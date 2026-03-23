@@ -168,6 +168,7 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
       console.log(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed.slice(0, 5);
     }
+    console.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
   } catch (error) {
     console.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
@@ -223,6 +224,7 @@ export async function generateMicroChallenges(params: {
       console.log(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed.slice(0, 3);
     }
+    console.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
   } catch (error) {
     console.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
@@ -286,6 +288,7 @@ ${context ? `关于这个人的信息：\n${context}` : ''}
       console.log(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed;
     }
+    console.warn(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${Date.now() - t0}ms: invalid response shape (expected 3 items with exactly 1 lie), using fallback`);
   } catch (error) {
     console.error(`[SocialIcebreakerAI] generateLieDetectiveStatements error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
@@ -397,6 +400,7 @@ ${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDete
       console.log(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${Date.now() - t0}ms`);
       return parsed;
     }
+    console.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
   } catch (error) {
     console.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }
@@ -513,6 +517,7 @@ ${JSON.stringify(participantList, null, 2)}
         difficulty: parsed[i].difficulty || fallbacks[i].difficulty,
       }));
     }
+    console.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${Date.now() - t0}ms: invalid response shape (expected ${participants.length} items), using fallback`);
   } catch (error) {
     console.error(`[SocialIcebreakerAI] generatePersonalityDiceChallenges error provider=${provider} latency=${Date.now() - t0}ms:`, error);
   }

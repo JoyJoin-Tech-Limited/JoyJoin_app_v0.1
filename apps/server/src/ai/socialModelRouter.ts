@@ -52,6 +52,22 @@ const HYBRID_ROUTING: Record<SocialAIFunction, AIProvider> = {
   generatePersonalityDiceChallenges: 'deepseek',
 };
 
+// ─── Valid provider modes ────────────────────────────────────────────────────
+
+const VALID_MODES = new Set(['hybrid', 'deepseek', 'minimax'] as const);
+type ProviderMode = 'hybrid' | 'deepseek' | 'minimax';
+
+function resolveMode(): ProviderMode {
+  const raw = process.env.SOCIAL_AI_PROVIDER;
+  if (!raw) return 'hybrid';
+  if (VALID_MODES.has(raw as ProviderMode)) return raw as ProviderMode;
+  console.warn(
+    `[SocialModelRouter] Unrecognized SOCIAL_AI_PROVIDER="${raw}". ` +
+      'Valid values: hybrid | deepseek | minimax. Defaulting to hybrid.'
+  );
+  return 'hybrid';
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export interface RoutedClient {
@@ -70,7 +86,7 @@ export interface RoutedClient {
  *    when the preferred provider is MiniMax but MINIMAX_API_KEY is not set.
  */
 export function getClientForFunction(fn: SocialAIFunction): RoutedClient {
-  const mode = process.env.SOCIAL_AI_PROVIDER || 'hybrid';
+  const mode = resolveMode();
 
   if (mode === 'deepseek') {
     return { client: deepseekClient, model: DEEPSEEK_MODEL, provider: 'deepseek' };
@@ -80,14 +96,23 @@ export function getClientForFunction(fn: SocialAIFunction): RoutedClient {
     if (minimaxClient) {
       return { client: minimaxClient, model: getMinimaxModel(), provider: 'minimax' };
     }
-    console.warn('[SocialModelRouter] SOCIAL_AI_PROVIDER=minimax but MINIMAX_API_KEY not set; falling back to DeepSeek');
+    console.warn(
+      `[SocialModelRouter] ${fn}: SOCIAL_AI_PROVIDER=minimax but MINIMAX_API_KEY is not set; ` +
+        'falling back to DeepSeek.'
+    );
     return { client: deepseekClient, model: DEEPSEEK_MODEL, provider: 'deepseek' };
   }
 
   // hybrid mode
   const preferred = HYBRID_ROUTING[fn];
-  if (preferred === 'minimax' && minimaxClient) {
-    return { client: minimaxClient, model: getMinimaxModel(), provider: 'minimax' };
+  if (preferred === 'minimax') {
+    if (minimaxClient) {
+      return { client: minimaxClient, model: getMinimaxModel(), provider: 'minimax' };
+    }
+    console.warn(
+      `[SocialModelRouter] ${fn}: preferred provider=minimax but MINIMAX_API_KEY is not set; ` +
+        'falling back to DeepSeek.'
+    );
   }
 
   return { client: deepseekClient, model: DEEPSEEK_MODEL, provider: 'deepseek' };
