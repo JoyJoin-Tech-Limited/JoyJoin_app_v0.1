@@ -44,6 +44,35 @@ export function isMiniMaxAvailable(): boolean {
 }
 
 /**
- * Default MiniMax model for creative generation tasks.
+ * Default MiniMax model for all generation tasks.
  */
-export const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'abab6.5s-chat';
+export const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'minimax-m2.7';
+
+/**
+ * Alias used by the social model router.
+ */
+export const MINIMAX_DEFAULT_MODEL = MINIMAX_MODEL;
+
+/**
+ * Returns the current configured MiniMax model name.
+ * Read on each call so env overrides work at runtime.
+ */
+export function getMinimaxModel(): string {
+  return process.env.MINIMAX_MODEL || 'minimax-m2.7';
+}
+
+/**
+ * The shared MiniMax OpenAI-compatible client (null if not configured).
+ * Evaluated once at module load; env var must be set before first import.
+ */
+export const minimaxClient: OpenAI | null = getMiniMaxClient();
+
+/**
+ * Returns true if MiniMax is configured and available (alias for isMiniMaxAvailable).
+ */
+export const isMinimaxEnabled = isMiniMaxAvailable;
+
+/**
+ * Returns the shared MiniMax client (alias for getMiniMaxClient, used by socialModelRouter).
+ */
+export const getMinimaxClient = getMiniMaxClient;

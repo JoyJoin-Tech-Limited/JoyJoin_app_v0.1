@@ -4,6 +4,7 @@ import "dotenv/config";
 import express, { type Request, type Response, type NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
+import { warmTTSCache } from "./ai/minimaxTTSService";
 
 const app = express();
 
@@ -79,6 +80,11 @@ app.use((req, res, next) => {
       console.log(`📍 API available at http://localhost:${PORT}/api`);
       console.log(`🔑 Admin secret key: ${process.env.ADMIN_CREATE_SECRET_KEY ? "✅ Configured" : "❌ Missing"}`);
       console.log(`\n`);
+
+      // Warm TTS cache non-blocking (no-op if MINIMAX keys not configured)
+      if (process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID) {
+        warmTTSCache().catch(err => console.warn('[startup] TTS cache warmup failed (non-fatal):', err));
+      }
     });
   } catch (error) {
     console.error("Failed to start server:", error);
