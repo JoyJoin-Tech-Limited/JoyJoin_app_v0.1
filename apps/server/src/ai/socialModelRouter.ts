@@ -13,10 +13,20 @@
 import OpenAI from 'openai';
 import { getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
 
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+// DeepSeek client — lazy-initialized so the module can load safely even when
+// DEEPSEEK_API_KEY is not set (e.g. MiniMax-only envs).  The dummy key
+// follows the same pattern used by other services in this codebase.
+let _deepseekClient: OpenAI | null = null;
+
+function getDeepseekClient(): OpenAI {
+  if (!_deepseekClient) {
+    _deepseekClient = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
+      baseURL: 'https://api.deepseek.com',
+    });
+  }
+  return _deepseekClient;
+}
 
 export interface SocialAICallParams {
   messages: OpenAI.Chat.ChatCompletionMessageParam[];
@@ -65,8 +75,13 @@ export async function callSocialAI(
   }
 
   // DeepSeek fallback
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error(
+      `[socialAI] ${callerTag}: MiniMax unavailable and DEEPSEEK_API_KEY is not set — cannot complete request`
+    );
+  }
   const start = Date.now();
-  const response = await deepseekClient.chat.completions.create({
+  const response = await getDeepseekClient().chat.completions.create({
     model: 'deepseek-chat',
     messages,
     temperature,
