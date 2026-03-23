@@ -69,12 +69,20 @@ User registers for event pool
 **Rule-based engine:** `packages/shared/src/atmospherePrediction.ts`  
 **Interface:**
 ```typescript
+// AtmosphereType — five values (no "party_mode"):
+export type AtmosphereType =
+  | "high_energy"    // 高能量：欢乐热闹
+  | "warm_cozy"      // 温暖治愈
+  | "balanced"       // 动静结合
+  | "deep_connect"   // 深度交流
+  | "creative_spark"; // 创意碰撞
+
 export interface AtmospherePrediction {
-  type: AtmosphereType;       // "party_mode" | "warm_cozy" | "high_energy" | "deep_connect" | "creative_spark" | "balanced"
+  type: AtmosphereType;
   title: string;              // e.g. "动静结合型"
   description: string;        // e.g. "有人暖场有人走心，节奏刚刚好"
-  energyScore: number;        // mean ARCHETYPE_ENERGY of group members
-  energyVariance: number;     // std deviation (diversity signal)
+  energyScore: number;        // mean of archetypeEnergyLevels for group members (rounded)
+  energyVariance: number;     // std deviation of energy levels (diversity signal, rounded)
   highlight: string;          // dynamic highlight sentence
   suggestedTopics: string[];  // 3 topic recommendations
   dominantArchetypes: string[]; // top archetype names in group
