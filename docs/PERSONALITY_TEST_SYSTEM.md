@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-02-04  
+**Last Updated:** 2026-03-23  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -66,9 +66,9 @@ The archetypes are numbered 1-12 in the order above. This ordering is used for:
 - Any feature requiring consistent enumeration
 
 **Energy Levels:**
-- **High Energy (75-100)**: 开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛
-- **Medium Energy (50-74)**: 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象
-- **Low Energy (0-49)**: 稳如龟, 隐身猫
+- **High Energy (75-100)**: 开心柯基 (95), 太阳鸡 (90), 夸夸豚 (85), 机智狐 (82), 淡定海豚 (75)
+- **Medium Energy (50-74)**: 织网蛛 (72), 暖心熊 (70), 灵感章鱼 (68), 沉思猫头鹰 (55), 定心大象 (52)
+- **Low Energy (0-49)**: 稳如龟 (38), 隐身猫 (30)
 
 ---
 
@@ -449,13 +449,14 @@ Hard constraints that disqualify extreme mismatches:
 ### Assessment Flow Diagram
 
 ```
-User starts assessment
+User opens /personality-test (unauthenticated)
          ↓
 ┌────────────────────────┐
 │ Create assessment_     │
 │ session record         │
-│ - phase: 'post_signup' │
+│ - phase: 'pre_signup'  │
 │ - status: 'in_progress'│
+│ - userId: null (anon)  │
 └────────────────────────┘
          ↓
 ┌────────────────────────┐
@@ -508,13 +509,19 @@ User starts assessment
 │ - completedAt          │
 └────────────────────────┘
          ↓
-┌────────────────────────┐
-│ Update users table     │
-│ - primary_archetype    │
-│ - hasCompletedTest     │
-└────────────────────────┘
+   Show results page
+   (WeChat 微信授权登入 CTA after 3 s)
          ↓
-  Show results page
+   On WeChat login:
+   POST /api/auth/wechat/login-with-test
+   POST /api/assessment/v4/:sessionId/link-user
+         ↓
+┌────────────────────────┐
+│ Link session to user   │
+│ - phase → 'completed'  │
+│ - userId = new user    │
+│ - hasCompletedTest=true│
+└────────────────────────┘
 ```
 
 ### API Call Sequence
@@ -548,6 +555,22 @@ POST /api/personality-test/complete
 GET /api/personality-test/results?sessionId={id}
 → Returns full results (archetype, traits, confidence, etc.)
 ```
+
+### Pre-Auth Anonymous Flow
+
+The V4 assessment runs **before** WeChat login. The anonymous flow differs from the authenticated flow:
+
+1. **Session creation**: `assessment_session` created with `userId = null`, `phase = 'pre_signup'`
+2. **Answer storage**: Answers stored both in `assessment_answers` table and `localStorage` (`joyjoin_v4_presignup_answers`) as backup
+3. **Results display**: `PersonalityTestResultPage` shows archetype result and WeChat login CTA after 3 seconds
+4. **Post-auth linking**: After WeChat login via `POST /api/auth/wechat/login-with-test`, client calls:
+   ```
+   POST /api/assessment/v4/:sessionId/link-user
+   ```
+   This associates the anonymous session with the new user account and sets `hasCompletedPersonalityTest = true`
+5. **Session ID persistence**: The anonymous `sessionId` is stored in `localStorage` so it survives the WeChat OAuth redirect
+
+> **Note**: For returning users who skip the pre-auth test and log in directly, the server returns `nextStep = 'personality-test'` if `hasCompletedPersonalityTest = false`, routing them to complete the test post-auth.
 
 ---
 
