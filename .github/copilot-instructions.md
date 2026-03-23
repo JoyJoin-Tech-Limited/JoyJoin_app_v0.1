@@ -310,7 +310,7 @@ activeAssessmentSessionId: string | null;
   // V4 Adaptive Engine State
   currentQuestionIndex: number;
   traitScores: { A: number, C: number, E: number, O: number, X: number, P: number };
-  traitConfidences: { [trait: string]: { score: number; confidence: number; sampleCount: number; variance: number; validityScore: number } };
+  traitConfidences: { [trait: string]: { score: number; confidence: number; sampleCount: number } };
   topArchetypes: Array<{ archetype: string; score: number; confidence: number }>;
   
   // MatcherV2 Results
