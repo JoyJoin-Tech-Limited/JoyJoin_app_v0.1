@@ -320,7 +320,7 @@ Two equally-weighted components:
 | Component | Ideal | Penalty |
 |-----------|-------|---------|
 | **avgScore** — mean energy of group | 50–70 (energised but not chaotic) | −2 pts per unit outside ideal band |
-| **harmonyScore** — energy std deviation | Low–moderate spread (natural dynamics) | −2.5 pts per SD unit |
+| **harmonyScore** — energy std deviation | stdDev ≤ 20 (natural mix) — no penalty | −2.5 pts per SD unit beyond 20 |
 
 ```typescript
 // Energy lookup (from ARCHETYPE_ENERGY in archetypeChemistry.ts):
@@ -329,7 +329,8 @@ Two equally-weighted components:
 // 沉思猫头鹰: 55, 定心大象: 52, 稳如龟: 38, 隐身猫: 30
 
 avgScore     = avgEnergy in [50,70] ? 100 : max(0, 100 − |avgEnergy − nearest boundary| × 2)
-harmonyScore = max(0, 100 − stdDev × 2.5)
+harmonyPenalty = max(0, stdDev − 20)   // no penalty for natural spread (stdDev ≤ 20)
+harmonyScore = max(0, 100 − harmonyPenalty × 2.5)
 energyBalance = round((avgScore + harmonyScore) / 2)
 ```
 
