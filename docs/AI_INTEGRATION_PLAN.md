@@ -81,7 +81,7 @@ export interface AtmospherePrediction {
 }
 ```
 
-**Called from:** `generateNotificationCopy()` and `generateReminderCopy()` — used in push notification text only. The `predictAtmosphere()` output is **not currently fed into `overallScore`** during group formation.
+**Notification helpers:** `generateNotificationCopy()` and `generateReminderCopy()` are available for push notification text generation but currently have no production call sites in this repo. The `predictAtmosphere()` output is **not currently fed into `overallScore`** during group formation.
 
 ### 2.2 The Gap
 
