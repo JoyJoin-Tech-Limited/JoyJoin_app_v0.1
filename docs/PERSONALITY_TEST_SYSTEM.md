@@ -518,9 +518,8 @@ User opens /personality-test (unauthenticated)
          ↓
 ┌────────────────────────┐
 │ Link session to user   │
-│ - phase → 'completed'  │
+│ - phase → 'post_signup'│
 │ - userId = new user    │
-│ - hasCompletedTest=true│
 └────────────────────────┘
 ```
 
