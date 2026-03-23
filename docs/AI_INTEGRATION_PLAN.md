@@ -272,9 +272,10 @@ export async function generateIceBreakers(
 - Triggered by: `POST /api/blind-box-events/:id/feedback`
 
 **Pool flow:** `apps/server/src/matchingWeightsService.ts`
+- Status: Implemented in isolation, **not yet wired** to any API endpoint
 - Thompson Sampling multi-armed bandit
 - Maintains Beta distribution per weight configuration (α, β updated per `wouldMeetAgain` signal)
-- Triggered by: `POST /api/event-pools/:poolId/feedback`
+- Planned trigger (not yet implemented): `POST /api/event-pools/:poolId/feedback`
 
 ### 4.2 The Gap
 
