@@ -562,12 +562,7 @@ The V4 assessment runs **before** WeChat login. The anonymous flow differs from 
 1. **Session creation**: `assessment_session` created with `userId = null`, `phase = 'pre_signup'`
 2. **Answer storage**: Answers stored both in `assessment_answers` table and `localStorage` (`joyjoin_v4_presignup_answers`) as backup
 3. **Results display**: `PersonalityTestResultPage` shows archetype result and WeChat login CTA after 3 seconds
-4. **Post-auth linking**: After WeChat login via `POST /api/auth/wechat/login-with-test`, client calls:
-   ```
-   POST /api/assessment/v4/:sessionId/link-user
-   ```
-   This associates the anonymous session with the new user account and sets `hasCompletedPersonalityTest = true`
-5. **Session ID persistence**: The anonymous `sessionId` is stored in `localStorage` so it survives the WeChat OAuth redirect
+4. **Post-auth processing**: After WeChat login, the client calls:
 
 > **Note**: For returning users who skip the pre-auth test and log in directly, the server returns `nextStep = 'personality-test'` if `hasCompletedPersonalityTest = false`, routing them to complete the test post-auth.
 
