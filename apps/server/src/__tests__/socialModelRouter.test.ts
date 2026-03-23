@@ -25,6 +25,14 @@ vi.mock('../ai/minimaxClient', () => ({
       : null;
   },
   getMinimaxModel: () => process.env.MINIMAX_MODEL || 'minimax-m2.7',
+  getMinimaxClient: (): OpenAI | null => {
+    return process.env.MINIMAX_API_KEY
+      ? ({ __isMinimax: true } as unknown as OpenAI)
+      : null;
+  },
+  isMinimaxEnabled: (): boolean => {
+    return Boolean(process.env.MINIMAX_API_KEY);
+  },
   MINIMAX_DEFAULT_MODEL: 'minimax-m2.7',
 }));
 

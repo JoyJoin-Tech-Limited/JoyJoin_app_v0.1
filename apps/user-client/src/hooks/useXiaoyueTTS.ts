@@ -12,7 +12,6 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { apiRequest } from '@/lib/queryClient';
 
 export interface TTSSpeakOptions {
   quality?: 'turbo' | 'hd';
@@ -35,18 +34,27 @@ export function useXiaoyueTTS() {
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Clean up audio on unmount
+  const revokeCurrentUrl = useCallback(() => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  }, []);
+
+  // Clean up audio and object URL on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      revokeCurrentUrl();
       abortControllerRef.current?.abort();
     };
-  }, []);
+  }, [revokeCurrentUrl]);
 
   const stop = useCallback(() => {
     if (audioRef.current) {
@@ -54,9 +62,10 @@ export function useXiaoyueTTS() {
       audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
+    revokeCurrentUrl();
     abortControllerRef.current?.abort();
     setIsPlaying(false);
-  }, []);
+  }, [revokeCurrentUrl]);
 
   const speak = useCallback(async (text: string, options: TTSSpeakOptions = {}) => {
     if (isMuted || options.silent || !text?.trim()) return;
@@ -68,14 +77,26 @@ export function useXiaoyueTTS() {
     abortControllerRef.current = controller;
 
     try {
-      const response = await apiRequest('POST', '/api/tts/synthesise', {
-        text,
-        quality: options.quality ?? 'turbo',
-        emotion: options.emotion,
-        callerTag: options.callerTag ?? 'useXiaoyueTTS',
+      // Use native fetch so we can pass the abort signal for true cancellation
+      const response = await fetch('/api/tts/synthesise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          quality: options.quality ?? 'turbo',
+          emotion: options.emotion,
+          callerTag: options.callerTag ?? 'useXiaoyueTTS',
+        }),
+        credentials: 'include',
+        signal: controller.signal,
       });
 
       if (controller.signal.aborted) return;
+
+      if (!response.ok) {
+        console.warn('[useXiaoyueTTS] server error:', response.status);
+        return;
+      }
 
       const data = await response.json() as { audioBase64?: string; error?: string };
 
@@ -89,6 +110,7 @@ export function useXiaoyueTTS() {
       }
       const blob = new Blob([bytes], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
+      objectUrlRef.current = url;
 
       const audio = new Audio(url);
       audioRef.current = audio;
@@ -96,13 +118,13 @@ export function useXiaoyueTTS() {
       setIsPlaying(true);
 
       audio.onended = () => {
-        URL.revokeObjectURL(url);
+        revokeCurrentUrl();
         setIsPlaying(false);
         audioRef.current = null;
       };
 
       audio.onerror = () => {
-        URL.revokeObjectURL(url);
+        revokeCurrentUrl();
         setIsPlaying(false);
         audioRef.current = null;
       };
@@ -110,13 +132,13 @@ export function useXiaoyueTTS() {
       await audio.play();
 
     } catch (err) {
-      if (!controller.signal.aborted) {
-        // TTS failure is non-fatal — log and continue silently
-        console.warn('[useXiaoyueTTS] speak failed:', err);
-      }
+      if (err instanceof Error && err.name === 'AbortError') return;
+      // TTS failure is non-fatal — log and continue silently
+      console.warn('[useXiaoyueTTS] speak failed:', err);
       setIsPlaying(false);
+      revokeCurrentUrl();
     }
-  }, [isMuted, stop]);
+  }, [isMuted, stop, revokeCurrentUrl]);
 
   const toggleMute = useCallback(() => {
     setIsMuted(prev => {

@@ -26,18 +26,25 @@ router.post('/synthesise', async (req, res) => {
     callerTag?: string;
   };
 
-  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+  if (typeof text !== 'string') {
     res.status(400).json({ error: 'text is required' });
     return;
   }
 
-  if (text.length > MAX_TTS_TEXT_LENGTH) {
+  const trimmedText = text.trim();
+
+  if (trimmedText.length === 0) {
+    res.status(400).json({ error: 'text is required' });
+    return;
+  }
+
+  if (trimmedText.length > MAX_TTS_TEXT_LENGTH) {
     res.status(400).json({ error: `text too long (max ${MAX_TTS_TEXT_LENGTH} chars)` });
     return;
   }
 
   const result = await synthesiseSpeech({
-    text: text.trim(),
+    text: trimmedText,
     quality: quality === 'hd' ? 'hd' : 'turbo',
     emotion: ['warm', 'excited', 'playful', 'happy', 'neutral'].includes(emotion ?? '')
       ? (emotion as 'warm' | 'excited' | 'playful' | 'happy' | 'neutral')

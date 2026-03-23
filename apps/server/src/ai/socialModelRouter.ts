@@ -11,7 +11,7 @@
  */
 
 import OpenAI from 'openai';
-import { minimaxClient, getMinimaxModel, getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
+import { getMinimaxModel, getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
 
 // DeepSeek client — lazy-initialized so the module can load safely even when
 // DEEPSEEK_API_KEY is not set (e.g. MiniMax-only envs).  The dummy key
@@ -68,8 +68,9 @@ export interface ClientSelection {
  */
 export function getClientForFunction(fn: SocialFunction): ClientSelection {
   const mode = resolveMode();
-  // minimaxClient is accessed each time so tests can control it via env
-  const mmClient = minimaxClient;
+  // Use getMinimaxClient() (evaluated on every call) rather than the module-load-time
+  // constant so that env changes between module import and actual invocation are respected.
+  const mmClient = getMinimaxClient();
 
   if (mode === 'deepseek') {
     return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };

@@ -49,11 +49,11 @@ export interface TTSResult {
   latencyMs: number;
 }
 
-/** Simple in-process cache keyed by text+quality to avoid re-billing fixed phrases */
+/** Simple in-process cache keyed by synthesised-text+quality to avoid re-billing fixed phrases */
 const _ttsCache = new Map<string, TTSResult>();
 
-function cacheKey(text: string, quality: TTSQuality): string {
-  return `${quality}:${text}`;
+function cacheKey(textWithEmotion: string, quality: TTSQuality): string {
+  return `${quality}:${textWithEmotion}`;
 }
 
 /**
@@ -76,16 +76,6 @@ export async function synthesiseSpeech(req: TTSRequest): Promise<TTSResult | nul
 
   const quality = req.quality ?? 'turbo';
   const model = quality === 'hd' ? TTS_MODEL_HD : TTS_MODEL;
-  const key = cacheKey(req.text, quality);
-
-  // Return cached result for identical fixed phrases
-  if (_ttsCache.has(key)) {
-    console.log(`[MinimaxTTS] ${req.callerTag ?? 'unknown'} cache_hit`);
-    return _ttsCache.get(key)!;
-  }
-
-  const apiKey = process.env.MINIMAX_API_KEY!;
-  const groupId = process.env.MINIMAX_GROUP_ID!;
 
   // Prepend emotion instruction if provided (MiniMax T2A supports natural-language style hints)
   const emotionPrefix: Record<NonNullable<TTSRequest['emotion']>, string> = {
@@ -96,6 +86,19 @@ export async function synthesiseSpeech(req: TTSRequest): Promise<TTSResult | nul
     neutral: '',
   };
   const textWithEmotion = req.emotion ? `${emotionPrefix[req.emotion]}${req.text}` : req.text;
+
+  // Cache is keyed by the final synthesised text (including emotion prefix) + quality
+  // so different emotions for the same base text are cached independently.
+  const key = cacheKey(textWithEmotion, quality);
+
+  // Return cached result for identical fixed phrases
+  if (_ttsCache.has(key)) {
+    console.log(`[MinimaxTTS] ${req.callerTag ?? 'unknown'} cache_hit`);
+    return _ttsCache.get(key)!;
+  }
+
+  const apiKey = process.env.MINIMAX_API_KEY!;
+  const groupId = process.env.MINIMAX_GROUP_ID!;
 
   const start = Date.now();
 
@@ -159,7 +162,7 @@ export async function synthesiseSpeech(req: TTSRequest): Promise<TTSResult | nul
     const result: TTSResult = { audioBase64, durationEstimateMs, model, latencyMs };
 
     // Cache fixed/short phrases only (phase announcements and similar short fixed lines)
-    if (req.text.length < CACHE_THRESHOLD_CHARS) {
+    if (textWithEmotion.length < CACHE_THRESHOLD_CHARS) {
       _ttsCache.set(key, result);
     }
 
@@ -175,17 +178,18 @@ export async function synthesiseSpeech(req: TTSRequest): Promise<TTSResult | nul
 
 /**
  * Pre-synthesises fixed phase announcement lines and warms the cache.
+ * Strings must match exactly what the client sends (see PHASE_START_TTS in
+ * SocialIcebreakerOrchestrator.tsx) so cache hits occur during real phase transitions.
  * Call once at server startup (optional, non-blocking).
  */
 export async function warmTTSCache(): Promise<void> {
   if (!isTTSEnabled()) return;
 
   const fixedLines = [
-    { text: '欢迎来到今晚的破冰时间！先从轻松的话题暖暖场吧', emotion: 'warm' as const, callerTag: 'warmup_phase_start' },
-    { text: '热身完毕！接下来是微挑战环节，大家准备好了吗？', emotion: 'excited' as const, callerTag: 'micro_challenge_phase_start' },
-    { text: '侦探们，仔细听每一句话，找出谎言！', emotion: 'playful' as const, callerTag: 'lie_detective_phase_start' },
-    { text: '揭晓时刻到了！谁是最佳说谎者？', emotion: 'excited' as const, callerTag: 'lie_detective_vote_reveal' },
-    { text: '今晚的破冰之旅圆满结束！', emotion: 'warm' as const, callerTag: 'recap_phase_start' },
+    { text: '欢迎来到今晚的破冰时间！先从轻松的话题暖暖场吧 🌅', emotion: 'warm' as const, callerTag: 'warmup_phase_start' },
+    { text: '热身完毕！接下来是微挑战环节，大家准备好了吗？⚡', emotion: 'excited' as const, callerTag: 'micro_challenge_phase_start' },
+    { text: '侦探们，仔细听每一句话，找出谎言！🕵️', emotion: 'playful' as const, callerTag: 'lie_detective_phase_start' },
+    { text: '今晚的破冰之旅圆满结束！✨', emotion: 'warm' as const, callerTag: 'recap_phase_start' },
   ];
 
   // Fire-and-forget in parallel, ignore errors
