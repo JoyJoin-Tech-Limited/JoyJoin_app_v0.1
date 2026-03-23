@@ -1,6 +1,6 @@
 # JoyJoin User Onboarding Flow
 
-## Overview (Updated 2026-02-04)
+## Overview (Updated 2026-03-23)
 
 JoyJoin uses a **value-first** onboarding approach:
 1. **Show value (personality test) BEFORE asking for signup**
@@ -94,14 +94,18 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **User State:** Authenticated, test complete, needs profile data
 
-**Required Fields (7 steps):**
+**Required Fields (5 steps):**
 1. Display Name
-2. Gender + Birth Year
-3. Relationship Status
-4. Education Level
-5. Industry (3-tier) + Occupation + Work Mode
-6. Hometown + Current City
-7. Intent (multi-select)
+2. Gender + Birth Year + Relationship Status
+3. Education Level + Industry (3-tier) + Occupation + Work Mode
+4. Hometown + Current City
+5. Intent / Social Goals (multi-select — sourced from shared constants in `packages/shared/src/constants/intentOptions.ts`, see PR #299)
+
+> Intent options are defined as a **single source of truth** in `packages/shared/src/constants/intentOptions.ts`. Do **not** hardcode intent option arrays in individual components — import from shared constants.
+
+> Valid work modes include: `employee`, `freelancer`, `entrepreneur`, `student`, `successor` (added 2026-03-18 for family business succession contexts).
+
+> All copy uses a conversational **Xiaoyue dialogue tone** (not form labels). See PR #301/#302 for the overhaul.
 
 **After Completion:**
 - `profileEssentialComplete = true`
@@ -120,10 +124,13 @@ await fetch('/api/auth/wechat/login-with-test', {
   - 56 topics across 8 categories
   - Multi-tap heat level (0/5/15/25)
   - Includes topic avoidances
+- **Archetype-based recommendation hints** are shown alongside interest topics — the carousel displays personalised suggestions based on the user's archetype result from Step 1 (PR #309).
 
 **After Completion/Skip:**
-- `hasCompletedExtendedData = true`
+- `hasCompletedInterestsCarousel = true` (server-persisted; this is the canonical step-completion signal)
 - Redirect to `/onboarding/review`
+
+> ⚠️ Do **not** use `profileExtendedComplete` as the step-completion gate — it is computed server-side from education/industry/hometown fields and can be `true` before the carousel is completed. Use `hasCompletedInterestsCarousel` for onboarding-step logic only.
 
 ---
 
@@ -136,6 +143,8 @@ await fetch('/api/auth/wechat/login-with-test', {
 **Content:**
 - Animated "analyzing" phase (minimum 2.5 seconds)
 - Profile portrait card reveal with archetype, interests, and stats
+- **Match Power preview** — displays the user's computed match score before they enter the Discover pool
+- **Archetype-personalized CTA** — the call-to-action copy is tailored to the user's archetype result (e.g., different messaging for each archetype type)
 
 **Data Contract:**
 - Server field: `user.hasSeenProfileReview` (persisted to database)
@@ -143,7 +152,19 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **After Completion:**
 - `hasSeenProfileReview = true`
-- Navigate to `/discover`
+- Navigate via **server-computed `nextStep`** using the route map:
+  ```ts
+  const NEXT_STEP_TO_PATH: Record<string, string> = {
+    'discover':        '/discover',
+    'guide':           '/discover',        // deprecated step alias
+    'profile-review':  '/onboarding/review',
+    'extended-data':   '/onboarding/extended',
+    'essential-data':  '/onboarding/setup',
+    'personality-test': '/personality-test',
+  };
+  const destination = (nextStep && NEXT_STEP_TO_PATH[nextStep]) ?? '/discover';
+  ```
+- Fallback to `/discover` if `nextStep` is absent or unrecognised.
 
 ---
 
@@ -154,6 +175,15 @@ await fetch('/api/auth/wechat/login-with-test', {
 **User State:** Onboarding complete
 
 > **Note:** The 3-step guide (`/guide`) that previously preceded the Discover page was deprecated on 2026-02-16. Its content has been replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page itself.
+
+**Post-Onboarding Profile Enrichment (Progressive)**
+
+After the user lands on Discover for the first time, a profile enrichment card is shown to collect additional signals that improve match quality. This is non-blocking and dismissible.
+
+Current enrichment fields collected post-onboarding:
+- `tableVibePreference` — dining/social vibe preference (two-layer UX: primary style → specific preferences). Added in PR #324.
+
+The enrichment card is shown via the `ProfileEnrichmentCard` component on the Discover page. It does **not** block access to the event pool.
 
 ---
 
@@ -171,6 +201,8 @@ await fetch('/api/auth/wechat/login-with-test', {
 | `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
+| `hasCompletedInterestsCarousel` | `boolean` | Set to `true` when the user completes or skips the interests carousel step (`/onboarding/extended`). This is the canonical completion gate for the extended-data onboarding step. |
+| `tableVibePreference` | `string \| null` | Post-onboarding dining/social vibe preference collected via the Discover-page enrichment card. `null` until the user completes the enrichment step. |
 
 ### API Endpoints
 
