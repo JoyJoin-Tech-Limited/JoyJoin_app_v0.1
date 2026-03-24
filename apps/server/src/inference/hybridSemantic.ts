@@ -4,16 +4,11 @@
  * 仅对低置信度特征补充分析，控制成本
  */
 
-import OpenAI from 'openai';
+import { getClientForFunction } from '../ai/socialModelRouter';
 import type { InferredAttribute } from './types';
 
 const CONFIDENCE_THRESHOLD = 0.6;
 const MAX_LLM_CALLS_PER_USER = 3;
-
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
 
 interface SemanticAnalysisResult {
   field: string;
@@ -42,10 +37,13 @@ export async function analyzeComplexSemantics(
   const results: SemanticAnalysisResult[] = [];
 
   const batchPrompt = buildBatchPrompt(text, attributesToAnalyze);
+  // Resolve provider once before try/catch so `provider` is accessible in the error log
+  const { client, model, provider } = getClientForFunction('analyzeComplexSemantics');
   
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const t0 = Date.now();
+    const response = await client.chat.completions.create({
+      model,
       messages: [
         { role: 'system', content: SEMANTIC_ANALYSIS_SYSTEM_PROMPT },
         { role: 'user', content: batchPrompt }
@@ -54,6 +52,7 @@ export async function analyzeComplexSemantics(
       max_tokens: 500,
       response_format: { type: 'json_object' }
     });
+    console.log(`[HybridSemantic] analyzeComplexSemantics provider=${provider} latency=${Date.now() - t0}ms`);
 
     const content = response.choices[0].message.content || '{}';
     const parsed = JSON.parse(content);
@@ -72,7 +71,7 @@ export async function analyzeComplexSemantics(
       }
     }
   } catch (error) {
-    console.error('[HybridSemantic] LLM analysis failed:', error);
+    console.error(`[HybridSemantic] analyzeComplexSemantics provider=${provider} failed:`, error);
   }
 
   return results;

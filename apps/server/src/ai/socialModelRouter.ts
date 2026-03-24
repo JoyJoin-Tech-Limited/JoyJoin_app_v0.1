@@ -3,7 +3,13 @@
  *
  * Routes social-experience AI calls to MiniMax when configured, falling
  * back to DeepSeek for resilience.  All caller code should go through
- * `callSocialAI` instead of instantiating provider clients directly.
+ * `callSocialAI` or `getClientForFunction` instead of instantiating
+ * provider clients directly.
+ *
+ * Services routed through this file:
+ *   - socialIcebreakerAIService.ts  (warmup topics, XiaoYue, recap, lie detective)
+ *   - matchExplanationService.ts    (pair explanations, icebreakers)
+ *   - inference/hybridSemantic.ts   (semantic attribute analysis)
  *
  * Provider priority:
  *   1. MiniMax  (if MINIMAX_API_KEY is set)
@@ -35,13 +41,18 @@ type SocialFunction =
   | 'generateRecapSummary'
   | 'generateLieDetectiveStatements'
   | 'generateMicroChallenges'
-  | 'generatePersonalityDiceChallenges';
+  | 'generatePersonalityDiceChallenges'
+  | 'generatePairExplanation'       // matchExplanationService — MiniMax preferred (warm narrative copy)
+  | 'generateIceBreakers'           // matchExplanationService — MiniMax preferred (warm narrative copy)
+  | 'analyzeComplexSemantics';      // hybridSemantic — DeepSeek default (structured JSON inference)
 
 const MINIMAX_DESIGNATED_FUNCTIONS = new Set<SocialFunction>([
   'generateWarmupTopics',
   'generateXiaoYueComment',
   'generateRecapSummary',
   'generateLieDetectiveStatements',
+  'generatePairExplanation',
+  'generateIceBreakers',
 ]);
 
 type ProviderMode = 'hybrid' | 'deepseek' | 'minimax';
