@@ -35,8 +35,8 @@ vi.mock('openai', () => ({
   },
 }));
 
-import { callSocialAI } from '../socialModelRouter';
-import { isMinimaxEnabled } from '../minimaxClient';
+import { callSocialAI, getClientForFunction } from '../socialModelRouter';
+import { isMinimaxEnabled, getMinimaxClient } from '../minimaxClient';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -192,6 +192,126 @@ describe('callSocialAI', () => {
         expect.any(Error)
       );
       warnSpy.mockRestore();
+    });
+  });
+});
+
+// ── getClientForFunction tests ────────────────────────────────────────────────
+
+const mockMinimaxClient = { chat: { completions: { create: mockMinimaxCreate } } };
+
+describe('getClientForFunction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.DEEPSEEK_API_KEY = 'sk-test-deepseek';
+    delete process.env.SOCIAL_AI_PROVIDER;
+    // Default: MiniMax available
+    vi.mocked(getMinimaxClient).mockReturnValue(mockMinimaxClient as any);
+  });
+
+  afterEach(() => {
+    delete process.env.DEEPSEEK_API_KEY;
+    delete process.env.SOCIAL_AI_PROVIDER;
+  });
+
+  // ── hybrid mode (default) ─────────────────────────────────────────────────
+
+  describe('hybrid mode (default)', () => {
+    it('routes generatePairExplanation to minimax when MiniMax is available', () => {
+      const sel = getClientForFunction('generatePairExplanation');
+      expect(sel.provider).toBe('minimax');
+      expect(sel.model).toBe('minimax-m2.7');
+    });
+
+    it('routes generateIceBreakers to minimax when MiniMax is available', () => {
+      const sel = getClientForFunction('generateIceBreakers');
+      expect(sel.provider).toBe('minimax');
+      expect(sel.model).toBe('minimax-m2.7');
+    });
+
+    it('routes analyzeComplexSemantics to deepseek even when MiniMax is available', () => {
+      const sel = getClientForFunction('analyzeComplexSemantics');
+      expect(sel.provider).toBe('deepseek');
+      expect(sel.model).toBe('deepseek-chat');
+    });
+
+    it('falls back to deepseek for generatePairExplanation when MiniMax is not configured', () => {
+      vi.mocked(getMinimaxClient).mockReturnValue(null);
+      const sel = getClientForFunction('generatePairExplanation');
+      expect(sel.provider).toBe('deepseek');
+    });
+
+    it('falls back to deepseek for generateIceBreakers when MiniMax is not configured', () => {
+      vi.mocked(getMinimaxClient).mockReturnValue(null);
+      const sel = getClientForFunction('generateIceBreakers');
+      expect(sel.provider).toBe('deepseek');
+    });
+  });
+
+  // ── minimax mode ──────────────────────────────────────────────────────────
+
+  describe('SOCIAL_AI_PROVIDER=minimax', () => {
+    beforeEach(() => {
+      process.env.SOCIAL_AI_PROVIDER = 'minimax';
+    });
+
+    it('routes generatePairExplanation to minimax', () => {
+      const sel = getClientForFunction('generatePairExplanation');
+      expect(sel.provider).toBe('minimax');
+    });
+
+    it('routes generateIceBreakers to minimax', () => {
+      const sel = getClientForFunction('generateIceBreakers');
+      expect(sel.provider).toBe('minimax');
+    });
+
+    it('always routes analyzeComplexSemantics to deepseek (forced, not overridden by minimax mode)', () => {
+      const sel = getClientForFunction('analyzeComplexSemantics');
+      expect(sel.provider).toBe('deepseek');
+    });
+
+    it('falls back to deepseek for generateIceBreakers when MINIMAX_API_KEY is not set', () => {
+      vi.mocked(getMinimaxClient).mockReturnValue(null);
+      const sel = getClientForFunction('generateIceBreakers');
+      expect(sel.provider).toBe('deepseek');
+    });
+  });
+
+  // ── deepseek mode ─────────────────────────────────────────────────────────
+
+  describe('SOCIAL_AI_PROVIDER=deepseek', () => {
+    beforeEach(() => {
+      process.env.SOCIAL_AI_PROVIDER = 'deepseek';
+    });
+
+    it('routes generatePairExplanation to deepseek', () => {
+      const sel = getClientForFunction('generatePairExplanation');
+      expect(sel.provider).toBe('deepseek');
+    });
+
+    it('routes generateIceBreakers to deepseek', () => {
+      const sel = getClientForFunction('generateIceBreakers');
+      expect(sel.provider).toBe('deepseek');
+    });
+
+    it('routes analyzeComplexSemantics to deepseek', () => {
+      const sel = getClientForFunction('analyzeComplexSemantics');
+      expect(sel.provider).toBe('deepseek');
+    });
+  });
+
+  // ── analyzeComplexSemantics forced-DeepSeek guard ─────────────────────────
+
+  describe('analyzeComplexSemantics forced-DeepSeek behavior', () => {
+    it('throws a clear error when DEEPSEEK_API_KEY is not set', () => {
+      delete process.env.DEEPSEEK_API_KEY;
+      expect(() => getClientForFunction('analyzeComplexSemantics')).toThrow('DEEPSEEK_API_KEY');
+    });
+
+    it('throws even when SOCIAL_AI_PROVIDER=minimax and MiniMax is configured', () => {
+      process.env.SOCIAL_AI_PROVIDER = 'minimax';
+      delete process.env.DEEPSEEK_API_KEY;
+      expect(() => getClientForFunction('analyzeComplexSemantics')).toThrow('DEEPSEEK_API_KEY');
     });
   });
 });

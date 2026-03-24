@@ -55,6 +55,13 @@ const MINIMAX_DESIGNATED_FUNCTIONS = new Set<SocialFunction>([
   'generateIceBreakers',
 ]);
 
+// Functions that must always use DeepSeek regardless of SOCIAL_AI_PROVIDER mode.
+// These use provider-specific API features (e.g. response_format: json_object)
+// that are not guaranteed to be supported by MiniMax.
+const DEEPSEEK_FORCED_FUNCTIONS = new Set<SocialFunction>([
+  'analyzeComplexSemantics',
+]);
+
 type ProviderMode = 'hybrid' | 'deepseek' | 'minimax';
 
 function resolveMode(): ProviderMode {
@@ -76,8 +83,22 @@ export interface ClientSelection {
  * Returns the appropriate AI client, model, and provider for a given social function.
  * Respects SOCIAL_AI_PROVIDER env var (hybrid | minimax | deepseek) with automatic
  * fallback to DeepSeek when MiniMax is not configured.
+ *
+ * Functions in DEEPSEEK_FORCED_FUNCTIONS always receive a DeepSeek selection
+ * regardless of the configured mode — they rely on DeepSeek-specific API
+ * features (e.g. response_format: json_object).
  */
 export function getClientForFunction(fn: SocialFunction): ClientSelection {
+  // Forced-DeepSeek functions bypass all provider mode logic
+  if (DEEPSEEK_FORCED_FUNCTIONS.has(fn)) {
+    if (!process.env.DEEPSEEK_API_KEY) {
+      throw new Error(
+        `[socialAI] ${fn} requires DeepSeek (response_format: json_object) but DEEPSEEK_API_KEY is not set`
+      );
+    }
+    return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+  }
+
   const mode = resolveMode();
   // Use getMinimaxClient() (evaluated on every call) rather than the module-load-time
   // constant so that env changes between module import and actual invocation are respected.
@@ -104,6 +125,15 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
     return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
   }
 
+  return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+}
+
+/**
+ * Returns a DeepSeek client selection unconditionally.
+ * Used by callers that need an explicit DeepSeek fallback path when their
+ * primary provider (MiniMax) has already failed.
+ */
+export function getDeepseekSelection(): ClientSelection {
   return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
 }
 
