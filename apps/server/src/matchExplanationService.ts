@@ -12,7 +12,7 @@
  * - 指数退避重试（最多2次重试）
  */
 
-import { getClientForFunction } from './ai/socialModelRouter';
+import { getClientForFunction, getDeepseekSelection } from './ai/socialModelRouter';
 import { chemistryMatrix } from './archetypeChemistry';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
@@ -522,9 +522,9 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
 
 请用中文回复，语气温暖友好，突出他们可能的互补或共鸣点。不要使用"用户A/B"的称呼，直接用描述性语言。回复长度控制在50-80字。`;
 
+  const { client, model, provider } = getClientForFunction('generatePairExplanation');
+  const t0 = Date.now();
   try {
-    const { client, model, provider } = getClientForFunction('generatePairExplanation');
-    const t0 = Date.now();
     const response = await withRetry(async () => {
       return client.chat.completions.create({
         model,
@@ -545,8 +545,34 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       sharedInterests,
       connectionPoints,
     };
-  } catch (error) {
-    console.error('[MatchExplanation] Error generating explanation after retries:', error);
+  } catch (primaryError) {
+    if (provider === 'minimax') {
+      console.warn(`[MatchExplanation] generatePairExplanation minimax failed after retries, trying deepseek fallback:`, primaryError);
+      try {
+        const { client: fbClient, model: fbModel } = getDeepseekSelection();
+        // Single attempt only — the primary path already exhausted its retries
+        const fbResponse = await fbClient.chat.completions.create({
+          model: fbModel,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 200,
+          temperature: 0.7,
+        });
+        console.log(`[MatchExplanation] generatePairExplanation provider=deepseek (fallback) latency=${Date.now() - t0}ms`);
+        const explanation = fbResponse.choices[0]?.message?.content?.trim() ||
+          `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
+        return {
+          pairKey: getPairKey(member1.userId, member2.userId),
+          explanation,
+          chemistryScore,
+          sharedInterests,
+          connectionPoints,
+        };
+      } catch (fallbackError) {
+        console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
+      }
+    } else {
+      console.error('[MatchExplanation] Error generating explanation after retries:', primaryError);
+    }
     // 降级处理：返回基于化学反应分数的模板解释
     return {
       pairKey: getPairKey(member1.userId, member2.userId),
@@ -734,9 +760,9 @@ ${commonInterests.length > 0 ? `共同兴趣: ${commonInterests.join('、')}` : 
 
 请直接列出话题，不要加序号或前缀。`;
 
+  const { client, model, provider } = getClientForFunction('generateIceBreakers');
+  const t0 = Date.now();
   try {
-    const { client, model, provider } = getClientForFunction('generateIceBreakers');
-    const t0 = Date.now();
     const response = await withRetry(async () => {
       return client.chat.completions.create({
         model,
@@ -757,8 +783,34 @@ ${commonInterests.length > 0 ? `共同兴趣: ${commonInterests.join('、')}` : 
     if (iceBreakers.length >= 2) { // Lowered threshold from 3 to 2
       return iceBreakers;
     }
-  } catch (error) {
-    console.error('[IceBreakers] Error generating ice-breakers after retries:', error);
+  } catch (primaryError) {
+    if (provider === 'minimax') {
+      console.warn(`[IceBreakers] generateIceBreakers minimax failed after retries, trying deepseek fallback:`, primaryError);
+      try {
+        const { client: fbClient, model: fbModel } = getDeepseekSelection();
+        // Single attempt only — the primary path already exhausted its retries
+        const fbResponse = await fbClient.chat.completions.create({
+          model: fbModel,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 300,
+          temperature: 0.8,
+        });
+        console.log(`[IceBreakers] generateIceBreakers provider=deepseek (fallback) latency=${Date.now() - t0}ms`);
+        const content = fbResponse.choices[0]?.message?.content?.trim() || '';
+        const iceBreakers = content
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 5 && line.length < 100)
+          .slice(0, 5);
+        if (iceBreakers.length >= 2) {
+          return iceBreakers;
+        }
+      } catch (fallbackError) {
+        console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
+      }
+    } else {
+      console.error('[IceBreakers] Error generating ice-breakers after retries:', primaryError);
+    }
   }
   
   // 降级：返回预设话题
