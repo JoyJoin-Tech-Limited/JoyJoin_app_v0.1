@@ -722,7 +722,7 @@ The system must not produce or surface any ranking that implies a user is "less 
 | `apps/server/src/venueAssignmentService.ts` | Venue-to-group assignment logic | 1 |
 | `apps/server/src/dynamicWeights.ts` | Legacy gradient descent weight update (blind-box flow) | 1, 2 |
 | `apps/server/src/matchingWeightsService.ts` | Thompson Sampling bandit for pool flow weight learning | 1, 2 |
-| `apps/server/src/inference/hybridSemantic.ts` | Semantic similarity stub — extend for Phase 2 embedding layer | 2 |
+| `apps/server/src/inference/hybridSemantic.ts` | DeepSeek-assisted semantic attribute inference (low-confidence attribute validation; not embedding similarity) | 2 |
 | `apps/server/src/ai/minimaxClient.ts` | MiniMax client (`minimax-m2.7`); also used for multimodal in Phase 3 | 1, 3 |
 | `apps/server/src/ai/socialModelRouter.ts` | Routes social AI calls to MiniMax or DeepSeek based on `SOCIAL_AI_PROVIDER` env | 1, 2 |
 | `apps/server/src/ai/creativeModelRouter.ts` | Routes creative AI calls (themes, scenarios) | 1 |
