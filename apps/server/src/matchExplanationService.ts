@@ -18,7 +18,7 @@ import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS } from '@shared/constants';
-import type { MatchExplanationContract, GroupAnalysisContract } from '@shared/groupAnalysis';
+import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
 
 // ============ 配置常量 ============
 
@@ -113,7 +113,7 @@ export interface MatchExplanation extends MatchExplanationContract {
 
 export interface GroupAnalysis extends GroupAnalysisContract {
   groupId: string;
-  overallChemistry: string; // fire/warm/mild/cold
+  overallChemistry: OverallChemistry; // fire/warm/mild/cold
   groupDynamics: string; // 整体动态描述
   pairExplanations: MatchExplanation[]; // 两两配对解释
   iceBreakers: string[]; // 推荐破冰话题
@@ -682,7 +682,7 @@ export async function generateGroupAnalysis(
   const avgChemistry = pairCount > 0 ? totalChemistry / pairCount : 50;
   
   // 确定化学反应等级
-  let overallChemistry: string;
+  let overallChemistry: OverallChemistry;
   if (avgChemistry >= 85) overallChemistry = 'fire';
   else if (avgChemistry >= 70) overallChemistry = 'warm';
   else if (avgChemistry >= 55) overallChemistry = 'mild';

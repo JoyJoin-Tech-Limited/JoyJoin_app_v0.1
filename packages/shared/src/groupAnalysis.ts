@@ -3,6 +3,11 @@
  * Used by both the server (matchExplanationService) and the client (PostMatchEventCard, PoolGroupDetailPage).
  */
 
+import type { OverallChemistry } from './types/groupAnalysis';
+
+// Re-export so consumers can import everything from this file
+export type { OverallChemistry };
+
 export interface MatchMemberBase {
   userId: string;
   displayName?: string | null;
@@ -21,8 +26,7 @@ export interface MatchExplanationContract {
 
 export interface GroupAnalysisContract {
   groupId: string;
-  /** 'fire' | 'warm' | 'mild' | 'cold' */
-  overallChemistry: string;
+  overallChemistry: OverallChemistry;
   groupDynamics: string;
   pairExplanations: MatchExplanationContract[];
   iceBreakers: string[];
