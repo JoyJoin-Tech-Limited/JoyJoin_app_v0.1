@@ -18,6 +18,7 @@ import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS } from '@shared/constants';
+import type { MatchExplanationContract, GroupAnalysisContract } from '@shared/groupAnalysis';
 
 // ============ 配置常量 ============
 
@@ -102,7 +103,7 @@ export interface MatchMember {
   interestsWithHeat?: Array<{ topicId: string; heatLevel: number }> | null;
 }
 
-export interface MatchExplanation {
+export interface MatchExplanation extends MatchExplanationContract {
   pairKey: string; // "userId1-userId2" 排序后的组合
   explanation: string; // 2-3句话的匹配解释
   chemistryScore: number; // 化学反应分数
@@ -110,7 +111,7 @@ export interface MatchExplanation {
   connectionPoints: string[]; // 连接点（同乡、同行业等）
 }
 
-export interface GroupAnalysis {
+export interface GroupAnalysis extends GroupAnalysisContract {
   groupId: string;
   overallChemistry: string; // fire/warm/mild/cold
   groupDynamics: string; // 整体动态描述
@@ -628,9 +629,10 @@ export async function generateGroupAnalysis(
   members: MatchMember[],
   eventType: string = "饭局",
   useCache: boolean = true
-): Promise<GroupAnalysis> {
+): Promise<GroupAnalysis & { fromCache: boolean }> {
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
+  let fromCache = false;
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -644,6 +646,7 @@ export async function generateGroupAnalysis(
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
       pairExplanations = cachedExplanations;
       iceBreakers = cachedIceBreakers;
+      fromCache = true;
     } else {
       // Cache miss, expired, or roster changed - regenerate in parallel
       [pairExplanations, iceBreakers] = await Promise.all([
@@ -688,6 +691,7 @@ export async function generateGroupAnalysis(
     groupDynamics,
     pairExplanations,
     iceBreakers,
+    fromCache,
   };
 }
 
