@@ -20,7 +20,7 @@
     "./interests": "./src/interests.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
-    "./groupAnalysis": "./src/groupAnalysis.ts"
+    "./types/groupAnalysis": "./src/types/groupAnalysis.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.39.1",

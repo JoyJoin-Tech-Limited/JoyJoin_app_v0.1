@@ -36,5 +36,6 @@ export * from './atmospherePrediction';
 export * from './districts';
 export * from './personality';
 export * from './types/industry';
+export * from './types/groupAnalysis';
 export * from './eventDetail';
 export * from './groupAnalysis';
