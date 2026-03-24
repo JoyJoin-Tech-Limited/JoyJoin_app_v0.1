@@ -37,3 +37,4 @@ export * from './districts';
 export * from './personality';
 export * from './types/industry';
 export * from './eventDetail';
+export * from './groupAnalysis';
