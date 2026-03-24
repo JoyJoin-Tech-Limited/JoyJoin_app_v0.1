@@ -57,8 +57,8 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 | Atmosphere prediction | `predictAtmosphere()` rule engine | ✅ Live — `atmospherePrediction.ts` |
 | Match explanation | DeepSeek pair explanations + icebreakers | ✅ Live — `matchExplanationService.ts` |
 | Event theme title | AI-generated group theme title | ✅ Live — `eventThemeTitleGenerator.ts` |
-| Weight learning | Thompson Sampling bandit (pool flow) | ✅ Live — `matchingWeightsService.ts` |
-| Weight learning | Gradient descent (legacy flow) | ✅ Live — `dynamicWeights.ts` |
+| Weight learning | Thompson Sampling bandit | ✅ Available — `matchingWeightsService.ts` (admin evolution + `userMatchingService.ts`; not yet wired into `poolMatchingService.ts`) |
+| Weight learning | Gradient descent | ⚠️ Legacy / experimental — `dynamicWeights.ts` (not active in current pool matching) |
 | Interest matching | Static Jaccard + heat bonus | ✅ Live — `poolMatchingService.ts` |
 | Temporal interest decay | Heat-weighted by recency | 🔲 Phase 1 |
 | Archetype trajectory | Blended smoothing over 30-day shifts | 🔲 Phase 1 |
