@@ -39,6 +39,7 @@ function ChatEventRedirect({ params }: { params: { eventId: string } }) {
   return null;
 }
 // InterestsTopicsPage and EditInterestsPage removed (2026-01-19) - legacy interests flow
+import EditInterestsCarouselPage from "@/pages/EditInterestsCarouselPage";
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
@@ -246,6 +247,7 @@ function AuthenticatedRouter() {
           <Route path="/profile/edit/work" component={EditWorkPage} />
           <Route path="/profile/edit/personal" component={EditPersonalPage} />
           <Route path="/profile/edit/intent" component={EditIntentPage} />
+          <Route path="/profile/edit/interests" component={EditInterestsCarouselPage} />
           <Route path="/profile/wallet" component={WalletPage} />
           <Route path="/profile/faq" component={FAQPage} />
           <Route path="/profile/terms" component={TermsPage} />
