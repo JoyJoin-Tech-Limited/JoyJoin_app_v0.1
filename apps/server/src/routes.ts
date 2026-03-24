@@ -2462,6 +2462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db
         .select({
           totalHeat: userInterests.totalHeat,
+          totalSelections: userInterests.totalSelections,
           topPriorities: userInterests.topPriorities,
           categoryHeat: userInterests.categoryHeat,
         })
@@ -2480,6 +2481,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // PATCH /api/user/interests/nudge
+  // Bumps heat level (+1, capped at level 3) for specified topic IDs already in the user's selections.
+  // Updates user_interests.updated_at — making it a meaningful behavioral signal.
+  // Used by the post-event interest nudge step in EventFeedbackFlow.
+  app.patch('/api/user/interests/nudge', isPhoneAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { boostTopicIds } = req.body;
+
+      if (!Array.isArray(boostTopicIds) || boostTopicIds.length === 0) {
+        return res.status(400).json({ error: "boostTopicIds must be a non-empty array" });
+      }
+
+      // Load existing interests
+      const existing = await db
+        .select()
+        .from(userInterests)
+        .where(eq(userInterests.userId, userId))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "No interests found" });
+      }
+
+      // Heat values are normalized from level — single source of truth prevents aggregate drift
+      const HEAT_BY_LEVEL: Record<number, number> = { 1: 3, 2: 10, 3: 25 };
+      // Only boost topics already in the user's selections — nudge refines existing signals.
+      // Adding new topics requires the full edit flow (/profile/edit/interests).
+      let boostedCount = 0;
+      const selections = (existing[0].selections as any[]).map(s => {
+        // Normalize heat from level for all entries to prevent aggregate drift from stale data
+        const normalizedHeat = HEAT_BY_LEVEL[s.level] ?? s.heat;
+        if (boostTopicIds.includes(s.topicId) && s.level < 3) {
+          const newLevel = (s.level + 1) as 1 | 2 | 3;
+          boostedCount++;
+          return { ...s, level: newLevel, heat: HEAT_BY_LEVEL[newLevel] };
+        }
+        return { ...s, heat: normalizedHeat };
+      });
+
+      // Recompute totals
+      const totalHeat = selections.reduce((sum: number, s: any) => sum + s.heat, 0);
+      const totalSelections = selections.length;
+      const categoryHeat: Record<string, number> = {};
+      selections.forEach((s: any) => {
+        categoryHeat[s.categoryId] = (categoryHeat[s.categoryId] || 0) + s.heat;
+      });
+      const topPriorities = selections
+        .filter((s: any) => s.level === 3)
+        .map((s: any) => ({ topicId: s.topicId, label: s.label, heat: s.heat }));
+
+      await db
+        .update(userInterests)
+        .set({ selections, totalHeat, totalSelections, categoryHeat, topPriorities, updatedAt: new Date() })
+        .where(eq(userInterests.userId, userId));
+
+      res.json({ success: true, boostedCount });
+    } catch (error) {
+      console.error("Error applying interest nudge:", error);
+      res.status(500).json({ message: "Failed to apply interest nudge" });
+    }
+  });
 
   app.post('/api/profile/personality', isPhoneAuthenticated, async (req: any, res) => {
     try {
