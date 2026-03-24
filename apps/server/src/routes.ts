@@ -6,6 +6,7 @@ import ttsRoutes from "./routes/tts";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
+import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { paymentService } from "./paymentService";
@@ -9380,6 +9381,131 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     } catch (error) {
       console.error("Error fetching pool group details:", error);
       res.status(500).json({ message: "Failed to fetch group details" });
+    }
+  });
+
+  // Get AI-generated group analysis for a pool group
+  app.get('/api/pool-groups/:groupId/analysis', requireAuth, aiEndpointLimiter, async (req, res) => {
+    try {
+      const { groupId } = req.params;
+      const userId = (req.session as any).userId as string;
+
+      // Load group from DB
+      const group = await db.query.eventPoolGroups.findFirst({
+        where: eq(eventPoolGroups.id, groupId),
+      });
+      if (!group) {
+        return res.status(404).json({ error: 'Group not found' });
+      }
+
+      // Load pool for eventType context
+      const pool = await db.query.eventPools.findFirst({
+        where: eq(eventPools.id, group.poolId),
+      });
+
+      // Check if user is in this group
+      const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: and(
+          eq(eventPoolRegistrations.userId, userId),
+          eq(eventPoolRegistrations.assignedGroupId, groupId)
+        ),
+      });
+
+      if (!userRegistration) {
+        return res.status(403).json({ error: 'Not a member of this group' });
+      }
+
+      // Load all group registrations to get member IDs
+      const groupRegistrations = await db.query.eventPoolRegistrations.findMany({
+        where: eq(eventPoolRegistrations.assignedGroupId, groupId),
+      });
+
+      const memberIds = groupRegistrations.map((r: any) => r.userId);
+
+      // Load full user profiles for all members
+      const memberProfiles = await db.query.users.findMany({
+        where: sql`${users.id} = ANY(${memberIds})`,
+      });
+
+      // Load user interests (with heat levels) for deep interest overlap detection
+      const memberInterestsRows = await db.query.userInterests.findMany({
+        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
+      const interestsByUserId = new Map(
+        memberInterestsRows.map((row) => [row.userId, row] as const)
+      );
+
+      // Build MatchMember[] using the same field mapping as the existing handler
+      const members = memberProfiles.map((m: any) => {
+        const interestRow = interestsByUserId.get(m.id);
+        const interestsWithHeat = interestRow?.selections
+          ? (interestRow.selections as Array<{ topicId: string; level?: number | null }>).map(
+              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+            )
+          : null;
+        // Prefer interestsRankedTop3; fall back to top heat-sorted selections; then legacy field
+        const interestsTop =
+          Array.isArray(m.interestsRankedTop3) && m.interestsRankedTop3.length > 0
+            ? m.interestsRankedTop3
+            : interestsWithHeat
+            ? interestsWithHeat
+                .slice()
+                .sort((a: { heatLevel: number }, b: { heatLevel: number }) => b.heatLevel - a.heatLevel)
+                .slice(0, 3)
+                .map((s: { topicId: string }) => s.topicId)
+            : m.interestsTop;
+        return {
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryArchetype,
+          interestsTop,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
+          interestsWithHeat,
+        };
+      });
+
+      const { generateGroupAnalysis } = await import('./matchExplanationService');
+
+      // Call the existing service with caching enabled
+      const analysis = await generateGroupAnalysis(
+        groupId,
+        members,
+        pool?.eventType ?? '饭局',
+        true
+      );
+
+      // Map internal GroupAnalysis → GroupAnalysisResponse
+      const response: GroupAnalysisResponse = {
+        groupId,
+        overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
+        groupDynamics: analysis.groupDynamics,
+        iceBreakers: analysis.iceBreakers,
+        pairExplanations: analysis.pairExplanations.map((pe) => ({
+          pairKey: pe.pairKey,
+          explanation: pe.explanation,
+          chemistryScore: pe.chemistryScore,
+          sharedInterests: pe.sharedInterests ?? [],
+          connectionPoints: pe.connectionPoints ?? [],
+        })),
+        fromCache: analysis.fromCache ?? false,
+        generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+      };
+
+      return res.json(response);
+    } catch (error) {
+      console.error('[analysis] Error generating group analysis:', error);
+      return res.status(500).json({ error: 'Failed to generate analysis' });
     }
   });
 
