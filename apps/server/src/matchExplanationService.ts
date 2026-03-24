@@ -177,7 +177,7 @@ function calculatePairCount(memberCount: number): number {
 async function loadCachedPairExplanations(
   groupId: string,
   members: MatchMember[]
-): Promise<MatchExplanation[] | null> {
+): Promise<{ explanations: MatchExplanation[]; generatedAt: string } | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -212,7 +212,7 @@ async function loadCachedPairExplanations(
         return null;
       }
       
-      return cached.explanations;
+      return { explanations: cached.explanations, generatedAt: cached.generatedAt };
     }
     
     // Handle legacy cache format (without memberHash) - invalidate and regenerate
@@ -636,6 +636,7 @@ export async function generateGroupAnalysis(
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
   let fromCache = false;
+  let cacheGeneratedAt: string | undefined;
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -647,7 +648,8 @@ export async function generateGroupAnalysis(
     
     if (cachedExplanations && cachedIceBreakers) {
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
-      pairExplanations = cachedExplanations;
+      pairExplanations = cachedExplanations.explanations;
+      cacheGeneratedAt = cachedExplanations.generatedAt;
       iceBreakers = cachedIceBreakers;
       fromCache = true;
     } else {
@@ -695,7 +697,8 @@ export async function generateGroupAnalysis(
     pairExplanations,
     iceBreakers,
     fromCache,
-    generatedAt: new Date().toISOString(),
+    // On cache hit, use the original generation timestamp so clients can tell when data was last refreshed
+    generatedAt: fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString(),
   };
 }
 

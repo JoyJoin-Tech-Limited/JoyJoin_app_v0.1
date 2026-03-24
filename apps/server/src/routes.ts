@@ -6,6 +6,7 @@ import ttsRoutes from "./routes/tts";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
+import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { paymentService } from "./paymentService";
@@ -9384,7 +9385,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Get AI-generated group analysis for a pool group
-  app.get('/api/pool-groups/:groupId/analysis', requireAuth, async (req, res) => {
+  app.get('/api/pool-groups/:groupId/analysis', requireAuth, aiEndpointLimiter, async (req, res) => {
     try {
       const { groupId } = req.params;
       const userId = (req.session as any).userId as string;
@@ -9445,12 +9446,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
               (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
             )
           : null;
+        // Prefer interestsRankedTop3; fall back to top heat-sorted selections; then legacy field
+        const interestsTop =
+          Array.isArray(m.interestsRankedTop3) && m.interestsRankedTop3.length > 0
+            ? m.interestsRankedTop3
+            : interestsWithHeat
+            ? interestsWithHeat
+                .slice()
+                .sort((a: { heatLevel: number }, b: { heatLevel: number }) => b.heatLevel - a.heatLevel)
+                .slice(0, 3)
+                .map((s: { topicId: string }) => s.topicId)
+            : m.interestsTop;
         return {
           userId: m.id,
           displayName: m.displayName || '神秘嘉宾',
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
-          interestsTop: m.interestsTop,
+          interestsTop,
           industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
@@ -9474,9 +9486,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       );
 
       // Map internal GroupAnalysis → GroupAnalysisResponse
-      const response = {
+      const response: GroupAnalysisResponse = {
         groupId,
-        overallChemistry: analysis.overallChemistry,
+        overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
         groupDynamics: analysis.groupDynamics,
         iceBreakers: analysis.iceBreakers,
         pairExplanations: analysis.pairExplanations.map((pe) => ({
