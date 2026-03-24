@@ -9420,16 +9420,20 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         where: eq(eventPoolRegistrations.assignedGroupId, groupId),
       });
 
-      const memberIds = groupRegistrations.map((r: any) => r.userId);
+      const memberIds = groupRegistrations.map((r: any) => r.userId as string);
+
+      if (memberIds.length === 0) {
+        return res.status(404).json({ error: 'Group has no members' });
+      }
 
       // Load full user profiles for all members
       const memberProfiles = await db.query.users.findMany({
-        where: sql`${users.id} = ANY(${memberIds})`,
+        where: inArray(users.id, memberIds),
       });
 
       // Load user interests (with heat levels) for deep interest overlap detection
       const memberInterestsRows = await db.query.userInterests.findMany({
-        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+        where: inArray(userInterests.userId, memberIds),
       }) as Array<{
         userId: string;
         selections: Array<{ topicId: string; level?: number | null }> | null;
@@ -9442,7 +9446,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const members = memberProfiles.map((m: any) => {
         const interestRow = interestsByUserId.get(m.id);
         const interestsWithHeat = interestRow?.selections
-          ? (interestRow.selections as Array<{ topicId: string; level?: number | null }>).map(
+          ? interestRow.selections.map(
               (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
             )
           : null;

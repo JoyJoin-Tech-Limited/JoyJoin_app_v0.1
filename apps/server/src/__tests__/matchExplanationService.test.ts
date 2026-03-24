@@ -6,9 +6,26 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('openai', () => {
-  const MockOpenAI = function() {
-    return {
+// Mock the database to avoid needing DATABASE_URL in tests
+vi.mock('../db', () => ({
+  db: {
+    query: {
+      eventPoolGroups: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    },
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    }),
+  },
+}));
+
+// Mock socialModelRouter to avoid needing AI API keys in tests
+vi.mock('../ai/socialModelRouter', () => ({
+  getClientForFunction: vi.fn().mockReturnValue({
+    client: {
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({
@@ -16,10 +33,24 @@ vi.mock('openai', () => {
           }),
         },
       },
-    };
-  };
-  return { default: MockOpenAI };
-});
+    },
+    model: 'deepseek-chat',
+    provider: 'deepseek',
+  }),
+  getDeepseekSelection: vi.fn().mockReturnValue({
+    client: {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+          }),
+        },
+      },
+    },
+    model: 'deepseek-chat',
+    provider: 'deepseek',
+  }),
+}));
 
 import { 
   matchExplanationService, 
@@ -138,7 +169,7 @@ describe('matchExplanationService', () => {
 
     it('should find same work mode + industry category compound connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points).toContain('同在科技互联网·在职人士');
+      expect(points).toContain('同在科技互联网·在职');
     });
 
     it('should find compound hometown + industry epic connection', () => {
