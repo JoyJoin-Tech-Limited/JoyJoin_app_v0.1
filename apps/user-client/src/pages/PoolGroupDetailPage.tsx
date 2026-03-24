@@ -8,6 +8,7 @@ import PostMatchEventCard from "@/components/PostMatchEventCard";
 import IcebreakerTool from "@/components/IcebreakerTool";
 import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import { useAuth } from "@/hooks/useAuth";
+import { useGroupAnalysis } from "@/hooks/useGroupAnalysis";
 import { calculateAge } from "@shared/utils";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 
@@ -43,6 +44,8 @@ export default function PoolGroupDetailPage() {
   const { data, isLoading } = useQuery<PoolGroupResponse>({
     queryKey: ["/api/pool-groups", groupId],
   });
+
+  const { data: groupAnalysis, isLoading: isLoadingAnalysis } = useGroupAnalysis(data?.group?.id ?? null);
 
   if (isLoading) {
     return (
@@ -247,6 +250,8 @@ export default function PoolGroupDetailPage() {
               hometownRegionCity: user?.hometownRegionCity || undefined,
               hometownAffinityOptin: user?.hometownAffinityOptin ?? undefined,
             }}
+            groupAnalysis={groupAnalysis}
+            isLoadingAnalysis={isLoadingAnalysis}
           />
         )}
 
