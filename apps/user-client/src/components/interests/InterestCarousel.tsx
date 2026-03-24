@@ -32,6 +32,7 @@ interface InterestSelection {
 interface InterestCarouselProps {
   onComplete: (data: InterestCarouselData) => void;
   onBack: () => void;
+  initialSelections?: Record<string, HeatLevel>;  // optional — for edit mode (pre-populate from DB)
 }
 
 export interface InterestCarouselData {
@@ -58,7 +59,7 @@ interface StoredProgress {
 // Maximum possible heat (56 topics × 25 heat at level 3)
 const MAX_HEAT = 1400;
 
-export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) {
+export function InterestCarousel({ onComplete, onBack, initialSelections }: InterestCarouselProps) {
   const { toast } = useToast();
   const prefersReducedMotion = useReducedMotion();
   const analytics = useOnboardingAnalytics('extended-data'); // Phase 2: Analytics tracking
@@ -73,7 +74,15 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
   const scrollTimeoutRef = useRef<NodeJS.Timeout>();
   const [lastSelectedTopic, setLastSelectedTopic] = useState<string | null>(null);
 
-  const [selections, setSelections] = useState<Record<string, HeatLevel>>({});
+  // In edit mode (initialSelections prop provided), skip localStorage — DB is the source of truth.
+  // Note: we check `initialSelections !== undefined` rather than non-empty, so that users with
+  // zero existing interests who arrive via the profile edit route also bypass localStorage.
+  const isEditMode = initialSelections !== undefined;
+  const [selections, setSelections] = useState<Record<string, HeatLevel>>(
+    initialSelections && Object.keys(initialSelections).length > 0
+      ? initialSelections
+      : {}
+  );
 
   // Enhancement 4: Heat bar milestone burst particles
   const HEAT_MILESTONES = [0.18, 0.35, 0.55, 0.75];
@@ -83,6 +92,9 @@ export function InterestCarousel({ onComplete, onBack }: InterestCarouselProps) 
 
   // Load from localStorage on mount with expiry check
   useEffect(() => {
+    // In edit mode (initialSelections provided), skip localStorage — DB is the source of truth
+    if (isEditMode) return;
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {

@@ -14,8 +14,9 @@ import SelectConnectionsStep from "@/components/feedback/SelectConnectionsStep";
 import WechatIdSetupStep from "@/components/feedback/WechatIdSetupStep";
 import ImprovementCards from "@/components/feedback/ImprovementCards";
 import FeedbackCompletion from "@/components/feedback/FeedbackCompletion";
+import { INTEREST_CATEGORIES, type HeatLevel } from "@/data/interestCarouselData";
 
-type FeedbackStep = "intro" | "atmosphere" | "selectConnections" | "wechatIdSetup" | "venueStyle" | "improvement" | "completion";
+type FeedbackStep = "intro" | "atmosphere" | "selectConnections" | "wechatIdSetup" | "venueStyle" | "improvement" | "interestRefresh" | "completion";
 
 interface FeedbackData {
   atmosphereScore?: number;
@@ -73,7 +74,7 @@ export default function EventFeedbackFlow() {
         setMutualMatches(response.mutualMatches);
       }
       
-      setCurrentStep("completion");
+      setCurrentStep("interestRefresh");
     },
     onError: (error) => {
       toast({
@@ -84,7 +85,7 @@ export default function EventFeedbackFlow() {
     },
   });
 
-  const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "wechatIdSetup", "venueStyle", "improvement", "completion"];
+  const steps: FeedbackStep[] = ["intro", "atmosphere", "selectConnections", "wechatIdSetup", "venueStyle", "improvement", "interestRefresh", "completion"];
 
   // Build the actual visible step list based on whether the wechat step applies.
   // When currentUser is still loading we conservatively include wechatIdSetup so the
@@ -113,9 +114,25 @@ export default function EventFeedbackFlow() {
     else if (currentStep === "wechatIdSetup") setCurrentStep("venueStyle");
     else if (currentStep === "venueStyle") setCurrentStep("improvement");
     else if (currentStep === "improvement") {
-      // Submit feedback
+      // Submit feedback; on success moves to interestRefresh (see submitMutation.onSuccess)
       submitMutation.mutate(updatedData);
     }
+  };
+
+  const handleInterestRefresh = async (data: { boostedTopicIds: string[] }) => {
+    if (data.boostedTopicIds.length > 0) {
+      try {
+        await apiRequest("PATCH", "/api/user/interests/nudge", {
+          boostTopicIds: data.boostedTopicIds,
+          eventId,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/interests"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      } catch {
+        // Silent fail — interest nudge is non-blocking
+      }
+    }
+    setCurrentStep("completion");
   };
 
   const handleBack = () => {
@@ -247,6 +264,14 @@ export default function EventFeedbackFlow() {
             initialOther={feedbackData.improvementOther}
             onNext={handleNext}
             isSubmitting={submitMutation.isPending}
+          />
+        )}
+        
+        {currentStep === "interestRefresh" && (
+          <InterestRefreshStep
+            eventType={event?.eventType}
+            onNext={handleInterestRefresh}
+            onSkip={() => setCurrentStep("completion")}
           />
         )}
         
@@ -449,5 +474,105 @@ function VenueStyleStep({
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+// Topic chip topics grouped by event type for the interest nudge step
+const NUDGE_TOPICS_BY_EVENT_TYPE: Record<string, string[]> = {
+  "饭局": ["lifestyle_food", "lifestyle_coffee", "culture_movies", "city_hidden_gems", "lifestyle_travel", "philosophy_meaning", "lifestyle_wine", "culture_live"],
+  "酒局": ["lifestyle_wine", "city_bars", "culture_music", "city_hidden_gems", "lifestyle_coffee", "culture_standup", "city_walk", "culture_live"],
+};
+
+// Generic fallback topics shown when event type doesn't match
+const NUDGE_TOPICS_FALLBACK = [
+  "lifestyle_travel", "lifestyle_food", "culture_music", "philosophy_meaning",
+  "career_networking", "lifestyle_sports", "culture_movies", "city_hidden_gems",
+];
+
+function getTopicsForEventType(eventType?: string): Array<{ id: string; emoji: string; label: string }> {
+  const topicIds = (eventType && NUDGE_TOPICS_BY_EVENT_TYPE[eventType]) ?? NUDGE_TOPICS_FALLBACK;
+  const result: Array<{ id: string; emoji: string; label: string }> = [];
+  for (const id of topicIds) {
+    for (const cat of INTEREST_CATEGORIES) {
+      const topic = cat.topics.find(t => t.id === id);
+      if (topic) {
+        result.push({ id: topic.id, emoji: topic.emoji, label: topic.label });
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+interface InterestRefreshStepProps {
+  eventType?: string;
+  onNext: (data: { boostedTopicIds: string[] }) => void;
+  onSkip: () => void;
+}
+
+function InterestRefreshStep({ eventType, onNext, onSkip }: InterestRefreshStepProps) {
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const topics = getTopicsForEventType(eventType);
+
+  const toggle = (topicId: string) => {
+    setSelectedTopicIds(prev =>
+      prev.includes(topicId) ? prev.filter(t => t !== topicId) : [...prev, topicId]
+    );
+  };
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] bg-background">
+      <div className="flex-1 p-6 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="text-4xl">🔥</div>
+          <h2 className="text-xl font-bold">今晚点燃了哪些兴趣？</h2>
+          <p className="text-sm text-muted-foreground">
+            选出今晚让你更有共鸣的话题，帮我们为你匹配更好的活动
+          </p>
+        </div>
+
+        {/* Topic chips grid */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {topics.map((topic) => {
+            const isSelected = selectedTopicIds.includes(topic.id);
+            return (
+              <motion.button
+                key={topic.id}
+                onClick={() => toggle(topic.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-sm font-medium transition-colors ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-muted-foreground/30 text-foreground hover:border-primary/50"
+                }`}
+                whileTap={{ scale: 0.95 }}
+                data-testid={`nudge-topic-${topic.id}`}
+              >
+                <span>{topic.emoji}</span>
+                <span>{topic.label}</span>
+              </motion.button>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center">
+          选择的话题会提升你的兴趣热度 🌡️
+        </p>
+      </div>
+
+      <div className="p-4 space-y-2 border-t">
+        <Button
+          onClick={() => onNext({ boostedTopicIds: selectedTopicIds })}
+          className="w-full h-12 font-bold"
+          data-testid="button-interest-refresh-confirm"
+        >
+          {selectedTopicIds.length > 0 ? `确认 (${selectedTopicIds.length} 个话题)` : "跳过"}
+        </Button>
+        {selectedTopicIds.length === 0 && (
+          <Button variant="ghost" onClick={onSkip} className="w-full text-muted-foreground" data-testid="button-interest-refresh-skip">
+            暂时跳过
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
