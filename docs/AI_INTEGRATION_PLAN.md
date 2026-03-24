@@ -563,7 +563,8 @@ PHASE 1: EXPERIENCE + INSTRUMENTATION
     -> energyScore, vibeType, suggestedTopics (5 atmosphere types)
   matchExplanationService.ts
     -> generateGroupAnalysis()  -> pairExplanationsCache, iceBreakersCache
-    -> generateIceBreakers(atmosphereType) -> SequencedIceBreaker[]
+    -> generateIceBreakers() -> string[]                        // current implementation
+    -> generateIceBreakers(atmosphereType) -> SequencedIceBreaker[]  // planned Phase 1 upgrade
   eventScenarioService.ts (new)
     -> generateEventScenario()  -> themeKeyword -> eventThemeTitleGenerator.ts
                                 -> venueVibeHint -> venueAssignmentService.ts
