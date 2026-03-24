@@ -110,4 +110,14 @@ export interface GroupAnalysisResponse {
    * refreshed. Clients can display "updated X minutes ago" using this.
    */
   generatedAt: string;
+
+  /**
+   * Pair explanations filtered for the authenticated viewer —
+   * a convenience subset of `pairExplanations` containing only the
+   * pairs that involve the requesting user.
+   *
+   * Populated server-side via `getPairExplanationForUser()`.
+   * Optional for backward compatibility with legacy/unauthenticated consumers.
+   */
+  myPairs?: PairExplanation[];
 }
