@@ -122,6 +122,13 @@ export default function EditProfilePage() {
   
   const { data: user, isLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
+  // Load interests summary separately — not included in /api/auth/user
+  const { data: interestsSummary } = useQuery<{ totalHeat: number; topPriorities: any[]; categoryHeat: Record<string, number>; totalSelections?: number } | null>({
+    queryKey: ["/api/user/interests/summary"],
+    enabled: !!user,
+    retry: false,
+  });
+
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -229,16 +236,16 @@ export default function EditProfilePage() {
           fields: [
             {
               label: "兴趣话题",
-              value: (user as any).userInterestsSelections?.length > 0
-                ? `已选 ${(user as any).userInterestsSelections.length} 个话题`
+              value: interestsSummary?.totalSelections != null && interestsSummary.totalSelections > 0
+                ? `已选 ${interestsSummary.totalSelections} 个话题`
                 : (getUserPrimaryInterests(user).length > 0
                     ? getUserPrimaryInterests(user).map((id: string) => getInterestLabel(id)).join(", ")
                     : null)
             },
             {
               label: "超热爱",
-              value: (user as any).userInterestsTopPriorities?.length > 0
-                ? (user as any).userInterestsTopPriorities.map((t: any) => t.label).join("、")
+              value: interestsSummary?.topPriorities?.length > 0
+                ? interestsSummary.topPriorities.map((t: any) => t.label).join("、")
                 : null
             },
           ],

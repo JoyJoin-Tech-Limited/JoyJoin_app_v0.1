@@ -128,8 +128,10 @@ export function InterestCarousel({ onComplete, onBack, initialSelections }: Inte
     }
   }, []);
 
-  // Save to localStorage on changes with timestamp
+  // Save to localStorage on changes with timestamp — skipped in edit mode to avoid
+  // overwriting onboarding progress (joyjoin_interests_carousel_progress) with profile edits.
   useEffect(() => {
+    if (isEditMode) return;
     const data: StoredProgress = {
       selections,
       currentCategoryIndex: 0, // Not used anymore but keeping for backward compatibility
