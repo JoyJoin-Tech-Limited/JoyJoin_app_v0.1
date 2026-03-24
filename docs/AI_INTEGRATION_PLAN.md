@@ -192,8 +192,22 @@ These items use **orchestration and experience AI** only — no new predictive c
 
 **Upgrade:** Pass `atmospherePrediction` context alongside archetype pair data so the explanation is grounded in the group's predicted energy, not just the pair in isolation.
 
+**Current signature:**
 ```typescript
-// Extended signature
+// apps/server/src/matchExplanationService.ts — current implementation
+export async function generatePairExplanation(
+  member1: MatchMember,
+  member2: MatchMember
+): Promise<MatchExplanation>
+
+// MatchExplanation return type:
+// { pairKey: string; explanation: string; chemistryScore: number;
+//   sharedInterests: string[]; connectionPoints: string[] }
+```
+
+**Proposed upgrade** (Phase 1):
+```typescript
+// Add optional groupContext parameter; extend MatchExplanation with context-aware framing
 export async function generatePairExplanation(
   member1: MatchMember,
   member2: MatchMember,
@@ -202,7 +216,7 @@ export async function generatePairExplanation(
     groupSize: number;
     dominantArchetypes: string[];
   }
-): Promise<string>
+): Promise<MatchExplanation>
 ```
 
 The context lets the model frame the connection as part of the group narrative: *"你和林晓的反差会在这次探索型小队里制造意外的火花"* rather than a generic *"你们兴趣相投"*.
@@ -723,7 +737,7 @@ The system must not produce or surface any ranking that implies a user is "less 
 | `apps/server/src/eventThemeGeneratorService.ts` | Orchestrates `generateAndSaveEventTheme()` | 1 |
 | `apps/server/src/venueAssignmentService.ts` | Venue-to-group assignment logic | 1 |
 | `apps/server/src/dynamicWeights.ts` | Legacy gradient descent weight update (blind-box flow) | 1, 2 |
-| `apps/server/src/matchingWeightsService.ts` | Thompson Sampling bandit for pool flow weight learning | 1, 2 |
+| `apps/server/src/matchingWeightsService.ts` | Thompson Sampling bandit weight learning — available (used in admin evolution + `userMatchingService.ts`); wiring into `poolMatchingService.ts` is a Phase 1 task | 1, 2 |
 | `apps/server/src/inference/hybridSemantic.ts` | DeepSeek-assisted semantic attribute inference (low-confidence attribute validation; not embedding similarity) | 2 |
 | `apps/server/src/ai/minimaxClient.ts` | MiniMax client (`minimax-m2.7`); also used for multimodal in Phase 3 | 1, 3 |
 | `apps/server/src/ai/socialModelRouter.ts` | Routes social AI calls to MiniMax or DeepSeek based on `SOCIAL_AI_PROVIDER` env | 1, 2 |
