@@ -116,6 +116,10 @@ export interface GroupAnalysis {
   groupDynamics: string; // 整体动态描述
   pairExplanations: MatchExplanation[]; // 两两配对解释
   iceBreakers: string[]; // 推荐破冰话题
+  /** true if the response was served from the DB cache */
+  fromCache?: boolean;
+  /** ISO-8601 timestamp of generation */
+  generatedAt?: string;
 }
 
 // ============ 缓存类型 ============
@@ -173,7 +177,7 @@ function calculatePairCount(memberCount: number): number {
 async function loadCachedPairExplanations(
   groupId: string,
   members: MatchMember[]
-): Promise<MatchExplanation[] | null> {
+): Promise<{ explanations: MatchExplanation[]; generatedAt: string } | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -208,7 +212,7 @@ async function loadCachedPairExplanations(
         return null;
       }
       
-      return cached.explanations;
+      return { explanations: cached.explanations, generatedAt: cached.generatedAt };
     }
     
     // Handle legacy cache format (without memberHash) - invalidate and regenerate
@@ -631,6 +635,8 @@ export async function generateGroupAnalysis(
 ): Promise<GroupAnalysis> {
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
+  let fromCache = false;
+  let cacheGeneratedAt: string | undefined;
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -642,8 +648,10 @@ export async function generateGroupAnalysis(
     
     if (cachedExplanations && cachedIceBreakers) {
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
-      pairExplanations = cachedExplanations;
+      pairExplanations = cachedExplanations.explanations;
+      cacheGeneratedAt = cachedExplanations.generatedAt;
       iceBreakers = cachedIceBreakers;
+      fromCache = true;
     } else {
       // Cache miss, expired, or roster changed - regenerate in parallel
       [pairExplanations, iceBreakers] = await Promise.all([
@@ -688,6 +696,9 @@ export async function generateGroupAnalysis(
     groupDynamics,
     pairExplanations,
     iceBreakers,
+    fromCache,
+    // On cache hit, use the original generation timestamp so clients can tell when data was last refreshed
+    generatedAt: fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString(),
   };
 }
 
