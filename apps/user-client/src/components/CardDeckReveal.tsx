@@ -10,6 +10,8 @@ import {
   type UserContext,
   type SparkPrediction,
 } from "@/lib/attendeeAnalytics";
+import ChemistryArc from "./ChemistryArc";
+import ConnectionPointPills from "./ConnectionPointPills";
 
 // ── Per-archetype visual lookup maps ─────────────────────────────────────────
 
@@ -84,6 +86,8 @@ export interface SquadMember {
   socialTag?: string;
   matchReason?: string;
   compatibilityScore?: number;
+  /** AI-detected connection points, e.g. "同乡（广州）", "同行业", "性格互补" */
+  connectionPoints?: string[];
   // Additional fields forwarded to spark-prediction engine
   educationLevel?: string;
   industry?: string;
@@ -467,8 +471,18 @@ function MemberCard({
               </div>
             )}
 
-            {/* Social Energy Bar */}
-            {config?.energyLevel !== undefined && <EnergyBar level={config.energyLevel} />}
+            {/* Chemistry Arc (AI) or Social Energy Bar (heuristic fallback) */}
+            {member.compatibilityScore !== undefined ? (
+              <div style={{ marginTop: 4 }}>
+                <ChemistryArc
+                  score={member.compatibilityScore}
+                  accentColor={archetypeAccentHex}
+                  prefersReducedMotion={prefersReducedMotion}
+                />
+              </div>
+            ) : (
+              config?.energyLevel !== undefined && <EnergyBar level={config.energyLevel} />
+            )}
 
             {/* Rarity dots — subtle preview of spark quality when collapsed */}
             {isFlipped && !isSelected && sortedSparks.length > 0 && (
