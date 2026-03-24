@@ -8,6 +8,7 @@
 ## Table of Contents
 
 1. [Overview & Design Philosophy](#1-overview--design-philosophy)
+   - [1.4 LLM Provider Architecture](#14-llm-provider-architecture)
 2. [Phase 1 — AI-Enhanced Social Experience & Match Quality Infrastructure](#2-phase-1--ai-enhanced-social-experience--match-quality-infrastructure)
 3. [Phase 2 — Predictive Compatibility Enrichment](#3-phase-2--predictive-compatibility-enrichment)
 4. [Phase 3 — Latent Compatibility Intelligence](#4-phase-3--latent-compatibility-intelligence)
@@ -70,6 +71,116 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 | Predictive compatibility scoring | Outcome-trained compatibility model | 🔲 Phase 2 |
 | Latent user state modeling | Behavioral embeddings, contextual memory | 🔲 Phase 3 |
 | Multimodal signal enrichment | Audio/visual cues with consent & fairness | 🔲 Phase 3 |
+
+### 1.4 LLM Provider Architecture
+
+JoyJoin runs a **dual-provider LLM layer** that is live in production today. Both providers share an OpenAI-compatible interface; routing is controlled by environment variables so the preferred provider for each function can be changed without a code deploy.
+
+#### Provider Overview
+
+| Provider | Model | Env var | Base URL | Client file |
+|---|---|---|---|---|
+| **MiniMax** | `minimax-m2.7` (overridable via `MINIMAX_MODEL`) | `MINIMAX_API_KEY` | `https://api.minimax.chat/v1` (overridable via `MINIMAX_BASE_URL`) | `apps/server/src/ai/minimaxClient.ts` |
+| **DeepSeek** | `deepseek-chat` | `DEEPSEEK_API_KEY` | `https://api.deepseek.com` | Instantiated inline in each service |
+
+**MiniMax client details** (`minimaxClient.ts`):
+- Lazy-initialized singleton; returns `null` when `MINIMAX_API_KEY` is not set — no error at module load
+- Timeout: 15 000 ms (overridable via `MINIMAX_TIMEOUT_MS`)
+- `maxRetries: 2`
+- Exports: `getMiniMaxClient()`, `isMiniMaxAvailable()`, `getMinimaxModel()`, `MINIMAX_MODEL`, `MINIMAX_DEFAULT_MODEL`, `isMinimaxEnabled` (alias for `isMiniMaxAvailable`), `getMinimaxClient` (alias), `minimaxClient` (module-load-time singleton)
+
+**DeepSeek client details**:
+- Instantiated inline inside each service file (not a shared singleton)
+- Lazy-initialized with `'dummy-key-for-fallback'` so the module can be safely imported in MiniMax-only environments without throwing on load; real requests require `DEEPSEEK_API_KEY` to be set
+
+#### Three Routing Layers
+
+**Layer 1 — `socialModelRouter.ts`: Social experience functions**
+
+Controlled by env var `SOCIAL_AI_PROVIDER`:
+
+| Value | Behaviour |
+|---|---|
+| `hybrid` *(default)* | MiniMax for designated functions; DeepSeek for the rest |
+| `minimax` | All social functions use MiniMax |
+| `deepseek` | All social functions use DeepSeek |
+
+Key exports:
+- `getClientForFunction(fn: SocialFunction): ClientSelection` — returns `{ client, model, provider }` for a given function
+- `callSocialAI(params): Promise<SocialAICallResult>` — unified call interface; MiniMax-first with automatic DeepSeek fallback on any error; returns `{ content, provider, latencyMs }`
+
+`SocialFunction` values: `generateWarmupTopics`, `generateXiaoYueComment`, `generateRecapSummary`, `generateLieDetectiveStatements`, `generateMicroChallenges`, `generatePersonalityDiceChallenges`.
+
+In **`hybrid` mode** (the production default), `MINIMAX_DESIGNATED_FUNCTIONS` pins four functions to MiniMax:
+
+| Function | Hybrid-mode provider |
+|---|---|
+| `generateWarmupTopics` | **MiniMax** |
+| `generateXiaoYueComment` | **MiniMax** |
+| `generateRecapSummary` | **MiniMax** |
+| `generateLieDetectiveStatements` | **MiniMax** |
+| `generateMicroChallenges` | DeepSeek |
+| `generatePersonalityDiceChallenges` | DeepSeek |
+
+`callSocialAI` logs `[socialAI] {callerTag} provider={minimax|deepseek} latency={n}ms` on every call for observability.
+
+---
+
+**Layer 2 — `creativeModelRouter.ts`: Creative / identity generation functions**
+
+Three-level resolution order per function:
+1. Function-level env override (e.g. `CREATIVE_AI_TAGS_PROVIDER=deepseek`)
+2. Global override `CREATIVE_AI_PROVIDER=minimax|deepseek`
+3. Auto-default: MiniMax if `MINIMAX_API_KEY` is set, otherwise DeepSeek
+
+Exported resolver functions and their callers:
+
+| Resolver | Env override | Consumed by |
+|---|---|---|
+| `getTagGenerationProvider()` | `CREATIVE_AI_TAGS_PROVIDER` | `tagGenerationService.ts` |
+| `getThemeLLMProvider()` | `CREATIVE_AI_THEME_PROVIDER` | `themeLLMService.ts` |
+| `getEventThemeTitleProvider()` | `CREATIVE_AI_TITLE_PROVIDER` | `eventThemeTitleGenerator.ts` |
+
+Service-level resilience:
+- `themeLLMService.ts`: validate-and-retry up to 3 attempts; falls back to a deterministic rule-based theme if all LLM attempts fail or produce invalid output
+- `tagGenerationService.ts`: content-moderation blacklist validation on every generated tag before returning; falls back to rule-based tags if all LLM-generated tags fail validation
+
+---
+
+**Layer 3 — Direct DeepSeek: Attribute inference fallback**
+
+`apps/server/src/inference/llmFallbackInference.ts` uses a **direct DeepSeek client** (not routed through either router above). Triggered when:
+- Rule matching fails (no regex hit)
+- Confidence < 0.5 after 2+ questions
+- `career` or `expectation` dimensions have confidence < 0.6
+- Semantic conflict detected in extracted attributes
+
+Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{ insights[], confidence, reasoning? }`.
+
+#### Full Per-Function Routing Table (Production)
+
+| Function / Service | Preferred Provider | Fallback | Router | Env Override |
+|---|---|---|---|---|
+| `generateWarmupTopics` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generateXiaoYueComment` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generateRecapSummary` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generateLieDetectiveStatements` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generateMicroChallenges` | DeepSeek | — | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generatePersonalityDiceChallenges` | DeepSeek | — | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generatePairExplanation` | DeepSeek | — | Direct (in `matchExplanationService.ts`) | — |
+| `generateIceBreakers` | DeepSeek | — | Direct (in `matchExplanationService.ts`) | — |
+| Social tag generation (`generateSocialTags`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_TAGS_PROVIDER` |
+| Event theme LLM (`generateThemeWithLLM`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_THEME_PROVIDER` |
+| Event theme title (`generateEventThemeTitle`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_TITLE_PROVIDER` |
+| Attribute inference fallback (`callLLMForInference`) | DeepSeek | — | Direct — no router | — |
+
+#### Phase Evolution of the Provider Layer
+
+| Phase | Provider layer change |
+|---|---|
+| **Phase 1 (current)** | Both providers active as described above. Phase 1 feature work (icebreaker sequencing, scenario service, group-context explanations) slots into the existing routing with no changes to the provider layer. |
+| **Phase 2** | `embeddingClient.ts` (new file, modelled after `minimaxClient.ts`) added as a **third provider slot** dedicated to vector embedding API calls. Embedding calls are not routed through `socialModelRouter` or `creativeModelRouter` — they are a separate background compute path consumed by `hybridSemantic.ts`. |
+| **Phase 3** | `minimaxClient.ts` is extended for multimodal input processing (`minimax-m2.7` already supports this natively). No new infrastructure client is needed — multimodal is an additional call pattern on the existing MiniMax client, gated by consent UI and fairness audit. |
 
 ---
 
