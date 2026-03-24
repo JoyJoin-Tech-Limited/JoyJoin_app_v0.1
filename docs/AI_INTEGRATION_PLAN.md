@@ -718,7 +718,8 @@ The system must not produce or surface any ranking that implies a user is "less 
 | `apps/server/src/archetypeChemistry.ts` | Live chemistry matrix at match time; `ARCHETYPE_ENERGY` map (30–95 scale, 12 archetypes) | 1, 2 |
 | `apps/server/src/poolMatchingService.ts` | Core matching algorithm — `matchEventPool()`, `calculateGroupPairScore()`, `calculateGroupDiversity()`, 6-dimension pair weights | 1, 2, 3 |
 | `apps/server/src/matchExplanationService.ts` | Orchestration + explanation AI — `generateGroupAnalysis()`, `generateIceBreakers()`, `generatePairExplanation()` | 1, 3 |
-| `apps/server/src/services/eventThemeTitleGenerator.ts` | AI event theme title generation (gated by `ENABLE_EVENT_THEME_TITLE_GENERATION`) | 1 |
+| `apps/server/src/services/eventThemeTitleGenerator.ts` | Core AI event theme title generation logic (prompting + model call) | 1 |
+| `apps/server/src/eventThemeTitleGenerator.ts` | Async assign/broadcast wrapper; env gating + provider routing for theme titles (gated by `ENABLE_EVENT_THEME_TITLE_GENERATION`) | 1 |
 | `apps/server/src/eventThemeGeneratorService.ts` | Orchestrates `generateAndSaveEventTheme()` | 1 |
 | `apps/server/src/venueAssignmentService.ts` | Venue-to-group assignment logic | 1 |
 | `apps/server/src/dynamicWeights.ts` | Legacy gradient descent weight update (blind-box flow) | 1, 2 |
