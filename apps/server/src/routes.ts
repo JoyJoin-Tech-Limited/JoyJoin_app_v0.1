@@ -2462,6 +2462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await db
         .select({
           totalHeat: userInterests.totalHeat,
+          totalSelections: userInterests.totalSelections,
           topPriorities: userInterests.topPriorities,
           categoryHeat: userInterests.categoryHeat,
         })
@@ -2488,7 +2489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/user/interests/nudge', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      const { boostTopicIds, eventId } = req.body;
+      const { boostTopicIds } = req.body;
 
       if (!Array.isArray(boostTopicIds) || boostTopicIds.length === 0) {
         return res.status(400).json({ error: "boostTopicIds must be a non-empty array" });
@@ -2505,15 +2506,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No interests found" });
       }
 
+      // Heat values are normalized from level — single source of truth prevents aggregate drift
       const HEAT_BY_LEVEL: Record<number, number> = { 1: 3, 2: 10, 3: 25 };
       // Only boost topics already in the user's selections — nudge refines existing signals.
       // Adding new topics requires the full edit flow (/profile/edit/interests).
+      let boostedCount = 0;
       const selections = (existing[0].selections as any[]).map(s => {
-        if (boostTopicIds.includes(s.topicId)) {
-          const newLevel = Math.min(3, (s.level || 1) + 1) as 1 | 2 | 3;
+        // Normalize heat from level for all entries to prevent aggregate drift from stale data
+        const normalizedHeat = HEAT_BY_LEVEL[s.level] ?? s.heat;
+        if (boostTopicIds.includes(s.topicId) && s.level < 3) {
+          const newLevel = (s.level + 1) as 1 | 2 | 3;
+          boostedCount++;
           return { ...s, level: newLevel, heat: HEAT_BY_LEVEL[newLevel] };
         }
-        return s;
+        return { ...s, heat: normalizedHeat };
       });
 
       // Recompute totals
@@ -2532,7 +2538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ selections, totalHeat, totalSelections, categoryHeat, topPriorities, updatedAt: new Date() })
         .where(eq(userInterests.userId, userId));
 
-      res.json({ success: true, boostedCount: boostTopicIds.length });
+      res.json({ success: true, boostedCount });
     } catch (error) {
       console.error("Error applying interest nudge:", error);
       res.status(500).json({ message: "Failed to apply interest nudge" });

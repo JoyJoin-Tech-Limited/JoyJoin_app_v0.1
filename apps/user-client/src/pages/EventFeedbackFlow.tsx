@@ -124,7 +124,6 @@ export default function EventFeedbackFlow() {
       try {
         await apiRequest("PATCH", "/api/user/interests/nudge", {
           boostTopicIds: data.boostedTopicIds,
-          eventId,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/user/interests"] });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -555,7 +554,7 @@ function InterestRefreshStep({ eventType, onNext, onSkip }: InterestRefreshStepP
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          选择的话题会提升你的兴趣热度 🌡️
+          选择的话题将帮助我们为你推荐更贴合的活动 ✨
         </p>
       </div>
 
