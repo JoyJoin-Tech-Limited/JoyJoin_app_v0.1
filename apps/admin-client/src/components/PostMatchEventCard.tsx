@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +23,16 @@ const CHEMISTRY_CONFIG: Record<OverallChemistry, { label: string; emoji: string;
   cold: { label: "慢热相识", emoji: "🌱", className: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300" },
 };
 
+/**
+ * Returns true when userId is an exact token in pairKey.
+ * pairKey format: sorted([userId1, userId2]).join('-')
+ * Using startsWith/endsWith avoids false positives from substring matching
+ * (e.g. userId "12" matching pairKey "123-456").
+ */
+function isPairMember(pairKey: string, userId: string): boolean {
+  return pairKey.startsWith(`${userId}-`) || pairKey.endsWith(`-${userId}`);
+}
+
 export default function PostMatchEventCard({ 
   matchedAttendees, 
   matchExplanation,
@@ -32,6 +42,15 @@ export default function PostMatchEventCard({
 }: PostMatchEventCardProps) {
   const [showOtherPairs, setShowOtherPairs] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   if (!matchedAttendees || matchedAttendees.length === 0) {
     return null;
@@ -40,19 +59,36 @@ export default function PostMatchEventCard({
   const currentUserId = (currentUser as UserContext & { userId?: string }).userId;
 
   const myPairs = groupAnalysis?.pairExplanations.filter(p =>
-    currentUserId && p.pairKey.includes(currentUserId)
+    currentUserId && isPairMember(p.pairKey, currentUserId)
   ) ?? [];
 
   const otherPairs = groupAnalysis?.pairExplanations.filter(p =>
-    !currentUserId || !p.pairKey.includes(currentUserId)
+    !currentUserId || !isPairMember(p.pairKey, currentUserId)
   ) ?? [];
 
-  const handleCopyIceBreaker = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text).catch((err) => {
+  const handleCopyIceBreaker = async (text: string, idx: number) => {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      console.warn("[PostMatchEventCard] Clipboard API is not available in this environment.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      if (copyTimerRef.current !== null) {
+        clearTimeout(copyTimerRef.current);
+      }
+      setCopiedIndex(idx);
+      copyTimerRef.current = setTimeout(() => {
+        setCopiedIndex(null);
+        copyTimerRef.current = null;
+      }, 1500);
+    } catch (err) {
       console.error("[PostMatchEventCard] Clipboard write failed:", err);
-    });
-    setCopiedIndex(idx);
-    setTimeout(() => setCopiedIndex(null), 1500);
+    }
   };
 
   const chemistryConfig = groupAnalysis ? CHEMISTRY_CONFIG[groupAnalysis.overallChemistry] : null;

@@ -14,16 +14,25 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 
-export function useGroupAnalysis(groupId: string | null | undefined) {
-  return useQuery<GroupAnalysisResponse>({
-    queryKey: ["group-analysis", groupId],
+/**
+ * Shared query options for fetching group analysis.
+ * Centralises queryKey, caching, and error handling so behaviour stays
+ * consistent — export this if you need to prefetch or prime the cache.
+ */
+export function getGroupAnalysisQueryOptions(groupId: string | null | undefined) {
+  return {
+    queryKey: ["group-analysis", groupId] as const,
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/pool-groups/${groupId}/analysis`);
       if (!res.ok) throw new Error("Failed to fetch group analysis");
-      return res.json();
+      return res.json() as Promise<GroupAnalysisResponse>;
     },
     enabled: !!groupId,
     staleTime: 1000 * 60 * 7,
-    retry: 2,
-  });
+    retry: 2 as const,
+  };
+}
+
+export function useGroupAnalysis(groupId: string | null | undefined) {
+  return useQuery<GroupAnalysisResponse>(getGroupAnalysisQueryOptions(groupId));
 }
