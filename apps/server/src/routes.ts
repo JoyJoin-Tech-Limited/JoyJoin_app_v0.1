@@ -6,6 +6,7 @@ import ttsRoutes from "./routes/tts";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
+import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { paymentService } from "./paymentService";
@@ -9383,38 +9384,46 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // Get AI group analysis (pair explanations + ice-breakers) for a pool group
-  app.get("/api/pool-groups/:groupId/analysis", requireAuth, aiEndpointLimiter, async (req, res) => {
+  // Get AI-generated group analysis for a pool group
+  app.get('/api/pool-groups/:groupId/analysis', requireAuth, aiEndpointLimiter, async (req, res) => {
     try {
-      const groupId = req.params.groupId;
+      const { groupId } = req.params;
       const userId = (req.session as any).userId as string;
 
-      // Get the group
+      // Load group from DB
       const group = await db.query.eventPoolGroups.findFirst({
-        where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+        where: eq(eventPoolGroups.id, groupId),
       });
-
       if (!group) {
-        return res.status(404).json({ message: "Group not found" });
+        return res.status(404).json({ error: 'Group not found' });
       }
 
-      // Verify the user is a member of this group
+      // Load pool for eventType context
+      const pool = await db.query.eventPools.findFirst({
+        where: eq(eventPools.id, group.poolId),
+      });
+
+      // Check if user is in this group
       const userRegistration = await db.query.eventPoolRegistrations.findFirst({
-        where: (regs: any, { eq, and }: any) =>
-          and(eq(regs.assignedGroupId, groupId), eq(regs.userId, userId)),
+        where: and(
+          eq(eventPoolRegistrations.userId, userId),
+          eq(eventPoolRegistrations.assignedGroupId, groupId)
+        ),
       });
 
       if (!userRegistration) {
-        return res.status(403).json({ message: "You are not a member of this group" });
+        return res.status(403).json({ error: 'Not a member of this group' });
       }
 
-      // Get all group members
-      const groupMembers = await db.query.eventPoolRegistrations.findMany({
-        where: (regs: any, { eq }: any) => eq(regs.assignedGroupId, groupId),
+      // Load all group registrations to get member IDs
+      const groupRegistrations = await db.query.eventPoolRegistrations.findMany({
+        where: eq(eventPoolRegistrations.assignedGroupId, groupId),
       });
 
-      const memberIds = groupMembers.map((m: any) => m.userId);
-      const members = await db.query.users.findMany({
+      const memberIds = groupRegistrations.map((r: any) => r.userId);
+
+      // Load full user profiles for all members
+      const memberProfiles = await db.query.users.findMany({
         where: sql`${users.id} = ANY(${memberIds})`,
       });
 
@@ -9429,19 +9438,31 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         memberInterestsRows.map((row) => [row.userId, row] as const)
       );
 
-      const matchMembers = members.map((m: any) => {
+      // Build MatchMember[] using the same field mapping as the existing handler
+      const members = memberProfiles.map((m: any) => {
         const interestRow = interestsByUserId.get(m.id);
         const interestsWithHeat = interestRow?.selections
-          ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
+          ? (interestRow.selections as Array<{ topicId: string; level?: number | null }>).map(
               (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
             )
           : null;
+        // Prefer interestsRankedTop3; fall back to top heat-sorted selections; then legacy field
+        const interestsTop =
+          Array.isArray(m.interestsRankedTop3) && m.interestsRankedTop3.length > 0
+            ? m.interestsRankedTop3
+            : interestsWithHeat
+            ? interestsWithHeat
+                .slice()
+                .sort((a: { heatLevel: number }, b: { heatLevel: number }) => b.heatLevel - a.heatLevel)
+                .slice(0, 3)
+                .map((s: { topicId: string }) => s.topicId)
+            : m.interestsTop;
         return {
           userId: m.id,
           displayName: m.displayName || '神秘嘉宾',
           archetype: m.archetype,
           secondaryArchetype: m.secondaryArchetype,
-          interestsTop: m.interestsTop,
+          interestsTop,
           industry: m.industryNicheLabel || m.industryCategoryLabel,
           hometown: m.hometownRegionCity,
           socialStyle: m.socialStyle,
@@ -9454,30 +9475,37 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         };
       });
 
-      // Get event pool info for event type
-      const pool = await db.query.eventPools.findFirst({
-        where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
-      });
+      const { generateGroupAnalysis } = await import('./matchExplanationService');
 
-      const { matchExplanationService } = await import('./matchExplanationService');
-
-      const groupAnalysis = await matchExplanationService.generateGroupAnalysis(
+      // Call the existing service with caching enabled
+      const analysis = await generateGroupAnalysis(
         groupId,
-        matchMembers,
-        pool?.eventType || '饭局'
+        members,
+        pool?.eventType ?? '饭局',
+        true
       );
 
-      res.json({
+      // Map internal GroupAnalysis → GroupAnalysisResponse
+      const response: GroupAnalysisResponse = {
         groupId,
-        overallChemistry: groupAnalysis.overallChemistry,
-        groupDynamics: groupAnalysis.groupDynamics,
-        pairExplanations: groupAnalysis.pairExplanations,
-        iceBreakers: groupAnalysis.iceBreakers,
-        fromCache: groupAnalysis.fromCache,
-      });
+        overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
+        groupDynamics: analysis.groupDynamics,
+        iceBreakers: analysis.iceBreakers,
+        pairExplanations: analysis.pairExplanations.map((pe) => ({
+          pairKey: pe.pairKey,
+          explanation: pe.explanation,
+          chemistryScore: pe.chemistryScore,
+          sharedInterests: pe.sharedInterests ?? [],
+          connectionPoints: pe.connectionPoints ?? [],
+        })),
+        fromCache: analysis.fromCache ?? false,
+        generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+      };
+
+      return res.json(response);
     } catch (error) {
-      console.error("Error generating group analysis:", error);
-      res.status(500).json({ message: "Failed to generate group analysis" });
+      console.error('[analysis] Error generating group analysis:', error);
+      return res.status(500).json({ error: 'Failed to generate analysis' });
     }
   });
 
