@@ -493,4 +493,116 @@ describe('Interest Carousel - Heat Level Type Guard', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Nudge endpoint logic tests (mirrors PATCH /api/user/interests/nudge behaviour)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const HEAT_BY_LEVEL: Record<number, number> = { 1: 3, 2: 10, 3: 25 };
+
+/** Mirrors the nudge endpoint's transform logic */
+function applyNudge(
+  selections: Array<{ topicId: string; level: number; heat: number; categoryId: string; label: string }>,
+  boostTopicIds: string[],
+) {
+  let boostedCount = 0;
+  const updated = selections.map(s => {
+    const normalizedHeat = HEAT_BY_LEVEL[s.level] ?? s.heat;
+    if (boostTopicIds.includes(s.topicId) && s.level < 3) {
+      const newLevel = (s.level + 1) as 1 | 2 | 3;
+      boostedCount++;
+      return { ...s, level: newLevel, heat: HEAT_BY_LEVEL[newLevel] };
+    }
+    return { ...s, heat: normalizedHeat };
+  });
+  const totalHeat = updated.reduce((sum, s) => sum + s.heat, 0);
+  const categoryHeat: Record<string, number> = {};
+  updated.forEach(s => { categoryHeat[s.categoryId] = (categoryHeat[s.categoryId] || 0) + s.heat; });
+  const topPriorities = updated.filter(s => s.level === 3).map(s => ({ topicId: s.topicId, label: s.label, heat: s.heat }));
+  return { selections: updated, totalHeat, categoryHeat, topPriorities, boostedCount };
+}
+
+const sampleSelections = [
+  { topicId: 'career_startup', emoji: '🚀', label: '创业', fullName: '创业', category: '职场野心', categoryId: 'career', level: 1, heat: 3 },
+  { topicId: 'lifestyle_food',  emoji: '🍜', label: '美食',  fullName: '美食',  category: '生活方式',   categoryId: 'lifestyle', level: 2, heat: 10 },
+  { topicId: 'culture_music',  emoji: '🎵', label: '音乐',  fullName: '音乐',  category: '文化娱乐',   categoryId: 'culture',   level: 3, heat: 25 },
+];
+
+describe('Nudge endpoint — level bumping logic', () => {
+  it('bumps level 1 → 2 and updates heat to 10', () => {
+    const { selections } = applyNudge(sampleSelections, ['career_startup']);
+    const s = selections.find(s => s.topicId === 'career_startup')!;
+    expect(s.level).toBe(2);
+    expect(s.heat).toBe(10);
+  });
+
+  it('bumps level 2 → 3 and updates heat to 25', () => {
+    const { selections } = applyNudge(sampleSelections, ['lifestyle_food']);
+    const s = selections.find(s => s.topicId === 'lifestyle_food')!;
+    expect(s.level).toBe(3);
+    expect(s.heat).toBe(25);
+  });
+
+  it('caps at level 3 — does not bump beyond L3', () => {
+    const { selections, boostedCount } = applyNudge(sampleSelections, ['culture_music']);
+    const s = selections.find(s => s.topicId === 'culture_music')!;
+    expect(s.level).toBe(3);
+    expect(s.heat).toBe(25);
+    expect(boostedCount).toBe(0); // already at max, not counted as boosted
+  });
+
+  it('ignores topic IDs not present in selections', () => {
+    const { selections, boostedCount } = applyNudge(sampleSelections, ['unknown_topic_xyz']);
+    expect(selections).toHaveLength(sampleSelections.length);
+    expect(boostedCount).toBe(0);
+  });
+
+  it('returns accurate boostedCount (only topics that actually changed level)', () => {
+    // career_startup: L1→L2 ✓, culture_music: already L3 (no change), unknown: ignored
+    const { boostedCount } = applyNudge(sampleSelections, ['career_startup', 'culture_music', 'unknown_topic_xyz']);
+    expect(boostedCount).toBe(1);
+  });
+
+  it('recomputes totalHeat correctly after boost', () => {
+    // Start: career_startup=3, lifestyle_food=10, culture_music=25 → total=38
+    // Boost career_startup (3→10): new total = 10+10+25 = 45
+    const { totalHeat } = applyNudge(sampleSelections, ['career_startup']);
+    expect(totalHeat).toBe(45);
+  });
+
+  it('normalizes heat from level for non-boosted entries (fixes aggregate drift)', () => {
+    const driftedSelections = [
+      { ...sampleSelections[0], heat: 999 }, // stale/wrong heat value
+      sampleSelections[1],
+      sampleSelections[2],
+    ];
+    const { selections } = applyNudge(driftedSelections, []);
+    // heat should be normalized to HEAT_BY_LEVEL[level=1] = 3
+    expect(selections[0].heat).toBe(3);
+  });
+
+  it('recomputes categoryHeat consistently', () => {
+    const { categoryHeat } = applyNudge(sampleSelections, ['career_startup']);
+    // career_startup bumped to L2 (heat=10), lifestyle_food stays L2 (heat=10), culture_music stays L3 (heat=25)
+    expect(categoryHeat['career']).toBe(10);
+    expect(categoryHeat['lifestyle']).toBe(10);
+    expect(categoryHeat['culture']).toBe(25);
+  });
+
+  it('updates topPriorities to reflect all current L3 selections after boost', () => {
+    // Boost lifestyle_food from L2 → L3; culture_music stays L3
+    const { topPriorities } = applyNudge(sampleSelections, ['lifestyle_food']);
+    const ids = topPriorities.map(p => p.topicId);
+    expect(ids).toContain('culture_music');
+    expect(ids).toContain('lifestyle_food');
+    expect(topPriorities.every(p => p.heat === 25)).toBe(true);
+  });
+
+  it('handles empty boostTopicIds without mutating selections', () => {
+    const { selections, boostedCount, totalHeat } = applyNudge(sampleSelections, []);
+    expect(boostedCount).toBe(0);
+    expect(totalHeat).toBe(3 + 10 + 25); // 38 — normalized from stored levels
+    expect(selections.map(s => s.level)).toEqual([1, 2, 3]);
+  });
+});
+
 console.log('✅ QA Test Suite for Interest Carousel - All tests defined');

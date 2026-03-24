@@ -34,14 +34,11 @@ import {
   getChildrenDisplay,
   getIntentDisplay,
   getUserPrimaryInterests,
-  getUserTopicAvoidances,
 } from "@/lib/userFieldMappings";
 import { getOccupationDisplayLabel, getIndustryDisplayLabel, WORK_MODE_TO_LABEL, INDUSTRY_ID_TO_LABEL, type WorkMode } from "@shared/occupations";
 import { getInterestLabel } from "@shared/interests";
 import { calculateProfileCompletion } from "@/lib/profileCompletion";
 
-// Topic label helper (topics are free-form strings, so we just return them as-is)
-const getTopicLabel = (topic: string) => topic;
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
@@ -124,6 +121,13 @@ export default function EditProfilePage() {
   const [manualEditOpen, setManualEditOpen] = useState(false);
   
   const { data: user, isLoading } = useQuery<any>({ queryKey: ["/api/auth/user"] });
+
+  // Load interests summary separately — not included in /api/auth/user
+  const { data: interestsSummary } = useQuery<{ totalHeat: number; topPriorities: any[]; categoryHeat: Record<string, number>; totalSelections?: number } | null>({
+    queryKey: ["/api/user/interests/summary"],
+    enabled: !!user,
+    retry: false,
+  });
 
   if (isLoading || !user) {
     return (
@@ -228,26 +232,24 @@ export default function EditProfilePage() {
           id: "interests",
           title: "兴趣偏好",
           icon: <Star className="h-4 w-4" />,
-          // path removed - EditInterestsPage moved to backup (2026-01-19)
-          // Users can re-take interest carousel in onboarding/extended if needed
+          path: "/profile/edit/interests",
           fields: [
-            { 
-              label: "主要兴趣", 
-              value: getUserPrimaryInterests(user).length > 0 
-                ? getUserPrimaryInterests(user).map(id => getInterestLabel(id)).join(", ") 
-                : null 
-            },
-            { 
-              label: "话题排斥", 
-              value: getUserTopicAvoidances(user).length > 0 
-                ? getUserTopicAvoidances(user).map(id => getTopicLabel(id)).join(", ") 
-                : null 
+            {
+              label: "兴趣话题",
+              value: interestsSummary?.totalSelections != null && interestsSummary.totalSelections > 0
+                ? `已选 ${interestsSummary.totalSelections} 个话题`
+                : (getUserPrimaryInterests(user).length > 0
+                    ? getUserPrimaryInterests(user).map((id: string) => getInterestLabel(id)).join(", ")
+                    : null)
             },
             {
-              label: "美食偏好",
-              value: user.cuisinePreference?.length > 0 ? user.cuisinePreference.join(", ") : null
+              label: "超热爱",
+              value: interestsSummary?.topPriorities?.length > 0
+                ? interestsSummary.topPriorities.map((t: any) => t.label).join("、")
+                : null
             },
           ],
+          hint: "随时可以更新，保持你最新的兴趣状态",
         },
         {
           id: "intent",

@@ -60,7 +60,9 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 | Weight learning | Thompson Sampling bandit | ✅ Available — `matchingWeightsService.ts` (admin evolution + `userMatchingService.ts`; not yet wired into `poolMatchingService.ts`) |
 | Weight learning | Gradient descent | ⚠️ Legacy / experimental — `dynamicWeights.ts` (not active in current pool matching) |
 | Interest matching | Static Jaccard + heat bonus | ✅ Live — `poolMatchingService.ts` |
-| Temporal interest decay | Heat-weighted by recency | 🔲 Phase 1 |
+| Temporal interest decay | Heat-weighted by recency | ❌ Dropped — see §2.2 |
+| Interest profile editability | User can revisit and update full interest carousel | ✅ Shipped — `EditInterestsCarouselPage` |
+| Post-event interest nudge | Micro-update interests after each event | ✅ Shipped — `EventFeedbackFlow` interestRefresh step |
 | Archetype trajectory | Blended smoothing over 30-day shifts | 🔲 Phase 1 |
 | Post-event feedback loop | Atmosphere + connection radar pipeline | 🔲 Phase 1 |
 | Adaptive icebreaker sequencing | Phase-aware ordering by group energy | 🔲 Phase 1 |
@@ -82,26 +84,51 @@ Phase 1 has two parallel tracks:
 - **Experience track:** Make the social moment richer and more resonant using AI orchestration and explanation — without waiting for learned signals.
 - **Infrastructure track:** Instrument the data pipelines that Phase 2 and Phase 3 depend on. Phase 1 is the foundation; its measurement work is as important as its feature work.
 
-### 2.2 Temporal Interest Heat Decay
+### 2.2 Interest Profile Freshness — Editable Carousel + Post-Event Nudge
 
-**Problem:** The current interest score in `poolMatchingService.ts::calculateInterestScoreAsync()` treats all heat values as static. A user who was obsessed with hiking six months ago but has recently pivoted to jazz and city exploration is represented as equally interested in both.
+**Architectural decision (2026-03-24):** Temporal heat decay was evaluated and rejected for JoyJoin's interest model. See rationale below.
 
-**Proposal:** Replace the static `totalHeat` read with a **temporally decayed heat value** computed from the `user_interests` table's `updatedAt` timestamp and per-topic `heat`.
+#### Why decay was dropped
 
-```typescript
-// Proposed utility in poolMatchingService.ts or a new interestDecayUtils.ts
-const HALF_LIFE_DAYS = 45; // interest heat halves every 45 days
+JoyJoin's 56-topic interest carousel captures **identity-level passions** (hiking, jazz, entrepreneurship, philosophy) — not ephemeral preferences. These are self-concept signals that change over years, not weeks. Applying a 45-day half-life decay to onboarding data would:
 
-// Pass nowMs from the caller to avoid repeated Date.now() calls during batch processing
-function decayedHeat(rawHeat: number, lastUpdatedAt: Date, nowMs: number): number {
-  const ageInDays = (nowMs - lastUpdatedAt.getTime()) / (1000 * 60 * 60 * 24);
-  return rawHeat * Math.pow(0.5, ageInDays / HALF_LIFE_DAYS);
-}
-```
+1. Silently penalise loyal users purely for time spent on the platform (the more established a user, the worse their interest score)
+2. Decay all topics equally because `user_interests.updated_at` is a **row-level onboarding timestamp** — there was no user-facing mechanism to update it per-topic
+3. Optimise for a user behaviour (frequent interest updates) that the product didn't support and users were never asked to do
 
-**Integration point:** `apps/server/src/poolMatchingService.ts` — `calculateInterestScoreAsync()`. The `user_interests` table already stores `updatedAt`; this change only requires reading and using it.
+The correct model is: **stable declared identity, with two deliberate freshness mechanisms:**
 
-**Why this matters:** Recency-weighted interests produce better conversations. Two people matched on their *current* obsessions are more likely to have live energy around a topic than two people matched on stale declared data.
+#### Mechanism 1 — Editable Interest Carousel (profile layer)
+
+Users can revisit and update their full 56-topic heat carousel from `/profile/edit` → 兴趣偏好 at any time.
+
+**Implementation:**
+- `apps/user-client/src/pages/EditInterestsCarouselPage.tsx` — edit-mode wrapper for `InterestCarousel`
+- Pre-populates selections from `GET /api/user/interests`
+- Saves via `POST /api/user/interests` (existing upsert endpoint, with `updatedAt = new Date()` on update)
+- Route: `/profile/edit/interests` (restored in `EditProfilePage.tsx`)
+
+When a user saves the carousel from the edit page, `user_interests.updated_at` updates to now. This makes `updated_at` a meaningful signal: it reflects intentional engagement, not just signup date.
+
+#### Mechanism 2 — Post-Event Interest Nudge (behavioral layer)
+
+After each event, the `EventFeedbackFlow` includes a new `"interestRefresh"` step that presents 6-8 topic chips relevant to the event type and asks: *"今晚点燃了哪些兴趣？"*
+
+Selected topics have their heat level bumped by +1 (capped at L3) via `PATCH /api/user/interests/nudge`. This:
+- Keeps interest data fresh without burdening users with manual profile updates
+- Creates a natural post-event re-engagement moment
+- Allows per-topic granularity: a user who loves food can bump food topics after a 饭局 without resetting unrelated interests
+- Feeds a genuine behavioral signal into `user_interests.updated_at` — the timestamp now reflects when a user last confirmed/updated a topic, not just when they signed up
+
+**API:** `PATCH /api/user/interests/nudge` — `{ boostTopicIds: string[], eventId: string }`
+
+#### Note on event-scoped topic excitement
+
+Per-event topic enthusiasm (e.g. *"I loved tonight's wine tasting"*) is a different signal from core identity interests. It is handled at the behavioral layer (nudge bump) and event registration layer (`preferredLanguages`, event-specific interests captured during pool registration). It should **not** be conflated with the declared profile heat model.
+
+#### Phase 2 downstream
+
+With `updated_at` now carrying genuine signal value, Phase 2's latent user state modeling (`user_latent_state`) can use it as a behavioral indicator: the **frequency and recency of interest nudge interactions** after events indicates active vs passive interest engagement — a richer signal than raw time decay. This is listed in §4.2 behavioral signals table ("Interest refresh engagement rate | `user_interests` + nudge API | Active vs passive interest engagement").
 
 ### 2.3 Archetype Trajectory Tracking & Smoothing
 
@@ -293,7 +320,10 @@ Phase 1 must establish the measurement infrastructure that every subsequent phas
 | `would_meet_again` (bool) | `event_group_outcomes` | Phase 2 weight bandit, chemistry calibration |
 | `connection_radar` per pair | `event_group_outcomes` | Phase 2 pair-level outcome modeling |
 | `icebreaker_ratings` per question | `event_group_outcomes` | Phase 2 icebreaker quality model |
-| Interest `updatedAt` read rate | `user_interests` | Phase 1 decay validation |
+| Interest `updatedAt` read rate | `user_interests` | Phase 1 freshness validation |
+| Interest carousel edit rate | `user_interests.updatedAt` post-edit | Phase 1 interest freshness baseline |
+| Post-event interest nudge completion rate | `EventFeedbackFlow` analytics | User engagement with interest refresh |
+| Post-event topic boost distribution | `PATCH /api/user/interests/nudge` | Which topic categories resonate per event type |
 | Archetype transition rate | `assessment_sessions` | Phase 1 smoothing validation |
 | Match reveal engagement | Client analytics | Explanation quality proxy |
 
@@ -500,7 +530,7 @@ Phase 3 shifts from *feature engineering on declared attributes* to *learning la
 | Repeat attendance patterns | Event RSVP history | Social stamina, novelty-seeking |
 | Response time in lie detective | Social Icebreaker timestamps | Decision pacing, confidence |
 | Archetype trajectory | `assessment_sessions` | Identity stability vs evolution |
-| Interest decay rate | `user_interests` + timestamp analysis | Active vs passive interest engagement |
+| Interest refresh engagement rate | `user_interests.updatedAt` + nudge API call log | Active vs passive interest engagement |
 
 **Proposed table:** `user_latent_state`
 ```sql
@@ -688,7 +718,8 @@ The system must not produce or surface any ranking that implies a user is "less 
 
 | Task | Priority | Files Affected |
 |------|----------|----------------|
-| Add temporal interest heat decay to `calculateInterestScoreAsync()` | P1 | `apps/server/src/poolMatchingService.ts` |
+| Restore interest carousel as editable profile section | P1 | `apps/user-client/src/pages/EditInterestsCarouselPage.tsx` (new), `EditProfilePage.tsx`, `InterestCarousel.tsx`, `App.tsx` |
+| Add post-event interest nudge step to EventFeedbackFlow | P1 | `apps/user-client/src/pages/EventFeedbackFlow.tsx`, `apps/server/src/routes.ts` |
 | Add archetype trajectory blending to `calculateChemistryScore()` | P1 | `apps/server/src/poolMatchingService.ts`, `archetypeChemistry.ts` |
 | Create `event_group_outcomes` table and POST endpoint | P1 | `packages/shared/src/schema.ts`, `apps/server/src/routes.ts` |
 | Wire `wouldMeetAgain` + `atmosphereScore` to `matchingWeightsService.ts` | P1 | `apps/server/src/matchingWeightsService.ts`, `routes.ts` |
