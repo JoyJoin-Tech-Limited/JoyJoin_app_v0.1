@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useParams } from "wouter";
 import { Sparkles, Package, Zap } from "lucide-react";
@@ -104,6 +104,8 @@ export default function SquadUnboxingFlow() {
   const [showSkipDialog, setShowSkipDialog] = useState(false);
   // 0 = waiting, 1–4 = each reveal phase
   const [analysingStage, setAnalysingStage] = useState<0 | 1 | 2 | 3 | 4>(0);
+  // True when the user skipped mid-animation — suppresses stagger delays on stages 3 & 4
+  const skippedToFinalRef = useRef(false);
 
   // Redirect immediately if there's no groupId in the URL
   useEffect(() => {
@@ -128,7 +130,7 @@ export default function SquadUnboxingFlow() {
     queryFn: () =>
       apiRequest("GET", `/api/pool-groups/${groupId}/analysis`).then((r) => r.json()),
     enabled: !!groupId && flowState === "revealed",
-    staleTime: 1000 * 60 * 7, // 7-minute client cache (matches server TTL)
+    staleTime: 1000 * 60 * 7, // 7-minute client cache; server-side group analysis cache persists longer
   });
 
   const { toast } = useToast();
@@ -301,8 +303,12 @@ export default function SquadUnboxingFlow() {
   };
 
   const handleSkip = () => {
-    // If the progressive reveal is mid-animation, snap to the final state first
-    if (analysingStage < 4) setAnalysingStage(4);
+    // If the progressive reveal is mid-animation, snap to the final state.
+    // Set the ref first so stage 3/4 render their items without stagger delays.
+    if (analysingStage < 4) {
+      skippedToFinalRef.current = true;
+      setAnalysingStage(4);
+    }
     setShowSkipDialog(true);
   };
 
@@ -565,9 +571,9 @@ export default function SquadUnboxingFlow() {
                             {sortedPairExplanations.map((pair, idx) => {
                               const members = getMembersFromPairKey(pair.pairKey);
                               const hasHighChemistry = pair.chemistryScore >= 85;
-                              // Only animate entry on first arrival at stage 3;
-                              // if the user skipped ahead (analysingStage === 4) render immediately.
-                              const animateEntry = analysingStage === 3;
+                              // Animate entry only when first arriving at stage 3 via auto-advance.
+                              // If the user skipped to the final state, render immediately without stagger.
+                              const animateEntry = analysingStage === 3 && !skippedToFinalRef.current;
                               return (
                                 <motion.div
                                   key={pair.pairKey}
@@ -617,9 +623,9 @@ export default function SquadUnboxingFlow() {
                         ) : groupAnalysis ? (
                           <div className="flex flex-wrap gap-2">
                             {groupAnalysis.iceBreakers.map((topic, idx) => {
-                              // Only animate entry on first arrival at stage 4;
-                              // if the user skipped ahead the chips render immediately.
-                              const animateEntry = analysingStage === 4;
+                              // Animate entry only when first arriving at stage 4 via auto-advance.
+                              // If the user skipped to the final state, render immediately without stagger.
+                              const animateEntry = analysingStage === 4 && !skippedToFinalRef.current;
                               return (
                                 <motion.span
                                   key={idx}
