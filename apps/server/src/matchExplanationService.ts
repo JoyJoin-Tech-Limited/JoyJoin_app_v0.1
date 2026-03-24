@@ -116,6 +116,10 @@ export interface GroupAnalysis {
   groupDynamics: string; // 整体动态描述
   pairExplanations: MatchExplanation[]; // 两两配对解释
   iceBreakers: string[]; // 推荐破冰话题
+  /** true if the response was served from the DB cache */
+  fromCache?: boolean;
+  /** ISO-8601 timestamp of generation */
+  generatedAt?: string;
 }
 
 // ============ 缓存类型 ============
@@ -631,6 +635,7 @@ export async function generateGroupAnalysis(
 ): Promise<GroupAnalysis> {
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
+  let fromCache = false;
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -644,6 +649,7 @@ export async function generateGroupAnalysis(
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
       pairExplanations = cachedExplanations;
       iceBreakers = cachedIceBreakers;
+      fromCache = true;
     } else {
       // Cache miss, expired, or roster changed - regenerate in parallel
       [pairExplanations, iceBreakers] = await Promise.all([
@@ -688,6 +694,8 @@ export async function generateGroupAnalysis(
     groupDynamics,
     pairExplanations,
     iceBreakers,
+    fromCache,
+    generatedAt: new Date().toISOString(),
   };
 }
 
