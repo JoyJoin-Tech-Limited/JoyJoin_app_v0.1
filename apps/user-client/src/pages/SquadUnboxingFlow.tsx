@@ -214,8 +214,6 @@ export default function SquadUnboxingFlow() {
       relationshipStatus: user.relationshipStatus ?? undefined,
       hometownRegionCity: user.hometownRegionCity ?? undefined,
       hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
-      seniority: user.seniority ?? undefined,
-      studyLocale: user.studyLocale ?? undefined,
     };
   }, [user]);
 

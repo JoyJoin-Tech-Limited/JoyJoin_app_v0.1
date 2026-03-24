@@ -64,8 +64,8 @@ export default function ConnectionPointPills({
               width: [52, 64, 44][i],
               borderRadius: 999,
               background: "rgba(0,0,0,0.07)",
-              animation: "pill-shimmer 1.4s ease-in-out infinite",
-              animationDelay: `${i * 0.15}s`,
+              animation: prefersReducedMotion ? undefined : "pill-shimmer 1.4s ease-in-out infinite",
+              animationDelay: prefersReducedMotion ? undefined : `${i * 0.15}s`,
             }}
           />
         ))}
@@ -73,9 +73,6 @@ export default function ConnectionPointPills({
           @keyframes pill-shimmer {
             0%, 100% { opacity: 0.4; }
             50% { opacity: 0.85; }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            div[style*="pill-shimmer"] { animation: none !important; }
           }
         `}</style>
       </div>

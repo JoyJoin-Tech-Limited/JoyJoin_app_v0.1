@@ -28,6 +28,8 @@ interface SquadVibePanelProps {
   iceBreakers?: string[];
   /** While true, render loading skeletons instead of real content */
   isLoading?: boolean;
+  /** When true, skips skeleton animations */
+  prefersReducedMotion?: boolean;
 }
 
 export default function SquadVibePanel({
@@ -35,6 +37,7 @@ export default function SquadVibePanel({
   groupDynamics,
   iceBreakers,
   isLoading = false,
+  prefersReducedMotion = false,
 }: SquadVibePanelProps) {
   const tokens = getVibeTokens(overallChemistry);
 
@@ -72,7 +75,7 @@ export default function SquadVibePanel({
               width: 160,
               borderRadius: 6,
               background: "rgba(255,255,255,0.25)",
-              animation: "squad-vibe-pulse 1.4s ease-in-out infinite",
+              animation: prefersReducedMotion ? undefined : "squad-vibe-pulse 1.4s ease-in-out infinite",
             }}
           />
         ) : (
@@ -108,7 +111,7 @@ export default function SquadVibePanel({
                 height: 14,
                 borderRadius: 4,
                 background: "rgba(0,0,0,0.07)",
-                animation: "squad-vibe-pulse 1.4s ease-in-out infinite",
+                animation: prefersReducedMotion ? undefined : "squad-vibe-pulse 1.4s ease-in-out infinite",
               }}
             />
             <div
@@ -117,8 +120,8 @@ export default function SquadVibePanel({
                 width: "80%",
                 borderRadius: 4,
                 background: "rgba(0,0,0,0.07)",
-                animation: "squad-vibe-pulse 1.4s ease-in-out infinite",
-                animationDelay: "0.15s",
+                animation: prefersReducedMotion ? undefined : "squad-vibe-pulse 1.4s ease-in-out infinite",
+                animationDelay: prefersReducedMotion ? undefined : "0.15s",
               }}
             />
           </div>
@@ -160,6 +163,7 @@ export default function SquadVibePanel({
             topics={iceBreakers ?? []}
             accentColor={tokens.panelGradient}
             isLoading={isLoading}
+            prefersReducedMotion={prefersReducedMotion}
           />
         </div>
       )}
@@ -168,9 +172,6 @@ export default function SquadVibePanel({
         @keyframes squad-vibe-pulse {
           0%, 100% { opacity: 0.45; }
           50% { opacity: 0.9; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          [style*="squad-vibe-pulse"] { animation: none !important; }
         }
       `}</style>
     </motion.div>
