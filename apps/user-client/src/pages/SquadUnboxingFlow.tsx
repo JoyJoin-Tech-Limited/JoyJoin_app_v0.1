@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useParams } from "wouter";
-import { Sparkles, Package } from "lucide-react";
+import { Sparkles, Package, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ import {
   getUserTopicAvoidances,
 } from "@/lib/userFieldMappings";
 import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
+import type { GroupAnalysisResponse, PairExplanation } from "@shared/types/groupAnalysis";
 
 // Safe wrapper around the Web Vibration API
 const hapticVibrate = (pattern: number | number[]) => {
@@ -38,6 +39,14 @@ type FlowState = "ready" | "shaking" | "revealed";
 
 // Shared JoyJoin gradient used across box and buttons in this flow
 const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
+
+// Chemistry badge configuration for the progressive reveal
+const CHEMISTRY_CONFIG = {
+  fire: { emoji: "🔥", label: "超级火花", gradientClass: "from-amber-500 to-orange-500" },
+  warm: { emoji: "✨", label: "暖意融融", gradientClass: "from-violet-700 to-purple-500" },
+  mild: { emoji: "💬", label: "相聊甚欢", gradientClass: "from-blue-500 to-cyan-500" },
+  cold: { emoji: "🌱", label: "慢慢发现", gradientClass: "from-green-500 to-emerald-500" },
+} as const;
 
 interface PoolGroupMember {
   userId: string;
@@ -93,6 +102,8 @@ export default function SquadUnboxingFlow() {
   const [flowState, setFlowState] = useState<FlowState>("ready");
   const [showActionZone, setShowActionZone] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
+  // 0 = waiting, 1–4 = each reveal phase
+  const [analysingStage, setAnalysingStage] = useState<0 | 1 | 2 | 3 | 4>(0);
 
   // Redirect immediately if there's no groupId in the URL
   useEffect(() => {
@@ -109,6 +120,15 @@ export default function SquadUnboxingFlow() {
   const { data, isLoading: isGroupLoading } = useQuery<PoolGroupResponse>({
     queryKey: ["/api/pool-groups", groupId],
     enabled: !!groupId,
+  });
+
+  // Fetch group analysis — only fires once the box is opened (revealed state)
+  const { data: groupAnalysis, isLoading: isLoadingAnalysis } = useQuery<GroupAnalysisResponse>({
+    queryKey: ["/api/pool-groups", groupId, "analysis"],
+    queryFn: () =>
+      apiRequest("GET", `/api/pool-groups/${groupId}/analysis`).then((r) => r.json()),
+    enabled: !!groupId && flowState === "revealed",
+    staleTime: 1000 * 60 * 7, // 7-minute client cache (matches server TTL)
   });
 
   const { toast } = useToast();
@@ -207,6 +227,40 @@ export default function SquadUnboxingFlow() {
     }, 0);
   }, [currentUser, squadMembers]);
 
+  // Sort pair explanations so current user's pairs appear first
+  const sortedPairExplanations = useMemo<PairExplanation[]>(() => {
+    if (!groupAnalysis?.pairExplanations) return [];
+    const currentUserId = user?.id;
+    if (!currentUserId) return groupAnalysis.pairExplanations;
+    return [...groupAnalysis.pairExplanations].sort((a, b) => {
+      const aHasUser = a.pairKey.includes(currentUserId);
+      const bHasUser = b.pairKey.includes(currentUserId);
+      if (aHasUser && !bHasUser) return -1;
+      if (!aHasUser && bHasUser) return 1;
+      return 0;
+    });
+  }, [groupAnalysis, user]);
+
+  // Pre-compute a pairKey → [member, member] lookup map to avoid O(n²) per-pair lookups
+  const pairKeyMemberMap = useMemo<Map<string, [PoolGroupMember, PoolGroupMember]>>(() => {
+    const map = new Map<string, [PoolGroupMember, PoolGroupMember]>();
+    if (!data?.members) return map;
+    const members = data.members;
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        const key = [members[i].userId, members[j].userId].sort().join("-");
+        map.set(key, [members[i], members[j]]);
+      }
+    }
+    return map;
+  }, [data]);
+
+  const getMembersFromPairKey = useCallback(
+    (pairKey: string): [PoolGroupMember, PoolGroupMember] | null =>
+      pairKeyMemberMap.get(pairKey) ?? null,
+    [pairKeyMemberMap]
+  );
+
   // Shaking → revealed transition after 1.5s
   useEffect(() => {
     if (flowState !== "shaking") return;
@@ -221,6 +275,21 @@ export default function SquadUnboxingFlow() {
     return () => clearTimeout(actionZoneTimeout);
   }, [flowState]);
 
+  // Progressive reveal: start Stage 1 (chemistry badge) 1.2s after revealed
+  useEffect(() => {
+    if (flowState !== "revealed") return;
+    const t = setTimeout(() => setAnalysingStage((s) => (s === 0 ? 1 : s)), 1200);
+    return () => clearTimeout(t);
+  }, [flowState]);
+
+  // Auto-advance stages 1 → 2 → 3 → 4, each 1.8s apart
+  useEffect(() => {
+    if (analysingStage < 1 || analysingStage >= 4) return;
+    const next = Math.min(analysingStage + 1, 4) as typeof analysingStage;
+    const t = setTimeout(() => setAnalysingStage(next), 1800);
+    return () => clearTimeout(t);
+  }, [analysingStage]);
+
   const handleOpenBox = () => {
     // Haptic: "weight of the box" shake pattern
     hapticVibrate([50, 50, 50, 50, 100]);
@@ -232,6 +301,8 @@ export default function SquadUnboxingFlow() {
   };
 
   const handleSkip = () => {
+    // If the progressive reveal is mid-animation, snap to the final state first
+    if (analysingStage < 4) setAnalysingStage(4);
     setShowSkipDialog(true);
   };
 
@@ -297,8 +368,12 @@ export default function SquadUnboxingFlow() {
         </p>
       </div>
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-5 py-4">
+      {/* Main content area — scrollable in revealed state to accommodate analysis sections */}
+      <div
+        className={`flex-1 flex flex-col px-5 py-4 ${
+          flowState === "revealed" ? "overflow-y-auto" : "items-center justify-center"
+        }`}
+      >
         <AnimatePresence mode="wait">
           {/* ── READY state: glowing box ── */}
           {flowState === "ready" && (
@@ -385,7 +460,7 @@ export default function SquadUnboxingFlow() {
             </motion.div>
           )}
 
-          {/* ── REVEALED state: card fan ── */}
+          {/* ── REVEALED state: card fan + progressive analysis reveal ── */}
           {flowState === "revealed" && (
             <motion.div
               key="revealed"
@@ -406,6 +481,181 @@ export default function SquadUnboxingFlow() {
                 onAllRevealed={handleAllRevealed}
                 onCardFlipped={handleCardFlipped}
               />
+
+              {/* ── Progressive analysis reveal (additive below card fan) ── */}
+              {analysingStage > 0 && (
+                <div className="w-full mt-6 space-y-4 pb-44">
+
+                  {/* Stage 1: Chemistry badge */}
+                  <AnimatePresence>
+                    {analysingStage >= 1 && (
+                      <motion.div
+                        key="stage-chemistry"
+                        initial={{ opacity: 0, scale: 0.9, y: 16 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          你们的火花
+                        </p>
+                        {isLoadingAnalysis ? (
+                          <div className="h-16 w-full rounded-2xl bg-muted animate-pulse" />
+                        ) : groupAnalysis ? (
+                          (() => {
+                            const cfg = CHEMISTRY_CONFIG[groupAnalysis.overallChemistry];
+                            return (
+                              <div
+                                className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-4 bg-gradient-to-r ${cfg.gradientClass} shadow-lg`}
+                              >
+                                <span className="text-3xl" aria-hidden="true">{cfg.emoji}</span>
+                                <span className="text-xl font-bold text-white">{cfg.label}</span>
+                              </div>
+                            );
+                          })()
+                        ) : null}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Stage 2: Group dynamics */}
+                  <AnimatePresence>
+                    {analysingStage >= 2 && (
+                      <motion.div
+                        key="stage-dynamics"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        {isLoadingAnalysis ? (
+                          <div className="space-y-2">
+                            <div className="h-4 w-full rounded bg-muted animate-pulse" />
+                            <div className="h-4 w-4/5 rounded bg-muted animate-pulse" />
+                          </div>
+                        ) : groupAnalysis ? (
+                          <div className="rounded-2xl border border-border bg-card px-5 py-4">
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {groupAnalysis.groupDynamics}
+                            </p>
+                          </div>
+                        ) : null}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Stage 3: Pair explanations */}
+                  <AnimatePresence>
+                    {analysingStage >= 3 && (
+                      <motion.div
+                        key="stage-pairs"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        <p className="text-sm font-semibold text-foreground mb-3">
+                          为什么你们会聊得来？
+                        </p>
+                        {isLoadingAnalysis ? (
+                          <div className="space-y-3">
+                            {[0, 1, 2].map((i) => (
+                              <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />
+                            ))}
+                          </div>
+                        ) : groupAnalysis ? (
+                          <div className="space-y-3">
+                            {sortedPairExplanations.map((pair, idx) => {
+                              const members = getMembersFromPairKey(pair.pairKey);
+                              const hasHighChemistry = pair.chemistryScore >= 85;
+                              // Only animate entry on first arrival at stage 3;
+                              // if the user skipped ahead (analysingStage === 4) render immediately.
+                              const animateEntry = analysingStage === 3;
+                              return (
+                                <motion.div
+                                  key={pair.pairKey}
+                                  className="rounded-2xl border border-border bg-card px-4 py-3"
+                                  initial={animateEntry ? { opacity: 0, y: 12 } : false}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.35, delay: animateEntry ? idx * 0.3 : 0 }}
+                                >
+                                  <div className="flex items-start gap-2 mb-1">
+                                    {hasHighChemistry && (
+                                      <Zap className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" aria-label="高火花" />
+                                    )}
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                      {members
+                                        ? `${members[0].displayName} × ${members[1].displayName}`
+                                        : pair.pairKey}
+                                    </p>
+                                  </div>
+                                  <p className="text-sm text-foreground leading-relaxed">
+                                    {pair.explanation}
+                                  </p>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Stage 4: Ice-breakers */}
+                  <AnimatePresence>
+                    {analysingStage >= 4 && (
+                      <motion.div
+                        key="stage-icebreakers"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        <p className="text-sm font-semibold text-foreground mb-3">今晚聊什么？💬</p>
+                        {isLoadingAnalysis ? (
+                          <div className="flex flex-wrap gap-2">
+                            {[0, 1, 2].map((i) => (
+                              <div key={i} className="h-8 w-24 rounded-full bg-muted animate-pulse" />
+                            ))}
+                          </div>
+                        ) : groupAnalysis ? (
+                          <div className="flex flex-wrap gap-2">
+                            {groupAnalysis.iceBreakers.map((topic, idx) => {
+                              // Only animate entry on first arrival at stage 4;
+                              // if the user skipped ahead the chips render immediately.
+                              const animateEntry = analysingStage === 4;
+                              return (
+                                <motion.span
+                                  key={idx}
+                                  className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1.5 text-sm text-foreground"
+                                  initial={animateEntry ? { opacity: 0, scale: 0.85 } : false}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ duration: 0.3, delay: animateEntry ? idx * 0.15 : 0 }}
+                                >
+                                  {topic}
+                                </motion.span>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Legacy fallback: show matchExplanation when groupAnalysis is null after loading */}
+                  {!isLoadingAnalysis && !groupAnalysis && data?.group.matchExplanation && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="rounded-2xl border border-border bg-card px-5 py-4"
+                    >
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        为什么是这桌？
+                      </p>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {data.group.matchExplanation}
+                      </p>
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
