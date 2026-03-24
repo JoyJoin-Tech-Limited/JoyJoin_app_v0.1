@@ -18,6 +18,8 @@ interface IceBreakerScrollCardsProps {
   accentColor?: string;
   /** While true, render shimmer skeleton cards */
   isLoading?: boolean;
+  /** When true, skips shimmer animation */
+  prefersReducedMotion?: boolean;
 }
 
 const CARD_WIDTH = 160;
@@ -27,6 +29,7 @@ export default function IceBreakerScrollCards({
   topics,
   accentColor = "linear-gradient(135deg, #7C3AED, #A855F7)",
   isLoading = false,
+  prefersReducedMotion = false,
 }: IceBreakerScrollCardsProps) {
   const items = isLoading ? Array(3).fill("") : topics;
 
@@ -52,16 +55,12 @@ export default function IceBreakerScrollCards({
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.85; }
         }
-        @media (prefers-reduced-motion: reduce) {
-          .icebreaker-shimmer { animation: none !important; }
-        }
       `}</style>
 
       {items.map((topic, i) =>
         isLoading ? (
           <div
             key={i}
-            className="icebreaker-shimmer"
             style={{
               flexShrink: 0,
               width: CARD_WIDTH,
@@ -69,8 +68,8 @@ export default function IceBreakerScrollCards({
               borderRadius: 12,
               background: "rgba(0,0,0,0.06)",
               scrollSnapAlign: "start",
-              animation: `icebreaker-shimmer 1.4s ease-in-out infinite`,
-              animationDelay: `${i * 0.12}s`,
+              animation: prefersReducedMotion ? undefined : `icebreaker-shimmer 1.4s ease-in-out infinite`,
+              animationDelay: prefersReducedMotion ? undefined : `${i * 0.12}s`,
             }}
           />
         ) : (

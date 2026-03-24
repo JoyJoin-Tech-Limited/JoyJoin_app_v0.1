@@ -9489,13 +9489,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         true
       );
 
-      const mappedPairExplanations = analysis.pairExplanations.map((pe) => ({
+      // Helper: map an internal PairExplanation to the shared response type
+      const mapPe = (pe: { pairKey: string; explanation: string; chemistryScore: number; sharedInterests?: string[]; connectionPoints?: string[] }) => ({
         pairKey: pe.pairKey,
         explanation: pe.explanation,
         chemistryScore: pe.chemistryScore,
         sharedInterests: pe.sharedInterests ?? [],
         connectionPoints: pe.connectionPoints ?? [],
-      }));
+      });
 
       // Map internal GroupAnalysis → GroupAnalysisResponse
       const response: GroupAnalysisResponse = {
@@ -9503,17 +9504,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
         groupDynamics: analysis.groupDynamics,
         iceBreakers: analysis.iceBreakers,
-        pairExplanations: mappedPairExplanations,
+        pairExplanations: analysis.pairExplanations.map(mapPe),
         fromCache: analysis.fromCache ?? false,
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
         // Convenience field: pairs involving the authenticated viewer
-        myPairs: getPairExplanationForUser(analysis, userId).map((pe) => ({
-          pairKey: pe.pairKey,
-          explanation: pe.explanation,
-          chemistryScore: pe.chemistryScore,
-          sharedInterests: pe.sharedInterests ?? [],
-          connectionPoints: pe.connectionPoints ?? [],
-        })),
+        myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
       };
 
       return res.json(response);

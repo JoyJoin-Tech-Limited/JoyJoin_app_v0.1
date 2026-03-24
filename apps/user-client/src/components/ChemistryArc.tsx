@@ -27,21 +27,6 @@ const CENTER = ARC_SIZE / 2;
 // Circumference of a full circle; we'll use dasharray to show a fraction.
 const CIRCUMFERENCE = Math.PI * RADIUS; // half-circle arc length
 
-// Compute (cx, cy) endpoints for the half-circle arc (left→right along top)
-function describeArc(score: number): string {
-  const fraction = Math.min(1, Math.max(0, score / 100));
-  const angle = Math.PI * fraction; // 0 → π
-  const startX = CENTER - RADIUS;
-  const startY = CENTER;
-  const endX = CENTER - RADIUS + Math.cos(angle) * RADIUS * 0;
-  const endY = CENTER;
-  // Simpler: use stroke-dasharray on a static half-circle path
-  // The caller uses dasharray; this helper is unused but kept for documentation.
-  void startX; void startY; void endX; void endY;
-  return "";
-}
-void describeArc;
-
 // ── ChemistryArc ──────────────────────────────────────────────────────────────
 interface ChemistryArcProps {
   /** AI chemistry score 0–100 */
