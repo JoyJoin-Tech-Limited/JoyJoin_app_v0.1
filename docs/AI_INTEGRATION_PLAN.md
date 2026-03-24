@@ -74,7 +74,7 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 
 ### 1.4 LLM Provider Architecture
 
-JoyJoin runs a **dual-provider LLM layer** that is live in production today. Both providers share an OpenAI-compatible interface; routing is controlled by environment variables so the preferred provider for each function can be changed without a code deploy.
+JoyJoin runs a **dual-provider LLM layer** that is live in production today. Both providers share an OpenAI-compatible interface; for router-managed AI functions, routing is controlled by environment variables so the preferred provider for those functions can be changed without a code deploy. Some services (e.g. inline DeepSeek callers) still instantiate a provider client directly and must be updated in code if their provider needs to change.
 
 #### Provider Overview
 
@@ -90,8 +90,11 @@ JoyJoin runs a **dual-provider LLM layer** that is live in production today. Bot
 - Exports: `getMiniMaxClient()`, `isMiniMaxAvailable()`, `getMinimaxModel()`, `MINIMAX_MODEL`, `MINIMAX_DEFAULT_MODEL`, `isMinimaxEnabled` (alias for `isMiniMaxAvailable`), `getMinimaxClient` (alias), `minimaxClient` (module-load-time singleton)
 
 **DeepSeek client details**:
-- Instantiated inline inside each service file (not a shared singleton)
-- Lazy-initialized with `'dummy-key-for-fallback'` so the module can be safely imported in MiniMax-only environments without throwing on load; real requests require `DEEPSEEK_API_KEY` to be set
+- No single shared client module — each service manages its own `OpenAI` DeepSeek client
+- **`socialModelRouter.ts`**: lazy-initialized singleton using a `'dummy-key-for-fallback'` so the router can be safely imported in MiniMax-only environments; real DeepSeek calls still require `DEEPSEEK_API_KEY`
+- **Some services** (e.g. certain analytics/explanation helpers): create module-load-time singletons with a dummy key, mirroring the MiniMax pattern so that import is cheap but real calls still check `DEEPSEEK_API_KEY` before use
+- **Other services** (e.g. `apps/server/src/matchExplanationService.ts`, `apps/server/src/inference/llmFallbackInference.ts`): instantiate `new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY })` at module load with no dummy key / no lazy init — these require `DEEPSEEK_API_KEY` to be set in any environment where the module is executed
+- New DeepSeek usage should generally prefer the lazy/dummy-key patterns (as in `socialModelRouter.ts`) to avoid hard failures on import in MiniMax-only deployments
 
 #### Three Routing Layers
 
@@ -111,7 +114,7 @@ Key exports:
 
 `SocialFunction` values: `generateWarmupTopics`, `generateXiaoYueComment`, `generateRecapSummary`, `generateLieDetectiveStatements`, `generateMicroChallenges`, `generatePersonalityDiceChallenges`.
 
-In **`hybrid` mode** (the production default), `MINIMAX_DESIGNATED_FUNCTIONS` pins four functions to MiniMax:
+In **`hybrid` mode** (default when `SOCIAL_AI_PROVIDER` is not set), `MINIMAX_DESIGNATED_FUNCTIONS` pins four functions to MiniMax:
 
 | Function | Hybrid-mode provider |
 |---|---|
@@ -147,15 +150,17 @@ Service-level resilience:
 
 ---
 
-**Layer 3 — Direct DeepSeek: Attribute inference fallback**
+**Layer 3 — Direct DeepSeek: Attribute inference fallback (implemented, not yet wired)**
 
-`apps/server/src/inference/llmFallbackInference.ts` uses a **direct DeepSeek client** (not routed through either router above). Triggered when:
+`apps/server/src/inference/llmFallbackInference.ts` defines a **direct DeepSeek client** (not routed through either router above) with `callLLMForInference()` intended to trigger when:
 - Rule matching fails (no regex hit)
 - Confidence < 0.5 after 2+ questions
 - `career` or `expectation` dimensions have confidence < 0.6
 - Semantic conflict detected in extracted attributes
 
 Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{ insights[], confidence, reasoning? }`.
+
+> **Note:** `callLLMForInference()` and `checkLLMFallbackNeeded()` are implemented in this file but currently have no callers in the runtime flow. This layer is planned for activation in Phase 1 attribute inference work.
 
 #### Full Per-Function Routing Table (Production)
 
@@ -172,7 +177,7 @@ Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{
 | Social tag generation (`generateSocialTags`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_TAGS_PROVIDER` |
 | Event theme LLM (`generateThemeWithLLM`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_THEME_PROVIDER` |
 | Event theme title (`generateEventThemeTitle`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_TITLE_PROVIDER` |
-| Attribute inference fallback (`callLLMForInference`) | DeepSeek | — | Direct — no router | — |
+| Planned attribute inference fallback (experimental, `callLLMForInference`) | DeepSeek (planned) | — | Direct — planned, not yet wired; no router | — |
 
 #### Phase Evolution of the Provider Layer
 
