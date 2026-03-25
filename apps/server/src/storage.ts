@@ -1014,10 +1014,12 @@ export class DatabaseStorage implements IStorage {
     // If the initiator IS currentUserId it means the same user re-submitted — keep it pending.
     if (row.initiatorId !== currentUserId) {
       // Fetch both users' wechat IDs in parallel for snapshot
-      const [userARecord, userBRecord] = await Promise.all([
-        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA)).then(r => r[0]),
-        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB)).then(r => r[0]),
+      const [userARows, userBRows] = await Promise.all([
+        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonA)),
+        db.select({ wechatContactId: users.wechatContactId }).from(users).where(eq(users.id, canonB)),
       ]);
+      const [userARecord] = userARows;
+      const [userBRecord] = userBRows;
 
       // Drizzle .returning() returns an array; destructuring gives the first row or undefined
       const [updated] = await db

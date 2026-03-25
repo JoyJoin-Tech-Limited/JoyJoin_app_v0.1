@@ -244,8 +244,8 @@ export default function EditProfilePage() {
             },
             {
               label: "超热爱",
-              value: interestsSummary?.topPriorities?.length > 0
-                ? interestsSummary.topPriorities.map((t: any) => t.label).join("、")
+              value: (interestsSummary?.topPriorities ?? []).length > 0
+                ? (interestsSummary?.topPriorities ?? []).map((t: any) => t.label).join("、")
                 : null
             },
           ],
