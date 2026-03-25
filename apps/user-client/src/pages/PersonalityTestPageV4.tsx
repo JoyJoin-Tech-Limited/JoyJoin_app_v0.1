@@ -14,6 +14,8 @@ import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptive
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
+import { SliderQuestion } from "@/components/SliderQuestion";
+import { EmojiTapQuestion } from "@/components/EmojiTapQuestion";
 import { useDynamicAccent } from "@/contexts/DynamicAccentContext";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import { useUnifiedProgress } from "@/hooks/useUnifiedProgress";
@@ -260,6 +262,7 @@ export default function PersonalityTestPageV4() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedOption, setSelectedOption] = useState<string | undefined>();
+  const [sliderValue, setSliderValue] = useState<number | undefined>(undefined);
   const { saveCheckpoint } = useOnboardingCheckpoint();
   const [showMilestoneReward, setShowMilestoneReward] = useState(false);
   const milestoneShownRef = useRef(false); // Track if milestone has been shown
@@ -413,14 +416,42 @@ export default function PersonalityTestPageV4() {
   }, []);
 
   const handleSubmitAnswer = useCallback(async () => {
-    if (!currentQuestion || !selectedOption) return;
-    
+    if (!currentQuestion) return;
+
+    // Slider question: compute traitScores from slider value, then map to nearest discrete option
+    if (currentQuestion.questionType === 'slider' && currentQuestion.sliderConfig) {
+      if (sliderValue === undefined) return; // require interaction before submitting
+      haptics.medium();
+      const config = currentQuestion.sliderConfig;
+      const traitScores: Record<string, number> = {};
+      for (const mapping of config.traitMappings) {
+        traitScores[mapping.traitKey] =
+          mapping.scoreAtZero + (sliderValue / 100) * (mapping.scoreAt100 - mapping.scoreAtZero);
+      }
+      // Map the continuous 0-100 value to the nearest discrete option so that
+      // selectedOption always matches an existing question.options entry (API requirement).
+      const options = currentQuestion.options ?? [];
+      if (options.length === 0) {
+        console.error('[handleSubmitAnswer] Slider question has no options:', currentQuestion.id);
+        return;
+      }
+      const maxIndex = options.length - 1;
+      const clampedIndex = Math.max(0, Math.min(maxIndex, Math.round((sliderValue / 100) * maxIndex)));
+      const selectedOptionForSlider = options[clampedIndex]?.value;
+      if (!selectedOptionForSlider) return;
+      await submitAnswer(currentQuestion.id, selectedOptionForSlider, traitScores);
+      setSliderValue(undefined);
+      return;
+    }
+
+    // emoji_tap and choice questions: use selectedOption
+    if (!selectedOption) return;
     haptics.medium();
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
     
     setSelectedOption(undefined);
-  }, [currentQuestion, selectedOption, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
+  }, [currentQuestion, selectedOption, sliderValue, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
 
 
@@ -430,6 +461,7 @@ export default function PersonalityTestPageV4() {
     const success = await skipQuestion(currentQuestion.id);
     if (success) {
       setSelectedOption(undefined);
+      setSliderValue(undefined);
       toast({
         description: "已换一道题",
       });
@@ -446,11 +478,11 @@ export default function PersonalityTestPageV4() {
 
   // Dynamic Xiaoyue pose based on user state (H1)
   const xiaoyuePose = useMemo((): "thinking" | "casual" | "pointing" => {
-    if (selectedOption) return "pointing";        // user made a choice — Xiaoyue points approvingly
+    if (selectedOption || sliderValue !== undefined) return "pointing"; // user made a choice — Xiaoyue points approvingly
     if (answeredCount === 0) return "pointing";   // very first question — Xiaoyue welcomes/guides
     if (estimatedRemaining <= 2) return "casual"; // almost done — relaxed, encouraging
     return "thinking";                            // mid-assessment — Xiaoyue is thoughtfully considering
-  }, [selectedOption, answeredCount, estimatedRemaining]);
+  }, [selectedOption, sliderValue, answeredCount, estimatedRemaining]);
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
@@ -565,11 +597,7 @@ export default function PersonalityTestPageV4() {
         total={displayTotal as any}
         remaining={estimatedRemaining}
         progress={progressPercentage}
-        onBack={() => {
-          // Since /onboarding is merged into /personality-test, go back to landing
-          setLocation('/');
-        }}
-        showBack={true}
+        showBack={false}
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
         milestoneReached={milestoneReached}
       />
@@ -601,26 +629,56 @@ export default function PersonalityTestPageV4() {
             <p className="text-base text-foreground mb-2 leading-relaxed font-semibold">
               {scenarioText}
             </p>
-            <XiaoyueChatBubble 
-              pose={xiaoyuePose}
-              content={selectedOption 
-                ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
-                : currentQuestion.questionText
-              }
-              horizontal
-              animate={!prefersReducedMotion}
-              className="mb-1"
-            />
+            {/* Xiaoyue bubble — content varies by question type */}
+            {currentQuestion.questionType !== 'slider' && (
+              <XiaoyueChatBubble 
+                pose={xiaoyuePose}
+                content={selectedOption 
+                  ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
+                  : currentQuestion.questionText
+                }
+                horizontal
+                animate={!prefersReducedMotion}
+                className="mb-1"
+              />
+            )}
+            {currentQuestion.questionType === 'slider' && sliderValue === undefined && (
+              <XiaoyueChatBubble
+                pose="pointing"
+                content={currentQuestion.questionText}
+                horizontal
+                animate={!prefersReducedMotion}
+                className="mb-1"
+              />
+            )}
           </div>
           
           <div className="flex-1 flex flex-col justify-center py-1 min-h-0">
             <div className="max-h-[70vh] overflow-y-auto pb-20 md:pb-10 -mx-4 px-4">
-              <SelectionList
-                options={optionsForList}
-                selected={selectedOption}
-                onSelect={handleSelectOption}
-                className="grid grid-cols-1 gap-3 sm:grid-cols-2 !space-y-0"
-              />
+              {/* Branch rendering by questionType */}
+              {currentQuestion.questionType === 'slider' && currentQuestion.sliderConfig ? (
+                <SliderQuestion
+                  questionId={currentQuestion.id}
+                  sliderConfig={currentQuestion.sliderConfig}
+                  value={sliderValue}
+                  onChange={setSliderValue}
+                  animate={!prefersReducedMotion}
+                />
+              ) : currentQuestion.questionType === 'emoji_tap' ? (
+                <EmojiTapQuestion
+                  options={currentQuestion.options}
+                  selected={selectedOption}
+                  onSelect={handleSelectOption}
+                  animate={!prefersReducedMotion}
+                />
+              ) : (
+                <SelectionList
+                  options={optionsForList}
+                  selected={selectedOption}
+                  onSelect={handleSelectOption}
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-2 !space-y-0"
+                />
+              )}
             </div>
           </div>
 
@@ -628,7 +686,13 @@ export default function PersonalityTestPageV4() {
             <div className="space-y-3">
               <StickyCTAButton
                 onClick={handleSubmitAnswer}
-                disabled={!selectedOption || isSubmitting || isSkipping}
+                disabled={
+                  (currentQuestion.questionType === 'slider'
+                    ? sliderValue === undefined
+                    : !selectedOption) ||
+                  isSubmitting ||
+                  isSkipping
+                }
                 isLoading={isSubmitting}
                 data-testid="button-submit-answer"
               >

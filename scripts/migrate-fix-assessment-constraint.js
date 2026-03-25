@@ -40,7 +40,15 @@ async function runMigration() {
     console.log('✅ Connected to database');
 
     console.log('\n📝 Reading migration file...');
-    const migrationPath = join(__dirname, '..', 'migrations', '20260119205000_fix_assessment_answer_unique_constraint.sql');
+    // const migrationPath = join(__dirname, '..', 'migrations', '20260119205000_fix_assessment_answer_unique_constraint.sql');
+    const migrationPath = join(
+  __dirname,
+  '..',
+  'apps',
+  'server',
+  'migrations',
+  '20260119205000_fix_assessment_answer_unique_constraint.sql'
+);
     
     // Check if migration file exists
     let migrationSQL;

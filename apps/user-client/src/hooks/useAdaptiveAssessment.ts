@@ -18,6 +18,18 @@ interface QuestionOption {
   traitScores: TraitScores;
 }
 
+interface SliderConfig {
+  leftLabel: string;
+  rightLabel: string;
+  leftEmoji: string;
+  rightEmoji: string;
+  traitMappings: Array<{
+    traitKey: string;
+    scoreAtZero: number;
+    scoreAt100: number;
+  }>;
+}
+
 interface AssessmentQuestion {
   id: string;
   level: number;
@@ -25,6 +37,8 @@ interface AssessmentQuestion {
   scenarioText: string;
   questionText: string;
   options: QuestionOption[];
+  questionType?: 'choice' | 'slider' | 'emoji_tap';
+  sliderConfig?: SliderConfig;
 }
 
 interface ArchetypeMatch {

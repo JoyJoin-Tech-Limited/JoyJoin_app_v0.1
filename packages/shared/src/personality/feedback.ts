@@ -845,18 +845,21 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "C": "礼貌距离感，不过度热情。",
     "D": "理性肯定派，冷静欣赏。"
   },
-  "Q_PLAYFUL_CONFLICT": {
-    "A": "直接派，有话直说。",
-    "B": "消化型，先沉淀一下。",
-    "C": "润滑剂，化解高手。",
-    "D": "冷静观察，不急着反应。"
+  // ── 互动式收尾题反馈 ──
+  // 滑条题: value bucket "left" (<30) | "center" (30-70) | "right" (>70)
+  "Q_PLAYFUL_SLIDER": {
+    "left":   "充电模式，懂。",
+    "center": "弹性派，哪种都能过。",
+    "right":  "能量满格！",
   },
-  "Q_PLAYFUL_MOTIVATION": {
-    "A": "内驱派，满足感藏在心里。",
-    "B": "分享体质，快乐加倍。",
-    "C": "内外兼顾，享受回味也爱分享。",
-    "D": "低调记录派，成就感很私人。"
-  }
+  // Emoji 直觉题: value = option.value
+  "Q_PLAYFUL_EMOJI": {
+    "popcorn": "旁观也是一种智慧。",
+    "dm":      "第一反应就是关心对方，暖。",
+    "leave":   "给自己一点空间，清醒。",
+    "dove":    "悄悄化解，高手。",
+    "direct":  "直接出手，果断。",
+  },
 };
 
 // 进度反馈（基于完成百分比）
