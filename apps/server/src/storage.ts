@@ -4022,9 +4022,14 @@ export class DatabaseStorage implements IStorage {
     skippedQuestionIds: string[];
     answeredQuestionIds: string[];
   }>): Promise<any> {
+    const { preSignupAnswers, ...rest } = updates;
+    const setData: any = { ...rest, updatedAt: new Date() };
+    if (preSignupAnswers !== undefined) {
+      setData.preSignupData = preSignupAnswers;
+    }
     const [session] = await db
       .update(assessmentSessions)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(setData)
       .where(eq(assessmentSessions.id, id))
       .returning();
     return session;
