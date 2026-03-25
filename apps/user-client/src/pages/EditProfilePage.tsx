@@ -128,6 +128,7 @@ export default function EditProfilePage() {
     enabled: !!user,
     retry: false,
   });
+  const topPriorities = interestsSummary?.topPriorities ?? [];
 
   if (isLoading || !user) {
     return (
@@ -244,8 +245,8 @@ export default function EditProfilePage() {
             },
             {
               label: "超热爱",
-              value: interestsSummary?.topPriorities?.length > 0
-                ? interestsSummary.topPriorities.map((t: any) => t.label).join("、")
+              value: topPriorities.length > 0
+                ? topPriorities.map((t: any) => t.label).join("、")
                 : null
             },
           ],
