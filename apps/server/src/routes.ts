@@ -11945,6 +11945,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           scenarioText: nextQuestion.scenarioText,
           questionText: nextQuestion.questionText,
           options: shuffleOptions(nextQuestion.options),
+          questionType: nextQuestion.questionType,
+          sliderConfig: nextQuestion.sliderConfig,
         } : null,
         progress: {
           answered: engineState.answeredQuestionIds.size,
@@ -12137,6 +12139,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             scenarioText: nextQuestion.scenarioText,
             questionText: nextQuestion.questionText,
             options: shuffleOptions(nextQuestion.options),
+            questionType: nextQuestion.questionType,
+            sliderConfig: nextQuestion.sliderConfig,
           } : null,
           progress: {
             answered: answers.length,
@@ -12260,6 +12264,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           scenarioText: newQuestion.scenarioText,
           questionText: newQuestion.questionText,
           options: shuffleOptions(newQuestion.options),
+          questionType: newQuestion.questionType,
+          sliderConfig: newQuestion.sliderConfig,
         } : null,
         skipCount: skipResult.newState.skipCount,
         canSkip: skipResult.newState.skipCount < MAX_SKIP_COUNT,
@@ -12362,6 +12368,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           scenarioText: nextQuestion.scenarioText,
           questionText: nextQuestion.questionText,
           options: shuffleOptions(nextQuestion.options),
+          questionType: nextQuestion.questionType,
+          sliderConfig: nextQuestion.sliderConfig,
         } : null,
         progress: {
           answered: engineState.answeredQuestionIds.size,
