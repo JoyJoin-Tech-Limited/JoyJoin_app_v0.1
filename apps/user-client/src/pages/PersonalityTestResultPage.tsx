@@ -8,7 +8,7 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Smartphone } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -514,8 +514,6 @@ export default function PersonalityTestResultPage() {
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [skipToResults, setSkipToResults] = useState(false);
-  const [showLoginCTA, setShowLoginCTA] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -613,112 +611,6 @@ export default function PersonalityTestResultPage() {
       setAnimationPhase('results');
     }
   }, [prefersReducedMotion, animationPhase]);
-
-  // Show login CTA after results are visible for unauthenticated users (Option B: Post-Test Signup)
-  useEffect(() => {
-    if (!isAuthenticated && animationPhase === 'results') {
-      const timer = setTimeout(() => setShowLoginCTA(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, animationPhase]);
-
-  // WeChat login handler (Option B: Post-Test Signup Flow)
-  const handleWeChatLogin = useCallback(async () => {
-    setIsLoggingIn(true);
-    
-    try {
-      // Get anonymous test answers from localStorage with error handling
-      let testAnswers: unknown[] = [];
-      const answers = localStorage.getItem('joyjoin_v4_presignup_answers');
-      if (answers) {
-        try {
-          const parsed = JSON.parse(answers);
-          // Only accept array-like data; otherwise, fall back to empty array
-          testAnswers = Array.isArray(parsed) ? parsed : [];
-        } catch (parseError) {
-          console.warn(
-            "[WeChat Login] Failed to parse joyjoin_v4_presignup_answers from localStorage, falling back to empty array.",
-            parseError
-          );
-          testAnswers = [];
-        }
-      }
-      
-      // In production, this would call wx.login() to get WeChat code
-      // For now, use a mock code for development/testing
-      const mockCode = `wechat_test_${crypto.randomUUID()}`;
-      
-      // Use wx.login() in WeChat Mini Program environment, fall back to mock in web/dev
-      let code: string;
-      if (typeof wx !== 'undefined' && wx.login) {
-        const loginResult = await new Promise<any>((resolve, reject) => {
-          wx.login({
-            success: resolve,
-            fail: (err: any) => reject(new Error(err.errMsg || 'wx.login failed')),
-          });
-        });
-        code = loginResult.code;
-      } else {
-        // Web/development environment fallback
-        code = mockCode;
-        console.warn('[WeChatLogin] wx.login() not available, using mock code for dev/web');
-      }
-      
-      const response = await fetch('/api/auth/wechat/login-with-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          testAnswers,
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: '登录失败' }));
-        throw new Error(errorData.error || '登录失败');
-      }
-      
-      await response.json();
-      
-      // Clear anonymous data
-      localStorage.removeItem('joyjoin_v4_presignup_answers');
-      localStorage.removeItem('joyjoin_v4_assessment_session');
-      localStorage.removeItem('joyjoin_synced_session_id');
-      localStorage.removeItem('joyjoin_synced_answer_count');
-      
-      // Refresh user auth state (queryClient is imported from @/lib/queryClient)
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      
-      toast({
-        title: "登录成功",
-        description: "正在为你准备个性化匹配...",
-      });
-      
-      // Fetch updated user to get server-calculated nextStep
-      const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
-      
-      // Use server-driven nextStep for navigation
-      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover' 
-        : updatedUser?.nextStep === 'guide' ? '/guide'
-        : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
-        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
-        : '/onboarding/setup'; // fallback to essential data
-      
-      setTimeout(() => {
-        setLocation(nextPath);
-      }, 500);
-      
-    } catch (error) {
-      console.error('[WeChat Login] Error:', error);
-      toast({
-        title: "登录失败",
-        description: error instanceof Error ? error.message : "请稍后重试",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoggingIn(false);
-    }
-  }, [setLocation, toast]);
 
   const devBypassMutation = useMutation({
     mutationFn: async () => {
@@ -969,7 +861,13 @@ export default function PersonalityTestResultPage() {
               spectrumPosition={styleSpectrum.spectrumPosition}
               isDecisive={styleSpectrum.isDecisive}
               decisionReason={styleSpectrum.decisionReason}
-              onClaimCard={() => setShareModalOpen(true)}
+              onClaimCard={() => {
+                if (!isAuthenticated) {
+                  setLocation('/personality-test/auth-gate');
+                  return;
+                }
+                setShareModalOpen(true);
+              }}
               traitScores={{
                 A: finalResult.affinityScore,
                 O: finalResult.opennessScore,
@@ -1181,17 +1079,9 @@ export default function PersonalityTestResultPage() {
             <Button 
               className={`relative w-full h-16 rounded-2xl text-lg font-bold shadow-xl bg-gradient-to-r ${gradient} hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 border-2 border-white/30`}
               onClick={() => {
-                // Check authentication first
+                // Unauthenticated: redirect to auth-gate to sign in first
                 if (!isAuthenticated) {
-                  // Show login CTA and scroll to it
-                  setShowLoginCTA(true);
-                  // Smooth scroll to the login CTA card on the next frame
-                  requestAnimationFrame(() => {
-                    const loginCta = document.querySelector('[data-testid="wechat-login-cta"]');
-                    if (loginCta instanceof HTMLElement) {
-                      loginCta.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  });
+                  setLocation('/personality-test/auth-gate');
                   return;
                 }
                 
@@ -1221,7 +1111,7 @@ export default function PersonalityTestResultPage() {
         <div className="h-24" />
       </motion.div>
 
-      {/* Duolingo-style floating CTA button */}
+      {/* Floating CTA button */}
       <motion.div 
         className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent z-40"
         initial={{ opacity: 0, y: 50 }}
@@ -1229,76 +1119,7 @@ export default function PersonalityTestResultPage() {
         transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
       >
         <div className="max-w-2xl mx-auto space-y-3">
-          {!isAuthenticated && showLoginCTA ? (
-            /* WeChat Login CTA for anonymous users (Option B: Post-Test Signup) */
-            <>
-              <Card 
-                className="border-2 border-primary bg-gradient-to-br from-background to-primary/5 animate-pulse-slow" 
-                data-testid="wechat-login-cta"
-              >
-                <CardContent className="p-4 text-center space-y-3">
-                  <div className="flex items-center justify-center gap-2">
-                    <motion.div
-                      animate={{ rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
-                    >
-                      🔥
-                    </motion.div>
-                    <h3 className="text-lg font-semibold">你的专属匹配已生成！</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    测都测完了，不看结果？你的匹配正在等你解锁…
-                  </p>
-                  <Button 
-                    size="lg" 
-                    onClick={handleWeChatLogin}
-                    disabled={isLoggingIn}
-                    className={`w-full h-12 bg-gradient-to-r ${gradient} hover:opacity-90 transition-all duration-200`}
-                  >
-                    {isLoggingIn ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        登录中...
-                      </>
-                    ) : (
-                      <>
-                        <Smartphone className="w-5 h-5 mr-2" />
-                        一键登录，立即解锁
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    已有 2,847 人领取了匹配报告
-                  </p>
-                  <p className="text-xs text-muted-foreground/70">
-                    登录即同意《用户协议》和《隐私政策》
-                  </p>
-                </CardContent>
-              </Card>
-              {import.meta.env.DEV && (
-                <div className="space-y-1 text-center">
-                  <p className="text-xs text-amber-500 font-medium">🧪 DEV: 跳过微信，用测试账号登录</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-amber-400 text-amber-600 hover:bg-amber-50"
-                    data-testid="button-dev-wechat-bypass"
-                    disabled={devBypassMutation.isPending}
-                    onClick={() => devBypassMutation.mutate()}
-                  >
-                    {devBypassMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        登录中...
-                      </>
-                    ) : (
-                      "⚡ 测试账号登录"
-                    )}
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : isAuthenticated ? (
+          {isAuthenticated ? (
             /* Authenticated users - continue to profile setup */
             <>
               <Button 
@@ -1323,6 +1144,28 @@ export default function PersonalityTestResultPage() {
                 完善资料，获得更精准的匹配推荐
               </p>
             </>
+          ) : import.meta.env.DEV ? (
+            /* DEV-only quick pass for unauthenticated testers */
+            <div className="space-y-1 text-center">
+              <p className="text-xs text-amber-500 font-medium">🧪 DEV: 跳过微信，用测试账号登录</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-amber-400 text-amber-600 hover:bg-amber-50"
+                data-testid="button-dev-wechat-bypass"
+                disabled={devBypassMutation.isPending}
+                onClick={() => devBypassMutation.mutate()}
+              >
+                {devBypassMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    登录中...
+                  </>
+                ) : (
+                  "⚡ 测试账号登录"
+                )}
+              </Button>
+            </div>
           ) : null}
         </div>
       </motion.div>
