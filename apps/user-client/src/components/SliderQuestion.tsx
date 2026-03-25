@@ -3,7 +3,7 @@
  * Renders a draggable horizontal slider that captures continuous trait intensity.
  */
 
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
@@ -31,6 +31,10 @@ interface SliderQuestionProps {
   onChange: (value: number) => void;
   animate?: boolean;
 }
+
+// Thumb is w-11 (44px); track has mx-5 (20px) horizontal padding on each side.
+// The thumb center lives within [TRACK_PADDING, trackWidth - TRACK_PADDING].
+const TRACK_PADDING = 20; // px — matches the `mx-5` / `px-5` classes on track & labels
 
 /** Map slider value (0–100) to one of the three feedback buckets. */
 function getSliderBucket(v: number): "left" | "center" | "right" {
@@ -64,13 +68,17 @@ export function SliderQuestion({
   const trackRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
-  /** Convert a clientX position to a 0–100 value relative to the track. */
+  /**
+   * Convert a clientX position to a 0–100 value relative to the track's
+   * draggable region ([TRACK_PADDING, trackWidth - TRACK_PADDING]).
+   */
   const clientXToValue = useCallback((clientX: number): number => {
     const track = trackRef.current;
     if (!track) return 50;
     const rect = track.getBoundingClientRect();
-    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-    return Math.round((x / rect.width) * 100);
+    const usableWidth = rect.width - TRACK_PADDING * 2;
+    const x = Math.max(0, Math.min(clientX - rect.left - TRACK_PADDING, usableWidth));
+    return Math.round((x / usableWidth) * 100);
   }, []);
 
   const handlePointerDown = useCallback(
@@ -100,7 +108,7 @@ export function SliderQuestion({
   const fillPercent = value ?? 50;
   const thumbEmoji = getThumbEmoji(value, sliderConfig.leftEmoji, sliderConfig.rightEmoji);
 
-  // Xiaoyue feedback bubble
+  // Xiaoyue feedback bubble — shown once user has interacted with slider
   const xiaoyueFeedbackText =
     value !== undefined
       ? getOptionFeedback(questionId, getSliderBucket(value))
@@ -119,7 +127,7 @@ export function SliderQuestion({
         onPointerCancel={handlePointerUp}
         data-testid="slider-track"
       >
-        {/* Track rail */}
+        {/* Track rail — inset by TRACK_PADDING on each side */}
         <div className="absolute left-0 right-0 h-3 rounded-full bg-muted mx-5 overflow-hidden">
           {/* Fill */}
           <div
@@ -128,7 +136,7 @@ export function SliderQuestion({
           />
         </div>
 
-        {/* Thumb */}
+        {/* Thumb — positioned at fillPercent% of the usable track range */}
         <motion.div
           className={cn(
             "absolute top-1/2 -translate-y-1/2 -translate-x-1/2",
@@ -137,7 +145,10 @@ export function SliderQuestion({
             "cursor-grab active:cursor-grabbing",
             "pointer-events-none", // track div handles pointer events
           )}
-          style={{ left: `calc(${fillPercent}% * (100% - 40px) / 100% + 20px)` }}
+          style={{
+            // Map 0–100 value into the [TRACK_PADDING, width-TRACK_PADDING] range
+            left: `calc(${TRACK_PADDING}px + ${fillPercent}% * (100% - ${TRACK_PADDING * 2}px) / 100)`,
+          }}
           animate={
             shouldAnimate && value !== undefined
               ? { scale: [1, 1.15, 1] }
@@ -150,7 +161,7 @@ export function SliderQuestion({
         </motion.div>
       </div>
 
-      {/* Emoji + label row */}
+      {/* Emoji + label row — px-5 matches TRACK_PADDING so labels align under track ends */}
       <div className="flex justify-between mt-1 px-5">
         <div className="flex flex-col items-center gap-1 max-w-[6rem]">
           <span className="text-2xl leading-none">{sliderConfig.leftEmoji}</span>

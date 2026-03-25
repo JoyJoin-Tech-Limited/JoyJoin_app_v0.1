@@ -4529,7 +4529,6 @@ export const questionsV4: AdaptiveQuestion[] = [
     isAnchor: false,
     isForcedChoice: true,
     discriminationIndex: 0.58,
-    sliderConfig: undefined,
     options: [
       {
         value: "popcorn",

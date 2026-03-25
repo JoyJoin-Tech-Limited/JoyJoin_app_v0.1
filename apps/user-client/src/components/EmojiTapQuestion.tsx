@@ -24,7 +24,10 @@ interface EmojiTapQuestionProps {
 
 /**
  * Extract the leading emoji grapheme cluster from a string.
- * Handles multi-codepoint emoji (ZWJ sequences, variation selectors, etc.).
+ * Handles multi-codepoint sequences including:
+ *   - \p{Emoji_Presentation} — emoji with default emoji presentation
+ *   - \p{Emoji}\uFE0F        — text-style emoji forced to emoji presentation via VS-16
+ *   - \u200D                 — Zero Width Joiner (ZWJ) for combined sequences (e.g. 🏳️‍🌈)
  */
 function extractEmoji(text: string): string {
   // Match the first Unicode emoji sequence (incl. ZWJ / variation selectors / skin tones)
