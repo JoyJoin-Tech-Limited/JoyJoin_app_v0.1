@@ -9479,7 +9479,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         };
       });
 
-      const { generateGroupAnalysis } = await import('./matchExplanationService');
+      const { generateGroupAnalysis, getPairExplanationForUser } = await import('./matchExplanationService');
 
       // Call the existing service with caching enabled
       const analysis = await generateGroupAnalysis(
@@ -9489,21 +9489,26 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         true
       );
 
+      // Helper: map an internal PairExplanation to the shared response type
+      const mapPe = (pe: { pairKey: string; explanation: string; chemistryScore: number; sharedInterests?: string[]; connectionPoints?: string[] }) => ({
+        pairKey: pe.pairKey,
+        explanation: pe.explanation,
+        chemistryScore: pe.chemistryScore,
+        sharedInterests: pe.sharedInterests ?? [],
+        connectionPoints: pe.connectionPoints ?? [],
+      });
+
       // Map internal GroupAnalysis → GroupAnalysisResponse
       const response: GroupAnalysisResponse = {
         groupId,
         overallChemistry: analysis.overallChemistry as GroupAnalysisResponse['overallChemistry'],
         groupDynamics: analysis.groupDynamics,
         iceBreakers: analysis.iceBreakers,
-        pairExplanations: analysis.pairExplanations.map((pe) => ({
-          pairKey: pe.pairKey,
-          explanation: pe.explanation,
-          chemistryScore: pe.chemistryScore,
-          sharedInterests: pe.sharedInterests ?? [],
-          connectionPoints: pe.connectionPoints ?? [],
-        })),
+        pairExplanations: analysis.pairExplanations.map(mapPe),
         fromCache: analysis.fromCache ?? false,
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+        // Convenience field: pairs involving the authenticated viewer
+        myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
       };
 
       return res.json(response);

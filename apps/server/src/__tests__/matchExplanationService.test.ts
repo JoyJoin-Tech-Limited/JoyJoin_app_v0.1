@@ -53,8 +53,10 @@ vi.mock('../ai/socialModelRouter', () => ({
 }));
 
 import { 
-  matchExplanationService, 
+  matchExplanationService,
+  getPairExplanationForUser,
   type MatchMember,
+  type GroupAnalysis,
 } from '../matchExplanationService';
 
 describe('matchExplanationService', () => {
@@ -390,6 +392,80 @@ describe('matchExplanationService', () => {
     it('should handle empty members array', async () => {
       const iceBreakers = await matchExplanationService.generateIceBreakers([], '饭局');
       expect(Array.isArray(iceBreakers)).toBe(true);
+    });
+  });
+
+  describe('getPairExplanationForUser', () => {
+    // A minimal GroupAnalysis fixture with pre-built pairExplanations
+    const makeAnalysis = (pairKeys: string[]): GroupAnalysis => ({
+      groupId: 'group-1',
+      overallChemistry: 'warm',
+      groupDynamics: '测试组合',
+      iceBreakers: [],
+      pairExplanations: pairKeys.map((pairKey) => ({
+        pairKey,
+        explanation: '测试解释',
+        chemistryScore: 80,
+        sharedInterests: [],
+        connectionPoints: [],
+      })),
+    });
+
+    it('should return pairs where viewer is sorted first (prefix)', () => {
+      // 'user-1' sorts before 'user-2' lexicographically
+      const analysis = makeAnalysis(['user-1-user-2', 'user-2-user-3']);
+      const result = getPairExplanationForUser(analysis, 'user-1');
+      expect(result).toHaveLength(1);
+      expect(result[0].pairKey).toBe('user-1-user-2');
+    });
+
+    it('should return pairs where viewer is sorted second (suffix)', () => {
+      // 'user-3' sorts after 'user-2' lexicographically
+      const analysis = makeAnalysis(['user-1-user-2', 'user-2-user-3']);
+      const result = getPairExplanationForUser(analysis, 'user-3');
+      expect(result).toHaveLength(1);
+      expect(result[0].pairKey).toBe('user-2-user-3');
+    });
+
+    it('should return all pairs involving the viewer', () => {
+      const analysis = makeAnalysis(['user-1-user-2', 'user-1-user-3', 'user-2-user-3']);
+      const result = getPairExplanationForUser(analysis, 'user-1');
+      expect(result).toHaveLength(2);
+      expect(result.map(r => r.pairKey)).toEqual(
+        expect.arrayContaining(['user-1-user-2', 'user-1-user-3'])
+      );
+    });
+
+    it('should return empty array for unknown viewer', () => {
+      const analysis = makeAnalysis(['user-1-user-2', 'user-2-user-3']);
+      const result = getPairExplanationForUser(analysis, 'user-99');
+      expect(result).toHaveLength(0);
+    });
+
+    it('should return empty array for empty viewerUserId', () => {
+      const analysis = makeAnalysis(['user-1-user-2']);
+      const result = getPairExplanationForUser(analysis, '');
+      expect(result).toHaveLength(0);
+    });
+
+    it('should not produce false positives for UUID-like IDs', () => {
+      // UUID format: 8-4-4-4-12
+      const id1 = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      const id2 = 'ffffffff-gggg-hhhh-iiii-jjjjjjjjjjjj';
+      // id1 < id2 lexicographically so pairKey = id1 + '-' + id2
+      const pairKey = [id1, id2].sort().join('-');
+      const analysis = makeAnalysis([pairKey]);
+
+      const resultForId1 = getPairExplanationForUser(analysis, id1);
+      expect(resultForId1).toHaveLength(1);
+
+      const resultForId2 = getPairExplanationForUser(analysis, id2);
+      expect(resultForId2).toHaveLength(1);
+
+      // A different ID that shares a prefix with id1 should NOT match
+      const otherId = 'aaaaaaaa-bbbb-cccc-dddd-ffffffffffff';
+      const resultForOther = getPairExplanationForUser(analysis, otherId);
+      expect(resultForOther).toHaveLength(0);
     });
   });
 });

@@ -18,10 +18,13 @@ import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
  * Shared query options for fetching group analysis.
  * Centralises queryKey, caching, and error handling so behaviour stays
  * consistent — export this if you need to prefetch or prime the cache.
+ *
+ * Query key follows the URL-path convention used across this repo:
+ * ["/api/pool-groups", groupId, "analysis"]
  */
 export function getGroupAnalysisQueryOptions(groupId: string | null | undefined) {
   return {
-    queryKey: ["group-analysis", groupId] as const,
+    queryKey: ["/api/pool-groups", groupId, "analysis"] as const,
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/pool-groups/${groupId}/analysis`);
       if (!res.ok) throw new Error("Failed to fetch group analysis");
