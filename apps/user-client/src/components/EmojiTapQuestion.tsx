@@ -7,12 +7,13 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import type { TraitScores } from "@shared/personality/types";
 
 export interface EmojiTapOption {
   value: string;
   /** Full label string, emoji prefix first, e.g. "🍿 吃瓜围观，看看怎么发展" */
   text: string;
-  traitScores: Record<string, number>;
+  traitScores: TraitScores;
 }
 
 interface EmojiTapQuestionProps {
