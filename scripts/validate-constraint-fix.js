@@ -19,7 +19,14 @@ console.log('🔍 Validating Assessment Constraint Fix...\n');
 let hasErrors = false;
 
 // Check 1: Migration SQL file exists
-const migrationPath = join(__dirname, '..', 'migrations', '20260119205000_fix_assessment_answer_unique_constraint.sql');
+const migrationPath = join(
+  __dirname,
+  '..',
+  'apps',
+  'server',
+  'migrations',
+  '20260119205000_fix_assessment_answer_unique_constraint.sql'
+);
 if (existsSync(migrationPath)) {
   console.log('✅ Migration SQL file exists');
   
