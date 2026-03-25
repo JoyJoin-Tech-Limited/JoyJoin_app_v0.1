@@ -14,13 +14,11 @@ export default function TransitionOverlay({
 }: TransitionOverlayProps) {
   const prefersReducedMotion = useReducedMotion();
 
-  // Keep latest values in refs so the timer effect never needs them as deps
+  // Keep onComplete in a ref so the timer effect never needs it as a dep
   const onCompleteRef = useRef(onComplete);
-  const prefersReducedMotionRef = useRef(prefersReducedMotion);
   useEffect(() => {
     onCompleteRef.current = onComplete;
-    prefersReducedMotionRef.current = prefersReducedMotion;
-  }, [onComplete, prefersReducedMotion]);
+  }, [onComplete]);
 
   // Subtle haptic feedback + auto-dismiss — driven solely by `isVisible`
   // changing to true, avoiding spurious re-runs.
@@ -123,7 +121,6 @@ export default function TransitionOverlay({
                   color: "rgba(255, 255, 255, 0.72)",
                   letterSpacing: "0.16em",
                 }}
-                aria-hidden="true"
               >
                 精准分析进行中
               </p>
