@@ -844,7 +844,22 @@ export const xiaoyueFeedback: Record<string, Record<string, string>> = {
     "B": "深情陪伴者，真诚温暖。",
     "C": "礼貌距离感，不过度热情。",
     "D": "理性肯定派，冷静欣赏。"
-  }
+  },
+  // ── 互动式收尾题反馈 ──
+  // 滑条题: value bucket "left" (<30) | "center" (30-70) | "right" (>70)
+  "Q_PLAYFUL_SLIDER": {
+    "left":   "充电模式，懂。",
+    "center": "弹性派，哪种都能过。",
+    "right":  "能量满格！",
+  },
+  // Emoji 直觉题: value = option.value
+  "Q_PLAYFUL_EMOJI": {
+    "popcorn": "旁观也是一种智慧。",
+    "dm":      "第一反应就是关心对方，暖。",
+    "leave":   "给自己一点空间，清醒。",
+    "dove":    "悄悄化解，高手。",
+    "direct":  "直接出手，果断。",
+  },
 };
 
 // 进度反馈（基于完成百分比）
