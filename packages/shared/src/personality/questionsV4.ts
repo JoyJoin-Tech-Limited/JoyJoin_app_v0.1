@@ -4485,6 +4485,72 @@ export const questionsV4: AdaptiveQuestion[] = [
         traitScores: { A: 2, C: 1, E: 4, O: 1, X: 0, P: -1 }
       }
     ]
+  },
+
+  // ==================== 趣味补充题 (Q_PLAYFUL_CONFLICT, Q_PLAYFUL_MOTIVATION) ====================
+  // These questions capture secondaryDifferentiator dimensions (conflictPosture, motivationDirection)
+  // that are not otherwise probed. traitScores are empty so they don't shift 6-dim scores.
+  {
+    id: "Q_PLAYFUL_CONFLICT",
+    level: 3,
+    category: "playful",
+    scenarioText: "💬 群里有人说了一句让你不太舒服的话。",
+    questionText: "你的第一反应是？",
+    primaryTraits: ["A", "C"],
+    isForcedChoice: false,
+    options: [
+      {
+        value: "A",
+        text: "直接回复，把话说清楚",
+        traitScores: {}
+      },
+      {
+        value: "B",
+        text: "默默截图，私下吐槽",
+        traitScores: {}
+      },
+      {
+        value: "C",
+        text: "发个表情包，把气氛岔开",
+        traitScores: {}
+      },
+      {
+        value: "D",
+        text: "等等看，也许只是误会",
+        traitScores: {}
+      }
+    ]
+  },
+  {
+    id: "Q_PLAYFUL_MOTIVATION",
+    level: 3,
+    category: "playful",
+    scenarioText: "🏆 你刚完成了一件努力很久的事，感觉超棒。",
+    questionText: "这一刻，你最想做的是？",
+    primaryTraits: ["X", "P"],
+    isForcedChoice: false,
+    options: [
+      {
+        value: "A",
+        text: "自己心里就很满足，不需要别人知道",
+        traitScores: {}
+      },
+      {
+        value: "B",
+        text: "想马上分享，让大家一起开心",
+        traitScores: {}
+      },
+      {
+        value: "C",
+        text: "会分享，但更享受自己回味那一刻",
+        traitScores: {}
+      },
+      {
+        value: "D",
+        text: "悄悄记在日记里，属于自己的成就感",
+        traitScores: {}
+      }
+    ]
   }
 ];
 
@@ -4525,3 +4591,24 @@ export const REVERSED_QUESTION_IDS = questionsV4
 export const ATTENTION_CHECK_QUESTION_IDS = questionsV4
   .filter(q => q.isAttentionCheck)
   .map(q => q.id);
+
+/**
+ * Maps playful secondary question IDs to the UserSecondaryData field and option → value lookup.
+ * Used by the server answer route and the wechatAuth pre-auth flow to decode and persist
+ * secondary personality dimension data without duplicating logic.
+ */
+export interface SecondaryQuestionMapping {
+  field: 'conflictPosture' | 'motivationDirection';
+  valueMap: Record<string, string>;
+}
+
+export const SECONDARY_QUESTION_MAP: Record<string, SecondaryQuestionMapping> = {
+  Q_PLAYFUL_CONFLICT: {
+    field: 'conflictPosture',
+    valueMap: { A: 'approach', B: 'avoid', C: 'mediate', D: 'avoid' },
+  },
+  Q_PLAYFUL_MOTIVATION: {
+    field: 'motivationDirection',
+    valueMap: { A: 'internal', B: 'external', C: 'balanced', D: 'internal' },
+  },
+};
