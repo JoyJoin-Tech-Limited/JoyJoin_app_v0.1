@@ -4487,71 +4487,105 @@ export const questionsV4: AdaptiveQuestion[] = [
     ]
   },
 
-  // ==================== 趣味补充题 (Q_PLAYFUL_CONFLICT, Q_PLAYFUL_MOTIVATION) ====================
-  // These questions capture secondaryDifferentiator dimensions (conflictPosture, motivationDirection)
-  // that are not otherwise probed. traitScores are empty so they don't shift 6-dim scores.
+  // ==================== Q_PLAYFUL: 互动式收尾题 (填补题库空白) ====================
+
+  // Q_PLAYFUL_SLIDER — Energy Dial
+  // 目标: 连续测量 X 强度 + 通过 P 信号解开 太阳鸡/淡定海豚 混淆对
+  // 设计依据: MCQ 选项强迫用户二选一，滑条让用户表达真实强度，绕过社会期望偏差
   {
-    id: "Q_PLAYFUL_CONFLICT",
+    id: "Q_PLAYFUL_SLIDER",
     level: 3,
-    category: "playful",
-    scenarioText: "💬 群里有人说了一句让你不太舒服的话。",
-    questionText: "你的第一反应是？",
-    primaryTraits: ["A", "C"],
-    isForcedChoice: false,
-    options: [
-      {
-        value: "A",
-        text: "直接回复，把话说清楚",
-        traitScores: {}
-      },
-      {
-        value: "B",
-        text: "默默截图，私下吐槽",
-        traitScores: {}
-      },
-      {
-        value: "C",
-        text: "发个表情包，把气氛岔开",
-        traitScores: {}
-      },
-      {
-        value: "D",
-        text: "等等看，也许只是误会",
-        traitScores: {}
-      }
-    ]
-  },
-  {
-    id: "Q_PLAYFUL_MOTIVATION",
-    level: 3,
-    category: "playful",
-    scenarioText: "🏆 你刚完成了一件努力很久的事，感觉超棒。",
-    questionText: "这一刻，你最想做的是？",
+    category: "能量感知",
+    scenarioText: "🌙 周五下班，终于自由了——",
+    questionText: "拖动滑条，找到最符合你此刻感受的位置",
     primaryTraits: ["X", "P"],
-    isForcedChoice: false,
+    questionType: "slider",
+    isAnchor: false,
+    discriminationIndex: 0.55,
+    sliderConfig: {
+      leftLabel: "想一个人待着",
+      rightLabel: "快叫上朋友！",
+      leftEmoji: "😮‍💨",
+      rightEmoji: "🥳",
+      traitMappings: [
+        { traitKey: "X", scoreAtZero: -4, scoreAt100: 4 },
+        { traitKey: "P", scoreAtZero: -3, scoreAt100: 3 },
+      ],
+    },
+    // 5 discrete buckets let the V4 engine validate selectedOption normally.
+    // The frontend maps the continuous 0–100 slider position to the nearest bucket,
+    // so scoring remains server-authoritative while the UX is still continuous.
     options: [
       {
-        value: "A",
-        text: "自己心里就很满足，不需要别人知道",
-        traitScores: {}
+        value: "slider_0",
+        text: "完全想一个人待着",
+        traitScores: { X: -4, P: -3 },
       },
       {
-        value: "B",
-        text: "想马上分享，让大家一起开心",
-        traitScores: {}
+        value: "slider_25",
+        text: "更偏向自己充电",
+        traitScores: { X: -2, P: -1 },
       },
       {
-        value: "C",
-        text: "会分享，但更享受自己回味那一刻",
-        traitScores: {}
+        value: "slider_50",
+        text: "看心情，居中就好",
+        traitScores: { X: 0, P: 0 },
       },
       {
-        value: "D",
-        text: "悄悄记在日记里，属于自己的成就感",
-        traitScores: {}
-      }
-    ]
-  }
+        value: "slider_75",
+        text: "有点想约人出去",
+        traitScores: { X: 2, P: 1 },
+      },
+      {
+        value: "slider_100",
+        text: "超想热闹一下，快叫上朋友！",
+        traitScores: { X: 4, P: 3 },
+      },
+    ],
+  },
+
+  // Q_PLAYFUL_EMOJI — Conflict Instinct Tap
+  // 目标: 捕捉 conflictPosture（prototypes.ts secondaryDifferentiators 中完全未被探测的维度）+ A 特质
+  // 设计依据: 5选1快速直觉选择激活系统一反应，比文字 MCQ 更能测出真实行为倾向
+  {
+    id: "Q_PLAYFUL_EMOJI",
+    level: 3,
+    category: "社交直觉",
+    scenarioText: "👀 你看到两个朋友在微信群里因为一件小事杠起来了……",
+    questionText: "你的第一反应？（别想，直接按）",
+    primaryTraits: ["A", "X", "E"],
+    questionType: "emoji_tap",
+    isAnchor: false,
+    isForcedChoice: true,
+    discriminationIndex: 0.58,
+    options: [
+      {
+        value: "popcorn",
+        text: "🍿 吃瓜围观，看看怎么发展",
+        traitScores: { O: 2, A: -2 },
+      },
+      {
+        value: "dm",
+        text: "💬 私信其中一个：你还好吗？",
+        traitScores: { A: 4, X: -1 },
+      },
+      {
+        value: "leave",
+        text: "🤫 默默退出群聊一小会儿",
+        traitScores: { E: 2, X: -3 },
+      },
+      {
+        value: "dove",
+        text: "🕊️ 发条轻松消息转移话题",
+        traitScores: { A: 2, P: 2, C: 1 },
+      },
+      {
+        value: "direct",
+        text: "🔥 直接说：好了好了，你们都有道理",
+        traitScores: { X: 2, C: 2, A: 1 },
+      },
+    ],
+  },
 ];
 
 export const ANCHOR_QUESTION_IDS = questionsV4
