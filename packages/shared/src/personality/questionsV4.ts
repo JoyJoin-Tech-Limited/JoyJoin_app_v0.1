@@ -4592,23 +4592,5 @@ export const ATTENTION_CHECK_QUESTION_IDS = questionsV4
   .filter(q => q.isAttentionCheck)
   .map(q => q.id);
 
-/**
- * Maps playful secondary question IDs to the UserSecondaryData field and option → value lookup.
- * Used by the server answer route and the wechatAuth pre-auth flow to decode and persist
- * secondary personality dimension data without duplicating logic.
- */
-export interface SecondaryQuestionMapping {
-  field: 'conflictPosture' | 'motivationDirection';
-  valueMap: Record<string, string>;
-}
-
-export const SECONDARY_QUESTION_MAP: Record<string, SecondaryQuestionMapping> = {
-  Q_PLAYFUL_CONFLICT: {
-    field: 'conflictPosture',
-    valueMap: { A: 'approach', B: 'avoid', C: 'mediate', D: 'avoid' },
-  },
-  Q_PLAYFUL_MOTIVATION: {
-    field: 'motivationDirection',
-    valueMap: { A: 'internal', B: 'external', C: 'balanced', D: 'internal' },
-  },
-};
+export type { SecondaryQuestionMapping } from './secondaryQuestionMap';
+export { SECONDARY_QUESTION_MAP } from './secondaryQuestionMap';
