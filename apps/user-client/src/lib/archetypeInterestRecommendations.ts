@@ -132,7 +132,7 @@ export function isRecommendedForArchetype(
   archetypeId: string | undefined | null
 ): boolean {
   if (!archetypeId) return false;
-  const recommendations =
+  const recommendations: readonly string[] | undefined =
     ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName];
   if (!recommendations) return false;
   return recommendations.includes(topicId);
@@ -144,5 +144,9 @@ export function isRecommendedForArchetype(
  */
 export function getRecommendedTopics(archetypeId: string | undefined | null): string[] {
   if (!archetypeId) return [];
-  return ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName] ?? [];
+
+  const recommendations: readonly string[] | undefined =
+    ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName];
+
+  return recommendations ? [...recommendations] : [];
 }
