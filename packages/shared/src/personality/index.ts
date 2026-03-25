@@ -13,3 +13,4 @@ export type { ArchetypeName as CompatibilityArchetypeName } from './archetypeCom
 export * from './archetypeNames';
 export * from './archetypeSkills';
 export * from './traitDisplayConfig';
+export * from './secondaryQuestionMap';
