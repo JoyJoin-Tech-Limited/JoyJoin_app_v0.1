@@ -17,7 +17,7 @@ const MS_PER_HOUR = 1000 * 60 * 60;
 const VENUE_UNLOCK_HOURS = 24;
 
 interface NavItem {
-  iconSrc?: string;
+  iconSrc: string;
   label: string;
   path: string;
   testId: string;
