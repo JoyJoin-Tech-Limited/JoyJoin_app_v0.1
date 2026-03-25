@@ -12003,7 +12003,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         shouldTerminate,
         getFinalResult,
         DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
+        V2_ASSESSMENT_CONFIG,
+        SECONDARY_QUESTION_MAP,
       } = await import('@shared/personality');
       
       // Use V2 config when ENABLE_MATCHER_V2 is set
@@ -12023,18 +12024,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       }
 
       // Detect playful secondary questions and persist the decoded value
-      const { SECONDARY_QUESTION_MAP } = await import('@shared/personality');
-
       if (SECONDARY_QUESTION_MAP[questionId]) {
         const { field, valueMap } = SECONDARY_QUESTION_MAP[questionId];
         const secondaryValue = valueMap[selectedOption];
         if (secondaryValue) {
-          const existingSecondary = (session.preSignupData as any)?.secondaryData ?? {};
+          const currentPreSignup = session.preSignupData as any;
+          const existingSecondary =
+            currentPreSignup && !Array.isArray(currentPreSignup)
+              ? currentPreSignup.secondaryData ?? {}
+              : {};
+          const newPreSignupData = Array.isArray(currentPreSignup)
+            ? currentPreSignup
+            : {
+                ...(currentPreSignup ?? {}),
+                secondaryData: { ...existingSecondary, [field]: secondaryValue },
+              };
           await storage.updateAssessmentSession(sessionId, {
-            preSignupAnswers: {
-              ...((session.preSignupData as any) ?? {}),
-              secondaryData: { ...existingSecondary, [field]: secondaryValue },
-            },
+            preSignupAnswers: newPreSignupData,
           });
         }
       }

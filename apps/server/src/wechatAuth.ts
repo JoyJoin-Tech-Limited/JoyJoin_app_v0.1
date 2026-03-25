@@ -7,7 +7,7 @@ import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
-import { SECONDARY_QUESTION_MAP } from "@shared/personality/questionsV4";
+import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
 
 const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
