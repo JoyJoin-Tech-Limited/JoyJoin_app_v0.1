@@ -30,6 +30,19 @@ export type CohortType =
   | 'reflective_stabilizer' // 沉思猫头鹰, 稳如龟 (high C + differentiated O/E)
   | 'universal';           // Works for all cohorts
 
+export interface SliderConfig {
+  leftLabel: string;
+  rightLabel: string;
+  leftEmoji: string;
+  rightEmoji: string;
+  traitMappings: Array<{
+    traitKey: TraitKey;
+    /** slider 0→100 maps linearly to scoreAtZero→scoreAt100 */
+    scoreAtZero: number;
+    scoreAt100: number;
+  }>;
+}
+
 export interface AdaptiveQuestion {
   id: string;
   level: QuestionLevel;
@@ -47,6 +60,9 @@ export interface AdaptiveQuestion {
   isForcedChoice?: boolean; // Forced-choice tradeoff questions between competing traits
   targetPairs?: string[]; // Archetype names this question is designed to differentiate
   cohortTag?: CohortType; // Which cohort this question is best suited for
+  /** Defaults to 'choice' if absent */
+  questionType?: 'choice' | 'slider' | 'emoji_tap';
+  sliderConfig?: SliderConfig;
 }
 
 export interface TraitConfidence {
