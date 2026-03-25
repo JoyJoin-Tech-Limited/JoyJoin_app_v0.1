@@ -116,7 +116,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertDirectMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, directMessageThreads, directMessages, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -9549,7 +9549,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         const linkedEvent = await db
           .select({ id: blindBoxEvents.id })
           .from(blindBoxEvents)
-          .where(eq(blindBoxEvents.eventPoolId, group.poolId))
+          .where(eq(blindBoxEvents.poolId, group.poolId))
           .limit(1);
         if (linkedEvent.length > 0) {
           blindBoxEventId = linkedEvent[0].id;

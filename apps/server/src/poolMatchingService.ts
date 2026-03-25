@@ -535,6 +535,8 @@ function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithPro
     score += calculateHometownAffinityScore(user1, user2);
     factors++;
   }
+
+  return factors > 0 ? Math.round(score / factors) : 50;
 }
 
 /**
