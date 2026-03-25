@@ -4512,7 +4512,36 @@ export const questionsV4: AdaptiveQuestion[] = [
         { traitKey: "P", scoreAtZero: -3, scoreAt100: 3 },
       ],
     },
-    options: [],
+    // 5 discrete buckets let the V4 engine validate selectedOption normally.
+    // The frontend maps the continuous 0–100 slider position to the nearest bucket,
+    // so scoring remains server-authoritative while the UX is still continuous.
+    options: [
+      {
+        value: "slider_0",
+        text: "完全想一个人待着",
+        traitScores: { X: -4, P: -3 },
+      },
+      {
+        value: "slider_25",
+        text: "更偏向自己充电",
+        traitScores: { X: -2, P: -1 },
+      },
+      {
+        value: "slider_50",
+        text: "看心情，居中就好",
+        traitScores: { X: 0, P: 0 },
+      },
+      {
+        value: "slider_75",
+        text: "有点想约人出去",
+        traitScores: { X: 2, P: 1 },
+      },
+      {
+        value: "slider_100",
+        text: "超想热闹一下，快叫上朋友！",
+        traitScores: { X: 4, P: 3 },
+      },
+    ],
   },
 
   // Q_PLAYFUL_EMOJI — Conflict Instinct Tap

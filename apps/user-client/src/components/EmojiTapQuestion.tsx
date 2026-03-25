@@ -66,6 +66,8 @@ export function EmojiTapQuestion({
           return (
             <motion.button
               key={option.value}
+              type="button"
+              aria-pressed={isSelected}
               initial={shouldAnimate ? { opacity: 0, y: 10 } : undefined}
               animate={shouldAnimate ? { opacity: 1, y: 0 } : undefined}
               transition={shouldAnimate ? { delay: index * 0.06 } : undefined}

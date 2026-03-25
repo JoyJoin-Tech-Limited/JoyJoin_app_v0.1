@@ -105,6 +105,38 @@ export function SliderQuestion({
     haptics.medium();
   }, []);
 
+  /** Keyboard interaction: arrow keys move by 5 units, Home/End jump to extremes. */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const current = value ?? 50;
+      const STEP = 5;
+      let next: number | undefined;
+
+      switch (e.key) {
+        case "ArrowRight":
+        case "ArrowUp":
+          next = Math.min(100, current + STEP);
+          break;
+        case "ArrowLeft":
+        case "ArrowDown":
+          next = Math.max(0, current - STEP);
+          break;
+        case "Home":
+          next = 0;
+          break;
+        case "End":
+          next = 100;
+          break;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      onChange(next);
+    },
+    [value, onChange],
+  );
+
   const fillPercent = value ?? 50;
   const thumbEmoji = getThumbEmoji(value, sliderConfig.leftEmoji, sliderConfig.rightEmoji);
 
@@ -116,15 +148,23 @@ export function SliderQuestion({
 
   return (
     <div className="w-full px-2 py-4" data-testid="slider-question">
-      {/* Track area — pointer events live here so the whole width is grabbable */}
+      {/* Track area — pointer events live here so the whole width is grabbable.
+          Also acts as the ARIA slider widget with keyboard support. */}
       <div
         ref={trackRef}
-        className="relative h-12 flex items-center cursor-pointer select-none"
+        role="slider"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={value ?? 50}
+        aria-valuetext={`${value ?? 50} — ${sliderConfig.leftLabel} 到 ${sliderConfig.rightLabel}`}
+        tabIndex={0}
+        className="relative h-12 flex items-center cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full"
         style={{ touchAction: "none" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onKeyDown={handleKeyDown}
         data-testid="slider-track"
       >
         {/* Track rail — inset by TRACK_PADDING on each side */}

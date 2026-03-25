@@ -418,7 +418,7 @@ export default function PersonalityTestPageV4() {
   const handleSubmitAnswer = useCallback(async () => {
     if (!currentQuestion) return;
 
-    // Slider question: compute traitScores from slider value
+    // Slider question: compute traitScores from slider value, then map to nearest discrete option
     if (currentQuestion.questionType === 'slider' && currentQuestion.sliderConfig) {
       if (sliderValue === undefined) return; // require interaction before submitting
       haptics.medium();
@@ -428,7 +428,18 @@ export default function PersonalityTestPageV4() {
         traitScores[mapping.traitKey] =
           mapping.scoreAtZero + (sliderValue / 100) * (mapping.scoreAt100 - mapping.scoreAtZero);
       }
-      await submitAnswer(currentQuestion.id, `slider_${Math.round(sliderValue)}`, traitScores);
+      // Map the continuous 0-100 value to the nearest discrete option so that
+      // selectedOption always matches an existing question.options entry (API requirement).
+      const options = currentQuestion.options ?? [];
+      if (options.length === 0) {
+        console.error('[handleSubmitAnswer] Slider question has no options:', currentQuestion.id);
+        return;
+      }
+      const maxIndex = options.length - 1;
+      const clampedIndex = Math.max(0, Math.min(maxIndex, Math.round((sliderValue / 100) * maxIndex)));
+      const selectedOptionForSlider = options[clampedIndex]?.value;
+      if (!selectedOptionForSlider) return;
+      await submitAnswer(currentQuestion.id, selectedOptionForSlider, traitScores);
       setSliderValue(undefined);
       return;
     }
