@@ -42,13 +42,13 @@ async function runMigration() {
     console.log('\n📝 Reading migration file...');
     // const migrationPath = join(__dirname, '..', 'migrations', '20260119000000_rename_role_to_archetype.sql');
     const migrationPath = join(
-  __dirname,
-  '..',
-  'apps',
-  'server',
-  'migrations',
-  '20260119205000_fix_assessment_answer_unique_constraint.sql'
-);
+      __dirname,
+      '..',
+      'apps',
+      'server',
+      'migrations',
+      '20260119000000_rename_role_to_archetype.sql'
+    );
     
     // Check if migration file exists
     let migrationSQL;
