@@ -565,11 +565,7 @@ export default function PersonalityTestPageV4() {
         total={displayTotal as any}
         remaining={estimatedRemaining}
         progress={progressPercentage}
-        onBack={() => {
-          // Since /onboarding is merged into /personality-test, go back to landing
-          setLocation('/');
-        }}
-        showBack={true}
+        showBack={false}
         showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
         milestoneReached={milestoneReached}
       />
