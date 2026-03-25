@@ -10,8 +10,8 @@
  * - Authenticated users are immediately redirected to /personality-test/results.
  * - Tapping the WeChat button logs in inline (forwarding pre-signup answers) then
  *   navigates to the server-calculated nextStep.
- * - Tapping "先不看了" navigates to /personality-test/results anyway — results are
- *   still viewable without logging in; they just won't be saved to the account.
+ * - In non-production environments a "测试快速通过" button lets testers bypass
+ *   auth and jump directly to the results page without signing in.
  *
  * Route: /personality-test/auth-gate
  */
@@ -194,10 +194,6 @@ export default function WeChatAuthGatePage() {
     }
   }, [isLoggingIn, setLocation, toast]);
 
-  const handleSkip = () => {
-    setLocation('/personality-test/results');
-  };
-
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -335,30 +331,22 @@ export default function WeChatAuthGatePage() {
             微信登录 · 揭开结果
           </button>
 
-          {/* Skip link — intentionally subdued; users can still view results without saving */}
-          <button
-            onClick={handleSkip}
-            className="text-sm text-muted-foreground bg-transparent border-0 cursor-pointer select-none"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
-          >
-            先不看了
-          </button>
+          {/* Dev/admin quick pass — only visible in non-production for testing purposes */}
+          {process.env.NODE_ENV !== 'production' && (
+            <button
+              onClick={() => setLocation('/personality-test/results')}
+              className="text-sm text-muted-foreground bg-transparent border-0 cursor-pointer select-none"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              测试快速通过
+            </button>
+          )}
         </motion.div>
 
         {/* ── Legal footer ─────────────────────────────────────────────── */}
         <p className="absolute bottom-8 text-xs text-muted-foreground/50 text-center px-8">
           登录即同意《用户协议》和《隐私政策》
         </p>
-
-        {/* DEV bypass */}
-        {process.env.NODE_ENV !== 'production' && (
-          <button
-            onClick={() => setLocation('/personality-test/results')}
-            className="absolute bottom-2 text-xs text-muted-foreground/40 bg-transparent border-0 cursor-pointer"
-          >
-            [DEV: Skip Auth]
-          </button>
-        )}
       </div>
     </>
   );
