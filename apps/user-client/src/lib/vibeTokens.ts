@@ -5,7 +5,8 @@
  * to the visual tokens used in SquadVibePanel and the SquadUnboxingFlow
  * chemistry badge.
  *
- * Single source of truth — import from here instead of inlining in components.
+ * Shared mapping for chemistry/vibe tokens — new usages should import from
+ * here instead of inlining configuration in components.
  */
 
 import type { OverallChemistry } from "@shared/types/groupAnalysis";

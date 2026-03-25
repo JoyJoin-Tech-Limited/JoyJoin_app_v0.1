@@ -229,6 +229,9 @@ function MemberCard({
 
   // Social tag: explicit tag → archetype nickname → archetype name
   const socialTagText = member.socialTag ?? config?.nickname ?? member.archetype;
+  const hasAIInsights = Boolean(
+    (member.connectionPoints && member.connectionPoints.length > 0) || member.matchReason
+  );
 
   // Fan layout geometry
   const spread = total > 1 ? Math.min(18, 54 / total) : 0;
@@ -654,6 +657,45 @@ function MemberCard({
                     </p>
                   </div>
                 )}
+
+                {hasAIInsights ? (
+                  <div
+                    style={{
+                      padding: "6px",
+                      borderRadius: 10,
+                      border: `1px solid rgba(${archetypeBorderRgb}, 0.18)`,
+                      background: `rgba(${archetypeBorderRgb}, 0.05)`,
+                    }}
+                  >
+                    {member.connectionPoints && member.connectionPoints.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[8px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          AI 契合点
+                        </p>
+                        <ConnectionPointPills
+                          points={member.connectionPoints}
+                          accentColor={archetypeAccentHex}
+                          maxVisible={2}
+                          prefersReducedMotion={prefersReducedMotion}
+                        />
+                      </div>
+                    )}
+
+                    {member.matchReason && (
+                      <p
+                        style={{
+                          fontSize: 9,
+                          color: "rgba(17,24,39,0.78)",
+                          lineHeight: 1.4,
+                          marginTop:
+                            member.connectionPoints && member.connectionPoints.length > 0 ? 6 : 0,
+                        }}
+                      >
+                        {member.matchReason}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
 
                 {/* Icebreaker Hook (破冰雷达) */}
                 {icebreakerText && (

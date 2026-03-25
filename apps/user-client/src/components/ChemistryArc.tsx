@@ -46,15 +46,16 @@ export default function ChemistryArc({
   prefersReducedMotion = false,
 }: ChemistryArcProps) {
   const clampedScore = Math.min(100, Math.max(0, Math.round(score)));
+  const targetProgress = clampedScore / 100;
   const [displayScore, setDisplayScore] = useState(prefersReducedMotion ? clampedScore : 0);
-  const [progress, setProgress] = useState(prefersReducedMotion ? clampedScore / 100 : 0);
+  const [progress, setProgress] = useState(prefersReducedMotion ? targetProgress : 0);
   const animFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (prefersReducedMotion || isLoading) {
       setDisplayScore(clampedScore);
-      setProgress(clampedScore / 100);
+      setProgress(targetProgress);
       return;
     }
 
@@ -70,7 +71,7 @@ export default function ChemistryArc({
       // easeOut cubic
       const eased = 1 - Math.pow(1 - t, 3);
 
-      setProgress(eased);
+      setProgress(targetProgress * eased);
       setDisplayScore(Math.round(eased * clampedScore));
 
       if (t < 1) {
@@ -82,7 +83,7 @@ export default function ChemistryArc({
     return () => {
       if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [clampedScore, isLoading, prefersReducedMotion]);
+  }, [clampedScore, isLoading, prefersReducedMotion, targetProgress]);
 
   // Static half-circle path: arc from left midpoint to right midpoint (top half)
   const halfCirclePath = `M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${RADIUS} 0 0 1 ${CENTER + RADIUS} ${CENTER}`;
@@ -116,7 +117,7 @@ export default function ChemistryArc({
             strokeDashoffset={CIRCUMFERENCE * 0.5}
             opacity={0.3}
             style={{
-              animation: "chemistry-arc-pulse 1.4s ease-in-out infinite",
+              animation: prefersReducedMotion ? undefined : "chemistry-arc-pulse 1.4s ease-in-out infinite",
             }}
           />
         </svg>
@@ -124,9 +125,6 @@ export default function ChemistryArc({
           @keyframes chemistry-arc-pulse {
             0%, 100% { opacity: 0.2; }
             50% { opacity: 0.55; }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .chemistry-arc-pulse { animation: none; }
           }
         `}</style>
         <span style={{ fontSize: 9, color: "rgba(0,0,0,0.30)", fontWeight: 600 }}>火花值</span>
