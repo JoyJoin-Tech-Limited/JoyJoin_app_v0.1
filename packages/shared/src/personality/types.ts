@@ -206,7 +206,7 @@ export interface MilestoneMessage {
 }
 
 export const MILESTONE_MESSAGES: MilestoneMessage[] = [
-  { position: 5, message: '嗯嗯，开始有点懂你了~', xiaoyueMood: 'thinking' },
-  { position: 8, message: '越来越清晰啦！快成型了~', xiaoyueMood: 'encouraging' },
-  { position: 11, message: '最后几题确认一下~', xiaoyueMood: 'excited' },
+  { position: 5, message: '有点意思，继续。', xiaoyueMood: 'thinking' },
+  { position: 8, message: '轮廓越来越清晰了~', xiaoyueMood: 'encouraging' },
+  { position: 11, message: '最后几题，确认一下没看错。', xiaoyueMood: 'excited' },
 ];
