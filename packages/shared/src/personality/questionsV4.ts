@@ -4625,3 +4625,6 @@ export const REVERSED_QUESTION_IDS = questionsV4
 export const ATTENTION_CHECK_QUESTION_IDS = questionsV4
   .filter(q => q.isAttentionCheck)
   .map(q => q.id);
+
+export type { SecondaryQuestionMapping } from './secondaryQuestionMap';
+export { SECONDARY_QUESTION_MAP } from './secondaryQuestionMap';

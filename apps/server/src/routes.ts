@@ -12005,7 +12005,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         shouldTerminate,
         getFinalResult,
         DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
+        V2_ASSESSMENT_CONFIG,
+        SECONDARY_QUESTION_MAP,
       } = await import('@shared/personality');
       
       // Use V2 config when ENABLE_MATCHER_V2 is set
@@ -12022,6 +12023,28 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const option = question.options.find(o => o.value === selectedOption);
       if (!option) {
         return res.status(400).json({ message: 'Invalid option selected' });
+      }
+
+      // Detect playful secondary questions and persist the decoded value
+      if (SECONDARY_QUESTION_MAP[questionId]) {
+        const { field, valueMap } = SECONDARY_QUESTION_MAP[questionId];
+        const secondaryValue = valueMap[selectedOption];
+        if (secondaryValue) {
+          const currentPreSignup = session.preSignupData as any;
+          const existingSecondary =
+            currentPreSignup && !Array.isArray(currentPreSignup)
+              ? currentPreSignup.secondaryData ?? {}
+              : {};
+          const newPreSignupData = Array.isArray(currentPreSignup)
+            ? currentPreSignup
+            : {
+                ...(currentPreSignup ?? {}),
+                secondaryData: { ...existingSecondary, [field]: secondaryValue },
+              };
+          await storage.updateAssessmentSession(sessionId, {
+            preSignupAnswers: newPreSignupData,
+          });
+        }
       }
       
       // Save answer
@@ -12048,8 +12071,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const isComplete = shouldTerminate(engineState);
       
       if (isComplete) {
+        // Load secondary data accumulated from playful questions (re-fetch to pick up any update above)
+        const freshSession = await storage.getAssessmentSession(sessionId);
+        const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
+
         // Generate final result
-        const finalResult = getFinalResult(engineState);
+        const finalResult = getFinalResult(engineState, userSecondaryData);
         
         // Update session
         await storage.updateAssessmentSession(sessionId, {

@@ -70,6 +70,7 @@ vi.mock("@shared/personality/matcherV2", () => ({
 // ── Import SUT after mocks are registered ──────────────────────────────────
 import { getWechatOpenId, findOrCreateWechatUser, processTestAnswers } from "../wechatAuth";
 import { storage } from "../storage";
+import { findBestMatchingArchetypesV2 } from "@shared/personality/matcherV2";
 
 // ── global fetch mock ───────────────────────────────────────────────────────
 const originalFetch = global.fetch;
@@ -245,5 +246,67 @@ describe("processTestAnswers", () => {
 
     // Should not throw
     await expect(processTestAnswers("user-1", answers)).resolves.toBeUndefined();
+  });
+
+  it("passes conflictPosture from Q_PLAYFUL_CONFLICT to findBestMatchingArchetypesV2", async () => {
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 5 } },
+      { questionId: "Q_PLAYFUL_CONFLICT", questionLevel: 3, selectedOption: "A", traitScores: {} },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ conflictPosture: "approach" }),
+      3
+    );
+  });
+
+  it("passes motivationDirection from Q_PLAYFUL_MOTIVATION to findBestMatchingArchetypesV2", async () => {
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "B", traitScores: { X: 2 } },
+      { questionId: "Q_PLAYFUL_MOTIVATION", questionLevel: 3, selectedOption: "B", traitScores: {} },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ motivationDirection: "external" }),
+      3
+    );
+  });
+
+  it("passes both secondary fields when both playful questions are answered", async () => {
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 3 } },
+      { questionId: "Q_PLAYFUL_CONFLICT", questionLevel: 3, selectedOption: "C", traitScores: {} },
+      { questionId: "Q_PLAYFUL_MOTIVATION", questionLevel: 3, selectedOption: "A", traitScores: {} },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ conflictPosture: "mediate", motivationDirection: "internal" }),
+      3
+    );
+  });
+
+  it("ignores unknown option values in playful questions and does not pass secondary data", async () => {
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 3 } },
+      { questionId: "Q_PLAYFUL_CONFLICT", questionLevel: 3, selectedOption: "Z", traitScores: {} },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    // userSecondaryData is empty, so undefined should be passed
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.any(Object),
+      undefined,
+      3
+    );
   });
 });
