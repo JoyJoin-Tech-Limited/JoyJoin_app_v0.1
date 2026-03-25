@@ -27,6 +27,7 @@ import {
 } from "@/lib/userFieldMappings";
 import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
 import { useGroupAnalysis } from "@/hooks/useGroupAnalysis";
+import { getVibeTokens } from "@/lib/vibeTokens";
 import type { PairExplanation } from "@shared/types/groupAnalysis";
 
 // Safe wrapper around the Web Vibration API
@@ -40,14 +41,6 @@ type FlowState = "ready" | "shaking" | "revealed";
 
 // Shared JoyJoin gradient used across box and buttons in this flow
 const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
-
-// Chemistry badge configuration for the progressive reveal
-const CHEMISTRY_CONFIG = {
-  fire: { emoji: "🔥", label: "超级火花", gradientClass: "from-amber-500 to-orange-500" },
-  warm: { emoji: "✨", label: "暖意融融", gradientClass: "from-violet-700 to-purple-500" },
-  mild: { emoji: "💬", label: "相聊甚欢", gradientClass: "from-blue-500 to-cyan-500" },
-  cold: { emoji: "🌱", label: "慢慢发现", gradientClass: "from-green-500 to-emerald-500" },
-} as const;
 
 interface PoolGroupMember {
   userId: string;
@@ -165,14 +158,12 @@ export default function SquadUnboxingFlow() {
       // Look up the viewer↔member pair explanation from myPairs first (server-computed),
       // falling back to a client-side pairKey lookup against the full list.
       let pairExp: PairExplanation | undefined;
-      if (groupAnalysis) {
-        if (groupAnalysis.myPairs && user?.id) {
-          pairExp = groupAnalysis.myPairs.find(
-            (p) => p.pairKey.startsWith(m.userId + '-') || p.pairKey.endsWith('-' + m.userId)
-          );
+      if (groupAnalysis && user?.id && m.userId !== user.id) {
+        const pairKey = [user.id, m.userId].sort().join("-");
+        if (groupAnalysis.myPairs) {
+          pairExp = groupAnalysis.myPairs.find((p) => p.pairKey === pairKey);
         }
-        if (!pairExp && user?.id) {
-          const pairKey = [user.id, m.userId].sort().join('-');
+        if (!pairExp) {
           pairExp = groupAnalysis.pairExplanations.find((p) => p.pairKey === pairKey);
         }
       }
@@ -527,7 +518,7 @@ export default function SquadUnboxingFlow() {
                           <div className="h-16 w-full rounded-2xl bg-muted animate-pulse" />
                         ) : groupAnalysis ? (
                           (() => {
-                            const cfg = CHEMISTRY_CONFIG[groupAnalysis.overallChemistry];
+                            const cfg = getVibeTokens(groupAnalysis.overallChemistry);
                             return (
                               <div
                                 className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-4 bg-gradient-to-r ${cfg.gradientClass} shadow-lg`}
