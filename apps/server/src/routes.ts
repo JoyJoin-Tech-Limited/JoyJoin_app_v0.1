@@ -12021,6 +12021,23 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       if (!option) {
         return res.status(400).json({ message: 'Invalid option selected' });
       }
+
+      // Detect playful secondary questions and persist the decoded value
+      const { SECONDARY_QUESTION_MAP } = await import('@shared/personality');
+
+      if (SECONDARY_QUESTION_MAP[questionId]) {
+        const { field, valueMap } = SECONDARY_QUESTION_MAP[questionId];
+        const secondaryValue = valueMap[selectedOption];
+        if (secondaryValue) {
+          const existingSecondary = (session.preSignupData as any)?.secondaryData ?? {};
+          await storage.updateAssessmentSession(sessionId, {
+            preSignupAnswers: {
+              ...((session.preSignupData as any) ?? {}),
+              secondaryData: { ...existingSecondary, [field]: secondaryValue },
+            },
+          });
+        }
+      }
       
       // Save answer
       await storage.createAssessmentAnswer({
@@ -12046,8 +12063,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const isComplete = shouldTerminate(engineState);
       
       if (isComplete) {
+        // Load secondary data accumulated from playful questions (re-fetch to pick up any update above)
+        const freshSession = await storage.getAssessmentSession(sessionId);
+        const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
+
         // Generate final result
-        const finalResult = getFinalResult(engineState);
+        const finalResult = getFinalResult(engineState, userSecondaryData);
         
         // Update session
         await storage.updateAssessmentSession(sessionId, {

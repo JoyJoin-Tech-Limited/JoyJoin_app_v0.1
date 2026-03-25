@@ -6,7 +6,8 @@ import { db } from "./db";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { findBestMatchingArchetypesV2 } from "@shared/personality/matcherV2";
+import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
+import { SECONDARY_QUESTION_MAP } from "@shared/personality/questionsV4";
 
 const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
@@ -312,9 +313,24 @@ export async function processTestAnswers(
     traitScores[trait] = Math.max(0, Math.min(100, 50 + traitScores[trait]));
   });
 
+  // Build userSecondaryData from playful secondary questions
+  const userSecondaryData: UserSecondaryData = {};
+  for (const answer of testAnswers as any[]) {
+    if (!answer || typeof answer !== 'object') continue;
+    const qId = String(answer.questionId ?? answer.question_id ?? answer.id ?? '');
+    const selectedOpt = String(answer.selectedOption ?? answer.value ?? answer.answer ?? answer.selected_option ?? '');
+    const mapping = SECONDARY_QUESTION_MAP[qId];
+    if (mapping && selectedOpt) {
+      const decoded = mapping.valueMap[selectedOpt];
+      if (decoded) {
+        userSecondaryData[mapping.field] = decoded as any;
+      }
+    }
+  }
+
   const matchResults = findBestMatchingArchetypesV2(
     traitScores as any,
-    undefined,
+    Object.keys(userSecondaryData).length > 0 ? userSecondaryData : undefined,
     3
   );
 
