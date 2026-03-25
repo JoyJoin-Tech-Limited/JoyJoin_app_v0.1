@@ -98,9 +98,10 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   }, [open]);
 
   // Fetch share card data
-  const { data: shareCardData, isLoading } = useQuery<ShareCardData>({
+  const { data: shareCardData, isLoading, isError } = useQuery<ShareCardData>({
     queryKey: ['/api/personality-test/share-card-data'],
     enabled: open,
+    retry: false,
   });
 
   const archetype = shareCardData?.archetype || "";
@@ -412,6 +413,23 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
       });
     }
   }, [generateImage, archetype, selectedExpression, selectedVariant, toast]);
+
+  if (isError) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <VisuallyHidden>
+            <DialogTitle>加载失败</DialogTitle>
+            <DialogDescription>无法加载卡片数据</DialogDescription>
+          </VisuallyHidden>
+          <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+            <p className="text-muted-foreground text-sm">卡片数据加载失败，请登录后重试</p>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>关闭</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (isLoading || !shareCardData || !selectedVariant) {
     return (

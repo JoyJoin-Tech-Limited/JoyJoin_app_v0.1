@@ -861,7 +861,13 @@ export default function PersonalityTestResultPage() {
               spectrumPosition={styleSpectrum.spectrumPosition}
               isDecisive={styleSpectrum.isDecisive}
               decisionReason={styleSpectrum.decisionReason}
-              onClaimCard={() => setShareModalOpen(true)}
+              onClaimCard={() => {
+                if (!isAuthenticated) {
+                  setLocation('/personality-test/auth-gate');
+                  return;
+                }
+                setShareModalOpen(true);
+              }}
               traitScores={{
                 A: finalResult.affinityScore,
                 O: finalResult.opennessScore,
