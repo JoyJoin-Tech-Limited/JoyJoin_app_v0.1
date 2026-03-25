@@ -26,7 +26,9 @@ import {
   getUserTopicAvoidances,
 } from "@/lib/userFieldMappings";
 import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
-import type { GroupAnalysisResponse, PairExplanation } from "@shared/types/groupAnalysis";
+import { useGroupAnalysis } from "@/hooks/useGroupAnalysis";
+import { getVibeTokens } from "@/lib/vibeTokens";
+import type { PairExplanation } from "@shared/types/groupAnalysis";
 
 // Safe wrapper around the Web Vibration API
 const hapticVibrate = (pattern: number | number[]) => {
@@ -39,14 +41,6 @@ type FlowState = "ready" | "shaking" | "revealed";
 
 // Shared JoyJoin gradient used across box and buttons in this flow
 const JOYJOIN_GRADIENT = "linear-gradient(135deg, #4C1D95, #7C3AED)";
-
-// Chemistry badge configuration for the progressive reveal
-const CHEMISTRY_CONFIG = {
-  fire: { emoji: "🔥", label: "超级火花", gradientClass: "from-amber-500 to-orange-500" },
-  warm: { emoji: "✨", label: "暖意融融", gradientClass: "from-violet-700 to-purple-500" },
-  mild: { emoji: "💬", label: "相聊甚欢", gradientClass: "from-blue-500 to-cyan-500" },
-  cold: { emoji: "🌱", label: "慢慢发现", gradientClass: "from-green-500 to-emerald-500" },
-} as const;
 
 interface PoolGroupMember {
   userId: string;
@@ -124,14 +118,11 @@ export default function SquadUnboxingFlow() {
     enabled: !!groupId,
   });
 
-  // Fetch group analysis — only fires once the box is opened (revealed state)
-  const { data: groupAnalysis, isLoading: isLoadingAnalysis } = useQuery<GroupAnalysisResponse>({
-    queryKey: ["/api/pool-groups", groupId, "analysis"],
-    queryFn: () =>
-      apiRequest("GET", `/api/pool-groups/${groupId}/analysis`).then((r) => r.json()),
-    enabled: !!groupId && flowState === "revealed",
-    staleTime: 1000 * 60 * 7, // 7-minute client cache; server-side group analysis cache persists longer
-  });
+  // Fetch group analysis — only fires once the box is opened (revealed state).
+  // Uses the shared hook so the query key and stale-time are canonical.
+  const { data: groupAnalysis, isLoading: isLoadingAnalysis } = useGroupAnalysis(
+    flowState === "revealed" ? groupId : null
+  );
 
   const { toast } = useToast();
 
@@ -159,24 +150,45 @@ export default function SquadUnboxingFlow() {
   // Map API members → SquadMember[] for CardDeckReveal
   // The API returns age as users.birthdate (a string) and industry as industryNicheLabel/industryCategoryLabel.
   // Normalise both fields here so spark predictions work correctly.
+  // When groupAnalysis is available, merge AI pair data (matchReason, compatibilityScore,
+  // connectionPoints) using myPairs (viewer-scoped) or the full pairExplanations list.
   const squadMembers = useMemo<SquadMember[]>(() => {
     if (!data?.members) return [];
-    return data.members.map((m) => ({
-      userId: m.userId,
-      displayName: m.displayName,
-      archetype: m.archetype ?? undefined,
-      // Compute numeric age from birthdate string; undefined if absent
-      age: m.age ? calculateAgeFromBirthdate(m.age) : undefined,
-      gender: m.gender ?? undefined,
-      educationLevel: m.educationLevel ?? undefined,
-      topInterests: m.topInterests ?? undefined,
-      // industry is not returned directly — use the most-specific label available
-      industry: m.industryNicheLabel ?? m.industryCategoryLabel ?? undefined,
-      relationshipStatus: m.relationshipStatus ?? undefined,
-      hometownRegionCity: m.hometownRegionCity ?? undefined,
-      hometownAffinityOptin: m.hometownAffinityOptin ?? undefined,
-    }));
-  }, [data]);
+    return data.members.map((m) => {
+      // Look up the viewer↔member pair explanation from myPairs first (server-computed),
+      // falling back to a client-side pairKey lookup against the full list.
+      let pairExp: PairExplanation | undefined;
+      if (groupAnalysis && user?.id && m.userId !== user.id) {
+        const pairKey = [user.id, m.userId].sort().join("-");
+        if (groupAnalysis.myPairs) {
+          pairExp = groupAnalysis.myPairs.find((p) => p.pairKey === pairKey);
+        }
+        if (!pairExp) {
+          pairExp = groupAnalysis.pairExplanations.find((p) => p.pairKey === pairKey);
+        }
+      }
+
+      return {
+        userId: m.userId,
+        displayName: m.displayName,
+        archetype: m.archetype ?? undefined,
+        // Compute numeric age from birthdate string; undefined if absent
+        age: m.age ? calculateAgeFromBirthdate(m.age) : undefined,
+        gender: m.gender ?? undefined,
+        educationLevel: m.educationLevel ?? undefined,
+        topInterests: m.topInterests ?? undefined,
+        // industry is not returned directly — use the most-specific label available
+        industry: m.industryNicheLabel ?? m.industryCategoryLabel ?? undefined,
+        relationshipStatus: m.relationshipStatus ?? undefined,
+        hometownRegionCity: m.hometownRegionCity ?? undefined,
+        hometownAffinityOptin: m.hometownAffinityOptin ?? undefined,
+        // AI-populated fields (undefined when analysis hasn't loaded yet — cards fall back gracefully)
+        matchReason: pairExp?.explanation ?? undefined,
+        compatibilityScore: pairExp?.chemistryScore ?? undefined,
+        connectionPoints: pairExp?.connectionPoints ?? undefined,
+      };
+    });
+  }, [data, groupAnalysis, user?.id]);
 
   // Build UserContext from auth user for spark-prediction engine
   const currentUser = useMemo<UserContext | undefined>(() => {
@@ -193,8 +205,6 @@ export default function SquadUnboxingFlow() {
       relationshipStatus: user.relationshipStatus ?? undefined,
       hometownRegionCity: user.hometownRegionCity ?? undefined,
       hometownAffinityOptin: user.hometownAffinityOptin ?? undefined,
-      seniority: user.seniority ?? undefined,
-      studyLocale: user.studyLocale ?? undefined,
     };
   }, [user]);
 
@@ -508,7 +518,7 @@ export default function SquadUnboxingFlow() {
                           <div className="h-16 w-full rounded-2xl bg-muted animate-pulse" />
                         ) : groupAnalysis ? (
                           (() => {
-                            const cfg = CHEMISTRY_CONFIG[groupAnalysis.overallChemistry];
+                            const cfg = getVibeTokens(groupAnalysis.overallChemistry);
                             return (
                               <div
                                 className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-4 bg-gradient-to-r ${cfg.gradientClass} shadow-lg`}
