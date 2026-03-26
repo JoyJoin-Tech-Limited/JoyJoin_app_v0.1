@@ -9,6 +9,7 @@ import { INDUSTRY_OPTIONS } from "@shared/constants";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
+import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
@@ -462,7 +463,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminAccount = await storage.getAdminAccountByUsername(loginId);
       if (adminAccount) {
         if (adminAccount.status !== 'active') {
-          return res.status(403).json({ message: "该账号已被禁用" });
+          console.warn("Admin login attempt for disabled account", {
+            username: adminAccount.username,
+            status: adminAccount.status,
+          });
+          return res.status(401).json({ message: "用户名或密码错误" });
         }
         const isValid = await bcrypt.compare(password, adminAccount.passwordHash);
         if (!isValid) {
@@ -6950,7 +6955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ ADMIN MIDDLEWARE ============
+  // ============ AUTH MIDDLEWARE ============
   
   async function requireAuth(req: Request, res: any, next: any) {
     const session = req.session as any;
@@ -6959,243 +6964,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   }
-  
-  /**
-   * requireAdmin – allows access if:
-   *  1. session has adminAccountId (new admin_accounts-based auth), OR
-   *  2. session has userId referencing a users row with isAdmin=true (legacy transitional)
-   * Also attaches req.adminRole for downstream RBAC checks.
-   */
-  async function requireAdmin(req: Request, res: any, next: any) {
-    const session = req.session as any;
 
-    // New admin_accounts-based session
-    if (session?.adminAccountId) {
-      try {
-        const adminAccount = await storage.getAdminAccountById(session.adminAccountId);
-        if (!adminAccount || adminAccount.status !== 'active') {
-          return res.status(403).json({ message: "Forbidden - Admin access required" });
-        }
-        (req as any).adminAccount = adminAccount;
-        (req as any).adminRole = adminAccount.role;
-        return next();
-      } catch (error) {
-        console.error("Error checking admin account status:", error);
-        return res.status(500).json({ message: "Internal server error" });
-      }
-    }
-
-    // Legacy users-table-based admin session
-    if (session?.userId) {
-      try {
-        const user = await storage.getUser(session.userId);
-        if (!user?.isAdmin) {
-          return res.status(403).json({ message: "Forbidden - Admin access required" });
-        }
-        (req as any).adminRole = 'super_admin'; // legacy admins get full access
-        return next();
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        return res.status(500).json({ message: "Internal server error" });
-      }
-    }
-
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  /**
-   * requireSuperAdmin – restricts access to super_admin role only.
-   * Must be used after requireAdmin.
-   */
-  function requireSuperAdmin(req: Request, res: any, next: any) {
-    const role = (req as any).adminRole;
-    if (role !== 'super_admin') {
-      return res.status(403).json({ message: "Forbidden - Super admin access required" });
-    }
-    next();
-  }
-
-  /**
-   * requireOperatorOrAbove – allows super_admin and operator; denies viewer.
-   * Must be used after requireAdmin.
-   */
-  function requireOperatorOrAbove(req: Request, res: any, next: any) {
-    const role = (req as any).adminRole;
-    if (role !== 'super_admin' && role !== 'operator') {
-      return res.status(403).json({ message: "Forbidden - Operator access required" });
-    }
-    next();
-  }
-
-  // ============ NEW CANONICAL ADMIN LOGIN ============
-
-  /**
-   * POST /api/admin/login
-   * Accepts { username, password }. Authenticates against the admin_accounts table.
-   * Returns session cookie + role information.
-   */
-  app.post('/api/admin/login', requireOperatorOrAbove, async (req: Request, res) => {
-    try {
-      const { username, password } = req.body;
-
-      if (!username || !password) {
-        return res.status(400).json({ message: "用户名和密码不能为空" });
-      }
-
-      const adminAccount = await storage.getAdminAccountByUsername(username);
-      if (!adminAccount) {
-        return res.status(401).json({ message: "用户名或密码错误" });
-      }
-
-      if (adminAccount.status !== 'active') {
-        return res.status(403).json({ message: "该账号已被禁用" });
-      }
-
-      const bcrypt = await import('bcrypt');
-      const isValid = await bcrypt.compare(password, adminAccount.passwordHash);
-      if (!isValid) {
-        return res.status(401).json({ message: "用户名或密码错误" });
-      }
-
-      await storage.updateAdminLastLogin(adminAccount.id);
-
-      await new Promise<void>((resolve, reject) => {
-        req.session.regenerate((err: any) => {
-          if (err) return reject(err);
-          req.session.adminAccountId = adminAccount.id;
-          req.session.adminRole = adminAccount.role;
-          req.session.save((saveErr: any) => {
-            if (saveErr) return reject(saveErr);
-            resolve();
-          });
-        });
-      });
-
-      return res.json({
-        message: "登录成功",
-        id: adminAccount.id,
-        username: adminAccount.username,
-        role: adminAccount.role,
-        displayName: adminAccount.displayName,
-      });
-    } catch (error) {
-      console.error("Error during admin login:", error);
-      res.status(500).json({ message: "登录失败" });
-    }
-  });
-
-  /**
-   * GET /api/admin/me
-   * Returns current admin account info (used by frontend to detect auth state + role).
-   */
-  app.get('/api/admin/me', requireAdmin, async (req: Request, res) => {
-    const adminAccount = (req as any).adminAccount;
-    const session = req.session as any;
-    if (adminAccount) {
-      return res.json({
-        id: adminAccount.id,
-        username: adminAccount.username,
-        role: adminAccount.role,
-        displayName: adminAccount.displayName,
-        isAdmin: true,
-      });
-    }
-    // Legacy users-table admin
-    if (session?.userId) {
-      const user = await storage.getUser(session.userId);
-      return res.json({
-        id: user?.id,
-        username: user?.phoneNumber || user?.email,
-        role: 'super_admin',
-        displayName: user?.displayName,
-        isAdmin: true,
-      });
-    }
-    res.status(401).json({ message: "Unauthorized" });
-  });
-
-  // ============ ADMIN ACCOUNT MANAGEMENT (super_admin only) ============
-
-  app.get('/api/admin/accounts', requireAdmin, requireSuperAdmin, async (_req: Request, res) => {
-    try {
-      const accounts = await storage.listAdminAccounts();
-      // Never return password hashes to the client
-      res.json(accounts.map(({ passwordHash: _ph, ...safe }) => safe));
-    } catch (error) {
-      console.error("Error listing admin accounts:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post('/api/admin/accounts', requireAdmin, requireSuperAdmin, async (req: Request, res) => {
-    try {
-      const { username, password, role, displayName } = req.body;
-      if (!username || !password || !role) {
-        return res.status(400).json({ message: "用户名、密码和角色不能为空" });
-      }
-      const validRoles = ['super_admin', 'operator', 'viewer'];
-      if (!validRoles.includes(role)) {
-        return res.status(400).json({ message: "无效的角色" });
-      }
-      const existing = await storage.getAdminAccountByUsername(username);
-      if (existing) {
-        return res.status(409).json({ message: "用户名已存在" });
-      }
-      const bcrypt = await import('bcrypt');
-      const passwordHash = await bcrypt.hash(password, 12);
-      const account = await storage.createAdminAccount({ username, passwordHash, role, displayName });
-      const { passwordHash: _ph, ...safe } = account;
-      res.status(201).json(safe);
-    } catch (error) {
-      console.error("Error creating admin account:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.patch('/api/admin/accounts/:id', requireAdmin, requireSuperAdmin, async (req: Request, res) => {
-    try {
-      const { id } = req.params;
-      const { role, status, displayName } = req.body;
-      const updates: any = {};
-      if (role !== undefined) {
-        const validRoles = ['super_admin', 'operator', 'viewer'];
-        if (!validRoles.includes(role)) {
-          return res.status(400).json({ message: "无效的角色" });
-        }
-        updates.role = role;
-      }
-      if (status !== undefined) {
-        if (!['active', 'disabled'].includes(status)) {
-          return res.status(400).json({ message: "无效的状态" });
-        }
-        updates.status = status;
-      }
-      if (displayName !== undefined) updates.displayName = displayName;
-      const account = await storage.updateAdminAccount(id, updates);
-      const { passwordHash: _ph, ...safe } = account;
-      res.json(safe);
-    } catch (error) {
-      console.error("Error updating admin account:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post('/api/admin/accounts/:id/reset-password', requireAdmin, requireSuperAdmin, async (req: Request, res) => {
-    try {
-      const { id } = req.params;
-      const { newPassword } = req.body;
-      if (!newPassword || newPassword.length < 8) {
-        return res.status(400).json({ message: "密码至少需要8个字符" });
-      }
-      const bcrypt = await import('bcrypt');
-      const passwordHash = await bcrypt.hash(newPassword, 12);
-      await storage.updateAdminAccount(id, { passwordHash });
-      res.json({ message: "密码已重置" });
-    } catch (error) {
-      console.error("Error resetting password:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  registerAdminAuthRoutes(app);
   
   // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
   app.get('/api/config/amap', requireAdmin, (_req, res) => {

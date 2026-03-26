@@ -1,38 +1,8 @@
-/**
- * Unit Tests for admin authentication (username/password + RBAC)
- *
- * Tests cover:
- * - POST /api/admin/login: success with valid credentials
- * - POST /api/admin/login: failure with wrong password
- * - POST /api/admin/login: failure for unknown username
- * - POST /api/admin/login: failure for disabled account
- * - GET /api/admin/accounts: super_admin can list accounts
- * - POST /api/admin/accounts: super_admin can create account
- * - RBAC: operator is denied access to /api/admin/accounts
- */
-
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import express from "express";
+import session from "express-session";
+import type { AddressInfo } from "net";
 import bcrypt from "bcrypt";
-
-// ── Storage mock ──────────────────────────────────────────────────────────
-const mockAdminAccount = {
-  id: "admin-1",
-  username: "testadmin",
-  passwordHash: "", // set in beforeEach
-  role: "super_admin",
-  status: "active",
-  displayName: "Test Admin",
-  lastLoginAt: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
-const mockOperatorAccount = {
-  ...mockAdminAccount,
-  id: "admin-2",
-  username: "operator1",
-  role: "operator",
-};
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../storage", () => ({
   storage: {
@@ -42,235 +12,269 @@ vi.mock("../storage", () => ({
     createAdminAccount: vi.fn(),
     updateAdminAccount: vi.fn(),
     updateAdminLastLogin: vi.fn(),
+    getUser: vi.fn(),
   },
 }));
 
 const { storage } = await import("../storage");
+const { registerAdminAuthRoutes, requireAdmin, requireSuperAdmin } = await import("../adminAuth");
 
-// ── Helper: build a minimal express-like context ──────────────────────────
-function buildMockReqRes(body: Record<string, any> = {}, sessionData: Record<string, any> = {}) {
-  const sessionStore: Record<string, any> = { ...sessionData };
-  const session = {
-    ...sessionStore,
-    regenerate: vi.fn((cb: (err: null) => void) => {
-      cb(null);
-    }),
-    save: vi.fn((cb: (err: null) => void) => {
-      cb(null);
-    }),
-    destroy: vi.fn((cb: (err: null) => void) => {
-      cb(null);
-    }),
-  };
-  const req: any = { body, session, sessionID: "test-session-id" };
-  const res: any = {
-    _status: 200,
-    _json: null,
-    status(code: number) { this._status = code; return this; },
-    json(data: any) { this._json = data; return this; },
-  };
-  return { req, res };
-}
+const superAdminPassword = "correct-password";
+const operatorPassword = "operator-password";
 
-// ── Import the handler functions under test ────────────────────────────────
-// We test the logic indirectly by calling through a simplified route handler
-// that mirrors what routes.ts does for POST /api/admin/login.
+const superAdminAccount = {
+  id: "admin-1",
+  username: "super-admin",
+  passwordHash: await bcrypt.hash(superAdminPassword, 12),
+  role: "super_admin",
+  status: "active",
+  displayName: "Super Admin",
+  lastLoginAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-async function adminLoginHandler(req: any, res: any) {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    res.status(400).json({ message: "用户名和密码不能为空" });
-    return;
-  }
-  const adminAccount = await storage.getAdminAccountByUsername(username);
-  if (!adminAccount) {
-    res.status(401).json({ message: "用户名或密码错误" });
-    return;
-  }
-  if ((adminAccount as any).status !== "active") {
-    res.status(403).json({ message: "该账号已被禁用" });
-    return;
-  }
-  const isValid = await bcrypt.compare(password, (adminAccount as any).passwordHash);
-  if (!isValid) {
-    res.status(401).json({ message: "用户名或密码错误" });
-    return;
-  }
-  await storage.updateAdminLastLogin((adminAccount as any).id);
-  // Simulate session setup
-  req.session.regenerate((err: null) => {
-    if (err) { res.status(500).json({ message: "登录失败" }); return; }
-    req.session.adminAccountId = (adminAccount as any).id;
-    req.session.adminRole = (adminAccount as any).role;
-    req.session.save((err: null) => {
-      if (err) { res.status(500).json({ message: "登录失败" }); return; }
-      res.json({
-        message: "登录成功",
-        id: (adminAccount as any).id,
-        username: (adminAccount as any).username,
-        role: (adminAccount as any).role,
-        displayName: (adminAccount as any).displayName,
-      });
+const operatorAccount = {
+  ...superAdminAccount,
+  id: "admin-2",
+  username: "ops-admin",
+  passwordHash: await bcrypt.hash(operatorPassword, 12),
+  role: "operator",
+  displayName: "Operator Admin",
+};
+
+function createApp() {
+  const app = express();
+  app.use(express.json());
+  app.use(
+    session({
+      secret: "test-secret",
+      resave: false,
+      saveUninitialized: false,
+    }),
+  );
+
+  registerAdminAuthRoutes(app);
+
+  app.post("/__test__/legacy-login", (req, res) => {
+    req.session.userId = "legacy-user-1";
+    req.session.save(() => {
+      res.json({ ok: true });
     });
   });
+
+  app.get("/__test__/admin-only", requireAdmin, (req, res) => {
+    res.json({ ok: true, role: (req as any).adminRole });
+  });
+
+  app.get("/__test__/super-only", requireAdmin, requireSuperAdmin, (req, res) => {
+    res.json({ ok: true, role: (req as any).adminRole });
+  });
+
+  return app;
 }
 
-// ── RBAC middleware ────────────────────────────────────────────────────────
-async function requireAdmin(req: any, res: any, next: () => void) {
-  if (req.session?.adminAccountId) {
-    const account = await storage.getAdminAccountById(req.session.adminAccountId);
-    if (!account || (account as any).status !== "active") {
-      res.status(403).json({ message: "Forbidden" }); return;
-    }
-    req.adminRole = (account as any).role;
-    return next();
+async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
+  const app = createApp();
+  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
+    const instance = app.listen(0, () => resolve(instance));
+  });
+
+  try {
+    const { port } = server.address() as AddressInfo;
+    return await fn(`http://127.0.0.1:${port}`);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
   }
-  res.status(401).json({ message: "Unauthorized" });
 }
 
-function requireSuperAdmin(req: any, res: any, next: () => void) {
-  if (req.adminRole !== "super_admin") {
-    res.status(403).json({ message: "Forbidden - Super admin access required" }); return;
-  }
-  next();
+function cookieHeader(response: Response) {
+  const raw = response.headers.get("set-cookie");
+  return raw ? raw.split(";")[0] : "";
 }
 
-// ── Tests ──────────────────────────────────────────────────────────────────
-
-describe("Admin Login (username/password)", () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    mockAdminAccount.passwordHash = await bcrypt.hash("correct-password", 12);
-  });
-
-  it("returns 200 with role on valid credentials", async () => {
-    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue(mockAdminAccount as any);
-    vi.mocked(storage.updateAdminLastLogin).mockResolvedValue(undefined as any);
-
-    const { req, res } = buildMockReqRes({ username: "testadmin", password: "correct-password" });
-    await adminLoginHandler(req, res);
-
-    expect(res._status).toBe(200);
-    expect(res._json.message).toBe("登录成功");
-    expect(res._json.role).toBe("super_admin");
-    expect(req.session.adminAccountId).toBe("admin-1");
-    expect(req.session.adminRole).toBe("super_admin");
-  });
-
-  it("returns 401 for unknown username", async () => {
-    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue(undefined);
-
-    const { req, res } = buildMockReqRes({ username: "unknown", password: "any" });
-    await adminLoginHandler(req, res);
-
-    expect(res._status).toBe(401);
-    expect(res._json.message).toBe("用户名或密码错误");
-  });
-
-  it("returns 401 for wrong password", async () => {
-    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue(mockAdminAccount as any);
-
-    const { req, res } = buildMockReqRes({ username: "testadmin", password: "wrong-password" });
-    await adminLoginHandler(req, res);
-
-    expect(res._status).toBe(401);
-    expect(res._json.message).toBe("用户名或密码错误");
-  });
-
-  it("returns 403 for disabled account", async () => {
-    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue({
-      ...mockAdminAccount,
-      status: "disabled",
-    } as any);
-
-    const { req, res } = buildMockReqRes({ username: "testadmin", password: "correct-password" });
-    await adminLoginHandler(req, res);
-
-    expect(res._status).toBe(403);
-    expect(res._json.message).toBe("该账号已被禁用");
-  });
-
-  it("returns 400 when username or password is missing", async () => {
-    const { req, res } = buildMockReqRes({ username: "testadmin" });
-    await adminLoginHandler(req, res);
-
-    expect(res._status).toBe(400);
-  });
-});
-
-describe("RBAC middleware", () => {
+describe("admin auth routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("allows super_admin through requireSuperAdmin", async () => {
-    vi.mocked(storage.getAdminAccountById).mockResolvedValue(mockAdminAccount as any);
-    const next = vi.fn();
-    const req: any = { session: { adminAccountId: "admin-1" } };
-    const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    await requireAdmin(req, res, () => {
-      requireSuperAdmin(req, res, next);
+  it("allows public login on /api/admin/login and sets admin session", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockImplementation(async (username: string) =>
+      username === superAdminAccount.username ? (superAdminAccount as any) : undefined,
+    );
+    vi.mocked(storage.updateAdminLastLogin).mockResolvedValue(undefined as any);
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: superAdminAccount.username, password: superAdminPassword }),
+      });
+
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.role).toBe("super_admin");
+      expect(cookieHeader(response)).toContain("connect.sid=");
+      expect(storage.updateAdminLastLogin).toHaveBeenCalledWith(superAdminAccount.id);
     });
-
-    expect(next).toHaveBeenCalled();
   });
 
-  it("denies operator from reaching requireSuperAdmin", async () => {
-    vi.mocked(storage.getAdminAccountById).mockResolvedValue(mockOperatorAccount as any);
-    const next = vi.fn();
-    const req: any = { session: { adminAccountId: "admin-2" } };
-    const res: any = { _status: 200, status(c: number) { this._status = c; return this; }, json: vi.fn() };
+  it("returns generic invalid-credentials response for disabled accounts", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue({
+      ...superAdminAccount,
+      status: "disabled",
+    } as any);
 
-    await requireAdmin(req, res, () => {
-      requireSuperAdmin(req, res, next);
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: superAdminAccount.username, password: superAdminPassword }),
+      });
+
+      const body = await response.json();
+      expect(response.status).toBe(401);
+      expect(body.message).toBe("用户名或密码错误");
     });
-
-    expect(res._status).toBe(403);
-    expect(next).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when no adminAccountId in session", async () => {
-    const next = vi.fn();
-    const req: any = { session: {} };
-    const res: any = { _status: 200, status(c: number) { this._status = c; return this; }, json: vi.fn() };
+  it("returns 401 for invalid password", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue(superAdminAccount as any);
 
-    await requireAdmin(req, res, next);
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: superAdminAccount.username, password: "wrong-password" }),
+      });
 
-    expect(res._status).toBe(401);
-    expect(next).not.toHaveBeenCalled();
+      const body = await response.json();
+      expect(response.status).toBe(401);
+      expect(body.message).toBe("用户名或密码错误");
+    });
   });
-});
 
-describe("requireAdmin - legacy users.isAdmin path", () => {
-  it("allows access for legacy admin via userId + isAdmin=true", async () => {
-    // Legacy path: session has userId (not adminAccountId), user.isAdmin=true
-    const legacyRequireAdmin = async (req: any, res: any, next: () => void) => {
-      if (req.session?.adminAccountId) {
-        const account = await storage.getAdminAccountById(req.session.adminAccountId);
-        if (!account || (account as any).status !== "active") {
-          res.status(403).json({ message: "Forbidden" }); return;
-        }
-        req.adminRole = (account as any).role;
-        return next();
-      }
-      if (req.session?.userId) {
-        // Legacy: check users.isAdmin – simulate with mock storage
-        const user = (await (storage as any).getUser?.(req.session.userId)) ?? { isAdmin: true };
-        if (!user?.isAdmin) { res.status(403).json({ message: "Forbidden" }); return; }
-        req.adminRole = "super_admin";
-        return next();
-      }
-      res.status(401).json({ message: "Unauthorized" });
-    };
+  it("validates minimum password length when creating admin accounts", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockImplementation(async (username: string) =>
+      username === superAdminAccount.username ? (superAdminAccount as any) : undefined,
+    );
+    vi.mocked(storage.getAdminAccountById).mockResolvedValue(superAdminAccount as any);
+    vi.mocked(storage.updateAdminLastLogin).mockResolvedValue(undefined as any);
 
-    const next = vi.fn();
-    const req: any = { session: { userId: "user-legacy-admin" } };
-    const res: any = { _status: 200, status(c: number) { this._status = c; return this; }, json: vi.fn() };
+    await withServer(async (baseUrl) => {
+      const loginResponse = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: superAdminAccount.username, password: superAdminPassword }),
+      });
+      const cookie = cookieHeader(loginResponse);
 
-    await legacyRequireAdmin(req, res, next);
+      const response = await fetch(`${baseUrl}/api/admin/accounts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie,
+        },
+        body: JSON.stringify({ username: "new-admin", password: "1234567", role: "viewer" }),
+      });
 
-    expect(next).toHaveBeenCalled();
-    expect(req.adminRole).toBe("super_admin");
+      const body = await response.json();
+      expect(response.status).toBe(400);
+      expect(body.message).toBe("密码至少需要8个字符");
+      expect(storage.createAdminAccount).not.toHaveBeenCalled();
+    });
+  });
+
+  it("accepts an 8-character password when creating admin accounts", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockImplementation(async (username: string) => {
+      if (username === superAdminAccount.username) return superAdminAccount as any;
+      return undefined;
+    });
+    vi.mocked(storage.getAdminAccountById).mockResolvedValue(superAdminAccount as any);
+    vi.mocked(storage.updateAdminLastLogin).mockResolvedValue(undefined as any);
+    vi.mocked(storage.createAdminAccount).mockResolvedValue({
+      id: "admin-3",
+      username: "new-admin",
+      passwordHash: "hashed",
+      role: "viewer",
+      status: "active",
+      displayName: null,
+      lastLoginAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any);
+
+    await withServer(async (baseUrl) => {
+      const loginResponse = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: superAdminAccount.username, password: superAdminPassword }),
+      });
+      const cookie = cookieHeader(loginResponse);
+
+      const response = await fetch(`${baseUrl}/api/admin/accounts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie,
+        },
+        body: JSON.stringify({ username: "new-admin", password: "12345678", role: "viewer" }),
+      });
+
+      const body = await response.json();
+      expect(response.status).toBe(201);
+      expect(body.username).toBe("new-admin");
+      expect(storage.createAdminAccount).toHaveBeenCalled();
+    });
+  });
+
+  it("denies operator access to super-admin-only admin account management", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockImplementation(async (username: string) =>
+      username === operatorAccount.username ? (operatorAccount as any) : undefined,
+    );
+    vi.mocked(storage.getAdminAccountById).mockResolvedValue(operatorAccount as any);
+    vi.mocked(storage.updateAdminLastLogin).mockResolvedValue(undefined as any);
+
+    await withServer(async (baseUrl) => {
+      const loginResponse = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: operatorAccount.username, password: operatorPassword }),
+      });
+      const cookie = cookieHeader(loginResponse);
+
+      const response = await fetch(`${baseUrl}/api/admin/accounts`, {
+        method: "GET",
+        headers: { Cookie: cookie },
+      });
+
+      expect(response.status).toBe(403);
+    });
+  });
+
+  it("keeps legacy users.isAdmin sessions working through requireAdmin", async () => {
+    vi.mocked(storage.getUser).mockResolvedValue({ id: "legacy-user-1", isAdmin: true } as any);
+
+    await withServer(async (baseUrl) => {
+      const legacyLogin = await fetch(`${baseUrl}/__test__/legacy-login`, {
+        method: "POST",
+      });
+      const cookie = cookieHeader(legacyLogin);
+
+      const response = await fetch(`${baseUrl}/__test__/admin-only`, {
+        headers: { Cookie: cookie },
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.role).toBe("super_admin");
+    });
   });
 });
