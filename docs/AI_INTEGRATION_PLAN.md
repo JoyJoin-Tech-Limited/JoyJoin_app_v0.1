@@ -50,13 +50,16 @@ The plan explicitly distinguishes:
 
 LLMs are excellent **orchestration and explanation layers**. They should not be treated as the primary source of truth for compatibility scoring until that scoring has been empirically validated against real outcomes. This distinction is enforced throughout the roadmap.
 
-### 1.3 Current State (as of 2026-03-24)
+### 1.3 Current State (as of 2026-03-26)
 
 | Area | Feature | Status |
 |------|---------|--------|
 | Match scoring | Rule-based 6-dimension pair score | ✅ Live — `poolMatchingService.ts` |
 | Atmosphere prediction | `predictAtmosphere()` rule engine | ✅ Live — `atmospherePrediction.ts` |
-| Match explanation | DeepSeek pair explanations + icebreakers | ✅ Live — `matchExplanationService.ts` |
+| Match explanation | MiniMax/DeepSeek pair explanations + icebreakers (via `socialModelRouter`) | ✅ Live — `matchExplanationService.ts` |
+| Group analysis | AI group analysis endpoint + client hook | ✅ Live — `GET /api/pool-groups/:groupId/analysis`, `useGroupAnalysis` |
+| Group analysis UI | Rich AI analysis in `PostMatchEventCard` | ✅ Live — `PostMatchEventCard.tsx` |
+| Squad reveal | Cinematic progressive reveal of group analysis | ✅ Live — `SquadUnboxingFlow.tsx` |
 | Event theme title | AI-generated group theme title | ✅ Live — `eventThemeTitleGenerator.ts` |
 | Weight learning | Thompson Sampling bandit | ✅ Available — `matchingWeightsService.ts` (admin evolution + `userMatchingService.ts`; not yet wired into `poolMatchingService.ts`) |
 | Weight learning | Gradient descent | ⚠️ Legacy / experimental — `dynamicWeights.ts` (not active in current pool matching) |
@@ -114,9 +117,9 @@ Key exports:
 - `getClientForFunction(fn: SocialFunction): ClientSelection` — returns `{ client, model, provider }` for a given function
 - `callSocialAI(params): Promise<SocialAICallResult>` — unified call interface; MiniMax-first with automatic DeepSeek fallback on any error; returns `{ content, provider, latencyMs }`
 
-`SocialFunction` values: `generateWarmupTopics`, `generateXiaoYueComment`, `generateRecapSummary`, `generateLieDetectiveStatements`, `generateMicroChallenges`, `generatePersonalityDiceChallenges`.
+`SocialFunction` values: `generateWarmupTopics`, `generateXiaoYueComment`, `generateRecapSummary`, `generateLieDetectiveStatements`, `generateMicroChallenges`, `generatePersonalityDiceChallenges`, `generatePairExplanation`, `generateIceBreakers`, `analyzeComplexSemantics`.
 
-In **`hybrid` mode** (default when `SOCIAL_AI_PROVIDER` is not set), `MINIMAX_DESIGNATED_FUNCTIONS` pins four functions to MiniMax:
+In **`hybrid` mode** (default when `SOCIAL_AI_PROVIDER` is not set), `MINIMAX_DESIGNATED_FUNCTIONS` pins six functions to MiniMax:
 
 | Function | Hybrid-mode provider |
 |---|---|
@@ -124,8 +127,11 @@ In **`hybrid` mode** (default when `SOCIAL_AI_PROVIDER` is not set), `MINIMAX_DE
 | `generateXiaoYueComment` | **MiniMax** |
 | `generateRecapSummary` | **MiniMax** |
 | `generateLieDetectiveStatements` | **MiniMax** |
+| `generatePairExplanation` | **MiniMax** |
+| `generateIceBreakers` | **MiniMax** |
 | `generateMicroChallenges` | DeepSeek |
 | `generatePersonalityDiceChallenges` | DeepSeek |
+| `analyzeComplexSemantics` | **DeepSeek** (forced — structured JSON inference) |
 
 `callSocialAI` logs `[socialAI] {callerTag} provider={minimax|deepseek} latency={n}ms` on every call for observability.
 
@@ -172,10 +178,11 @@ Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{
 | `generateXiaoYueComment` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
 | `generateRecapSummary` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
 | `generateLieDetectiveStatements` | MiniMax | DeepSeek | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
+| `generatePairExplanation` | **MiniMax** | DeepSeek | `socialModelRouter` (via `matchExplanationService.ts`) | `SOCIAL_AI_PROVIDER` |
+| `generateIceBreakers` | **MiniMax** | DeepSeek | `socialModelRouter` (via `matchExplanationService.ts`) | `SOCIAL_AI_PROVIDER` |
+| `analyzeComplexSemantics` | DeepSeek (forced) | — | `socialModelRouter` (via `hybridSemantic.ts`) | `SOCIAL_AI_PROVIDER` |
 | `generateMicroChallenges` | DeepSeek | — | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
 | `generatePersonalityDiceChallenges` | DeepSeek | — | `socialModelRouter` | `SOCIAL_AI_PROVIDER` |
-| `generatePairExplanation` | DeepSeek | — | Direct (in `matchExplanationService.ts`) | — |
-| `generateIceBreakers` | DeepSeek | — | Direct (in `matchExplanationService.ts`) | — |
 | Social tag generation (`generateSocialTags`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_TAGS_PROVIDER` |
 | Event theme LLM (`generateThemeWithLLM`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_THEME_PROVIDER` |
 | Event theme title (`generateEventThemeTitle`) | MiniMax (if set) | DeepSeek | `creativeModelRouter` | `CREATIVE_AI_TITLE_PROVIDER` |
@@ -328,6 +335,34 @@ CREATE TABLE event_group_outcomes (
 ### 2.5 AI-Enhanced Social Experience
 
 These items use **orchestration and experience AI** only — no new predictive claims.
+
+#### 2.5.0 Group Analysis & Squad Reveal (Shipped — PRs #339–344)
+
+The group analysis surface is **live**. After pool groups are formed, users can access an AI-generated compatibility analysis via two surfaces:
+
+**API endpoint:**
+```
+GET /api/pool-groups/:groupId/analysis
+```
+Returns `GroupAnalysisResponse` (defined in `packages/shared/src/types/groupAnalysis.ts`). Results are cached for 7 days per group roster (cache key based on group member IDs). First call generates all pair explanations in parallel via `socialModelRouter` (MiniMax preferred, DeepSeek fallback).
+
+**Client hook:**
+```typescript
+// apps/user-client/src/hooks/useGroupAnalysis.ts
+const { data: groupAnalysis, isLoading } = useGroupAnalysis(groupId);
+// groupAnalysis: GroupAnalysisResponse | undefined
+```
+
+**PostMatchEventCard** (`apps/user-client/src/components/PostMatchEventCard.tsx`): displays pair explanations, shared interests, connection points, and icebreakers inline.
+
+**SquadUnboxingFlow** (`apps/user-client/src/pages/SquadUnboxingFlow.tsx`): cinematic progressive reveal sequence:
+1. Member archetype cards animate in
+2. Overall chemistry level + label
+3. Pair explanation cards fade in sequentially
+4. Icebreaker cards (swipeable)
+5. Group share / event action CTA
+
+Both surfaces use `useGroupAnalysis` and wait for analysis data before advancing past a loading state.
 
 #### 2.5.1 Stronger Match Reveal Explanations
 

@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-03-23  
+**Last Updated:** 2026-03-26  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -25,17 +25,28 @@
 
 The JoyJoin Personality Test System uses a scientifically calibrated adaptive assessment to match users to 1 of 12 carefully designed personality archetypes. The system consists of:
 
-- **60-Question Bank**: Divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
-- **V4 Adaptive Engine**: Dynamically selects 8-16 questions based on real-time confidence tracking
+- **60-Question Bank**: Divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation) plus 2 interactive closing questions
+- **V4 Adaptive Engine**: Dynamically selects 8-16 standard questions based on real-time confidence tracking, followed by 2 fixed interactive closing questions (`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI`)
 - **V2 Matcher Algorithm**: Weighted Manhattan distance with asymmetric penalties and VETO filters
 - **6-Trait Model (ACOEXP)**: Affinity, Conscientiousness, Emotional Stability, Openness, Extraversion, Positivity
+- **Secondary Data Pipeline**: A secondary differentiator (`conflictPosture`) captured through the playful closing questions and fed to the V2 Matcher tiebreaker (with `motivationDirection` reserved for future use)
 
 **Key Features:**
 - Adaptive question selection (not fixed 10 questions)
 - Real-time confidence tracking for each trait
 - Early stopping when confidence thresholds met
 - Confusion pair disambiguation
+- Two interactive closing questions for richer secondary signals
 - Decisive match detection (confidence ≥ 70%)
+- **Back button hidden** in `PersonalityTestPageV4` — users cannot navigate back to the landing page mid-test
+
+**Supported Question Types:**
+
+| Type | Value | Description |
+|------|-------|-------------|
+| Multiple choice | `choice` (default) | 4 labelled options (A–D), each with `traitScores` |
+| Continuous slider | `slider` | 0–100 dial; frontend maps position to nearest bucket (`slider_0` / `slider_25` / `slider_50` / `slider_75` / `slider_100`) and submits as `selectedOption: "slider_<value>"` |
+| Emoji tap | `emoji_tap` | Quick-tap emoji reaction; options use `value` keys like `direct`, `dove`, `dm`, `leave`, `popcorn` |
 
 ---
 
@@ -122,7 +133,7 @@ The system measures 6 core personality traits, each scored on a 0-100 scale:
 
 ## Question Bank Structure
 
-**Total: 60 Questions** divided into 3 levels
+**Total: 60 Standard Questions** divided into 3 levels, plus **2 interactive closing questions**
 
 ### L1 基础枢纽题 (Anchor Questions) - Q1-Q15
 
@@ -229,6 +240,75 @@ D. 礼貌倾听，但心里想着其他事
    → { O: -3, E: 2, X: -1 } // 稳如龟
 ```
 
+### Interactive Closing Questions (Q_PLAYFUL_SLIDER + Q_PLAYFUL_EMOJI)
+
+After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on all traits, or 16 standard questions), **two fixed interactive closing questions** are always presented in order.
+
+#### Q_PLAYFUL_SLIDER — Energy Dial (`slider` type)
+
+```
+🌙 周五下班，终于自由了——
+拖动滑条，找到最符合你此刻感受的位置
+
+                ← 😮‍💨 想一个人待着 ──────── 快叫上朋友！🥳 →
+```
+
+- **Question type:** `slider`
+- **Primary traits measured:** `X` (Extraversion), `P` (Positivity)
+- **Score mapping:** Linear interpolation from X=−4, P=−3 at the left extreme (0) to X=+4, P=+3 at the right extreme (100)
+- **Submission format:** Frontend maps continuous 0–100 position to the nearest bucket and submits `selectedOption: "slider_<value>"` where `<value>` ∈ {`0`, `25`, `50`, `75`, `100`}
+- **Secondary data:** `Q_PLAYFUL_SLIDER` is **trait-scoring only**. It does **not** populate any `UserSecondaryData` field. It is intentionally absent from `SECONDARY_QUESTION_MAP`.
+- **Design rationale:** Slider UX bypasses social-desirability bias in multiple-choice by letting users express continuous intensity rather than picking a label.
+
+#### Q_PLAYFUL_EMOJI — Conflict Instinct Tap (`emoji_tap` type)
+
+```
+💬 群里两个朋友突然争了起来……你的第一反应是？
+(快速点一个 emoji，相信直觉)
+```
+
+Emoji options and their `conflictPosture` mappings:
+
+| Value | Emoji / Label | `conflictPosture` |
+|-------|---------------|-------------------|
+| `direct` | 直接说：好了好了，你们都有道理 | `approach` |
+| `dove` | 发条轻松消息转移话题 | `mediate` |
+| `dm` | 私信其中一个：你还好吗？ | `mediate` |
+| `leave` | 默默退出群聊一小会儿 | `avoid` |
+| `popcorn` | 吃瓜围观，看看怎么发展 | `avoid` |
+
+- **Question type:** `emoji_tap`
+- **Secondary data:** Maps to `conflictPosture` via `SECONDARY_QUESTION_MAP` (`packages/shared/src/personality/secondaryQuestionMap.ts`)
+- **Trait scoring:** The option objects also carry `traitScores` (using the shared `TraitScores` type — all keys optional) for incremental A-trait contributions
+- **Design rationale:** Captures the `conflictPosture` secondary differentiator — a dimension that is not probed anywhere in the standard adaptive question bank, making it a high-information signal for archetype tiebreaking
+
+#### Secondary Data Wiring
+
+The two closing questions are processed by `SECONDARY_QUESTION_MAP` in `packages/shared/src/personality/secondaryQuestionMap.ts`:
+
+```typescript
+// Only Q_PLAYFUL_EMOJI is mapped — Q_PLAYFUL_SLIDER is trait-scoring only
+export const SECONDARY_QUESTION_MAP: Record<string, SecondaryQuestionMapping> = {
+  Q_PLAYFUL_EMOJI: {
+    field: 'conflictPosture',
+    valueMap: {
+      direct:   'approach',
+      dove:     'mediate',
+      dm:       'mediate',
+      leave:    'avoid',
+      popcorn:  'avoid',
+    },
+  },
+  // Q_PLAYFUL_SLIDER is intentionally absent — it feeds X/P traits, not secondary data
+};
+```
+
+The assembled `UserSecondaryData` object (at most `{ conflictPosture }` from these closing questions) is passed to `getFinalResult()` in `adaptiveEngine.ts`, which forwards it to the V2 Matcher's `secondaryBonus` step.
+
+#### TypeScript Note — `EmojiTapOption.traitScores`
+
+`EmojiTapOption` options must use the shared `TraitScores` type from `@shared/personality/types` (`{ A?, C?, E?, O?, X?, P? }`) — **not** `Record<string, number>`. `TraitScores` has no index signature, so using `Record` breaks TypeScript's assignability to `QuestionOption[]`. This was corrected in PR #353.
+
 ---
 
 ## V4 Adaptive Engine
@@ -288,15 +368,31 @@ function calculateConfidence(variance: number, sampleCount: number): number {
 
 ### Stopping Criteria
 
-The assessment stops when **either** condition is met:
+The adaptive phase stops when **either** condition is met:
 
 1. **Confidence threshold met**: All 6 traits have confidence ≥ 0.7
-2. **Hard limit reached**: 16 questions answered
+2. **Hard limit reached**: 16 standard questions answered
+
+After the adaptive phase stops, the two closing questions (`Q_PLAYFUL_SLIDER` then `Q_PLAYFUL_EMOJI`) are always shown before the final result is calculated. Total possible session length: **8–18 questions** (8–16 adaptive + 2 closing).
 
 **Typical Session Lengths:**
-- **Decisive users** (strong, consistent responses): 8-10 questions
-- **Average users**: 12-14 questions
-- **Indecisive/inconsistent users**: 15-16 questions (hit hard limit)
+- **Decisive users** (strong, consistent responses): 10–12 questions (8–10 adaptive + 2 closing)
+- **Average users**: 14–16 questions (12–14 adaptive + 2 closing)
+- **Indecisive/inconsistent users**: 18 questions (16 adaptive + 2 closing)
+
+### Mid-Test Overlay (TransitionOverlay)
+
+When the adaptive engine transitions from the anchor phase to the adaptive/disambiguation phase, a fullscreen **premium calibration interlude** (`TransitionOverlay` component) is displayed briefly (~2.2 seconds). It shows:
+
+> **精准分析进行中**  
+> 再完成几道校准题  
+> *我们正在细化你的性格画像，让分析结果更精准、更贴近真实的你。*
+
+This overlay uses a glass-morphism dark backdrop with a subtle purple ambient glow. It replaces an earlier "playful midpoint" popup framing, signaling a precise calibration moment rather than a casual midpoint break.
+
+### Back Button
+
+The back button is **hidden** (`showBack={false}`) throughout `PersonalityTestPageV4`. Users cannot navigate back to the landing page mid-test. This prevents the previous regression where the back button routed users away from the test unexpectedly.
 
 ---
 
@@ -708,8 +804,11 @@ positivity_score INTEGER
 ```typescript
 {
   sessionId: string;
-  questionId: string; // 'Q1', 'Q2', etc.
-  selectedOption: 'A' | 'B' | 'C' | 'D';
+  questionId: string; // 'Q1', 'Q2', etc. — or 'Q_PLAYFUL_SLIDER' / 'Q_PLAYFUL_EMOJI' for closing questions
+  selectedOption: string;
+  // For standard choice questions: 'A' | 'B' | 'C' | 'D'
+  // For slider questions (Q_PLAYFUL_SLIDER): 'slider_0' | 'slider_25' | 'slider_50' | 'slider_75' | 'slider_100'
+  // For emoji tap questions (Q_PLAYFUL_EMOJI): 'direct' | 'dove' | 'dm' | 'leave' | 'popcorn'
 }
 ```
 
@@ -915,12 +1014,16 @@ for (const pair of confusionPairs) {
 ### Manual Testing Checklist
 
 **UI/UX Validation:**
-- [ ] Progress bar updates correctly (1/8 → 1/16)
+- [ ] Progress bar updates correctly (1/8 → 1/16, then shows closing questions)
+- [ ] Slider question renders with draggable dial (not radio buttons)
+- [ ] Emoji tap question renders with tap-selectable emoji reactions
+- [ ] Premium calibration overlay (`TransitionOverlay`) shows at adaptive phase transition
+- [ ] Back button is **not visible** during the test (no navigation back to landing)
 - [ ] Radar chart displays all 6 traits (ACOEXP)
 - [ ] Archetype icons match canonical list (🐕, 🐓, etc.)
 - [ ] Results show correct archetype name (开心柯基, not 火花塞)
 - [ ] Decisive match badge shows when confidence ≥ 70%
-- [ ] Question flow adapts (may end at 8-12 for decisive users)
+- [ ] Question flow adapts (may end at 10–12 for decisive users)
 - [ ] No references to deprecated archetypes (火花塞, 探索者, etc.)
 
 **Data Validation:**
@@ -970,11 +1073,15 @@ for (const pair of confusionPairs) {
 - Still used old archetype names
 
 **V4 System (Current):**
-- 60-question bank (3 levels)
+- 60-question standard bank (3 levels) + 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`)
 - 12 archetypes (canonical names)
-- Adaptive 8-16 questions
+- Adaptive 8–18 questions total
 - V2 Matcher with soul trait weighting
 - Asymmetric penalties and VETO filters
+- Secondary data (`conflictPosture`) captured via `Q_PLAYFUL_EMOJI` and fed to tiebreaker
+- Three question types: `choice`, `slider`, `emoji_tap`
+- Back button hidden (no mid-test navigation to landing page)
+- Premium calibration overlay at adaptive phase transition
 
 ---
 
