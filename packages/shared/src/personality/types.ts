@@ -199,14 +199,5 @@ export interface XiaoyueFeedback {
   prototypeHint?: string;
 }
 
-export interface MilestoneMessage {
-  position: number;
-  message: string;
-  xiaoyueMood: 'thinking' | 'excited' | 'encouraging';
-}
-
-export const MILESTONE_MESSAGES: MilestoneMessage[] = [
-  { position: 5, message: '嗯嗯，开始有点懂你了~', xiaoyueMood: 'thinking' },
-  { position: 8, message: '越来越清晰啦！快成型了~', xiaoyueMood: 'encouraging' },
-  { position: 11, message: '最后几题确认一下~', xiaoyueMood: 'excited' },
-];
+// Milestone messaging is defined in feedback.ts (MilestoneConfig / milestoneConfigs / getMilestoneMessage).
+// MilestoneMessage and MILESTONE_MESSAGES were removed to eliminate the duplicate — use getMilestoneMessage() instead.
