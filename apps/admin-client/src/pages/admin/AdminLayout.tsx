@@ -23,8 +23,11 @@ import AdminMatchingConfigPage from "@/pages/admin/AdminMatchingConfigPage";
 import AdminMatchingLogsPage from "@/pages/admin/AdminMatchingLogsPage";
 import AdminPricingPage from "@/pages/admin/AdminPricingPage";
 import AdminEvolutionPage from "@/pages/admin/AdminEvolutionPage";
+import AdminAccountsPage from "@/pages/admin/AdminAccountsPage";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLayout() {
+  const { user } = useAuth();
   const sidebarStyle = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -42,7 +45,9 @@ export default function AdminLayout() {
               <h1 className="text-lg font-medium">管理后台</h1>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">管理员</span>
+              <span className="text-sm text-muted-foreground">
+                {user?.displayName || "管理员"}
+              </span>
             </div>
           </header>
           <main className="flex-1 overflow-auto bg-muted/30">
@@ -69,6 +74,7 @@ export default function AdminLayout() {
               <Route path="/admin/matching-config" component={AdminMatchingConfigPage} />
               <Route path="/admin/matching-logs" component={AdminMatchingLogsPage} />
               <Route path="/admin/evolution" component={AdminEvolutionPage} />
+              <Route path="/admin/accounts" component={AdminAccountsPage} />
             </Switch>
           </main>
         </div>
