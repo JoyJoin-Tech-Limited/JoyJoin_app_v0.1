@@ -40,9 +40,12 @@ export default function TransitionOverlay({
           transition={{ duration: 0.3 }}
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            backgroundColor: "rgba(0, 0, 0, 0.40)",
+            backdropFilter: "blur(28px)",
+            WebkitBackdropFilter: "blur(28px)",
+            backgroundColor: "rgba(80, 20, 180, 0.18)",
+            backgroundImage:
+              "radial-gradient(ellipse at 50% 30%, rgba(160, 80, 255, 0.22) 0%, transparent 65%)," +
+              "radial-gradient(ellipse at 20% 80%, rgba(100, 40, 220, 0.15) 0%, transparent 55%)",
           }}
           aria-live="polite"
           aria-atomic="true"
@@ -72,12 +75,12 @@ export default function TransitionOverlay({
             className="relative mx-6 w-full max-w-sm overflow-hidden px-8 py-8 text-center"
             style={{
               borderRadius: 28,
-              background: "rgba(255, 255, 255, 0.07)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              background: "rgba(130, 60, 255, 0.18)",
+              backdropFilter: "blur(32px)",
+              WebkitBackdropFilter: "blur(32px)",
+              border: "1px solid rgba(200, 150, 255, 0.35)",
               boxShadow:
-                "0 24px 80px rgba(0, 0, 0, 0.40), 0 0 0 0.5px rgba(255,255,255,0.06) inset",
+                "0 8px 48px rgba(100, 30, 220, 0.30), 0 0 0 0.5px rgba(200,150,255,0.20) inset",
             }}
           >
             {/* Ambient glow behind content */}
@@ -88,11 +91,11 @@ export default function TransitionOverlay({
                 top: "-40px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                width: 160,
-                height: 120,
+                width: 200,
+                height: 140,
                 borderRadius: "50%",
                 background:
-                  "radial-gradient(ellipse, rgba(168, 107, 255, 0.22) 0%, transparent 70%)",
+                  "radial-gradient(ellipse, rgba(180, 120, 255, 0.40) 0%, transparent 70%)",
                 pointerEvents: "none",
               }}
             />
@@ -116,9 +119,9 @@ export default function TransitionOverlay({
               <p
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium"
                 style={{
-                  background: "rgba(255, 255, 255, 0.08)",
-                  border: "1px solid rgba(255, 255, 255, 0.14)",
-                  color: "rgba(255, 255, 255, 0.72)",
+                  background: "rgba(180, 120, 255, 0.20)",
+                  border: "1px solid rgba(220, 170, 255, 0.40)",
+                  color: "rgba(255, 255, 255, 0.90)",
                   letterSpacing: "0.16em",
                 }}
               >
@@ -136,7 +139,7 @@ export default function TransitionOverlay({
               {/* Supporting copy */}
               <p
                 className="mt-3 text-sm leading-relaxed"
-                style={{ color: "rgba(255, 255, 255, 0.58)" }}
+                style={{ color: "rgba(235, 210, 255, 0.85)" }}
               >
                 我们正在细化你的性格画像，让分析结果更精准、更贴近真实的你。
               </p>
