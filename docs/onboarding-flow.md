@@ -37,6 +37,8 @@ Essential Data → Extended Data → Profile Review → Discover Page
 - Anonymous session ID generated: `crypto.randomUUID()`
 - Answers saved to localStorage: `joyjoin_v4_presignup_answers`
 - No backend submission until login
+- **Back button is hidden** (`showBack={false}`) — no mid-test navigation to the landing page
+- The test now includes 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) after the adaptive phase, for a total of 8–18 questions
 
 **Why This Works:**
 - Reduce friction: No upfront commitment required
@@ -64,6 +66,12 @@ Essential Data → Extended Data → Profile Review → Discover Page
 - After 3 seconds, show WeChat login CTA
 - On login: Send test results to backend, create user, link results
 - Uses endpoint: `POST /api/auth/wechat/login-with-test`
+
+**Auth-gate flow (current behaviour):**
+- The unauthenticated claim CTA on the results page routes to **`/personality-test/auth-gate`** rather than showing a loading spinner. This ensures users are not trapped in a spinner state if WeChat auth is not yet ready.
+- On the **`/personality-test/auth-gate`** page there is a **non-production-only testing quick-pass** text link labeled **`测试快速通过`**. It immediately continues the flow without triggering WeChat OAuth. This link is only rendered in development / staging builds, has **no `data-testid`**, and must never be exposed in production.
+- On the results page there is a **DEV-only WeChat bypass button** labeled **`⚡ 测试账号登录`** with `data-testid="button-dev-wechat-bypass"`. It logs in using a mock WeChat code for local testing, is hidden in production, and is not a user-facing CTA.
+- The floating **`你的专属匹配已生成！` login card** (a redundant secondary login prompt that appeared over the results page) has been **removed**. The primary WeChat login CTA is sufficient.
 
 **WeChat Authentication Flow:**
 ```typescript
