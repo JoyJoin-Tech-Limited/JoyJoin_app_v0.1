@@ -10,7 +10,7 @@ import { ChevronLeft, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { useAdaptiveAssessment, type PreSignupAnswer } from "@/hooks/useAdaptiveAssessment";
+import { useAdaptiveAssessment, type PreSignupAnswer, type AssessmentQuestion } from "@/hooks/useAdaptiveAssessment";
 import { getOptionFeedback } from "@shared/personality/feedback";
 import { StickyCTA, StickyCTAButton, StickyCTASecondaryButton } from "@/components/StickyCTA";
 import { SelectionList } from "@/components/SelectionList";
@@ -266,6 +266,13 @@ export default function PersonalityTestPageV4() {
   const { saveCheckpoint } = useOnboardingCheckpoint();
   const [showMilestoneReward, setShowMilestoneReward] = useState(false);
   const milestoneShownRef = useRef(false); // Track if milestone has been shown
+
+  // Question history for back-navigation (client-side, read-only review)
+  const [questionHistory, setQuestionHistory] = useState<Array<{ question: AssessmentQuestion; answerValue: string }>>([]);
+  const [historyViewIndex, setHistoryViewIndex] = useState<number | null>(null);
+  // Derived helpers
+  const isViewingHistory = historyViewIndex !== null;
+  const historyEntry = historyViewIndex !== null ? questionHistory[historyViewIndex] : null;
   
   const { setArchetype: setDynamicAccent, reset: resetDynamicAccent } = useDynamicAccent();
   const { milestoneReached, detectMilestone, getUnifiedProgress } = useUnifiedProgress();
@@ -422,6 +429,8 @@ export default function PersonalityTestPageV4() {
     if (currentQuestion.questionType === 'slider' && currentQuestion.sliderConfig) {
       if (sliderValue === undefined) return; // require interaction before submitting
       haptics.medium();
+      // Save to history before submitting
+      setQuestionHistory(prev => [...prev, { question: currentQuestion, answerValue: String(sliderValue) }]);
       const config = currentQuestion.sliderConfig;
       const traitScores: Record<string, number> = {};
       for (const mapping of config.traitMappings) {
@@ -447,11 +456,33 @@ export default function PersonalityTestPageV4() {
     // emoji_tap and choice questions: use selectedOption
     if (!selectedOption) return;
     haptics.medium();
+    // Save to history before submitting
+    setQuestionHistory(prev => [...prev, { question: currentQuestion, answerValue: selectedOption }]);
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
     
     setSelectedOption(undefined);
   }, [currentQuestion, selectedOption, sliderValue, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
+
+  // Back handler: navigates to previous question in local history, or exits to '/' at the start
+  const handleBack = useCallback(() => {
+    if (isViewingHistory && historyViewIndex !== null) {
+      if (historyViewIndex > 0) {
+        setHistoryViewIndex(historyViewIndex - 1);
+      } else {
+        // At the very first answered question; exit back to landing
+        setHistoryViewIndex(null);
+        setLocation('/');
+      }
+    } else {
+      if (questionHistory.length > 0) {
+        setHistoryViewIndex(questionHistory.length - 1);
+      } else {
+        // No history yet (on the first question); exit to landing
+        setLocation('/');
+      }
+    }
+  }, [isViewingHistory, historyViewIndex, questionHistory.length, setLocation]);
 
 
 
@@ -578,11 +609,16 @@ export default function PersonalityTestPageV4() {
     );
   }
 
-  const scenarioText = stripEmoji(currentQuestion.scenarioText);
-  const optionsForList = currentQuestion.options.map(opt => ({
+  const scenarioText = stripEmoji((isViewingHistory && historyEntry?.question ? historyEntry.question : currentQuestion).scenarioText);
+  const displayedQuestion: AssessmentQuestion = isViewingHistory && historyEntry?.question ? historyEntry.question : currentQuestion;
+  const optionsForList = displayedQuestion.options.map((opt) => ({
     value: opt.value,
     label: opt.text,
   }));
+  // In history view: pre-select the stored answer; in live view: use current selectedOption
+  const displayedSelection = isViewingHistory ? historyEntry?.answerValue : selectedOption;
+  // Display question number: history view shows historical position, live shows current
+  const historyDisplayCurrent = isViewingHistory && historyViewIndex !== null ? (historyViewIndex + 1) : displayCurrent;
 
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col">
@@ -593,18 +629,19 @@ export default function PersonalityTestPageV4() {
       />
 
       <OnboardingProgress
-        current={displayCurrent}
+        current={historyDisplayCurrent}
         total={displayTotal as any}
-        remaining={estimatedRemaining}
-        progress={progressPercentage}
-        showBack={false}
-        showExtendedMessage={answeredCount >= 8 && estimatedRemaining >= 3}
+        remaining={isViewingHistory ? 0 : estimatedRemaining}
+        progress={isViewingHistory ? Math.round((historyDisplayCurrent / Math.max(Number(displayTotal) || 8, historyDisplayCurrent)) * 100) : progressPercentage}
+        showBack={true}
+        onBack={handleBack}
+        showExtendedMessage={!isViewingHistory && answeredCount >= 8 && estimatedRemaining >= 3}
         milestoneReached={milestoneReached}
       />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={currentQuestion.id}
+          key={isViewingHistory ? `history-${historyViewIndex}` : currentQuestion.id}
           initial={prefersReducedMotion
             ? { opacity: 0 }
             : { opacity: 0, x: 60, rotateY: 8, transformPerspective: 1200 }
@@ -630,22 +667,24 @@ export default function PersonalityTestPageV4() {
               {scenarioText}
             </p>
             {/* Xiaoyue bubble — content varies by question type */}
-            {currentQuestion.questionType !== 'slider' && (
+            {displayedQuestion.questionType !== 'slider' && (
               <XiaoyueChatBubble 
-                pose={xiaoyuePose}
-                content={selectedOption 
-                  ? getOptionFeedback(currentQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
-                  : currentQuestion.questionText
+                pose={isViewingHistory ? "casual" : xiaoyuePose}
+                content={isViewingHistory
+                  ? displayedQuestion.questionText
+                  : (selectedOption 
+                    ? getOptionFeedback(displayedQuestion.id, selectedOption) || "记下了，很有意思的选择！" 
+                    : displayedQuestion.questionText)
                 }
                 horizontal
                 animate={!prefersReducedMotion}
                 className="mb-1"
               />
             )}
-            {currentQuestion.questionType === 'slider' && sliderValue === undefined && (
+            {displayedQuestion.questionType === 'slider' && !isViewingHistory && sliderValue === undefined && (
               <XiaoyueChatBubble
                 pose="pointing"
-                content={currentQuestion.questionText}
+                content={displayedQuestion.questionText}
                 horizontal
                 animate={!prefersReducedMotion}
                 className="mb-1"
@@ -656,26 +695,26 @@ export default function PersonalityTestPageV4() {
           <div className="flex-1 flex flex-col justify-center py-1 min-h-0">
             <div className="max-h-[70vh] overflow-y-auto pb-20 md:pb-10 -mx-4 px-4">
               {/* Branch rendering by questionType */}
-              {currentQuestion.questionType === 'slider' && currentQuestion.sliderConfig ? (
+              {displayedQuestion.questionType === 'slider' && displayedQuestion.sliderConfig ? (
                 <SliderQuestion
-                  questionId={currentQuestion.id}
-                  sliderConfig={currentQuestion.sliderConfig}
-                  value={sliderValue}
-                  onChange={setSliderValue}
+                  questionId={displayedQuestion.id}
+                  sliderConfig={displayedQuestion.sliderConfig}
+                  value={isViewingHistory ? Number(historyEntry?.answerValue) : sliderValue}
+                  onChange={isViewingHistory ? () => {} : setSliderValue}
                   animate={!prefersReducedMotion}
                 />
-              ) : currentQuestion.questionType === 'emoji_tap' ? (
+              ) : displayedQuestion.questionType === 'emoji_tap' ? (
                 <EmojiTapQuestion
-                  options={currentQuestion.options}
-                  selected={selectedOption}
-                  onSelect={handleSelectOption}
+                  options={displayedQuestion.options}
+                  selected={displayedSelection}
+                  onSelect={isViewingHistory ? () => {} : handleSelectOption}
                   animate={!prefersReducedMotion}
                 />
               ) : (
                 <SelectionList
                   options={optionsForList}
-                  selected={selectedOption}
-                  onSelect={handleSelectOption}
+                  selected={displayedSelection}
+                  onSelect={isViewingHistory ? () => {} : handleSelectOption}
                   className="grid grid-cols-1 gap-3 sm:grid-cols-2 !space-y-0"
                 />
               )}
@@ -684,36 +723,47 @@ export default function PersonalityTestPageV4() {
 
           <StickyCTA>
             <div className="space-y-3">
-              <StickyCTAButton
-                onClick={handleSubmitAnswer}
-                disabled={
-                  (currentQuestion.questionType === 'slider'
-                    ? sliderValue === undefined
-                    : !selectedOption) ||
-                  isSubmitting ||
-                  isSkipping
-                }
-                isLoading={isSubmitting}
-                data-testid="button-submit-answer"
-              >
-                继续
-              </StickyCTAButton>
-              
-              {canSkip && (
-                <div className="flex flex-col items-center gap-1">
-                  <StickyCTASecondaryButton
-                    onClick={handleSkipQuestion}
-                    disabled={isSkipping || isSubmitting}
-                    isLoading={isSkipping}
-                    data-testid="button-skip-question"
+              {isViewingHistory ? (
+                <StickyCTAButton
+                  onClick={() => setHistoryViewIndex(null)}
+                  data-testid="button-return-current"
+                >
+                  返回当前题目 →
+                </StickyCTAButton>
+              ) : (
+                <>
+                  <StickyCTAButton
+                    onClick={handleSubmitAnswer}
+                    disabled={
+                      (displayedQuestion.questionType === 'slider'
+                        ? sliderValue === undefined
+                        : !selectedOption) ||
+                      isSubmitting ||
+                      isSkipping
+                    }
+                    isLoading={isSubmitting}
+                    data-testid="button-submit-answer"
                   >
-                    <RefreshCw className="h-5 w-5" />
-                    换一道题
-                  </StickyCTASecondaryButton>
-                  <span className="text-xs text-muted-foreground/70">
-                    选项都不合适？还剩{remainingSkips}次机会
-                  </span>
-                </div>
+                    继续
+                  </StickyCTAButton>
+                  
+                  {canSkip && (
+                    <div className="flex flex-col items-center gap-1">
+                      <StickyCTASecondaryButton
+                        onClick={handleSkipQuestion}
+                        disabled={isSkipping || isSubmitting}
+                        isLoading={isSkipping}
+                        data-testid="button-skip-question"
+                      >
+                        <RefreshCw className="h-5 w-5" />
+                        换一道题
+                      </StickyCTASecondaryButton>
+                      <span className="text-xs text-muted-foreground/70">
+                        选项都不合适？还剩{remainingSkips}次机会
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </StickyCTA>
