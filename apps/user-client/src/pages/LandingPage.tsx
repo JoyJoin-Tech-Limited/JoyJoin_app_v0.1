@@ -18,9 +18,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 import logoImage from "@/assets/box_logo_archetypes.png";
-import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.png";
-import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.png";
-import continueImg from "@/assets/landing screen/动物延续 compressed.png";
+import matchCardImg from "@/assets/landing screen/匹配卡片.png";
+import dinnerImg from "@/assets/landing screen/动物聚餐.png";
+import continueImg from "@/assets/landing screen/动物延续.png";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
@@ -215,11 +215,11 @@ export default function LandingPage() {
           {/* Primary CTA — Duolingo 3D press */}
           <Button
             onClick={handlePrimaryCTA}
+            type="button"
             size="lg"
-            className="w-full h-16 rounded-2xl text-white text-xl font-bold border-0 transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_#5a1fb5]"
+            className="w-full h-16 rounded-2xl text-white text-xl font-bold border-0 shadow-[0_6px_0_#5a1fb5] no-default-hover-elevate no-default-active-elevate transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_#5a1fb5]"
             style={{
               background: "linear-gradient(135deg, #8B5CFF 0%, #C471FF 100%)",
-              boxShadow: "0 6px 0 #5a1fb5",
               touchAction: "manipulation",
             }}
           >
@@ -228,6 +228,7 @@ export default function LandingPage() {
 
           {/* Secondary CTA — text link */}
           <button
+            type="button"
             onClick={handleSecondaryCTA}
             disabled={isLoggingIn}
             aria-label="已有账号，点击登录"
@@ -252,7 +253,7 @@ export default function LandingPage() {
             </a>
             和
             <a
-              href="/privacy"
+              href="/terms#ts-privacy"
               className="underline text-[#6B5B8D]"
               onClick={() => console.log('[Analytics] Landing: Privacy clicked')}
             >
