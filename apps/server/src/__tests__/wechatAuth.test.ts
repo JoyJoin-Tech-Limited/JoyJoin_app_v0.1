@@ -248,10 +248,10 @@ describe("processTestAnswers", () => {
     await expect(processTestAnswers("user-1", answers)).resolves.toBeUndefined();
   });
 
-  it("passes conflictPosture from Q_PLAYFUL_CONFLICT to findBestMatchingArchetypesV2", async () => {
+  it("passes conflictPosture from Q_PLAYFUL_EMOJI (direct) to findBestMatchingArchetypesV2", async () => {
     const answers = [
       { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 5 } },
-      { questionId: "Q_PLAYFUL_CONFLICT", questionLevel: 3, selectedOption: "A", traitScores: {} },
+      { questionId: "Q_PLAYFUL_EMOJI", questionLevel: 3, selectedOption: "direct", traitScores: {} },
     ];
 
     await processTestAnswers("user-1", answers);
@@ -263,33 +263,48 @@ describe("processTestAnswers", () => {
     );
   });
 
-  it("passes motivationDirection from Q_PLAYFUL_MOTIVATION to findBestMatchingArchetypesV2", async () => {
+  it("passes conflictPosture 'mediate' from Q_PLAYFUL_EMOJI (dove) to findBestMatchingArchetypesV2", async () => {
     const answers = [
       { questionId: "q1", questionLevel: 1, selectedOption: "B", traitScores: { X: 2 } },
-      { questionId: "Q_PLAYFUL_MOTIVATION", questionLevel: 3, selectedOption: "B", traitScores: {} },
+      { questionId: "Q_PLAYFUL_EMOJI", questionLevel: 3, selectedOption: "dove", traitScores: {} },
     ];
 
     await processTestAnswers("user-1", answers);
 
     expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.objectContaining({ motivationDirection: "external" }),
+      expect.objectContaining({ conflictPosture: "mediate" }),
       3
     );
   });
 
-  it("passes both secondary fields when both playful questions are answered", async () => {
+  it("passes conflictPosture 'avoid' from Q_PLAYFUL_EMOJI (popcorn) to findBestMatchingArchetypesV2", async () => {
     const answers = [
       { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 3 } },
-      { questionId: "Q_PLAYFUL_CONFLICT", questionLevel: 3, selectedOption: "C", traitScores: {} },
-      { questionId: "Q_PLAYFUL_MOTIVATION", questionLevel: 3, selectedOption: "A", traitScores: {} },
+      { questionId: "Q_PLAYFUL_EMOJI", questionLevel: 3, selectedOption: "popcorn", traitScores: {} },
     ];
 
     await processTestAnswers("user-1", answers);
 
     expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.objectContaining({ conflictPosture: "mediate", motivationDirection: "internal" }),
+      expect.objectContaining({ conflictPosture: "avoid" }),
+      3
+    );
+  });
+
+  it("does not populate secondary data from Q_PLAYFUL_SLIDER (trait-only question)", async () => {
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 3 } },
+      { questionId: "Q_PLAYFUL_SLIDER", questionLevel: 3, selectedOption: "slider_50", traitScores: { X: 0, P: 0 } },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    // Q_PLAYFUL_SLIDER only affects trait scores, not secondary data
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.any(Object),
+      undefined,
       3
     );
   });
@@ -297,7 +312,7 @@ describe("processTestAnswers", () => {
   it("ignores unknown option values in playful questions and does not pass secondary data", async () => {
     const answers = [
       { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 3 } },
-      { questionId: "Q_PLAYFUL_CONFLICT", questionLevel: 3, selectedOption: "Z", traitScores: {} },
+      { questionId: "Q_PLAYFUL_EMOJI", questionLevel: 3, selectedOption: "Z", traitScores: {} },
     ];
 
     await processTestAnswers("user-1", answers);
