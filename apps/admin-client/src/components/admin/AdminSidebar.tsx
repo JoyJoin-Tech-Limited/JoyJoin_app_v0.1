@@ -17,6 +17,7 @@ import {
   CalendarDays,
   Tag,
   ReceiptText,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,6 +31,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 const coreOpsItems = [
   { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -63,15 +65,15 @@ const contentRevenueItems = [
   { title: "小悦进化", url: "/admin/evolution", icon: Brain },
 ];
 
-const groups = [
-  { label: "核心运营", items: coreOpsItems },
-  { label: "盲盒匹配", items: matchingItems },
-  { label: "反馈与安全", items: safetyItems },
-  { label: "内容与收入", items: contentRevenueItems },
+// Only shown to super_admin
+const systemItems = [
+  { title: "管理员账号", url: "/admin/accounts", icon: ShieldCheck },
 ];
 
 export function AdminSidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.adminRole === 'super_admin';
 
   return (
     <Sidebar>
@@ -87,7 +89,13 @@ export function AdminSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {groups.map((group) => (
+        {[
+          { label: "核心运营", items: coreOpsItems },
+          { label: "盲盒匹配", items: matchingItems },
+          { label: "反馈与安全", items: safetyItems },
+          { label: "内容与收入", items: contentRevenueItems },
+          ...(isSuperAdmin ? [{ label: "系统管理", items: systemItems }] : []),
+        ].map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
