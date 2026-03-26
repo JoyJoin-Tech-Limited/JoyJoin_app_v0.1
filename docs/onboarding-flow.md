@@ -69,7 +69,8 @@ Essential Data → Extended Data → Profile Review → Discover Page
 
 **Auth-gate flow (current behaviour):**
 - The unauthenticated claim CTA on the results page routes to **`/personality-test/auth-gate`** rather than showing a loading spinner. This ensures users are not trapped in a spinner state if WeChat auth is not yet ready.
-- The **`先不看了` button** on the results page is a **development / non-production testing quick-pass**. It is only shown in dev environments (`data-testid="button-dev-wechat-bypass"`) and bypasses WeChat auth for local testing. It is not visible in production and is not a user-facing CTA.
+- On the **`/personality-test/auth-gate`** page there is a **non-production-only testing quick-pass** text link labeled **`测试快速通过`**. It immediately continues the flow without triggering WeChat OAuth. This link is only rendered in development / staging builds, has **no `data-testid`**, and must never be exposed in production.
+- On the results page there is a **DEV-only WeChat bypass button** labeled **`⚡ 测试账号登录`** with `data-testid="button-dev-wechat-bypass"`. It logs in using a mock WeChat code for local testing, is hidden in production, and is not a user-facing CTA.
 - The floating **`你的专属匹配已生成！` login card** (a redundant secondary login prompt that appeared over the results page) has been **removed**. The primary WeChat login CTA is sufficient.
 
 **WeChat Authentication Flow:**

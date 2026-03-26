@@ -29,7 +29,7 @@ The JoyJoin Personality Test System uses a scientifically calibrated adaptive as
 - **V4 Adaptive Engine**: Dynamically selects 8-16 standard questions based on real-time confidence tracking, followed by 2 fixed interactive closing questions (`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI`)
 - **V2 Matcher Algorithm**: Weighted Manhattan distance with asymmetric penalties and VETO filters
 - **6-Trait Model (ACOEXP)**: Affinity, Conscientiousness, Emotional Stability, Openness, Extraversion, Positivity
-- **Secondary Data Pipeline**: Two secondary differentiators (`conflictPosture`, `motivationDirection`) captured through the playful closing questions and fed to the V2 Matcher tiebreaker
+- **Secondary Data Pipeline**: A secondary differentiator (`conflictPosture`) captured through the playful closing questions and fed to the V2 Matcher tiebreaker (with `motivationDirection` reserved for future use)
 
 **Key Features:**
 - Adaptive question selection (not fixed 10 questions)
