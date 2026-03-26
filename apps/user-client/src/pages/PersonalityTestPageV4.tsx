@@ -422,6 +422,19 @@ export default function PersonalityTestPageV4() {
     setSelectedOption(next);
   }, []);
 
+  const commitQuestionHistory = useCallback((question: AssessmentQuestion, answerValue: string) => {
+    setQuestionHistory((prev) => {
+      const existingIndex = prev.findIndex((entry) => entry.question.id === question.id);
+      if (existingIndex === -1) {
+        return [...prev, { question, answerValue }];
+      }
+
+      const next = [...prev];
+      next[existingIndex] = { question, answerValue };
+      return next;
+    });
+  }, []);
+
   const handleSubmitAnswer = useCallback(async () => {
     if (!currentQuestion) return;
 
@@ -429,8 +442,8 @@ export default function PersonalityTestPageV4() {
     if (currentQuestion.questionType === 'slider' && currentQuestion.sliderConfig) {
       if (sliderValue === undefined) return; // require interaction before submitting
       haptics.medium();
-      // Save to history before submitting
-      setQuestionHistory(prev => [...prev, { question: currentQuestion, answerValue: String(sliderValue) }]);
+      const questionToPersist = currentQuestion;
+      const answerValueToPersist = String(sliderValue);
       const config = currentQuestion.sliderConfig;
       const traitScores: Record<string, number> = {};
       for (const mapping of config.traitMappings) {
@@ -449,6 +462,7 @@ export default function PersonalityTestPageV4() {
       const selectedOptionForSlider = options[clampedIndex]?.value;
       if (!selectedOptionForSlider) return;
       await submitAnswer(currentQuestion.id, selectedOptionForSlider, traitScores);
+      commitQuestionHistory(questionToPersist, answerValueToPersist);
       setSliderValue(undefined);
       return;
     }
@@ -456,13 +470,14 @@ export default function PersonalityTestPageV4() {
     // emoji_tap and choice questions: use selectedOption
     if (!selectedOption) return;
     haptics.medium();
-    // Save to history before submitting
-    setQuestionHistory(prev => [...prev, { question: currentQuestion, answerValue: selectedOption }]);
+    const questionToPersist = currentQuestion;
+    const answerValueToPersist = selectedOption;
     const selectedOpt = currentQuestion.options.find(o => o.value === selectedOption);
     await submitAnswer(currentQuestion.id, selectedOption, selectedOpt?.traitScores || {});
+    commitQuestionHistory(questionToPersist, answerValueToPersist);
     
     setSelectedOption(undefined);
-  }, [currentQuestion, selectedOption, sliderValue, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
+  }, [commitQuestionHistory, currentQuestion, selectedOption, sliderValue, submitAnswer, answeredCount, estimatedRemaining, currentMatches]);
 
   // Back handler: navigates to previous question in local history, or exits to '/' at the start
   const handleBack = useCallback(() => {
