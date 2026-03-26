@@ -14,11 +14,13 @@ import {
   type RegistrationSession,
   type PreSignupData,
   type UserSocialTagGeneration,
+  type AdminAccount,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
-  assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections
+  assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections,
+  adminAccounts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -387,6 +389,14 @@ export interface IStorage {
   getEventAttendanceSummary(eventId: string): Promise<Array<{ userId: string; displayName: string; archetype: string | null; status: string; estimatedLateMinutes: number | null; absentReason: string | null; }>>;
   adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void>;
   getPendingAttendees(eventId: string): Promise<Array<{ userId: string; displayName: string; }>>;
+
+  // Admin Account operations (RBAC)
+  getAdminAccountByUsername(username: string): Promise<AdminAccount | undefined>;
+  getAdminAccountById(id: string): Promise<AdminAccount | undefined>;
+  listAdminAccounts(): Promise<AdminAccount[]>;
+  createAdminAccount(data: { username: string; passwordHash: string; role: string; displayName?: string }): Promise<AdminAccount>;
+  updateAdminAccount(id: string, updates: Partial<Pick<AdminAccount, 'role' | 'status' | 'displayName' | 'passwordHash'>>): Promise<AdminAccount>;
+  updateAdminLastLogin(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4174,6 +4184,69 @@ export class DatabaseStorage implements IStorage {
         AND (ea.attendance_status IS NULL OR ea.attendance_status = 'pending')
     `);
     return result.rows as any[];
+  }
+
+  // ---- Admin Account operations (RBAC) ----
+
+  async getAdminAccountByUsername(username: string): Promise<AdminAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(adminAccounts)
+      .where(eq(adminAccounts.username, username));
+    return account;
+  }
+
+  async getAdminAccountById(id: string): Promise<AdminAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(adminAccounts)
+      .where(eq(adminAccounts.id, id));
+    return account;
+  }
+
+  async listAdminAccounts(): Promise<AdminAccount[]> {
+    return db
+      .select()
+      .from(adminAccounts)
+      .orderBy(adminAccounts.createdAt);
+  }
+
+  async createAdminAccount(data: {
+    username: string;
+    passwordHash: string;
+    role: string;
+    displayName?: string;
+  }): Promise<AdminAccount> {
+    const [account] = await db
+      .insert(adminAccounts)
+      .values({
+        username: data.username,
+        passwordHash: data.passwordHash,
+        role: data.role,
+        displayName: data.displayName,
+        status: 'active',
+      })
+      .returning();
+    return account;
+  }
+
+  async updateAdminAccount(
+    id: string,
+    updates: Partial<Pick<AdminAccount, 'role' | 'status' | 'displayName' | 'passwordHash'>>,
+  ): Promise<AdminAccount> {
+    const [account] = await db
+      .update(adminAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(adminAccounts.id, id))
+      .returning();
+    return account;
+  }
+
+  async updateAdminLastLogin(id: string): Promise<void> {
+    await db
+      .update(adminAccounts)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(adminAccounts.id, id));
   }
 }
 

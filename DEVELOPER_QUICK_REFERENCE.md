@@ -280,6 +280,32 @@ These are commented out in schema but kept for backward compatibility.
 | `/admin/coupons` | AdminCouponsPage | Coupon management |
 | `/admin/venues` | AdminVenuesPage | Venue partners |
 | `/admin/evolution` | AdminEvolutionPage | AI evolution dashboard |
+| `/admin/accounts` | AdminAccountsPage | Admin account management (super_admin only) |
+
+### Admin Authentication
+
+Admin portal login uses **username/password** credentials stored in the `admin_accounts` table.
+
+**Login endpoint:** `POST /api/admin/login` – accepts `{ username, password }`
+
+**Roles:**
+| Role | Access |
+|------|--------|
+| `super_admin` | Full access including admin account management |
+| `operator` | General admin operations; cannot manage admin accounts |
+| `viewer` | Read-only access to dashboards and reports |
+
+**Creating the first admin account (CLI):**
+```bash
+# Set ADMIN_CREATE_SECRET_KEY in .env first
+npm run admin:create <username> <password> <secretKey> [role] [displayName]
+
+# Examples:
+npm run admin:create admin MySecretPass99 BYPASSSECRET12345678
+npm run admin:create ops_user OpPass99 BYPASSSECRET12345678 operator "运营小王"
+```
+
+> **Transitional note:** Existing admins with `users.isAdmin = true` (phone-based) still work via the `/api/auth/admin-login` fallback. Migrate them by creating a new `admin_accounts` entry using the CLI.
 
 ---
 
