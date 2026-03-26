@@ -138,7 +138,7 @@ secondaryBonus = f(conflictPosture)  // populated from Q_PLAYFUL_EMOJI
 // Max contribution: ~+8 points
 ```
 
-**Active wiring (as of PR #349):**
+**Active wiring (as of PR #352):**
 
 | `UserSecondaryData` field | Source question | Captured by |
 |---|---|---|
@@ -481,9 +481,12 @@ After groups are formed and saved, an AI analysis surface provides human-readabl
 interface GroupAnalysisResponse {
   groupId: string;
   overallChemistry: 'fire' | 'warm' | 'mild' | 'cold';  // mean chemistryScore: fire≥85, warm≥70, mild≥55, cold<55
+  groupDynamics: string;                 // 1-2 sentence prose description of the group dynamic (Chinese)
   pairExplanations: PairExplanation[];   // one per user pair (sorted pairKey)
   iceBreakers: string[];                 // 3-5 personalised conversation starters
-  groupNarrative: string;               // 50-100 char group chemistry summary
+  fromCache: boolean;                    // true if served from cached analysis
+  generatedAt: string;                   // ISO-8601 timestamp of last generation
+  myPairs?: PairExplanation[];           // optional: pairs involving the requesting user
 }
 
 interface PairExplanation {
@@ -511,7 +514,7 @@ Authorization: requireAuth
 | Surface | File | How it uses group analysis |
 |---|---|---|
 | `useGroupAnalysis` hook | `apps/user-client/src/hooks/useGroupAnalysis.ts` | TanStack Query wrapper for the `/analysis` endpoint; returns `{ data, isLoading }` |
-| `PostMatchEventCard` | `apps/user-client/src/components/PostMatchEventCard.tsx` | Rich AI analysis panel showing pair explanations, icebreakers, group narrative |
+| `PostMatchEventCard` | `apps/user-client/src/components/PostMatchEventCard.tsx` | Rich AI analysis panel showing pair explanations, icebreakers, group dynamics |
 | `SquadUnboxingFlow` | `apps/user-client/src/pages/SquadUnboxingFlow.tsx` | Cinematic progressive reveal: member cards → chemistry score → pair explanations → icebreakers |
 
 ### 6.5.4 SquadUnboxingFlow Reveal Sequence
@@ -571,5 +574,5 @@ The flow uses `useGroupAnalysis` to poll the `/analysis` endpoint and waits for 
 | **ARCHETYPE_ENERGY** | Constant in `archetypeChemistry.ts` mapping all 12 archetypes to social energy levels (30–95). Used by `calculateEnergyBalance()`. |
 | **UserSecondaryData** | Non-trait differentiators (`conflictPosture`, `motivationDirection`) assembled from closing question answers and fed to the V2 Matcher tiebreaker. Only `conflictPosture` is actively captured via `Q_PLAYFUL_EMOJI`. |
 | **SECONDARY_QUESTION_MAP** | Lookup table in `secondaryQuestionMap.ts` mapping closing question IDs and answer values to `UserSecondaryData` fields. `Q_PLAYFUL_SLIDER` is absent — it is trait-scoring only. |
-| **GroupAnalysisResponse** | Shared TypeScript contract for the AI group analysis returned by `GET /api/pool-groups/:groupId/analysis`. Includes pair explanations, icebreakers, group narrative, and overall chemistry level. |
+| **GroupAnalysisResponse** | Shared TypeScript contract for the AI group analysis returned by `GET /api/pool-groups/:groupId/analysis`. Includes pair explanations, icebreakers, `groupDynamics` summary, overall chemistry level, and cache metadata (`fromCache`, `generatedAt`, optional `myPairs`). |
 | **conflictPosture** | Secondary differentiator with values `approach` / `mediate` / `avoid`, derived from `Q_PLAYFUL_EMOJI` answer. Used in `secondaryBonus` tiebreaker step of MatcherV2. |
