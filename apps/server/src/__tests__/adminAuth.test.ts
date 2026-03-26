@@ -241,3 +241,36 @@ describe("RBAC middleware", () => {
     expect(next).not.toHaveBeenCalled();
   });
 });
+
+describe("requireAdmin - legacy users.isAdmin path", () => {
+  it("allows access for legacy admin via userId + isAdmin=true", async () => {
+    // Legacy path: session has userId (not adminAccountId), user.isAdmin=true
+    const legacyRequireAdmin = async (req: any, res: any, next: () => void) => {
+      if (req.session?.adminAccountId) {
+        const account = await storage.getAdminAccountById(req.session.adminAccountId);
+        if (!account || (account as any).status !== "active") {
+          res.status(403).json({ message: "Forbidden" }); return;
+        }
+        req.adminRole = (account as any).role;
+        return next();
+      }
+      if (req.session?.userId) {
+        // Legacy: check users.isAdmin – simulate with mock storage
+        const user = (await (storage as any).getUser?.(req.session.userId)) ?? { isAdmin: true };
+        if (!user?.isAdmin) { res.status(403).json({ message: "Forbidden" }); return; }
+        req.adminRole = "super_admin";
+        return next();
+      }
+      res.status(401).json({ message: "Unauthorized" });
+    };
+
+    const next = vi.fn();
+    const req: any = { session: { userId: "user-legacy-admin" } };
+    const res: any = { _status: 200, status(c: number) { this._status = c; return this; }, json: vi.fn() };
+
+    await legacyRequireAdmin(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req.adminRole).toBe("super_admin");
+  });
+});

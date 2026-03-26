@@ -456,8 +456,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "用户名和密码不能为空" });
       }
 
-      // Try new admin_accounts table first (username-based)
       const bcrypt = await import('bcrypt');
+
+      // Try new admin_accounts table first (username-based)
       const adminAccount = await storage.getAdminAccountByUsername(loginId);
       if (adminAccount) {
         if (adminAccount.status !== 'active') {
@@ -468,18 +469,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(401).json({ message: "用户名或密码错误" });
         }
         await storage.updateAdminLastLogin(adminAccount.id);
-        return new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
           req.session.regenerate((err: any) => {
-            if (err) { res.status(500).json({ message: "登录失败" }); return resolve(); }
+            if (err) return reject(err);
             req.session.adminAccountId = adminAccount.id;
             req.session.adminRole = adminAccount.role;
-            req.session.save((err: any) => {
-              if (err) { res.status(500).json({ message: "登录失败" }); return resolve(); }
-              res.json({ message: "登录成功", role: adminAccount.role, displayName: adminAccount.displayName });
+            req.session.save((saveErr: any) => {
+              if (saveErr) return reject(saveErr);
               resolve();
             });
           });
         });
+        return res.json({ message: "登录成功", role: adminAccount.role, displayName: adminAccount.displayName });
       }
 
       // Fallback: legacy users table (phone-based admin, transitional)
@@ -499,17 +500,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!isValidPassword) {
           return res.status(401).json({ message: "用户名或密码错误" });
         }
-        return new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
           req.session.regenerate((err: any) => {
-            if (err) { res.status(500).json({ message: "登录失败" }); return resolve(); }
+            if (err) return reject(err);
             req.session.userId = user.id;
-            req.session.save((err: any) => {
-              if (err) { res.status(500).json({ message: "登录失败" }); return resolve(); }
-              res.json({ message: "登录成功", userId: user.id });
+            req.session.save((saveErr: any) => {
+              if (saveErr) return reject(saveErr);
               resolve();
             });
           });
         });
+        return res.json({ message: "登录成功", userId: user.id });
       }
 
       return res.status(401).json({ message: "用户名或密码错误" });
@@ -7058,31 +7059,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateAdminLastLogin(adminAccount.id);
 
-      return new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         req.session.regenerate((err: any) => {
-          if (err) {
-            console.error("Session regeneration error:", err);
-            res.status(500).json({ message: "登录失败" });
-            return resolve();
-          }
+          if (err) return reject(err);
           req.session.adminAccountId = adminAccount.id;
           req.session.adminRole = adminAccount.role;
-          req.session.save((err: any) => {
-            if (err) {
-              console.error("Session save error:", err);
-              res.status(500).json({ message: "登录失败" });
-              return resolve();
-            }
-            res.json({
-              message: "登录成功",
-              id: adminAccount.id,
-              username: adminAccount.username,
-              role: adminAccount.role,
-              displayName: adminAccount.displayName,
-            });
+          req.session.save((saveErr: any) => {
+            if (saveErr) return reject(saveErr);
             resolve();
           });
         });
+      });
+
+      return res.json({
+        message: "登录成功",
+        id: adminAccount.id,
+        username: adminAccount.username,
+        role: adminAccount.role,
+        displayName: adminAccount.displayName,
       });
     } catch (error) {
       console.error("Error during admin login:", error);
