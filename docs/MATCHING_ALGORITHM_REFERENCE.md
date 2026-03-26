@@ -1,6 +1,6 @@
 # JoyJoin Matching Algorithm Reference
 
-> **Status:** Living document — last updated 2026-03-23 11:21:30  
+> **Status:** Living document — last updated 2026-03-26  
 > **Scope:** Covers all three matching layers: (1) Personality archetype assignment, (2) Pair compatibility scoring, (3) Group formation.
 
 ---
@@ -68,7 +68,7 @@ User completes personality quiz
 | `X` | 外向性 (Extraversion) | Sociability, energy, talkativeness |
 | `P` | 耐心 (Patience) | Tolerance, deliberateness, steady pace |
 
-All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment (16+4 questions).
+All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment (8–18 questions: 8–16 adaptive + 2 interactive closing questions).
 
 ### 2.2 The 12 Social Archetypes
 
@@ -131,12 +131,23 @@ signalTraitAlignment = Σ max(0, 1 − |userScore − protoScore| / 50)
 
 #### Step 5 — Secondary Bonus
 
-Optional tiebreaker using non-trait data:
+Tiebreaker using non-trait secondary differentiator data collected from the V4 interactive closing questions:
 
 ```typescript
-secondaryBonus = f(motivationDirection, conflictPosture, riskTolerance)
+secondaryBonus = f(conflictPosture)  // populated from Q_PLAYFUL_EMOJI
 // Max contribution: ~+8 points
 ```
+
+**Active wiring (as of PR #349):**
+
+| `UserSecondaryData` field | Source question | Captured by |
+|---|---|---|
+| `conflictPosture` | `Q_PLAYFUL_EMOJI` (emoji_tap) | `SECONDARY_QUESTION_MAP` in `secondaryQuestionMap.ts` |
+| `motivationDirection` | *(no active question)* | Not currently captured |
+
+`SECONDARY_QUESTION_MAP` is the single source of truth for how closing question answers map to `UserSecondaryData` fields. Only `Q_PLAYFUL_EMOJI` is listed — `Q_PLAYFUL_SLIDER` is trait-scoring only and intentionally absent.
+
+The assembled `UserSecondaryData` is passed to `getFinalResult()` in `adaptiveEngine.ts`, which passes it to the V2 Matcher. The secondary bonus fires whenever `conflictPosture` is present — it is no longer dead code.
 
 #### Step 6 — Final Score
 
@@ -159,14 +170,14 @@ Applied after scoring all 12 archetypes:
 
 #### Tie-Breaking
 
-If top-2 scores are within a close gap, `breakTie()` uses secondary differentiators (motivationDirection, conflictPosture, riskTolerance) to resolve.
+If top-2 scores are within a close gap, `breakTie()` uses secondary differentiators to resolve. The only active secondary differentiator in the current question bank is `conflictPosture` (from `Q_PLAYFUL_EMOJI`). `motivationDirection` is defined in `UserSecondaryData` but is not currently captured by any question.
 
 ### 2.4 V4 Adaptive Assessment Engine
 
 **File:** `packages/shared/src/personality/adaptiveEngine.ts`
 
-- **Base questions:** 16 anchor questions (balanced across 6 traits)
-- **Adaptive supplement:** Up to 4 targeted questions for confusable archetype pairs
+- **Base questions:** 8–16 adaptive anchor/disambiguation questions
+- **Closing questions:** 2 fixed interactive questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) appended after adaptive phase stops
 - **Confusable pairs** (CONFUSABLE_ARCHETYPE_PAIRS) drive adaptive question selection
 - MatcherV2 is enabled by default (`ENABLE_MATCHER_V2_DEFAULT = true`)
 
@@ -229,6 +240,8 @@ Heat levels: `5` (level 1 / casual), `10` (level 2 / active), `25` (level 3 / pa
 Default when one or both users have no interest data:
 - Both missing → 70 (neutral)
 - One missing → 30 (low)
+
+**Interest model note:** Temporal heat decay was evaluated and rejected. The active model uses **stable declared interests** kept fresh by two explicit mechanisms: (1) an editable interest carousel at `/profile/edit/interests` (`EditInterestsCarouselPage`), and (2) a post-event interest nudge step in `EventFeedbackFlow` that bumps heat for relevant topics. `user_interests.updated_at` reflects intentional engagement, not time since signup. See `docs/AI_INTEGRATION_PLAN.md §2.2` for rationale.
 
 #### 3.2.3 Social Affinity Score (社交同频度) — 20%
 
@@ -455,16 +468,80 @@ Current hard constraints include:
 
 ---
 
+## 6.5 AI Group Analysis
+
+After groups are formed and saved, an AI analysis surface provides human-readable compatibility explanations.
+
+### 6.5.1 Shared Contract
+
+**File:** `packages/shared/src/types/groupAnalysis.ts`  
+**Import:** `import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'`
+
+```typescript
+interface GroupAnalysisResponse {
+  groupId: string;
+  overallChemistry: 'fire' | 'warm' | 'mild' | 'cold';  // mean chemistryScore: fire≥85, warm≥70, mild≥55, cold<55
+  pairExplanations: PairExplanation[];   // one per user pair (sorted pairKey)
+  iceBreakers: string[];                 // 3-5 personalised conversation starters
+  groupNarrative: string;               // 50-100 char group chemistry summary
+}
+
+interface PairExplanation {
+  pairKey: string;          // sorted([userId1, userId2]).join('-')
+  explanation: string;      // 2-3 sentence warm personalised explanation (Chinese)
+  chemistryScore: number;   // 0-100, from chemistry matrix (deterministic)
+  sharedInterests: string[];
+  connectionPoints: string[];
+}
+```
+
+### 6.5.2 API Endpoint
+
+```
+GET /api/pool-groups/:groupId/analysis
+Authorization: requireAuth
+```
+
+- Returns `GroupAnalysisResponse` immediately from cache after the first generation (7-day TTL per group roster)
+- On cache miss: calls `generateGroupAnalysis()` in `matchExplanationService.ts`, which fans out pair explanation calls and generates icebreakers in parallel via `socialModelRouter` (MiniMax preferred, DeepSeek fallback)
+- Rate limited via `aiEndpointLimiter`
+
+### 6.5.3 Client Surfaces
+
+| Surface | File | How it uses group analysis |
+|---|---|---|
+| `useGroupAnalysis` hook | `apps/user-client/src/hooks/useGroupAnalysis.ts` | TanStack Query wrapper for the `/analysis` endpoint; returns `{ data, isLoading }` |
+| `PostMatchEventCard` | `apps/user-client/src/components/PostMatchEventCard.tsx` | Rich AI analysis panel showing pair explanations, icebreakers, group narrative |
+| `SquadUnboxingFlow` | `apps/user-client/src/pages/SquadUnboxingFlow.tsx` | Cinematic progressive reveal: member cards → chemistry score → pair explanations → icebreakers |
+
+### 6.5.4 SquadUnboxingFlow Reveal Sequence
+
+`SquadUnboxingFlow` (route: accessed from group detail) delivers a cinematic squad reveal:
+
+1. **Member reveal** — member archetype cards animate in one by one
+2. **Chemistry reveal** — overall chemistry level shown with temperature label
+3. **Pair explanation reveal** — each pair explanation fades in sequentially
+4. **Icebreaker reveal** — personalised conversation starters presented as swipeable cards
+5. **Share/action CTA** — group share or event registration prompt
+
+The flow uses `useGroupAnalysis` to poll the `/analysis` endpoint and waits for data before advancing beyond the loading state.
+
+---
+
 ## 7. Key Source Files
 
 | File | Role |
 |------|------|
 | `packages/shared/src/personality/matcherV2.ts` | Personality archetype assignment algorithm |
 | `packages/shared/src/personality/adaptiveEngine.ts` | V4 adaptive quiz engine |
+| `packages/shared/src/personality/secondaryQuestionMap.ts` | Maps closing question answers → `UserSecondaryData` fields |
 | `packages/shared/src/personality/archetypeCompatibility.ts` | Chemistry matrix (single source of truth) |
 | `packages/shared/src/personality/prototypes.ts` | Archetype prototype trait profiles |
+| `packages/shared/src/types/groupAnalysis.ts` | `GroupAnalysisResponse` shared contract |
 | `apps/server/src/poolMatchingService.ts` | Pair scoring + group formation (primary matching service) |
 | `apps/server/src/archetypeChemistry.ts` | Server-side chemistry helpers (imports from shared) |
+| `apps/server/src/matchExplanationService.ts` | AI pair explanations + icebreakers + `generateGroupAnalysis()` |
+| `apps/user-client/src/hooks/useGroupAnalysis.ts` | Client hook for `GET /api/pool-groups/:groupId/analysis` |
 | `apps/server/src/userMatchingService.ts` | Legacy 6-dimensional user matching (used for admin lab / older flows) |
 | `apps/server/src/personalityMatchingV2.ts` | V8 hybrid (Euclidean + cosine) scoring utilities |
 | `apps/admin-client/src/pages/admin/AdminMatchingLabPage.tsx` | Admin UI for testing matching weights |
@@ -492,3 +569,7 @@ Current hard constraints include:
 | **communicationBalance** | Field name in `MatchGroup` interface and DB alias for `energy_balance` column. Currently stores the Energy Balance score (social energy distribution) — name is a legacy alias. |
 | **energyBalance** | Group-level score (0–100) measuring health of social energy distribution using `ARCHETYPE_ENERGY`. Replaces the former language-based `communicationBalance` calculation. |
 | **ARCHETYPE_ENERGY** | Constant in `archetypeChemistry.ts` mapping all 12 archetypes to social energy levels (30–95). Used by `calculateEnergyBalance()`. |
+| **UserSecondaryData** | Non-trait differentiators (`conflictPosture`, `motivationDirection`) assembled from closing question answers and fed to the V2 Matcher tiebreaker. Only `conflictPosture` is actively captured via `Q_PLAYFUL_EMOJI`. |
+| **SECONDARY_QUESTION_MAP** | Lookup table in `secondaryQuestionMap.ts` mapping closing question IDs and answer values to `UserSecondaryData` fields. `Q_PLAYFUL_SLIDER` is absent — it is trait-scoring only. |
+| **GroupAnalysisResponse** | Shared TypeScript contract for the AI group analysis returned by `GET /api/pool-groups/:groupId/analysis`. Includes pair explanations, icebreakers, group narrative, and overall chemistry level. |
+| **conflictPosture** | Secondary differentiator with values `approach` / `mediate` / `avoid`, derived from `Q_PLAYFUL_EMOJI` answer. Used in `secondaryBonus` tiebreaker step of MatcherV2. |
