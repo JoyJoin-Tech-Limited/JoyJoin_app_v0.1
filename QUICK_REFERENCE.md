@@ -179,9 +179,11 @@ draft → matching → registration_open → confirmed
 
 ---
 
-## 📈 Admin Portal Pages (18)
+## 📈 Admin Portal Pages (19)
 
 > **Deployment note:** The admin portal is a **separate deployment** at `https://admin.yuejuapp.com` (the `apps/admin-client` workspace). Routes in `apps/user-client/src/App.tsx` redirect all `/admin/*` paths to that subdomain. Admin pages listed below are served by the admin client, not the user client.
+
+> **Authentication:** Admin portal uses username/password login (`POST /api/admin/login`). No SMS/phone verification required. Login at `/admin/login`.
 
 | Page | Route | Purpose |
 |------|-------|---------|
@@ -201,6 +203,7 @@ draft → matching → registration_open → confirmed
 | Moderation | `/admin/moderation` | Interaction reports |
 | Reports | `/admin/reports` | User reports |
 | Interaction Logs | `/admin/interaction-logs` | Audit trail |
+| **Admin Accounts** | `/admin/accounts` | **RBAC account management (super_admin only)** |
 
 ---
 
@@ -258,6 +261,13 @@ POST /api/coupons/validate      # Validate coupon
 
 ### Admin
 ```
+POST /api/admin/login                      # Admin login (username + password) ← canonical
+POST /api/auth/admin-login                 # Legacy admin login (phone-based, transitional)
+GET  /api/admin/me                         # Current admin info + role
+GET  /api/admin/accounts                   # List admin accounts (super_admin only)
+POST /api/admin/accounts                   # Create admin account (super_admin only)
+PATCH /api/admin/accounts/:id              # Update role/status (super_admin only)
+POST /api/admin/accounts/:id/reset-password # Reset password (super_admin only)
 GET  /api/admin/stats                      # Dashboard metrics
 GET  /api/admin/users                      # List users
 POST /api/admin/events                     # Create event
@@ -266,6 +276,9 @@ GET  /api/admin/data-insights              # Analytics data
 POST /api/admin/matching/test              # Test matching
 POST /api/admin/notifications/broadcast    # Send notification
 ```
+
+**Admin roles:** `super_admin` | `operator` | `viewer`
+**Create first admin:** `npm run admin:create <username> <password> <secretKey>`
 
 **Full list:** See `apps/server/src/routes.ts`
 

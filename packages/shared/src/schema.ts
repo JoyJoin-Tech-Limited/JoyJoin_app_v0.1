@@ -3045,3 +3045,46 @@ export const insertBlindBoxPreAttendanceSchema = createInsertSchema(blindBoxPreA
 
 export type BlindBoxPreAttendance = typeof blindBoxPreAttendance.$inferSelect;
 export type InsertBlindBoxPreAttendance = z.infer<typeof insertBlindBoxPreAttendanceSchema>;
+
+// ================================
+// Admin Accounts (RBAC)
+// ================================
+
+/**
+ * Dedicated admin accounts table – decoupled from the regular `users` table.
+ * Roles:
+ *   super_admin – full access including admin account management
+ *   operator    – general admin operations; cannot manage admin accounts
+ *   viewer      – read-only access to dashboards / reports
+ *
+ * Transitional note: existing admins who authenticated via the `users` table
+ * (isAdmin = true, phone-number-based) should be migrated by running the
+ * updated `createAdminAccount` CLI which inserts a row here. The legacy
+ * `users.isAdmin` flag and `requireAdmin` middleware continue to work until
+ * full migration is complete.
+ */
+export const adminAccounts = pgTable("admin_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username", { length: 64 }).unique().notNull(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  role: varchar("role", { length: 32 }).notNull().default("operator"),
+  // "active" | "disabled"
+  status: varchar("status", { length: 16 }).notNull().default("active"),
+  displayName: varchar("display_name", { length: 100 }),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_admin_accounts_username").on(table.username),
+  index("idx_admin_accounts_role").on(table.role),
+]);
+
+export const insertAdminAccountSchema = createInsertSchema(adminAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+});
+
+export type AdminAccount = typeof adminAccounts.$inferSelect;
+export type InsertAdminAccount = z.infer<typeof insertAdminAccountSchema>;

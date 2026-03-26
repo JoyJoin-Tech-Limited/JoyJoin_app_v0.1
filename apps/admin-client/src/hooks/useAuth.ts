@@ -1,8 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
+
+/**
+ * Admin auth response – may be a full User row (legacy phone-based admin)
+ * or a synthetic admin object returned when logged in via admin_accounts table.
+ */
+export interface AdminAuthUser {
+  id: string;
+  displayName?: string | null;
+  isAdmin: boolean;
+  /** RBAC role: super_admin | operator | viewer (undefined for legacy admin sessions) */
+  adminRole?: string;
+  nextStep?: string;
+  // Legacy User fields that may be present for phone-based admins
+  [key: string]: any;
+}
 
 export function useAuth() {
-  const { data: user, isLoading, isError } = useQuery<User>({
+  const { data: user, isLoading, isError } = useQuery<AdminAuthUser>({
     queryKey: ["/api/auth/user"],
     retry: (failureCount, error: any) => {
       if (error?.status === 401 || error?.status === 403) return false;
@@ -11,7 +25,6 @@ export function useAuth() {
     staleTime: Infinity,
   });
 
-  // If there's an error or no user, treat as not authenticated (don't stay in loading state)
   const isAuthenticated = !!user && !isError;
   const actualIsLoading = isLoading && !isError;
 

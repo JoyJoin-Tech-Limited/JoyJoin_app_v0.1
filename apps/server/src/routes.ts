@@ -9,6 +9,7 @@ import { INDUSTRY_OPTIONS } from "@shared/constants";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
+import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
@@ -444,65 +445,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WeChat auth setup
   setupWechatAuth(app);
 
-  // Admin password login endpoint
+  // Admin password login endpoint (legacy: phone-based; kept for backward compat during transition)
+  // New canonical endpoint is POST /api/admin/login (username-based).
   app.post('/api/auth/admin-login', async (req: Request, res) => {
     try {
-      const { phoneNumber, password } = req.body;
+      // Support both old phone-based format and new username-based format
+      const { username, phoneNumber, password } = req.body;
+      const loginId = username || phoneNumber;
 
-      if (!phoneNumber || !password) {
-        return res.status(400).json({ message: "Phone number and password are required" });
+      if (!loginId || !password) {
+        return res.status(400).json({ message: "用户名和密码不能为空" });
       }
 
-      // Get user by phone number
-      const users = await storage.getUserByPhone(phoneNumber);
-      
-      if (users.length === 0) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const user = users[0];
-
-      // Check if user is admin
-      if (!user.isAdmin) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      // Check if user has password set
-      if (!user.password) {
-        return res.status(401).json({ message: "Password not set for this account" });
-      }
-
-      // Verify password
       const bcrypt = await import('bcrypt');
-      const isValidPassword = await bcrypt.compare(password, user.password);
 
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Set session
-      req.session.regenerate((err: any) => {
-        if (err) {
-          console.error("Session regeneration error:", err);
-          return res.status(500).json({ message: "Login failed" });
+      // Try new admin_accounts table first (username-based)
+      const adminAccount = await storage.getAdminAccountByUsername(loginId);
+      if (adminAccount) {
+        if (adminAccount.status !== 'active') {
+          console.warn("Admin login attempt for disabled account", {
+            username: adminAccount.username,
+            status: adminAccount.status,
+          });
+          return res.status(401).json({ message: "用户名或密码错误" });
         }
-
-        req.session.userId = user.id;
-        req.session.save((err: any) => {
-          if (err) {
-            console.error("Session save error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
-
-          res.json({ 
-            message: "Login successful",
-            userId: user.id
+        const isValid = await bcrypt.compare(password, adminAccount.passwordHash);
+        if (!isValid) {
+          return res.status(401).json({ message: "用户名或密码错误" });
+        }
+        await storage.updateAdminLastLogin(adminAccount.id);
+        await new Promise<void>((resolve, reject) => {
+          req.session.regenerate((err: any) => {
+            if (err) return reject(err);
+            req.session.adminAccountId = adminAccount.id;
+            req.session.adminRole = adminAccount.role;
+            req.session.save((saveErr: any) => {
+              if (saveErr) return reject(saveErr);
+              resolve();
+            });
           });
         });
-      });
+        return res.json({ message: "登录成功", role: adminAccount.role, displayName: adminAccount.displayName });
+      }
+
+      // Fallback: legacy users table (phone-based admin, transitional)
+      if (phoneNumber) {
+        const users = await storage.getUserByPhone(phoneNumber);
+        if (users.length === 0) {
+          return res.status(401).json({ message: "用户名或密码错误" });
+        }
+        const user = users[0];
+        if (!user.isAdmin) {
+          return res.status(403).json({ message: "该账号没有管理员权限" });
+        }
+        if (!user.password) {
+          return res.status(401).json({ message: "该账号未设置密码" });
+        }
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: "用户名或密码错误" });
+        }
+        await new Promise<void>((resolve, reject) => {
+          req.session.regenerate((err: any) => {
+            if (err) return reject(err);
+            req.session.userId = user.id;
+            req.session.save((saveErr: any) => {
+              if (saveErr) return reject(saveErr);
+              resolve();
+            });
+          });
+        });
+        return res.json({ message: "登录成功", userId: user.id });
+      }
+
+      return res.status(401).json({ message: "用户名或密码错误" });
     } catch (error) {
       console.error("Error during admin login:", error);
-      res.status(500).json({ message: "Login failed" });
+      res.status(500).json({ message: "登录失败" });
     }
   });
 
@@ -863,19 +882,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth routes
-  app.get('/api/auth/user', isPhoneAuthenticated, async (req: Request, res) => {
+  app.get('/api/auth/user', async (req: Request, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
     if (process.env.DEBUG_AUTH === "1") {
       console.log("[AUTH/USER]", {
         sid: req.sessionID,
         cookie: req.headers.cookie,
         userId: req.session?.userId,
-        isAdmin: req.session?.isAdmin,
+        adminAccountId: req.session?.adminAccountId,
       });
     }
+
+    // New admin_accounts-based session: return synthetic admin user object
+    if (req.session?.adminAccountId) {
+      try {
+        const adminAccount = await storage.getAdminAccountById(req.session.adminAccountId);
+        if (adminAccount && adminAccount.status === 'active') {
+          return res.json({
+            id: adminAccount.id,
+            displayName: adminAccount.displayName || adminAccount.username,
+            isAdmin: true,
+            adminRole: adminAccount.role,
+            // Enough for AdminApp.tsx to detect admin status:
+            nextStep: 'discover',
+          });
+        }
+        return res.status(401).json({ message: "Unauthorized" });
+      } catch (err) {
+        return res.status(500).json({ message: "Internal server error" });
+      }
+    }
+
+    // Regular user session
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     try {
       const userId = req.session.userId;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "User not found" });
       
@@ -6911,7 +6955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ ADMIN MIDDLEWARE ============
+  // ============ AUTH MIDDLEWARE ============
   
   async function requireAuth(req: Request, res: any, next: any) {
     const session = req.session as any;
@@ -6920,27 +6964,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     next();
   }
-  
-  async function requireAdmin(req: Request, res: any, next: any) {
-    const session = req.session as any;
-    if (!session?.userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    
-    try {
-      const user = await storage.getUser(session.userId);
-      if (!user?.isAdmin) {
-        return res.status(403).json({ message: "Forbidden - Admin access required" });
-      }
-      
-      next();
-    } catch (error) {
-      console.error("Error checking admin status:", error);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-  }
 
-  // ============ ADMIN API ROUTES ============
+  registerAdminAuthRoutes(app);
   
   // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
   app.get('/api/config/amap', requireAdmin, (_req, res) => {
