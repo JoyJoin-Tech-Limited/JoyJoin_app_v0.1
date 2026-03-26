@@ -18,9 +18,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 import logoImage from "@/assets/box_logo_archetypes.png";
-import matchCardImg from "@/assets/landing screen/匹配卡片.png";
-import dinnerImg from "@/assets/landing screen/动物聚餐.png";
-import continueImg from "@/assets/landing screen/动物延续.png";
+import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.png";
+import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.png";
+import continueImg from "@/assets/landing screen/动物延续 compressed.png";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
@@ -189,7 +189,7 @@ export default function LandingPage() {
             通过氛围测试，找到你的氛围原型，遇见志同道合的ta
           </p>
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            {["🧠 氛围测试", "🎯 算法匹配", "👥 4-6人局"].map((label) => (
+            {['🧠 氛围测试', '🎯 算法匹配', '👥 4-6人局'].map((label) => (
               <span
                 key={label}
                 className="bg-white/60 rounded-full px-3 py-1 text-[13px] font-semibold text-[#5A4A7A] shadow-sm"
