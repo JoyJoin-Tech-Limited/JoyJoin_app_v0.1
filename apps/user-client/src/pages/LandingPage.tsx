@@ -1,233 +1,267 @@
 /**
- * Static Landing Page
- * 
- * Fixed viewport landing screen with no scroll required.
+ * Landing Page V2 — Maximum Impact
+ *
+ * Route: / (default for unauthenticated users)
+ * Updated: 2026-03-26 (V2: Duolingo-style CTAs, 3-card hero, sticky bottom zone)
+ *
  * Features:
- * - 4 tilted photo tiles using modular config
- * - Brand logo with ZCOOL QingKe HuangYou font
- * - 3 feature tags
- * - Primary CTA: "看看我会遇见谁" → /personality-test (combined registration & assessment)
- * - Secondary CTA: "已有账号登录" → WeChat OAuth (direct login or onboarding)
- * - Legal footer links
- * 
- * Route: /
- * Updated: 2026-03-07 (Fix: clear stale assessment cache on CTA to ensure fresh start)
+ * - 3-card stacked hero illustration (匹配 → 悦聚 → 延续)
+ * - Gradient headline with ZCOOL QingKe HuangYou font
+ * - 3 pill-shaped feature badges
+ * - Primary CTA: Duolingo 3D press shadow, h-16, "看看我会遇见谁" → /personality-test
+ * - Secondary CTA: text link "已有账号？登录" → WeChat OAuth
+ * - Sticky bottom CTA zone with env(safe-area-inset-bottom)
+ * - WeChat WebView safe (no backdrop-filter, no hover states, touch-action manipulation)
  */
 
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import logoImage from "@/assets/box_logo_archetypes.png";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
-
-// Import landing screen images
-import malePortrait from "@/assets/landing screen/男生单人.png";
-import femalePortrait from "@/assets/landing screen/女生单人.png";
-import diningScene from "@/assets/landing screen/聚餐.png";
-import drinkingScene from "@/assets/landing screen/酒局.png";
+import logoImage from "@/assets/box_logo_archetypes.png";
+import matchCardImg from "@/assets/landing screen/匹配卡片.png";
+import dinnerImg from "@/assets/landing screen/动物聚餐.png";
+import continueImg from "@/assets/landing screen/动物延续.png";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin();
 
-  // Inline image array
-  const landingImages = [
-    { src: malePortrait, alt: "男生单人", rotation: -8, translateY: 10 },
-    { src: diningScene, alt: "朋友聚餐", rotation: 5, translateY: 20 },
-    { src: drinkingScene, alt: "酒局现场", rotation: 6, translateY: -15 },
-    { src: femalePortrait, alt: "女生单人", rotation: -5, translateY: -10 },
-  ];
-
-  // Primary CTA handler - go to personality test (combined registration & assessment)
   const handlePrimaryCTA = () => {
     console.log('[Analytics] Landing: Primary CTA clicked');
-
-    // Clear any stale assessment session cache so the personality test
-    // always starts fresh from the landing page CTA.
-    // Keys must match constants in useAdaptiveAssessment.ts:
-    //   PRESIGNUP_SESSION_KEY = "joyjoin_v4_assessment_session"
-    //   PRESIGNUP_ANSWERS_KEY = "joyjoin_v4_presignup_answers"
     localStorage.removeItem("joyjoin_v4_assessment_session");
     localStorage.removeItem("joyjoin_v4_presignup_answers");
     localStorage.removeItem("joyjoin_synced_session_id");
     localStorage.removeItem("joyjoin_synced_answer_count");
-
-    // Direct to personality test (includes registration + adaptive assessment)
     setLocation('/personality-test');
   };
 
-  // Secondary CTA handler - trigger WeChat OAuth directly
   const handleSecondaryCTA = () => {
     console.log('[Analytics] Landing: Secondary CTA clicked');
     handleWeChatLogin();
   };
 
-  // Image error handler
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.currentTarget;
     if (img.dataset.fallbackApplied === "true") return;
     img.dataset.fallbackApplied = "true";
-    img.src =
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='20'%3EImage unavailable%3C/text%3E%3C/svg%3E";
+    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='20'%3EImage unavailable%3C/text%3E%3C/svg%3E";
   };
 
   return (
-    <main 
-      className="min-h-screen bg-gradient-to-b from-[#FFF5F7] via-[#FFF0F5] to-[#FFE4E1] flex flex-col items-center justify-between overflow-hidden px-6 pt-4 pb-8"
+    <main
+      className="min-h-screen flex flex-col items-center"
+      style={{
+        fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
+        backgroundImage:
+          "linear-gradient(180deg, #FFF0E8 0%, #F5E6FF 35%, #EDE4FF 55%, #F8F4FF 80%, #FFFBF9 100%)," +
+          "radial-gradient(circle at 20% 15%, rgba(255, 200, 160, 0.5), transparent 55%)," +
+          "radial-gradient(circle at 80% 10%, rgba(200, 170, 255, 0.5), transparent 50%)," +
+          "radial-gradient(circle at 50% 60%, rgba(255, 200, 230, 0.35), transparent 55%)",
+        backgroundBlendMode: "normal, screen, screen, screen",
+        overflowX: "hidden",
+      }}
     >
-      {/* Top section: Photo tiles — staggered entrance */}
-      <section className="flex-none pt-6 sm:pt-8" aria-label="精选活动照片">
-        <div className="max-w-sm mx-auto">
-          {/* 2x2 grid of tilted photo tiles */}
-          <div className="grid grid-cols-2 gap-3">
-            {landingImages.map((image, index) => (
-              <motion.div
-                key={index}
-                className="relative rounded-2xl overflow-hidden shadow-lg aspect-[4/5] bg-white p-1"
-                initial={{ opacity: 0, y: 24, rotate: image.rotation * 0.5 }}
-                animate={{ opacity: 1, y: 0, rotate: 0 }}
-                transition={{
-                  duration: 0.5,
-                  delay: 0.1 + index * 0.08,
-                  ease: [0.34, 1.2, 0.64, 1],
-                }}
-              >
-                <div
-                  className="w-full h-full transition-transform duration-200 hover:scale-[1.02]"
-                  style={{
-                    transform: `rotate(${image.rotation}deg) translateY(${image.translateY}px)`,
-                  }}
-                >
-                  <img 
-                    src={image.src}
-                    alt={image.alt}
-                    className="w-full h-full object-cover rounded-xl filter sepia-[.15] contrast-110" 
-                    loading="eager"
-                    onError={handleImageError}
-                  />
-                </div>
-              </motion.div>
-            ))}
+      {/* Scrollable content zone */}
+      <div
+        className="flex-1 flex flex-col items-center w-full max-w-sm mx-auto px-5"
+        style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}
+      >
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <div className="relative w-24 h-24 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-white/40 rounded-3xl"
+              style={{ filter: "blur(16px)" }}
+            />
+            <img
+              src={logoImage}
+              alt="悦聚 Logo"
+              className="relative w-20 h-20 object-contain drop-shadow-xl"
+              loading="eager"
+              onError={handleImageError}
+            />
           </div>
         </div>
-      </section>
 
-      {/* Middle section: Logo, title, tags - takes remaining space */}
-      <motion.section
-        className="flex-1 flex flex-col justify-center pt-4"
-        aria-label="品牌介绍"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.42, ease: "easeOut" }}
-      >
-        <div className="max-w-sm mx-auto w-full text-center">
-          {/* Logo with floating animation and glow effect */}
-          <motion.div
-            className="w-24 h-24 relative mx-auto mb-4"
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              duration: 0.6,
-              delay: 0.32,
-              type: "spring",
-              stiffness: 180,
-              damping: 14,
-            }}
+        {/* 3-Card Hero */}
+        <div
+          className="relative w-full"
+          style={{ height: "min(52vw, 260px)" }}
+          aria-label="三张活动卡片展示"
+        >
+          {/* SVG dashed orbit circles */}
+          <svg
+            className="absolute inset-0 pointer-events-none z-0"
+            viewBox="0 0 400 280"
+            aria-hidden="true"
           >
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm rounded-full blur-xl transform scale-150 animate-float" />
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img 
-                src={logoImage} 
-                alt="悦聚 Logo" 
-                className="h-20 w-auto object-contain drop-shadow-xl"
+            <circle
+              cx={115}
+              cy={110}
+              r={95}
+              stroke="#D4B8FF"
+              strokeWidth={1.5}
+              fill="none"
+              strokeDasharray="6 5"
+            />
+            <circle
+              cx={285}
+              cy={210}
+              r={95}
+              stroke="#D4B8FF"
+              strokeWidth={1.5}
+              fill="none"
+              strokeDasharray="6 5"
+            />
+          </svg>
+
+          {/* Left card — 匹配 */}
+          <div
+            className="absolute left-0 top-0 z-10 w-[30vw] max-w-[130px] rounded-2xl shadow-lg border-[3px] border-[#F28B82] bg-[#F28B82] flex flex-col p-[3px] overflow-hidden"
+          >
+            <div className="aspect-square w-full overflow-hidden rounded-[11px]">
+              <img
+                src={matchCardImg}
+                alt="匹配"
+                className="w-full h-full object-cover block"
+                loading="eager"
+                onError={handleImageError}
               />
             </div>
-          </motion.div>
+            <div className="py-1.5 text-center rounded-b-[11px]">
+              <span className="text-[14px] font-bold text-white drop-shadow-sm">匹配</span>
+            </div>
+          </div>
 
-          {/* Brand title with gradient */}
-          <h1 
-            className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 via-violet-600 to-purple-500 mb-2 leading-tight drop-shadow-sm"
-            style={{ fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif' }}
+          {/* Centre card — 悦聚 */}
+          <div
+            className="absolute left-1/2 top-[8%] -translate-x-1/2 z-20 w-[40vw] max-w-[170px] rounded-2xl shadow-lg border-[3px] border-[#C9956B] bg-[#C9956B] flex flex-col p-[3px] overflow-hidden"
           >
-            让对的相遇<br/>不再错过
-          </h1>
+            <div className="aspect-square w-full overflow-hidden rounded-[11px]">
+              <img
+                src={dinnerImg}
+                alt="悦聚"
+                className="w-full h-full object-cover block"
+                loading="eager"
+                onError={handleImageError}
+              />
+            </div>
+            <div className="py-1.5 text-center rounded-b-[11px]">
+              <span className="text-[14px] font-bold text-white drop-shadow-sm">悦聚</span>
+            </div>
+          </div>
 
-          {/* Feature Icons */}
-          <div className="flex items-center justify-center space-x-6 w-full px-4 mt-4">
-            {[
-              { icon: "🧠", label: "氛围测试" },
-              { icon: "🎯", label: "算法匹配" },
-              { icon: "👥", label: "4-6人局" },
-            ].map((tag, i) => (
-              <motion.div
-                key={tag.label}
-                className="text-purple-900/70 font-medium text-sm text-center"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.52 + i * 0.07 }}
+          {/* Right card — 延续 */}
+          <div
+            className="absolute right-0 bottom-0 z-10 w-[30vw] max-w-[130px] rounded-2xl shadow-lg border-[3px] border-[#7ECFB3] bg-[#7ECFB3] flex flex-col p-[3px] overflow-hidden"
+          >
+            <div className="aspect-square w-full overflow-hidden rounded-[11px]">
+              <img
+                src={continueImg}
+                alt="延续"
+                className="w-full h-full object-cover block"
+                loading="eager"
+                onError={handleImageError}
+              />
+            </div>
+            <div className="py-1.5 text-center rounded-b-[11px]">
+              <span className="text-[14px] font-bold text-[#134A3E] drop-shadow-sm">延续</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Headline, subtitle and pill badges */}
+        <div className="w-full text-center mt-6 space-y-3">
+          <h1
+            style={{
+              background: "linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
+              fontSize: "clamp(30px, 9vw, 38px)",
+              fontWeight: 800,
+              lineHeight: 1.2,
+            }}
+          >
+            让对的相遇不再错过
+          </h1>
+          <p className="text-[15px] text-[#7B6A96] text-center leading-relaxed max-w-[300px] mx-auto">
+            通过氛围测试，找到你的氛围原型，遇见志同道合的ta
+          </p>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            {['🧠 氛围测试', '🎯 算法匹配', '👥 4-6人局'].map((label) => (
+              <span
+                key={label}
+                className="bg-white/60 rounded-full px-3 py-1 text-[13px] font-semibold text-[#5A4A7A] shadow-sm"
               >
-                <span className="block mb-1 opacity-80 text-lg">{tag.icon}</span>
-                {tag.label}
-              </motion.div>
+                {label}
+              </span>
             ))}
           </div>
         </div>
-      </motion.section>
 
-      {/* Bottom section: CTAs and footer */}
-      <motion.section
-        className="flex-none pb-6 sm:pb-8"
-        aria-label="行动按钮"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.65, ease: "easeOut" }}
+        {/* Spacer so content doesn't hide behind sticky CTA */}
+        <div className="h-40" />
+      </div>
+
+      {/* Sticky bottom CTA zone */}
+      <section
+        className="fixed bottom-0 left-0 right-0 flex justify-center pointer-events-none"
       >
-        <div className="max-w-sm mx-auto space-y-3">
-          {/* Primary CTA — unified gradient from-[#FF6B9D] to-[#A86BFF] */}
+        <div
+          className="w-full max-w-sm mx-auto px-5 space-y-3 pointer-events-auto"
+          style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+        >
+          {/* Primary CTA — Duolingo 3D press */}
           <Button
             onClick={handlePrimaryCTA}
+            type="button"
             size="lg"
-            className="w-full h-14 bg-gradient-to-r from-[#FF6B9D] to-[#A86BFF] hover:from-[#e55f8e] hover:to-[#9257e6] text-white text-lg font-semibold shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98] border-0"
+            className="w-full h-16 rounded-2xl text-white text-xl font-bold border-0 shadow-[0_6px_0_#5a1fb5] no-default-hover-elevate no-default-active-elevate transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_#5a1fb5]"
+            style={{
+              background: "linear-gradient(135deg, #8B5CFF 0%, #C471FF 100%)",
+              touchAction: "manipulation",
+            }}
           >
             看看我会遇见谁
           </Button>
 
-          {/* Secondary CTA */}
-          <Button
+          {/* Secondary CTA — text link */}
+          <button
+            type="button"
             onClick={handleSecondaryCTA}
-            variant="outline"
-            size="lg"
             disabled={isLoggingIn}
-            className="w-full h-12 border-2 border-pink-200 hover:border-pink-300 hover:bg-pink-50 text-pink-600 font-medium transition-all duration-200 motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.98]"
+            aria-label="已有账号，点击登录"
+            className="w-full py-2 text-[#6B5B8D] text-base font-medium underline underline-offset-4 disabled:opacity-50 transition-opacity"
+            style={{ touchAction: "manipulation", background: "none", border: "none" }}
           >
-            {isLoggingIn ? "登录中..." : "已有账号登录"}
-          </Button>
+            {isLoggingIn ? "登录中..." : "已有账号？登录"}
+          </button>
 
           {/* Legal footer */}
-          <div className="text-center mt-4">
-            <p className="text-[10px] text-gray-500">
-              我已阅读并同意
-              <a 
-                className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" 
-                href="/terms" 
-                aria-label="查看用户协议"
-                onClick={() => console.log('[Analytics] Landing: Terms of service clicked')}
-              >
-                《用户协议》
-              </a>
-              和
-              <a 
-                className="font-bold underline text-gray-700 hover:text-pink-600 transition-colors" 
-                href="/privacy" 
-                aria-label="查看隐私政策"
-                onClick={() => console.log('[Analytics] Landing: Privacy policy clicked')}
-              >
-                《隐私政策》
-              </a>
-            </p>
-          </div>
+          <p
+            className="text-center text-[11px] text-[#8B7AAD]"
+            style={{ fontFamily: '"Noto Sans SC", system-ui, sans-serif' }}
+          >
+            我已阅读并同意
+            <a
+              href="/terms"
+              className="underline text-[#6B5B8D]"
+              onClick={() => console.log('[Analytics] Landing: Terms clicked')}
+            >
+              《用户协议》
+            </a>
+            和
+            <a
+              href="/terms#ts-privacy"
+              className="underline text-[#6B5B8D]"
+              onClick={() => console.log('[Analytics] Landing: Privacy clicked')}
+            >
+              《隐私政策》
+            </a>
+          </p>
         </div>
-      </motion.section>
+      </section>
     </main>
   );
 }

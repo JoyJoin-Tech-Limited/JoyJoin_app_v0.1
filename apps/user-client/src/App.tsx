@@ -319,6 +319,7 @@ function Router() {
         <Route path="/registration" component={PersonalityTestPageV4} />
         <Route path="/registration/chat" component={PersonalityTestPageV4} />
         <Route path="/register" component={PersonalityTestPageV4} />
+        <Route path="/terms" component={TermsPage} />
         {/* Legacy login page still accessible */}
         <Route path="/login" component={LoginPage} />
         {/* New landing page is the default entry point */}
