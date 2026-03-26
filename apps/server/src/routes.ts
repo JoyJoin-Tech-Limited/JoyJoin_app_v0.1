@@ -7033,7 +7033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Accepts { username, password }. Authenticates against the admin_accounts table.
    * Returns session cookie + role information.
    */
-  app.post('/api/admin/login', async (req: Request, res) => {
+  app.post('/api/admin/login', requireOperatorOrAbove, async (req: Request, res) => {
     try {
       const { username, password } = req.body;
 
