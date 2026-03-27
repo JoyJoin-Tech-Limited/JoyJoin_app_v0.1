@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 import { getHongKongDateForComparison } from "@/lib/hongKongTime";
 import { motion, AnimatePresence } from "framer-motion";
+import { prefetchEmptyStateAssets } from "@/lib/prefetchEmptyStateAssets";
 
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
@@ -83,6 +84,12 @@ export default function BottomNav() {
           queryClient.prefetchQuery({ queryKey });
         }, index * 150);
       });
+
+      // Prefetch empty-state illustration assets for the centre tab.
+      // Most authenticated users landing here for the first time will tap the
+      // centre button and hit the no-activity empty state — prefetching early
+      // means the artwork is ready before they get there.
+      prefetchEmptyStateAssets();
     };
 
     // Use requestIdleCallback for non-blocking prefetch
