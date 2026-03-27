@@ -413,6 +413,18 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   registeredAt: timestamp("registered_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
+  // NOTE: DB-level uniqueness for (pool_id, user_id). If this constraint is being
+  // added to an existing database where the table might already contain data, you
+  // MUST check for and resolve duplicates before running `npm run db:push`, or the
+  // constraint creation will fail. Example check query:
+  //
+  //   SELECT pool_id, user_id, COUNT(*) AS duplicate_count
+  //   FROM event_pool_registrations
+  //   GROUP BY pool_id, user_id
+  //   HAVING COUNT(*) > 1;
+  //
+  // Any rows returned by the query above should be deduplicated (delete/merge) in a
+  // one-off manual migration before deploying this constraint to production.
   unique("event_pool_registrations_pool_user_unique").on(table.poolId, table.userId),
 ]);
 
