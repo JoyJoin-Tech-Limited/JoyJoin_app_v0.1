@@ -18,6 +18,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
@@ -143,8 +144,8 @@ export default function ProfilePage() {
     mutationFn: async (data: any) => {
       return await apiRequest("PATCH", "/api/profile", data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       setEditDialogOpen(false);
     },
     onError: (error: Error) => {
