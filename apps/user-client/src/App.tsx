@@ -47,6 +47,7 @@ import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import EssentialDataPage from "@/pages/EssentialDataPage";
 import ExtendedDataPage from "@/pages/ExtendedDataPage";
 import DiscoverPage from "@/pages/DiscoverPage";
+import CenterTabEmptyStatePage from "@/pages/CenterTabEmptyStatePage";
 import EventsPage from "@/pages/EventsPage";
 import ConnectionsPage from "@/pages/ConnectionsPage";
 import EventCoordinationPage from "@/pages/EventCoordinationPage";
@@ -88,6 +89,7 @@ import WalletPage from "@/pages/WalletPage";
 import FAQPage from "@/pages/FAQPage";
 import TermsPage from "@/pages/TermsPage";
 import { ADMIN_PORTAL_URL } from "@/config/admin";
+import { CENTER_TAB_EMPTY_STATE_ROUTE } from "@/lib/centerTabRouting";
 
 preloadXiaoyueImages();
 
@@ -217,6 +219,7 @@ function AuthenticatedRouter() {
         <Switch>
           <Route path="/" component={DiscoverPage} />
           <Route path="/discover" component={DiscoverPage} />
+          <Route path={CENTER_TAB_EMPTY_STATE_ROUTE} component={CenterTabEmptyStatePage} />
           {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
           <Route path="/guide" component={GuidePage} />
           <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
