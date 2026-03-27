@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import {
   Sheet,
@@ -54,7 +55,7 @@ export default function EventPoolDetailDrawer({
   const { toast } = useToast();
   
   // Fetch pool stats
-  const { data: stats, refetch: refetchStats } = useQuery<PoolStats>({
+  const { data: stats, isLoading: isStatsLoading, isError: isStatsError, refetch: refetchStats } = useQuery<PoolStats>({
     queryKey: [`/api/event-pools/${poolId}/stats`],
     queryFn: async () => {
       if (!poolId) throw new Error("No pool ID");
@@ -109,7 +110,7 @@ export default function EventPoolDetailDrawer({
   }
   
   // Show loading state while fetching stats
-  if (!stats && isOpen) {
+  if (isStatsLoading && isOpen) {
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetPortal>
@@ -128,6 +129,26 @@ export default function EventPoolDetailDrawer({
     );
   }
   
+  if (isStatsError && isOpen) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetPortal>
+          <SheetOverlay />
+          <SheetContent
+            side="bottom"
+            className="h-[92vh] p-0 border-t-0 rounded-t-[32px] overflow-hidden flex items-center justify-center"
+          >
+            <div className="text-center space-y-4 px-6">
+              <p className="font-medium">活动池信息加载失败</p>
+              <p className="text-sm text-muted-foreground">请重试，或先返回发现页继续浏览。</p>
+              <Button variant="outline" onClick={() => refetchStats()}>重新加载</Button>
+            </div>
+          </SheetContent>
+        </SheetPortal>
+      </Sheet>
+    );
+  }
+
   if (!stats) return null;
   
   const spotsNeeded = eventData.minGroupSize - (stats.totalRegistrations % eventData.minGroupSize);

@@ -412,7 +412,9 @@ export const eventPoolRegistrations = pgTable("event_pool_registrations", {
   // 元数据
   registeredAt: timestamp("registered_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  unique("event_pool_registrations_pool_user_unique").on(table.poolId, table.userId),
+]);
 
 // Event Pool Groups table - 匹配成功的小组
 export const eventPoolGroups = pgTable("event_pool_groups", {

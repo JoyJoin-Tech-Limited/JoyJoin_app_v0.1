@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 
 const educationSchema = z.object({
@@ -33,6 +34,7 @@ export default function EditEducationPage() {
       return await apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/profile/edit");
     },
