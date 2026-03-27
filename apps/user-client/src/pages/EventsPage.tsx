@@ -9,6 +9,7 @@ import SlidingTabs from "@/components/SlidingTabs";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -185,12 +186,12 @@ export default function EventsPage() {
   }, [subscribe, toast, queryClient]);
 
   // 客户端永久缓存 - 毫秒级加载
-  const { data: events, isLoading } = useQuery<Array<BlindBoxEvent>>({
+  const { data: events, isLoading, isError: isEventsError, refetch: refetchEvents } = useQuery<Array<BlindBoxEvent>>({
     queryKey: ["/api/my-events"],
   });
 
   // 客户端永久缓存 - 毫秒级加载
-  const { data: poolRegistrations, isLoading: isLoadingPoolRegistrations } = useQuery<Array<PoolRegistration>>({
+  const { data: poolRegistrations, isLoading: isLoadingPoolRegistrations, isError: isPoolRegistrationsError, refetch: refetchPoolRegistrations } = useQuery<Array<PoolRegistration>>({
     queryKey: ["/api/my-pool-registrations"],
   });
 
@@ -243,6 +244,37 @@ export default function EventsPage() {
           <div className="text-center space-y-4">
             <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-sm text-muted-foreground">加载中...</p>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  if (isEventsError || isPoolRegistrationsError) {
+    return (
+      <div className="min-h-screen bg-background pb-16 flex flex-col">
+        <MobileHeader title="活动" />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-sm w-full border border-dashed rounded-2xl bg-muted/20 p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-full bg-destructive/10 mx-auto flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="font-semibold">活动状态加载失败</h2>
+              <p className="text-sm text-muted-foreground">请重试，或先返回发现页继续浏览活动。</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                refetchEvents();
+                refetchPoolRegistrations();
+              }}
+              className="inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              重新加载
+            </button>
           </div>
         </div>
         <BottomNav />
