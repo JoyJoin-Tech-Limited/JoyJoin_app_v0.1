@@ -10,6 +10,10 @@ function getComparableTime(value: string) {
   return getHongKongDateForComparison(value).getTime();
 }
 
+function getHoursUntilEvent(value: string, now: Date) {
+  return (getComparableTime(value) - now.getTime()) / MS_PER_HOUR;
+}
+
 function selectEarliestByTime<T>(items: T[], getTime: (item: T) => number) {
   return items.reduce<T | undefined>((earliest, item) => {
     if (!earliest) {
@@ -54,8 +58,7 @@ export function getCenterButtonDestination(
   }
 
   const upcomingMatchedPool = selectEarliestByTime(matchedPoolRegistrations.filter((registration) => {
-    const eventDate = getHongKongDateForComparison(registration.poolDateTime);
-    const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+    const hoursUntil = getHoursUntilEvent(registration.poolDateTime, now);
     return registration.assignedGroupId && hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
   }), (registration) => getComparableTime(registration.poolDateTime));
 
@@ -73,8 +76,7 @@ export function getCenterButtonDestination(
   }
 
   const futureMatchedPool = selectEarliestByTime(matchedPoolRegistrations.filter((registration) => {
-    const eventDate = getHongKongDateForComparison(registration.poolDateTime);
-    const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+    const hoursUntil = getHoursUntilEvent(registration.poolDateTime, now);
     return registration.assignedGroupId && hoursUntil >= VENUE_UNLOCK_HOURS;
   }), (registration) => getComparableTime(registration.poolDateTime));
 
