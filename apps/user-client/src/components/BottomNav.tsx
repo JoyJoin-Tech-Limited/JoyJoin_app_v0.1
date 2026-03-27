@@ -10,6 +10,13 @@ import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 import { getHongKongDateForComparison } from "@/lib/hongKongTime";
+import {
+  CENTER_TAB_EMPTY_STATE_ROUTE,
+  DISCOVER_ROUTE,
+  MS_PER_HOUR,
+  VENUE_UNLOCK_HOURS,
+  getCenterButtonDestination,
+} from "@/lib/centerTabRouting";
 import { motion, AnimatePresence } from "framer-motion";
 import { prefetchEmptyStateAssets } from "@/lib/prefetchEmptyStateAssets";
 
@@ -250,6 +257,12 @@ export default function BottomNav() {
   };
 
   const handleCenterClick = () => {
+    const userState = !poolRegistrations || !events
+      ? "loading"
+      : centerButtonDestination === CENTER_TAB_EMPTY_STATE_ROUTE
+        ? "no_activity"
+        : "has_activity";
+
     console.log('[Analytics] center_button_tapped', {
       destination: centerButtonDestination,
       userState: centerButtonDestination === CENTER_TAB_EMPTY_STATE_ROUTE ? 'no_activity' : 'has_activity',
@@ -302,7 +315,7 @@ export default function BottomNav() {
         {/* Left side items */}
         {sideNavItems.slice(0, 2).map((item) => {
           const isActive = item.path === "/" 
-            ? (location === "/" || location === "/discover")
+            ? (location === "/" || location === DISCOVER_ROUTE)
             : location === item.path;
           const badgeCount = item.badgeCategory && notificationCounts 
             ? notificationCounts[item.badgeCategory] 
