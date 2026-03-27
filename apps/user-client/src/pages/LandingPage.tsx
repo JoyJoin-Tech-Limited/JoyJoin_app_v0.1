@@ -18,9 +18,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 import logoImage from "@/assets/box_logo_archetypes.png";
-import matchCardImg from "@/assets/landing screen/匹配卡片.png";
-import dinnerImg from "@/assets/landing screen/动物聚餐.png";
-import continueImg from "@/assets/landing screen/动物延续.png";
+import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.png";
+import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.png";
+import continueImg from "@/assets/landing screen/动物延续 compressed.png";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
@@ -49,7 +49,7 @@ export default function LandingPage() {
 
   return (
     <main
-      className="min-h-screen flex flex-col items-center"
+      className="h-screen overflow-hidden flex flex-col items-center"
       style={{
         fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
         backgroundImage:
@@ -58,13 +58,12 @@ export default function LandingPage() {
           "radial-gradient(circle at 80% 10%, rgba(200, 170, 255, 0.5), transparent 50%)," +
           "radial-gradient(circle at 50% 60%, rgba(255, 200, 230, 0.35), transparent 55%)",
         backgroundBlendMode: "normal, screen, screen, screen",
-        overflowX: "hidden",
       }}
     >
-      {/* Scrollable content zone */}
+      {/* Content zone — flex-1 but overflow-hidden so it never scrolls */}
       <div
-        className="flex-1 flex flex-col items-center w-full max-w-sm mx-auto px-5"
-        style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}
+        className="flex-1 min-h-0 overflow-hidden flex flex-col items-center w-full max-w-sm mx-auto px-5"
+        style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top))" }}
       >
         {/* Logo */}
         <div className="flex justify-center mb-4">
@@ -85,8 +84,8 @@ export default function LandingPage() {
 
         {/* 3-Card Hero */}
         <div
-          className="relative w-full"
-          style={{ height: "min(52vw, 260px)" }}
+          className="relative w-full flex-shrink-0"
+          style={{ height: "min(46vw, 210px)" }}
           aria-label="三张活动卡片展示"
         >
           {/* SVG dashed orbit circles */}
@@ -171,47 +170,41 @@ export default function LandingPage() {
         </div>
 
         {/* Headline, subtitle and pill badges */}
-        <div className="w-full text-center mt-6 space-y-3">
+        <div className="w-full text-center mt-4 space-y-2">
           <h1
             style={{
               background: "linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
-              fontSize: "clamp(30px, 9vw, 38px)",
+              fontSize: "clamp(26px, 8vw, 36px)",
               fontWeight: 800,
               lineHeight: 1.2,
             }}
           >
             让对的相遇不再错过
           </h1>
-          <p className="text-[15px] text-[#7B6A96] text-center leading-relaxed max-w-[300px] mx-auto">
+          <p className="text-[14px] text-[#7B6A96] text-center leading-relaxed max-w-[300px] mx-auto">
             通过氛围测试，找到你的氛围原型，遇见志同道合的ta
           </p>
           <div className="flex items-center justify-center gap-2 flex-wrap">
             {['🧠 氛围测试', '🎯 算法匹配', '👥 4-6人局'].map((label) => (
               <span
                 key={label}
-                className="bg-white/60 rounded-full px-3 py-1 text-[13px] font-semibold text-[#5A4A7A] shadow-sm"
+                className="bg-white/60 rounded-full px-3 py-1 text-[12px] font-semibold text-[#5A4A7A] shadow-sm"
               >
                 {label}
               </span>
             ))}
           </div>
         </div>
-
-        {/* Spacer so content doesn't hide behind sticky CTA */}
-        <div className="h-40" />
       </div>
 
-      {/* Sticky bottom CTA zone */}
+      {/* Sticky bottom CTA zone — in document flow so it never overlaps */}
       <section
-        className="fixed bottom-0 left-0 right-0 flex justify-center pointer-events-none"
+        className="flex-none w-full max-w-sm mx-auto px-5 space-y-3"
+        style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))", paddingTop: "0.75rem" }}
       >
-        <div
-          className="w-full max-w-sm mx-auto px-5 space-y-3 pointer-events-auto"
-          style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
-        >
           {/* Primary CTA — Duolingo 3D press */}
           <Button
             onClick={handlePrimaryCTA}
@@ -260,7 +253,6 @@ export default function LandingPage() {
               《隐私政策》
             </a>
           </p>
-        </div>
       </section>
     </main>
   );
