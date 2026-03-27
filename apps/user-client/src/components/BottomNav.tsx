@@ -18,6 +18,12 @@ import {
   getCenterButtonDestination,
 } from "@/lib/centerTabRouting";
 import { motion, AnimatePresence } from "framer-motion";
+import { prefetchEmptyStateAssets } from "@/lib/prefetchEmptyStateAssets";
+
+// Constants
+const MS_PER_HOUR = 1000 * 60 * 60;
+const VENUE_UNLOCK_HOURS = 24;
+const CENTER_TAB_EMPTY_STATE_ROUTE = "/center-tab/empty";
 
 interface NavItem {
   iconSrc: string;
@@ -67,7 +73,11 @@ export default function BottomNav() {
     const prefetchData = () => {
       // Check network quality - skip prefetch on slow connections
       const connection = (navigator as any).connection;
-      if (connection?.effectiveType === '2g' || connection?.saveData) {
+      if (
+        connection?.effectiveType === '2g' ||
+        connection?.effectiveType === 'slow-2g' ||
+        connection?.saveData
+      ) {
         return;
       }
 
@@ -86,6 +96,7 @@ export default function BottomNav() {
           queryClient.prefetchQuery({ queryKey });
         }, index * 150);
       });
+
     };
 
     // Use requestIdleCallback for non-blocking prefetch
@@ -98,10 +109,100 @@ export default function BottomNav() {
   }, []);
 
   // Smart routing logic for center button
-  const centerButtonDestination = useMemo(
-    () => getCenterButtonDestination(poolRegistrations, events),
-    [poolRegistrations, events],
-  );
+  const centerButtonDestination = useMemo(() => {
+    if (!poolRegistrations || !events) {
+      return '/discover';
+    }
+
+    const now = getHongKongDateForComparison(new Date());
+    const matchedEvents = events.filter(e => e.status === "matched");
+    const matchedPoolRegistrations = poolRegistrations.filter(r => r.matchStatus === "matched");
+
+    // Priority 1: Matched event happening TODAY (HK timezone)
+    const todayMatchedEvent = matchedEvents.find(e => {
+      const eventDate = getHongKongDateForComparison(e.dateTime);
+      // Compare dates in HK timezone by comparing the date string (YYYY-MM-DD)
+      return eventDate.toISOString().split('T')[0] === now.toISOString().split('T')[0];
+    });
+    if (todayMatchedEvent) {
+      return `/blind-box-events/${todayMatchedEvent.id}`;
+    }
+
+    // Priority 2: Matched pool event < 24h away (venue revealed)
+    const upcomingMatchedPool = matchedPoolRegistrations.find(r => {
+      const eventDate = getHongKongDateForComparison(r.poolDateTime);
+      const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+      return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
+    });
+    if (upcomingMatchedPool && upcomingMatchedPool.assignedGroupId) {
+      return `/pool-groups/${upcomingMatchedPool.assignedGroupId}`;
+    }
+
+    // Priority 3: Pending match in progress
+    const pendingRegistration = poolRegistrations.find(r => r.matchStatus === "pending");
+    if (pendingRegistration) {
+      return `/pool-matching/${pendingRegistration.id}`;
+    }
+
+    // Priority 4: Matched event in future (> 24h away) — show squad unboxing experience
+    const futureMatchedPool = matchedPoolRegistrations.find(r => {
+      const eventDate = getHongKongDateForComparison(r.poolDateTime);
+      const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+      return hoursUntil >= VENUE_UNLOCK_HOURS;
+    });
+    if (futureMatchedPool && futureMatchedPool.assignedGroupId) {
+      return `/squad-unboxing/${futureMatchedPool.assignedGroupId}`;
+    }
+
+    const futureMatchedEvent = matchedEvents.find(e => {
+      const eventDate = getHongKongDateForComparison(e.dateTime);
+      return eventDate > now;
+    });
+    if (futureMatchedEvent) {
+      return `/blind-box-events/${futureMatchedEvent.id}`;
+    }
+
+    // Priority 5: No activity — navigate to dedicated empty state
+    return CENTER_TAB_EMPTY_STATE_ROUTE;
+  }, [poolRegistrations, events]);
+
+  useEffect(() => {
+    if (!poolRegistrations || !events) {
+      return;
+    }
+
+    if (centerButtonDestination !== CENTER_TAB_EMPTY_STATE_ROUTE) {
+      return;
+    }
+
+    let timeoutId: number | undefined = undefined;
+    let idleCallbackId: number | undefined = undefined;
+
+    const prefetchAfterDataWarmup = () => {
+      // Let the existing query prefetches fire first so the large SVG requests
+      // don't compete with the higher-priority API warmup work.
+      timeoutId = window.setTimeout(() => {
+        prefetchEmptyStateAssets();
+      }, 700);
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleCallbackId = (window as any).requestIdleCallback(prefetchAfterDataWarmup, {
+        timeout: 2500,
+      });
+    } else {
+      prefetchAfterDataWarmup();
+    }
+
+    return () => {
+      if (idleCallbackId !== undefined && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(idleCallbackId);
+      }
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [centerButtonDestination, events, poolRegistrations]);
 
   // P2-1: Dynamic center button label
   const centerButtonLabel = useMemo(() => {
@@ -133,7 +234,9 @@ export default function BottomNav() {
     const matched = poolRegistrations.find(r => r.matchStatus === "matched" && r.assignedGroupId);
     if (matched) return '查看桌友 👥';
     
-    return '去参与';
+    // No-activity users now land on the dedicated empty state, whose primary
+    // CTA sends them on to discover available activities.
+    return '去发现';
   }, [poolRegistrations, events]);
 
   // Show notification badge when there's pending or matched activity
@@ -162,7 +265,7 @@ export default function BottomNav() {
 
     console.log('[Analytics] center_button_tapped', {
       destination: centerButtonDestination,
-      userState,
+      userState: centerButtonDestination === CENTER_TAB_EMPTY_STATE_ROUTE ? 'no_activity' : 'has_activity',
     });
     setLocation(centerButtonDestination);
   };
