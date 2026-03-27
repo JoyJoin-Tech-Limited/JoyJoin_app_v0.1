@@ -1,6 +1,7 @@
 //my path:/Users/felixg/projects/JoyJoin3/server/routes.ts
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import socialIcebreakerRoutes from "./routes/socialIcebreaker";
 import ttsRoutes from "./routes/tts";
 import { storage } from "./storage";
@@ -3586,20 +3587,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const insertCount = typeof count === "number" && count > 0 ? count : 4;
       const finalBudget = budgetTier ?? "100以下";
 
-      const registrationsToInsert: any[] = [];
-      for (let i = 0; i < insertCount; i++) {
-        registrationsToInsert.push({
-          poolId,
-          userId,
-          budgetRange: [finalBudget],
-          preferredLanguages: [],
-          tasteIntensity: [],
-          cuisinePreferences: [],
-          eventIntent: [],
-          dietaryRestrictions: [],
-          matchStatus: "pending",
-        });
-      }
+      const demoUsersToInsert = Array.from({ length: insertCount }, (_, index) => {
+        const suffix = randomUUID();
+        const archetype = ARCHETYPE_NAMES[index % ARCHETYPE_NAMES.length];
+        return {
+          email: `demo.pool.${suffix}@joyjoin.local`,
+          phoneNumber: `demo-pool-${suffix}`,
+          displayName: `测试桌友${index + 1}`,
+          gender: index % 2 === 0 ? "女性" : "男性",
+          currentCity: pool.city,
+          archetype,
+          primaryArchetype: archetype,
+          hasCompletedRegistration: true,
+          hasCompletedPersonalityTest: true,
+          hasCompletedInterestsCarousel: true,
+        };
+      });
+
+      const demoUsers = await db
+        .insert(users)
+        .values(demoUsersToInsert)
+        .returning({ id: users.id });
+
+      const registrationsToInsert = demoUsers.map((demoUser: { id: string }) => ({
+        poolId,
+        userId: demoUser.id,
+        budgetRange: [finalBudget],
+        preferredLanguages: [],
+        tasteIntensity: [],
+        cuisinePreferences: [],
+        eventIntent: [],
+        dietaryRestrictions: [],
+        matchStatus: "pending",
+      }));
 
       const inserted = await db
         .insert(eventPoolRegistrations)
@@ -3617,7 +3637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("[DemoSeedPoolRegistrations] inserted registrations:", {
         poolId,
-        userId,
+        requestedByUserId: userId,
         count: inserted.length,
       });
 
