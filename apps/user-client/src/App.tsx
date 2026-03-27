@@ -88,7 +88,6 @@ import CommunityJoinPage from "@/pages/CommunityJoinPage";
 import WalletPage from "@/pages/WalletPage";
 import FAQPage from "@/pages/FAQPage";
 import TermsPage from "@/pages/TermsPage";
-import CenterTabEmptyStatePage from "@/pages/CenterTabEmptyStatePage";
 import { ADMIN_PORTAL_URL } from "@/config/admin";
 import { CENTER_TAB_EMPTY_STATE_ROUTE } from "@/lib/centerTabRouting";
 
