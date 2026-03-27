@@ -97,6 +97,24 @@ const FAQ_ITEMS = [
   },
 ];
 
+// Design Tokens & UX Principles (2026):
+// - Touch targets: Minimum 48px (52px+ preferred) for better mobile UX
+// - Visual hierarchy: Primary CTA above fold, progressive disclosure
+// - Loading states: Skeleton screens for perceived performance
+// - Animations: Subtle (floating logo 3s loop, hover states <300ms)
+// - Spacing: 4px base grid (using Tailwind's spacing scale)
+// - Shadows: Layered depth (sm/md/lg/xl/2xl for elevation)
+// - Typography: Base 16px, scale up for hierarchy
+// - Colors: Primary gradient (purple-pink), white overlay for trust badges
+// - Accessibility: WCAG AA contrast, keyboard navigation, semantic HTML
+
+// Design Constants
+const DESIGN_TOKENS = {
+  LOGO_HEIGHT: 36, // h-36 in pixels (144px)
+  FLOAT_ANIMATION_OFFSET: 8, // pixels for logo floating effect
+  PRIMARY_GLOW_COLOR: 'rgba(168, 85, 247, 0.5)', // purple-500 for glow effects
+} as const;
+
 // 小悦对话消息序列
 const XIAOYUE_MESSAGES = [
   "嗨～我是小悦，你的社交配局师！",
@@ -142,6 +160,55 @@ export default function LoginPage() {
   const [isVideoMuted, setIsVideoMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDevelopment = import.meta.env.DEV;
+  
+  // Respect user's motion preferences for accessibility (using state for re-renders)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  
+  useEffect(() => {
+    // Check if user prefers reduced motion
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  // Performance tracking for loading states
+  useEffect(() => {
+    const trackLoadingPerformance = () => {
+      if (typeof window !== 'undefined' && window.performance) {
+        // Use modern Navigation Timing API
+        const perfEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+        if (perfEntries.length > 0) {
+          const perfData = perfEntries[0];
+          const pageLoadTime = perfData.loadEventEnd - perfData.fetchStart;
+          const connectTime = perfData.responseEnd - perfData.requestStart;
+          
+          if (pageLoadTime > 0) {
+            console.log('📊 [Analytics] Landing Page Performance:', {
+              pageLoadTime: `${Math.round(pageLoadTime)}ms`,
+              connectTime: `${Math.round(connectTime)}ms`,
+              domContentLoaded: `${Math.round(perfData.domContentLoadedEventEnd - perfData.fetchStart)}ms`,
+            });
+          }
+        } else {
+          console.log('📊 [Analytics] Navigation Timing API not available in this environment');
+        }
+      }
+    };
+
+    // Track performance after page fully loaded
+    if (document.readyState === 'complete') {
+      trackLoadingPerformance();
+    } else {
+      window.addEventListener('load', trackLoadingPerformance);
+      return () => window.removeEventListener('load', trackLoadingPerformance);
+    }
+  }, []);
 
   // Test shortcut: press 't' to go to registration
   useEffect(() => {
@@ -401,9 +468,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Section 1: Hero with Video Background */}
+      {/* Section 1: Hero with Video Background - OPTIMIZED: Reduced height for better CTA visibility */}
       <section 
-        className="relative min-h-[70vh] flex items-center justify-center overflow-hidden"
+        className="relative min-h-[55vh] flex items-center justify-center overflow-hidden"
         data-testid="section-hero"
       >
         {/* Video Background Layer */}
@@ -423,6 +490,15 @@ export default function LoginPage() {
           
           {/* Dark wash overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+          
+          {/* Video mute toggle - OPTIMIZED: Enhanced touch target */}
+          <button
+            onClick={() => setIsVideoMuted(!isVideoMuted)}
+            className="absolute bottom-4 right-4 z-10 bg-black/30 hover:bg-black/50 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label={isVideoMuted ? "Unmute video" : "Mute video"}
+          >
+            {isVideoMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+          </button>
         </div>
 
         {/* Content Layer */}
@@ -436,32 +512,45 @@ export default function LoginPage() {
               key={`logo-${Date.now()}`}
               className="flex justify-center mb-6"
               initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 180, damping: 12, duration: 0.8 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1,
+                y: prefersReducedMotion ? 0 : [0, -DESIGN_TOKENS.FLOAT_ANIMATION_OFFSET, 0], // Floating animation with design token
+              }}
+              transition={{ 
+                opacity: { duration: 0.5 },
+                scale: { type: "spring", stiffness: 180, damping: 12, duration: 0.8 },
+                y: prefersReducedMotion ? {} : { 
+                  duration: 3, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }
+              }}
             >
               <img 
                 src={joyJoinLogo} 
                 alt="悦聚 JoyJoin Logo" 
-                className="h-44 w-auto drop-shadow-xl"
+                className="h-36 w-auto drop-shadow-2xl"
                 data-testid="img-logo"
+                loading="eager"
               />
             </motion.div>
             
-            <h1 className="text-4xl font-jiangdou text-white drop-shadow-lg" data-testid="text-brand-name">
+            <h1 className="text-3xl sm:text-4xl font-jiangdou text-white drop-shadow-lg" data-testid="text-brand-name">
               悦聚·JoyJoin
             </h1>
             
-            <p className="text-2xl font-jiangdou text-white/90 mt-2 drop-shadow-md">
+            <p className="text-xl sm:text-2xl font-jiangdou text-white/90 mt-2 drop-shadow-md">
               小局·好能量
             </p>
             
-            <p className="text-white/80 mt-4 leading-relaxed max-w-md mx-auto drop-shadow-sm">
+            <p className="text-base sm:text-lg text-white/80 mt-4 leading-relaxed max-w-md mx-auto drop-shadow-sm">
               在香港和深圳，AI帮你找到真正合拍的朋友。<br/>
               每一场4-6人小聚，都是精心策划的相遇。
             </p>
           </motion.div>
 
-          {/* CTA Button - P0 优化：渐变+发光+脉冲动画 */}
+          {/* CTA Button - OPTIMIZED: Enhanced touch target (min 48px), improved gradient, larger size */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -471,44 +560,44 @@ export default function LoginPage() {
             <motion.div
               animate={{ 
                 boxShadow: [
-                  "0 0 15px rgba(168, 85, 247, 0.4), 0 0 30px rgba(168, 85, 247, 0.2)",
-                  "0 0 25px rgba(168, 85, 247, 0.6), 0 0 50px rgba(168, 85, 247, 0.3)",
-                  "0 0 15px rgba(168, 85, 247, 0.4), 0 0 30px rgba(168, 85, 247, 0.2)"
+                  `0 0 20px ${DESIGN_TOKENS.PRIMARY_GLOW_COLOR}, 0 0 40px rgba(168, 85, 247, 0.25)`,
+                  `0 0 30px rgba(168, 85, 247, 0.7), 0 0 60px rgba(168, 85, 247, 0.35)`,
+                  `0 0 20px ${DESIGN_TOKENS.PRIMARY_GLOW_COLOR}, 0 0 40px rgba(168, 85, 247, 0.25)`
                 ]
               }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="inline-flex rounded-md"
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              className="inline-flex rounded-lg"
             >
               <Button
                 size="lg"
-                className="min-h-[52px] px-10 text-lg font-bold bg-gradient-to-r from-purple-500 via-primary to-pink-500 hover:from-purple-600 hover:via-primary/90 hover:to-pink-600 text-white border-0 shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                className="min-h-[56px] min-w-[180px] px-12 py-4 text-lg font-bold bg-gradient-to-r from-purple-700 via-primary to-pink-700 hover:from-purple-800 hover:via-primary/95 hover:to-pink-800 text-white border-0 shadow-2xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
                 onClick={() => setLocation("/onboarding")}
                 data-testid="button-hero-cta"
               >
                 立即体验
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </motion.div>
           </motion.div>
 
-          {/* Safety Badges - P0 优化 */}
+          {/* Safety Badges - OPTIMIZED: Enhanced visibility and larger touch targets */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="flex items-center justify-center gap-4 flex-wrap"
+            className="flex items-center justify-center gap-5 flex-wrap"
           >
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <Shield className="h-4 w-4" />
-              <span>实名认证</span>
+            <div className="flex items-center gap-2 text-white/90 text-base bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <Shield className="h-5 w-5" />
+              <span className="font-medium">实名认证</span>
             </div>
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>不满意全退</span>
+            <div className="flex items-center gap-2 text-white/90 text-base bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="font-medium">不满意全退</span>
             </div>
-            <div className="flex items-center gap-1.5 text-white/80 text-sm">
-              <Users className="h-4 w-4" />
-              <span>4-6人小局</span>
+            <div className="flex items-center gap-2 text-white/90 text-base bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <Users className="h-5 w-5" />
+              <span className="font-medium">4-6人小局</span>
             </div>
           </motion.div>
         </div>
@@ -522,7 +611,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* P1-1: FAQ Quick Entry - 社恐安心提示 */}
+      {/* P1-1: FAQ Quick Entry - OPTIMIZED: Larger touch target */}
       <div className="px-4 pb-4" data-testid="section-faq-quick">
         <a href="#faq-section"
           className="block max-w-lg mx-auto"
@@ -532,18 +621,18 @@ export default function LoginPage() {
           }}
           data-testid="link-faq-reassurance"
         >
-          <div className="flex items-center justify-center gap-2 min-h-[44px] px-4 bg-primary/10 hover:bg-primary/15 rounded-lg transition-colors">
-            <Heart className="h-5 w-5 text-primary" />
-            <span className="text-base text-foreground">一个人去会不会尴尬？</span>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center justify-center gap-3 min-h-[52px] px-5 bg-primary/10 hover:bg-primary/20 rounded-lg transition-all duration-200 hover:shadow-md active:scale-[0.98]">
+            <Heart className="h-5 w-5 text-primary flex-shrink-0" />
+            <span className="text-base font-medium text-foreground">一个人去会不会尴尬？</span>
+            <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
           </div>
         </a>
       </div>
 
-      {/* Section 3: 小悦介绍区 - 卡片式全身展示 */}
+      {/* Section 3: 小悦介绍区 - OPTIMIZED: Enhanced card design with better shadow */}
       <section className="py-4 px-4" data-testid="section-features">
         <div className="max-w-lg mx-auto">
-          <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-card">
+          <Card className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-card">
             <CardContent className="p-0">
               <div className="flex">
                 {/* 小悦全身图 - 左侧 */}
@@ -559,23 +648,24 @@ export default function LoginPage() {
                     alt="小悦" 
                     className="w-full h-48 object-contain object-center"
                     data-testid="img-xiaoyue-avatar"
+                    loading="lazy"
                   />
                 </motion.div>
 
                 {/* 右侧信息区 */}
-                <div className="flex-1 py-3 pr-4 flex flex-col justify-center">
+                <div className="flex-1 py-4 pr-4 flex flex-col justify-center">
                   {/* 名字和标识 */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="mb-2"
+                    className="mb-3"
                   >
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-foreground">小悦</h3>
-                      <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">AI社交建筑师</span>
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-medium">AI社交建筑师</span>
                     </div>
-                    <p className="text-sm text-foreground mt-1" data-testid="text-xiaoyue-message-0">
+                    <p className="text-sm text-foreground mt-1.5" data-testid="text-xiaoyue-message-0">
                       帮 <span className="font-bold text-primary">500+</span> 朋友配到chemistry对的饭搭子
                     </p>
                   </motion.div>
@@ -606,7 +696,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 5: Login Form */}
+      {/* Section 5: Login Form - OPTIMIZED: Enhanced card with better shadows */}
       <section id="login-section" className="py-6 px-6" data-testid="section-login">
         <div className="max-w-md mx-auto">
           <motion.div
@@ -615,7 +705,7 @@ export default function LoginPage() {
             viewport={{ once: true }}
             className="text-center mb-6"
           >
-            <Badge variant="secondary" className="mb-3">立即开始</Badge>
+            <Badge variant="secondary" className="mb-3 px-4 py-1.5">立即开始</Badge>
             <h2 className="text-xl font-bold">加入悦聚大家庭</h2>
           </motion.div>
 
@@ -624,7 +714,7 @@ export default function LoginPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <Card className="border shadow-lg">
+            <Card className="border shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <CardContent className="p-6 space-y-5">
                 {/* WeChat Login */}
                 <Button
@@ -684,7 +774,7 @@ export default function LoginPage() {
                     <Label htmlFor="phone" className="text-sm font-medium">手机号</Label>
                     <div className="flex gap-2">
                       <Select value={areaCode} onValueChange={setAreaCode}>
-                        <SelectTrigger className="w-[110px] h-11" data-testid="select-area-code">
+                        <SelectTrigger className="w-[110px] min-h-[48px]" data-testid="select-area-code">
                           <span className="flex items-center gap-1">
                             <span>{AREA_CODES.find(a => a.code === areaCode)?.flag}</span>
                             <span>{areaCode}</span>
@@ -709,7 +799,7 @@ export default function LoginPage() {
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, getPhoneLength()))}
                         maxLength={getPhoneLength()}
-                        className="h-11 flex-1"
+                        className="min-h-[48px] flex-1 text-base"
                         data-testid="input-phone"
                       />
                     </div>
@@ -744,7 +834,7 @@ export default function LoginPage() {
 
                   <Button
                     size="lg"
-                    className="w-full h-11"
+                    className="w-full min-h-[52px] text-base font-semibold hover:scale-[1.01] active:scale-[0.99] transition-all duration-200"
                     onClick={handleLogin}
                     disabled={loginMutation.isPending}
                     data-testid="button-login"
@@ -778,7 +868,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 6: Testimonials */}
+      {/* Section 6: Testimonials - OPTIMIZED: Better spacing and card design */}
       <section className="py-12 px-6 bg-muted/30" data-testid="section-testimonials">
         <div className="max-w-lg mx-auto">
           <motion.div
@@ -787,7 +877,7 @@ export default function LoginPage() {
             viewport={{ once: true }}
             className="text-center mb-8"
           >
-            <Badge variant="secondary" className="mb-3">用户心声</Badge>
+            <Badge variant="secondary" className="mb-3 px-4 py-1.5">用户心声</Badge>
             <h2 className="text-xl font-bold">他们在悦聚找到了</h2>
           </motion.div>
 
@@ -799,7 +889,7 @@ export default function LoginPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
               >
-                <Card data-testid={`testimonial-${testimonial.id}`}>
+                <Card className="hover:shadow-lg transition-shadow duration-300" data-testid={`testimonial-${testimonial.id}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -834,7 +924,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Section 7: FAQ */}
+      {/* Section 7: FAQ - OPTIMIZED: Better accordion styling */}
       <section id="faq-section" className="py-12 px-6" data-testid="section-faq">
         <div className="max-w-lg mx-auto">
           <motion.div
@@ -843,16 +933,16 @@ export default function LoginPage() {
             viewport={{ once: true }}
             className="text-center mb-8"
           >
-            <Badge variant="secondary" className="mb-3">常见问题</Badge>
+            <Badge variant="secondary" className="mb-3 px-4 py-1.5">常见问题</Badge>
             <h2 className="text-xl font-bold">你可能想知道</h2>
           </motion.div>
 
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-3">
             {FAQ_ITEMS.map((item, i) => (
               <AccordionItem 
                 key={i} 
                 value={`item-${i}`}
-                className="border rounded-lg px-4 data-[state=open]:bg-muted/50"
+                className="border rounded-xl px-4 data-[state=open]:bg-muted/50 data-[state=open]:shadow-md transition-all duration-200"
                 data-testid={`faq-item-${i}`}
               >
                 <AccordionTrigger className="text-left hover:no-underline py-3 text-sm">
@@ -885,13 +975,13 @@ export default function LoginPage() {
 
             <Button 
               size="lg" 
-              className="px-8"
+              className="min-h-[52px] px-10 text-base font-semibold hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 shadow-lg"
               onClick={() => document.getElementById('phone')?.focus()}
               data-testid="button-cta"
             >
               <Sparkles className="mr-2 h-5 w-5" />
               立即开始
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </motion.div>
         </div>
