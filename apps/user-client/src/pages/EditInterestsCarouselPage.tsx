@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
 import type { HeatLevel } from "@/data/interestCarouselData";
@@ -18,9 +19,8 @@ export default function EditInterestsCarouselPage() {
     mutationFn: async (data: InterestCarouselData) => {
       return await apiRequest("POST", "/api/user/interests", { interests: data });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/interests"] });
+    onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       toast({ title: "兴趣已更新 🎉", description: "你的兴趣画像已同步更新" });
       setLocation("/profile/edit");
     },

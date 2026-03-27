@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
 import { IndustrySelector } from "@/components/IndustrySelector";
@@ -345,7 +346,7 @@ export default function EssentialDataPage() {
     },
     onSuccess: async () => {
       localStorage.removeItem(ESSENTIAL_CACHE_KEY);
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await invalidateUserDerivedQueries();
       
       // Phase 2: Track successful completion
       analytics.stepCompleted({

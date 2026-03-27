@@ -10,7 +10,7 @@ import JourneyProgressCard from "@/components/JourneyProgressCard";
 import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
 import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
 import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
-import { Sparkles } from "lucide-react";
+import { AlertCircle, RefreshCw, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
@@ -19,6 +19,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 import { archetypeConfig } from "@/lib/archetypes";
 
 interface EventPool {
@@ -173,7 +174,7 @@ export default function DiscoverPage() {
   };
 
   // Fetch event pools with client-side caching (毫秒级加载)
-  const { data: eventPools = [], isLoading } = useQuery<EventPool[]>({
+  const { data: eventPools = [], isLoading, isError: isEventPoolsError, refetch: refetchEventPools } = useQuery<EventPool[]>({
     queryKey: ["/api/event-pools", selectedCity],
     queryFn: async () => {
       const res = await fetch(`/api/event-pools?city=${encodeURIComponent(selectedCity)}`, {
@@ -405,6 +406,20 @@ export default function DiscoverPage() {
                 <div className="text-center py-8">
                   <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
                   <p className="text-sm text-muted-foreground mt-4">加载中...</p>
+                </div>
+              ) : isEventPoolsError ? (
+                <div className="text-center py-8 px-4 border border-dashed rounded-2xl bg-muted/20 space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-destructive/10 mx-auto flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-destructive" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium">活动列表加载失败</p>
+                    <p className="text-sm text-muted-foreground">请重试，或先看看其他页面再回来。</p>
+                  </div>
+                  <Button variant="outline" onClick={() => refetchEventPools()} className="min-w-32">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    重新加载
+                  </Button>
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
                 filteredBlindBoxEvents.map((event, index) => {

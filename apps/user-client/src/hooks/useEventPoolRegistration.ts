@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { haptics } from "@/lib/haptics";
 import { confettiPresets } from "@/lib/confetti-utils";
@@ -149,10 +150,12 @@ export function useEventPoolRegistration({
         payload
       );
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       haptics.success();
       confettiPresets.celebration();
-      queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
+      await invalidateUserDerivedQueries();
+      await queryClient.refetchQueries({ queryKey: ["/api/my-pool-registrations"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/event-pools"] });
       
       // Clear draft
       localStorage.removeItem(`draft-${poolId}`);
