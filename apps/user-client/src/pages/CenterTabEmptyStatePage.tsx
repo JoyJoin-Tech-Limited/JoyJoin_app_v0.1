@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Sparkles } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
@@ -13,8 +13,14 @@ const CTA = "去发现活动";
 
 export default function CenterTabEmptyStatePage() {
   const [, setLocation] = useLocation();
+  const hasTrackedViewRef = useRef(false);
 
   useEffect(() => {
+    if (hasTrackedViewRef.current) {
+      return;
+    }
+
+    hasTrackedViewRef.current = true;
     console.log("[Analytics] center_tab_empty_state_viewed", {
       route: CENTER_TAB_EMPTY_STATE_ROUTE,
     });
@@ -38,7 +44,7 @@ export default function CenterTabEmptyStatePage() {
       />
 
       {/* Foreground content */}
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-[calc(env(safe-area-inset-bottom,0px)+88px)] pt-16">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-[calc(env(safe-area-inset-bottom,0px)+var(--bottom-nav-height,88px))] pt-16">
         {/* Hero illustration */}
         <div className="w-full max-w-[320px]">
           <img
