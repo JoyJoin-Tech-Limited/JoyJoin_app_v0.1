@@ -20,10 +20,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { prefetchEmptyStateAssets } from "@/lib/prefetchEmptyStateAssets";
 
-// Constants
-const MS_PER_HOUR = 1000 * 60 * 60;
-const VENUE_UNLOCK_HOURS = 24;
-const CENTER_TAB_EMPTY_STATE_ROUTE = "/center-tab/empty";
 
 interface NavItem {
   iconSrc: string;
