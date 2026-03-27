@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CENTER_TAB_EMPTY_STATE_ROUTE, getCenterButtonDestination } from "../centerTabRouting";
+import {
+  CENTER_TAB_EMPTY_STATE_ROUTE,
+  DISCOVER_ROUTE,
+  getCenterButtonDestination,
+} from "../centerTabRouting";
 
 describe("getCenterButtonDestination", () => {
   it("preserves the discover fallback while activity data is still loading", () => {
-    expect(getCenterButtonDestination(undefined, undefined)).toBe("/discover");
+    expect(getCenterButtonDestination(undefined, undefined)).toBe(DISCOVER_ROUTE);
   });
 
   it("routes to the dedicated empty state when no activity exists", () => {

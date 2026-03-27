@@ -3,6 +3,7 @@ import { getHongKongDateForComparison } from "@/lib/hongKongTime";
 export const MS_PER_HOUR = 1000 * 60 * 60;
 export const VENUE_UNLOCK_HOURS = 24;
 
+export const DISCOVER_ROUTE = "/discover";
 export const CENTER_TAB_EMPTY_STATE_ROUTE = "/center-tab/empty";
 
 export function getCenterButtonDestination(
@@ -20,7 +21,7 @@ export function getCenterButtonDestination(
   referenceTime = new Date(),
 ) {
   if (!poolRegistrations || !events) {
-    return "/discover";
+    return DISCOVER_ROUTE;
   }
 
   const now = getHongKongDateForComparison(referenceTime);

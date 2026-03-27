@@ -5,6 +5,7 @@ import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
+import { CENTER_TAB_EMPTY_STATE_ROUTE, DISCOVER_ROUTE } from "@/lib/centerTabRouting";
 
 const TITLE = "你还没参加任何活动";
 const BODY = "去看看为你准备的活动，也许下一次连接就从这里开始。";
@@ -15,15 +16,15 @@ export default function CenterTabEmptyStatePage() {
 
   useEffect(() => {
     console.log("[Analytics] center_tab_empty_state_viewed", {
-      route: "/center-tab/empty",
+      route: CENTER_TAB_EMPTY_STATE_ROUTE,
     });
   }, []);
 
   const handleDiscoverClick = () => {
     console.log("[Analytics] center_tab_empty_state_cta_tapped", {
-      destination: "/discover",
+      destination: DISCOVER_ROUTE,
     });
-    setLocation("/discover");
+    setLocation(DISCOVER_ROUTE);
   };
 
   return (
