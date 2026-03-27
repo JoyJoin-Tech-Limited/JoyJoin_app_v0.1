@@ -11,6 +11,7 @@
   --accent-dynamic-s: 45%;
   --accent-dynamic-l: 55%;
   --accent-dynamic: hsl(var(--accent-dynamic-h) var(--accent-dynamic-s) var(--accent-dynamic-l));
+  --bottom-nav-height: 88px;
 }
 
 /* Transition class for smooth accent color changes */

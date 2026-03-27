@@ -25,6 +25,7 @@ import { useAnonymousPersonalityTestResults } from "@/hooks/useAnonymousPersonal
 import { getStyleSpectrum, getAllArchetypeScores } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { ArchetypeSlotMachine } from "@/components/slot-machine";
 import { UnlockOverlay } from "@/components/UnlockOverlay";
@@ -710,7 +711,7 @@ export default function PersonalityTestResultPage() {
     },
     onSettled: () => {
       // Refetch in background to sync server state
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      invalidateUserDerivedQueries();
     },
   });
 

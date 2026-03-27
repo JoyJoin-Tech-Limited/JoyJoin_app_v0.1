@@ -5,14 +5,14 @@ import { useState } from "react";
 import VoiceQuiz from "@/components/VoiceQuiz";
 import QuizIntro from "@/components/QuizIntro";
 import PersonalityProfile from "@/components/PersonalityProfile";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OnboardingQuizPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [stage, setStage] = useState<"intro" | "quiz" | "results">("intro");
   const [coachGender, setCoachGender] = useState<"female" | "male">("female");
   const [results, setResults] = useState<any>(null);
@@ -26,8 +26,8 @@ export default function OnboardingQuizPage() {
         energyLevel: data.energyLevel || 75,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       toast({
         title: "测评完成",
         description: "你的性格特质已保存",
@@ -52,8 +52,8 @@ export default function OnboardingQuizPage() {
         energyLevel: 75,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       setLocation("/");
     },
     onError: (error) => {
