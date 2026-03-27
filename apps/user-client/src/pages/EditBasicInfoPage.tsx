@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -47,6 +48,7 @@ export default function EditBasicInfoPage() {
       return await apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "保存成功",

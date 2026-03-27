@@ -4,6 +4,7 @@ import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,7 @@ export default function EditIntentPage() {
       return await apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/profile/edit");
     },

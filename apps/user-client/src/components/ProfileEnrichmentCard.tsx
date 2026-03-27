@@ -48,7 +48,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { RELATIONSHIP_STATUS_OPTIONS } from "@shared/constants";
 import type { AuthUser } from "@/hooks/useAuth";
@@ -227,8 +228,8 @@ export function ProfileEnrichmentCard({ user }: ProfileEnrichmentCardProps) {
   const { mutate: saveField, isPending } = useMutation({
     mutationFn: (data: Record<string, unknown>) =>
       apiRequest("PATCH", "/api/profile", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       setActiveFlow(null);
     },
     onError: () => {
