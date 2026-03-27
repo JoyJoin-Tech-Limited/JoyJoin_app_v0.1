@@ -106,60 +106,7 @@ export default function BottomNav() {
 
   // Smart routing logic for center button
   const centerButtonDestination = useMemo(() => {
-    if (!poolRegistrations || !events) {
-      return '/discover';
-    }
-
-    const now = getHongKongDateForComparison(new Date());
-    const matchedEvents = events.filter(e => e.status === "matched");
-    const matchedPoolRegistrations = poolRegistrations.filter(r => r.matchStatus === "matched");
-
-    // Priority 1: Matched event happening TODAY (HK timezone)
-    const todayMatchedEvent = matchedEvents.find(e => {
-      const eventDate = getHongKongDateForComparison(e.dateTime);
-      // Compare dates in HK timezone by comparing the date string (YYYY-MM-DD)
-      return eventDate.toISOString().split('T')[0] === now.toISOString().split('T')[0];
-    });
-    if (todayMatchedEvent) {
-      return `/blind-box-events/${todayMatchedEvent.id}`;
-    }
-
-    // Priority 2: Matched pool event < 24h away (venue revealed)
-    const upcomingMatchedPool = matchedPoolRegistrations.find(r => {
-      const eventDate = getHongKongDateForComparison(r.poolDateTime);
-      const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
-      return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
-    });
-    if (upcomingMatchedPool && upcomingMatchedPool.assignedGroupId) {
-      return `/pool-groups/${upcomingMatchedPool.assignedGroupId}`;
-    }
-
-    // Priority 3: Pending match in progress
-    const pendingRegistration = poolRegistrations.find(r => r.matchStatus === "pending");
-    if (pendingRegistration) {
-      return `/pool-matching/${pendingRegistration.id}`;
-    }
-
-    // Priority 4: Matched event in future (> 24h away) — show squad unboxing experience
-    const futureMatchedPool = matchedPoolRegistrations.find(r => {
-      const eventDate = getHongKongDateForComparison(r.poolDateTime);
-      const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
-      return hoursUntil >= VENUE_UNLOCK_HOURS;
-    });
-    if (futureMatchedPool && futureMatchedPool.assignedGroupId) {
-      return `/squad-unboxing/${futureMatchedPool.assignedGroupId}`;
-    }
-
-    const futureMatchedEvent = matchedEvents.find(e => {
-      const eventDate = getHongKongDateForComparison(e.dateTime);
-      return eventDate > now;
-    });
-    if (futureMatchedEvent) {
-      return `/blind-box-events/${futureMatchedEvent.id}`;
-    }
-
-    // Priority 5: No activity — navigate to dedicated empty state
-    return CENTER_TAB_EMPTY_STATE_ROUTE;
+    return getCenterButtonDestination(poolRegistrations, events);
   }, [poolRegistrations, events]);
 
   useEffect(() => {
