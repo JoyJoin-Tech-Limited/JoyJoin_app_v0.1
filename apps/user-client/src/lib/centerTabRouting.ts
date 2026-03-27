@@ -56,7 +56,7 @@ export function getCenterButtonDestination(
   const upcomingMatchedPool = pickEarliest(matchedPoolRegistrations.filter((registration) => {
     const eventDate = getHongKongDateForComparison(registration.poolDateTime);
     const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
-    return Boolean(registration.assignedGroupId) && hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
+    return registration.assignedGroupId && hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
   }), (registration) => getComparableTime(registration.poolDateTime));
 
   if (upcomingMatchedPool?.assignedGroupId) {
@@ -75,7 +75,7 @@ export function getCenterButtonDestination(
   const futureMatchedPool = pickEarliest(matchedPoolRegistrations.filter((registration) => {
     const eventDate = getHongKongDateForComparison(registration.poolDateTime);
     const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
-    return Boolean(registration.assignedGroupId) && hoursUntil >= VENUE_UNLOCK_HOURS;
+    return registration.assignedGroupId && hoursUntil >= VENUE_UNLOCK_HOURS;
   }), (registration) => getComparableTime(registration.poolDateTime));
 
   if (futureMatchedPool?.assignedGroupId) {
