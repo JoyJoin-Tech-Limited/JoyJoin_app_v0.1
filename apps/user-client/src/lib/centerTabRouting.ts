@@ -1,0 +1,80 @@
+import { getHongKongDateForComparison } from "@/lib/hongKongTime";
+
+export const MS_PER_HOUR = 1000 * 60 * 60;
+export const VENUE_UNLOCK_HOURS = 24;
+
+export const DISCOVER_ROUTE = "/discover";
+export const CENTER_TAB_EMPTY_STATE_ROUTE = "/center-tab/empty";
+
+export function getCenterButtonDestination(
+  poolRegistrations?: Array<{
+    id: string;
+    matchStatus: "pending" | "matched" | "completed";
+    assignedGroupId: string | null;
+    poolDateTime: string;
+  }>,
+  events?: Array<{
+    id: string;
+    status: string;
+    dateTime: string;
+  }>,
+  referenceTime = new Date(),
+) {
+  if (!poolRegistrations || !events) {
+    return DISCOVER_ROUTE;
+  }
+
+  const now = getHongKongDateForComparison(referenceTime);
+  const matchedEvents = events.filter((event) => event.status === "matched");
+  const matchedPoolRegistrations = poolRegistrations.filter(
+    (registration) => registration.matchStatus === "matched",
+  );
+
+  const todayMatchedEvent = matchedEvents.find((event) => {
+    const eventDate = getHongKongDateForComparison(event.dateTime);
+    return eventDate.toISOString().split("T")[0] === now.toISOString().split("T")[0];
+  });
+
+  if (todayMatchedEvent) {
+    return `/blind-box-events/${todayMatchedEvent.id}`;
+  }
+
+  const upcomingMatchedPool = matchedPoolRegistrations.find((registration) => {
+    const eventDate = getHongKongDateForComparison(registration.poolDateTime);
+    const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+    return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
+  });
+
+  if (upcomingMatchedPool?.assignedGroupId) {
+    return `/pool-groups/${upcomingMatchedPool.assignedGroupId}`;
+  }
+
+  const pendingRegistration = poolRegistrations.find(
+    (registration) => registration.matchStatus === "pending",
+  );
+
+  if (pendingRegistration) {
+    return `/pool-matching/${pendingRegistration.id}`;
+  }
+
+  const futureMatchedPool = matchedPoolRegistrations.find((registration) => {
+    const eventDate = getHongKongDateForComparison(registration.poolDateTime);
+    const hoursUntil = (eventDate.getTime() - now.getTime()) / MS_PER_HOUR;
+    return hoursUntil >= VENUE_UNLOCK_HOURS;
+  });
+
+  if (futureMatchedPool?.assignedGroupId) {
+    return `/squad-unboxing/${futureMatchedPool.assignedGroupId}`;
+  }
+
+  const futureMatchedEvent = matchedEvents.find((event) => {
+    const eventDate = getHongKongDateForComparison(event.dateTime);
+    return eventDate > now;
+  });
+
+  if (futureMatchedEvent) {
+    return `/blind-box-events/${futureMatchedEvent.id}`;
+  }
+
+  return CENTER_TAB_EMPTY_STATE_ROUTE;
+}
