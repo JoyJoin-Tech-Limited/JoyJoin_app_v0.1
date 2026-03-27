@@ -87,6 +87,7 @@ import CommunityJoinPage from "@/pages/CommunityJoinPage";
 import WalletPage from "@/pages/WalletPage";
 import FAQPage from "@/pages/FAQPage";
 import TermsPage from "@/pages/TermsPage";
+import CenterTabEmptyStatePage from "@/pages/CenterTabEmptyStatePage";
 import { ADMIN_PORTAL_URL } from "@/config/admin";
 
 preloadXiaoyueImages();
@@ -222,6 +223,7 @@ function AuthenticatedRouter() {
           <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
+          <Route path="/center-tab/empty" component={CenterTabEmptyStatePage} />
           <Route path="/my-journey" component={MyJourneyPage} />
           <Route path="/squad-unboxing/:groupId" component={SquadUnboxingFlow} />
           {process.env.NODE_ENV !== "production" && (

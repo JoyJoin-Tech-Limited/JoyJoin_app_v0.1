@@ -6,7 +6,7 @@ let prefetched = false;
 /**
  * Background-prefetch the empty-state illustration assets for the centre tab.
  * Safe to call multiple times — executes at most once per page lifecycle.
- * Skips on data-saver mode or very slow (2g) connections.
+ * Skips on data-saver mode or very slow (2g / slow-2g) connections.
  */
 export function prefetchEmptyStateAssets(): void {
   if (typeof window === 'undefined') return;
@@ -16,7 +16,11 @@ export function prefetchEmptyStateAssets(): void {
   // Network Information API is not yet standardised — `any` cast is the
   // established pattern in this codebase (see BottomNav.tsx, resourceCaching.ts).
   const connection = (navigator as any).connection;
-  if (connection?.saveData || connection?.effectiveType === '2g') {
+  if (
+    connection?.saveData ||
+    connection?.effectiveType === '2g' ||
+    connection?.effectiveType === 'slow-2g'
+  ) {
     return;
   }
 

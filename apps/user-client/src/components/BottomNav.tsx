@@ -16,6 +16,7 @@ import { prefetchEmptyStateAssets } from "@/lib/prefetchEmptyStateAssets";
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const VENUE_UNLOCK_HOURS = 24;
+const CENTER_TAB_EMPTY_STATE_ROUTE = "/center-tab/empty";
 
 interface NavItem {
   iconSrc: string;
@@ -65,7 +66,11 @@ export default function BottomNav() {
     const prefetchData = () => {
       // Check network quality - skip prefetch on slow connections
       const connection = (navigator as any).connection;
-      if (connection?.effectiveType === '2g' || connection?.saveData) {
+      if (
+        connection?.effectiveType === '2g' ||
+        connection?.effectiveType === 'slow-2g' ||
+        connection?.saveData
+      ) {
         return;
       }
 
@@ -85,11 +90,6 @@ export default function BottomNav() {
         }, index * 150);
       });
 
-      // Prefetch empty-state illustration assets for the centre tab.
-      // Most authenticated users landing here for the first time will tap the
-      // centre button and hit the no-activity empty state — prefetching early
-      // means the artwork is ready before they get there.
-      prefetchEmptyStateAssets();
     };
 
     // Use requestIdleCallback for non-blocking prefetch
@@ -155,9 +155,47 @@ export default function BottomNav() {
       return `/blind-box-events/${futureMatchedEvent.id}`;
     }
 
-    // Priority 5: No activity — navigate to discover
-    return '/discover';
+    // Priority 5: No activity — navigate to dedicated empty state
+    return CENTER_TAB_EMPTY_STATE_ROUTE;
   }, [poolRegistrations, events]);
+
+  useEffect(() => {
+    if (!poolRegistrations || !events) {
+      return;
+    }
+
+    if (centerButtonDestination !== CENTER_TAB_EMPTY_STATE_ROUTE) {
+      return;
+    }
+
+    let timeoutId: number | undefined = undefined;
+    let idleCallbackId: number | undefined = undefined;
+
+    const prefetchAfterDataWarmup = () => {
+      // Let the existing query prefetches fire first so the large SVG requests
+      // don't compete with the higher-priority API warmup work.
+      timeoutId = window.setTimeout(() => {
+        prefetchEmptyStateAssets();
+      }, 700);
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleCallbackId = (window as any).requestIdleCallback(prefetchAfterDataWarmup, {
+        timeout: 2500,
+      });
+    } else {
+      prefetchAfterDataWarmup();
+    }
+
+    return () => {
+      if (idleCallbackId !== undefined && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(idleCallbackId);
+      }
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [centerButtonDestination, events, poolRegistrations]);
 
   // P2-1: Dynamic center button label
   const centerButtonLabel = useMemo(() => {
@@ -189,7 +227,9 @@ export default function BottomNav() {
     const matched = poolRegistrations.find(r => r.matchStatus === "matched" && r.assignedGroupId);
     if (matched) return '查看桌友 👥';
     
-    return '去参与';
+    // No-activity users now land on the dedicated empty state, whose primary
+    // CTA sends them on to discover available activities.
+    return '去发现';
   }, [poolRegistrations, events]);
 
   // Show notification badge when there's pending or matched activity
@@ -212,7 +252,7 @@ export default function BottomNav() {
   const handleCenterClick = () => {
     console.log('[Analytics] center_button_tapped', {
       destination: centerButtonDestination,
-      userState: centerButtonDestination === '/discover' ? 'no_activity' : 'has_activity',
+      userState: centerButtonDestination === CENTER_TAB_EMPTY_STATE_ROUTE ? 'no_activity' : 'has_activity',
     });
     setLocation(centerButtonDestination);
   };
