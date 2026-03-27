@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
@@ -45,7 +46,7 @@ export default function ExtendedDataPage() {
     },
     onSuccess: async () => {
       // Data work: invalidate cache, show toast, save checkpoint
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await invalidateUserDerivedQueries();
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
       toast({

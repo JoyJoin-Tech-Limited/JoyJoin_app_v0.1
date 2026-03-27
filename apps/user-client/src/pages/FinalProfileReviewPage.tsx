@@ -19,6 +19,7 @@ import { SpiralWaveAnimation } from "@/components/SpiralWaveAnimation";
 import { ProfilePortraitCard } from "@/components/ProfilePortraitCard";
 import { useOnboardingAnalytics } from "@/hooks/useOnboardingAnalytics"; // Phase 2
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
@@ -86,7 +87,7 @@ export default function FinalProfileReviewPage() {
       // Fetch refreshed auth state to read the server-calculated nextStep.
       // Invalidate first so we always get a fresh response (not a stale cache hit).
       // The default queryFn returns null on 401, so type accordingly and handle that case.
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await invalidateUserDerivedQueries();
       const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
       
       if (!updatedUser?.nextStep) {

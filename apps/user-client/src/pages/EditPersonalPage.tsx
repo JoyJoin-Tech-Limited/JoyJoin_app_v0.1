@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Check } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 type PersonalData = {
   relationshipStatus?: string;
@@ -37,6 +38,7 @@ export default function EditPersonalPage() {
       return await apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/profile/edit");
     },

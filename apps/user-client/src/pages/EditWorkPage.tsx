@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, Briefcase, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useToast } from "@/hooks/use-toast";
 import { WORK_MODE_TO_LABEL } from "@shared/occupations";
 
@@ -42,6 +43,7 @@ export default function EditWorkPage() {
       return await apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: async () => {
+      await invalidateUserDerivedQueries();
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/profile/edit");
     },

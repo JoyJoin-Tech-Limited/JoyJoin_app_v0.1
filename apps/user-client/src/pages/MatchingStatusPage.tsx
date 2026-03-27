@@ -134,7 +134,7 @@ export default function MatchingStatusPage() {
   const microInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch registration from shared cache
-  const { data: poolRegistrations } = useQuery<Array<PoolRegistration>>({
+  const { data: poolRegistrations, isLoading: isRegistrationLoading, isError: isRegistrationError, refetch: refetchRegistrations } = useQuery<Array<PoolRegistration>>({
     queryKey: ["/api/my-pool-registrations"],
   });
 
@@ -447,14 +447,61 @@ export default function MatchingStatusPage() {
     return "再邀1人即可成局！";
   };
 
-  // Loading state
-  if (!registration) {
+  if (isRegistrationLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">加载中...</p>
+          <p className="text-sm text-muted-foreground">正在同步匹配进度...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isRegistrationError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-destructive/10 mx-auto flex items-center justify-center">
+              <RefreshCw className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-xl font-bold">匹配状态加载失败</h2>
+            <p className="text-sm text-muted-foreground">请重试，或先返回发现页继续浏览其他活动。</p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => refetchRegistrations()} variant="outline" className="w-full">
+                重新加载
+              </Button>
+              <Button onClick={() => setLocation("/")} className="w-full">
+                返回发现页
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!registration) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
+              <XCircle className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-bold">未找到这次报名</h2>
+            <p className="text-sm text-muted-foreground">可能是状态刚更新完成，或这次报名已被取消。</p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => refetchRegistrations()} variant="outline" className="w-full">
+                刷新状态
+              </Button>
+              <Button onClick={() => setLocation("/events")} className="w-full">
+                查看我的活动
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
