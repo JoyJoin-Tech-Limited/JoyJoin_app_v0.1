@@ -985,7 +985,7 @@ AI features without explicit cost and latency budgets will expand silently until
 
 | Feature | Target P95 Latency | Generation Mode |
 |---|---|---|
-| Onboarding final summary | ≤ 2,000 ms | Synchronous (user is waiting) |
+| Onboarding final summary | ≤ 2,000 ms | Async-with-UI-wait (generated while user views results; SLO = time-to-summary-visible) |
 | Onboarding wording variants | ≤ 500 ms | Pre-generated at session start |
 | Match explanation (pair) | ≤ 3,000 ms per pair | Async, cached 7 days |
 | Match intro angles | ≤ 3,000 ms per pair | Async, piggybacked on explanation call |
