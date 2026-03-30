@@ -8,7 +8,7 @@ import type {
   PulseCheckResult,
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
-import { MVP_PHASES, getNextPhase } from '@shared/socialIcebreaker';
+import { getNextEligiblePhase } from '@shared/socialIcebreaker';
 import {
   generateWarmupTopics,
   generateMicroChallenges,
@@ -17,6 +17,11 @@ import {
   generateRecapSummary,
   generatePersonalityDiceChallenges,
 } from '../socialIcebreakerAIService';
+import {
+  cleanupPhaseStateForNextPhase,
+  ensureSessionEnabledPhases,
+  getServerEnabledPhases,
+} from '../socialIcebreakerPhaseConfig';
 
 const router = Router();
 
@@ -104,6 +109,7 @@ router.post('/start', async (req: any, res) => {
 
   if (existing) {
     syncPlayerCount(socialSessionId, existing);
+    ensureSessionEnabledPhases(existing);
     socialSessions.set(socialSessionId, existing);
     return res.json({
       socialSessionId,
@@ -126,6 +132,7 @@ router.post('/start', async (req: any, res) => {
     sessionStartedAt: Date.now(),
     completedPhases: [],
     eventType,
+    enabledPhases: getServerEnabledPhases(),
   };
 
   socialSessions.set(socialSessionId, newState);
@@ -149,6 +156,8 @@ router.get('/:socialSessionId', (req: any, res) => {
   if (!state) {
     return res.status(404).json({ error: 'Social session not found' });
   }
+
+  ensureSessionEnabledPhases(state);
 
   // Track this user as joined (polling counts as presence)
   if (userId) {
@@ -213,7 +222,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 router.post('/:socialSessionId/advance', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
-  const { currentPhase, enabledPhases } = req.body as { currentPhase: SocialIcebreakerPhase; enabledPhases?: SocialIcebreakerPhase[] };
+  const { currentPhase } = req.body as { currentPhase: SocialIcebreakerPhase };
 
   if (!currentPhase) {
     return res.status(400).json({ error: 'currentPhase is required' });
@@ -232,27 +241,14 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'Phase mismatch' });
   }
 
-  // Use client-provided enabledPhases (for optional phases like personality_dice) or fall back to MVP_PHASES.
-  // Only allow phases that are valid SocialIcebreakerPhase values to prevent injection.
-  const VALID_PHASES = new Set<SocialIcebreakerPhase>(['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'recap']);
-  const resolvedEnabledPhases: SocialIcebreakerPhase[] =
-    Array.isArray(enabledPhases) && enabledPhases.every(p => VALID_PHASES.has(p))
-      ? enabledPhases
-      : MVP_PHASES;
-
-  const nextPhase = getNextPhase(currentPhase, resolvedEnabledPhases);
-  const resolvedNextPhase: SocialIcebreakerPhase = nextPhase === 'recap' ? 'recap' : nextPhase;
-
-  // Auto-skip lie_detective if not enough players
-  const effectiveNextPhase =
-    resolvedNextPhase === 'lie_detective' && state.playerCount < 3
-      ? 'recap'
-      : resolvedNextPhase;
+  const resolvedEnabledPhases = ensureSessionEnabledPhases(state);
+  const effectiveNextPhase = getNextEligiblePhase(currentPhase, resolvedEnabledPhases, state.playerCount);
 
   if (!state.completedPhases.includes(currentPhase)) {
     state.completedPhases = [...(state.completedPhases || []), currentPhase];
   }
 
+  cleanupPhaseStateForNextPhase(state, currentPhase);
   state.currentPhase = effectiveNextPhase;
   state.phaseStartedAt = Date.now();
   state.pulseChecks = [];

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Check, Lock } from 'lucide-react';
-import { PHASE_CONFIG, MVP_PHASES } from '@shared/socialIcebreaker';
+import { PHASE_CONFIG } from '@shared/socialIcebreaker';
 import type { SocialIcebreakerPhase } from '@shared/socialIcebreaker';
 
 interface PhaseProgressBarProps {
@@ -16,6 +16,7 @@ const ALL_PHASES: SocialIcebreakerPhase[] = [
   'lie_detective',
   'auction',
   'personality_dice',
+  'mini_script_beta',
   'recap',
 ];
 
@@ -35,7 +36,7 @@ export function PhaseProgressBar({
           const config = PHASE_CONFIG[phase];
           const isActive = phase === currentPhase;
           const isCompleted = completedPhases.includes(phase);
-          const isEnabled = enabledPhases.includes(phase);
+          const isEnabled = phase === 'recap' || enabledPhases.includes(phase);
           const isLocked = !isEnabled && !isCompleted && phase !== currentPhase;
 
           return (
