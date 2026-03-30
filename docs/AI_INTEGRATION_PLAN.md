@@ -1,6 +1,6 @@
 # JoyJoin AI Integration Plan
 
-> **Status:** Living document — last revised 2026-03-24  
+> **Status:** Living document — last revised 2026-03-30  
 > **Scope:** Phased AI roadmap for latent social compatibility modeling — from near-term experience enhancements through predictive learning to long-horizon latent intelligence.
 
 ---
@@ -17,6 +17,12 @@
 7. [Fairness, Safety & Multimodal Guardrails](#7-fairness-safety--multimodal-guardrails)
 8. [Implementation Roadmap](#8-implementation-roadmap)
 9. [Key Source Files](#9-key-source-files)
+10. [Budget-Optimized Execution Plan](#10-budget-optimized-execution-plan)
+    - [10.1 Revised v1 Scope — Narrowed for Practical Delivery](#101-revised-v1-scope--narrowed-for-practical-delivery)
+    - [10.2 Budget & Latency Guidance](#102-budget--latency-guidance)
+    - [10.3 Tightened Phased Rollout (Phases A–E)](#103-tightened-phased-rollout-phases-ae)
+    - [10.4 Admin / Ops Visibility Requirements](#104-admin--ops-visibility-requirements)
+    - [10.5 Success Gating](#105-success-gating)
 
 
 ---
@@ -927,3 +933,279 @@ The system must not produce or surface any ranking that implies a user is "less 
 | `apps/server/src/socialIcebreakerAIService.ts` | AI service for Social Icebreaker phases | 1 |
 | `packages/shared/src/schema.ts` | Drizzle DB schema — all tables referenced above | All |
 | `apps/user-client/src/hooks/useInviteData.ts` | `useMatchExplanations()` — client fetch for AI explanations | 1 |
+
+---
+
+## 10. Budget-Optimized Execution Plan
+
+> **Purpose:** This section supersedes the high-level phase table in §8 with a tighter, execution-focused plan that constrains scope, cost, and complexity for initial rollout. The strategic phases (1–3) in §§2–4 remain the authoritative long-horizon roadmap; this section governs *what ships first and in what order*.
+
+### 10.1 Revised v1 Scope — Narrowed for Practical Delivery
+
+The v1 scope deliberately avoids AI ownership of critical decision paths. AI in v1 is a **presentation and assist layer only**; deterministic server logic remains the source of truth for all matching decisions and policy.
+
+#### Onboarding v1
+
+| Capability | In Scope | Out of Scope |
+|---|---|---|
+| AI-enhanced wording | ✅ Improve question phrasing and option labels via prompt templates | ❌ Dynamic question generation or AI-driven branching |
+| Lightweight scenario adaptation | ✅ Adjust summary copy tone based on declared archetype (rule-triggered prompt variant) | ❌ Real-time archetype inference during the assessment |
+| Final summary generation | ✅ Generate a short, personalised 2–3 sentence result blurb after test completion | ❌ Full profile narrative, compatibility predictions, or "AI coaching" copy |
+
+**Guiding constraint:** Onboarding AI calls must complete within the existing page render budget. Async generation is preferred; block only on final summary (user is already reading results).
+
+#### Matching v1
+
+| Capability | In Scope | Out of Scope |
+|---|---|---|
+| Deterministic shortlist preservation | ✅ `poolMatchingService.ts` output is the authoritative group list; AI cannot modify it | ❌ Any live AI reranking of groups in production |
+| AI-generated match explanations | ✅ Pair explanation copy via `matchExplanationService.ts` (already live, extend with group context) | ❌ AI-authored compatibility scores presented to users |
+| Intro angles | ✅ Per-pair opening conversation suggestions grounded in shared interests + archetype chemistry | ❌ Personalised advice based on prior event history (Phase 3) |
+| Shadow-mode bounded reranking | ✅ Run AI rerank in shadow mode, log deltas, measure lift before any live exposure | ❌ Live rerank in v1; gated to Phase D after metrics prove uplift |
+
+**Guiding constraint:** AI matching calls must be async and cached. No AI call may sit in the critical path of `matchEventPool()`.
+
+#### Icebreaker v1
+
+| Capability | In Scope | Out of Scope |
+|---|---|---|
+| Admin/host-assist only | ✅ AI suggestions are surfaced in the admin/host console, not pushed automatically to users | ❌ Auto-injected AI icebreakers in user-facing Social Icebreaker flow |
+| Structured activity suggestions | ✅ Host receives 3–5 structured activity options (type, energy level, time estimate) with rationale | ❌ Sequenced full-event AI facilitation |
+| Curated fallback templates | ✅ Static fallback library of 25+ categorised templates; AI picks from this library rather than free-generating | ❌ Fully generative icebreaker creation without fallback containment |
+
+**Guiding constraint:** Icebreaker AI in v1 is advisory, not autonomous. Hosts review and select; the system never auto-applies an AI suggestion to a live event session.
+
+---
+
+### 10.2 Budget & Latency Guidance
+
+AI features without explicit cost and latency budgets will expand silently until they degrade user experience or blow the operating budget. Each feature shipped must declare its budget upfront.
+
+#### Per-Feature Latency Targets
+
+| Feature | Target P95 Latency | Generation Mode |
+|---|---|---|
+| Onboarding final summary | ≤ 2,000 ms | Async-with-UI-wait (generated while user views results; SLO = time-to-summary-visible) |
+| Onboarding wording variants | ≤ 500 ms | Pre-generated at session start |
+| Match explanation (pair) | ≤ 3,000 ms per pair | Async, cached 7 days |
+| Match intro angles | ≤ 3,000 ms per pair | Async, piggybacked on explanation call |
+| Icebreaker host suggestions | ≤ 4,000 ms | Async, host-triggered on demand |
+| Shadow rerank (Phase D) | No user-visible latency | Background batch job, post-formation |
+
+#### Per-Feature AI Cost Targets
+
+Define a monthly token budget per feature category before enabling in production. Suggested initial allocation:
+
+| Category | Monthly Token Budget | Primary Model Tier |
+|---|---|---|
+| Onboarding summaries | Low (< 5K calls/month at launch scale) | DeepSeek `deepseek-chat` (sufficient for short copy) |
+| Match explanations | Medium (cached; effective call rate << raw group count) | MiniMax (already default via `socialModelRouter`) |
+| Icebreaker host assist | Low (host-triggered, admin portal only) | DeepSeek `deepseek-chat` |
+| Shadow rerank scoring | Medium (batch, not real-time) | DeepSeek `deepseek-chat` |
+| Personalized explanations (Phase 3) | High — defer until Phase 3 | MiniMax or future model |
+
+#### Model Tiering Principles
+
+1. **Use DeepSeek for structured output and short-copy tasks** where JSON extraction, list generation, or concise prose is the goal. Cost-per-token is lower; latency is acceptable.
+2. **Use MiniMax for tonal, expressive copy** where warmth, narrative quality, and Chinese social register matter (match reveals, pair explanation copy, XiaoYue commentary).
+3. **Do not route structured inference (attribute extraction, schema validation) through MiniMax.** Keep `analyzeComplexSemantics` and `callLLMForInference` on DeepSeek — `analyzeComplexSemantics` is forced via `socialModelRouter.ts`, while `callLLMForInference` uses a direct DeepSeek client in `apps/server/src/inference/llmFallbackInference.ts`.
+4. **Gate expensive models behind feature flags.** No new MiniMax usage ships without a budget sign-off; default new feature calls to DeepSeek unless tonal quality is the primary success criterion.
+
+#### Evaluator Usage Policy
+
+Running an evaluator (quality-check LLM call) on every generation step doubles cost and latency without proportional benefit at early scale. Apply evaluators **conditionally**:
+
+- **Evaluate on sampling (1–5% of calls)** for features already in production with stable prompts (match explanations, icebreaker suggestions).
+- **Evaluate on all calls only during initial prompt validation** (first 200 production calls on a new prompt template), then switch to sampled mode.
+- **Never evaluate in the user-facing critical path.** Evaluator calls must be async, logged, and non-blocking.
+- Log evaluator outputs to the admin trace viewer (see §10.4) for prompt quality monitoring.
+
+#### Caching & Async Generation Policy
+
+| Rule | Rationale |
+|---|---|
+| Cache match explanations for 7 days per groupId with roster-hash validation | Group composition is stable; regeneration wastes budget |
+| Pre-generate onboarding wording variants at session start (not per question) | Eliminates per-question latency; variants are a finite set |
+| Generate icebreaker host suggestions on explicit host request, not on event creation | Avoids waste when hosts never open the console |
+| Shadow rerank scores computed as a batch job after group formation completes | Keeps match formation latency deterministic |
+| Never call AI synchronously in `matchEventPool()` | Matching SLA must not depend on AI provider uptime |
+
+#### Policy Synthesis Stays Deterministic and Server-Owned
+
+AI outputs (explanation copy, suggestion text, shadow rerank deltas) are **presentation and instrumentation data only**. The following decisions are always made by deterministic server logic and are never delegated to AI output:
+
+- Group formation and shortlist
+- Score thresholds and pass/fail gates
+- Hard constraint filtering (budget, gender, industry restrictions)
+- Feature flag state
+- User-facing permission or eligibility decisions
+
+If an AI output would need to be trusted as a policy decision, that is a sign the feature scope has drifted and should be re-scoped.
+
+---
+
+### 10.3 Tightened Phased Rollout (Phases A–E)
+
+The phases below map onto the long-horizon phases in §8 but provide a narrower, delivery-focused sequence with explicit entry and exit criteria.
+
+```
+Phase A  ──▶  Phase B  ──▶  Phase C  ──▶  Phase D (gated)  ──▶  Phase E
+Foundation    Onboarding v1  Matching v1    Matching v1.5         Event
++ Infra                      + Shadow       Bounded Rerank        Momentum v1
+```
+
+#### Phase A — Foundation, Shared Contracts, Logging, Feature Flags, Admin Trace Viewer MVP
+
+**Goal:** Make all subsequent AI work safe to ship, observable, and reversible.
+
+| Deliverable | Notes |
+|---|---|
+| Feature flag system for AI features | Server-side flags; each AI feature has an explicit `ENABLE_*` env var; defaults to off |
+| Shared AI call logging contract | Every AI call logs: `feature`, `model`, `provider`, `latencyMs`, `tokens`, `cacheHit`, `evaluatorUsed` |
+| Per-feature budget counters | Prometheus-style counters (or simple DB-backed rolling totals) per feature per day |
+| Admin trace viewer MVP | Minimal UI: searchable log of recent AI calls with latency, token usage, model, feature tag; accessible at `/admin/ai-trace` |
+| Prompt registry (v1) | Flat file or DB table: `{ promptId, version, template, feature, createdAt, notes }` — enables rollback without code deploy |
+| Fallback coverage audit | Verify every AI-calling code path has an explicit deterministic fallback; document gaps |
+
+**Exit criteria:** All Phase B AI calls will emit structured logs readable in the trace viewer. Feature flags verified working (AI off → deterministic fallback in effect).
+
+#### Phase B — Onboarding v1
+
+**Goal:** Ship AI-enhanced onboarding wording and final summary without blocking the core onboarding funnel.
+
+| Deliverable | Notes |
+|---|---|
+| AI-enhanced question wording variants | Pre-generated at session start; stored in session cache; no per-question AI call |
+| Lightweight archetype-triggered scenario adaptation | Rule selects prompt variant based on early archetype signal; AI fills copy within template |
+| Final summary generation | Async call on test completion; user sees result screen while summary generates; fallback = static archetype description |
+| Prompt registry entries for all onboarding prompts | Version-tagged; reviewable in admin trace viewer |
+| Onboarding AI metrics in trace viewer | Calls, latency distribution, fallback rate, token usage |
+
+**Exit criteria:** Onboarding completion rate unchanged or improved vs. baseline. Summary generation fallback rate < 5%. P95 latency ≤ 2,000 ms.
+
+#### Phase C — Matching v1 with Shadow Rerank
+
+**Goal:** Extend live match explanations with intro angles; start instrumented shadow reranking without any live influence.
+
+| Deliverable | Notes |
+|---|---|
+| Pair explanation + intro angle (combined call) | Extend `generatePairExplanation()` with intro angle output; single model call; cached |
+| Group context passed to explanation (§2.5.1) | `atmosphereType`, `groupSize`, `dominantArchetypes` |
+| Shadow rerank batch job | Post-formation: score groups with AI rerank signal, log delta vs. deterministic order; no user impact |
+| Shadow rerank dashboard in admin trace viewer | Table: group ID, deterministic rank, shadow rank, delta, explanation; admin-only |
+| Matching AI metrics in trace viewer | Explanation cache hit rate, latency, token usage per pool |
+
+**Exit criteria:** Explanation cache hit rate ≥ 80% within 2 weeks of a pool forming. Shadow rerank logs accumulate across ≥ 10 events with measurable delta distribution before Phase D begins.
+
+#### Phase D — Matching v1.5 Bounded Rerank (Metrics-Gated)
+
+**Gate:** Phase D only begins when shadow rerank data across ≥ 10 events shows statistically measurable positive lift (atmosphere_score or would_meet_again improvement, p < 0.05).
+
+**Goal:** Introduce bounded live AI reranking with hard safeguards.
+
+| Deliverable | Notes |
+|---|---|
+| Bounded rerank live (feature-flagged) | AI rerank delta capped at ±2 position shifts; deterministic score preserved as primary key |
+| A/B test infrastructure | Route a fraction of pools to bounded rerank arm; compare outcome labels over 4+ weeks |
+| Rollback trigger | If outcome metrics regress > 5% from baseline in any 2-week window, auto-disable flag |
+| Admin override | Admin portal can disable bounded rerank per pool or globally without code change |
+
+**Exit criteria:** A/B test shows positive lift. No fairness regression detected. Admin portal rollback verified functional.
+
+#### Phase E — Event Momentum v1 (Admin/Host Only)
+
+**Goal:** Deliver AI-assisted event facilitation tools to admins and hosts. No autonomous AI actions visible to users.
+
+| Deliverable | Notes |
+|---|---|
+| Host icebreaker suggestion console | Admin/host portal UI; AI suggests 3–5 structured activities; host selects and applies manually |
+| Curated fallback template library | 25+ templates categorised by energy level and event type; AI selection prefers from this library |
+| Event momentum metrics | Host selection rate, activity completion rate, icebreaker ratings; visible in admin event console |
+| XiaoYue commentary assist (optional) | Host can trigger AI-drafted XiaoYue comment for a phase; host edits before sending |
+
+**Exit criteria:** Host console used in ≥ 50% of events. Icebreaker selection-to-delivery rate ≥ 70% (hosts who see suggestions actually use them).
+
+---
+
+### 10.4 Admin / Ops Visibility Requirements
+
+Operational visibility must be available **before** AI features reach users, not after. The admin portal trace viewer and console modules are **Phase A deliverables**, not Phase E nice-to-haves.
+
+#### Core Admin Portal Modules
+
+| Module | Purpose | Phase |
+|---|---|---|
+| **AI Operations Dashboard** | Top-level: daily AI call volume, total token spend, provider breakdown (MiniMax vs DeepSeek), P95 latency per feature, fallback rate per feature | A |
+| **Trace Viewer** | Searchable log of individual AI calls: feature, prompt version, model, provider, latency, tokens, cache hit, evaluator result; full prompt/response on expand | A |
+| **Prompt / Experiment Registry** | CRUD interface for prompt templates; version history; associate prompts with feature flags; diff view across versions | A |
+| **Onboarding Intelligence Console** | Onboarding AI funnel: summary generation rate, fallback rate, wording variant distribution, completion rate by archetype; prompt quality from sampled evaluator logs | B |
+| **Match Intelligence Console** | Per-pool AI explanation coverage, cache performance, intro angle quality distribution, shadow rerank delta table, bounded rerank A/B arm status | C |
+| **Event Momentum Console** | Host console activity: suggestions generated, suggestions applied, icebreaker ratings, event phase AI usage; XiaoYue comment assist usage | E |
+| **Feature Flag Control Panel** | Enable/disable any AI feature per environment; override model tier per feature; view active flag state; no code deploy required for AI kill-switch | A |
+
+#### Module Ownership and Boundaries
+
+Each module has an explicit owner and a data boundary:
+
+- **AI Ops Dashboard + Trace Viewer + Prompt Registry:** Platform/infra team — reads from the shared AI call log; no domain-specific logic.
+- **Onboarding Intelligence Console:** Onboarding team — reads from onboarding session + AI call logs filtered to `feature=onboarding_*`.
+- **Match Intelligence Console:** Matching team — reads from pool matching logs, explanation cache, shadow rerank log.
+- **Event Momentum Console:** Event ops team — reads from host console interaction logs + icebreaker ratings.
+- **Feature Flag Control Panel:** Platform/infra team — writes to feature flag store; all other modules read-only.
+
+Modules must **not** share mutable state. Each console reads its domain's data from dedicated log tables or filtered views. No console can modify matching algorithm state or user data directly.
+
+#### Trace Viewer MVP Requirements
+
+The trace viewer must be available as a minimal implementation before any Phase B AI feature ships. Minimum viable trace record:
+
+```typescript
+interface AICallTrace {
+  id: string;
+  timestamp: Date;
+  feature: string;          // e.g. 'onboarding_summary', 'match_explanation'
+  promptId: string;         // references prompt registry
+  promptVersion: string;
+  model: string;            // e.g. 'minimax-m2.7', 'deepseek-chat'
+  provider: string;         // 'minimax' | 'deepseek'
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheHit: boolean;
+  fallbackUsed: boolean;
+  evaluatorScore?: number;  // populated when sampled evaluator ran
+  userId?: string;          // nullable — some calls are not user-scoped
+  groupId?: string;         // nullable — for match explanation calls
+  error?: string;           // populated on failure
+}
+```
+
+This schema must be agreed across all team members before Phase A concludes. Downstream consoles depend on it.
+
+---
+
+### 10.5 Success Gating
+
+**Principle:** Deeper AI ownership — higher AI influence on user experience, more model calls in the critical path, higher token spend — must follow demonstrated KPI lift, not precede it. Architectural complexity should track proven ROI.
+
+#### Gate Definitions
+
+| Gate | Condition | Unlocks |
+|---|---|---|
+| **G1 — Onboarding AI baseline** | Onboarding completion rate unchanged or ↑ vs. pre-AI baseline; P95 summary latency ≤ 2,000 ms; fallback rate < 5% | Continued onboarding AI investment; Phase B deemed stable |
+| **G2 — Explanation quality baseline** | Explanation cache hit rate ≥ 80%; user-facing explanation engagement rate (taps on pair explanation cards) ↑ vs. baseline | Extend explanation scope to intro angles + group context |
+| **G3 — Shadow rerank signal confirmed** | ≥ 10 events with logged shadow rerank deltas; delta distribution is non-trivial (AI is not reproducing deterministic order exactly); positive correlation with `atmosphere_score` detectable | Enables Phase D (live bounded rerank A/B test) |
+| **G4 — Bounded rerank lift confirmed** | A/B test over ≥ 4 weeks shows `atmosphere_score` or `would_meet_again` uplift, p < 0.05; no fairness regression | Raises bounded rerank influence cap; enables weight learning integration |
+| **G5 — Host console adoption** | Host console used in ≥ 50% of events over a 4-week period; icebreaker selection-to-delivery ≥ 70% | Extends icebreaker AI to participant-visible surfaces (Phase 3 territory) |
+
+#### Complexity Budget
+
+The following **must not happen** before the corresponding gate is passed:
+
+- ❌ Live AI reranking in `matchEventPool()` before G3 + G4
+- ❌ AI-authored compatibility scores surfaced to users before G4
+- ❌ Auto-injected AI icebreakers in user-facing Social Icebreaker flow before G5
+- ❌ Personalized explanations using behavioral history (Phase 3) before G4 + 1,000+ `event_group_outcomes` records
+- ❌ Any new MiniMax model calls in the critical render path before a latency budget analysis is documented and approved
+
+Each gate is a documented checkpoint reviewed by the product and engineering leads. Gate passage is logged in this document's revision history.
