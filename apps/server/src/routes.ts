@@ -1170,6 +1170,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI profile tagline — presentation-only, no onboarding state side-effects
+  app.get('/api/onboarding/profile-tagline', requireAuth, aiEndpointLimiter, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+      // Fetch user and interests in parallel
+      const [userRow, interestsRow] = await Promise.all([
+        db.query.users.findFirst({ where: eq(users.id, userId) }),
+        db.query.userInterests.findFirst({ where: eq(userInterests.userId, userId) }),
+      ]);
+
+      if (!userRow) return res.status(404).json({ message: 'User not found' });
+
+      const { generateProfileTagline } = await import('./profileTaglineService');
+      const tagline = await generateProfileTagline({
+        archetype: (userRow.archetype ?? userRow.primaryArchetype) as string | undefined,
+        categoryHeat: (interestsRow?.categoryHeat as Record<string, number> | null) ?? {},
+        intentKeys: Array.isArray(userRow.intent) ? (userRow.intent as string[]) : [],
+      });
+
+      res.json(tagline);
+    } catch (error) {
+      console.error('[profileTagline] route error:', error);
+      res.status(500).json({ message: 'Failed to generate profile tagline' });
+    }
+  });
+
   // Phase 2: Onboarding Analytics endpoint
   app.post('/api/analytics/onboarding', async (req: Request, res) => {
     try {
