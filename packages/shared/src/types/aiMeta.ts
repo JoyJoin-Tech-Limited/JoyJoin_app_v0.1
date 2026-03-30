@@ -42,14 +42,21 @@
 export type AIProvider = 'minimax' | 'deepseek' | null;
 
 /**
+ * Provider identifier for a fresh live LLM response.
+ * Unlike `AIProvider`, this excludes null because the serving provider
+ * must be known when a live model call succeeds.
+ */
+export type LiveAIProvider = Exclude<AIProvider, null>;
+
+/**
  * Standard observability metadata for AI-backed service responses.
  *
  * Embed in response types or pass alongside responses for structured
  * logging and the Phase A trace viewer (AI_INTEGRATION_PLAN.md §10.4).
  *
- * All 7 fields are sourced from the guardrail pipeline stage 7:
- * "Return only the Policy Synthesizer-approved structured output.
- *  Log: prompt version, model version, input context hash, output schema
+ * These fields are aligned with the guardrail pipeline stage 7, which:
+ * "Returns only the Policy Synthesizer-approved structured output and
+ *  logs: prompt version, model version, input context hash, output schema
  *  validity, latency, fallback usage."
  */
 export interface AIResponseMeta {
@@ -109,7 +116,7 @@ export interface AIResponseMeta {
  * @param promptVersion  Optional prompt registry version tag.
  */
 export function buildLiveAIMeta(
-  provider: AIProvider,
+  provider: LiveAIProvider,
   promptVersion?: string
 ): AIResponseMeta {
   return {
