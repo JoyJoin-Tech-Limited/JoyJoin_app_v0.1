@@ -46,6 +46,14 @@ export function cleanupPhaseStateForNextPhase(
       state.currentChallenge = undefined;
       return;
     case 'lie_detective':
+      if (Array.isArray(state.lieDetectivePlayers)) {
+        state.lieDetectivePlayers = state.lieDetectivePlayers.map((player) => ({
+          userId: player.userId,
+          displayName: player.displayName,
+          statements: [],
+        }));
+      }
+      state.votes = undefined;
       state.currentLieDetectivePlayerIndex = undefined;
       return;
     case 'personality_dice':
