@@ -14,7 +14,7 @@ export interface InterestSignal {
 
 export interface UpsertInterestSignalInput {
   interestKey: string;
-  enthusiasmLevel: number;
+  /** NOTE: enthusiasmLevel is derived server-side from onboarding heat data; do not send from client. */
   discussionStyle: string;
   conversationDepth: number;
 }
