@@ -19,6 +19,7 @@ import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
+import type { AIProvider } from '@shared/types/aiMeta';
 
 // ============ 配置常量 ============
 
@@ -129,6 +130,17 @@ export interface GroupAnalysis extends GroupAnalysisContract {
   fromCache?: boolean;
   /** ISO-8601 timestamp of generation */
   generatedAt?: string;
+  /**
+   * The LLM provider used for this generation.
+   * null on cache hit (original provider not recorded) or deterministic fallback.
+   * Aligned with AIResponseMeta.provider.
+   */
+  provider?: AIProvider;
+  /**
+   * true if deterministic fallback content was used for any component of
+   * this analysis. Aligned with AIResponseMeta.fallbackUsed.
+   */
+  fallbackUsed?: boolean;
 }
 
 // ============ 缓存类型 ============
@@ -663,11 +675,19 @@ export async function generateGroupAnalysis(
   members: MatchMember[],
   eventType: string = "饭局",
   useCache: boolean = true
-): Promise<GroupAnalysis & { fromCache: boolean }> {
+): Promise<GroupAnalysis & { fromCache: boolean; generatedAt: string; provider: AIProvider; fallbackUsed: boolean }> {
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
   let fromCache = false;
   let cacheGeneratedAt: string | undefined;
+  // Normalized metadata fields (aligned with AIResponseMeta)
+  let provider: AIProvider = null;
+  let fallbackUsed = false;
+
+  // Determine the primary configured provider for this generation pass.
+  // getClientForFunction() is a pure routing lookup (no network call) — it reads
+  // the SOCIAL_AI_PROVIDER env flag and returns the appropriate client metadata.
+  const { provider: primaryProvider } = getClientForFunction('generateIceBreakers');
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -683,12 +703,19 @@ export async function generateGroupAnalysis(
       cacheGeneratedAt = cachedExplanations.generatedAt;
       iceBreakers = cachedIceBreakers;
       fromCache = true;
+      // Cache hit: original provider is not recorded; fallback was not used in this request
+      provider = null;
+      fallbackUsed = false;
     } else {
       // Cache miss, expired, or roster changed - regenerate in parallel
-      [pairExplanations, iceBreakers] = await Promise.all([
+      const [freshPairExplanations, iceBreakerResult] = await Promise.all([
         generateFreshPairExplanations(members),
         generateIceBreakers(members, eventType)
       ]);
+      pairExplanations = freshPairExplanations;
+      iceBreakers = iceBreakerResult.iceBreakers;
+      provider = primaryProvider;
+      fallbackUsed = iceBreakerResult.fallbackUsed;
       
       // Save to cache with roster metadata (fire and forget with error handling)
       savePairExplanationsCache(groupId, members, pairExplanations).catch((err) => {
@@ -700,10 +727,14 @@ export async function generateGroupAnalysis(
     }
   } else {
     // No cache requested - generate fresh in parallel
-    [pairExplanations, iceBreakers] = await Promise.all([
+    const [freshPairExplanations, iceBreakerResult] = await Promise.all([
       generateFreshPairExplanations(members),
       generateIceBreakers(members, eventType)
     ]);
+    pairExplanations = freshPairExplanations;
+    iceBreakers = iceBreakerResult.iceBreakers;
+    provider = primaryProvider;
+    fallbackUsed = iceBreakerResult.fallbackUsed;
   }
   
   // 计算整体化学反应
@@ -730,6 +761,8 @@ export async function generateGroupAnalysis(
     fromCache,
     // On cache hit, use the original generation timestamp so clients can tell when data was last refreshed
     generatedAt: fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString(),
+    provider,
+    fallbackUsed,
   };
 }
 
@@ -761,11 +794,13 @@ function generateGroupDynamics(
 
 /**
  * 生成个性化破冰话题
+ * Returns both the ice-breaker topics and a flag indicating whether
+ * deterministic fallback content was used (i.e. all LLM calls failed).
  */
 export async function generateIceBreakers(
   members: MatchMember[],
   eventType: string = "饭局"
-): Promise<string[]> {
+): Promise<{ iceBreakers: string[]; fallbackUsed: boolean }> {
   // 收集共同兴趣
   const allInterests: string[] = [];
   members.forEach(m => {
@@ -845,7 +880,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
       .slice(0, 5);
     
     if (iceBreakers.length >= 2) { // Lowered threshold from 3 to 2
-      return iceBreakers;
+      return { iceBreakers, fallbackUsed: false };
     }
   } catch (primaryError) {
     if (provider === 'minimax') {
@@ -867,7 +902,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           .filter(line => line.length > 5 && line.length < 100)
           .slice(0, 5);
         if (iceBreakers.length >= 2) {
-          return iceBreakers;
+          return { iceBreakers, fallbackUsed: false };
         }
       } catch (fallbackError) {
         console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
@@ -878,7 +913,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
   }
   
   // 降级：返回预设话题
-  return getFallbackIceBreakers(eventType, commonInterests);
+  return { iceBreakers: getFallbackIceBreakers(eventType, commonInterests), fallbackUsed: true };
 }
 
 /**
