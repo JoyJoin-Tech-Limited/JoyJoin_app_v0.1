@@ -118,7 +118,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, userInterestSignals, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
 import { db } from "./db";
@@ -2588,6 +2588,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error applying interest nudge:", error);
       res.status(500).json({ message: "Failed to apply interest nudge" });
+    }
+  });
+
+  // ============ Interest Signal Boost endpoints ============
+  // Optional pre-match signal: stores per-user per-interest calibration data.
+  // Never required for matching or onboarding.
+
+  const interestSignalSchema = z.object({
+    interestKey: z.string().min(1).max(100),
+    interestLabel: z.string().min(1).max(100),
+    enthusiasmLevel: z.number().int().min(1).max(5),
+    discussionStyle: z.enum([
+      "casual_vibes",
+      "character_people",
+      "plot_worldbuilding",
+      "meme_humor",
+      "deeper_analysis",
+    ]),
+    conversationDepth: z.number().int().min(1).max(3),
+  });
+
+  // POST /api/user/interest-signals — create or update a signal for one interest
+  app.post('/api/user/interest-signals', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const result = interestSignalSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      const signal = await storage.upsertInterestSignal(userId, result.data);
+      res.json({ success: true, data: signal });
+    } catch (error) {
+      console.error("Error upserting interest signal:", error);
+      res.status(500).json({ message: "Failed to save interest signal" });
+    }
+  });
+
+  // GET /api/user/interest-signals — retrieve all signals for the current user
+  app.get('/api/user/interest-signals', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const signals = await storage.getUserInterestSignals(userId);
+      res.json({ signals });
+    } catch (error) {
+      console.error("Error fetching interest signals:", error);
+      res.status(500).json({ message: "Failed to fetch interest signals" });
     }
   });
 
