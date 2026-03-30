@@ -103,7 +103,8 @@ export default function InterestSignalBoostSheet({
         conversationDepth: depth,
       });
       setStep("done");
-    } catch {
+    } catch (error) {
+      console.error("Failed to save interest signal:", error);
       toast({ title: "保存失败，请重试", variant: "destructive" });
     }
   };

@@ -242,3 +242,13 @@ export const RELATIONSHIP_MATCH_LABELS: Record<string, { text: string; tier: Con
   "离异": { text: "都经历过婚姻", tier: "common" },
   "丧偶": { text: "都经历过失去伴侣", tier: "common" },
 };
+
+
+// Chinese display labels for interest signal discussion styles
+export const DISCUSSION_STYLE_LABELS: Record<string, string> = {
+  casual_vibes: '随便聊聊',
+  character_people: '角色/人物党',
+  plot_worldbuilding: '剧情/世界观',
+  meme_humor: '梗和搞笑',
+  deeper_analysis: '深度讨论',
+};
