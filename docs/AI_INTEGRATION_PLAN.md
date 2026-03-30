@@ -1008,7 +1008,7 @@ Define a monthly token budget per feature category before enabling in production
 
 1. **Use DeepSeek for structured output and short-copy tasks** where JSON extraction, list generation, or concise prose is the goal. Cost-per-token is lower; latency is acceptable.
 2. **Use MiniMax for tonal, expressive copy** where warmth, narrative quality, and Chinese social register matter (match reveals, pair explanation copy, XiaoYue commentary).
-3. **Do not route structured inference (attribute extraction, schema validation) through MiniMax.** Keep `analyzeComplexSemantics` and `callLLMForInference` on DeepSeek (already enforced in `socialModelRouter.ts`).
+3. **Do not route structured inference (attribute extraction, schema validation) through MiniMax.** Keep `analyzeComplexSemantics` and `callLLMForInference` on DeepSeek — `analyzeComplexSemantics` is forced via `socialModelRouter.ts`, while `callLLMForInference` uses a direct DeepSeek client in `apps/server/src/inference/llmFallbackInference.ts`.
 4. **Gate expensive models behind feature flags.** No new MiniMax usage ships without a budget sign-off; default new feature calls to DeepSeek unless tonal quality is the primary success criterion.
 
 #### Evaluator Usage Policy
