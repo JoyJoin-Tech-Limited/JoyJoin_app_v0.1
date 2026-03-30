@@ -2635,10 +2635,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ Interest Signal Boost endpoints ============
   // Optional pre-match signal: stores per-user per-interest calibration data.
   // Never required for matching or onboarding.
+  //
+  // enthusiasmLevel is NO LONGER collected from the client — it is derived
+  // server-side from the user's onboarding interest heat (user_interests table):
+  //   heat=25 (level 3) → enthusiasmLevel=5
+  //   heat=10 (level 2) → enthusiasmLevel=3
+  //   heat=5  (level 1) → enthusiasmLevel=2
+  //   no data / unknown → enthusiasmLevel=3 (neutral default)
 
   const interestSignalSchema = z.object({
     interestKey: z.string().min(1).max(100),
-    enthusiasmLevel: z.number().int().min(1).max(5),
     discussionStyle: z.enum([
       "casual_vibes",
       "character_people",
@@ -2648,6 +2654,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ]),
     conversationDepth: z.number().int().min(1).max(3),
   });
+
+  /** Derive enthusiasm level (1-5) from onboarding heat value (5/10/25). */
+  function deriveEnthusiasmFromHeat(heat: number): number {
+    if (heat >= 25) return 5;
+    if (heat >= 10) return 3;
+    if (heat >= 5)  return 2;
+    return 3; // neutral default: no heat data or below minimum threshold
+  }
+
+  /** Load heat value for a specific interestKey from the user_interests table. */
+  async function getOnboardingHeatForInterest(userId: string, interestKey: string): Promise<number> {
+    const rows = await db.select().from(userInterests).where(eq(userInterests.userId, userId)).limit(1);
+    if (!rows.length) return 0;
+    const selections = (rows[0].selections as any[]) ?? [];
+    const match = selections.find((s: any) => s.topicId === interestKey);
+    return match?.heat ?? 0;
+  }
 
   // POST /api/user/interest-signals — create or update a signal for one interest
   app.post('/api/user/interest-signals', requireAuth, async (req: any, res) => {
@@ -2663,10 +2686,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid interestKey: not found in active interest taxonomy" });
       }
 
+      // Derive enthusiasm from onboarding data so we never duplicate the self-report
+      const heat = await getOnboardingHeatForInterest(userId, result.data.interestKey);
+      const enthusiasmLevel = deriveEnthusiasmFromHeat(heat);
+
       const signal = await storage.upsertInterestSignal(userId, {
-        ...result.data,
+        interestKey: result.data.interestKey,
         interestLabel: interest.label,
+        enthusiasmLevel,
+        discussionStyle: result.data.discussionStyle,
+        conversationDepth: result.data.conversationDepth,
       });
+
+      // Instrumentation: log completion for opt-in rate metrics
+      console.info(`[InterestSignalBoost] completed userId=${userId} interestKey=${result.data.interestKey} style=${result.data.discussionStyle} depth=${result.data.conversationDepth} derivedEnthusiasm=${enthusiasmLevel}`);
+
       res.json({ success: true, data: signal });
     } catch (error) {
       console.error("Error upserting interest signal:", error);
