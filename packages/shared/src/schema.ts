@@ -12,6 +12,7 @@ import {
   numeric,
   serial,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -3102,3 +3103,53 @@ export const insertAdminAccountSchema = createInsertSchema(adminAccounts).omit({
 
 export type AdminAccount = typeof adminAccounts.$inferSelect;
 export type InsertAdminAccount = z.infer<typeof insertAdminAccountSchema>;
+
+// ============ Interest Signal Boost ============
+
+/**
+ * Per-user per-interest signal table.
+ *
+ * Stores a lightweight "conversation-fit calibration" signal for a chosen
+ * interest: how enthusiastic the user is, their preferred discussion style,
+ * and desired conversation depth.  Used as a soft bonus in matching and as
+ * richer context for icebreaker / conversation-topic generation.
+ *
+ * MVP: text-first, no image/audio recognition.  Optional for users; never
+ * blocks matching or onboarding.
+ */
+export const userInterestSignals = pgTable("user_interest_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Normalized interest identifier (topicId from INTEREST_TAXONOMY)
+  interestKey: varchar("interest_key").notNull(),
+  // Human-readable label shown in UI (e.g. "美食")
+  interestLabel: varchar("interest_label").notNull(),
+
+  // Self-reported enthusiasm: 1 (just tagged it) – 5 (obsessed)
+  enthusiasmLevel: integer("enthusiasm_level").notNull().default(3),
+
+  // Preferred discussion style for this interest.
+  // One of: "casual_vibes" | "character_people" | "plot_worldbuilding" |
+  //         "meme_humor" | "deeper_analysis"
+  discussionStyle: varchar("discussion_style").notNull().default("casual_vibes"),
+
+  // Desired conversation depth: 1=light, 2=medium, 3=deep
+  conversationDepth: integer("conversation_depth").notNull().default(2),
+
+  // Freshness metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_user_interest_signals_user_interest").on(table.userId, table.interestKey),
+  index("idx_user_interest_signals_user_id").on(table.userId),
+]);
+
+export const insertUserInterestSignalSchema = createInsertSchema(userInterestSignals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UserInterestSignal = typeof userInterestSignals.$inferSelect;
+export type InsertUserInterestSignal = z.infer<typeof insertUserInterestSignalSchema>;

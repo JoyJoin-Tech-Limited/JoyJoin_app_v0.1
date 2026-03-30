@@ -6,6 +6,14 @@ export interface ParticipantProfile {
   interests?: string[];
   topicsHappy?: string[];
   topicsAvoid?: string[];
+  /** Optional interest signal boost data */
+  interestSignals?: Array<{
+    interestKey: string;
+    interestLabel: string;
+    enthusiasmLevel: number;
+    discussionStyle: string;
+    conversationDepth: number;
+  }>;
 }
 
 export interface TopicSuggestion {
@@ -75,6 +83,32 @@ export async function generateConversationTopics(
     .map(([interest]) => interest)
     .slice(0, 5);
 
+  // Collect aligned interest signals (same interest key shared by ≥2 participants)
+  const signalMap = new Map<string, { label: string; styles: string[]; depths: number[] }>();
+  participants.forEach(p => {
+    (p.interestSignals || []).forEach(sig => {
+      const entry = signalMap.get(sig.interestKey) ?? { label: sig.interestLabel, styles: [], depths: [] };
+      entry.styles.push(sig.discussionStyle);
+      entry.depths.push(sig.conversationDepth);
+      signalMap.set(sig.interestKey, entry);
+    });
+  });
+  const sharedSignals = Array.from(signalMap.entries())
+    .filter(([_, v]) => v.styles.length >= 2)
+    .map(([_, v]) => {
+      const dominant = v.styles.sort(
+        (a, b) => v.styles.filter(s => s === b).length - v.styles.filter(s => s === a).length
+      )[0];
+      const avgDepth = Math.round(v.depths.reduce((a, c) => a + c, 0) / v.depths.length);
+      const STYLE_LABELS: Record<string, string> = {
+        casual_vibes: '随便聊聊', character_people: '角色/人物党',
+        plot_worldbuilding: '剧情/世界观', meme_humor: '梗和搞笑',
+        deeper_analysis: '深度讨论',
+      };
+      return `${v.label}（${STYLE_LABELS[dominant] || dominant}，深度${avgDepth}/3）`;
+    })
+    .slice(0, 3);
+
   const userPrompt = `## 参与者信息
 人数：${participants.length}人
 昵称：${participants.map(p => p.displayName).join('、')}
@@ -83,6 +117,7 @@ export async function generateConversationTopics(
 个人兴趣：${Array.from(new Set(allInterests)).slice(0, 8).join('、') || '未知'}
 偏好话题：${Array.from(new Set(allTopicsHappy)).slice(0, 5).join('、') || '未知'}
 避免话题：${Array.from(new Set(allTopicsAvoid)).slice(0, 3).join('、') || '无'}
+${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）：${sharedSignals.join('；')}` : ''}
 ${eventType ? `活动类型：${eventType}` : ''}
 
 请生成3-5个适合这群人的话题建议。`;

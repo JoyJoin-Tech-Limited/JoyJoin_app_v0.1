@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import InterestSignalBoostSheet from "@/components/InterestSignalBoostSheet";
 
 interface SuccessCelebrationProps {
   onNavigate?: () => void;
+  /** Optional: offer the interest signal boost after registration */
+  boostInterestKey?: string;
+  boostInterestLabel?: string;
 }
 
-export default function SuccessCelebration({ onNavigate }: SuccessCelebrationProps) {
+export default function SuccessCelebration({ onNavigate, boostInterestKey, boostInterestLabel }: SuccessCelebrationProps) {
   const [, setLocation] = useLocation();
   const [countdown, setCountdown] = useState(5);
+  const [showBoost, setShowBoost] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -96,6 +101,19 @@ export default function SuccessCelebration({ onNavigate }: SuccessCelebrationPro
         transition={{ delay: 0.5 }}
         className="w-full max-w-xs space-y-3"
       >
+        {/* Optional interest signal boost CTA */}
+        {boostInterestKey && boostInterestLabel && (
+          <Button
+            variant="outline"
+            onClick={() => setShowBoost(true)}
+            className="w-full border-primary/40 text-primary hover:bg-primary/5"
+            size="lg"
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            提升匹配质量（1分钟）
+          </Button>
+        )}
+
         <Button
           onClick={handleNavigate}
           className="w-full bg-gradient-to-r from-primary to-purple-600"
@@ -126,6 +144,14 @@ export default function SuccessCelebration({ onNavigate }: SuccessCelebrationPro
           </div>
         </div>
       </motion.div>
+
+      {/* Interest Signal Boost Sheet */}
+      <InterestSignalBoostSheet
+        open={showBoost}
+        onOpenChange={setShowBoost}
+        interestKey={boostInterestKey}
+        interestLabel={boostInterestLabel}
+      />
     </div>
   );
 }
