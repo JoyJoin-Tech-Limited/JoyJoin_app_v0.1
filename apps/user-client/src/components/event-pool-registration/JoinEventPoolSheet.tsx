@@ -174,6 +174,7 @@ export default function JoinEventPoolSheet({
             onNavigate={handleNavigateToEvents}
             boostInterestKey={topBoostInterest?.topicId}
             boostInterestLabel={topBoostInterest?.label}
+            boostInterestHeat={topBoostInterest?.heat}
           />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">

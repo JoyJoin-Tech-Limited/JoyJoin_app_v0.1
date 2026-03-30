@@ -10,9 +10,16 @@ interface SuccessCelebrationProps {
   /** Optional: offer the interest signal boost after registration */
   boostInterestKey?: string;
   boostInterestLabel?: string;
+  /**
+   * The user's onboarding heat value for the boost interest (from user_interests).
+   * Heat 5 = casual, 10 = active, 25 = passionate.
+   * Passed to InterestSignalBoostSheet so it can show a read-only passion badge,
+   * reassuring the user they are not being re-profiled.
+   */
+  boostInterestHeat?: number;
 }
 
-export default function SuccessCelebration({ onNavigate, boostInterestKey, boostInterestLabel }: SuccessCelebrationProps) {
+export default function SuccessCelebration({ onNavigate, boostInterestKey, boostInterestLabel, boostInterestHeat }: SuccessCelebrationProps) {
   const [, setLocation] = useLocation();
   const [countdown, setCountdown] = useState(5);
   const [showBoost, setShowBoost] = useState(false);
@@ -110,7 +117,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
             size="lg"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            提升匹配质量（1分钟）
+            精调同频设置（2步完成）
           </Button>
         )}
 
@@ -151,6 +158,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         onOpenChange={setShowBoost}
         interestKey={boostInterestKey}
         interestLabel={boostInterestLabel}
+        onboardingHeatLevel={boostInterestHeat}
       />
     </div>
   );
