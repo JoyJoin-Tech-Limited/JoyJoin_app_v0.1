@@ -1,4 +1,5 @@
 import { callSocialAI } from './ai/socialModelRouter';
+import { DISCUSSION_STYLE_LABELS } from '@shared/constants';
 
 export interface ParticipantProfile {
   displayName: string;
@@ -96,16 +97,11 @@ export async function generateConversationTopics(
   const sharedSignals = Array.from(signalMap.entries())
     .filter(([_, v]) => v.styles.length >= 2)
     .map(([_, v]) => {
-      const dominant = v.styles.sort(
-        (a, b) => v.styles.filter(s => s === b).length - v.styles.filter(s => s === a).length
-      )[0];
+      const styleCounts = new Map<string, number>();
+      v.styles.forEach(s => styleCounts.set(s, (styleCounts.get(s) || 0) + 1));
+      const dominant = Array.from(styleCounts.entries()).sort((a, b) => b[1] - a[1])[0][0];
       const avgDepth = Math.round(v.depths.reduce((a, c) => a + c, 0) / v.depths.length);
-      const STYLE_LABELS: Record<string, string> = {
-        casual_vibes: '随便聊聊', character_people: '角色/人物党',
-        plot_worldbuilding: '剧情/世界观', meme_humor: '梗和搞笑',
-        deeper_analysis: '深度讨论',
-      };
-      return `${v.label}（${STYLE_LABELS[dominant] || dominant}，深度${avgDepth}/3）`;
+      return `${v.label}（${DISCUSSION_STYLE_LABELS[dominant] || dominant}，深度${avgDepth}/3）`;
     })
     .slice(0, 3);
 

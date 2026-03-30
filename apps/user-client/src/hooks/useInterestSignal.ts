@@ -22,7 +22,7 @@ export interface UpsertInterestSignalInput {
 
 async function fetchInterestSignals(): Promise<InterestSignal[]> {
   const res = await fetch("/api/user/interest-signals", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch interest signals");
+  if (!res.ok) throw new Error(`Failed to fetch interest signals: ${res.status} ${res.statusText}`);
   const json = await res.json();
   return json.signals ?? [];
 }
@@ -34,7 +34,7 @@ async function upsertInterestSignal(data: UpsertInterestSignalInput): Promise<In
     credentials: "include",
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to save interest signal");
+  if (!res.ok) throw new Error(`Failed to save interest signal: ${res.status} ${res.statusText}`);
   const json = await res.json();
   return json.data as InterestSignal;
 }
