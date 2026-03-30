@@ -23,7 +23,7 @@ interface UseSocialIcebreakerReturn {
   socialSessionId: string | null;
   startSession: () => Promise<void>;
   fetchTopics: (mood: AtmosphereMood) => Promise<SocialTopic[]>;
-  advancePhase: (enabledPhases?: SocialIcebreakerPhase[]) => Promise<void>;
+  advancePhase: () => Promise<void>;
   submitPulseCheck: (vibe: 1 | 2 | 3) => Promise<{ averageVibe: number; voteCount: number; allVoted: boolean } | null>;
   generateMyStatements: () => Promise<Array<{ index: number; text: string }>>;
   castVote: (targetUserId: string, statementIndex: number) => Promise<void>;
@@ -101,13 +101,12 @@ export function useSocialIcebreaker({
     [socialSessionId, state?.playerCount, eventType, qc]
   );
 
-  const advancePhase = useCallback(async (enabledPhases?: SocialIcebreakerPhase[]) => {
+  const advancePhase = useCallback(async () => {
     if (!socialSessionId || !state) return;
     setIsAdvancing(true);
     try {
       await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/advance`, {
         currentPhase: state.currentPhase,
-        ...(enabledPhases ? { enabledPhases } : {}),
       });
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
     } catch (error) {
