@@ -100,19 +100,20 @@ Returns all stored signals for the authenticated user.
 
 ## How Matching Uses the Signal
 
-Signal data is consumed in three places, all as **soft enhancers** with no hard-filter behaviour:
+Signal data is consumed in two places, both as **AI prompt enrichment** with no effect on deterministic pair-score computation:
 
-### 1. Pair Scoring — `calculateSignalAlignmentBonus()` in `poolMatchingService.ts` ✅ NEW
+### 1. ~~Pair Scoring — `calculateSignalAlignmentBonus()` in `poolMatchingService.ts`~~ ❌ REMOVED
 
-When two users share a common interest AND both have completed the boost for that interest:
-
-```
-+5 if discussionStyle matches exactly
-+3 if |conversationDepth₁ - conversationDepth₂| ≤ 1
-Total signal bonus capped at +10, applied on top of the heat bonus
-```
-
-This is the **primary matching-quality path**: users who complete the boost flow receive a small but real pair-score improvement when their conversation style/depth preferences align with a potential match. This is measurable by comparing average interest-dimension pair-scores between (both users have signals) vs. (neither has signals) for the same shared interest.
+> **Architectural boundary (enforced):** `user_interest_signals` are NOT used in deterministic
+> pair-score computation. The `calculateSignalAlignmentBonus()` function and
+> `loadInterestSignalLookup()` have been removed from `poolMatchingService.ts`.
+>
+> The deterministic interest score (`calculateInterestScoreAsync`) reads **only** from
+> `user_interests` (topic overlaps + heat levels). Changing or omitting
+> `user_interest_signals` data does not affect pair scores or group formation.
+>
+> This invariant is verified by the tests in
+> `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
 
 ### 2. Match Explanation — `findConnectionPoints()` in `matchExplanationService.ts`
 
@@ -128,13 +129,13 @@ When generating pair explanations:
 
 ## Measurement Plan
 
-### Primary metric: does the boost drive better matching outcomes?
+### Primary metric: does the boost drive richer AI explanation and icebreaker quality?
 
-Compare the interest-dimension pair-score for user pairs where:
-- **A**: both users have a signal for the shared interest
-- **B**: neither user has a signal for the shared interest
+Since signals are no longer used in deterministic pair scoring, the measurement focus shifts
+to AI enrichment quality:
 
-If the feature is working: group A should show higher interest-dimension scores and, when post-event feedback is available, higher satisfaction ratings.
+- **Connection point richness**: compare explanation connection points for users with vs. without signals
+- **Icebreaker relevance**: evaluate topic relevance via post-event feedback for signal vs. no-signal cohorts
 
 ### Secondary metrics
 
@@ -142,7 +143,6 @@ If the feature is working: group A should show higher interest-dimension scores 
 |---|---|
 | Opt-in rate | Count `[InterestSignalBoost] completed` log lines / pool registration events |
 | Completion rate | Same log — all completions are full 2-step (no partial save) |
-| Avg signal alignment bonus at match time | Log `signalBonus > 0` in `calculateSignalAlignmentBonus()` |
 | Post-event satisfaction | Existing `EventFeedbackFlow` — compare signal vs. no-signal cohorts |
 
 Server-side log format (emitted on each POST /api/user/interest-signals):
@@ -159,7 +159,6 @@ Server-side log format (emitted on each POST /api/user/interest-signals):
 - Typed server routes (POST/GET), with `enthusiasmLevel` derived from onboarding data
 - Optional client UI: 2-step bottom sheet (discussion style + depth)
 - Read-only heat badge shown in sheet header from onboarding data
-- Signal alignment bonus in `calculateInterestScoreAsync()` (+5 style match, +3 depth match, cap +10)
 - Integration with match explanation connection points
 - Integration with icebreaker topic generation prompt
 - Server-side instrumentation logging

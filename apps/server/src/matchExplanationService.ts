@@ -496,7 +496,10 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
     points.push(`深度同好（${deepOverlap.count}个共同深度兴趣）`);
   }
 
-  // Interest signal alignment: same interest key + similar discussion style or depth
+  // Interest signal alignment — prompt enrichment only.
+  // user_interest_signals (discussionStyle, conversationDepth) are valid here for
+  // generating richer connection points shown in the AI match explanation.
+  // They must NOT be read inside poolMatchingService pair-score computation.
   if (member1.interestSignals?.length && member2.interestSignals?.length) {
     const signalMap2 = new Map(
       member2.interestSignals.map(s => [s.interestKey, s])
