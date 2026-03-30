@@ -44,6 +44,9 @@ import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentSer
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
 
+type UserInterestSignalMap = Map<string, UserInterestSignal>;
+type UserInterestSignalLookup = Map<string, UserInterestSignalMap>;
+
 
 
 
@@ -231,6 +234,33 @@ async function getUserInterests(userId: string): Promise<{
 }
 
 /**
+ * 预加载用户兴趣信号，避免在匹配循环中为每个 pair 额外查询数据库。
+ */
+async function loadInterestSignalLookup(userIds: string[]): Promise<UserInterestSignalLookup> {
+  const lookup: UserInterestSignalLookup = new Map();
+
+  if (userIds.length === 0) {
+    return lookup;
+  }
+
+  const signals = await db
+    .select()
+    .from(userInterestSignals)
+    .where(inArray(userInterestSignals.userId, userIds));
+
+  for (const signal of signals) {
+    let userSignalMap = lookup.get(signal.userId);
+    if (!userSignalMap) {
+      userSignalMap = new Map();
+      lookup.set(signal.userId, userSignalMap);
+    }
+    userSignalMap.set(signal.interestKey, signal);
+  }
+
+  return lookup;
+}
+
+/**
  * 计算兴趣兼容信号对齐加分 (0–10)
  *
  * When two users have both completed the optional Interest Signal Boost for the
@@ -246,27 +276,22 @@ async function getUserInterests(userId: string): Promise<{
  * Measurement: compare average pair-score for (both have signal) vs. (neither has signal)
  * on the same shared interest to evaluate whether the bonus drives better group outcomes.
  */
-async function calculateSignalAlignmentBonus(
+function calculateSignalAlignmentBonus(
   user1Id: string,
   user2Id: string,
-  commonTopics: string[]
-): Promise<number> {
+  commonTopics: string[],
+  signalLookup?: UserInterestSignalLookup
+): number {
   if (commonTopics.length === 0) return 0;
 
-  const [signals1, signals2] = await Promise.all([
-    db.select().from(userInterestSignals).where(eq(userInterestSignals.userId, user1Id)),
-    db.select().from(userInterestSignals).where(eq(userInterestSignals.userId, user2Id)),
-  ]);
+  const signalMap1 = signalLookup?.get(user1Id);
+  const signalMap2 = signalLookup?.get(user2Id);
 
-  if (!signals1.length || !signals2.length) return 0;
-
-  const signalMap2 = new Map<string, UserInterestSignal>(
-    signals2.map((s: UserInterestSignal) => [s.interestKey, s])
-  );
+  if (!signalMap1 || !signalMap2) return 0;
 
   let bonus = 0;
   for (const topic of commonTopics) {
-    const s1 = signals1.find((s: UserInterestSignal) => s.interestKey === topic);
+    const s1 = signalMap1.get(topic);
     const s2 = signalMap2.get(topic);
     if (!s1 || !s2) continue;
 
@@ -285,7 +310,8 @@ async function calculateSignalAlignmentBonus(
  */
 async function calculateInterestScoreAsync(
   user1Id: string, 
-  user2Id: string
+  user2Id: string,
+  signalLookup?: UserInterestSignalLookup
 ): Promise<number> {
   const interests1 = await getUserInterests(user1Id);
   const interests2 = await getUserInterests(user2Id);
@@ -323,10 +349,10 @@ async function calculateInterestScoreAsync(
   }
   
   heatBonus = Math.min(heatBonus, 20);
-
+  
   // Signal alignment bonus: soft boost when both users have completed the optional
   // Interest Signal Boost for the same interest with compatible style/depth prefs.
-  const signalBonus = await calculateSignalAlignmentBonus(user1Id, user2Id, commonTopics);
+  const signalBonus = calculateSignalAlignmentBonus(user1Id, user2Id, commonTopics, signalLookup);
 
   return Math.min(100, baseScore + heatBonus + signalBonus);
 }
@@ -638,9 +664,13 @@ function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWi
  * Note — Language (4%): 普通话覆盖率高，语言维度区分力有限，保留为轻量兼容信号。
  * Note — Preference (5%): 目前酒吧/饭店活动场景分化有限，保留为轻量场景适配信号。
  */
-async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile): Promise<number> {
+async function calculatePairScore(
+  user1: UserWithProfile,
+  user2: UserWithProfile,
+  signalLookup?: UserInterestSignalLookup
+): Promise<number> {
   const chemistry = calculateChemistryScore(user1, user2);
-  const interest = await calculateInterestScoreAsync(user1.userId, user2.userId);
+  const interest = await calculateInterestScoreAsync(user1.userId, user2.userId, signalLookup);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
 
@@ -674,7 +704,10 @@ async function calculatePairScore(user1: UserWithProfile, user2: UserWithProfile
  * 计算小组内所有成员的平均配对兼容性分数
  * 包含所有6个维度：chemistry + interest + socialAffinity + backgroundDiversity + preference + language
  */
-async function calculateGroupPairScore(members: UserWithProfile[]): Promise<number> {
+async function calculateGroupPairScore(
+  members: UserWithProfile[],
+  signalLookup?: UserInterestSignalLookup
+): Promise<number> {
   if (members.length < 2) return 0;
   
   let totalScore = 0;
@@ -682,7 +715,7 @@ async function calculateGroupPairScore(members: UserWithProfile[]): Promise<numb
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += await calculatePairScore(members[i], members[j]);
+      totalScore += await calculatePairScore(members[i], members[j], signalLookup);
       pairCount++;
     }
   }
@@ -854,6 +887,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   if (eligibleUsers.length < (pool.minGroupSize || 4)) {
     throw new Error(`报名人数不足，至少需要${pool.minGroupSize}人`);
   }
+
+  const eligibleUserIds = eligibleUsers.map(user => user.userId);
+  const interestSignalLookup = await loadInterestSignalLookup(eligibleUserIds);
   
   // 3.5 获取邀请关系 (invitation relationships)
   // Query all invitation uses for registrations in this pool
@@ -904,7 +940,8 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
       let score = await calculatePairScore(
         eligibleUsers[i] as UserWithProfile, 
-        eligibleUsers[j] as UserWithProfile
+        eligibleUsers[j] as UserWithProfile,
+        interestSignalLookup
       );
       
       // Check if this pair has an invitation relationship
@@ -952,7 +989,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         // 计算候选人与当前小组成员的平均分数
         let totalScore = 0;
         for (const member of groupMembers) {
-          totalScore += await calculatePairScore(candidate, member);
+          totalScore += await calculatePairScore(candidate, member, interestSignalLookup);
         }
         const avgScore = totalScore / groupMembers.length;
         
@@ -972,7 +1009,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     // 只保留达到最小人数的小组
     if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = await calculateGroupPairScore(groupMembers);
+      const avgPairScore = await calculateGroupPairScore(groupMembers, interestSignalLookup);
       const diversity = calculateGroupDiversity(groupMembers);
       const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));

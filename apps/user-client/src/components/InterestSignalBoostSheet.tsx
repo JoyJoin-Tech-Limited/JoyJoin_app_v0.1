@@ -8,7 +8,7 @@
  * Enthusiasm/passion baseline is derived server-side from onboarding heat data — not re-asked here.
  * Never blocks matching or onboarding — purely optional.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Check, Flame, Leaf, Star } from "lucide-react";
 import {
@@ -38,6 +38,10 @@ const DEPTH_OPTIONS = [
   { value: 2, emoji: "🏄", label: "适度深入", sub: "聊出点干货" },
   { value: 3, emoji: "🤿", label: "深挖细节", sub: "越深越带劲" },
 ];
+
+// Keep reset timing aligned with the sheet close animation so state clears
+// after the dismiss transition completes, not while the sheet is still visible.
+const SHEET_RESET_DELAY_MS = 400;
 
 // ── Heat level badge helper ────────────────────────────────────────────────
 
@@ -75,6 +79,8 @@ export default function InterestSignalBoostSheet({
 }: InterestSignalBoostSheetProps) {
   const { upsertSignal, isSubmitting } = useInterestSignal();
   const { toast } = useToast();
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasOpenedRef = useRef(false);
 
   const [step, setStep] = useState<1 | 2 | "done">(1);
   const [style, setStyle] = useState<string>("");
@@ -84,14 +90,37 @@ export default function InterestSignalBoostSheet({
   const resolvedLabel = interestLabel ?? "兴趣";
   const heatBadge = getHeatBadge(onboardingHeatLevel);
 
-  const handleClose = () => {
-    onOpenChange(false);
-    // Reset for next open
-    setTimeout(() => {
+  useEffect(() => {
+    if (open) {
+      hasOpenedRef.current = true;
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+        resetTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (!hasOpenedRef.current) {
+      return;
+    }
+
+    resetTimeoutRef.current = setTimeout(() => {
       setStep(1);
       setStyle("");
       setDepth(0);
-    }, 400);
+      resetTimeoutRef.current = null;
+    }, SHEET_RESET_DELAY_MS);
+
+    return () => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+        resetTimeoutRef.current = null;
+      }
+    };
+  }, [open]);
+
+  const handleSheetOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
   };
 
   const handleSubmit = async () => {
@@ -113,7 +142,7 @@ export default function InterestSignalBoostSheet({
   const canSubmit = style !== "" && depth > 0;
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto rounded-t-2xl pb-8">
         {/* Header */}
         <SheetHeader className="mb-5 text-left">
@@ -261,7 +290,7 @@ export default function InterestSignalBoostSheet({
                   {heatBadge.label}
                 </Badge>
               )}
-              <Button className="w-full max-w-xs mt-2" onClick={handleClose}>
+              <Button className="w-full max-w-xs mt-2" onClick={() => onOpenChange(false)}>
                 好的，期待活动！
               </Button>
             </motion.div>
