@@ -1,8 +1,62 @@
 # JoyJoin AI Agent Harness Separation Strategy
 
-**Status:** Reference Architecture — Internal Engineering / Product Use  
+**Status:** Current-State + Next-State Architecture — Internal Engineering / Product Use  
 **Last updated:** 2026-03-30  
 **Scope:** AI product agent systems for Onboarding Discovery, Match Intelligence, and Event Momentum
+
+> **Audit note (2026-03-30):** This document has been revised from a forward-looking reference memo
+> to a current-state + next-state architecture guide. Sections now distinguish between **✅ Active today**,
+> **⚡ Partially implemented / adjacent patterns already in repo**, and **🔲 Still proposed / future work**.
+> See §0 for the current implementation map and §11–12 for codified architectural invariants.
+
+---
+
+## 0. Current Implementation Map
+
+This section maps the three agent systems to what is **actually shipped in the repository today**. Use it as the ground truth when scoping new AI work or reviewing PRs.
+
+### 0.1 What is Active Today
+
+| System | Shipped component | Key file(s) | Notes |
+|---|---|---|---|
+| **Event Momentum** | Curated fallback content libraries | `apps/server/src/socialIcebreakerAIService.ts` | `FALLBACK_WARMUP_TOPICS`, `FALLBACK_MICRO_CHALLENGES`, `FALLBACK_LIE_DETECTIVE_STATEMENTS` — activated automatically when model output is invalid |
+| **Event Momentum** | Live/fallback generation for all MVP phases | `apps/server/src/socialIcebreakerAIService.ts` | `generateWarmupTopics()`, `generateMicroChallenges()`, `generateLieDetectiveStatements()`, `generateRecapSummary()`, `generatePersonalityDiceChallenges()` |
+| **Event Momentum** | Server-driven phase lifecycle with env-flag feature gates | `apps/server/src/socialIcebreakerPhaseConfig.ts`, `apps/server/src/routes/socialIcebreaker.ts` | `getServerEnabledPhases()` resolves active phases from env vars; `/advance` uses `getNextEligiblePhase()` — the server, not the client, owns phase transitions |
+| **Event Momentum** | Beta phase scaffolding (auction, mini_script_beta) | `packages/shared/src/socialIcebreaker.ts`, `apps/server/src/socialIcebreakerPhaseConfig.ts` | Phases defined and gate-controlled; off by default (`SOCIAL_ICEBREAKER_ENABLE_AUCTION`, `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` env flags) |
+| **Match Intelligence** | AI pair explanations + icebreakers with cache | `apps/server/src/matchExplanationService.ts` | `generatePairExplanation()`, `generateIceBreakers()` — composed via `generateGroupAnalysis()` and cached in `eventPoolGroups.pairExplanationsCache` / `iceBreakersCache`; `generatedAt` timestamp returned |
+| **Match Intelligence** | Group analysis AI endpoint (full pipeline) | `apps/server/src/matchExplanationService.ts` | `generateGroupAnalysis()` — implements cache → AI generation → fallback → structured output pipeline; returns `fromCache: boolean`, `generatedAt` |
+| **Match Intelligence** | Shared typed contract for group analysis | `packages/shared/src/groupAnalysis.ts`, `packages/shared/src/types/groupAnalysis.ts` | `MatchExplanationContract`, `GroupAnalysisContract`, `GroupAnalysisResponse` — consumed by both server and `user-client` |
+| **Match Intelligence** | Interest signal boost for icebreakers / conversation topics | `apps/server/src/matchExplanationService.ts` (l.104+), `apps/server/src/conversationTopicsService.ts` | `MatchMember.interestSignals[]` — loaded via `loadInterestSignalsByUserIds()` in `routes.ts`; used to enrich prompts for group analysis and blind-box conversation topics; does **not** affect `poolMatchingService.ts` pair scores |
+| **Match Intelligence** | Dual-provider LLM routing (social + creative) | `apps/server/src/ai/socialModelRouter.ts`, `apps/server/src/ai/creativeModelRouter.ts` | `callSocialAI()` MiniMax-first + DeepSeek fallback; `getClientForFunction()` per-function routing; logs `provider=` + `latency=ms` on every call |
+| **Onboarding Discovery** | Canonical adaptive V4 personality engine (deterministic) | `packages/shared/src/personality/` | Authoritative — AI layer must not replace this |
+| **Onboarding Discovery** | Server-driven onboarding state via `nextStep` | `apps/server/src/routes.ts`, `apps/user-client/src/App.tsx` | All progression flags (`hasCompletedPersonalityTest`, `profileEssentialComplete`, etc.) are server-owned; client reads only |
+
+### 0.2 Adjacent Patterns Already in Repo (Partially Realized)
+
+These components exhibit patterns from the strategy's three-role model but were not built under the formal orchestrator abstraction. They serve as de facto reference implementations.
+
+| Pattern | Where it lives | What it implements |
+|---|---|---|
+| Generator → Evaluator → Policy Synthesizer (sequential) | `apps/server/src/socialIcebreakerAIService.ts` | Each `generate*()` function: calls model, validates response shape, falls back to curated content on rejection — this IS the three-stage pattern at Level 1 |
+| Generator → cache → structured output | `apps/server/src/matchExplanationService.ts` | `generateGroupAnalysis()` applies cache-check → AI call → shape validation → fallback → returns typed `GroupAnalysis` with `fromCache` + `generatedAt` metadata |
+| Shared typed I/O contract | `packages/shared/src/groupAnalysis.ts`, `packages/shared/src/types/groupAnalysis.ts` | Replaces the abstract `packages/shared/src/ai/` proposal for Match Intelligence — the actual contract lives here |
+| Observability fields on AI output | `packages/shared/src/types/groupAnalysis.ts` | `GroupAnalysisResponse.fromCache`, `.generatedAt` — partial; prompt version and evaluator rejection reason not yet captured |
+| Per-call provider + latency logging | `apps/server/src/ai/socialModelRouter.ts` | `[socialAI] {callerTag} provider={minimax|deepseek} latency={n}ms` on every `callSocialAI()` call |
+
+### 0.3 Still Proposed / Not Yet Built
+
+| Item | Status | Notes |
+|---|---|---|
+| `apps/server/src/services/onboardingDiscoveryOrchestrator.ts` | 🔲 Proposed | No file exists; Onboarding Discovery has no dedicated AI layer yet |
+| `apps/server/src/services/matchIntelligenceOrchestrator.ts` | 🔲 Proposed | No file exists; `matchExplanationService.ts` is the de facto adjacent implementation |
+| `apps/server/src/services/eventMomentumOrchestrator.ts` | 🔲 Proposed | No file exists; `socialIcebreakerAIService.ts` is the de facto implementation |
+| `packages/shared/src/ai/onboarding.ts` | 🔲 Proposed | Directory `packages/shared/src/ai/` does not exist |
+| `packages/shared/src/ai/matching.ts` | 🔲 Proposed | Actual contract is in `packages/shared/src/groupAnalysis.ts` + `packages/shared/src/types/groupAnalysis.ts` |
+| `packages/shared/src/ai/icebreaker.ts` | 🔲 Proposed | No dedicated shared contract; schema lives inline in `socialIcebreakerAIService.ts` |
+| Prompt version tagging on all model calls | 🔲 Proposed | Not consistently implemented; provider + latency are logged but prompt version is not |
+| Evaluator rejection reason in observability output | 🔲 Proposed | `fromCache` + `generatedAt` are logged; rejection reasons are `console.warn` only |
+| `callLLMForInference()` (attribute inference fallback) | ⚡ Implemented, not wired | `apps/server/src/inference/llmFallbackInference.ts` — implemented but no runtime callers yet |
+| Thompson Sampling weight learning in pool matching | ⚡ Implemented, not wired | `apps/server/src/matchingWeightsService.ts` — not yet active in `poolMatchingService.ts` |
 
 ---
 
@@ -129,7 +183,13 @@ The following levels describe how independently each role operates at runtime. H
 
 In v1, implement **3 orchestration services** — one per product agent system. **Onboarding Discovery** and **Event Momentum** should start at **Separation Level 1** (sequential Generator → Evaluator → Policy Synthesizer stages inside one orchestration service). **Match Intelligence is the deliberate v1 exception:** it should still be orchestrated as one product system, but with stronger internal separation from day one, targeting **Level 1–2 for the Generator** and **Level 2 for the Evaluator and Policy Synthesizer**.
 
-> **Proposed files (to be created):** The `apps/server/src/services/` directory already exists (see `eventThemeTitleGenerator.ts`). The orchestrator files below are the recommended new additions:
+> **Adjacency note (2026-03-30):** The formal orchestrator files below have not yet been created. However,
+> `apps/server/src/socialIcebreakerAIService.ts` (Event Momentum) and `apps/server/src/matchExplanationService.ts`
+> (Match Intelligence) already implement the three-role pipeline at Separation Level 1. New orchestrator work should
+> **extend these existing services deliberately** rather than duplicating logic under new files with vague boundaries.
+> The "Phase 0" infrastructure work (shared contracts, observability hooks) is partially realized — see §0.2 and §0.3.
+
+> **🔲 Proposed files (to be created):** The `apps/server/src/services/` directory already exists (see `eventThemeTitleGenerator.ts`). The orchestrator files below are the recommended new additions:
 
 ```
 apps/server/src/services/
@@ -138,13 +198,16 @@ apps/server/src/services/
   eventMomentumOrchestrator.ts         ← Separation Level 1 (v1) — proposed
 ```
 
-> **Proposed files (to be created):** The `packages/shared/src/ai/` directory does not yet exist. Create it as part of Phase 0. Shared typed I/O contracts live there:
+> **🔲 Proposed files (to be created):** The `packages/shared/src/ai/` directory does not yet exist.
+> For **Match Intelligence**, the actual shared contract already exists at `packages/shared/src/groupAnalysis.ts`
+> and `packages/shared/src/types/groupAnalysis.ts` — extend those rather than creating a duplicate.
+> For the other two systems, create the `packages/shared/src/ai/` directory as part of Phase 0:
 
 ```
 packages/shared/src/ai/
   onboarding.ts    ← input/output schemas for Onboarding Discovery — proposed
-  matching.ts      ← input/output schemas for Match Intelligence — proposed
   icebreaker.ts    ← input/output schemas for Event Momentum — proposed
+  (matching.ts omitted — use packages/shared/src/groupAnalysis.ts + types/groupAnalysis.ts instead)
 ```
 
 Each orchestrator implements the same structural stages:
@@ -217,13 +280,16 @@ Onboarding and Event Momentum can start lighter because:
 
 ### 6.3 Rollout Phases
 
-| Phase | System | Scope |
-|---|---|---|
-| **Phase 0** | All | Build shared harness infrastructure: `packages/shared/src/ai/` schemas, server AI client wrapper, logging/observability hooks, feature flags, fallback contract pattern. |
-| **Phase 1** | Event Momentum | Deploy `eventMomentumOrchestrator`. Scope: structured game plan generation for 酒吧 and 饭局. Host-supervised delivery only. Curated fallback game library must be active before launch. |
-| **Phase 2** | Onboarding Discovery | Deploy `onboardingDiscoveryOrchestrator`. Scope: question phrasing adaptation, low-signal detection, result explanation. Server-owned progression must be verified as unchanged. |
-| **Phase 3** | Match Intelligence | Deploy `matchIntelligenceOrchestrator`. Scope: compatibility narratives, intro suggestions, bounded reranking of deterministic shortlist. A/B tested against deterministic baseline. |
-| **Phase 4** | All | Cross-agent feedback loop: unify event outcome instrumentation, build evaluation dashboard, connect offline outcomes to per-system harness tuning. |
+> **Status update (2026-03-30):** Several Phase 0 infrastructure primitives are already realized in the repo.
+> The table below reflects current state.
+
+| Phase | System | Scope | Status |
+|---|---|---|---|
+| **Phase 0** | All | Build shared harness infrastructure: `packages/shared/src/ai/` schemas, server AI client wrapper, logging/observability hooks, feature flags, fallback contract pattern. | ⚡ **Partially realized.** Dual-provider routing (`socialModelRouter.ts`, `creativeModelRouter.ts`) is live. Match Intelligence shared contract is live (`packages/shared/src/groupAnalysis.ts`). Curated fallback libraries are active. `fromCache` + `generatedAt` observability fields are present on group analysis. Prompt-version tagging and structured fallback-rejection observability are still 🔲 proposed. |
+| **Phase 1** | Event Momentum | Deploy `eventMomentumOrchestrator`. Scope: structured game plan generation for 酒吧 and 饭局. Host-supervised delivery only. Curated fallback game library must be active before launch. | ⚡ **Core functionality live** in `socialIcebreakerAIService.ts` at Level 1. Formal `eventMomentumOrchestrator.ts` wrapper is 🔲 still proposed. |
+| **Phase 2** | Onboarding Discovery | Deploy `onboardingDiscoveryOrchestrator`. Scope: question phrasing adaptation, low-signal detection, result explanation. Server-owned progression must be verified as unchanged. | 🔲 **Not yet started.** Canonical engine in `packages/shared/src/personality/` is deterministic only. |
+| **Phase 3** | Match Intelligence | Deploy `matchIntelligenceOrchestrator`. Scope: compatibility narratives, intro suggestions, bounded reranking of deterministic shortlist. A/B tested against deterministic baseline. | ⚡ **Explanation layer live** in `matchExplanationService.ts`. Formal orchestrator wrapper + bounded reranking are 🔲 still proposed. |
+| **Phase 4** | All | Cross-agent feedback loop: unify event outcome instrumentation, build evaluation dashboard, connect offline outcomes to per-system harness tuning. | 🔲 **Not yet started.** `matchingWeightsService.ts` (Thompson Sampling) is implemented but not wired into `poolMatchingService.ts`. |
 
 ### 6.4 KPI Implications by Separation Level
 
@@ -249,9 +315,16 @@ Specific KPIs per system to track from Phase 1 onwards:
 
 ## 7. Shared Output Contract Shapes
 
-The following are reference schemas for `packages/shared/src/ai/`. These are not exhaustive; add fields as needed, but enforce schema validation before returning any output from the Policy Synthesizer stage.
+The following are reference schemas. Enforce schema validation before returning any output from the Policy Synthesizer stage.
 
-### Onboarding Discovery Output (`onboarding.ts`)
+> **Match Intelligence contract status (2026-03-30):** The Match Intelligence output contract is **✅ already live**.
+> Do not create a separate `packages/shared/src/ai/matching.ts` — use and extend the existing contracts:
+> - `packages/shared/src/groupAnalysis.ts` — `MatchExplanationContract`, `GroupAnalysisContract`
+> - `packages/shared/src/types/groupAnalysis.ts` — `GroupAnalysisResponse` (includes `fromCache`, `generatedAt`, `myPairs`)
+>
+> The Onboarding Discovery and Event Momentum contracts below are still 🔲 proposed.
+
+### Onboarding Discovery Output (`packages/shared/src/ai/onboarding.ts`) — 🔲 Proposed
 
 ```typescript
 interface OnboardingDiscoveryOutput {
@@ -267,7 +340,33 @@ interface OnboardingDiscoveryOutput {
 }
 ```
 
-### Match Intelligence Output (`matching.ts`)
+### Match Intelligence Output — ✅ Active (use existing contracts)
+
+```typescript
+// packages/shared/src/groupAnalysis.ts — MatchExplanationContract (active)
+export interface MatchExplanationContract {
+  pairKey: string;
+  explanation: string;
+  chemistryScore: number;
+  sharedInterests: string[];
+  connectionPoints: string[];
+}
+
+// packages/shared/src/types/groupAnalysis.ts — GroupAnalysisResponse (active)
+export interface GroupAnalysisResponse {
+  groupId: string;
+  groupDynamics: string;
+  fromCache: boolean;      // ✅ observability field: active
+  generatedAt: string;     // ✅ observability field: active
+  myPairs?: PairExplanation[];
+  // ... see full definition in packages/shared/src/types/groupAnalysis.ts
+}
+```
+
+> Note: `fallbackUsed` and `policyFlags` from the reference schema below are not yet present on the live
+> `GroupAnalysisResponse`. Add them when the formal orchestrator is built.
+
+### Match Intelligence Output — Reference schema for orchestrator expansion (`matching.ts`) — 🔲 Proposed additions
 
 ```typescript
 interface MatchIntelligenceOutput {
@@ -283,7 +382,7 @@ interface MatchIntelligenceOutput {
 }
 ```
 
-### Event Momentum Output (`icebreaker.ts`)
+### Event Momentum Output (`packages/shared/src/ai/icebreaker.ts`) — 🔲 Proposed
 
 ```typescript
 interface EventMomentumOutput {
@@ -346,18 +445,28 @@ Every orchestrator service should implement the same 7-stage structural pipeline
 
 ## 9. Related Files
 
-| File | Relevance |
-|---|---|
-| `apps/server/src/poolMatchingService.ts` | Authoritative deterministic matching core; Match Intelligence agent wraps this, never replaces it |
-| `apps/server/src/socialIcebreakerAIService.ts` | Existing AI integration point for Event Momentum; orchestrator should integrate here |
-| `apps/server/src/routes/socialIcebreaker.ts` | Social Icebreaker phase lifecycle API; Event Momentum agent operates within this lifecycle |
-| `packages/shared/src/personality/` | Canonical personality engine; Onboarding Discovery agent produces inputs for this, does not replace it |
-| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | Client-side entry point for onboarding; agent outputs are rendered here, not computed here |
-| `apps/server/src/routes.ts` | All API route registrations; new orchestrator routes register here |
-| `packages/shared/src/schema.ts` | Database schema source of truth; agent services read but do not own schema definition |
-| `docs/icebreaker-system.md` | Full technical reference for Social Icebreaker system |
-| `docs/MATCHING_ALGORITHM_REFERENCE.md` | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
-| `docs/PERSONALITY_TEST_SYSTEM.md` | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
+| File | Status | Relevance |
+|---|---|---|
+| `apps/server/src/poolMatchingService.ts` | ✅ Active | Authoritative deterministic matching core; Match Intelligence agent wraps this, never replaces it |
+| `apps/server/src/matchExplanationService.ts` | ✅ Active | De facto Match Intelligence Level-1 orchestration: `generateGroupAnalysis()`, `generateGroupExplanations()`, `generateGroupIceBreakers()`; cache + retry + fallback |
+| `apps/server/src/socialIcebreakerAIService.ts` | ✅ Active | De facto Event Momentum Level-1 orchestration: curated fallback libraries + model generation for all phase types |
+| `apps/server/src/socialIcebreakerPhaseConfig.ts` | ✅ Active | Server-owned phase feature-flag resolution via `getServerEnabledPhases()`; beta phase scaffolding |
+| `apps/server/src/routes/socialIcebreaker.ts` | ✅ Active | Social Icebreaker phase lifecycle API; Event Momentum agent must operate within this lifecycle |
+| `apps/server/src/ai/socialModelRouter.ts` | ✅ Active | Unified dual-provider social AI router (`callSocialAI()`); per-function MiniMax/DeepSeek routing; logs provider + latency |
+| `apps/server/src/ai/creativeModelRouter.ts` | ✅ Active | Provider resolver for creative/identity generation functions (tags, themes, event titles) |
+| `packages/shared/src/groupAnalysis.ts` | ✅ Active | Shared typed contract for Match Intelligence: `MatchExplanationContract`, `GroupAnalysisContract` |
+| `packages/shared/src/types/groupAnalysis.ts` | ✅ Active | `GroupAnalysisResponse` — client-facing contract; includes `fromCache`, `generatedAt` observability fields |
+| `packages/shared/src/personality/` | ✅ Active | Canonical personality engine; Onboarding Discovery agent produces inputs for this, does not replace it |
+| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | ✅ Active | Client-side entry point for onboarding; agent outputs are rendered here, not computed here |
+| `apps/server/src/routes.ts` | ✅ Active | All API route registrations; new orchestrator routes register here; `loadInterestSignalsByUserIds()` defined here |
+| `packages/shared/src/schema.ts` | ✅ Active | Database schema source of truth; agent services read but do not own schema definition |
+| `apps/server/src/inference/llmFallbackInference.ts` | ⚡ Implemented, not wired | Attribute inference fallback via direct DeepSeek; `callLLMForInference()` has no runtime callers yet |
+| `apps/server/src/matchingWeightsService.ts` | ⚡ Implemented, not wired | Thompson Sampling weight learning; not yet connected to `poolMatchingService.ts` |
+| `docs/icebreaker-system.md` | ✅ Active | Full technical reference for Social Icebreaker system |
+| `docs/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
+| `docs/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
+| `docs/interest-signal-boost.md` | ✅ Active | Interest signal boost feature reference; signals flow into icebreaker/explanation prompts, not pair scoring |
+| `docs/AI_INTEGRATION_PLAN.md` | ✅ Active | Phased AI roadmap including LLM provider architecture (§1.4); complementary to this document |
 
 ---
 
@@ -371,7 +480,100 @@ Every orchestrator service should implement the same 7-stage structural pipeline
 | Policy Synthesizer is always deterministic | Generative components must not own the final policy decision. Deterministic enforcement is required for auditability and safety. |
 | Fallback is mandatory before launch | Live user-facing surfaces must not degrade to raw model failure. Fallback to rule-based outputs is required for all three systems before any production launch. |
 | Shared schemas in `packages/shared/src/ai/` | Consistent with repository principle that schema is the source of truth. Enables typed contracts across server and any future client that consumes agent outputs. |
+| Match Intelligence contract already lives in `packages/shared/src/groupAnalysis.ts` | The formal `packages/shared/src/ai/matching.ts` was never created because a real typed contract emerged organically during group analysis implementation. Do not duplicate — extend the existing contract. |
+| Adjacency over greenfield orchestration | Where existing services already behave as proto-orchestrators (`matchExplanationService.ts`, `socialIcebreakerAIService.ts`), extend them deliberately rather than duplicating logic under new files. |
+| Interest signals flow into icebreaker prompts, not pair scoring | `user_interest_signals` are a soft enrichment signal for explanation quality, not a matching filter. This keeps `poolMatchingService.ts` as the single authoritative scoring authority. |
+| Server owns phase lifecycle; AI generates phase content | `getServerEnabledPhases()` and `/advance` transitions are deterministic server operations. AI content generation operates within the resolved phase, never decides what phase comes next. |
 
 ---
 
-*This document is intended as a durable engineering and product reference. Update the Decision Log and Recommended Separation Table when architecture decisions change.*
+## 11. Architecture Invariants
+
+These are non-negotiable rules that must be preserved by all future AI work. Reviewers should reject PRs that violate them.
+
+### 11.1 Deterministic Core is Always Authoritative
+
+- `poolMatchingService.ts` 6-dimension pair scoring is the authoritative ranking source. AI may explain or softly rerank a deterministic shortlist, but must never produce the primary ranking.
+- `packages/shared/src/personality/` adaptive engine selects personality questions deterministically. AI may suggest variants; the canonical engine approves the final selection.
+- Social Icebreaker phase transitions are resolved by `getServerEnabledPhases()` + `getNextEligiblePhase()`. AI generates content within a phase; it does not determine which phase comes next.
+- Onboarding state flags (`nextStep`, `hasCompletedPersonalityTest`, `profileEssentialComplete`, etc.) are server-owned. No AI layer may write or mutate these flags.
+
+### 11.2 Shared Typed Contracts Come Before Client Exposure
+
+- Any AI output that reaches a client must be typed by a shared contract in `packages/shared/`. Do not ship AI-to-client payloads without a TypeScript interface in the shared package.
+- For Match Intelligence, the contract is `packages/shared/src/groupAnalysis.ts` + `packages/shared/src/types/groupAnalysis.ts`. Extend it; do not create parallel types.
+- New AI surfaces must define their shared contract before writing the route handler.
+
+### 11.3 Curated Fallback Libraries are Required, Not Optional
+
+- Every user-facing AI surface must have a curated deterministic fallback library that activates when the model returns an invalid response, times out, or is unavailable.
+- The pattern established in `socialIcebreakerAIService.ts` (`FALLBACK_WARMUP_TOPICS`, `FALLBACK_MICRO_CHALLENGES`, `FALLBACK_LIE_DETECTIVE_STATEMENTS`) is the canonical example. All future AI surfaces must follow it.
+- Fallback must be exercised in tests before the surface ships.
+
+### 11.4 Server-Driven Lifecycle; AI Generates Content Within Phases
+
+- The server owns all state machines and progression logic. AI may generate content within a phase; it must not invent phases, add routes, or mutate lifecycle state directly.
+- This applies equally to: Social Icebreaker phases, onboarding `nextStep`, matching pipeline steps, and any future AI-adjacent lifecycle.
+
+### 11.5 Observability Fields on All AI Outputs
+
+All **new or modified** structured AI outputs returned to a client or stored in the database must include:
+- `fromCache: boolean` — whether the result was served from cache
+- `generatedAt: string` (ISO timestamp) — when the content was generated
+- `provider: string` (optional but strongly recommended) — which LLM produced the output
+
+Existing shipped AI endpoints that do not yet include these fields (e.g. some Social Icebreaker and conversation topic endpoints listed in §0) are treated as **backlog to migrate** to this format; do not assume they are compliant today.
+Future AI outputs should also add:
+- `promptVersion: string` — the version tag of the prompt template used
+- `fallbackUsed: boolean` — whether the curated fallback was activated
+- `evaluatorRejectionReason?: string` — reason if the evaluator rejected a generator output
+
+**Do not log raw PII or user message content in observability fields.**
+
+### 11.6 No Legacy Onboarding Fields in AI Context
+
+No AI service may use `registration_sessions`, `hasCompletedRegistration`, or any other field documented as legacy in `copilot-instructions.md` as input context. Use only active schema fields from `packages/shared/src/schema.ts`.
+
+### 11.7 Interest Signals Enrich Prompts; They Do Not Score Matches
+
+`user_interest_signals` (enthusiasm level, discussion style, conversation depth) are loaded via `loadInterestSignalsByUserIds()` in `routes.ts` and passed as `MatchMember.interestSignals[]` to explanation and icebreaker generation. They are **not** inputs to `poolMatchingService.ts` pair scoring. This distinction must be preserved to keep the scoring algorithm auditable and the explanation layer independently tunable.
+
+---
+
+## 12. What Future AI Changes Must Not Do
+
+This section serves as a reviewer checklist for any PR that touches AI surfaces.
+
+### Matching system
+
+- ❌ Must not give AI output write access to `poolMatchingService.ts` ranking results
+- ❌ Must not bypass hard matching constraints (budget, gender, industry, age range) by any AI reranking
+- ❌ Must not produce match explanations that reference facts not present in the user's actual profile data
+- ❌ Must not create a parallel pair-scoring path that competes with the 6-dimension algorithm
+- ❌ Must not remove or weaken the `fromCache` / `generatedAt` observability fields from `GroupAnalysisResponse`
+
+### Onboarding system
+
+- ❌ Must not allow any AI output to write `nextStep`, `hasCompletedPersonalityTest`, or any other onboarding flag
+- ❌ Must not reconstruct onboarding flow client-side based on AI predictions
+- ❌ Must not replace the deterministic adaptive engine in `packages/shared/src/personality/` with a model-driven question selector
+- ❌ Must not add new `nextStep` values without a corresponding server-side flag and switch case in `App.tsx`
+
+### Event Momentum system
+
+- ❌ Must not deliver AI-generated game content directly to attendees without passing through host review or a curated fallback gate
+- ❌ Must not allow AI to add, remove, or reorder Social Icebreaker phases by mutating `enabledPhases` — only `getServerEnabledPhases()` may resolve active phases
+- ❌ Must not remove curated fallback libraries from `socialIcebreakerAIService.ts`
+- ❌ Must not expose raw model chain-of-thought or internal reasoning to end users
+
+### All AI surfaces
+
+- ❌ Must not ship a new AI-to-client payload without a shared TypeScript contract in `packages/shared/`
+- ❌ Must not skip schema validation on model output before returning it from any route handler
+- ❌ Must not use legacy fields (`registration_sessions`, `hasCompletedRegistration`, deprecated `interestsTop`) as AI context
+- ❌ Must not use `console.warn` as the only signal for evaluator rejection — structured `fallbackUsed` must be returned in the response
+- ❌ Must not introduce a new DeepSeek or MiniMax client without evaluating whether `socialModelRouter.ts` or `creativeModelRouter.ts` is the right integration point
+
+---
+
+*This document is intended as a durable engineering and product reference. Update the Decision Log, Architecture Invariants, and What Future AI Changes Must Not Do sections when architecture decisions change.*
