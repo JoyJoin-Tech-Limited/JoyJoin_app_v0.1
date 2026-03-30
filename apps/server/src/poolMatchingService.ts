@@ -25,6 +25,7 @@ import {
   eventAttendance,
   users, 
   userInterests,
+  userInterestSignals,
   matchingConfig,
   invitationUses,
   invitations,
@@ -36,6 +37,7 @@ import { calculateAge } from "@shared/utils";
 import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
+import type { UserInterestSignal } from "@shared/schema";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
@@ -229,7 +231,56 @@ async function getUserInterests(userId: string): Promise<{
 }
 
 /**
- * 计算兴趣重叠度 (升级版 - 支持 Heat Level 加权)
+ * 计算兴趣兼容信号对齐加分 (0–10)
+ *
+ * When two users have both completed the optional Interest Signal Boost for the
+ * same interest, we apply a soft alignment bonus to the interest pair-score:
+ *   +5 if discussionStyle matches exactly
+ *   +3 if |conversationDepth1 - conversationDepth2| ≤ 1
+ * Total is capped at +10.
+ *
+ * This creates a *real* matching-quality path: users who invest in the boost flow
+ * are rewarded with marginally higher affinity scores when their style/depth
+ * preferences align — a concrete, measurable improvement over the baseline.
+ *
+ * Measurement: compare average pair-score for (both have signal) vs. (neither has signal)
+ * on the same shared interest to evaluate whether the bonus drives better group outcomes.
+ */
+async function calculateSignalAlignmentBonus(
+  user1Id: string,
+  user2Id: string,
+  commonTopics: string[]
+): Promise<number> {
+  if (commonTopics.length === 0) return 0;
+
+  const [signals1, signals2] = await Promise.all([
+    db.select().from(userInterestSignals).where(eq(userInterestSignals.userId, user1Id)),
+    db.select().from(userInterestSignals).where(eq(userInterestSignals.userId, user2Id)),
+  ]);
+
+  if (!signals1.length || !signals2.length) return 0;
+
+  const signalMap2 = new Map<string, UserInterestSignal>(
+    signals2.map((s: UserInterestSignal) => [s.interestKey, s])
+  );
+
+  let bonus = 0;
+  for (const topic of commonTopics) {
+    const s1 = signals1.find((s: UserInterestSignal) => s.interestKey === topic);
+    const s2 = signalMap2.get(topic);
+    if (!s1 || !s2) continue;
+
+    // Same discussion style → strong alignment signal
+    if (s1.discussionStyle === s2.discussionStyle) bonus += 5;
+    // Similar conversation depth (±1) → compatible depth preference
+    if (Math.abs((s1.conversationDepth ?? 2) - (s2.conversationDepth ?? 2)) <= 1) bonus += 3;
+  }
+
+  return Math.min(bonus, 10); // Cap at +10 to keep interest weight balanced
+}
+
+/**
+ * 计算兴趣重叠度 (升级版 - 支持 Heat Level 加权 + 信号对齐加分)
  * 优先使用 user_interests 表，回退到 legacy interestsTop
  */
 async function calculateInterestScoreAsync(
@@ -272,7 +323,12 @@ async function calculateInterestScoreAsync(
   }
   
   heatBonus = Math.min(heatBonus, 20);
-  return Math.min(100, baseScore + heatBonus);
+
+  // Signal alignment bonus: soft boost when both users have completed the optional
+  // Interest Signal Boost for the same interest with compatible style/depth prefs.
+  const signalBonus = await calculateSignalAlignmentBonus(user1Id, user2Id, commonTopics);
+
+  return Math.min(100, baseScore + heatBonus + signalBonus);
 }
 
 /**
