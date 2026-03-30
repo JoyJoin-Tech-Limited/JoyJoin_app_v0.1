@@ -59,7 +59,7 @@ function getBadgeLabel(enthusiasm: number): string {
 export interface InterestSignalBoostSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Pre-selected interest. If absent the user picks from their interest list. */
+  /** Pre-selected interest key for this sheet; this component does not render an interest picker. */
   interestKey?: string;
   interestLabel?: string;
 }
@@ -97,7 +97,6 @@ export default function InterestSignalBoostSheet({
     try {
       await upsertSignal({
         interestKey: resolvedKey,
-        interestLabel: resolvedLabel,
         enthusiasmLevel: enthusiasm,
         discussionStyle: style,
         conversationDepth: depth,

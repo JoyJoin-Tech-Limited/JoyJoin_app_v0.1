@@ -239,6 +239,74 @@ describe('matchExplanationService', () => {
       expect(points.some(p => p.includes('深度同好'))).toBe(false);
     });
 
+    it('should show matching discussion style for the same signaled interest', () => {
+      const memberA: MatchMember = {
+        userId: 'user-a',
+        displayName: '甲',
+        archetype: '开心柯基',
+        interestSignals: [
+          {
+            interestKey: 'hotpot',
+            interestLabel: '火锅',
+            enthusiasmLevel: 4,
+            discussionStyle: 'casual_vibes',
+            conversationDepth: 2,
+          },
+        ],
+      };
+      const memberB: MatchMember = {
+        userId: 'user-b',
+        displayName: '乙',
+        archetype: '暖心熊',
+        interestSignals: [
+          {
+            interestKey: 'hotpot',
+            interestLabel: '火锅',
+            enthusiasmLevel: 5,
+            discussionStyle: 'casual_vibes',
+            conversationDepth: 3,
+          },
+        ],
+      };
+
+      const points = matchExplanationService.findConnectionPoints(memberA, memberB);
+      expect(points).toContain('火锅同款聊法（随便聊聊）');
+    });
+
+    it('should show similar conversation depth for the same signaled interest', () => {
+      const memberA: MatchMember = {
+        userId: 'user-a',
+        displayName: '甲',
+        archetype: '开心柯基',
+        interestSignals: [
+          {
+            interestKey: 'anime',
+            interestLabel: '动漫',
+            enthusiasmLevel: 4,
+            discussionStyle: 'plot_worldbuilding',
+            conversationDepth: 2,
+          },
+        ],
+      };
+      const memberB: MatchMember = {
+        userId: 'user-b',
+        displayName: '乙',
+        archetype: '暖心熊',
+        interestSignals: [
+          {
+            interestKey: 'anime',
+            interestLabel: '动漫',
+            enthusiasmLevel: 3,
+            discussionStyle: 'character_people',
+            conversationDepth: 3,
+          },
+        ],
+      };
+
+      const points = matchExplanationService.findConnectionPoints(memberA, memberB);
+      expect(points).toContain('动漫话题深度相近');
+    });
+
     it('should NOT show relationship connection when status is 不透露', () => {
       const memberPrivate: MatchMember = {
         userId: 'user-private',
