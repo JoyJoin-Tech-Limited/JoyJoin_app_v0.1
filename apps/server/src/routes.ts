@@ -9688,6 +9688,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         pairExplanations: analysis.pairExplanations.map(mapPe),
         fromCache: analysis.fromCache ?? false,
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+        provider: analysis.provider ?? null,
+        fallbackUsed: analysis.fallbackUsed ?? false,
         // Convenience field: pairs involving the authenticated viewer
         myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
       };
