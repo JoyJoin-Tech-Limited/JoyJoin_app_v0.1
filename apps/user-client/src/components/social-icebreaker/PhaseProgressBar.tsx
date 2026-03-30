@@ -36,7 +36,7 @@ export function PhaseProgressBar({
           const config = PHASE_CONFIG[phase];
           const isActive = phase === currentPhase;
           const isCompleted = completedPhases.includes(phase);
-          const isEnabled = enabledPhases.includes(phase);
+          const isEnabled = phase === 'recap' || enabledPhases.includes(phase);
           const isLocked = !isEnabled && !isCompleted && phase !== currentPhase;
 
           return (

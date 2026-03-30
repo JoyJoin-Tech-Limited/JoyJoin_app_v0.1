@@ -15,7 +15,7 @@ export function MiniScriptBetaStub({ isHost, onAdvance, isAdvancing }: MiniScrip
       <div className="text-center max-w-sm">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-300 text-xs font-bold mb-4">
           <span>🧪</span>
-          <span>Beta Lab</span>
+          <span>Beta 实验室</span>
         </div>
         <div className="text-7xl mb-6">🎭</div>
         <h2 className="text-3xl font-black text-foreground mb-2">迷你剧本杀</h2>

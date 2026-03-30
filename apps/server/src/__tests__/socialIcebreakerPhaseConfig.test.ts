@@ -58,7 +58,7 @@ describe('social icebreaker phase configuration', () => {
     const state: SocialSessionState = {
       socialSessionId: 'social_test',
       icebreakerSessionId: 'test',
-      currentPhase: 'personality_dice',
+      currentPhase: 'lie_detective',
       hostUserId: 'host-1',
       hostDisplayName: 'Host',
       playerCount: 4,
@@ -68,6 +68,17 @@ describe('social icebreaker phase configuration', () => {
       enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
       warmupTopics: [{ id: 't1', question: 'Q1', mood: 'funny', emoji: '😂' }],
       challengeCompletedBy: ['host-1'],
+      lieDetectivePlayers: [
+        {
+          userId: 'host-1',
+          displayName: 'Host',
+          statements: [{ index: 1, text: 'Statement 1' }],
+        },
+      ],
+      currentLieDetectivePlayerIndex: 0,
+      votes: [
+        { voterId: 'host-1', targetUserId: 'host-2', guessedStatementIndex: 1 },
+      ],
       personalityDiceChallenges: [
         {
           userId: 'host-1',
@@ -82,6 +93,18 @@ describe('social icebreaker phase configuration', () => {
       currentDicePlayerIndex: 0,
       diceCompletedBy: ['host-1'],
     };
+
+    cleanupPhaseStateForNextPhase(state, 'lie_detective');
+
+    expect(state.lieDetectivePlayers).toEqual([
+      {
+        userId: 'host-1',
+        displayName: 'Host',
+        statements: [],
+      },
+    ]);
+    expect(state.currentLieDetectivePlayerIndex).toBeUndefined();
+    expect(state.votes).toBeUndefined();
 
     cleanupPhaseStateForNextPhase(state, 'personality_dice');
 

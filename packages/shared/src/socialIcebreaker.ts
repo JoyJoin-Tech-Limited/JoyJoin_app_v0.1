@@ -197,7 +197,7 @@ export const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES: SocialIcebreakerPhase[] =
 export function getNextPhase(
   current: SocialIcebreakerPhase,
   enabledPhases: SocialIcebreakerPhase[]
-): SocialIcebreakerPhase | 'recap' {
+): SocialIcebreakerPhase {
   const idx = enabledPhases.indexOf(current);
   if (idx === -1 || idx === enabledPhases.length - 1) return 'recap';
   return enabledPhases[idx + 1];
@@ -207,7 +207,7 @@ export function getNextEligiblePhase(
   current: SocialIcebreakerPhase,
   enabledPhases: SocialIcebreakerPhase[],
   playerCount: number
-): SocialIcebreakerPhase | 'recap' {
+): SocialIcebreakerPhase {
   let candidate = getNextPhase(current, enabledPhases);
 
   while (candidate !== 'recap') {

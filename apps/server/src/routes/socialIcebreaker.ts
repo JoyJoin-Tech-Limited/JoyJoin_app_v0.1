@@ -242,8 +242,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   const resolvedEnabledPhases = ensureSessionEnabledPhases(state);
-  const nextPhase = getNextEligiblePhase(currentPhase, resolvedEnabledPhases, state.playerCount);
-  const effectiveNextPhase: SocialIcebreakerPhase = nextPhase === 'recap' ? 'recap' : nextPhase;
+  const effectiveNextPhase = getNextEligiblePhase(currentPhase, resolvedEnabledPhases, state.playerCount);
 
   if (!state.completedPhases.includes(currentPhase)) {
     state.completedPhases = [...(state.completedPhases || []), currentPhase];
