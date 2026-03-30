@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -42,6 +43,16 @@ export default function JoinEventPoolSheet({
   const [showSuccess, setShowSuccess] = useState(false);
   const [showMascot, setShowMascot] = useState(false);
   const [mascotMessage, setMascotMessage] = useState("");
+
+  // Fetch the user's top priority interest for the optional boost CTA
+  const { data: interestsSummary } = useQuery<{
+    topPriorities?: Array<{ topicId: string; label: string; heat: number }>;
+  } | null>({
+    queryKey: ["/api/user/interests/summary"],
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+  const topBoostInterest = interestsSummary?.topPriorities?.[0];
 
   const {
     step,
@@ -159,7 +170,11 @@ export default function JoinEventPoolSheet({
 
         {/* Success Celebration */}
         {showSuccess ? (
-          <SuccessCelebration onNavigate={handleNavigateToEvents} />
+          <SuccessCelebration
+            onNavigate={handleNavigateToEvents}
+            boostInterestKey={topBoostInterest?.topicId}
+            boostInterestLabel={topBoostInterest?.label}
+          />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header */}
