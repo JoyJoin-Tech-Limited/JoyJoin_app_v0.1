@@ -127,7 +127,7 @@ The following levels describe how independently each role operates at runtime. H
 
 ## 4. v1 Architecture Recommendation
 
-In v1, implement **3 orchestration services** — one per product agent system — each containing sequential Generator → Evaluator → Policy Synthesizer stages at **Separation Level 1**.
+In v1, implement **3 orchestration services** — one per product agent system. **Onboarding Discovery** and **Event Momentum** should start at **Separation Level 1** (sequential Generator → Evaluator → Policy Synthesizer stages inside one orchestration service). **Match Intelligence is the deliberate v1 exception:** it should still be orchestrated as one product system, but with stronger internal separation from day one, targeting **Level 1–2 for the Generator** and **Level 2 for the Evaluator and Policy Synthesizer**.
 
 > **Proposed files (to be created):** The `apps/server/src/services/` directory already exists (see `eventThemeTitleGenerator.ts`). The orchestrator files below are the recommended new additions:
 
@@ -155,8 +155,7 @@ Each orchestrator implements the same structural stages:
 4. Evaluator stage (schema validation + quality/safety scoring)
 5. Policy Synthesizer (deterministic business rule enforcement)
 6. Fallback activation if evaluator rejects output
-7. Structured output return
-8. Logging and observability metadata emission
+7. Structured output return + logging and observability metadata emission
 
 ---
 
@@ -337,7 +336,8 @@ Every orchestrator service should implement the same 7-stage structural pipeline
      Enforce hard constraints.
      Activate fallback if evaluator rejected output.
 
-7. Logging and observability
+7. Structured output return + logging and observability
+     Return only the Policy Synthesizer-approved structured output.
      Log: prompt version, model version, input context hash, output schema validity, latency, fallback usage.
      Do not log PII or sensitive user content in unencrypted form.
 ```
