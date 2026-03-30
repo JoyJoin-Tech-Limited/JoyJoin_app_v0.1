@@ -517,11 +517,12 @@ These are non-negotiable rules that must be preserved by all future AI work. Rev
 
 ### 11.5 Observability Fields on All AI Outputs
 
-Every structured AI output returned to a client or stored in the database must include:
+All **new or modified** structured AI outputs returned to a client or stored in the database must include:
 - `fromCache: boolean` — whether the result was served from cache
 - `generatedAt: string` (ISO timestamp) — when the content was generated
 - `provider: string` (optional but strongly recommended) — which LLM produced the output
 
+Existing shipped AI endpoints that do not yet include these fields (e.g. some Social Icebreaker and conversation topic endpoints listed in §0) are treated as **backlog to migrate** to this format; do not assume they are compliant today.
 Future AI outputs should also add:
 - `promptVersion: string` — the version tag of the prompt template used
 - `fallbackUsed: boolean` — whether the curated fallback was activated
