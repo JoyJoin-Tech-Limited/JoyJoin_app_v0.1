@@ -1024,7 +1024,7 @@ Running an evaluator (quality-check LLM call) on every generation step doubles c
 
 | Rule | Rationale |
 |---|---|
-| Cache match explanations for 7 days keyed by group roster hash | Group composition is stable; regeneration wastes budget |
+| Cache match explanations for 7 days per groupId with roster-hash validation | Group composition is stable; regeneration wastes budget |
 | Pre-generate onboarding wording variants at session start (not per question) | Eliminates per-question latency; variants are a finite set |
 | Generate icebreaker host suggestions on explicit host request, not on event creation | Avoids waste when hosts never open the console |
 | Shadow rerank scores computed as a batch job after group formation completes | Keeps match formation latency deterministic |
