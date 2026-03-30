@@ -14,7 +14,6 @@ export interface InterestSignal {
 
 export interface UpsertInterestSignalInput {
   interestKey: string;
-  interestLabel: string;
   enthusiasmLevel: number;
   discussionStyle: string;
   conversationDepth: number;

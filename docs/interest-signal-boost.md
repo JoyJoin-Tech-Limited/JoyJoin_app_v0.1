@@ -47,12 +47,12 @@ Unique constraint: `(user_id, interest_key)` — one signal per user per interes
 
 ### `POST /api/user/interest-signals`
 Creates or updates the signal for one interest (upsert by `(userId, interestKey)`).
+The server validates `interestKey` against the active taxonomy and derives the stored `interestLabel` from the canonical definition.
 
 **Request body:**
 ```json
 {
   "interestKey": "hotpot",
-  "interestLabel": "火锅",
   "enthusiasmLevel": 4,
   "discussionStyle": "casual_vibes",
   "conversationDepth": 2
