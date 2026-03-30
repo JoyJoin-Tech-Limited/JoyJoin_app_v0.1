@@ -125,6 +125,8 @@ export interface GroupAnalysis extends GroupAnalysisContract {
   groupDynamics: string; // 整体动态描述
   pairExplanations: MatchExplanation[]; // 两两配对解释
   iceBreakers: string[]; // 推荐破冰话题
+  groupThemeTags: string[]; // 2–4 compact post-match theme tags
+  groupThemeCompanion: string; // one short companion line
   /** true if the response was served from the DB cache */
   fromCache?: boolean;
   /** ISO-8601 timestamp of generation */
@@ -720,17 +722,112 @@ export async function generateGroupAnalysis(
   
   // 生成小组动态描述
   const groupDynamics = generateGroupDynamics(members, avgChemistry, eventType);
-  
+
+  // 生成主题标签和伴随说明（确定性生成，无需LLM调用）
+  const groupThemeTags = generateGroupThemeTags(members, overallChemistry, eventType);
+  const groupThemeCompanion = generateGroupThemeCompanion(members, overallChemistry, eventType);
+
   return {
     groupId,
     overallChemistry,
     groupDynamics,
     pairExplanations,
     iceBreakers,
+    groupThemeTags,
+    groupThemeCompanion,
     fromCache,
     // On cache hit, use the original generation timestamp so clients can tell when data was last refreshed
     generatedAt: fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString(),
   };
+}
+
+// ============ 主题标签生成 ============
+
+/** Archetype clusters used for theme tag derivation */
+const ENERGETIC_ARCHETYPES = new Set(['开心柯基', '太阳鸡', '夸夸豚']);
+const ANALYTICAL_ARCHETYPES = new Set(['机智狐', '沉思猫头鹰', '灵感章鱼']);
+const WARM_ARCHETYPES = new Set(['暖心熊', '定心大象']);
+const QUIET_ARCHETYPES = new Set(['稳如龟', '隐身猫']);
+
+/**
+ * Deterministically generate 2–4 compact post-match theme tags.
+ * Derived from archetype composition, chemistry level, and shared interests.
+ * No LLM call — always returns a result instantly.
+ */
+function generateGroupThemeTags(
+  members: MatchMember[],
+  overallChemistry: OverallChemistry,
+  eventType: string
+): string[] {
+  const tags: string[] = [];
+  const archetypes = members.map(m => m.archetype).filter(Boolean) as string[];
+
+  // 1. Chemistry vibe tag
+  if (overallChemistry === 'fire') tags.push('高火花');
+  else if (overallChemistry === 'warm') tags.push('相遇顺畅');
+  else tags.push('轻松破冰');
+
+  // 2. Archetype composition tag
+  const energeticCount = archetypes.filter(a => ENERGETIC_ARCHETYPES.has(a)).length;
+  const analyticalCount = archetypes.filter(a => ANALYTICAL_ARCHETYPES.has(a)).length;
+  const warmCount = archetypes.filter(a => WARM_ARCHETYPES.has(a)).length;
+  const quietCount = archetypes.filter(a => QUIET_ARCHETYPES.has(a)).length;
+  if (energeticCount > 0 && analyticalCount > 0) tags.push('动静结合');
+  else if (energeticCount >= 2) tags.push('活力满格');
+  else if (analyticalCount >= 2) tags.push('深度交流');
+  else if (warmCount >= 2) tags.push('温暖同频');
+  else if (quietCount >= 2) tags.push('慢热深聊');
+  else if (archetypes.length > 0) tags.push('性格多元');
+
+  // 3. Interest / activity tag (based on shared topics)
+  const allInterests: string[] = [];
+  members.forEach(m => { if (m.interestsTop) allInterests.push(...m.interestsTop); });
+  const interestCounts = new Map<string, number>();
+  allInterests.forEach(i => interestCounts.set(i, (interestCounts.get(i) || 0) + 1));
+  const topShared = Array.from(interestCounts.entries())
+    .filter(([_, c]) => c >= 2)
+    .map(([i]) => i);
+  if (topShared.some(t => ['旅游', '户外', '徒步'].includes(t))) tags.push('城市探索');
+  else if (topShared.some(t => ['美食', '烹饪'].includes(t))) tags.push('美食同好');
+  else if (topShared.some(t => ['音乐', '乐器'].includes(t))) tags.push('音乐同频');
+  else if (topShared.some(t => ['读书', '文学', '书'].includes(t))) tags.push('文化共鸣');
+  else if (eventType === '酒局') tags.push('把酒言欢');
+  else if (topShared.length >= 2) tags.push('话题丰富');
+
+  // 4. Background diversity tag (only when truly cross-industry)
+  const industries = new Set(members.map(m => m.industryCategory).filter(Boolean));
+  if (industries.size >= 3 && tags.length < 4) tags.push('背景多元');
+
+  return tags.slice(0, 4);
+}
+
+/**
+ * Deterministically generate a compact companion line contextualising the group theme.
+ * Non-duplicative of pair explanations and groupDynamics.
+ */
+function generateGroupThemeCompanion(
+  members: MatchMember[],
+  overallChemistry: OverallChemistry,
+  eventType: string
+): string {
+  const archetypes = members.map(m => m.archetype).filter(Boolean) as string[];
+  const energeticCount = archetypes.filter(a => ENERGETIC_ARCHETYPES.has(a)).length;
+  const analyticalCount = archetypes.filter(a => ANALYTICAL_ARCHETYPES.has(a)).length;
+  const quietCount = archetypes.filter(a => QUIET_ARCHETYPES.has(a)).length;
+
+  if (overallChemistry === 'fire') {
+    return `这组的火花感很强，${eventType}现场很可能很快就热络起来。`;
+  }
+  if (energeticCount > 0 && analyticalCount > 0) {
+    return `动静结合的组合，${eventType}中往往能聊出意想不到的层次。`;
+  }
+  if (quietCount >= 2 || overallChemistry === 'mild' || overallChemistry === 'cold') {
+    return `这组更适合先自然接触，再慢慢进入更有质量的交流。`;
+  }
+  if (energeticCount >= 2) {
+    return `活力型组合，${eventType}开场会很自然，记得给安静的成员留点空间。`;
+  }
+  return `多元背景带来新鲜视角，${eventType}中聊开了会很有意思。`;
 }
 
 /**

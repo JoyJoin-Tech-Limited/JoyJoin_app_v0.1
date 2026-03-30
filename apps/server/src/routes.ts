@@ -9690,6 +9690,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
         // Convenience field: pairs involving the authenticated viewer
         myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
+        // Post-match theme layer
+        groupThemeTags: analysis.groupThemeTags,
+        groupThemeCompanion: analysis.groupThemeCompanion,
       };
 
       return res.json(response);

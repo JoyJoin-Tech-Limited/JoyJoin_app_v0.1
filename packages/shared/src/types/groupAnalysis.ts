@@ -120,4 +120,20 @@ export interface GroupAnalysisResponse {
    * Optional for backward compatibility with legacy/unauthenticated consumers.
    */
   myPairs?: PairExplanation[];
+
+  /**
+   * 2–4 compact post-match theme tags describing the group's social vibe.
+   * Derived deterministically from archetype composition, chemistry level,
+   * and shared interests. Examples: "高火花", "动静结合", "城市探索".
+   * Optional for backward compatibility with cached responses.
+   */
+  groupThemeTags?: string[];
+
+  /**
+   * One short AI-framed companion line contextualising the group theme.
+   * Complements the theme tags with a warm, readable sentence about
+   * how to interpret the group's social energy.
+   * Optional for backward compatibility with cached responses.
+   */
+  groupThemeCompanion?: string;
 }
