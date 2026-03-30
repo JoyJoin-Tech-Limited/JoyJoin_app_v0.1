@@ -6,6 +6,7 @@ export type SocialIcebreakerPhase =
   | 'lie_detective'
   | 'auction'
   | 'personality_dice'
+  | 'mini_script_beta'
   | 'recap';
 
 export type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
@@ -71,6 +72,7 @@ export interface SocialSessionState {
   sessionStartedAt: number; // timestamp of session creation
   completedPhases: SocialIcebreakerPhase[];
   eventType?: string;
+  enabledPhases?: SocialIcebreakerPhase[];
   // Per-phase data
   warmupTopics?: SocialTopic[];
   currentTopicIndex?: number;
@@ -151,6 +153,17 @@ export const PHASE_CONFIG = {
     timeoutMinutes: 15,
     minPlayersRequired: 2,
   },
+  mini_script_beta: {
+    emoji: '🧪',
+    name: '剧本杀β',
+    nameEn: 'Mini Script Beta',
+    gradient: 'from-indigo-500 to-slate-700',
+    bgGradient: 'from-indigo-50 via-slate-50 to-violet-50',
+    darkBgGradient: 'from-slate-950 via-indigo-950 to-zinc-900',
+    pillColor: 'bg-indigo-100/80 text-indigo-700 border border-indigo-300',
+    timeoutMinutes: 20,
+    minPlayersRequired: 4,
+  },
   recap: {
     emoji: '✨',
     name: '回顾',
@@ -170,10 +183,16 @@ export const PHASE_ORDER: SocialIcebreakerPhase[] = [
   'lie_detective',
   'auction',
   'personality_dice',
+  'mini_script_beta',
   'recap',
 ];
 
 export const MVP_PHASES: SocialIcebreakerPhase[] = ['warmup', 'micro_challenge', 'lie_detective'];
+
+export const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES: SocialIcebreakerPhase[] = [
+  ...MVP_PHASES,
+  'personality_dice',
+];
 
 export function getNextPhase(
   current: SocialIcebreakerPhase,
@@ -182,4 +201,21 @@ export function getNextPhase(
   const idx = enabledPhases.indexOf(current);
   if (idx === -1 || idx === enabledPhases.length - 1) return 'recap';
   return enabledPhases[idx + 1];
+}
+
+export function getNextEligiblePhase(
+  current: SocialIcebreakerPhase,
+  enabledPhases: SocialIcebreakerPhase[],
+  playerCount: number
+): SocialIcebreakerPhase | 'recap' {
+  let candidate = getNextPhase(current, enabledPhases);
+
+  while (candidate !== 'recap') {
+    if (playerCount >= PHASE_CONFIG[candidate].minPlayersRequired) {
+      return candidate;
+    }
+    candidate = getNextPhase(candidate, enabledPhases);
+  }
+
+  return 'recap';
 }

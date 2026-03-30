@@ -85,6 +85,7 @@ type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
 
 // MVP active phases (currently deployed):
 const MVP_PHASES = ['warmup', 'micro_challenge', 'lie_detective'];
+const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_dice'];
 ```
 
 ### Phase Configuration
@@ -273,6 +274,16 @@ Function: `generateGameRecommendation()` using `GAME_RECOMMENDATION_PROMPT`
 ### Relationship to Social Icebreaker
 The Toolkit is the **host preparation layer**, helping hosts browse and choose suitable games/topics before running an event.
 At present, the Social Icebreaker `micro_challenge` phase is always populated server-side via `generateMicroChallenges(...)` and does **not** consume Toolkit game selections directly; wiring Toolkit selection into `micro_challenge` is an aspirational/future integration, not yet implemented.
+
+### Server-Driven Phase Flags
+Social Icebreaker v2 phase availability is now owned by the server. Each `SocialSessionState` carries an `enabledPhases` array, and `/api/social-icebreaker/:socialSessionId/advance` advances using that server-owned list rather than any client-provided phase order.
+
+Current server flags:
+- `SOCIAL_ICEBREAKER_ENABLE_AUCTION=true` → inserts `auction` before `personality_dice`
+- `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE=false` → removes `personality_dice`
+- `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA=true` → appends `mini_script_beta` before recap
+
+If a configured phase does not meet `PHASE_CONFIG[phase].minPlayersRequired`, the server skips only that phase and advances to the next enabled phase instead of jumping straight to recap.
 
 ---
 
