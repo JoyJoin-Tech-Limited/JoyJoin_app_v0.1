@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Volume2, VolumeX } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
@@ -10,11 +10,12 @@ import { MicroChallengePhase } from './micro-challenge/MicroChallengePhase';
 import { LieDetectivePhase } from './lie-detective/LieDetectivePhase';
 import { AuctionPhaseStub } from './AuctionPhaseStub';
 import { PersonalityDicePhase } from './PersonalityDicePhase';
+import { MiniScriptBetaStub } from './MiniScriptBetaStub';
 import { SocialIcebreakerRecap } from './SocialIcebreakerRecap';
 import { PulseCheckOverlay } from './PulseCheckOverlay';
 import { SocialPhaseTransition } from './SocialPhaseTransition';
 import { XiaoYueFloatingHost } from './XiaoYueFloatingHost';
-import { MVP_PHASES } from '@shared/socialIcebreaker';
+import { DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES } from '@shared/socialIcebreaker';
 import type { SocialIcebreakerPhase, AtmosphereMood, SocialTopic } from '@shared/socialIcebreaker';
 
 interface SocialIcebreakerOrchestratorProps {
@@ -105,15 +106,9 @@ export function SocialIcebreakerOrchestrator({
   const [xiaoYueVisible, setXiaoYueVisible] = useState(false);
   const [startedOnce, setStartedOnce] = useState(false);
 
-  // Enable personality_dice phase if any participant has an archetype.
-  // Must be declared before early returns to satisfy React's Rules of Hooks.
-  const enabledPhases = useMemo(
-    () =>
-      participants.some(p => p.archetype)
-        ? ([...MVP_PHASES, 'personality_dice'] as SocialIcebreakerPhase[])
-        : MVP_PHASES,
-    [participants]
-  );
+  const enabledPhases = state?.enabledPhases?.length
+    ? state.enabledPhases
+    : DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES;
 
   // Start session on mount
   useEffect(() => {
@@ -197,7 +192,7 @@ export function SocialIcebreakerOrchestrator({
 
   const handleAdvancePhase = async () => {
     if (navigator.vibrate) navigator.vibrate(100);
-    await advancePhase(enabledPhases);
+    await advancePhase();
   };
 
   const handleFetchTopics = async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
@@ -375,6 +370,22 @@ export function SocialIcebreakerOrchestrator({
                 completedBy={state.diceCompletedBy || []}
                 onGenerate={handleGenerateDice}
                 onComplete={handleCompleteDice}
+                onAdvance={handleAdvancePhase}
+                isAdvancing={isAdvancing}
+              />
+            </motion.div>
+          )}
+
+          {state.currentPhase === 'mini_script_beta' && (
+            <motion.div
+              key="mini_script_beta"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full"
+            >
+              <MiniScriptBetaStub
+                isHost={isHost}
                 onAdvance={handleAdvancePhase}
                 isAdvancing={isAdvancing}
               />
