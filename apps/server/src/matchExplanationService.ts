@@ -780,8 +780,8 @@ function generateGroupThemeTags(
   else if (archetypes.length > 0) tags.push('性格多元');
 
   // 3. Interest / activity tag (based on shared topics)
-  const allInterests: string[] = [];
-  members.forEach(m => { if (m.interestsTop) allInterests.push(...m.interestsTop); });
+  // Interest labels are display strings consistent with the rest of this service
+  const allInterests = members.flatMap(m => m.interestsTop ?? []);
   const interestCounts = new Map<string, number>();
   allInterests.forEach(i => interestCounts.set(i, (interestCounts.get(i) || 0) + 1));
   const topShared = Array.from(interestCounts.entries())
