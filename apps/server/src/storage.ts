@@ -15,12 +15,14 @@ import {
   type PreSignupData,
   type UserSocialTagGeneration,
   type AdminAccount,
+  type UserInterestSignal,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
   assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections,
-  adminAccounts
+  adminAccounts,
+  userInterestSignals,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
@@ -397,6 +399,16 @@ export interface IStorage {
   createAdminAccount(data: { username: string; passwordHash: string; role: string; displayName?: string }): Promise<AdminAccount>;
   updateAdminAccount(id: string, updates: Partial<Pick<AdminAccount, 'role' | 'status' | 'displayName' | 'passwordHash'>>): Promise<AdminAccount>;
   updateAdminLastLogin(id: string): Promise<void>;
+
+  // Interest Signal Boost
+  upsertInterestSignal(userId: string, data: {
+    interestKey: string;
+    interestLabel: string;
+    enthusiasmLevel: number;
+    discussionStyle: string;
+    conversationDepth: number;
+  }): Promise<UserInterestSignal>;
+  getUserInterestSignals(userId: string): Promise<UserInterestSignal[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4247,6 +4259,47 @@ export class DatabaseStorage implements IStorage {
       .update(adminAccounts)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(adminAccounts.id, id));
+  }
+
+  // ============ Interest Signal Boost ============
+
+  async upsertInterestSignal(userId: string, data: {
+    interestKey: string;
+    interestLabel: string;
+    enthusiasmLevel: number;
+    discussionStyle: string;
+    conversationDepth: number;
+  }): Promise<UserInterestSignal> {
+    const [record] = await db
+      .insert(userInterestSignals)
+      .values({
+        userId,
+        interestKey: data.interestKey,
+        interestLabel: data.interestLabel,
+        enthusiasmLevel: data.enthusiasmLevel,
+        discussionStyle: data.discussionStyle,
+        conversationDepth: data.conversationDepth,
+      })
+      .onConflictDoUpdate({
+        target: [userInterestSignals.userId, userInterestSignals.interestKey],
+        set: {
+          interestLabel: data.interestLabel,
+          enthusiasmLevel: data.enthusiasmLevel,
+          discussionStyle: data.discussionStyle,
+          conversationDepth: data.conversationDepth,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return record;
+  }
+
+  async getUserInterestSignals(userId: string): Promise<UserInterestSignal[]> {
+    return db
+      .select()
+      .from(userInterestSignals)
+      .where(eq(userInterestSignals.userId, userId))
+      .orderBy(desc(userInterestSignals.updatedAt));
   }
 }
 

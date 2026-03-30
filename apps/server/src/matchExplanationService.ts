@@ -17,7 +17,7 @@ import { chemistryMatrix } from './archetypeChemistry';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS } from '@shared/constants';
+import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
 
 // ============ 配置常量 ============
@@ -101,6 +101,14 @@ export interface MatchMember {
   industryCategory?: string | null;   // Category code for matching (e.g. "tech")
   industryCategoryLabel?: string | null; // Human-readable label for display (e.g. "科技互联网")
   interestsWithHeat?: Array<{ topicId: string; heatLevel: number }> | null;
+  /** Optional interest signal boost data (from user_interest_signals table) */
+  interestSignals?: Array<{
+    interestKey: string;
+    interestLabel: string;
+    enthusiasmLevel: number;       // 1–5
+    discussionStyle: string;       // e.g. "character_people"
+    conversationDepth: number;     // 1–3
+  }> | null;
 }
 
 export interface MatchExplanation extends MatchExplanationContract {
@@ -391,6 +399,11 @@ function getWorkModeLabel(mode: string): string {
   return WORK_MODE_LABELS[mode as keyof typeof WORK_MODE_LABELS] || mode;
 }
 
+/** Maps internal discussionStyle keys to Chinese display labels */
+function formatDiscussionStyle(style: string): string {
+  return DISCUSSION_STYLE_LABELS[style] || style;
+}
+
 /**
  * 找出两个用户在热度达标兴趣上的深度重叠
  */
@@ -481,6 +494,23 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
   );
   if (deepOverlap.count >= 3) {
     points.push(`深度同好（${deepOverlap.count}个共同深度兴趣）`);
+  }
+
+  // Interest signal alignment: same interest key + similar discussion style or depth
+  if (member1.interestSignals?.length && member2.interestSignals?.length) {
+    const signalMap2 = new Map(
+      member2.interestSignals.map(s => [s.interestKey, s])
+    );
+    for (const sig1 of member1.interestSignals) {
+      const sig2 = signalMap2.get(sig1.interestKey);
+      if (!sig2) continue;
+      // Both have signaled this interest
+      if (sig1.discussionStyle === sig2.discussionStyle) {
+        points.push(`${sig1.interestLabel}同款聊法（${formatDiscussionStyle(sig1.discussionStyle)}）`);
+      } else if (Math.abs(sig1.conversationDepth - sig2.conversationDepth) <= 1) {
+        points.push(`${sig1.interestLabel}话题深度相近`);
+      }
+    }
   }
 
   return points;
@@ -756,11 +786,33 @@ export async function generateIceBreakers(
   
   // 收集原型信息
   const archetypes = members.map(m => m.archetype).filter(Boolean);
+
+  // Collect aligned interest signals (same interest key shared by ≥2 members)
+  const signalKeyCount = new Map<string, { label: string; styles: string[]; depths: number[] }>();
+  members.forEach(m => {
+    (m.interestSignals || []).forEach(sig => {
+      const entry = signalKeyCount.get(sig.interestKey) ?? { label: sig.interestLabel, styles: [], depths: [] };
+      entry.styles.push(sig.discussionStyle);
+      entry.depths.push(sig.conversationDepth);
+      signalKeyCount.set(sig.interestKey, entry);
+    });
+  });
+  const sharedSignals = Array.from(signalKeyCount.entries())
+    .filter(([_, v]) => v.styles.length >= 2)
+    .map(([key, v]) => {
+      const styleCounts = new Map<string, number>();
+      v.styles.forEach(s => styleCounts.set(s, (styleCounts.get(s) || 0) + 1));
+      const dominantStyle = Array.from(styleCounts.entries()).sort((a, b) => b[1] - a[1])[0][0];
+      const avgDepth = Math.round(v.depths.reduce((a, c) => a + c, 0) / v.depths.length);
+      return `${v.label}（${formatDiscussionStyle(dominantStyle)}，深度${avgDepth}/3）`;
+    })
+    .slice(0, 3);
   
   const prompt = `你是一个社交活动的破冰专家。请为这个${eventType}小组生成3-5个有趣的破冰话题。
 
 小组成员原型: ${archetypes.join('、') || '多样化组合'}
 ${commonInterests.length > 0 ? `共同兴趣: ${commonInterests.join('、')}` : ''}
+${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSignals.join('；')}` : ''}
 活动类型: ${eventType}
 
 要求:

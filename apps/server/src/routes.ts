@@ -118,9 +118,9 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
-import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION } from "@shared/interests";
+import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION, getInterestById } from "@shared/interests";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
@@ -265,6 +265,47 @@ function generateInsights(primaryArchetype: string, secondaryArchetype: string |
 } {
   // Use imported roleInsights from archetypeConfig.ts
   return roleInsights[primaryArchetype as ArchetypeName] || roleInsights["淡定海豚"]; // Default to 淡定海豚
+}
+
+type InterestSignalContext = {
+  interestKey: string;
+  interestLabel: string;
+  enthusiasmLevel: number;
+  discussionStyle: string;
+  conversationDepth: number;
+};
+
+async function loadInterestSignalsByUserIds(userIds: string[]): Promise<Map<string, InterestSignalContext[]>> {
+  if (userIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await db
+    .select({
+      userId: userInterestSignals.userId,
+      interestKey: userInterestSignals.interestKey,
+      interestLabel: userInterestSignals.interestLabel,
+      enthusiasmLevel: userInterestSignals.enthusiasmLevel,
+      discussionStyle: userInterestSignals.discussionStyle,
+      conversationDepth: userInterestSignals.conversationDepth,
+    })
+    .from(userInterestSignals)
+    .where(sql`${userInterestSignals.userId} = ANY(${userIds})`);
+
+  const byUserId = new Map<string, InterestSignalContext[]>();
+  for (const row of rows) {
+    const existing = byUserId.get(row.userId) ?? [];
+    existing.push({
+      interestKey: row.interestKey,
+      interestLabel: row.interestLabel,
+      enthusiasmLevel: row.enthusiasmLevel,
+      discussionStyle: row.discussionStyle,
+      conversationDepth: row.conversationDepth,
+    });
+    byUserId.set(row.userId, existing);
+  }
+
+  return byUserId;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -2588,6 +2629,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error applying interest nudge:", error);
       res.status(500).json({ message: "Failed to apply interest nudge" });
+    }
+  });
+
+  // ============ Interest Signal Boost endpoints ============
+  // Optional pre-match signal: stores per-user per-interest calibration data.
+  // Never required for matching or onboarding.
+
+  const interestSignalSchema = z.object({
+    interestKey: z.string().min(1).max(100),
+    enthusiasmLevel: z.number().int().min(1).max(5),
+    discussionStyle: z.enum([
+      "casual_vibes",
+      "character_people",
+      "plot_worldbuilding",
+      "meme_humor",
+      "deeper_analysis",
+    ]),
+    conversationDepth: z.number().int().min(1).max(3),
+  });
+
+  // POST /api/user/interest-signals — create or update a signal for one interest
+  app.post('/api/user/interest-signals', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const result = interestSignalSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      const interest = getInterestById(result.data.interestKey);
+      if (!interest?.active) {
+        return res.status(400).json({ message: "Invalid interestKey: not found in active interest taxonomy" });
+      }
+
+      const signal = await storage.upsertInterestSignal(userId, {
+        ...result.data,
+        interestLabel: interest.label,
+      });
+      res.json({ success: true, data: signal });
+    } catch (error) {
+      console.error("Error upserting interest signal:", error);
+      res.status(500).json({ message: "Failed to save interest signal" });
+    }
+  });
+
+  // GET /api/user/interest-signals — retrieve all signals for the current user
+  app.get('/api/user/interest-signals', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const signals = await storage.getUserInterestSignals(userId);
+      res.json({ signals });
+    } catch (error) {
+      console.error("Error fetching interest signals:", error);
+      res.status(500).json({ message: "Failed to fetch interest signals" });
     }
   });
 
@@ -9488,6 +9583,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: string;
         selections: Array<{ topicId: string; level?: number | null }> | null;
       }>;
+      const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
       const interestsByUserId = new Map(
         memberInterestsRows.map((row) => [row.userId, row] as const)
       );
@@ -9526,6 +9622,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           industryCategory: m.industryCategory,
           industryCategoryLabel: m.industryCategoryLabel,
           interestsWithHeat,
+          interestSignals: interestSignalsByUserId.get(m.id) ?? null,
         };
       });
 
@@ -11272,6 +11369,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         userId: string;
         selections: Array<{ topicId: string; level?: number | null }> | null;
       }>;
+      const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
       const interestsByUserId = new Map(
         memberInterestsRows.map((row) => [row.userId, row] as const)
       );
@@ -11298,6 +11396,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           industryCategory: m.industryCategory,
           industryCategoryLabel: m.industryCategoryLabel,
           interestsWithHeat,
+          interestSignals: interestSignalsByUserId.get(m.id) ?? null,
         };
       });
 
@@ -11365,24 +11464,45 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const members = await db.query.users.findMany({
         where: sql`${users.id} = ANY(${memberIds})`,
       });
+      const memberInterestsRows = await db.query.userInterests.findMany({
+        where: sql`${userInterests.userId} = ANY(${memberIds})`,
+      }) as Array<{
+        userId: string;
+        selections: Array<{ topicId: string; level?: number | null }> | null;
+      }>;
+      const interestsByUserId = new Map(
+        memberInterestsRows.map((row) => [row.userId, row] as const)
+      );
+      const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
 
       const { matchExplanationService } = await import('./matchExplanationService');
 
-      const matchMembers = members.map((m: any) => ({
-        userId: m.id,
-        displayName: m.displayName || '神秘嘉宾',
-        archetype: m.archetype,
-        secondaryArchetype: m.secondaryArchetype,
-        interestsTop: m.interestsTop,
-        industry: m.industryNicheLabel || m.industryCategoryLabel,
-        hometown: m.hometownRegionCity,
-        socialStyle: m.socialStyle,
-        educationLevel: m.educationLevel,
-        relationshipStatus: m.relationshipStatus,
-        workMode: m.workMode,
-        industryCategory: m.industryCategory,
-        industryCategoryLabel: m.industryCategoryLabel,
-      }));
+      const matchMembers = members.map((m: any) => {
+        const interestRow = interestsByUserId.get(m.id);
+        const interestsWithHeat = interestRow?.selections
+          ? (interestRow.selections as Array<{ topicId: string; level?: number | null }>).map(
+              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
+            )
+          : null;
+
+        return {
+          userId: m.id,
+          displayName: m.displayName || '神秘嘉宾',
+          archetype: m.archetype,
+          secondaryArchetype: m.secondaryArchetype,
+          interestsTop: m.interestsTop,
+          industry: m.industryNicheLabel || m.industryCategoryLabel,
+          hometown: m.hometownRegionCity,
+          socialStyle: m.socialStyle,
+          educationLevel: m.educationLevel,
+          relationshipStatus: m.relationshipStatus,
+          workMode: m.workMode,
+          industryCategory: m.industryCategory,
+          industryCategoryLabel: m.industryCategoryLabel,
+          interestsWithHeat,
+          interestSignals: interestSignalsByUserId.get(m.id) ?? null,
+        };
+      });
 
       // Get event pool info for event type
       const pool = await db.query.eventPools.findFirst({
@@ -11549,6 +11669,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           topicsAvoid: true,
         },
       });
+      const interestSignalsByUserId = await loadInterestSignalsByUserIds(validParticipantIds);
 
       const { generateConversationTopics } = await import('./conversationTopicsService');
       
@@ -11558,6 +11679,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         interests: p.interestsTop || undefined,
         topicsHappy: p.topicsHappy || undefined,
         topicsAvoid: p.topicsAvoid || undefined,
+        interestSignals: interestSignalsByUserId.get(p.id) ?? undefined,
       }));
 
       const result = await generateConversationTopics(profiles, blindBoxEvent.eventType || '饭局');
@@ -11695,6 +11817,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         const members = await db.query.users.findMany({
           where: sql`${users.id} = ANY(${memberIds})`,
         });
+        const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
 
         const matchMembers = members.map((m: any) => ({
           userId: m.id,
@@ -11710,6 +11833,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           workMode: m.workMode,
           industryCategory: m.industryCategory,
           industryCategoryLabel: m.industryCategoryLabel,
+          interestSignals: interestSignalsByUserId.get(m.id) ?? null,
         }));
 
         const analysis = await matchExplanationService.generateGroupAnalysis(
