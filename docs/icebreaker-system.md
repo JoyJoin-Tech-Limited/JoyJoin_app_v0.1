@@ -77,8 +77,9 @@ type SocialIcebreakerPhase =
   | 'warmup'           // 🌅 Hot Topics — mood-filtered conversation starters
   | 'micro_challenge'  // ⚡ Group Challenges — timed activities
   | 'lie_detective'    // 🕵️ Two Truths One Lie — AI-generated statements
-  | 'auction'          // 🎪 [Future] Personality auction
-  | 'personality_dice' // 🎲 [Future] Dice game
+  | 'auction'          // 🎪 Auction (feature-flagged)
+  | 'personality_dice' // 🎲 Personality Dice
+  | 'mini_script_beta' // 🧪 Mini Script Mystery beta (feature-flagged)
   | 'recap';           // ✨ Session summary
 
 type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
@@ -95,8 +96,9 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 | `warmup` | 🌅 | 热身 | 20 min | 2 | Mood-filtered topics, host navigates, all see same topic |
 | `micro_challenge` | ⚡ | 挑战 | 15 min | 2 | Timed group task, each player taps "done" |
 | `lie_detective` | 🕵️ | 侦探 | 25 min | 3 | Per-player AI statements, group votes on which is the lie |
-| `auction` | 🎪 | 拍卖 | 30 min | 3 | Future phase |
-| `personality_dice` | 🎲 | 骰子 | 15 min | 2 | Future phase |
+| `auction` | 🎪 | 拍卖 | 30 min | 3 | Feature-flagged phase stub |
+| `personality_dice` | 🎲 | 骰子 | 15 min | 2 | AI-generated archetype dares |
+| `mini_script_beta` | 🧪 | 剧本杀β | 20 min | 4 | Feature-flagged beta stub |
 | `recap` | ✨ | 回顾 | 5 min | 1 | AI-generated session summary |
 
 ### Session Lifecycle
