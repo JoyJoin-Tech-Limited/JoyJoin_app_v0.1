@@ -470,6 +470,8 @@ describe('matchExplanationService', () => {
       overallChemistry: 'warm',
       groupDynamics: '测试组合',
       iceBreakers: [],
+      groupThemeTags: [],
+      groupThemeCompanion: '',
       pairExplanations: pairKeys.map((pairKey) => ({
         pairKey,
         explanation: '测试解释',
