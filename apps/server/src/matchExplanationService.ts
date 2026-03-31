@@ -760,39 +760,24 @@ function getInterestThemeBucket(interest: string): GroupThemeBucket {
   const normalized = normalizeInterestForTheme(interest);
 
   if (
-    ['travel', 'hiking', 'camping', 'citywalk', 'sailing'].includes(interest) ||
     ['旅游', '旅行', '户外', '徒步', '露营', 'CityWalk', '城市漫步', '海边帆船'].includes(normalized)
   ) {
     return 'exploration';
   }
 
   if (
-    [
-      'hotpot',
-      'bbq',
-      'cantonese',
-      'japanese',
-      'western',
-      'dessert',
-      'coffee',
-      'food_hunting',
-      'dabianlu',
-      'private_kitchen',
-    ].includes(interest) ||
     ['美食', '烹饪', '火锅', '撸串', '早茶', '日料', '西餐', '下午茶', '咖啡', '探店', '打边炉', '私厨'].includes(normalized)
   ) {
     return 'food';
   }
 
   if (
-    ['music', 'concert', 'live_house', 'ktv'].includes(interest) ||
     ['音乐', '玩音乐', '乐器', '演唱会', 'LiveHouse', 'KTV'].includes(normalized)
   ) {
     return 'music';
   }
 
   if (
-    ['reading', 'exhibition', 'theater', 'cinema'].includes(interest) ||
     ['读书', '阅读', '文学', '书', '看展', '话剧', '电影'].includes(normalized)
   ) {
     return 'culture';
@@ -849,14 +834,20 @@ function generateGroupThemeTags(
   const industries = new Set(members.map(m => m.industryCategory).filter(Boolean));
   if (industries.size >= 3 && tags.length < 4) tags.push('背景多元');
 
-  if (tags.length < 2) {
-    if (eventType === '酒局') {
-      tags.push('轻松小酌');
-    } else if (members.length >= 4) {
-      tags.push('缘分开桌');
-    } else {
-      tags.push('轻松相处');
+  while (tags.length < 2) {
+    const fallbackTag =
+      eventType === '酒局'
+        ? '轻松小酌'
+        : members.length >= 4
+        ? '缘分开桌'
+        : '轻松相处';
+
+    if (!tags.includes(fallbackTag)) {
+      tags.push(fallbackTag);
+      continue;
     }
+
+    tags.push('自然同桌');
   }
 
   return tags.slice(0, 4);
