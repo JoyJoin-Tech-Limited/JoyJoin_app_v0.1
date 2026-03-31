@@ -12,7 +12,7 @@ import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator }
 import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
 import LimitedBrowseBanner from "@/components/LimitedBrowseBanner";
 import { AlertCircle, RefreshCw, Sparkles } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -114,6 +114,53 @@ const saveCoachMarkState = (state: CoachMarkState) => {
     localStorage.setItem(COACH_MARKS_STORAGE_KEY, JSON.stringify(state));
   } catch {}
 };
+
+// Pure transformation: module-level so it's stable across renders (no component state deps).
+function transformEventPool(pool: EventPool): {
+  id: string;
+  poolId: string;
+  date: string;
+  time: string;
+  eventType: "饭局" | "酒局";
+  area: string;
+  city: "香港" | "深圳";
+  mysteryTitle: string;
+  isAA: boolean;
+  isGirlsNight: boolean;
+  registrationCount: number;
+  sampleArchetypes: string[];
+  registrationDeadline: string | undefined;
+} | null {
+  try {
+    const chineseDate = formatChineseDateOnly(pool.dateTime);
+    const chineseTime = extractChineseTime(pool.dateTime);
+    const area = `${pool.city}•${pool.district}`;
+    const mysteryTitle = pool.title || `神秘${pool.eventType}｜等你揭晓`;
+    const isGirlsNight = pool.genderRestriction === '仅限女性' ||
+                        pool.title?.toLowerCase().includes('girls') ||
+                        pool.title?.includes('女性') ||
+                        pool.title?.includes('闺蜜');
+
+    return {
+      id: pool.id,
+      poolId: pool.id,
+      date: chineseDate,
+      time: chineseTime,
+      eventType: (pool.eventType === "其他" ? "饭局" : pool.eventType) as "饭局" | "酒局",
+      area,
+      city: pool.city,
+      mysteryTitle,
+      isAA: true,
+      isGirlsNight,
+      registrationCount: pool.registrationCount || 0,
+      sampleArchetypes: pool.sampleArchetypes || [],
+      registrationDeadline: pool.registrationDeadline,
+    };
+  } catch (error) {
+    console.error("Error transforming event pool:", pool, error);
+    return null;
+  }
+}
 
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
@@ -241,57 +288,23 @@ export default function DiscoverPage() {
     }
   };
 
-  // Transform event pools to blind box event card props
-  const transformEventPool = (pool: EventPool) => {
-    try {
-      // Use Chinese date format: "12月25日 (周四)" with proper timezone
-      const chineseDate = formatChineseDateOnly(pool.dateTime);
-      // Extract time in Chinese format: "晚上9点" with proper timezone  
-      const chineseTime = extractChineseTime(pool.dateTime);
-      const area = `${pool.city}•${pool.district}`;
-      
-      // Use pool title as mystery title, or generate one
-      const mysteryTitle = pool.title || `神秘${pool.eventType}｜等你揭晓`;
-      
-      // Check if it's girls night based on gender restriction or title
-      const isGirlsNight = pool.genderRestriction === '仅限女性' || 
-                          pool.title?.toLowerCase().includes('girls') ||
-                          pool.title?.includes('女性') ||
-                          pool.title?.includes('闺蜜');
-
-      return {
-        id: pool.id,
-        poolId: pool.id, // 关键：传递 poolId 给 BlindBoxEventCard，用于后端报名
-        date: chineseDate,
-        time: chineseTime,
-        eventType: (pool.eventType === "其他" ? "饭局" : pool.eventType) as "饭局" | "酒局",
-        area,
-        city: pool.city,
-        mysteryTitle,
-        isAA: true, // Event pools default to AA
-        isGirlsNight,
-        registrationCount: pool.registrationCount || 0,
-        sampleArchetypes: pool.sampleArchetypes || [],
-        registrationDeadline: pool.registrationDeadline,
-      };
-    } catch (error) {
-      console.error("Error transforming event pool:", pool, error);
-      return null;
-    }
-  };
-
-  // Filter and transform event pools
-  const filteredBlindBoxEvents = eventPools
+  // Filter and transform event pools — memoized to avoid recomputing on every render
+  const filteredBlindBoxEvents = useMemo(() => eventPools
     .filter(pool => {
       if (pool.city !== selectedCity) return false;
       if (selectedArea && !pool.district.includes(selectedArea)) return false;
       return true;
     })
     .map(transformEventPool)
-    .filter((event): event is NonNullable<typeof event> => event !== null);
+    .filter((event): event is NonNullable<typeof event> => event !== null),
+    [eventPools, selectedCity, selectedArea]
+  );
 
-  // Create a map for O(1) pool lookup to avoid O(n²) complexity
-  const poolMap = new Map(eventPools.map(pool => [pool.id, pool]));
+  // Create a map for O(1) pool lookup to avoid O(n²) complexity — memoized
+  const poolMap = useMemo(
+    () => new Map(eventPools.map(pool => [pool.id, pool])),
+    [eventPools]
+  );
   
   // Show event tooltip after a delay if first time (must be after filteredBlindBoxEvents is defined)
   useEffect(() => {

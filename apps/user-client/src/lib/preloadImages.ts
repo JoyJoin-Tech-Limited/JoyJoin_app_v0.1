@@ -1,20 +1,13 @@
+// Only import the Xiaoyue mascot images needed on the critical path
+// (used in PersonalityTestPageV4 and onboarding flows).
+// Archetype images are intentionally NOT imported or preloaded here.
+// They are fetched on demand by the components that use them (e.g. DiscoverPage,
+// MatchingStatusPage, PoolGroupDetailPage, etc.), so we avoid preloading
+// the full archetype set at startup.
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";
 import xiaoyueFox from "@/assets/Xiao_Yue_Avatar-06.png";
-
-import corgiImg from "@/assets/开心柯基_transparent_1.png";
-import foxImg from "@/assets/机智狐_transparent_2.png";
-import bearImg from "@/assets/暖心熊_transparent_3.png";
-import spiderImg from "@/assets/织网蛛_transparent_4.png";
-import pigImg from "@/assets/夸夸豚_transparent_5.png";
-import chickenImg from "@/assets/太阳鸡_transparent_6.png";
-import dolphinImg from "@/assets/淡定海豚_transparent_7.png";
-import owlImg from "@/assets/沉思猫头鹰_transparent_8.png";
-import turtleImg from "@/assets/稳如龟_transparent_9.png";
-import catImg from "@/assets/隐身猫_transparent_10.png";
-import elephantImg from "@/assets/定心大象_transparent_11.png";
-import octopusImg from "@/assets/灵感章鱼_transparent_12.png";
 
 const XIAOYUE_IMAGES = [
   xiaoyueNormal,
@@ -23,31 +16,15 @@ const XIAOYUE_IMAGES = [
   xiaoyueFox,
 ];
 
-const ARCHETYPE_IMAGES = [
-  corgiImg,
-  foxImg,
-  bearImg,
-  spiderImg,
-  pigImg,
-  chickenImg,
-  dolphinImg,
-  owlImg,
-  turtleImg,
-  catImg,
-  elephantImg,
-  octopusImg,
-];
-
 let preloaded = false;
 
 export function preloadXiaoyueImages(): void {
   if (typeof window === 'undefined') return;
   if (preloaded) return;
   preloaded = true;
-  
-  const allImages = [...XIAOYUE_IMAGES, ...ARCHETYPE_IMAGES];
-  
-  allImages.forEach((src) => {
+
+  // Only preload the 4 Xiaoyue mascot images used on the critical onboarding path.
+  XIAOYUE_IMAGES.forEach((src) => {
     const img = new Image();
     img.src = src;
   });

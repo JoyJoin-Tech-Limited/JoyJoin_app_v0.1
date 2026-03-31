@@ -4,90 +4,68 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { Suspense, useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { preloadXiaoyueImages } from "@/lib/preloadImages";
 import { AchievementProvider } from "@/contexts/AchievementContext";
 import { AchievementPopup } from "@/components/achievements";
 import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
+
+// --- Critical-path pages (eagerly loaded) ---
+// These are required for first paint and the initial user journey.
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
 import MobileLandingPage from "@/pages/MobileLandingPage";
-// RegistrationPage removed (legacy registration flow deprecated)
-// import RegistrationPage from "@/pages/RegistrationPage";
-// RegistrationMethodPage kept for internal reference only - not imported in user routes
-// ChatRegistrationPage removed (2026-01-20) - was no longer routed
-
-// Backward-compatible redirects: /chats → /connections
-function ChatsRedirect() {
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    setLocation("/connections");
-  }, [setLocation]);
-
-  return null;
-}
-
-// Backward-compatible redirects: /chats/:eventId → /connections/:eventId
-function ChatEventRedirect({ params }: { params: { eventId: string } }) {
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    setLocation(`/connections/${params.eventId}`);
-  }, [params.eventId, setLocation]);
-
-  return null;
-}
-// InterestsTopicsPage and EditInterestsPage removed (2026-01-19) - legacy interests flow
-import EditInterestsCarouselPage from "@/pages/EditInterestsCarouselPage";
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
-import ProfileSetupPage from "@/pages/ProfileSetupPage";
 import EssentialDataPage from "@/pages/EssentialDataPage";
 import ExtendedDataPage from "@/pages/ExtendedDataPage";
-import DiscoverPage from "@/pages/DiscoverPage";
-import CenterTabEmptyStatePage from "@/pages/CenterTabEmptyStatePage";
-import EventsPage from "@/pages/EventsPage";
-import ConnectionsPage from "@/pages/ConnectionsPage";
-import EventCoordinationPage from "@/pages/EventCoordinationPage";
-import ProfilePage from "@/pages/ProfilePage";
-import EditProfilePage from "@/pages/EditProfilePage";
-import EditBasicInfoPage from "@/pages/EditBasicInfoPage";
-import EditEducationPage from "@/pages/EditEducationPage";
-import EditWorkPage from "@/pages/EditWorkPage";
-import EditPersonalPage from "@/pages/EditPersonalPage";
-import EditIntentPage from "@/pages/EditIntentPage";
-import EventDetailPage from "@/pages/EventDetailPage";
-import BlindBoxPaymentPage from "@/pages/BlindBoxPaymentPage";
-import BlindBoxConfirmationPage from "@/pages/BlindBoxConfirmationPage";
-import BlindBoxEventDetailPage from "@/pages/BlindBoxEventDetailPage";
-import PoolGroupDetailPage from "@/pages/PoolGroupDetailPage";
-import InvitationLandingPage from "@/pages/InvitationLandingPage";
-import InviteLandingRouter from "@/pages/InviteLandingRouter";
-import InvitePage from "@/pages/InvitePage";
-import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
-import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
-import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
-import IcebreakerDemoPage from "@/pages/IcebreakerDemoPage";
-import IcebreakerGamePage from "@/pages/IcebreakerGamePage";
-import SocialIcebreakerRecapPage from "@/pages/SocialIcebreakerRecapPage";
-import RewardsPage from "@/pages/RewardsPage";
-import MatchingStatusPage from "@/pages/MatchingStatusPage";
-import MyJourneyPage from "@/pages/MyJourneyPage";
-import EventPoolRegistrationPage from "@/pages/EventPoolRegistrationPage";
-import TestArchetypeOrbit from "@/pages/TestArchetypeOrbit";
-import NotFound from "@/pages/not-found";
-import LevelUpProvider from "@/components/LevelUpProvider";
-import GuidePage from "@/pages/GuidePage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
-import SquadUnboxingFlow from "@/pages/SquadUnboxingFlow";
 import LoginPromptPage from "@/pages/LoginPromptPage";
-import { LoadingScreen } from "@/components/LoadingScreen";
-import CommunityJoinPage from "@/pages/CommunityJoinPage";
-import WalletPage from "@/pages/WalletPage";
-import FAQPage from "@/pages/FAQPage";
+import InviteLandingRouter from "@/pages/InviteLandingRouter";
+import DiscoverPage from "@/pages/DiscoverPage";
+import NotFound from "@/pages/not-found";
 import TermsPage from "@/pages/TermsPage";
+import { LoadingScreen } from "@/components/LoadingScreen";
+
+// --- Non-critical pages (lazily loaded) ---
+// These are only needed after initial onboarding/first render completes.
+// RegistrationPage removed (legacy registration flow deprecated)
+// ChatRegistrationPage removed (2026-01-20) - was no longer routed
+// InterestsTopicsPage and EditInterestsPage removed (2026-01-19) - legacy interests flow
+const EditInterestsCarouselPage = lazy(() => import("@/pages/EditInterestsCarouselPage"));
+const CenterTabEmptyStatePage = lazy(() => import("@/pages/CenterTabEmptyStatePage"));
+const EventsPage = lazy(() => import("@/pages/EventsPage"));
+const ConnectionsPage = lazy(() => import("@/pages/ConnectionsPage"));
+const EventCoordinationPage = lazy(() => import("@/pages/EventCoordinationPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const EditProfilePage = lazy(() => import("@/pages/EditProfilePage"));
+const EditBasicInfoPage = lazy(() => import("@/pages/EditBasicInfoPage"));
+const EditEducationPage = lazy(() => import("@/pages/EditEducationPage"));
+const EditWorkPage = lazy(() => import("@/pages/EditWorkPage"));
+const EditPersonalPage = lazy(() => import("@/pages/EditPersonalPage"));
+const EditIntentPage = lazy(() => import("@/pages/EditIntentPage"));
+const EventDetailPage = lazy(() => import("@/pages/EventDetailPage"));
+const BlindBoxPaymentPage = lazy(() => import("@/pages/BlindBoxPaymentPage"));
+const BlindBoxConfirmationPage = lazy(() => import("@/pages/BlindBoxConfirmationPage"));
+const BlindBoxEventDetailPage = lazy(() => import("@/pages/BlindBoxEventDetailPage"));
+const PoolGroupDetailPage = lazy(() => import("@/pages/PoolGroupDetailPage"));
+const InvitePage = lazy(() => import("@/pages/InvitePage"));
+const EventFeedbackFlow = lazy(() => import("@/pages/EventFeedbackFlow"));
+const DeepFeedbackFlow = lazy(() => import("@/pages/DeepFeedbackFlow"));
+const IcebreakerSessionPage = lazy(() => import("@/pages/IcebreakerSessionPage"));
+const IcebreakerDemoPage = lazy(() => import("@/pages/IcebreakerDemoPage"));
+const IcebreakerGamePage = lazy(() => import("@/pages/IcebreakerGamePage"));
+const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
+const MatchingStatusPage = lazy(() => import("@/pages/MatchingStatusPage"));
+const MyJourneyPage = lazy(() => import("@/pages/MyJourneyPage"));
+const TestArchetypeOrbit = lazy(() => import("@/pages/TestArchetypeOrbit"));
+const SquadUnboxingFlow = lazy(() => import("@/pages/SquadUnboxingFlow"));
+const CommunityJoinPage = lazy(() => import("@/pages/CommunityJoinPage"));
+const WalletPage = lazy(() => import("@/pages/WalletPage"));
+const FAQPage = lazy(() => import("@/pages/FAQPage"));
+
+import LevelUpProvider from "@/components/LevelUpProvider";
 import { ADMIN_PORTAL_URL } from "@/config/admin";
 import { CENTER_TAB_EMPTY_STATE_ROUTE } from "@/lib/centerTabRouting";
 
@@ -99,6 +77,22 @@ function RedirectToPersonalityTest() {
   useEffect(() => {
     setLocation("/personality-test");
   }, [setLocation]);
+  return null;
+}
+
+function ChatsRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/connections");
+  }, [setLocation]);
+  return null;
+}
+
+function ChatEventRedirect({ params }: { params: { eventId: string } }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(`/connections/${params.eventId}`);
+  }, [params.eventId, setLocation]);
   return null;
 }
 
@@ -203,11 +197,10 @@ function AuthenticatedRouter() {
       );
 
     case 'profile-review':
-      return (
+        return (
         <Switch>
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
-          {/* Guide page deprecated - using inline coach marks instead */}
-          <Route path="/guide" component={GuidePage} />
+          <Route path="/guide" component={RedirectToDiscover} />
           <Route path="*" component={RedirectToReview} />
         </Switch>
       );
@@ -220,8 +213,7 @@ function AuthenticatedRouter() {
           <Route path="/" component={DiscoverPage} />
           <Route path="/discover" component={DiscoverPage} />
           <Route path={CENTER_TAB_EMPTY_STATE_ROUTE} component={CenterTabEmptyStatePage} />
-          {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
-          <Route path="/guide" component={GuidePage} />
+          <Route path="/guide" component={RedirectToDiscover} />
           <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
@@ -240,9 +232,9 @@ function AuthenticatedRouter() {
           <Route path="/icebreaker-game" component={IcebreakerGamePage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/connections" component={ConnectionsPage} />
-          <Route path="/chats" component={ConnectionsPage} />
+          <Route path="/chats" component={ChatsRedirect} />
           <Route path="/connections/:eventId" component={EventCoordinationPage} />
-          <Route path="/chats/:eventId" component={EventCoordinationPage} />
+          <Route path="/chats/:eventId" component={ChatEventRedirect} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/rewards" component={RewardsPage} />
           <Route path="/profile/edit" component={EditProfilePage} />
