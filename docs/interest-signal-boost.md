@@ -100,7 +100,7 @@ Returns all stored signals for the authenticated user.
 
 ## How Matching Uses the Signal
 
-Signal data is consumed in two places, both as **AI prompt enrichment** with no effect on deterministic pair-score computation:
+Signal data is documented below in three sections, but only the last two are **active AI prompt enrichment** paths. The first is retained here as an explicit removal notice so the deterministic pair-score boundary stays visible and auditable:
 
 ### 1. ~~Pair Scoring — `calculateSignalAlignmentBonus()` in `poolMatchingService.ts`~~ ❌ REMOVED
 

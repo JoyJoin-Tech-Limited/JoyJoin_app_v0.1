@@ -22,24 +22,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // runtime miss-mock rather than silently affecting scores.
 // ---------------------------------------------------------------------------
 
-const mockUserInterestsSelect = vi.fn();
+const {
+  mockUserInterestsSelect,
+  userInterestsTable,
+  userInterestSignalsTable,
+} = vi.hoisted(() => ({
+  mockUserInterestsSelect: vi.fn(),
+  userInterestsTable: Symbol('userInterests'),
+  userInterestSignalsTable: Symbol('userInterestSignals'),
+}));
 
 vi.mock('../db', () => ({
   db: {
     select: () => ({
-      from: (table: unknown) => ({
-        where: () => ({
-          limit: () => Promise.resolve(mockUserInterestsSelect()),
-        }),
-      }),
+      from: (table: unknown) => {
+        if (table !== userInterestsTable) {
+          throw new Error(
+            `Unexpected table passed to db.select().from() in interestSignalBoundary tests: ${String(table)}`,
+          );
+        }
+
+        return {
+          where: () => ({
+            limit: () => Promise.resolve(mockUserInterestsSelect()),
+          }),
+        };
+      },
     }),
   },
 }));
 
 // Stub schema tables so the module can be imported without a live DB.
 vi.mock('@shared/schema', () => ({
-  userInterests: Symbol('userInterests'),
-  userInterestSignals: Symbol('userInterestSignals'),
+  userInterests: userInterestsTable,
+  userInterestSignals: userInterestSignalsTable,
   eventPools: Symbol('eventPools'),
   eventPoolRegistrations: Symbol('eventPoolRegistrations'),
   eventPoolGroups: Symbol('eventPoolGroups'),
@@ -74,6 +90,14 @@ vi.mock('../archetypeChemistry', () => ({
 vi.mock('@shared/utils', () => ({ calculateAge: vi.fn().mockReturnValue(28) }));
 vi.mock('@shared/constants', () => ({
   EDU_ORDINAL: {},
+  WORK_MODE_LABELS: {
+    employed: '在职',
+    student: '学生',
+  },
+  RELATIONSHIP_MATCH_LABELS: {
+    single: '同为单身',
+    in_relationship: '感情状态相近',
+  },
   DISCUSSION_STYLE_LABELS: {
     casual_vibes: '随便聊聊',
     character_people: '角色/人物党',
@@ -104,7 +128,7 @@ describe('Interest Signal Boundary — deterministic pair scoring', () => {
   });
 
   it('returns a deterministic score based solely on user_interests topic overlap', async () => {
-    // Both users share one topic out of two — 50 % Jaccard → baseScore ~57.
+    // Both users share one topic out of three — Jaccard 1/3 (≈33%) → baseScore ~43.
     mockUserInterestsSelect
       .mockReturnValueOnce(makeInterestsRow([
         { topicId: 'food', heat: 10 },

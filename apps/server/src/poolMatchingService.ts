@@ -31,7 +31,7 @@ import {
   coupons,
   userCoupons
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { calculateAge } from "@shared/utils";
 import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
@@ -230,7 +230,7 @@ async function getUserInterests(userId: string): Promise<{
 
 /**
  * 计算兴趣重叠度 (Heat Level 加权 Jaccard)
- * 优先使用 user_interests 表，回退到 legacy interestsTop
+ * 使用 user_interests 表中的兴趣选择和热度信息
  *
  * BOUNDARY INVARIANT: this function reads ONLY from `user_interests`.
  * `user_interest_signals` (discussion style / conversation depth) are intentionally
