@@ -9,6 +9,34 @@
 import type { AIResponseMeta } from '../types/aiMeta';
 
 /**
+ * Generic fallback text shown in the profile portrait card when the AI
+ * tagline is not yet available or no context is present.
+ * Used as a placeholder that reserves layout height to prevent card jump.
+ */
+export const GENERIC_PROFILE_TAGLINE_FALLBACK =
+  '我们的算法已初步读懂你的社交画像，期待你的加入。';
+
+/**
+ * Profile Tagline Response
+ * 档案标语响应
+ *
+ * Returned by GET /api/onboarding/profile-tagline.
+ * Contains a single warm insight line for the profile review card.
+ */
+export interface ProfileTaglineResponse {
+  /**
+   * A warm, concise insight line about the user's social style.
+   * 20–36 Chinese characters.
+   */
+  insightLine: string;
+
+  /**
+   * Standard AI observability metadata.
+   */
+  meta: AIResponseMeta;
+}
+
+/**
  * Pre-Join Vibe Brief
  * 加入前的 Vibe 简报
  *
@@ -33,6 +61,17 @@ export interface PreJoinVibeBrief {
    * Example: "我们会以此为基础，为你匹配更对 vibe 的小组"
    */
   matchingPromise: string;
+
+  /**
+   * 2–3 concise fit reasons explaining why this specific pool suits the user.
+   * Each reason should be ≤ 25 Chinese characters, skimmable, and non-prescriptive.
+   * Examples:
+   *   - "与你的社交风格契合"
+   *   - "符合你对轻松聚餐的偏好"
+   *   - "参与者背景多元，利于破冰"
+   * Empty array means no reasons could be generated (graceful degradation).
+   */
+  reasons: string[];
 
   /**
    * Standard AI observability metadata.

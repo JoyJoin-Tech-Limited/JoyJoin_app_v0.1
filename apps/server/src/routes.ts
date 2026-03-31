@@ -10912,6 +10912,44 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     student: '我们会帮你找到同样好奇心旺盛、愿意交流的小组',
   };
 
+  // Archetype-keyed fit reasons per event type (饭局 / 酒局)
+  const ARCHETYPE_FIT_REASONS: Record<string, { 饭局: string; 酒局: string }> = {
+    '开心柯基':    { 饭局: '你的暖场能量适合围桌聊天的饭局节奏', 酒局: '你的活力正好点燃吧台氛围' },
+    '太阳鸡':     { 饭局: '你的感染力在饭桌上最容易带动全场', 酒局: '你的热情在酒局里能让陌生人迅速破冰' },
+    '夸夸豚':     { 饭局: '轻松的饭局氛围最能发挥你欣赏他人的优势', 酒局: '你的温柔共情让酒局不只是喧嚣' },
+    '机智狐':     { 饭局: '话题型饭局是你大展身手的舞台', 酒局: '酒局的自由节奏给你最好的即兴发挥空间' },
+    '淡定海豚':   { 饭局: '你的真实感在饭局里特别有质感', 酒局: '你不需要刻意表现，在酒局里反而是最有存在感的' },
+    '织网蛛':     { 饭局: '你天然擅长串联不同背景的人，饭局是你的主场', 酒局: '多元背景在酒局里更容易碰撞出有趣的连接' },
+    '暖心熊':     { 饭局: '你的安全感在饭局的亲密氛围里更容易建立信任', 酒局: '你的体贴让酒局有了温度，不只是热闹' },
+    '灵感章鱼':   { 饭局: '跨界话题在饭桌上能帮你找到志同道合的人', 酒局: '酒局的松弛感最能释放你的跨界联想力' },
+    '沉思猫头鹰': { 饭局: '饭局的慢节奏正好让你先观察、再深入聊', 酒局: '你在酒局里偶尔抛出的深刻观点往往让人惊喜' },
+    '定心大象':   { 饭局: '你的稳定感让一顿饭从喧嚣变成有温度的聚会', 酒局: '你的沉稳在酒局里反而是最特别的存在' },
+    '稳如龟':     { 饭局: '你不急于表现，踏实感在饭局里慢慢发酵', 酒局: '你的真诚在酒局的热闹过后仍然令人印象深刻' },
+    '隐身猫':     { 饭局: '你在饭局里慢热，但一旦找到对的话题就光彩四射', 酒局: '酒局的松弛环境最适合你慢慢展开自己' },
+  };
+
+  // WorkMode-keyed social goal reasons
+  const WORK_MODE_GOAL_REASONS: Record<string, string> = {
+    founder: '同桌往往有主见、有经历，聊得来的概率比随机高很多',
+    self_employed: '多元背景的小组能带来意想不到的灵感和视角',
+    employed: '小而精的聚会比大趴更容易留下真实的连接',
+    student: '参与者年龄相近，共同话题多，破冰成本低',
+  };
+
+  // Valid event types for type-safe checks across VibeBrief logic
+  const VALID_EVENT_TYPES = ['饭局', '酒局'] as const;
+  type VibeBriefEventType = typeof VALID_EVENT_TYPES[number];
+
+  function isValidEventType(v: string | null | undefined): v is VibeBriefEventType {
+    return VALID_EVENT_TYPES.includes(v as VibeBriefEventType);
+  }
+
+  // Generic area/format fit reason
+  function buildAreaReason(area: string | null | undefined): string | null {
+    if (!area || !area.trim()) return null;
+    return `活动在${area}，地理上减少了你的出行顾虑`;
+  }
+
   /**
    * Generate a deterministic vibe brief from profile fields.
    * No LLM call — uses curated copy variants keyed on archetype/workMode.
@@ -10920,7 +10958,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     archetype: string | null | undefined,
     workMode: string | null | undefined,
     industry: string | null | undefined,
-  ): { insight: string; matchingPromise: string } {
+    eventType?: string | null,
+    area?: string | null,
+  ): { insight: string; matchingPromise: string; reasons: string[] } {
     let insight: string;
     if (archetype && ARCHETYPE_INSIGHTS[archetype]) {
       insight = ARCHETYPE_INSIGHTS[archetype];
@@ -10934,16 +10974,45 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       ? WORK_MODE_PROMISES[workMode]
       : VIBE_BRIEF_FALLBACK.matchingPromise;
 
-    return { insight, matchingPromise };
+    // Build 2-3 pool-specific fit reasons
+    const reasons: string[] = [];
+    const normalizedEventType = isValidEventType(eventType) ? eventType : null;
+
+    // Reason 1: archetype × event type
+    if (archetype && ARCHETYPE_FIT_REASONS[archetype] && normalizedEventType) {
+      reasons.push(ARCHETYPE_FIT_REASONS[archetype][normalizedEventType]);
+    } else if (normalizedEventType === '饭局') {
+      reasons.push('轻松的饭局形式适合自然拉近距离');
+    } else if (normalizedEventType === '酒局') {
+      reasons.push('酒局的松弛氛围让初次见面不那么拘束');
+    }
+
+    // Reason 2: workMode-based social dynamic
+    if (workMode && WORK_MODE_GOAL_REASONS[workMode]) {
+      reasons.push(WORK_MODE_GOAL_REASONS[workMode]);
+    } else {
+      reasons.push('小规模聚会更容易建立真实连接');
+    }
+
+    // Reason 3: area-based (only if area is available, to keep it specific)
+    const areaReason = buildAreaReason(area);
+    if (areaReason) {
+      reasons.push(areaReason);
+    }
+
+    return { insight, matchingPromise, reasons };
   }
 
   // GET /api/ai/pre-join-vibe-brief - Compact pre-join vibe brief for conversion
-  // Returns a personalized insight + matching promise based on the user's profile.
+  // Returns a personalized insight + matching promise + 2-3 pool fit reasons.
   // Always returns content — meta.fallbackUsed indicates live vs deterministic.
+  // Optional query params: eventType ("饭局"|"酒局"), area (e.g. "南山区")
   app.get('/api/ai/pre-join-vibe-brief', requireAuth, async (req: any, res) => {
     const { buildFallbackAIMeta } = await import('@shared/types/aiMeta');
     try {
       const userId = req.session.userId as string;
+      const eventType = typeof req.query.eventType === 'string' ? req.query.eventType : null;
+      const area = typeof req.query.area === 'string' ? req.query.area : null;
 
       const [profile] = await db
         .select({
@@ -10960,6 +11029,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         return res.json({
           insight: VIBE_BRIEF_FALLBACK.insight,
           matchingPromise: VIBE_BRIEF_FALLBACK.matchingPromise,
+          reasons: [],
           meta: buildFallbackAIMeta('user_not_found'),
         });
       }
@@ -10968,11 +11038,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         profile.primaryArchetype,
         profile.workMode,
         profile.industryNicheLabel ?? profile.industryCategoryLabel,
+        eventType,
+        area,
       );
 
       return res.json({
         insight: brief.insight,
         matchingPromise: brief.matchingPromise,
+        reasons: brief.reasons,
         meta: buildFallbackAIMeta(),
       });
     } catch (err) {
@@ -10980,6 +11053,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       return res.json({
         insight: VIBE_BRIEF_FALLBACK.insight,
         matchingPromise: VIBE_BRIEF_FALLBACK.matchingPromise,
+        reasons: [],
         meta: buildFallbackAIMeta('server_error'),
       });
     }
