@@ -392,6 +392,8 @@ describe('matchExplanationService', () => {
       expect(analysis).toHaveProperty('groupDynamics');
       expect(analysis).toHaveProperty('pairExplanations');
       expect(analysis).toHaveProperty('iceBreakers');
+      expect(analysis).toHaveProperty('groupThemeTags');
+      expect(analysis).toHaveProperty('groupThemeCompanion');
     });
 
     it('should generate correct number of pair explanations', async () => {
@@ -435,6 +437,103 @@ describe('matchExplanationService', () => {
 
       expect(analysis.pairExplanations).toHaveLength(0);
     });
+
+    it('should derive 动静结合 for mixed energetic and analytical archetypes', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-mixed',
+        [
+          { ...mockMember1, interestsTop: ['travel', 'coffee'] },
+          { ...mockMember3, interestsTop: ['旅行', '咖啡'] },
+          { ...mockMember2, interestsTop: ['阅读', '电影'] },
+        ],
+        '饭局'
+      );
+
+      expect(analysis.groupThemeTags).toContain('动静结合');
+      expect(analysis.groupThemeTags.length).toBeGreaterThanOrEqual(2);
+      expect(analysis.groupThemeTags.length).toBeLessThanOrEqual(4);
+    });
+
+    it('should map canonical interest IDs and labels into the same shared theme bucket', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-interest-normalized',
+        [
+          { ...mockMember1, interestsTop: ['hiking', 'coffee'], archetype: '稳如龟' },
+          { ...mockMember2, interestsTop: ['徒步', '咖啡'], archetype: '隐身猫' },
+        ],
+        '饭局'
+      );
+
+      expect(analysis.groupThemeTags).toContain('城市探索');
+    });
+
+    it('should return at least two theme tags even when composition signals are sparse', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-min-tags',
+        [],
+        '饭局'
+      );
+
+      expect(analysis.groupThemeTags.length).toBeGreaterThanOrEqual(2);
+      expect(analysis.groupThemeTags.length).toBeLessThanOrEqual(4);
+      expect(analysis.groupThemeTags).toContain('轻松相处');
+    });
+
+    it('should use fire chemistry theme copy for high-chemistry groups', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-fire',
+        [mockMember1, mockMember2],
+        '饭局'
+      );
+
+      expect(analysis.overallChemistry).toBe('fire');
+      expect(analysis.groupThemeTags).toContain('高火花');
+      expect(analysis.groupThemeCompanion).toContain('火花感很强');
+    });
+
+    it('should use warm chemistry theme tags for warm groups', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-warm',
+        [
+          { ...mockMember1, archetype: '开心柯基', interestsTop: ['travel'] },
+          { ...mockMember2, archetype: '淡定海豚', interestsTop: ['travel'] },
+        ],
+        '饭局'
+      );
+
+      expect(analysis.overallChemistry).toBe('warm');
+      expect(analysis.groupThemeTags).toContain('相遇顺畅');
+    });
+
+    it('should use mild chemistry companion copy for slower-burn groups', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-mild',
+        [
+          { ...mockMember1, archetype: '开心柯基', interestsTop: ['travel'] },
+          { ...mockMember2, archetype: '稳如龟', interestsTop: ['travel'] },
+        ],
+        '饭局'
+      );
+
+      expect(analysis.overallChemistry).toBe('mild');
+      expect(analysis.groupThemeTags).toContain('轻松破冰');
+      expect(analysis.groupThemeCompanion).toContain('先自然接触');
+    });
+
+    it('should use cold chemistry companion copy when archetypes fall back to the default chemistry score', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-theme-cold',
+        [
+          { userId: 'cold-1', displayName: '甲', archetype: '未知原型A', interestsTop: ['reading'] },
+          { userId: 'cold-2', displayName: '乙', archetype: '未知原型B', interestsTop: ['阅读'] },
+        ],
+        '饭局'
+      );
+
+      expect(analysis.overallChemistry).toBe('cold');
+      expect(analysis.groupThemeTags).toContain('轻松破冰');
+      expect(analysis.groupThemeCompanion).toContain('先自然接触');
+    });
   });
 
   describe('generateIceBreakers', () => {
@@ -470,6 +569,8 @@ describe('matchExplanationService', () => {
       overallChemistry: 'warm',
       groupDynamics: '测试组合',
       iceBreakers: [],
+      groupThemeTags: [],
+      groupThemeCompanion: '',
       pairExplanations: pairKeys.map((pairKey) => ({
         pairKey,
         explanation: '测试解释',
