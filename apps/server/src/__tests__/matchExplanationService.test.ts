@@ -428,6 +428,8 @@ describe('matchExplanationService', () => {
       expect(analysis).toHaveProperty('groupDynamics');
       expect(analysis).toHaveProperty('pairExplanations');
       expect(analysis).toHaveProperty('iceBreakers');
+      expect(analysis).toHaveProperty('groupThemeTags');
+      expect(analysis).toHaveProperty('groupThemeCompanion');
     });
 
     it('should generate correct number of pair explanations', async () => {
@@ -669,6 +671,8 @@ describe('matchExplanationService', () => {
       overallChemistry: 'warm',
       groupDynamics: '测试组合',
       iceBreakers: [],
+      groupThemeTags: [],
+      groupThemeCompanion: '',
       pairExplanations: pairKeys.map((pairKey) => ({
         pairKey,
         explanation: '测试解释',

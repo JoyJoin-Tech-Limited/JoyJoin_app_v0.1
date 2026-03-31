@@ -13,7 +13,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { 
+import { Sparkles,
   MapPin, 
   Briefcase, 
   GraduationCap, 
@@ -34,6 +34,10 @@ import { SocialTagSelectionCard } from "./SocialTagSelectionCard";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { cn } from "@/lib/utils";
+import {
+  GENERIC_PROFILE_TAGLINE_FALLBACK,
+  type ProfileTaglineResponse,
+} from "@shared/ai/onboarding";
 
 // Category configuration with visual styling
 const CATEGORY_CONFIG: Record<string, { label: string; emoji: string; gradient: string }> = {
@@ -108,6 +112,14 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
   const { data: interestsData } = useQuery<any>({ 
     queryKey: ["/api/user/interests"],
     enabled: !!user?.hasCompletedInterestsCarousel,
+  });
+
+  // Fetch AI profile tagline — presentation-only, fires after auth is confirmed
+  const { data: taglineData } = useQuery<ProfileTaglineResponse | null>({
+    queryKey: ["/api/onboarding/profile-tagline"],
+    enabled: !!user,
+    staleTime: 1000 * 60 * 30, // 30 min — tagline is stable for the session
+    retry: 1,
   });
 
   // Get archetype config and avatar
@@ -436,6 +448,22 @@ export function ProfilePortraitCard({ className }: ProfilePortraitCardProps) {
                   <p className="text-xs text-muted-foreground mt-1">
                     你的资料已经能产生 {matchPower.connectionPointCount} 种契合点
                   </p>
+                  {/* AI insight tagline — reserve height to avoid card jump when data arrives */}
+                  <div className="relative pt-1">
+                    <div
+                      aria-hidden="true"
+                      className="flex items-start gap-1 text-xs italic opacity-0"
+                    >
+                      <Sparkles className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span>{GENERIC_PROFILE_TAGLINE_FALLBACK}</span>
+                    </div>
+                    {taglineData?.insightLine ? (
+                      <p className="absolute inset-x-0 top-1 flex items-start gap-1 text-xs text-muted-foreground/70 italic">
+                        <Sparkles className="w-3 h-3 shrink-0 mt-0.5 text-purple-400" />
+                        <span>{taglineData.insightLine}</span>
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>

@@ -1170,6 +1170,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI profile tagline — presentation-only, no onboarding state side-effects
+  app.get('/api/onboarding/profile-tagline', requireAuth, aiEndpointLimiter, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+      // Fetch user and interests in parallel
+      const [userRow, interestsRow] = await Promise.all([
+        db.query.users.findFirst({ where: eq(users.id, userId) }),
+        db.query.userInterests.findFirst({ where: eq(userInterests.userId, userId) }),
+      ]);
+
+      if (!userRow) return res.status(404).json({ message: 'User not found' });
+
+      const { generateProfileTagline } = await import('./profileTaglineService');
+      const tagline = await generateProfileTagline({
+        archetype: (userRow.archetype ?? userRow.primaryArchetype) as string | undefined,
+        categoryHeat: (interestsRow?.categoryHeat as Record<string, number> | null) ?? {},
+        intentKeys: Array.isArray(userRow.intent) ? (userRow.intent as string[]) : [],
+      });
+
+      res.json(tagline);
+    } catch (error) {
+      console.error('[profileTagline] route error:', error);
+      res.status(500).json({ message: 'Failed to generate profile tagline' });
+    }
+  });
+
   // Phase 2: Onboarding Analytics endpoint
   app.post('/api/analytics/onboarding', async (req: Request, res) => {
     try {
@@ -9692,6 +9720,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         fallbackUsed: analysis.fallbackUsed ?? false,
         // Convenience field: pairs involving the authenticated viewer
         myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
+        // Post-match theme layer
+        groupThemeTags: analysis.groupThemeTags,
+        groupThemeCompanion: analysis.groupThemeCompanion,
       };
 
       return res.json(response);
@@ -10849,7 +10880,113 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     return INDUSTRY_OPTIONS_MAP.find((o) => o.value === matchedValue) || fallback;
   }
 
+// ============ AI 时刻 API ============
+
+  /** Fallback copy used when no profile data is available. */
+  const VIBE_BRIEF_FALLBACK = {
+    insight: '我们的算法已初步读懂你的社交画像',
+    matchingPromise: '我们会以此为基础，为你匹配更对 vibe 的小组',
+  } as const;
+
+  // Archetype-keyed insight copy (12 archetypes)
+  const ARCHETYPE_INSIGHTS: Record<string, string> = {
+    '开心柯基': '你天生自带暖场能量，最容易让整桌气氛活跃起来',
+    '太阳鸡': '你的热情感染力强，适合引领话题的群体节奏',
+    '夸夸豚': '你善于欣赏他人，最容易在轻松氛围里建立连接',
+    '机智狐': '你对话题的洞察快，适合那种先破冰、再深聊的群体',
+    '淡定海豚': '你不需要刻意表现，真实感反而是你最强的社交优势',
+    '织网蛛': '你擅长把不同背景的人串联在一起，天然的社交节点',
+    '暖心熊': '你给人安全感，最容易在小群体里慢慢成为大家信任的人',
+    '灵感章鱼': '你的跨界联想力强，适合多元背景交汇的小组',
+    '沉思猫头鹰': '你更适合先观察、再发言的节奏，深聊比破冰更适合你',
+    '定心大象': '你的稳定感让整个群体更有安全感，适合偏深度的小聚',
+    '稳如龟': '你不求一夜深交，但会让别人记住你的踏实感',
+    '隐身猫': '你慢热但有质感，在对的氛围里往往是最让人印象深刻的那个',
+  };
+
+  // WorkMode-keyed matching promise variants
+  const WORK_MODE_PROMISES: Record<string, string> = {
+    founder: '我们会为你匹配同样有主见、聊得来的同频小组',
+    self_employed: '我们会优先把你放进背景多元、互相启发的小组',
+    employed: '我们会以此为基础，为你匹配更对 vibe 的小组',
+    student: '我们会帮你找到同样好奇心旺盛、愿意交流的小组',
+  };
+
+  /**
+   * Generate a deterministic vibe brief from profile fields.
+   * No LLM call — uses curated copy variants keyed on archetype/workMode.
+   */
+  function generateVibeBrief(
+    archetype: string | null | undefined,
+    workMode: string | null | undefined,
+    industry: string | null | undefined,
+  ): { insight: string; matchingPromise: string } {
+    let insight: string;
+    if (archetype && ARCHETYPE_INSIGHTS[archetype]) {
+      insight = ARCHETYPE_INSIGHTS[archetype];
+    } else if (industry) {
+      insight = `我们已读懂你在${industry}领域的社交画像`;
+    } else {
+      insight = VIBE_BRIEF_FALLBACK.insight;
+    }
+
+    const matchingPromise = (workMode && WORK_MODE_PROMISES[workMode])
+      ? WORK_MODE_PROMISES[workMode]
+      : VIBE_BRIEF_FALLBACK.matchingPromise;
+
+    return { insight, matchingPromise };
+  }
+
+  // GET /api/ai/pre-join-vibe-brief - Compact pre-join vibe brief for conversion
+  // Returns a personalized insight + matching promise based on the user's profile.
+  // Always returns content — meta.fallbackUsed indicates live vs deterministic.
+  app.get('/api/ai/pre-join-vibe-brief', requireAuth, async (req: any, res) => {
+    const { buildFallbackAIMeta } = await import('@shared/types/aiMeta');
+    try {
+      const userId = req.session.userId as string;
+
+      const [profile] = await db
+        .select({
+          primaryArchetype: users.primaryArchetype,
+          workMode: users.workMode,
+          industryNicheLabel: users.industryNicheLabel,
+          industryCategoryLabel: users.industryCategoryLabel,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!profile) {
+        return res.json({
+          insight: VIBE_BRIEF_FALLBACK.insight,
+          matchingPromise: VIBE_BRIEF_FALLBACK.matchingPromise,
+          meta: buildFallbackAIMeta('user_not_found'),
+        });
+      }
+
+      const brief = generateVibeBrief(
+        profile.primaryArchetype,
+        profile.workMode,
+        profile.industryNicheLabel ?? profile.industryCategoryLabel,
+      );
+
+      return res.json({
+        insight: brief.insight,
+        matchingPromise: brief.matchingPromise,
+        meta: buildFallbackAIMeta(),
+      });
+    } catch (err) {
+      console.error('[VibeBrief] Failed to generate pre-join vibe brief:', err);
+      return res.json({
+        insight: VIBE_BRIEF_FALLBACK.insight,
+        matchingPromise: VIBE_BRIEF_FALLBACK.matchingPromise,
+        meta: buildFallbackAIMeta('server_error'),
+      });
+    }
+  });
+
 // ============ 推断引擎API ============
+
 
   // POST /api/inference/parse-industry - semantic industry parsing
   app.post("/api/inference/parse-industry", isPhoneAuthenticated, async (req, res) => {
