@@ -9,6 +9,29 @@
 import type { AIResponseMeta } from '../types/aiMeta';
 
 /**
+ * Profile Tagline Response
+ * 档案标语响应
+ *
+ * Returned by GET /api/onboarding/profile-tagline.
+ * Contains a single warm AI-generated insight line shown in ProfilePortraitCard
+ * during the FinalProfileReviewPage.  Always present — `meta.fallbackUsed`
+ * distinguishes live AI output from a deterministic fallback.
+ */
+export interface ProfileTaglineResponse {
+  /** One warm insight line about the user's social style (20–36 Chinese characters). */
+  insightLine: string;
+  /** Standard AI observability metadata. */
+  meta: AIResponseMeta;
+}
+
+/**
+ * Generic fallback tagline shown when no archetype-specific fallback applies.
+ * Used as the final safety net in profileTaglineService and ProfilePortraitCard.
+ */
+export const GENERIC_PROFILE_TAGLINE_FALLBACK =
+  '你的独特气质，会让合适的人主动靠近。';
+
+/**
  * Pre-Join Vibe Brief
  * 加入前的 Vibe 简报
  *
