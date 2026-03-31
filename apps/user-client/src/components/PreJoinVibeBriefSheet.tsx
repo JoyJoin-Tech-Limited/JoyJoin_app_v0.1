@@ -16,7 +16,7 @@ export default function PreJoinVibeBriefSheet({
   onOpenChange,
   onProceedToJoin,
 }: PreJoinVibeBriefSheetProps) {
-  const { data: brief, isLoading } = useQuery<PreJoinVibeBrief>({
+  const { data: brief, isLoading } = useQuery<PreJoinVibeBrief | null>({
     queryKey: ["/api/ai/pre-join-vibe-brief"],
     enabled: open,
     staleTime: 5 * 60 * 1000,
@@ -31,7 +31,7 @@ export default function PreJoinVibeBriefSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-2xl pb-safe-area-inset-bottom"
+        className="rounded-t-2xl pb-safe"
         style={{ maxHeight: "60vh" }}
       >
         <div className="flex flex-col gap-5 px-1 pt-2 pb-6">
