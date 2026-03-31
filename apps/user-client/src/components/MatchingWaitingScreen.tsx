@@ -13,8 +13,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import matchingWaitingBg from "@/assets/matching-waiting/matching-waiting-bg.svg";
-import matchingWaitingHero from "@/assets/matching-waiting/matching-waiting-hero.svg";
+import matchingWaitingBg from "@/assets/matching/shared/matching-bg.svg";
+import matchingWaitingHero from "@/assets/matching/waiting/matching-waiting-hero.svg";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
