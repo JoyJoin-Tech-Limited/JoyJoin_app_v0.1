@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Bell, ChevronRight, RefreshCw, ArrowLeft, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,6 +132,7 @@ export default function MatchingWaitingScreen({
   newMemberArchetype = null,
 }: MatchingWaitingScreenProps) {
   const [refreshCountdown, setRefreshCountdown] = useState(refreshIntervalSeconds);
+  const shouldReduceMotion = useReducedMotion();
 
   const fillState = getFillState(filledCount, minGroupSize, maxGroupSize);
   const copy = getCopy(fillState, filledCount, minGroupSize, maxGroupSize);
@@ -217,7 +218,7 @@ export default function MatchingWaitingScreen({
             src={matchingWaitingHero}
             alt="匹配等待中的插画"
             className="h-auto w-full max-w-[260px] object-contain drop-shadow-2xl"
-            animate={{ y: [0, -8, 0] }}
+            animate={shouldReduceMotion ? {} : { y: [0, -8, 0] }}
             transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
@@ -281,7 +282,7 @@ export default function MatchingWaitingScreen({
            * Segments beyond the threshold (indices >= minGroupSize) are "bonus"
            * seats and rendered at medium height.
            */}
-          <div className="flex items-end gap-1.5" role="progressbar" aria-valuenow={filledCount} aria-valuemin={0} aria-valuemax={maxGroupSize} aria-label={`已有 ${filledCount} 人，共 ${maxGroupSize} 个席位`}>
+          <div className="flex items-end gap-1.5" role="progressbar" aria-valuenow={filledCount} aria-valuemin={0} aria-valuemax={maxGroupSize} aria-label={`已有 ${filledCount} 人，共 ${maxGroupSize} 个席位`} aria-valuetext={`${filledCount} 人已加入，共 ${maxGroupSize} 个席位${filledCount < minGroupSize ? `，还需 ${minGroupSize - filledCount} 人可成局` : filledCount < maxGroupSize ? "，已可成团" : "，人数已满"}`}>
             {Array.from({ length: maxGroupSize }).map((_, i) => {
               const isFilled = i < filledCount;
               const isThreshold = i === minGroupSize - 1;
@@ -308,7 +309,7 @@ export default function MatchingWaitingScreen({
                   <motion.div
                     className={`w-full rounded-full ${barHeight} ${isFilled ? filledGradient : emptyStyle}`}
                     initial={false}
-                    animate={isFilled ? { scaleY: [0.6, 1.08, 1] } : { scaleY: 1 }}
+                    animate={isFilled && !shouldReduceMotion ? { scaleY: [0.6, 1.08, 1] } : { scaleY: 1 }}
                     transition={{ duration: 0.45, ease: "easeOut" }}
                   />
                 </div>
@@ -320,8 +321,7 @@ export default function MatchingWaitingScreen({
         {/* Auto-refresh countdown */}
         <div className="mt-5 flex items-center gap-1.5 text-white/35 text-xs">
           <RefreshCw
-            className="h-3 w-3"
-            style={{ animation: "spin 3s linear infinite" }}
+            className={`h-3 w-3 ${shouldReduceMotion ? "" : "refresh-spin"}`}
             aria-hidden="true"
           />
           <span>{refreshCountdown} 秒后自动刷新</span>
@@ -387,11 +387,17 @@ export default function MatchingWaitingScreen({
         </p>
       </div>
 
-      {/* CSS-only keyframe for the refresh icon spin (fallback for Tailwind animate-spin override) */}
+      {/* CSS-only keyframe for the refresh icon spin */}
       <style>{`
-        @keyframes spin {
+        .refresh-spin {
+          animation: mws-spin 3s linear infinite;
+        }
+        @keyframes mws-spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .refresh-spin { animation: none; }
         }
       `}</style>
     </div>
