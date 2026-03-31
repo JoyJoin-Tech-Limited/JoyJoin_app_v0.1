@@ -13,8 +13,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import matchingWaitingBg from "@/assets/matching-waiting/matching-waiting-bg.svg";
-import matchingWaitingHero from "@/assets/matching-waiting/matching-waiting-hero.svg";
+const matchingWaitingBg = new URL(
+  "../assets/matching-waiting/matching-waiting-bg.svg",
+  import.meta.url,
+).href;
+
+const matchingWaitingHero = new URL(
+  "../assets/matching-waiting/matching-waiting-hero.svg",
+  import.meta.url,
+).href;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -50,7 +57,9 @@ export interface MatchingWaitingScreenProps {
   refreshIntervalSeconds?: number;
   /** Called when the auto-refresh countdown expires or the user manually refreshes. */
   onRefresh?: () => void;
-  /** Primary CTA: invite / notify. */
+  /** Primary CTA: invite friends to speed up forming a group. */
+  onInvite?: () => void;
+  /** @deprecated Use `onInvite` for the invite CTA. */
   onNotify?: () => void;
   /** Secondary CTA: browse while waiting. */
   onBrowse?: () => void;
@@ -123,6 +132,7 @@ export default function MatchingWaitingScreen({
   maxGroupSize = DEFAULT_MAX_GROUP_SIZE,
   refreshIntervalSeconds = DEFAULT_REFRESH_INTERVAL_SECONDS,
   onRefresh,
+  onInvite,
   onNotify,
   onBrowse,
   onCancel,
@@ -133,9 +143,28 @@ export default function MatchingWaitingScreen({
 }: MatchingWaitingScreenProps) {
   const [refreshCountdown, setRefreshCountdown] = useState(refreshIntervalSeconds);
   const shouldReduceMotion = useReducedMotion();
+  const normalizedMaxGroupSize = Math.max(1, Math.floor(maxGroupSize));
+  const normalizedMinGroupSize = Math.min(
+    normalizedMaxGroupSize,
+    Math.max(1, Math.floor(minGroupSize)),
+  );
+  const displayFilledCount = Math.min(
+    normalizedMaxGroupSize,
+    Math.max(0, Math.floor(filledCount)),
+  );
+  const primaryInviteHandler = onInvite ?? onNotify;
 
-  const fillState = getFillState(filledCount, minGroupSize, maxGroupSize);
-  const copy = getCopy(fillState, filledCount, minGroupSize, maxGroupSize);
+  const fillState = getFillState(
+    displayFilledCount,
+    normalizedMinGroupSize,
+    normalizedMaxGroupSize,
+  );
+  const copy = getCopy(
+    fillState,
+    displayFilledCount,
+    normalizedMinGroupSize,
+    normalizedMaxGroupSize,
+  );
 
   // Reset countdown when the refresh interval prop changes.
   useEffect(() => {
@@ -272,7 +301,7 @@ export default function MatchingWaitingScreen({
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-medium text-white/50">匹配进度</span>
             <span className="text-xs font-bold text-white/80">
-              {filledCount}&thinsp;/&thinsp;{maxGroupSize} 人
+              {displayFilledCount}&thinsp;/&thinsp;{normalizedMaxGroupSize} 人
             </span>
           </div>
 
@@ -282,11 +311,11 @@ export default function MatchingWaitingScreen({
            * Segments beyond the threshold (indices >= minGroupSize) are "bonus"
            * seats and rendered at medium height.
            */}
-          <div className="flex items-end gap-1.5" role="progressbar" aria-valuenow={filledCount} aria-valuemin={0} aria-valuemax={maxGroupSize} aria-label={`已有 ${filledCount} 人，共 ${maxGroupSize} 个席位`} aria-valuetext={`${filledCount} 人已加入，共 ${maxGroupSize} 个席位${filledCount < minGroupSize ? `，还需 ${minGroupSize - filledCount} 人可成局` : filledCount < maxGroupSize ? "，已可成团" : "，人数已满"}`}>
-            {Array.from({ length: maxGroupSize }).map((_, i) => {
-              const isFilled = i < filledCount;
-              const isThreshold = i === minGroupSize - 1;
-              const isBonus = i >= minGroupSize;
+          <div className="flex items-end gap-1.5" role="progressbar" aria-valuenow={displayFilledCount} aria-valuemin={0} aria-valuemax={normalizedMaxGroupSize} aria-label={`已有 ${displayFilledCount} 人，共 ${normalizedMaxGroupSize} 个席位`} aria-valuetext={`${displayFilledCount} 人已加入，共 ${normalizedMaxGroupSize} 个席位${displayFilledCount < normalizedMinGroupSize ? `，还需 ${normalizedMinGroupSize - displayFilledCount} 人可成局` : displayFilledCount < normalizedMaxGroupSize ? "，已可成团" : "，人数已满"}`}>
+            {Array.from({ length: normalizedMaxGroupSize }).map((_, i) => {
+              const isFilled = i < displayFilledCount;
+              const isThreshold = i === normalizedMinGroupSize - 1;
+              const isBonus = i >= normalizedMinGroupSize;
 
               const barHeight = isThreshold ? "h-6" : isBonus ? "h-5" : "h-4";
               const filledGradient = isThreshold
@@ -331,7 +360,7 @@ export default function MatchingWaitingScreen({
         <div className="mt-8 w-full max-w-sm space-y-3">
           {/* Primary: invite / notify */}
           <Button
-            onClick={onNotify}
+            onClick={primaryInviteHandler}
             size="lg"
             className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
           >

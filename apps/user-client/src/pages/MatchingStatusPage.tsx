@@ -546,7 +546,7 @@ export default function MatchingStatusPage() {
               queryKey: ["/api/event-pools", registration.poolId, "group-fill"],
             });
           }}
-          onNotify={handleInvite}
+          onInvite={handleInvite}
           onBrowse={() => setLocation("/")}
           onCancel={handleCancel}
           isCancelling={cancelMutation.isPending}
@@ -678,10 +678,10 @@ export default function MatchingStatusPage() {
             {/* Status text */}
             <div className="text-center space-y-2">
               <h2 className="text-lg font-black">
-                正在为你寻找 {poolStats?.minGroupSize || DEFAULT_MIN_GROUP_SIZE}-{poolStats?.maxGroupSize || DEFAULT_MAX_GROUP_SIZE} 人的完美契合小队...
+                你的小队已组好，准备解锁这场相遇
               </h2>
               <p className="text-sm text-muted-foreground font-medium">
-                匹配中，组队成功后你将收到通知。
+                我们已为你锁定同组伙伴，活动细节会按时间逐步揭晓。
               </p>
             </div>
 
