@@ -359,10 +359,12 @@ export default function DiscoverPage() {
         />
 
         {/* Limited Browse Mode Banner — shown when user chose "browse first" on profile review */}
-        <LimitedBrowseBanner
-          className="mx-4 mt-3"
-          onExploreEvents={handleSelectEvent}
-        />
+        {registrations.length === 0 && (
+          <LimitedBrowseBanner
+            className="mx-4 mt-3"
+            onExploreEvents={handleSelectEvent}
+          />
+        )}
 
         {/* 用户旅程进度卡片 - 引导完成关键步骤 */}
         {isAuthenticated && (
