@@ -24,7 +24,6 @@ import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
 import GuidePage from "@/pages/GuidePage";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import InviteLandingRouter from "@/pages/InviteLandingRouter";
-import InvitationLandingPage from "@/pages/InvitationLandingPage";
 import DiscoverPage from "@/pages/DiscoverPage";
 import NotFound from "@/pages/not-found";
 import TermsPage from "@/pages/TermsPage";
