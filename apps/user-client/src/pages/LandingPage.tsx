@@ -18,9 +18,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 import logoImage from "@/assets/box_logo_archetypes.png";
-import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.png";
-import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.png";
-import continueImg from "@/assets/landing screen/动物延续 compressed.png";
+import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.webp";
+import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.webp";
+import continueImg from "@/assets/landing screen/动物延续 compressed.webp";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
@@ -123,7 +123,7 @@ export default function LandingPage() {
                 src={matchCardImg}
                 alt="匹配"
                 className="w-full h-full object-cover block"
-                loading="eager"
+                decoding="async"
                 onError={handleImageError}
               />
             </div>
@@ -141,7 +141,7 @@ export default function LandingPage() {
                 src={dinnerImg}
                 alt="悦聚"
                 className="w-full h-full object-cover block"
-                loading="eager"
+                decoding="async"
                 onError={handleImageError}
               />
             </div>
@@ -159,7 +159,7 @@ export default function LandingPage() {
                 src={continueImg}
                 alt="延续"
                 className="w-full h-full object-cover block"
-                loading="eager"
+                decoding="async"
                 onError={handleImageError}
               />
             </div>
