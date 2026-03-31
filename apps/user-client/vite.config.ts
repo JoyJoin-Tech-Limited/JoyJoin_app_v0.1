@@ -12,8 +12,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          // Core React runtime — loaded on every page
           'react-vendor': ['react', 'react-dom'],
+          // Data-fetching layer — used by critical-path pages
           'query': ['@tanstack/react-query'],
+          // Radix UI primitives — used across onboarding and main app
           'ui-radix': [
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
@@ -22,8 +25,15 @@ export default defineConfig({
             '@radix-ui/react-tooltip',
             '@radix-ui/react-toast',
           ],
+          // framer-motion is used on critical-path pages (PersonalityTest, Discover)
+          // so it stays in its own chunk loaded with the initial bundle rather than
+          // being inlined into the entry chunk.
           'motion': ['framer-motion'],
+          // recharts and lottie are only used on secondary (lazy-loaded) pages;
+          // keeping them in separate chunks prevents them from appearing in the
+          // entry bundle even when a lazy page is eventually loaded.
           'charts': ['recharts'],
+          'lottie': ['lottie-react'],
         },
       },
     },
