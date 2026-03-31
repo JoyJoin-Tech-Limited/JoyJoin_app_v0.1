@@ -2,12 +2,13 @@
  * FinalProfileReviewPage - Magical profile reveal experience
  *
  * Two phases:
- * 1. Analyzing: Spiral wave animation with fade-in text (min 2.5s guaranteed)
+ * 1. Analyzing: Spiral wave animation with fade-in text (min wait, skippable)
  * 2. Complete: Profile portrait card with stagger animation
  *
- * Fix (2026-02-24): Added minTimePassed guard to prevent instant phase
- * transition when React Query cache is warm. The "analyzing" reveal must
- * always play for at least 2500ms regardless of data load speed.
+ * The "analyzing" phase plays for at minimum MIN_ANALYZING_MS_DEFAULT (1200ms),
+ * or MIN_ANALYZING_MS_REDUCED (500ms) for users who prefer reduced motion.
+ * After SKIP_ENABLED_AFTER_MS (600ms), users can tap anywhere to skip straight
+ * to the reveal — preventing artificial waiting when data is already ready.
  */
 
 import { useState, useEffect } from "react";
@@ -25,26 +26,46 @@ import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import type { AuthUser } from "@/hooks/useAuth";
 
 type Phase = "analyzing" | "complete";
 
-// Minimum duration the "analyzing" phase must be shown (ms).
-// Prevents instant skip when React Query cache is already warm.
-const MIN_ANALYZING_MS = 2500;
+// Minimum analyzing phase duration (ms) before auto-advancing or allowing skip.
+// Reduced-motion users get a shorter wait; standard users get 1200ms (was 2500ms).
+const MIN_ANALYZING_MS_DEFAULT = 1200;
+const MIN_ANALYZING_MS_REDUCED = 500;
+
+// Earliest point at which a tap/click skips the analyzing phase (ms).
+// Prevents accidental instant-skip while still respecting intentional taps.
+const SKIP_ENABLED_AFTER_MS = 600;
 
 export default function FinalProfileReviewPage() {
   const [, setLocation] = useLocation();
   const analytics = useOnboardingAnalytics('profile-review'); // Phase 2: Analytics
   const { toast } = useToast();
+  const prefersReducedMotion = useReducedMotion();
 
-  // Minimum time guard – ensures the reveal animation always plays
+  const minAnalyzingMs = prefersReducedMotion ? MIN_ANALYZING_MS_REDUCED : MIN_ANALYZING_MS_DEFAULT;
+
+  // Minimum time guard – ensures the reveal animation has at least a moment to play.
   const [minTimePassed, setMinTimePassed] = useState(false);
+  // Becomes true after SKIP_ENABLED_AFTER_MS; enables tap-to-skip.
+  const [canSkip, setCanSkip] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setMinTimePassed(true), MIN_ANALYZING_MS);
-    return () => clearTimeout(timer);
-  }, []);
+    const skipTimer = setTimeout(() => setCanSkip(true), SKIP_ENABLED_AFTER_MS);
+    const revealTimer = setTimeout(() => setMinTimePassed(true), minAnalyzingMs);
+    return () => {
+      clearTimeout(skipTimer);
+      clearTimeout(revealTimer);
+    };
+  }, [minAnalyzingMs]);
+
+  // Allow tapping anywhere in the analyzing phase to skip once canSkip is true.
+  const handleSkipAnalyzing = () => {
+    if (canSkip) setMinTimePassed(true);
+  };
 
   // Data dependencies
   const { data: user } = useQuery<any>({ 
@@ -122,9 +143,20 @@ export default function FinalProfileReviewPage() {
         {phase === "analyzing" ? (
           <motion.div
             key="analyzing"
-            className="fixed inset-0 flex flex-col items-center justify-center gap-8"
+            className={`fixed inset-0 flex flex-col items-center justify-center gap-8 select-none ${canSkip ? "cursor-pointer" : ""}`}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
+            onClick={canSkip ? handleSkipAnalyzing : undefined}
+            role={canSkip ? "button" : undefined}
+            tabIndex={canSkip ? 0 : -1}
+            aria-label={canSkip ? "分析中，轻触跳过" : "分析中"}
+            onKeyDown={(event) => {
+              if (!canSkip) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleSkipAnalyzing();
+              }
+            }}
           >
             <SpiralWaveAnimation />
             
@@ -143,20 +175,22 @@ export default function FinalProfileReviewPage() {
               className="text-sm text-muted-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1, duration: 0.6 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
             >
               分析性格特质 • 兴趣偏好 • 社交风格
             </motion.p>
 
-            {/* Subtle hint message to fill the 2.5s wait */}
-            <motion.p
-              className="text-xs text-muted-foreground/60 text-center px-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.6, duration: 0.5 }}
-            >
-              综合你的测评答案和兴趣选择，正在计算最适合你的社交场景...
-            </motion.p>
+            {/* Tap-to-skip hint — appears once skip is enabled */}
+            {canSkip && !prefersReducedMotion && (
+              <motion.p
+                className="text-xs text-muted-foreground/50 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                轻触屏幕跳过
+              </motion.p>
+            )}
           </motion.div>
         ) : (
           <motion.div
