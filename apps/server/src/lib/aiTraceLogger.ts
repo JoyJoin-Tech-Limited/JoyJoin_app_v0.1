@@ -7,7 +7,7 @@
  * future log-aggregation or admin inspection tooling can query them
  * without coupling to a specific storage backend.
  *
- * Shape aligns with `AICallTrace` from AI_INTEGRATION_PLAN.md §10.4
+ * Shape aligns with `AICallTrace` from docs/AI_INTEGRATION_PLAN.md §10.4
  * and uses the same `AIProvider` vocabulary as `packages/shared/src/types/aiMeta.ts`.
  *
  * Usage:
@@ -32,6 +32,7 @@
  *   - This is intentionally minimal groundwork — storage/indexing is a future concern.
  */
 
+import { randomUUID } from 'node:crypto';
 import type { AIProvider } from '@shared/types/aiMeta';
 
 /**
@@ -60,8 +61,12 @@ export interface AICallTrace {
 
   /**
    * LLM provider used for this call.
-   * null when fromCache is true and provider is unknown, or when
-   * a deterministic fallback was activated.
+   *
+   * - Use the attempted provider even when the call fails
+   *   (e.g. 'parse_error', 'llm_error', 'timeout').
+   * - Use null only when no live model call was made (pure
+   *   deterministic fallback), or when the result was served
+   *   from cache and the original provider is unknown.
    */
   provider: AIProvider;
 
@@ -71,10 +76,25 @@ export interface AICallTrace {
    */
   model?: string;
 
-  /** Wall-clock latency of the LLM call in milliseconds. */
+  /**
+   * End-to-end wall-clock latency for this AI execution in milliseconds,
+   * including time spent across retries and any fallback provider calls.
+   */
   latencyMs: number;
 
-  /** true → call succeeded and usable content was returned */
+  /**
+   * LLM output acceptance flag.
+   *
+   * true  → an LLM-generated result (from the primary or a secondary provider,
+   *         or from a cache of a previous LLM call) was accepted by the
+   *         post-processing pipeline and used for the response.
+   *
+   * false → no LLM output was used for this response (e.g. all LLM calls
+   *         failed or were rejected and deterministic / rule-based fallback
+   *         content was served instead). The caller may still receive usable
+   *         content when this is false; this flag is specifically about
+   *         whether an LLM result was used, not overall request success.
+   */
   success: boolean;
 
   /**
@@ -144,12 +164,10 @@ export function logAITrace(
 }
 
 /**
- * Generate a lightweight opaque trace ID.
- * Not cryptographically secure — used only for log correlation,
- * not for security-sensitive operations.
+ * Generate an opaque trace ID for log correlation.
+ * Uses Node's UUID generator to reduce collision risk across
+ * concurrent requests and processes.
  */
 function generateTraceId(): string {
-  const ts = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `${ts}-${rand}`;
+  return randomUUID();
 }

@@ -609,11 +609,11 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
         };
       } catch (fallbackError) {
         console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
-        logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: null, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
+        logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: 'deepseek', model: fbModel, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
       }
     } else {
       console.error('[MatchExplanation] Error generating explanation after retries:', primaryError);
-      logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: null, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
+      logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
     }
     // 降级处理：返回基于化学反应分数的模板解释
     return {
@@ -882,11 +882,11 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
         }
       } catch (fallbackError) {
         console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
-        logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: null, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
+        logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: 'deepseek', model: fbModel, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
       }
     } else {
       console.error('[IceBreakers] Error generating ice-breakers after retries:', primaryError);
-      logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: null, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
+      logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
     }
   }
   
