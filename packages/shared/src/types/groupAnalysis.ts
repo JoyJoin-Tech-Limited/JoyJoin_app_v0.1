@@ -129,8 +129,9 @@ export interface GroupAnalysisResponse {
 
   /**
    * The LLM provider used for this analysis generation.
-   * null when the response came from cache (original provider not recorded)
-   * or when a deterministic fallback was used (no model was called).
+   * null when cached provider metadata is unavailable, when no model call
+   * succeeded for the response, or when successful LLM-generated components
+   * came from multiple providers and the response cannot be attributed to one.
    * Mirrors AIResponseMeta.provider.
    */
   provider: AIProvider;

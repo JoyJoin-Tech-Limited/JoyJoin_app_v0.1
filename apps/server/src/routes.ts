@@ -11545,12 +11545,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         where: eq(eventPools.id, group.poolId),
       });
 
-      const iceBreakers = await matchExplanationService.generateIceBreakers(
+      const iceBreakerResult = await matchExplanationService.generateIceBreakers(
         matchMembers,
         pool?.eventType || '饭局'
       );
 
-      res.json({ iceBreakers });
+      res.json({
+        iceBreakers: iceBreakerResult.iceBreakers,
+        provider: iceBreakerResult.providerUsed,
+        fallbackUsed: iceBreakerResult.fallbackUsed,
+      });
     } catch (error: any) {
       console.error('[Ice-Breakers] Error:', error);
       res.status(500).json({ message: 'Failed to generate ice-breakers', error: error.message });
