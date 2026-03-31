@@ -13,15 +13,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-const matchingWaitingBg = new URL(
-  "../assets/matching-waiting/matching-waiting-bg.svg",
-  import.meta.url,
-).href;
-
-const matchingWaitingHero = new URL(
-  "../assets/matching-waiting/matching-waiting-hero.svg",
-  import.meta.url,
-).href;
+import matchingWaitingBg from "@/assets/matching-waiting/matching-waiting-bg.svg";
+import matchingWaitingHero from "@/assets/matching-waiting/matching-waiting-hero.svg";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
