@@ -15,6 +15,8 @@
  *   import type { GroupAnalysisResponse } from '@joyjoin/shared/types/groupAnalysis';
  */
 
+import type { AIProvider } from './aiMeta';
+
 /**
  * AI-generated explanation for a single user pair within a group.
  * Produced by matchExplanationService.generatePairExplanation().
@@ -121,19 +123,26 @@ export interface GroupAnalysisResponse {
    */
   myPairs?: PairExplanation[];
 
-  /**
-   * 2–4 compact post-match theme tags describing the group's social vibe.
-   * Derived deterministically from archetype composition, chemistry level,
-   * and shared interests. Examples: "高火花", "动静结合", "城市探索".
-   * Optional for backward compatibility with cached responses.
-   */
-  groupThemeTags?: string[];
+  // ─── Normalized AI observability metadata (aligned with AIResponseMeta) ──────
+  // These fields extend the existing fromCache/generatedAt inline fields with
+  // the additional provider/fallback signals defined in aiMeta.ts.
 
   /**
-   * One short AI-framed companion line contextualising the group theme.
-   * Complements the theme tags with a warm, readable sentence about
-   * how to interpret the group's social energy.
-   * Optional for backward compatibility with cached responses.
+   * The LLM provider used for this analysis generation.
+   * null when cached provider metadata is unavailable, when no model call
+   * succeeded for the response, or when successful LLM-generated components
+   * came from multiple providers and the response cannot be attributed to one.
+   * Mirrors AIResponseMeta.provider.
    */
-  groupThemeCompanion?: string;
+  provider: AIProvider;
+
+  /**
+   * true  → deterministic fallback content was used for at least one
+   *         component of this analysis (e.g. ice-breakers fell back to
+   *         curated templates because both LLM providers were unavailable).
+   * false → live LLM output was used (or the response was served from cache
+   *         which originally used live LLM output).
+   * Mirrors AIResponseMeta.fallbackUsed.
+   */
+  fallbackUsed: boolean;
 }
