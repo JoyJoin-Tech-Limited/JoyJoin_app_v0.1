@@ -10914,26 +10914,26 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
   // Archetype-keyed fit reasons per event type (饭局 / 酒局)
   const ARCHETYPE_FIT_REASONS: Record<string, { 饭局: string; 酒局: string }> = {
-    '开心柯基':    { 饭局: '你的暖场能量适合围桌聊天的饭局节奏', 酒局: '你的活力正好点燃吧台氛围' },
-    '太阳鸡':     { 饭局: '你的感染力在饭桌上最容易带动全场', 酒局: '你的热情在酒局里能让陌生人迅速破冰' },
-    '夸夸豚':     { 饭局: '轻松的饭局氛围最能发挥你欣赏他人的优势', 酒局: '你的温柔共情让酒局不只是喧嚣' },
-    '机智狐':     { 饭局: '话题型饭局是你大展身手的舞台', 酒局: '酒局的自由节奏给你最好的即兴发挥空间' },
-    '淡定海豚':   { 饭局: '你的真实感在饭局里特别有质感', 酒局: '你不需要刻意表现，在酒局里反而是最有存在感的' },
-    '织网蛛':     { 饭局: '你天然擅长串联不同背景的人，饭局是你的主场', 酒局: '多元背景在酒局里更容易碰撞出有趣的连接' },
-    '暖心熊':     { 饭局: '你的安全感在饭局的亲密氛围里更容易建立信任', 酒局: '你的体贴让酒局有了温度，不只是热闹' },
-    '灵感章鱼':   { 饭局: '跨界话题在饭桌上能帮你找到志同道合的人', 酒局: '酒局的松弛感最能释放你的跨界联想力' },
-    '沉思猫头鹰': { 饭局: '饭局的慢节奏正好让你先观察、再深入聊', 酒局: '你在酒局里偶尔抛出的深刻观点往往让人惊喜' },
-    '定心大象':   { 饭局: '你的稳定感让一顿饭从喧嚣变成有温度的聚会', 酒局: '你的沉稳在酒局里反而是最特别的存在' },
-    '稳如龟':     { 饭局: '你不急于表现，踏实感在饭局里慢慢发酵', 酒局: '你的真诚在酒局的热闹过后仍然令人印象深刻' },
-    '隐身猫':     { 饭局: '你在饭局里慢热，但一旦找到对的话题就光彩四射', 酒局: '酒局的松弛环境最适合你慢慢展开自己' },
+    '开心柯基':    { 饭局: '你的暖场感很适合围桌聊天', 酒局: '你的活力能自然带热气氛' },
+    '太阳鸡':     { 饭局: '你的感染力很适合带动全桌', 酒局: '你的热情能帮陌生人快些破冰' },
+    '夸夸豚':     { 饭局: '轻松饭局最能发挥你的共情力', 酒局: '你的温柔让酒局不只热闹' },
+    '机智狐':     { 饭局: '话题型饭局很适合你的机智', 酒局: '自由节奏给你更多即兴空间' },
+    '淡定海豚':   { 饭局: '你的真实感很适合轻松饭局', 酒局: '你的松弛感在酒局里很加分' },
+    '织网蛛':     { 饭局: '你擅长把一桌人自然串联', 酒局: '多元背景更容易被你聊开' },
+    '暖心熊':     { 饭局: '你的安全感适合慢慢熟络', 酒局: '你的体贴会让酒局更有温度' },
+    '灵感章鱼':   { 饭局: '跨界话题里你更容易发光', 酒局: '松弛酒局最能放大你的灵感' },
+    '沉思猫头鹰': { 饭局: '饭局的慢节奏适合你深入聊', 酒局: '你偶尔的深刻观点会很出彩' },
+    '定心大象':   { 饭局: '你的稳定感适合有温度的小聚', 酒局: '你的沉稳会让热闹更舒服' },
+    '稳如龟':     { 饭局: '你的踏实感适合慢慢熟悉彼此', 酒局: '热闹过后别人更容易记住你' },
+    '隐身猫':     { 饭局: '饭局给你更自然的展开空间', 酒局: '松弛环境适合你慢慢打开自己' },
   };
 
   // WorkMode-keyed social goal reasons
   const WORK_MODE_GOAL_REASONS: Record<string, string> = {
-    founder: '同桌往往有主见、有经历，聊得来的概率比随机高很多',
-    self_employed: '多元背景的小组能带来意想不到的灵感和视角',
-    employed: '小而精的聚会比大趴更容易留下真实的连接',
-    student: '参与者年龄相近，共同话题多，破冰成本低',
+    founder: '同桌多半有主见，也更有聊头',
+    self_employed: '多元背景更容易带来新灵感',
+    employed: '小而精的局更容易留下真连接',
+    student: '年纪相近的话题更容易接住',
   };
 
   // Valid event types for type-safe checks across VibeBrief logic
@@ -10947,7 +10947,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // Generic area/format fit reason
   function buildAreaReason(area: string | null | undefined): string | null {
     if (!area || !area.trim()) return null;
-    return `活动在${area}，地理上减少了你的出行顾虑`;
+    return `在${area}附近，更容易轻松赴约`;
   }
 
   /**
@@ -10982,9 +10982,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     if (archetype && ARCHETYPE_FIT_REASONS[archetype] && normalizedEventType) {
       reasons.push(ARCHETYPE_FIT_REASONS[archetype][normalizedEventType]);
     } else if (normalizedEventType === '饭局') {
-      reasons.push('轻松的饭局形式适合自然拉近距离');
+      reasons.push('轻松饭局更适合自然拉近距离');
     } else if (normalizedEventType === '酒局') {
-      reasons.push('酒局的松弛氛围让初次见面不那么拘束');
+      reasons.push('松弛酒局让初见没那么拘束');
     }
 
     // Reason 2: workMode-based social dynamic
@@ -10998,6 +10998,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     const areaReason = buildAreaReason(area);
     if (areaReason) {
       reasons.push(areaReason);
+    }
+
+    if (reasons.length < 2) {
+      return { insight, matchingPromise, reasons: [] };
     }
 
     return { insight, matchingPromise, reasons };
