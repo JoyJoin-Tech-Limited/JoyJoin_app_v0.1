@@ -9,6 +9,27 @@
 import type { AIResponseMeta } from '../types/aiMeta';
 
 /**
+ * Generic fallback tagline used when no archetype-specific line is available.
+ * Warm and forward-looking without being too generic.
+ */
+export const GENERIC_PROFILE_TAGLINE_FALLBACK =
+  '你的存在让每次聚会都多一份可能性。';
+
+/**
+ * Profile Tagline Response
+ * 档案标语响应
+ *
+ * Returned by GET /api/onboarding/profile-tagline.
+ * A single warm insight line for the profile review card, plus AI observability metadata.
+ */
+export interface ProfileTaglineResponse {
+  /** One warm, personalised insight line (≤ 40 Chinese characters). */
+  insightLine: string;
+  /** Standard AI observability metadata. */
+  meta: AIResponseMeta;
+}
+
+/**
  * Pre-Join Vibe Brief
  * 加入前的 Vibe 简报
  *

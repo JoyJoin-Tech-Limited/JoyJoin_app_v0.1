@@ -17,6 +17,7 @@ import SocialGoalsStep from "./steps/SocialGoalsStep";
 import SmartDefaultsStep from "./steps/SmartDefaultsStep";
 import DinnerPreferencesStep from "./steps/DinnerPreferencesStep";
 import BarPreferencesStep from "./steps/BarPreferencesStep";
+import BlindPoolTrustExplainer from "./BlindPoolTrustExplainer";
 import { shenzhenClusters } from "@shared/districts";
 
 interface JoinEventPoolSheetProps {
@@ -259,6 +260,19 @@ export default function JoinEventPoolSheet({
                             }
                           />
                         )}
+                      </div>
+
+                      {/* Trust explainer — shown before final submit on step 3 */}
+                      <div className="mt-6">
+                        <BlindPoolTrustExplainer
+                          poolData={{
+                            date: poolData.date,
+                            area: poolData.area,
+                            city: poolData.city,
+                            eventType: poolData.eventType,
+                          }}
+                          selectedBudget={preferences.budget}
+                        />
                       </div>
                     </>
                   )}
