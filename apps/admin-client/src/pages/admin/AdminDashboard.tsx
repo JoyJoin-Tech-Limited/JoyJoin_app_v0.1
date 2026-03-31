@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog, Trophy, Coins, Flame } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useMemo } from "react";
 
 interface WeakUser {
   id: string;
@@ -101,7 +102,7 @@ export default function AdminDashboard() {
     );
   }
 
-  const statCards = [
+  const statCards = useMemo(() => [
     {
       title: "用户总数",
       value: stats?.totalUsers?.toString() || "0",
@@ -138,7 +139,35 @@ export default function AdminDashboard() {
       icon: TrendingUp,
       description: "相比上周",
     },
-  ];
+  ], [stats]);
+
+  const sortedPersonalityDistribution = useMemo(() =>
+    stats?.personalityDistribution
+      ? Object.entries(stats.personalityDistribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
+      : [],
+  [stats]);
+
+  const sortedArchetypeDistribution = useMemo(() =>
+    stats?.archetypeDistribution
+      ? Object.entries(stats.archetypeDistribution).sort((a, b) => b[1] - a[1]).slice(0, 6)
+      : [],
+  [stats]);
+
+  const sortedCityDistribution = useMemo(() =>
+    stats?.cityDistribution
+      ? Object.entries(stats.cityDistribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
+      : [],
+  [stats]);
+
+  const sortedLevelDistribution = useMemo(() =>
+    stats?.gamificationStats?.levelDistribution
+      ? Object.entries(stats.gamificationStats.levelDistribution).sort((a, b) => {
+          const levelA = parseInt(a[0].replace('Lv.', ''));
+          const levelB = parseInt(b[0].replace('Lv.', ''));
+          return levelB - levelA;
+        })
+      : [],
+  [stats]);
 
   return (
     <div className="p-6">
@@ -306,10 +335,7 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="space-y-2">
               {stats?.personalityDistribution && Object.keys(stats.personalityDistribution).length > 0 ? (
-                Object.entries(stats.personalityDistribution)
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 5)
-                  .map(([role, count]) => (
+                sortedPersonalityDistribution.map(([role, count]) => (
                     <div key={role} className="flex items-center justify-between">
                       <span className="text-sm font-medium">{role}</span>
                       <span className="text-sm text-muted-foreground">{count} 人</span>
@@ -393,10 +419,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-2">
                 {stats?.archetypeDistribution && Object.keys(stats.archetypeDistribution).length > 0 ? (
-                  Object.entries(stats.archetypeDistribution)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([archetype, count]) => (
+                  sortedArchetypeDistribution.map(([archetype, count]) => (
                       <div key={archetype} className="flex items-center justify-between">
                         <span className="text-sm font-medium truncate">{archetype}</span>
                         <span className="text-sm text-muted-foreground">{count}人</span>
@@ -420,10 +443,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-2">
                 {stats?.cityDistribution && Object.keys(stats.cityDistribution).length > 0 ? (
-                  Object.entries(stats.cityDistribution)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 5)
-                    .map(([city, count]) => (
+                  sortedCityDistribution.map(([city, count]) => (
                       <div key={city} className="flex items-center justify-between">
                         <span className="text-sm font-medium">{city}</span>
                         <span className="text-sm text-muted-foreground">{count}人</span>
@@ -551,13 +571,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {Object.entries(stats.gamificationStats.levelDistribution)
-                  .sort((a, b) => {
-                    const levelA = parseInt(a[0].replace('Lv.', ''));
-                    const levelB = parseInt(b[0].replace('Lv.', ''));
-                    return levelB - levelA;
-                  })
-                  .map(([level, count]) => (
+                {sortedLevelDistribution.map(([level, count]) => (
                     <Badge 
                       key={level} 
                       variant="secondary" 
