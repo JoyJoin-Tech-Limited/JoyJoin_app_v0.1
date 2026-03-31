@@ -10924,7 +10924,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         .limit(1);
 
       if (!profile) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.json({
+          insight: VIBE_BRIEF_FALLBACK.insight,
+          matchingPromise: VIBE_BRIEF_FALLBACK.matchingPromise,
+          meta: buildFallbackAIMeta('user_not_found'),
+        });
       }
 
       const brief = generateVibeBrief(
