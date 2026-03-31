@@ -60,7 +60,6 @@ const IcebreakerGamePage = lazy(() => import("@/pages/IcebreakerGamePage"));
 const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
 const MatchingStatusPage = lazy(() => import("@/pages/MatchingStatusPage"));
 const MyJourneyPage = lazy(() => import("@/pages/MyJourneyPage"));
-const EventPoolRegistrationPage = lazy(() => import("@/pages/EventPoolRegistrationPage"));
 const TestArchetypeOrbit = lazy(() => import("@/pages/TestArchetypeOrbit"));
 const SquadUnboxingFlow = lazy(() => import("@/pages/SquadUnboxingFlow"));
 const CommunityJoinPage = lazy(() => import("@/pages/CommunityJoinPage"));
