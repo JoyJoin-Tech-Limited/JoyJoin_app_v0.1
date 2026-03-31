@@ -34,7 +34,6 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 // RegistrationPage removed (legacy registration flow deprecated)
 // ChatRegistrationPage removed (2026-01-20) - was no longer routed
 // InterestsTopicsPage and EditInterestsPage removed (2026-01-19) - legacy interests flow
-const ProfileSetupPage = lazy(() => import("@/pages/ProfileSetupPage"));
 const EditInterestsCarouselPage = lazy(() => import("@/pages/EditInterestsCarouselPage"));
 const CenterTabEmptyStatePage = lazy(() => import("@/pages/CenterTabEmptyStatePage"));
 const EventsPage = lazy(() => import("@/pages/EventsPage"));
