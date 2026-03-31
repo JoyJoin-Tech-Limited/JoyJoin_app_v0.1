@@ -1,8 +1,9 @@
 // Only import the Xiaoyue mascot images needed on the critical path
 // (used in PersonalityTestPageV4 and onboarding flows).
-// Archetype images are NOT imported here — they are only needed on
-// secondary pages (MatchingStatusPage, PoolGroupDetailPage, etc.) which
-// are lazy-loaded, so their images will be fetched on demand.
+// Archetype images are intentionally NOT imported or preloaded here.
+// They are fetched on demand by the components that use them (e.g. DiscoverPage,
+// MatchingStatusPage, PoolGroupDetailPage, etc.), so we avoid preloading
+// the full archetype set at startup.
 import xiaoyueNormal from "@/assets/Xiao_Yue_Avatar-01.png";
 import xiaoyueExcited from "@/assets/Xiao_Yue_Avatar-03.png";
 import xiaoyuePointing from "@/assets/Xiao_Yue_Avatar-04.png";

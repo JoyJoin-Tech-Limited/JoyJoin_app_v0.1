@@ -21,7 +21,6 @@ import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
 import EssentialDataPage from "@/pages/EssentialDataPage";
 import ExtendedDataPage from "@/pages/ExtendedDataPage";
 import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
-import GuidePage from "@/pages/GuidePage";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import InviteLandingRouter from "@/pages/InviteLandingRouter";
 import DiscoverPage from "@/pages/DiscoverPage";
@@ -78,6 +77,22 @@ function RedirectToPersonalityTest() {
   useEffect(() => {
     setLocation("/personality-test");
   }, [setLocation]);
+  return null;
+}
+
+function ChatsRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/connections");
+  }, [setLocation]);
+  return null;
+}
+
+function ChatEventRedirect({ params }: { params: { eventId: string } }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(`/connections/${params.eventId}`);
+  }, [params.eventId, setLocation]);
   return null;
 }
 
@@ -182,11 +197,10 @@ function AuthenticatedRouter() {
       );
 
     case 'profile-review':
-      return (
+        return (
         <Switch>
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
-          {/* Guide page deprecated - using inline coach marks instead */}
-          <Route path="/guide" component={GuidePage} />
+          <Route path="/guide" component={RedirectToDiscover} />
           <Route path="*" component={RedirectToReview} />
         </Switch>
       );
@@ -199,8 +213,7 @@ function AuthenticatedRouter() {
           <Route path="/" component={DiscoverPage} />
           <Route path="/discover" component={DiscoverPage} />
           <Route path={CENTER_TAB_EMPTY_STATE_ROUTE} component={CenterTabEmptyStatePage} />
-          {/* Guide page deprecated - kept for backward compatibility, redirects to / */}
-          <Route path="/guide" component={GuidePage} />
+          <Route path="/guide" component={RedirectToDiscover} />
           <Route path="/squad-unboxing" component={SquadUnboxingFlow} />
           <Route path="/pool-groups/:groupId" component={PoolGroupDetailPage} />
           <Route path="/pool-matching/:registrationId" component={MatchingStatusPage} />
@@ -219,9 +232,9 @@ function AuthenticatedRouter() {
           <Route path="/icebreaker-game" component={IcebreakerGamePage} />
           <Route path="/events" component={EventsPage} />
           <Route path="/connections" component={ConnectionsPage} />
-          <Route path="/chats" component={ConnectionsPage} />
+          <Route path="/chats" component={ChatsRedirect} />
           <Route path="/connections/:eventId" component={EventCoordinationPage} />
-          <Route path="/chats/:eventId" component={EventCoordinationPage} />
+          <Route path="/chats/:eventId" component={ChatEventRedirect} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/rewards" component={RewardsPage} />
           <Route path="/profile/edit" component={EditProfilePage} />
