@@ -72,10 +72,14 @@ export default function LimitedBrowseBanner({
 
   useEffect(() => {
     const inBrowseMode = isInLimitedBrowseMode();
-    const dismissed =
-      typeof window !== "undefined"
-        ? localStorage.getItem(BANNER_DISMISSED_KEY) === "true"
-        : false;
+    let dismissed = false;
+    if (typeof window !== "undefined") {
+      try {
+        dismissed = localStorage.getItem(BANNER_DISMISSED_KEY) === "true";
+      } catch {
+        dismissed = false;
+      }
+    }
     setIsVisible(inBrowseMode && !dismissed);
   }, []);
 
