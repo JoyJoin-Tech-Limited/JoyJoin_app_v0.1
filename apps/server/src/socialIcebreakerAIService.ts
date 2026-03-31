@@ -6,6 +6,7 @@ import type {
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
 import { getClientForFunction } from './ai/socialModelRouter';
+import { logAITrace } from './lib/aiTraceLogger';
 
 // ============ CURATED FALLBACK CONTENT ============
 
@@ -165,12 +166,18 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      console.log(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${Date.now() - t0}ms`);
+      const latencyMs = Date.now() - t0;
+      console.log(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms`);
+      logAITrace({ domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false });
       return parsed.slice(0, 5);
     }
-    console.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
+    const latencyMs = Date.now() - t0;
+    console.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
+    logAITrace({ domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, errorCode: 'parse_error' });
   } catch (error) {
-    console.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${Date.now() - t0}ms:`, error);
+    const latencyMs = Date.now() - t0;
+    console.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, error);
+    logAITrace({ domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, errorCode: 'llm_error' });
   }
 
   return getFallbackTopics(params.mood);
@@ -221,12 +228,18 @@ export async function generateMicroChallenges(params: {
 
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      console.log(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${Date.now() - t0}ms`);
+      const latencyMs = Date.now() - t0;
+      console.log(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms`);
+      logAITrace({ domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false });
       return parsed.slice(0, 3);
     }
-    console.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${Date.now() - t0}ms: invalid response shape, using fallback`);
+    const latencyMs = Date.now() - t0;
+    console.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
+    logAITrace({ domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, errorCode: 'parse_error' });
   } catch (error) {
-    console.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${Date.now() - t0}ms:`, error);
+    const latencyMs = Date.now() - t0;
+    console.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, error);
+    logAITrace({ domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, errorCode: 'llm_error' });
   }
 
   return getFallbackChallenges(params.completedChallengeIds);
