@@ -10,6 +10,7 @@ import JourneyProgressCard from "@/components/JourneyProgressCard";
 import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
 import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
 import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
+import LimitedBrowseBanner from "@/components/LimitedBrowseBanner";
 import { AlertCircle, RefreshCw, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -357,6 +358,13 @@ export default function DiscoverPage() {
           onLocationClick={() => setLocationPickerOpen(true)}
         />
 
+        {/* Limited Browse Mode Banner — shown when user chose "browse first" on profile review */}
+        {registrations.length === 0 && (
+          <LimitedBrowseBanner
+            className="mx-4 mt-3"
+            onExploreEvents={handleSelectEvent}
+          />
+        )}
 
         {/* 用户旅程进度卡片 - 引导完成关键步骤 */}
         {isAuthenticated && (

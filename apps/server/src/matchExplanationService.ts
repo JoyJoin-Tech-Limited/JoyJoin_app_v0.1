@@ -19,7 +19,7 @@ import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
-import type { AIProvider } from '@shared/types/aiMeta';
+import { logAITrace } from './lib/aiTraceLogger';
 
 // ============ 配置常量 ============
 
@@ -666,7 +666,9 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
         temperature: 0.7,
       });
     });
-    console.log(`[MatchExplanation] generatePairExplanation provider=${provider} latency=${Date.now() - t0}ms`);
+    const latencyMs = Date.now() - t0;
+    console.log(`[MatchExplanation] generatePairExplanation provider=${provider} latency=${latencyMs}ms`);
+    logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false });
     
     const explanation = response.choices[0]?.message?.content?.trim() || 
       `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
@@ -694,7 +696,9 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
           max_tokens: 200,
           temperature: 0.7,
         });
-        console.log(`[MatchExplanation] generatePairExplanation provider=deepseek (fallback) latency=${Date.now() - t0}ms`);
+        const latencyMs = Date.now() - t0;
+        console.log(`[MatchExplanation] generatePairExplanation provider=deepseek (fallback) latency=${latencyMs}ms`);
+        logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: 'deepseek', model: fbModel, latencyMs, success: true, fallbackUsed: true, fromCache: false });
         const explanation = fbResponse.choices[0]?.message?.content?.trim() ||
           `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
         return {
@@ -710,9 +714,11 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
         };
       } catch (fallbackError) {
         console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
+        logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: 'deepseek', model: fbModel, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
       }
     } else {
       console.error('[MatchExplanation] Error generating explanation after retries:', primaryError);
+      logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
     }
     // 降级处理：返回基于化学反应分数的模板解释
     return {
@@ -1133,7 +1139,9 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
         temperature: 0.8,
       });
     });
-    console.log(`[IceBreakers] generateIceBreakers provider=${provider} latency=${Date.now() - t0}ms`);
+    const latencyMs = Date.now() - t0;
+    console.log(`[IceBreakers] generateIceBreakers provider=${provider} latency=${latencyMs}ms`);
+    logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false });
     
     const content = response.choices[0]?.message?.content?.trim() || '';
     const iceBreakers = content
@@ -1157,7 +1165,9 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           max_tokens: 300,
           temperature: 0.8,
         });
-        console.log(`[IceBreakers] generateIceBreakers provider=deepseek (fallback) latency=${Date.now() - t0}ms`);
+        const latencyMs = Date.now() - t0;
+        console.log(`[IceBreakers] generateIceBreakers provider=deepseek (fallback) latency=${latencyMs}ms`);
+        logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: 'deepseek', model: fbModel, latencyMs, success: true, fallbackUsed: true, fromCache: false });
         const content = fbResponse.choices[0]?.message?.content?.trim() || '';
         const iceBreakers = content
           .split('\n')
@@ -1169,9 +1179,11 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
         }
       } catch (fallbackError) {
         console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
+        logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: 'deepseek', model: fbModel, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
       }
     } else {
       console.error('[IceBreakers] Error generating ice-breakers after retries:', primaryError);
+      logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
     }
   }
   

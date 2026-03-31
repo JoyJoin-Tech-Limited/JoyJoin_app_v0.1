@@ -2,12 +2,13 @@
  * FinalProfileReviewPage - Magical profile reveal experience
  *
  * Two phases:
- * 1. Analyzing: Spiral wave animation with fade-in text (min 2.5s guaranteed)
+ * 1. Analyzing: Spiral wave animation with fade-in text (min wait, skippable)
  * 2. Complete: Profile portrait card with stagger animation
  *
- * Fix (2026-02-24): Added minTimePassed guard to prevent instant phase
- * transition when React Query cache is warm. The "analyzing" reveal must
- * always play for at least 2500ms regardless of data load speed.
+ * The "analyzing" phase plays for at minimum MIN_ANALYZING_MS_DEFAULT (1200ms),
+ * or MIN_ANALYZING_MS_REDUCED (500ms) for users who prefer reduced motion.
+ * After SKIP_ENABLED_AFTER_MS (600ms), users can tap anywhere to skip straight
+ * to the reveal — preventing artificial waiting when data is already ready.
  */
 
 import { useState, useEffect } from "react";
@@ -25,26 +26,79 @@ import { archetypeConfig } from "@/lib/archetypes";
 import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import type { AuthUser } from "@/hooks/useAuth";
+import { enterLimitedBrowseMode } from "@/components/LimitedBrowseBanner";
+
+/**
+ * Experiment: Limited Browse Mode
+ * Set to `false` to hide the secondary "browse first" CTA globally.
+ * Can also be disabled per-session with ?exp=no_limited_browse in the URL.
+ */
+const ENABLE_LIMITED_BROWSE_MODE = true;
 
 type Phase = "analyzing" | "complete";
 
-// Minimum duration the "analyzing" phase must be shown (ms).
-// Prevents instant skip when React Query cache is already warm.
-const MIN_ANALYZING_MS = 2500;
+// Minimum analyzing phase duration (ms) before auto-advancing or allowing skip.
+// Reduced-motion users get a shorter wait; standard users get 1200ms (was 2500ms).
+const MIN_ANALYZING_MS_DEFAULT = 1200;
+const MIN_ANALYZING_MS_REDUCED = 500;
+
+// Earliest point at which a tap/click skips the analyzing phase (ms).
+// Prevents accidental instant-skip while still respecting intentional taps.
+const SKIP_ENABLED_AFTER_MS = 600;
 
 export default function FinalProfileReviewPage() {
   const [, setLocation] = useLocation();
   const analytics = useOnboardingAnalytics('profile-review'); // Phase 2: Analytics
   const { toast } = useToast();
+  const prefersReducedMotion = useReducedMotion();
+
+  const minAnalyzingMs = prefersReducedMotion ? MIN_ANALYZING_MS_REDUCED : MIN_ANALYZING_MS_DEFAULT;
+
+  // Resolve whether the limited-browse secondary CTA should be shown.
+  // Respects the module constant AND supports opt-in via ?exp=limited_browse.
+  const showLimitedBrowseCta: boolean = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const exp = urlParams.get("exp");
+
+      // Explicit opt-in wins regardless of global flag
+      if (exp === "limited_browse") return true;
+
+      // If globally disabled, stay off unless explicitly opted in above
+      if (!ENABLE_LIMITED_BROWSE_MODE) return false;
+
+      // Allow explicit opt-out per-session if flag is on globally
+      if (exp === "no_limited_browse") return false;
+
+      // Default when flag is enabled and no explicit override is present
+      return true;
+    } catch {
+      // On any parsing error, fall back to the global flag
+      return ENABLE_LIMITED_BROWSE_MODE;
+    }
+  })();
 
   // Minimum time guard – ensures the reveal animation always plays
   const [minTimePassed, setMinTimePassed] = useState(false);
+  // Becomes true after SKIP_ENABLED_AFTER_MS; enables tap-to-skip.
+  const [canSkip, setCanSkip] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setMinTimePassed(true), MIN_ANALYZING_MS);
-    return () => clearTimeout(timer);
-  }, []);
+    const skipTimer = setTimeout(() => setCanSkip(true), SKIP_ENABLED_AFTER_MS);
+    const revealTimer = setTimeout(() => setMinTimePassed(true), minAnalyzingMs);
+    return () => {
+      clearTimeout(skipTimer);
+      clearTimeout(revealTimer);
+    };
+  }, [minAnalyzingMs]);
+
+  // Allow tapping anywhere in the analyzing phase to skip once canSkip is true.
+  const handleSkipAnalyzing = () => {
+    if (canSkip) setMinTimePassed(true);
+  };
 
   // Data dependencies
   const { data: user } = useQuery<any>({ 
@@ -108,6 +162,44 @@ export default function FinalProfileReviewPage() {
     }
   };
 
+  /**
+   * Limited browse mode: mark profile review as complete (same server call)
+   * but additionally flag the session so DiscoverPage can show the browse banner.
+   * Experiment: ENABLE_LIMITED_BROWSE_MODE
+   */
+  const handleBrowseFirst = async () => {
+    analytics.stepCompleted({
+      viewedFullProfile: true,
+      hasInterests: !!interests,
+      hasArchetype: !!user?.archetype,
+      entryMode: 'limited_browse',
+    });
+
+    try {
+      await apiRequest("POST", "/api/profile-review/complete");
+
+      // Enter limited browse mode before navigating so DiscoverPage can detect it.
+      enterLimitedBrowseMode();
+
+      await invalidateUserDerivedQueries();
+      const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
+
+      if (!updatedUser?.nextStep) {
+        setLocation('/login');
+        return;
+      }
+
+      setLocation(nextStepToRoute(updatedUser.nextStep));
+    } catch (error) {
+      console.error("Error completing profile review (browse first):", error);
+      toast({
+        title: "出现错误",
+        description: "无法保存进度，请重试",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Derive archetype nickname for the personalized CTA
   const archetypeName: string | undefined = user?.archetype || user?.primaryArchetype;
   const archetypeNickname: string = archetypeName
@@ -122,9 +214,20 @@ export default function FinalProfileReviewPage() {
         {phase === "analyzing" ? (
           <motion.div
             key="analyzing"
-            className="fixed inset-0 flex flex-col items-center justify-center gap-8"
+            className={`fixed inset-0 flex flex-col items-center justify-center gap-8 select-none ${canSkip ? "cursor-pointer" : ""}`}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
+            onClick={canSkip ? handleSkipAnalyzing : undefined}
+            role={canSkip ? "button" : undefined}
+            tabIndex={canSkip ? 0 : -1}
+            aria-label={canSkip ? "分析中，轻触跳过" : "分析中"}
+            onKeyDown={(event) => {
+              if (!canSkip) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleSkipAnalyzing();
+              }
+            }}
           >
             <SpiralWaveAnimation />
             
@@ -143,20 +246,22 @@ export default function FinalProfileReviewPage() {
               className="text-sm text-muted-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1, duration: 0.6 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
             >
               分析性格特质 • 兴趣偏好 • 社交风格
             </motion.p>
 
-            {/* Subtle hint message to fill the 2.5s wait */}
-            <motion.p
-              className="text-xs text-muted-foreground/60 text-center px-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.6, duration: 0.5 }}
-            >
-              综合你的测评答案和兴趣选择，正在计算最适合你的社交场景...
-            </motion.p>
+            {/* Tap-to-skip hint — appears once skip is enabled */}
+            {canSkip && !prefersReducedMotion && (
+              <motion.p
+                className="text-xs text-muted-foreground/50 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                轻触屏幕跳过
+              </motion.p>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -223,6 +328,24 @@ export default function FinalProfileReviewPage() {
                   去看看谁在等我 →
                 </Button>
               </motion.div>
+
+              {/* Limited browse secondary CTA — experiment: ENABLE_LIMITED_BROWSE_MODE */}
+              {showLimitedBrowseCta && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.2, duration: 0.4 }}
+                >
+                  <button
+                    type="button"
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2 underline-offset-2 hover:underline"
+                    onClick={handleBrowseFirst}
+                    data-testid="browse-first-cta"
+                  >
+                    先浏览一下，随时可以报名 →
+                  </button>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
