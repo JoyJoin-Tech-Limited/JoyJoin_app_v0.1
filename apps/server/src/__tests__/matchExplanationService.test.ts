@@ -58,8 +58,44 @@ import {
   type MatchMember,
   type GroupAnalysis,
 } from '../matchExplanationService';
+import { db } from '../db';
+import { getClientForFunction, getDeepseekSelection } from '../ai/socialModelRouter';
 
 describe('matchExplanationService', () => {
+  const defaultSingleLineResponse = {
+    choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+  };
+
+  beforeEach(() => {
+    vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue(null);
+    vi.mocked(getClientForFunction).mockReturnValue({
+      client: {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue(defaultSingleLineResponse),
+          },
+        },
+      } as any,
+      model: 'deepseek-chat',
+      provider: 'deepseek',
+    });
+    vi.mocked(getDeepseekSelection).mockReturnValue({
+      client: {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue(defaultSingleLineResponse),
+          },
+        },
+      } as any,
+      model: 'deepseek-chat',
+      provider: 'deepseek',
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   const mockMember1: MatchMember = {
     userId: 'user-1',
     displayName: '小明',
@@ -457,21 +493,76 @@ describe('matchExplanationService', () => {
       expect(new Date(analysis.generatedAt).toString()).not.toBe('Invalid Date');
     });
 
-    it('should expose null provider and false fallbackUsed on cache hit', async () => {
-      // The DB mock returns null for findFirst (cache miss), so this is still
-      // a fresh generation path in tests. We verify the shape contracts:
-      // cache-hit behaviour is validated by the route-level integration.
+    it('should restore provider and fallbackUsed from cache metadata on cache hit', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '缓存的配对解释',
+            chemistryScore: 80,
+            sharedInterests: ['美食'],
+            connectionPoints: ['同乡（深圳）'],
+          }],
+          provider: 'deepseek',
+          fallbackUsed: false,
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['缓存破冰 1', '缓存破冰 2'],
+          provider: null,
+          fallbackUsed: true,
+        },
+      } as any);
+
       const analysis = await matchExplanationService.generateGroupAnalysis(
         'group-meta-cache',
         [mockMember1, mockMember2],
         '饭局'
       );
 
-      // fromCache is false here because the mock returns null (no cached data)
-      expect(analysis.fromCache).toBe(false);
-      // provider is set to the mock provider ('deepseek') on fresh generation
-      expect(['minimax', 'deepseek', null]).toContain(analysis.provider);
-      expect(typeof analysis.fallbackUsed).toBe('boolean');
+      expect(analysis.fromCache).toBe(true);
+      expect(analysis.generatedAt).toBe('2026-03-30T00:00:00.000Z');
+      expect(analysis.provider).toBe('deepseek');
+      expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.iceBreakers).toEqual(['缓存破冰 1', '缓存破冰 2']);
+    });
+
+    it('should default legacy cache metadata to provider=null and fallbackUsed=false', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '旧缓存配对解释',
+            chemistryScore: 78,
+            sharedInterests: [],
+            connectionPoints: [],
+          }],
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['旧缓存破冰 1', '旧缓存破冰 2'],
+        },
+      } as any);
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-legacy-cache',
+        [mockMember1, mockMember2],
+        '饭局'
+      );
+
+      expect(analysis.fromCache).toBe(true);
+      expect(analysis.provider).toBe(null);
+      expect(analysis.fallbackUsed).toBe(false);
     });
 
     it('should set fallbackUsed=false when LLM returns valid ice-breakers', async () => {
@@ -497,21 +588,49 @@ describe('matchExplanationService', () => {
       );
 
       expect(analysis.fallbackUsed).toBe(false);
+      expect(analysis.provider).toBe('deepseek');
+    });
 
-      // Restore the default mock for subsequent tests
+    it('should set fallbackUsed=true and return deterministic topics when both LLM paths fail', async () => {
       vi.mocked(getClientForFunction).mockReturnValue({
         client: {
           chat: {
             completions: {
-              create: vi.fn().mockResolvedValue({
-                choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
-              }),
+              create: vi.fn().mockRejectedValue(new Error('primary failed')),
+            },
+          },
+        } as any,
+        model: 'minimax-chat',
+        provider: 'minimax',
+      } as any);
+      vi.mocked(getDeepseekSelection).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('deepseek failed')),
             },
           },
         } as any,
         model: 'deepseek-chat',
         provider: 'deepseek',
       } as any);
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-fallback',
+        [mockMember1, mockMember2],
+        '饭局',
+        false
+      );
+
+      expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.provider).toBe(null);
+      expect(analysis.iceBreakers).toEqual([
+        '最拿手的一道菜是什么？',
+        '最近发现的一家宝藏餐厅是哪家？',
+        '如果可以拥有一项超能力，你会选什么？',
+        '周末最喜欢的放松方式是什么？',
+        '最近在追什么剧或者看什么书？',
+      ]);
     });
   });
 
@@ -524,6 +643,7 @@ describe('matchExplanationService', () => {
 
       expect(Array.isArray(result.iceBreakers)).toBe(true);
       expect(result.iceBreakers.length).toBeGreaterThan(0);
+      expect(['minimax', 'deepseek', null]).toContain(result.providerUsed);
       expect(typeof result.fallbackUsed).toBe('boolean');
     });
 

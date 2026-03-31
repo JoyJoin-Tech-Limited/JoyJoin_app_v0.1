@@ -132,7 +132,8 @@ export interface GroupAnalysis extends GroupAnalysisContract {
   generatedAt?: string;
   /**
    * The LLM provider used for this generation.
-   * null on cache hit (original provider not recorded) or deterministic fallback.
+   * null when cached metadata is unavailable, when no model call succeeded,
+   * or when different successful providers contributed to the same response.
    * Aligned with AIResponseMeta.provider.
    */
   provider?: AIProvider;
@@ -145,14 +146,19 @@ export interface GroupAnalysis extends GroupAnalysisContract {
 
 // ============ 缓存类型 ============
 
-interface PairExplanationsCache {
+interface CachedAIMetadata {
+  provider?: AIProvider;
+  fallbackUsed?: boolean;
+}
+
+interface PairExplanationsCache extends CachedAIMetadata {
   memberHash: string; // Hash of sorted member IDs for validation
   pairCount: number;
   generatedAt: string;
   explanations: MatchExplanation[];
 }
 
-interface IceBreakersCache {
+interface IceBreakersCache extends CachedAIMetadata {
   memberHash: string; // Hash of sorted member IDs for validation
   eventType: string;
   generatedAt: string;
@@ -167,6 +173,24 @@ interface LegacyCachedPairExplanation extends MatchExplanation {
 interface LegacyCachedIceBreakers {
   topics: string[];
   generatedAt: string;
+}
+
+interface PairExplanationGenerationResult {
+  explanation: MatchExplanation;
+  providerUsed: AIProvider;
+  fallbackUsed: boolean;
+}
+
+interface BatchPairExplanationGenerationResult {
+  explanations: MatchExplanation[];
+  providerUsed: AIProvider;
+  fallbackUsed: boolean;
+}
+
+interface IceBreakerGenerationResult {
+  iceBreakers: string[];
+  providerUsed: AIProvider;
+  fallbackUsed: boolean;
 }
 
 // Cache expiry: 7 days
@@ -190,6 +214,42 @@ function calculatePairCount(memberCount: number): number {
   return (memberCount * (memberCount - 1)) / 2;
 }
 
+/**
+ * Normalize cache metadata with safe defaults for legacy or partially populated
+ * cache records. This keeps `provider` nullable and forces `fallbackUsed` to a
+ * strict boolean so cache-hit observability is consistent.
+ */
+function coerceCachedAIMetadata(cache: CachedAIMetadata | null | undefined): {
+  provider: AIProvider;
+  fallbackUsed: boolean;
+} {
+  return {
+    provider: cache?.provider ?? null,
+    fallbackUsed: cache?.fallbackUsed === true,
+  };
+}
+
+/**
+ * Collapse component-level provider signals to a single response-level provider.
+ *
+ * @param providers Providers reported by individual Match Intelligence
+ *   components (pair explanations, ice-breakers, etc.).
+ * @returns The single provider when all successful LLM-generated components
+ *   came from the same provider; otherwise null for mixed-provider or
+ *   no-provider responses.
+ */
+function mergeProviders(...providers: AIProvider[]): AIProvider {
+  const successfulProviders = Array.from(
+    new Set(providers.filter((provider): provider is Exclude<AIProvider, null> => provider !== null))
+  );
+
+  if (successfulProviders.length === 1) {
+    return successfulProviders[0];
+  }
+
+  return null;
+}
+
 // ============ 缓存函数 ============
 
 /**
@@ -198,7 +258,7 @@ function calculatePairCount(memberCount: number): number {
 async function loadCachedPairExplanations(
   groupId: string,
   members: MatchMember[]
-): Promise<{ explanations: MatchExplanation[]; generatedAt: string } | null> {
+): Promise<{ explanations: MatchExplanation[]; generatedAt: string; provider: AIProvider; fallbackUsed: boolean } | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -233,7 +293,13 @@ async function loadCachedPairExplanations(
         return null;
       }
       
-      return { explanations: cached.explanations, generatedAt: cached.generatedAt };
+      const metadata = coerceCachedAIMetadata(cached);
+      return {
+        explanations: cached.explanations,
+        generatedAt: cached.generatedAt,
+        provider: metadata.provider,
+        fallbackUsed: metadata.fallbackUsed,
+      };
     }
     
     // Handle legacy cache format (without memberHash) - invalidate and regenerate
@@ -255,7 +321,8 @@ async function loadCachedPairExplanations(
 async function savePairExplanationsCache(
   groupId: string, 
   members: MatchMember[],
-  explanations: MatchExplanation[]
+  explanations: MatchExplanation[],
+  metadata: { provider: AIProvider; fallbackUsed: boolean }
 ): Promise<void> {
   try {
     const cache: PairExplanationsCache = {
@@ -263,6 +330,8 @@ async function savePairExplanationsCache(
       pairCount: explanations.length,
       generatedAt: new Date().toISOString(),
       explanations,
+      provider: metadata.provider,
+      fallbackUsed: metadata.fallbackUsed,
     };
     
     await db.update(eventPoolGroups)
@@ -285,7 +354,7 @@ async function loadCachedIceBreakers(
   groupId: string,
   members: MatchMember[],
   eventType: string
-): Promise<string[] | null> {
+): Promise<{ topics: string[]; generatedAt: string; provider: AIProvider; fallbackUsed: boolean } | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -319,7 +388,13 @@ async function loadCachedIceBreakers(
         return null;
       }
       
-      return cached.topics;
+      const metadata = coerceCachedAIMetadata(cached);
+      return {
+        topics: cached.topics,
+        generatedAt: cached.generatedAt,
+        provider: metadata.provider,
+        fallbackUsed: metadata.fallbackUsed,
+      };
     }
     
     // Handle legacy cache format - invalidate and regenerate
@@ -342,7 +417,8 @@ async function saveIceBreakersCache(
   groupId: string,
   members: MatchMember[],
   eventType: string,
-  topics: string[]
+  topics: string[],
+  metadata: { provider: AIProvider; fallbackUsed: boolean }
 ): Promise<void> {
   try {
     const cache: IceBreakersCache = {
@@ -350,6 +426,8 @@ async function saveIceBreakersCache(
       eventType,
       generatedAt: new Date().toISOString(),
       topics,
+      provider: metadata.provider,
+      fallbackUsed: metadata.fallbackUsed,
     };
     
     await db.update(eventPoolGroups)
@@ -538,12 +616,15 @@ function getPairKey(userId1: string, userId2: string): string {
 // ============ 核心生成函数 ============
 
 /**
- * 为一对用户生成匹配解释
+ * 为一对用户生成匹配解释及其生成元数据。
+ * Internal helper for group-level aggregation so the public
+ * `generatePairExplanation()` API can stay focused on the explanation payload
+ * while group analysis still captures provider/fallback observability.
  */
-export async function generatePairExplanation(
+async function generatePairExplanationWithMetadata(
   member1: MatchMember,
   member2: MatchMember
-): Promise<MatchExplanation> {
+): Promise<PairExplanationGenerationResult> {
   const chemistryScore = getChemistryScore(member1.archetype, member2.archetype);
   const sharedInterests = findSharedInterests(member1.interestsTop, member2.interestsTop);
   const connectionPoints = findConnectionPoints(member1, member2);
@@ -586,11 +667,15 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
     
     return {
-      pairKey: getPairKey(member1.userId, member2.userId),
-      explanation,
-      chemistryScore,
-      sharedInterests,
-      connectionPoints,
+      explanation: {
+        pairKey: getPairKey(member1.userId, member2.userId),
+        explanation,
+        chemistryScore,
+        sharedInterests,
+        connectionPoints,
+      },
+      providerUsed: provider,
+      fallbackUsed: false,
     };
   } catch (primaryError) {
     if (provider === 'minimax') {
@@ -608,11 +693,15 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
         const explanation = fbResponse.choices[0]?.message?.content?.trim() ||
           `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
         return {
-          pairKey: getPairKey(member1.userId, member2.userId),
-          explanation,
-          chemistryScore,
-          sharedInterests,
-          connectionPoints,
+          explanation: {
+            pairKey: getPairKey(member1.userId, member2.userId),
+            explanation,
+            chemistryScore,
+            sharedInterests,
+            connectionPoints,
+          },
+          providerUsed: 'deepseek',
+          fallbackUsed: false,
         };
       } catch (fallbackError) {
         console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
@@ -622,11 +711,15 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
     }
     // 降级处理：返回基于化学反应分数的模板解释
     return {
-      pairKey: getPairKey(member1.userId, member2.userId),
-      explanation: generateFallbackExplanation(member1, member2, chemistryScore),
-      chemistryScore,
-      sharedInterests,
-      connectionPoints,
+      explanation: {
+        pairKey: getPairKey(member1.userId, member2.userId),
+        explanation: generateFallbackExplanation(member1, member2, chemistryScore),
+        chemistryScore,
+        sharedInterests,
+        connectionPoints,
+      },
+      providerUsed: null,
+      fallbackUsed: true,
     };
   }
 }
@@ -650,9 +743,11 @@ function generateFallbackExplanation(
 }
 
 /**
- * 生成所有配对的解释（不使用缓存）
+ * 生成所有配对的解释（不使用缓存），并汇总批次级别的元数据。
+ * Returns the explanations plus aggregated provider/fallback state for the
+ * full pair-explanation batch.
  */
-async function generateFreshPairExplanations(members: MatchMember[]): Promise<MatchExplanation[]> {
+async function generateFreshPairExplanations(members: MatchMember[]): Promise<BatchPairExplanationGenerationResult> {
   const pairs: Array<{ member1: MatchMember; member2: MatchMember }> = [];
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
@@ -660,11 +755,28 @@ async function generateFreshPairExplanations(members: MatchMember[]): Promise<Ma
     }
   }
   
-  return runWithConcurrencyLimit(
+  const results = await runWithConcurrencyLimit(
     pairs,
-    async (pair) => generatePairExplanation(pair.member1, pair.member2),
+    async (pair) => generatePairExplanationWithMetadata(pair.member1, pair.member2),
     API_CONFIG.CONCURRENCY_LIMIT
   );
+
+  return {
+    explanations: results.map((result) => result.explanation),
+    providerUsed: mergeProviders(...results.map((result) => result.providerUsed)),
+    fallbackUsed: results.some((result) => result.fallbackUsed),
+  };
+}
+
+/**
+ * 为一对用户生成匹配解释
+ */
+export async function generatePairExplanation(
+  member1: MatchMember,
+  member2: MatchMember
+): Promise<MatchExplanation> {
+  const result = await generatePairExplanationWithMetadata(member1, member2);
+  return result.explanation;
 }
 
 /**
@@ -683,11 +795,6 @@ export async function generateGroupAnalysis(
   // Normalized metadata fields (aligned with AIResponseMeta)
   let provider: AIProvider = null;
   let fallbackUsed = false;
-
-  // Determine the primary configured provider for this generation pass.
-  // getClientForFunction() is a pure routing lookup (no network call) — it reads
-  // the SOCIAL_AI_PROVIDER env flag and returns the appropriate client metadata.
-  const { provider: primaryProvider } = getClientForFunction('generateIceBreakers');
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -701,40 +808,45 @@ export async function generateGroupAnalysis(
       console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
       pairExplanations = cachedExplanations.explanations;
       cacheGeneratedAt = cachedExplanations.generatedAt;
-      iceBreakers = cachedIceBreakers;
+      iceBreakers = cachedIceBreakers.topics;
       fromCache = true;
-      // Cache hit: original provider is not recorded; fallback was not used in this request
-      provider = null;
-      fallbackUsed = false;
+      provider = mergeProviders(cachedExplanations.provider, cachedIceBreakers.provider);
+      fallbackUsed = cachedExplanations.fallbackUsed || cachedIceBreakers.fallbackUsed;
     } else {
       // Cache miss, expired, or roster changed - regenerate in parallel
-      const [freshPairExplanations, iceBreakerResult] = await Promise.all([
+      const [pairExplanationResult, iceBreakerResult] = await Promise.all([
         generateFreshPairExplanations(members),
         generateIceBreakers(members, eventType)
       ]);
-      pairExplanations = freshPairExplanations;
+      pairExplanations = pairExplanationResult.explanations;
       iceBreakers = iceBreakerResult.iceBreakers;
-      provider = primaryProvider;
-      fallbackUsed = iceBreakerResult.fallbackUsed;
+      provider = mergeProviders(pairExplanationResult.providerUsed, iceBreakerResult.providerUsed);
+      fallbackUsed = pairExplanationResult.fallbackUsed || iceBreakerResult.fallbackUsed;
       
       // Save to cache with roster metadata (fire and forget with error handling)
-      savePairExplanationsCache(groupId, members, pairExplanations).catch((err) => {
+      savePairExplanationsCache(groupId, members, pairExplanations, {
+        provider: pairExplanationResult.providerUsed,
+        fallbackUsed: pairExplanationResult.fallbackUsed,
+      }).catch((err) => {
         console.error('[MatchExplanation] Failed to save pair explanations cache:', err);
       });
-      saveIceBreakersCache(groupId, members, eventType, iceBreakers).catch((err) => {
+      saveIceBreakersCache(groupId, members, eventType, iceBreakers, {
+        provider: iceBreakerResult.providerUsed,
+        fallbackUsed: iceBreakerResult.fallbackUsed,
+      }).catch((err) => {
         console.error('[MatchExplanation] Failed to save ice breakers cache:', err);
       });
     }
   } else {
     // No cache requested - generate fresh in parallel
-    const [freshPairExplanations, iceBreakerResult] = await Promise.all([
+    const [pairExplanationResult, iceBreakerResult] = await Promise.all([
       generateFreshPairExplanations(members),
       generateIceBreakers(members, eventType)
     ]);
-    pairExplanations = freshPairExplanations;
+    pairExplanations = pairExplanationResult.explanations;
     iceBreakers = iceBreakerResult.iceBreakers;
-    provider = primaryProvider;
-    fallbackUsed = iceBreakerResult.fallbackUsed;
+    provider = mergeProviders(pairExplanationResult.providerUsed, iceBreakerResult.providerUsed);
+    fallbackUsed = pairExplanationResult.fallbackUsed || iceBreakerResult.fallbackUsed;
   }
   
   // 计算整体化学反应
@@ -800,7 +912,7 @@ function generateGroupDynamics(
 export async function generateIceBreakers(
   members: MatchMember[],
   eventType: string = "饭局"
-): Promise<{ iceBreakers: string[]; fallbackUsed: boolean }> {
+): Promise<IceBreakerGenerationResult> {
   // 收集共同兴趣
   const allInterests: string[] = [];
   members.forEach(m => {
@@ -880,7 +992,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
       .slice(0, 5);
     
     if (iceBreakers.length >= 2) { // Lowered threshold from 3 to 2
-      return { iceBreakers, fallbackUsed: false };
+      return { iceBreakers, providerUsed: provider, fallbackUsed: false };
     }
   } catch (primaryError) {
     if (provider === 'minimax') {
@@ -902,7 +1014,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           .filter(line => line.length > 5 && line.length < 100)
           .slice(0, 5);
         if (iceBreakers.length >= 2) {
-          return { iceBreakers, fallbackUsed: false };
+          return { iceBreakers, providerUsed: 'deepseek', fallbackUsed: false };
         }
       } catch (fallbackError) {
         console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
@@ -913,7 +1025,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
   }
   
   // 降级：返回预设话题
-  return { iceBreakers: getFallbackIceBreakers(eventType, commonInterests), fallbackUsed: true };
+  return { iceBreakers: getFallbackIceBreakers(eventType, commonInterests), providerUsed: null, fallbackUsed: true };
 }
 
 /**
