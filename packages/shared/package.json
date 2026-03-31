@@ -21,7 +21,8 @@
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
     "./types/groupAnalysis": "./src/types/groupAnalysis.ts",
-    "./types/aiMeta": "./src/types/aiMeta.ts"
+    "./types/aiMeta": "./src/types/aiMeta.ts",
+    "./ai/onboarding": "./src/ai/onboarding.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.39.1",

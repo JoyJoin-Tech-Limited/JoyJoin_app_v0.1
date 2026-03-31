@@ -533,7 +533,7 @@ export default function SquadUnboxingFlow() {
                     )}
                   </AnimatePresence>
 
-                  {/* Stage 2: Group dynamics */}
+                  {/* Stage 2: Group theme tags + companion + dynamics */}
                   <AnimatePresence>
                     {analysingStage >= 2 && (
                       <motion.div
@@ -548,10 +548,32 @@ export default function SquadUnboxingFlow() {
                             <div className="h-4 w-4/5 rounded bg-muted animate-pulse" />
                           </div>
                         ) : groupAnalysis ? (
-                          <div className="rounded-2xl border border-border bg-card px-5 py-4">
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {groupAnalysis.groupDynamics}
-                            </p>
+                          <div className="space-y-3">
+                            {/* Theme tags */}
+                            {groupAnalysis.groupThemeTags && groupAnalysis.groupThemeTags.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {groupAnalysis.groupThemeTags.map((tag, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {/* Companion line */}
+                            {groupAnalysis.groupThemeCompanion && (
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {groupAnalysis.groupThemeCompanion}
+                              </p>
+                            )}
+                            {/* Group dynamics */}
+                            <div className="rounded-2xl border border-border bg-card px-5 py-4">
+                              <p className="text-sm text-muted-foreground leading-relaxed">
+                                {groupAnalysis.groupDynamics}
+                              </p>
+                            </div>
                           </div>
                         ) : null}
                       </motion.div>
