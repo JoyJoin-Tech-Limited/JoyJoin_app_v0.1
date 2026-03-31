@@ -12,6 +12,7 @@ import FloatingOrbs from "./FloatingOrbs";
 import TransitionMascot from "./TransitionMascot";
 import FooterActions from "./FooterActions";
 import SuccessCelebration from "./SuccessCelebration";
+import WhyThisFitsCard from "./WhyThisFitsCard";
 import BudgetSelectionStep from "./steps/BudgetSelectionStep";
 import SocialGoalsStep from "./steps/SocialGoalsStep";
 import SmartDefaultsStep from "./steps/SmartDefaultsStep";
@@ -205,11 +206,19 @@ export default function JoinEventPoolSheet({
                   className="pb-4"
                 >
                   {step === 1 && (
-                    <BudgetSelectionStep
-                      eventType={poolData.eventType}
-                      selectedBudget={preferences.budget}
-                      onSelectBudget={(budget) => updatePreferences({ budget })}
-                    />
+                    <>
+                      <WhyThisFitsCard
+                        poolId={poolData.poolId}
+                        eventType={poolData.eventType}
+                        area={poolData.area}
+                        enabled={open}
+                      />
+                      <BudgetSelectionStep
+                        eventType={poolData.eventType}
+                        selectedBudget={preferences.budget}
+                        onSelectBudget={(budget) => updatePreferences({ budget })}
+                      />
+                    </>
                   )}
 
                   {step === 2 && (
