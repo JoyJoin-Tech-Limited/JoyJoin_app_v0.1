@@ -57,7 +57,6 @@ const DeepFeedbackFlow = lazy(() => import("@/pages/DeepFeedbackFlow"));
 const IcebreakerSessionPage = lazy(() => import("@/pages/IcebreakerSessionPage"));
 const IcebreakerDemoPage = lazy(() => import("@/pages/IcebreakerDemoPage"));
 const IcebreakerGamePage = lazy(() => import("@/pages/IcebreakerGamePage"));
-const SocialIcebreakerRecapPage = lazy(() => import("@/pages/SocialIcebreakerRecapPage"));
 const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
 const MatchingStatusPage = lazy(() => import("@/pages/MatchingStatusPage"));
 const MyJourneyPage = lazy(() => import("@/pages/MyJourneyPage"));
