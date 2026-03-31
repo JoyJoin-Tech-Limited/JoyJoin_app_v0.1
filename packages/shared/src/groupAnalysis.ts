@@ -30,4 +30,8 @@ export interface GroupAnalysisContract {
   groupDynamics: string;
   pairExplanations: MatchExplanationContract[];
   iceBreakers: string[];
+  /** 2–4 compact post-match theme tags (e.g. "高火花", "动静结合") */
+  groupThemeTags?: string[];
+  /** One short companion line contextualising the group theme */
+  groupThemeCompanion?: string;
 }
