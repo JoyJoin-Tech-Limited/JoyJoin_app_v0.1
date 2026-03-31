@@ -17,7 +17,10 @@ import {
   buildLiveAIMeta,
   buildFallbackAIMeta,
 } from '@shared/types/aiMeta';
-import type { ProfileTaglineResponse } from '@shared/ai/onboarding';
+import {
+  GENERIC_PROFILE_TAGLINE_FALLBACK,
+  type ProfileTaglineResponse,
+} from '@shared/ai/onboarding';
 
 const PROMPT_VERSION = 'profile-tagline-v1';
 
@@ -41,14 +44,11 @@ const ARCHETYPE_FALLBACK_LINES: Record<string, string> = {
   '隐身猫':      '你慢热但深情，最好的关系往往从你不经意的一句话开始。',
 };
 
-const GENERIC_FALLBACK =
-  '你的社交风格独特，期待在活动里遇见真正和你频道相近的人。';
-
 function getFallbackLine(archetype?: string): string {
   if (archetype && ARCHETYPE_FALLBACK_LINES[archetype]) {
     return ARCHETYPE_FALLBACK_LINES[archetype];
   }
-  return GENERIC_FALLBACK;
+  return GENERIC_PROFILE_TAGLINE_FALLBACK;
 }
 
 // ─── Input contract ────────────────────────────────────────────────────────────
@@ -96,9 +96,11 @@ export interface ProfileTaglineInput {
  * Always resolves — errors activate the deterministic fallback library.
  */
 export async function generateProfileTagline(
-  input: ProfileTaglineInput
+  input?: ProfileTaglineInput | null
 ): Promise<ProfileTaglineResponse> {
-  const { archetype, categoryHeat = {}, intentKeys = [] } = input;
+  const archetype = input?.archetype;
+  const categoryHeat = input?.categoryHeat ?? {};
+  const intentKeys = input?.intentKeys ?? [];
 
   // Resolve top 2 interest categories by heat (label mapping is done once here)
   const topInterestCategories = Object.entries(categoryHeat)
