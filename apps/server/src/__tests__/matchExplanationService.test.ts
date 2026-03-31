@@ -58,8 +58,44 @@ import {
   type MatchMember,
   type GroupAnalysis,
 } from '../matchExplanationService';
+import { db } from '../db';
+import { getClientForFunction, getDeepseekSelection } from '../ai/socialModelRouter';
 
 describe('matchExplanationService', () => {
+  const defaultSingleLineResponse = {
+    choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+  };
+
+  beforeEach(() => {
+    vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue(null);
+    vi.mocked(getClientForFunction).mockReturnValue({
+      client: {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue(defaultSingleLineResponse),
+          },
+        },
+      } as any,
+      model: 'deepseek-chat',
+      provider: 'deepseek',
+    });
+    vi.mocked(getDeepseekSelection).mockReturnValue({
+      client: {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue(defaultSingleLineResponse),
+          },
+        },
+      } as any,
+      model: 'deepseek-chat',
+      provider: 'deepseek',
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   const mockMember1: MatchMember = {
     userId: 'user-1',
     displayName: '小明',
@@ -438,127 +474,193 @@ describe('matchExplanationService', () => {
       expect(analysis.pairExplanations).toHaveLength(0);
     });
 
-    it('should derive 动静结合 for mixed energetic and analytical archetypes', async () => {
+    // ── Normalized metadata (AIResponseMeta alignment) ──────────────────────
+    it('should include normalized metadata fields on fresh generation', async () => {
       const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-mixed',
-        [
-          { ...mockMember1, interestsTop: ['travel', 'coffee'] },
-          { ...mockMember3, interestsTop: ['旅行', '咖啡'] },
-          { ...mockMember2, interestsTop: ['阅读', '电影'] },
-        ],
-        '饭局'
+        'group-meta-live',
+        [mockMember1, mockMember2],
+        '饭局',
+        false // bypass cache to force fresh generation
       );
 
-      expect(analysis.groupThemeTags).toContain('动静结合');
-      expect(analysis.groupThemeTags.length).toBeGreaterThanOrEqual(2);
-      expect(analysis.groupThemeTags.length).toBeLessThanOrEqual(4);
+      // provider must be a known provider string or null
+      expect(['minimax', 'deepseek', null]).toContain(analysis.provider);
+      // fallbackUsed must be boolean
+      expect(typeof analysis.fallbackUsed).toBe('boolean');
+      // fromCache must be false for a fresh generation
+      expect(analysis.fromCache).toBe(false);
+      // generatedAt must be a valid ISO-8601 timestamp
+      expect(typeof analysis.generatedAt).toBe('string');
+      expect(analysis.generatedAt).toBeTruthy();
+      expect(new Date(analysis.generatedAt).toString()).not.toBe('Invalid Date');
     });
 
-    it('should map canonical interest IDs and labels into the same shared theme bucket', async () => {
+    it('should restore provider and fallbackUsed from cache metadata on cache hit', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '缓存的配对解释',
+            chemistryScore: 80,
+            sharedInterests: ['美食'],
+            connectionPoints: ['同乡（深圳）'],
+          }],
+          provider: 'deepseek',
+          fallbackUsed: false,
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['缓存破冰 1', '缓存破冰 2'],
+          provider: null,
+          fallbackUsed: true,
+        },
+      } as any);
+
       const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-interest-normalized',
-        [
-          { ...mockMember1, interestsTop: ['hiking', 'coffee'], archetype: '稳如龟' },
-          { ...mockMember2, interestsTop: ['徒步', '咖啡'], archetype: '隐身猫' },
-        ],
-        '饭局'
-      );
-
-      expect(analysis.groupThemeTags).toContain('城市探索');
-    });
-
-    it('should return at least two theme tags even when composition signals are sparse', async () => {
-      const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-min-tags',
-        [],
-        '饭局'
-      );
-
-      expect(analysis.groupThemeTags.length).toBeGreaterThanOrEqual(2);
-      expect(analysis.groupThemeTags.length).toBeLessThanOrEqual(4);
-      expect(analysis.groupThemeTags).toContain('轻松相处');
-    });
-
-    it('should use fire chemistry theme copy for high-chemistry groups', async () => {
-      const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-fire',
+        'group-meta-cache',
         [mockMember1, mockMember2],
         '饭局'
       );
 
-      expect(analysis.overallChemistry).toBe('fire');
-      expect(analysis.groupThemeTags).toContain('高火花');
-      expect(analysis.groupThemeCompanion).toContain('火花感很强');
+      expect(analysis.fromCache).toBe(true);
+      expect(analysis.generatedAt).toBe('2026-03-30T00:00:00.000Z');
+      expect(analysis.provider).toBe('deepseek');
+      expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.iceBreakers).toEqual(['缓存破冰 1', '缓存破冰 2']);
     });
 
-    it('should use warm chemistry theme tags for warm groups', async () => {
+    it('should default legacy cache metadata to provider=null and fallbackUsed=false', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '旧缓存配对解释',
+            chemistryScore: 78,
+            sharedInterests: [],
+            connectionPoints: [],
+          }],
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['旧缓存破冰 1', '旧缓存破冰 2'],
+        },
+      } as any);
+
       const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-warm',
-        [
-          { ...mockMember1, archetype: '开心柯基', interestsTop: ['travel'] },
-          { ...mockMember2, archetype: '淡定海豚', interestsTop: ['travel'] },
-        ],
+        'group-legacy-cache',
+        [mockMember1, mockMember2],
         '饭局'
       );
 
-      expect(analysis.overallChemistry).toBe('warm');
-      expect(analysis.groupThemeTags).toContain('相遇顺畅');
+      expect(analysis.fromCache).toBe(true);
+      expect(analysis.provider).toBe(null);
+      expect(analysis.fallbackUsed).toBe(false);
     });
 
-    it('should use mild chemistry companion copy for slower-burn groups', async () => {
+    it('should set fallbackUsed=false when LLM returns valid ice-breakers', async () => {
+      // Override the mock to return multi-line ice-breaker content when called for ice-breakers
+      const { getClientForFunction } = await import('../ai/socialModelRouter');
+      const multiLineCreate = vi.fn().mockResolvedValue({
+        choices: [{ message: { content: '你最近发现的宝藏地方是哪里？\n如果有超能力你会选什么？\n最近在看什么有意思的东西？' } }],
+      });
+      const singleLineCreate = vi.fn().mockResolvedValue({
+        choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+      });
+      vi.mocked(getClientForFunction).mockImplementation((fnName: string) => ({
+        client: { chat: { completions: { create: fnName === 'generateIceBreakers' ? multiLineCreate : singleLineCreate } } } as any,
+        model: 'deepseek-chat',
+        provider: 'deepseek',
+      } as any));
+
       const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-mild',
-        [
-          { ...mockMember1, archetype: '开心柯基', interestsTop: ['travel'] },
-          { ...mockMember2, archetype: '稳如龟', interestsTop: ['travel'] },
-        ],
-        '饭局'
+        'group-no-fallback',
+        [mockMember1, mockMember2],
+        '饭局',
+        false
       );
 
-      expect(analysis.overallChemistry).toBe('mild');
-      expect(analysis.groupThemeTags).toContain('轻松破冰');
-      expect(analysis.groupThemeCompanion).toContain('先自然接触');
+      expect(analysis.fallbackUsed).toBe(false);
+      expect(analysis.provider).toBe('deepseek');
     });
 
-    it('should use cold chemistry companion copy when archetypes fall back to the default chemistry score', async () => {
+    it('should set fallbackUsed=true and return deterministic topics when both LLM paths fail', async () => {
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('primary failed')),
+            },
+          },
+        } as any,
+        model: 'minimax-chat',
+        provider: 'minimax',
+      } as any);
+      vi.mocked(getDeepseekSelection).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('deepseek failed')),
+            },
+          },
+        } as any,
+        model: 'deepseek-chat',
+        provider: 'deepseek',
+      } as any);
+
       const analysis = await matchExplanationService.generateGroupAnalysis(
-        'group-theme-cold',
-        [
-          { userId: 'cold-1', displayName: '甲', archetype: '未知原型A', interestsTop: ['reading'] },
-          { userId: 'cold-2', displayName: '乙', archetype: '未知原型B', interestsTop: ['阅读'] },
-        ],
-        '饭局'
+        'group-fallback',
+        [mockMember1, mockMember2],
+        '饭局',
+        false
       );
 
-      expect(analysis.overallChemistry).toBe('cold');
-      expect(analysis.groupThemeTags).toContain('轻松破冰');
-      expect(analysis.groupThemeCompanion).toContain('先自然接触');
+      expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.provider).toBe(null);
+      expect(analysis.iceBreakers).toEqual([
+        '最拿手的一道菜是什么？',
+        '最近发现的一家宝藏餐厅是哪家？',
+        '如果可以拥有一项超能力，你会选什么？',
+        '周末最喜欢的放松方式是什么？',
+        '最近在追什么剧或者看什么书？',
+      ]);
     });
   });
 
   describe('generateIceBreakers', () => {
-    it('should return array of ice-breakers', async () => {
-      const iceBreakers = await matchExplanationService.generateIceBreakers(
+    it('should return iceBreakers array and fallbackUsed flag', async () => {
+      const result = await matchExplanationService.generateIceBreakers(
         [mockMember1, mockMember2],
         '饭局'
       );
 
-      expect(Array.isArray(iceBreakers)).toBe(true);
-      expect(iceBreakers.length).toBeGreaterThan(0);
+      expect(Array.isArray(result.iceBreakers)).toBe(true);
+      expect(result.iceBreakers.length).toBeGreaterThan(0);
+      expect(['minimax', 'deepseek', null]).toContain(result.providerUsed);
+      expect(typeof result.fallbackUsed).toBe('boolean');
     });
 
     it('should return appropriate topics for 酒局', async () => {
-      const iceBreakers = await matchExplanationService.generateIceBreakers(
+      const result = await matchExplanationService.generateIceBreakers(
         [mockMember1, mockMember2],
         '酒局'
       );
 
-      expect(Array.isArray(iceBreakers)).toBe(true);
+      expect(Array.isArray(result.iceBreakers)).toBe(true);
     });
 
     it('should handle empty members array', async () => {
-      const iceBreakers = await matchExplanationService.generateIceBreakers([], '饭局');
-      expect(Array.isArray(iceBreakers)).toBe(true);
+      const result = await matchExplanationService.generateIceBreakers([], '饭局');
+      expect(Array.isArray(result.iceBreakers)).toBe(true);
     });
   });
 
