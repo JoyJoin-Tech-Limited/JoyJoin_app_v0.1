@@ -9,27 +9,25 @@
 import type { AIResponseMeta } from '../types/aiMeta';
 
 /**
+ * Generic fallback tagline used when no archetype-specific line is available.
+ * Warm and forward-looking without being too generic.
+ */
+export const GENERIC_PROFILE_TAGLINE_FALLBACK =
+  '你的存在让每次聚会都多一份可能性。';
+
+/**
  * Profile Tagline Response
  * 档案标语响应
  *
  * Returned by GET /api/onboarding/profile-tagline.
- * Contains a single warm AI-generated insight line shown in ProfilePortraitCard
- * during the FinalProfileReviewPage.  Always present — `meta.fallbackUsed`
- * distinguishes live AI output from a deterministic fallback.
+ * A single warm insight line for the profile review card, plus AI observability metadata.
  */
 export interface ProfileTaglineResponse {
-  /** One warm insight line about the user's social style (20–36 Chinese characters). */
+  /** One warm, personalised insight line (≤ 40 Chinese characters). */
   insightLine: string;
   /** Standard AI observability metadata. */
   meta: AIResponseMeta;
 }
-
-/**
- * Generic fallback tagline shown when no archetype-specific fallback applies.
- * Used as the final safety net in profileTaglineService and ProfilePortraitCard.
- */
-export const GENERIC_PROFILE_TAGLINE_FALLBACK =
-  '你的独特气质，会让合适的人主动靠近。';
 
 /**
  * Pre-Join Vibe Brief

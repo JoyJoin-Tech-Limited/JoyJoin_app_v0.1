@@ -19,7 +19,8 @@ import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
-import { logAITrace } from './lib/aiTraceLogger';
+import type { AIProvider } from '@shared/types/aiMeta';
+import { getInterestById } from '@shared/interests';
 
 // ============ 配置常量 ============
 
