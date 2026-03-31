@@ -19,6 +19,7 @@ import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
+import { getInterestById } from '@shared/interests';
 
 // ============ 配置常量 ============
 
@@ -749,6 +750,57 @@ const ANALYTICAL_ARCHETYPES = new Set(['机智狐', '沉思猫头鹰', '灵感�
 const WARM_ARCHETYPES = new Set(['暖心熊', '定心大象']);
 const QUIET_ARCHETYPES = new Set(['稳如龟', '隐身猫']);
 
+type GroupThemeBucket = 'exploration' | 'food' | 'music' | 'culture' | null;
+
+function normalizeInterestForTheme(interest: string): string {
+  return getInterestById(interest)?.label ?? interest;
+}
+
+function getInterestThemeBucket(interest: string): GroupThemeBucket {
+  const normalized = normalizeInterestForTheme(interest);
+
+  if (
+    ['travel', 'hiking', 'camping', 'citywalk', 'sailing'].includes(interest) ||
+    ['旅游', '旅行', '户外', '徒步', '露营', 'CityWalk', '城市漫步', '海边帆船'].includes(normalized)
+  ) {
+    return 'exploration';
+  }
+
+  if (
+    [
+      'hotpot',
+      'bbq',
+      'cantonese',
+      'japanese',
+      'western',
+      'dessert',
+      'coffee',
+      'food_hunting',
+      'dabianlu',
+      'private_kitchen',
+    ].includes(interest) ||
+    ['美食', '烹饪', '火锅', '撸串', '早茶', '日料', '西餐', '下午茶', '咖啡', '探店', '打边炉', '私厨'].includes(normalized)
+  ) {
+    return 'food';
+  }
+
+  if (
+    ['music', 'concert', 'live_house', 'ktv'].includes(interest) ||
+    ['音乐', '玩音乐', '乐器', '演唱会', 'LiveHouse', 'KTV'].includes(normalized)
+  ) {
+    return 'music';
+  }
+
+  if (
+    ['reading', 'exhibition', 'theater', 'cinema'].includes(interest) ||
+    ['读书', '阅读', '文学', '书', '看展', '话剧', '电影'].includes(normalized)
+  ) {
+    return 'culture';
+  }
+
+  return null;
+}
+
 /**
  * Deterministically generate 2–4 compact post-match theme tags.
  * Derived from archetype composition, chemistry level, and shared interests.
@@ -779,24 +831,33 @@ function generateGroupThemeTags(
   else if (quietCount >= 2) tags.push('慢热深聊');
   else if (archetypes.length > 0) tags.push('性格多元');
 
-  // 3. Interest / activity tag (based on shared topics)
-  // Interest labels are display strings consistent with the rest of this service
-  const allInterests = members.flatMap(m => m.interestsTop ?? []);
+  // 3. Interest / activity tag (supports both canonical interest IDs and legacy/display labels)
+  const allInterests = members.flatMap(m => (m.interestsTop ?? []).map(normalizeInterestForTheme));
   const interestCounts = new Map<string, number>();
   allInterests.forEach(i => interestCounts.set(i, (interestCounts.get(i) || 0) + 1));
   const topShared = Array.from(interestCounts.entries())
     .filter(([_, c]) => c >= 2)
     .map(([i]) => i);
-  if (topShared.some(t => ['旅游', '户外', '徒步'].includes(t))) tags.push('城市探索');
-  else if (topShared.some(t => ['美食', '烹饪'].includes(t))) tags.push('美食同好');
-  else if (topShared.some(t => ['音乐', '乐器'].includes(t))) tags.push('音乐同频');
-  else if (topShared.some(t => ['读书', '文学', '书'].includes(t))) tags.push('文化共鸣');
+  if (topShared.some(t => getInterestThemeBucket(t) === 'exploration')) tags.push('城市探索');
+  else if (topShared.some(t => getInterestThemeBucket(t) === 'food')) tags.push('美食同好');
+  else if (topShared.some(t => getInterestThemeBucket(t) === 'music')) tags.push('音乐同频');
+  else if (topShared.some(t => getInterestThemeBucket(t) === 'culture')) tags.push('文化共鸣');
   else if (eventType === '酒局') tags.push('把酒言欢');
   else if (topShared.length >= 2) tags.push('话题丰富');
 
   // 4. Background diversity tag (only when truly cross-industry)
   const industries = new Set(members.map(m => m.industryCategory).filter(Boolean));
   if (industries.size >= 3 && tags.length < 4) tags.push('背景多元');
+
+  if (tags.length < 2) {
+    if (eventType === '酒局') {
+      tags.push('轻松小酌');
+    } else if (members.length >= 4) {
+      tags.push('缘分开桌');
+    } else {
+      tags.push('轻松相处');
+    }
+  }
 
   return tags.slice(0, 4);
 }
