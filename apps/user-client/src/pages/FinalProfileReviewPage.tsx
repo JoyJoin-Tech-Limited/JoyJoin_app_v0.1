@@ -143,11 +143,20 @@ export default function FinalProfileReviewPage() {
         {phase === "analyzing" ? (
           <motion.div
             key="analyzing"
-            className="fixed inset-0 flex flex-col items-center justify-center gap-8 cursor-pointer select-none"
+            className={`fixed inset-0 flex flex-col items-center justify-center gap-8 select-none ${canSkip ? "cursor-pointer" : ""}`}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            onClick={handleSkipAnalyzing}
+            onClick={canSkip ? handleSkipAnalyzing : undefined}
+            role={canSkip ? "button" : undefined}
+            tabIndex={canSkip ? 0 : -1}
             aria-label={canSkip ? "分析中，轻触跳过" : "分析中"}
+            onKeyDown={(event) => {
+              if (!canSkip) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleSkipAnalyzing();
+              }
+            }}
           >
             <SpiralWaveAnimation />
             
