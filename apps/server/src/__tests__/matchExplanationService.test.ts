@@ -58,8 +58,44 @@ import {
   type MatchMember,
   type GroupAnalysis,
 } from '../matchExplanationService';
+import { db } from '../db';
+import { getClientForFunction, getDeepseekSelection } from '../ai/socialModelRouter';
 
 describe('matchExplanationService', () => {
+  const defaultSingleLineResponse = {
+    choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+  };
+
+  beforeEach(() => {
+    vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue(null);
+    vi.mocked(getClientForFunction).mockReturnValue({
+      client: {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue(defaultSingleLineResponse),
+          },
+        },
+      } as any,
+      model: 'deepseek-chat',
+      provider: 'deepseek',
+    });
+    vi.mocked(getDeepseekSelection).mockReturnValue({
+      client: {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue(defaultSingleLineResponse),
+          },
+        },
+      } as any,
+      model: 'deepseek-chat',
+      provider: 'deepseek',
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   const mockMember1: MatchMember = {
     userId: 'user-1',
     displayName: '小明',
@@ -392,6 +428,8 @@ describe('matchExplanationService', () => {
       expect(analysis).toHaveProperty('groupDynamics');
       expect(analysis).toHaveProperty('pairExplanations');
       expect(analysis).toHaveProperty('iceBreakers');
+      expect(analysis).toHaveProperty('groupThemeTags');
+      expect(analysis).toHaveProperty('groupThemeCompanion');
     });
 
     it('should generate correct number of pair explanations', async () => {
@@ -435,31 +473,194 @@ describe('matchExplanationService', () => {
 
       expect(analysis.pairExplanations).toHaveLength(0);
     });
-  });
 
-  describe('generateIceBreakers', () => {
-    it('should return array of ice-breakers', async () => {
-      const iceBreakers = await matchExplanationService.generateIceBreakers(
+    // ── Normalized metadata (AIResponseMeta alignment) ──────────────────────
+    it('should include normalized metadata fields on fresh generation', async () => {
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-meta-live',
+        [mockMember1, mockMember2],
+        '饭局',
+        false // bypass cache to force fresh generation
+      );
+
+      // provider must be a known provider string or null
+      expect(['minimax', 'deepseek', null]).toContain(analysis.provider);
+      // fallbackUsed must be boolean
+      expect(typeof analysis.fallbackUsed).toBe('boolean');
+      // fromCache must be false for a fresh generation
+      expect(analysis.fromCache).toBe(false);
+      // generatedAt must be a valid ISO-8601 timestamp
+      expect(typeof analysis.generatedAt).toBe('string');
+      expect(analysis.generatedAt).toBeTruthy();
+      expect(new Date(analysis.generatedAt).toString()).not.toBe('Invalid Date');
+    });
+
+    it('should restore provider and fallbackUsed from cache metadata on cache hit', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '缓存的配对解释',
+            chemistryScore: 80,
+            sharedInterests: ['美食'],
+            connectionPoints: ['同乡（深圳）'],
+          }],
+          provider: 'deepseek',
+          fallbackUsed: false,
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['缓存破冰 1', '缓存破冰 2'],
+          provider: null,
+          fallbackUsed: true,
+        },
+      } as any);
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-meta-cache',
         [mockMember1, mockMember2],
         '饭局'
       );
 
-      expect(Array.isArray(iceBreakers)).toBe(true);
-      expect(iceBreakers.length).toBeGreaterThan(0);
+      expect(analysis.fromCache).toBe(true);
+      expect(analysis.generatedAt).toBe('2026-03-30T00:00:00.000Z');
+      expect(analysis.provider).toBe('deepseek');
+      expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.iceBreakers).toEqual(['缓存破冰 1', '缓存破冰 2']);
+    });
+
+    it('should default legacy cache metadata to provider=null and fallbackUsed=false', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '旧缓存配对解释',
+            chemistryScore: 78,
+            sharedInterests: [],
+            connectionPoints: [],
+          }],
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['旧缓存破冰 1', '旧缓存破冰 2'],
+        },
+      } as any);
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-legacy-cache',
+        [mockMember1, mockMember2],
+        '饭局'
+      );
+
+      expect(analysis.fromCache).toBe(true);
+      expect(analysis.provider).toBe(null);
+      expect(analysis.fallbackUsed).toBe(false);
+    });
+
+    it('should set fallbackUsed=false when LLM returns valid ice-breakers', async () => {
+      // Override the mock to return multi-line ice-breaker content when called for ice-breakers
+      const { getClientForFunction } = await import('../ai/socialModelRouter');
+      const multiLineCreate = vi.fn().mockResolvedValue({
+        choices: [{ message: { content: '你最近发现的宝藏地方是哪里？\n如果有超能力你会选什么？\n最近在看什么有意思的东西？' } }],
+      });
+      const singleLineCreate = vi.fn().mockResolvedValue({
+        choices: [{ message: { content: '这两位性格互补，会有很多话题聊！' } }],
+      });
+      vi.mocked(getClientForFunction).mockImplementation((fnName: string) => ({
+        client: { chat: { completions: { create: fnName === 'generateIceBreakers' ? multiLineCreate : singleLineCreate } } } as any,
+        model: 'deepseek-chat',
+        provider: 'deepseek',
+      } as any));
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-no-fallback',
+        [mockMember1, mockMember2],
+        '饭局',
+        false
+      );
+
+      expect(analysis.fallbackUsed).toBe(false);
+      expect(analysis.provider).toBe('deepseek');
+    });
+
+    it('should set fallbackUsed=true and return deterministic topics when both LLM paths fail', async () => {
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('primary failed')),
+            },
+          },
+        } as any,
+        model: 'minimax-chat',
+        provider: 'minimax',
+      } as any);
+      vi.mocked(getDeepseekSelection).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('deepseek failed')),
+            },
+          },
+        } as any,
+        model: 'deepseek-chat',
+        provider: 'deepseek',
+      } as any);
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-fallback',
+        [mockMember1, mockMember2],
+        '饭局',
+        false
+      );
+
+      expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.provider).toBe(null);
+      expect(analysis.iceBreakers).toEqual([
+        '最拿手的一道菜是什么？',
+        '最近发现的一家宝藏餐厅是哪家？',
+        '如果可以拥有一项超能力，你会选什么？',
+        '周末最喜欢的放松方式是什么？',
+        '最近在追什么剧或者看什么书？',
+      ]);
+    });
+  });
+
+  describe('generateIceBreakers', () => {
+    it('should return iceBreakers array and fallbackUsed flag', async () => {
+      const result = await matchExplanationService.generateIceBreakers(
+        [mockMember1, mockMember2],
+        '饭局'
+      );
+
+      expect(Array.isArray(result.iceBreakers)).toBe(true);
+      expect(result.iceBreakers.length).toBeGreaterThan(0);
+      expect(['minimax', 'deepseek', null]).toContain(result.providerUsed);
+      expect(typeof result.fallbackUsed).toBe('boolean');
     });
 
     it('should return appropriate topics for 酒局', async () => {
-      const iceBreakers = await matchExplanationService.generateIceBreakers(
+      const result = await matchExplanationService.generateIceBreakers(
         [mockMember1, mockMember2],
         '酒局'
       );
 
-      expect(Array.isArray(iceBreakers)).toBe(true);
+      expect(Array.isArray(result.iceBreakers)).toBe(true);
     });
 
     it('should handle empty members array', async () => {
-      const iceBreakers = await matchExplanationService.generateIceBreakers([], '饭局');
-      expect(Array.isArray(iceBreakers)).toBe(true);
+      const result = await matchExplanationService.generateIceBreakers([], '饭局');
+      expect(Array.isArray(result.iceBreakers)).toBe(true);
     });
   });
 
@@ -470,6 +671,8 @@ describe('matchExplanationService', () => {
       overallChemistry: 'warm',
       groupDynamics: '测试组合',
       iceBreakers: [],
+      groupThemeTags: [],
+      groupThemeCompanion: '',
       pairExplanations: pairKeys.map((pairKey) => ({
         pairKey,
         explanation: '测试解释',

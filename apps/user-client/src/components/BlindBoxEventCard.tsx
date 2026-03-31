@@ -7,6 +7,7 @@ import { Calendar, MapPin, Sparkles, Users, Shield, Heart, HelpCircle, Timer, Fl
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
+import PreJoinVibeBriefSheet from "./PreJoinVibeBriefSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
 
@@ -92,12 +93,17 @@ export default function BlindBoxEventCard({
   onDetailsClick,
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
+  const [vibeBriefOpen, setVibeBriefOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setVibeBriefOpen(true);
+  };
+
+  const handleProceedToJoin = () => {
     console.log("[BlindBoxEventCard] opening JoinEventPoolSheet with poolId:", poolId);
     setJoinSheetOpen(true);
   };
@@ -407,6 +413,14 @@ export default function BlindBoxEventCard({
           city,
         }}
       />
+
+      {poolId && (
+        <PreJoinVibeBriefSheet
+          open={vibeBriefOpen}
+          onOpenChange={setVibeBriefOpen}
+          onProceedToJoin={handleProceedToJoin}
+        />
+      )}
 
       {poolId && joinSheetOpen && (
         <JoinEventPoolSheet
