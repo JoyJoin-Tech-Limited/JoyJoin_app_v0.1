@@ -12,13 +12,20 @@
  *  - Fallback-safe: every field that maps to rendered copy has a
  *    deterministic fallback value baked in at the service layer
  *  - Observable: AIResponseMeta is always included so the trace viewer
- *    can record provider, latency, and fallback usage
+ *    can record provider, cache/fallback state, and prompt/evaluator metadata
  *
  * Import via:
  *   import type { ProfileTaglineResponse } from '@shared/ai/onboarding';
  */
 
 import type { AIResponseMeta } from '../types/aiMeta';
+
+/**
+ * Shared generic fallback copy for the onboarding profile tagline when
+ * archetype-specific copy is unavailable.
+ */
+export const GENERIC_PROFILE_TAGLINE_FALLBACK =
+  '你的社交风格独特，期待在活动里遇见真正和你频率相近的人。';
 
 /**
  * Response shape for GET /api/onboarding/profile-tagline
@@ -40,7 +47,8 @@ export interface ProfileTaglineResponse {
   insightLine: string;
 
   /**
-   * Observability metadata — provider, latency bucket, fallback flag.
+   * Observability metadata — provider, cache/fallback state, and
+   * prompt/evaluator metadata from AIResponseMeta.
    */
   meta: AIResponseMeta;
 }
