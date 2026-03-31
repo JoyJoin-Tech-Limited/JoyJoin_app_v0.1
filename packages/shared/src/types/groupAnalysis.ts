@@ -123,6 +123,20 @@ export interface GroupAnalysisResponse {
    */
   myPairs?: PairExplanation[];
 
+  /**
+   * Short thematic tags describing the overall group vibe
+   * (e.g. ["创意碰撞", "聊不停", "跨界奇缘"]).
+   * Optional; populated when the LLM-backed analysis includes theme tagging.
+   */
+  groupThemeTags?: string[];
+
+  /**
+   * One short companion line that reinforces the group theme.
+   * Written in Simplified Chinese (≤ 30 characters).
+   * Optional; populated alongside groupThemeTags when available.
+   */
+  groupThemeCompanion?: string;
+
   // ─── Normalized AI observability metadata (aligned with AIResponseMeta) ──────
   // These fields extend the existing fromCache/generatedAt inline fields with
   // the additional provider/fallback signals defined in aiMeta.ts.
