@@ -26,6 +26,14 @@ import { getArchetypeAvatar } from "@/lib/archetypeAdapter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
 import type { AuthUser } from "@/hooks/useAuth";
+import { enterLimitedBrowseMode } from "@/components/LimitedBrowseBanner";
+
+/**
+ * Experiment: Limited Browse Mode
+ * Set to `false` to hide the secondary "browse first" CTA globally.
+ * Can also be disabled per-session with ?exp=no_limited_browse in the URL.
+ */
+const ENABLE_LIMITED_BROWSE_MODE = true;
 
 type Phase = "analyzing" | "complete";
 
@@ -37,6 +45,19 @@ export default function FinalProfileReviewPage() {
   const [, setLocation] = useLocation();
   const analytics = useOnboardingAnalytics('profile-review'); // Phase 2: Analytics
   const { toast } = useToast();
+
+  // Resolve whether the limited-browse secondary CTA should be shown.
+  // Respects the module constant AND supports opt-in via ?exp=limited_browse.
+  const showLimitedBrowseCta: boolean = (() => {
+    if (!ENABLE_LIMITED_BROWSE_MODE) return false;
+    if (typeof window === "undefined") return false;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      // Allow explicit opt-out per-session if flag is on globally
+      if (urlParams.get("exp") === "no_limited_browse") return false;
+    } catch {}
+    return true;
+  })();
 
   // Minimum time guard – ensures the reveal animation always plays
   const [minTimePassed, setMinTimePassed] = useState(false);
@@ -100,6 +121,44 @@ export default function FinalProfileReviewPage() {
       setLocation(nextStepToRoute(updatedUser.nextStep));
     } catch (error) {
       console.error("Error completing profile review:", error);
+      toast({
+        title: "出现错误",
+        description: "无法保存进度，请重试",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /**
+   * Limited browse mode: mark profile review as complete (same server call)
+   * but additionally flag the session so DiscoverPage can show the browse banner.
+   * Experiment: ENABLE_LIMITED_BROWSE_MODE
+   */
+  const handleBrowseFirst = async () => {
+    analytics.stepCompleted({
+      viewedFullProfile: true,
+      hasInterests: !!interests,
+      hasArchetype: !!user?.archetype,
+      entryMode: 'limited_browse',
+    });
+
+    try {
+      await apiRequest("POST", "/api/profile-review/complete");
+
+      // Enter limited browse mode before navigating so DiscoverPage can detect it.
+      enterLimitedBrowseMode();
+
+      await invalidateUserDerivedQueries();
+      const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
+
+      if (!updatedUser?.nextStep) {
+        setLocation('/login');
+        return;
+      }
+
+      setLocation(nextStepToRoute(updatedUser.nextStep));
+    } catch (error) {
+      console.error("Error completing profile review (browse first):", error);
       toast({
         title: "出现错误",
         description: "无法保存进度，请重试",
@@ -223,6 +282,24 @@ export default function FinalProfileReviewPage() {
                   去看看谁在等我 →
                 </Button>
               </motion.div>
+
+              {/* Limited browse secondary CTA — experiment: ENABLE_LIMITED_BROWSE_MODE */}
+              {showLimitedBrowseCta && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.2, duration: 0.4 }}
+                >
+                  <button
+                    type="button"
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2 underline-offset-2 hover:underline"
+                    onClick={handleBrowseFirst}
+                    data-testid="browse-first-cta"
+                  >
+                    先浏览一下，随时可以报名 →
+                  </button>
+                </motion.div>
+              )}
             </div>
           </motion.div>
         )}
