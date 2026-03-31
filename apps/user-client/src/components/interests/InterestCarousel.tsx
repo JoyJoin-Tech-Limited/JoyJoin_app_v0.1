@@ -400,7 +400,10 @@ export function InterestCarousel({ onComplete, onBack, initialSelections }: Inte
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-base font-medium flex-1">选择兴趣</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-medium leading-tight">完善兴趣偏好</h1>
+            <p className="text-xs text-muted-foreground leading-tight mt-0.5">这些将直接影响你的匹配质量</p>
+          </div>
           
           {/* Compact counters */}
           <div className="flex items-center gap-3 text-xs">
