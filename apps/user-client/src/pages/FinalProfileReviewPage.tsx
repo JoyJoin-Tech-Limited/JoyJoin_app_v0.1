@@ -49,14 +49,26 @@ export default function FinalProfileReviewPage() {
   // Resolve whether the limited-browse secondary CTA should be shown.
   // Respects the module constant AND supports opt-in via ?exp=limited_browse.
   const showLimitedBrowseCta: boolean = (() => {
-    if (!ENABLE_LIMITED_BROWSE_MODE) return false;
     if (typeof window === "undefined") return false;
     try {
       const urlParams = new URLSearchParams(window.location.search);
+      const exp = urlParams.get("exp");
+
+      // Explicit opt-in wins regardless of global flag
+      if (exp === "limited_browse") return true;
+
+      // If globally disabled, stay off unless explicitly opted in above
+      if (!ENABLE_LIMITED_BROWSE_MODE) return false;
+
       // Allow explicit opt-out per-session if flag is on globally
-      if (urlParams.get("exp") === "no_limited_browse") return false;
-    } catch {}
-    return true;
+      if (exp === "no_limited_browse") return false;
+
+      // Default when flag is enabled and no explicit override is present
+      return true;
+    } catch {
+      // On any parsing error, fall back to the global flag
+      return ENABLE_LIMITED_BROWSE_MODE;
+    }
   })();
 
   // Minimum time guard – ensures the reveal animation always plays
