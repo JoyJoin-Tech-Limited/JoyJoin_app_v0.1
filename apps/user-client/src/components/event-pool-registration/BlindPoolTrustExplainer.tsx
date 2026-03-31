@@ -101,8 +101,8 @@ export default function BlindPoolTrustExplainer({
   return (
     <motion.div
       initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.35 }}
       className="rounded-2xl border border-primary/20 bg-gradient-to-br from-background to-primary/5 overflow-hidden"
     >
       {/* Collapsed header — always visible */}
