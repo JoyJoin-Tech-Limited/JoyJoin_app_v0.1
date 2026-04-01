@@ -1,5 +1,7 @@
 # JoyJoin 性能优化指南
 
+> **Last updated:** 2026-04-01 (PRs #385, #386, #388, #390)
+
 ## 性能预算
 
 | 指标 | 目标值 | 说明 |
@@ -13,14 +15,24 @@
 
 ## 优化策略
 
-### 1. 路由级代码分割
+### 1. 路由级代码分割 (active default)
 
-所有页面组件使用 `React.lazy()` 动态导入：
+**All non-critical page components must use `React.lazy()` dynamic imports.** This is the active default in `apps/user-client/src/App.tsx` (PR #386):
 
 ```typescript
-const DiscoverPage = lazy(() => import("@/pages/DiscoverPage"));
-const PersonalityTestPageV4 = lazy(() => import("@/pages/PersonalityTestPageV4"));
+// Critical / above-fold routes — eagerly imported (no lazy)
+import DiscoverPage from "@/pages/DiscoverPage";
+import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
+
+// All other pages — lazy-loaded (active convention)
+const EventsPage = lazy(() => import("@/pages/EventsPage"));
+const ConnectionsPage = lazy(() => import("@/pages/ConnectionsPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const MatchingStatusPage = lazy(() => import("@/pages/MatchingStatusPage"));
+// … (see App.tsx for the full list)
 ```
+
+**Guardrail:** Do **not** add static imports for non-critical pages. If in doubt, use `lazy()`.
 
 ### 2. Suspense 边界
 
@@ -44,6 +56,8 @@ queryClient.prefetchQuery({
 });
 ```
 
+**Prefetch gating:** Asset prefetching should be gated on real activity state. Do not unconditionally prefetch large background assets for users who have no active events (see PR #363 — center-tab empty-state page gates background asset prefetch for no-activity users).
+
 ### 4. 静态数据缓存
 
 静态元数据（如人格特质、原型定义）配置较长的 `staleTime`：
@@ -57,15 +71,51 @@ queryClient.prefetchQuery({
 
 ### 5. 资源优化
 
-- **图片**: 使用 WebP/AVIF 格式，非关键图片设置 `loading="lazy"`
+#### 图片格式 (updated, PR #388)
+
+- **Hero images:** Use **WebP** format with `decoding="async"` on the `<img>` tag. PNG is no longer the default for hero images. Example from `LandingPage.tsx`:
+  ```tsx
+  <img src={matchCardImg} alt="…" decoding="async" />
+  ```
+  Landing page hero images are in `apps/user-client/src/assets/landing screen/*.webp`.
+- **Non-critical images:** Add `loading="lazy"` to defer off-screen images.
+- **Animated SVGs:** Optimise (run through SVGO) before committing — see empty-state SVGs (PR #362).
 - **字体**: 使用 `font-display: swap`，仅加载必要字重
 - **动画**: Lottie JSON 控制在 80KB gzip 以下
 
-### 6. 构建优化
+#### Archetype assets
 
-- Vite 使用 esbuild 压缩
-- 仅预加载关键 chunk
-- 配置合理的 browserslist 目标
+The 12 archetype PNG files are large (~120–300 KB each). `DiscoverPage.tsx` defers archetype image loads until they are needed (PR #386). Do not eagerly preload all archetype assets in the critical path.
+
+#### Matching-state assets (centralized, PR #390)
+
+All matching-state screens share a single background SVG (`apps/user-client/src/assets/matching/shared/matching-bg.svg`). State-specific hero images live in sibling subdirectories:
+
+```
+apps/user-client/src/assets/matching/
+├── shared/              # ← single shared dark background
+│   └── matching-bg.svg
+├── waiting/
+│   └── matching-waiting-hero.svg
+├── no-match/
+│   └── no-match-hero.svg
+├── join-error/
+│   └── join-error-hero.svg
+├── extended-data-empty/
+│   └── extended-data-empty-hero.svg
+└── test-incomplete/
+    └── …
+```
+
+**Guardrail:** Do **not** duplicate `matching-bg.svg` into per-screen directories. Always import from `matching/shared/matching-bg.svg` via `MatchingStateLayout`.
+
+### 6. 构建优化 / Vite chunk strategy (PR #385)
+
+- Admin-only code must **not** be imported into `apps/user-client` — it inflates the user bundle unnecessarily. Dead admin code was removed from user-client in PR #385.
+- Vite manual chunk grouping: vendor libraries (`react`, `framer-motion`, `@tanstack/react-query`) are split into a stable vendor chunk; feature chunks are kept per-route via `lazy()`.
+- Uses esbuild for minification.
+- Only preload the critical vendor chunk and the initial route chunk.
+- Configure a reasonable `browserslist` target for the mobile-first audience.
 
 ## 监控指标
 
@@ -84,7 +134,7 @@ logWebVitals(); // 初始化性能监控
 
 ```typescript
 performance.mark('route-start');
-// ... 路由切换 ...
+// … 路由切换 …
 performance.measure('route-transition', 'route-start');
 ```
 
@@ -98,3 +148,14 @@ performance.measure('route-transition', 'route-start');
 
 - 注册流程: onboarding → 性格测试 → 资料填写 → 引导页 → 发现首页
 - p75 移动网络下，整体流程 TTI ≤ 2s
+
+## Performance Guardrails (summary)
+
+| Guardrail | Rule |
+|-----------|------|
+| Non-critical routes | Must use `React.lazy()` — no static imports in `App.tsx` |
+| Admin code | Must not be imported into `apps/user-client` |
+| Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
+| Hero images | Use WebP + `decoding="async"`; avoid large PNG |
+| Archetype assets | Defer / gate — do not preload all 12 in the critical path |
+| Asset prefetching | Gate on real activity state — do not prefetch for no-activity users |
