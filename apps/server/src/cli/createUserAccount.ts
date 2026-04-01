@@ -111,9 +111,6 @@ async function createUserAccount() {
     // Step 8: Industry (optional)
     const industry = await prompt(rl, '💼 Enter industry (optional, press Enter to skip): ');
 
-    // Step 9: Top interests (optional)
-    const topInterests = await prompt(rl, '❤️ Enter interests (comma-separated, optional, press Enter to skip): ');
-
     console.log('\n⏳ Creating user account...');
 
     // Hash password
@@ -130,18 +127,10 @@ async function createUserAccount() {
       gender,
       currentCity: city,
       hasCompletedPersonalityTest: true,
-      hasCompletedRegistration: true,
     };
 
     if (industry) {
       userData.currentOccupation = industry;
-    }
-
-    if (topInterests) {
-      const interestsArray = topInterests.split(',').map(i => i.trim()).filter(i => i);
-      if (interestsArray.length > 0) {
-        userData.interestsTop = interestsArray;
-      }
     }
 
     if (existingUsers.length > 0) {
@@ -170,7 +159,6 @@ async function createUserAccount() {
     console.log(`   Gender: ${user.gender}`);
     console.log(`   City: ${user.currentCity}`);
     if (industry) console.log(`   Industry: ${industry}`);
-    if (topInterests) console.log(`   Interests: ${topInterests}`);
     console.log('\n   Login at: /login');
     console.log('   Use phone + verification code (demo: 666666)');
 

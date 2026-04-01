@@ -1,13 +1,19 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type {
   SocialSessionState,
-  SocialIcebreakerPhase,
   AtmosphereMood,
   SocialTopic,
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
+
+function getSocialSessionStorageKey(sessionId: string): string {
+  return `joyjoin_social_session_id:${sessionId}`;
+}
+
+/** How often (ms) to send a heartbeat when the tab is active. */
+const HEARTBEAT_INTERVAL_MS = 10_000;
 
 interface UseSocialIcebreakerOptions {
   sessionId: string;
@@ -33,8 +39,8 @@ interface UseSocialIcebreakerReturn {
   isLoading: boolean;
   isHost: boolean;
   socialSessionId: string | null;
-  error: IcebreakerError | null;
-  clearError: () => void;
+  /** True when the server returned SESSION_EXPIRED (410) for this session. */
+  sessionExpired: boolean;
   startSession: () => Promise<void>;
   fetchTopics: (mood: AtmosphereMood) => Promise<SocialTopic[]>;
   advancePhase: () => Promise<void>;
@@ -78,33 +84,109 @@ export function useSocialIcebreaker({
   eventType,
 }: UseSocialIcebreakerOptions): UseSocialIcebreakerReturn {
   const qc = useQueryClient();
-  const [socialSessionId, setSocialSessionId] = useState<string | null>(null);
+  const storageKey = getSocialSessionStorageKey(sessionId);
+
+  // Restore a cached socialSessionId from sessionStorage so that the GET
+  // polling query can start immediately on reconnect/refresh, before
+  // startSession() completes its POST.
+  const [socialSessionId, setSocialSessionId] = useState<string | null>(() => {
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      return stored || null;
+    } catch {
+      return null;
+    }
+  });
+
   const [isStarting, setIsStarting] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
-  const [error, setError] = useState<IcebreakerError | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [isDocumentVisible, setIsDocumentVisible] =
+    useState(typeof document === 'undefined' || document.visibilityState === 'visible');
   const startedRef = useRef(false);
 
-  const clearError = useCallback(() => setError(null), []);
+  // Keep sessionStorage in sync with the current socialSessionId.
+  const setAndCacheSocialSessionId = useCallback((id: string | null) => {
+    setSocialSessionId(id);
+    try {
+      if (id) {
+        sessionStorage.setItem(storageKey, id);
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch {
+      // sessionStorage may be unavailable in some environments; ignore.
+    }
+  }, [storageKey]);
 
-  // Poll for state every 3 seconds once we have a session
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Poll for state every 3 seconds once we have a session.
+  // The query fn checks for the structured expiry error and updates state.
   const { data: state, isLoading } = useQuery<SocialSessionState | null>({
     queryKey: ['/api/social-icebreaker', socialSessionId],
     queryFn: async () => {
       if (!socialSessionId) return null;
-      try {
-        const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`);
-        return res.json();
-      } catch (e) {
-        setError(await classifyError(e));
+      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`, undefined, {
+        allowStatuses: [410],
+      });
+      if (res.status === 410) {
+        setSessionExpired(true);
+        setAndCacheSocialSessionId(null);
         return null;
       }
+      if (!res.ok) return null;
+      return res.json();
     },
-    enabled: !!socialSessionId,
+    enabled: !!socialSessionId && !sessionExpired,
     refetchInterval: 3000,
     staleTime: 1000,
   });
 
   const isHost = state?.hostUserId === userId;
+
+  // Periodically send a heartbeat to keep the user marked as active while
+  // the tab remains visible.
+  useEffect(() => {
+    if (!socialSessionId || sessionExpired || !isDocumentVisible) return;
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const sendHeartbeat = async () => {
+      try {
+        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/heartbeat`, {}, {
+          allowStatuses: [410],
+        });
+        if (res.status === 410) {
+          setSessionExpired(true);
+          setAndCacheSocialSessionId(null);
+        }
+      } catch {
+        // Network failure; will retry next interval.
+      } finally {
+        if (!cancelled) {
+          timeoutId = window.setTimeout(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+        }
+      }
+    };
+
+    void sendHeartbeat();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [socialSessionId, sessionExpired, isDocumentVisible, setAndCacheSocialSessionId]);
 
   const startSession = useCallback(async () => {
     if (startedRef.current) return;
@@ -113,20 +195,26 @@ export function useSocialIcebreaker({
     setError(null);
     try {
       const res = await apiRequest('POST', '/api/social-icebreaker/start', {
-        sessionId,
-        displayName,
-        eventType,
+          sessionId,
+          displayName,
+          eventType,
+        }, {
+          allowStatuses: [410],
       });
+      if (res.status === 410) {
+        setSessionExpired(true);
+        setAndCacheSocialSessionId(null);
+        return;
+      }
       const data = await res.json();
-      setSocialSessionId(data.socialSessionId);
-    } catch (e) {
-      const err = await classifyError(e);
-      setError(err);
+      setAndCacheSocialSessionId(data.socialSessionId);
+    } catch (error) {
+      console.error('[useSocialIcebreaker] startSession error:', error);
       startedRef.current = false;
     } finally {
       setIsStarting(false);
     }
-  }, [sessionId, displayName, eventType]);
+  }, [sessionId, displayName, eventType, setAndCacheSocialSessionId]);
 
   const fetchTopics = useCallback(
     async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
@@ -242,7 +330,6 @@ export function useSocialIcebreaker({
     async () => {
       if (!socialSessionId) return;
       try {
-        // The server now derives the userId from the session; no body userId needed
         await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {});
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
       } catch (e) {
@@ -257,8 +344,7 @@ export function useSocialIcebreaker({
     isLoading,
     isHost,
     socialSessionId,
-    error,
-    clearError,
+    sessionExpired,
     startSession,
     fetchTopics,
     advancePhase,

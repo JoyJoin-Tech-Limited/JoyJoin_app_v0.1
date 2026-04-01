@@ -9,7 +9,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  guardrails:
+    name: Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify env, secret, and legacy guardrails
+        run: node scripts/check-guardrails.mjs
+
   lint-user:
+    needs: [guardrails]
     name: Type Check User Client
     runs-on: ubuntu-latest
     steps:
@@ -37,6 +51,7 @@ jobs:
         run: npx tsc -p apps/user-client/tsconfig.json --noEmit
 
   lint-admin:
+    needs: [guardrails]
     name: Type Check Admin Client
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +79,7 @@ jobs:
         run: npx tsc -p apps/admin-client/tsconfig.json --noEmit
 
   lint-server:
+    needs: [guardrails]
     name: Type Check Server
     runs-on: ubuntu-latest
     steps:
@@ -126,17 +142,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH Remote Deployment
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30m
+          envs: DATABASE_URL
           script: |
             set -euo pipefail
 
-            # ====== HARD-CODED DATABASE_URL (as requested) ======
-            export DATABASE_URL="postgresql://neondb_owner:npg_3C9FJhvfrBVE@ep-broad-firefly-a1zh1g6z-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+            : "${DATABASE_URL:?DATABASE_URL GitHub secret is required}"
 
             soft_cleanup() {
               echo "🧹 Soft cleanup (keep 7 days)..."
