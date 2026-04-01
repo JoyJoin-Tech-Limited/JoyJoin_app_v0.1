@@ -1,5 +1,7 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
-import { storage } from "./storage";
+import { notificationsRepo } from "./repositories/notificationsRepo";
+import { paymentsRepo } from "./repositories/paymentsRepo";
+import { usersRepo } from "./repositories/usersRepo";
 import { getLevelDiscount } from "@shared/gamification";
 
 /**
@@ -34,6 +36,10 @@ interface WechatWebhookRequest {
   headers: WechatWebhookHeaders;
   rawBody: Buffer | string;
   payload: WechatWebhookPayload;
+}
+
+function getSingleHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 interface WechatPayConfig {
@@ -77,7 +83,7 @@ export class PaymentService {
 
     // 1. Apply level discount first (for event payments)
     if (applyLevelDiscount && paymentType === "event") {
-      const user = await storage.getUser(userId);
+      const user = await usersRepo.getUser(userId);
       if (user) {
         const userLevel = user.currentLevel || 1;
         const levelDiscountPercent = getLevelDiscount(userLevel);
@@ -93,7 +99,7 @@ export class PaymentService {
 
     // 2. Apply coupon discount on top of level discount
     if (couponId) {
-      const coupon = await storage.getCoupon(couponId);
+      const coupon = await paymentsRepo.getCoupon(couponId);
       if (coupon && coupon.isActive) {
         // Validate coupon
         const now = new Date();
@@ -122,7 +128,7 @@ export class PaymentService {
     const wechatOrderId = `JJ${Date.now()}${Math.random().toString(36).slice(2, 11)}`;
 
     // Create payment record (discountAmount stores the total discount)
-    const payment = await storage.createPayment({
+    const payment = await paymentsRepo.createPayment({
       userId,
       paymentType,
       relatedId,
@@ -185,31 +191,32 @@ export class PaymentService {
    * @param rawBody   Raw request body string (required for signature verification)
    * @param headers   WeChat Pay signature headers
    */
+  async handleWebhook(payload: any, rawBody: string, headers: WechatWebhookHeaders): Promise<void>;
   async handleWebhook(request: WechatWebhookRequest): Promise<void>;
   async handleWebhook(
-    payload: WechatWebhookPayload,
-    rawBody: string,
-    headers: WechatWebhookHeaders
-  ): Promise<void>;
-  async handleWebhook(
-    payloadOrRequest: WechatWebhookPayload | WechatWebhookRequest,
-    rawBody?: string,
-    headers?: WechatWebhookHeaders
+    payloadOrRequest: any,
+    rawBodyArg?: string,
+    headersArg?: WechatWebhookHeaders
   ): Promise<void> {
-    const normalizedRequest = this.normalizeWebhookRequest(payloadOrRequest, rawBody, headers);
+    const request = this.normalizeWebhookRequest(payloadOrRequest, rawBodyArg, headersArg);
+    const { payload, rawBody, headers } = request;
+
+    if (!payload || typeof payload !== "object") {
+      throw Object.assign(new Error("Webhook payload is required"), { status: 400 });
+    }
 
     // ── 1. Signature verification ──────────────────────────────────────────
     const isDevMode = process.env.NODE_ENV === "development";
     if (!isDevMode) {
-      const signatureValid = this.verifySignature(normalizedRequest.rawBody, normalizedRequest.headers);
+      const signatureValid = this.verifySignature(rawBody, headers);
       if (!signatureValid) {
         console.warn("[Payment] Webhook rejected: invalid signature");
         throw this.createHttpError(401, "Invalid webhook signature");
       }
     }
 
-    const eventType = normalizedRequest.payload.event_type;
-    const resource = normalizedRequest.payload.resource;
+    const eventType = (payload as any).event_type;
+    const resource = (payload as any).resource;
 
     if (typeof eventType !== "string" || !resource || typeof resource !== "object") {
       throw this.createHttpError(400, "Invalid webhook payload");
@@ -247,7 +254,7 @@ export class PaymentService {
     console.log(`[Payment] Processing successful payment: ${wechatOrderId}`);
 
     // Find payment by WeChat order ID
-    const payment = await storage.getPaymentByWechatOrderId(wechatOrderId);
+    const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
 
     if (!payment) {
       console.error(`[Payment] Payment not found for order ${wechatOrderId}`);
@@ -265,7 +272,7 @@ export class PaymentService {
     }
     
     // Update payment status
-    await storage.updatePayment(payment.id, {
+    await paymentsRepo.updatePayment(payment.id, {
       status: "completed",
       wechatTransactionId: transactionId,
       paidAt: new Date(),
@@ -273,7 +280,7 @@ export class PaymentService {
 
     // Record coupon usage if applicable
     if (payment.couponId) {
-      await storage.recordCouponUsage({
+      await paymentsRepo.recordCouponUsage({
         couponId: payment.couponId,
         userId: payment.userId,
         paymentId: payment.id,
@@ -290,7 +297,7 @@ export class PaymentService {
 
     const isBundle = payment.paymentType === "event_bundle";
     const isSubscription = payment.paymentType === "subscription";
-    await storage.createNotification({
+    await notificationsRepo.createNotification({
       userId: payment.userId,
       category: "activities",
       type: (isSubscription || isBundle) ? "subscription_activated" : "event_confirmed",
@@ -308,7 +315,7 @@ export class PaymentService {
    * Activate subscription after successful payment
    */
   private async activateSubscription(subscriptionId: string, paymentId: string): Promise<void> {
-    await storage.updateSubscription(subscriptionId, {
+    await paymentsRepo.updateSubscription(subscriptionId, {
       status: "active",
       paymentId,
     });
@@ -330,7 +337,7 @@ export class PaymentService {
   private async handleRefundSuccess(wechatOrderId: string): Promise<void> {
     console.log(`[Payment] Processing refund for order: ${wechatOrderId}`);
 
-    const payment = await storage.getPaymentByWechatOrderId(wechatOrderId);
+    const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
 
     if (!payment) {
       console.error(`[Payment] Payment not found for refund ${wechatOrderId}`);
@@ -345,13 +352,13 @@ export class PaymentService {
       return;
     }
     
-    await storage.updatePayment(payment.id, {
+    await paymentsRepo.updatePayment(payment.id, {
       status: "refunded",
     });
 
     // Deactivate subscription if it was a subscription or bundle payment
     if ((payment.paymentType === "subscription" || payment.paymentType === "event_bundle") && payment.relatedId) {
-      await storage.updateSubscription(payment.relatedId, {
+      await paymentsRepo.updateSubscription(payment.relatedId, {
         status: "cancelled",
       });
     }
@@ -411,10 +418,35 @@ export class PaymentService {
    *
    * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
    */
+  private normalizeWebhookRequest(
+    payloadOrRequest: any,
+    rawBodyArg?: string,
+    headersArg?: WechatWebhookHeaders
+  ): { payload: any; rawBody: string; headers: WechatWebhookHeaders } {
+    if (rawBodyArg !== undefined && headersArg !== undefined) {
+      return {
+        payload: payloadOrRequest,
+        rawBody: rawBodyArg,
+        headers: headersArg,
+      };
+    }
+
+    const request = payloadOrRequest as Partial<WechatWebhookRequest>;
+    const rawBody = typeof request.rawBody === "string"
+      ? request.rawBody
+      : request.rawBody?.toString("utf8") ?? JSON.stringify(request.payload ?? {});
+
+    return {
+      payload: request.payload,
+      rawBody,
+      headers: request.headers ?? {},
+    };
+  }
+
   private verifySignature(rawBody: string, headers: WechatWebhookHeaders): boolean {
-    const timestamp = this.getHeader(headers, "timestamp");
-    const nonce = this.getHeader(headers, "nonce");
-    const signature = this.getHeader(headers, "signature");
+    const timestamp = getSingleHeaderValue(headers.timestamp ?? headers["wechatpay-timestamp"]);
+    const nonce = getSingleHeaderValue(headers.nonce ?? headers["wechatpay-nonce"]);
+    const signature = getSingleHeaderValue(headers.signature ?? headers["wechatpay-signature"]);
 
     if (!timestamp || !nonce || !signature) {
       console.warn("[Payment] Webhook missing required signature headers");
@@ -473,7 +505,7 @@ export class PaymentService {
    * Create refund for a payment
    */
   async createRefund(paymentId: string, reason: string): Promise<void> {
-    const payment = await storage.getPaymentById(paymentId);
+    const payment = await paymentsRepo.getPaymentById(paymentId);
 
     if (!payment) {
       throw new Error("Payment not found");
@@ -499,7 +531,7 @@ export class PaymentService {
       },
     });
 
-    await storage.updatePayment(payment.id, {
+    await paymentsRepo.updatePayment(payment.id, {
       status: "refund_pending",
     });
 

@@ -3,9 +3,14 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const payments: any[] = [];
 
-vi.mock("../storage", () => ({
-  storage: {
+vi.mock("../repositories/usersRepo", () => ({
+  usersRepo: {
     getUser: vi.fn(),
+  },
+}));
+
+vi.mock("../repositories/paymentsRepo", () => ({
+  paymentsRepo: {
     getCoupon: vi.fn(),
     createPayment: vi.fn(async (data: any) => {
       const payment = {
@@ -25,13 +30,19 @@ vi.mock("../storage", () => ({
       return payment;
     }),
     recordCouponUsage: vi.fn(),
-    createNotification: vi.fn(),
     updateSubscription: vi.fn(async (id: string, updates: Record<string, unknown>) => ({ id, ...updates })),
   },
 }));
 
+vi.mock("../repositories/notificationsRepo", () => ({
+  notificationsRepo: {
+    createNotification: vi.fn(),
+  },
+}));
+
 import { PaymentService } from "../paymentService";
-import { storage } from "../storage";
+import { notificationsRepo } from "../repositories/notificationsRepo";
+import { paymentsRepo } from "../repositories/paymentsRepo";
 
 const originalFetch = global.fetch;
 const envSnapshot = { ...process.env };
@@ -163,12 +174,12 @@ describe("PaymentService", () => {
       status: "completed",
       wechatTransactionId: "wx_txn_123",
     });
-    expect(storage.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_SUCCESS_001");
-    expect(storage.updateSubscription).toHaveBeenCalledWith("subscription-1", {
+    expect(paymentsRepo.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_SUCCESS_001");
+    expect(paymentsRepo.updateSubscription).toHaveBeenCalledWith("subscription-1", {
       status: "active",
       paymentId: "payment-1",
     });
-    expect(storage.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsRepo.createNotification).toHaveBeenCalledTimes(1);
   });
 
   it("rejects webhooks with invalid signatures", async () => {
@@ -210,7 +221,7 @@ describe("PaymentService", () => {
       "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds",
       expect.objectContaining({ method: "POST" }),
     );
-    expect(storage.getPaymentById).toHaveBeenCalledWith("payment-refund-1");
+    expect(paymentsRepo.getPaymentById).toHaveBeenCalledWith("payment-refund-1");
     expect(payments[0].status).toBe("refund_pending");
 
     const refundPayload = {
@@ -222,8 +233,8 @@ describe("PaymentService", () => {
     await service.handleWebhook(refundPayload, rawBody, signWebhook(rawBody));
 
     expect(payments[0].status).toBe("refunded");
-    expect(storage.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_REFUND_001");
-    expect(storage.updateSubscription).toHaveBeenCalledWith("subscription-2", {
+    expect(paymentsRepo.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_REFUND_001");
+    expect(paymentsRepo.updateSubscription).toHaveBeenCalledWith("subscription-2", {
       status: "cancelled",
     });
   });
