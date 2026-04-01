@@ -1,0 +1,276 @@
+# Admin Portal — Incident Handling Runbook
+
+**Audience:** JoyJoin internal support staff and on-call engineers  
+**Environment:** Internal beta (`admin.yuejuapp.com`)  
+**Last updated:** 2026-04-01
+
+---
+
+## Table of Contents
+
+1. [Common Operational Tasks](#1-common-operational-tasks)
+2. [Incident Triage](#2-incident-triage)
+3. [Internal Beta Daily Checklist](#3-internal-beta-daily-checklist)
+4. [Escalation Paths](#4-escalation-paths)
+
+---
+
+## 1. Common Operational Tasks
+
+### 1.1 Admin Login / Account Handling
+
+**Login:**
+1. Navigate to `https://admin.yuejuapp.com`
+2. Enter admin username and password.
+3. On success the session cookie is set and you are redirected to the dashboard.
+
+**Session issues:** Admin sessions expire when the session store is cleared (server restart or Replit sleep). Log out and log in again.
+
+**Forgot password / reset:**
+- Only a `super_admin` can reset another admin's password.
+- In the admin portal: **Admin Accounts → ⋮ → Reset Password**.
+- API: `POST /api/admin/accounts/:id/reset-password` with `{ "newPassword": "<min 8 chars>" }`.
+- The reset is audit-logged (`ADMIN_PASSWORD_RESET`); the new password itself is **not** logged.
+
+**Create a new admin account:**
+```
+POST /api/admin/accounts
+{ "username": "ops1", "password": "…", "role": "operator", "displayName": "…" }
+```
+Requires `super_admin` session. Valid roles: `super_admin`, `operator`, `viewer`.
+
+**Disable a compromised account:**
+```
+PATCH /api/admin/accounts/:id
+{ "status": "disabled" }
+```
+The account is immediately blocked; active sessions are invalidated on the next request.
+
+---
+
+### 1.2 Manual Attendance Override
+
+Attendance overrides are used when a user's self-reported pre-attendance status is incorrect (e.g., they forgot to check in).
+
+1. In the admin portal, navigate to the event and open the **Attendance** tab.
+2. Use the status dropdown next to the user's name.
+
+**API equivalent:**
+```
+PATCH /api/admin/blind-box-events/:eventId/attendees/:userId/attendance
+{ "status": "confirmed" }   // or "late", "absent", "pending"
+```
+
+All overrides are audit-logged (`ATTENDANCE_OVERRIDE`) with `eventId`, `userId`, and `newStatus`.
+
+**File:** `apps/server/src/storage.ts` → `adminOverrideAttendanceStatus()`
+
+---
+
+### 1.3 Adjusting User Points (XP / JoyCoins)
+
+> **Note:** `adminAdjustPoints()` exists in `apps/server/src/gamificationService.ts` but is not yet exposed via a UI or dedicated HTTP route. It can be called programmatically or via an internal script.
+
+When a route or UI action exists:
+```
+// Example future route (not yet wired):
+POST /api/admin/users/:id/adjust-points
+{ "xpAdjustment": 100, "coinsAdjustment": 10, "reason": "beta tester bonus" }
+```
+
+All point adjustments are audit-logged (`ADMIN_POINTS_ADJUSTED`) with before/after state.
+
+---
+
+### 1.4 Issuing / Broadcasting Notifications
+
+1. In the admin portal: **Notifications → New Broadcast**.
+2. Fill in title, body, and target audience.
+
+**API:**
+```
+POST /api/admin/notifications/broadcast
+{ "title": "…", "body": "…", "targetAudience": "all" }
+```
+
+**Send to a single user:**
+```
+POST /api/admin/notifications/send
+{ "userId": "…", "title": "…", "body": "…" }
+```
+
+---
+
+### 1.5 Banning / Unbanning a User
+
+1. Navigate to **Users → [User] → Ban** in the admin portal.
+2. Confirm the action.
+
+**API:**
+```
+PATCH /api/admin/users/:id/ban
+PATCH /api/admin/users/:id/unban
+```
+
+Both actions are audit-logged (`USER_BANNED` / `USER_UNBANNED`) with before/after `isBanned` state.
+
+---
+
+### 1.6 Payment Refunds
+
+1. Navigate to **Finance → Payments → [Payment] → Refund**.
+2. Provide a reason.
+
+**API:**
+```
+POST /api/admin/payments/:paymentId/refund
+{ "reason": "duplicate charge" }
+```
+
+Refunds are audit-logged (`PAYMENT_REFUND_INITIATED`) with `paymentId` and `reason`.
+
+---
+
+## 2. Incident Triage
+
+### 2.1 Admin UI Fails to Load
+
+**Symptoms:** Browser shows blank page or network error at `admin.yuejuapp.com`.
+
+**Checklist:**
+1. Check that the **admin-client** build is deployed (`apps/admin-client/dist/`).
+2. Verify the Caddy reverse proxy is routing `admin.yuejuapp.com` correctly (separate deployment from the user client).
+3. Check server health: `GET /api/health` should return `200`.
+4. Check browser console for CORS or 5xx errors.
+5. Verify the session store (PostgreSQL connect-pg-simple) is reachable — a DB outage will break session reads.
+
+**Files:**
+- `apps/admin-client/` — frontend build
+- `apps/server/src/routes.ts` — backend API
+- Server session setup: `apps/server/src/routes.ts` near `connectPg`
+
+---
+
+### 2.2 Missing Audit Logs
+
+**Symptoms:** Expected `[AdminAudit]` lines are absent from server stdout.
+
+**Checklist:**
+1. Confirm the action was actually performed (check DB state).
+2. Verify the server logs are captured — stdout must not be redirected to `/dev/null`.
+3. Check that `logAdminAudit()` is called in the relevant handler:
+   - Admin login: `apps/server/src/adminAuth.ts` → `POST /api/admin/login`
+   - Account changes: `adminAuth.ts` → `POST/PATCH /api/admin/accounts*`
+   - Ban/unban: `apps/server/src/routes.ts` → `PATCH /api/admin/users/:id/ban|unban`
+   - Attendance override: `apps/server/src/storage.ts` → `adminOverrideAttendanceStatus()`
+   - Refund: `apps/server/src/routes.ts` → `POST /api/admin/payments/:paymentId/refund`
+4. Search logs by prefix: `grep '\[AdminAudit\]' <logfile>` or equivalent in your log aggregator.
+5. Each record includes an `auditId` UUID for cross-reference.
+
+**Module:** `apps/server/src/lib/adminAuditLogger.ts`
+
+---
+
+### 2.3 RBAC Failures / 403 Errors
+
+**Symptoms:** Admin receives `403 Forbidden` when accessing an endpoint they should be allowed to use.
+
+**Checklist:**
+1. Verify the admin's role in the `admin_accounts` table.
+2. Check whether the route requires `requireSuperAdmin` — only `super_admin` may access account-management routes.
+3. Check session validity: call `GET /api/admin/me` and inspect the returned role.
+4. If the account's `status` is `disabled`, all requests will be blocked by `requireAdmin`.
+5. Run the RBAC coverage test to verify no unexpected middleware has been removed:
+   ```bash
+   npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
+   ```
+6. Refer to `docs/admin-rbac-matrix.md` for the full role requirement per endpoint.
+
+---
+
+### 2.4 Admin Login / Session Issues
+
+**Symptoms:** Login fails with valid credentials, or session is lost unexpectedly.
+
+**Checklist:**
+1. Check `admin_accounts` table: username must exist, `status = 'active'`, and `passwordHash` must be a valid bcrypt hash.
+2. Password must be ≥ 8 characters.
+3. Session store: PostgreSQL session table must be accessible. A DB restart may clear sessions.
+4. Cookie domain: sessions are shared across `*.yuejuapp.com` (see `cookieDomain` in `apps/server/src/routes.ts`). Ensure browser is not blocking cross-subdomain cookies.
+5. If logging in from a new device, check for any IP restrictions (none currently, but note for future).
+
+**First-time setup — create initial super_admin:**
+Use the server-side script or direct DB insert (hashed password via bcrypt):
+```sql
+INSERT INTO admin_accounts (id, username, password_hash, role, display_name, status)
+VALUES (gen_random_uuid(), 'admin', '<bcrypt-hash>', 'super_admin', 'Admin', 'active');
+```
+
+---
+
+### 2.5 Matching Algorithm Produces No Groups
+
+**Symptoms:** Running pool matching returns empty groups.
+
+**Checklist:**
+1. Verify registered users pass hard constraints (budget, gender, industry, education).
+2. Check that `user_interests` table has data for the registered users.
+3. Pair scores need `avgScore ≥ 60` for a user to be added to a group.
+4. Check `minGroupSize` (default 4) — if fewer than 4 users are eligible, no group is formed.
+5. Review matching logs: `GET /api/admin/matching-logs`.
+6. Use the Matching Lab: `/admin/matching-lab` → adjust thresholds if needed.
+
+---
+
+## 3. Internal Beta Daily Checklist
+
+Run this checklist each day during internal beta.
+
+### Morning (09:00)
+
+- [ ] Verify server is running: `GET /api/health` returns `200`
+- [ ] Check error logs for any `500` responses or unhandled exceptions
+- [ ] Confirm `[AdminAudit]` entries are appearing for any actions taken the previous day
+- [ ] Review any new user reports in `/admin/moderation`
+- [ ] Check scheduled events for the day in `/admin/events`
+
+### Before Events
+
+- [ ] Confirm event pool matching has been run and groups are assigned
+- [ ] Verify venue booking is confirmed
+- [ ] Check attendee count and pre-attendance responses in `/admin/events → Attendance`
+- [ ] Confirm notification broadcast was sent to participants
+
+### After Events
+
+- [ ] Override any missing attendance statuses (users who attended but did not self-report)
+- [ ] Review event feedback in `/admin/feedback`
+- [ ] Check for any moderation reports from the event chat
+
+### Weekly
+
+- [ ] Review admin account list for any accounts that should be disabled
+- [ ] Review KPI dashboard: `/admin/kpi`
+- [ ] Check abuse detection state (currently in-memory; resets on server restart — see `docs/launch-risks.md`)
+
+---
+
+## 4. Escalation Paths
+
+| Issue | First Contact | Escalation |
+|-------|--------------|------------|
+| Server down / 5xx errors | On-call engineer | Engineering lead |
+| Data integrity issue | Engineering lead | CTO |
+| Security incident (unauthorized access, data exposure) | Engineering lead | CTO + Legal |
+| Payment / refund dispute | Operations | Finance lead |
+| Admin account compromise | Engineering lead | CTO (disable account immediately) |
+
+**Emergency admin account disable (if portal is inaccessible):**
+```sql
+UPDATE admin_accounts SET status = 'disabled' WHERE username = '<compromised>';
+```
+
+---
+
+*For RBAC role definitions and endpoint permissions, see [`docs/admin-rbac-matrix.md`](../admin-rbac-matrix.md).*  
+*For known MVP limitations, see [`docs/launch-risks.md`](../launch-risks.md).*

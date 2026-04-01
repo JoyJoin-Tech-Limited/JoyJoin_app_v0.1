@@ -1,5 +1,6 @@
 import type { Express, Request, RequestHandler } from "express";
 import { storage } from "./storage";
+import { logAdminAudit } from "./lib/adminAuditLogger";
 
 const VALID_ADMIN_ROLES = ["super_admin", "operator", "viewer"] as const;
 type AdminRole = (typeof VALID_ADMIN_ROLES)[number];
@@ -102,6 +103,15 @@ export function registerAdminAuthRoutes(app: Express) {
       await storage.updateAdminLastLogin(adminAccount.id);
       await establishAdminSession(req, adminAccount.id, adminAccount.role);
 
+      logAdminAudit({
+        action: 'ADMIN_LOGIN',
+        adminId: adminAccount.id,
+        adminRole: adminAccount.role,
+        targetEntityType: 'admin_account',
+        targetEntityId: adminAccount.id,
+        context: { username: adminAccount.username },
+      });
+
       return res.json({
         message: "登录成功",
         id: adminAccount.id,
@@ -173,6 +183,16 @@ export function registerAdminAuthRoutes(app: Express) {
       const passwordHash = await bcrypt.hash(password, 12);
       const account = await storage.createAdminAccount({ username, passwordHash, role, displayName });
       const { passwordHash: _ph, ...safe } = account;
+
+      logAdminAudit({
+        action: 'ADMIN_ACCOUNT_CREATED',
+        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'admin_account',
+        targetEntityId: account.id,
+        context: { username: account.username, role: account.role, displayName: account.displayName },
+      });
+
       return res.status(201).json(safe);
     } catch (error) {
       console.error("Error creating admin account:", error);
@@ -200,6 +220,16 @@ export function registerAdminAuthRoutes(app: Express) {
       if (displayName !== undefined) updates.displayName = displayName;
       const account = await storage.updateAdminAccount(id, updates as any);
       const { passwordHash: _ph, ...safe } = account;
+
+      logAdminAudit({
+        action: 'ADMIN_ACCOUNT_UPDATED',
+        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'admin_account',
+        targetEntityId: id,
+        after: updates,
+      });
+
       return res.json(safe);
     } catch (error) {
       console.error("Error updating admin account:", error);
@@ -217,6 +247,16 @@ export function registerAdminAuthRoutes(app: Express) {
       const bcrypt = await import("bcrypt");
       const passwordHash = await bcrypt.hash(newPassword, 12);
       await storage.updateAdminAccount(id, { passwordHash });
+
+      logAdminAudit({
+        action: 'ADMIN_PASSWORD_RESET',
+        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'admin_account',
+        targetEntityId: id,
+        // newPassword is intentionally NOT logged
+      });
+
       return res.json({ message: "密码已重置" });
     } catch (error) {
       console.error("Error resetting password:", error);
