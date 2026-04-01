@@ -1,6 +1,6 @@
 # Button Design System
 
-> **Source of truth:** `packages/shared/src/ui/buttonVariants.ts`  
+> **Source of truth:** `packages/shared/src/ui/Button.tsx` (runtime component) + `packages/shared/src/ui/buttonVariants.ts` (styling)  
 > **App wrappers:** `apps/user-client/src/components/ui/button.tsx` · `apps/admin-client/src/components/ui/button.tsx`
 
 ---
@@ -86,7 +86,7 @@ All standard HTML `<button>` attributes (`disabled`, `type`, `onClick`, `aria-la
 
 - Uses a native `<button>` element (or delegated slot) — correct semantics out of the box.
 - `disabled || loading` sets `disabled` on the element; `pointer-events-none` prevents ghost clicks.
-- `loading` renders a `Loader2` spinner with `aria-hidden="true"` — the button label remains visible to screen readers.
+- `loading` renders a `Loader2` spinner with `aria-hidden="true"` — the button label remains visible to screen readers. `aria-busy="true"` is also set so assistive technologies can announce the in-progress state.
 - Icon-only buttons **must** include `aria-label="…"` since there is no visible text.
 - Focus ring: `ring-2 ring-ring ring-offset-2` — uses the `--ring` token (same warm purple as brand) for consistent, highly-visible focus treatment (WCAG 2.1 §2.4.7).
 - `lg` meets the 44 × 44 px touch target. `icon` is visually 36 × 36 px, so use surrounding padding/layout when a full 44 px touch target is required.
