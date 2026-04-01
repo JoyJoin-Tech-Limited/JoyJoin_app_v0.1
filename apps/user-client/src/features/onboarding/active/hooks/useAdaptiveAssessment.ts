@@ -315,7 +315,6 @@ export function useAdaptiveAssessment() {
         const topMatch = data.currentMatches[0];
         if (topMatch && topMatch.confidence >= 0.7 && !prefetchTriggeredRef.current) {
           prefetchTriggeredRef.current = true;
-          const currentTraits = data.progress ? {} : {};
           // Use trait scores from result if available, otherwise use empty object
           const traitScoresToPrefetch = data.result?.traitScores || {};
           prefetchXiaoyueAnalysis(topMatch.archetype, traitScoresToPrefetch, topMatch.confidence);
