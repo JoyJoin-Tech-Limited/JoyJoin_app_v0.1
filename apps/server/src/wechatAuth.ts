@@ -9,6 +9,14 @@ import { eq } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
 import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
 
+/**
+ * Minimum number of answers with a valid questionId + selectedOption that must
+ * be present in a testAnswers payload before we attempt to create a completed
+ * assessment session. Payloads with fewer valid items are rejected to prevent
+ * low-quality or malformed imports from persisting garbage data.
+ */
+const MIN_VALID_ANSWERS = 3;
+
 const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
 
@@ -266,6 +274,10 @@ export async function findOrCreateWechatUser(
 /**
  * Process test answers, persist per-question data to assessment_answers, and update the user's
  * personality archetype. All writes are wrapped in a transaction for atomicity.
+ *
+ * Validation: rejects payloads where fewer than MIN_VALID_ANSWERS items carry both a
+ * recognisable questionId and a selectedOption to prevent garbage sessions from
+ * being created from malformed or empty payloads.
  */
 export async function processTestAnswers(
   userId: string,
@@ -273,8 +285,33 @@ export async function processTestAnswers(
 ): Promise<void> {
   if (!Array.isArray(testAnswers) || testAnswers.length === 0) return;
 
+  // Validate payload structure before touching the database.
+  // We accept unknown[] from the caller (the field arrives as untyped JSON) so the cast
+  // to any[] here is intentional and narrowed immediately by the property checks below.
+  const validItems = (testAnswers as Record<string, unknown>[]).filter((ans) => {
+    if (!ans || typeof ans !== "object") return false;
+    const questionId = String(ans.questionId ?? ans.question_id ?? ans.id ?? "");
+    const selectedOption = String(
+      ans.selectedOption ?? ans.value ?? ans.answer ?? ans.selected_option ?? ""
+    );
+    return questionId.length > 0 && selectedOption.length > 0;
+  });
+
+  if (validItems.length < MIN_VALID_ANSWERS) {
+    console.warn(
+      `[WeChat Auth] Rejecting testAnswers for user ${userId}: only ${validItems.length} valid ` +
+      `items (minimum ${MIN_VALID_ANSWERS} required). Payload length was ${testAnswers.length}.`
+    );
+    throw Object.assign(
+      new Error(
+        `Personality test payload contains too few valid answers (${validItems.length} of ${MIN_VALID_ANSWERS} required)`
+      ),
+      { code: "INVALID_TEST_RESULTS" }
+    );
+  }
+
   console.log(
-    `[WeChat Auth] Processing ${testAnswers.length} test answers for user ${userId}`
+    `[WeChat Auth] Processing ${testAnswers.length} test answers (${validItems.length} valid) for user ${userId}`
   );
 
   const traitScores: Record<string, number> = {
@@ -571,14 +608,32 @@ export function setupWechatAuth(app: Express) {
    * POST /api/auth/wechat/login-with-test
    * WeChat Mini Program authentication with optional personality test answers.
    * Used after the pre-signup personality test flow.
+   *
+   * Idempotency: if the user has already completed the personality test
+   * (hasCompletedPersonalityTest === true), the testAnswers import is skipped
+   * entirely so that a retry or double-submit cannot create a duplicate
+   * assessment_session row.
+   *
+   * Presignup claim: the caller may provide an optional `anonymousSessionId`
+   * (the temporary session ID that was used during the pre-auth personality
+   * test). When present and valid, the server-side presignup cache record for
+   * that session is deleted after a successful import so stale resume prompts
+   * cannot resurrect old anonymous data.
    */
   app.post("/api/auth/wechat/login-with-test", async (req: any, res) => {
     try {
-      const { code, testAnswers } = req.body;
+      const { code, testAnswers, anonymousSessionId } = req.body;
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
       }
+
+      // Sanitise the optional anonymousSessionId so we only pass a safe string
+      // to storage methods (never an arbitrary object from the request body).
+      const safeAnonSessionId: string | null =
+        typeof anonymousSessionId === "string" && anonymousSessionId.trim().length > 0
+          ? anonymousSessionId.trim()
+          : null;
 
       const { openid, session_key } = await getWechatOpenId(code);
       const { user, isNewUser } = await findOrCreateWechatUser(
@@ -586,8 +641,42 @@ export function setupWechatAuth(app: Express) {
         session_key
       );
 
-      if (testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
+      // Idempotency guard: only import testAnswers the first time.
+      // If the user already has a completed personality test we skip the import
+      // so that retries / double-submits do not create duplicate sessions.
+      const alreadyImported = Boolean(user.hasCompletedPersonalityTest);
+
+      if (!alreadyImported && testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
         await processTestAnswers(user.id, testAnswers);
+
+        // Consume the anonymous presignup cache entry so the same answers
+        // cannot be imported again and stale resume prompts stop appearing.
+        if (safeAnonSessionId) {
+          try {
+            await storage.clearPreSignupData(safeAnonSessionId);
+            console.log(
+              `[WeChat Auth] Consumed presignup cache for session ${safeAnonSessionId}, user ${user.id}`
+            );
+          } catch (cacheErr) {
+            // Non-fatal: log but do not fail the login if cache cleanup fails.
+            console.warn(
+              `[WeChat Auth] Failed to clear presignup cache for session ${safeAnonSessionId}:`,
+              cacheErr
+            );
+          }
+        }
+      } else if (alreadyImported && testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
+        console.log(
+          `[WeChat Auth] Skipping duplicate testAnswers import for user ${user.id} (already completed)`
+        );
+        // Still consume the presignup cache to prevent stale resume prompts.
+        if (safeAnonSessionId) {
+          try {
+            await storage.clearPreSignupData(safeAnonSessionId);
+          } catch {
+            // Non-fatal
+          }
+        }
       }
 
       // Fetch updated full user record
