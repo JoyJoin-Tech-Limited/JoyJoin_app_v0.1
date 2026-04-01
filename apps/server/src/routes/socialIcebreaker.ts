@@ -28,6 +28,7 @@ import {
   createSession,
   updateSession,
   upsertParticipant,
+  getParticipant,
   heartbeat as dbHeartbeat,
   getRosterCount,
   getActiveParticipantCount,
@@ -38,6 +39,22 @@ import {
 } from '../lib/socialIcebreakerStore';
 
 const router = Router();
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (
+      (('code' in error) && (error as { code?: unknown }).code === '23505') ||
+      (('cause' in error) &&
+        typeof (error as { cause?: unknown }).cause === 'object' &&
+        (error as { cause?: { code?: unknown } }).cause?.code === '23505') ||
+      (('message' in error) &&
+        typeof (error as { message?: unknown }).message === 'string' &&
+        (error as { message: string }).message.includes('unique constraint'))
+    )
+  );
+}
 
 // ============ TTL / CLEANUP ============
 // Sweep expired sessions from the DB every 5 minutes.
@@ -103,17 +120,25 @@ router.post('/start', async (req: any, res) => {
     }
 
     const state = existing.state;
+    const existingParticipant = await getParticipant(existing.socialSessionId, userId);
+    const participantDisplayName =
+      displayName || existingParticipant?.displayName || state.hostDisplayName;
 
     // Register (or re-register) this participant and bump lastSeen.
-    await upsertParticipant(existing.socialSessionId, userId, displayName || state.hostDisplayName);
+    await upsertParticipant(existing.socialSessionId, userId, participantDisplayName);
 
     const rosterCount = await getRosterCount(existing.socialSessionId);
     const activeCount = await getActiveParticipantCount(existing.socialSessionId);
 
     state.playerCount = rosterCount;
     state.activePlayerCount = activeCount;
+    // ensureSessionEnabledPhases mutates `state` in place for older persisted
+    // sessions; only persist when that backfill actually changed the payload.
+    const enabledPhaseCount = state.enabledPhases?.length ?? 0;
     ensureSessionEnabledPhases(state);
-    await updateSession(existing.socialSessionId, state);
+    if ((state.enabledPhases?.length ?? 0) !== enabledPhaseCount) {
+      await updateSession(existing.socialSessionId, state);
+    }
 
     return res.json({
       socialSessionId: existing.socialSessionId,
@@ -142,8 +167,38 @@ router.post('/start', async (req: any, res) => {
     enabledPhases: getServerEnabledPhases(),
   };
 
-  await createSession(newState);
-  await upsertParticipant(socialSessionId, userId, displayName || '主持人');
+  try {
+    await createSession(newState);
+    await upsertParticipant(socialSessionId, userId, displayName || '主持人');
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+
+    const concurrent = await getSessionByIcebreakerSessionId(sessionId);
+    if (!concurrent || concurrent.expired) {
+      throw error;
+    }
+
+    const concurrentParticipant = await getParticipant(concurrent.socialSessionId, userId);
+    const participantDisplayName =
+      displayName || concurrentParticipant?.displayName || concurrent.state.hostDisplayName;
+
+    await upsertParticipant(concurrent.socialSessionId, userId, participantDisplayName);
+
+    const rosterCount = await getRosterCount(concurrent.socialSessionId);
+    const activeCount = await getActiveParticipantCount(concurrent.socialSessionId);
+    concurrent.state.playerCount = rosterCount;
+    concurrent.state.activePlayerCount = activeCount;
+
+    return res.json({
+      socialSessionId: concurrent.socialSessionId,
+      hostUserId: concurrent.state.hostUserId,
+      hostDisplayName: concurrent.state.hostDisplayName,
+      currentPhase: concurrent.state.currentPhase,
+      state: sanitizeStateForClient(concurrent.state),
+    });
+  }
 
   return res.json({
     socialSessionId,
@@ -173,7 +228,6 @@ router.get('/:socialSessionId', async (req: any, res) => {
     const activeCount = await getActiveParticipantCount(socialSessionId);
     state.playerCount = rosterCount;
     state.activePlayerCount = activeCount;
-    await updateSession(socialSessionId, state);
   }
 
   return res.json(sanitizeStateForClient(state));
@@ -531,7 +585,11 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 // ---------------------------------------------------------------------------
 router.post('/:socialSessionId/personality-dice/complete', async (req: any, res) => {
   const { socialSessionId } = req.params;
-  const { userId } = req.body as { userId: string };
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;

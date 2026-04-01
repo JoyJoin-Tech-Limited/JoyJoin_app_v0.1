@@ -3219,11 +3219,12 @@ export type SocialIcebreakerParticipantRow = typeof socialIcebreakerParticipants
  */
 export const socialIcebreakerLieTruths = pgTable("social_icebreaker_lie_truths", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  socialSessionId: varchar("social_session_id").notNull(),
+  socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull(),
   statementsJson: jsonb("statements_json").notNull().$type<Array<{ index: number; text: string; isLie: boolean }>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("idx_social_icebreaker_lie_truths_session_user").on(table.socialSessionId, table.userId),
+  index("idx_social_icebreaker_lie_truths_session").on(table.socialSessionId),
 ]);

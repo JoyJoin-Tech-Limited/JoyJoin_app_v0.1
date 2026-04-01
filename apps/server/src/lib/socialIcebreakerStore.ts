@@ -230,6 +230,25 @@ export async function getActiveParticipantCount(
   return rows[0]?.count ?? 0;
 }
 
+/** Retrieve a participant row for rejoin/name-preservation logic. */
+export async function getParticipant(
+  socialSessionId: string,
+  userId: string,
+): Promise<{ displayName: string } | null> {
+  const rows = await db
+    .select({ displayName: socialIcebreakerParticipants.displayName })
+    .from(socialIcebreakerParticipants)
+    .where(
+      and(
+        eq(socialIcebreakerParticipants.socialSessionId, socialSessionId),
+        eq(socialIcebreakerParticipants.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Lie-truth storage (server-only; never returned to clients)
 // ---------------------------------------------------------------------------
