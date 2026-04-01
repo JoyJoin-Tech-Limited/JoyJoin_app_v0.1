@@ -1,0 +1,68 @@
+skill: matching-domain
+
+primary_ownership: >
+  Deterministic pair scoring across 6 weighted dimensions, signal boundary invariant
+  (user_interest_signals excluded from scoring), and separation of scoring from
+  AI explanation/enrichment.
+
+use_when:
+  - modifying pool matching scoring dimensions or weights
+  - debugging why groups or pairs are not forming
+  - adding or changing a match explanation feature
+  - working on chemistry score, interest score, or group overall score
+  - working on pool registration or pool matching execution
+
+do_not_use_when:
+  - task is purely about onboarding completion (use onboarding-state-architecture)
+  - task is about icebreaker sessions (use social-icebreaker-domain)
+  - task is purely about UI layout for a screen that happens to show matching results
+
+strong_triggers:
+  - poolMatchingService
+  - archetypeChemistry
+  - matchExplanationService
+  - matchingThresholds
+  - POOL_MATCHED
+  - pairScore
+  - groupOverallScore
+  - chemistry score
+  - interest score
+  - social affinity
+  - background diversity
+  - preference score
+  - language score
+  - add a scoring factor
+  - modify match weights
+  - why are groups not forming
+  - debug low match scores
+  - add match explanation
+  - MatchingStateLayout
+  - pool registration
+
+owned_files:
+  - apps/server/src/poolMatchingService.ts
+  - apps/server/src/poolRealtimeMatchingService.ts
+  - apps/user-client/src/components/matching/**
+  - apps/user-client/src/pages/MatchingStatusPage.tsx
+  - docs/MATCHING_ALGORITHM_REFERENCE.md
+
+owned_paths:
+  - /api/pool/**
+  - /api/matching/**
+
+owned_symbols:
+  - poolMatchingService
+  - archetypeChemistry
+  - matchExplanationService
+  - calculatePairScore
+  - groupOverallScore
+  - MatchingStateLayout
+  - POOL_MATCHED
+
+related_skills:
+  - skill: reliability-and-state-integrity
+    when: matching execution involves idempotency guards, transaction boundaries, or re-entry
+  - skill: testing-and-regression-guardrails
+    when: adding signal boundary invariant tests or scoring regression tests
+  - skill: platform-observability-and-ops
+    when: adding metrics or logging for matching execution telemetry

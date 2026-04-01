@@ -96,3 +96,46 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 - keep `description` under 1024 characters
 - keep `SKILL.md` concise and operational — place deeper examples in `references/` when needed
 - every skill should include `## Quick examples`, `## Troubleshooting`, and `## Review checklist`
+
+---
+
+## Routing metadata
+
+Each core skill directory contains a `routing.yml` file alongside `SKILL.md`. This is the skill's **routing contract** — it tells the routing system when and why to load the skill.
+
+### Minimal required fields
+
+```yaml
+skill: <kebab-case-name-matching-directory>
+primary_ownership: > one-sentence summary of what this skill owns
+use_when:
+  - scenario or phrase that indicates this skill applies
+strong_triggers:
+  - TypeScript symbol, route path, or repo-specific keyword
+```
+
+### Full schema
+
+See `.github/skills/routing-schema.yml` for the complete documented schema including `do_not_use_when`, `owned_files`, `owned_paths`, `owned_symbols`, and `related_skills`.
+
+### Tooling
+
+```bash
+# Validate all routing.yml files (required fields, path freshness, legacy refs)
+node scripts/validate-skill-routing.mjs
+
+# Route an ask interactively
+node scripts/skill-router.mjs "add a nextStep rule after profile review"
+
+# Run the full routing regression suite (37 test cases)
+node scripts/test-skill-routing.mjs
+```
+
+### Maintenance rules
+
+- **When you add a trigger phrase** to `SKILL.md`, also add it to `strong_triggers` in `routing.yml`.
+- **When a file is moved**, update `owned_files` and run `validate-skill-routing.mjs` to catch stale paths.
+- **When a new handoff pattern emerges**, add it to `related_skills` in both skills involved.
+- **Never add legacy terms** as triggers — routing metadata must follow the same active-flow-only canon as all other repo content.
+
+See [`docs/architecture/skill-routing.md`](../../docs/architecture/skill-routing.md) for the full routing design, scoring model, observability format, and extension guidance.
