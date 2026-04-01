@@ -23,6 +23,8 @@ export interface AuthUser extends User {
   profileEssentialComplete?: boolean;
   profileExtendedComplete?: boolean;
   activeAssessmentSessionId?: string | null;
+  /** Whether the payment system is enabled (server-controlled kill switch). */
+  paymentsEnabled?: boolean;
 }
 
 export interface UseAuthResult {
@@ -39,6 +41,8 @@ export interface UseAuthResult {
   profileEssentialComplete: boolean | undefined;
   profileExtendedComplete: boolean | undefined;
   activeAssessmentSessionId: string | null | undefined;
+  /** Whether the payment system is currently enabled (false = kill switch active). */
+  paymentsEnabled: boolean;
 }
 
 export function useAuth(): UseAuthResult {
@@ -68,5 +72,9 @@ export function useAuth(): UseAuthResult {
     profileEssentialComplete: user?.profileEssentialComplete,
     profileExtendedComplete: user?.profileExtendedComplete,
     activeAssessmentSessionId: user?.activeAssessmentSessionId,
+    // Feature flags — default to false (safe / disabled) while user data is loading
+    // or when the user is unauthenticated. The payment page itself is only reachable
+    // from authenticated routes, so a brief false during loading is acceptable.
+    paymentsEnabled: user?.paymentsEnabled ?? false,
   };
 }

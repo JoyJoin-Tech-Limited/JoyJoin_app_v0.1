@@ -5,17 +5,21 @@ import { getLevelDiscount } from "@shared/gamification";
 /**
  * Payment Service for WeChat Pay Integration
  *
- * Required environment variables:
- * - WECHAT_PAY_APP_ID
- * - WECHAT_PAY_MCH_ID
- * - WECHAT_PAY_SERIAL_NO
- * - WECHAT_PAY_PRIVATE_KEY
- * - WECHAT_PAY_APIV3_KEY
- * - WECHAT_PAY_PLATFORM_PUBLIC_KEY (for webhook signature verification)
+ * SETUP REQUIRED:
+ * 1. Register for WeChat Pay merchant account (https://pay.weixin.qq.com/)
+ * 2. Add environment variables:
+ *    - WECHAT_PAY_APP_ID
+ *    - WECHAT_PAY_MCH_ID (Merchant ID)
+ *    - WECHAT_PAY_SERIAL_NO (Certificate serial number)
+ *    - WECHAT_PAY_PRIVATE_KEY (API v3 private key, PEM format)
+ *    - WECHAT_PAY_APIV3_KEY (32-byte API v3 key, used for AES decryption)
  *
- * Optional:
- * - WECHAT_PAY_NOTIFY_URL (defaults to `${APP_URL}/api/webhooks/wechat-pay`)
- * - WECHAT_PAY_PLATFORM_SERIAL (validated against webhook serial header when provided)
+ * Docs: https://pay.weixin.qq.com/wiki/doc/apiv3/index.shtml
+ *
+ * NOTE: Full RSA-SHA256 callback signature verification requires WeChat's platform
+ * certificate (downloaded from the merchant console). Configure
+ * WECHAT_PAY_PLATFORM_CERT (PEM) in non-development environments whenever
+ * PAYMENTS_ENABLED=true.
  */
 
 const WECHAT_PAY_API_BASE = "https://api.mch.weixin.qq.com";
@@ -178,37 +182,53 @@ export class PaymentService {
   /**
    * Handle WeChat Pay webhook callback
    *
-   * WeChat Pay will send a POST request to your webhook URL when payment status changes
+   * WeChat Pay will send a POST request to your webhook URL when payment status changes.
    * Endpoint: POST /api/webhooks/wechat-pay
+   *
+   * @param payload   Parsed JSON body from the webhook request
+   * @param rawBody   Raw request body string (required for signature verification)
+   * @param headers   WeChat Pay signature headers
    */
-  async handleWebhook(webhook: WechatWebhookRequest): Promise<void> {
-    const rawBody = typeof webhook.rawBody === "string"
-      ? webhook.rawBody
-      : webhook.rawBody?.toString("utf8");
-
-    if (!rawBody) {
-      throw this.createHttpError(400, "Missing raw WeChat Pay webhook body");
+  async handleWebhook(
+    payload: any,
+    rawBody: string,
+    headers: WechatWebhookHeaders
+  ): Promise<void> {
+    // ── 1. Signature verification ──────────────────────────────────────────
+    const isDevMode = process.env.NODE_ENV === "development";
+    if (!isDevMode) {
+      const signatureValid = this.verifySignature(rawBody, headers);
+      if (!signatureValid) {
+        console.warn("[Payment] Webhook rejected: invalid signature");
+        throw Object.assign(new Error("Invalid webhook signature"), { status: 401 });
+      }
     }
 
-    if (!this.verifySignature(webhook.headers, rawBody)) {
-      throw this.createHttpError(401, "Invalid WeChat Pay webhook signature");
-    }
-
-    const payload = webhook.payload ?? JSON.parse(rawBody);
     const { resource, event_type } = payload;
-    const decryptedResource = resource?.ciphertext ? this.decryptResource(resource) : resource;
 
     if (event_type === "TRANSACTION.SUCCESS") {
-      const { out_trade_no, transaction_id } = decryptedResource;
+      // Payment successful
+      const { out_trade_no, transaction_id } = resource.ciphertext
+        ? this.decryptResource(resource) // Decrypt if encrypted
+        : resource;
+
       await this.handlePaymentSuccess(out_trade_no, transaction_id);
     } else if (event_type === "REFUND.SUCCESS") {
-      const { out_trade_no } = decryptedResource;
+      // Refund successful
+      const { out_trade_no } = resource.ciphertext
+        ? this.decryptResource(resource)
+        : resource;
+
       await this.handleRefundSuccess(out_trade_no);
+    } else {
+      // Unknown event type — log but don't error (WeChat may add new types)
+      console.log(`[Payment] Received unhandled webhook event_type: ${event_type}`);
     }
   }
 
   /**
    * Handle successful payment - activate subscription or event registration
+   * Idempotent: safe to call multiple times for the same order.
    */
   private async handlePaymentSuccess(wechatOrderId: string, transactionId: string): Promise<void> {
     console.log(`[Payment] Processing successful payment: ${wechatOrderId}`);
@@ -221,11 +241,16 @@ export class PaymentService {
       return;
     }
 
-    if (payment.status === "completed" || payment.status === "refunded") {
-      console.log(`[Payment] Skipping duplicate payment success for ${wechatOrderId}`);
+    // ── Idempotency guard ──────────────────────────────────────────────────
+    // If the payment has already been completed (e.g. duplicate webhook delivery),
+    // skip all downstream mutations to avoid double-applying state transitions.
+    if (payment.status === "completed") {
+      console.log(
+        `[Payment] Duplicate webhook for already-completed order ${wechatOrderId} — skipping`
+      );
       return;
     }
-
+    
     // Update payment status
     await storage.updatePayment(payment.id, {
       status: "completed",
@@ -286,7 +311,8 @@ export class PaymentService {
   }
 
   /**
-   * Handle successful refund
+   * Handle successful refund.
+   * Idempotent: safe to call multiple times for the same order.
    */
   private async handleRefundSuccess(wechatOrderId: string): Promise<void> {
     console.log(`[Payment] Processing refund for order: ${wechatOrderId}`);
@@ -298,11 +324,14 @@ export class PaymentService {
       return;
     }
 
+    // Idempotency guard
     if (payment.status === "refunded") {
-      console.log(`[Payment] Skipping duplicate refund success for ${wechatOrderId}`);
+      console.log(
+        `[Payment] Duplicate refund webhook for already-refunded order ${wechatOrderId} — skipping`
+      );
       return;
     }
-
+    
     await storage.updatePayment(payment.id, {
       status: "refunded",
     });
@@ -316,70 +345,92 @@ export class PaymentService {
   }
 
   /**
-   * Decrypt WeChat Pay encrypted resource
+   * Decrypt WeChat Pay AES-256-GCM encrypted resource.
+   * Uses WECHAT_PAY_APIV3_KEY as the decryption key.
    * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_2.shtml
    */
-  private decryptResource(resource: { ciphertext: string; nonce: string; associated_data?: string }): any {
-    const apiV3Key = Buffer.from(this.getWechatPayConfig().apiV3Key, "utf8");
-    if (apiV3Key.length !== 32) {
-      throw new Error("WECHAT_PAY_APIV3_KEY must be 32 bytes for AES-256-GCM decryption");
+  private decryptResource(resource: {
+    algorithm?: string;
+    ciphertext: string;
+    nonce: string;
+    associated_data: string;
+  }): any {
+    if (resource.algorithm !== "AEAD_AES_256_GCM") {
+      throw new Error(
+        `Unsupported WeChat Pay resource algorithm: ${resource.algorithm ?? "missing"}`
+      );
     }
 
-    const encrypted = Buffer.from(resource.ciphertext, "base64");
-    const authTag = encrypted.subarray(encrypted.length - 16);
-    const ciphertext = encrypted.subarray(0, encrypted.length - 16);
-    const decipher = createDecipheriv("aes-256-gcm", apiV3Key, Buffer.from(resource.nonce, "utf8"));
-
-    if (resource.associated_data) {
-      decipher.setAAD(Buffer.from(resource.associated_data, "utf8"));
+    const apiv3Key = process.env.WECHAT_PAY_APIV3_KEY;
+    if (!apiv3Key) {
+      throw new Error(
+        "WECHAT_PAY_APIV3_KEY is not configured — cannot decrypt WeChat Pay webhook resource"
+      );
+    }
+    if (Buffer.byteLength(apiv3Key, "utf8") !== 32) {
+      throw new Error("WECHAT_PAY_APIV3_KEY must be exactly 32 bytes");
     }
 
+    const key = Buffer.from(apiv3Key, "utf8");
+    const iv = Buffer.from(resource.nonce, "utf8");
+    const authTag = Buffer.from(resource.ciphertext, "base64").slice(-16);
+    const ciphertext = Buffer.from(resource.ciphertext, "base64").slice(0, -16);
+
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
     decipher.setAuthTag(authTag);
-    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+    decipher.setAAD(Buffer.from(resource.associated_data ?? "", "utf8"));
 
-    try {
-      return JSON.parse(plaintext);
-    } catch {
-      return plaintext;
-    }
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return JSON.parse(decrypted.toString("utf8"));
   }
 
   /**
-   * Verify WeChat Pay webhook signature
+   * Verify WeChat Pay webhook signature.
+   *
+   * WeChat Pay v3 signature scheme:
+   *   message = timestamp + "\n" + nonce + "\n" + body + "\n"
+   *
+   * Production path: RSA-SHA256 with the WeChat Pay platform certificate
+   *   (set WECHAT_PAY_PLATFORM_CERT to the PEM certificate contents).
+   *   Outside development, missing certs cause verification to fail closed.
+   *
+   * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
    */
-  private verifySignature(headers: WechatWebhookHeaders, rawBody: string): boolean {
-    const signature = this.getHeader(headers, "wechatpay-signature");
-    const timestamp = this.getHeader(headers, "wechatpay-timestamp");
-    const nonce = this.getHeader(headers, "wechatpay-nonce");
-    const serial = this.getHeader(headers, "wechatpay-serial");
+  private verifySignature(rawBody: string, headers: WechatWebhookHeaders): boolean {
+    const { timestamp, nonce, signature } = headers;
 
-    if (!signature || !timestamp || !nonce) {
+    if (!timestamp || !nonce || !signature) {
+      console.warn("[Payment] Webhook missing required signature headers");
       return false;
     }
 
-    const webhookConfig = this.getWebhookConfig();
-    if (webhookConfig.platformSerial) {
-      if (!serial || webhookConfig.platformSerial !== serial) {
-        return false;
-      }
-    }
-
-    const timestampSeconds = Number(timestamp);
-    if (!Number.isFinite(timestampSeconds)) {
-      return false;
-    }
-
-    const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - timestampSeconds);
-    if (ageSeconds > WEBHOOK_TOLERANCE_SECONDS) {
+    // Reject stale timestamps (> 5 minutes) to prevent replay attacks
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const requestSeconds = parseInt(timestamp, 10);
+    if (isNaN(requestSeconds) || Math.abs(nowSeconds - requestSeconds) > 300) {
+      console.warn("[Payment] Webhook rejected: stale or invalid timestamp");
       return false;
     }
 
     const message = `${timestamp}\n${nonce}\n${rawBody}\n`;
-    const verify = createVerify("RSA-SHA256");
-    verify.update(message);
-    verify.end();
 
-    return verify.verify(webhookConfig.platformPublicKey, signature, "base64");
+    // ── RSA-SHA256 path (required outside development) ────────────────────
+    const platformCert = process.env.WECHAT_PAY_PLATFORM_CERT;
+    try {
+      if (!platformCert) {
+        console.warn(
+          "[Payment] WECHAT_PAY_PLATFORM_CERT is not configured — cannot verify webhook signature"
+        );
+        return false;
+      }
+
+      const verifier = createVerify("RSA-SHA256");
+      verifier.update(message);
+      return verifier.verify(platformCert, signature, "base64");
+    } catch (err) {
+      console.error("[Payment] RSA signature verification failed:", err);
+      return false;
+    }
   }
 
   /**

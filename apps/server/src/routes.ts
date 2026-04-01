@@ -21,6 +21,7 @@ import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
 import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 import { getMetricsText } from "./middleware/metrics";
+import { registerHealthRoutes } from "./healthRoutes";
 
 type Traits = {
   affinity: number;
@@ -115,7 +116,7 @@ export const roleInsights: Record<ArchetypeName, Insights> = {
   },
 };
 import { processTestV2, type AnswerV2 } from "./personalityMatchingV2";
-import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
+import { aiEndpointLimiter, kpiEndpointLimiter, authEndpointLimiter, paymentEndpointLimiter, webhookEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -339,25 +340,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Health check endpoint - must be before session middleware for cloud platform health checks
-  app.get('/api/health', (_req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime()
-    });
-  });
-
-  // Prometheus-style metrics endpoint — scraped by Prometheus / Grafana Agent
-  app.get('/api/metrics', async (_req, res) => {
-    try {
-      const text = await getMetricsText();
-      res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
-      res.status(200).send(text);
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to collect metrics' });
-    }
-  });
+  // Health and readiness endpoints must be before session middleware for cloud checks
+  registerHealthRoutes(app);
 
   // Reverse geocode endpoint - converts GPS coordinates to city/district
   // Uses Amap API for accurate Chinese address resolution
@@ -492,6 +476,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-subdomain in production
     },
   }));
+
+  // Apply rate limiting to auth endpoints before registering auth routes
+  // This protects against brute-force and abuse of login/token endpoints
+  app.use("/api/auth/wechat", authEndpointLimiter);
+  app.use("/api/auth/phone", authEndpointLimiter);
 
   // Phone auth setup
   setupPhoneAuth(app);
@@ -1076,6 +1065,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileEssentialComplete,
         profileExtendedComplete,
         activeAssessmentSessionId,
+        // Feature flags visible to the client
+        paymentsEnabled: (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true",
       });
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -10177,7 +10168,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // Create subscription renewal (returns payment details)
-  app.post("/api/subscription/renew", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -10253,8 +10244,24 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
   // ============ PAYMENT & WEBHOOKS ============
   
+  /**
+   * Payment kill switch — set PAYMENTS_ENABLED=false to disable all payment entry points.
+   * Defaults to false (disabled) for safety during beta.
+   * Set PAYMENTS_ENABLED=true in the environment to enable payments.
+   */
+  function checkPaymentsEnabled(req: any, res: any, next: any) {
+    const enabled = (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
+    if (!enabled) {
+      return res.status(503).json({
+        error: "Payment system is currently disabled for maintenance",
+        code: "PAYMENTS_DISABLED",
+      });
+    }
+    next();
+  }
+
   // Create payment order for subscription
-  app.post("/api/payments/create", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -10290,30 +10297,44 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // WeChat Pay webhook - receives payment status updates
-  app.post("/api/webhooks/wechat-pay", async (req, res) => {
-    try {
-      await paymentService.handleWebhook({
-        headers: req.headers,
-        rawBody: (req as typeof req & { rawBody?: Buffer }).rawBody,
-        payload: req.body,
-      });
-      res.json({ code: "SUCCESS", message: "OK" });
-    } catch (error) {
-      console.error("Error processing WeChat Pay webhook:", error);
-      const status = typeof (error as { status?: unknown }).status === "number"
-        ? ((error as { status: number }).status)
-        : 500;
-      const message = status >= 500
-        ? "Internal server error"
-        : error instanceof Error
-          ? error.message
-          : "Request failed";
-      res.status(status).json({
-        code: "FAIL",
-        message,
-      });
+  // Note: express.raw() captures the raw body needed for signature verification.
+  // This route intentionally does NOT use checkPaymentsEnabled — WeChat Pay must
+  // always be able to deliver webhooks for in-flight payments even when new payment
+  // creation is disabled.
+  app.post(
+    "/api/webhooks/wechat-pay",
+    webhookEndpointLimiter,
+    async (req: any, res) => {
+      let rawBody: string;
+      let payload: any;
+      try {
+        if (typeof req.rawBody !== "string" || req.rawBody.length === 0) {
+          return res.status(400).json({ code: "FAIL", message: "Missing raw body for signature verification" });
+        }
+
+        rawBody = req.rawBody;
+        payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      } catch {
+        return res.status(400).json({ code: "FAIL", message: "Invalid request body" });
+      }
+
+      const headers = {
+        timestamp: req.headers["wechatpay-timestamp"] as string | undefined,
+        nonce: req.headers["wechatpay-nonce"] as string | undefined,
+        signature: req.headers["wechatpay-signature"] as string | undefined,
+        serial: req.headers["wechatpay-serial"] as string | undefined,
+      };
+
+      try {
+        await paymentService.handleWebhook(payload, rawBody, headers);
+        res.json({ code: "SUCCESS", message: "OK" });
+      } catch (error: any) {
+        console.error("Error processing WeChat Pay webhook:", error);
+        const status = error?.status === 401 ? 401 : 500;
+        res.status(status).json({ code: "FAIL", message: "Webhook processing failed" });
+      }
     }
-  });
+  );
   
   // Query payment status
   app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, async (req, res) => {
