@@ -4,7 +4,7 @@ import { setupWechatAuth } from "../../wechatAuth";
 import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
 import { db } from "../../db";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { assessmentAnswers, assessmentSessions, users, type User } from "@shared/schema";
 
 export function registerAuthRoutes(app: Express): void {
@@ -505,19 +505,9 @@ export function registerAuthRoutes(app: Express): void {
 
       let activeAssessmentSessionId: string | null = null;
       try {
-        const sessions = await db
-          .select({ id: assessmentSessions.id })
-          .from(assessmentSessions)
-          .where(
-            and(
-              eq(assessmentSessions.userId, userId),
-              eq(assessmentSessions.phase, 'in_progress')
-            )
-          )
-          .orderBy(desc(assessmentSessions.createdAt))
-          .limit(1);
-        if (sessions.length > 0) {
-          activeAssessmentSessionId = sessions[0].id;
+        const activeSession = await storage.getAssessmentSessionByUser(userId);
+        if (activeSession?.id) {
+          activeAssessmentSessionId = activeSession.id;
         }
       } catch (e) {
         // Ignore errors - session lookup is optional

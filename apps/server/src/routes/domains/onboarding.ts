@@ -4,6 +4,7 @@ import { db } from "../../db";
 import { isPhoneAuthenticated } from "../../phoneAuth";
 import { eq } from "drizzle-orm";
 import { onboardingAnalytics, userInterests, users } from "@shared/schema";
+import { normalizeOptionalDuration } from "./helpers";
 
 async function requireAuth(req: Request, res: any, next: any) {
   const session = req.session as any;
@@ -12,6 +13,7 @@ async function requireAuth(req: Request, res: any, next: any) {
   }
   next();
 }
+
 
 export function registerOnboardingRoutes(app: Express): void {
   // Mark guide as seen (B2: Guide persistence server-side)
@@ -142,8 +144,8 @@ export function registerOnboardingRoutes(app: Express): void {
       const sessionId = req.session?.id || req.headers['x-session-id'] as string || null;
 
       // Fix: Validate duration values are non-negative
-      const validSessionDuration = sessionDuration && sessionDuration >= 0 ? sessionDuration : null;
-      const validStepDuration = stepDuration && stepDuration >= 0 ? stepDuration : null;
+      const validSessionDuration = normalizeOptionalDuration(sessionDuration);
+      const validStepDuration = normalizeOptionalDuration(stepDuration);
 
       // Insert analytics event
       await db.insert(onboardingAnalytics).values({
