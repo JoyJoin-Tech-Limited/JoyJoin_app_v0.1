@@ -43,14 +43,20 @@ description: Structure frontend components correctly across packages/shared, app
 
 ## App wrapper pattern
 
-App wrapper files re-export the shared primitive and add a local styling entry point:
+Current app wrappers are thin local shims: they keep the runtime in the app workspace, but pull shared variant definitions from `packages/shared`.
 
 ```tsx
 // apps/user-client/src/components/ui/button.tsx
-export { Button, buttonVariants } from '@joyjoin/shared';
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { buttonVariants } from "@shared/ui/buttonVariants";
+
+// Local wrapper mirrors the shared Button API while reusing shared variants
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(/* ... */);
+export { Button, buttonVariants };
 ```
 
-Do not duplicate component logic in the wrapper. The shared package owns the runtime.
+Do not fork behaviour casually. Keep local wrappers behaviourally aligned with the shared primitive and reuse shared variant definitions instead of inventing app-only logic.
 
 ## Semantic correctness
 
@@ -83,7 +89,7 @@ Do not duplicate component logic in the wrapper. The shared package owns the run
 
 - `packages/shared/src/ui/Button.tsx` — shared Button runtime
 - `packages/shared/src/ui/buttonVariants.ts` — CVA variant definitions
-- `apps/user-client/src/components/ui/button.tsx` — user-client re-export
-- `apps/admin-client/src/components/ui/button.tsx` — admin-client re-export
+- `apps/user-client/src/components/ui/button.tsx` — user-client thin wrapper
+- `apps/admin-client/src/components/ui/button.tsx` — admin-client thin wrapper
 - `docs/button-design.md` — design rationale and usage examples
 - `docs/architecture/current-state.md` — workspace placement rules

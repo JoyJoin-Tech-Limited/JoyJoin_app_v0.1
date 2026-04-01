@@ -16,7 +16,7 @@ description: Focused regression tests, invariant tests, structural tests, and CI
 
 ## Test infrastructure
 
-Tests use **Vitest** across workspaces.
+Tests use **Vitest** in the workspaces that currently have active test suites, but not every workspace `test` script invokes Vitest yet.
 
 ```bash
 # Run server tests
@@ -25,14 +25,19 @@ npm run test -w @joyjoin/server
 # Run a specific test file
 npm run test -w @joyjoin/server -- src/__tests__/poolMatchingService.test.ts
 
-# Run user-client tests
-npm run test -w @joyjoin/user-client
+# Run user-client Vitest suites directly (the workspace `test` script is still a placeholder)
+npx vitest run --config apps/user-client/vitest.config.ts
 ```
 
 Workspace-specific test files:
 - `apps/server/src/__tests__/` — server unit and integration tests
 - `apps/user-client/src/features/onboarding/active/__tests__/` — onboarding flow tests
 - `apps/user-client/src/hooks/__tests__/` — hook tests
+
+Current script reality:
+- `npm run test -w @joyjoin/server` runs the active server Vitest suite
+- `npm run test -w @joyjoin/user-client` is currently a placeholder script, even though `apps/user-client` contains active Vitest tests
+- `@joyjoin/shared` and `@joyjoin/admin-client` currently use placeholder `test` scripts
 
 ## Types of tests
 

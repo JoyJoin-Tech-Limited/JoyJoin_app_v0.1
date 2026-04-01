@@ -28,19 +28,20 @@ GET /api/auth/user
 
 ## Active onboarding steps
 
-| nextStep value | Route | Component | Completion flag |
-|----------------|-------|-----------|-----------------|
-| `personality-test` | `/personality-test` | `PersonalityTestPage.tsx` | `hasCompletedPersonalityTest` |
-| `essential-data` | `/onboarding/setup` | `EssentialDataPage.tsx` | `profileEssentialComplete` |
-| `extended-data` | `/onboarding/extended` | `ExtendedDataPage.tsx` | `hasCompletedInterestsCarousel` |
-| `profile-review` | `/onboarding/review` | `FinalProfileReviewPage.tsx` | `hasSeenProfileReview` |
-| `guide` / `discover` | `/discover` | `DiscoverPage.tsx` | `hasSeenGuide` |
+| nextStep value | Route | Component | Completion signal (source) |
+|----------------|-------|-----------|----------------------------|
+| `personality-test` | `/personality-test` | `PersonalityTestPage.tsx` | `hasCompletedPersonalityTest` (`users` table flag) |
+| `essential-data` | `/onboarding/setup` | `EssentialDataPage.tsx` | `profileEssentialComplete` (server-computed field from `/api/auth/user`) |
+| `extended-data` | `/onboarding/extended` | `ExtendedDataPage.tsx` | `hasCompletedInterestsCarousel` (`users` table flag) |
+| `profile-review` | `/onboarding/review` | `FinalProfileReviewPage.tsx` | `hasSeenProfileReview` (`users` table flag) |
+| `guide` / `discover` | `/discover` | `DiscoverPage.tsx` | `hasSeenGuide` (`users` table flag) |
 
 All active onboarding pages live under `apps/user-client/src/features/onboarding/active/pages/`.
 
 ## Server-owned completion semantics
 
 - Completion flags (`hasCompletedPersonalityTest`, `hasCompletedInterestsCarousel`, `hasSeenProfileReview`, etc.) are set server-side via API calls
+- `profileEssentialComplete` is not a persisted `users` table flag — it is a server-computed completion signal returned by `/api/auth/user`
 - The client must not set these flags locally or compute its own onboarding position
 - After each step completes, re-fetch `/api/auth/user` and use the updated `nextStep`
 

@@ -65,6 +65,7 @@ Log record fields: `level`, `time`, `msg`, `request_id` (when available), plus c
 ## Health and readiness
 
 - `GET /api/health` returns `{ status: 'ok' }` when the server is healthy
+- `GET /api/readyz` is the readiness probe — it verifies database and config readiness before returning 200
 - Health check must not perform heavy computation or block on external services
 - The synthetic probe script (`scripts/synthetic/happy-path-probe.mjs`) runs on a 5-minute schedule via GitHub Actions
 
@@ -76,10 +77,12 @@ Admin and sensitive operations must emit an audit log entry:
 import { logAdminAudit } from '../lib/adminAuditLogger';
 
 logAdminAudit({
-  actorId: req.session.adminId,
-  action: 'pool:force-match',
-  targetId: poolId,
-  metadata: { groupCount },
+  adminId: req.adminAccount.id,
+  adminRole: req.adminAccount.role,
+  action: 'EVENT_POOL_STATUS_CHANGED',
+  targetEntityType: 'event_pool',
+  targetEntityId: poolId,
+  context: { groupCount },
 });
 ```
 
@@ -92,7 +95,17 @@ AI service call sites should emit a structured trace:
 ```typescript
 import { logAITrace } from '../lib/aiTraceLogger';
 
-logAITrace({ provider, promptVersion, durationMs, fromCache, userId });
+logAITrace({
+  domain: 'match_explanation',
+  feature: 'generatePairExplanation',
+  provider,
+  model,
+  latencyMs: Date.now() - startedAt,
+  success: true,
+  fallbackUsed: false,
+  fromCache,
+  promptVersion,
+});
 ```
 
 `logAITrace` emits `[AITrace] {json}` single-line structured log entries — do not use ad-hoc `console.log` for AI calls.
@@ -108,7 +121,7 @@ logAITrace({ provider, promptVersion, durationMs, fromCache, userId });
 
 - Using `console.log` instead of the shared logger
 - Not including `request_id` in per-request log lines
-- Returning health check `200 OK` without actually verifying database connectivity
+- Treating `/api/health` as a readiness probe — database and config verification belong in `/api/readyz`
 - Adding metrics but no alert rule for a critical path
 - Performing audit-worthy admin actions without an audit log entry
 - Logging sensitive data (session tokens, WeChat codes, payment tokens) in log fields
