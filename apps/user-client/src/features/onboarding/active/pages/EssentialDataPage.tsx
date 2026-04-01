@@ -13,7 +13,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BirthDatePicker } from "@/components/BirthDatePicker";
-import { IndustrySelector } from "@/components/IndustrySelector";
 import { EnhancedOccupationSelector } from "@/components/EnhancedOccupationSelector";
 import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { haptics } from "@/lib/haptics";
