@@ -205,7 +205,7 @@ export function broadcastAttendanceStatusUpdated(
 
 export function broadcastPoolRegistrationAdded(
   poolId: string,
-  archetype: string,
+  archetype: string | undefined,
   userId: string,
   totalRegistrations: number,
 ) {

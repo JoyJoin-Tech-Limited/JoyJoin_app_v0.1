@@ -142,7 +142,7 @@ export interface EventThemeTitleRevealedData {
 // 活动池新报名
 export interface PoolRegistrationAddedData {
   poolId: string;
-  archetype: string;
+  archetype?: string;
   userId: string;
   totalRegistrations: number;
 }
