@@ -393,7 +393,6 @@ export function registerAuthRoutes(app: Express): void {
         intent,
         birthYear,
         relationshipStatus,
-        preSignupAnswers,
       } = req.body;
 
       if (!displayName || !gender || !currentCity || !intent || intent.length === 0) {
