@@ -540,16 +540,6 @@ function normalise(text) {
 }
 
 /**
- * Check if a trigger appears in the normalised text.
- * @param {string} trigger
- * @param {string} normText
- * @returns {boolean}
- */
-function triggerMatches(trigger, normText) {
-  return normText.includes(normalise(trigger));
-}
-
-/**
  * Score a single skill against the given inputs.
  *
  * @param {SkillDef} skill
