@@ -10191,13 +10191,19 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
       
+      const forwardedFor = req.headers["x-forwarded-for"];
+      const clientIp = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
+        || req.ip
+        || req.socket.remoteAddress
+        || "127.0.0.1";
+
       const paymentResult = await paymentService.createPayment({
         userId,
         paymentType: "event_bundle",
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
-        clientIp: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.ip || req.socket.remoteAddress || "127.0.0.1",
+        clientIp,
       });
       
       res.json({
@@ -10253,13 +10259,19 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
       
+      const forwardedFor = req.headers["x-forwarded-for"];
+      const clientIp = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
+        || req.ip
+        || req.socket.remoteAddress
+        || "127.0.0.1";
+
       const paymentResult = await paymentService.createPayment({
         userId,
         paymentType,
         relatedId,
         originalAmount,
         couponId,
-        clientIp: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.ip || req.socket.remoteAddress || "127.0.0.1",
+        clientIp,
       });
       
       res.json(paymentResult);
@@ -10283,9 +10295,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const status = typeof (error as { status?: unknown }).status === "number"
         ? ((error as { status: number }).status)
         : 500;
+      const message = status >= 500
+        ? "Internal server error"
+        : error instanceof Error
+          ? error.message
+          : "Request failed";
       res.status(status).json({
         code: "FAIL",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message,
       });
     }
   });

@@ -15,6 +15,9 @@ vi.mock("../storage", () => ({
       payments.push(payment);
       return payment;
     }),
+    getPaymentById: vi.fn(async (id: string) => payments.find((entry) => entry.id === id)),
+    getPaymentByWechatOrderId: vi.fn(async (wechatOrderId: string) =>
+      payments.find((entry) => entry.wechatOrderId === wechatOrderId)),
     getAllPayments: vi.fn(async () => payments),
     updatePayment: vi.fn(async (id: string, updates: Record<string, unknown>) => {
       const payment = payments.find((entry) => entry.id === id);
@@ -163,6 +166,7 @@ describe("PaymentService", () => {
       status: "completed",
       wechatTransactionId: "wx_txn_123",
     });
+    expect(storage.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_SUCCESS_001");
     expect(storage.updateSubscription).toHaveBeenCalledWith("subscription-1", {
       status: "active",
       paymentId: "payment-1",
@@ -213,6 +217,7 @@ describe("PaymentService", () => {
       "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds",
       expect.objectContaining({ method: "POST" }),
     );
+    expect(storage.getPaymentById).toHaveBeenCalledWith("payment-refund-1");
     expect(payments[0].status).toBe("refund_pending");
 
     const refundPayload = {
@@ -228,6 +233,7 @@ describe("PaymentService", () => {
     });
 
     expect(payments[0].status).toBe("refunded");
+    expect(storage.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_REFUND_001");
     expect(storage.updateSubscription).toHaveBeenCalledWith("subscription-2", {
       status: "cancelled",
     });
