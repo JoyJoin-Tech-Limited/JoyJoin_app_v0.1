@@ -72,10 +72,10 @@ function AdminRouter() {
             <Button
               variant="destructive"
               onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
+              loading={logoutMutation.isPending}
               data-testid="button-logout"
             >
-              {logoutMutation.isPending ? "登出中..." : "登出并重试"}
+              登出并重试
             </Button>
           </div>
         </div>
