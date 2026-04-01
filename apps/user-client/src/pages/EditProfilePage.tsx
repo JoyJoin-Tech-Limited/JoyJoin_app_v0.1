@@ -429,8 +429,9 @@ export default function EditProfilePage() {
                 const isRecommended = index === 0;
                 return (
                   <button
+                    type="button"
                     key={group.id}
-                    className={`relative inline-flex items-center gap-2 h-11 px-4 rounded-full border text-sm hover-elevate active-elevate-2 transition-colors ${
+                    className={`relative inline-flex items-center gap-2 h-11 px-4 rounded-full border text-sm hover-elevate active-elevate-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                       isRecommended 
                         ? "bg-primary/5 border-primary/30" 
                         : "bg-background"
@@ -457,7 +458,8 @@ export default function EditProfilePage() {
               })}
               {groupsWithMissingFields.length > 3 && (
                 <button
-                  className="inline-flex items-center h-11 px-4 rounded-full border bg-background text-sm text-muted-foreground hover-elevate"
+                  type="button"
+                  className="inline-flex items-center h-11 px-4 rounded-full border bg-background text-sm text-muted-foreground hover-elevate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   onClick={() => setManualEditOpen(true)}
                   data-testid="chip-more"
                 >
@@ -472,7 +474,8 @@ export default function EditProfilePage() {
         <Collapsible open={manualEditOpen} onOpenChange={setManualEditOpen}>
           <CollapsibleTrigger asChild>
             <button 
-              className="w-full flex items-center justify-between h-12 px-3 text-muted-foreground hover:text-foreground rounded-lg hover-elevate transition-colors"
+              type="button"
+              className="w-full flex items-center justify-between h-12 px-3 text-muted-foreground hover:text-foreground rounded-lg hover-elevate transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               data-testid="button-toggle-manual-edit"
             >
               <div className="flex items-center gap-2">

@@ -22,7 +22,8 @@ function triggerHaptic() {
 // rounded-xl matches the standardized button radius; min-h-[44px] meets touch target.
 const selectButtonBase =
   "relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm min-h-[44px]" +
-  " transition-all duration-150 ease-out active:scale-[0.97]";
+  " transition-all duration-150 ease-out active:scale-[0.97]" +
+  " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 export function MultiSelectButton({
   selected,
@@ -41,8 +42,10 @@ export function MultiSelectButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={disabled}
+      aria-pressed={selected}
       className={cn(
         selectButtonBase,
         selected
@@ -110,7 +113,7 @@ export function MultiSelectGroup({
 interface SingleSelectButtonProps {
   selected: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   disabled?: boolean;
   className?: string;
   "data-testid"?: string;
@@ -132,8 +135,10 @@ export function SingleSelectButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={disabled}
+      aria-pressed={selected}
       className={cn(
         selectButtonBase,
         selected

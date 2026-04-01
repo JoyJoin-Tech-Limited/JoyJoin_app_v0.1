@@ -23,6 +23,7 @@ export default function EventDetailPage() {
           <Button 
             variant="ghost" 
             size="icon" 
+            aria-label="返回"
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
@@ -148,7 +149,7 @@ export default function EventDetailPage() {
         </Card>
 
         <Card 
-          className="border-0 bg-muted/30 cursor-pointer hover-elevate active-elevate-2 transition-all"
+          className="border-0 bg-muted/30 cursor-pointer hover-elevate active-elevate-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={() => setShowSafety(!showSafety)}
           role="button"
           tabIndex={0}

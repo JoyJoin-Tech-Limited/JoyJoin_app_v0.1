@@ -79,6 +79,7 @@ export default function IcebreakerTool() {
           <Button 
             size="sm" 
             variant="outline"
+            aria-label="刷新破冰问题"
             onClick={handleRefresh}
             loading={isLoading}
             data-testid="button-refresh-question"
