@@ -72,7 +72,8 @@ Use this skill when:
 - Never cross-reference a deprecated route, component, or API in new or updated doc sections — even as a historical note — unless the legacy section is the explicit subject.
 - If a doc section describes something that was removed, mark it `<!-- REMOVED -->` or delete it. Do not leave stale content describing removed behaviour as if it is current.
 - The `QUICK_REFERENCE.md` file (legacy) is **not canonical**. Always update `DEVELOPER_QUICK_REFERENCE.md` instead.
-- Canonical docs are: `DEVELOPER_QUICK_REFERENCE.md`, `docs/architecture/current-state.md`, `docs/onboarding-flow.md`, `.github/skills/`, `apps/server/src/README.md`.
+- Canonical docs are: `DEVELOPER_QUICK_REFERENCE.md`, `docs/architecture/current-state.md`, `docs/onboarding-flow.md`, and other active files under `docs/architecture/` that describe current production behaviour.
+- Supplemental references to update after canonical docs include skills under `.github/skills/`, `apps/server/src/README.md`, `packages/shared/src/README.md`, and other per-module READMEs.
 
 ---
 
