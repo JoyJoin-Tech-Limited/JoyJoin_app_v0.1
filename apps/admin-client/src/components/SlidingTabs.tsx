@@ -36,6 +36,7 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
   return (
     <div 
       ref={containerRef}
+      role="tablist"
       className="relative flex bg-muted/40 rounded-xl p-1.5 mx-4 mt-4 mb-2"
       data-testid="sliding-tabs-container"
     >
@@ -63,9 +64,33 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
         
         return (
           <button
+            type="button"
             key={tab.value}
             ref={(el) => (tabRefs.current[index] = el)}
             onClick={() => onTabChange(tab.value)}
+            onKeyDown={(e) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+                return;
+              }
+
+              e.preventDefault();
+
+              const lastIndex = tabs.length - 1;
+              const nextIndex =
+                e.key === "Home"
+                  ? 0
+                  : e.key === "End"
+                  ? lastIndex
+                  : e.key === "ArrowRight"
+                  ? (index + 1) % tabs.length
+                  : (index - 1 + tabs.length) % tabs.length;
+
+              tabRefs.current[nextIndex]?.focus();
+              onTabChange(tabs[nextIndex].value);
+            }}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             className={`
               relative flex-1 z-10 py-3 px-2 rounded-lg text-sm font-medium
               transition-all duration-200 ease-out
@@ -73,6 +98,7 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
                 ? 'text-primary-foreground' 
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
               active:scale-[0.98]
             `}
             data-testid={`tab-${tab.value}`}

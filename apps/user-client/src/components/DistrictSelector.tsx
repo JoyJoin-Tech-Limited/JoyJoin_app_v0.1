@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight, X, Sparkles, Flame, Zap } from "lucide-react";
 import { 
@@ -28,7 +27,9 @@ function DistrictChip({ district, selected, onSelect, showHeat = true }: Distric
   
   return (
     <button
+      type="button"
       onClick={() => onSelect(district)}
+      aria-pressed={selected}
       className={`
         inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
         transition-all border-2
@@ -36,6 +37,7 @@ function DistrictChip({ district, selected, onSelect, showHeat = true }: Distric
           ? 'bg-primary text-primary-foreground border-primary' 
           : 'bg-background border-border hover-elevate'
         }
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
       `}
       data-testid={`chip-district-${district.id}`}
     >
@@ -140,8 +142,10 @@ export function DistrictSelector(props: DistrictSelectorProps) {
               >
                 {district.name}
                 <button
+                  type="button"
                   onClick={() => removeSelection(district.id)}
-                  className="ml-1 hover:bg-muted rounded-full p-0.5"
+                  className="ml-1 hover:bg-muted rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                  aria-label={`移除${district.name}`}
                   data-testid={`button-remove-${district.id}`}
                 >
                   <X className="h-3 w-3" />
@@ -193,8 +197,10 @@ function SingleSelectView({ clusters, selectedId, onSelect }: SingleSelectViewPr
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {clusters.map(cluster => (
           <button
+            type="button"
             key={cluster.id}
             onClick={() => setActiveCluster(cluster.id)}
+            aria-pressed={activeCluster === cluster.id}
             className={`
               px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap
               transition-all border-2
@@ -202,6 +208,7 @@ function SingleSelectView({ clusters, selectedId, onSelect }: SingleSelectViewPr
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background border-border hover-elevate'
               }
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
             `}
             data-testid={`tab-cluster-${cluster.id}`}
           >
@@ -239,7 +246,7 @@ function ClusterSection({ cluster, expanded, onToggle, isSelected, onSelect }: C
   
   return (
     <Collapsible open={expanded} onOpenChange={onToggle}>
-      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate">
+      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover-elevate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
         <div className="flex items-center gap-2">
           {expanded ? (
             <ChevronDown className="h-4 w-4" />

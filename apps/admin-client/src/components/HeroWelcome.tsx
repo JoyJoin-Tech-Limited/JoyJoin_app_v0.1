@@ -1,5 +1,4 @@
 import { MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface HeroWelcomeProps {
   userName?: string;
@@ -33,8 +32,10 @@ export default function HeroWelcome({
       <div className="flex items-center flex-wrap gap-2 text-xl font-semibold">
         <span>在</span>
         <button
+          type="button"
           onClick={onLocationClick}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover-elevate active-elevate-2 border border-primary/20"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-all hover-elevate active-elevate-2 border border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label={`选择地区，当前为${displayLocation}`}
           data-testid="button-location-chip"
         >
           <MapPin className="h-4 w-4 text-primary" />
