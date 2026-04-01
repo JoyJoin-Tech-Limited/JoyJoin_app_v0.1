@@ -66,9 +66,13 @@ export default function JoinErrorScreen({
 
         {/* Headline */}
         <motion.h2
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.1 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={
+            shouldReduceMotion
+              ? undefined
+              : { type: "spring", stiffness: 300, damping: 26, delay: 0.1 }
+          }
           className="mt-3 text-center text-xl font-black leading-tight tracking-tight text-white"
         >
           系统刚刚开了个小差
@@ -76,9 +80,9 @@ export default function JoinErrorScreen({
 
         {/* Support copy */}
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1 }}
+          transition={shouldReduceMotion ? undefined : { duration: 0.4, delay: 0.2 }}
           className="mt-3 px-4 text-center text-sm leading-relaxed text-white/55"
         >
           你的席位还没有锁定成功。可以稍后再试一次，我们会尽量接着刚才的进度继续。

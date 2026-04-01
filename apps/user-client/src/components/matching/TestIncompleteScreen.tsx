@@ -75,9 +75,13 @@ export default function TestIncompleteScreen({
 
         {/* Headline */}
         <motion.h2
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.1 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={
+            shouldReduceMotion
+              ? undefined
+              : { type: "spring", stiffness: 300, damping: 26, delay: 0.1 }
+          }
           className="mt-3 text-center text-xl font-black leading-tight tracking-tight text-white"
         >
           完成性格测试，更容易遇到聊得来的人
@@ -85,9 +89,9 @@ export default function TestIncompleteScreen({
 
         {/* Support copy */}
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1 }}
+          transition={shouldReduceMotion ? undefined : { duration: 0.4, delay: 0.2 }}
           className="mt-3 px-4 text-center text-sm leading-relaxed text-white/55"
         >
           再花一点时间补完测试，我们会更懂你，也更容易帮你安排合适的一桌。
