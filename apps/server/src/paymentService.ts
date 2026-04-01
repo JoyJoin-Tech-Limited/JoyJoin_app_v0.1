@@ -205,6 +205,10 @@ export class PaymentService {
     const request = this.normalizeWebhookRequest(payloadOrRequest, rawBodyArg, headersArg);
     const { payload, rawBody, headers } = request;
 
+    if (!payload || typeof payload !== "object") {
+      throw Object.assign(new Error("Webhook payload is required"), { status: 400 });
+    }
+
     // ── 1. Signature verification ──────────────────────────────────────────
     const isDevMode = process.env.NODE_ENV === "development";
     if (!isDevMode) {
@@ -420,7 +424,7 @@ export class PaymentService {
       };
     }
 
-    const request = payloadOrRequest as WechatWebhookRequest;
+    const request = payloadOrRequest as Partial<WechatWebhookRequest>;
     const rawBody = typeof request.rawBody === "string"
       ? request.rawBody
       : request.rawBody?.toString("utf8") ?? JSON.stringify(request.payload ?? {});

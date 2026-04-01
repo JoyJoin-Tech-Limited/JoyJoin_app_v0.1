@@ -1,4 +1,3 @@
-//my path:/Users/felixg/projects/JoyJoin3/server/storage.ts
 import { 
   type User, type UpsertUser, type UpdateProfile, type UpdateFullProfile, type UpdatePersonality,
   type Event, type EventAttendance, type ChatMessage, type EventFeedback, type BlindBoxEvent,

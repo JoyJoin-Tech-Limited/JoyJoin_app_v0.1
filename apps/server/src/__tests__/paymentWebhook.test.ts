@@ -35,7 +35,7 @@ const mockNotificationsRepo = {
 vi.mock("../repositories/paymentsRepo", () => ({ paymentsRepo: mockPaymentsRepo }));
 vi.mock("../repositories/notificationsRepo", () => ({ notificationsRepo: mockNotificationsRepo }));
 vi.mock("../repositories/usersRepo", () => ({ usersRepo: { getUser: vi.fn() } }));
-vi.mock("../gamification", () => ({ getLevelDiscount: vi.fn().mockReturnValue(0) }));
+vi.mock("@shared/gamification", () => ({ getLevelDiscount: vi.fn().mockReturnValue(0) }));
 
 // Use dynamic import after mocks are set up
 const { PaymentService } = await import("../paymentService");
@@ -262,6 +262,15 @@ describe("PaymentService — handleWebhook", () => {
         })
       ).rejects.toMatchObject({ status: 401 });
     });
+  });
+
+  it("rejects request-object webhooks without a payload", async () => {
+    await expect(
+      service.handleWebhook({
+        headers: {},
+        rawBody: "{}",
+      })
+    ).rejects.toMatchObject({ status: 400 });
   });
 });
 

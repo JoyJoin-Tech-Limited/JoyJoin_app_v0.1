@@ -1,16 +1,35 @@
 import { db } from "../db";
 import { sql } from "drizzle-orm";
 
+interface CreateSubscriptionData {
+  userId: string;
+  planType: string;
+  startDate: Date | string;
+  endDate: Date | string;
+  isActive?: boolean;
+  autoRenew?: boolean;
+  paymentId?: string | null;
+}
+
+interface CreateCouponData {
+  code: string;
+  discountType: string;
+  discountValue: number;
+  validFrom: Date | string;
+  validUntil?: Date | string | null;
+  maxUses?: number | null;
+}
+
 export interface PaymentsRepository {
   getAllSubscriptions(): Promise<any[]>;
   getActiveSubscriptions(): Promise<any[]>;
   getUserSubscription(userId: string): Promise<any | undefined>;
-  createSubscription(data: any): Promise<any>;
+  createSubscription(data: CreateSubscriptionData): Promise<any>;
   updateSubscription(id: string, updates: any): Promise<any>;
   getAllCoupons(): Promise<any[]>;
   getCoupon(id: string): Promise<any | undefined>;
   getCouponByCode(code: string): Promise<any | undefined>;
-  createCoupon(data: any): Promise<any>;
+  createCoupon(data: CreateCouponData): Promise<any>;
   updateCoupon(id: string, updates: any): Promise<any>;
   getCouponUsageStats(couponId: string): Promise<any>;
   recordCouponUsage(data: { couponId: string; userId: string; paymentId: string; discountApplied: number }): Promise<void>;
@@ -58,10 +77,10 @@ export const paymentsRepo: PaymentsRepository = {
     return result.rows[0];
   },
 
-  async createSubscription(data: any): Promise<any> {
+  async createSubscription(data: CreateSubscriptionData): Promise<any> {
     const result = await db.execute(sql`
       INSERT INTO subscriptions (user_id, plan_type, start_date, end_date, is_active, auto_renew, payment_id)
-      VALUES (${data.userId}, ${data.planType}, ${data.startDate}, ${data.endDate}, ${data.isActive || true}, ${data.autoRenew || false}, ${data.paymentId || null})
+      VALUES (${data.userId}, ${data.planType}, ${data.startDate}, ${data.endDate}, ${data.isActive ?? true}, ${data.autoRenew ?? false}, ${data.paymentId ?? null})
       RETURNING *
     `);
     return result.rows[0];
@@ -134,10 +153,10 @@ export const paymentsRepo: PaymentsRepository = {
     return result.rows[0];
   },
 
-  async createCoupon(data: any): Promise<any> {
+  async createCoupon(data: CreateCouponData): Promise<any> {
     const result = await db.execute(sql`
       INSERT INTO coupons (code, discount_type, discount_value, valid_from, valid_until, usage_limit, is_active)
-      VALUES (${data.code}, ${data.discountType}, ${data.discountValue}, ${data.validFrom}, ${data.validUntil}, ${data.maxUses || null}, true)
+      VALUES (${data.code}, ${data.discountType}, ${data.discountValue}, ${data.validFrom}, ${data.validUntil}, ${data.maxUses ?? null}, true)
       RETURNING *
     `);
     return result.rows[0];
