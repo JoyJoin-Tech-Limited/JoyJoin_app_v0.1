@@ -24,11 +24,11 @@ import {
   adminAccounts,
   userInterestSignals,
 } from "@shared/schema";
-import { db } from "./db";
+import { db } from "../db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
-import { logAdminAudit } from "./lib/adminAuditLogger";
+import { logAdminAudit } from "../lib/adminAuditLogger";
 
 export interface LegacyStorage {
   // User operations
