@@ -55,25 +55,16 @@ async function classifyError(error: unknown): Promise<IcebreakerError> {
   if (error instanceof TypeError) {
     return { kind: 'network_error', message: '网络连接失败，请检查网络后重试' };
   }
-  if (error instanceof Response) {
-    if (error.status === 404) return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
-    if (error.status === 403) return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
-    if (error.status === 400) return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
-  }
-  if (error && typeof error === 'object' && 'status' in error) {
-    const status = (error as any).status;
-    if (status === 404) return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
-    if (status === 403) return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
-    if (status === 400) return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
-  }
   if (error instanceof Error) {
-    if (error.message.startsWith('404:') || error.message.toLowerCase().includes('not found')) {
+    const message = error.message || '';
+    const lowerMessage = message.toLowerCase();
+    if (message.startsWith('404:') || lowerMessage.includes('not found')) {
       return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
     }
-    if (error.message.startsWith('403:')) {
+    if (message.startsWith('403:')) {
       return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
     }
-    if (error.message.startsWith('400:')) {
+    if (message.startsWith('400:')) {
       return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
     }
   }
@@ -180,7 +171,8 @@ export function useSocialIcebreaker({
           vibe,
         });
         return res.json();
-      } catch {
+      } catch (e) {
+        setError(await classifyError(e));
         return null;
       }
     },

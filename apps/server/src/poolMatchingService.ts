@@ -1049,6 +1049,10 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   // 获取活动池信息用于通知
   const [pool] = await db.select().from(eventPools).where(eq(eventPools.id, poolId));
 
+  if (!pool) {
+    throw new Error(`[Pool Matching] Pool not found: ${poolId}`);
+  }
+
   // B: Execution guard — atomically set status from 'active' to 'matching'.
   // If 0 rows are updated another run is already in progress; bail out safely.
   const guardResult = await db
@@ -1229,7 +1233,12 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   }
 
   // 6. 发放邀请奖励优惠券 (Invitation Reward Coupons)
-  await processInvitationRewards(poolId, groups);
+  try {
+    await processInvitationRewards(poolId, groups);
+    console.log(`[Pool Matching] ✅ Invitation rewards processed for pool ${poolId}`);
+  } catch (error) {
+    console.error(`[Pool Matching] ⚠️ Failed to process invitation rewards for pool ${poolId}:`, error);
+  }
   
   // 7. 自动分配场地 (Automatic Venue Assignment)
   console.log(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
