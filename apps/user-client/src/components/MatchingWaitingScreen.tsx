@@ -13,9 +13,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import matchingWaitingBg from "@/assets/matching/shared/matching-bg.svg";
+import matchingBg from "@/assets/matching/shared/matching-bg.svg";
 import matchingWaitingHero from "@/assets/matching/waiting/matching-waiting-hero.svg";
 
+const matchingWaitingBg = matchingBg; // Backward-compatible alias; prefer matchingBg for shared use
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_MIN_GROUP_SIZE = 4;
