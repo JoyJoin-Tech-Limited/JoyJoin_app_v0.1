@@ -1,6 +1,11 @@
 ---
-name: Frontend Component Architecture
-description: Structure frontend components correctly across packages/shared, apps/user-client, and apps/admin-client — shared primitives, thin app wrappers, semantic correctness, and composition patterns.
+name: frontend-component-architecture
+description: >
+  Structure frontend components correctly across packages/shared, apps/user-client, and
+  apps/admin-client — shared primitives, thin app wrappers, semantic correctness, and composition
+  patterns. Use when creating, moving, or reviewing UI components. Trigger phrases: "where does
+  this component go?", "should this be shared?", "wrap the shared Button", "is this semantically
+  correct?", "add a loading state".
 ---
 
 # Frontend Component Architecture
@@ -93,3 +98,31 @@ Do not fork behaviour casually. Keep local wrappers behaviourally aligned with t
 - `apps/admin-client/src/components/ui/button.tsx` — admin-client thin wrapper
 - `docs/button-design.md` — design rationale and usage examples
 - `docs/architecture/current-state.md` — workspace placement rules
+
+## Quick examples
+
+**User says:** "I need a `TagChip` component. Should it go in shared or user-client?"
+**Apply this skill by:** Checking whether admin-client would ever need it. If yes → `packages/shared/src/ui/TagChip.tsx` with no app-specific deps. If only user-client → `apps/user-client/src/components/`.
+**Result:** Correct placement from the start; no circular imports, no duplication.
+
+---
+
+**User says:** "I want to render the shared `Button` as a `<Link>` for navigation."
+**Apply this skill by:** Using the `asChild` prop with a Radix Slot so the `Button` renders as the router `Link` element without forking behaviour.
+**Result:** Navigation uses semantic `<a>` markup while inheriting all shared button styles and states.
+
+## Troubleshooting
+
+- **`packages/shared` is importing from `apps/user-client`** — this is a hard violation. Move the dependency into shared or accept the duplication in the app workspace. Shared must never depend on an app.
+- **Duplicate component exists in both `user-client` and the shared package** — remove the app-local copy and import from shared. If a small difference exists, check whether `asChild` or a prop extension in the shared primitive is sufficient.
+- **Button renders as non-interactive `<div>` in screen reader** — a `<div onClick>` was used instead of `<button>`. Replace with the shared `Button` or a native `<button>`.
+- **`disabled` prop has no visual or functional effect** — the element is using `pointer-events-none` CSS instead of the semantic `disabled` attribute. Use `disabled` directly so assistive tech reports the state correctly.
+
+## Review checklist
+
+- [ ] Component is placed in the correct layer (shared vs app workspace)
+- [ ] `packages/shared` has no imports from `apps/*`
+- [ ] Interactive elements use `<button>` or `<a>`, not `<div onClick>`
+- [ ] Icon-only buttons have `aria-label`
+- [ ] `loading` and `disabled` states are handled by the shared `Button` prop, not CSS overrides
+- [ ] App wrapper does not fork or override core shared behaviour

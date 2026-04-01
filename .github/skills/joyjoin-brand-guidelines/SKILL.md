@@ -1,6 +1,10 @@
 ---
 name: joyjoin-brand-guidelines
-description: Apply JoyJoin brand guidelines across UI, marketing, social, offline, and motion design. Use this skill when work must stay consistent with JoyJoin’s visual identity, emotional tone, and brand system.
+description: >
+  Apply JoyJoin brand guidelines across UI, marketing, social, offline, and motion design. Use this
+  skill when work must stay consistent with JoyJoin's visual identity, emotional tone, and brand
+  system. Trigger phrases: "make this on-brand", "does this fit JoyJoin style?", "which colour
+  should I use?", "is this too corporate?", "review this design for brand consistency".
 license: See repository license information.
 ---
 
@@ -163,3 +167,31 @@ Every JoyJoin design output should feel:
 - visually soft and polished
 - simple but memorable
 - premium, playful, and approachable
+
+## Quick examples
+
+**User says:** "Make this button feel more on-brand."
+**Apply this skill by:** Checking the color system — primary actions use Vibrant Purple (`#8B5CF6`). Ensure the button uses rounded corners, soft spacing, and the brand font for any label text.
+**Result:** Button feels warm, premium, and consistent with the JoyJoin identity.
+
+---
+
+**User says:** "Can I add a mascot to this empty-state screen?"
+**Apply this skill by:** Choosing the mascot whose personality fits the moment (e.g. Koala for a calm/empty state). Keep the illustration soft-lined, cute but tasteful, and ensure it does not clutter the layout.
+**Result:** Empty state feels emotionally welcoming without being noisy or childish.
+
+## Troubleshooting
+
+- **Looks too corporate or cold** — check whether background colour and typography are using warm tones. Replace stark white or dark-mode grays with Warm Beige or the `--background` token. Prefer rounded forms over sharp angles.
+- **Too many colours or mascots in one view** — secondary colours should support, not compete. Reduce to purple as the anchor; demote other colours to accents only. Mascots should appear once per screen, intentionally.
+- **Inconsistent typography** — brand headlines must use ZhanKuQingKeHuangYouTi; body copy pairs with a clean sans-serif only when needed for legibility. Do not mix multiple display fonts on the same screen.
+- **Motion feels loud or distracting** — review against motion guidance: transitions should be gentle, smooth, and restrained. Remove bouncy keyframes or aggressive fade speeds.
+
+## Review checklist
+
+- [ ] Primary action colour is Vibrant Purple; secondary colours are used as accents only
+- [ ] Typography uses the brand font for identity moments; body copy is clean and legible
+- [ ] Layout feels breathable — rounded corners, soft spacing, no harsh contrast
+- [ ] Mascots or illustrations are used intentionally and only once per view
+- [ ] Motion is gentle and premium — no loud or bouncy animations
+- [ ] Design feels warm and premium, not corporate, cold, or cluttered
