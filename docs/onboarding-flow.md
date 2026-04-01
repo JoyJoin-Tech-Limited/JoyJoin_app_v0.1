@@ -150,10 +150,14 @@ await fetch('/api/auth/wechat/login-with-test', {
 **User State:** Has completed essential and extended data
 
 **Content:**
-- Animated "analyzing" phase (minimum 2.5 seconds)
+- Animated "analyzing" phase (minimum **1200 ms** for standard motion; **500 ms** for reduced-motion users). After 600 ms a tap/click anywhere skips straight to the reveal — preventing artificial waiting when data is already ready. (Prior to PR #383 this was a fixed 2500 ms wait with no skip path.)
 - Profile portrait card reveal with archetype, interests, and stats
+- **AI insight tagline** — a short personalised `insightLine` fetched from `GET /api/onboarding/profile-tagline` (service: `apps/server/src/profileTaglineService.ts`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`). Displayed inside `ProfilePortraitCard`. Rendered as a presentation-only enhancement; does not block navigation.
 - **Match Power preview** — displays the user's computed match score before they enter the Discover pool
 - **Archetype-personalized CTA** — the call-to-action copy is tailored to the user's archetype result (e.g., different messaging for each archetype type)
+- **Limited browse mode CTA** *(scoped experiment)* — a secondary "先浏览 →" CTA that lets the user enter read-only event discovery without committing to registration. Controlled by `ENABLE_LIMITED_BROWSE_MODE` constant in `FinalProfileReviewPage.tsx` (currently `true`). Can be disabled per-session via `?exp=no_limited_browse` in the URL. Do **not** generalize this pattern or add permanent browse-mode routing without verifying the gating logic and confirming it is no longer an experiment. See `LimitedBrowseBanner` component for the session flag.
+
+**Downstream onboarding data reuse:** The user's interest selections made in Step 4 (Extended Data) are automatically reused downstream — they seed the optional **Interest Signal Boost** pre-match calibration tool (surfaced after pool registration), and pre-select the user's highest-heat interest for the boost UX. No re-asking of onboarding data is needed.
 
 **Data Contract:**
 - Server field: `user.hasSeenProfileReview` (persisted to database)
