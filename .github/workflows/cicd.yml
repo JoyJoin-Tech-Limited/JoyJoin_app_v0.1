@@ -8,6 +8,9 @@ concurrency:
   group: joyjoin-prod-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   guardrails:
     name: Guardrails

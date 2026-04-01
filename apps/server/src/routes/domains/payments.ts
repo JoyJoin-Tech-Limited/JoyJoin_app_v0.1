@@ -31,6 +31,22 @@ function checkPaymentsEnabled(req: any, res: any, next: any) {
 }
 
 export function registerPaymentRoutes(app: Express): void {
+  // Get current user's subscription status
+  app.get("/api/subscription/status", isPhoneAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const status = await subscriptionService.getUserSubscriptionStatus(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching subscription status:", error);
+      res.status(500).json({ message: "Failed to fetch subscription status" });
+    }
+  });
+
   // Create subscription renewal (returns payment details)
   app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
     try {
