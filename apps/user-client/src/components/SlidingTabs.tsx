@@ -11,9 +11,15 @@ interface SlidingTabsProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (value: string) => void;
+  ariaLabel?: string;
 }
 
-export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTabsProps) {
+export default function SlidingTabs({
+  tabs,
+  activeTab,
+  onTabChange,
+  ariaLabel = "选项切换",
+}: SlidingTabsProps) {
   const [sliderStyle, setSliderStyle] = useState({ width: 0, left: 0 });
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,6 +42,8 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
   return (
     <div 
       ref={containerRef}
+      role="group"
+      aria-label={ariaLabel}
       className="relative flex bg-muted/40 rounded-xl p-1.5 mx-4 mt-4 mb-2"
       data-testid="sliding-tabs-container"
     >
@@ -63,9 +71,11 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
         
         return (
           <button
+            type="button"
             key={tab.value}
             ref={(el) => (tabRefs.current[index] = el)}
             onClick={() => onTabChange(tab.value)}
+            aria-pressed={isActive}
             className={`
               relative flex-1 z-10 py-3 px-2 rounded-lg text-sm font-medium
               transition-all duration-200 ease-out
@@ -73,6 +83,7 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
                 ? 'text-primary-foreground' 
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
               active:scale-[0.98]
             `}
             data-testid={`tab-${tab.value}`}

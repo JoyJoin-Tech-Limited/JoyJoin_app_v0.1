@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
@@ -8,6 +8,7 @@ import * as schema from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
 import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
+import { canUseMockWechatAuth, isDebugAuthLoggingEnabled } from "./auth/policy";
 
 /**
  * Minimum number of answers with a valid questionId + selectedOption that must
@@ -18,7 +19,6 @@ import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap
 const MIN_VALID_ANSWERS = 3;
 const IMPORTABLE_TRAITS = ["A", "C", "E", "O", "X", "P"] as const;
 
-const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
 
 function hasImportableTraitDelta(value: unknown): boolean {
@@ -62,7 +62,7 @@ function isImportableTestAnswer(answer: unknown): boolean {
 export async function getWechatOpenId(
   code: string
 ): Promise<{ openid: string; session_key: string }> {
-  if (process.env.NODE_ENV === "development") {
+  if (canUseMockWechatAuth(code)) {
     return {
       openid: `mock_openid_${code}`,
       session_key: `mock_session_${Date.now()}`,
@@ -190,7 +190,7 @@ export async function getWechatOpenId(
 export async function getWechatOAuthOpenId(
   code: string
 ): Promise<{ openid: string; access_token: string }> {
-  if (process.env.NODE_ENV === "development") {
+  if (canUseMockWechatAuth(code)) {
     return {
       openid: `mock_openid_${code}`,
       access_token: `mock_access_token_${Date.now()}`,
@@ -535,7 +535,7 @@ export function setupWechatAuth(app: Express) {
    * the user is bounced directly to the callback with a mock code so the flow can be
    * tested without a registered WeChat Official Account.
    */
-  app.get("/api/auth/wechat/oauth/start", (req: any, res) => {
+  app.get("/api/auth/wechat/oauth/start", (req: Request, res) => {
     // APP_URL is the public-facing origin of the app (e.g. https://yuejuapp.com).
     // The Caddy reverse proxy routes /api/* from this same origin to the backend
     // (path-based, not subdomain), so a single variable covers both the WeChat OAuth2
@@ -604,7 +604,7 @@ export function setupWechatAuth(app: Express) {
    * The handler validates the CSRF state, exchanges the code for an openid, finds or
    * creates the user, persists the session, then redirects the browser to the frontend.
    */
-  app.get("/api/auth/wechat/oauth/callback", async (req: any, res) => {
+  app.get("/api/auth/wechat/oauth/callback", async (req: Request, res) => {
     const appUrl = (process.env.APP_URL ?? "http://localhost:5173").replace(/\/$/, "");
     const { code, state } = req.query as { code?: string; state?: string };
 
@@ -632,7 +632,7 @@ export function setupWechatAuth(app: Express) {
       req.session.userId = fullUser.id;
 
       await new Promise<void>((resolve, reject) => {
-        req.session.save((err: any) => {
+        req.session.save((err) => {
           if (err) reject(err);
           else resolve();
         });
@@ -643,7 +643,7 @@ export function setupWechatAuth(app: Express) {
       // Let the frontend's AuthenticatedRouter drive navigation via nextStep.
       res.redirect(appUrl);
     } catch (error) {
-      const err: any = error;
+      const err = error as Error & { code?: string; status?: number };
       console.error("[WeChat OAuth] Callback error:", {
         message: err?.message,
         code: err?.code,
@@ -665,9 +665,13 @@ export function setupWechatAuth(app: Express) {
    *   presignupSessionId – Server-side pre-signup cache session ID to claim/delete
    *                        after successful answer import (optional, B)
    */
-  app.post("/api/auth/wechat/login-with-test", async (req: any, res) => {
+  app.post("/api/auth/wechat/login-with-test", async (req: Request, res) => {
     try {
-      const { code, testAnswers, presignupSessionId } = req.body;
+      const { code, testAnswers, anonymousSessionId } = req.body as {
+        code?: string;
+        testAnswers?: unknown[];
+        anonymousSessionId?: unknown;
+      };
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
@@ -715,7 +719,7 @@ export function setupWechatAuth(app: Express) {
       // Fetch updated full user record
       const fullUser = (await storage.getUserById(user.id)) ?? user;
 
-      if (DEBUG_AUTH) {
+      if (isDebugAuthLoggingEnabled()) {
         console.log("[WeChat Auth] before session save", {
           userId: fullUser.id,
           sid: req.sessionID,
@@ -723,8 +727,8 @@ export function setupWechatAuth(app: Express) {
       }
 
       req.session.userId = fullUser.id;
-      req.session.save(async (err: any) => {
-        if (DEBUG_AUTH) {
+      req.session.save(async (err) => {
+        if (isDebugAuthLoggingEnabled()) {
           console.log("[WeChat Auth] after session save", {
             err: err ? String(err) : null,
             sid: req.sessionID,
@@ -749,7 +753,7 @@ export function setupWechatAuth(app: Express) {
         });
       });
     } catch (error) {
-      const err: any = error;
+      const err = error as Error & { code?: string; status?: number };
       console.error("[WeChat Auth] Error during WeChat login-with-test:", {
         message: err?.message,
         code: err?.code,
@@ -787,9 +791,9 @@ export function setupWechatAuth(app: Express) {
    * POST /api/auth/wechat/login
    * WeChat Mini Program authentication for returning users (no test answers needed).
    */
-  app.post("/api/auth/wechat/login", async (req: any, res) => {
+  app.post("/api/auth/wechat/login", async (req: Request, res) => {
     try {
-      const { code } = req.body;
+      const { code } = req.body as { code?: string };
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
@@ -804,7 +808,7 @@ export function setupWechatAuth(app: Express) {
       const fullUser = (await storage.getUserById(user.id)) ?? user;
 
       req.session.userId = fullUser.id;
-      req.session.save((err: any) => {
+      req.session.save((err) => {
         if (err) {
           console.error("[WeChat Auth] Session save error:", err);
           return res.status(500).json({ error: "Failed to create session" });
@@ -817,7 +821,7 @@ export function setupWechatAuth(app: Express) {
         });
       });
     } catch (error) {
-      const err: any = error;
+      const err = error as Error & { code?: string; status?: number };
       console.error("[WeChat Auth] Error during WeChat login:", {
         message: err?.message,
         code: err?.code,

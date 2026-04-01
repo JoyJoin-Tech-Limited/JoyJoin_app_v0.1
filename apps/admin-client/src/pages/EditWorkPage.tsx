@@ -85,6 +85,7 @@ export default function EditWorkPage() {
           <Button 
             variant="ghost" 
             size="icon"
+            aria-label="返回编辑资料页"
             onClick={() => setLocation("/profile/edit")}
             data-testid="button-back"
           >
@@ -134,12 +135,14 @@ export default function EditWorkPage() {
                 key={option.value}
                 type="button"
                 onClick={() => form.setValue("workVisibility", option.value as any)}
+                aria-pressed={form.watch("workVisibility") === option.value}
                 className={`
                   w-full px-5 py-4 text-left rounded-xl border-2 transition-all duration-150 text-base
                   ${form.watch("workVisibility") === option.value
                     ? 'border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]'
                     : 'border-border hover-elevate active-elevate-2'
                   }
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
                 `}
                 data-testid={`button-work-visibility-${option.value}`}
               >

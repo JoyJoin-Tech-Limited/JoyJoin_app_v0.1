@@ -120,25 +120,28 @@ export default function QuizIntro({ onStart, onSkip }: QuizIntroProps) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Card
-                className="border shadow-sm cursor-pointer hover-elevate active-elevate-2 transition-all"
+              <button
+                type="button"
+                className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 onClick={() => onStart(coach.gender)}
                 data-testid={`button-select-${coach.gender}-coach`}
               >
-                <CardContent className="p-4 text-center space-y-2">
-                  <div
-                    className={`h-16 w-16 rounded-full ${coach.gradient} flex items-center justify-center mx-auto`}
-                  >
-                    <span className="text-2xl">{coach.emoji}</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{coach.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {coach.role}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card className="border shadow-sm cursor-pointer hover-elevate active-elevate-2 transition-all">
+                  <CardContent className="p-4 text-center space-y-2">
+                    <div
+                      className={`h-16 w-16 rounded-full ${coach.gradient} flex items-center justify-center mx-auto`}
+                    >
+                      <span className="text-2xl">{coach.emoji}</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{coach.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {coach.role}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
             </motion.div>
           ))}
         </div>
