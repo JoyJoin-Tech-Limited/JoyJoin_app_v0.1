@@ -66,6 +66,8 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/events` | Chase attendees | POST | `/api/admin/blind-box-events/:eventId/chase-attendees` | `requireAdmin` |
 | `/admin/events` | Override attendance ⚠️ | PATCH | `/api/admin/blind-box-events/:eventId/attendees/:userId/attendance` | `requireAdmin` |
 
+> Note: `apps/server/src/routes.ts` also retains older `/api/admin/events/:eventId/attendance-summary` and `/api/admin/events/:eventId/attendees/:userId/attendance-status` variants. The matrix above lists the routes currently used by `apps/admin-client/src/components/AttendanceSummaryTab.tsx`.
+
 ---
 
 ## Finance

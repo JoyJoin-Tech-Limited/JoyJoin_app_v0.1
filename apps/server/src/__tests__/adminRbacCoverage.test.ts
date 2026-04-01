@@ -1,14 +1,17 @@
 /**
  * RBAC Coverage Audit Test — `/api/admin/*`
  *
- * This test mounts the real Express app (with mocked storage/services) and
- * introspects its registered route stack to verify that every `/api/admin/*`
- * route has appropriate RBAC middleware.
+ * This audit scans the authoritative admin route definitions in:
+ * - `apps/server/src/adminAuth.ts`
+ * - `apps/server/src/routes.ts`
+ *
+ * and verifies that every declared `/api/admin/*` route has the expected RBAC
+ * middleware attached.
  *
  * Rules enforced
  * ──────────────
- * 1. `/api/admin/login` is the ONLY expected public admin route (no auth).
- * 2. Every other `/api/admin/*` route MUST include `requireAdmin` middleware.
+ * 1. `POST /api/admin/login` is the ONLY expected public admin route.
+ * 2. Every other `/api/admin/*` route MUST include `requireAdmin`.
  * 3. Account-management routes (list, create, update, reset-password) MUST
  *    additionally include `requireSuperAdmin`.
  *
@@ -19,214 +22,151 @@
  * Documented exceptions (see also docs/admin-rbac-matrix.md at project root)
  * ──────────────────────────────────────────────────────────
  * - `POST /api/admin/login`  — public; intentional; no session exists yet.
- * - `GET  /api/admin/me`     — protected by `requireAdmin`; returns caller's
- *   own profile and is therefore safe at `requireAdmin` level (not super-admin).
+ * - `GET  /api/admin/me`     — protected by `requireAdmin`; returns the
+ *   caller's own profile and is therefore safe at `requireAdmin` level.
  */
 
-import express from 'express';
-import session from 'express-session';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-
-// ── Mock heavy dependencies so the app can be instantiated without DB ───────
-
-vi.mock('../storage', () => ({
-  storage: {
-    getAdminAccountByUsername: vi.fn(),
-    getAdminAccountById: vi.fn(),
-    listAdminAccounts: vi.fn(),
-    createAdminAccount: vi.fn(),
-    updateAdminAccount: vi.fn(),
-    updateAdminLastLogin: vi.fn(),
-    getUser: vi.fn(),
-  },
-}));
-
-// ── Import after mocking ────────────────────────────────────────────────────
-
-const { registerAdminAuthRoutes } =
-  await import('../adminAuth');
-
-// ── Helper: build minimal app with admin routes only ────────────────────────
-
-function buildApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({ secret: 'test', resave: false, saveUninitialized: false }),
-  );
-  registerAdminAuthRoutes(app);
-  return app;
-}
-
-// ── Introspect the Express route stack ──────────────────────────────────────
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 interface RouteInfo {
   method: string;
   path: string;
   middlewareNames: string[];
+  sourceFile: string;
 }
 
-function extractAdminRoutes(app: express.Express): RouteInfo[] {
-  const routes: RouteInfo[] = [];
-
-  function walk(stack: any[], prefix = '') {
-    for (const layer of stack) {
-      if (layer.route) {
-        const routePath: string = prefix + (layer.route.path ?? '');
-        if (!routePath.startsWith('/api/admin')) continue;
-
-        const methods = Object.keys(layer.route.methods).filter(
-          (m) => layer.route.methods[m],
-        );
-
-        for (const method of methods) {
-          const handlers: any[] = layer.route.stack ?? [];
-          const middlewareNames = handlers.map(
-            (h: any) => h.handle?.name ?? h.name ?? '<anonymous>',
-          );
-          routes.push({ method: method.toUpperCase(), path: routePath, middlewareNames });
-        }
-      } else if (layer.name === 'router' && layer.handle?.stack) {
-        const mountPath = layer.regexp?.source
-          ? (layer.keys?.length === 0
-            ? layer.regexp.source
-                .replace('\\/?(?=\\/|$)', '')
-                .replace(/\\\//g, '/')
-                .replace(/^\^/, '')
-            : '')
-          : '';
-        walk(layer.handle.stack, prefix + mountPath);
-      }
-    }
-  }
-
-  walk((app as any)._router?.stack ?? []);
-  return routes;
-}
-
-// ── RBAC coverage tests for admin routes ───────────────────────────────────
-
-describe('Admin RBAC coverage for /api/admin routes', () => {
-  it('ensures all non-login admin routes include requireAdmin', () => {
-    const app = buildApp();
-    const routes = extractAdminRoutes(app);
-
-    for (const route of routes) {
-      // Public login route is the only allowed exception
-      if (route.method === 'POST' && route.path === '/api/admin/login') {
-        expect(route.middlewareNames).not.toContain('requireAdmin');
-        continue;
-      }
-
-      expect(route.middlewareNames).toContain('requireAdmin');
-    }
-  });
-
-  it('ensures account-management routes also include requireSuperAdmin', () => {
-    const app = buildApp();
-    const routes = extractAdminRoutes(app);
-
-    // Adjust these to reflect the concrete account-management routes
-    const superAdminRoutes = [
-      { method: 'GET', path: '/api/admin/accounts' },            // list
-      { method: 'POST', path: '/api/admin/accounts' },           // create
-      { method: 'PUT', path: '/api/admin/accounts/:id' },        // update
-      { method: 'POST', path: '/api/admin/accounts/:id/reset' }, // reset-password
-    ];
-
-    for (const { method, path } of superAdminRoutes) {
-      const matching = routes.filter(
-        (r) => r.method === method && r.path === path,
-      );
-
-      // If a documented account-management route exists, it must use requireSuperAdmin
-      for (const route of matching) {
-        expect(route.middlewareNames).toContain('requireSuperAdmin');
-      }
-    }
-  });
-});
-
-// ── Routes that must have requireSuperAdmin in addition to requireAdmin ──────
+const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(TEST_FILE_DIR, '../../../..');
+const ADMIN_ROUTE_FILES = [
+  'apps/server/src/adminAuth.ts',
+  'apps/server/src/routes.ts',
+] as const;
 
 const SUPER_ADMIN_REQUIRED: Array<{ method: string; pathPattern: RegExp }> = [
-  { method: 'GET',   pathPattern: /^\/api\/admin\/accounts$/ },
-  { method: 'POST',  pathPattern: /^\/api\/admin\/accounts$/ },
-  { method: 'PATCH', pathPattern: /^\/api\/admin\/accounts\// },
-  { method: 'POST',  pathPattern: /^\/api\/admin\/accounts\/.*\/reset-password$/ },
+  { method: 'GET', pathPattern: /^\/api\/admin\/accounts$/ },
+  { method: 'POST', pathPattern: /^\/api\/admin\/accounts$/ },
+  { method: 'PATCH', pathPattern: /^\/api\/admin\/accounts\/:id$/ },
+  { method: 'POST', pathPattern: /^\/api\/admin\/accounts\/:id\/reset-password$/ },
 ];
 
-// ── Tests ───────────────────────────────────────────────────────────────────
+function extractAdminRoutesFromSource(filePath: string): RouteInfo[] {
+  const source = readFileSync(path.join(REPO_ROOT, filePath), 'utf8');
+  const routes: RouteInfo[] = [];
+
+  // This parser intentionally targets the concrete route declaration style
+  // used in adminAuth.ts and routes.ts today:
+  //   app.get('/api/admin/...', middlewareA, middlewareB, async (req, res) => {})
+  // It will not detect future `app.use('/api/admin', router)` mounts or
+  // substantially different multiline/template-literal registration styles.
+  const routePattern = /^\s*app\.(get|post|patch|put|delete)\(\s*(["'])((?:\\.|(?!\2).)+)\2\s*,\s*(.*?)(?:,\s*)?(?:async\s*)?\(/gm;
+
+  for (const match of source.matchAll(routePattern)) {
+    const method = match[1]?.toUpperCase();
+    const routePath = match[3];
+    const middlewareSegment = (match[4] ?? '').trim();
+
+    if (!method || !routePath?.startsWith('/api/admin')) {
+      continue;
+    }
+
+    const middlewareNames = middlewareSegment.length
+      ? middlewareSegment
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+      : [];
+
+    routes.push({
+      method,
+      path: routePath,
+      middlewareNames,
+      sourceFile: filePath,
+    });
+  }
+
+  return routes;
+}
 
 describe('Admin RBAC coverage audit', () => {
   let adminRoutes: RouteInfo[];
 
   beforeAll(() => {
-    const app = buildApp();
-    adminRoutes = extractAdminRoutes(app);
-    // Ensure we actually found routes to test
-    expect(adminRoutes.length).toBeGreaterThan(0);
+    adminRoutes = ADMIN_ROUTE_FILES.flatMap(extractAdminRoutesFromSource);
+    expect(adminRoutes.length).toBeGreaterThan(80);
+    expect(adminRoutes.some((route) => route.sourceFile.endsWith('adminAuth.ts'))).toBe(true);
+    expect(adminRoutes.some((route) => route.sourceFile.endsWith('routes.ts'))).toBe(true);
   });
 
-  it('every /api/admin/* route other than /api/admin/login must include requireAdmin', () => {
-    const unprotected: string[] = [];
+  it('discovers admin routes from both adminAuth.ts and routes.ts', () => {
+    const summaryByFile = adminRoutes.reduce<Record<string, number>>((acc, route) => {
+      acc[route.sourceFile] = (acc[route.sourceFile] ?? 0) + 1;
+      return acc;
+    }, {});
 
-    for (const route of adminRoutes) {
+    expect(summaryByFile['apps/server/src/adminAuth.ts'] ?? 0).toBeGreaterThan(0);
+    expect(summaryByFile['apps/server/src/routes.ts'] ?? 0).toBeGreaterThan(80);
+  });
+
+  it('every /api/admin/* route other than POST /api/admin/login includes requireAdmin', () => {
+    const unprotected = adminRoutes.filter((route) => {
       if (route.method === 'POST' && route.path === '/api/admin/login') {
-        // Known public exception — the login endpoint itself has no prior auth
-        continue;
+        return false;
       }
 
-      const hasRequireAdmin = route.middlewareNames.includes('requireAdmin');
-      if (!hasRequireAdmin) {
-        unprotected.push(`${route.method} ${route.path}  [${route.middlewareNames.join(', ')}]`);
-      }
-    }
-
-    expect(unprotected, `Unprotected admin routes found:\n${unprotected.join('\n')}`).toHaveLength(0);
-  });
-
-  it('/api/admin/login must NOT have requireAdmin (it is the public login endpoint)', () => {
-    const loginRoute = adminRoutes.find(
-      (r) => r.method === 'POST' && r.path === '/api/admin/login',
-    );
-    // If the route exists it must be unprotected
-    if (loginRoute) {
-      expect(loginRoute.middlewareNames).not.toContain('requireAdmin');
-    }
-  });
-
-  it('account-management routes must include requireSuperAdmin', () => {
-    const missing: string[] = [];
-
-    for (const { method, pathPattern } of SUPER_ADMIN_REQUIRED) {
-      const matching = adminRoutes.filter(
-        (r) => r.method === method && pathPattern.test(r.path),
-      );
-      for (const route of matching) {
-        const hasSuperAdmin = route.middlewareNames.includes('requireSuperAdmin');
-        if (!hasSuperAdmin) {
-          missing.push(
-            `${route.method} ${route.path}  [${route.middlewareNames.join(', ')}]`,
-          );
-        }
-      }
-    }
+      return !route.middlewareNames.includes('requireAdmin');
+    });
 
     expect(
-      missing,
-      `Super-admin-only routes missing requireSuperAdmin:\n${missing.join('\n')}`,
+      unprotected,
+      `Unprotected admin routes found:\n${unprotected
+        .map((route) => `${route.method} ${route.path} [${route.middlewareNames.join(', ')}] in ${route.sourceFile}`)
+        .join('\n')}`,
     ).toHaveLength(0);
   });
 
-  it('snapshot of all discovered /api/admin/* routes for documentation purposes', () => {
-    // This test is intentionally informational (always passes).
-    // Run it to see the full route list with middleware names.
+  it('POST /api/admin/login remains the only public admin route', () => {
+    const publicRoutes = adminRoutes.filter(
+      (route) => !route.middlewareNames.includes('requireAdmin'),
+    );
+
+    expect(publicRoutes).toEqual([
+      {
+        method: 'POST',
+        path: '/api/admin/login',
+        middlewareNames: [],
+        sourceFile: 'apps/server/src/adminAuth.ts',
+      },
+    ]);
+  });
+
+  it('account-management routes include requireSuperAdmin', () => {
+    const missing = adminRoutes.filter((route) =>
+      SUPER_ADMIN_REQUIRED.some(
+        ({ method, pathPattern }) =>
+          route.method === method && pathPattern.test(route.path) && !route.middlewareNames.includes('requireSuperAdmin'),
+      ),
+    );
+
+    expect(
+      missing,
+      `Super-admin-only routes missing requireSuperAdmin:\n${missing
+        .map((route) => `${route.method} ${route.path} [${route.middlewareNames.join(', ')}] in ${route.sourceFile}`)
+        .join('\n')}`,
+    ).toHaveLength(0);
+  });
+
+  it('prints an admin route snapshot for CI visibility', () => {
     const summary = adminRoutes
-      .map((r) => `${r.method.padEnd(6)} ${r.path.padEnd(60)} [${r.middlewareNames.join(', ')}]`)
+      .map(
+        (route) =>
+          `${route.method.padEnd(6)} ${route.path.padEnd(72)} [${route.middlewareNames.join(', ')}] (${route.sourceFile})`,
+      )
       .join('\n');
-    // Print for CI log visibility
+
     console.info(`\n=== Admin Route RBAC Snapshot ===\n${summary}\n`);
-    expect(adminRoutes.length).toBeGreaterThan(0);
+    expect(adminRoutes.length).toBeGreaterThan(80);
   });
 });

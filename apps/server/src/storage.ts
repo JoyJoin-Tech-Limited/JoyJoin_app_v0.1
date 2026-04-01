@@ -4185,7 +4185,7 @@ export class DatabaseStorage implements IStorage {
       action: 'ATTENDANCE_OVERRIDE',
       adminId,
       targetEntityType: 'event_attendance',
-      targetEntityId: userId,
+      targetEntityId: `${eventId}:${userId}`,
       context: { eventId, userId, newStatus: status },
     });
   }
