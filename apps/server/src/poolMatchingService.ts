@@ -25,7 +25,6 @@ import {
   eventAttendance,
   users, 
   userInterests,
-  matchingConfig,
   invitationUses,
   invitations,
   coupons,
@@ -33,7 +32,6 @@ import {
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { calculateAge } from "@shared/utils";
-import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
@@ -201,6 +199,12 @@ function calculateChemistryScore(user1: UserWithProfile, user2: UserWithProfile)
 }
 
 /**
+ * Per-run user interest cache type.
+ * Key: userId → { topics, heatMap }
+ */
+export type UserInterestsCache = Map<string, { topics: string[]; heatMap: Record<string, number> }>;
+
+/**
  * 获取用户兴趣 (统一从 user_interests 表)
  * @returns { topics: string[], heatMap: Record<string, number> }
  */
@@ -229,6 +233,38 @@ async function getUserInterests(userId: string): Promise<{
 }
 
 /**
+ * Preload user_interests for a list of userIds in one batch query.
+ * Returns a cache map: userId -> { topics, heatMap }.
+ * Used to avoid N×(N-1)/2 repeated DB lookups inside pair-score loops.
+ */
+export async function preloadUserInterests(userIds: string[]): Promise<UserInterestsCache> {
+  const cache: UserInterestsCache = new Map();
+  if (userIds.length === 0) return cache;
+
+  const rows = await db
+    .select()
+    .from(userInterests)
+    .where(inArray(userInterests.userId, userIds));
+
+  for (const row of rows) {
+    const selections = (row.selections as any[]) || [];
+    cache.set(row.userId, {
+      topics: selections.map((s: any) => s.topicId),
+      heatMap: Object.fromEntries(selections.map((s: any) => [s.topicId, s.heat])),
+    });
+  }
+
+  // Fill missing users with empty interests so every userId has an entry
+  for (const userId of userIds) {
+    if (!cache.has(userId)) {
+      cache.set(userId, { topics: [], heatMap: {} });
+    }
+  }
+
+  return cache;
+}
+
+/**
  * 计算兴趣重叠度 (Heat Level 加权 Jaccard)
  * 使用 user_interests 表中的兴趣选择和热度信息
  *
@@ -239,11 +275,12 @@ async function getUserInterests(userId: string): Promise<{
  * Do NOT add user_interest_signals reads to this function.
  */
 export async function calculateInterestScoreAsync(
-  user1Id: string, 
+  user1Id: string,
   user2Id: string,
+  cache?: UserInterestsCache,
 ): Promise<number> {
-  const interests1 = await getUserInterests(user1Id);
-  const interests2 = await getUserInterests(user2Id);
+  const interests1 = cache?.get(user1Id) ?? await getUserInterests(user1Id);
+  const interests2 = cache?.get(user2Id) ?? await getUserInterests(user2Id);
   
   if (interests1.topics.length === 0 && interests2.topics.length === 0) {
     return 70; // 默认中等分数
@@ -592,9 +629,17 @@ function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWi
 async function calculatePairScore(
   user1: UserWithProfile,
   user2: UserWithProfile,
+  interestsCache?: UserInterestsCache,
+  pairScoreCache?: Map<string, number>,
 ): Promise<number> {
+  // Use a sorted key so (A,B) and (B,A) map to the same cache entry
+  const cacheKey = [user1.userId, user2.userId].sort().join('|');
+  if (pairScoreCache?.has(cacheKey)) {
+    return pairScoreCache.get(cacheKey)!;
+  }
+
   const chemistry = calculateChemistryScore(user1, user2);
-  const interest = await calculateInterestScoreAsync(user1.userId, user2.userId);
+  const interest = await calculateInterestScoreAsync(user1.userId, user2.userId, interestsCache);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
 
@@ -621,7 +666,9 @@ async function calculatePairScore(
     preference          * weights.preference +
     language            * weights.language;
 
-  return Math.round(totalScore);
+  const result = Math.round(totalScore);
+  pairScoreCache?.set(cacheKey, result);
+  return result;
 }
 
 /**
@@ -630,6 +677,8 @@ async function calculatePairScore(
  */
 async function calculateGroupPairScore(
   members: UserWithProfile[],
+  interestsCache?: UserInterestsCache,
+  pairScoreCache?: Map<string, number>,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -638,12 +687,29 @@ async function calculateGroupPairScore(
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += await calculatePairScore(members[i], members[j]);
+      totalScore += await calculatePairScore(members[i], members[j], interestsCache, pairScoreCache);
       pairCount++;
     }
   }
   
   return pairCount > 0 ? Math.round(totalScore / pairCount) : 0;
+}
+
+/**
+ * Calculate the average chemistry-only score for the group members.
+ * Used to populate avgChemistryScore (distinct from avgPairScore).
+ */
+function calculateGroupChemistryScore(members: UserWithProfile[]): number {
+  if (members.length < 2) return 0;
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      total += calculateChemistryScore(members[i], members[j]);
+      count++;
+    }
+  }
+  return count > 0 ? Math.round(total / count) : 0;
 }
 
 /**
@@ -812,41 +878,42 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   }
 
   const eligibleUserIds = eligibleUsers.map(user => user.userId);
+
+  // 3.5 Preload user_interests for all eligible users in one batch query (C: runtime hardening)
+  const interestsCache = await preloadUserInterests(eligibleUserIds);
+
+  // In-memory pair score cache for this run (C: avoid recomputing the same pair twice)
+  const pairScoreCache = new Map<string, number>();
   
-  // 3.5 获取邀请关系 (invitation relationships)
-  // Query all invitation uses for registrations in this pool
+  // 3.6 获取邀请关系 (invitation relationships)
+  // Batch query all invitation uses for registrations in this pool, then join in memory.
   const registrationIds = eligibleUsers.map(u => u.registrationId);
-  
+  const allInviteUses = registrationIds.length > 0
+    ? await db.select().from(invitationUses)
+        .where(inArray(invitationUses.poolRegistrationId, registrationIds))
+    : [];
+
+  // D: Fix — invitationUses.invitationId is a FK to invitations.id (not invitations.code)
+  const invitationIds = allInviteUses
+    .map((u: any) => u.invitationId)
+    .filter(Boolean) as string[];
+  const relatedInvitations = invitationIds.length > 0
+    ? await db.select().from(invitations)
+        .where(inArray(invitations.id, invitationIds))
+    : [];
+
+  const invitationById = new Map(relatedInvitations.map((inv: any) => [inv.id, inv]));
+
   // Build invitation map: inviteeUserId -> inviterUserId
-  // This will help us prioritize matching invited users with their inviters
   const invitationPairs: Array<{inviterId: string, inviteeId: string}> = [];
-  
-  for (const user of eligibleUsers) {
-    // Check if this user was invited (is an invitee)
-    const [inviteUse]: any = await db
-      .select()
-      .from(invitationUses)
-      .where(eq(invitationUses.poolRegistrationId, user.registrationId))
-      .limit(1);
-    
-    if (inviteUse && inviteUse.invitationId) {
-      // Get the invitation to find who invited this user
-      const [invitation]: any = await db
-        .select()
-        .from(invitations)
-        .where(eq(invitations.code, inviteUse.invitationId))
-        .limit(1);
-      
-      if (invitation) {
-        // Check if inviter is also in this pool
-        const inviter = eligibleUsers.find((u) => u.userId === invitation.inviterId);
-        if (inviter) {
-          invitationPairs.push({
-            inviterId: inviter.userId,
-            inviteeId: user.userId
-          });
-        }
-      }
+  for (const inviteUse of allInviteUses) {
+    if (!(inviteUse as any).invitationId) continue;
+    const invitation = invitationById.get((inviteUse as any).invitationId);
+    if (!invitation) continue;
+    const inviter = eligibleUsers.find((u) => u.userId === (invitation as any).inviterId);
+    const invitee = eligibleUsers.find((u) => u.registrationId === (inviteUse as any).poolRegistrationId);
+    if (inviter && invitee && inviter.userId !== invitee.userId) {
+      invitationPairs.push({ inviterId: inviter.userId, inviteeId: invitee.userId });
     }
   }
   
@@ -860,14 +927,11 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
   for (let i = 0; i < eligibleUsers.length; i++) {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
-      let score = await calculatePairScore(
-        eligibleUsers[i] as UserWithProfile, 
-        eligibleUsers[j] as UserWithProfile,
-      );
-      
-      // Check if this pair has an invitation relationship
       const user1 = eligibleUsers[i] as UserWithProfile;
       const user2 = eligibleUsers[j] as UserWithProfile;
+      let score = await calculatePairScore(user1, user2, interestsCache, pairScoreCache);
+      
+      // Check if this pair has an invitation relationship
       const isInvited = invitationPairs.some(pair => 
         (pair.inviterId === user1.userId && pair.inviteeId === user2.userId) ||
         (pair.inviterId === user2.userId && pair.inviteeId === user1.userId)
@@ -907,10 +971,10 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       for (const candidate of eligibleUsers as UserWithProfile[]) {
         if (used.has(candidate.userId)) continue;
         
-        // 计算候选人与当前小组成员的平均分数
+        // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
         let totalScore = 0;
         for (const member of groupMembers) {
-          totalScore += await calculatePairScore(candidate, member);
+          totalScore += await calculatePairScore(candidate, member, interestsCache, pairScoreCache);
         }
         const avgScore = totalScore / groupMembers.length;
         
@@ -930,7 +994,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     // 只保留达到最小人数的小组
     if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = await calculateGroupPairScore(groupMembers);
+      const avgPairScore = await calculateGroupPairScore(groupMembers, interestsCache, pairScoreCache);
+      // E: Compute true chemistry-only average (distinct from avgPairScore)
+      const avgChemistryScore = calculateGroupChemistryScore(groupMembers);
       const diversity = calculateGroupDiversity(groupMembers);
       const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
@@ -939,7 +1005,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       const group: MatchGroup = {
         members: groupMembers,
         avgPairScore: avgPairScore,
-        avgChemistryScore: avgPairScore, // Same as avgPairScore for now
+        avgChemistryScore: avgChemistryScore,
         diversityScore: diversity,
         communicationBalance: communicationBalance,
         overallScore: overall,
@@ -965,116 +1031,190 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
 
 /**
  * 保存匹配结果到数据库
+ *
+ * A: Core DB writes are wrapped in a single transaction so the pool can never
+ *    be left in a partial state if any write fails mid-way.
+ * B: An atomic pool-status CAS (active → matching) acts as an execution guard:
+ *    only one matching run can commit for a given pool at a time.  If the guard
+ *    is already held the call throws immediately and no duplicate groups are
+ *    created.
+ *
+ * Side-effects that are intentionally kept OUTSIDE the transaction:
+ *   - WebSocket notifications (cannot be rolled back, sent after commit)
+ *   - Venue assignment (best-effort, non-critical)
+ *   - Async theme generation / title broadcast (fire-and-forget)
+ *   - Invitation reward coupons (best-effort, separate idempotency guard)
  */
 export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Promise<void> {
   // 获取活动池信息用于通知
   const [pool] = await db.select().from(eventPools).where(eq(eventPools.id, poolId));
-  
-  // 1. 创建小组记录并发送WebSocket通知
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i];
-    
-    // 1.1 Generate event theme title for this group
-    let eventThemeTitle: string | null = null;
-    let themeTagline: string | null = null;
-    let themeEmoji: string | null = null;
-    let themeReasoning: string | null = null;
-    
+
+  if (!pool) {
+    throw new Error(`[Pool Matching] Pool not found: ${poolId}`);
+  }
+
+  // B: Execution guard — atomically set status from 'active' to 'matching'.
+  // If 0 rows are updated another run is already in progress; bail out safely.
+  const guardResult = await db
+    .update(eventPools)
+    .set({ status: "matching", updatedAt: new Date() })
+    .where(and(eq(eventPools.id, poolId), eq(eventPools.status, "active")))
+    .returning({ id: eventPools.id });
+
+  if (guardResult.length === 0) {
+    throw new Error(`[Pool Matching] Guard rejected: pool ${poolId} is not in 'active' state — concurrent or duplicate run prevented`);
+  }
+
+  // Precompute theme-title metadata outside the transaction so DB locks are held
+  // only during the actual persistence work.
+  const themeMetadata = await Promise.all(groups.map(async (group, i) => {
     const memberUserIds = group.members.map(m => m.userId);
-    
     try {
       const themeTitleResult = await generateEventThemeTitle(memberUserIds, poolId);
-      eventThemeTitle = themeTitleResult.eventThemeTitle;
-      themeTagline = themeTitleResult.themeTagline;
-      themeEmoji = themeTitleResult.emoji;
-      themeReasoning = themeTitleResult.reasoning;
-      
-      console.log(`[Pool Matching] Generated event theme title for group ${i + 1}: ${eventThemeTitle} - ${themeTagline} ${themeEmoji}`);
+      console.log(`[Pool Matching] Generated event theme title for group ${i + 1}: ${themeTitleResult.eventThemeTitle} - ${themeTitleResult.themeTagline} ${themeTitleResult.emoji}`);
+      return {
+        eventThemeTitle: themeTitleResult.eventThemeTitle,
+        themeTagline: themeTitleResult.themeTagline,
+        themeEmoji: themeTitleResult.emoji,
+        themeReasoning: themeTitleResult.reasoning,
+      };
     } catch (error) {
       console.error(`[Pool Matching] Failed to generate event theme title for group ${i + 1}:`, error);
-      // Continue without event theme title - it's not critical for matching
+      return {
+        eventThemeTitle: null,
+        themeTagline: null,
+        themeEmoji: null,
+        themeReasoning: null,
+      };
     }
-    
-    const [groupRecord] = await db.insert(eventPoolGroups).values({
-      poolId,
-      groupNumber: i + 1,
-      memberCount: group.members.length,
-      avgChemistryScore: group.avgPairScore,
-      diversityScore: group.diversityScore,
-      communicationBalance: group.communicationBalance,
-      overallScore: group.overallScore,
-      temperatureLevel: group.temperatureLevel,
-      matchExplanation: group.explanation,
-      theme: eventThemeTitle,
-      subtitle: themeTagline,
-      themeEmoji: themeEmoji,
-      themeReasoning: themeReasoning,
-      themeGeneratedAt: (eventThemeTitle || themeTagline || themeEmoji || themeReasoning) ? new Date() : null,
-      status: "confirmed"
-    }).returning();
-    
-    // 1.5 Generate and save event theme (mystery box 盲盒主题)
-    // Fire-and-forget to avoid blocking match save
-    generateAndSaveEventTheme(groupRecord.id, memberUserIds, poolId)
-      .then(() => {
-        console.log(`[Pool Matching] ✅ Generated event theme for group ${i + 1}`);
-      })
-      .catch((error) => {
-        console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${i + 1}:`, error);
-      });
-    
-    // 2. 更新用户报名状态
-    const memberRegistrationIds = group.members.map(m => m.registrationId);
-    await db.update(eventPoolRegistrations)
-      .set({
-        matchStatus: "matched",
-        assignedGroupId: groupRecord.id,
-        matchScore: group.overallScore,
-        updatedAt: new Date()
-      })
-      .where(inArray(eventPoolRegistrations.id, memberRegistrationIds));
-    
-    // 2.5 创建对应的events记录，使其出现在活动管理模块
-    const location = pool?.district ? `${pool.city} ${pool.district}` : pool?.city || "待定";
-    
-    const [eventRecord] = await db.insert(events).values({
-      title: `${pool?.title || "盲盒活动"} - 第${i + 1}组`,
-      description: `来自活动池匹配：${pool?.description || ""}\n匹配分数: ${group.overallScore}\n化学反应: ${group.temperatureLevel}`,
-      dateTime: pool?.dateTime || new Date(),
-      location: location,
-      area: pool?.district || null,
-      maxAttendees: group.members.length,
-      currentAttendees: group.members.length,
-      hostId: pool?.createdBy || null,
-      status: "matched", // 匹配成功的状态
-      iconName: pool?.eventType === "饭局" ? "utensils" : pool?.eventType === "酒局" ? "wine" : "calendar",
-    }).returning();
-    
-    // 2.6 为每个成员创建eventAttendance记录
-    for (const member of group.members) {
-      await db.insert(eventAttendance).values({
-        eventId: eventRecord.id,
-        userId: member.userId,
-        status: "confirmed",
-      });
+  }));
+
+  // Collect per-group data needed for WebSocket notifications (populated inside tx)
+  const notificationQueue: Array<{ memberUserIds: string[]; notificationData: PoolMatchedData }> = [];
+  // Collect fire-and-forget theme generation tasks (kicked off after tx commit)
+  const themeGenTasks: Array<{ groupId: string; memberUserIds: string[] }> = [];
+
+  try {
+    // A: Single transaction wrapping all core DB mutations
+    await (db as any).transaction(async (tx: any) => {
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        const memberUserIds = group.members.map(m => m.userId);
+        const { eventThemeTitle, themeTagline, themeEmoji, themeReasoning } = themeMetadata[i];
+
+        // 1. 创建小组记录
+        const [groupRecord] = await tx.insert(eventPoolGroups).values({
+          poolId,
+          groupNumber: i + 1,
+          memberCount: group.members.length,
+          avgChemistryScore: group.avgChemistryScore,
+          diversityScore: group.diversityScore,
+          communicationBalance: group.communicationBalance,
+          overallScore: group.overallScore,
+          temperatureLevel: group.temperatureLevel,
+          matchExplanation: group.explanation,
+          theme: eventThemeTitle,
+          subtitle: themeTagline,
+          themeEmoji: themeEmoji,
+          themeReasoning: themeReasoning,
+          themeGeneratedAt: (eventThemeTitle || themeTagline || themeEmoji || themeReasoning) ? new Date() : null,
+          status: "confirmed"
+        }).returning();
+
+        // 2. 更新用户报名状态
+        const memberRegistrationIds = group.members.map(m => m.registrationId);
+        await tx.update(eventPoolRegistrations)
+          .set({
+            matchStatus: "matched",
+            assignedGroupId: groupRecord.id,
+            matchScore: group.overallScore,
+            updatedAt: new Date()
+          })
+          .where(inArray(eventPoolRegistrations.id, memberRegistrationIds));
+
+        // 2.5 创建对应的events记录
+        const location = pool?.district ? `${pool.city} ${pool.district}` : pool?.city || "待定";
+        const [eventRecord] = await tx.insert(events).values({
+          title: `${pool?.title || "盲盒活动"} - 第${i + 1}组`,
+          description: `来自活动池匹配：${pool?.description || ""}\n匹配分数: ${group.overallScore}\n化学反应: ${group.temperatureLevel}`,
+          dateTime: pool?.dateTime || new Date(),
+          location: location,
+          area: pool?.district || null,
+          maxAttendees: group.members.length,
+          currentAttendees: group.members.length,
+          hostId: pool?.createdBy || null,
+          status: "matched",
+          iconName: pool?.eventType === "饭局" ? "utensils" : pool?.eventType === "酒局" ? "wine" : "calendar",
+        }).returning();
+
+        // 2.6 为每个成员创建eventAttendance记录
+        for (const member of group.members) {
+          await tx.insert(eventAttendance).values({
+            eventId: eventRecord.id,
+            userId: member.userId,
+            status: "confirmed",
+          });
+        }
+
+        console.log(`[Pool Matching] Created event ${eventRecord.id} for group ${i + 1} with ${memberUserIds.length} attendees`);
+
+        // Queue notification data for post-commit dispatch
+        notificationQueue.push({
+          memberUserIds,
+          notificationData: {
+            poolId,
+            poolTitle: pool?.title || "活动池",
+            groupId: groupRecord.id,
+            groupNumber: i + 1,
+            matchScore: group.overallScore,
+            memberCount: group.members.length,
+            temperatureLevel: group.temperatureLevel,
+          },
+        });
+
+        // Queue theme generation for post-commit fire-and-forget
+        themeGenTasks.push({ groupId: groupRecord.id, memberUserIds });
+      }
+
+      // 4. 更新活动池状态 → 'matched'
+      await tx.update(eventPools)
+        .set({
+          status: "matched",
+          successfulMatches: groups.reduce((sum, g) => sum + g.members.length, 0),
+          matchedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(eventPools.id, poolId));
+
+      // 5. 标记未匹配用户
+      await tx.update(eventPoolRegistrations)
+        .set({
+          matchStatus: "unmatched",
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            eq(eventPoolRegistrations.matchStatus, "pending")
+          )
+        );
+    });
+  } catch (error) {
+    // If the transaction failed, reset the pool status back to 'active' so it can be retried.
+    // (If the guard CAS succeeded but the tx failed, status is still 'matching' — we reset it.)
+    try {
+      await db.update(eventPools)
+        .set({ status: "active", updatedAt: new Date() })
+        .where(eq(eventPools.id, poolId));
+    } catch (resetErr) {
+      console.error(`[Pool Matching] ⚠️ Failed to reset pool status after transaction error:`, resetErr);
     }
-    
-    // 2.7 更新groupRecord关联的eventId（如果需要的话，可以在eventPoolGroups表添加eventId字段）
-    // 这里暂时不修改schema，只是创建关联记录
-    
-    console.log(`[Pool Matching] Created event ${eventRecord.id} for group ${i + 1} with ${memberUserIds.length} attendees`);
-    
-    // 3. 发送WebSocket通知给每个匹配到的用户
-    const notificationData: PoolMatchedData = {
-      poolId,
-      poolTitle: pool?.title || "活动池",
-      groupId: groupRecord.id,
-      groupNumber: i + 1,
-      matchScore: group.overallScore,
-      memberCount: group.members.length,
-      temperatureLevel: group.temperatureLevel
-    };
-    
+    throw error;
+  }
+
+  // ── Post-commit side effects ──────────────────────────────────────────────
+  // 3. 发送WebSocket通知 (outside transaction — notifications cannot be rolled back)
+  for (const { memberUserIds, notificationData } of notificationQueue) {
     memberUserIds.forEach(userId => {
       wsService.broadcastToUser(userId, {
         type: "POOL_MATCHED",
@@ -1082,35 +1222,23 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
         timestamp: new Date().toISOString()
       });
     });
-    
-    console.log(`[Pool Matching] Sent POOL_MATCHED notification to ${memberUserIds.length} users for group ${i + 1}`);
+    console.log(`[Pool Matching] Sent POOL_MATCHED notification to ${memberUserIds.length} users for group ${notificationData.groupNumber}`);
   }
-  
-  // 4. 更新活动池状态
-  await db.update(eventPools)
-    .set({
-      status: "matched",
-      successfulMatches: groups.reduce((sum, g) => sum + g.members.length, 0),
-      matchedAt: new Date(),
-      updatedAt: new Date()
-    })
-    .where(eq(eventPools.id, poolId));
-  
-  // 5. 标记未匹配用户
-  await db.update(eventPoolRegistrations)
-    .set({
-      matchStatus: "unmatched",
-      updatedAt: new Date()
-    })
-    .where(
-      and(
-        eq(eventPoolRegistrations.poolId, poolId),
-        eq(eventPoolRegistrations.matchStatus, "pending")
-      )
-    );
-  
+
+  // 1.5 Generate and save event themes (fire-and-forget)
+  for (const { groupId, memberUserIds } of themeGenTasks) {
+    generateAndSaveEventTheme(groupId, memberUserIds, poolId)
+      .then(() => console.log(`[Pool Matching] ✅ Generated event theme for group ${groupId}`))
+      .catch((err: unknown) => console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${groupId}:`, err));
+  }
+
   // 6. 发放邀请奖励优惠券 (Invitation Reward Coupons)
-  await processInvitationRewards(poolId, groups);
+  try {
+    await processInvitationRewards(poolId, groups);
+    console.log(`[Pool Matching] ✅ Invitation rewards processed for pool ${poolId}`);
+  } catch (error) {
+    console.error(`[Pool Matching] ⚠️ Failed to process invitation rewards for pool ${poolId}:`, error);
+  }
   
   // 7. 自动分配场地 (Automatic Venue Assignment)
   console.log(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
@@ -1135,7 +1263,6 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   }
 
   // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)
-  // Use setImmediate to queue event theme title generation without blocking
   setImmediate(() => {
     void (async () => {
       console.log(`[Pool Matching] Starting async event theme title generation for ${groups.length} groups...`);
@@ -1149,7 +1276,6 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
         
         const groupIdByNumber = new Map<number, string>();
         for (const record of groupRecords) {
-          // Assumes groupNumber is unique per pool
           groupIdByNumber.set(record.groupNumber, record.id);
         }
         
@@ -1167,7 +1293,6 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
             );
             
             if (themeTitleResult) {
-              // Broadcast EVENT_THEME_TITLE_REVEALED to all group members
               const memberUserIds = group.members.map(m => m.userId);
               
               memberUserIds.forEach(userId => {
@@ -1190,12 +1315,10 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
             }
           } catch (error) {
             console.error(`[Pool Matching] ⚠️ Event theme title generation failed for group ${i + 1}:`, error);
-            // Don't throw - matching already succeeded, event theme title is optional
           }
         }
       } catch (error) {
         console.error(`[Pool Matching] ⚠️ Async event theme title generation failed:`, error);
-        // Don't throw - matching already succeeded, event theme titles are best-effort
       }
     })();
   });
@@ -1236,10 +1359,10 @@ async function processInvitationRewards(poolId: string, groups: MatchGroup[]): P
   for (const inviteUse of inviteUses) {
     if (inviteUse.rewardIssued || !inviteUse.invitationId) continue;
     
-    // 获取邀请信息
+    // D: Fix — invitationUses.invitationId is a FK to invitations.id (not invitations.code)
     const [invitation] = await db.select()
       .from(invitations)
-      .where(eq(invitations.code, inviteUse.invitationId))
+      .where(eq(invitations.id, inviteUse.invitationId))
       .limit(1);
     
     if (!invitation) continue;
