@@ -46,7 +46,7 @@ Button-specific CSS custom properties are defined in both apps' `src/index.css` 
 
 | `variant` | Usage | Visual |
 |-----------|-------|--------|
-| `default` (alias: primary) | Main CTAs, primary actions | Warm-purple gradient + depth shadow |
+| `default` | Main CTAs, primary actions | Warm-purple gradient + depth shadow |
 | `secondary` | Supporting actions | Muted surface, secondary foreground |
 | `outline` | Contextual/inline actions | Transparent bg, border inherits context |
 | `ghost` | Low-emphasis actions, icon toolbars | No border, no background |
@@ -61,7 +61,7 @@ Button-specific CSS custom properties are defined in both apps' `src/index.css` 
 | `sm` | 32 px | Compact inline actions, badges |
 | `default` | 36 px | General form actions, mid-importance CTAs |
 | `lg` | 44 px | Primary page CTAs — meets WCAG 44 px touch target |
-| `icon` | 36 × 36 px | Icon-only toolbar buttons (`aria-label` required) |
+| `icon` | 36 × 36 px visual (use padding/container layout when a 44 px touch target is required) | Icon-only toolbar buttons (`aria-label` required) |
 
 ---
 
@@ -89,7 +89,7 @@ All standard HTML `<button>` attributes (`disabled`, `type`, `onClick`, `aria-la
 - `loading` renders a `Loader2` spinner with `aria-hidden="true"` — the button label remains visible to screen readers.
 - Icon-only buttons **must** include `aria-label="…"` since there is no visible text.
 - Focus ring: `ring-2 ring-ring ring-offset-2` — uses the `--ring` token (same warm purple as brand) for consistent, highly-visible focus treatment (WCAG 2.1 §2.4.7).
-- Minimum touch target for `lg` and `icon` sizes: 44 × 44 px.
+- `lg` meets the 44 × 44 px touch target. `icon` is visually 36 × 36 px, so use surrounding padding/layout when a full 44 px touch target is required.
 - Gradient colours are tested against white foreground at WCAG AA (4.5 : 1 contrast ratio).
 
 ---
@@ -107,7 +107,7 @@ import { Button } from "@/components/ui/button";
 </Button>
 
 // Loading state
-<Button loading disabled={mutation.isPending}>
+<Button loading={mutation.isPending}>
   保存
 </Button>
 

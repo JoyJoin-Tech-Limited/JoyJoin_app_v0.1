@@ -23,7 +23,8 @@
     "./types/groupAnalysis": "./src/types/groupAnalysis.ts",
     "./types/aiMeta": "./src/types/aiMeta.ts",
     "./ai/onboarding": "./src/ai/onboarding.ts",
-    "./ui/button": "./src/ui/buttonVariants.ts"
+    "./ui/button": "./src/ui/buttonVariants.ts",
+    "./ui/buttonVariants": "./src/ui/buttonVariants.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

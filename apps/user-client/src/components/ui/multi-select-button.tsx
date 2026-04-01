@@ -19,7 +19,7 @@ function triggerHaptic() {
 }
 
 // Base classes shared between multi- and single-select buttons.
-// Uses brand tokens: rounded-xl matches --btn-radius; min-h-[44px] meets touch target.
+// rounded-xl matches the standardized button radius; min-h-[44px] meets touch target.
 const selectButtonBase =
   "relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm min-h-[44px]" +
   " transition-all duration-150 ease-out active:scale-[0.97]";
