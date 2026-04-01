@@ -73,12 +73,6 @@ interface EssentialDataState {
 
 type XiaoyueMood = "normal" | "excited" | "pointing";
 
-const XIAOYUE_AVATARS: Record<XiaoyueMood, string> = {
-  normal: xiaoyueNormal,
-  excited: xiaoyueExcited,
-  pointing: xiaoyuePointing,
-};
-
 const GENDER_OPTIONS = [
   { value: "女性", label: "女生", emoji: "👩" },
   { value: "男性", label: "男生", emoji: "👨" },
