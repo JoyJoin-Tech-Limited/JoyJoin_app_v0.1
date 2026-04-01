@@ -7,6 +7,13 @@ export interface IcebreakerSessionParticipant {
   topicsAvoid?: string[];
 }
 
+/**
+ * Canonical session-details payload for `IcebreakerSessionPage`.
+ *
+ * `eventSource` distinguishes blind-box sessions from pool-group sessions.
+ * `eventId` is null for pool-group sessions because there is no blind-box event
+ * record to fetch by id in that path.
+ */
 export interface IcebreakerSessionDetails {
   id: string;
   eventId: string | null;

@@ -7303,7 +7303,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       const sampleUserIds = Array.from(
         new Set(
-          Array.from(registrationsByPool.values())
+          [...registrationsByPool.values()]
             .flatMap((registrations) => registrations.slice(0, 3).map((registration) => registration.userId)),
         ),
       );
