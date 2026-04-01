@@ -105,11 +105,6 @@ const CITY_OPTIONS = [
   { value: "other", label: "其他城市" },
 ];
 
-const BIRTH_YEARS = Array.from({ length: 50 }, (_, i) => {
-  const year = 2006 - i;
-  return { value: String(year), label: `${year}年` };
-});
-
 const STEP_CONFIG = [
   {
     id: "displayName",
