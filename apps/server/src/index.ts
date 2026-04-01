@@ -5,38 +5,37 @@ import express, { type Request, type Response, type NextFunction } from "express
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
+import { logger } from "./lib/logger";
+import { requestIdMiddleware } from "./middleware/requestId";
+import { metricsMiddleware } from "./middleware/metrics";
 
 const app = express();
+
+// ── Observability middleware (must be first) ───────────────────────────────
+// 1. Attach a unique correlation ID to every request.
+app.use(requestIdMiddleware);
+// 2. Collect Prometheus-style metrics for every request.
+app.use(metricsMiddleware);
 
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Request logging middleware
+// Request logging middleware — emits structured JSON instead of plain text
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      console.log(logLine);
+    if (path.startsWith("/api") && path !== "/api/metrics") {
+      logger.info("HTTP request", {
+        request_id: req.requestId,
+        method: req.method,
+        path,
+        status_code: res.statusCode,
+        duration_ms: duration,
+      });
     }
   });
 
@@ -49,10 +48,15 @@ app.use((req, res, next) => {
     const server = await registerRoutes(app);
 
     // Error handling middleware (must be after routes)
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      console.error("Error:", err);
+      logger.error("Unhandled request error", {
+        request_id: req.requestId,
+        status,
+        message,
+        stack: err.stack,
+      });
       res.status(status).json({ message });
     });
 
@@ -66,28 +70,19 @@ app.use((req, res, next) => {
     // Start server
     const PORT = parseInt(process.env.PORT || "5001", 10);
     server.listen(PORT, "0.0.0.0", () => {
-      const formattedTime = new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
+      logger.info("JoyJoin Server started", {
+        port: PORT,
+        environment: process.env.NODE_ENV ?? "development",
+        admin_key_configured: Boolean(process.env.ADMIN_CREATE_SECRET_KEY),
       });
-
-      console.log(`\n🎉 JoyJoin Server Started Successfully!`);
-      console.log(`⏰ Time: ${formattedTime}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🚀 Server listening on port ${PORT}`);
-      console.log(`📍 API available at http://localhost:${PORT}/api`);
-      console.log(`🔑 Admin secret key: ${process.env.ADMIN_CREATE_SECRET_KEY ? "✅ Configured" : "❌ Missing"}`);
-      console.log(`\n`);
 
       // Warm TTS cache non-blocking (no-op if MINIMAX keys not configured)
       if (process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID) {
-        warmTTSCache().catch(err => console.warn('[startup] TTS cache warmup failed (non-fatal):', err));
+        warmTTSCache().catch(err => logger.warn('[startup] TTS cache warmup failed (non-fatal)', { error: String(err) }));
       }
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error("Failed to start server", { error: String(error) });
     process.exit(1);
   }
 })();
