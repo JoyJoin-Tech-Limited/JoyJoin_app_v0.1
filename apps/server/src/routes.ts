@@ -268,8 +268,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       
       // Calculate events completed: count completed events the user attended
-      const completedEventsResult = await db
-        .select({ count: eventAttendance.id })
+      const [completedEventsResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
         .from(eventAttendance)
         .innerJoin(events, eq(eventAttendance.eventId, events.id))
         .where(
@@ -278,12 +278,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(events.status, 'completed')
           )
         );
-      
-      const eventsCompleted = completedEventsResult.length || 0;
-      
+
+      const eventsCompleted = completedEventsResult?.count ?? 0;
+
       // Calculate connections made: count mutual connections where user is participant
-      const connectionsResult = await db
-        .select({ id: connections.id })
+      const [connectionsResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
         .from(connections)
         .where(
           and(
@@ -294,8 +294,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(connections.status, 'mutual')
           )
         );
-      
-      const connectionsMade = connectionsResult.length || 0;
+
+      const connectionsMade = connectionsResult?.count ?? 0;
       
       res.json({
         eventsCompleted,
