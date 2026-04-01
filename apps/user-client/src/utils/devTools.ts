@@ -95,14 +95,14 @@ window.dev.createAdmin()
 
 // Create user account
 window.dev.createUser()
-> Enter secret key: BYPASSSECRET12345678
+> Enter secret key from your local ADMIN_CREATE_SECRET_KEY config
 > Enter phone number: +8613900139000
 > Enter password: user123
 > ... (follow prompts)
 
 // Bypass personality test
 window.dev.bypassTest()
-> Enter secret key: BYPASSSECRET12345678
+> Enter secret key from your local ADMIN_CREATE_SECRET_KEY config
 
 Troubleshooting:
 ----------------
