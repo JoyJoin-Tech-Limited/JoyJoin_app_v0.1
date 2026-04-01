@@ -490,6 +490,15 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.status(403).json({ error: 'Only the host can generate dice challenges' });
   }
 
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+
+  // Idempotent retry: if challenges already exist, return them instead of regenerating
+  if ((state.personalityDiceChallenges || []).length > 0) {
+    return res.json({ challenges: state.personalityDiceChallenges });
+  }
+
   try {
     const challenges = await generatePersonalityDiceChallenges(participants || []);
     state.personalityDiceChallenges = challenges;

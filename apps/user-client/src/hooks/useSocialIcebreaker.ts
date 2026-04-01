@@ -53,7 +53,6 @@ interface UseSocialIcebreakerReturn {
  */
 async function classifyError(error: unknown): Promise<IcebreakerError> {
   if (error instanceof TypeError) {
-    // fetch threw — network-level failure
     return { kind: 'network_error', message: '网络连接失败，请检查网络后重试' };
   }
   if (error instanceof Response) {
@@ -61,15 +60,22 @@ async function classifyError(error: unknown): Promise<IcebreakerError> {
     if (error.status === 403) return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
     if (error.status === 400) return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
   }
-  // Try to extract status from non-ok responses wrapped by apiRequest
   if (error && typeof error === 'object' && 'status' in error) {
     const status = (error as any).status;
     if (status === 404) return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
     if (status === 403) return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
     if (status === 400) return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
   }
-  if (error instanceof Error && (error.message.includes('404') || error.message.toLowerCase().includes('not found'))) {
-    return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
+  if (error instanceof Error) {
+    if (error.message.startsWith('404:') || error.message.toLowerCase().includes('not found')) {
+      return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
+    }
+    if (error.message.startsWith('403:')) {
+      return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
+    }
+    if (error.message.startsWith('400:')) {
+      return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
+    }
   }
   return { kind: 'unknown', message: '操作失败，请稍后重试' };
 }
@@ -94,13 +100,13 @@ export function useSocialIcebreaker({
     queryKey: ['/api/social-icebreaker', socialSessionId],
     queryFn: async () => {
       if (!socialSessionId) return null;
-      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`);
-      if (!res.ok) {
-        const err = await classifyError({ status: res.status });
-        setError(err);
+      try {
+        const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`);
+        return res.json();
+      } catch (e) {
+        setError(await classifyError(e));
         return null;
       }
-      return res.json();
     },
     enabled: !!socialSessionId,
     refetchInterval: 3000,
@@ -120,12 +126,6 @@ export function useSocialIcebreaker({
         displayName,
         eventType,
       });
-      if (!res.ok) {
-        const err = await classifyError({ status: res.status });
-        setError(err);
-        startedRef.current = false;
-        return;
-      }
       const data = await res.json();
       setSocialSessionId(data.socialSessionId);
     } catch (e) {
@@ -146,10 +146,6 @@ export function useSocialIcebreaker({
           eventType,
           participantCount: state?.playerCount || 4,
         });
-        if (!res.ok) {
-          setError(await classifyError({ status: res.status }));
-          return [];
-        }
         const data = await res.json();
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
         return data.topics || [];
@@ -165,17 +161,10 @@ export function useSocialIcebreaker({
     if (!socialSessionId || !state) return;
     setIsAdvancing(true);
     try {
-      const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/advance`, {
+      await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/advance`, {
         currentPhase: state.currentPhase,
       });
-      if (!res.ok) {
-        // 400 phase-mismatch means it was already advanced — not an error worth surfacing
-        if (res.status !== 400) {
-          setError(await classifyError({ status: res.status }));
-        }
-      } else {
-        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-      }
+      qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
     } catch (e) {
       setError(await classifyError(e));
     } finally {
@@ -190,7 +179,6 @@ export function useSocialIcebreaker({
         const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/pulse-check`, {
           vibe,
         });
-        if (!res.ok) return null;
         return res.json();
       } catch {
         return null;
@@ -202,10 +190,8 @@ export function useSocialIcebreaker({
   const completeChallenge = useCallback(async () => {
     if (!socialSessionId) return;
     try {
-      const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/micro-challenge/complete`, {});
-      if (res.ok) {
-        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-      }
+      await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/micro-challenge/complete`, {});
+      qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
     } catch (e) {
       setError(await classifyError(e));
     }
@@ -219,10 +205,6 @@ export function useSocialIcebreaker({
         `/api/social-icebreaker/${socialSessionId}/lie-detective/generate`,
         { displayName }
       );
-      if (!res.ok) {
-        setError(await classifyError({ status: res.status }));
-        return [];
-      }
       const data = await res.json();
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
       return data.statements || [];
@@ -236,14 +218,10 @@ export function useSocialIcebreaker({
     async (targetUserId: string, statementIndex: number) => {
       if (!socialSessionId) return;
       try {
-        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/lie-detective/vote`, {
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/lie-detective/vote`, {
           targetUserId,
           guessedStatementIndex: statementIndex,
         });
-        if (!res.ok) {
-          setError(await classifyError({ status: res.status }));
-          return;
-        }
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
       } catch (e) {
         setError(await classifyError(e));
@@ -257,10 +235,6 @@ export function useSocialIcebreaker({
       if (!socialSessionId) return [];
       try {
         const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/generate`, { participants });
-        if (!res.ok) {
-          setError(await classifyError({ status: res.status }));
-          return [];
-        }
         const data = await res.json();
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
         return data.challenges || [];
@@ -277,10 +251,8 @@ export function useSocialIcebreaker({
       if (!socialSessionId) return;
       try {
         // The server now derives the userId from the session; no body userId needed
-        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {});
-        if (res.ok) {
-          qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-        }
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {});
+        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
       } catch (e) {
         setError(await classifyError(e));
       }
