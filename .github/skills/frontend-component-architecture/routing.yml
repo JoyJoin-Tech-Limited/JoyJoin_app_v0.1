@@ -1,0 +1,52 @@
+skill: frontend-component-architecture
+
+primary_ownership: >
+  UI component placement across packages/shared/src/ui/ (shared primitives) and
+  thin app-local wrappers in apps/*/src/components/ui/.
+
+use_when:
+  - user asks where a UI component should live in the monorepo
+  - creating, moving, or reviewing a shared or app-local UI component
+  - deciding whether a component should be in packages/shared or an app workspace
+  - adding composition patterns, loading states, or semantic HTML structure
+  - wrapping a shared primitive in an app-local component
+
+do_not_use_when:
+  - task is purely about CSS tokens or color variables (use design-system-governance)
+  - task is about backend API placement (use server-domain-architecture)
+  - task is about onboarding step routing (use onboarding-state-architecture)
+
+strong_triggers:
+  - packages/shared/src/ui
+  - apps/user-client/src/components
+  - apps/admin-client/src/components
+  - where does this component go
+  - should this be shared
+  - shared primitive
+  - wrap the shared Button
+  - is this semantically correct
+  - add a loading state
+  - asChild
+  - composition pattern
+
+owned_files:
+  - packages/shared/src/ui/**
+  - apps/user-client/src/components/**
+  - apps/admin-client/src/components/**
+
+owned_paths: []
+
+owned_symbols:
+  - Button
+  - buttonVariants
+  - asChild
+  - SharedCard
+  - Avatar
+
+related_skills:
+  - skill: design-system-governance
+    when: component uses CSS tokens, CVA variants, or has accessibility requirements
+  - skill: testing-and-regression-guardrails
+    when: changing shared component invariants that need regression coverage
+  - skill: wow-elements
+    when: component needs micro-interaction or motion polish

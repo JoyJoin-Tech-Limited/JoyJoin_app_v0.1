@@ -1,0 +1,69 @@
+skill: onboarding-state-architecture
+
+primary_ownership: >
+  Server-driven nextStep model, active onboarding module routing authority,
+  profile completion gating, and legacy onboarding quarantine.
+
+use_when:
+  - user asks about onboarding flow, nextStep, or setup/extended/review routing
+  - user changes auth-driven navigation or profile completion gating
+  - user adds or changes an onboarding completion flag
+  - user is debugging why a user is stuck in onboarding
+  - user changes AuthenticatedRouter or onboarding step progression
+
+do_not_use_when:
+  - task is about admin login permissions only
+  - task is purely about generic UI styling
+  - task is about a matching or icebreaker state (use matching-domain or social-icebreaker-domain)
+
+strong_triggers:
+  - nextStep
+  - /onboarding/setup
+  - /onboarding/extended
+  - /onboarding/review
+  - profileEssentialComplete
+  - profileExtendedComplete
+  - hasSeenProfileReview
+  - useAuth
+  - useOnboardingOrchestrator
+  - AuthenticatedRouter
+  - essential-data
+  - extended-data
+  - profile-review
+  - personality-test
+  - onboarding step
+  - user is stuck in onboarding
+  - add a new onboarding step
+  - why is nextStep wrong
+  - onboarding routing loop
+  - modify completion flags
+
+owned_files:
+  - apps/user-client/src/features/onboarding/**
+  - apps/user-client/src/hooks/useAuth.ts
+  - apps/user-client/src/hooks/useOnboardingRoute.ts
+  - apps/user-client/src/hooks/useOnboardingProgress.ts
+  - apps/user-client/src/App.tsx
+  - apps/server/src/routes/domains/auth.ts
+
+owned_paths:
+  - /onboarding/setup
+  - /onboarding/extended
+  - /onboarding/review
+  - /personality-test
+
+owned_symbols:
+  - nextStep
+  - useOnboardingOrchestrator
+  - AuthenticatedRouter
+  - profileEssentialComplete
+  - profileExtendedComplete
+  - hasSeenProfileReview
+
+related_skills:
+  - skill: reliability-and-state-integrity
+    when: onboarding change involves retries, re-entry guards, or expiry semantics
+  - skill: testing-and-regression-guardrails
+    when: adding regression tests for onboarding step invariants
+  - skill: auth-session-and-safety-boundaries
+    when: onboarding gating involves auth session validation or dev-only bypass

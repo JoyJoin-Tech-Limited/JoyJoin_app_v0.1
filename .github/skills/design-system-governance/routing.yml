@@ -1,0 +1,61 @@
+skill: design-system-governance
+
+primary_ownership: >
+  CSS design tokens, CVA button variants, accessibility standards, documented
+  visual exceptions, and migration discipline for the JoyJoin UI.
+
+use_when:
+  - adding or changing a button variant
+  - introducing a new colour or token
+  - migrating a raw element to the shared Button
+  - documenting a visual exception
+  - checking component usage for token compliance
+  - adding or reviewing CSS custom properties
+
+do_not_use_when:
+  - task is about component placement (use frontend-component-architecture)
+  - task is about brand narrative or logo usage (use joyjoin-brand-guidelines)
+  - task is about backend logic
+
+strong_triggers:
+  - buttonVariants
+  - CVA
+  - --btn-primary-gradient
+  - --btn-shadow-primary
+  - --ring
+  - --background
+  - --foreground
+  - tailwind.config
+  - index.css
+  - token
+  - 44px touch target
+  - WCAG
+  - visual exception
+  - add a button variant
+  - button variant
+  - use a new colour
+  - check this for token usage
+
+owned_files:
+  - packages/shared/src/ui/buttonVariants.ts
+  - apps/user-client/src/index.css
+  - apps/admin-client/src/index.css
+  - apps/user-client/tailwind.config.ts
+  - apps/admin-client/tailwind.config.ts
+  - docs/button-design.md
+
+owned_paths: []
+
+owned_symbols:
+  - buttonVariants
+  - cva
+  - VariantProps
+  - cn
+
+related_skills:
+  - skill: frontend-component-architecture
+    when: token change affects shared UI primitive placement or composition
+  - skill: joyjoin-brand-guidelines
+    when: introducing a new colour that must align with brand identity
+  - skill: wow-elements
+    when: token change involves motion or transition values
