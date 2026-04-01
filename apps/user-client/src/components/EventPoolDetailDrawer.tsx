@@ -66,7 +66,8 @@ export default function EventPoolDetailDrawer({
       return res.json();
     },
     enabled: !!poolId && isOpen,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    staleTime: 15_000,
+    refetchInterval: 15_000,
   });
   
   // WebSocket subscription

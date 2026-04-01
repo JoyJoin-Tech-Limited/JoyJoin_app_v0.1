@@ -1,5 +1,7 @@
 import { useEffect } from "react";
+import { useParams } from "wouter";
 import { useLocation } from "wouter";
+import { getDiscoverJoinRoute } from "@/lib/poolRegistrationRouting";
 
 /**
  * EventPoolRegistrationPage
@@ -9,12 +11,12 @@ import { useLocation } from "wouter";
  * opened from the Discover page, not as a separate route.
  */
 export default function EventPoolRegistrationPage() {
+  const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   
   useEffect(() => {
-    // Redirect to discover page
-    setLocation("/discover");
-  }, [setLocation]);
+    setLocation(id ? getDiscoverJoinRoute(id) : "/discover");
+  }, [id, setLocation]);
 
   return null;
 }
