@@ -58,7 +58,7 @@ receivers:
     #   - routing_key: "${PAGERDUTY_INTEGRATION_KEY}"
     #     description: "{{ .CommonAnnotations.summary }}"
     webhook_configs:
-      - url: "${ALERT_WEBHOOK_URL:-http://localhost:9999/alert}"
+      - url: "http://localhost:9999/alert"
         send_resolved: true
 
   # ── Warning ────────────────────────────────────────────────────────────────

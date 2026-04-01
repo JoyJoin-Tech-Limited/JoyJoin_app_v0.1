@@ -53,7 +53,7 @@ docker compose -f infra/docker-compose.observability.yml ps
 ### Step 1 — Confirm the JoyJoin server emits structured JSON
 
 ```bash
-# Start the server (or in a separate terminal) and tail stdout
+# If you run the API directly on the host, this verifies JSON log formatting only.
 node --import tsx/esm apps/server/src/index.ts 2>&1 | head -5
 ```
 
@@ -64,7 +64,17 @@ Each line should be valid JSON:
 
 ### Step 2 — Confirm Promtail is scraping
 
+> **Important:** the current Promtail configuration uses `docker_sd_configs`, so
+> Loki ingestion verification requires the JoyJoin API to be running in Docker
+> (for example via `deployment/docker-compose.caddy.yml`, where the backend
+> container is `joyjoin-api`). A host-run `node ... apps/server/src/index.ts`
+> process will not be discovered by Promtail.
+
 ```bash
+# Start the deployed stack (or at minimum the API container) so Promtail can
+# discover Docker logs from `joyjoin-api`.
+docker compose -f deployment/docker-compose.caddy.yml up -d api
+
 curl http://localhost:9080/targets | python3 -m json.tool | grep joyjoin
 ```
 

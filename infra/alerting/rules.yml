@@ -11,7 +11,7 @@ groups:
       # ── Health-check / service down ────────────────────────────────────────
       - alert: JoyJoinServiceDown
         expr: |
-          absent(http_requests_total{job="joyjoin_server"})
+          up{job="joyjoin_server"} == 0 OR absent(up{job="joyjoin_server"})
         for: 2m
         labels:
           severity: critical
@@ -126,7 +126,9 @@ groups:
       # The synthetic probe script pushes a 0/1 metric via Pushgateway or a
       # simple HTTP gauge. Adjust the metric name to match your push setup.
       - alert: JoyJoinSyntheticProbeFailed
-        expr: joyjoin_synthetic_probe_success == 0
+        expr: |
+          absent_over_time(joyjoin_synthetic_probe_success[10m]) OR
+          joyjoin_synthetic_probe_success == 0
         for: 5m
         labels:
           severity: critical
