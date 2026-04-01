@@ -1061,6 +1061,30 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     throw new Error(`[Pool Matching] Guard rejected: pool ${poolId} is not in 'active' state — concurrent or duplicate run prevented`);
   }
 
+  // Precompute theme-title metadata outside the transaction so DB locks are held
+  // only during the actual persistence work.
+  const themeMetadata = await Promise.all(groups.map(async (group, i) => {
+    const memberUserIds = group.members.map(m => m.userId);
+    try {
+      const themeTitleResult = await generateEventThemeTitle(memberUserIds, poolId);
+      console.log(`[Pool Matching] Generated event theme title for group ${i + 1}: ${themeTitleResult.eventThemeTitle} - ${themeTitleResult.themeTagline} ${themeTitleResult.emoji}`);
+      return {
+        eventThemeTitle: themeTitleResult.eventThemeTitle,
+        themeTagline: themeTitleResult.themeTagline,
+        themeEmoji: themeTitleResult.emoji,
+        themeReasoning: themeTitleResult.reasoning,
+      };
+    } catch (error) {
+      console.error(`[Pool Matching] Failed to generate event theme title for group ${i + 1}:`, error);
+      return {
+        eventThemeTitle: null,
+        themeTagline: null,
+        themeEmoji: null,
+        themeReasoning: null,
+      };
+    }
+  }));
+
   // Collect per-group data needed for WebSocket notifications (populated inside tx)
   const notificationQueue: Array<{ memberUserIds: string[]; notificationData: PoolMatchedData }> = [];
   // Collect fire-and-forget theme generation tasks (kicked off after tx commit)
@@ -1072,25 +1096,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
       for (let i = 0; i < groups.length; i++) {
         const group = groups[i];
         const memberUserIds = group.members.map(m => m.userId);
-
-        // 1.1 Generate event theme title BEFORE the transaction (external I/O)
-        // This runs outside the tx but the result is inserted inside — acceptable because
-        // theme title generation failure only means a null theme, not a partial match state.
-        let eventThemeTitle: string | null = null;
-        let themeTagline: string | null = null;
-        let themeEmoji: string | null = null;
-        let themeReasoning: string | null = null;
-
-        try {
-          const themeTitleResult = await generateEventThemeTitle(memberUserIds, poolId);
-          eventThemeTitle = themeTitleResult.eventThemeTitle;
-          themeTagline = themeTitleResult.themeTagline;
-          themeEmoji = themeTitleResult.emoji;
-          themeReasoning = themeTitleResult.reasoning;
-          console.log(`[Pool Matching] Generated event theme title for group ${i + 1}: ${eventThemeTitle} - ${themeTagline} ${themeEmoji}`);
-        } catch (error) {
-          console.error(`[Pool Matching] Failed to generate event theme title for group ${i + 1}:`, error);
-        }
+        const { eventThemeTitle, themeTagline, themeEmoji, themeReasoning } = themeMetadata[i];
 
         // 1. 创建小组记录
         const [groupRecord] = await tx.insert(eventPoolGroups).values({
@@ -1195,7 +1201,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
     try {
       await db.update(eventPools)
         .set({ status: "active", updatedAt: new Date() })
-        .where(and(eq(eventPools.id, poolId), eq(eventPools.status, "matching")));
+        .where(eq(eventPools.id, poolId));
     } catch (resetErr) {
       console.error(`[Pool Matching] ⚠️ Failed to reset pool status after transaction error:`, resetErr);
     }
