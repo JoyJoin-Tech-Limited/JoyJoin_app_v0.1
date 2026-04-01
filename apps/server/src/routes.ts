@@ -57,6 +57,7 @@ import { z } from "zod";
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
 type UserInterestSignalRow = typeof userInterestSignals.$inferSelect;
+const SAMPLE_ARCHETYPE_COUNT = 3;
 
 /**
  * Batch-load interest signals for multiple users.
@@ -7304,7 +7305,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const sampleUserIds = Array.from(
         new Set(
           [...registrationsByPool.values()]
-            .flatMap((registrations) => registrations.slice(0, 3).map((registration) => registration.userId)),
+            .flatMap((registrations) => registrations.slice(0, SAMPLE_ARCHETYPE_COUNT).map((registration) => registration.userId)),
         ),
       );
 
@@ -7325,7 +7326,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const poolsWithSocialProof = visiblePools.map((pool: any) => {
         const registrations = registrationsByPool.get(pool.id) ?? [];
         const sampleArchetypes = registrations
-          .slice(0, 3)
+          .slice(0, SAMPLE_ARCHETYPE_COUNT)
           .map((registration) => userArchetypeMap.get(registration.userId))
           .filter((archetype): archetype is string => Boolean(archetype));
 

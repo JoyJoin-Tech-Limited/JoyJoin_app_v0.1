@@ -7,6 +7,7 @@ export function getEventPoolRegistrationRoute(poolId: string): string {
 }
 
 export function getJoinPoolIdFromUrl(url: string): string | null {
-  const query = url.includes("?") ? url.slice(url.indexOf("?")) : "";
+  const normalizedUrl = url.split("#")[0];
+  const query = normalizedUrl.includes("?") ? normalizedUrl.slice(normalizedUrl.indexOf("?")) : "";
   return new URLSearchParams(query).get("joinPool");
 }
