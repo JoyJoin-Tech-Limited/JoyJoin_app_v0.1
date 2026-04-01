@@ -101,7 +101,7 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: guest2Cookie },
         body: JSON.stringify({ sessionId, displayName: 'Guest 2' }),
       });
-      const { socialSessionId } = await startGuest2.json();
+      const { socialSessionId } = await startGuest2.json() as { socialSessionId: string };
 
       await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
         method: 'POST',
@@ -125,7 +125,7 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
         body: JSON.stringify({ targetUserId: 'host', guessedStatementIndex: 0 }),
       });
-      const voteBody = await voteResponse.json();
+      const voteBody = await voteResponse.json() as any;
 
       expect(voteResponse.status).toBe(200);
       expect(voteBody.votes[0].guessedStatementIndex).toBe(0);
@@ -142,14 +142,14 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({ sessionId, displayName: 'Host' }),
       });
-      const { socialSessionId } = await startResponse.json();
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
 
       const voteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({ targetUserId: 'someone', guessedStatementIndex: 0 }),
       });
-      const voteBody = await voteResponse.json();
+      const voteBody = await voteResponse.json() as any;
 
       expect(voteResponse.status).toBe(400);
       expect(voteBody.error).toContain('lie_detective');
@@ -178,7 +178,7 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: guest2Cookie },
         body: JSON.stringify({ sessionId, displayName: 'Guest 2' }),
       });
-      const { socialSessionId } = await startGuest2.json();
+      const { socialSessionId } = await startGuest2.json() as { socialSessionId: string };
 
       for (const phase of ['warmup', 'micro_challenge', 'lie_detective']) {
         await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
@@ -205,7 +205,7 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
         body: JSON.stringify({ userId: 'dice-host' }),
       });
-      const completeBody = await completeResponse.json();
+      const completeBody = await completeResponse.json() as any;
 
       expect(completeResponse.status).toBe(200);
       expect(completeBody.diceCompletedBy).toContain('dice-guest-1');

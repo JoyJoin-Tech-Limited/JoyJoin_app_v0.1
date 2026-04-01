@@ -418,30 +418,6 @@ export class PaymentService {
    *
    * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
    */
-  private normalizeWebhookRequest(
-    payloadOrRequest: any,
-    rawBodyArg?: string,
-    headersArg?: WechatWebhookHeaders
-  ): { payload: any; rawBody: string; headers: WechatWebhookHeaders } {
-    if (rawBodyArg !== undefined && headersArg !== undefined) {
-      return {
-        payload: payloadOrRequest,
-        rawBody: rawBodyArg,
-        headers: headersArg,
-      };
-    }
-
-    const request = payloadOrRequest as Partial<WechatWebhookRequest>;
-    const rawBody = typeof request.rawBody === "string"
-      ? request.rawBody
-      : request.rawBody?.toString("utf8") ?? JSON.stringify(request.payload ?? {});
-
-    return {
-      payload: request.payload,
-      rawBody,
-      headers: request.headers ?? {},
-    };
-  }
 
   private verifySignature(rawBody: string, headers: WechatWebhookHeaders): boolean {
     const timestamp = getSingleHeaderValue(headers.timestamp ?? headers["wechatpay-timestamp"]);
