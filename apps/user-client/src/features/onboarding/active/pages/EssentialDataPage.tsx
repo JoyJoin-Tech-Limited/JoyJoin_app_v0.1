@@ -8,7 +8,7 @@ import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { INDUSTRY_OPTIONS, type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
+import { type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
