@@ -1,6 +1,11 @@
 ---
-name: Matching Domain
-description: Deterministic server-owned matching system — scoring boundaries, execution safety, persistence expectations, and separation from AI explanation/enrichment layers. Use when working on pool matching, pair scoring, group formation, or match explanation features.
+name: matching-domain
+description: >
+  Deterministic server-owned matching system — scoring boundaries, execution safety, persistence
+  expectations, and separation from AI explanation/enrichment layers. Use when working on pool
+  matching, pair scoring, group formation, or match explanation features. Trigger phrases: "add a
+  scoring factor", "modify match weights", "why are groups not forming?", "debug low match
+  scores", "add match explanation".
 ---
 
 # Matching Domain
@@ -105,3 +110,31 @@ Only users passing all hard constraints are scored.
 - `packages/shared/src/types/aiMeta.ts`
 - `docs/MATCHING_ALGORITHM_REFERENCE.md` — full algorithm reference
 - `docs/interest-signal-boost.md` — interest signal feature and boundary invariant
+
+## Quick examples
+
+**User says:** "Add a `language_affinity` scoring dimension weighted at 10%."
+**Apply this skill by:** Adding the dimension to `calculateInterestScoreAsync()` in `poolMatchingService.ts`, adjusting existing weights so they still sum to 100%, sourcing data only from the allowed tables (not `user_interest_signals`), and updating `poolMatchingService.test.ts`.
+**Result:** New dimension is deterministic, correctly bounded, and covered by tests.
+
+---
+
+**User says:** "Groups aren't forming even though we have 8 users in the pool."
+**Apply this skill by:** Checking pair scores against the `avgScore ≥ 60` threshold and verifying all 8 users pass the L1 hard constraints (budget, gender, industry, education, age). Use the debug steps in the "Debugging poor scores" section.
+**Result:** Root cause is identified — either scores are below threshold or users are failing an L1 filter.
+
+## Troubleshooting
+
+- **All pair scores are unexpectedly low** — check that `user_interests.selections` is non-empty for both users in each pair, and verify the archetype chemistry matrix has entries for the relevant archetypes.
+- **`user_interest_signals` appears in a scoring function** — this violates the signal boundary invariant. Remove it immediately; AI signals feed only `matchExplanationService.ts`. Confirm the test in `interestSignalBoundary.test.ts` catches the violation.
+- **Matching ran twice concurrently and produced duplicate groups** — the execution guard was not set correctly or was not released in a `finally` block. Review `poolRealtimeMatchingService.ts` for guard acquisition and release.
+- **Groups form but are too small** — the pool may have fewer than `minGroupSize` (4) users passing all filters. Check hard constraint filters and verify `targetGroupSize`/`minGroupSize` config values.
+
+## Review checklist
+
+- [ ] New scoring data is read only from approved tables (not `user_interest_signals`)
+- [ ] Scoring weights still sum to 100% after any change
+- [ ] Hard constraints (budget, gender, industry) are applied as L1 filters, not soft scores
+- [ ] Matching execution is guarded against concurrent runs with a `finally` release
+- [ ] Match result is persisted before notifications fire
+- [ ] New or changed scoring logic is covered by `poolMatchingService.test.ts`

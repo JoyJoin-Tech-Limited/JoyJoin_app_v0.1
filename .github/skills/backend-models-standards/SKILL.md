@@ -1,6 +1,11 @@
 ---
-name: Backend Models Standards
-description: Define database models with clear naming, appropriate data types, constraints, relationships, and validation at multiple layers. Use this skill when creating or modifying database model files, ORM classes, schema definitions, or data model relationships. Apply when working with model files (e.g., models.py, models/, ActiveRecord classes, Prisma schema, Sequelize models), defining table structures, setting up foreign keys and relationships, configuring cascade behaviors, implementing model validations, adding timestamps, or working with database constraints (NOT NULL, UNIQUE, foreign keys). Use for any task involving data integrity enforcement, relationship definitions, or model-level data validation.
+name: backend-models-standards
+description: >
+  Define database models with clear naming, appropriate data types, constraints, relationships, and
+  validation at multiple layers. Use this skill when creating or modifying database model files,
+  schema definitions, or data model relationships. Trigger phrases: "add a new table", "define a
+  model", "add a foreign key", "configure cascade behavior", "what data type should I use", "add an
+  index", "enforce a unique constraint".
 ---
 
 # Backend Models Standards
@@ -250,3 +255,33 @@ def test_user_orders_cascade_delete():
 - [ ] Validation at model and database levels
 - [ ] Relationships defined on both sides
 - [ ] Tests for constraints and validation
+
+## Quick examples
+
+**User says:** "Add a `pool_registrations` table with a foreign key to `users`."
+**Apply this skill by:** Using `snake_case` table name, explicit `NOT NULL`, a `CASCADE` delete on the FK, an index on `user_id`, and `created_at`/`updated_at` timestamps.
+**Result:** Table is correctly normalised, constraints are enforced at the database level, and cascade behaviour is intentional.
+
+---
+
+**User says:** "What type should I use for the event fee field?"
+**Apply this skill by:** Checking the data-type table in this skill — money values use `DECIMAL(10,2)`, never `FLOAT`.
+**Result:** Accurate monetary storage with no floating-point rounding errors.
+
+## Troubleshooting
+
+- **Constraint failure on insert** — check whether a `NOT NULL` or `UNIQUE` constraint is being violated. Look at the error message for the column name, then verify the application layer is supplying the value correctly.
+- **Duplicate key error on retry** — the operation is not idempotent. Add an existence check before inserting, or use an `INSERT … ON CONFLICT DO NOTHING` clause.
+- **Unexpected cascade delete wiped rows** — review the `ondelete` setting on the FK. If the rows should survive parent deletion, switch to `SET NULL` or `RESTRICT` and handle nulls in application code.
+- **Query is slow after adding a column to a `WHERE` clause** — the column probably lacks an index. Add one and verify with `EXPLAIN`.
+
+## Review checklist
+
+- [ ] Table name is `plural_snake_case`; model name is `SingularPascalCase`
+- [ ] All required fields have `NOT NULL` constraints at the database level
+- [ ] Every FK has an explicit `ondelete` behavior (not the ORM default)
+- [ ] Foreign key columns are indexed
+- [ ] Money/currency fields use `DECIMAL`, not `FLOAT`
+- [ ] Both `created_at` and `updated_at` are present
+- [ ] Relationships are defined on both sides (back-populate / inverse)
+- [ ] Constraint and cascade behavior is covered by a test

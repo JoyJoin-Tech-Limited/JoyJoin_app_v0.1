@@ -1,6 +1,10 @@
 ---
-name: Server Domain Architecture
-description: routes.ts as composition root, routes/domains/* ownership, repositories/* for new persistence logic, and storage.ts as a compatibility facade. Use when adding server routes, services, or data access code.
+name: server-domain-architecture
+description: >
+  routes.ts as composition root, routes/domains/* ownership, repositories/* for new persistence
+  logic, and storage.ts as a compatibility facade. Use when adding server routes, services, or data
+  access code. Trigger phrases: "add a new API route", "where does this service go?", "migrate
+  logic from storage.ts", "add a repository", "routes.ts is getting too large".
 ---
 
 # Server Domain Architecture
@@ -96,3 +100,31 @@ Standalone auth and CLI modules remain at the `apps/server/src/` root:
 - `apps/server/src/middleware/`
 - `apps/server/src/README.md`
 - `docs/architecture/current-state.md`
+
+## Quick examples
+
+**User says:** "Add a `POST /api/events/:id/publish` endpoint."
+**Apply this skill by:** Creating (or extending) `routes/domains/events.ts` for the handler, adding the persistence query to `repositories/eventsRepository.ts`, mounting the domain router in `routes.ts`, and keeping `storage.ts` unchanged.
+**Result:** New handler is in the correct domain module; `routes.ts` stays lean and `storage.ts` is not expanded.
+
+---
+
+**User says:** "There is a `getUserInterests()` function in `storage.ts` — I need to modify it."
+**Apply this skill by:** Extracting the function to the nearest domain repository (e.g. `repositories/interestsRepository.ts`), updating `storage.ts` to delegate to the new location, and modifying the logic there. Do not add new code to `storage.ts` directly.
+**Result:** Logic lives in a maintainable repository; `storage.ts` becomes a thinner facade.
+
+## Troubleshooting
+
+- **Business logic accumulating in `routes.ts`** — inline handler blocks are growing instead of being extracted to a domain module. Create `routes/domains/<domain>.ts`, move the handlers there, and mount via `router` in `routes.ts`.
+- **Repository and `storage.ts` confusion** — a developer added a new query to `storage.ts` instead of a repository. Move the query to the appropriate `repositories/` file and have `storage.ts` delegate.
+- **Cross-domain repository import** — one domain module is importing directly from another domain's repository. Move shared data access to a shared service in `lib/` or expose it via a well-defined interface.
+- **New middleware is inside a domain file** — Express middleware belongs in `middleware/`, not `routes/domains/`. Move it and register it in `routes.ts`.
+
+## Review checklist
+
+- [ ] New route handlers live in `routes/domains/<domain>.ts`, not inline in `routes.ts`
+- [ ] New persistence logic is in `repositories/`, not added directly to `storage.ts`
+- [ ] `routes.ts` mounts the new domain router — it does not inline the handler logic
+- [ ] Cross-cutting helpers go in `lib/`, not domain files
+- [ ] Express middleware is placed in `middleware/`, not route handlers
+- [ ] `storage.ts` public surface is not expanded with new methods
