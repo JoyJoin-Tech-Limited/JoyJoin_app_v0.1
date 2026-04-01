@@ -461,7 +461,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/registration/chat/complete', async (_req: any, res) => {
     return res.status(410).json({
-      message: "Chat registration is no longer supported. Please use the active V4 onboarding flow.",
+      code: "chat_registration_deprecated",
+      message: "聊天注册已下线，请使用新的 V4 引导流程（/personality-test）。Chat registration is no longer supported, please use the active V4 onboarding flow.",
       route: '/personality-test',
     });
   });
