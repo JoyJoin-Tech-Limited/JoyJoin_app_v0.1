@@ -227,7 +227,7 @@ export function registerAuthRoutes(app: Express): void {
   // Unified onboarding - auth + profile + answers in one transaction
   app.post('/api/auth/unified-onboarding', async (req: any, res) => {
     try {
-      const { authData, profileData, assessmentAnswers: assessmentAnswerPayload, temporarySessionId, metadata } = req.body;
+      const { authData, profileData, assessmentAnswers: assessmentAnswerPayload, temporarySessionId } = req.body;
       const phoneNumber = authData?.phoneNumber || authData?.phone;
       const code = authData?.code;
 
