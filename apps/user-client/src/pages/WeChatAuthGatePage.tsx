@@ -135,6 +135,21 @@ export default function WeChatAuthGatePage() {
         }
       }
 
+      // Read the anonymous session ID so the server can consume the presignup cache
+      // entry after a successful import and prevent stale resume prompts.
+      let anonymousSessionId: string | null = null;
+      try {
+        const sessionRaw = localStorage.getItem(PRESIGNUP_SESSION_KEY);
+        if (sessionRaw) {
+          const parsed = JSON.parse(sessionRaw);
+          if (parsed?.sessionId && typeof parsed.sessionId === 'string') {
+            anonymousSessionId = parsed.sessionId;
+          }
+        }
+      } catch {
+        // Non-fatal: missing sessionId means the server simply skips cache cleanup
+      }
+
       // In WeChat Mini Program use wx.login(); fall back to mock code in web/dev
       let code: string;
       const wxGlobal = (window as any).wx;
@@ -154,7 +169,7 @@ export default function WeChatAuthGatePage() {
       const response = await fetch('/api/auth/wechat/login-with-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, testAnswers }),
+        body: JSON.stringify({ code, testAnswers, anonymousSessionId }),
       });
 
       if (!response.ok) {
@@ -164,7 +179,7 @@ export default function WeChatAuthGatePage() {
 
       await response.json();
 
-      // Clear anonymous assessment data
+      // Clear anonymous assessment data from localStorage after successful import
       localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
       localStorage.removeItem(PRESIGNUP_SESSION_KEY);
       localStorage.removeItem('joyjoin_synced_session_id');
@@ -176,11 +191,22 @@ export default function WeChatAuthGatePage() {
 
       // Navigate to server-calculated nextStep
       const updatedUser = await queryClient.fetchQuery({ queryKey: ['/api/auth/user'] }) as AuthUser;
-      const nextPath = updatedUser?.nextStep === 'discover' ? '/discover'
-        : updatedUser?.nextStep === 'guide' ? '/guide'
-        : updatedUser?.nextStep === 'extended-data' ? '/onboarding/extended'
-        : updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
-        : '/onboarding/setup';
+      const step = updatedUser?.nextStep;
+      let nextPath: string;
+      if (step === 'discover' || step === 'guide') {
+        nextPath = '/discover';
+      } else if (step === 'extended-data') {
+        nextPath = '/onboarding/extended';
+      } else if (step === 'profile-review') {
+        nextPath = '/onboarding/review';
+      } else if (step === 'essential-data') {
+        nextPath = '/onboarding/setup';
+      } else if (step === 'onboarding' || step === 'personality-test') {
+        nextPath = '/personality-test';
+      } else {
+        // Unknown step fallback
+        nextPath = '/onboarding/setup';
+      }
 
       setTimeout(() => setLocation(nextPath), 500);
     } catch (error) {

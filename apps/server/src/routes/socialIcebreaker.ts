@@ -460,6 +460,11 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  // F3: Wrong-phase guard — statement generation is only valid during lie_detective phase
+  if (state.currentPhase !== 'lie_detective') {
+    return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
+
   try {
     const statements = await generateLieDetectiveStatements({
       userId,
@@ -507,12 +512,17 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
     guessedStatementIndex: number;
   };
 
-  if (!voterId || !targetUserId || !guessedStatementIndex) {
+  if (!voterId || !targetUserId || guessedStatementIndex === undefined || guessedStatementIndex === null) {
     return res.status(400).json({ error: 'Authentication, targetUserId, and guessedStatementIndex are required' });
   }
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  // F3: Wrong-phase guard — votes are only valid during lie_detective phase
+  if (state.currentPhase !== 'lie_detective') {
+    return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
 
   const votes: LieDetectiveVote[] = state.votes || [];
   const existingVoteIdx = votes.findIndex(
@@ -564,6 +574,15 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 
   if (state.hostUserId !== userId) {
     return res.status(403).json({ error: 'Only the host can generate dice challenges' });
+  }
+
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+
+  // Idempotent retry: if challenges already exist, return them instead of regenerating
+  if ((state.personalityDiceChallenges || []).length > 0) {
+    return res.json({ challenges: state.personalityDiceChallenges });
   }
 
   try {
