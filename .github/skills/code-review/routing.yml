@@ -1,0 +1,66 @@
+skill: code-review
+
+primary_ownership: >
+  Structured pull request review using the Harness Engineering Framework as the
+  mandatory review lens — correctness, reliability, scalability, security,
+  observability, and maintainability/architecture fit.
+
+use_when:
+  - reviewing a pull request or auditing code changes
+  - evaluating engineering quality against the Harness Framework
+  - checking a change for reliability, security, scalability, or observability gaps
+  - asked to look for issues, risks, or regressions in a diff
+  - starting any PR review (always load this skill first, then add domain skills)
+
+do_not_use_when:
+  - task is about implementing a feature (use the relevant domain skill)
+  - task is about adding a specific metric or log line only (use platform-observability-and-ops)
+  - task is a quick syntax or typo fix with no architectural implications
+
+strong_triggers:
+  - review this PR
+  - audit this pull request
+  - check this code
+  - review my changes
+  - code review
+  - look for issues
+  - evaluate against Harness framework
+  - Harness Engineering Framework
+  - check for reliability
+  - check for security
+  - check for scalability
+  - check for observability
+  - find regressions
+  - what did I miss
+  - review verdict
+  - PR review
+  - pull request review
+
+owned_files: []
+
+owned_paths: []
+
+owned_symbols:
+  - Harness Engineering Framework
+
+related_skills:
+  - skill: auth-session-and-safety-boundaries
+    when: PR touches auth gating, session handling, or webhook validation
+  - skill: reliability-and-state-integrity
+    when: PR touches multi-step writes, payments, or session lifecycle
+  - skill: server-domain-architecture
+    when: PR adds or moves API routes or server-side services
+  - skill: testing-and-regression-guardrails
+    when: PR lacks regression tests or touches a tested invariant boundary
+  - skill: platform-observability-and-ops
+    when: PR adds server code that should be instrumented
+  - skill: onboarding-state-architecture
+    when: PR touches onboarding flow, nextStep, or completion flags
+  - skill: matching-domain
+    when: PR touches pool matching, scoring, or group formation
+  - skill: social-icebreaker-domain
+    when: PR touches icebreaker sessions, phases, or host/player authority
+  - skill: frontend-component-architecture
+    when: PR adds or moves UI components across workspaces
+  - skill: design-system-governance
+    when: PR introduces new colours, variants, or token overrides

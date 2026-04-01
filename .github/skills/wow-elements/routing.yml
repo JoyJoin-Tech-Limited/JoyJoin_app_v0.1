@@ -1,0 +1,61 @@
+skill: wow-elements
+
+primary_ownership: >
+  Crafted, brand-aligned micro-interactions and polish — completion moments,
+  empty/loading state delight, motion principles, and accessibility guardrails
+  for premium emotional resonance.
+
+use_when:
+  - adding or reviewing a micro-interaction (animation, transition, haptic cue)
+  - making a completion moment, empty state, or loading state feel more considered
+  - polishing an existing interaction for emotional resonance
+  - reviewing motion or animation for brand alignment and accessibility compliance
+  - deciding whether a proposed animation adds genuine delight or is decorative noise
+
+do_not_use_when:
+  - task is about CSS token or colour implementation (use design-system-governance)
+  - task is about component placement structure (use frontend-component-architecture)
+  - task is about brand narrative or logo guidance (use joyjoin-brand-guidelines)
+  - task is about backend logic
+
+strong_triggers:
+  - micro-interaction
+  - micro-interactions
+  - completion animation
+  - empty state polish
+  - loading state delight
+  - motion design
+  - spring animation
+  - haptic
+  - wow moment
+  - emotional resonance
+  - crafted moment
+  - reduce-motion
+  - prefers-reduced-motion
+  - feel premium
+  - feel more premium
+  - feel delightful
+  - add delight
+  - polish the interaction
+  - improve micro-interactions
+  - make this feel premium
+  - AnimatePresence
+  - Framer Motion
+
+owned_files:
+  - apps/user-client/src/**
+
+owned_paths: []
+
+owned_symbols:
+  - motion
+  - AnimatePresence
+  - useReducedMotion
+
+related_skills:
+  - skill: frontend-component-architecture
+    when: wow element is a new shared primitive or requires workspace placement decision
+  - skill: design-system-governance
+    when: motion uses or introduces transition tokens or CSS custom properties
+  - skill: joyjoin-brand-guidelines
+    when: animation direction must align with JoyJoin's brand motion personality

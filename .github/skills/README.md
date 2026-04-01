@@ -77,6 +77,9 @@ Keep docs aligned with the active codebase. Use after significant code changes o
 | Skill | What it covers |
 |-------|---------------|
 | [`docs-sync`](./docs-sync/SKILL.md) | Scan code changes, map them to documentation targets, draft minimal updates, and enforce active-flow-only guardrails. Use when docs need syncing after a PR merges or an architecture decision is made. |
+
+---
+
 ## Review and Quality
 
 Skills for writing, reviewing, auditing, and maintaining skills and code quality.
@@ -128,6 +131,30 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 
 ---
 
+## Skill routing
+
+All active skills under `.github/skills/` participate in the lightweight skill routing system. The router selects the right skill for an ask using signals declared in each skill's `routing.yml`.
+
+**Coverage requirement:** every new skill directory must include a `routing.yml` (or, rarely, a `routing-exempt.yml` with a written reason). The validator enforces this — a missing routing file causes `validate-skill-routing.mjs` to fail.
+
+### Adding routing metadata for a new skill
+
+1. Create `.github/skills/<skill-name>/routing.yml` following the schema in `routing-schema.yml`
+2. Add `strong_triggers` with repo-specific terms (symbols, file paths, route patterns, canonical phrases)
+3. Fill `use_when` / `do_not_use_when` to sharpen routing boundaries
+4. List `related_skills` for natural handoff points
+5. Run `node scripts/validate-skill-routing.mjs` — all 17 skills should show ✅
+6. Add test cases to `scripts/test-skill-routing.mjs` for the new skill's key asks
+7. Run `node scripts/test-skill-routing.mjs` to confirm all tests pass
+
+See `docs/architecture/skill-routing.md` for full documentation, scoring model, and worked examples.
+
+### Special routing notes
+
+- **`code-review`** is the mandatory entry point for all PR reviews. Start here, then load domain-specific skills for the affected areas. The router selects it for asks like "review this PR", "audit this pull request", or "evaluate against the Harness framework".
+- **`skill-authoring-governance`** routes any ask about creating, updating, or auditing skills — including routing metadata maintenance. Use it when writing a new skill or updating a `SKILL.md`.
+- **`docs-sync`** routes post-change documentation hygiene — use when docs are stale after a merge.
+
 ## Routing metadata
 
 Each core skill directory contains a `routing.yml` file alongside `SKILL.md`. This is the skill's **routing contract** — `scripts/skill-router.mjs` reads the current `routing.yml` files at runtime to decide when and why to load a skill.
@@ -156,7 +183,7 @@ node scripts/validate-skill-routing.mjs
 # Route an ask interactively
 node scripts/skill-router.mjs "add a nextStep rule after profile review"
 
-# Run the full routing regression suite (37 test cases)
+# Run the full routing regression suite (75 test cases)
 node scripts/test-skill-routing.mjs
 ```
 
