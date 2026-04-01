@@ -161,7 +161,7 @@ interface AuthState {
 │  /personality-test/results → PersonalityTestResultPage (+ Login CTA)│
 │  /login              → LoginPage (fallback for non-WeChat)          │
 │  /invite/:code       → InviteLandingRouter (public)                 │
-│  /icebreaker-demo    → IcebreakerDemoPage (public demo)             │
+│  /dev/icebreaker-demo → IcebreakerDemoPage (dev sandbox only)       │
 │  /admin/login        → AdminLoginPage                               │
 │  *                   → Redirects to LandingPage                     │
 └─────────────────────────────────────────────────────────────────────┘

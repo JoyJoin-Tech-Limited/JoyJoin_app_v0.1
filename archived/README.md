@@ -1,6 +1,6 @@
 # Archived Documentation and Assets
 
-This directory contains historical documentation, implementation summaries, and visual assets that have been moved from the repository root for better organization.
+This directory contains historical documentation, implementation summaries, test evidence, and visual assets that have been moved from the repository root for better organization.
 
 ## Structure
 
@@ -23,6 +23,7 @@ This directory contains historical documentation, implementation summaries, and 
 These files represent important historical context for the project's development but are not actively needed for day-to-day development. They have been preserved here for:
 
 - Historical reference
+- Archived copies of root-level implementation/test summaries
 - Understanding past decisions
 - Tracking project evolution
 - Compliance and audit purposes
@@ -33,7 +34,7 @@ For current, active documentation, please refer to the files at the repository r
 
 - `PRODUCT_REQUIREMENTS.md` - Main product requirements
 - `DEVELOPER_QUICK_REFERENCE.md` - Key developer reference
-- `QUICK_REFERENCE.md` - Quick reference guide
+- `QUICK_REFERENCE.md` - Supplementary quick reference (use only with active docs above)
 - `design_guidelines.md` - Design standards
 - `replit.md` - Replit-specific documentation
 
