@@ -97,7 +97,7 @@ async function resolveSession(
     }
     return null;
   }
-  return state ? { ...state } : null;
+  return { ...state };
 }
 
 // ---------------------------------------------------------------------------
