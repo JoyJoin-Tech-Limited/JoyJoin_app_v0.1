@@ -1,0 +1,56 @@
+skill: joyjoin-brand-guidelines
+
+primary_ownership: >
+  JoyJoin brand essence, colour system, typography, mascot usage, UI tone,
+  motion guidance, and brand consistency across UI, marketing, and offline
+  materials.
+
+use_when:
+  - checking whether a visual or copy decision fits JoyJoin's brand identity
+  - choosing colours, typography, or illustration style for a new surface
+  - reviewing a design or component for brand consistency
+  - writing or reviewing copy tone and voice
+  - applying brand guidance to marketing, social, or offline materials
+  - working on motion or animation that must feel on-brand
+
+do_not_use_when:
+  - task is about CSS token or CVA variant implementation (use design-system-governance)
+  - task is about component placement or shared primitives (use frontend-component-architecture)
+  - task is about polished micro-interactions (use wow-elements)
+  - task is purely backend with no brand-facing output
+
+strong_triggers:
+  - on-brand
+  - brand guidelines
+  - brand colour
+  - brand typography
+  - brand tone
+  - brand voice
+  - brand identity
+  - brand consistency
+  - JoyJoin mascot
+  - Mochi
+  - Jojo
+  - logo usage
+  - social media design
+  - offline materials
+  - warm and playful
+  - emotional tone
+  - is this too corporate
+  - make this on-brand
+  - joyjoin style
+  - review this design for brand consistency
+
+owned_files: []
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: design-system-governance
+    when: brand colour or typography decision must be encoded as a CSS token or variant
+  - skill: wow-elements
+    when: brand motion or animation guidance is needed for a polished moment
+  - skill: frontend-component-architecture
+    when: brand-driven component must be placed correctly across workspaces
