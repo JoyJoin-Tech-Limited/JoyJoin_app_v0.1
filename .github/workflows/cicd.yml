@@ -18,9 +18,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Verify env, secret, and legacy guardrails
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify env, secret, legacy, and import-boundary guardrails
         run: node scripts/check-guardrails.mjs
+
+      - name: Verify workspace dependency ownership
+        run: node scripts/check-workspace-dependency-ownership.mjs
 
   lint-user:
     needs: [guardrails]
@@ -35,20 +43,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Debug workspace + lockfile
-        run: |
-          set -e
-          echo "PWD=$(pwd)"
-          echo "WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
-          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Run TSC
-        run: npx tsc -p apps/user-client/tsconfig.json --noEmit
+      - name: Type check
+        run: npm run typecheck -w @joyjoin/user-client
 
   lint-admin:
     needs: [guardrails]
@@ -63,20 +62,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Debug workspace + lockfile
-        run: |
-          set -e
-          echo "PWD=$(pwd)"
-          echo "WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
-          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Run TSC
-        run: npx tsc -p apps/admin-client/tsconfig.json --noEmit
+      - name: Type check
+        run: npm run typecheck -w @joyjoin/admin-client
 
   lint-server:
     needs: [guardrails]
@@ -91,24 +81,15 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Debug workspace + lockfile
-        run: |
-          set -e
-          echo "PWD=$(pwd)"
-          echo "WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
-          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Run TSC
-        run: npx tsc -p apps/server/tsconfig.json --noEmit
+      - name: Type check
+        run: npm run typecheck -w @joyjoin/server
 
-  ai-test:
-    name: AI Simulation Test
-    needs: [lint-user, lint-admin, lint-server]
+  test-server:
+    needs: [guardrails]
+    name: Server Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -119,14 +100,24 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Debug workspace + lockfile
-        run: |
-          set -e
-          echo "PWD=$(pwd)"
-          echo "WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-          find . -maxdepth 4 \( -name "package-lock.json" -o -name "npm-shrinkwrap.json" \) -print
-          test -f package-lock.json || (echo "❌ package-lock.json NOT FOUND at repo root" && exit 1)
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test -w @joyjoin/server
+
+  ai-test:
+    name: AI Simulation Test
+    needs: [lint-user, lint-admin, lint-server, test-server]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci

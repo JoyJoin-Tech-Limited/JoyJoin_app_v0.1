@@ -11,7 +11,7 @@ import type {
   IcebreakerSessionEndedData,
   IcebreakerUserStatusData,
   RateLimitedData,
-} from '@/../../shared/wsEvents';
+} from '@shared/wsEvents';
 
 export type IcebreakerPhase = 'waiting' | 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
 

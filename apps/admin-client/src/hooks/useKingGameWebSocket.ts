@@ -12,7 +12,7 @@ import type {
   KingGameRoundCompleteData,
   KingGameStateSyncData,
   RateLimitedData,
-} from '@/../../shared/wsEvents';
+} from '@shared/wsEvents';
 
 export type KingGamePhase = 'waiting' | 'dealing' | 'commanding' | 'executing' | 'completed';
 

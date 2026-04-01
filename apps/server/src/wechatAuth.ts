@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
 import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
 import { canUseMockWechatAuth, isDebugAuthLoggingEnabled } from "./auth/policy";
+import { storage } from "./storage";
 
 /**
  * Minimum number of answers with a valid questionId + selectedOption that must
@@ -361,7 +362,7 @@ export async function processTestAnswers(
   }
 
   console.log(
-    `[WeChat Auth] Processing ${testAnswers.length} test answers (${validItems.length} importable) for user ${userId}`
+    `[WeChat Auth] Processing ${testAnswers.length} test answers for user ${userId}`
   );
 
   const traitScores: Record<string, number> = {
@@ -700,16 +701,16 @@ export function setupWechatAuth(app: Express) {
 
         // B: Consume the server-side presignup cache so the same answers cannot be
         // re-imported and resume prompts based on this session don't reappear.
-        if (presignupSessionId && typeof presignupSessionId === "string") {
+        if (safeAnonSessionId && typeof safeAnonSessionId === "string") {
           try {
-            await storage.clearPreSignupData(presignupSessionId);
+            await storage.clearPreSignupData(safeAnonSessionId);
             console.log(
-              `[WeChat Auth] Claimed presignup cache session ${presignupSessionId} for user ${user.id}`
+              `[WeChat Auth] Claimed presignup cache session ${safeAnonSessionId} for user ${user.id}`
             );
           } catch (cacheErr) {
             // Non-fatal — log but don't fail the auth request
             console.warn(
-              `[WeChat Auth] Failed to clear presignup cache ${presignupSessionId}:`,
+              `[WeChat Auth] Failed to clear presignup cache ${safeAnonSessionId}:`,
               cacheErr
             );
           }
