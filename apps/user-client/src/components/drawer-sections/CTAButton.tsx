@@ -47,7 +47,7 @@ export default function CTAButton({
           <Button
             onClick={handleClick}
             size="lg"
-            className="relative w-full h-14 rounded-2xl overflow-hidden no-default-hover-elevate no-default-active-elevate"
+            className="relative w-full overflow-hidden no-default-hover-elevate no-default-active-elevate"
           >
             {/* Shimmer Effect */}
             <motion.div
