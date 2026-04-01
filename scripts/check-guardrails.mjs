@@ -30,6 +30,14 @@ const activeLegacyGuardFiles = [
   'apps/server/src/cli/createUserAccount.ts',
 ];
 
+const requiredRootScripts = {
+  check: 'npm run typecheck',
+  'check:clients': 'npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client',
+  'check:server': 'npm run typecheck -w @joyjoin/server',
+  'check:full': 'npm run guardrails && npm run lint && npm run test && npm run build',
+  'set-admin': 'npm run admin:create',
+};
+
 const violations = [];
 
 for (const file of trackedFiles) {
@@ -47,6 +55,13 @@ for (const file of activeLegacyGuardFiles) {
     if (re.test(content)) {
       violations.push(`Legacy identifier "${identifier}" is banned in active code: ${file}`);
     }
+  }
+}
+
+const rootPackage = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+for (const [scriptName, expectedCommand] of Object.entries(requiredRootScripts)) {
+  if (rootPackage.scripts?.[scriptName] !== expectedCommand) {
+    violations.push(`Root package.json script "${scriptName}" must equal: ${expectedCommand}`);
   }
 }
 
@@ -106,4 +121,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('Guardrails passed: no tracked env files, obvious secrets, or banned legacy onboarding identifiers were found.');
+console.log('Guardrails passed: no tracked env files, obvious secrets, banned legacy onboarding identifiers, or root script regressions were found.');
