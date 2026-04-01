@@ -51,7 +51,7 @@ for (const file of trackedFiles) {
 
 // 1. Ban imports from the top-level legacy shared/ directory.
 //    All shared code must come from packages/shared (via @joyjoin/shared or @shared/* alias).
-const legacySharedImportPattern = /from\s+['"](?:@\/)?\.\.\/\.\.\/shared\//;
+const legacySharedImportPattern = /(?:from\s+['"]|import\(\s*['"])(?:@\/)?(?:\.\.\/){2,}shared\//;
 const appSourceFiles = trackedFiles.filter(
   (f) =>
     (f.startsWith('apps/user-client/src/') || f.startsWith('apps/admin-client/src/') || f.startsWith('apps/server/src/')) &&

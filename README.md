@@ -9,7 +9,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 ├── apps/
 │   ├── user-client/     # React 18 + Vite PWA (user-facing, port 5001)
 │   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.yuejuapp.com)
-│   └── server/          # Node.js + Express API server (port 5000)
+│   └── server/          # Node.js + Express API server (default port 5001, configurable via PORT env)
 ├── packages/
 │   └── shared/          # @joyjoin/shared — internal shared library
 ├── scripts/             # Repo-wide tooling scripts (guardrails, migration helpers)

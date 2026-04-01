@@ -28,6 +28,7 @@ import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 import { getMetricsText } from "./middleware/metrics";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
+import { broadcastPoolRegistrationAdded } from "./eventBroadcast";
 import {
   assertValidTransition as assertValidEventPoolTransition,
   InvalidTransitionError as InvalidPoolTransitionError,
@@ -51,6 +52,7 @@ import { z } from "zod";
 
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
+type UserInterestSignalRow = typeof userInterestSignals.$inferSelect;
 
 /**
  * Batch-load interest signals for multiple users.
@@ -58,13 +60,13 @@ type DbTransaction = NeonDatabase<typeof schema>;
  */
 async function loadInterestSignalsByUserIds(
   userIds: string[],
-): Promise<Map<string, typeof userInterestSignals.$inferSelect[]>> {
+): Promise<Map<string, UserInterestSignalRow[]>> {
   if (userIds.length === 0) return new Map();
   const rows = await db
     .select()
     .from(userInterestSignals)
     .where(inArray(userInterestSignals.userId, userIds));
-  const map = new Map<string, typeof userInterestSignals.$inferSelect[]>();
+  const map = new Map<string, UserInterestSignalRow[]>();
   for (const row of rows) {
     const existing = map.get(row.userId) ?? [];
     existing.push(row);
@@ -2393,6 +2395,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       console.log("[BlindBoxPayment] updated eventPool after registration:", updatedPool);
+
+      const currentUser = await storage.getUser(userId);
+      broadcastPoolRegistrationAdded(
+        pool.id,
+        currentUser?.archetype ?? currentUser?.primaryArchetype ?? "新朋友",
+        userId,
+        updatedPool?.totalRegistrations ?? pool.totalRegistrations + 1,
+      );
 
       // ✅ 返回报名信息（前端目前只需要知道成功了 & 池子信息）
       return res.json({
