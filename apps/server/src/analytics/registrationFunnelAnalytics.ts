@@ -1,6 +1,10 @@
 /**
  * 注册漏斗分析服务
  * 
+ * ⚠️ Legacy analytics boundary: this module reads historical `registration_sessions`
+ * telemetry and legacy registration-completion flags for admin reporting only.
+ * Do not reuse these identifiers in active onboarding or navigation code.
+ * 
  * 收集和分析用户注册过程中的三层信息漏斗数据
  * - L1 (显式基础): 7个必问字段的完成率
  * - L2 (自然丰富): 11个可选字段的参与度

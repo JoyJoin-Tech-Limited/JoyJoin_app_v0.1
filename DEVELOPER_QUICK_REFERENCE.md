@@ -33,6 +33,13 @@
 2. Check `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology*.
 3. If still unsure, flag for human review rather than guessing.
 
+
+### Guardrails: env files, secrets, and legacy onboarding identifiers
+- Never commit a real `.env` file. The only tracked env templates are `.env.example`, `deployment/.env.production.example`, and `deployment/.env.staging.example`.
+- Run `npm run guardrails` before pushing. CI runs the same check.
+- In active onboarding / auth / CLI code, do not reintroduce these legacy identifiers: `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`.
+- If you ever copied values from the removed tracked `.env` or the old hard-coded deployment database URL, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, and `ADMIN_CREATE_SECRET_KEY`.
+
 ---
 
 ## Quick Start

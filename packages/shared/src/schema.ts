@@ -104,6 +104,8 @@ export const users = pgTable("users", {
   intent: text("intent").array(), // Can include: networking, friends, discussion, fun, romance, flexible
   
   // Onboarding progress
+  // Legacy compatibility flag only. Do not use this for new onboarding logic;
+  // prefer server-calculated `nextStep` and `profileEssentialComplete`.
   hasCompletedRegistration: boolean("has_completed_registration").default(false),
   hasCompletedInterestsTopics: boolean("has_completed_interests_topics").default(false),
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
@@ -2338,6 +2340,7 @@ export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;
 // ============ 注册会话遥测系统 ============
 
 // Registration Sessions table - 追踪注册漏斗的完整生命周期
+// Legacy telemetry table retained for historical reporting only; do not use in new product flows.
 export const registrationSessions = pgTable("registration_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   

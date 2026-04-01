@@ -25,6 +25,7 @@ import { SiWechat } from "react-icons/si";
 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { calculateOnboardingRoute } from "@/hooks/useOnboardingRoute";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
@@ -238,13 +239,13 @@ export default function LoginPage() {
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       
-      // Check if user has completed registration
-      if (!userData.hasCompletedRegistration) {
+      const nextRoute = calculateOnboardingRoute(userData);
+      if (nextRoute !== "/discover") {
         toast({
           title: "欢迎加入悦聚！",
           description: "让我们开始认识你吧~",
         });
-        setTimeout(() => setLocation("/onboarding"), 500);
+        setTimeout(() => setLocation(nextRoute), 500);
       } else {
         toast({
           title: "登录成功",

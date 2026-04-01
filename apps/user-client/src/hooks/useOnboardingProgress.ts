@@ -71,11 +71,10 @@ function nextStepToOnboardingStep(nextStep: NextStepType): OnboardingStep {
  * fallback for the rare case where `nextStep` is absent.
  */
 export function useOnboardingProgress(): OnboardingProgress {
-  const { user, needsRegistration, needsPersonalityTest, needsProfileSetup } = useAuth();
+  const { user } = useAuth();
   
   const progress = useMemo(() => {
     // --- Completion signals (server-owned flags preferred) ---
-    const hasCompletedRegistration = user?.hasCompletedRegistration ?? false;
     const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
     // Prefer server-computed flag; fall back to field-presence check only if unavailable.
     const hasCompletedEssentialData =
@@ -86,7 +85,7 @@ export function useOnboardingProgress(): OnboardingProgress {
     const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
 
     const steps = {
-      registration: hasCompletedRegistration,
+      registration: hasCompletedPersonalityTest,
       personalityTest: hasCompletedPersonalityTest,
       essentialData: hasCompletedEssentialData,
       extendedData: hasCompletedExtendedData,
@@ -98,13 +97,11 @@ export function useOnboardingProgress(): OnboardingProgress {
     if (user?.nextStep) {
       currentStep = nextStepToOnboardingStep(user.nextStep);
     } else {
-      // Fallback: reconstruct from local booleans (used only when nextStep is absent).
+      // Fallback: reconstruct from server-owned completion flags when nextStep is absent.
       currentStep = 'complete';
-      if (needsRegistration) {
+      if (!hasCompletedPersonalityTest) {
         currentStep = 'registration';
-      } else if (needsPersonalityTest) {
-        currentStep = 'personality-test';
-      } else if (needsProfileSetup) {
+      } else if (!hasCompletedEssentialData) {
         currentStep = 'essential-data';
       } else if (!hasCompletedExtendedData) {
         currentStep = 'extended-data';
@@ -125,7 +122,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       isComplete: currentStep === 'complete',
       steps,
     };
-  }, [user, needsRegistration, needsPersonalityTest, needsProfileSetup]);
+  }, [user]);
   
   return progress;
 }
