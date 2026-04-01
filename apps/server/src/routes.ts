@@ -28,7 +28,10 @@ import {
   assertValidTransition as assertValidEventPoolTransition,
   InvalidTransitionError as InvalidPoolTransitionError,
 } from "./lib/stateTransitions";
-import { checkVenueDataQuality } from "./lib/venueDataQuality";
+import {
+  checkVenueDataQuality,
+  normalizeVenueQualityRecord,
+} from "./lib/venueDataQuality";
 
 type Traits = {
   affinity: number;
@@ -140,6 +143,36 @@ type DbTransaction = NeonDatabase<typeof schema>;
 
 function getActingAdminId(req: any): string {
   return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+}
+
+function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!body) return {};
+
+  const allowedKeys = [
+    "name",
+    "type",
+    "city",
+    "district",
+    "clusterId",
+    "districtId",
+    "commissionRate",
+    "tags",
+    "cuisines",
+    "priceRange",
+    "maxConcurrentEvents",
+    "decorStyle",
+    "tasteIntensity",
+    "barThemes",
+    "alcoholOptions",
+    "vibeDescriptor",
+    "isActive",
+  ] as const;
+
+  return Object.fromEntries(
+    allowedKeys
+      .filter((key) => body[key] !== undefined)
+      .map((key) => [key, body[key]]),
+  );
 }
 
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
@@ -356,12 +389,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Prometheus-style metrics endpoint — internal use only.
   // Returns plain-text Prometheus exposition format for scraping.
-  app.get("/api/metrics", async (_req, res) => {
+  app.get("/api/metrics", async (req, res) => {
     try {
       const text = await getMetricsText();
       res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
       res.status(200).send(text);
     } catch (error) {
+      logger.error("Error generating /api/metrics", {
+        request_id: req.requestId,
+        error: String(error),
+      });
       res.status(500).send("# Error generating metrics\n");
     }
   });
@@ -7977,7 +8014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/venues/data-quality", requireAdmin, async (_req, res) => {
     try {
       const venues = await storage.getAllVenues();
-      const report = checkVenueDataQuality(venues);
+      const report = checkVenueDataQuality(venues.map((venue) => normalizeVenueQualityRecord(venue)));
       res.json(report);
     } catch (error) {
       logger.error("Error running venue data quality check", { error: String(error) });
@@ -8063,7 +8100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminRole: (req as any).adminRole,
         targetEntityType: 'venue',
         targetEntityId: req.params.id,
-        after: req.body,
+        after: buildVenueAuditAfter(req.body),
       });
       res.json(venue);
     } catch (error) {
@@ -8917,7 +8954,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         oldStatus = currentPool.status ?? undefined;
 
         try {
-          assertValidEventPoolTransition(oldStatus, updates.status);
+          assertValidEventPoolTransition('event_pool', oldStatus, updates.status);
         } catch (transitionErr) {
           if (transitionErr instanceof InvalidPoolTransitionError) {
             return res.status(409).json({
@@ -8931,13 +8968,41 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         }
       }
 
+      // Optimistic concurrency control: when status is being mutated, only
+      // update the row if the status is still the value we just validated.
+      const whereClause = updates.status && oldStatus
+        ? and(
+            eq(eventPools.id, req.params.id),
+            eq(eventPools.status, oldStatus),
+          )
+        : eq(eventPools.id, req.params.id);
+
       const [pool] = await db
         .update(eventPools)
         .set(updates)
-        .where(eq(eventPools.id, req.params.id))
+        .where(whereClause)
         .returning();
       
       if (!pool) {
+        if (updates.status && oldStatus) {
+          const [latestPool] = await db
+            .select({ id: eventPools.id, status: eventPools.status })
+            .from(eventPools)
+            .where(eq(eventPools.id, req.params.id));
+
+          if (!latestPool) {
+            return res.status(404).json({ message: "Event pool not found" });
+          }
+
+          return res.status(409).json({
+            message: "Event pool status changed during update. Please retry.",
+            code: "STALE_STATUS",
+            from: oldStatus,
+            current: latestPool.status,
+            to: updates.status,
+          });
+        }
+
         return res.status(404).json({ message: "Event pool not found" });
       }
 

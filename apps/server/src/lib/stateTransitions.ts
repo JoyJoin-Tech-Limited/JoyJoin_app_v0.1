@@ -11,8 +11,9 @@
  *   - `assertValidTransition` throws a structured `InvalidTransitionError` on
  *     invalid transitions so route handlers can return a clean 409 response.
  *   - Transitions to the *same* state are idempotent no-ops and are allowed.
- *   - Unknown/null `from` states are treated as "not yet set" and are always allowed
- *     (covers INSERT paths where the row doesn't exist yet).
+ *   - Null/undefined/empty-string `from` states are treated as "not yet set"
+ *     and are always allowed (covers INSERT paths where the row doesn't exist
+ *     yet). Unknown non-empty string `from` states are rejected (fail closed).
  *
  * Usage:
  *   import { assertValidTransition, InvalidTransitionError } from '../lib/stateTransitions';

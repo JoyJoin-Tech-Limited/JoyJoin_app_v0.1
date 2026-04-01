@@ -65,6 +65,71 @@ export interface VenueQualitySummary {
   results: VenueQualityResult[];
 }
 
+/**
+ * Normalize raw venue rows from storage/SQL into the camelCased shape expected
+ * by the quality rules. Supports both the current schema field names and older
+ * route/storage aliases used elsewhere in the codebase.
+ */
+export function normalizeVenueQualityRecord(
+  venue: Record<string, unknown>,
+): VenueRecord {
+  return {
+    ...venue,
+    id: String(venue.id ?? ''),
+    name: (venue.name as string | null | undefined) ?? null,
+    venueType:
+      (venue.venueType as string | null | undefined)
+      ?? (venue.venue_type as string | null | undefined)
+      ?? (venue.type as string | null | undefined)
+      ?? null,
+    address:
+      (venue.address as string | null | undefined)
+      ?? (venue.address_cn as string | null | undefined)
+      ?? (venue.address_zh as string | null | undefined)
+      ?? null,
+    city: (venue.city as string | null | undefined) ?? null,
+    area:
+      (venue.area as string | null | undefined)
+      ?? (venue.district as string | null | undefined)
+      ?? null,
+    contactPerson:
+      (venue.contactPerson as string | null | undefined)
+      ?? (venue.contact_person as string | null | undefined)
+      ?? (venue.contact_name as string | null | undefined)
+      ?? (venue.contactName as string | null | undefined)
+      ?? null,
+    contactPhone:
+      (venue.contactPhone as string | null | undefined)
+      ?? (venue.contact_phone as string | null | undefined)
+      ?? null,
+    priceRange:
+      (venue.priceRange as string | null | undefined)
+      ?? (venue.price_range as string | null | undefined)
+      ?? null,
+    budgetCategories:
+      (venue.budgetCategories as string[] | null | undefined)
+      ?? (venue.budget_categories as string[] | null | undefined)
+      ?? null,
+    tags: (venue.tags as string[] | null | undefined) ?? null,
+    commissionRate:
+      (venue.commissionRate as number | null | undefined)
+      ?? (venue.commission_rate as number | null | undefined)
+      ?? null,
+    operatingHours:
+      (venue.operatingHours as string | null | undefined)
+      ?? (venue.operating_hours as string | null | undefined)
+      ?? null,
+    partnerStatus:
+      (venue.partnerStatus as string | null | undefined)
+      ?? (venue.partner_status as string | null | undefined)
+      ?? null,
+    isActive:
+      (venue.isActive as boolean | null | undefined)
+      ?? (venue.is_active as boolean | null | undefined)
+      ?? null,
+  };
+}
+
 // ── Rule definitions ──────────────────────────────────────────────────────
 
 interface Rule {
