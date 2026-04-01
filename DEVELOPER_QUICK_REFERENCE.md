@@ -1,7 +1,7 @@
 # JoyJoin Developer Quick Reference Guide
 
-**Version:** 2.0  
-**Last Updated:** March 2026  
+**Version:** 2.1  
+**Last Updated:** April 2026  
 **For:** Tech Team Onboarding & Codebase Navigation
 
 ---
@@ -99,8 +99,13 @@ joyjoin-monorepo/
 │   │
 │   └── server/               # Express.js backend
 │       └── src/
-│           ├── routes.ts             # API endpoints (5000+ lines)
-│           ├── storage.ts            # Database storage interface
+│           ├── routes.ts             # Composition root — mounts domain routers
+│           ├── routes/domains/       # Domain route modules (auth, onboarding, admin, …)
+│           ├── repositories/         # Domain data access (usersRepo, paymentsRepo, …)
+│           ├── storage.ts            # Compatibility facade — delegates to repositories/
+│           ├── lib/                  # Cross-cutting helpers (logger, adminAuditLogger, …)
+│           ├── middleware/           # Express middleware (requestId, metrics)
+│           ├── auth/                 # Auth policy helpers (policy.ts)
 │           ├── db.ts                 # Drizzle database connection
 │           ├── index.ts              # Server entry point
 │           ├── wsService.ts          # WebSocket service
@@ -137,27 +142,82 @@ joyjoin-monorepo/
 
 ---
 
+## Server Domain Architecture
+
+> Full reference: `apps/server/src/README.md` · `docs/architecture/current-state.md` · skill: `server-domain-architecture`
+
+`routes.ts` is the **composition root** — it mounts domain routers and registers global middleware. Do not add new inline handler blocks to `routes.ts`; extract them into a domain module instead.
+
+| Layer | Location | Rule |
+|-------|----------|------|
+| Composition root | `routes.ts` | Mounts domain routers; contains transitional legacy handlers |
+| Domain route modules | `routes/domains/*.ts` | Own handlers, validation, service calls for their domain |
+| Persistence layer | `repositories/*.ts` | All new database queries go here — not in `storage.ts` |
+| Compatibility facade | `storage.ts` | Delegates to repositories; do not add new methods |
+| Cross-cutting helpers | `lib/` | `logger.ts`, `adminAuditLogger.ts`, `aiTraceLogger.ts`, `socialIcebreakerStore.ts` |
+| Express middleware | `middleware/` | `requestId.ts` (correlation IDs), `metrics.ts` (Prometheus) |
+| Auth policy | `auth/policy.ts` | `isDevAuthToolsEnabled()`, `canUseMockWechatAuth()` — single source of truth |
+
+Active domain modules in `routes/domains/`:
+
+| Module | Owns |
+|--------|------|
+| `auth.ts` | WeChat auth, session, admin-login, `nextStep` computation |
+| `onboarding.ts` | Onboarding completion endpoints |
+| `assessment.ts` | Personality assessment endpoints |
+| `admin.ts` | Admin management API |
+| `analytics.ts` | Analytics and KPI endpoints |
+| `payments.ts` | WeChat Pay v3 signed integration + webhook verification |
+| `icebreaker.ts` | Social Icebreaker session endpoints |
+| `helpers.ts` | Shared route helpers |
+
+---
+
+## Observability & Ops
+
+> Full reference: `docs/observability.md` · `docs/runbooks/observability.md`
+
+| Concern | File / endpoint |
+|---------|-----------------|
+| Structured logging | `apps/server/src/lib/logger.ts` — use `logger.info/warn/error()`, never `console.log` in server code |
+| Request correlation | `apps/server/src/middleware/requestId.ts` — sets `req.requestId`; bind with `logger.child({ request_id: req.requestId })` |
+| Prometheus metrics | `apps/server/src/middleware/metrics.ts` — HTTP metrics emitted automatically; domain metrics can be added via the metrics module |
+| Metrics scrape endpoint | `GET /api/metrics` |
+| Health check | `GET /api/health` → `{ status: 'ok' }` |
+| Readiness probe | `GET /api/readyz` → verifies DB + config before returning 200 |
+| Admin audit log | `apps/server/src/lib/adminAuditLogger.ts` — emit an audit entry for every sensitive admin action |
+| Synthetic monitoring | `scripts/synthetic/happy-path-probe.mjs` — GitHub Actions schedule (every 5 min) |
+| Infra stack | `infra/` — Prometheus, Alertmanager, Grafana, Loki, Promtail configs |
+
+**Structured logging pattern:**
+```typescript
+import { logger } from '../lib/logger';
+const reqLogger = logger.child({ request_id: req.requestId });
+reqLogger.info('Processing registration', { eventId, userId });
+logger.error('Payment webhook failed', { orderId, error: err.message });
+```
+
+---
+
 ## User Journey & Authentication Flow
 
-**Updated:** 2026-02-04 (Post-Test Signup Flow - Option B)
+**Updated:** 2026-03-23 (server-driven `nextStep`, consolidated onboarding module)
 
 ### Authentication States
 
 The app uses progressive authentication with server-driven navigation:
 
 ```typescript
-// From useAuth hook (extended for post-test signup)
-interface AuthState {
-  isAuthenticated: boolean;       // Has valid session
-  nextStep: string;               // Server-calculated next route
-  profileEssentialComplete: boolean;  // Essential data complete
-  profileExtendedComplete: boolean;   // Extended data complete
-  activeAssessmentSessionId: string | null;  // Active test session
-  
-  // Legacy computed fields (still available)
-  needsRegistration: boolean;     // Phone verified, no profile
-  needsPersonalityTest: boolean;  // Profile exists, no test results
-  needsProfileSetup: boolean;     // Test done, profile incomplete
+// From useAuth hook — server-driven navigation (B1)
+interface UseAuthResult {
+  user: AuthUser | undefined;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  nextStep: NextStepType | undefined;       // Server-calculated next route
+  profileEssentialComplete: boolean | undefined;
+  profileExtendedComplete: boolean | undefined;
+  activeAssessmentSessionId: string | null | undefined;
+  paymentsEnabled: boolean;                 // Feature flag: payment kill switch
 }
 ```
 
@@ -213,15 +273,24 @@ interface AuthState {
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Changes (2026-02-04)
+### Onboarding Architecture Summary
 
-1. **Signup Timing:** Now AFTER personality test (was before)
-2. **Anonymous Testing:** Test results stored locally until login
-3. **WeChat Authentication:** Silent login with test result linking via `POST /api/auth/wechat/login-with-test`
-4. **Simplified Extended Data:** Only Interest Carousel (removed 5 deprecated fields)
-5. **Value-First Approach:** Users see their archetype before committing to signup
-6. **Profile Review Step:** New `/onboarding/review` (`FinalProfileReviewPage`) inserted between Extended Data and Discover; gated by `hasSeenProfileReview` (server-persisted); marked complete via `POST /api/profile-review/complete`
-7. **Guide Deprecated (2026-02-16):** `/guide` page removed from active onboarding; `hasSeenGuide` retained for backward compat
+**Authority chain:** `GET /api/auth/user` (server) → `useAuth()` → `AuthenticatedRouter` → `features/onboarding/active/`
+
+The client **never** computes its own onboarding position. `nextStep` is always the server's value.
+
+| `nextStep` value | Route | Completion signal |
+|----------------|-------|-------------------|
+| `personality-test` | `/personality-test` | `hasCompletedPersonalityTest` (users table) |
+| `essential-data` | `/onboarding/setup` | `profileEssentialComplete` (server-computed) |
+| `extended-data` | `/onboarding/extended` | `hasCompletedInterestsCarousel` (users table) |
+| `profile-review` | `/onboarding/review` | `hasSeenProfileReview` (users table) |
+| `guide` / `discover` | `/discover` | `hasSeenGuide` (users table) |
+
+Active onboarding pages: `apps/user-client/src/features/onboarding/active/pages/`  
+Legacy surfaces: `apps/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
+
+> Full reference: `docs/onboarding-flow.md` · skill: `onboarding-state-architecture`
 
 ### Deprecated Fields
 
@@ -316,7 +385,7 @@ npm run admin:create admin MySecretPass99 BYPASSSECRET12345678
 npm run admin:create ops_user OpPass99 BYPASSSECRET12345678 operator "运营小王"
 ```
 
-> **Transitional note:** Existing admins with `users.isAdmin = true` (phone-based) still work via the `/api/auth/admin-login` fallback. Migrate them by creating a new `admin_accounts` entry using the CLI.
+> **Admin auth:** New admins must use `admin_accounts` (username-based). A legacy `users.isAdmin` fallback remains at `/api/auth/admin-login` for existing phone-based admins; migrate them to `admin_accounts` using the CLI above. Do not create new phone-based admin accounts.
 
 ---
 
@@ -910,9 +979,25 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `SESSION_SECRET` | Express session encryption |
+| `JWT_SECRET` | JWT signing |
+| `WECHAT_SECRET` | WeChat OAuth app secret |
+| `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
 | `AMAP_API_KEY` | Gaode Maps API |
 | `AMAP_SECURITY_KEY` | Gaode Maps security |
 | `DEEPSEEK_API_KEY` | AI service (via integration) |
+| `WECHAT_PAY_MCH_ID` | WeChat Pay v3 merchant ID |
+| `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay v3 RSA private key |
+| `WECHAT_PAY_SERIAL_NO` | WeChat Pay v3 certificate serial |
+| `WECHAT_PAY_APIV3_KEY` | WeChat Pay v3 API key (webhook decryption) |
+
+### Dev / feature-flag env vars
+
+| Variable | Purpose |
+|----------|---------|
+| `ENABLE_DEV_AUTH_TOOLS` | `1` to enable dev/test auth routes (non-production only) |
+| `DEBUG_AUTH` | `1` to enable verbose auth debug logging (non-production only) |
+| `ENABLE_EVENT_THEME_TITLE_GENERATION` | `true`/`false` to toggle AI event theme generation |
+| `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
 
 ### Auto-Populated (via Replit)
 
@@ -1034,13 +1119,13 @@ const mutation = useMutation({
 | Active Flow Reference | `DEVELOPER_QUICK_REFERENCE.md` (this file) | **Primary dev reference** |
 | Product Requirements | `PRODUCT_REQUIREMENTS.md` | Full PRD |
 | Design Guidelines | `design_guidelines.md` | - |
-| API Routes | `apps/server/src/routes.ts` | - |
+| API Routes | `apps/server/src/routes.ts` + `apps/server/src/routes/domains/` | Composition root + domain modules |
 | Database Schema | `packages/shared/src/schema.ts` | - |
 | Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
-| Changelog | `CHANGELOG_24H.md` | - |
 | Supplementary (outdated sections) | `QUICK_REFERENCE.md` | ⚠️ Supplementary only — not authoritative |
 | **Admin RBAC Matrix** | `docs/admin-rbac-matrix.md` | Admin endpoint → role requirements |
 | **Admin Incident Runbook** | `docs/runbooks/admin-incident-handling.md` | Ops tasks, triage, daily checklist |
+| **Observability Guide** | `docs/observability.md` | Structured logging, Prometheus, Grafana, alerting, synthetic monitoring |
 | **Internal Beta Launch Risks** | `docs/launch-risks.md` | MVP caveats + risk acceptance sign-off |
 
 ---
