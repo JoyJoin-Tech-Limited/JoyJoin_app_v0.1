@@ -2396,10 +2396,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("[BlindBoxPayment] updated eventPool after registration:", updatedPool);
 
-      const currentUser = await storage.getUser(userId);
       broadcastPoolRegistrationAdded(
         pool.id,
-        currentUser?.archetype ?? currentUser?.primaryArchetype ?? "新朋友",
+        undefined,
         userId,
         updatedPool?.totalRegistrations ?? pool.totalRegistrations + 1,
       );
