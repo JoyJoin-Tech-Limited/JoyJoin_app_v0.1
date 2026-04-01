@@ -70,9 +70,9 @@ function nextStepToOnboardingStep(nextStep: NextStepType): OnboardingStep {
  * `/api/auth/user`. The legacy boolean reconstruction is kept only as an explicit
  * fallback for the rare case where `nextStep` is absent.
  */
-export function calculateOnboardingProgress(user: AuthUser | undefined): OnboardingProgress {
+export function calculateOnboardingProgress(user: AuthUser | null | undefined): OnboardingProgress {
   // --- Completion signals (server-owned flags preferred) ---
-  const hasAccount = Boolean(user?.id);
+  const hasAuthenticatedUser = Boolean(user?.id);
   const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
   // Prefer server-computed flag; fall back to field-presence check only if unavailable.
   const hasCompletedEssentialData =
@@ -83,7 +83,8 @@ export function calculateOnboardingProgress(user: AuthUser | undefined): Onboard
   const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
 
   const steps = {
-    registration: hasAccount,
+    // `registration` here means account creation/authentication is complete.
+    registration: hasAuthenticatedUser,
     personalityTest: hasCompletedPersonalityTest,
     essentialData: hasCompletedEssentialData,
     extendedData: hasCompletedExtendedData,
@@ -97,7 +98,7 @@ export function calculateOnboardingProgress(user: AuthUser | undefined): Onboard
   } else {
     // Fallback: reconstruct from server-owned completion flags when nextStep is absent.
     currentStep = 'complete';
-    if (!hasAccount) {
+    if (!hasAuthenticatedUser) {
       currentStep = 'registration';
     } else if (!hasCompletedPersonalityTest) {
       currentStep = 'personality-test';
@@ -112,7 +113,7 @@ export function calculateOnboardingProgress(user: AuthUser | undefined): Onboard
 
   // Calculate progress
   const currentIndex = STEP_ORDER.indexOf(currentStep);
-  const totalSteps = STEP_ORDER.length - 1; // 不包括 'complete'
+  const totalSteps = STEP_ORDER.length - 1; // Excludes the terminal 'complete' state.
   const progressPercent = Math.round((currentIndex / totalSteps) * 100);
 
   return {
