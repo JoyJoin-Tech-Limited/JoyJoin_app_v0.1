@@ -101,11 +101,11 @@ export default function InvitePage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/10">
       <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center h-14 px-4 gap-3">
-          <Link href="/discover">
-            <Button variant="ghost" size="icon" data-testid="button-back">
+          <Button asChild variant="ghost" size="icon" aria-label="返回发现页" data-testid="button-back">
+            <Link href="/discover">
               <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <h1 className="text-lg font-semibold">邀请好友</h1>
         </div>
       </header>
@@ -248,6 +248,7 @@ export default function InvitePage() {
                 <Button 
                   variant="outline" 
                   size="icon"
+                  aria-label={copied ? "已复制邀请链接" : "复制邀请链接"}
                   onClick={handleCopyLink}
                   disabled={isLoading || !inviteLink}
                   data-testid="button-copy-link"
@@ -268,7 +269,8 @@ export default function InvitePage() {
                 variant="outline" 
                 className="w-full"
                 onClick={handleCopyLink}
-                disabled={isLoading || !inviteLink}
+                disabled={!inviteLink}
+                loading={isLoading}
                 data-testid="button-copy"
               >
                 <Copy className="h-4 w-4 mr-2" />
@@ -277,7 +279,8 @@ export default function InvitePage() {
               <Button 
                 className="w-full"
                 onClick={handleShare}
-                disabled={isLoading || !inviteLink}
+                disabled={!inviteLink}
+                loading={isLoading}
                 data-testid="button-share"
               >
                 <Share2 className="h-4 w-4 mr-2" />

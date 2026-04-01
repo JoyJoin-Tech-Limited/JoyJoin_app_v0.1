@@ -30,11 +30,12 @@ const WEBHOOK_TOLERANCE_SECONDS = 300;
 type WechatApiMethod = "GET" | "POST";
 
 type WechatWebhookHeaders = Record<string, string | string[] | undefined>;
+type WechatWebhookPayload = Record<string, unknown>;
 
 interface WechatWebhookRequest {
   headers: WechatWebhookHeaders;
-  rawBody?: Buffer | string;
-  payload?: any;
+  rawBody: Buffer | string;
+  payload: WechatWebhookPayload;
 }
 
 function getSingleHeaderValue(value: string | string[] | undefined): string | undefined {
@@ -48,11 +49,6 @@ interface WechatPayConfig {
   privateKey: string;
   apiV3Key: string;
   notifyUrl: string;
-}
-
-interface WechatWebhookConfig {
-  platformPublicKey: string;
-  platformSerial?: string;
 }
 
 export interface CreatePaymentParams {
@@ -212,32 +208,41 @@ export class PaymentService {
     // ── 1. Signature verification ──────────────────────────────────────────
     const isDevMode = process.env.NODE_ENV === "development";
     if (!isDevMode) {
-      const signatureValid = this.verifySignature(rawBody, headers);
+      const signatureValid = this.verifySignature(normalizedRequest.rawBody, normalizedRequest.headers);
       if (!signatureValid) {
         console.warn("[Payment] Webhook rejected: invalid signature");
-        throw Object.assign(new Error("Invalid webhook signature"), { status: 401 });
+        throw this.createHttpError(401, "Invalid webhook signature");
       }
     }
 
-    const { resource, event_type } = payload;
+    const eventType = normalizedRequest.payload.event_type;
+    const resource = normalizedRequest.payload.resource;
 
-    if (event_type === "TRANSACTION.SUCCESS") {
-      // Payment successful
-      const { out_trade_no, transaction_id } = resource.ciphertext
-        ? this.decryptResource(resource) // Decrypt if encrypted
-        : resource;
+    if (typeof eventType !== "string" || !resource || typeof resource !== "object") {
+      throw this.createHttpError(400, "Invalid webhook payload");
+    }
 
-      await this.handlePaymentSuccess(out_trade_no, transaction_id);
-    } else if (event_type === "REFUND.SUCCESS") {
-      // Refund successful
-      const { out_trade_no } = resource.ciphertext
-        ? this.decryptResource(resource)
-        : resource;
+    if (eventType === "TRANSACTION.SUCCESS") {
+      const paymentResource = this.getWebhookResource(resource);
+      const transactionPayload = paymentResource.ciphertext
+        ? this.decryptResource(this.getEncryptedWebhookResource(paymentResource))
+        : paymentResource;
 
-      await this.handleRefundSuccess(out_trade_no);
+      await this.handlePaymentSuccess(
+        this.getRequiredWebhookString(transactionPayload.out_trade_no, "out_trade_no"),
+        this.getRequiredWebhookString(transactionPayload.transaction_id, "transaction_id")
+      );
+    } else if (eventType === "REFUND.SUCCESS") {
+      const refundResource = this.getWebhookResource(resource);
+      const refundPayload = refundResource.ciphertext
+        ? this.decryptResource(this.getEncryptedWebhookResource(refundResource))
+        : refundResource;
+
+      await this.handleRefundSuccess(
+        this.getRequiredWebhookString(refundPayload.out_trade_no, "out_trade_no")
+      );
     } else {
-      // Unknown event type — log but don't error (WeChat may add new types)
-      console.log(`[Payment] Received unhandled webhook event_type: ${event_type}`);
+      console.log(`[Payment] Received unhandled webhook event_type: ${eventType}`);
     }
   }
 
@@ -407,7 +412,9 @@ export class PaymentService {
    *
    * Production path: RSA-SHA256 with the WeChat Pay platform certificate
    *   (set WECHAT_PAY_PLATFORM_CERT to the PEM certificate contents).
-   *   Outside development, missing certs cause verification to fail closed.
+   *   For compatibility, WECHAT_PAY_PLATFORM_PUBLIC_KEY is also accepted when
+   *   certificate material is unavailable. Outside development, missing keys
+   *   cause verification to fail closed.
    *
    * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
    */
@@ -449,7 +456,7 @@ export class PaymentService {
     // Reject stale timestamps (> 5 minutes) to prevent replay attacks
     const nowSeconds = Math.floor(Date.now() / 1000);
     const requestSeconds = parseInt(timestamp, 10);
-    if (isNaN(requestSeconds) || Math.abs(nowSeconds - requestSeconds) > 300) {
+    if (isNaN(requestSeconds) || Math.abs(nowSeconds - requestSeconds) > WEBHOOK_TOLERANCE_SECONDS) {
       console.warn("[Payment] Webhook rejected: stale or invalid timestamp");
       return false;
     }
@@ -457,7 +464,7 @@ export class PaymentService {
     const message = `${timestamp}\n${nonce}\n${rawBody}\n`;
 
     // ── RSA-SHA256 path (required outside development) ────────────────────
-    const platformCert = process.env.WECHAT_PAY_PLATFORM_CERT;
+    const platformCert = process.env.WECHAT_PAY_PLATFORM_CERT ?? process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY;
     try {
       if (!platformCert) {
         console.warn(
@@ -581,13 +588,6 @@ export class PaymentService {
     };
   }
 
-  private getWebhookConfig(): WechatWebhookConfig {
-    return {
-      platformPublicKey: this.normalizePem(this.requireEnv("WECHAT_PAY_PLATFORM_PUBLIC_KEY", process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY)),
-      platformSerial: process.env.WECHAT_PAY_PLATFORM_SERIAL,
-    };
-  }
-
   private getPaymentDescription(paymentType: CreatePaymentParams["paymentType"]): string {
     if (paymentType === "event_bundle") return "JoyJoin月度活动礼包";
     if (paymentType === "subscription") return "JoyJoin活动礼包";
@@ -614,8 +614,20 @@ export class PaymentService {
   }
 
   private getHeader(headers: WechatWebhookHeaders, name: string): string | undefined {
-    const value = headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()];
-    return Array.isArray(value) ? value[0] : value;
+    const aliases = [name, name.toLowerCase(), name.toUpperCase()];
+    if (name === "timestamp" || name === "nonce" || name === "signature" || name === "serial") {
+      aliases.push(`wechatpay-${name}`);
+      aliases.push(`WECHATPAY-${name.toUpperCase()}`);
+    }
+
+    for (const alias of aliases) {
+      const value = headers[alias];
+      if (value !== undefined) {
+        return Array.isArray(value) ? value[0] : value;
+      }
+    }
+
+    return undefined;
   }
 
   private normalizePem(value: string): string {
@@ -626,6 +638,53 @@ export class PaymentService {
     if (!value) {
       throw new Error(`Missing required WeChat Pay configuration: ${name}`);
     }
+    return value;
+  }
+
+  private normalizeWebhookRequest(
+    payloadOrRequest: WechatWebhookPayload | WechatWebhookRequest,
+    rawBody?: string,
+    headers: WechatWebhookHeaders = {}
+  ): { payload: WechatWebhookPayload; rawBody: string; headers: WechatWebhookHeaders } {
+    if (rawBody !== undefined) {
+      return { payload: payloadOrRequest as WechatWebhookPayload, rawBody, headers };
+    }
+
+    const request = payloadOrRequest as WechatWebhookRequest;
+    const normalizedRawBody = Buffer.isBuffer(request.rawBody)
+      ? request.rawBody.toString("utf8")
+      : request.rawBody;
+
+    return {
+      payload: request.payload,
+      rawBody: normalizedRawBody,
+      headers: request.headers ?? {},
+    };
+  }
+
+  private getWebhookResource(resource: unknown): Record<string, unknown> {
+    if (!resource || typeof resource !== "object") {
+      throw this.createHttpError(400, "Invalid webhook payload resource");
+    }
+
+    return resource as Record<string, unknown>;
+  }
+
+  private getEncryptedWebhookResource(resource: Record<string, unknown>) {
+    const ciphertext = this.getRequiredWebhookString(resource.ciphertext, "resource.ciphertext");
+    const nonce = this.getRequiredWebhookString(resource.nonce, "resource.nonce");
+    const associated_data =
+      typeof resource.associated_data === "string" ? resource.associated_data : "";
+    const algorithm = typeof resource.algorithm === "string" ? resource.algorithm : undefined;
+
+    return { ciphertext, nonce, associated_data, algorithm };
+  }
+
+  private getRequiredWebhookString(value: unknown, fieldName: string): string {
+    if (typeof value !== "string" || value.length === 0) {
+      throw this.createHttpError(400, `Missing ${fieldName} in webhook payload`);
+    }
+
     return value;
   }
 
