@@ -1,0 +1,59 @@
+skill: monorepo-workspace-governance
+
+primary_ownership: >
+  Root package.json as orchestration-only, workspace dependency ownership,
+  normalised scripts/tsconfig structure, and env/secret/legacy guardrails.
+
+use_when:
+  - adding or removing a dependency in any workspace
+  - modifying root package.json scripts or workspace config
+  - moving code between workspaces or creating a new workspace
+  - updating or troubleshooting tsconfig across workspaces
+  - a guardrails script is failing due to missing or mis-named scripts
+  - managing environment variables or secrets at the repo level
+
+do_not_use_when:
+  - task is about individual route placement inside the server workspace (use server-domain-architecture)
+  - task is about adding a regression test only (use testing-and-regression-guardrails)
+  - task is about a purely UI-level change with no package or config impact
+
+strong_triggers:
+  - add a dependency
+  - change root scripts
+  - move code between workspaces
+  - update tsconfig
+  - guardrails is failing
+  - root package.json
+  - workspace dependency
+  - npm workspaces
+  - check-guardrails
+  - check-workspace-dependency-ownership
+  - package.json scripts
+  - tsconfig.json
+  - tsconfig.node.json
+  - monorepo layout
+  - workspace config
+  - npm install
+  - peerDependencies
+  - devDependencies
+  - scripts/check-guardrails.mjs
+  - scripts/check-workspace-dependency-ownership.mjs
+
+owned_files:
+  - package.json
+  - scripts/check-guardrails.mjs
+  - scripts/check-workspace-dependency-ownership.mjs
+
+owned_paths: []
+
+owned_symbols:
+  - workspaces
+  - check-guardrails
+
+related_skills:
+  - skill: testing-and-regression-guardrails
+    when: guardrails failure needs a regression test or structural invariant test
+  - skill: server-domain-architecture
+    when: new workspace involves adding server-side routes or domain services
+  - skill: platform-observability-and-ops
+    when: env variable management affects observability or metrics configuration

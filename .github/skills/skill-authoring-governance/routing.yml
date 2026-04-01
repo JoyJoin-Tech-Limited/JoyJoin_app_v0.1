@@ -1,0 +1,54 @@
+skill: skill-authoring-governance
+
+primary_ownership: >
+  Governing standard for creating, updating, auditing, and improving repo skills
+  under .github/skills/ — frontmatter, file structure, trigger phrases,
+  progressive disclosure, and routing metadata conventions.
+
+use_when:
+  - creating a new skill under .github/skills/
+  - writing or updating a SKILL.md file
+  - updating routing metadata (routing.yml) for a skill
+  - auditing existing skills for quality, consistency, or staleness
+  - reviewing a PR that adds or modifies skill files
+  - checking frontmatter correctness (name, description, trigger phrases)
+  - bringing a skill up to standard (examples, troubleshooting, review checklist)
+
+do_not_use_when:
+  - task is about using a skill to solve a product problem (use the relevant domain skill)
+  - task is about routing system implementation (use validate-skill-routing.mjs or the router directly)
+  - task is purely about documentation outside .github/skills/ (use docs-sync)
+
+strong_triggers:
+  - create a new skill
+  - write a skill
+  - update SKILL.md
+  - skill frontmatter
+  - skill description
+  - trigger phrases
+  - routing metadata
+  - .github/skills
+  - SKILL.md
+  - skill authoring
+  - skill conventions
+  - audit our skills
+  - skill quality
+  - skill system
+  - progressive disclosure
+  - skill review checklist
+  - frontmatter name
+  - skill-authoring-governance
+
+owned_files:
+  - .github/skills/README.md
+  - .github/skills/routing-schema.yml
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: docs-sync
+    when: skill update is part of a broader post-PR documentation hygiene pass
+  - skill: testing-and-regression-guardrails
+    when: skill authoring change needs a validation or structural test to lock it in

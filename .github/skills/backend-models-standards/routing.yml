@@ -1,0 +1,55 @@
+skill: backend-models-standards
+
+primary_ownership: >
+  Drizzle ORM schema definitions, table naming conventions, column data types,
+  constraints, relationships, indexes, and multi-layer validation patterns.
+
+use_when:
+  - creating or modifying a Drizzle schema file or table definition
+  - adding a foreign key, index, or unique constraint
+  - configuring cascade behaviour on a relationship
+  - deciding which data type to use for a column
+  - adding validation that belongs at the model/schema layer
+
+do_not_use_when:
+  - task is about route handler structure (use server-domain-architecture)
+  - task is about transaction wrapping or idempotency (use reliability-and-state-integrity)
+  - task is about seeding or test fixtures only, with no schema change
+
+strong_triggers:
+  - add a new table
+  - define a model
+  - add a foreign key
+  - configure cascade behavior
+  - what data type should I use
+  - add an index
+  - enforce a unique constraint
+  - drizzle schema
+  - pgTable
+  - integer column
+  - text column
+  - timestamp column
+  - onDelete cascade
+  - onUpdate cascade
+  - primaryKey
+  - uniqueIndex
+  - db/schema
+  - apps/server/src/db
+
+owned_files:
+  - apps/server/src/db.ts
+
+owned_paths: []
+
+owned_symbols:
+  - pgTable
+  - uniqueIndex
+  - primaryKey
+
+related_skills:
+  - skill: server-domain-architecture
+    when: schema change requires a matching repository or storage layer update
+  - skill: reliability-and-state-integrity
+    when: model change involves transactional writes or idempotency constraints
+  - skill: testing-and-regression-guardrails
+    when: locking in schema invariants or migration correctness with regression tests

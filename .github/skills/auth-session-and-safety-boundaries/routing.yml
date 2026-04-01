@@ -1,0 +1,66 @@
+skill: auth-session-and-safety-boundaries
+
+primary_ownership: >
+  Policy-based auth gating, typed request/session contracts, explicit
+  non-production-only debug/dev auth surfaces, and fail-closed handling
+  for sensitive flows.
+
+use_when:
+  - adding or reviewing a route that requires authentication or role checks
+  - implementing or auditing admin-only endpoints
+  - adding dev/test authentication tooling that must be gated to non-production
+  - validating webhook signatures or external callback payloads
+  - ensuring a sensitive flow fails closed on error rather than open
+
+do_not_use_when:
+  - task is purely about route placement structure (use server-domain-architecture)
+  - task is about multi-step transaction atomicity only (use reliability-and-state-integrity)
+  - task is about onboarding routing logic only (use onboarding-state-architecture)
+
+strong_triggers:
+  - gate this route for admin only
+  - add an auth check
+  - register a dev-only endpoint
+  - verify a webhook signature
+  - fail safely on auth error
+  - requireAuth
+  - requireAdmin
+  - isAuthenticated
+  - ENABLE_DEV_AUTH_TOOLS
+  - VITE_ENABLE_DEV_TOOLS
+  - session middleware
+  - session secret
+  - policy.ts
+  - auth/policy
+  - phoneAuth
+  - wechat auth
+  - admin middleware
+  - webhook signature
+  - fail closed
+  - non-production auth
+
+owned_files:
+  - apps/server/src/auth/policy.ts
+  - apps/server/src/phoneAuth.ts
+  - apps/server/src/routes/domains/auth.ts
+  - apps/server/src/middleware/**
+
+owned_paths:
+  - /api/auth/**
+  - /api/admin/**
+
+owned_symbols:
+  - requireAuth
+  - requireAdmin
+  - isAuthenticated
+  - ENABLE_DEV_AUTH_TOOLS
+
+related_skills:
+  - skill: server-domain-architecture
+    when: auth change requires adding or restructuring an Express route handler
+  - skill: reliability-and-state-integrity
+    when: auth flow must be idempotent or fail-closed with transaction guards
+  - skill: platform-observability-and-ops
+    when: auth events (login, failure, admin action) need audit logging
+  - skill: testing-and-regression-guardrails
+    when: locking in auth policy invariants or dev-auth isolation with regression tests
