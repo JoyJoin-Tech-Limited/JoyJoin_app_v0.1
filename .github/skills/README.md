@@ -70,6 +70,16 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 ---
 
+## Documentation
+
+Keep docs aligned with the active codebase. Use after significant code changes or when docs are visibly stale.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`docs-sync`](./docs-sync/SKILL.md) | Scan code changes, map them to documentation targets, draft minimal updates, and enforce active-flow-only guardrails. Use when docs need syncing after a PR merges or an architecture decision is made. |
+
+---
+
 ## Existing Specialized Skills
 
 | Skill | What it covers |
@@ -97,6 +107,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
+| How do I keep docs in sync after a code change? | `docs-sync` |
 
 ---
 
