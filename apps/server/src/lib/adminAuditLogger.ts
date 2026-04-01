@@ -29,23 +29,26 @@ import { randomUUID } from 'node:crypto';
  * All recognizable sensitive admin action types.
  * Extend this union as new sensitive actions are added.
  */
-export type AdminAuditAction =
+export const ADMIN_AUDIT_ACTIONS = [
   // Admin account management
-  | 'ADMIN_LOGIN'
-  | 'ADMIN_ACCOUNT_CREATED'
-  | 'ADMIN_ACCOUNT_UPDATED'
-  | 'ADMIN_PASSWORD_RESET'
+  'ADMIN_LOGIN',
+  'ADMIN_ACCOUNT_CREATED',
+  'ADMIN_ACCOUNT_UPDATED',
+  'ADMIN_PASSWORD_RESET',
   // User moderation
-  | 'USER_BANNED'
-  | 'USER_UNBANNED'
+  'USER_BANNED',
+  'USER_UNBANNED',
   // Points / coins
-  | 'ADMIN_POINTS_ADJUSTED'
+  'ADMIN_POINTS_ADJUSTED',
   // Attendance
-  | 'ATTENDANCE_OVERRIDE'
+  'ATTENDANCE_OVERRIDE',
   // Financial
-  | 'PAYMENT_REFUND_INITIATED'
-  // Generic fallback for one-off sensitive mutations
-  | string;
+  'PAYMENT_REFUND_INITIATED',
+  // Runtime fallback for malformed / untyped callers
+  'OTHER',
+] as const;
+
+export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
 
 // ── Record shape ────────────────────────────────────────────────────────────
 
@@ -58,8 +61,9 @@ export interface AdminAuditRecord {
 
   /**
    * Identifier of the admin who performed the action.
-   * Use the `adminAccount.id` from RBAC sessions; fall back to `'legacy_user'`
-   * when the action is performed via the older `isAdmin` flag on the users table.
+   * Use the `adminAccount.id` from RBAC sessions; fall back to the legacy
+   * `session.userId` when the action is performed via the older `isAdmin`
+   * flag on the users table.
    */
   adminId: string;
 
@@ -116,17 +120,19 @@ export function logAdminAudit(
   fields: Omit<AdminAuditRecord, 'auditId' | 'timestamp'> &
     Partial<Pick<AdminAuditRecord, 'auditId' | 'timestamp'>>,
 ): void {
+  const safeContext = redactSensitiveFields(fields.context);
+  const normalizedAction = normalizeAction(fields.action);
   const record: AdminAuditRecord = {
     auditId: fields.auditId ?? randomUUID(),
     timestamp: fields.timestamp ?? new Date().toISOString(),
-    adminId: fields.adminId,
+    adminId: normalizeRequiredString(fields.adminId, 'unknown'),
     adminRole: fields.adminRole,
-    action: fields.action,
-    targetEntityType: fields.targetEntityType,
+    action: normalizedAction,
+    targetEntityType: normalizeRequiredString(fields.targetEntityType, 'unknown'),
     targetEntityId: fields.targetEntityId,
-    before: fields.before,
-    after: fields.after,
-    context: fields.context,
+    before: redactSensitiveFields(fields.before),
+    after: redactSensitiveFields(fields.after),
+    context: buildContextWithOriginalAction(normalizedAction, fields.action, safeContext),
   };
 
   // Strip undefined keys for compact output
@@ -135,4 +141,67 @@ export function logAdminAudit(
   ) as AdminAuditRecord;
 
   console.log(`[AdminAudit] ${JSON.stringify(compact)}`);
+}
+
+const REDACTED_VALUE = '[REDACTED]';
+const SENSITIVE_KEY_PATTERN = /(password|secret|token|session|cookie|authorization|apikey|api_key)/i;
+
+function redactSensitiveFields<T>(value: T): T {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSensitiveFields(entry)) as T;
+  }
+
+  if (typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => [
+      key,
+      SENSITIVE_KEY_PATTERN.test(key)
+        ? REDACTED_VALUE
+        : redactSensitiveFields(entryValue),
+    ]),
+  ) as T;
+}
+
+function normalizeRequiredString(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function normalizeAction(value: unknown): AdminAuditAction {
+  if (typeof value !== 'string') {
+    return 'OTHER';
+  }
+
+  const trimmed = value.trim();
+  return isAdminAuditAction(trimmed) ? trimmed : 'OTHER';
+}
+
+function buildContextWithOriginalAction(
+  normalizedAction: AdminAuditAction,
+  originalAction: unknown,
+  safeContext: AdminAuditRecord['context'],
+): AdminAuditRecord['context'] {
+  if (normalizedAction !== 'OTHER' || typeof originalAction !== 'string' || !originalAction.trim()) {
+    return safeContext;
+  }
+
+  return {
+    ...((safeContext ?? {}) as Record<string, unknown>),
+    originalAction: originalAction.trim(),
+  };
+}
+
+function isAdminAuditAction(value: string): value is AdminAuditAction {
+  return (ADMIN_AUDIT_ACTIONS as readonly string[]).includes(value);
 }

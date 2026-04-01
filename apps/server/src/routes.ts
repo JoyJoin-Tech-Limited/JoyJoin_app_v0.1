@@ -130,6 +130,10 @@ import { z } from "zod";
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
 
+function getActingAdminId(req: any): string {
+  return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+}
+
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
 const roleMapping: Record<string, Record<string, string>> = {
   "1": { "A": "开心柯基", "B": "淡定海豚", "C": "隐身猫", "D": "织网蛛" },
@@ -7637,7 +7641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       logAdminAudit({
         action: 'USER_BANNED',
-        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'user',
         targetEntityId: req.params.id,
@@ -7664,7 +7668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       logAdminAudit({
         action: 'USER_UNBANNED',
-        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'user',
         targetEntityId: req.params.id,
@@ -10329,7 +10333,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       logAdminAudit({
         action: 'PAYMENT_REFUND_INITIATED',
-        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'payment',
         targetEntityId: paymentId,
@@ -13841,6 +13845,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           target: [schema.blindBoxPreAttendance.eventId, schema.blindBoxPreAttendance.userId],
           set: { status, updatedAt: new Date() },
         });
+
+      logAdminAudit({
+        action: 'ATTENDANCE_OVERRIDE',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'blind_box_pre_attendance',
+        targetEntityId: `${eventId}:${userId}`,
+        context: { eventId, userId, newStatus: status },
+      });
 
       res.json({ success: true, status });
     } catch (error) {

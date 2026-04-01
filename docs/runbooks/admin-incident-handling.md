@@ -24,7 +24,7 @@
 2. Enter admin username and password.
 3. On success the session cookie is set and you are redirected to the dashboard.
 
-**Session issues:** Admin sessions expire when the session store is cleared (server restart or Replit sleep). Log out and log in again.
+**Session issues:** Admin sessions are stored in PostgreSQL and normally survive server restarts. Sessions can drop if the session has expired, cookies were cleared/blocked, or the database is temporarily unavailable. In most cases, log out and log in again; if this keeps happening, check database status and browser cookie settings.
 
 **Forgot password / reset:**
 - Only a `super_admin` can reset another admin's password.
@@ -55,7 +55,7 @@ Attendance overrides are used when a user's self-reported pre-attendance status 
 1. In the admin portal, navigate to the event and open the **Attendance** tab.
 2. Use the status dropdown next to the user's name.
 
-**API equivalent:**
+**API equivalent (used by the current admin client):**
 ```
 PATCH /api/admin/blind-box-events/:eventId/attendees/:userId/attendance
 { "status": "confirmed" }   // or "late", "absent", "pending"
@@ -63,7 +63,10 @@ PATCH /api/admin/blind-box-events/:eventId/attendees/:userId/attendance
 
 All overrides are audit-logged (`ATTENDANCE_OVERRIDE`) with `eventId`, `userId`, and `newStatus`.
 
-**File:** `apps/server/src/storage.ts` → `adminOverrideAttendanceStatus()`
+**Files:**
+- Active admin UI route: `apps/admin-client/src/components/AttendanceSummaryTab.tsx`
+- Blind-box override handler: `apps/server/src/routes.ts` → `PATCH /api/admin/blind-box-events/:eventId/attendees/:userId/attendance`
+- Legacy/general attendance helper: `apps/server/src/storage.ts` → `adminOverrideAttendanceStatus()`
 
 ---
 

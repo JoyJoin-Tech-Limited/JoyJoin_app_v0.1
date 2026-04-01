@@ -68,7 +68,7 @@ describe('logAdminAudit', () => {
     const record = captureAuditRecord();
     expect(typeof record.auditId).toBe('string');
     expect(record.auditId.length).toBeGreaterThan(0);
-    expect(() => new Date(record.timestamp)).not.toThrow();
+    expect(Number.isNaN(Date.parse(record.timestamp))).toBe(false);
   });
 
   it('should accept explicit auditId and timestamp overrides', () => {
@@ -128,7 +128,7 @@ describe('logAdminAudit', () => {
       action: 'ATTENDANCE_OVERRIDE',
       adminId: 'admin-1',
       targetEntityType: 'event_attendance',
-      targetEntityId: 'user-5',
+      targetEntityId: 'evt-1:user-5',
       context: { eventId: 'evt-1', userId: 'user-5', newStatus: 'confirmed' },
     });
 
@@ -171,5 +171,55 @@ describe('logAdminAudit', () => {
     expect(serialised).not.toMatch(/"newPassword"/i);
     expect(serialised).not.toMatch(/"passwordHash"/i);
     expect(serialised).not.toMatch(/"password"\s*:/i);
+  });
+
+  it('should redact sensitive keys recursively from before/after/context', () => {
+    logAdminAudit({
+      action: 'ADMIN_ACCOUNT_UPDATED',
+      adminId: 'admin-1',
+      targetEntityType: 'admin_account',
+      targetEntityId: 'admin-5',
+      before: {
+        passwordHash: 'hashed-secret',
+        nested: { apiToken: 'abc123' },
+      },
+      after: {
+        profile: {
+          sessionCookie: 'cookie-value',
+        },
+      },
+      context: {
+        resetSecret: 'super-secret',
+        safeValue: 'kept',
+      },
+    });
+
+    const record = captureAuditRecord();
+    expect(record.before).toEqual({
+      passwordHash: '[REDACTED]',
+      nested: { apiToken: '[REDACTED]' },
+    });
+    expect(record.after).toEqual({
+      profile: { sessionCookie: '[REDACTED]' },
+    });
+    expect(record.context).toEqual({
+      resetSecret: '[REDACTED]',
+      safeValue: 'kept',
+    });
+  });
+
+  it('should normalize missing required fields for untyped callers', () => {
+    logAdminAudit({
+      action: 'NOT_A_REAL_ACTION' as any,
+      adminId: '' as any,
+      targetEntityType: '' as any,
+      targetEntityId: 'entity-1',
+    });
+
+    const record = captureAuditRecord();
+    expect(record.action).toBe('OTHER');
+    expect(record.adminId).toBe('unknown');
+    expect(record.targetEntityType).toBe('unknown');
+    expect(record.context).toEqual({ originalAction: 'NOT_A_REAL_ACTION' });
   });
 });

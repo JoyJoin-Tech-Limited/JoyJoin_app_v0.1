@@ -7,6 +7,10 @@ type AdminRole = (typeof VALID_ADMIN_ROLES)[number];
 
 const INVALID_CREDENTIALS_MESSAGE = "用户名或密码错误";
 
+function getActingAdminId(req: Request): string {
+  return (req as any).adminAccount?.id ?? (req.session as any)?.userId ?? "unknown";
+}
+
 async function establishAdminSession(req: Request, adminAccountId: string, adminRole: string) {
   await new Promise<void>((resolve, reject) => {
     req.session.regenerate((err: any) => {
@@ -186,7 +190,7 @@ export function registerAdminAuthRoutes(app: Express) {
 
       logAdminAudit({
         action: 'ADMIN_ACCOUNT_CREATED',
-        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'admin_account',
         targetEntityId: account.id,
@@ -223,7 +227,7 @@ export function registerAdminAuthRoutes(app: Express) {
 
       logAdminAudit({
         action: 'ADMIN_ACCOUNT_UPDATED',
-        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'admin_account',
         targetEntityId: id,
@@ -250,7 +254,7 @@ export function registerAdminAuthRoutes(app: Express) {
 
       logAdminAudit({
         action: 'ADMIN_PASSWORD_RESET',
-        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminId: getActingAdminId(req),
         adminRole: (req as any).adminRole,
         targetEntityType: 'admin_account',
         targetEntityId: id,

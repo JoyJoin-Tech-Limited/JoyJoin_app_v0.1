@@ -934,7 +934,7 @@ middleware.
 npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
 ```
 
-Expected output: 4 tests passing. The snapshot test also prints the full route/middleware
+Expected output: 5 tests passing. The snapshot test also prints the full route/middleware
 table to the CI log for audit purposes.
 
 ### Audit Logging
