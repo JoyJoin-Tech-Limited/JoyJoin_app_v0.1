@@ -460,26 +460,38 @@ activeAssessmentSessionId: string | null;
 
 ## Matching-State UI Architecture
 
-> **Guardrail:** All matching-state screens must extend the shared `MatchingStateLayout` rather than creating one-off dark-background layouts. Do not duplicate `matching-bg.svg`.
+> **Guardrail:** Full-screen matching-status pages must extend the shared `MatchingStateLayout` rather than creating one-off dark-background layouts. Do not duplicate `matching-bg.svg`.
 
 ### Shared Layout — `MatchingStateLayout`
 
 **File:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
 
-Full-screen layout shell shared by all matching-state screens. Provides:
+Full-screen layout shell shared by matching-status pages. Provides:
 - Canonical dark background (`apps/user-client/src/assets/matching/shared/matching-bg.svg`) + readability scrim
 - Safe-area-aware header (optional back button + title)
 - Composition slots: `hero`, `copy`, `cta`, `footer`
 
-### Active Matching-State Screens
+### Full-Screen Matching-State Screens
 
 | Component | State | File |
 |-----------|-------|------|
 | `MatchingWaitingScreen` | Blind-pool waiting (fill states: `waiting` / `can_form` / `full`) | `components/MatchingWaitingScreen.tsx` |
 | `NoMatchScreen` | No match found | `components/matching/NoMatchScreen.tsx` |
+
+### Join-Sheet Interstitial Screens
+
+These are currently shown inside `JoinEventPoolSheet.tsx`, not as standalone full-screen pages:
+
+| Component | State | File |
+|-----------|-------|------|
 | `JoinErrorScreen` | Join / registration error | `components/matching/JoinErrorScreen.tsx` |
 | `ExtendedDataEmptyScreen` | Insufficient profile data | `components/matching/ExtendedDataEmptyScreen.tsx` |
 | `TestIncompleteScreen` | Personality test not done | `components/matching/TestIncompleteScreen.tsx` |
+
+### Post-Match Reveal Components
+
+| Component | Role | File |
+|-----------|------|------|
 | `SurpriseMatchReveal` | Cinematic match reveal | `components/matching/SurpriseMatchReveal.tsx` |
 | `MatchPointsDisplay` | Match points summary | `components/matching/MatchPointsDisplay.tsx` |
 
@@ -487,7 +499,7 @@ Full-screen layout shell shared by all matching-state screens. Provides:
 
 1. **State must be trigger-driven** — `MatchingStatusPage.tsx` maps real app state (event status, fill count, WebSocket events) to the correct screen. No placeholder timers or mocked transitions.
 2. **Recovery / re-entry must be correct** — a user returning after a refresh should land in the right state.
-3. **Never duplicate `matching-bg.svg`** — always import via `MatchingStateLayout`.
+3. **For full-screen matching-status pages, never duplicate `matching-bg.svg`** — always import via `MatchingStateLayout`. Join-sheet interstitials currently reuse the shared background asset directly inside `JoinEventPoolSheet`.
 4. **Asset locations:** `apps/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
 
 Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
@@ -517,10 +529,10 @@ Keep these three layers clearly separated:
 
 `packages/shared/src/types/aiMeta.ts` is the shared metadata contract for all AI-derived surfaces. Use the builder helpers:
 - `buildLiveAIMeta(provider, promptVersion?)` — fresh LLM response
-- `buildCachedAIMeta(provider?)` — cache-hit response
-- `buildFallbackAIMeta(promptVersion?)` — curated fallback
+- `buildCachedAIMeta(generatedAt, provider)` — cache-hit response
+- `buildFallbackAIMeta(evaluatorRejectionReason?)` — curated or evaluator-rejected fallback
 
-New AI service code should attach `AIResponseMeta` to response shapes. Do not add ad-hoc `fromCache` / `provider` / `generatedAt` fields outside this contract.
+New AI service code should attach `AIResponseMeta` to response shapes, either via a nested `meta` field or by extending an existing response shape with inline `fromCache` / `provider` / `generatedAt` fields whose names and semantics align with `AIResponseMeta`. Do not invent additional ad-hoc metadata flags outside this contract.
 
 ### AI Trace Logger
 

@@ -12,13 +12,13 @@ This document covers the polished matching-state UX and reveal experience for th
 ### Shared Layout: `MatchingStateLayout`
 **File**: `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
 
-All matching-state screens (waiting, no-match, join-error, etc.) use this shared layout shell. It provides:
+All **full-screen** matching-status pages use this shared layout shell. It provides:
 - The canonical dark background (`apps/user-client/src/assets/matching/shared/matching-bg.svg`)
 - A readability scrim overlay
 - Safe-area-aware header (optional back button + title)
 - Composition slots: `hero`, `copy`, `cta`, `footer`
 
-**New matching-state screens must extend `MatchingStateLayout`** — do not recreate the dark background or reimplement the layout shell for each screen.
+**New full-screen matching-status pages must extend `MatchingStateLayout`** — do not recreate the dark background or reimplement the layout shell for each screen-level page.
 
 ### `MatchingWaitingScreen` — Premium Blind-Pool Waiting UI
 **File**: `apps/user-client/src/components/MatchingWaitingScreen.tsx`
@@ -30,17 +30,31 @@ A dark-mode premium waiting screen rendered via `MatchingStateLayout`. Supports 
 
 Props: `poolTitle`, `filledCount`, `minGroupSize` (default 4), `maxGroupSize` (default 6), `onRefresh`, `onWithdraw`, and optional `refreshIntervalSeconds`.
 
-### Full Matching-State Screen Family
+### Full-Screen Matching-State Screens
 
 | Component | State | Location |
 |-----------|-------|----------|
 | `MatchingWaitingScreen` | Blind-pool waiting | `components/MatchingWaitingScreen.tsx` |
 | `NoMatchScreen` | No match found | `components/matching/NoMatchScreen.tsx` |
+
+### Join-Sheet Interstitial Screens
+
+These components are used inside `JoinEventPoolSheet.tsx`. They reuse the same canonical background asset directly, but they are **not** full-screen pages and do not wrap themselves in `MatchingStateLayout`.
+
+| Component | State | Location |
+|-----------|-------|----------|
 | `JoinErrorScreen` | Registration/join error | `components/matching/JoinErrorScreen.tsx` |
 | `ExtendedDataEmptyScreen` | Insufficient profile data | `components/matching/ExtendedDataEmptyScreen.tsx` |
 | `TestIncompleteScreen` | Personality test not done | `components/matching/TestIncompleteScreen.tsx` |
-| `SurpriseMatchReveal` | Cinematic match reveal | `components/matching/SurpriseMatchReveal.tsx` |
-| `MatchPointsDisplay` | Match points summary | `components/matching/MatchPointsDisplay.tsx` |
+
+### Post-Match Reveal Components
+
+These are part of the reveal / celebration experience, not `MatchingStateLayout` page shells:
+
+| Component | Role | Location |
+|-----------|------|----------|
+| `SurpriseMatchReveal` | Cinematic match reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
+| `MatchPointsDisplay` | Match points renderer used inside reveal/details surfaces | `components/matching/MatchPointsDisplay.tsx` |
 
 ### Trigger-Based State Wiring
 
