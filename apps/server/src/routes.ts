@@ -11,6 +11,7 @@ import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
+import { logAdminAudit } from "./lib/adminAuditLogger";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
@@ -7633,8 +7634,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: true });
-      
-      // TODO: Log moderation action
+
+      logAdminAudit({
+        action: 'USER_BANNED',
+        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'user',
+        targetEntityId: req.params.id,
+        before: { isBanned: user.isBanned },
+        after: { isBanned: true },
+      });
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error banning user:", error);
@@ -7651,8 +7661,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: false });
-      
-      // TODO: Log moderation action
+
+      logAdminAudit({
+        action: 'USER_UNBANNED',
+        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'user',
+        targetEntityId: req.params.id,
+        before: { isBanned: user.isBanned },
+        after: { isBanned: false },
+      });
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error unbanning user:", error);
@@ -10307,6 +10326,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { paymentId } = req.params;
       const { reason } = req.body;
       await paymentService.createRefund(paymentId, reason);
+
+      logAdminAudit({
+        action: 'PAYMENT_REFUND_INITIATED',
+        adminId: (req as any).adminAccount?.id ?? 'legacy_user',
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'payment',
+        targetEntityId: paymentId,
+        context: { reason },
+      });
+
       res.json({ message: "Refund initiated" });
     } catch (error) {
       console.error("Error creating refund:", error);

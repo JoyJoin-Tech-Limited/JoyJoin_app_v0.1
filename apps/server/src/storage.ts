@@ -28,6 +28,7 @@ import { db } from "./db";
 import { eq, and, desc, sql, or, gte, lte } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
+import { logAdminAudit } from "./lib/adminAuditLogger";
 
 export interface IStorage {
   // User operations
@@ -4179,6 +4180,14 @@ export class DatabaseStorage implements IStorage {
         attendance_status_updated_at = EXCLUDED.attendance_status_updated_at
     `);
     console.log(`[AdminOverride] Admin ${adminId} overrode attendance status for user ${userId} in event ${eventId} to ${status}`);
+
+    logAdminAudit({
+      action: 'ATTENDANCE_OVERRIDE',
+      adminId,
+      targetEntityType: 'event_attendance',
+      targetEntityId: userId,
+      context: { eventId, userId, newStatus: status },
+    });
   }
 
   async getPendingAttendees(eventId: string): Promise<Array<{ userId: string; displayName: string; }>> {

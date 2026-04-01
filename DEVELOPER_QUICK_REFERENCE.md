@@ -916,3 +916,39 @@ const mutation = useMutation({
 | Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
 | Changelog | `CHANGELOG_24H.md` | - |
 | Supplementary (outdated sections) | `QUICK_REFERENCE.md` | ⚠️ Supplementary only — not authoritative |
+| **Admin RBAC Matrix** | `docs/admin-rbac-matrix.md` | Admin endpoint → role requirements |
+| **Admin Incident Runbook** | `docs/runbooks/admin-incident-handling.md` | Ops tasks, triage, daily checklist |
+| **Internal Beta Launch Risks** | `docs/launch-risks.md` | MVP caveats + risk acceptance sign-off |
+
+---
+
+## Admin Portal Operational Readiness
+
+### Running the RBAC Coverage Audit Test
+
+The RBAC coverage test introspects the live Express route stack and asserts that every
+`/api/admin/*` route (except the public login endpoint) is protected by the appropriate
+middleware.
+
+```bash
+npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
+```
+
+Expected output: 4 tests passing. The snapshot test also prints the full route/middleware
+table to the CI log for audit purposes.
+
+### Audit Logging
+
+Sensitive admin actions emit structured `[AdminAudit]` JSON lines to stdout:
+
+```bash
+grep '\[AdminAudit\]' <logfile>
+```
+
+The audit logger is at `apps/server/src/lib/adminAuditLogger.ts`. Instrumented actions:
+- Admin login (`ADMIN_LOGIN`)
+- Account create/update/password-reset (`ADMIN_ACCOUNT_CREATED`, `ADMIN_ACCOUNT_UPDATED`, `ADMIN_PASSWORD_RESET`)
+- User ban/unban (`USER_BANNED`, `USER_UNBANNED`)
+- Attendance override (`ATTENDANCE_OVERRIDE`)
+- Payment refund (`PAYMENT_REFUND_INITIATED`)
+- Points adjustment (`ADMIN_POINTS_ADJUSTED`)

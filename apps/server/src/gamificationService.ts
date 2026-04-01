@@ -8,6 +8,7 @@ import {
   getXPForNextLevel,
   type XPTransactionType 
 } from "@shared/gamification";
+import { logAdminAudit } from "./lib/adminAuditLogger";
 
 // ============ XP/悦币发放服务 ============
 
@@ -482,7 +483,9 @@ export async function adminAdjustPoints(
   userId: string,
   xpAdjustment: number,
   coinsAdjustment: number,
-  reason: string
+  reason: string,
+  adminId?: string,
+  adminRole?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const [user] = await db
@@ -521,6 +524,25 @@ export async function adminAdjustPoints(
       coinsBalance: newCoins,
       description: `Admin adjustment: ${reason}`,
       descriptionCn: `管理员调整: ${reason}`,
+    });
+
+    logAdminAudit({
+      action: 'ADMIN_POINTS_ADJUSTED',
+      adminId: adminId ?? 'unknown',
+      adminRole,
+      targetEntityType: 'user',
+      targetEntityId: userId,
+      before: {
+        experiencePoints: user.experiencePoints ?? 0,
+        joyCoins: user.joyCoins ?? 0,
+        currentLevel: user.currentLevel ?? 1,
+      },
+      after: {
+        experiencePoints: newXP,
+        joyCoins: newCoins,
+        currentLevel: newLevel,
+      },
+      context: { xpAdjustment, coinsAdjustment, reason },
     });
 
     return { success: true };
