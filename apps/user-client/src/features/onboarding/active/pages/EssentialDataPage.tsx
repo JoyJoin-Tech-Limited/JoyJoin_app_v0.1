@@ -374,7 +374,7 @@ export default function EssentialDataPage() {
       
       // Use server-driven nextStep for navigation instead of hardcoded URL
       const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
-      let nextPath = '/';
+      let nextPath;
       switch (updatedUser?.nextStep) {
         case 'onboarding':
           nextPath = '/onboarding';
