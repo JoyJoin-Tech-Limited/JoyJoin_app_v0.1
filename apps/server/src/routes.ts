@@ -2,8 +2,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
-import socialIcebreakerRoutes from "./routes/socialIcebreaker";
-import ttsRoutes from "./routes/tts";
 import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
@@ -20,8 +18,6 @@ import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
 import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
-import { paymentService } from "./paymentService";
-import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "./userMatchingService";
 import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceStatusUpdated } from "./eventBroadcast";
@@ -41,7 +37,7 @@ import {
   normalizeVenueQualityRecord,
 } from "./lib/venueDataQuality";
 
-import { aiEndpointLimiter, kpiEndpointLimiter, authEndpointLimiter, paymentEndpointLimiter, webhookEndpointLimiter } from "./rateLimiter";
+import { aiEndpointLimiter, kpiEndpointLimiter, authEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -463,271 +459,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.end();
   });
 
-  app.post('/api/registration/chat/complete', async (req: any, res) => {
-    try {
-      const { conversationHistory, phoneNumber, startTime } = req.body;
-      
-      // Validate conversation has sufficient content
-      if (!conversationHistory || conversationHistory.length < 4) {
-        return res.status(400).json({ message: "对话记录不完整，请继续和小悦聊天" });
-      }
-      
-      const { summarizeAndExtractInfo } = await import('./deepseekClient');
-      
-      // Server-side extraction from conversation history (more secure than trusting client)
-      const extractedInfo = await summarizeAndExtractInfo(conversationHistory);
-      
-      // Validate required field
-      if (!extractedInfo.displayName) {
-        return res.status(400).json({ message: "请告诉小悦你希望大家怎么称呼你" });
-      }
-      
-      // Calculate server-side conversationalProfile metrics
-      const registrationTime = new Date().toISOString();
-      let completionSpeed: 'fast' | 'medium' | 'slow' = 'medium';
-      if (startTime) {
-        const durationMinutes = (Date.now() - new Date(startTime).getTime()) / 60000;
-        if (durationMinutes < 3) {
-          completionSpeed = 'fast';
-        } else if (durationMinutes > 10) {
-          completionSpeed = 'slow';
-        }
-      }
-      
-      // Always create conversationalProfile with server metrics, merging LLM behavioral data when available
-      const conversationalProfile = {
-        responseLength: extractedInfo.conversationalProfile?.responseLength || 'moderate',
-        emojiUsage: extractedInfo.conversationalProfile?.emojiUsage || 'few',
-        formalityLevel: extractedInfo.conversationalProfile?.formalityLevel || 'neutral',
-        proactiveness: extractedInfo.conversationalProfile?.proactiveness || 'neutral',
-        registrationTime,
-        completionSpeed
-      };
-      extractedInfo.conversationalProfile = conversationalProfile as any;
-      
-      // Map collected info to user registration fields
-      const registrationData: any = {
-        displayName: extractedInfo.displayName,
-        gender: extractedInfo.gender || '不透露',
-        currentCity: extractedInfo.currentCity || '',
-        registrationMethod: 'chat',
-      };
-      
-      // Set birthdate if birth year provided
-      if (extractedInfo.birthYear) {
-        registrationData.birthdate = `${extractedInfo.birthYear}-01-01`;
-      }
-      
-      // ❌ REMOVED: Legacy interests fields no longer exist in schema
-      // These are now managed by user_interests table via Interest Carousel
-      // if (extractedInfo.interestsTop && extractedInfo.interestsTop.length > 0) {
-      //   registrationData.interestsTop = extractedInfo.interestsTop;
-      // }
-      // if (extractedInfo.primaryInterests && extractedInfo.primaryInterests.length > 0) {
-      //   registrationData.primaryInterests = extractedInfo.primaryInterests;
-      // }
-      
-      // Map new fields from AI chat extraction
-      if (extractedInfo.intent && extractedInfo.intent.length > 0) {
-        registrationData.intent = extractedInfo.intent;
-      }
-      if (extractedInfo.lifeStage) {
-        registrationData.lifeStage = extractedInfo.lifeStage;
-      }
-      if (extractedInfo.ageMatchPreference) {
-        registrationData.ageMatchPreference = extractedInfo.ageMatchPreference;
-      }
-      if (extractedInfo.relationshipStatus) {
-        registrationData.relationshipStatus = extractedInfo.relationshipStatus;
-      }
-      if (extractedInfo.socialStyle) {
-        registrationData.socialStyle = extractedInfo.socialStyle;
-      }
-      if (extractedInfo.venueStylePreference) {
-        registrationData.venueStylePreference = extractedInfo.venueStylePreference;
-      }
-
-      res.json({ message: "Personality test completed", user: updatedUser });
-    } catch (error) {
-      console.error("Error completing personality test:", error);
-      res.status(500).json({ message: "Failed to complete personality test" });
-    }
+  app.post('/api/registration/chat/complete', async (_req: any, res) => {
+    return res.status(410).json({
+      message: "Chat registration is no longer supported. Please use the active V4 onboarding flow.",
+      route: '/personality-test',
+    });
   });
 
-  // Auth routes
-  app.get('/api/auth/user', async (req: Request, res) => {
-    // 🔧 DEBUG_AUTH logging (Phase 4.2)
-    if (isDebugAuthLoggingEnabled()) {
-      console.log("[AUTH/USER]", {
-        sid: req.sessionID,
-        cookie: req.headers.cookie,
-        userId: req.session?.userId,
-        adminAccountId: req.session?.adminAccountId,
-      });
-    }
-
-    // New admin_accounts-based session: return synthetic admin user object
-    if (req.session?.adminAccountId) {
-      try {
-        const adminAccount = await storage.getAdminAccountById(req.session.adminAccountId);
-        if (adminAccount && adminAccount.status === 'active') {
-          return res.json({
-            id: adminAccount.id,
-            displayName: adminAccount.displayName || adminAccount.username,
-            isAdmin: true,
-            adminRole: adminAccount.role,
-            // Enough for AdminApp.tsx to detect admin status:
-            nextStep: 'discover',
-          });
-        }
-        return res.status(401).json({ message: "Unauthorized" });
-      } catch (err) {
-        return res.status(500).json({ message: "Internal server error" });
-      }
-      if (extractedInfo.favoriteRestaurant) {
-        registrationData.favoriteRestaurant = extractedInfo.favoriteRestaurant;
-      }
-      if (extractedInfo.favoriteRestaurantReason) {
-        registrationData.favoriteRestaurantReason = extractedInfo.favoriteRestaurantReason;
-      }
-      if (extractedInfo.educationLevel) {
-        registrationData.educationLevel = extractedInfo.educationLevel;
-      }
-      // ❌ REMOVED: topicAvoidances field no longer exists in schema
-      // if (extractedInfo.topicAvoidances && extractedInfo.topicAvoidances.length > 0) {
-      //   registrationData.topicAvoidances = extractedInfo.topicAvoidances;
-      // }
-      if (extractedInfo.hometown) {
-        registrationData.hometownRegionCity = extractedInfo.hometown;
-      }
-      if (extractedInfo.ageDisplayPreference) {
-        registrationData.ageDisplayPreference = extractedInfo.ageDisplayPreference;
-      }
-      if (extractedInfo.occupationDescription) {
-        registrationData.occupationDescription = extractedInfo.occupationDescription;
-      }
-      
-      // ===== 智能信息收集系统新增字段 =====
-      // ❌ REMOVED: industry field (replaced by 3-tier classification)
-      // if (extractedInfo.industry) {
-      //   registrationData.industry = extractedInfo.industry;
-      // }
-      if (extractedInfo.industrySegment) {
-        registrationData.industrySegment = extractedInfo.industrySegment;
-      }
-      if (extractedInfo.occupation) {
-        registrationData.structuredOccupation = extractedInfo.occupation;
-      }
-      if (extractedInfo.companyType) {
-        registrationData.companyType = extractedInfo.companyType;
-      }
-      // ❌ REMOVED: seniority field (never collected in onboarding)
-      // if (extractedInfo.seniority) {
-      //   registrationData.seniority = extractedInfo.seniority;
-      // }
-      // 智能洞察存储到 insightLedger（JSONB）
-      if (extractedInfo.smartInsights && extractedInfo.smartInsights.length > 0) {
-        registrationData.insightLedger = extractedInfo.smartInsights;
-      }
-      
-      // ===== AI Evolution System: Insight Detection & Storage =====
-      try {
-        const { insightDetectorService } = await import('./insightDetectorService');
-        const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
-        const { getSessionInsights, clearSessionInsights } = await import('./deepseekClient');
-        
-        // Get accumulated per-message insights from session
-        const sessionId = req.body.sessionId || req.sessionID;
-        const accumulatedInsights = getSessionInsights(sessionId);
-        
-        // Store phoneNumber for cross-session linking
-        const linkPhoneNumber = phoneNumber;
-        
-        // Run full conversation analysis (includes dialect + deep traits)
-        const insightResult = await insightDetectorService.analyzeConversation(conversationHistory);
-        
-        // Merge accumulated per-message insights with final analysis
-        const allInsights = [...accumulatedInsights, ...insightResult.insights];
-        const uniqueInsights = allInsights.filter((insight, index, self) =>
-          index === self.findIndex(i => i.subType === insight.subType)
-        );
-        
-        // Update result with merged insights
-        insightResult.insights = uniqueInsights;
-        
-        // Store insights to dialogue_embeddings table
-        const dialogueContent = conversationHistory
-          .filter((m: any) => m.role === 'user')
-          .map((m: any) => m.content)
-          .join('\n');
-        
-        await dialogueEmbeddingsService.storeInsights(
-          sessionId,
-          null, // userId not available yet
-          dialogueContent,
-          insightResult,
-          true, // isSuccessful
-          linkPhoneNumber // Store phone for cross-session linking
-        );
-        
-        // Clear session insights after storing
-        clearSessionInsights(sessionId);
-        
-        console.log(`[AI Evolution] Stored ${insightResult.insights.length} insights (${accumulatedInsights.length} realtime + final), dialect: ${insightResult.dialectProfile?.primaryDialect || 'none'}`);
-        
-        // Merge safety insights into registrationData
-        const safetyInsights = insightResult.insights.filter(i => i.category === 'safety');
-        if (safetyInsights.length > 0) {
-          registrationData.safetyNoteHost = safetyInsights
-            .map(i => `[${i.subType}] ${i.value}`)
-            .join('; ');
-        }
-      } catch (insightError) {
-        console.error('[AI Evolution] Insight detection error:', insightError);
-        // Non-blocking - continue with registration
-      }
-      // ===== End AI Evolution System =====
-      
-      // Store chatSessionId in session for linking insights at user registration
-      const chatSessionId = req.body.sessionId || req.sessionID;
-      if (req.session) {
-        req.session.chatSessionId = chatSessionId;
-      }
-      
-      // If user is already logged in (via phone auth), update their profile and mark registration complete
-      const userId = req.session?.userId;
-      if (userId) {
-        try {
-          // Update user profile with extracted data
-          // Also mark interests/topics as complete since AI chat already collected this info
-          await storage.updateUserProfile(userId, {
-            ...registrationData,
-            hasCompletedInterestsTopics: true,
-          });
-          
-          // Mark registration as complete
-          await storage.markRegistrationComplete(userId);
-          
-          console.log(`[Chat Registration] User ${userId} profile updated, registration and interests marked complete`);
-        } catch (updateError) {
-          console.error('[Chat Registration] Error updating user profile:', updateError);
-          // Non-blocking - continue with response
-        }
-      }
-      
-      // Return collected info
-      res.json({
-        success: true,
-        message: userId ? "注册完成！" : "对话注册完成，请通过电话验证完成注册",
-        registrationData,
-        conversationalProfile: extractedInfo.conversationalProfile,
-        chatSessionId, // Return for client to persist if needed
-      });
-    } catch (error) {
-      console.error("Error completing chat registration:", error);
-      res.status(500).json({ message: "注册失败，请稍后再试" });
-    }
-  });
 
   // ============ Registration Session Telemetry Routes ============
   
@@ -819,6 +557,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
+  registerPaymentRoutes(app);
+  registerIcebreakerRoutes(app);
 
   // Profile routes
   app.post('/api/profile/setup', isPhoneAuthenticated, async (req: any, res) => {
@@ -8729,239 +8469,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  // ============ SUBSCRIPTION MANAGEMENT ============
-  
-  // Get current user's subscription status
-  app.get("/api/subscription/status", isPhoneAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const status = await subscriptionService.getUserSubscriptionStatus(userId);
-      res.json(status);
-    } catch (error) {
-      console.error("Error fetching subscription status:", error);
-      res.status(500).json({ message: "Failed to fetch subscription status" });
-    }
-  });
-  
-  // Create subscription renewal (returns payment details)
-  app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const { planType, couponCode } = req.body;
-      
-      if (!planType || !["monthly", "quarterly"].includes(planType)) {
-        return res.status(400).json({ message: "Invalid plan type" });
-      }
-      
-      // Create pending subscription
-      const renewalData = await subscriptionService.renewSubscription(userId, planType);
-      
-      // Create payment for the renewal
-      let couponId: string | undefined;
-      if (couponCode) {
-        const coupons = await storage.getAllCoupons();
-        const coupon = coupons.find(c => c.code === couponCode && c.isActive);
-        if (coupon) {
-          couponId = coupon.id;
-        }
-      }
-      
-      const paymentResult = await paymentService.createPayment({
-        userId,
-        paymentType: "event_bundle",
-        relatedId: renewalData.subscriptionId,
-        originalAmount: renewalData.amount,
-        couponId,
-        clientIp: getRequestClientIp(req),
-      });
-      
-      res.json({
-        subscription: renewalData,
-        payment: paymentResult,
-      });
-    } catch (error) {
-      console.error("Error renewing subscription:", error);
-      res.status(500).json({ message: "Failed to renew subscription" });
-    }
-  });
-  
-  // Cancel subscription
-  app.post("/api/subscription/cancel", isPhoneAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const subscription = await storage.getUserSubscription(userId);
-      if (!subscription) {
-        return res.status(404).json({ message: "No active subscription found" });
-      }
-      
-      await subscriptionService.cancelSubscription(subscription.id, req.body.reason);
-      res.json({ message: "Subscription cancelled" });
-    } catch (error) {
-      console.error("Error cancelling subscription:", error);
-      res.status(500).json({ message: "Failed to cancel subscription" });
-    }
-  });
-
-  const getRequestClientIp = (req: Request): string => {
-    const forwardedFor = req.headers["x-forwarded-for"];
-    return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
-      || req.ip
-      || req.socket.remoteAddress
-      || "127.0.0.1";
-  };
-
-  // ============ PAYMENT & WEBHOOKS ============
-  
-  /**
-   * Payment kill switch — set PAYMENTS_ENABLED=false to disable all payment entry points.
-   * Defaults to false (disabled) for safety during beta.
-   * Set PAYMENTS_ENABLED=true in the environment to enable payments.
-   */
-  function checkPaymentsEnabled(req: any, res: any, next: any) {
-    const enabled = (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
-    if (!enabled) {
-      return res.status(503).json({
-        error: "Payment system is currently disabled for maintenance",
-        code: "PAYMENTS_DISABLED",
-      });
-    }
-    next();
-  }
-
-  // Create payment order for subscription
-  app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const { paymentType, relatedId, originalAmount, couponCode } = req.body;
-      
-      // Validate coupon if provided
-      let couponId: string | undefined;
-      if (couponCode) {
-        const coupons = await storage.getAllCoupons();
-        const coupon = coupons.find(c => c.code === couponCode && c.isActive);
-        if (coupon) {
-          couponId = coupon.id;
-        }
-      }
-      
-      const paymentResult = await paymentService.createPayment({
-        userId,
-        paymentType,
-        relatedId,
-        originalAmount,
-        couponId,
-        clientIp: getRequestClientIp(req),
-      });
-      
-      res.json(paymentResult);
-    } catch (error) {
-      console.error("Error creating payment:", error);
-      res.status(500).json({ message: "Failed to create payment" });
-    }
-  });
-  
-  // WeChat Pay webhook - receives payment status updates
-  // Note: express.raw() captures the raw body needed for signature verification.
-  // This route intentionally does NOT use checkPaymentsEnabled — WeChat Pay must
-  // always be able to deliver webhooks for in-flight payments even when new payment
-  // creation is disabled.
-  app.post(
-    "/api/webhooks/wechat-pay",
-    webhookEndpointLimiter,
-    async (req: Request, res) => {
-      let rawBody: string;
-      let payload: any;
-      try {
-        if (typeof req.rawBody !== "string" || req.rawBody.length === 0) {
-          return res.status(400).json({ code: "FAIL", message: "Missing raw body for signature verification" });
-        }
-
-        rawBody = req.rawBody;
-        payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      } catch {
-        return res.status(400).json({ code: "FAIL", message: "Invalid request body" });
-      }
-
-      const headers = {
-        timestamp: req.headers["wechatpay-timestamp"] as string | undefined,
-        nonce: req.headers["wechatpay-nonce"] as string | undefined,
-        signature: req.headers["wechatpay-signature"] as string | undefined,
-        serial: req.headers["wechatpay-serial"] as string | undefined,
-      };
-
-      try {
-        await paymentService.handleWebhook(payload, rawBody, headers);
-        res.json({ code: "SUCCESS", message: "OK" });
-      } catch (error: any) {
-        console.error("Error processing WeChat Pay webhook:", error);
-        const status = error?.status === 401 ? 401 : 500;
-        res.status(status).json({ code: "FAIL", message: "Webhook processing failed" });
-      }
-    }
-  );
-  
-  // Query payment status
-  app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, async (req, res) => {
-    try {
-      const { wechatOrderId } = req.params;
-      const status = await paymentService.queryPaymentStatus(wechatOrderId);
-      res.json({ status });
-    } catch (error) {
-      console.error("Error querying payment status:", error);
-      res.status(500).json({ message: "Failed to query payment status" });
-    }
-  });
-  
-  // Admin - Get all payments
-  app.get("/api/admin/payments", requireAdmin, async (req, res) => {
-    try {
-      const payments = await storage.getAllPayments();
-      res.json(payments);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      res.status(500).json({ message: "Failed to fetch payments" });
-    }
-  });
-  
-  // Admin - Create refund
-  app.post("/api/admin/payments/:paymentId/refund", requireAdmin, async (req, res) => {
-    try {
-      const { paymentId } = req.params;
-      const { reason } = req.body;
-      await paymentService.createRefund(paymentId, reason);
-
-      logAdminAudit({
-        action: 'PAYMENT_REFUND_INITIATED',
-        adminId: getActingAdminId(req),
-        adminRole: (req as any).adminRole,
-        targetEntityType: 'payment',
-        targetEntityId: paymentId,
-        context: { reason },
-      });
-
-      res.json({ message: "Refund initiated" });
-    } catch (error) {
-      console.error("Error creating refund:", error);
-      res.status(500).json({ message: "Failed to create refund" });
-    }
-  });
-
   // ============ VENUE MATCHING ============
   
   // Find matching venues for event criteria
@@ -12341,9 +11848,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   }
-
-  app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
-  app.use('/api/tts', isPhoneAuthenticated, ttsRoutes);
 
   // ============ Pre-event Attendance (Blind Box) ============
 

@@ -10,7 +10,8 @@
       "@shared/*": [
         "./src/*"
       ]
-    }
+    },
+    "jsx": "react-jsx"
   },
   "include": [
     "src/**/*"
