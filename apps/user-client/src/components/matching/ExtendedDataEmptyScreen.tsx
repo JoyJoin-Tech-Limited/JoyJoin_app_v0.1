@@ -60,9 +60,13 @@ export default function ExtendedDataEmptyScreen({
 
         {/* Headline */}
         <motion.h2
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.1 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={
+            shouldReduceMotion
+              ? undefined
+              : { type: "spring", stiffness: 300, damping: 26, delay: 0.1 }
+          }
           className="mt-3 text-center text-xl font-black leading-tight tracking-tight text-white"
         >
           多补充一点，匹配会更准
@@ -70,9 +74,9 @@ export default function ExtendedDataEmptyScreen({
 
         {/* Support copy */}
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1 }}
+          transition={shouldReduceMotion ? undefined : { duration: 0.4, delay: 0.2 }}
           className="mt-3 px-4 text-center text-sm leading-relaxed text-white/55"
         >
           这些信息不是必填，但补充之后，我们会更容易帮你找到更合拍的同桌。

@@ -26,6 +26,7 @@ export default function NoMatchScreen({
   onBack,
 }: NoMatchScreenProps) {
   const shouldReduceMotion = useReducedMotion();
+  const shouldShowNotifyButton = Boolean(onNotify);
 
   // ── Slot: Hero ──────────────────────────────────────────────────────────────
   const heroSlot = (
@@ -55,9 +56,13 @@ export default function NoMatchScreen({
 
       {/* Headline */}
       <motion.h2
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.1 }}
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+        animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={
+          shouldReduceMotion
+            ? undefined
+            : { type: "spring", stiffness: 300, damping: 26, delay: 0.1 }
+        }
         className="mt-3 text-center text-[22px] font-black leading-tight tracking-tight text-white"
       >
         先别急，我们在等更对味的人齐
@@ -65,9 +70,9 @@ export default function NoMatchScreen({
 
       {/* Support copy */}
       <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.25 }}
+        initial={shouldReduceMotion ? false : { opacity: 0 }}
+        animate={shouldReduceMotion ? undefined : { opacity: 1 }}
+        transition={shouldReduceMotion ? undefined : { duration: 0.4, delay: 0.25 }}
         className="mt-3 px-4 text-center text-sm leading-relaxed text-white/55"
       >
         这场局我们还在慢慢凑人。与其随便把你塞进一桌，不如等一个更聊得来的组合。
@@ -78,15 +83,16 @@ export default function NoMatchScreen({
   // ── Slot: CTA ────────────────────────────────────────────────────────────────
   const ctaSlot = (
     <div className="mt-8 w-full max-w-sm space-y-3">
-      {/* Primary */}
-      <Button
-        onClick={onNotify}
-        size="lg"
-        className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
-      >
-        <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
-        成局后通知我
-      </Button>
+      {shouldShowNotifyButton && (
+        <Button
+          onClick={onNotify}
+          size="lg"
+          className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
+        >
+          <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
+          成局后通知我
+        </Button>
+      )}
 
       {/* Secondary */}
       <Button

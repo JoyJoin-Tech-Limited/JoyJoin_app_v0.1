@@ -123,9 +123,17 @@ export default function JoinEventPoolSheet({
   // Reset prefill flag when the sheet closes so each session starts clean
   useEffect(() => {
     if (!open) {
+      // `open` is the only trigger for this reset. The effect callback is recreated
+      // on every render, so when `open` flips to false it closes over the latest
+      // `registerMutation` instance returned by `useEventPoolRegistration`.
       setIsPrefilledFromProfile(false);
+      setExtendedDataNudgeDismissed(false);
+      setShowSuccess(false);
+      setShowMascot(false);
+      setStep(1);
+      registerMutation.reset();
     }
-  }, [open]);
+  }, [open, setStep]);
 
   // Show mascot during step transitions
   useEffect(() => {
@@ -168,7 +176,9 @@ export default function JoinEventPoolSheet({
   // Personality test incomplete: derived from auth state
   const isTestIncomplete = !!user && !user.hasCompletedPersonalityTest;
 
-  // Extended data nudge: show once per sheet open when profile is incomplete and user hasn't dismissed it
+  // Extended data nudge: show once per sheet open when profile enrichment is incomplete.
+  // The server computes `profileExtendedComplete` from education + industry + hometown,
+  // so the CTA should route to a real profile-edit surface instead of the interests carousel.
   const showExtendedDataNudge =
     !isTestIncomplete &&
     !extendedDataNudgeDismissed &&
@@ -209,7 +219,7 @@ export default function JoinEventPoolSheet({
             onFillProfile={() => {
               setExtendedDataNudgeDismissed(true);
               onOpenChange(false);
-              setLocation("/onboarding/extended");
+              setLocation("/profile/edit");
             }}
             onSkip={() => setExtendedDataNudgeDismissed(true)}
           />
@@ -218,7 +228,10 @@ export default function JoinEventPoolSheet({
           <JoinErrorScreen
             isRetrying={registerMutation.isPending}
             onRetry={() => registerMutation.mutate()}
-            onBrowse={() => onOpenChange(false)}
+            onBrowse={() => {
+              registerMutation.reset();
+              onOpenChange(false);
+            }}
           />
         ) : showSuccess ? (
           <SuccessCelebration
