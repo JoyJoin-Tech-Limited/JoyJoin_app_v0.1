@@ -37,7 +37,7 @@ interface UseSocialIcebreakerReturn {
   castVote: (targetUserId: string, statementIndex: number) => Promise<void>;
   completeChallenge: () => Promise<void>;
   generateDiceChallenges: (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) => Promise<PersonalityDiceChallenge[]>;
-  completeDiceChallenge: (userId: string) => Promise<void>;
+  completeDiceChallenge: () => Promise<void>;
   isStarting: boolean;
   isAdvancing: boolean;
 }
@@ -66,6 +66,8 @@ export function useSocialIcebreaker({
   const [isStarting, setIsStarting] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [isDocumentVisible, setIsDocumentVisible] =
+    useState(typeof document === 'undefined' || document.visibilityState === 'visible');
   const startedRef = useRef(false);
 
   // Keep sessionStorage in sync with the current socialSessionId.
@@ -82,14 +84,25 @@ export function useSocialIcebreaker({
     }
   }, [storageKey]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   // Poll for state every 3 seconds once we have a session.
   // The query fn checks for the structured expiry error and updates state.
   const { data: state, isLoading } = useQuery<SocialSessionState | null>({
     queryKey: ['/api/social-icebreaker', socialSessionId],
     queryFn: async () => {
       if (!socialSessionId) return null;
-      const res = await fetch(`/api/social-icebreaker/${socialSessionId}`, {
-        credentials: 'include',
+      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`, undefined, {
+        allowStatuses: [410],
       });
       if (res.status === 410) {
         setSessionExpired(true);
@@ -106,20 +119,18 @@ export function useSocialIcebreaker({
 
   const isHost = state?.hostUserId === userId;
 
-  // Periodically send a heartbeat to keep the user marked as active.
+  // Periodically send a heartbeat to keep the user marked as active while
+  // the tab remains visible.
   useEffect(() => {
-    if (!socialSessionId || sessionExpired) return;
+    if (!socialSessionId || sessionExpired || !isDocumentVisible) return;
 
     let cancelled = false;
     let timeoutId: number | null = null;
 
     const sendHeartbeat = async () => {
       try {
-        const res = await fetch(`/api/social-icebreaker/${socialSessionId}/heartbeat`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/heartbeat`, {}, {
+          allowStatuses: [410],
         });
         if (res.status === 410) {
           setSessionExpired(true);
@@ -140,30 +151,24 @@ export function useSocialIcebreaker({
       cancelled = true;
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [socialSessionId, sessionExpired, setAndCacheSocialSessionId]);
+  }, [socialSessionId, sessionExpired, isDocumentVisible, setAndCacheSocialSessionId]);
 
   const startSession = useCallback(async () => {
     if (startedRef.current) return;
     startedRef.current = true;
     setIsStarting(true);
     try {
-      const res = await fetch('/api/social-icebreaker/start', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await apiRequest('POST', '/api/social-icebreaker/start', {
           sessionId,
           displayName,
           eventType,
-        }),
+        }, {
+          allowStatuses: [410],
       });
       if (res.status === 410) {
         setSessionExpired(true);
         setAndCacheSocialSessionId(null);
         return;
-      }
-      if (!res.ok) {
-        throw new Error(`${res.status}: ${await res.text()}`);
       }
       const data = await res.json();
       setAndCacheSocialSessionId(data.socialSessionId);
@@ -286,10 +291,10 @@ export function useSocialIcebreaker({
   );
 
   const completeDiceChallenge = useCallback(
-    async (diceUserId: string) => {
+    async () => {
       if (!socialSessionId) return;
       try {
-        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, { userId: diceUserId });
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {});
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
       } catch (error) {
         console.error('[useSocialIcebreaker] completeDiceChallenge error:', error);
