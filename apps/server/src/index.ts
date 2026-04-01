@@ -7,6 +7,9 @@ import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
+import { logger } from "./lib/logger";
+import { requestIdMiddleware } from "./middleware/requestId";
+import { metricsMiddleware } from "./middleware/metrics";
 
 // Validate required configuration early — exits in production if critical vars are missing
 validateConfig();

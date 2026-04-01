@@ -18,7 +18,7 @@ interface PersonalityDicePhaseProps {
   currentPlayerIndex: number;
   completedBy: string[];
   onGenerate: () => Promise<void>;
-  onComplete: (userId: string) => Promise<void>;
+  onComplete: () => Promise<void>;
   onAdvance: () => void;
   isAdvancing: boolean;
 }
@@ -55,7 +55,7 @@ export function PersonalityDicePhase({
   const handleComplete = async () => {
     setIsCompleting(true);
     try {
-      await onComplete(userId);
+      await onComplete();
     } finally {
       setIsCompleting(false);
     }
