@@ -150,14 +150,14 @@ export default function EventDetailPage() {
 
         <Card 
           className="border-0 bg-muted/30 cursor-pointer hover-elevate active-elevate-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          onClick={() => setShowSafety(!showSafety)}
+          onClick={() => setShowSafety((prev) => !prev)}
           role="button"
           tabIndex={0}
           aria-expanded={showSafety}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setShowSafety(!showSafety);
+              setShowSafety((prev) => !prev);
             }
           }}
           data-testid="card-safety-comfort"
