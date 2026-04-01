@@ -1,6 +1,6 @@
 # JoyJoin User Onboarding Flow
 
-## Overview (Updated 2026-03-23)
+## Overview (Updated 2026-04-01)
 
 JoyJoin uses a **value-first** onboarding approach:
 
@@ -9,6 +9,8 @@ JoyJoin uses a **value-first** onboarding approach:
 - `apps/user-client/src/features/onboarding/active/flow.ts` — `nextStep` → step/route mapping (source of truth on client)
 - `apps/user-client/src/features/onboarding/active/pages/*` — active onboarding pages
 - `apps/user-client/src/legacy/onboarding/pages/*` — quarantined legacy onboarding surfaces
+
+> **Module consolidation (PRs #401, #403, #423):** The `features/onboarding/active/` module is the single owner of all new onboarding navigation and page logic. Do not add new onboarding routes to `apps/user-client/src/pages/` directly — route-to-step mapping lives in `flow.ts`, and orchestration lives in `useOnboardingOrchestrator.ts`. Legacy surfaces under `legacy/onboarding/` are quarantined and must not be referenced by active code.
 
 1. **Show value (personality test) BEFORE asking for signup**
 2. Silent WeChat authentication after user is invested
