@@ -50,6 +50,16 @@ Deep expertise for the two core product engines.
 
 ---
 
+## UX Polish and Delight
+
+Guidance for adding crafted, brand-aligned micro-interactions and premium emotional moments.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
+
+---
+
 ## Existing Specialized Skills
 
 | Skill | What it covers |
