@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.3  
-**Last Updated:** March 13, 2026  
+**Version:** 1.4  
+**Last Updated:** April 1, 2026  
 **Platform:** WeChat H5 Mini-App  
 **Target Market:** Hong Kong & Shenzhen  
 
@@ -360,19 +360,21 @@ LandingPage → /personality-test (anonymous V4 test)
 
 *See `packages/shared/src/personality/archetypeNames.ts` for canonical source*
 
-#### Test Structure - V4 Adaptive Assessment (8-16 Questions)
+#### Test Structure - V4 Adaptive Assessment (8-18 Questions)
 
 **Adaptive System:**
 - 60-question bank divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
-- V4 engine selects 8-16 questions based on real-time confidence tracking
-- Stops when all trait confidences ≥ 0.7 OR 16 questions reached
+- V4 engine selects 8-18 questions based on real-time confidence tracking
+- Stops when all trait confidences ≥ 0.7 OR 16 questions reached; 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) are always appended after the adaptive phase for a maximum of 18 total
+- See `docs/onboarding-flow.md` § Step 1 for the client-side question count details
 
 **Question Flow:**
 ```
 Phase 1: Ask 8 anchor questions (L1) → Establish baseline
 Phase 2: Check confidences → If low, ask adaptive questions (L2)
 Phase 3: Check confusion → If top-2 close, ask disambiguation (L3)
-Phase 4: V2 Matcher → Calculate final archetype
+Phase 4: 2 interactive closing questions appended (always)
+Phase 5: V2 Matcher → Calculate final archetype
 ```
 
 **Example Adaptive Question:**
@@ -446,11 +448,11 @@ For each archetype, system provides:
 **Last Updated:** 2026-02-04 (Personality Test System V4)
 
 **During Test:**
-- ✨ **Progress Indicator:** Visual progress bar + question counter (1/8 to 1/16, adaptive)
+- ✨ **Progress Indicator:** Visual progress bar + question counter (1/8 to 1/18, adaptive)
 - 📊 **Mini Radar Chart:** Real-time progress visualization showing 6 traits (ACOEXP)
 - 🎉 **Milestone Animation:** Appears dynamically based on trait confidence levels
 - 🎁 **Blind Box Reveal:** 3-second rotating gift box animation on submission
-- 🔄 **Adaptive Flow:** Questions adjust based on confidence - may finish in 8-12 questions if decisive
+- 🔄 **Adaptive Flow:** Questions adjust based on confidence — may finish in 8-12 adaptive questions + 2 interactive closing questions
 
 **Results Page Components:**
 
@@ -663,6 +665,38 @@ Display:
   - Hover Effect: Expand to show full traits
 ```
 
+#### Blind Pool Join Flow Enhancements *(PRs #376, #381, #382)*
+
+The standard join sheet (`JoinEventPoolSheet.tsx`) now includes a three-stage pre-join experience before the user commits to pool registration:
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `BlindPoolTrustExplainer` | `apps/user-client/src/components/BlindPoolTrustExplainer.tsx` | Inline explainer card — explains how the blind pool works and what to expect |
+| `PreJoinVibeBriefSheet` | `apps/user-client/src/components/PreJoinVibeBriefSheet.tsx` | Bottom-sheet surfacing pool atmosphere signals and intent context before commit |
+| `WhyThisFitsCard` | `apps/user-client/src/components/WhyThisFitsCard.tsx` | Personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) — shown after vibe brief, before join confirmation |
+
+These components render in sequence within `JoinEventPoolSheet` and do not change pool registration state — they only inform and reassure the user before they tap the final join CTA.
+
+#### Matching-State Screen Family *(PRs #387–#391)*
+
+A shared `MatchingStateLayout` abstraction provides a canonical dark-background, slot-based composition (`hero / copy / CTA / footer`) for all matching-state screens. These screens are wired to real trigger conditions and app state — no placeholder timers or mocked transitions.
+
+| Screen | Trigger |
+|--------|---------|
+| `MatchingWaitingScreen` | Pool is open and fill is in progress (`waiting` → `can_form` → `full` fill-state transitions) |
+| `NoMatchScreen` | Pool closed without a match for this user |
+| `JoinErrorScreen` | Join attempt failed (network or server error) |
+| `TestIncompleteScreen` | User has not completed personality test — blocks join |
+| `ExtendedDataEmptyScreen` | User's extended profile (interest carousel) is incomplete — blocks join |
+| `SurpriseMatchReveal` | Match formed — squad reveal animation |
+| `MatchPointsDisplay` | Post-reveal match score breakdown |
+
+**Shared asset:** Canonical background SVG at `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories.
+
+#### Center-Tab Empty-State Page *(PRs #359, #362, #363)*
+
+`CenterTabEmptyStatePage` — dedicated page for users with no active activity, accessed via the centre nav tab. Background asset prefetch is gated on activity state to avoid unnecessary loading.
+
 ---
 
 ### 1.5 权益方案 & Payment System
@@ -679,9 +713,13 @@ Display:
 | **季度权益方案** | ¥294 | 90 days | 15% discount, exclusive quarterly events |
 | **单次票** | ¥148 | Per event | No commitment, standard price |
 
-#### Payment Integration - WeChat Pay
+#### Payment Integration - WeChat Pay (v3 Signed API)
 
-**Service File:** `server/paymentService.ts`
+**Service Files:**
+- `apps/server/src/routes/domains/payments.ts` — payment route handler (domain router)
+- `apps/server/src/paymentService.ts` — WeChat Pay v3 signed API integration, idempotency handling, kill switch
+
+> **Payment Kill Switch:** The server exposes a `paymentsEnabled` feature flag. When disabled (e.g., during incident mitigation or pre-launch hold), all payment creation requests are rejected with a clear error before any WeChat API call is made. This is the primary launch-safety lever for payment flows.
 
 **Payment Flow:**
 ```
@@ -694,26 +732,34 @@ Display:
      subscriptionTier: "monthly"
    }
    ↓
-3. Backend creates payment record (status: "pending")
+3. Server checks paymentsEnabled flag (kill switch) — rejects if disabled
    ↓
-4. WeChat Pay JSAPI called
+4. Backend creates payment record (status: "pending") with idempotency key
+   ↓
+5. WeChat Pay v3 signed JSAPI order created
+   (v3 signature: SHA-256 HMAC with API v3 key — NOT the legacy MD5/v2 method)
    {
      appId, timeStamp, nonceStr, package, signType, paySign
    }
    ↓
-5. User completes payment in WeChat
+6. User completes payment in WeChat
    ↓
-6. WeChat webhook POST /api/payments/webhook
+7. WeChat webhook POST /api/payments/webhook
    ↓
-7. Backend verifies signature & updates:
+8. Server verifies v3 webhook signature before processing
+   (rejects requests with invalid or missing signatures)
+   ↓
+9. Backend updates:
    - payment.status = "completed"
    - subscription.status = "active"
    - subscription.startDate = now
    - subscription.endDate = now + 30 days
    ↓
-8. WebSocket notification to user
-   "支付成功！权益已激活"
+10. WebSocket notification to user
+    "支付成功！权益已激活"
 ```
+
+> **Webhook security:** The server performs cryptographic signature verification on every incoming WeChat Pay webhook notification using the v3 protocol. Notifications that fail verification are rejected before any state change occurs. Duplicate notifications are handled via idempotency keys.
 
 **Database Schema:**
 ```sql
@@ -772,7 +818,7 @@ async function checkExpiredSubscriptions() {
 
 #### Coupon System
 
-**File:** `client/src/pages/admin/AdminCouponsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminCouponsPage.tsx`
 
 **Coupon Types:**
 - **Percentage Discount:** 20% off
@@ -948,6 +994,13 @@ CREATE TABLE chat_logs (
 
 The Social Icebreaker is the **core in-event facilitation tool** for matched JoyJoin groups. It replaces any standalone game browsers as the primary icebreaking experience.
 
+#### Server-Driven Phase Ownership
+
+Phase progression is **server-authoritative**. The server determines the current phase for each session and pushes phase transitions to all participants in real time. Clients do not compute or advance phases locally — they render whatever the server declares as the current state. This means:
+- All participants see the same phase simultaneously
+- The HOST triggers phase advances via server calls; the server then broadcasts the update
+- Phase configuration (e.g., which phases are active, their duration) is controlled server-side via `apps/server/src/socialIcebreakerPhaseConfig.ts`
+
 #### Phases (MVP)
 
 | Phase | CN Name | Duration | Mechanic |
@@ -957,10 +1010,22 @@ The Social Icebreaker is the **core in-event facilitation tool** for matched Joy
 | `lie_detective` | 🕵️ 侦探 | 25 min | Two Truths One Lie — AI-generated |
 | `recap` | ✨ 回顾 | 5 min | AI-generated session summary |
 
+> **Lie Detective secrecy:** The `isLie` truth-marker is stored server-side and only included in the current player's own session state. It is never included in the shared/public session state broadcast to other participants. See `apps/server/src/routes/socialIcebreaker.ts` for the sanitization boundary.
+
 #### Entry
 - Available on event day when event status is `in_progress`
 - Accessible via BottomNav "去参与" button or from `PoolGroupDetailPage`
 - First user to open becomes HOST and drives phase progression
+
+#### Persistence / Recovery / Expiry
+
+- **Session persistence:** All session state (phase, participants, lie-truths) is stored in PostgreSQL via `apps/server/src/lib/socialIcebreakerStore.ts`. Sessions survive server restarts.
+- **Rejoin:** A participant who closes and reopens the session is restored to the current live state without data loss. The server rehydrates their view from the persisted record.
+- **Session expiry:** Sessions are not retained indefinitely — they are scoped to the event lifecycle. Expired sessions return a terminal state that prevents further interaction.
+
+#### v2 Phase Rollout *(PR #370)*
+
+Server-driven phase rollout configuration was added for Social Icebreaker v2. Beta phase scaffolding exists for future phases beyond MVP (the four current phases remain the active set). New phases can be toggled via server configuration without a client deployment.
 
 #### Supporting Layers (Optional)
 - **AI Card Game** (`/icebreaker-game`): Optional deep-dive card experience accessible from within the warmup phase
@@ -968,6 +1033,12 @@ The Social Icebreaker is the **core in-event facilitation tool** for matched Joy
 
 #### Technical Reference
 Full system documentation: `docs/icebreaker-system.md`
+
+Active server files:
+- `apps/server/src/routes/socialIcebreaker.ts` — route handlers
+- `apps/server/src/socialIcebreakerAIService.ts` — AI-generated content
+- `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL session persistence
+- `apps/server/src/socialIcebreakerPhaseConfig.ts` — phase configuration
 
 ---
 
@@ -1016,7 +1087,7 @@ Appears immediately after event ends (status: "completed")
 
 **Step 3: Select Meaningful Connections**
 
-**Component:** `client/src/components/feedback/SelectConnectionsStep.tsx`
+**Component:** `apps/user-client/src/components/feedback/SelectConnectionsStep.tsx`
 
 ```typescript
 // User selects attendees they connected with
@@ -1031,7 +1102,7 @@ Data Stored:
 
 **Step 4: Attendee Trait Tags (参与者印象标签)**
 
-**Component:** `client/src/components/feedback/TraitTagsWall.tsx`
+**Component:** `apps/user-client/src/components/feedback/TraitTagsWall.tsx`
 
 For EACH selected connection:
 ```typescript
@@ -1169,7 +1240,7 @@ CREATE TABLE event_feedback (
 
 ### 1.8 User Profile Management
 
-**File Location:** `client/src/pages/ProfilePage.tsx`, `client/src/pages/Edit*.tsx`
+**File Location:** `apps/user-client/src/pages/ProfilePage.tsx`, `apps/user-client/src/pages/Edit*.tsx`
 
 #### Profile Sections
 
@@ -1264,8 +1335,8 @@ interface PrivacySettings {
 #### Protected Routes
 
 ```typescript
-// Requires authentication
-Middleware: isPhoneAuthenticated
+// Requires authentication (WeChat session)
+// Auth policy: apps/server/src/auth/policy.ts
 
 Protected Routes:
   - /discover
@@ -1282,11 +1353,14 @@ Protected Routes:
 Public Routes:
   - /
   - /login
-  - /register
-  - /personality-test (can be taken before full registration)
+  - /personality-test (anonymous — taken before registration)
+  - /personality-test/auth-gate (WeChat auth handoff page)
+  
+Dev-only Routes (non-production only):
+  - ⚠️ Testing quick-pass and mock-login surfaces on the auth-gate and results pages are only rendered in non-production builds. See §1.1 auth-gate notes and `apps/server/src/auth/policy.ts`.
 ```
 
-> **Note:** `/chats/direct/:threadId` has been removed (DM system removed). The `连接` tab at `/connections` shows structured post-event connections. Event coordination is at `/event-coordination/:groupId`.
+> **Note:** `/register` (phone registration) is a legacy fallback on `/login`. The primary new-user path is the personality-test → WeChat-login flow. `/chats/direct/:threadId` has been removed (DM system removed). The `连接` tab at `/connections` shows structured post-event connections. Event coordination is at `/event-coordination/:groupId`.
 
 > **Note on admin routes:** All `/admin/*` routes in the user client redirect to `https://admin.yuejuapp.com`. The admin portal is a separate deployment (`apps/admin-client`).
 
@@ -1348,14 +1422,16 @@ This is **enrichment data**, not gating. Connections work without feedback; feed
 
 ---
 
+## 🖥️ Admin Portal Features
 
+> **File path note:** All admin page source files live under `apps/admin-client/src/pages/admin/`. References in this section to `client/src/pages/admin/` are legacy path style and should be treated as `apps/admin-client/src/pages/admin/` in the current monorepo.
 
 **Access:** `https://joyjoin.app/admin` (Desktop-optimized)
 
 **Authentication:** 
 - Admin users have `is_admin: true` in database
 - Middleware: `requireAdmin` on all `/api/admin/*` routes
-- Test account: Phone `19896500978` / Password `Lasalle11`
+- Admin access provisioned via `npm run set-admin` CLI (see `DEVELOPER_QUICK_REFERENCE.md`)
 
 ---
 
@@ -2919,14 +2995,14 @@ Charts:
 
 ### 2.13 Real-Time WebSocket Integration
 
-**File:** `server/wsService.ts`, `client/src/hooks/useWebSocket.ts`
+**File:** `apps/server/src/wsService.ts`, `apps/user-client/src/hooks/useWebSocket.ts`
 
 #### Architecture
 
 **Backend WebSocket Service:**
 
 ```typescript
-// server/wsService.ts
+// apps/server/src/wsService.ts
 class WebSocketService {
   private wss: WebSocketServer;
   private userConnections: Map<userId, WebSocket>;
@@ -2980,7 +3056,7 @@ type AdminWSMessage =
 **Frontend Hook:**
 
 ```typescript
-// client/src/hooks/useWebSocket.ts
+// apps/user-client/src/hooks/useWebSocket.ts
 export function useWebSocket() {
   const [isConnected, setIsConnected] = useState(false);
   const ws = useRef<WebSocket>();
@@ -3095,14 +3171,44 @@ export function useWebSocket() {
 - PostgreSQL session store (7-day persistence)
 
 **Payment:**
-- WeChat Pay JSAPI integration
-- Webhook signature verification
-- Idempotency handling
+- WeChat Pay JSAPI v3 signed integration (SHA-256 HMAC with API v3 key)
+- Verified webhook handling (v3 signature validation before any state change)
+- Idempotency handling for duplicate webhook delivery
+- Payment kill switch (`paymentsEnabled` flag) — disables payment creation without code deployment
 
 **Real-Time:**
 - WebSocket connections
 - Event-based message broadcasting
 - Auto-reconnection on disconnect
+
+**Observability & Operational Readiness** *(PRs #397, #402)*
+- Structured JSON logging via `apps/server/src/lib/logger.ts`; every request carries a unique `requestId` for log correlation
+- Prometheus-compatible metrics endpoint (`/metrics`) — request rate, latency, memory, CPU, and domain-specific counters
+- Health check: `GET /api/health` (liveness) and `GET /api/ready` (readiness — verifies DB connectivity before accepting traffic)
+- Admin action audit log: `apps/server/src/lib/adminAuditLogger.ts` — every sensitive admin action emits a structured audit event
+- AI call trace log: `apps/server/src/lib/aiTraceLogger.ts` — every AI invocation emits a single-line `[AITrace] {json}` to stdout
+- Full observability setup: `docs/observability.md`; incident runbooks: `docs/runbooks/observability.md`
+
+---
+
+### 3.1b Server Domain Architecture *(PRs #422, #425, #427, #429)*
+
+The server uses a **route-domain modularization model** that all contributors should understand:
+
+| Layer | Path | Role |
+|-------|------|------|
+| Composition root | `apps/server/src/routes.ts` | Mounts all domain routers; entry point for route registration |
+| Domain routers | `apps/server/src/routes/domains/` | Each domain owns its routes: `auth`, `onboarding`, `assessment`, `payments`, `analytics`, `admin`, `icebreaker` |
+| Repositories | `apps/server/src/repositories/` | Active persistence layer — new data access logic goes here |
+| Compatibility facade | `apps/server/src/storage.ts` | Legacy composed facade from repositories; do not expand with new logic |
+| Cross-cutting libs | `apps/server/src/lib/` | Logger, aiTraceLogger, adminAuditLogger, socialIcebreakerStore |
+
+**Key rules:**
+- New API routes belong in a domain router under `routes/domains/`, not directly in `routes.ts`
+- New persistence logic belongs in a repository under `repositories/`, not in `storage.ts`
+- Cross-cutting utilities (logging, audit, session store) belong in `lib/`
+
+For full details: `apps/server/src/README.md` and `docs/architecture/current-state.md`
 
 ---
 
@@ -3136,26 +3242,39 @@ export function useWebSocket() {
 24. **invitation_uses** - Invitation reward tracking (NEW v1.1)
 25. **user_coupons** - User coupon assignments (NEW v1.1)
 
-**Full schema:** See `shared/schema.ts` (3000+ lines)
+**Full schema:** See `packages/shared/src/schema.ts` (Drizzle ORM — canonical source of truth for all tables)
 
 ---
 
 ### 3.3 API Endpoints Summary
 
+**Public / Operational Routes:**
+- `GET /api/health` - Liveness probe (always 200 if server is running)
+- `GET /api/ready` - Readiness probe (checks DB connectivity before accepting traffic)
+- `GET /metrics` - Prometheus-compatible metrics endpoint
+
 **Public Routes:**
-- `POST /api/phone/register` - Send SMS verification
-- `POST /api/phone/verify` - Verify code + create session
-- `POST /api/phone/login` - Existing user login
+- `POST /api/phone/register` - Send SMS verification (legacy fallback)
+- `POST /api/phone/verify` - Verify code + create session (legacy fallback)
+- `POST /api/phone/login` - Existing user login (legacy fallback)
+- `POST /api/auth/wechat/login-with-test` - WeChat login + save personality test
+- `POST /api/auth/wechat/login` - WeChat returning-user login
+- `GET /api/auth/wechat/oauth/start` - Browser OAuth2 flow start
+- `GET /api/auth/wechat/oauth/callback` - Browser OAuth2 callback
 
 **User Routes** (requires authentication):
-- `GET /api/auth/user` - Get current user
+- `GET /api/auth/user` - Get current user (including `nextStep` for onboarding routing)
 - `POST /api/personality-test/submit` - Submit test answers
 - `GET /api/personality-test/results` - Get test results
 - `GET /api/personality-test/stats` - Get archetype distribution
+- `POST /api/auth/complete-personality-test` - Mark personality test complete
+- `GET /api/onboarding/profile-tagline` - Get AI-generated profile tagline
+- `POST /api/profile-review/complete` - Mark profile review as seen
 - `GET /api/events` - List events
 - `GET /api/events/:id` - Event details
 - `POST /api/events/:id/register` - Register for event
-- `POST /api/payments/create` - Create payment
+- `POST /api/payments/create` - Create payment (subject to `paymentsEnabled` kill switch)
+- `POST /api/payments/webhook` - WeChat Pay v3 webhook (verified before processing)
 - `POST /api/coupons/validate` - Validate coupon code
 - `GET /api/chats/:eventId` - Get event chat messages
 - `POST /api/chats/:eventId/message` - Send message
@@ -3194,12 +3313,12 @@ export function useWebSocket() {
 - `GET /api/admin/data-insights` - Analytics data
 - `POST /api/admin/matching/test` - Test matching algorithm
 - `PATCH /api/admin/matching/weights` - Update weights
-- `GET /api/admin/matching-thresholds` - Get pool matching thresholds (NEW v1.1)
-- `PUT /api/admin/matching-thresholds/:poolId` - Update thresholds (NEW v1.1)
-- `POST /api/admin/trigger-matching/:poolId` - Manually trigger matching (NEW v1.1)
-- `GET /api/admin/matching-logs` - Get matching decision history (NEW v1.1)
+- `GET /api/admin/matching-thresholds` - Get pool matching thresholds
+- `PUT /api/admin/matching-thresholds/:poolId` - Update thresholds
+- `POST /api/admin/trigger-matching/:poolId` - Manually trigger matching
+- `GET /api/admin/matching-logs` - Get matching decision history
 
-**Full API documentation:** See `server/routes.ts` (3400+ lines)
+**Route architecture:** `apps/server/src/routes.ts` is the composition root that mounts domain routers from `apps/server/src/routes/domains/` (auth, onboarding, assessment, analytics, admin, payments, icebreaker). See `apps/server/src/README.md` for the active domain ownership map.
 
 ---
 
@@ -3207,7 +3326,7 @@ export function useWebSocket() {
 
 #### Traditional Event Matching (1-on-1 Compatibility)
 
-**File:** `server/userMatchingService.ts`
+**File:** `apps/server/src/userMatchingService.ts`
 
 **5-Dimensional Scoring System:**
 
@@ -3323,7 +3442,9 @@ const chemistryMatrix = {
 
 #### Event Pool Matching (Blind Box Group Formation)
 
-**Files:** `server/poolMatchingService.ts`, `server/archetypeChemistry.ts`
+**Files:** `apps/server/src/poolMatchingService.ts`, `apps/server/src/archetypeChemistry.ts`
+
+> **Interest Signal Boundary (PR #379):** `user_interest_signals` are **not** part of deterministic pair scoring. The pair score below uses `user_interests` (onboarding heat-weighted selections) for interest overlap, but `user_interest_signals` (the post-onboarding calibration tool) feed AI enrichment only (match explanation connection points, icebreaker topics). This boundary is enforced by `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
 
 **Two-Stage Matching Model:**
 
@@ -3436,7 +3557,7 @@ if (matchHistory.length > 0) {
 
 **NEW in v1.1** (Nov 20, 2025)
 
-**Files:** `server/archetypeChemistry.ts`, `shared/schema.ts`, `shared/wsEvents.ts`
+**Files:** `apps/server/src/archetypeChemistry.ts`, `packages/shared/src/schema.ts`, `packages/shared/src/wsEvents.ts`
 
 **Purpose:** Provide intuitive visual feedback on match quality using dual-temperature metaphor
 
@@ -3444,31 +3565,16 @@ if (matchHistory.length > 0) {
 
 **1. Social Energy Temperature (社交能量温度)**
 
-Maps 14 personality archetypes to energy levels (0-100 scale) to prevent unbalanced groups.
+Maps the 12 V4 personality archetypes to energy levels (0-100 scale) to prevent unbalanced groups.
+
+> ⚠️ The example `ARCHETYPE_ENERGY` values below use illustrative names for readability. The actual implementation in `apps/server/src/archetypeChemistry.ts` uses the current 12 canonical V4 archetypes (开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛, 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象, 稳如龟, 隐身猫).
 
 ```typescript
-const ARCHETYPE_ENERGY = {
-  // High Energy (80-95)
-  社交蝴蝶: 95,        // Social Butterfly - Highest energy
-  活动策划者: 90,      // Event Planner
-  幽默大师: 85,        // Humor Master
-  氛围营造者: 82,      // Atmosphere Creator
-  
-  // Medium-High Energy (60-75)
-  知识分享者: 60,      // Knowledge Sharer
-  创意思考者: 55,      // Creative Thinker
-  
-  // Medium Energy (45-55)
-  倾听者: 50,          // Listener
-  平衡协调者: 52,      // Balanced Coordinator
-  
-  // Low Energy (25-40)
-  深度对话者: 40,      // Deep Conversationalist
-  观察者: 30,          // Observer
-  独立思考者: 25,      // Independent Thinker - Lowest energy
-  
-  // ... all 14 archetypes mapped
-};
+// Energy levels for current 12 V4 archetypes (from archetypeChemistry.ts)
+// High Energy (78-95): 开心柯基 (95), 太阳鸡 (88), 夸夸豚 (82)
+// Medium Energy (48-78): 机智狐 (78), 淡定海豚 (65), 织网蛛 (60)
+// Low-Medium (40-52): 暖心熊 (48), 灵感章鱼 (52), 沉思猫头鹰 (40)
+// Low (20-40): 定心大象 (40), 稳如龟 (30), 隐身猫 (20)
 ```
 
 **Communication Balance Calculation** (replaced former energy balance):
@@ -3604,32 +3710,37 @@ CREATE TABLE event_pool_groups (
 
 ### Feature Completion Matrix
 
-| Module | Status | Files | Notes |
+| Module | Status | Primary Files | Notes |
 |--------|--------|-------|-------|
-| **User Registration** | ✅ Complete | `RegistrationPage.tsx`, `phoneAuth.ts` | SMS + bcrypt |
-| **Personality Test** | ✅ Complete | `PersonalityTestPage.tsx`, 10 questions | 14 archetypes |
+| **WeChat-First Onboarding** | ✅ Complete | `features/onboarding/active/`, `routes/domains/auth.ts` | Anonymous test → WeChat login → server nextStep |
+| **Personality Test V4** | ✅ Complete | `PersonalityTestPageV4.tsx`, `packages/shared/src/personality/` | 12 archetypes, 8-18 questions |
+| **Profile Review + AI Tagline** | ✅ Complete | `FinalProfileReviewPage.tsx`, `profileTaglineService.ts` | Reduced wait, skippable, AI tagline |
+| **Limited Browse Mode** | ✅ Experiment | `FinalProfileReviewPage.tsx` | Scoped by feature flag `ENABLE_LIMITED_BROWSE_MODE` |
 | **Event Discovery** | ✅ Complete | `DiscoverPage.tsx`, `BlindBoxEventDetailPage.tsx` | Blind box system |
-| **Match Scoring** | ✅ Complete | `userMatchingService.ts` | 5-dimensional |
-| **Payment Integration** | ✅ Complete | `paymentService.ts`, WeChat Pay | Webhook handling |
+| **Blind Pool Join Flow** | ✅ Complete | `JoinEventPoolSheet.tsx`, `BlindPoolTrustExplainer.tsx`, `PreJoinVibeBriefSheet.tsx`, `WhyThisFitsCard.tsx` | Trust explainer + vibe brief + why-fits |
+| **Matching-State UI** | ✅ Complete | `components/matching/` | 7-screen family: waiting, no-match, join-error, test-incomplete, extended-data-empty, reveal, points |
+| **Center-Tab Empty State** | ✅ Complete | `CenterTabEmptyStatePage.tsx` | No-activity users via center nav tab |
+| **Match Scoring** | ✅ Complete | `apps/server/src/poolMatchingService.ts` | 6-dimensional pair + group scoring; interest signals excluded from deterministic scoring |
+| **Payment Integration** | ✅ Complete | `apps/server/src/paymentService.ts`, `routes/domains/payments.ts` | WeChat Pay v3 signed, verified webhook, kill switch |
 | **Subscription Management** | ✅ Complete | `subscriptionService.ts` | Auto-expiry |
 | **Chat System** | ✅ Complete | `EventChatDetailPage.tsx`, WebSocket | Real-time |
+| **Social Icebreaker** | ✅ Complete | `routes/socialIcebreaker.ts`, `lib/socialIcebreakerStore.ts`, `socialIcebreakerPhaseConfig.ts` | Server-driven phases, PostgreSQL persistence, rejoin recovery |
 | **Feedback System** | ✅ Complete | `EventFeedbackFlow.tsx`, 2-tier | Basic + Deep |
-| **Admin Dashboard** | ✅ Complete | `AdminDashboard.tsx` | 5 key metrics |
+| **Connection Model** | ✅ Complete | `ChatsPage.tsx`, `SelectConnectionsStep.tsx` | Post-event selection + 连接 tab enrichment |
+| **Admin Dashboard** | ✅ Complete | `AdminDashboard.tsx` | Key metrics |
 | **User Management** | ✅ Complete | `AdminUsersPage.tsx` | CRUD + analytics |
 | **Venue Management** | ✅ Complete | `AdminVenuesPage.tsx`, `venueMatchingService.ts` | Auto-matching |
-| **Event Templates** | ✅ Complete | `AdminEventTemplatesPage.tsx` | Reusable configs |
 | **Matching Lab** | ✅ Complete | `AdminMatchingLabPage.tsx` | Weight tuning |
 | **Content Management** | ✅ Complete | `AdminContentPage.tsx` | CMS for announcements |
 | **Notification System** | ✅ Complete | `AdminNotificationsPage.tsx` | Broadcast |
 | **Moderation System** | ✅ Complete | `AdminModerationPage.tsx`, `AdminReportsPage.tsx` | Report handling |
-| **Interaction Logs** | ✅ Complete | `AdminInteractionLogsPage.tsx` | Audit trail |
 | **Data Insights** | ✅ Complete | `AdminDataInsightsPage.tsx` | 7 analytics modules |
-| **Feedback Management** | ✅ Complete | `AdminFeedbackPage.tsx` | Review interface |
 | **WebSocket Sync** | ✅ Complete | `wsService.ts`, `useWebSocket.ts` | Bidirectional |
-| **Temperature Concept** | ✅ Complete (v1.1) | `archetypeChemistry.ts`, `poolMatchingService.ts` | Dual-temperature system |
-| **Real-time Dynamic Matching** | ✅ Complete (v1.1) | `poolRealtimeMatchingService.ts`, `AdminMatchingConfigPage.tsx` | Three-tier threshold system |
-| **Invitation & Viral Growth** | ✅ Complete (v1.1) | `poolMatchingService.ts`, `user_coupons` table | Auto-coupon issuance |
-| **Event Pool User Flow** | ✅ Complete (v1.1) | `EventPoolRegistrationPage.tsx`, `PoolRegistrationCard.tsx` | Two-stage matching UI |
+| **Observability Stack** | ✅ Complete | `lib/logger.ts`, `lib/aiTraceLogger.ts`, `lib/adminAuditLogger.ts` | Structured logs, request IDs, metrics, health/readiness |
+| **Route Domain Modularization** | ✅ Complete | `routes/domains/*`, `repositories/*` | routes.ts as composition root; storage.ts as compat facade |
+| **Temperature Concept** | ✅ Complete | `apps/server/src/archetypeChemistry.ts`, `poolMatchingService.ts` | Dual-temperature system |
+| **Real-time Dynamic Matching** | ✅ Complete | `poolRealtimeMatchingService.ts`, `AdminMatchingConfigPage.tsx` | Three-tier threshold system |
+| **Invitation & Viral Growth** | ✅ Complete | `poolMatchingService.ts`, `user_coupons` table | Auto-coupon issuance |
 
 ---
 
@@ -3647,8 +3758,10 @@ CREATE TABLE event_pool_groups (
 
 **Payment Security:**
 - PCI DSS compliant (via WeChat Pay)
-- Webhook signature verification
+- WeChat Pay v3 signed API (SHA-256 HMAC — not legacy MD5/v2 method)
+- Cryptographic webhook signature verification (v3 protocol) — requests that fail verification are rejected before any state change
 - Idempotency keys for duplicate prevention
+- Payment kill switch (`paymentsEnabled`) for launch-safety control
 
 **Moderation:**
 - Automated keyword flagging
@@ -3689,68 +3802,100 @@ npm run dev
 
 ## 📁 File Structure Reference
 
+> ⚠️ **This section reflects the current monorepo structure.** The legacy `client/src/` and `server/` top-level paths are no longer used. All active code lives under `apps/`, `packages/`, or `docs/`.
+
 ```
-joyjoin/
-├── client/src/
-│   ├── pages/
-│   │   ├── admin/                    # 18 admin pages
+joyjoin-monorepo/
+├── apps/
+│   ├── user-client/src/
+│   │   ├── features/
+│   │   │   └── onboarding/
+│   │   │       ├── active/           # ACTIVE onboarding module (use this)
+│   │   │       │   ├── pages/        # Onboarding page components
+│   │   │       │   ├── flow.ts       # nextStep → route mapping
+│   │   │       │   └── useOnboardingOrchestrator.ts
+│   │   │       └── README.md
+│   │   ├── pages/                    # Route-level page components
+│   │   │   ├── PersonalityTestResultPage.tsx
+│   │   │   ├── DiscoverPage.tsx
+│   │   │   ├── BlindBoxEventDetailPage.tsx
+│   │   │   ├── IcebreakerSessionPage.tsx
+│   │   │   ├── EventFeedbackFlow.tsx
+│   │   │   ├── MatchingStatusPage.tsx
+│   │   │   └── ... (40+ pages total)
+│   │   ├── components/
+│   │   │   ├── ui/                   # shadcn/shared component wrappers
+│   │   │   ├── matching/             # Matching-state screen family
+│   │   │   │   ├── MatchingStateLayout.tsx
+│   │   │   │   ├── MatchingWaitingScreen.tsx
+│   │   │   │   ├── NoMatchScreen.tsx
+│   │   │   │   ├── JoinErrorScreen.tsx
+│   │   │   │   ├── TestIncompleteScreen.tsx
+│   │   │   │   └── ExtendedDataEmptyScreen.tsx
+│   │   │   ├── BlindPoolTrustExplainer.tsx
+│   │   │   ├── PreJoinVibeBriefSheet.tsx
+│   │   │   ├── WhyThisFitsCard.tsx
+│   │   │   ├── AttendeePreviewCard.tsx
+│   │   │   └── feedback/
+│   │   │       ├── ConnectionRadar.tsx
+│   │   │       ├── TraitTagsWall.tsx
+│   │   │       └── SelectConnectionsStep.tsx
+│   │   ├── hooks/
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useOnboardingRoute.ts
+│   │   │   ├── useSocialIcebreaker.ts
+│   │   │   └── useWebSocket.ts
+│   │   ├── lib/
+│   │   │   └── queryClient.ts
+│   │   └── App.tsx                   # Main routing entry point
+│   │
+│   ├── admin-client/src/
+│   │   ├── pages/admin/              # 18 admin pages
 │   │   │   ├── AdminDashboard.tsx
 │   │   │   ├── AdminUsersPage.tsx
 │   │   │   ├── AdminSubscriptionsPage.tsx
-│   │   │   ├── AdminCouponsPage.tsx
 │   │   │   ├── AdminVenuesPage.tsx
-│   │   │   ├── AdminEventTemplatesPage.tsx
 │   │   │   ├── AdminEventsPage.tsx
 │   │   │   ├── AdminFinancePage.tsx
 │   │   │   ├── AdminDataInsightsPage.tsx
 │   │   │   ├── AdminFeedbackPage.tsx
 │   │   │   ├── AdminMatchingLabPage.tsx
-│   │   │   ├── AdminContentPage.tsx
-│   │   │   ├── AdminNotificationsPage.tsx
-│   │   │   ├── AdminModerationPage.tsx
-│   │   │   ├── AdminReportsPage.tsx
-│   │   │   └── AdminInteractionLogsPage.tsx
-│   │   ├── RegistrationPage.tsx      # Phone auth
-│   │   ├── PersonalityTestPage.tsx   # 10 questions
-│   │   ├── PersonalityTestResultPage.tsx
-│   │   ├── DiscoverPage.tsx          # Event browsing
-│   │   ├── BlindBoxEventDetailPage.tsx
-│   │   ├── BlindBoxPaymentPage.tsx
-│   │   ├── EventChatDetailPage.tsx
-│   │   ├── EventFeedbackFlow.tsx
-│   │   ├── DeepFeedbackFlow.tsx
-│   │   └── ... (30+ pages total)
-│   ├── components/
-│   │   ├── ui/                       # shadcn components
-│   │   ├── PersonalityRadarChart.tsx
-│   │   ├── AttendeePreviewCard.tsx
-│   │   ├── StackedAttendeeCards.tsx
-│   │   └── feedback/
-│   │       ├── ConnectionRadar.tsx
-│   │       ├── TraitTagsWall.tsx
-│   │       └── SelectConnectionsStep.tsx
-│   ├── lib/
-│   │   ├── archetypes.ts            # 14 archetype configs
-│   │   ├── archetypeAvatars.ts      # Gradients + emojis
-│   │   ├── matchExplanation.ts
-│   │   └── queryClient.ts
-│   └── hooks/
-│       ├── useAuth.ts
-│       └── useWebSocket.ts
-├── server/
-│   ├── routes.ts                    # 3400+ lines, all API routes
-│   ├── storage.ts                   # Database layer
-│   ├── phoneAuth.ts                 # SMS verification
-│   ├── paymentService.ts            # WeChat Pay
-│   ├── subscriptionService.ts       # Auto-expiry
-│   ├── venueMatchingService.ts      # Venue algorithm
-│   ├── userMatchingService.ts       # User matching (5D)
-│   ├── wsService.ts                 # WebSocket server
-│   └── eventBroadcast.ts            # Real-time sync
-├── shared/
-│   └── schema.ts                    # 3000+ lines, full DB schema
-└── db/
-    └── index.ts                     # Drizzle connection
+│   │   │   └── ... (18 total)
+│   │   └── AdminApp.tsx
+│   │
+│   └── server/src/
+│       ├── routes.ts                 # Composition root — mounts domain routers
+│       ├── routes/domains/           # Domain routers (auth, onboarding, payments, etc.)
+│       ├── repositories/             # Active persistence layer (new logic goes here)
+│       ├── storage.ts                # Compatibility facade (legacy — do not expand)
+│       ├── poolMatchingService.ts    # Blind pool matching algorithm
+│       ├── paymentService.ts         # WeChat Pay v3 signed integration
+│       ├── socialIcebreakerAIService.ts
+│       ├── socialIcebreakerPhaseConfig.ts
+│       ├── matchExplanationService.ts
+│       ├── profileTaglineService.ts
+│       ├── auth/policy.ts            # Auth policy and env-gate helpers
+│       ├── lib/
+│       │   ├── logger.ts             # Structured JSON logger (request IDs)
+│       │   ├── aiTraceLogger.ts      # AI call trace logger
+│       │   ├── adminAuditLogger.ts   # Admin action audit log
+│       │   └── socialIcebreakerStore.ts  # PostgreSQL-backed icebreaker sessions
+│       └── README.md                 # Server architecture guide
+│
+├── packages/shared/src/
+│   ├── schema.ts                     # Canonical DB schema (Drizzle)
+│   ├── personality/                  # V4 engine, archetypes, chemistry matrix
+│   ├── types/aiMeta.ts               # AIResponseMeta contract
+│   ├── socialIcebreaker.ts           # Shared icebreaker contracts
+│   ├── constants.ts                  # INTENT_OPTIONS, WORK_MODE, etc.
+│   └── index.ts                      # Barrel export
+│
+└── docs/
+    ├── onboarding-flow.md            # Active onboarding flow reference
+    ├── observability.md              # Monitoring, metrics, alerting setup
+    ├── architecture/current-state.md # Active architecture map
+    ├── icebreaker-system.md          # Social Icebreaker full system docs
+    └── runbooks/observability.md     # Incident response runbook
 ```
 
 ---
@@ -3768,21 +3913,29 @@ joyjoin/
    ```
 
 2. **Admin Login:**
-   - Phone: `19896500978`
-   - Password: `Lasalle11`
-   - Navigate to `/admin`
+   - Navigate to `/admin` (admin portal is `apps/admin-client`)
+   - Use the `set-admin` CLI script to grant admin access: `npm run set-admin`
 
 3. **Key Files to Read First:**
-   - `replit.md` - Project overview
-   - `shared/schema.ts` - Database structure
-   - `server/routes.ts` - API endpoints
-   - `client/src/App.tsx` - Routing
+   - `DEVELOPER_QUICK_REFERENCE.md` — active codebase reference and canonical rules
+   - `docs/architecture/current-state.md` — active architecture map by domain
+   - `apps/server/src/README.md` — server domain ownership and file placement guide
+   - `packages/shared/src/schema.ts` — canonical DB schema (Drizzle)
+   - `apps/server/src/routes.ts` — API route composition root
+   - `apps/user-client/src/App.tsx` — client routing entry point
 
 4. **Common Tasks:**
-   - Add new API endpoint → `server/routes.ts`
-   - Add new admin page → `client/src/pages/admin/`
-   - Modify matching → `server/userMatchingService.ts`
-   - Update schema → `shared/schema.ts` + `npm run db:push`
+   - Add new API route → `apps/server/src/routes/domains/<domain>.ts`, mount in `routes.ts`
+   - Add new admin page → `apps/admin-client/src/pages/admin/`
+   - Modify matching → `apps/server/src/poolMatchingService.ts`
+   - New persistence logic → `apps/server/src/repositories/<domain>Repo.ts` (not `storage.ts`)
+   - Update schema → `packages/shared/src/schema.ts` + `npm run db:push`
+   - Active onboarding page → `apps/user-client/src/features/onboarding/active/pages/`
+
+5. **Skills / Architecture guides:**
+   - `.github/skills/README.md` — domain skill index for AI coding agents
+   - `docs/observability.md` — monitoring, logging, metrics
+   - `docs/onboarding-flow.md` — complete onboarding flow reference
 
 **For Product Managers:**
 
@@ -3793,19 +3946,55 @@ joyjoin/
 
 **For Designers:**
 
-- Design system: shadcn/ui components in `client/src/components/ui/`
-- Color palette: Defined in `client/src/index.css`
-- Personality archetype branding: `client/src/lib/archetypeAvatars.ts`
+- Design system: `packages/shared/src/ui/` (shared primitives) + `apps/user-client/src/components/ui/` (app wrappers)
+- Color palette: Defined in `apps/user-client/src/index.css`
+- Personality archetype branding: `apps/user-client/src/lib/archetypeAvatars.ts`
 - Dark mode: Fully supported via Tailwind classes
 
 ---
 
 ## 📝 Changelog & Version History
 
-**v1.0 (Current) - November 14, 2025**
+**v1.4 (April 1, 2026)**
+- ✅ WeChat Pay v3 signed integration + verified webhook handling + payment kill switch
+- ✅ Server-driven observability: structured logging, request IDs, Prometheus metrics, health/readiness endpoints
+- ✅ Server domain modularization: `routes/domains/*` as active domain routers; `repositories/*` as persistence layer; `storage.ts` as compatibility facade
+- ✅ Social Icebreaker durability: PostgreSQL-backed session store, rejoin recovery, server-driven phase rollout
+- ✅ Matching-state UI system: MatchingStateLayout + full screen family (7 screens)
+- ✅ Blind pool join flow: BlindPoolTrustExplainer, PreJoinVibeBriefSheet, WhyThisFitsCard
+- ✅ Onboarding clarity: reduced analyzing wait (1200ms / 500ms reduced-motion), skippable after 600ms
+- ✅ Limited browse mode experiment (scoped, gated by feature flag)
+- ✅ AI profile tagline, AIResponseMeta normalization, AI trace logger
+- ✅ Interest signal boundary enforced: `user_interest_signals` removed from deterministic pair scoring
+- ✅ Active onboarding module consolidation: `features/onboarding/active/` is single source of truth
+- ✅ `.github/skills/README.md` and domain skills now active contributor guidance
+- ✅ PRD metadata updated to v1.4 / April 1, 2026
+
+**v1.3 (March 2026)**
+- ✅ V4 personality test: 8-18 questions (8-16 adaptive + 2 closing questions)
+- ✅ AI onboarding tagline on Profile Review page
+- ✅ Interest Signal Boost: 2-step UX, pre-seeded from onboarding interest data
+- ✅ Limited browse mode prototype
+
+**v1.2 (February–March 2026)**
+- ✅ Server-driven `nextStep` navigation (Scope B1)
+- ✅ Active onboarding module: `features/onboarding/active/`
+- ✅ Guide page deprecated (2026-02-16); replaced by inline coach marks
+- ✅ Auth gate flow: `/personality-test/auth-gate` page + dev-only bypass
+- ✅ Intent options: single source of truth in `packages/shared/src/constants.ts`
+
+**v1.1 (November–December 2025)**
+- ✅ Temperature concept system (dual-temperature: social energy + chemistry reaction)
+- ✅ 12-archetype V4 system (replaced 14-archetype V1/V2)
+- ✅ Three-tier matching threshold system with time decay
+- ✅ Invitation & viral growth (auto-coupon issuance)
+- ✅ Event pool user flow (two-stage matching UI)
+- ✅ Life stage affinity matrix (LIFE_STAGE_AFFINITY workMode 7×7)
+
+**v1.0 (November 14, 2025)**
 - ✅ Complete user app with blind box events
-- ✅ 14 personality archetype system
-- ✅ 5-dimensional matching algorithm
+- ✅ 12 personality archetype system (V4)
+- ✅ 6-dimensional pair + group matching algorithm
 - ✅ WeChat Pay integration
 - ✅ Comprehensive admin portal (18 pages)
 - ✅ Real-time WebSocket sync
@@ -3813,27 +4002,26 @@ joyjoin/
 - ✅ Data insights dashboard
 - ✅ Chat moderation system
 
-**Planned for v1.1:**
-- [ ] Mobile app (React Native)
-- [ ] AI-generated conversation starters
-- [ ] Video introduction profiles
-- [ ] Advanced A/B testing framework
-- [ ] Multi-language support (English full launch)
-
 ---
 
 ## 📞 Support & Resources
 
 **Documentation:**
-- This PRD
-- `replit.md` - Project architecture
-- API docs: See `server/routes.ts` inline comments
-- Component docs: See component prop interfaces
+- This PRD (`PRODUCT_REQUIREMENTS.md`) — canonical product and active-flow reference
+- `DEVELOPER_QUICK_REFERENCE.md` — codebase navigation, conventions, active-flow rules
+- `docs/architecture/current-state.md` — active architecture map by domain
+- `apps/server/src/README.md` — server domain ownership and file placement
+- `docs/observability.md` — monitoring, structured logging, metrics, alerting
+- `docs/runbooks/observability.md` — incident runbooks
+- `docs/onboarding-flow.md` — complete onboarding flow reference
+- `.github/skills/README.md` — domain skill index for AI coding agents
 
 **Developer Resources:**
-- Database tool: Use `/api/admin` routes or execute_sql_tool
-- Testing: Use run_test tool for playwright tests
-- Logs: Check workflow logs in Replit
+- Schema: `packages/shared/src/schema.ts`
+- Route composition: `apps/server/src/routes.ts` + `routes/domains/`
+- Tests: `npm run test -w @joyjoin/server` (server tests), `npm run test -w @joyjoin/user-client` (Vitest, user-client)
+- Guardrails: `npm run guardrails` (monorepo health checks — run before pushing)
+- Logs: structured JSON to stdout; request ID correlation available in all server logs
 
 **Contact:**
 - Technical lead: [TBD]
@@ -3844,6 +4032,6 @@ joyjoin/
 
 **End of Product Requirements Document**
 
-*Last updated: November 14, 2025*  
-*Document version: 1.0*  
-*Total pages: ~50 (Markdown equivalent)*
+*Last updated: April 1, 2026*  
+*Document version: 1.4*  
+*Total pages: ~55 (Markdown equivalent)*
