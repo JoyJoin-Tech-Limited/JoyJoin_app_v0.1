@@ -138,7 +138,7 @@ export async function updateSession(
     .set({
       currentPhase: state.currentPhase,
       phaseStartedAt: new Date(state.phaseStartedAt),
-      stateJson: state as Record<string, unknown>,
+      stateJson: state as unknown as Record<string, unknown>,
       updatedAt: new Date(),
     })
     .where(eq(socialIcebreakerSessions.id, socialSessionId));

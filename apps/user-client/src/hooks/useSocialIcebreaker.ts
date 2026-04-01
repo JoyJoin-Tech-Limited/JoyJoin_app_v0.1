@@ -3,15 +3,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type {
   SocialSessionState,
-  SocialIcebreakerPhase,
   AtmosphereMood,
   SocialTopic,
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
 
-// Session storage key used to persist the socialSessionId across page refreshes
-// so polling can resume immediately without waiting for startSession to complete.
-const SOCIAL_SESSION_STORAGE_KEY = 'joyjoin_social_session_id';
+function getSocialSessionStorageKey(sessionId: string): string {
+  return `joyjoin_social_session_id:${sessionId}`;
+}
 
 /** How often (ms) to send a heartbeat when the tab is active. */
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -50,13 +49,14 @@ export function useSocialIcebreaker({
   eventType,
 }: UseSocialIcebreakerOptions): UseSocialIcebreakerReturn {
   const qc = useQueryClient();
+  const storageKey = getSocialSessionStorageKey(sessionId);
 
   // Restore a cached socialSessionId from sessionStorage so that the GET
   // polling query can start immediately on reconnect/refresh, before
   // startSession() completes its POST.
   const [socialSessionId, setSocialSessionId] = useState<string | null>(() => {
     try {
-      const stored = sessionStorage.getItem(SOCIAL_SESSION_STORAGE_KEY);
+      const stored = sessionStorage.getItem(storageKey);
       return stored || null;
     } catch {
       return null;
@@ -73,14 +73,14 @@ export function useSocialIcebreaker({
     setSocialSessionId(id);
     try {
       if (id) {
-        sessionStorage.setItem(SOCIAL_SESSION_STORAGE_KEY, id);
+        sessionStorage.setItem(storageKey, id);
       } else {
-        sessionStorage.removeItem(SOCIAL_SESSION_STORAGE_KEY);
+        sessionStorage.removeItem(storageKey);
       }
     } catch {
       // sessionStorage may be unavailable in some environments; ignore.
     }
-  }, []);
+  }, [storageKey]);
 
   // Poll for state every 3 seconds once we have a session.
   // The query fn checks for the structured expiry error and updates state.
@@ -88,9 +88,12 @@ export function useSocialIcebreaker({
     queryKey: ['/api/social-icebreaker', socialSessionId],
     queryFn: async () => {
       if (!socialSessionId) return null;
-      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`);
+      const res = await fetch(`/api/social-icebreaker/${socialSessionId}`, {
+        credentials: 'include',
+      });
       if (res.status === 410) {
         setSessionExpired(true);
+        setAndCacheSocialSessionId(null);
         return null;
       }
       if (!res.ok) return null;
@@ -109,9 +112,15 @@ export function useSocialIcebreaker({
 
     const timer = setInterval(async () => {
       try {
-        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/heartbeat`, {});
+        const res = await fetch(`/api/social-icebreaker/${socialSessionId}/heartbeat`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
         if (res.status === 410) {
           setSessionExpired(true);
+          setAndCacheSocialSessionId(null);
         }
       } catch {
         // Network failure; will retry next interval.
@@ -119,21 +128,30 @@ export function useSocialIcebreaker({
     }, HEARTBEAT_INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, [socialSessionId, sessionExpired]);
+  }, [socialSessionId, sessionExpired, setAndCacheSocialSessionId]);
 
   const startSession = useCallback(async () => {
     if (startedRef.current) return;
     startedRef.current = true;
     setIsStarting(true);
     try {
-      const res = await apiRequest('POST', '/api/social-icebreaker/start', {
-        sessionId,
-        displayName,
-        eventType,
+      const res = await fetch('/api/social-icebreaker/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          displayName,
+          eventType,
+        }),
       });
       if (res.status === 410) {
         setSessionExpired(true);
+        setAndCacheSocialSessionId(null);
         return;
+      }
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${await res.text()}`);
       }
       const data = await res.json();
       setAndCacheSocialSessionId(data.socialSessionId);
