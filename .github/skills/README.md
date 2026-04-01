@@ -70,6 +70,13 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 ---
 
+## Documentation
+
+Keep docs aligned with the active codebase. Use after significant code changes or when docs are visibly stale.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`docs-sync`](./docs-sync/SKILL.md) | Scan code changes, map them to documentation targets, draft minimal updates, and enforce active-flow-only guardrails. Use when docs need syncing after a PR merges or an architecture decision is made. |
 ## Review and Quality
 
 Skills for writing, reviewing, auditing, and maintaining skills and code quality.
@@ -107,6 +114,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
+| How do I keep docs in sync after a code change? | `docs-sync` |
 
 ---
 
@@ -117,3 +125,46 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 - keep `description` under 1024 characters
 - keep `SKILL.md` concise and operational — place deeper examples in `references/` when needed
 - every skill should include `## Quick examples`, `## Troubleshooting`, and `## Review checklist`
+
+---
+
+## Routing metadata
+
+Each core skill directory contains a `routing.yml` file alongside `SKILL.md`. This is the skill's **routing contract** — `scripts/skill-router.mjs` reads the current `routing.yml` files at runtime to decide when and why to load a skill.
+
+### Minimal required fields
+
+```yaml
+skill: <kebab-case-name-matching-directory>
+primary_ownership: > one-sentence summary of what this skill owns
+use_when:
+  - scenario or phrase that indicates this skill applies
+strong_triggers:
+  - TypeScript symbol, route path, or repo-specific keyword
+```
+
+### Full schema
+
+See `.github/skills/routing-schema.yml` for the complete documented schema including `do_not_use_when`, `owned_files`, `owned_paths`, `owned_symbols`, and `related_skills`.
+
+### Tooling
+
+```bash
+# Validate all routing.yml files (required fields, path freshness, legacy refs as blocking errors)
+node scripts/validate-skill-routing.mjs
+
+# Route an ask interactively
+node scripts/skill-router.mjs "add a nextStep rule after profile review"
+
+# Run the full routing regression suite (37 test cases)
+node scripts/test-skill-routing.mjs
+```
+
+### Maintenance rules
+
+- **When you add a trigger phrase** to `SKILL.md`, also add it to `strong_triggers` in `routing.yml`.
+- **When a file is moved**, update `owned_files` and run `validate-skill-routing.mjs` to catch stale paths.
+- **When a new handoff pattern emerges**, add it to `related_skills` in both skills involved.
+- **Never add legacy terms** as triggers — routing metadata must follow the same active-flow-only canon as all other repo content.
+
+See [`docs/architecture/skill-routing.md`](../../docs/architecture/skill-routing.md) for the full routing design, scoring model, observability format, and extension guidance.
