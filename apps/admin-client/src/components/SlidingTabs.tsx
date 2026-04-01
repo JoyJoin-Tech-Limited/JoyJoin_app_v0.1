@@ -69,6 +69,12 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
             ref={(el) => (tabRefs.current[index] = el)}
             onClick={() => onTabChange(tab.value)}
             onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                onTabChange(tab.value);
+                return;
+              }
+
               if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
                 return;
               }
