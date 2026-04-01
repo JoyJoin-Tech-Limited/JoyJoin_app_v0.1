@@ -641,7 +641,8 @@ export class PaymentService {
   private getEncryptedWebhookResource(resource: Record<string, unknown>) {
     const ciphertext = this.getRequiredWebhookString(resource.ciphertext, "resource.ciphertext");
     const nonce = this.getRequiredWebhookString(resource.nonce, "resource.nonce");
-    const associated_data = this.getRequiredWebhookString(resource.associated_data, "resource.associated_data");
+    const associated_data =
+      typeof resource.associated_data === "string" ? resource.associated_data : "";
     const algorithm = typeof resource.algorithm === "string" ? resource.algorithm : undefined;
 
     return { ciphertext, nonce, associated_data, algorithm };
