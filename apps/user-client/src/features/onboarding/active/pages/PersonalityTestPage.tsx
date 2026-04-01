@@ -284,7 +284,6 @@ export default function PersonalityTestPage() {
     isComplete,
     isInitialized,
     result,
-    encouragement,
     isLoading,
     isSubmitting,
     isSkipping,
