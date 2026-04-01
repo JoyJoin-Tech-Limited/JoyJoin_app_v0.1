@@ -205,16 +205,16 @@ export default function LandingPage() {
         className="flex-none w-full max-w-sm mx-auto px-5 space-y-3"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))", paddingTop: "0.75rem" }}
       >
-          {/* Primary CTA — Duolingo 3D press */}
+          {/* Primary CTA — Duolingo 3D press.
+               Intentional exception: uses a deeper 3D-press "floor" shadow
+               (not --btn-shadow-primary) to create the landing-page depth effect.
+               Gradient comes from the shared brand token so it stays on-palette. */}
           <Button
             onClick={handlePrimaryCTA}
             type="button"
             size="lg"
-            className="w-full h-16 rounded-2xl text-white text-xl font-bold border-0 shadow-[0_6px_0_#5a1fb5] no-default-hover-elevate no-default-active-elevate transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_#5a1fb5]"
-            style={{
-              background: "linear-gradient(135deg, #8B5CFF 0%, #C471FF 100%)",
-              touchAction: "manipulation",
-            }}
+            className="w-full h-16 rounded-2xl text-xl font-bold border-0 [background:var(--btn-primary-gradient)] shadow-[0_6px_0_hsl(270_55%_35%)] no-default-hover-elevate no-default-active-elevate transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_hsl(270_55%_35%)]"
+            style={{ touchAction: "manipulation" }}
           >
             看看我会遇见谁
           </Button>
