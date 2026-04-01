@@ -1,0 +1,61 @@
+skill: server-domain-architecture
+
+primary_ownership: >
+  routes.ts as composition root, routes/domains/* for domain-scoped handlers,
+  repositories/* for new persistence logic, and storage.ts as legacy facade.
+
+use_when:
+  - adding a new API route or Express handler
+  - deciding where a new server service or helper belongs
+  - migrating logic from storage.ts to a domain or repository layer
+  - adding a new repository file for persistence
+  - routes.ts is getting too large and needs decomposition
+
+do_not_use_when:
+  - task is purely about onboarding state transitions (use onboarding-state-architecture)
+  - task is about auth session gating rules (use auth-session-and-safety-boundaries)
+  - task is about transaction/idempotency patterns only (use reliability-and-state-integrity)
+
+strong_triggers:
+  - routes.ts
+  - routes/domains
+  - repositories
+  - storage.ts
+  - Express route
+  - API handler
+  - add a new API route
+  - where does this service go
+  - migrate logic from storage.ts
+  - add a repository
+  - routes.ts is getting too large
+  - domain router
+
+owned_files:
+  - apps/server/src/routes.ts
+  - apps/server/src/routes/domains/**
+  - apps/server/src/repositories/**
+  - apps/server/src/storage.ts
+  - apps/server/src/lib/**
+  - apps/server/src/middleware/**
+
+owned_paths:
+  - /api/**
+
+owned_symbols:
+  - db.transaction
+  - registerRoutes
+  - storage
+  - registerAuthRoutes
+  - registerOnboardingRoutes
+  - registerAdminRoutes
+  - registerIcebreakerRoutes
+
+related_skills:
+  - skill: reliability-and-state-integrity
+    when: route handler involves multi-step writes or idempotency requirements
+  - skill: auth-session-and-safety-boundaries
+    when: route requires auth gating, role checks, or webhook signature validation
+  - skill: platform-observability-and-ops
+    when: adding structured logging, request IDs, or metrics to a new route
+  - skill: testing-and-regression-guardrails
+    when: locking in route ownership boundaries with structural tests

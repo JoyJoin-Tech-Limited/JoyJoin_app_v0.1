@@ -1,0 +1,68 @@
+skill: platform-observability-and-ops
+
+primary_ownership: >
+  Structured logging, request IDs, Prometheus metrics, health/readiness endpoints,
+  alert rules, synthetic monitoring, and audit logging.
+
+use_when:
+  - adding structured logging to a new server route or service
+  - instrumenting a Prometheus metric or counter
+  - adding or reviewing a health or readiness endpoint
+  - writing an audit log for an admin or sensitive action
+  - adding alerting rules or SLO monitoring
+  - reviewing observability readiness of new backend code
+
+do_not_use_when:
+  - task is purely about route structure (use server-domain-architecture)
+  - task is about frontend error handling
+  - task is about test writing only
+
+strong_triggers:
+  - logger
+  - logger.info
+  - logger.error
+  - logger.child
+  - request_id
+  - req.requestId
+  - logAdminAudit
+  - logAITrace
+  - Prometheus
+  - metrics
+  - /api/health
+  - /api/readyz
+  - /api/metrics
+  - audit log
+  - structured logging
+  - add logging to this route
+  - instrument a metric
+  - health vs readiness check
+  - audit log an admin action
+  - requestId middleware
+
+owned_files:
+  - apps/server/src/lib/logger.ts
+  - apps/server/src/middleware/requestId.ts
+  - apps/server/src/middleware/metrics.ts
+  - apps/server/src/lib/adminAuditLogger.ts
+  - apps/server/src/lib/aiTraceLogger.ts
+  - docs/observability.md
+
+owned_paths:
+  - /api/health
+  - /api/readyz
+  - /api/metrics
+
+owned_symbols:
+  - logger
+  - logAdminAudit
+  - logAITrace
+  - requestId
+  - metricsMiddleware
+
+related_skills:
+  - skill: server-domain-architecture
+    when: new route needs both structural placement and observability instrumentation
+  - skill: testing-and-regression-guardrails
+    when: adding synthetic monitoring or health-check tests
+  - skill: reliability-and-state-integrity
+    when: logging execution guard state transitions or retry telemetry
