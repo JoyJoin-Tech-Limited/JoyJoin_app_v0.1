@@ -392,7 +392,6 @@ export function registerAuthRoutes(app: Express): void {
         currentCity,
         intent,
         birthYear,
-        showBirthYear,
         relationshipStatus,
         preSignupAnswers,
       } = req.body;
