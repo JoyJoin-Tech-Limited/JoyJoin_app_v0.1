@@ -8,6 +8,7 @@ import { FancyLineLoadingScreen } from "@/components/FancyLineLoadingScreen";
 import { InterestCarousel, type InterestCarouselData } from "@/components/interests/InterestCarousel";
 import { useOnboardingCheckpoint } from "@/hooks/useOnboardingCheckpoint";
 import type { AuthUser } from "@/hooks/useAuth";
+import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
 
 // Maximum time to wait for data save before navigating anyway (ms).
 const MAX_NAVIGATION_WAIT_MS = 5000;
@@ -62,11 +63,11 @@ export default function ExtendedDataPage() {
         // Continue navigation even if checkpoint fails (non-blocking)
       }
       
-      // Signal that it's safe to navigate once the animation finishes
+      // E: Use the canonical nextStep → route mapper; also fixes guide/discover → '/'
+      // bug where root was used instead of '/discover'.
       const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as AuthUser;
-      nextPathRef.current =
-        updatedUser?.nextStep === 'profile-review' ? '/onboarding/review'
-        : updatedUser?.nextStep === 'guide' || updatedUser?.nextStep === 'discover' ? '/'
+      nextPathRef.current = updatedUser?.nextStep
+        ? nextStepToRoute(updatedUser.nextStep)
         : '/onboarding/review'; // safe fallback
       readyToNavigateRef.current = true;
     },

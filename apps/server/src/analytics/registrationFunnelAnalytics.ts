@@ -1,6 +1,10 @@
 /**
  * 注册漏斗分析服务
  * 
+ * ⚠️ Legacy analytics boundary: this module reads historical `registration_sessions`
+ * telemetry and legacy registration-completion flags for admin reporting only.
+ * Do not reuse these identifiers in active onboarding or navigation code.
+ * 
  * 收集和分析用户注册过程中的三层信息漏斗数据
  * - L1 (显式基础): 7个必问字段的完成率
  * - L2 (自然丰富): 11个可选字段的参与度
@@ -156,11 +160,19 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .from(users);
   const totalStarted = totalResult?.count || 0;
 
-  // 已完成注册
+  const completedRegistrationWhere = and(
+    sql`${users.hasCompletedPersonalityTest} = true`,
+    isNotNull(users.displayName),
+    isNotNull(users.gender),
+    isNotNull(users.currentCity)
+  );
+
+  // 已完成注册 — align fallback KPI logic with the funnel's "注册完成" stage:
+  // personality test completed plus essential profile data present.
   const [completedResult] = await db
     .select({ count: count() })
     .from(users)
-    .where(sql`${users.hasCompletedRegistration} = true`);
+    .where(completedRegistrationWhere);
   const totalCompleted = completedResult?.count || 0;
 
   // 近7天完成 (exclusive lower bound)
@@ -168,7 +180,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .select({ count: count() })
     .from(users)
     .where(and(
-      sql`${users.hasCompletedRegistration} = true`,
+      completedRegistrationWhere,
       sql`${users.createdAt} > ${sevenDaysAgo}`
     ));
   const completedLast7Days = last7DaysResult?.count || 0;
@@ -178,7 +190,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .select({ count: count() })
     .from(users)
     .where(and(
-      sql`${users.hasCompletedRegistration} = true`,
+      completedRegistrationWhere,
       sql`${users.createdAt} > ${fourteenDaysAgo}`,
       sql`${users.createdAt} <= ${sevenDaysAgo}`
     ));
@@ -196,7 +208,10 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
         avgMinutes: sql<number>`AVG(EXTRACT(EPOCH FROM (${users.updatedAt} - ${users.createdAt})) / 60)`
       })
       .from(users)
-      .where(sql`${users.hasCompletedRegistration} = true AND ${users.updatedAt} > ${users.createdAt}`);
+      .where(and(
+        completedRegistrationWhere,
+        sql`${users.updatedAt} > ${users.createdAt}`
+      ));
     if (timeResult?.avgMinutes && timeResult.avgMinutes > 0 && timeResult.avgMinutes < 60) {
       avgCompletionTimeMinutes = Math.round(timeResult.avgMinutes * 10) / 10;
     }
@@ -273,7 +288,12 @@ async function getFunnelStages(): Promise<FunnelStage[]> {
   const [completedResult] = await db
     .select({ count: count() })
     .from(users)
-    .where(sql`${users.hasCompletedRegistration} = true`);
+    .where(and(
+      sql`${users.hasCompletedPersonalityTest} = true`,
+      isNotNull(users.displayName),
+      isNotNull(users.gender),
+      isNotNull(users.currentCity)
+    ));
   const completed = completedResult?.count || 0;
 
   const stages: FunnelStage[] = [

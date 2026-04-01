@@ -99,7 +99,7 @@ All components meet mobile touch target requirements:
 
 ## Demo
 
-Visit `/mobile-landing` to see these components in action.
+Visit `/dev/mobile-landing` in non-production builds to see these components in action.
 
 ## Browser Support
 

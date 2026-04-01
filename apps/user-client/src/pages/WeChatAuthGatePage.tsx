@@ -26,6 +26,7 @@ import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { haptics } from "@/lib/haptics";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -135,19 +136,18 @@ export default function WeChatAuthGatePage() {
         }
       }
 
-      // Read the anonymous session ID so the server can consume the presignup cache
-      // entry after a successful import and prevent stale resume prompts.
-      let anonymousSessionId: string | null = null;
+      // B: Read the server-side presignup cache session ID so the server can
+      // claim/delete it after a successful import, preventing stale resume prompts.
+      let presignupSessionId: string | undefined;
       try {
         const sessionRaw = localStorage.getItem(PRESIGNUP_SESSION_KEY);
         if (sessionRaw) {
-          const parsed = JSON.parse(sessionRaw);
-          if (parsed?.sessionId && typeof parsed.sessionId === 'string') {
-            anonymousSessionId = parsed.sessionId;
-          }
+          const sessionData = JSON.parse(sessionRaw);
+          const sid = sessionData?.sessionId ?? sessionData?.id ?? null;
+          if (sid && typeof sid === 'string') presignupSessionId = sid;
         }
       } catch {
-        // Non-fatal: missing sessionId means the server simply skips cache cleanup
+        // Ignore parse errors — presignupSessionId stays undefined
       }
 
       // In WeChat Mini Program use wx.login(); fall back to mock code in web/dev
@@ -169,7 +169,7 @@ export default function WeChatAuthGatePage() {
       const response = await fetch('/api/auth/wechat/login-with-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, testAnswers, anonymousSessionId }),
+        body: JSON.stringify({ code, testAnswers, presignupSessionId }),
       });
 
       if (!response.ok) {
@@ -179,7 +179,8 @@ export default function WeChatAuthGatePage() {
 
       await response.json();
 
-      // Clear anonymous assessment data from localStorage after successful import
+      // B: Clear anonymous assessment data from localStorage now that the server
+      // has claimed the session. This prevents resume prompts from reappearing.
       localStorage.removeItem(PRESIGNUP_ANSWERS_KEY);
       localStorage.removeItem(PRESIGNUP_SESSION_KEY);
       localStorage.removeItem('joyjoin_synced_session_id');
@@ -189,24 +190,10 @@ export default function WeChatAuthGatePage() {
 
       toast({ title: "登录成功", description: "正在为你准备个性化匹配..." });
 
-      // Navigate to server-calculated nextStep
+      // E: Use the canonical nextStep → route mapper so routing stays in sync with
+      // any future server-side step changes.
       const updatedUser = await queryClient.fetchQuery({ queryKey: ['/api/auth/user'] }) as AuthUser;
-      const step = updatedUser?.nextStep;
-      let nextPath: string;
-      if (step === 'discover' || step === 'guide') {
-        nextPath = '/discover';
-      } else if (step === 'extended-data') {
-        nextPath = '/onboarding/extended';
-      } else if (step === 'profile-review') {
-        nextPath = '/onboarding/review';
-      } else if (step === 'essential-data') {
-        nextPath = '/onboarding/setup';
-      } else if (step === 'onboarding' || step === 'personality-test') {
-        nextPath = '/personality-test';
-      } else {
-        // Unknown step fallback
-        nextPath = '/onboarding/setup';
-      }
+      const nextPath = nextStepToRoute(updatedUser?.nextStep ?? 'essential-data');
 
       setTimeout(() => setLocation(nextPath), 500);
     } catch (error) {

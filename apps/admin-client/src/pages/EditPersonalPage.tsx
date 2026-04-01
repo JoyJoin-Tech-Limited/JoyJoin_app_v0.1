@@ -172,10 +172,10 @@ export default function EditPersonalPage() {
           <Button 
             onClick={handleSave}
             className="w-full"
-            disabled={updateMutation.isPending}
+            loading={updateMutation.isPending}
             data-testid="button-save"
           >
-            {updateMutation.isPending ? "保存中..." : "保存"}
+            保存
           </Button>
         </div>
       </div>
