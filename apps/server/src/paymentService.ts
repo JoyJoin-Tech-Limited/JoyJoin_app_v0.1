@@ -214,8 +214,7 @@ export class PaymentService {
     console.log(`[Payment] Processing successful payment: ${wechatOrderId}`);
 
     // Find payment by WeChat order ID
-    const payments = await storage.getAllPayments();
-    const payment = payments.find((p) => p.wechatOrderId === wechatOrderId);
+    const payment = await storage.getPaymentByWechatOrderId(wechatOrderId);
 
     if (!payment) {
       console.error(`[Payment] Payment not found for order ${wechatOrderId}`);
@@ -292,8 +291,7 @@ export class PaymentService {
   private async handleRefundSuccess(wechatOrderId: string): Promise<void> {
     console.log(`[Payment] Processing refund for order: ${wechatOrderId}`);
 
-    const payments = await storage.getAllPayments();
-    const payment = payments.find((p) => p.wechatOrderId === wechatOrderId);
+    const payment = await storage.getPaymentByWechatOrderId(wechatOrderId);
 
     if (!payment) {
       console.error(`[Payment] Payment not found for refund ${wechatOrderId}`);
@@ -360,8 +358,10 @@ export class PaymentService {
     }
 
     const webhookConfig = this.getWebhookConfig();
-    if (webhookConfig.platformSerial && serial && webhookConfig.platformSerial !== serial) {
-      return false;
+    if (webhookConfig.platformSerial) {
+      if (!serial || webhookConfig.platformSerial !== serial) {
+        return false;
+      }
     }
 
     const timestampSeconds = Number(timestamp);
@@ -405,8 +405,7 @@ export class PaymentService {
    * Create refund for a payment
    */
   async createRefund(paymentId: string, reason: string): Promise<void> {
-    const payments = await storage.getAllPayments();
-    const payment = payments.find((p) => p.id === paymentId);
+    const payment = await storage.getPaymentById(paymentId);
 
     if (!payment) {
       throw new Error("Payment not found");
