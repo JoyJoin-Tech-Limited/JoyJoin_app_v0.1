@@ -73,7 +73,7 @@ router.post('/apply-promo', requireAuth, async (req, res) => {
 
 ### What to inspect
 
-- Are all three writes wrapped in a transaction?
+- Are both DB writes wrapped in a single transaction?
 - What happens if the email send fails — is the credit already applied and the promo not yet marked used?
 - What happens if the client retries after a 5xx — will the user receive double credit?
 - Is the promo application logged for audit purposes?
@@ -114,7 +114,7 @@ router.post('/apply-promo', requireAuth, async (req, res) => {
 
 ### What changed
 
-A new `/api/admin/export-user-data` endpoint is added for the admin panel. It queries all users matching a filter and streams a CSV response. The route is gated behind `requireAdminAuth`.
+A new `/api/admin/export-user-data` endpoint is added for the admin panel. It queries all users matching a filter, builds a CSV in memory, and returns it with `res.send(...)`. The route is gated behind `requireAdminAuth`.
 
 ```typescript
 // apps/server/src/routes/domains/admin.ts
