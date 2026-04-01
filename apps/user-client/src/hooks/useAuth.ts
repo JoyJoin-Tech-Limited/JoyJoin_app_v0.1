@@ -31,7 +31,7 @@ export interface UseAuthResult {
   user: AuthUser | undefined;
   isLoading: boolean;
   isAuthenticated: boolean;
-  /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
+  /** @deprecated Prefer server-driven nextStep from /api/auth/user. Legacy account-creation state only. */
   needsRegistration: boolean | undefined;
   /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
   needsPersonalityTest: boolean | undefined;
@@ -63,10 +63,16 @@ export function useAuth(): UseAuthResult {
     user: isError ? undefined : user,
     isLoading: actualIsLoading,
     isAuthenticated,
-    // Legacy computed fields (prefer server-driven nextStep)
-    needsRegistration: user ? !user.hasCompletedRegistration : undefined,
-    needsPersonalityTest: user ? Boolean(user.hasCompletedRegistration) && !user.hasCompletedPersonalityTest : undefined,
-    needsProfileSetup: user ? Boolean(user.hasCompletedRegistration) && Boolean(user.hasCompletedPersonalityTest) && (!user.displayName || !user.gender || !user.currentCity) : undefined,
+    // Legacy computed fields (prefer server-driven nextStep).
+    // `needsRegistration` is kept only for backwards compatibility and reflects
+    // account presence, not personality-test completion. In the modern V4 flow
+    // any authenticated user already has an account.
+    needsRegistration: user ? false : undefined,
+    needsPersonalityTest: user ? !user.hasCompletedPersonalityTest : undefined,
+    needsProfileSetup: user
+      ? user.hasCompletedPersonalityTest === true &&
+        (!user.displayName || !user.gender || !user.currentCity)
+      : undefined,
     // Server-driven navigation (B1)
     nextStep: user?.nextStep,
     profileEssentialComplete: user?.profileEssentialComplete,
