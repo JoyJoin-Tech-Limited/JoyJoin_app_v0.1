@@ -16,9 +16,43 @@ import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap
  * low-quality or malformed imports from persisting garbage data.
  */
 const MIN_VALID_ANSWERS = 3;
+const IMPORTABLE_TRAITS = ["A", "C", "E", "O", "X", "P"] as const;
 
 const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
+
+function hasImportableTraitDelta(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+
+  return IMPORTABLE_TRAITS.some((trait) => {
+    const delta = (value as Record<string, unknown>)[trait];
+    return typeof delta === "number" && !Number.isNaN(delta);
+  });
+}
+
+// Compatibility helpers: historical clients have sent several field-name variants
+// for the same semantic values, so imports must continue to accept them.
+function getImportedQuestionId(candidate: Record<string, unknown>): string {
+  return String(candidate.questionId ?? candidate.question_id ?? candidate.id ?? "").trim();
+}
+
+function getImportedSelectedOption(candidate: Record<string, unknown>): string {
+  return String(
+    candidate.selectedOption ?? candidate.value ?? candidate.answer ?? candidate.selected_option ?? ""
+  ).trim();
+}
+
+function isImportableTestAnswer(answer: unknown): boolean {
+  if (!answer || typeof answer !== "object") return false;
+
+  const candidate = answer as Record<string, unknown>;
+  const questionId = getImportedQuestionId(candidate);
+  const selectedOption = getImportedSelectedOption(candidate);
+
+  return questionId.length > 0 &&
+    selectedOption.length > 0 &&
+    hasImportableTraitDelta(candidate.traitScores ?? candidate.trait_scores);
+}
 
 /**
  * Exchange a WeChat Mini Program login code for an openid.
@@ -275,9 +309,9 @@ export async function findOrCreateWechatUser(
  * Process test answers, persist per-question data to assessment_answers, and update the user's
  * personality archetype. All writes are wrapped in a transaction for atomicity.
  *
- * Validation: rejects payloads where fewer than MIN_VALID_ANSWERS items carry both a
- * recognisable questionId and a selectedOption to prevent garbage sessions from
- * being created from malformed or empty payloads.
+ * Validation: rejects payloads where fewer than MIN_VALID_ANSWERS items carry a
+ * recognisable questionId, a selectedOption, and at least one numeric trait delta.
+ * This prevents garbage sessions from being created from malformed or empty payloads.
  */
 export async function processTestAnswers(
   userId: string,
@@ -286,32 +320,26 @@ export async function processTestAnswers(
   if (!Array.isArray(testAnswers) || testAnswers.length === 0) return;
 
   // Validate payload structure before touching the database.
-  // We accept unknown[] from the caller (the field arrives as untyped JSON) so the cast
-  // to any[] here is intentional and narrowed immediately by the property checks below.
-  const validItems = (testAnswers as Record<string, unknown>[]).filter((ans) => {
-    if (!ans || typeof ans !== "object") return false;
-    const questionId = String(ans.questionId ?? ans.question_id ?? ans.id ?? "");
-    const selectedOption = String(
-      ans.selectedOption ?? ans.value ?? ans.answer ?? ans.selected_option ?? ""
-    );
-    return questionId.length > 0 && selectedOption.length > 0;
-  });
+  // The request payload arrives as unknown[] JSON; we only count entries that pass
+  // isImportableTestAnswer(), which requires a question id, selected option, and at
+  // least one numeric trait delta on the known importable traits.
+  const validItems = testAnswers.filter(isImportableTestAnswer);
 
   if (validItems.length < MIN_VALID_ANSWERS) {
     console.warn(
-      `[WeChat Auth] Rejecting testAnswers for user ${userId}: only ${validItems.length} valid ` +
+      `[WeChat Auth] Rejecting testAnswers for user ${userId}: only ${validItems.length} importable ` +
       `items (minimum ${MIN_VALID_ANSWERS} required). Payload length was ${testAnswers.length}.`
     );
     throw Object.assign(
       new Error(
-        `Personality test payload contains too few valid answers (${validItems.length} of ${MIN_VALID_ANSWERS} required)`
+        `Personality test payload contains too few importable answers (${validItems.length} of ${MIN_VALID_ANSWERS} required)`
       ),
       { code: "INVALID_TEST_RESULTS" }
     );
   }
 
   console.log(
-    `[WeChat Auth] Processing ${testAnswers.length} test answers (${validItems.length} valid) for user ${userId}`
+    `[WeChat Auth] Processing ${testAnswers.length} test answers (${validItems.length} importable) for user ${userId}`
   );
 
   const traitScores: Record<string, number> = {
@@ -354,8 +382,8 @@ export async function processTestAnswers(
   const userSecondaryData: UserSecondaryData = {};
   for (const answer of testAnswers as any[]) {
     if (!answer || typeof answer !== 'object') continue;
-    const qId = String(answer.questionId ?? answer.question_id ?? answer.id ?? '');
-    const selectedOpt = String(answer.selectedOption ?? answer.value ?? answer.answer ?? answer.selected_option ?? '');
+    const qId = getImportedQuestionId(answer as Record<string, unknown>);
+    const selectedOpt = getImportedSelectedOption(answer as Record<string, unknown>);
     const mapping = SECONDARY_QUESTION_MAP[qId];
     if (mapping && selectedOpt) {
       const decoded = mapping.valueMap[selectedOpt];
@@ -434,10 +462,8 @@ export async function processTestAnswers(
     // Persist per-question answers to assessment_answers
     for (const ans of testAnswers as any[]) {
       if (!ans || typeof ans !== "object") continue;
-      const questionId = String(ans.questionId ?? ans.question_id ?? ans.id ?? "");
-      const selectedOption = String(
-        ans.selectedOption ?? ans.value ?? ans.answer ?? ans.selected_option ?? ""
-      );
+      const questionId = getImportedQuestionId(ans as Record<string, unknown>);
+      const selectedOption = getImportedSelectedOption(ans as Record<string, unknown>);
       if (!questionId || !selectedOption) continue;
 
       await tx.insert(assessmentAnswers).values({
@@ -648,34 +674,27 @@ export function setupWechatAuth(app: Express) {
 
       if (!alreadyImported && testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
         await processTestAnswers(user.id, testAnswers);
-
-        // Consume the anonymous presignup cache entry so the same answers
-        // cannot be imported again and stale resume prompts stop appearing.
-        if (safeAnonSessionId) {
-          try {
-            await storage.clearPreSignupData(safeAnonSessionId);
-            console.log(
-              `[WeChat Auth] Consumed presignup cache for session ${safeAnonSessionId}, user ${user.id}`
-            );
-          } catch (cacheErr) {
-            // Non-fatal: log but do not fail the login if cache cleanup fails.
-            console.warn(
-              `[WeChat Auth] Failed to clear presignup cache for session ${safeAnonSessionId}:`,
-              cacheErr
-            );
-          }
-        }
       } else if (alreadyImported && testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
         console.log(
           `[WeChat Auth] Skipping duplicate testAnswers import for user ${user.id} (already completed)`
         );
-        // Still consume the presignup cache to prevent stale resume prompts.
-        if (safeAnonSessionId) {
-          try {
-            await storage.clearPreSignupData(safeAnonSessionId);
-          } catch {
-            // Non-fatal
-          }
+      }
+
+      // Consume the anonymous presignup cache entry on any successful login when a
+      // valid temporary session id is provided. This prevents stale resume prompts
+      // from resurfacing even if the client retries with empty answers after a prior import.
+      if (safeAnonSessionId) {
+        try {
+          await storage.clearPreSignupData(safeAnonSessionId);
+          console.log(
+            `[WeChat Auth] Consumed presignup cache for session ${safeAnonSessionId}, user ${user.id}`
+          );
+        } catch (cacheErr) {
+          // Non-fatal: log but do not fail the login if cache cleanup fails.
+          console.warn(
+            `[WeChat Auth] Failed to clear presignup cache for session ${safeAnonSessionId}:`,
+            cacheErr
+          );
         }
       }
 
