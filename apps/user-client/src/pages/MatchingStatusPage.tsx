@@ -28,6 +28,7 @@ import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import MatchSuccessSheet from "@/components/MatchSuccessSheet";
 import MatchingWaitingScreen from "@/components/MatchingWaitingScreen";
+import NoMatchScreen from "@/components/matching/NoMatchScreen";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
 import { calculateAge } from "@/lib/userFieldMappings";
@@ -510,25 +511,14 @@ export default function MatchingStatusPage() {
     );
   }
 
+  // ── No match state: event time passed but group never formed ────────────────
   if (countdown.isExpired && registration.matchStatus === "pending") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
-              <XCircle className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-bold">本次活动未能成局</h2>
-            <p className="text-sm text-muted-foreground">
-              很遗憾，本次活动未达到最少人数要求。报名费用将原路退回。
-            </p>
-            <p className="text-sm font-medium">下次再来 💜</p>
-            <Button onClick={() => setLocation("/")} className="w-full">
-              探索更多活动
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <NoMatchScreen
+        poolTitle={registration.poolTitle}
+        onBack={() => setLocation("/events")}
+        onBrowse={() => setLocation("/")}
+      />
     );
   }
 

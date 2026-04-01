@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   Sheet,
   SheetContent,
@@ -19,6 +20,9 @@ import SmartDefaultsStep from "./steps/SmartDefaultsStep";
 import DinnerPreferencesStep from "./steps/DinnerPreferencesStep";
 import BarPreferencesStep from "./steps/BarPreferencesStep";
 import BlindPoolTrustExplainer from "./BlindPoolTrustExplainer";
+import JoinErrorScreen from "@/components/matching/JoinErrorScreen";
+import TestIncompleteScreen from "@/components/matching/TestIncompleteScreen";
+import ExtendedDataEmptyScreen from "@/components/matching/ExtendedDataEmptyScreen";
 import { shenzhenClusters } from "@shared/districts";
 
 interface JoinEventPoolSheetProps {
@@ -41,10 +45,14 @@ export default function JoinEventPoolSheet({
   poolData,
 }: JoinEventPoolSheetProps) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const prefersReducedMotion = useReducedMotion();
   const [showSuccess, setShowSuccess] = useState(false);
   const [showMascot, setShowMascot] = useState(false);
   const [mascotMessage, setMascotMessage] = useState("");
+  // Tracks whether the extended-data nudge has been dismissed in this session.
+  // Once the user explicitly skips or acts on it, we don't re-show it.
+  const [extendedDataNudgeDismissed, setExtendedDataNudgeDismissed] = useState(false);
 
   // Fetch the user's top priority interest for the optional boost CTA
   const { data: interestsSummary } = useQuery<{
@@ -154,7 +162,23 @@ export default function JoinEventPoolSheet({
     onOpenChange(false);
     setShowSuccess(false);
     setStep(1);
+    setExtendedDataNudgeDismissed(false);
   };
+
+  // Personality test incomplete: derived from auth state
+  const isTestIncomplete = !!user && !user.hasCompletedPersonalityTest;
+
+  // Extended data nudge: show once per sheet open when profile is incomplete and user hasn't dismissed it
+  const showExtendedDataNudge =
+    !isTestIncomplete &&
+    !extendedDataNudgeDismissed &&
+    user?.profileExtendedComplete === false;
+
+  // Join error: mutation reached an error state
+  // Note: registerMutation.mutate() takes no arguments — the payload is read
+  // from the `preferences` closure inside useEventPoolRegistration, so retrying
+  // without arguments re-uses the same form data correctly.
+  const showJoinError = registerMutation.isError;
 
   const totalSteps = 3;
 
@@ -164,14 +188,39 @@ export default function JoinEventPoolSheet({
         side="bottom" 
         className="h-[90vh] overflow-hidden flex flex-col"
       >
-        {/* Floating Orbs Background */}
-        <FloatingOrbs />
+        {/* Floating Orbs Background — hidden when a matching-state screen is active */}
+        {!isTestIncomplete && !showExtendedDataNudge && !showJoinError && <FloatingOrbs />}
 
         {/* Mascot */}
         <TransitionMascot show={showMascot} message={mascotMessage} />
 
-        {/* Success Celebration */}
-        {showSuccess ? (
+        {/* ── Personality test incomplete gate ── */}
+        {isTestIncomplete ? (
+          <TestIncompleteScreen
+            onContinueTest={() => {
+              onOpenChange(false);
+              setLocation("/personality-test");
+            }}
+            onDismiss={() => onOpenChange(false)}
+          />
+        ) : showExtendedDataNudge ? (
+          /* ── Extended data optional nudge ── */
+          <ExtendedDataEmptyScreen
+            onFillProfile={() => {
+              setExtendedDataNudgeDismissed(true);
+              onOpenChange(false);
+              setLocation("/onboarding/extended");
+            }}
+            onSkip={() => setExtendedDataNudgeDismissed(true)}
+          />
+        ) : showJoinError ? (
+          /* ── Join error state ── */
+          <JoinErrorScreen
+            isRetrying={registerMutation.isPending}
+            onRetry={() => registerMutation.mutate()}
+            onBrowse={() => onOpenChange(false)}
+          />
+        ) : showSuccess ? (
           <SuccessCelebration
             onNavigate={handleNavigateToEvents}
             boostInterestKey={topBoostInterest?.topicId}
