@@ -570,7 +570,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
-  registerPaymentRoutes(app);
   registerIcebreakerRoutes(app);
 
   // Profile routes
@@ -8597,87 +8596,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // This route intentionally does NOT use checkPaymentsEnabled — WeChat Pay must
   // always be able to deliver webhooks for in-flight payments even when new payment
   // creation is disabled.
-  app.post(
-    "/api/webhooks/wechat-pay",
-    webhookEndpointLimiter,
-    async (req: Request, res) => {
-      let rawBody: string;
-      let payload: any;
-      try {
-        if (typeof req.rawBody !== "string" || req.rawBody.length === 0) {
-          return res.status(400).json({ code: "FAIL", message: "Missing raw body for signature verification" });
-        }
-
-        rawBody = req.rawBody;
-        payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      } catch {
-        return res.status(400).json({ code: "FAIL", message: "Invalid request body" });
-      }
-
-      const headers = {
-        timestamp: req.headers["wechatpay-timestamp"] as string | undefined,
-        nonce: req.headers["wechatpay-nonce"] as string | undefined,
-        signature: req.headers["wechatpay-signature"] as string | undefined,
-        serial: req.headers["wechatpay-serial"] as string | undefined,
-      };
-
-      try {
-        await paymentService.handleWebhook(payload, rawBody, headers);
-        res.json({ code: "SUCCESS", message: "OK" });
-      } catch (error: any) {
-        console.error("Error processing WeChat Pay webhook:", error);
-        const status = error?.status === 401 ? 401 : 500;
-        res.status(status).json({ code: "FAIL", message: "Webhook processing failed" });
-      }
-    }
-  );
-  
-  // Query payment status
-  app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, async (req, res) => {
-    try {
-      const { wechatOrderId } = req.params;
-      const status = await paymentService.queryPaymentStatus(wechatOrderId);
-      res.json({ status });
-    } catch (error) {
-      console.error("Error querying payment status:", error);
-      res.status(500).json({ message: "Failed to query payment status" });
-    }
-  });
-  
-  // Admin - Get all payments
-  app.get("/api/admin/payments", requireAdmin, async (req, res) => {
-    try {
-      const payments = await storage.getAllPayments();
-      res.json(payments);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      res.status(500).json({ message: "Failed to fetch payments" });
-    }
-  });
-  
-  // Admin - Create refund
-  app.post("/api/admin/payments/:paymentId/refund", requireAdmin, async (req, res) => {
-    try {
-      const { paymentId } = req.params;
-      const { reason } = req.body;
-      await paymentService.createRefund(paymentId, reason);
-
-      logAdminAudit({
-        action: 'PAYMENT_REFUND_INITIATED',
-        adminId: getActingAdminId(req),
-        adminRole: (req as any).adminRole,
-        targetEntityType: 'payment',
-        targetEntityId: paymentId,
-        context: { reason },
-      });
-
-      res.json({ message: "Refund initiated" });
-    } catch (error) {
-      console.error("Error creating refund:", error);
-      res.status(500).json({ message: "Failed to create refund" });
-    }
-  });
-
   // ============ VENUE MATCHING ============
   
   // Find matching venues for event criteria
