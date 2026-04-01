@@ -1,5 +1,9 @@
 # Environment variables — NEVER commit
 .env
+.env.*
+!.env.example
+!deployment/.env.production.example
+!deployment/.env.staging.example
 .env.local
 .env.*.local
 
@@ -44,6 +48,7 @@ Thumbs.db
 .replit
 .replit.nix
 .replit.json
+.local/
 
 # Misc legacy
 server/public
