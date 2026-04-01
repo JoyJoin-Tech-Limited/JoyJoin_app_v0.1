@@ -1,0 +1,59 @@
+skill: testing-and-regression-guardrails
+
+primary_ownership: >
+  Regression tests, invariant tests, structural tests, CI guardrail scripts,
+  and test placement rules by workspace.
+
+use_when:
+  - adding a regression test for a recently changed feature
+  - locking in an architectural boundary with an invariant test
+  - guardrails script is failing in CI
+  - deciding which workspace a test belongs in
+  - writing structural tests that read TypeScript source (not compiled output)
+
+do_not_use_when:
+  - task is purely about implementing the feature (use the relevant domain skill)
+  - task is about CI pipeline configuration unrelated to test files
+
+strong_triggers:
+  - regression test
+  - invariant test
+  - invariant
+  - guardrails
+  - check-guardrails
+  - structural test
+  - CI check
+  - add a regression test
+  - lock in this boundary
+  - write an invariant test
+  - which workspace does this test belong in
+  - vitest
+  - apps/server/src/__tests__
+  - apps/user-client/src/features/onboarding/active/__tests__
+  - apps/user-client/src/hooks/__tests__
+
+owned_files:
+  - apps/server/src/__tests__/**
+  - apps/user-client/src/features/onboarding/active/__tests__/**
+  - apps/user-client/src/hooks/__tests__/**
+  - scripts/check-guardrails.mjs
+
+owned_paths: []
+
+owned_symbols:
+  - vi.mock
+  - routeModularization.test.ts
+  - adminRbacCoverage.test.ts
+  - socialIcebreakerRoutes.test.ts
+
+related_skills:
+  - skill: server-domain-architecture
+    when: test covers route placement or domain ownership boundaries
+  - skill: onboarding-state-architecture
+    when: test covers nextStep invariants or onboarding routing correctness
+  - skill: matching-domain
+    when: test covers scoring signal boundaries or match execution guards
+  - skill: social-icebreaker-domain
+    when: test covers host/player authority or session phase transitions
+  - skill: reliability-and-state-integrity
+    when: test covers transaction boundaries or idempotency invariants
