@@ -125,14 +125,12 @@ function run() {
     console.log('');
   }
 
-  let allClean = true;
   for (const { skill, errors, warnings } of results) {
     if (errors.length === 0 && warnings.length === 0) {
       console.log(`  ✅  ${skill}`);
       continue;
     }
 
-    allClean = false;
     if (errors.length > 0) {
       console.log(`  ❌  ${skill}`);
       errors.forEach(error => console.log(`       error: ${error}`));
