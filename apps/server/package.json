@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "NODE_ENV=development node --env-file=../../.env --import tsx/esm src/index.ts",
     "build": "NODE_ENV=production esbuild ./src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:vite --external:nanoid --external:../../user-client/vite.config.js --define:process.env.NODE_ENV=\\\"production\\\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "npm run typecheck",
+    "test": "vitest run",
     "start": "NODE_ENV=production node dist/index.js",
-    "lint": "tsc --noEmit",
     "db:push": "drizzle-kit push --config=./drizzle.config.ts",
     "db:generate": "drizzle-kit generate --config=./drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",

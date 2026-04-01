@@ -64,6 +64,10 @@ npm run dev
 
 ### Key Commands
 ```bash
+npm run build            # Build user-client, admin-client, and server workspaces
+npm run typecheck        # Run TypeScript checks across shared + app workspaces
+npm run lint             # Alias of the repo TypeScript checks
+npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
 npm run db:push          # Sync Drizzle schema to database
 npm run db:push --force  # Force sync (use when db:push fails)
 npm run db:studio        # Open Drizzle Studio (database GUI)
