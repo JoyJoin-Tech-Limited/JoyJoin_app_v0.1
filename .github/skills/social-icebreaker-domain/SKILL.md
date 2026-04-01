@@ -107,6 +107,7 @@ Lie detective phase — secrecy rules:
 
 - `packages/shared/src/socialIcebreaker.ts`
 - `apps/server/src/routes/socialIcebreaker.ts`
+- `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL-backed session/participant/lie-truth store; all reads and writes go through this module
 - `apps/server/src/socialIcebreakerAIService.ts`
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts`
 - `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
