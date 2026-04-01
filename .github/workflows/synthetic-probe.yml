@@ -1,0 +1,62 @@
+# Synthetic Happy-Path Probe — runs every 5 minutes via GitHub Actions
+#
+# Exercises the /api/health, /api/metrics, and /api/auth/user endpoints on the
+# production server to verify basic availability and observability infrastructure.
+#
+# Required repository secret:
+#   PRODUCTION_BASE_URL — e.g. https://api.joyjoin.app
+#   PUSHGATEWAY_URL     — (optional) Prometheus Pushgateway URL
+#
+# If PRODUCTION_BASE_URL is not set, the probe runs against http://localhost:5001
+# (useful for testing the workflow itself with act or manual dispatches against
+# a deployed environment).
+
+name: Synthetic Monitoring Probe
+
+on:
+  schedule:
+    # Every 5 minutes
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override base URL (leave empty for PRODUCTION_BASE_URL secret)"
+        required: false
+
+jobs:
+  probe:
+    name: Happy-Path Probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run synthetic probe
+        env:
+          BASE_URL: ${{ inputs.base_url || secrets.PRODUCTION_BASE_URL || 'http://localhost:5001' }}
+          PROBE_TIMEOUT_MS: "5000"
+          PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
+        run: node scripts/synthetic/happy-path-probe.mjs
+
+      - name: Notify on failure
+        if: failure()
+        # Replace with your preferred notification action (Slack, PagerDuty, etc.)
+        # Example using slackapi/slack-github-action:
+        #   uses: slackapi/slack-github-action@v1
+        #   with:
+        #     channel-id: C_INCIDENTS
+        #     payload: '{"text":"🚨 JoyJoin synthetic probe FAILED. Check GitHub Actions for details."}'
+        #   env:
+        #     SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: |
+          echo "::error::Synthetic probe failed — server may be down or unhealthy."
+          echo "Runbook: https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinsyntheticprobefailed"
