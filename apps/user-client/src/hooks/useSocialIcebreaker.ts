@@ -134,7 +134,7 @@ export function useSocialIcebreaker({
       }
     };
 
-    timeoutId = window.setTimeout(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+    void sendHeartbeat();
 
     return () => {
       cancelled = true;
