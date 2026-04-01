@@ -50,6 +50,16 @@ Deep expertise for the two core product engines.
 
 ---
 
+## UX Polish and Delight
+
+Guidance for adding crafted, brand-aligned micro-interactions and premium emotional moments.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
+
+---
+
 ## Existing Specialized Skills
 
 | Skill | What it covers |
@@ -76,3 +86,4 @@ Deep expertise for the two core product engines.
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
+| How do I make this screen feel premium or add delight? | `wow-elements` |
