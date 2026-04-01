@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import { randomUUID } from "crypto";
-import { onboardingRepo } from "./repositories/onboardingRepo";
 import { usersRepo } from "./repositories/usersRepo";
 import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
 import { db } from "./db";
