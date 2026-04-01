@@ -15,7 +15,6 @@ import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 // These are required for first paint and the initial user journey.
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
-import MobileLandingPage from "@/pages/MobileLandingPage";
 import PersonalityTestPage from "@/features/onboarding/active/pages/PersonalityTestPage";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import WeChatAuthGatePage from "@/features/onboarding/active/pages/WeChatAuthGatePage";
