@@ -373,6 +373,11 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     return res.status(404).json({ error: 'Social session not found' });
   }
 
+  // F3: Wrong-phase guard — statement generation is only valid during lie_detective phase
+  if (state.currentPhase !== 'lie_detective') {
+    return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
+
   try {
     const statements = await generateLieDetectiveStatements({
       userId,
@@ -419,13 +424,18 @@ router.post('/:socialSessionId/lie-detective/vote', (req: any, res) => {
     guessedStatementIndex: number;
   };
 
-  if (!voterId || !targetUserId || !guessedStatementIndex) {
+  if (!voterId || !targetUserId || guessedStatementIndex === undefined || guessedStatementIndex === null) {
     return res.status(400).json({ error: 'Authentication, targetUserId, and guessedStatementIndex are required' });
   }
 
   const state = socialSessions.get(socialSessionId);
   if (!state) {
     return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  // F3: Wrong-phase guard — votes are only valid during lie_detective phase
+  if (state.currentPhase !== 'lie_detective') {
+    return res.status(400).json({ error: 'Not in lie_detective phase' });
   }
 
   const votes: LieDetectiveVote[] = state.votes || [];
@@ -480,6 +490,15 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.status(403).json({ error: 'Only the host can generate dice challenges' });
   }
 
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+
+  // Idempotent retry: if challenges already exist, return them instead of regenerating
+  if ((state.personalityDiceChallenges || []).length > 0) {
+    return res.json({ challenges: state.personalityDiceChallenges });
+  }
+
   try {
     const challenges = await generatePersonalityDiceChallenges(participants || []);
     state.personalityDiceChallenges = challenges;
@@ -497,11 +516,20 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 // POST /api/social-icebreaker/:socialSessionId/personality-dice/complete
 router.post('/:socialSessionId/personality-dice/complete', (req: any, res) => {
   const { socialSessionId } = req.params;
-  const { userId } = req.body as { userId: string };
+  // F2: Derive the acting user from the authenticated session — never trust body userId
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   const state = socialSessions.get(socialSessionId);
   if (!state) {
     return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
   }
 
   const diceCompletedBy = state.diceCompletedBy || [];
