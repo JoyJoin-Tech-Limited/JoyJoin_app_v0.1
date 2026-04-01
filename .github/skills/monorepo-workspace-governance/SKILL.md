@@ -38,8 +38,8 @@ Required root scripts (enforced by `scripts/check-guardrails.mjs`):
 | `check` | Aliases `typecheck` across workspaces |
 | `check:clients` | TypeScript check for both client workspaces |
 | `check:server` | TypeScript check for server workspace |
-| `check:full` | Full typecheck across all workspaces |
-| `set-admin` | Delegates to the server `admin:create` CLI |
+| `check:full` | Runs `guardrails`, `lint`, `test`, then `build` across all workspaces |
+| `set-admin` | Delegates to the root `admin:create` script |
 | `guardrails` | Runs `scripts/check-guardrails.mjs` |
 
 Do not change these script names or their delegated commands without updating the guardrail check.
@@ -56,7 +56,7 @@ Do not change these script names or their delegated commands without updating th
 - `tsconfig.base.json` at the repo root defines shared `compilerOptions`
 - Root `tsconfig.json` is a solution-style file with `references` to each workspace
 - Each workspace extends `tsconfig.base.json` and adds workspace-specific settings
-- User-client and admin-client workspaces run typecheck against **both** `tsconfig.json` and `tsconfig.node.json` (see workspace `package.json` typecheck script)
+- User-client and admin-client currently run `typecheck` against their workspace `tsconfig.json`; `tsconfig.node.json` exists for node-specific tooling and is not invoked by the current `typecheck` script
 
 ## Script normalization
 
@@ -65,7 +65,7 @@ Workspace `package.json` files should expose:
 - `build` — production build
 - `typecheck` — TypeScript check
 - `lint` — ESLint check
-- `test` — vitest or equivalent
+- `test` — workspace-owned test entry point (some workspaces still use placeholder scripts today)
 
 Root scripts delegate via `npm run <script> -w @joyjoin/<workspace>`.
 

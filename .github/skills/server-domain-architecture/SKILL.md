@@ -18,7 +18,7 @@ description: routes.ts as composition root, routes/domains/* ownership, reposito
 
 ```
 apps/server/src/
-├── routes.ts                   ← Composition root: mounts domain routers only
+├── routes.ts                   ← Composition root: mounts domain routers and still contains some legacy inline handlers
 ├── routes/
 │   └── domains/                ← Domain routers (auth, onboarding, assessment,
 │       ├── auth.ts               analytics, admin, payments, icebreaker, …)
@@ -32,9 +32,9 @@ apps/server/src/
 
 ## routes.ts — composition root
 
-- `routes.ts` registers domain routers and global middleware — it should not contain inline business logic
+- `routes.ts` is the composition root: it mounts domain routers and global middleware, but still contains some legacy inline handlers
 - When adding a new API domain, create `routes/domains/<domain>.ts` and mount it in `routes.ts`
-- Avoid growing inline handler blocks inside `routes.ts` — extract them into a domain module
+- Avoid growing inline handler blocks inside `routes.ts` — extract new work into a domain module and migrate old inline handlers incrementally
 
 ## routes/domains/* — domain ownership
 
@@ -45,7 +45,7 @@ apps/server/src/
 ## repositories/* — new persistence logic
 
 - New persistence logic (queries, inserts, updates) lives in the nearest domain repository
-- Repository functions are plain TypeScript functions that accept a `db` connection and return typed results
+- Existing repositories often import the singleton `db` directly; for new code, prefer plain TypeScript functions that can also accept a `db`/`tx` dependency when transactional composition matters
 - Do not add new database query logic directly to `storage.ts`
 - When migrating logic from `storage.ts`, extract to a repository first, then update `storage.ts` to delegate
 
@@ -63,7 +63,7 @@ Standalone auth and CLI modules remain at the `apps/server/src/` root:
 - `wechatAuth.ts` — WeChat OAuth2 flow
 - `phoneAuth.ts` — SMS phone auth (legacy fallback)
 - `adminAuth.ts` — admin authentication
-- `auth/policy.ts` — policy-based auth gating helpers
+- `auth/policy.ts` — env/debug auth policy helpers
 
 ## lib/ — cross-cutting helpers
 

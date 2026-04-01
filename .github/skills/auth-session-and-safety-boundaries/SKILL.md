@@ -5,7 +5,7 @@ description: Policy-based auth gating, typed request/session contracts, explicit
 
 # Auth, Session, and Safety Boundaries
 
-**Core rule:** Auth is enforced via policy helpers, not inline checks. Debug and dev auth surfaces are explicitly gated to non-production environments. Sensitive flows fail closed on error.
+**Core rule:** Admin auth should use shared middleware and debug/dev auth surfaces must be explicitly gated to non-production environments. Sensitive flows fail closed on error. Where authenticated-user checks are still duplicated inline, prefer extracting or reusing a shared helper rather than adding another ad-hoc check.
 
 ## When to use this skill
 
@@ -15,20 +15,15 @@ description: Policy-based auth gating, typed request/session contracts, explicit
 - Reviewing webhook validation logic
 - Working on session management or cookie configuration
 
-## Auth policy helpers
+## Auth helper locations
 
-Auth gating is handled through policy helpers in `apps/server/src/auth/policy.ts`, not inline `if (!req.session.userId)` checks.
+Current auth responsibilities are split:
 
-```typescript
-// Prefer this
-requireAuth(req, res, next);        // authenticated user required
-requireAdmin(req, res, next);       // admin-level required
+- `apps/server/src/adminAuth.ts` exports `requireAdmin`, `requireSuperAdmin`, and `requireOperatorOrAbove`
+- `apps/server/src/auth/policy.ts` owns environment/debug auth boundaries such as `isDevAuthToolsEnabled()` and `canUseMockWechatAuth()`
+- Authenticated-user checks (`requireAuth`) still exist as local helpers in places like `apps/server/src/routes.ts` and `apps/server/src/routes/domains/onboarding.ts`
 
-// Not this
-if (!req.session.userId) { return res.status(401).json(...); }
-```
-
-Use the appropriate middleware — do not implement custom session reads in route handlers.
+Use the existing shared middleware where it exists, and avoid creating another one-off auth check if a nearby route file already has an established helper that should be extracted instead.
 
 ## Admin routes
 
@@ -86,7 +81,7 @@ Sensitive flows should fail closed:
 
 ## Common mistakes to avoid
 
-- Adding inline `req.session` checks in route handlers instead of using policy helpers
+- Adding another one-off `req.session` auth check when an existing shared or local helper should be reused/extracted
 - Registering a dev/debug route without an environment gate
 - Omitting `requireAdmin` on admin endpoints
 - Processing webhook data before verifying the signature
@@ -95,10 +90,12 @@ Sensitive flows should fail closed:
 
 ## Related files
 
-- `apps/server/src/auth/policy.ts` — policy-based auth helpers
+- `apps/server/src/auth/policy.ts` — env/debug auth boundaries
 - `apps/server/src/phoneAuth.ts` — SMS auth (with dev-auth env gate)
 - `apps/server/src/adminAuth.ts` — admin authentication
 - `apps/server/src/wechatAuth.ts` — WeChat OAuth2
+- `apps/server/src/routes.ts` — current local `requireAuth` usage
+- `apps/server/src/routes/domains/onboarding.ts` — domain-local `requireAuth` usage
 - `apps/server/src/lib/adminAuditLogger.ts` — audit logging
 - `apps/user-client/src/App.tsx` — client-side dev tools gate
 - `docs/admin-rbac-matrix.md` — admin permission matrix
