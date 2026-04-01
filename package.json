@@ -18,7 +18,6 @@
     "check:full": "npm run guardrails && npm run lint && npm run test && npm run build",
     "lint": "npm run lint -w @joyjoin/shared && npm run lint -w @joyjoin/user-client && npm run lint -w @joyjoin/admin-client && npm run lint -w @joyjoin/server",
     "test": "npm run test -w @joyjoin/shared && npm run test -w @joyjoin/user-client && npm run test -w @joyjoin/admin-client && npm run test -w @joyjoin/server",
-    "check": "npm run guardrails && npm run typecheck",
     "dev:user": "npm run dev -w @joyjoin/user-client",
     "dev:admin": "npm run dev -w @joyjoin/admin-client",
     "dev:server": "npm run dev -w @joyjoin/server",
