@@ -19,7 +19,8 @@ const {
     updateSetCalls: [] as any[],
     updateReturningQueue: [] as any[],
     updateWhereQueue: [] as any[],
-    poolRow: { id: 'pool-1', title: 'Test Pool', eventType: '饭局', city: '上海', district: '徐汇', dateTime: new Date(), createdBy: 'host-1' },
+    poolRow: { id: 'pool-1', title: 'Test Pool', eventType: '饭局', city: '上海', district: '徐汇', dateTime: new Date(), createdBy: 'host-1' } as any | null,
+    throwCouponsSelect: false,
     transactionImpl: vi.fn(),
   },
   eventPoolsTable: Symbol('eventPools'),
@@ -57,6 +58,7 @@ vi.mock('drizzle-orm', () => ({
 
 function makeAwaitable(value: unknown) {
   return {
+    limit: () => Promise.resolve(value),
     returning: () => Promise.resolve(value),
     then: (resolve: (v: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(value).then(resolve, reject),
@@ -69,7 +71,7 @@ vi.mock('../db', () => ({
       from: (table: unknown) => ({
         where: (condition: any) => {
           if (table === eventPoolsTable) {
-            return makeAwaitable([mockState.poolRow]);
+            return makeAwaitable(mockState.poolRow ? [mockState.poolRow] : []);
           }
           if (table === userInterestsTable) {
             if (condition?.type === 'inArray') {
@@ -84,6 +86,9 @@ vi.mock('../db', () => ({
               then: (resolve: (v: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
                 Promise.resolve(row ? [row] : []).then(resolve, reject),
             };
+          }
+          if (table === couponsTable && mockState.throwCouponsSelect) {
+            throw new Error('coupon lookup failed');
           }
           return makeAwaitable([]);
         },
@@ -143,6 +148,8 @@ describe('poolMatchingService', () => {
     mockState.updateSetCalls.length = 0;
     mockState.updateReturningQueue.length = 0;
     mockState.updateWhereQueue.length = 0;
+    mockState.poolRow = { id: 'pool-1', title: 'Test Pool', eventType: '饭局', city: '上海', district: '徐汇', dateTime: new Date(), createdBy: 'host-1' };
+    mockState.throwCouponsSelect = false;
     mockState.transactionImpl.mockReset();
   });
 
@@ -161,6 +168,14 @@ describe('poolMatchingService', () => {
     expect(mockState.transactionImpl).not.toHaveBeenCalled();
   });
 
+  it('throws a clear not-found error before attempting the pool guard', async () => {
+    mockState.poolRow = null;
+
+    await expect(saveMatchResults('missing-pool', [])).rejects.toThrow(/Pool not found/);
+    expect(mockState.updateSetCalls).toHaveLength(0);
+    expect(mockState.transactionImpl).not.toHaveBeenCalled();
+  });
+
   it('resets the pool status back to active when the transactional match save fails', async () => {
     mockState.updateReturningQueue.push([{ id: 'pool-1' }]); // guard acquisition
     mockState.updateWhereQueue.push([]); // reset status update
@@ -170,5 +185,15 @@ describe('poolMatchingService', () => {
 
     expect(mockState.updateSetCalls[0]).toMatchObject({ status: 'matching' });
     expect(mockState.updateSetCalls[1]).toMatchObject({ status: 'active' });
+  });
+
+  it('keeps match persistence successful when invitation reward processing fails', async () => {
+    mockState.updateReturningQueue.push([{ id: 'pool-1' }]); // guard acquisition
+    mockState.throwCouponsSelect = true;
+    mockState.transactionImpl.mockResolvedValueOnce(undefined);
+
+    await expect(saveMatchResults('pool-1', [])).resolves.toBeUndefined();
+
+    expect(mockState.updateSetCalls[0]).toMatchObject({ status: 'matching' });
   });
 });
