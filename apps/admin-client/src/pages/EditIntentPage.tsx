@@ -101,6 +101,7 @@ export default function EditIntentPage() {
           <Button 
             variant="ghost" 
             size="icon"
+            aria-label="返回编辑资料页"
             onClick={() => setLocation("/profile/edit")}
             data-testid="button-back"
           >
@@ -131,6 +132,7 @@ export default function EditIntentPage() {
                   type="button"
                   onClick={() => toggleIntent(option.value)}
                   disabled={isDisabled}
+                  aria-pressed={isSelected}
                   className={`
                     w-full px-5 py-4 text-left rounded-xl border-2 transition-all duration-150
                     ${isSelected
@@ -139,6 +141,7 @@ export default function EditIntentPage() {
                       ? 'border-border bg-muted/30 text-muted-foreground cursor-not-allowed'
                       : 'border-border hover-elevate active-elevate-2'
                     }
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
                   `}
                   data-testid={`button-intent-${option.value}`}
                 >
@@ -171,19 +174,19 @@ export default function EditIntentPage() {
             </p>
           )}
         </div>
-      </form>
 
-      {/* Bottom action */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
-        <Button 
-          onClick={form.handleSubmit(onSubmit)} 
-          className="w-full"
-          loading={updateMutation.isPending}
-          data-testid="button-save"
-        >
-          保存
-        </Button>
-      </div>
+        {/* Bottom action */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <Button 
+            type="submit"
+            className="w-full"
+            loading={updateMutation.isPending}
+            data-testid="button-save"
+          >
+            保存
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
