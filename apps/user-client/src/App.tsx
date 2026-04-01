@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboardingOrchestrator } from "@/features/onboarding/active/useOnboardingOrchestrator";
 import { Suspense, lazy, useEffect } from "react";
 import { preloadXiaoyueImages } from "@/lib/preloadImages";
 import { AchievementProvider } from "@/contexts/AchievementContext";
@@ -14,12 +15,12 @@ import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 // These are required for first paint and the initial user journey.
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
-import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
+import PersonalityTestPage from "@/features/onboarding/active/pages/PersonalityTestPage";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
-import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
-import EssentialDataPage from "@/pages/EssentialDataPage";
-import ExtendedDataPage from "@/pages/ExtendedDataPage";
-import FinalProfileReviewPage from "@/pages/FinalProfileReviewPage";
+import WeChatAuthGatePage from "@/features/onboarding/active/pages/WeChatAuthGatePage";
+import EssentialDataPage from "@/features/onboarding/active/pages/EssentialDataPage";
+import ExtendedDataPage from "@/features/onboarding/active/pages/ExtendedDataPage";
+import FinalProfileReviewPage from "@/features/onboarding/active/pages/FinalProfileReviewPage";
 import LoginPromptPage from "@/pages/LoginPromptPage";
 import InviteLandingRouter from "@/pages/InviteLandingRouter";
 import DiscoverPage from "@/pages/DiscoverPage";
@@ -151,8 +152,7 @@ function RedirectToReview() {
 }
 
 function AuthenticatedRouter() {
-  const { user, nextStep, isLoading } = useAuth();
-  const [location] = useLocation();
+  const { nextStep, isLoading } = useOnboardingOrchestrator();
 
   // Show loading while fetching user state
   if (isLoading) {
@@ -165,7 +165,7 @@ function AuthenticatedRouter() {
     case 'onboarding':
       return (
         <Switch>
-          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test" component={PersonalityTestPage} />
           <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
@@ -176,7 +176,7 @@ function AuthenticatedRouter() {
     case 'personality-test':
       return (
         <Switch>
-          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test" component={PersonalityTestPage} />
           <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
@@ -263,7 +263,7 @@ function AuthenticatedRouter() {
           <Route path="/onboarding/login" component={LoginPromptPage} />
           <Route path="/event/:id" component={EventDetailPage} />
           <Route path="/invite" component={InvitePage} />
-          <Route path="/personality-test" component={PersonalityTestPageV4} />
+          <Route path="/personality-test" component={PersonalityTestPage} />
           <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
           <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
           <Route path="/personality-test/results" component={PersonalityTestResultPage} />
@@ -309,17 +309,17 @@ function Router() {
     return (
       <Switch>
         {/* Anonymous personality test (Option B: Post-Test Signup Flow - 2026-02-04) */}
-        <Route path="/personality-test" component={PersonalityTestPageV4} />
+        <Route path="/personality-test" component={PersonalityTestPage} />
         <Route path="/personality-test/auth-gate" component={WeChatAuthGatePage} />
         <Route path="/personality-test/results" component={PersonalityTestResultPage} />
         <Route path="/personality-test/complete" component={PersonalityTestResultPage} />
         
         {/* Legacy /onboarding route redirects to personality test */}
-        <Route path="/onboarding" component={PersonalityTestPageV4} />
+        <Route path="/onboarding" component={PersonalityTestPage} />
         {/* Registration routes redirect to personality test (new flow) */}
-        <Route path="/registration" component={PersonalityTestPageV4} />
-        <Route path="/registration/chat" component={PersonalityTestPageV4} />
-        <Route path="/register" component={PersonalityTestPageV4} />
+        <Route path="/registration" component={PersonalityTestPage} />
+        <Route path="/registration/chat" component={PersonalityTestPage} />
+        <Route path="/register" component={PersonalityTestPage} />
         <Route path="/terms" component={TermsPage} />
         {/* Legacy login page still accessible */}
         <Route path="/login" component={LoginPage} />

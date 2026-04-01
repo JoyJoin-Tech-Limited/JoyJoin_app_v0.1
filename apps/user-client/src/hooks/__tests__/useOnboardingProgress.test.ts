@@ -29,21 +29,21 @@ function buildUser(overrides: Partial<AuthUser> = {}): AuthUser {
 }
 
 describe("calculateOnboardingProgress", () => {
-  it("marks registration complete once an authenticated user exists", () => {
-    const progress = calculateOnboardingProgress(buildUser());
-
-    expect(progress.steps.registration).toBe(true);
-    expect(progress.steps.personalityTest).toBe(false);
-    expect(progress.currentStep).toBe("personality-test");
-    expect(progress.progress).toBe(20);
-  });
-
-  it("keeps unauthenticated users on the registration step", () => {
+  it("keeps signed-out users at the first active step", () => {
     const progress = calculateOnboardingProgress(undefined);
 
-    expect(progress.steps.registration).toBe(false);
-    expect(progress.currentStep).toBe("registration");
+    expect(progress.steps.personalityTest).toBe(false);
+    expect(progress.currentStep).toBe("personality-test");
     expect(progress.progress).toBe(0);
+  });
+
+  it("tracks completion flags without reconstructing routing from them", () => {
+    const progress = calculateOnboardingProgress(buildUser());
+
+    expect(progress.steps.personalityTest).toBe(false);
+    expect(progress.steps.essentialData).toBe(false);
+    expect(progress.currentStep).toBe("complete");
+    expect(progress.progress).toBe(100);
   });
 
   it("still prefers server-driven nextStep when present", () => {
@@ -54,6 +54,6 @@ describe("calculateOnboardingProgress", () => {
     }));
 
     expect(progress.currentStep).toBe("extended-data");
-    expect(progress.progress).toBe(60);
+    expect(progress.progress).toBe(50);
   });
 });

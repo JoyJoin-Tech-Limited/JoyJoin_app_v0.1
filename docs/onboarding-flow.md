@@ -3,6 +3,13 @@
 ## Overview (Updated 2026-03-23)
 
 JoyJoin uses a **value-first** onboarding approach:
+
+**Canonical client module boundary (active flow):**
+- `apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts` — single onboarding navigation/progress hook
+- `apps/user-client/src/features/onboarding/active/flow.ts` — `nextStep` → step/route mapping (source of truth on client)
+- `apps/user-client/src/features/onboarding/active/pages/*` — active onboarding pages
+- `apps/user-client/src/legacy/onboarding/pages/*` — quarantined legacy onboarding surfaces
+
 1. **Show value (personality test) BEFORE asking for signup**
 2. Silent WeChat authentication after user is invested
 3. Minimal data collection in onboarding
