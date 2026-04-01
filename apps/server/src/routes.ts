@@ -20,6 +20,7 @@ import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
 import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
+import { getMetricsText } from "./middleware/metrics";
 
 type Traits = {
   affinity: number;
@@ -345,6 +346,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
+  });
+
+  // Prometheus-style metrics endpoint — scraped by Prometheus / Grafana Agent
+  app.get('/api/metrics', async (_req, res) => {
+    try {
+      const text = await getMetricsText();
+      res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+      res.status(200).send(text);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to collect metrics' });
+    }
   });
 
   // Reverse geocode endpoint - converts GPS coordinates to city/district

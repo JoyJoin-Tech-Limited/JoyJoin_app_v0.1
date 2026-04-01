@@ -1,0 +1,78 @@
+# Alertmanager configuration for JoyJoin
+# Docs: https://prometheus.io/docs/alerting/latest/configuration/
+#
+# Replace placeholder values with real credentials before deploying.
+# Store secrets in environment variables or a secrets manager — never commit
+# real tokens to the repository.
+#
+# Supported receiver examples below (uncomment and fill in as needed):
+#   - Slack webhook
+#   - PagerDuty integration key
+#   - Generic webhook (e.g. DingTalk, Feishu, custom endpoint)
+
+global:
+  # Default time before re-sending an unresolved alert
+  resolve_timeout: 5m
+
+route:
+  # Default grouping and timing
+  group_by: ["alertname", "severity", "team"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: "default"
+
+  routes:
+    # Critical alerts → immediate notification
+    - matchers:
+        - severity = "critical"
+      receiver: "critical"
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts → slower cadence
+    - matchers:
+        - severity = "warning"
+      receiver: "warning"
+      repeat_interval: 8h
+
+receivers:
+  # ── Default (catch-all) ────────────────────────────────────────────────────
+  - name: "default"
+    # Uncomment and configure a channel below:
+    # slack_configs:
+    #   - api_url: "${SLACK_WEBHOOK_URL}"
+    #     channel: "#ops-alerts"
+    #     title: "{{ .CommonAnnotations.summary }}"
+    #     text: "{{ .CommonAnnotations.description }}"
+
+  # ── Critical ───────────────────────────────────────────────────────────────
+  - name: "critical"
+    # slack_configs:
+    #   - api_url: "${SLACK_WEBHOOK_URL_CRITICAL}"
+    #     channel: "#incidents"
+    #     title: "🚨 CRITICAL: {{ .CommonAnnotations.summary }}"
+    #     text: "{{ .CommonAnnotations.description }}\nRunbook: {{ .CommonAnnotations.runbook_url }}"
+    #     send_resolved: true
+    # pagerduty_configs:
+    #   - routing_key: "${PAGERDUTY_INTEGRATION_KEY}"
+    #     description: "{{ .CommonAnnotations.summary }}"
+    webhook_configs:
+      - url: "${ALERT_WEBHOOK_URL:-http://localhost:9999/alert}"
+        send_resolved: true
+
+  # ── Warning ────────────────────────────────────────────────────────────────
+  - name: "warning"
+    # slack_configs:
+    #   - api_url: "${SLACK_WEBHOOK_URL}"
+    #     channel: "#ops-warnings"
+    #     title: "⚠️ WARNING: {{ .CommonAnnotations.summary }}"
+    #     text: "{{ .CommonAnnotations.description }}"
+
+inhibit_rules:
+  # Suppress warning if a critical for the same alert is already firing
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ["alertname"]
