@@ -80,7 +80,7 @@ async function resolveSession(
     }
     return null;
   }
-  return state;
+  return state ? { ...state } : null;
 }
 
 // ---------------------------------------------------------------------------

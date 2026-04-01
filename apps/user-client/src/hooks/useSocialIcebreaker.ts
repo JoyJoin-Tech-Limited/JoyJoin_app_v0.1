@@ -110,7 +110,10 @@ export function useSocialIcebreaker({
   useEffect(() => {
     if (!socialSessionId || sessionExpired) return;
 
-    const timer = setInterval(async () => {
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const sendHeartbeat = async () => {
       try {
         const res = await fetch(`/api/social-icebreaker/${socialSessionId}/heartbeat`, {
           method: 'POST',
@@ -124,10 +127,19 @@ export function useSocialIcebreaker({
         }
       } catch {
         // Network failure; will retry next interval.
+      } finally {
+        if (!cancelled) {
+          timeoutId = window.setTimeout(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+        }
       }
-    }, HEARTBEAT_INTERVAL_MS);
+    };
 
-    return () => clearInterval(timer);
+    timeoutId = window.setTimeout(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
   }, [socialSessionId, sessionExpired, setAndCacheSocialSessionId]);
 
   const startSession = useCallback(async () => {
