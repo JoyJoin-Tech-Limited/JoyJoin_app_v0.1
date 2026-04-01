@@ -13,7 +13,7 @@ This document summarises the implementation of the archetype-based reveal experi
 
 **Location:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
 
-All matching-state screens share a single layout shell that provides:
+All full-screen matching-status pages share a single layout shell that provides:
 - The canonical dark background (`apps/user-client/src/assets/matching/shared/matching-bg.svg`) with a readability scrim
 - Safe-area-aware header with optional back button and title
 - Centred content container exposing **hero / copy / CTA / footer** composition slots
@@ -27,21 +27,33 @@ All matching-state screens share a single layout shell that provides:
 />
 ```
 
-**Guardrail:** New matching-state screens **must** extend `MatchingStateLayout` rather than reimplementing their own dark background or layout shell. Duplicating `matching-bg.svg` is explicitly discouraged.
+**Guardrail:** New full-screen matching-status pages **must** extend `MatchingStateLayout` rather than reimplementing their own dark background or layout shell. Duplicating `matching-bg.svg` is explicitly discouraged.
 
-### Active Matching-State Screen Family
+### Full-Screen Matching-State Screen Family
 
 | Component | State | Asset |
 |-----------|-------|-------|
 | `MatchingWaitingScreen` | Premium dark-mode blind-pool waiting (fill states: waiting / can_form / full) | `matching/waiting/matching-waiting-hero.svg` |
 | `NoMatchScreen` | No match found for this pool round | `matching/no-match/no-match-hero.svg` |
+
+### Join-Sheet Interstitial Screens
+
+These are shown inside `JoinEventPoolSheet.tsx`, not as standalone full-screen pages:
+
+| Component | State | Asset |
+|-----------|-------|-------|
 | `JoinErrorScreen` | Registration / join error | `matching/join-error/join-error-hero.svg` |
 | `ExtendedDataEmptyScreen` | Profile data insufficient for matching | `matching/extended-data-empty/extended-data-empty-hero.svg` |
 | `TestIncompleteScreen` | Personality test not completed | `matching/test-incomplete/…` |
-| `SurpriseMatchReveal` | Cinematic surprise match reveal | (inline animation) |
-| `MatchPointsDisplay` | Match points and compatibility summary | (inline) |
 
-All screens live in `apps/user-client/src/components/matching/`.
+### Post-Match Reveal Components
+
+| Component | Role | Asset |
+|-----------|------|-------|
+| `SurpriseMatchReveal` | Cinematic surprise match reveal overlay | (inline animation) |
+| `MatchPointsDisplay` | Match points and compatibility summary renderer | (inline) |
+
+These screens live under `apps/user-client/src/components/matching/`, except `MatchingWaitingScreen`, which is at `apps/user-client/src/components/MatchingWaitingScreen.tsx`.
 
 ### Trigger-Based State Wiring
 
