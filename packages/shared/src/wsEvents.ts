@@ -9,6 +9,7 @@ export type WSEventType =
   | "EVENT_CANCELED"
   | "POOL_MATCHED"
   | "EVENT_THEME_TITLE_REVEALED"
+  | "POOL_REGISTRATION_ADDED"
   | "USER_JOINED"
   | "USER_CONFIRMED"
   | "USER_LEFT"
@@ -136,6 +137,14 @@ export interface EventThemeTitleRevealedData {
   themeEmoji: string;
   themeHighlights: string[];
   themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
+}
+
+// 活动池新报名
+export interface PoolRegistrationAddedData {
+  poolId: string;
+  archetype: string;
+  userId: string;
+  totalRegistrations: number;
 }
 
 // ============ 破冰流程事件数据 ============

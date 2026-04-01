@@ -56,6 +56,27 @@ import { z } from "zod";
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
 
+/**
+ * Batch-load interest signals for multiple users.
+ * Returns a Map<userId, UserInterestSignal[]>.
+ */
+async function loadInterestSignalsByUserIds(
+  userIds: string[],
+): Promise<Map<string, typeof userInterestSignals.$inferSelect[]>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(userInterestSignals)
+    .where(inArray(userInterestSignals.userId, userIds));
+  const map = new Map<string, typeof userInterestSignals.$inferSelect[]>();
+  for (const row of rows) {
+    const existing = map.get(row.userId) ?? [];
+    existing.push(row);
+    map.set(row.userId, existing);
+  }
+  return map;
+}
+
 function getActingAdminId(req: any): string {
   return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
 }
@@ -261,6 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerAuthRoutes(app);
   registerOnboardingRoutes(app);
+  registerPaymentRoutes(app);
 
   // Profile stats endpoint
   app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
@@ -462,273 +484,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.end();
   });
-
-  app.post('/api/registration/chat/complete', async (req: any, res) => {
-    try {
-      const { conversationHistory, phoneNumber, startTime } = req.body;
-      
-      // Validate conversation has sufficient content
-      if (!conversationHistory || conversationHistory.length < 4) {
-        return res.status(400).json({ message: "对话记录不完整，请继续和小悦聊天" });
-      }
-      
-      const { summarizeAndExtractInfo } = await import('./deepseekClient');
-      
-      // Server-side extraction from conversation history (more secure than trusting client)
-      const extractedInfo = await summarizeAndExtractInfo(conversationHistory);
-      
-      // Validate required field
-      if (!extractedInfo.displayName) {
-        return res.status(400).json({ message: "请告诉小悦你希望大家怎么称呼你" });
-      }
-      
-      // Calculate server-side conversationalProfile metrics
-      const registrationTime = new Date().toISOString();
-      let completionSpeed: 'fast' | 'medium' | 'slow' = 'medium';
-      if (startTime) {
-        const durationMinutes = (Date.now() - new Date(startTime).getTime()) / 60000;
-        if (durationMinutes < 3) {
-          completionSpeed = 'fast';
-        } else if (durationMinutes > 10) {
-          completionSpeed = 'slow';
-        }
-      }
-      
-      // Always create conversationalProfile with server metrics, merging LLM behavioral data when available
-      const conversationalProfile = {
-        responseLength: extractedInfo.conversationalProfile?.responseLength || 'moderate',
-        emojiUsage: extractedInfo.conversationalProfile?.emojiUsage || 'few',
-        formalityLevel: extractedInfo.conversationalProfile?.formalityLevel || 'neutral',
-        proactiveness: extractedInfo.conversationalProfile?.proactiveness || 'neutral',
-        registrationTime,
-        completionSpeed
-      };
-      extractedInfo.conversationalProfile = conversationalProfile as any;
-      
-      // Map collected info to user registration fields
-      const registrationData: any = {
-        displayName: extractedInfo.displayName,
-        gender: extractedInfo.gender || '不透露',
-        currentCity: extractedInfo.currentCity || '',
-        registrationMethod: 'chat',
-      };
-      
-      // Set birthdate if birth year provided
-      if (extractedInfo.birthYear) {
-        registrationData.birthdate = `${extractedInfo.birthYear}-01-01`;
-      }
-      
-      // ❌ REMOVED: Legacy interests fields no longer exist in schema
-      // These are now managed by user_interests table via Interest Carousel
-      // if (extractedInfo.interestsTop && extractedInfo.interestsTop.length > 0) {
-      //   registrationData.interestsTop = extractedInfo.interestsTop;
-      // }
-      // if (extractedInfo.primaryInterests && extractedInfo.primaryInterests.length > 0) {
-      //   registrationData.primaryInterests = extractedInfo.primaryInterests;
-      // }
-      
-      // Map new fields from AI chat extraction
-      if (extractedInfo.intent && extractedInfo.intent.length > 0) {
-        registrationData.intent = extractedInfo.intent;
-      }
-      if (extractedInfo.lifeStage) {
-        registrationData.lifeStage = extractedInfo.lifeStage;
-      }
-      if (extractedInfo.ageMatchPreference) {
-        registrationData.ageMatchPreference = extractedInfo.ageMatchPreference;
-      }
-      if (extractedInfo.relationshipStatus) {
-        registrationData.relationshipStatus = extractedInfo.relationshipStatus;
-      }
-      if (extractedInfo.socialStyle) {
-        registrationData.socialStyle = extractedInfo.socialStyle;
-      }
-      if (extractedInfo.venueStylePreference) {
-        registrationData.venueStylePreference = extractedInfo.venueStylePreference;
-      }
-
-      res.json({ message: "Personality test completed", user: updatedUser });
-    } catch (error) {
-      console.error("Error completing personality test:", error);
-      res.status(500).json({ message: "Failed to complete personality test" });
-    }
-  });
-
-  // Auth routes
-  app.get('/api/auth/user', async (req: Request, res) => {
-    // 🔧 DEBUG_AUTH logging (Phase 4.2)
-    if (isDebugAuthLoggingEnabled()) {
-      console.log("[AUTH/USER]", {
-        sid: req.sessionID,
-        cookie: req.headers.cookie,
-        userId: req.session?.userId,
-        adminAccountId: req.session?.adminAccountId,
-      });
-    }
-
-    // New admin_accounts-based session: return synthetic admin user object
-    if (req.session?.adminAccountId) {
-      try {
-        const adminAccount = await storage.getAdminAccountById(req.session.adminAccountId);
-        if (adminAccount && adminAccount.status === 'active') {
-          return res.json({
-            id: adminAccount.id,
-            displayName: adminAccount.displayName || adminAccount.username,
-            isAdmin: true,
-            adminRole: adminAccount.role,
-            // Enough for AdminApp.tsx to detect admin status:
-            nextStep: 'discover',
-          });
-        }
-        return res.status(401).json({ message: "Unauthorized" });
-      } catch (err) {
-        return res.status(500).json({ message: "Internal server error" });
-      }
-      if (extractedInfo.favoriteRestaurant) {
-        registrationData.favoriteRestaurant = extractedInfo.favoriteRestaurant;
-      }
-      if (extractedInfo.favoriteRestaurantReason) {
-        registrationData.favoriteRestaurantReason = extractedInfo.favoriteRestaurantReason;
-      }
-      if (extractedInfo.educationLevel) {
-        registrationData.educationLevel = extractedInfo.educationLevel;
-      }
-      // ❌ REMOVED: topicAvoidances field no longer exists in schema
-      // if (extractedInfo.topicAvoidances && extractedInfo.topicAvoidances.length > 0) {
-      //   registrationData.topicAvoidances = extractedInfo.topicAvoidances;
-      // }
-      if (extractedInfo.hometown) {
-        registrationData.hometownRegionCity = extractedInfo.hometown;
-      }
-      if (extractedInfo.ageDisplayPreference) {
-        registrationData.ageDisplayPreference = extractedInfo.ageDisplayPreference;
-      }
-      if (extractedInfo.occupationDescription) {
-        registrationData.occupationDescription = extractedInfo.occupationDescription;
-      }
-      
-      // ===== 智能信息收集系统新增字段 =====
-      // ❌ REMOVED: industry field (replaced by 3-tier classification)
-      // if (extractedInfo.industry) {
-      //   registrationData.industry = extractedInfo.industry;
-      // }
-      if (extractedInfo.industrySegment) {
-        registrationData.industrySegment = extractedInfo.industrySegment;
-      }
-      if (extractedInfo.occupation) {
-        registrationData.structuredOccupation = extractedInfo.occupation;
-      }
-      if (extractedInfo.companyType) {
-        registrationData.companyType = extractedInfo.companyType;
-      }
-      // ❌ REMOVED: seniority field (never collected in onboarding)
-      // if (extractedInfo.seniority) {
-      //   registrationData.seniority = extractedInfo.seniority;
-      // }
-      // 智能洞察存储到 insightLedger（JSONB）
-      if (extractedInfo.smartInsights && extractedInfo.smartInsights.length > 0) {
-        registrationData.insightLedger = extractedInfo.smartInsights;
-      }
-      
-      // ===== AI Evolution System: Insight Detection & Storage =====
-      try {
-        const { insightDetectorService } = await import('./insightDetectorService');
-        const { dialogueEmbeddingsService } = await import('./dialogueEmbeddingsService');
-        const { getSessionInsights, clearSessionInsights } = await import('./deepseekClient');
-        
-        // Get accumulated per-message insights from session
-        const sessionId = req.body.sessionId || req.sessionID;
-        const accumulatedInsights = getSessionInsights(sessionId);
-        
-        // Store phoneNumber for cross-session linking
-        const linkPhoneNumber = phoneNumber;
-        
-        // Run full conversation analysis (includes dialect + deep traits)
-        const insightResult = await insightDetectorService.analyzeConversation(conversationHistory);
-        
-        // Merge accumulated per-message insights with final analysis
-        const allInsights = [...accumulatedInsights, ...insightResult.insights];
-        const uniqueInsights = allInsights.filter((insight, index, self) =>
-          index === self.findIndex(i => i.subType === insight.subType)
-        );
-        
-        // Update result with merged insights
-        insightResult.insights = uniqueInsights;
-        
-        // Store insights to dialogue_embeddings table
-        const dialogueContent = conversationHistory
-          .filter((m: any) => m.role === 'user')
-          .map((m: any) => m.content)
-          .join('\n');
-        
-        await dialogueEmbeddingsService.storeInsights(
-          sessionId,
-          null, // userId not available yet
-          dialogueContent,
-          insightResult,
-          true, // isSuccessful
-          linkPhoneNumber // Store phone for cross-session linking
-        );
-        
-        // Clear session insights after storing
-        clearSessionInsights(sessionId);
-        
-        console.log(`[AI Evolution] Stored ${insightResult.insights.length} insights (${accumulatedInsights.length} realtime + final), dialect: ${insightResult.dialectProfile?.primaryDialect || 'none'}`);
-        
-        // Merge safety insights into registrationData
-        const safetyInsights = insightResult.insights.filter(i => i.category === 'safety');
-        if (safetyInsights.length > 0) {
-          registrationData.safetyNoteHost = safetyInsights
-            .map(i => `[${i.subType}] ${i.value}`)
-            .join('; ');
-        }
-      } catch (insightError) {
-        console.error('[AI Evolution] Insight detection error:', insightError);
-        // Non-blocking - continue with registration
-      }
-      // ===== End AI Evolution System =====
-      
-      // Store chatSessionId in session for linking insights at user registration
-      const chatSessionId = req.body.sessionId || req.sessionID;
-      if (req.session) {
-        req.session.chatSessionId = chatSessionId;
-      }
-      
-      // If user is already logged in (via phone auth), update their profile and mark registration complete
-      const userId = req.session?.userId;
-      if (userId) {
-        try {
-          // Update user profile with extracted data
-          // Also mark interests/topics as complete since AI chat already collected this info
-          await storage.updateUserProfile(userId, {
-            ...registrationData,
-            hasCompletedInterestsTopics: true,
-          });
-          
-          // Mark registration as complete
-          await storage.markRegistrationComplete(userId);
-          
-          console.log(`[Chat Registration] User ${userId} profile updated, registration and interests marked complete`);
-        } catch (updateError) {
-          console.error('[Chat Registration] Error updating user profile:', updateError);
-          // Non-blocking - continue with response
-        }
-      }
-      
-      // Return collected info
-      res.json({
-        success: true,
-        message: userId ? "注册完成！" : "对话注册完成，请通过电话验证完成注册",
-        registrationData,
-        conversationalProfile: extractedInfo.conversationalProfile,
-        chatSessionId, // Return for client to persist if needed
-      });
-    } catch (error) {
-      console.error("Error completing chat registration:", error);
-      res.status(500).json({ message: "注册失败，请稍后再试" });
-    }
-  });
-
   // ============ Registration Session Telemetry Routes ============
   
   // Create a new registration session (called when chat registration starts)
@@ -8839,43 +8594,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
     next();
   }
-
-  // Create payment order for subscription
-  app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const { paymentType, relatedId, originalAmount, couponCode } = req.body;
-      
-      // Validate coupon if provided
-      let couponId: string | undefined;
-      if (couponCode) {
-        const coupons = await storage.getAllCoupons();
-        const coupon = coupons.find(c => c.code === couponCode && c.isActive);
-        if (coupon) {
-          couponId = coupon.id;
-        }
-      }
-      
-      const paymentResult = await paymentService.createPayment({
-        userId,
-        paymentType,
-        relatedId,
-        originalAmount,
-        couponId,
-        clientIp: getRequestClientIp(req),
-      });
-      
-      res.json(paymentResult);
-    } catch (error) {
-      console.error("Error creating payment:", error);
-      res.status(500).json({ message: "Failed to create payment" });
-    }
-  });
-  
   // WeChat Pay webhook - receives payment status updates
   // Note: express.raw() captures the raw body needed for signature verification.
   // This route intentionally does NOT use checkPaymentsEnabled — WeChat Pay must

@@ -15,7 +15,7 @@
  * the repo has a reusable DB-backed test harness for this feature area.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 // ---------------------------------------------------------------------------

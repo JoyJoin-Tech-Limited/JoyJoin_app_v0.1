@@ -39,6 +39,41 @@ for (const file of trackedFiles) {
   }
 }
 
+// --- Monorepo boundary guards ---
+
+// 1. Ban imports from the top-level legacy shared/ directory.
+//    All shared code must come from packages/shared (via @joyjoin/shared or @shared/* alias).
+const legacySharedImportPattern = /from\s+['"](?:@\/)?\.\.\/\.\.\/shared\//;
+const appSourceFiles = trackedFiles.filter(
+  (f) =>
+    (f.startsWith('apps/user-client/src/') || f.startsWith('apps/admin-client/src/') || f.startsWith('apps/server/src/')) &&
+    (f.endsWith('.ts') || f.endsWith('.tsx')),
+);
+for (const file of appSourceFiles) {
+  const content = fs.readFileSync(file, 'utf8');
+  if (legacySharedImportPattern.test(content)) {
+    violations.push(`Import from legacy top-level shared/ is banned (use @joyjoin/shared or @shared/*): ${file}`);
+  }
+}
+
+// 2. Ban direct cross-app source imports (e.g. user-client importing from admin-client src).
+const crossAppPatterns = [
+  { from: 'apps/user-client/', bannedPrefix: /from\s+['"][^'"]*apps\/admin-client\/src\// },
+  { from: 'apps/user-client/', bannedPrefix: /from\s+['"][^'"]*apps\/server\/src\// },
+  { from: 'apps/admin-client/', bannedPrefix: /from\s+['"][^'"]*apps\/user-client\/src\// },
+  { from: 'apps/admin-client/', bannedPrefix: /from\s+['"][^'"]*apps\/server\/src\// },
+  { from: 'apps/server/', bannedPrefix: /from\s+['"][^'"]*apps\/user-client\/src\// },
+  { from: 'apps/server/', bannedPrefix: /from\s+['"][^'"]*apps\/admin-client\/src\// },
+];
+for (const file of appSourceFiles) {
+  const content = fs.readFileSync(file, 'utf8');
+  for (const { from, bannedPrefix } of crossAppPatterns) {
+    if (file.startsWith(from) && bannedPrefix.test(content)) {
+      violations.push(`Cross-app source import is banned (use @joyjoin/shared for shared code): ${file}`);
+    }
+  }
+}
+
 for (const file of activeLegacyGuardFiles) {
   const content = fs.readFileSync(file, 'utf8');
   for (const identifier of bannedLegacyIdentifiers) {
@@ -106,4 +141,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('Guardrails passed: no tracked env files, obvious secrets, or banned legacy onboarding identifiers were found.');
+console.log('Guardrails passed: no tracked env files, obvious secrets, banned legacy onboarding identifiers, legacy shared/ imports, or cross-app source imports were found.');
