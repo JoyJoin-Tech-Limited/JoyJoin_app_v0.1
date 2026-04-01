@@ -11,6 +11,7 @@ import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
+import { logAdminAudit } from "./lib/adminAuditLogger";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
@@ -130,6 +131,10 @@ import { z } from "zod";
 
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
+
+function getActingAdminId(req: any): string {
+  return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+}
 
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
 const roleMapping: Record<string, Record<string, string>> = {
@@ -7636,8 +7641,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: true });
-      
-      // TODO: Log moderation action
+
+      logAdminAudit({
+        action: 'USER_BANNED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'user',
+        targetEntityId: req.params.id,
+        before: { isBanned: user.isBanned },
+        after: { isBanned: true },
+      });
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error banning user:", error);
@@ -7654,8 +7668,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedUser = await storage.updateUser(req.params.id, { isBanned: false });
-      
-      // TODO: Log moderation action
+
+      logAdminAudit({
+        action: 'USER_UNBANNED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'user',
+        targetEntityId: req.params.id,
+        before: { isBanned: user.isBanned },
+        after: { isBanned: false },
+      });
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error unbanning user:", error);
@@ -10365,6 +10388,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { paymentId } = req.params;
       const { reason } = req.body;
       await paymentService.createRefund(paymentId, reason);
+
+      logAdminAudit({
+        action: 'PAYMENT_REFUND_INITIATED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'payment',
+        targetEntityId: paymentId,
+        context: { reason },
+      });
+
       res.json({ message: "Refund initiated" });
     } catch (error) {
       console.error("Error creating refund:", error);
@@ -13870,6 +13903,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           target: [schema.blindBoxPreAttendance.eventId, schema.blindBoxPreAttendance.userId],
           set: { status, updatedAt: new Date() },
         });
+
+      logAdminAudit({
+        action: 'ATTENDANCE_OVERRIDE',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'blind_box_pre_attendance',
+        targetEntityId: `${eventId}:${userId}`,
+        context: { eventId, userId, newStatus: status },
+      });
 
       res.json({ success: true, status });
     } catch (error) {
