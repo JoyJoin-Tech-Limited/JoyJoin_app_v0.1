@@ -1,13 +1,13 @@
 import { assessmentRepo, type AssessmentRepository } from "./repositories/assessmentRepo";
 import { eventPoolsRepo, type EventPoolsRepository } from "./repositories/eventPoolsRepo";
 import { icebreakerRepo, type IcebreakerRepository } from "./repositories/icebreakerRepo";
-import { legacyStorageRepo, type LegacyStorage } from "./repositories/legacyStorageRepo";
+import { legacyStorageRepo } from "./repositories/legacyStorageRepo";
 import { notificationsRepo, type NotificationsRepository } from "./repositories/notificationsRepo";
 import { onboardingRepo, type OnboardingRepository } from "./repositories/onboardingRepo";
 import { paymentsRepo, type PaymentsRepository } from "./repositories/paymentsRepo";
 import { usersRepo, type UsersRepository } from "./repositories/usersRepo";
 
-export type IStorage = LegacyStorage
+export type IStorage = typeof legacyStorageRepo
   & OnboardingRepository
   & UsersRepository
   & AssessmentRepository
