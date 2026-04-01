@@ -48,7 +48,6 @@ Using `references/mapping.md`:
 |------|---------|---------------|
 | `docs/onboarding-flow.md` | Step sequence table | Insert `photo-upload` between `extended-data` and `profile-review` |
 | `.github/skills/onboarding-state-architecture/SKILL.md` | Active onboarding steps | Add row: nextStep=`photo-upload`, route=`/onboarding/photo-upload`, component=`PhotoUploadPage.tsx`, completion=`hasCompletedPhotoUpload` |
-| `apps/server/src/routes/domains/auth.ts` header comment | nextStep values | Add `photo-upload` to the documented value list |
 | `apps/user-client/src/features/onboarding/README.md` | Active pages list | Add `PhotoUploadPage.tsx` entry |
 ```
 

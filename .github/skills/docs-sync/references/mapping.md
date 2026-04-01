@@ -106,9 +106,9 @@ This guide maps areas of the JoyJoin codebase to the documentation files that mu
 
 **Source paths:**
 - `apps/server/src/routes/domains/matching.ts` (or equivalent)
-- `apps/server/src/services/poolMatchingService.ts`
-- `apps/server/src/services/matchExplanationService.ts`
-- Matching-related data structures in `apps/server/src/db/`
+- `apps/server/src/poolMatchingService.ts`
+- `apps/server/src/matchExplanationService.ts`
+- Matching-related data structures in `packages/shared/src/schema.ts` / `@shared/schema`
 
 **Documentation targets:**
 
@@ -186,7 +186,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files that mu
 ## 9. Database / schema changes
 
 **Source paths:**
-- `apps/server/src/db/schema.ts` (or Drizzle schema files)
+- `packages/shared/src/schema.ts` (or Drizzle schema files)
 - Migration files
 
 **Documentation targets:**
