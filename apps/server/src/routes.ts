@@ -18,6 +18,7 @@ import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
+import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
@@ -545,8 +546,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (extractedInfo.venueStylePreference) {
         registrationData.venueStylePreference = extractedInfo.venueStylePreference;
       }
-      if (extractedInfo.cuisinePreference && extractedInfo.cuisinePreference.length > 0) {
-        registrationData.cuisinePreference = extractedInfo.cuisinePreference;
+
+      res.json({ message: "Personality test completed", user: updatedUser });
+    } catch (error) {
+      console.error("Error completing personality test:", error);
+      res.status(500).json({ message: "Failed to complete personality test" });
+    }
+  });
+
+  // Auth routes
+  app.get('/api/auth/user', async (req: Request, res) => {
+    // 🔧 DEBUG_AUTH logging (Phase 4.2)
+    if (isDebugAuthLoggingEnabled()) {
+      console.log("[AUTH/USER]", {
+        sid: req.sessionID,
+        cookie: req.headers.cookie,
+        userId: req.session?.userId,
+        adminAccountId: req.session?.adminAccountId,
+      });
+    }
+
+    // New admin_accounts-based session: return synthetic admin user object
+    if (req.session?.adminAccountId) {
+      try {
+        const adminAccount = await storage.getAdminAccountById(req.session.adminAccountId);
+        if (adminAccount && adminAccount.status === 'active') {
+          return res.json({
+            id: adminAccount.id,
+            displayName: adminAccount.displayName || adminAccount.username,
+            isAdmin: true,
+            adminRole: adminAccount.role,
+            // Enough for AdminApp.tsx to detect admin status:
+            nextStep: 'discover',
+          });
+        }
+        return res.status(401).json({ message: "Unauthorized" });
+      } catch (err) {
+        return res.status(500).json({ message: "Internal server error" });
       }
       if (extractedInfo.favoriteRestaurant) {
         registrationData.favoriteRestaurant = extractedInfo.favoriteRestaurant;
@@ -8711,7 +8747,220 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
   
-  registerPaymentRoutes(app);
+  // Create subscription renewal (returns payment details)
+  app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { planType, couponCode } = req.body;
+      
+      if (!planType || !["monthly", "quarterly"].includes(planType)) {
+        return res.status(400).json({ message: "Invalid plan type" });
+      }
+      
+      // Create pending subscription
+      const renewalData = await subscriptionService.renewSubscription(userId, planType);
+      
+      // Create payment for the renewal
+      let couponId: string | undefined;
+      if (couponCode) {
+        const coupons = await storage.getAllCoupons();
+        const coupon = coupons.find(c => c.code === couponCode && c.isActive);
+        if (coupon) {
+          couponId = coupon.id;
+        }
+      }
+      
+      const paymentResult = await paymentService.createPayment({
+        userId,
+        paymentType: "event_bundle",
+        relatedId: renewalData.subscriptionId,
+        originalAmount: renewalData.amount,
+        couponId,
+        clientIp: getRequestClientIp(req),
+      });
+      
+      res.json({
+        subscription: renewalData,
+        payment: paymentResult,
+      });
+    } catch (error) {
+      console.error("Error renewing subscription:", error);
+      res.status(500).json({ message: "Failed to renew subscription" });
+    }
+  });
+  
+  // Cancel subscription
+  app.post("/api/subscription/cancel", isPhoneAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const subscription = await storage.getUserSubscription(userId);
+      if (!subscription) {
+        return res.status(404).json({ message: "No active subscription found" });
+      }
+      
+      await subscriptionService.cancelSubscription(subscription.id, req.body.reason);
+      res.json({ message: "Subscription cancelled" });
+    } catch (error) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
+  const getRequestClientIp = (req: Request): string => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
+      || req.ip
+      || req.socket.remoteAddress
+      || "127.0.0.1";
+  };
+
+  // ============ PAYMENT & WEBHOOKS ============
+  
+  /**
+   * Payment kill switch — set PAYMENTS_ENABLED=false to disable all payment entry points.
+   * Defaults to false (disabled) for safety during beta.
+   * Set PAYMENTS_ENABLED=true in the environment to enable payments.
+   */
+  function checkPaymentsEnabled(req: any, res: any, next: any) {
+    const enabled = (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
+    if (!enabled) {
+      return res.status(503).json({
+        error: "Payment system is currently disabled for maintenance",
+        code: "PAYMENTS_DISABLED",
+      });
+    }
+    next();
+  }
+
+  // Create payment order for subscription
+  app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { paymentType, relatedId, originalAmount, couponCode } = req.body;
+      
+      // Validate coupon if provided
+      let couponId: string | undefined;
+      if (couponCode) {
+        const coupons = await storage.getAllCoupons();
+        const coupon = coupons.find(c => c.code === couponCode && c.isActive);
+        if (coupon) {
+          couponId = coupon.id;
+        }
+      }
+      
+      const paymentResult = await paymentService.createPayment({
+        userId,
+        paymentType,
+        relatedId,
+        originalAmount,
+        couponId,
+        clientIp: getRequestClientIp(req),
+      });
+      
+      res.json(paymentResult);
+    } catch (error) {
+      console.error("Error creating payment:", error);
+      res.status(500).json({ message: "Failed to create payment" });
+    }
+  });
+  
+  // WeChat Pay webhook - receives payment status updates
+  // Note: express.raw() captures the raw body needed for signature verification.
+  // This route intentionally does NOT use checkPaymentsEnabled — WeChat Pay must
+  // always be able to deliver webhooks for in-flight payments even when new payment
+  // creation is disabled.
+  app.post(
+    "/api/webhooks/wechat-pay",
+    webhookEndpointLimiter,
+    async (req: Request, res) => {
+      let rawBody: string;
+      let payload: any;
+      try {
+        if (typeof req.rawBody !== "string" || req.rawBody.length === 0) {
+          return res.status(400).json({ code: "FAIL", message: "Missing raw body for signature verification" });
+        }
+
+        rawBody = req.rawBody;
+        payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      } catch {
+        return res.status(400).json({ code: "FAIL", message: "Invalid request body" });
+      }
+
+      const headers = {
+        timestamp: req.headers["wechatpay-timestamp"] as string | undefined,
+        nonce: req.headers["wechatpay-nonce"] as string | undefined,
+        signature: req.headers["wechatpay-signature"] as string | undefined,
+        serial: req.headers["wechatpay-serial"] as string | undefined,
+      };
+
+      try {
+        await paymentService.handleWebhook(payload, rawBody, headers);
+        res.json({ code: "SUCCESS", message: "OK" });
+      } catch (error: any) {
+        console.error("Error processing WeChat Pay webhook:", error);
+        const status = error?.status === 401 ? 401 : 500;
+        res.status(status).json({ code: "FAIL", message: "Webhook processing failed" });
+      }
+    }
+  );
+  
+  // Query payment status
+  app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, async (req, res) => {
+    try {
+      const { wechatOrderId } = req.params;
+      const status = await paymentService.queryPaymentStatus(wechatOrderId);
+      res.json({ status });
+    } catch (error) {
+      console.error("Error querying payment status:", error);
+      res.status(500).json({ message: "Failed to query payment status" });
+    }
+  });
+  
+  // Admin - Get all payments
+  app.get("/api/admin/payments", requireAdmin, async (req, res) => {
+    try {
+      const payments = await storage.getAllPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+  
+  // Admin - Create refund
+  app.post("/api/admin/payments/:paymentId/refund", requireAdmin, async (req, res) => {
+    try {
+      const { paymentId } = req.params;
+      const { reason } = req.body;
+      await paymentService.createRefund(paymentId, reason);
+
+      logAdminAudit({
+        action: 'PAYMENT_REFUND_INITIATED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'payment',
+        targetEntityId: paymentId,
+        context: { reason },
+      });
+
+      res.json({ message: "Refund initiated" });
+    } catch (error) {
+      console.error("Error creating refund:", error);
+      res.status(500).json({ message: "Failed to create refund" });
+    }
+  });
 
   // ============ VENUE MATCHING ============
   
@@ -11779,9 +12028,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // ============ Development Tools API Endpoints ============
-  // TODO: Restrict to development only before production launch
-  // Currently enabled in production for internal testing
-  
+  // Opt-in only outside production; omitted entirely from production registrations.
+  if (isDevAuthToolsEnabled()) {
+
   // Helper function to verify secret key
   function verifySecretKey(secretKey: string): { valid: boolean; error?: string; hint?: string } {
     const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
@@ -11791,18 +12040,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       return { 
         valid: false, 
         error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
-        hint: 'Add ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678 to .env'
+        hint: 'Add ADMIN_CREATE_SECRET_KEY to your local server environment before using dev auth tools.'
       };
     }
     
     if (secretKey !== expectedKey) {
       console.error('[DEV TOOLS] Secret key mismatch');
-      console.error('[DEV TOOLS] Expected length:', expectedKey.length);
-      console.error('[DEV TOOLS] Received length:', secretKey?.length || 0);
       return { 
         valid: false, 
         error: 'Invalid secret key',
-        hint: 'Use BYPASSSECRET12345678'
+        hint: 'Confirm the local ADMIN_CREATE_SECRET_KEY value matches your current shell/.env configuration.'
       };
     }
     
@@ -11810,7 +12057,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   }
 
   // Create admin account
-  app.post('/api/dev/admin/create', async (req: any, res) => {
+  app.post('/api/dev/admin/create', async (req: Request, res) => {
     try {
       const { phoneNumber, password, secretKey } = req.body;
 
@@ -11888,7 +12135,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Create user account with bypass
-  app.post('/api/dev/user/create', async (req: any, res) => {
+  app.post('/api/dev/user/create', async (req: Request, res) => {
     try {
       const { 
         phoneNumber, 
@@ -11937,7 +12184,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const existingUsers = await storage.getUserByPhone(phoneNumber);
       let user;
 
-      const userData: any = {
+      const userData: Record<string, unknown> = {
         password: hashedPassword,
         displayName,
         primaryArchetype: archetype,
@@ -12002,7 +12249,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Bypass personality test for current user
-  app.post('/api/dev/personality-test/bypass', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/dev/personality-test/bypass', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const { secretKey } = req.body;
       const userId = req.session.userId;
@@ -12030,7 +12277,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       }
 
       // Set default archetype if none exists
-      const updates: any = {
+      const updates: Record<string, unknown> = {
         hasCompletedPersonalityTest: true,
       };
 
@@ -12061,7 +12308,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Check secret key validity (debugging endpoint)
-  app.post('/api/dev/check-secret', async (req: any, res) => {
+  app.post('/api/dev/check-secret', async (req: Request, res) => {
     const { secretKey } = req.body;
     
     const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
@@ -12075,16 +12322,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     if (!DEV_SECRET_KEY) {
       return res.status(500).json({
         error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
-        hint: 'Server admin needs to add this to .env file'
+        hint: 'Add ADMIN_CREATE_SECRET_KEY to the local server environment before retrying.'
       });
     }
     
     if (secretKey !== DEV_SECRET_KEY) {
       return res.status(403).json({
         error: 'Secret key does not match',
-        hint: 'Expected: BYPASSSECRET12345678',
-        serverKeyLength: DEV_SECRET_KEY.length,
-        providedKeyLength: secretKey?.length || 0
+        hint: 'Confirm the local ADMIN_CREATE_SECRET_KEY value matches your current shell/.env configuration.'
       });
     }
     
@@ -12095,7 +12340,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     });
   });
 
-  registerIcebreakerRoutes(app);
+  }
+
+  app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
+  app.use('/api/tts', isPhoneAuthenticated, ttsRoutes);
 
   // ============ Pre-event Attendance (Blind Box) ============
 
