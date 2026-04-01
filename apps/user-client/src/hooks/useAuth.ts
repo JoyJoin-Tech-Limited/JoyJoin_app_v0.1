@@ -63,10 +63,15 @@ export function useAuth(): UseAuthResult {
     user: isError ? undefined : user,
     isLoading: actualIsLoading,
     isAuthenticated,
-    // Legacy computed fields (prefer server-driven nextStep)
-    needsRegistration: user ? !user.hasCompletedRegistration : undefined,
-    needsPersonalityTest: user ? Boolean(user.hasCompletedRegistration) && !user.hasCompletedPersonalityTest : undefined,
-    needsProfileSetup: user ? Boolean(user.hasCompletedRegistration) && Boolean(user.hasCompletedPersonalityTest) && (!user.displayName || !user.gender || !user.currentCity) : undefined,
+    // Legacy computed fields (prefer server-driven nextStep).
+    // These no longer depend on hasCompletedRegistration, which is a legacy flag
+    // not set in the modern V4 onboarding flow.
+    needsRegistration: user ? !user.hasCompletedPersonalityTest : undefined,
+    needsPersonalityTest: user ? !user.hasCompletedPersonalityTest : undefined,
+    needsProfileSetup: user
+      ? user.hasCompletedPersonalityTest === true &&
+        (!user.displayName || !user.gender || !user.currentCity)
+      : undefined,
     // Server-driven navigation (B1)
     nextStep: user?.nextStep,
     profileEssentialComplete: user?.profileEssentialComplete,

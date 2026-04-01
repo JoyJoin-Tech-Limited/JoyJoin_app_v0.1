@@ -5,7 +5,7 @@ import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
 import { db } from "./db";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
 import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
 
@@ -272,6 +272,47 @@ export async function processTestAnswers(
   testAnswers: unknown[]
 ): Promise<void> {
   if (!Array.isArray(testAnswers) || testAnswers.length === 0) return;
+
+  // C: Validate that at least one answer carries a non-zero trait score so we
+  // don't create completed sessions from garbage/empty payloads.
+  // Both camelCase (traitScores) and snake_case (trait_scores) field names are
+  // accepted here for backward compatibility with older client payload shapes.
+  const hasValidScoredAnswer = (testAnswers as any[]).some((a) => {
+    if (!a || typeof a !== "object") return false;
+    const scores = a.traitScores ?? a.trait_scores;
+    if (!scores || typeof scores !== "object") return false;
+    return Object.values(scores).some(
+      (v) => typeof v === "number" && !Number.isNaN(v) && v !== 0
+    );
+  });
+  if (!hasValidScoredAnswer) {
+    console.warn(
+      `[WeChat Auth] Rejecting testAnswers for user ${userId}: no answer carries a non-zero trait score`
+    );
+    throw Object.assign(
+      new Error("Invalid test answers: payload contains no scored answers"),
+      { code: "INVALID_TEST_RESULTS" }
+    );
+  }
+
+  // A: Idempotency guard — skip if the user already has a completed session from
+  // a prior import so that retries or double-submits don't create duplicates.
+  const [existingSession] = await db
+    .select({ id: assessmentSessions.id })
+    .from(assessmentSessions)
+    .where(
+      and(
+        eq(assessmentSessions.userId, userId),
+        eq(assessmentSessions.phase, "completed")
+      )
+    )
+    .limit(1);
+  if (existingSession) {
+    console.log(
+      `[WeChat Auth] Skipping duplicate processTestAnswers for user ${userId}: completed session ${existingSession.id} already exists`
+    );
+    return;
+  }
 
   console.log(
     `[WeChat Auth] Processing ${testAnswers.length} test answers for user ${userId}`
@@ -571,10 +612,17 @@ export function setupWechatAuth(app: Express) {
    * POST /api/auth/wechat/login-with-test
    * WeChat Mini Program authentication with optional personality test answers.
    * Used after the pre-signup personality test flow.
+   *
+   * Body params:
+   *   code            – WeChat login code (required)
+   *   testAnswers     – Array of V4 test answers to import (optional, omit or [] for
+   *                     returning-user logins)
+   *   presignupSessionId – Server-side pre-signup cache session ID to claim/delete
+   *                        after successful answer import (optional, B)
    */
   app.post("/api/auth/wechat/login-with-test", async (req: any, res) => {
     try {
-      const { code, testAnswers } = req.body;
+      const { code, testAnswers, presignupSessionId } = req.body;
 
       if (!code) {
         return res.status(400).json({ error: "WeChat code is required" });
@@ -588,6 +636,23 @@ export function setupWechatAuth(app: Express) {
 
       if (testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
         await processTestAnswers(user.id, testAnswers);
+
+        // B: Consume the server-side presignup cache so the same answers cannot be
+        // re-imported and resume prompts based on this session don't reappear.
+        if (presignupSessionId && typeof presignupSessionId === "string") {
+          try {
+            await storage.clearPreSignupData(presignupSessionId);
+            console.log(
+              `[WeChat Auth] Claimed presignup cache session ${presignupSessionId} for user ${user.id}`
+            );
+          } catch (cacheErr) {
+            // Non-fatal — log but don't fail the auth request
+            console.warn(
+              `[WeChat Auth] Failed to clear presignup cache ${presignupSessionId}:`,
+              cacheErr
+            );
+          }
+        }
       }
 
       // Fetch updated full user record

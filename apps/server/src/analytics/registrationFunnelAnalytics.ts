@@ -156,11 +156,12 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .from(users);
   const totalStarted = totalResult?.count || 0;
 
-  // 已完成注册
+  // 已完成注册 — use hasCompletedPersonalityTest as the modern completion signal;
+  // hasCompletedRegistration is a legacy field that is no longer the primary completion gate.
   const [completedResult] = await db
     .select({ count: count() })
     .from(users)
-    .where(sql`${users.hasCompletedRegistration} = true`);
+    .where(sql`${users.hasCompletedPersonalityTest} = true`);
   const totalCompleted = completedResult?.count || 0;
 
   // 近7天完成 (exclusive lower bound)
@@ -168,7 +169,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .select({ count: count() })
     .from(users)
     .where(and(
-      sql`${users.hasCompletedRegistration} = true`,
+      sql`${users.hasCompletedPersonalityTest} = true`,
       sql`${users.createdAt} > ${sevenDaysAgo}`
     ));
   const completedLast7Days = last7DaysResult?.count || 0;
@@ -178,7 +179,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
     .select({ count: count() })
     .from(users)
     .where(and(
-      sql`${users.hasCompletedRegistration} = true`,
+      sql`${users.hasCompletedPersonalityTest} = true`,
       sql`${users.createdAt} > ${fourteenDaysAgo}`,
       sql`${users.createdAt} <= ${sevenDaysAgo}`
     ));
@@ -196,7 +197,7 @@ async function getKPIs(): Promise<RegistrationFunnelKPIs> {
         avgMinutes: sql<number>`AVG(EXTRACT(EPOCH FROM (${users.updatedAt} - ${users.createdAt})) / 60)`
       })
       .from(users)
-      .where(sql`${users.hasCompletedRegistration} = true AND ${users.updatedAt} > ${users.createdAt}`);
+      .where(sql`${users.hasCompletedPersonalityTest} = true AND ${users.updatedAt} > ${users.createdAt}`);
     if (timeResult?.avgMinutes && timeResult.avgMinutes > 0 && timeResult.avgMinutes < 60) {
       avgCompletionTimeMinutes = Math.round(timeResult.avgMinutes * 10) / 10;
     }
@@ -262,18 +263,23 @@ async function getFunnelStages(): Promise<FunnelStage[]> {
     .where(sql`${users.hasCompletedInterestsCarousel} = true`);
   const l2Engaged = l2EngagedResult?.count || 0;
 
-  // 阶段4: L3推断（完成对话，有推断数据）
+  // 阶段4: L3推断 — personality test completed (modern completion signal)
   const [l3InferredResult] = await db
     .select({ count: count() })
     .from(users)
-    .where(sql`${users.hasCompletedRegistration} = true`);
+    .where(sql`${users.hasCompletedPersonalityTest} = true`);
   const l3Inferred = l3InferredResult?.count || 0;
 
-  // 阶段5: 注册完成
+  // 阶段5: 注册完成 — personality test AND essential profile data present
   const [completedResult] = await db
     .select({ count: count() })
     .from(users)
-    .where(sql`${users.hasCompletedRegistration} = true`);
+    .where(and(
+      sql`${users.hasCompletedPersonalityTest} = true`,
+      isNotNull(users.displayName),
+      isNotNull(users.gender),
+      isNotNull(users.currentCity)
+    ));
   const completed = completedResult?.count || 0;
 
   const stages: FunnelStage[] = [
