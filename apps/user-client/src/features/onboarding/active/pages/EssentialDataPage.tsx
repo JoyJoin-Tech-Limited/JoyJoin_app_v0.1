@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, ArrowRight, Loader2, Users, Network, MessageCircle, PartyPopper, Heart, Shuffle, Calendar, Star, Check, AlertCircle } from "lucide-react";
 import { SegmentedProgress } from "@/components/ui/progress-segmented";
 import { cn } from "@/lib/utils";
