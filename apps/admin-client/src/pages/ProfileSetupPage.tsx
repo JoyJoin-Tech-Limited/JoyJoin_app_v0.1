@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,8 @@ export default function ProfileSetupPage() {
     },
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
     if (!displayName.trim()) {
       toast({
         title: "请输入昵称",
@@ -81,39 +82,41 @@ export default function ProfileSetupPage() {
             </p>
           </motion.div>
 
-          <Card className="border shadow-sm">
-            <CardContent className="p-6 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">昵称</Label>
-                <Input
-                  id="displayName"
-                  placeholder="输入你的昵称"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  data-testid="input-display-name"
-                />
-                <p className="text-xs text-muted-foreground">
-                  这是其他人看到的名字
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Card className="border shadow-sm">
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">昵称</Label>
+                  <Input
+                    id="displayName"
+                    placeholder="输入你的昵称"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    data-testid="input-display-name"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    这是其他人看到的名字
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={handleSubmit}
-              disabled={setupMutation.isPending}
-              data-testid="button-save-profile"
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
             >
-              {setupMutation.isPending ? "保存中..." : "继续"}
-            </Button>
-          </motion.div>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                loading={setupMutation.isPending}
+                data-testid="button-save-profile"
+              >
+                继续
+              </Button>
+            </motion.div>
+          </form>
         </motion.div>
       </div>
     </div>

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// TODO: Restrict to development only before production launch
-// Currently enabled in production for internal testing
+import { assertProductionAuthDebugSurfaceAllowed } from '../auth/policy';
 
 import { storage } from '../storage';
 import * as bcrypt from 'bcrypt';
@@ -47,6 +46,7 @@ async function createUserAccount() {
   const rl = createReadlineInterface();
 
   try {
+    assertProductionAuthDebugSurfaceAllowed('createUserAccount CLI');
     console.log('🔧 JoyJoin User Account Creator');
     console.log('================================\n');
 
@@ -56,7 +56,7 @@ async function createUserAccount() {
     
     if (!expectedKey) {
       console.error('❌ Error: ADMIN_CREATE_SECRET_KEY not set in .env file');
-      console.error('Please add: ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678');
+      console.error('Please add ADMIN_CREATE_SECRET_KEY to your local environment before retrying.');
       rl.close();
       process.exit(1);
     }
@@ -120,7 +120,7 @@ async function createUserAccount() {
     const existingUsers = await storage.getUserByPhone(phoneNumber);
     let user;
 
-    const userData: any = {
+    const userData: Record<string, unknown> = {
       password: hashedPassword,
       displayName,
       primaryArchetype: archetype as ArchetypeName,
@@ -164,8 +164,9 @@ async function createUserAccount() {
 
     rl.close();
     process.exit(0);
-  } catch (error: any) {
-    console.error('❌ Error creating user account:', error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error creating user account:', message);
     rl.close();
     process.exit(1);
   }
