@@ -28,6 +28,8 @@
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "zod": "^3.24.2"
