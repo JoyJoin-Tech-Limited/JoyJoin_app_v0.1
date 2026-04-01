@@ -66,17 +66,6 @@ function assertIncludes(arr, item, msg) {
 }
 
 /**
- * @param {unknown[]} arr
- * @param {unknown} item
- * @param {string} [msg]
- */
-function assertNotIncludes(arr, item, msg) {
-  if (arr.includes(item)) {
-    throw new Error(msg ?? `Expected array NOT to include ${JSON.stringify(item)}`);
-  }
-}
-
-/**
  * @param {boolean} value
  * @param {string} [msg]
  */
