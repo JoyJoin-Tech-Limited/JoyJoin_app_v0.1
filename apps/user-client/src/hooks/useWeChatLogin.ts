@@ -23,6 +23,7 @@ import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthUser } from "@/hooks/useAuth";
+import { nextStepToRoute } from "@/hooks/useOnboardingRoute";
 
 /** Subset of the wx.login() success callback result we actually use. */
 interface WxLoginResult {
@@ -104,47 +105,26 @@ export function useWeChatLogin() {
       const data = await response.json();
 
       if (data.success) {
-        // New users are sent to the onboarding flow (personality test).
-        // Existing users are navigated to the server-calculated next step.
-        if (data.isNewUser) {
-          setLocation('/personality-test');
-          return;
+        // B: Clear any stale pre-signup localStorage state so resume prompts
+        // don't re-appear after a successful login on the same device.
+        try {
+          localStorage.removeItem('joyjoin_v4_presignup_answers');
+          localStorage.removeItem('joyjoin_v4_assessment_session');
+          localStorage.removeItem('joyjoin_synced_session_id');
+          localStorage.removeItem('joyjoin_synced_answer_count');
+        } catch {
+          // localStorage may be unavailable in some embedded environments
         }
 
+        // E: Use a single authoritative nextStep → route mapper for all outcomes
+        // (new users, returning users, partially-onboarded users) so that any
+        // future server-side step changes are automatically reflected here.
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         const updatedUser = await queryClient.fetchQuery({
           queryKey: ["/api/auth/user"],
         }) as AuthUser;
 
-        const step = updatedUser?.nextStep;
-        let nextPath: string;
-        switch (step) {
-          case 'discover':
-          case 'guide':
-            nextPath = '/discover';
-            break;
-          case 'personality-test':
-            nextPath = '/personality-test';
-            break;
-          case 'extended-data':
-            nextPath = '/onboarding/extended';
-            break;
-          case 'profile-review':
-            nextPath = '/onboarding/review';
-            break;
-          case 'essential-data':
-            nextPath = '/onboarding/setup';
-            break;
-          case 'onboarding':
-            // Legacy/fallback: 'onboarding' maps to /personality-test
-            // (AuthenticatedRouter also handles this redirect).
-            nextPath = '/personality-test';
-            break;
-          default:
-            nextPath = '/onboarding/setup';
-            break;
-        }
-        setLocation(nextPath);
+        setLocation(nextStepToRoute(updatedUser?.nextStep ?? 'personality-test'));
       } else {
         throw new Error(data.error || '登录失败');
       }

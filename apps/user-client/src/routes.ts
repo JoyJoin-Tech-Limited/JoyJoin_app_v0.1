@@ -11,7 +11,6 @@ export const publicRoutes = {
   login: '/',
   previewLogin: '/preview-login',
   inviteCode: '/invite/:code',
-  icebreakerDemo: '/icebreaker-demo',
   adminLogin: '/admin/login',
 } as const;
 
