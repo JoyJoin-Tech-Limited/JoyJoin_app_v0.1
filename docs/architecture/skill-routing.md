@@ -16,7 +16,7 @@ The JoyJoin skill routing system ensures that the right repo skill is loaded at 
 
 1. **Simple first.** A rule-based router with explicit signals is easier to maintain and debug than a trained classifier. Start here; upgrade only if signal quality degrades.
 2. **Observable.** Every routing decision emits a structured log with reasons, confidence, and scores. You can always explain why a skill was selected.
-3. **Metadata as contract.** Routing signals live in `routing.yml` inside each skill directory — part of the skill's ownership contract, not a hidden central config.
+3. **Metadata as contract.** Routing signals live in `routing.yml` inside each skill directory, and `scripts/skill-router.mjs` loads those files at runtime rather than duplicating the metadata in code.
 4. **Anti-legacy guard.** A cross-cutting canonical check fires on every ask and warns whenever a deprecated pattern (like `/guide`, `shared/` root import, or direct messaging) is referenced.
 5. **Clarify on low confidence.** When confidence is low or two skills score closely, the router recommends clarification rather than committing to the wrong skill.
 
@@ -238,7 +238,7 @@ node scripts/skill-router.mjs "Refactor this hook" \
 ## Running validation
 
 ```bash
-# Validate routing metadata freshness (checks required fields, path existence, legacy refs)
+# Validate routing metadata freshness (checks required fields, path existence, blocks legacy refs)
 node scripts/validate-skill-routing.mjs
 
 # Run representative routing examples (37 test cases)

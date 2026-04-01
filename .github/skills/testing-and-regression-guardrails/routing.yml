@@ -41,11 +41,10 @@ owned_files:
 owned_paths: []
 
 owned_symbols:
-  - it
-  - describe
-  - expect
   - vi.mock
-  - beforeEach
+  - routeModularization.test.ts
+  - adminRbacCoverage.test.ts
+  - socialIcebreakerRoutes.test.ts
 
 related_skills:
   - skill: server-domain-architecture

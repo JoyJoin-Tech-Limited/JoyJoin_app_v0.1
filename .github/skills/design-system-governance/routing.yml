@@ -32,6 +32,7 @@ strong_triggers:
   - WCAG
   - visual exception
   - add a button variant
+  - button variant
   - use a new colour
   - check this for token usage
 

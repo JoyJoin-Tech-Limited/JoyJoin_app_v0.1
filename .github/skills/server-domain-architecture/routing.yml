@@ -45,10 +45,10 @@ owned_symbols:
   - db.transaction
   - registerRoutes
   - storage
-  - createAuthDomainRouter
-  - createOnboardingDomainRouter
-  - createAdminDomainRouter
-  - createIcebreakerDomainRouter
+  - registerAuthRoutes
+  - registerOnboardingRoutes
+  - registerAdminRoutes
+  - registerIcebreakerRoutes
 
 related_skills:
   - skill: reliability-and-state-integrity
