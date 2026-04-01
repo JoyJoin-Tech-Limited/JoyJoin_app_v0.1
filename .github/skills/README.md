@@ -77,6 +77,13 @@ Keep docs aligned with the active codebase. Use after significant code changes o
 | Skill | What it covers |
 |-------|---------------|
 | [`docs-sync`](./docs-sync/SKILL.md) | Scan code changes, map them to documentation targets, draft minimal updates, and enforce active-flow-only guardrails. Use when docs need syncing after a PR merges or an architecture decision is made. |
+## Review and Quality
+
+Skills for writing, reviewing, auditing, and maintaining skills and code quality.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`skill-authoring-governance`](./skill-authoring-governance/SKILL.md) | Governing standard for creating, updating, auditing, and improving repo skills — use this when writing a new skill, updating an existing one, or auditing the skills system |
 
 ---
 
@@ -93,7 +100,7 @@ Keep docs aligned with the active codebase. Use after significant code changes o
 
 | Question | Skill |
 |----------|-------|
-| How do I review a pull request? | `code-review` — start here, then load domain skills |
+| How do I write or audit a skill? | `skill-authoring-governance` |
 | Where does this component go? | `frontend-component-architecture` |
 | How do I add a new button variant? | `design-system-governance` |
 | What controls the onboarding step a user sees? | `onboarding-state-architecture` |
