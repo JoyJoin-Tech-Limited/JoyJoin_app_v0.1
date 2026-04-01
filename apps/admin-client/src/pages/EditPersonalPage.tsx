@@ -96,9 +96,9 @@ export default function EditPersonalPage() {
                 key={option.value}
                 onClick={() => setRelationshipStatus(option.value)}
                 className={`
-                  w-full px-5 py-4 text-left rounded-lg border transition-all
+                  w-full px-5 py-4 text-left rounded-xl border-2 transition-all duration-150
                   ${relationshipStatus === option.value
-                    ? 'border-primary bg-primary/5 text-primary'
+                    ? 'border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]'
                     : 'border-border hover-elevate active-elevate-2'
                   }
                 `}
@@ -122,9 +122,9 @@ export default function EditPersonalPage() {
                 key={city}
                 onClick={() => setCurrentCity(city)}
                 className={`
-                  px-4 py-3 rounded-lg border text-sm transition-all
+                  px-4 py-3 rounded-xl border-2 text-sm transition-all duration-150
                   ${currentCity === city
-                    ? 'border-primary bg-primary/5 text-primary'
+                    ? 'border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]'
                     : 'border-border hover-elevate active-elevate-2'
                   }
                 `}
@@ -148,9 +148,9 @@ export default function EditPersonalPage() {
                 key={city}
                 onClick={() => setHometownRegionCity(city)}
                 className={`
-                  px-4 py-3 rounded-lg border text-sm transition-all
+                  px-4 py-3 rounded-xl border-2 text-sm transition-all duration-150
                   ${hometownRegionCity === city
-                    ? 'border-primary bg-primary/5 text-primary'
+                    ? 'border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]'
                     : 'border-border hover-elevate active-elevate-2'
                   }
                 `}

@@ -22,9 +22,12 @@
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
     "./types/groupAnalysis": "./src/types/groupAnalysis.ts",
     "./types/aiMeta": "./src/types/aiMeta.ts",
-    "./ai/onboarding": "./src/ai/onboarding.ts"
+    "./ai/onboarding": "./src/ai/onboarding.ts",
+    "./ui/button": "./src/ui/buttonVariants.ts",
+    "./ui/buttonVariants": "./src/ui/buttonVariants.ts"
   },
   "dependencies": {
+    "class-variance-authority": "^0.7.1",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "zod": "^3.24.2"

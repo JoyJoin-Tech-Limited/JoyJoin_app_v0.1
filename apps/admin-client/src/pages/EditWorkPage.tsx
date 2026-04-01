@@ -135,9 +135,9 @@ export default function EditWorkPage() {
                 type="button"
                 onClick={() => form.setValue("workVisibility", option.value as any)}
                 className={`
-                  w-full px-5 py-4 text-left rounded-lg border transition-all text-base
+                  w-full px-5 py-4 text-left rounded-xl border-2 transition-all duration-150 text-base
                   ${form.watch("workVisibility") === option.value
-                    ? 'border-primary bg-primary/5 text-primary' 
+                    ? 'border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]'
                     : 'border-border hover-elevate active-elevate-2'
                   }
                 `}

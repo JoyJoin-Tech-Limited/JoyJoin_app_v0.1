@@ -40,25 +40,21 @@ export default function CTAButton({
             </motion.div>
           )}
           
-          {/* Main Button */}
+          {/* Main Button — uses shared premium default variant.
+               no-default-hover-elevate/no-default-active-elevate are project-defined
+               CSS escape-hatch classes that disable the automatic brightness overlay
+               so the shimmer animation is unobstructed. See index.css @layer utilities. */}
           <Button
             onClick={handleClick}
-            className="relative w-full h-14 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold text-base shadow-lg overflow-hidden"
+            size="lg"
+            className="relative w-full overflow-hidden no-default-hover-elevate no-default-active-elevate"
           >
             {/* Shimmer Effect */}
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-              animate={{
-                x: ["-100%", "100%"],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "linear",
-              }}
-              style={{
-                width: "50%",
-              }}
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+              animate={{ x: ["-100%", "100%"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              style={{ width: "50%" }}
             />
             
             {/* Button Content */}

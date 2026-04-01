@@ -864,6 +864,40 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 
 ## Code Conventions
 
+### Standardized Button Component (required for all new UI)
+
+> **Rule:** Always use the shared `<Button>` component for interactive buttons. Do **not** add raw `<button>` elements with ad-hoc styling.
+
+```tsx
+// ✅ Correct — uses the shared premium component
+import { Button } from "@/components/ui/button";
+
+<Button size="lg" fullWidth onClick={handleSubmit}>提交</Button>
+<Button variant="secondary" onClick={onCancel}>取消</Button>
+<Button variant="ghost" size="icon" aria-label="返回"><ChevronLeft /></Button>
+<Button loading={mutation.isPending}>保存</Button>
+
+// ❌ Avoid — ad-hoc gradient / radius overrides on Button
+<Button className="bg-gradient-to-r from-violet-600 to-purple-600 rounded-2xl">…</Button>
+
+// ❌ Avoid — raw button with hard-coded styles
+<button className="px-4 py-2 bg-purple-600 rounded-lg text-white">…</button>
+```
+
+**Selectable option chips** (radio/checkbox-style lists) are an exception to the raw-button prohibition. Use the CSS tokens directly to stay aligned:
+```tsx
+<button
+  className={`rounded-xl border-2 transition-all duration-150 px-4 py-3 text-sm
+    ${selected
+      ? '[background:var(--btn-primary-gradient)] text-primary-foreground border-primary font-semibold shadow-[var(--btn-shadow-primary)]'
+      : 'border-border hover-elevate active-elevate-2'
+    }`}
+>…</button>
+```
+
+**Source of truth:** `packages/shared/src/ui/buttonVariants.ts`  
+**Full design reference:** `docs/button-design.md`
+
 ### Import Aliases
 
 ```typescript
