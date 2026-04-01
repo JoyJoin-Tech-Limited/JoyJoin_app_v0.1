@@ -101,11 +101,11 @@ export default function InvitePage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/10">
       <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center h-14 px-4 gap-3">
-          <Link href="/discover">
-            <Button variant="ghost" size="icon" aria-label="返回发现页" data-testid="button-back">
+          <Button asChild variant="ghost" size="icon" aria-label="返回发现页" data-testid="button-back">
+            <Link href="/discover">
               <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <h1 className="text-lg font-semibold">邀请好友</h1>
         </div>
       </header>

@@ -11,9 +11,15 @@ interface SlidingTabsProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (value: string) => void;
+  ariaLabel?: string;
 }
 
-export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTabsProps) {
+export default function SlidingTabs({
+  tabs,
+  activeTab,
+  onTabChange,
+  ariaLabel = "选项切换",
+}: SlidingTabsProps) {
   const [sliderStyle, setSliderStyle] = useState({ width: 0, left: 0 });
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,7 +42,8 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
   return (
     <div 
       ref={containerRef}
-      role="tablist"
+      role="group"
+      aria-label={ariaLabel}
       className="relative flex bg-muted/40 rounded-xl p-1.5 mx-4 mt-4 mb-2"
       data-testid="sliding-tabs-container"
     >
@@ -68,35 +75,7 @@ export default function SlidingTabs({ tabs, activeTab, onTabChange }: SlidingTab
             key={tab.value}
             ref={(el) => (tabRefs.current[index] = el)}
             onClick={() => onTabChange(tab.value)}
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                onTabChange(tab.value);
-                return;
-              }
-
-              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-                return;
-              }
-
-              e.preventDefault();
-
-              const lastIndex = tabs.length - 1;
-              const nextIndex =
-                e.key === "Home"
-                  ? 0
-                  : e.key === "End"
-                  ? lastIndex
-                  : e.key === "ArrowRight"
-                  ? (index + 1) % tabs.length
-                  : (index - 1 + tabs.length) % tabs.length;
-
-              tabRefs.current[nextIndex]?.focus();
-              onTabChange(tabs[nextIndex].value);
-            }}
-            role="tab"
-            aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
+            aria-pressed={isActive}
             className={`
               relative flex-1 z-10 py-3 px-2 rounded-lg text-sm font-medium
               transition-all duration-200 ease-out

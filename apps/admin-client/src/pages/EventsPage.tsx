@@ -237,6 +237,7 @@ export default function EventsPage() {
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={(value) => setActiveTab(value as typeof activeTab)}
+          ariaLabel="活动状态筛选"
         />
 
         <div className="px-4">
