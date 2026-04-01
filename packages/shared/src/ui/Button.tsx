@@ -14,6 +14,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { Loader2 } from "lucide-react";
 import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { buttonVariants, type ButtonVariantProps } from "./buttonVariants";
 
 export interface ButtonProps
@@ -45,10 +46,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
-        className={clsx(
+        className={twMerge(clsx(
           buttonVariants({ variant, size, className }),
           fullWidth && "w-full",
-        )}
+        ))}
         ref={ref}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
