@@ -1,109 +1,34 @@
-/**
- * useOnboardingRoute - Thin adapter around server-driven nextStep for onboarding routing.
- *
- * The canonical onboarding routing is server-driven via `nextStep` from /api/auth/user.
- * This module translates server `nextStep` values into concrete route strings.
- *
- * Route Order (matches server nextStep sequence):
- * 1. /personality-test - personality-test / onboarding (legacy)
- * 2. /onboarding/setup - essential-data
- * 3. /onboarding/extended - extended-data
- * 4. /onboarding/review - profile-review
- * 5. /discover - guide (deprecated, maps to discover) / discover
- */
+import type { AuthUser } from "./useAuth";
+import { useOnboardingOrchestrator } from "@/features/onboarding/active/useOnboardingOrchestrator";
+import {
+  nextStepToRoute,
+  type OnboardingRoute,
+} from "@/features/onboarding/active/flow";
 
-import { useMemo } from "react";
-import { useAuth, type AuthUser, type NextStepType } from "./useAuth";
-// NextStepType values: 'onboarding' | 'personality-test' | 'essential-data' |
-//                      'extended-data' | 'profile-review' | 'guide' | 'discover'
-
-export type OnboardingRoute = 
-  | '/login'
-  | '/personality-test'
-  | '/onboarding/setup'
-  | '/onboarding/extended'
-  | '/onboarding/review'
-  | '/discover';
+export { nextStepToRoute, type OnboardingRoute } from "@/features/onboarding/active/flow";
 
 /**
- * Convert a server-calculated nextStep value to a concrete route path.
- * This is the primary routing function and should be preferred over
- * calculateOnboardingRoute whenever nextStep is available.
- *
- * Requires a known NextStepType. Handle undefined/null at the call site
- * (e.g. redirect to /login if no auth state is available).
- */
-export function nextStepToRoute(nextStep: NextStepType): OnboardingRoute {
-  switch (nextStep) {
-    case 'onboarding':
-    case 'personality-test':
-      return '/personality-test';
-    case 'essential-data':
-      return '/onboarding/setup';
-    case 'extended-data':
-      return '/onboarding/extended';
-    case 'profile-review':
-      return '/onboarding/review';
-    case 'guide':
-    case 'discover':
-    default:
-      return '/discover';
-  }
-}
-
-/**
- * Resolve the concrete onboarding route for an auth payload.
- * Prefers server-driven `nextStep`, with a narrow compatibility fallback
- * only for cases where `nextStep` is temporarily unavailable.
- */
-export function resolveOnboardingRoute(user: AuthUser | null | undefined): OnboardingRoute {
-  // Not authenticated -> login
-  if (!user) {
-    return '/login';
-  }
-
-  // Primary: use server-computed nextStep when available.
-  if (user.nextStep) {
-    return nextStepToRoute(user.nextStep);
-  }
-
-  // Fallback: reconstruct from server-owned completion flags when nextStep is absent.
-  if (!user.hasCompletedPersonalityTest) {
-    return '/personality-test';
-  }
-  const hasEssentialData = user.profileEssentialComplete ?? !!(user.displayName && user.gender && user.currentCity);
-  if (!hasEssentialData) {
-    return '/onboarding/setup';
-  }
-  if (!user.hasCompletedInterestsCarousel) {
-    return '/onboarding/extended';
-  }
-  if (!user.hasSeenProfileReview) {
-    return '/onboarding/review';
-  }
-  return '/discover';
-}
-
-/**
- * @deprecated Prefer resolveOnboardingRoute(user) for all new code.
- * Kept only as a compatibility wrapper while older imports are migrated.
+ * @deprecated Prefer useOnboardingOrchestrator() for active onboarding flow state.
+ * Compatibility helper for legacy call sites that still expect a pure resolver.
  */
 export function calculateOnboardingRoute(user: AuthUser | null | undefined): OnboardingRoute {
-  return resolveOnboardingRoute(user);
+  if (!user) {
+    return "/login";
+  }
+
+  return nextStepToRoute(user.nextStep);
 }
 
 /**
- * Hook to get the current onboarding route based on server-driven nextStep.
+ * @deprecated Compatibility alias for legacy call sites/tests.
  */
-export function useOnboardingRoute() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+export const resolveOnboardingRoute = calculateOnboardingRoute;
 
-  const currentRoute = useMemo(() => {
-    return resolveOnboardingRoute(user);
-  }, [user]);
+export function useOnboardingRoute() {
+  const { currentRoute, user, isLoading, isAuthenticated } = useOnboardingOrchestrator();
 
   return {
-    currentRoute,
+    currentRoute: isAuthenticated ? currentRoute : "/login",
     user,
     isLoading,
     isAuthenticated,
