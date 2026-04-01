@@ -179,7 +179,7 @@ Active domain modules in `routes/domains/`:
 
 | Concern | File / endpoint |
 |---------|-----------------|
-| Structured logging | `apps/server/src/lib/logger.ts` — use `logger.info/warn/error()`, never `console.log` in server code |
+| Structured logging | `apps/server/src/lib/logger.ts` — prefer `logger.info/warn/error()` for request/operational logs; avoid `console.*` in request handlers (tests/CLIs may still use `console.*`) |
 | Request correlation | `apps/server/src/middleware/requestId.ts` — sets `req.requestId`; bind with `logger.child({ request_id: req.requestId })` |
 | Prometheus metrics | `apps/server/src/middleware/metrics.ts` — HTTP metrics emitted automatically; domain metrics can be added via the metrics module |
 | Metrics scrape endpoint | `GET /api/metrics` |
@@ -973,22 +973,37 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 
 ## Environment Variables
 
-### Required Secrets
+### Required at startup (`apps/server/src/lib/configValidation.ts`)
 
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `SESSION_SECRET` | Express session encryption |
-| `JWT_SECRET` | JWT signing |
-| `WECHAT_SECRET` | WeChat OAuth app secret |
+| `WECHAT_APPID` | WeChat Mini Program App ID (always required) |
+| `WECHAT_SECRET` | WeChat Mini Program app secret (always required) |
+
+### Payment env vars (required when `PAYMENTS_ENABLED=true`)
+
+| Variable | Purpose |
+|----------|---------|
+| `PAYMENTS_ENABLED` | `true`/`false` to enable WeChat Pay integration and its config validation |
+| `WECHAT_PAY_APP_ID` | WeChat Pay app ID |
+| `WECHAT_PAY_MCH_ID` | WeChat Pay v3 merchant ID |
+| `WECHAT_PAY_SERIAL_NO` | WeChat Pay v3 certificate serial |
+| `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay v3 RSA private key |
+| `WECHAT_PAY_APIV3_KEY` | WeChat Pay v3 API key (must be exactly 32 bytes) |
+| `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM for non-development webhook signature verification |
+| `WECHAT_PAY_NOTIFY_URL` | Public payment webhook URL; if absent, the server derives it from `APP_URL`, so one of the two must be set when payments are enabled |
+
+### Operational / optional env vars
+
+| Variable | Purpose |
+|----------|---------|
 | `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
 | `AMAP_API_KEY` | Gaode Maps API |
 | `AMAP_SECURITY_KEY` | Gaode Maps security |
-| `DEEPSEEK_API_KEY` | AI service (via integration) |
-| `WECHAT_PAY_MCH_ID` | WeChat Pay v3 merchant ID |
-| `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay v3 RSA private key |
-| `WECHAT_PAY_SERIAL_NO` | WeChat Pay v3 certificate serial |
-| `WECHAT_PAY_APIV3_KEY` | WeChat Pay v3 API key (webhook decryption) |
+| `DEEPSEEK_API_KEY` | AI service (via integration); AI features degrade if absent |
+| `APP_URL` | Base public app URL; used as the fallback source for the WeChat Pay notify URL when `WECHAT_PAY_NOTIFY_URL` is unset |
 
 ### Dev / feature-flag env vars
 
