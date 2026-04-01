@@ -86,9 +86,9 @@ export function resolveOnboardingRoute(user: AuthUser | null | undefined): Onboa
 
 /**
  * @deprecated Prefer resolveOnboardingRoute(user) for all new code.
- * Kept as a compatibility wrapper for existing callers.
+ * Kept only as a compatibility wrapper while older imports are migrated.
  */
-export function calculateOnboardingRoute(user: AuthUser | undefined): OnboardingRoute {
+export function calculateOnboardingRoute(user: AuthUser | null | undefined): OnboardingRoute {
   return resolveOnboardingRoute(user);
 }
 
