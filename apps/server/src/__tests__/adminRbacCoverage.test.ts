@@ -104,6 +104,49 @@ function extractAdminRoutes(app: express.Express): RouteInfo[] {
   return routes;
 }
 
+// ── RBAC coverage tests for admin routes ───────────────────────────────────
+
+describe('Admin RBAC coverage for /api/admin routes', () => {
+  it('ensures all non-login admin routes include requireAdmin', () => {
+    const app = buildApp();
+    const routes = extractAdminRoutes(app);
+
+    for (const route of routes) {
+      // Public login route is the only allowed exception
+      if (route.method === 'POST' && route.path === '/api/admin/login') {
+        expect(route.middlewareNames).not.toContain('requireAdmin');
+        continue;
+      }
+
+      expect(route.middlewareNames).toContain('requireAdmin');
+    }
+  });
+
+  it('ensures account-management routes also include requireSuperAdmin', () => {
+    const app = buildApp();
+    const routes = extractAdminRoutes(app);
+
+    // Adjust these to reflect the concrete account-management routes
+    const superAdminRoutes = [
+      { method: 'GET', path: '/api/admin/accounts' },            // list
+      { method: 'POST', path: '/api/admin/accounts' },           // create
+      { method: 'PUT', path: '/api/admin/accounts/:id' },        // update
+      { method: 'POST', path: '/api/admin/accounts/:id/reset' }, // reset-password
+    ];
+
+    for (const { method, path } of superAdminRoutes) {
+      const matching = routes.filter(
+        (r) => r.method === method && r.path === path,
+      );
+
+      // If a documented account-management route exists, it must use requireSuperAdmin
+      for (const route of matching) {
+        expect(route.middlewareNames).toContain('requireSuperAdmin');
+      }
+    }
+  });
+});
+
 // ── Routes that must have requireSuperAdmin in addition to requireAdmin ──────
 
 const SUPER_ADMIN_REQUIRED: Array<{ method: string; pathPattern: RegExp }> = [
