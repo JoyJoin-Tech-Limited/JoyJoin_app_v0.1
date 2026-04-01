@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createHmac } from "crypto";
+import { createSign, generateKeyPairSync } from "crypto";
 
 // ── Storage mock ─────────────────────────────────────────────────────────────
 const mockPayment = {
@@ -53,6 +53,8 @@ describe("PaymentService — handleWebhook", () => {
 
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;
+    delete process.env.WECHAT_PAY_PLATFORM_CERT;
+    delete process.env.WECHAT_PAY_APIV3_KEY;
   });
 
   // ── Dev mode (no signature verification) ──────────────────────────────────
@@ -161,8 +163,7 @@ describe("PaymentService — handleWebhook", () => {
       ).rejects.toMatchObject({ status: 401 });
     });
 
-    it("rejects webhook when signature is invalid (HMAC mismatch)", async () => {
-      process.env.WECHAT_PAY_APIV3_KEY = "a".repeat(32);
+    it("rejects webhook when signature is invalid", async () => {
       const timestamp = String(Math.floor(Date.now() / 1000));
       const nonce = "abc123";
 
@@ -178,14 +179,9 @@ describe("PaymentService — handleWebhook", () => {
           signature: "badsignature==",
         })
       ).rejects.toMatchObject({ status: 401 });
-
-      delete process.env.WECHAT_PAY_APIV3_KEY;
     });
 
-    it("accepts webhook when HMAC signature matches APIV3_KEY", async () => {
-      const apiv3Key = "a".repeat(32);
-      process.env.WECHAT_PAY_APIV3_KEY = apiv3Key;
-
+    it("rejects webhook when platform certificate is missing", async () => {
       const timestamp = String(Math.floor(Date.now() / 1000));
       const nonce = "nonce123";
       const rawBody = JSON.stringify({
@@ -193,11 +189,35 @@ describe("PaymentService — handleWebhook", () => {
         resource: { out_trade_no: "JJ123456", transaction_id: "tx999" },
       });
 
-      // Compute the expected HMAC to construct a valid signature
+      await expect(
+        service.handleWebhook(JSON.parse(rawBody), rawBody, {
+          timestamp,
+          nonce,
+          signature: "anything==",
+        })
+      ).rejects.toMatchObject({ status: 401 });
+    });
+
+    it("accepts webhook when RSA signature matches the platform cert", async () => {
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const nonce = "nonce123";
+      const rawBody = JSON.stringify({
+        event_type: "TRANSACTION.SUCCESS",
+        resource: { out_trade_no: "JJ123456", transaction_id: "tx999" },
+      });
+
+      const { privateKey, publicKey } = generateKeyPairSync("rsa", {
+        modulusLength: 2048,
+      });
+      process.env.WECHAT_PAY_PLATFORM_CERT = publicKey.export({
+        type: "spki",
+        format: "pem",
+      }).toString();
+
       const message = `${timestamp}\n${nonce}\n${rawBody}\n`;
-      const signature = createHmac("sha256", apiv3Key)
-        .update(message)
-        .digest("base64");
+      const signer = createSign("RSA-SHA256");
+      signer.update(message);
+      const signature = signer.sign(privateKey, "base64");
 
       const payload = JSON.parse(rawBody);
       await service.handleWebhook(payload, rawBody, { timestamp, nonce, signature });
@@ -206,12 +226,10 @@ describe("PaymentService — handleWebhook", () => {
         "pay-001",
         expect.objectContaining({ status: "completed" })
       );
-
-      delete process.env.WECHAT_PAY_APIV3_KEY;
+      delete process.env.WECHAT_PAY_PLATFORM_CERT;
     });
 
     it("rejects webhook with stale timestamp (> 5 min ago)", async () => {
-      process.env.WECHAT_PAY_APIV3_KEY = "a".repeat(32);
       const staleTimestamp = String(Math.floor(Date.now() / 1000) - 400); // 6.7 min ago
       const nonce = "nonce456";
       const rawBody = "{}";
@@ -223,8 +241,6 @@ describe("PaymentService — handleWebhook", () => {
           signature: "anything==",
         })
       ).rejects.toMatchObject({ status: 401 });
-
-      delete process.env.WECHAT_PAY_APIV3_KEY;
     });
   });
 });
@@ -237,10 +253,25 @@ describe("PaymentService — decryptResource", () => {
     delete process.env.WECHAT_PAY_APIV3_KEY;
     expect(() =>
       (svc as any).decryptResource({
+        algorithm: "AEAD_AES_256_GCM",
         ciphertext: Buffer.alloc(32).toString("base64"),
         nonce: "nonce123456",
         associated_data: "transaction",
       })
     ).toThrow("WECHAT_PAY_APIV3_KEY is not configured");
+  });
+
+  it("throws for unsupported algorithms before attempting decryption", () => {
+    const svc = new PaymentService();
+    process.env.WECHAT_PAY_APIV3_KEY = "a".repeat(32);
+    expect(() =>
+      (svc as any).decryptResource({
+        algorithm: "NOT_SUPPORTED",
+        ciphertext: Buffer.alloc(32).toString("base64"),
+        nonce: "nonce123456",
+        associated_data: "transaction",
+      })
+    ).toThrow("Unsupported WeChat Pay resource algorithm");
+    delete process.env.WECHAT_PAY_APIV3_KEY;
   });
 });

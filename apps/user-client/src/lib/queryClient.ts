@@ -24,7 +24,9 @@ function handleSessionExpired(): void {
   // Redirect to landing page (non-SPA navigation to ensure full app reset)
   const target = "/";
   if (window.location.pathname !== target) {
-    window.location.replace(target);
+    queueMicrotask(() => {
+      window.location.replace(target);
+    });
   }
 }
 

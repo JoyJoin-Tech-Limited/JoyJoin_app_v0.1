@@ -14,6 +14,11 @@ interface ConfigSpec {
   validate?: (value: string) => string | undefined;
 }
 
+interface ConfigIssueBuckets {
+  errors: string[];
+  warnings: string[];
+}
+
 const CONFIG_SPECS: ConfigSpec[] = [
   // ── Always required ──────────────────────────────────────────────────────
   {
@@ -57,16 +62,14 @@ const CONFIG_SPECS: ConfigSpec[] = [
   },
 ];
 
-/**
- * Validate all config specifications.
- * In non-production environments, missing REQUIRED vars are warnings (not fatal).
- * In production, missing REQUIRED vars cause process.exit(1).
- */
-export function validateConfig(): void {
-  const env = process.env;
-  const nodeEnv = env.NODE_ENV ?? "development";
-  const isProduction = nodeEnv === "production";
+function isPaymentsEnabled(env: NodeJS.ProcessEnv): boolean {
+  return (env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
+}
 
+function collectBaseConfigIssues(
+  env: NodeJS.ProcessEnv,
+  isProduction: boolean,
+): ConfigIssueBuckets {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -88,8 +91,8 @@ export function validateConfig(): void {
       continue;
     }
 
-    if (spec.validate) {
-      const validationError = spec.validate(value!);
+    if (value !== undefined && value !== null && spec.validate) {
+      const validationError = spec.validate(value);
       if (validationError) {
         const msg = `${spec.key} is invalid: ${validationError}`;
         if (spec.required && isProduction) {
@@ -100,6 +103,93 @@ export function validateConfig(): void {
       }
     }
   }
+
+  return { errors, warnings };
+}
+
+function collectPaymentConfigIssues(
+  env: NodeJS.ProcessEnv,
+  isProduction: boolean,
+): ConfigIssueBuckets {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!isPaymentsEnabled(env)) {
+    return { errors, warnings };
+  }
+
+  const paymentRequiredKeys = [
+    "WECHAT_PAY_APP_ID",
+    "WECHAT_PAY_MCH_ID",
+    "WECHAT_PAY_SERIAL_NO",
+    "WECHAT_PAY_PRIVATE_KEY",
+    "WECHAT_PAY_APIV3_KEY",
+    "WECHAT_PAY_PLATFORM_CERT",
+  ] as const;
+
+  for (const key of paymentRequiredKeys) {
+    const value = env[key];
+    const missing = value === undefined || value.trim() === "";
+    if (!missing) continue;
+
+    const msg = `${key} is required when PAYMENTS_ENABLED=true`;
+    if (isProduction) {
+      errors.push(`[FATAL] ${msg}`);
+    } else {
+      warnings.push(`[WARN]  ${msg}`);
+    }
+  }
+
+  const apiv3Key = env.WECHAT_PAY_APIV3_KEY;
+  if (apiv3Key && Buffer.byteLength(apiv3Key, "utf8") !== 32) {
+    const msg = "WECHAT_PAY_APIV3_KEY must be exactly 32 bytes";
+    if (isProduction) {
+      errors.push(`[FATAL] ${msg}`);
+    } else {
+      warnings.push(`[WARN]  ${msg}`);
+    }
+  }
+
+  return { errors, warnings };
+}
+
+export function getConfigValidationIssues(
+  env: NodeJS.ProcessEnv = process.env,
+  options?: { productionMode?: boolean },
+): ConfigIssueBuckets {
+  const isProduction =
+    options?.productionMode ?? (env.NODE_ENV ?? "development") === "production";
+
+  const base = collectBaseConfigIssues(env, isProduction);
+  const payment = collectPaymentConfigIssues(env, isProduction);
+
+  return {
+    errors: [...base.errors, ...payment.errors],
+    warnings: [...base.warnings, ...payment.warnings],
+  };
+}
+
+export function getReadinessConfigErrors(
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  const issues = getConfigValidationIssues(env, { productionMode: true });
+  return issues.errors.map((issue) =>
+    issue.replace(/^\[FATAL\]\s*/, ""),
+  );
+}
+
+/**
+ * Validate all config specifications.
+ * In non-production environments, missing REQUIRED vars are warnings (not fatal).
+ * In production, missing REQUIRED vars cause process.exit(1).
+ */
+export function validateConfig(): void {
+  const env = process.env;
+  const nodeEnv = env.NODE_ENV ?? "development";
+  const isProduction = nodeEnv === "production";
+  const { errors, warnings } = getConfigValidationIssues(env, {
+    productionMode: isProduction,
+  });
 
   // Emit warnings
   for (const w of warnings) {
