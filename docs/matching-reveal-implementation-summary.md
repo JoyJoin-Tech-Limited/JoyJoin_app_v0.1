@@ -133,7 +133,7 @@ Hide reveal → Show MatchCelebrationOverlay → Navigate
 ### TestArchetypeOrbit
 **Location**: `apps/user-client/src/pages/TestArchetypeOrbit.tsx`
 
-- Route: `/test/archetype-orbit` (dev-only, gated by `NODE_ENV !== "production"`)
+- Route: `/dev/archetype-orbit` (dev sandbox only, gated by `NODE_ENV !== "production"`)
 - Reveals overlay now gated behind button click
 - Allows testing different sizes and animation modes
 

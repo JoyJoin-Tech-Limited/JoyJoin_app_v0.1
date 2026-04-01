@@ -125,9 +125,9 @@ interface MobileContainerProps {
 
 ### MobileLandingPage
 
-**Location**: `apps/user-client/src/pages/MobileLandingPage.tsx`
+**Location**: `apps/user-client/src/pages/dev/MobileLandingPage.tsx`
 
-**Route**: `/mobile-landing` (demo)
+**Route**: `/dev/mobile-landing` (dev sandbox only, non-production)
 
 **Structure**:
 ```tsx
@@ -268,7 +268,7 @@ npm run dev
 
 1. **Desktop Testing**:
    ```
-   Navigate to: http://localhost:5001/mobile-landing
+   Navigate to: http://localhost:5001/dev/mobile-landing
    Open DevTools → Device toolbar
    Select mobile viewport (e.g., iPhone 12)
    ```

@@ -161,7 +161,7 @@ interface AuthState {
 │  /personality-test/results → PersonalityTestResultPage (+ Login CTA)│
 │  /login              → LoginPage (fallback for non-WeChat)          │
 │  /invite/:code       → InviteLandingRouter (public)                 │
-│  /icebreaker-demo    → IcebreakerDemoPage (public demo)             │
+│  /dev/icebreaker-demo → IcebreakerDemoPage (dev sandbox only)       │
 │  /admin/login        → AdminLoginPage                               │
 │  *                   → Redirects to LandingPage                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -973,7 +973,7 @@ import { Button } from "@/components/ui/button";
 >…</button>
 ```
 
-**Source of truth:** `packages/shared/src/ui/buttonVariants.ts`  
+**Source of truth:** `packages/shared/src/ui/Button.tsx` (runtime) · `packages/shared/src/ui/buttonVariants.ts` (styling)  
 **Full design reference:** `docs/button-design.md`
 
 ### Import Aliases

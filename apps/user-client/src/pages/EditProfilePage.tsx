@@ -390,7 +390,7 @@ export default function EditProfilePage() {
               <Button 
                 onClick={() => handleChatWithXiaoyue()}
                 size="lg"
-                className="relative w-full gap-3 bg-gradient-to-r from-primary via-purple-500 to-pink-500 shadow-xl border-0 min-h-[56px] text-base font-semibold"
+                className="relative w-full gap-3 [background:var(--btn-primary-gradient)] shadow-[var(--btn-shadow-primary)] border-0 min-h-[56px] text-base font-semibold"
                 data-testid="button-chat-xiaoyue-main"
               >
                 {/* 小悦头像 */}
