@@ -52,11 +52,11 @@ export function nextStepToRoute(nextStep: NextStepType): OnboardingRoute {
 }
 
 /**
- * @deprecated Prefer nextStepToRoute(user.nextStep) for all new code.
- * Kept as a fallback for contexts where nextStep is unavailable.
- * Do not extend or rely on this function for new onboarding flows.
+ * Resolve the concrete onboarding route for an auth payload.
+ * Prefers server-driven `nextStep`, with a narrow compatibility fallback
+ * only for cases where `nextStep` is temporarily unavailable.
  */
-export function calculateOnboardingRoute(user: AuthUser | undefined): OnboardingRoute {
+export function resolveOnboardingRoute(user: AuthUser | null | undefined): OnboardingRoute {
   // Not authenticated -> login
   if (!user) {
     return '/login';
@@ -85,13 +85,21 @@ export function calculateOnboardingRoute(user: AuthUser | undefined): Onboarding
 }
 
 /**
+ * @deprecated Prefer resolveOnboardingRoute(user) for all new code.
+ * Kept as a compatibility wrapper for existing callers.
+ */
+export function calculateOnboardingRoute(user: AuthUser | undefined): OnboardingRoute {
+  return resolveOnboardingRoute(user);
+}
+
+/**
  * Hook to get the current onboarding route based on server-driven nextStep.
  */
 export function useOnboardingRoute() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   const currentRoute = useMemo(() => {
-    return calculateOnboardingRoute(user);
+    return resolveOnboardingRoute(user);
   }, [user]);
 
   return {
