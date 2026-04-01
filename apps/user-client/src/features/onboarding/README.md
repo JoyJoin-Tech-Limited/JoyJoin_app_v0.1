@@ -1,17 +1,24 @@
 # Onboarding Domain Guide
 
-This folder is a documentation anchor for the onboarding domain.
+This folder is the documentation anchor for JoyJoin's active onboarding domain.
 
-The active onboarding implementation still lives across existing client entry points:
+## Active module layout
+
+The canonical onboarding client implementation now lives in `apps/user-client/src/features/onboarding/active/`:
+- `flow.ts` — canonical `nextStep` → step/route mapping
+- `useOnboardingOrchestrator.ts` — shared progress and route orchestration
+- `pages/PersonalityTestPage.tsx`
+- `pages/WeChatAuthGatePage.tsx`
+- `pages/EssentialDataPage.tsx`
+- `pages/ExtendedDataPage.tsx`
+- `pages/FinalProfileReviewPage.tsx`
+
+The surrounding entry points that consume this module are:
 - `apps/user-client/src/App.tsx`
 - `apps/user-client/src/hooks/useAuth.ts`
 - `apps/user-client/src/hooks/useOnboardingProgress.ts`
 - `apps/user-client/src/hooks/useOnboardingRoute.ts`
-- `apps/user-client/src/pages/PersonalityTestPageV4.tsx`
 - `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
-- `apps/user-client/src/pages/EssentialDataPage.tsx`
-- `apps/user-client/src/pages/ExtendedDataPage.tsx`
-- `apps/user-client/src/pages/FinalProfileReviewPage.tsx`
 
 ## Active onboarding architecture
 
@@ -21,52 +28,54 @@ JoyJoin onboarding is **server-driven and conditional**.
 
 - The client reads `nextStep` from `GET /api/auth/user`.
 - `apps/user-client/src/App.tsx` decides which routes are available for the current user state.
-- The server computes `nextStep`; the client must not reconstruct the flow as a new source of truth.
+- `apps/server/src/routes/domains/auth.ts` owns the active `nextStep` response.
+- The client must not reconstruct the flow as a new source of truth.
 
 ### Active first-time flow
 
 1. `/personality-test` — anonymous V4 personality test
-2. `/personality-test/results` — result reveal and WeChat login handoff
-3. `/onboarding/setup` — essential profile data
-4. `/onboarding/extended` — interests carousel
-5. `/onboarding/review` — final profile review
-6. `/discover` — main app
+2. `/personality-test/results` — result reveal
+3. `/personality-test/auth-gate` — WeChat login handoff
+4. `/onboarding/setup` — essential profile data
+5. `/onboarding/extended` — interests carousel
+6. `/onboarding/review` — final profile review
+7. `/discover` — main app
 
 ### Important nuances
 
 - `nextStep === 'guide'` currently routes users to discover behavior, not a blocking guide screen.
 - `nextStep === 'onboarding'` is a legacy/fallback server value that redirects to `/personality-test`.
 - `profileExtendedComplete` is **not** the same thing as `hasCompletedInterestsCarousel`.
-- The dedicated guide page is backward-compat only; do not add new onboarding requirements to it.
+- Legacy onboarding surfaces remain under `apps/user-client/src/legacy/onboarding/`; do not add new feature work there.
 
 ## Ownership map
 
 ### Routing and access control
 - `apps/user-client/src/App.tsx`
-- `apps/user-client/src/routes.ts`
+- `apps/user-client/src/features/onboarding/active/flow.ts`
+- `apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts`
 
 ### Auth and onboarding state readers
 - `apps/user-client/src/hooks/useAuth.ts`
 - `apps/user-client/src/hooks/useOnboardingProgress.ts`
 - `apps/user-client/src/hooks/useOnboardingRoute.ts`
-- `apps/user-client/src/hooks/useOnboardingCheckpoint.ts`
+- `apps/user-client/src/features/onboarding/active/hooks/`
 
 ### Step-specific UI
-- `apps/user-client/src/pages/PersonalityTestPageV4.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`
 - `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
-- `apps/user-client/src/pages/EssentialDataPage.tsx`
-- `apps/user-client/src/pages/ExtendedDataPage.tsx`
-- `apps/user-client/src/pages/FinalProfileReviewPage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/WeChatAuthGatePage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/EssentialDataPage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/ExtendedDataPage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`
 
 ## Where new onboarding files go
 
-Because this app has not yet been reorganized into a full `features/onboarding` implementation, place new files by responsibility:
-
-- **New onboarding page or route-level screen:** `apps/user-client/src/pages/`
-- **Reusable onboarding UI used by a page:** `apps/user-client/src/components/`
-- **Onboarding-specific state, routing, or data-fetch hooks:** `apps/user-client/src/hooks/` with `useOnboarding*` naming when appropriate
+- **Active onboarding page, hook, or flow utility:** `apps/user-client/src/features/onboarding/active/`
+- **Shared onboarding state reader used outside the feature module:** `apps/user-client/src/hooks/` with `useOnboarding*` naming when appropriate
+- **Reusable onboarding UI used across non-onboarding pages:** `apps/user-client/src/components/`
 - **Pure utilities/constants shared across client and server:** `packages/shared/src/`
-- **Server-owned onboarding decisions or persistence:** `apps/server/src/`
+- **Server-owned onboarding decisions or persistence:** `apps/server/src/routes/domains/` or `apps/server/src/repositories/`
 
 ## Guardrails
 
