@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useAuth, type NextStepType } from "./useAuth";
+import { useAuth, type AuthUser, type NextStepType } from "./useAuth";
 
 /**
  * 注册引导进度状态
@@ -70,65 +70,65 @@ function nextStepToOnboardingStep(nextStep: NextStepType): OnboardingStep {
  * `/api/auth/user`. The legacy boolean reconstruction is kept only as an explicit
  * fallback for the rare case where `nextStep` is absent.
  */
+export function calculateOnboardingProgress(user: AuthUser | null | undefined): OnboardingProgress {
+  // --- Completion signals (server-owned flags preferred) ---
+  const hasAuthenticatedUser = Boolean(user?.id);
+  const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
+  // Prefer server-computed flag; fall back to field-presence check only if unavailable.
+  const hasCompletedEssentialData =
+    user?.profileEssentialComplete ?? !!(user?.displayName && user?.gender && user?.currentCity);
+  // Use dedicated server flag; avoid mixing semantic field presence (e.g. `intent`)
+  // with onboarding completion.
+  const hasCompletedExtendedData = user?.hasCompletedInterestsCarousel ?? false;
+  const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
+
+  const steps = {
+    // `registration` here means account creation/authentication is complete.
+    registration: hasAuthenticatedUser,
+    personalityTest: hasCompletedPersonalityTest,
+    essentialData: hasCompletedEssentialData,
+    extendedData: hasCompletedExtendedData,
+    profileReview: hasSeenProfileReview,
+  };
+
+  // --- Primary: derive currentStep from server-calculated nextStep ---
+  let currentStep: OnboardingStep;
+  if (user?.nextStep) {
+    currentStep = nextStepToOnboardingStep(user.nextStep);
+  } else {
+    // Fallback: reconstruct from server-owned completion flags when nextStep is absent.
+    currentStep = 'complete';
+    if (!hasAuthenticatedUser) {
+      currentStep = 'registration';
+    } else if (!hasCompletedPersonalityTest) {
+      currentStep = 'personality-test';
+    } else if (!hasCompletedEssentialData) {
+      currentStep = 'essential-data';
+    } else if (!hasCompletedExtendedData) {
+      currentStep = 'extended-data';
+    } else if (!hasSeenProfileReview) {
+      currentStep = 'profile-review';
+    }
+  }
+
+  // Calculate progress
+  const currentIndex = STEP_ORDER.indexOf(currentStep);
+  const totalSteps = STEP_ORDER.length - 1; // Excludes the terminal 'complete' state.
+  const progressPercent = Math.round((currentIndex / totalSteps) * 100);
+
+  return {
+    currentStep,
+    totalSteps,
+    progress: progressPercent,
+    isComplete: currentStep === 'complete',
+    steps,
+  };
+}
+
 export function useOnboardingProgress(): OnboardingProgress {
   const { user } = useAuth();
-  
-  const progress = useMemo(() => {
-    // --- Completion signals (server-owned flags preferred) ---
-    // registration: any authenticated user has an account, so we treat `!!user`
-    // as the practical completion signal for the registration step. Personality test
-    // completion is tracked separately via `steps.personalityTest`. The legacy
-    // `hasCompletedRegistration` flag is not used in the modern V4 flow.
-    const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
-    // Prefer server-computed flag; fall back to field-presence check only if unavailable.
-    const hasCompletedEssentialData =
-      user?.profileEssentialComplete ?? !!(user?.displayName && user?.gender && user?.currentCity);
-    // Use dedicated server flag; avoid mixing semantic field presence (e.g. `intent`)
-    // with onboarding completion.
-    const hasCompletedExtendedData = user?.hasCompletedInterestsCarousel ?? false;
-    const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
 
-    const steps = {
-      registration: !!user,
-      personalityTest: hasCompletedPersonalityTest,
-      essentialData: hasCompletedEssentialData,
-      extendedData: hasCompletedExtendedData,
-      profileReview: hasSeenProfileReview,
-    };
-
-    // --- Primary: derive currentStep from server-calculated nextStep ---
-    let currentStep: OnboardingStep;
-    if (user?.nextStep) {
-      currentStep = nextStepToOnboardingStep(user.nextStep);
-    } else {
-      // Fallback: reconstruct from local booleans (used only when nextStep is absent).
-      currentStep = 'complete';
-      if (!hasCompletedPersonalityTest) {
-        currentStep = 'personality-test';
-      } else if (!hasCompletedEssentialData) {
-        currentStep = 'essential-data';
-      } else if (!hasCompletedExtendedData) {
-        currentStep = 'extended-data';
-      } else if (!hasSeenProfileReview) {
-        currentStep = 'profile-review';
-      }
-    }
-
-    // Calculate progress
-    const currentIndex = STEP_ORDER.indexOf(currentStep);
-    const totalSteps = STEP_ORDER.length - 1; // 不包括 'complete'
-    const progressPercent = Math.round((currentIndex / totalSteps) * 100);
-    
-    return {
-      currentStep,
-      totalSteps,
-      progress: progressPercent,
-      isComplete: currentStep === 'complete',
-      steps,
-    };
-  }, [user]);
-  
-  return progress;
+  return useMemo(() => calculateOnboardingProgress(user), [user]);
 }
 
 /**
