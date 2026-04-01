@@ -48,6 +48,7 @@ Thumbs.db
 .replit
 .replit.nix
 .replit.json
+.local/
 
 # Misc legacy
 server/public

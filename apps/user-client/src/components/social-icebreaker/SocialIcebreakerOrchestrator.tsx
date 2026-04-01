@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Volume2, VolumeX, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
 import { useXiaoyueTTS } from '@/hooks/useXiaoyueTTS';
 import { PhaseProgressBar } from './PhaseProgressBar';
@@ -76,6 +76,7 @@ export function SocialIcebreakerOrchestrator({
     socialSessionId,
     startSession,
     isStarting,
+    sessionExpired,
     fetchTopics,
     advancePhase,
     submitPulseCheck,
@@ -85,6 +86,8 @@ export function SocialIcebreakerOrchestrator({
     generateDiceChallenges,
     completeDiceChallenge,
     isAdvancing,
+    error,
+    clearError,
   } = useSocialIcebreaker({ sessionId, userId, displayName, eventType });
 
   const { speak, isMuted, toggleMute } = useXiaoyueTTS();
@@ -217,10 +220,58 @@ export function SocialIcebreakerOrchestrator({
     );
   }
 
-  if (!state) {
+  if (sessionExpired) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">无法加载破冰会话</p>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6 text-center">
+        <p className="text-xl">⏰</p>
+        <p className="font-semibold text-foreground">破冰会话已过期</p>
+        <p className="text-sm text-muted-foreground">本次活动的破冰时间已结束，感谢参与！</p>
+        <button
+          onClick={onEnd}
+          className="mt-4 px-6 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium"
+        >
+          返回活动页
+        </button>
+      </div>
+    );
+  }
+
+  if (!state) {
+    const isExpired = error?.kind === 'session_missing';
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6 text-center">
+        <AlertCircle className="w-10 h-10 text-destructive" />
+        <p className="text-foreground font-medium">
+          {error?.message || '无法加载破冰会话'}
+        </p>
+        <div className="flex gap-3">
+          {isExpired ? (
+            <button
+              onClick={onEnd}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+            >
+              <LogOut className="w-4 h-4" />
+              退出
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => { clearError(); startSession(); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+              >
+                <RefreshCw className="w-4 h-4" />
+                重试
+              </button>
+              <button
+                onClick={onEnd}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                退出
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -234,11 +285,28 @@ export function SocialIcebreakerOrchestrator({
   };
 
   const handleCompleteDice = async (diceUserId: string) => {
-    await completeDiceChallenge(diceUserId);
+    if (diceUserId !== userId) return;
+    await completeDiceChallenge();
   };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" data-testid="social-icebreaker-orchestrator">
+      {/* Non-blocking error banner for in-session action failures */}
+      {error && (
+        <div className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-2 bg-destructive/90 text-destructive-foreground px-4 py-2 text-sm">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error.message}</span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {error.kind === 'session_missing' ? (
+              <button onClick={onEnd} className="underline text-xs">退出</button>
+            ) : (
+              <button onClick={clearError} className="underline text-xs">关闭</button>
+            )}
+          </div>
+        </div>
+      )}
       {/* Host badge */}
       {isHost && (
         <div className="absolute top-16 right-4 z-20 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">

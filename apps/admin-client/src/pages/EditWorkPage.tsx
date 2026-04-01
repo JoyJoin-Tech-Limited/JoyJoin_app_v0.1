@@ -154,10 +154,10 @@ export default function EditWorkPage() {
           <Button 
             type="submit" 
             className="w-full"
-            disabled={updateMutation.isPending}
+            loading={updateMutation.isPending}
             data-testid="button-save"
           >
-            {updateMutation.isPending ? "保存中..." : "保存"}
+            保存
           </Button>
         </div>
       </form>

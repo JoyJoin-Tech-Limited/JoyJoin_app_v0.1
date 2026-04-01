@@ -1,13 +1,19 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type {
   SocialSessionState,
-  SocialIcebreakerPhase,
   AtmosphereMood,
   SocialTopic,
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
+
+function getSocialSessionStorageKey(sessionId: string): string {
+  return `joyjoin_social_session_id:${sessionId}`;
+}
+
+/** How often (ms) to send a heartbeat when the tab is active. */
+const HEARTBEAT_INTERVAL_MS = 10_000;
 
 interface UseSocialIcebreakerOptions {
   sessionId: string;
@@ -16,11 +22,25 @@ interface UseSocialIcebreakerOptions {
   eventType?: string;
 }
 
+export type IcebreakerErrorKind =
+  | 'session_missing'   // 404 — session not found or expired
+  | 'permission_denied' // 403 — not the host, or wrong user
+  | 'wrong_phase'       // 400 — action not valid for the current phase
+  | 'network_error'     // network/fetch failure
+  | 'unknown';          // any other error
+
+export interface IcebreakerError {
+  kind: IcebreakerErrorKind;
+  message: string;
+}
+
 interface UseSocialIcebreakerReturn {
   state: SocialSessionState | null;
   isLoading: boolean;
   isHost: boolean;
   socialSessionId: string | null;
+  /** True when the server returned SESSION_EXPIRED (410) for this session. */
+  sessionExpired: boolean;
   startSession: () => Promise<void>;
   fetchTopics: (mood: AtmosphereMood) => Promise<SocialTopic[]>;
   advancePhase: () => Promise<void>;
@@ -29,9 +49,32 @@ interface UseSocialIcebreakerReturn {
   castVote: (targetUserId: string, statementIndex: number) => Promise<void>;
   completeChallenge: () => Promise<void>;
   generateDiceChallenges: (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) => Promise<PersonalityDiceChallenge[]>;
-  completeDiceChallenge: (userId: string) => Promise<void>;
+  completeDiceChallenge: () => Promise<void>;
   isStarting: boolean;
   isAdvancing: boolean;
+}
+
+/**
+ * Classify a fetch error into a user-actionable kind.
+ */
+async function classifyError(error: unknown): Promise<IcebreakerError> {
+  if (error instanceof TypeError) {
+    return { kind: 'network_error', message: '网络连接失败，请检查网络后重试' };
+  }
+  if (error instanceof Error) {
+    const message = error.message || '';
+    const lowerMessage = message.toLowerCase();
+    if (message.startsWith('404:') || lowerMessage.includes('not found')) {
+      return { kind: 'session_missing', message: '破冰会话已过期，请重新加入' };
+    }
+    if (message.startsWith('403:')) {
+      return { kind: 'permission_denied', message: '当前操作需要主持人权限' };
+    }
+    if (message.startsWith('400:')) {
+      return { kind: 'wrong_phase', message: '当前阶段不支持此操作' };
+    }
+  }
+  return { kind: 'unknown', message: '操作失败，请稍后重试' };
 }
 
 export function useSocialIcebreaker({
@@ -41,45 +84,137 @@ export function useSocialIcebreaker({
   eventType,
 }: UseSocialIcebreakerOptions): UseSocialIcebreakerReturn {
   const qc = useQueryClient();
-  const [socialSessionId, setSocialSessionId] = useState<string | null>(null);
+  const storageKey = getSocialSessionStorageKey(sessionId);
+
+  // Restore a cached socialSessionId from sessionStorage so that the GET
+  // polling query can start immediately on reconnect/refresh, before
+  // startSession() completes its POST.
+  const [socialSessionId, setSocialSessionId] = useState<string | null>(() => {
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      return stored || null;
+    } catch {
+      return null;
+    }
+  });
+
   const [isStarting, setIsStarting] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [isDocumentVisible, setIsDocumentVisible] =
+    useState(typeof document === 'undefined' || document.visibilityState === 'visible');
   const startedRef = useRef(false);
 
-  // Poll for state every 3 seconds once we have a session
+  // Keep sessionStorage in sync with the current socialSessionId.
+  const setAndCacheSocialSessionId = useCallback((id: string | null) => {
+    setSocialSessionId(id);
+    try {
+      if (id) {
+        sessionStorage.setItem(storageKey, id);
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch {
+      // sessionStorage may be unavailable in some environments; ignore.
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Poll for state every 3 seconds once we have a session.
+  // The query fn checks for the structured expiry error and updates state.
   const { data: state, isLoading } = useQuery<SocialSessionState | null>({
     queryKey: ['/api/social-icebreaker', socialSessionId],
     queryFn: async () => {
       if (!socialSessionId) return null;
-      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`);
+      const res = await apiRequest('GET', `/api/social-icebreaker/${socialSessionId}`, undefined, {
+        allowStatuses: [410],
+      });
+      if (res.status === 410) {
+        setSessionExpired(true);
+        setAndCacheSocialSessionId(null);
+        return null;
+      }
+      if (!res.ok) return null;
       return res.json();
     },
-    enabled: !!socialSessionId,
+    enabled: !!socialSessionId && !sessionExpired,
     refetchInterval: 3000,
     staleTime: 1000,
   });
 
   const isHost = state?.hostUserId === userId;
 
+  // Periodically send a heartbeat to keep the user marked as active while
+  // the tab remains visible.
+  useEffect(() => {
+    if (!socialSessionId || sessionExpired || !isDocumentVisible) return;
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const sendHeartbeat = async () => {
+      try {
+        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/heartbeat`, {}, {
+          allowStatuses: [410],
+        });
+        if (res.status === 410) {
+          setSessionExpired(true);
+          setAndCacheSocialSessionId(null);
+        }
+      } catch {
+        // Network failure; will retry next interval.
+      } finally {
+        if (!cancelled) {
+          timeoutId = window.setTimeout(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+        }
+      }
+    };
+
+    void sendHeartbeat();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [socialSessionId, sessionExpired, isDocumentVisible, setAndCacheSocialSessionId]);
+
   const startSession = useCallback(async () => {
     if (startedRef.current) return;
     startedRef.current = true;
     setIsStarting(true);
+    setError(null);
     try {
       const res = await apiRequest('POST', '/api/social-icebreaker/start', {
-        sessionId,
-        displayName,
-        eventType,
+          sessionId,
+          displayName,
+          eventType,
+        }, {
+          allowStatuses: [410],
       });
+      if (res.status === 410) {
+        setSessionExpired(true);
+        setAndCacheSocialSessionId(null);
+        return;
+      }
       const data = await res.json();
-      setSocialSessionId(data.socialSessionId);
+      setAndCacheSocialSessionId(data.socialSessionId);
     } catch (error) {
       console.error('[useSocialIcebreaker] startSession error:', error);
       startedRef.current = false;
     } finally {
       setIsStarting(false);
     }
-  }, [sessionId, displayName, eventType]);
+  }, [sessionId, displayName, eventType, setAndCacheSocialSessionId]);
 
   const fetchTopics = useCallback(
     async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
@@ -93,8 +228,8 @@ export function useSocialIcebreaker({
         const data = await res.json();
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
         return data.topics || [];
-      } catch (error) {
-        console.error('[useSocialIcebreaker] fetchTopics error:', error);
+      } catch (e) {
+        setError(await classifyError(e));
         return [];
       }
     },
@@ -109,8 +244,8 @@ export function useSocialIcebreaker({
         currentPhase: state.currentPhase,
       });
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-    } catch (error) {
-      console.error('[useSocialIcebreaker] advancePhase error:', error);
+    } catch (e) {
+      setError(await classifyError(e));
     } finally {
       setIsAdvancing(false);
     }
@@ -124,8 +259,8 @@ export function useSocialIcebreaker({
           vibe,
         });
         return res.json();
-      } catch (error) {
-        console.error('[useSocialIcebreaker] submitPulseCheck error:', error);
+      } catch (e) {
+        setError(await classifyError(e));
         return null;
       }
     },
@@ -137,8 +272,8 @@ export function useSocialIcebreaker({
     try {
       await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/micro-challenge/complete`, {});
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-    } catch (error) {
-      console.error('[useSocialIcebreaker] completeChallenge error:', error);
+    } catch (e) {
+      setError(await classifyError(e));
     }
   }, [socialSessionId, qc]);
 
@@ -153,8 +288,8 @@ export function useSocialIcebreaker({
       const data = await res.json();
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
       return data.statements || [];
-    } catch (error) {
-      console.error('[useSocialIcebreaker] generateMyStatements error:', error);
+    } catch (e) {
+      setError(await classifyError(e));
       return [];
     }
   }, [socialSessionId, displayName, qc]);
@@ -168,8 +303,8 @@ export function useSocialIcebreaker({
           guessedStatementIndex: statementIndex,
         });
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-      } catch (error) {
-        console.error('[useSocialIcebreaker] castVote error:', error);
+      } catch (e) {
+        setError(await classifyError(e));
       }
     },
     [socialSessionId, qc]
@@ -183,8 +318,8 @@ export function useSocialIcebreaker({
         const data = await res.json();
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
         return data.challenges || [];
-      } catch (error) {
-        console.error('[useSocialIcebreaker] generateDiceChallenges error:', error);
+      } catch (e) {
+        setError(await classifyError(e));
         return [];
       }
     },
@@ -192,13 +327,13 @@ export function useSocialIcebreaker({
   );
 
   const completeDiceChallenge = useCallback(
-    async (diceUserId: string) => {
+    async () => {
       if (!socialSessionId) return;
       try {
-        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, { userId: diceUserId });
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {});
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
-      } catch (error) {
-        console.error('[useSocialIcebreaker] completeDiceChallenge error:', error);
+      } catch (e) {
+        setError(await classifyError(e));
       }
     },
     [socialSessionId, qc]
@@ -209,6 +344,7 @@ export function useSocialIcebreaker({
     isLoading,
     isHost,
     socialSessionId,
+    sessionExpired,
     startSession,
     fetchTopics,
     advancePhase,

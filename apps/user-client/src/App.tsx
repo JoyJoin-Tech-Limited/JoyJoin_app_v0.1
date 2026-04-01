@@ -14,7 +14,6 @@ import { DynamicAccentProvider } from "@/contexts/DynamicAccentContext";
 // These are required for first paint and the initial user journey.
 import LoginPage from "@/pages/LoginPage";
 import LandingPage from "@/pages/LandingPage";
-import MobileLandingPage from "@/pages/MobileLandingPage";
 import PersonalityTestPageV4 from "@/pages/PersonalityTestPageV4";
 import PersonalityTestResultPage from "@/pages/PersonalityTestResultPage";
 import WeChatAuthGatePage from "@/pages/WeChatAuthGatePage";
@@ -54,16 +53,18 @@ const InvitePage = lazy(() => import("@/pages/InvitePage"));
 const EventFeedbackFlow = lazy(() => import("@/pages/EventFeedbackFlow"));
 const DeepFeedbackFlow = lazy(() => import("@/pages/DeepFeedbackFlow"));
 const IcebreakerSessionPage = lazy(() => import("@/pages/IcebreakerSessionPage"));
-const IcebreakerDemoPage = lazy(() => import("@/pages/IcebreakerDemoPage"));
+const DevIcebreakerDemoPage = lazy(() => import("@/pages/dev/IcebreakerDemoPage"));
 const IcebreakerGamePage = lazy(() => import("@/pages/IcebreakerGamePage"));
 const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
 const MatchingStatusPage = lazy(() => import("@/pages/MatchingStatusPage"));
 const MyJourneyPage = lazy(() => import("@/pages/MyJourneyPage"));
-const TestArchetypeOrbit = lazy(() => import("@/pages/TestArchetypeOrbit"));
+const DevTestArchetypeOrbit = lazy(() => import("@/pages/dev/TestArchetypeOrbit"));
 const SquadUnboxingFlow = lazy(() => import("@/pages/SquadUnboxingFlow"));
 const CommunityJoinPage = lazy(() => import("@/pages/CommunityJoinPage"));
 const WalletPage = lazy(() => import("@/pages/WalletPage"));
 const FAQPage = lazy(() => import("@/pages/FAQPage"));
+const DevMobileLandingPage = lazy(() => import("@/pages/dev/MobileLandingPage"));
+const DevUnlockOverlayTestPage = lazy(() => import("@/pages/dev/UnlockOverlayTestPage"));
 
 import LevelUpProvider from "@/components/LevelUpProvider";
 import { ADMIN_PORTAL_URL } from "@/config/admin";
@@ -110,6 +111,18 @@ function RedirectToDiscover() {
     setLocation("/");
   }, [setLocation]);
   return null;
+}
+
+function DevSandboxRouter() {
+  return (
+    <Switch>
+      <Route path="/dev/mobile-landing" component={DevMobileLandingPage} />
+      <Route path="/dev/icebreaker-demo" component={DevIcebreakerDemoPage} />
+      <Route path="/dev/archetype-orbit" component={DevTestArchetypeOrbit} />
+      <Route path="/dev/unlock-overlay" component={DevUnlockOverlayTestPage} />
+      <Route component={NotFound} />
+    </Switch>
+  );
 }
 
 // @deprecated - Guide page replaced with inline coach marks (2026-02-16)
@@ -220,9 +233,6 @@ function AuthenticatedRouter() {
           <Route path="/center-tab/empty" component={CenterTabEmptyStatePage} />
           <Route path="/my-journey" component={MyJourneyPage} />
           <Route path="/squad-unboxing/:groupId" component={SquadUnboxingFlow} />
-          {process.env.NODE_ENV !== "production" && (
-            <Route path="/test/archetype-orbit" component={TestArchetypeOrbit} />
-          )}
           <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
           <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
@@ -289,14 +299,9 @@ function Router() {
     return <Route path="/invite/:code" component={InviteLandingRouter} />;
   }
 
-  // Mobile landing page demo is publicly accessible for testing
-  if (location === "/mobile-landing") {
-    return <Route path="/mobile-landing" component={MobileLandingPage} />;
-  }
-
-  // Icebreaker demo is publicly accessible for testing
-  if (location === "/icebreaker-demo") {
-    return <Route path="/icebreaker-demo" component={IcebreakerDemoPage} />;
+  // Sandbox-only demo/test routes live under /dev to keep them off the product surface.
+  if (process.env.NODE_ENV !== "production" && location.startsWith("/dev/")) {
+    return <DevSandboxRouter />;
   }
 
   // Regular user routes
