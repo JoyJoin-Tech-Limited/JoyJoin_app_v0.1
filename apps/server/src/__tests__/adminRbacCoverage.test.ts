@@ -4,6 +4,7 @@
  * This audit scans the authoritative admin route definitions in:
  * - `apps/server/src/adminAuth.ts`
  * - `apps/server/src/routes.ts`
+ * - `apps/server/src/routes/domains/payments.ts`
  *
  * and verifies that every declared `/api/admin/*` route has the expected RBAC
  * middleware attached.
@@ -43,6 +44,7 @@ const REPO_ROOT = path.resolve(TEST_FILE_DIR, '../../../..');
 const ADMIN_ROUTE_FILES = [
   'apps/server/src/adminAuth.ts',
   'apps/server/src/routes.ts',
+  'apps/server/src/routes/domains/payments.ts',
 ] as const;
 
 const SUPER_ADMIN_REQUIRED: Array<{ method: string; pathPattern: RegExp }> = [
@@ -57,7 +59,7 @@ function extractAdminRoutesFromSource(filePath: string): RouteInfo[] {
   const routes: RouteInfo[] = [];
 
   // This parser intentionally targets the concrete route declaration style
-  // used in adminAuth.ts and routes.ts today:
+  // used in adminAuth.ts, routes.ts, and domain modules today:
   //   app.get('/api/admin/...', middlewareA, middlewareB, async (req, res) => {})
   // It will not detect future `app.use('/api/admin', router)` mounts or
   // substantially different multiline/template-literal registration styles.
@@ -98,16 +100,18 @@ describe('Admin RBAC coverage audit', () => {
     expect(adminRoutes.length).toBeGreaterThan(80);
     expect(adminRoutes.some((route) => route.sourceFile.endsWith('adminAuth.ts'))).toBe(true);
     expect(adminRoutes.some((route) => route.sourceFile.endsWith('routes.ts'))).toBe(true);
+    expect(adminRoutes.some((route) => route.sourceFile.endsWith('payments.ts'))).toBe(true);
   });
 
-  it('discovers admin routes from both adminAuth.ts and routes.ts', () => {
+  it('discovers admin routes from adminAuth.ts, routes.ts, and extracted domain files', () => {
     const summaryByFile = adminRoutes.reduce<Record<string, number>>((acc, route) => {
       acc[route.sourceFile] = (acc[route.sourceFile] ?? 0) + 1;
       return acc;
     }, {});
 
     expect(summaryByFile['apps/server/src/adminAuth.ts'] ?? 0).toBeGreaterThan(0);
-    expect(summaryByFile['apps/server/src/routes.ts'] ?? 0).toBeGreaterThan(80);
+    expect(summaryByFile['apps/server/src/routes.ts'] ?? 0).toBeGreaterThan(75);
+    expect(summaryByFile['apps/server/src/routes/domains/payments.ts'] ?? 0).toBeGreaterThan(0);
   });
 
   it('every /api/admin/* route other than POST /api/admin/login includes requireAdmin', () => {
