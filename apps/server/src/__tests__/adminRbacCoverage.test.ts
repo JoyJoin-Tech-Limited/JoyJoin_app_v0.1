@@ -43,7 +43,7 @@ vi.mock('../storage', () => ({
 
 // ── Import after mocking ────────────────────────────────────────────────────
 
-const { registerAdminAuthRoutes, requireSuperAdmin } =
+const { registerAdminAuthRoutes } =
   await import('../adminAuth');
 
 // ── Helper: build minimal app with admin routes only ────────────────────────
