@@ -11,7 +11,6 @@ Full golden standard for evaluating any skill in `.github/skills/`.
 - [ ] `description` explains **what the skill does** and **when to use it**
 - [ ] `description` includes at least 3 explicit trigger phrases
 - [ ] No XML angle brackets (`<`, `>`) in frontmatter values
-- [ ] No reserved names (`claude`, `anthropic`, etc.) in `name`
 - [ ] Optional metadata fields (license, version, etc.) are appropriate if used
 
 ---
@@ -65,7 +64,6 @@ Full golden standard for evaluating any skill in `.github/skills/`.
 ## 7. Technical Correctness
 
 - [ ] No XML angle brackets in frontmatter
-- [ ] No reserved names in `name` field
 - [ ] All `references/` links use relative paths
 - [ ] File paths referenced in the skill are correct and exist in the repo
 - [ ] No hard-coded absolute paths (runner paths, machine-specific paths, etc.)

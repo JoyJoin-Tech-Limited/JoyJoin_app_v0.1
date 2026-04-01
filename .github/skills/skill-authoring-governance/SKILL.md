@@ -93,6 +93,14 @@ Produce: inline comments or a review summary noting which checklist items pass o
 
 ---
 
+## Quick examples
+
+- **Create a new skill**: start with frontmatter, add a concrete "When to use this skill" section, then add quick examples, troubleshooting, and a review checklist before moving any long material to `references/`.
+- **Audit an existing skill**: check folder/file naming first, then frontmatter, then whether the skill is actionable and includes examples, troubleshooting, and validation.
+- **Review a PR that changes a skill**: verify the changed skill still matches the checklist in [`references/checklist.md`](./references/checklist.md) and that new requirements did not bloat `SKILL.md`.
+
+---
+
 ## Common failure modes
 
 | Failure | Fix |
@@ -107,6 +115,19 @@ Produce: inline comments or a review summary noting which checklist items pass o
 | References use absolute or broken paths | Use relative paths from the skill folder root |
 | Generic advice instead of operational guidance | Replace with concrete steps, file paths, and patterns |
 | Code-review skill lacks Harness framework evaluation | Add per-pillar checklist and compliance verdict section |
+
+---
+
+## Troubleshooting
+
+**A skill reads well but is hard to trigger**
+Add explicit trigger phrases to the frontmatter `description` and concrete scenarios under "When to use this skill".
+
+**A skill is accurate but too long**
+Keep the core rule and workflow in `SKILL.md`, then move examples, checklists, or large reference material into `references/`.
+
+**An audit result feels subjective**
+Tie findings back to the checklist in [`references/checklist.md`](./references/checklist.md) so each pass/fail item is objective and repeatable.
 
 ---
 
