@@ -31,7 +31,7 @@ export interface UseAuthResult {
   user: AuthUser | undefined;
   isLoading: boolean;
   isAuthenticated: boolean;
-  /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
+  /** @deprecated Prefer server-driven nextStep from /api/auth/user. Legacy account-creation state only. */
   needsRegistration: boolean | undefined;
   /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
   needsPersonalityTest: boolean | undefined;
@@ -64,9 +64,10 @@ export function useAuth(): UseAuthResult {
     isLoading: actualIsLoading,
     isAuthenticated,
     // Legacy computed fields (prefer server-driven nextStep).
-    // These no longer depend on hasCompletedRegistration, which is a legacy flag
-    // not set in the modern V4 onboarding flow.
-    needsRegistration: user ? !user.hasCompletedPersonalityTest : undefined,
+    // `needsRegistration` is kept only for backwards compatibility and reflects
+    // account presence, not personality-test completion. In the modern V4 flow
+    // any authenticated user already has an account.
+    needsRegistration: user ? false : undefined,
     needsPersonalityTest: user ? !user.hasCompletedPersonalityTest : undefined,
     needsProfileSetup: user
       ? user.hasCompletedPersonalityTest === true &&

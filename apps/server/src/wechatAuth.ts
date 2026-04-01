@@ -273,6 +273,25 @@ export async function processTestAnswers(
 ): Promise<void> {
   if (!Array.isArray(testAnswers) || testAnswers.length === 0) return;
 
+  // A: Idempotency guard — skip if the user already has a completed session from
+  // a prior import so that retries or double-submits don't create duplicates.
+  const [existingSession] = await db
+    .select({ id: assessmentSessions.id })
+    .from(assessmentSessions)
+    .where(
+      and(
+        eq(assessmentSessions.userId, userId),
+        eq(assessmentSessions.phase, "completed")
+      )
+    )
+    .limit(1);
+  if (existingSession) {
+    console.log(
+      `[WeChat Auth] Skipping duplicate processTestAnswers for user ${userId}: completed session ${existingSession.id} already exists`
+    );
+    return;
+  }
+
   // C: Validate that at least one answer carries a non-zero trait score so we
   // don't create completed sessions from garbage/empty payloads.
   // Both camelCase (traitScores) and snake_case (trait_scores) field names are
@@ -295,25 +314,6 @@ export async function processTestAnswers(
     );
   }
 
-  // A: Idempotency guard — skip if the user already has a completed session from
-  // a prior import so that retries or double-submits don't create duplicates.
-  const [existingSession] = await db
-    .select({ id: assessmentSessions.id })
-    .from(assessmentSessions)
-    .where(
-      and(
-        eq(assessmentSessions.userId, userId),
-        eq(assessmentSessions.phase, "completed")
-      )
-    )
-    .limit(1);
-  if (existingSession) {
-    console.log(
-      `[WeChat Auth] Skipping duplicate processTestAnswers for user ${userId}: completed session ${existingSession.id} already exists`
-    );
-    return;
-  }
-
   console.log(
     `[WeChat Auth] Processing ${testAnswers.length} test answers for user ${userId}`
   );
@@ -331,10 +331,11 @@ export async function processTestAnswers(
       continue;
     }
     try {
-      if (answer.traitScores && typeof answer.traitScores === "object") {
-        Object.keys(answer.traitScores).forEach((trait: string) => {
+      const answerTraitScores = answer.traitScores ?? answer.trait_scores;
+      if (answerTraitScores && typeof answerTraitScores === "object") {
+        Object.keys(answerTraitScores).forEach((trait: string) => {
           if (Object.prototype.hasOwnProperty.call(traitScores, trait)) {
-            const delta = answer.traitScores[trait];
+            const delta = answerTraitScores[trait];
             if (typeof delta === "number" && !Number.isNaN(delta)) {
               traitScores[trait] += delta;
             }
