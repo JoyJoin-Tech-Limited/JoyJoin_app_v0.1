@@ -9,8 +9,50 @@ import { eq, and } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
 import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
 
+/**
+ * Minimum number of answers with a valid questionId + selectedOption that must
+ * be present in a testAnswers payload before we attempt to create a completed
+ * assessment session. Payloads with fewer valid items are rejected to prevent
+ * low-quality or malformed imports from persisting garbage data.
+ */
+const MIN_VALID_ANSWERS = 3;
+const IMPORTABLE_TRAITS = ["A", "C", "E", "O", "X", "P"] as const;
+
 const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
+
+function hasImportableTraitDelta(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+
+  return IMPORTABLE_TRAITS.some((trait) => {
+    const delta = (value as Record<string, unknown>)[trait];
+    return typeof delta === "number" && !Number.isNaN(delta);
+  });
+}
+
+// Compatibility helpers: historical clients have sent several field-name variants
+// for the same semantic values, so imports must continue to accept them.
+function getImportedQuestionId(candidate: Record<string, unknown>): string {
+  return String(candidate.questionId ?? candidate.question_id ?? candidate.id ?? "").trim();
+}
+
+function getImportedSelectedOption(candidate: Record<string, unknown>): string {
+  return String(
+    candidate.selectedOption ?? candidate.value ?? candidate.answer ?? candidate.selected_option ?? ""
+  ).trim();
+}
+
+function isImportableTestAnswer(answer: unknown): boolean {
+  if (!answer || typeof answer !== "object") return false;
+
+  const candidate = answer as Record<string, unknown>;
+  const questionId = getImportedQuestionId(candidate);
+  const selectedOption = getImportedSelectedOption(candidate);
+
+  return questionId.length > 0 &&
+    selectedOption.length > 0 &&
+    hasImportableTraitDelta(candidate.traitScores ?? candidate.trait_scores);
+}
 
 /**
  * Exchange a WeChat Mini Program login code for an openid.
@@ -266,6 +308,10 @@ export async function findOrCreateWechatUser(
 /**
  * Process test answers, persist per-question data to assessment_answers, and update the user's
  * personality archetype. All writes are wrapped in a transaction for atomicity.
+ *
+ * Validation: rejects payloads where fewer than MIN_VALID_ANSWERS items carry a
+ * recognisable questionId, a selectedOption, and at least one numeric trait delta.
+ * This prevents garbage sessions from being created from malformed or empty payloads.
  */
 export async function processTestAnswers(
   userId: string,
@@ -315,7 +361,7 @@ export async function processTestAnswers(
   }
 
   console.log(
-    `[WeChat Auth] Processing ${testAnswers.length} test answers for user ${userId}`
+    `[WeChat Auth] Processing ${testAnswers.length} test answers (${validItems.length} importable) for user ${userId}`
   );
 
   const traitScores: Record<string, number> = {
@@ -359,8 +405,8 @@ export async function processTestAnswers(
   const userSecondaryData: UserSecondaryData = {};
   for (const answer of testAnswers as any[]) {
     if (!answer || typeof answer !== 'object') continue;
-    const qId = String(answer.questionId ?? answer.question_id ?? answer.id ?? '');
-    const selectedOpt = String(answer.selectedOption ?? answer.value ?? answer.answer ?? answer.selected_option ?? '');
+    const qId = getImportedQuestionId(answer as Record<string, unknown>);
+    const selectedOpt = getImportedSelectedOption(answer as Record<string, unknown>);
     const mapping = SECONDARY_QUESTION_MAP[qId];
     if (mapping && selectedOpt) {
       const decoded = mapping.valueMap[selectedOpt];
@@ -439,10 +485,8 @@ export async function processTestAnswers(
     // Persist per-question answers to assessment_answers
     for (const ans of testAnswers as any[]) {
       if (!ans || typeof ans !== "object") continue;
-      const questionId = String(ans.questionId ?? ans.question_id ?? ans.id ?? "");
-      const selectedOption = String(
-        ans.selectedOption ?? ans.value ?? ans.answer ?? ans.selected_option ?? ""
-      );
+      const questionId = getImportedQuestionId(ans as Record<string, unknown>);
+      const selectedOption = getImportedSelectedOption(ans as Record<string, unknown>);
       if (!questionId || !selectedOption) continue;
 
       await tx.insert(assessmentAnswers).values({
@@ -629,13 +673,25 @@ export function setupWechatAuth(app: Express) {
         return res.status(400).json({ error: "WeChat code is required" });
       }
 
+      // Sanitise the optional anonymousSessionId so we only pass a safe string
+      // to storage methods (never an arbitrary object from the request body).
+      const safeAnonSessionId: string | null =
+        typeof anonymousSessionId === "string" && anonymousSessionId.trim().length > 0
+          ? anonymousSessionId.trim()
+          : null;
+
       const { openid, session_key } = await getWechatOpenId(code);
       const { user, isNewUser } = await findOrCreateWechatUser(
         openid,
         session_key
       );
 
-      if (testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
+      // Idempotency guard: only import testAnswers the first time.
+      // If the user already has a completed personality test we skip the import
+      // so that retries / double-submits do not create duplicate sessions.
+      const alreadyImported = Boolean(user.hasCompletedPersonalityTest);
+
+      if (!alreadyImported && testAnswers && Array.isArray(testAnswers) && testAnswers.length > 0) {
         await processTestAnswers(user.id, testAnswers);
 
         // B: Consume the server-side presignup cache so the same answers cannot be

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { logAdminAudit, type AdminAuditRecord } from '../lib/adminAuditLogger';
+import { logAdminAudit, ADMIN_AUDIT_ACTIONS, type AdminAuditRecord } from '../lib/adminAuditLogger';
 
 describe('logAdminAudit', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
@@ -221,5 +221,51 @@ describe('logAdminAudit', () => {
     expect(record.adminId).toBe('unknown');
     expect(record.targetEntityType).toBe('unknown');
     expect(record.context).toEqual({ originalAction: 'NOT_A_REAL_ACTION' });
+  });
+
+  it('ADMIN_AUDIT_ACTIONS includes the venue and event management actions', () => {
+    const required = [
+      'VENUE_CREATED',
+      'VENUE_UPDATED',
+      'VENUE_DELETED',
+      'EVENT_STATUS_CHANGED',
+      'EVENT_POOL_STATUS_CHANGED',
+    ] as const;
+    for (const action of required) {
+      expect(ADMIN_AUDIT_ACTIONS).toContain(action);
+    }
+  });
+
+  it('emits a valid record for VENUE_CREATED', () => {
+    logAdminAudit({
+      action: 'VENUE_CREATED',
+      adminId: 'admin-1',
+      adminRole: 'operator',
+      targetEntityType: 'venue',
+      targetEntityId: 'venue-42',
+      context: { name: 'Sky Bar', city: '深圳', type: 'bar' },
+    });
+
+    const record = captureAuditRecord();
+    expect(record.action).toBe('VENUE_CREATED');
+    expect(record.targetEntityType).toBe('venue');
+    expect(record.targetEntityId).toBe('venue-42');
+    expect((record.context as any)?.name).toBe('Sky Bar');
+  });
+
+  it('emits a valid record for EVENT_POOL_STATUS_CHANGED with before/after', () => {
+    logAdminAudit({
+      action: 'EVENT_POOL_STATUS_CHANGED',
+      adminId: 'admin-2',
+      targetEntityType: 'event_pool',
+      targetEntityId: 'pool-7',
+      before: { status: 'active' },
+      after: { status: 'matching' },
+    });
+
+    const record = captureAuditRecord();
+    expect(record.action).toBe('EVENT_POOL_STATUS_CHANGED');
+    expect((record.before as any)?.status).toBe('active');
+    expect((record.after as any)?.status).toBe('matching');
   });
 });
