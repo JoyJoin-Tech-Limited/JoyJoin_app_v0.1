@@ -1,0 +1,87 @@
+# JoyJoin Skill Routing Metadata Schema
+# Version: 1.0
+#
+# Each skill directory may contain a `routing.yml` file conforming to this schema.
+# The schema is intentionally small — maintainability is more important than completeness.
+#
+# Required fields: skill, primary_ownership, use_when, strong_triggers
+# All other fields are optional but strongly recommended.
+
+# -------------------------------------------------------------------
+# Schema definition (YAML comments as documentation)
+# -------------------------------------------------------------------
+
+# skill: (required) kebab-case name matching the parent folder name
+# skill: <string>
+
+# primary_ownership: (required) one-sentence summary of what this skill owns
+# primary_ownership: <string>
+
+# use_when: (required) list of scenarios/phrases that indicate this skill applies
+# use_when:
+#   - <string>
+
+# do_not_use_when: list of scenarios where this skill should NOT be loaded
+# do_not_use_when:
+#   - <string>
+
+# strong_triggers: high-confidence keywords, symbol names, or file patterns
+# that almost certainly mean this skill is needed
+# strong_triggers:
+#   - <string>
+
+# owned_files: glob patterns for files this skill owns
+# owned_files:
+#   - <glob pattern>
+
+# owned_paths: API route patterns or URL path prefixes owned by this skill
+# owned_paths:
+#   - <string>
+
+# owned_symbols: TypeScript symbols, function names, or entity names this skill owns
+# owned_symbols:
+#   - <string>
+
+# related_skills: handoff notes for neighboring skills
+# related_skills:
+#   - skill: <skill-name>
+#     when: <brief explanation of when to hand off or co-load>
+
+# -------------------------------------------------------------------
+# Example instance (from onboarding-state-architecture)
+# -------------------------------------------------------------------
+
+# skill: onboarding-state-architecture
+# primary_ownership: >
+#   Server-driven nextStep model, active onboarding module routing authority,
+#   and legacy onboarding quarantine.
+# use_when:
+#   - user asks about onboarding flow, nextStep, or setup/extended/review routing
+#   - user changes auth-driven navigation or profile completion gating
+# do_not_use_when:
+#   - task is about admin login permissions only
+#   - task is purely about generic UI styling
+# strong_triggers:
+#   - nextStep
+#   - /onboarding/setup
+#   - /onboarding/extended
+#   - /onboarding/review
+#   - profileEssentialComplete
+#   - profileExtendedComplete
+#   - hasSeenProfileReview
+# owned_files:
+#   - apps/user-client/src/features/onboarding/**
+#   - apps/user-client/src/hooks/useAuth.ts
+# owned_paths:
+#   - /onboarding/setup
+#   - /onboarding/extended
+#   - /onboarding/review
+# owned_symbols:
+#   - nextStep
+#   - useOnboardingOrchestrator
+#   - AuthenticatedRouter
+# related_skills:
+#   - skill: reliability-and-state-integrity
+#     when: onboarding change involves retries, re-entry guards, or expiry
+#   - skill: testing-and-regression-guardrails
+#     when: locking in onboarding invariants with regression tests

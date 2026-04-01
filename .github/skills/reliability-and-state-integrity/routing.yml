@@ -1,0 +1,59 @@
+skill: reliability-and-state-integrity
+
+primary_ownership: >
+  Transactions, idempotency guards, execution guards, recovery/re-entry semantics,
+  expiry handling, and separation of critical writes from side effects.
+
+use_when:
+  - implementing a multi-step write that must be atomic
+  - adding retry or idempotency logic to a server operation
+  - handling re-entry or duplicate execution for long-running processes
+  - managing expiry or timeout for stateful operations
+  - separating critical writes from side effects like notifications or AI calls
+  - pool matching execution flow or payment processing
+
+do_not_use_when:
+  - task is purely about route placement (use server-domain-architecture)
+  - task is purely about UI state management
+  - task is about test writing only (use testing-and-regression-guardrails)
+
+strong_triggers:
+  - db.transaction
+  - idempotent
+  - idempotency
+  - retry
+  - re-entry
+  - execution guard
+  - isRunning
+  - lockedAt
+  - check-then-insert
+  - UNIQUE constraint
+  - expiry
+  - make this idempotent
+  - wrap in a transaction
+  - handle retry safely
+  - side effect after commit
+  - atomic
+
+owned_files:
+  - apps/server/src/poolMatchingService.ts
+  - apps/server/src/poolRealtimeMatchingService.ts
+  - apps/server/src/routes/domains/**
+  - apps/server/src/repositories/**
+
+owned_paths: []
+
+owned_symbols:
+  - db.transaction
+  - isRunning
+  - lockedAt
+  - poolMatchingService
+  - poolRealtimeMatchingService
+
+related_skills:
+  - skill: server-domain-architecture
+    when: determining where reliable/transactional logic should live in the domain structure
+  - skill: testing-and-regression-guardrails
+    when: adding invariant tests for idempotency or transaction boundaries
+  - skill: platform-observability-and-ops
+    when: logging execution guard state or retry telemetry

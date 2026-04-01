@@ -1,0 +1,71 @@
+skill: social-icebreaker-domain
+
+primary_ownership: >
+  Session lifecycle phases (warmup → micro_challenge → lie_detective → recap),
+  host/player authority boundaries, persistence/rejoin semantics, roster vs active
+  presence, action integrity, and lie-detective secrecy.
+
+use_when:
+  - working on icebreaker session phase transitions
+  - enforcing host-only or player-only actions
+  - handling player reconnects or session rejoin behavior
+  - implementing lie-detective secrecy boundaries
+  - adding or changing icebreaker AI content generation
+  - debugging icebreaker session state issues
+
+do_not_use_when:
+  - task is about pool matching (use matching-domain)
+  - task is about onboarding gating (use onboarding-state-architecture)
+  - task is purely about generic UI layout not tied to icebreaker session state
+
+strong_triggers:
+  - socialIcebreaker
+  - useSocialIcebreaker
+  - /icebreaker/:sessionId
+  - warmup
+  - micro_challenge
+  - lie_detective
+  - recap
+  - host authority
+  - player advance
+  - session rejoin
+  - roster
+  - active presence
+  - isLie
+  - lie detective secrecy
+  - player reconnects to session
+  - enforce host-only action
+  - advance icebreaker phase
+  - session lifecycle
+  - icebreaker host
+
+owned_files:
+  - apps/server/src/routes/socialIcebreaker.ts
+  - apps/server/src/lib/socialIcebreakerStore.ts
+  - apps/user-client/src/pages/IcebreakerSessionPage.tsx
+  - docs/icebreaker-system.md
+
+owned_paths:
+  - /api/icebreaker/**
+  - /icebreaker/:sessionId
+
+owned_symbols:
+  - useSocialIcebreaker
+  - socialIcebreakerStore
+  - advancePhase
+  - IcebreakerPhase
+  - warmup
+  - micro_challenge
+  - lie_detective
+  - recap
+  - isLie
+
+related_skills:
+  - skill: reliability-and-state-integrity
+    when: session state transitions require transaction guards or re-entry protection
+  - skill: testing-and-regression-guardrails
+    when: adding invariant tests for host/player authority or secrecy boundaries
+  - skill: platform-observability-and-ops
+    when: adding session telemetry or audit logging for icebreaker actions
+  - skill: matching-domain
+    when: icebreaker is launched from a post-match flow and context bridges both domains
