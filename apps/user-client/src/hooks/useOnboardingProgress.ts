@@ -75,9 +75,10 @@ export function useOnboardingProgress(): OnboardingProgress {
   
   const progress = useMemo(() => {
     // --- Completion signals (server-owned flags preferred) ---
-    // registration: any authenticated user has an account — use personality test
-    // completion as the practical completion signal for the registration step, since
-    // hasCompletedRegistration is a legacy flag not set in the modern V4 flow.
+    // registration: any authenticated user has an account, so we treat `!!user`
+    // as the practical completion signal for the registration step. Personality test
+    // completion is tracked separately via `steps.personalityTest`. The legacy
+    // `hasCompletedRegistration` flag is not used in the modern V4 flow.
     const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
     // Prefer server-computed flag; fall back to field-presence check only if unavailable.
     const hasCompletedEssentialData =

@@ -385,6 +385,20 @@ describe("processTestAnswers", () => {
     await expect(processTestAnswers("user-1", answers)).resolves.toBeUndefined();
   });
 
+  it("accepts snake_case trait_scores payloads and accumulates them into matcher input", async () => {
+    const answers = [
+      { questionId: "q1", selectedOption: "A", trait_scores: { A: 5, C: 2 } },
+    ];
+
+    await expect(processTestAnswers("user-1", answers)).resolves.toBeUndefined();
+
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.objectContaining({ A: 55, C: 52 }),
+      undefined,
+      3
+    );
+  });
+
   // ── A: Idempotency tests ────────────────────────────────────────────────────
 
   it("skips insert when a completed session already exists (idempotency guard)", async () => {
@@ -399,6 +413,17 @@ describe("processTestAnswers", () => {
 
     const { db } = await import("../db");
     // Should not create a new session when one already exists
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("treats malformed retry payloads as a no-op when a completed session already exists", async () => {
+    mockSelectLimit.mockResolvedValueOnce([{ id: "existing-session-xyz" }]);
+
+    const answers = [null, undefined, "string", 42];
+
+    await expect(processTestAnswers("user-1", answers as any)).resolves.toBeUndefined();
+
+    const { db } = await import("../db");
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
