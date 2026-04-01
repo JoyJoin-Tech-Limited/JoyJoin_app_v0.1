@@ -37,7 +37,7 @@ import {
   normalizeVenueQualityRecord,
 } from "./lib/venueDataQuality";
 
-import { aiEndpointLimiter, kpiEndpointLimiter, authEndpointLimiter } from "./rateLimiter";
+import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
