@@ -28,6 +28,8 @@ jobs:
     name: Happy-Path Probe
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout

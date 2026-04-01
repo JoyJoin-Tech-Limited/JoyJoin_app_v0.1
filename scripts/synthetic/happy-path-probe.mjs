@@ -24,7 +24,7 @@
  *   PUSHGATEWAY_URL   Optional Prometheus Pushgateway URL to push probe result
  *
  * Cron example (every 5 minutes):
- *   * /5 * * * *  node /path/to/scripts/synthetic/happy-path-probe.mjs >> /var/log/joyjoin-probe.log 2>&1
+ *   */5 * * * *  node /path/to/scripts/synthetic/happy-path-probe.mjs >> /var/log/joyjoin-probe.log 2>&1
  *
  * GitHub Actions example (see .github/workflows/synthetic-probe.yml):
  *   Uses the workflow_dispatch + schedule triggers.
