@@ -19,28 +19,31 @@ Use it together with:
 ### 1. Onboarding and authenticated routing
 
 **Authority chain**
-1. `apps/server/src/routes.ts` computes `nextStep`
+1. `apps/server/src/routes/domains/auth.ts` computes and serves `nextStep` from `GET /api/auth/user`
 2. `apps/user-client/src/hooks/useAuth.ts` exposes that contract
 3. `apps/user-client/src/App.tsx` gates routes from `nextStep`
+4. `apps/user-client/src/features/onboarding/active/flow.ts` and `useOnboardingOrchestrator.ts` provide the canonical client mapping helpers
 
-**Active flow**
-- `/personality-test`
-- `/personality-test/results`
-- `/onboarding/setup`
-- `/onboarding/extended`
-- `/onboarding/review`
-- `/discover`
+**Active flow module**
+- `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`
+- `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/WeChatAuthGatePage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/EssentialDataPage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/ExtendedDataPage.tsx`
+- `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`
 
 **Boundary rules**
 - Do not reconstruct onboarding progress as a new client-side source of truth.
 - Treat `guide` and `onboarding` as compatibility values, not new feature targets.
 - Keep server-owned completion semantics aligned with the `users` table and `/api/auth/user` response.
+- Legacy onboarding surfaces stay under `apps/user-client/src/legacy/onboarding/`.
 
 Primary files:
 - `apps/user-client/src/features/onboarding/README.md`
 - `apps/user-client/src/App.tsx`
 - `apps/user-client/src/hooks/useAuth.ts`
-- `apps/server/src/routes.ts`
+- `apps/server/src/routes/domains/auth.ts`
+- `apps/server/src/routes/domains/onboarding.ts`
 
 ### 2. Matching, events, and post-match experience
 
@@ -94,31 +97,33 @@ Boundary:
 
 ### 5. Server domain ownership
 
-**Auth / onboarding / sessions**
-- `apps/server/src/routes.ts`
+**Routes**
+- `apps/server/src/routes.ts` is the composition root that mounts domain routers from `apps/server/src/routes/domains/`
+- Domain modules currently include auth, onboarding, assessment, analytics, admin, payments, and icebreaker routing
+
+**Data access**
+- `apps/server/src/storage.ts` is now a compatibility facade composed from `apps/server/src/repositories/*`
+- New persistence logic should live in the nearest domain repository instead of expanding the legacy facade
+
+**Operational entry points**
 - `apps/server/src/wechatAuth.ts`
 - `apps/server/src/phoneAuth.ts`
-
-**Payments / subscriptions**
-- `apps/server/src/paymentService.ts`
-- `apps/server/src/subscriptionService.ts`
-
-**Admin operations**
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
-- `apps/server/src/README.md`
 
 ## Where new files go
 
 ### User client
-- Route-level page: `apps/user-client/src/pages/`
+- Route-level page: `apps/user-client/src/pages/` unless it belongs to the active onboarding module
+- Active onboarding page/hook/flow utility: `apps/user-client/src/features/onboarding/active/`
 - Shared presentation component: `apps/user-client/src/components/`
 - Client hook or query adapter: `apps/user-client/src/hooks/`
 - Pure browser utility: `apps/user-client/src/lib/` or `apps/user-client/src/utils/`
 
 ### Server
-- Route registration: `apps/server/src/routes.ts`
-- Cohesive router module: `apps/server/src/routes/`
+- Route registration composition: `apps/server/src/routes.ts`
+- Cohesive domain router: `apps/server/src/routes/domains/`
+- Domain repository: `apps/server/src/repositories/`
 - Domain service: `apps/server/src/` or an existing domain subfolder
 - Cross-cutting invariant/helper: `apps/server/src/lib/`
 - Middleware: `apps/server/src/middleware/`
