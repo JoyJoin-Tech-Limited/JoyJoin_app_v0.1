@@ -66,7 +66,9 @@ npm run db:push --force  # Force sync (use carefully)
 /
 ├── apps/
 │   ├── user-client/src/
-│   │   ├── pages/          # Page components (PersonalityTestPageV4, DiscoverPage, etc.)
+│   │   ├── pages/          # General page components (DiscoverPage, etc.)
+│   │   ├── features/onboarding/active/  # Canonical active onboarding module
+│   │   └── legacy/onboarding/           # Quarantined legacy onboarding surfaces
 │   │   ├── components/     # Shared UI components (BottomNav, AttendeePreviewCard, etc.)
 │   │   ├── hooks/          # Custom hooks (useAuth, useWeChatLogin, useSocialIcebreaker)
 │   │   └── lib/            # Utilities (archetypes.ts, queryClient.ts, hongKongTime.ts)
@@ -226,7 +228,7 @@ if (nextStep !== 'discover') {
 
 **Helper hook for detailed progress:**
 ```typescript
-const { currentStep, progress, isComplete, steps } = useOnboardingProgress();
+const { currentStep, currentRoute, progress, isComplete, steps } = useOnboardingOrchestrator();
 ```
 
 #### Auth Response Extensions
@@ -257,13 +259,15 @@ The guide is **server-persisted** but **currently conditional** in routing: `Aut
 #### Key Files
 - `apps/user-client/src/App.tsx` — `AuthenticatedRouter` switch on `nextStep` (authoritative routing source)
 - `apps/user-client/src/hooks/useAuth.ts` — Returns `nextStep` from server
-- `apps/user-client/src/hooks/useOnboardingRoute.ts` — Client-side route calculation helper
-- `apps/user-client/src/hooks/useOnboardingProgress.ts` — Progress tracking
-- `apps/user-client/src/pages/PersonalityTestPageV4.tsx` — V4 adaptive assessment (runs unauthenticated)
+- `apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts` — Canonical onboarding navigation + progress hook
+- `apps/user-client/src/features/onboarding/active/flow.ts` — `nextStep` to step / route mapping for active onboarding
+- `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx` — Adaptive personality test (runs unauthenticated)
 - `apps/user-client/src/pages/PersonalityTestResultPage.tsx` — Shows result; hosts WeChat 微信授权登入 for new users
-- `apps/user-client/src/pages/EssentialDataPage.tsx` — 7-step essential data
-- `apps/user-client/src/pages/ExtendedDataPage.tsx` — Interests carousel
-- `apps/user-client/src/pages/FinalProfileReviewPage.tsx` — Profile preview and review
+- `apps/user-client/src/features/onboarding/active/pages/WeChatAuthGatePage.tsx` — WeChat auth gate after the test
+- `apps/user-client/src/features/onboarding/active/pages/EssentialDataPage.tsx` — Essential data collection
+- `apps/user-client/src/features/onboarding/active/pages/ExtendedDataPage.tsx` — Interests carousel
+- `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx` — Profile preview and review
+- `apps/user-client/src/legacy/onboarding/pages/` — Quarantined legacy onboarding pages
 - `apps/user-client/src/pages/LoginPage.tsx` — WeChat 微信授权登入
 - `apps/user-client/src/pages/GuidePage.tsx` — ⚠️ **Deprecated** (2026-02-16). Replaced by inline coach marks. The `/guide` route still renders this page for backward compatibility but `nextStep === 'guide'` routes directly to `DiscoverPage`. Do not add new features here.
 - `apps/user-client/src/pages/ProfileSetupPage.tsx` — ⚠️ **Unused** — imported in `App.tsx` but not routed. Candidate for removal.
