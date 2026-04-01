@@ -70,6 +70,7 @@ Standalone auth and CLI modules remain at the `apps/server/src/` root:
 - `lib/logger.ts` — structured JSON logger
 - `lib/adminAuditLogger.ts` — audit event logger
 - `lib/aiTraceLogger.ts` — AI trace logger
+- `lib/socialIcebreakerStore.ts` — PostgreSQL-backed persistence for icebreaker sessions, participants, and lie-truths (all icebreaker session reads/writes go through this module)
 - New cross-cutting utilities belong in `lib/`, not inlined in routes
 
 ## middleware/
