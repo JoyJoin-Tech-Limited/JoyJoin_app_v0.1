@@ -9,12 +9,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run db:push && NODE_ENV=development node --env-file=.env --import tsx/esm apps/server/src/index.ts",
+    "dev": "npm run dev -w @joyjoin/server",
     "dev:user": "npm run dev -w @joyjoin/user-client",
     "dev:admin": "npm run dev -w @joyjoin/admin-client",
     "dev:server": "npm run dev -w @joyjoin/server",
     "dev:all": "npm run dev",
-    "build": "vite build && esbuild apps/server/src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:vite --define:process.env.NODE_ENV=\\\"production\\\"",
+    "build": "npm run deps:check && npm run build:user && npm run build:admin && npm run build:server",
     "build:user": "npm run build -w @joyjoin/user-client",
     "build:admin": "npm run build -w @joyjoin/admin-client",
     "build:server": "npm run build -w @joyjoin/server",
