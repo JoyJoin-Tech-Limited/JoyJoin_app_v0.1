@@ -52,8 +52,21 @@ const mockTx = {
   update: mockUpdate,
 };
 
+// select chain for the idempotency check: db.select().from().where().limit()
+const mockSelectLimit = vi.fn().mockResolvedValue([]); // default: no existing session
+const mockSelectWhere = vi.fn().mockReturnValue({ limit: mockSelectLimit });
+const mockSelectFrom = vi.fn().mockReturnValue({ where: mockSelectWhere });
+const mockSelectFn = vi.fn().mockReturnValue({ from: mockSelectFrom });
+
 vi.mock("../db", () => ({
   db: {
+    // Wrap in an arrow function so `mockSelectFn` is evaluated at call time rather
+    // than at mock-object-construction time.  vitest hoists `vi.mock()` calls to
+    // run before top-level variable declarations; a direct property reference like
+    // `select: mockSelectFn` would therefore hit the temporal dead zone and throw.
+    // This is the standard vitest pattern for referencing mutable module-scope
+    // variables inside a mock factory.
+    select: (...args: any[]) => mockSelectFn(...args),
     transaction: vi.fn(async (cb: (tx: any) => Promise<void>) => cb(mockTx)),
   },
 }));
@@ -214,6 +227,11 @@ describe("processTestAnswers", () => {
     mockInsert.mockReturnValue({ values: mockInsertValues });
     mockUpdateSet.mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
     mockUpdate.mockReturnValue({ set: mockUpdateSet });
+    // Default: no existing completed session (idempotency check returns empty)
+    mockSelectLimit.mockResolvedValue([]);
+    mockSelectWhere.mockReturnValue({ limit: mockSelectLimit });
+    mockSelectFrom.mockReturnValue({ where: mockSelectWhere });
+    mockSelectFn.mockReturnValue({ from: mockSelectFrom });
   });
 
   it("is a no-op for empty answer array", async () => {
@@ -323,5 +341,101 @@ describe("processTestAnswers", () => {
       undefined,
       3
     );
+  });
+
+  // ── C: Validation tests ─────────────────────────────────────────────────────
+
+  it("throws INVALID_TEST_RESULTS when all answers have empty traitScores", async () => {
+    const answers = [
+      { questionId: "q1", selectedOption: "A", traitScores: {} },
+      { questionId: "q2", selectedOption: "B", traitScores: {} },
+    ];
+
+    await expect(processTestAnswers("user-1", answers)).rejects.toMatchObject({
+      code: "INVALID_TEST_RESULTS",
+    });
+    const { db } = await import("../db");
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("throws INVALID_TEST_RESULTS when all trait score values are zero", async () => {
+    const answers = [
+      { questionId: "q1", selectedOption: "A", traitScores: { A: 0, C: 0, E: 0, O: 0, X: 0, P: 0 } },
+    ];
+
+    await expect(processTestAnswers("user-1", answers)).rejects.toMatchObject({
+      code: "INVALID_TEST_RESULTS",
+    });
+  });
+
+  it("throws INVALID_TEST_RESULTS for an array of non-object entries", async () => {
+    const answers = [null, undefined, "string", 42];
+
+    await expect(processTestAnswers("user-1", answers as any)).rejects.toMatchObject({
+      code: "INVALID_TEST_RESULTS",
+    });
+  });
+
+  it("does not throw when at least one answer has a non-zero trait score alongside all-zero answers", async () => {
+    const answers = [
+      { questionId: "q1", selectedOption: "A", traitScores: { A: 0, C: 0 } }, // all zero
+      { questionId: "q2", selectedOption: "B", traitScores: { A: 7 } },         // non-zero
+    ];
+
+    await expect(processTestAnswers("user-1", answers)).resolves.toBeUndefined();
+  });
+
+  it("accepts snake_case trait_scores payloads and accumulates them into matcher input", async () => {
+    const answers = [
+      { questionId: "q1", selectedOption: "A", trait_scores: { A: 5, C: 2 } },
+    ];
+
+    await expect(processTestAnswers("user-1", answers)).resolves.toBeUndefined();
+
+    expect(findBestMatchingArchetypesV2).toHaveBeenCalledWith(
+      expect.objectContaining({ A: 55, C: 52 }),
+      undefined,
+      3
+    );
+  });
+
+  // ── A: Idempotency tests ────────────────────────────────────────────────────
+
+  it("skips insert when a completed session already exists (idempotency guard)", async () => {
+    // Simulate an existing completed session returned by the db.select check
+    mockSelectLimit.mockResolvedValueOnce([{ id: "existing-session-xyz" }]);
+
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 5 } },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    const { db } = await import("../db");
+    // Should not create a new session when one already exists
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("treats malformed retry payloads as a no-op when a completed session already exists", async () => {
+    mockSelectLimit.mockResolvedValueOnce([{ id: "existing-session-xyz" }]);
+
+    const answers = [null, undefined, "string", 42];
+
+    await expect(processTestAnswers("user-1", answers as any)).resolves.toBeUndefined();
+
+    const { db } = await import("../db");
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("proceeds to insert when no completed session exists", async () => {
+    // Default mock already returns []
+    const answers = [
+      { questionId: "q1", questionLevel: 1, selectedOption: "A", traitScores: { A: 5 } },
+    ];
+
+    await processTestAnswers("user-1", answers);
+
+    const { db } = await import("../db");
+    expect(db.transaction).toHaveBeenCalledOnce();
   });
 });

@@ -31,12 +31,6 @@ export interface UseAuthResult {
   user: AuthUser | undefined;
   isLoading: boolean;
   isAuthenticated: boolean;
-  /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
-  needsRegistration: boolean | undefined;
-  /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
-  needsPersonalityTest: boolean | undefined;
-  /** @deprecated Prefer server-driven nextStep from /api/auth/user. */
-  needsProfileSetup: boolean | undefined;
   nextStep: NextStepType | undefined;
   profileEssentialComplete: boolean | undefined;
   profileExtendedComplete: boolean | undefined;
@@ -63,10 +57,6 @@ export function useAuth(): UseAuthResult {
     user: isError ? undefined : user,
     isLoading: actualIsLoading,
     isAuthenticated,
-    // Legacy computed fields (prefer server-driven nextStep)
-    needsRegistration: user ? !user.hasCompletedRegistration : undefined,
-    needsPersonalityTest: user ? Boolean(user.hasCompletedRegistration) && !user.hasCompletedPersonalityTest : undefined,
-    needsProfileSetup: user ? Boolean(user.hasCompletedRegistration) && Boolean(user.hasCompletedPersonalityTest) && (!user.displayName || !user.gender || !user.currentCity) : undefined,
     // Server-driven navigation (B1)
     nextStep: user?.nextStep,
     profileEssentialComplete: user?.profileEssentialComplete,
