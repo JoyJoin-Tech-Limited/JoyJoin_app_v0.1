@@ -10,7 +10,7 @@ description: >
 
 # Wow Elements
 
-**Core rule:** A wow element is successful when it makes the product feel more considered, more alive, and more emotionally resonant — without making it slower, harder to understand, or less accessible.
+**Core rule:** A wow element is successful when it makes the product feel more considered, more alive, and more emotionally resonant — **crafted confidence, not decoration** — without making it slower, harder to understand, or less accessible.
 
 JoyJoin wow elements should feel like **subtle luxury in motion**: warm, polished, emotionally intelligent, and never noisy.
 
@@ -58,18 +58,24 @@ Build the feature. Get the data, layout, and interactions correct. No polish yet
 Identify the single most emotionally significant moment in the flow. Add a targeted, minimal wow element to that moment only. Review against the checklist below.
 
 **Pass 3 — Systemize if repeated**
-If the same pattern appears in two or more places, extract it into a shared component, utility, or hook. Do not create an abstraction for a one-off.
+If the same pattern appears in three or more unrelated places, extract it into a shared component, utility, or hook. Do not create an abstraction for a one-off.
 
 ## Implementation patterns
 
 ### CSS / Tailwind for small motion
-Use `transition`, `duration-*`, and `ease-*` utilities for hover states, focus rings, button feedback, and simple reveal transitions. This is the lightest and safest option.
+Use `transition`, `duration-*`, and `ease-*` utilities for hover states, focus rings, button feedback, and simple reveal transitions. Apply them in the shared primitive or variant layer when the pattern is part of the system. This is the lightest and safest option.
 
 ```tsx
-// Preferred for simple transitions
-<button className="transition-transform duration-150 ease-out active:scale-95 ...">
+// Preferred: add motion to the shared Button primitive or variant classes
+import { Button } from "@/components/ui/button";
+
+<Button
+  variant="default"
+  size="lg"
+  className="transition-transform duration-150 ease-out active:scale-[0.98]"
+>
   Join
-</button>
+</Button>
 ```
 
 ### Framer Motion for choreographed entrances/exits

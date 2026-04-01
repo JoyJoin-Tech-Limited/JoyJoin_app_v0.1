@@ -9,30 +9,35 @@ Concrete implementation examples for the patterns described in `../SKILL.md`.
 A primary CTA (e.g. "Join Event", "Confirm Payment") should give the user a brief, satisfying signal that their action was received — not just a spinner.
 
 ```tsx
-// packages/shared/src/ui/PrimaryButton.tsx (or existing button with added state)
+// apps/user-client/src/components/PremiumCtaButton.tsx
+import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
-interface PrimaryButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface PremiumCtaButtonProps extends React.ComponentProps<typeof Button> {
   isSuccess?: boolean;
 }
 
-export function PrimaryButton({ isSuccess, children, ...props }: PrimaryButtonProps) {
+export function PremiumCtaButton({
+  isSuccess,
+  children,
+  ...props
+}: PremiumCtaButtonProps) {
   const reduceMotion = useReducedMotion();
 
   return (
-    <motion.button
-      {...props}
+    <motion.div
       animate={
         isSuccess && !reduceMotion
           ? { scale: [1, 1.04, 1] }
           : { scale: 1 }
       }
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className="bg-violet-500 text-white rounded-xl px-6 py-3 font-medium
-                 transition-opacity active:opacity-80 disabled:opacity-50"
     >
-      {isSuccess ? '✓ Done' : children}
-    </motion.button>
+      <Button {...props} variant="default" size="lg">
+        {isSuccess ? '✓ Done' : children}
+      </Button>
+    </motion.div>
   );
 }
 ```
@@ -51,7 +56,9 @@ The first authenticated screen a user lands on after completing sign-up. Content
 
 ```tsx
 // apps/user-client/src/features/onboarding/active/OnboardingWelcome.tsx
+import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 const ITEMS = [
   { key: 'heading', delay: 0 },
@@ -92,9 +99,9 @@ export function OnboardingWelcome() {
         </p>
       </FadeUp>
       <FadeUp delay={ITEMS[2].delay}>
-        <PrimaryButton onClick={/* navigate to first step */}>
+        <Button variant="default" size="lg" onClick={/* navigate to first step */}>
           Get started
-        </PrimaryButton>
+        </Button>
       </FadeUp>
     </div>
   );
@@ -115,6 +122,7 @@ An empty state (no matches yet, no events nearby, no connections) should feel li
 
 ```tsx
 // apps/user-client/src/components/EmptyState.tsx
+import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 
 interface EmptyStateProps {
@@ -149,11 +157,13 @@ export function EmptyState({ illustration, heading, body, action }: EmptyStatePr
 
 **Usage:**
 ```tsx
+import { Button } from '@/components/ui/button';
+
 <EmptyState
   illustration="🐢"  // Turtle mascot — steady, thoughtful, reliable
   heading="No gatherings yet"
   body="Your first match is just around the corner. Check back soon."
-  action={<PrimaryButton onClick={handleRefresh}>Refresh</PrimaryButton>}
+  action={<Button onClick={handleRefresh}>Refresh</Button>}
 />
 ```
 
