@@ -9,7 +9,13 @@ import { warmTTSCache } from "./ai/minimaxTTSService";
 const app = express();
 
 // Body parsing middleware
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    if (req.originalUrl === "/api/webhooks/wechat-pay" || req.url === "/api/webhooks/wechat-pay") {
+      (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: false }));
 
 // Request logging middleware

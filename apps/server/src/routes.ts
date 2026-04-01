@@ -10197,6 +10197,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
+        clientIp: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.ip || req.socket.remoteAddress || "127.0.0.1",
       });
       
       res.json({
@@ -10258,6 +10259,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         relatedId,
         originalAmount,
         couponId,
+        clientIp: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.ip || req.socket.remoteAddress || "127.0.0.1",
       });
       
       res.json(paymentResult);
@@ -10270,11 +10272,21 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // WeChat Pay webhook - receives payment status updates
   app.post("/api/webhooks/wechat-pay", async (req, res) => {
     try {
-      await paymentService.handleWebhook(req.body);
+      await paymentService.handleWebhook({
+        headers: req.headers,
+        rawBody: (req as typeof req & { rawBody?: Buffer }).rawBody,
+        payload: req.body,
+      });
       res.json({ code: "SUCCESS", message: "OK" });
     } catch (error) {
       console.error("Error processing WeChat Pay webhook:", error);
-      res.status(500).json({ code: "FAIL", message: "Internal server error" });
+      const status = typeof (error as { status?: unknown }).status === "number"
+        ? ((error as { status: number }).status)
+        : 500;
+      res.status(status).json({
+        code: "FAIL",
+        message: error instanceof Error ? error.message : "Internal server error",
+      });
     }
   });
   
