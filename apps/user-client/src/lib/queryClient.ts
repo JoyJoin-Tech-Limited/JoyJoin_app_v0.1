@@ -30,10 +30,15 @@ function handleSessionExpired(): void {
   }
 }
 
+type ApiRequestOptions = {
+  allowStatuses?: number[];
+};
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: ApiRequestOptions,
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
@@ -46,6 +51,11 @@ export async function apiRequest(
   if (res.status === 401) {
     handleSessionExpired();
     throw new Error("401: Session expired. Please log in again.");
+  }
+
+  // 401 is intentionally handled above even if a caller includes it here.
+  if (options?.allowStatuses?.includes(res.status)) {
+    return res;
   }
 
   await throwIfResNotOk(res);
