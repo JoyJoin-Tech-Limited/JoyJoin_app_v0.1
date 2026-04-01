@@ -1,6 +1,10 @@
 ---
-name: Design System Governance
-description: Maintain JoyJoin UI consistency through tokens, variants, accessibility expectations, documented exceptions, and migration discipline. Use when standardizing components, adding new variants, or reviewing visual exceptions.
+name: design-system-governance
+description: >
+  Maintain JoyJoin UI consistency through tokens, variants, accessibility expectations, documented
+  exceptions, and migration discipline. Use when standardizing components, adding new variants, or
+  reviewing visual exceptions. Trigger phrases: "add a button variant", "use a new colour",
+  "migrate to the shared Button", "document a visual exception", "check this for token usage".
 ---
 
 # Design System Governance
@@ -85,3 +89,31 @@ When standardising an existing component to use the shared primitive:
 - `docs/button-design.md`
 - `.github/skills/joyjoin-brand-guidelines/SKILL.md`
 - `.github/skills/frontend-component-architecture/SKILL.md`
+
+## Quick examples
+
+**User says:** "Add a `warning` variant to the Button for destructive-but-reversible actions."
+**Apply this skill by:** Adding the new variant to `packages/shared/src/ui/buttonVariants.ts` using CVA, defining the required tokens in both `apps/*/src/index.css` `:root` and `.dark` blocks, and running both app builds.
+**Result:** Variant is available consistently in both clients, tokens are theme-aware, and no ad-hoc hex values appear in component files.
+
+---
+
+**User says:** "This component uses a hard-coded purple hex — can I leave it for now?"
+**Apply this skill by:** No — replace it with the `--btn-primary-gradient` or nearest brand token. If a genuine exception exists, add a `{/* Exception: … */}` comment with a rationale.
+**Result:** Undocumented token drift is eliminated; future reviewers understand any intentional deviation.
+
+## Troubleshooting
+
+- **Dark-mode token is missing — component looks broken in `.dark` class** — a new token was added to `:root` but not the `.dark` block. Open both `apps/user-client/src/index.css` and `apps/admin-client/src/index.css` and add the dark value.
+- **Focus ring is invisible after a style change** — `outline` was suppressed without a replacement. Restore the `--ring` token-based focus ring or add an equivalent `box-shadow` focus indicator.
+- **App-local variant drifted from the shared CVA definition** — a developer added a variant directly in an app wrapper instead of in `buttonVariants.ts`. Move the variant to shared, delete the local override, and rebuild.
+- **Component failing accessibility contrast check** — verify against the WCAG AA 4.5 : 1 ratio documented in `docs/button-design.md` for the affected variant.
+
+## Review checklist
+
+- [ ] No hard-coded hex values in component files — all colours reference CSS tokens
+- [ ] New tokens are added to both `:root` and `.dark` in both app `index.css` files
+- [ ] New variants are defined in `packages/shared/src/ui/buttonVariants.ts`, not app-local files
+- [ ] Focus ring is visible and uses the `--ring` token
+- [ ] Touch target for primary CTAs is at least 44 px (meets WCAG 2.5.5)
+- [ ] Visual exceptions are documented with a comment and rationale in the component

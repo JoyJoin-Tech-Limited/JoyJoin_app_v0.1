@@ -86,4 +86,13 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
-| How do I make this screen feel premium or add delight? | `wow-elements` |
+
+---
+
+## Skill authoring conventions
+
+- frontmatter `name` must match the folder name exactly in kebab-case
+- `description` should explain what the skill does and when to use it; include a few trigger phrases
+- keep `description` under 1024 characters
+- keep `SKILL.md` concise and operational — place deeper examples in `references/` when needed
+- every skill should include `## Quick examples`, `## Troubleshooting`, and `## Review checklist`
