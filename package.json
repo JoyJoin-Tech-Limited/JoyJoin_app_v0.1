@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "npm run db:push && npm run dev:server",
-    "build": "npm run build -w @joyjoin/user-client && npm run build -w @joyjoin/admin-client && npm run build -w @joyjoin/server",
+    "build": "npm run dep-check && npm run build:user && npm run build:admin && npm run build:server",
     "typecheck": "npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w @joyjoin/server",
     "check": "npm run typecheck",
     "check:clients": "npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client",
