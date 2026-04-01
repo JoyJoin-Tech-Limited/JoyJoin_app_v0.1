@@ -37,6 +37,16 @@ export function getSocialSessionId(icebreakerSessionId: string): string {
   return `social_${icebreakerSessionId}`;
 }
 
+function withExpiry(
+  state: SocialSessionState,
+  expiresAt: Date,
+): SocialSessionState {
+  return {
+    ...state,
+    expiresAt: expiresAt.toISOString(),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Session read helpers
 // ---------------------------------------------------------------------------
@@ -54,7 +64,9 @@ export async function getSession(
     .where(eq(socialIcebreakerSessions.id, socialSessionId))
     .limit(1);
 
-  return rows[0] ? (rows[0].stateJson as SocialSessionState) : null;
+  return rows[0]
+    ? withExpiry(rows[0].stateJson as SocialSessionState, rows[0].expiresAt)
+    : null;
 }
 
 /**
@@ -79,7 +91,9 @@ export async function getSessionWithExpiry(socialSessionId: string): Promise<{
 
   const expired = rows[0].expiresAt < new Date();
   return {
-    state: expired ? null : (rows[0].stateJson as SocialSessionState),
+    state: expired
+      ? null
+      : withExpiry(rows[0].stateJson as SocialSessionState, rows[0].expiresAt),
     expired,
   };
 }
@@ -103,7 +117,7 @@ export async function getSessionByIcebreakerSessionId(
   const expired = rows[0].expiresAt < new Date();
   return {
     socialSessionId: rows[0].id,
-    state: rows[0].stateJson as SocialSessionState,
+    state: withExpiry(rows[0].stateJson as SocialSessionState, rows[0].expiresAt),
     expired,
   };
 }
@@ -124,7 +138,7 @@ export async function createSession(state: SocialSessionState): Promise<void> {
     phaseStartedAt: new Date(state.phaseStartedAt),
     sessionStartedAt: new Date(state.sessionStartedAt),
     expiresAt,
-    stateJson: { ...state, expiresAt: expiresAt.toISOString() } as Record<string, unknown>,
+    stateJson: state as unknown as Record<string, unknown>,
   });
 }
 
