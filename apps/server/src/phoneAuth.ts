@@ -1,5 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
+import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 
 // 简化的验证码存储（生产环境应使用Redis）
 const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
@@ -36,12 +37,13 @@ export function validateVerificationCode(phoneNumber: string, code: string) {
 }
 export function setupPhoneAuth(app: Express) {
   const isProduction = process.env.NODE_ENV === 'production';
-  const DEBUG_AUTH = process.env.DEBUG_AUTH === "1";
+  const debugAuthLoggingEnabled = isDebugAuthLoggingEnabled();
 
   // ============ Phase 2: Debug Endpoints (无依赖测试) ============
-  
+  // Explicitly opt-in only; these routes are not registered in production by default.
+  if (isDevAuthToolsEnabled()) {
   // A) 强制 set 普通 cookie（验证链路是否吞 Set-Cookie）
-  app.get("/api/debug/cookie-direct", (req: any, res) => {
+  app.get("/api/debug/cookie-direct", (req, res) => {
     console.log("🔧 [DEBUG] /api/debug/cookie-direct called");
     res.cookie("debug_direct", "1", { 
       path: "/", 
@@ -52,11 +54,11 @@ export function setupPhoneAuth(app: Express) {
   });
 
   // B) 强制写 session 并保存（验证 session cookie 能否发出）
-  app.get("/api/debug/session-set", (req: any, res) => {
+  app.get("/api/debug/session-set", (req, res) => {
     console.log("🔧 [DEBUG] /api/debug/session-set called, sessionID:", req.sessionID);
     req.session.userId = "debug-user";
     req.session.isAdmin = true;
-    req.session.save((err: any) => {
+    req.session.save((err) => {
       if (err) {
         console.error("🔧 [DEBUG] Session save error:", err);
         return res.status(500).json({ ok: false, err: String(err) });
@@ -67,7 +69,7 @@ export function setupPhoneAuth(app: Express) {
   });
 
   // C) 回显 cookie（验证浏览器是否带回 cookie）
-  app.get("/api/debug/echo-cookie", (req: any, res) => {
+  app.get("/api/debug/echo-cookie", (req, res) => {
     console.log("🔧 [DEBUG] /api/debug/echo-cookie called");
     res.json({
       cookieHeader: req.headers.cookie || null,
@@ -86,7 +88,7 @@ export function setupPhoneAuth(app: Express) {
   });
 
   // 兼容旧的 set-cookie 端点
-  app.get("/api/debug/set-cookie", (req: any, res) => {
+  app.get("/api/debug/set-cookie", (req, res) => {
     console.log("🔧 [DEBUG] /api/debug/set-cookie called");
     res.cookie("debug_direct", "1", {
       httpOnly: false,
@@ -95,15 +97,17 @@ export function setupPhoneAuth(app: Express) {
       path: "/",
     });
     req.session.debugTest = Date.now();
-    req.session.save((err: any) => {
+    req.session.save((err) => {
       if (err) {
         console.error("🔧 [DEBUG] Session save error:", err);
-        return res.status(500).json({ ok: false, error: err.message });
+        return res.status(500).json({ ok: false, error: String(err) });
       }
       console.log("🔧 [DEBUG] Session saved successfully, sessionID:", req.sessionID);
       res.json({ ok: true, sessionID: req.sessionID, message: "Check Response Headers for Set-Cookie" });
     });
   });
+
+  }
 
   // 发送验证码
   app.post("/api/auth/send-code", async (req, res) => {
@@ -119,8 +123,10 @@ export function setupPhoneAuth(app: Express) {
 
       verificationCodes.set(phoneNumber, { code, expiresAt });
 
-      // 在开发环境中，将验证码打印到console
-      console.log(`📱 Verification code for ${phoneNumber}: ${code}`);
+      // 仅在非生产环境输出验证码，避免敏感信息进入生产日志。
+      if (!isProduction) {
+        console.log(`📱 Verification code for ${phoneNumber}: ${code}`);
+      }
 
       // 生产环境中，这里应该调用短信服务商API发送验证码
       // 例如：await sendSMS(phoneNumber, `您的验证码是：${code}，5分钟内有效`);
@@ -183,21 +189,21 @@ export function setupPhoneAuth(app: Express) {
       }
 
       // 设置session - Phase 4.1 DEBUG_AUTH logging
-      if (DEBUG_AUTH) {
+      if (debugAuthLoggingEnabled) {
         console.log("[LOGIN] before", { sid: req.sessionID, cookie: req.headers.cookie });
       }
       
       // 直接写入 session（不用 regenerate，更简单可靠）
       req.session.userId = userId;
-      (req.session as any).verifiedPhoneNumber = phoneNumber;
+      req.session.verifiedPhoneNumber = phoneNumber;
       
-      if (DEBUG_AUTH) {
+      if (debugAuthLoggingEnabled) {
         console.log("[LOGIN] session written", { userId, sessionData: req.session });
       }
       
       // 使用 Promise 包装 save，确保完成后再响应
       req.session.save(async (err) => {
-        if (DEBUG_AUTH) {
+        if (debugAuthLoggingEnabled) {
           console.log("[LOGIN] after-save", {
             err: err ? String(err) : null,
             sid: req.sessionID,

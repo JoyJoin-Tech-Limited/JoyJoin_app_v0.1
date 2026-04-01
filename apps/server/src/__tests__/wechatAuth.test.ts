@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 // ── Storage mock ────────────────────────────────────────────────────────────
 const mockUser = {
   id: "user-123",
-  wechatOpenId: "mock_openid_test_code",
+  wechatOpenId: "mock_openid_wechat_test_code",
   wechatSessionKey: "old_session",
   hasCompletedPersonalityTest: false,
   hasCompletedRegistration: false,
@@ -110,8 +110,8 @@ describe("getWechatOpenId", () => {
 
     it("returns a mock openid without calling fetch", async () => {
       global.fetch = vi.fn();
-      const result = await getWechatOpenId("test_code");
-      expect(result.openid).toBe("mock_openid_test_code");
+      const result = await getWechatOpenId("wechat_test_code");
+      expect(result.openid).toBe("mock_openid_wechat_test_code");
       expect(result.session_key).toMatch(/^mock_session_/);
       expect(global.fetch).not.toHaveBeenCalled();
     });

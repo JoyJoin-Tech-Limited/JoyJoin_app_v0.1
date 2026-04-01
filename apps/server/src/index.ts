@@ -1,7 +1,7 @@
 // Load environment variables from .env file (MUST be first)
 import "dotenv/config";
 
-import express from "express";
+import express, { type Request } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
@@ -26,7 +26,7 @@ app.use(metricsMiddleware);
 // Capture the original signed bytes for WeChat Pay webhook verification before
 // JSON parsing consumes the request stream.
 app.use(express.json({
-  verify: (req: any, _res, buf) => {
+  verify: (req: Request, _res, buf) => {
     const url = req.originalUrl ?? req.url ?? "";
     if (url === "/api/webhooks/wechat-pay" || url.startsWith("/api/webhooks/wechat-pay?")) {
       if (buf.length <= 1024 * 1024) {

@@ -1,11 +1,24 @@
 import "express-session";
+import type { AdminAccount } from "@shared/schema";
+
+type AdminRole = AdminAccount["role"];
 
 declare module "express-session" {
   interface SessionData {
-    userId: string;
-    /** New admin_accounts-based admin session */
-    adminAccountId: string;
-    /** Cached admin role for quick RBAC checks */
-    adminRole: string;
+    userId?: string;
+    adminAccountId?: string;
+    adminRole?: AdminRole;
+    verifiedPhoneNumber?: string;
+    debugTest?: number;
+    isAdmin?: boolean;
+    oauthState?: string;
+  }
+}
+
+declare module "express-serve-static-core" {
+  interface Request {
+    rawBody?: string;
+    adminAccount?: AdminAccount;
+    adminRole?: AdminRole;
   }
 }

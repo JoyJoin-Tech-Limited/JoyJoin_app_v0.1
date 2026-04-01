@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// TODO: Restrict to development only before production launch
-// Currently enabled in production for internal testing
+import { assertProductionAuthDebugSurfaceAllowed } from '../auth/policy';
 
 import { storage } from '../storage';
 
 async function bypassLogin() {
   try {
+    assertProductionAuthDebugSurfaceAllowed('bypassLogin CLI');
     // Get command line arguments
     const args = process.argv.slice(2);
     
@@ -21,7 +21,7 @@ async function bypassLogin() {
     const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
     if (!expectedKey) {
       console.error('❌ Error: ADMIN_CREATE_SECRET_KEY not set in .env file');
-      console.error('Please add: ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678');
+      console.error('Please add ADMIN_CREATE_SECRET_KEY to your local environment before retrying.');
       process.exit(1);
     }
 
@@ -44,7 +44,7 @@ async function bypassLogin() {
     const user = existingUsers[0];
 
     // Set default archetype if none exists
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       hasCompletedPersonalityTest: true,
     };
 
@@ -63,8 +63,9 @@ async function bypassLogin() {
     console.log('\n   User can now access the app without completing the personality test');
 
     process.exit(0);
-  } catch (error: any) {
-    console.error('❌ Error bypassing test:', error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error bypassing test:', message);
     process.exit(1);
   }
 }
