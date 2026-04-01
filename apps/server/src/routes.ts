@@ -23,6 +23,15 @@ import type { ArchetypeName } from "./archetypeConfig";
 import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 import { getMetricsText } from "./middleware/metrics";
 import { registerHealthRoutes } from "./healthRoutes";
+import { logger } from "./lib/logger";
+import {
+  assertValidTransition as assertValidEventPoolTransition,
+  InvalidTransitionError as InvalidPoolTransitionError,
+} from "./lib/stateTransitions";
+import {
+  checkVenueDataQuality,
+  normalizeVenueQualityRecord,
+} from "./lib/venueDataQuality";
 
 type Traits = {
   affinity: number;
@@ -134,6 +143,36 @@ type DbTransaction = NeonDatabase<typeof schema>;
 
 function getActingAdminId(req: any): string {
   return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+}
+
+function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!body) return {};
+
+  const allowedKeys = [
+    "name",
+    "type",
+    "city",
+    "district",
+    "clusterId",
+    "districtId",
+    "commissionRate",
+    "tags",
+    "cuisines",
+    "priceRange",
+    "maxConcurrentEvents",
+    "decorStyle",
+    "tasteIntensity",
+    "barThemes",
+    "alcoholOptions",
+    "vibeDescriptor",
+    "isActive",
+  ] as const;
+
+  return Object.fromEntries(
+    allowedKeys
+      .filter((key) => body[key] !== undefined)
+      .map((key) => [key, body[key]]),
+  );
 }
 
 // 12个社交氛围原型题目映射表（与前端personalityQuestions.ts保持一致）
@@ -347,6 +386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health and readiness endpoints must be before session middleware for cloud checks
   registerHealthRoutes(app);
+
+  // Prometheus-style metrics endpoint — internal use only.
+  // Returns plain-text Prometheus exposition format for scraping.
+  app.get("/api/metrics", async (req, res) => {
+    try {
+      const text = await getMetricsText();
+      res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+      res.status(200).send(text);
+    } catch (error) {
+      logger.error("Error generating /api/metrics", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      res.status(500).send("# Error generating metrics\n");
+    }
+  });
 
   // Reverse geocode endpoint - converts GPS coordinates to city/district
   // Uses Amap API for accurate Chinese address resolution
@@ -1013,9 +1068,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
       
       let nextStep: OnboardingStep;
-      if (!user.hasCompletedRegistration) {
+      // NOTE: hasCompletedRegistration is a legacy flag (set when essential data is saved).
+      // We no longer use it as the primary gate so that users who authenticated via WeChat
+      // and completed the personality test (hasCompletedPersonalityTest=true) are correctly
+      // advanced to 'essential-data' rather than being looped back to 'onboarding'.
+      // The 'onboarding' step is kept as a legacy/fallback value that the AuthenticatedRouter
+      // maps to /personality-test; it is only returned when hasCompletedRegistration is false
+      // AND the personality test has also not been completed, so truly-new users still see it.
+      if (!user.hasCompletedPersonalityTest && !user.hasCompletedRegistration) {
+        // Truly new user: no personality test and no legacy registration — send to onboarding
+        // (AuthenticatedRouter treats 'onboarding' as a redirect to /personality-test).
         nextStep = 'onboarding';
       } else if (!user.hasCompletedPersonalityTest) {
+        // Personality test started but not finished (or legacy user missing the flag).
         nextStep = 'personality-test';
       } else if (!profileEssentialComplete) {
         nextStep = 'essential-data';
@@ -7532,7 +7597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
       const profileEssentialComplete = !!(user.displayName && user.gender && user.currentCity);
       let nextStep: OnboardingStep;
-      if (!user.hasCompletedRegistration) nextStep = 'onboarding';
+      // Keep consistent with /api/auth/user: gate on hasCompletedPersonalityTest rather than
+      // hasCompletedRegistration so post-WeChat-auth users advance correctly.
+      if (!user.hasCompletedPersonalityTest && !user.hasCompletedRegistration) nextStep = 'onboarding';
       else if (!user.hasCompletedPersonalityTest) nextStep = 'personality-test';
       else if (!profileEssentialComplete) nextStep = 'essential-data';
       else if (!user.hasCompletedInterestsCarousel) nextStep = 'extended-data';
@@ -7954,6 +8021,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Venue Data Quality — admin-facing summary of missing/invalid venue data.
+  // Must be registered before /:id to avoid the segment matching "data-quality".
+  app.get("/api/admin/venues/data-quality", requireAdmin, async (_req, res) => {
+    try {
+      const venues = await storage.getAllVenues();
+      const report = checkVenueDataQuality(venues.map((venue) => normalizeVenueQualityRecord(venue)));
+      res.json(report);
+    } catch (error) {
+      logger.error("Error running venue data quality check", { error: String(error) });
+      res.status(500).json({ message: "Failed to run venue data quality check" });
+    }
+  });
+
   // Venue Management - Get venue details
   app.get("/api/admin/venues/:id", requireAdmin, async (req, res) => {
     try {
@@ -8006,9 +8086,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         vibeDescriptor: vibeDescriptor || null,
       });
 
+      logAdminAudit({
+        action: 'VENUE_CREATED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'venue',
+        targetEntityId: venue.id,
+        context: { name: venue.name, city: venue.city, type: venue.type },
+      });
+
       res.json(venue);
     } catch (error) {
-      console.error("Error creating venue:", error);
+      logger.error("Error creating venue", { error: String(error) });
       res.status(500).json({ message: "Failed to create venue" });
     }
   });
@@ -8017,9 +8106,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/venues/:id", requireAdmin, async (req, res) => {
     try {
       const venue = await storage.updateVenue(req.params.id, req.body);
+      logAdminAudit({
+        action: 'VENUE_UPDATED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'venue',
+        targetEntityId: req.params.id,
+        after: buildVenueAuditAfter(req.body),
+      });
       res.json(venue);
     } catch (error) {
-      console.error("Error updating venue:", error);
+      logger.error("Error updating venue", { venueId: req.params.id, error: String(error) });
       res.status(500).json({ message: "Failed to update venue" });
     }
   });
@@ -8028,9 +8125,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/venues/:id", requireAdmin, async (req, res) => {
     try {
       await storage.deleteVenue(req.params.id);
+      logAdminAudit({
+        action: 'VENUE_DELETED',
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: 'venue',
+        targetEntityId: req.params.id,
+      });
       res.json({ message: "Venue deleted successfully" });
     } catch (error) {
-      console.error("Error deleting venue:", error);
+      logger.error("Error deleting venue", { venueId: req.params.id, error: String(error) });
       res.status(500).json({ message: "Failed to delete venue" });
     }
   });
@@ -8664,10 +8768,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.body
         );
       }
-      
+
+      // Emit audit log when event status is mutated
+      if (req.body.status && req.body.status !== oldEvent.status) {
+        logAdminAudit({
+          action: 'EVENT_STATUS_CHANGED',
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: 'event',
+          targetEntityId: eventId,
+          before: { status: oldEvent.status },
+          after: { status: req.body.status },
+          context: { reason: req.body.reason },
+        });
+      }
+
       res.json(updatedEvent);
     } catch (error) {
-      console.error("Error updating event:", error);
+      logger.error("Error updating event", { eventId: req.params.id, error: String(error) });
       res.status(500).json({ message: "Failed to update event" });
     }
   });
@@ -8830,20 +8948,92 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       }
       
       updates.updatedAt = new Date();
-      
+
+      // ── State transition guard ────────────────────────────────────────
+      // If a status change is requested, validate it against the allowed
+      // transition graph before persisting anything.
+      let oldStatus: string | undefined;
+      if (updates.status) {
+        const [currentPool] = await db
+          .select({ status: eventPools.status })
+          .from(eventPools)
+          .where(eq(eventPools.id, req.params.id));
+
+        if (!currentPool) {
+          return res.status(404).json({ message: "Event pool not found" });
+        }
+
+        oldStatus = currentPool.status ?? undefined;
+
+        try {
+          assertValidEventPoolTransition('event_pool', oldStatus, updates.status);
+        } catch (transitionErr) {
+          if (transitionErr instanceof InvalidPoolTransitionError) {
+            return res.status(409).json({
+              message: transitionErr.message,
+              code: 'INVALID_TRANSITION',
+              from: oldStatus,
+              to: updates.status,
+            });
+          }
+          throw transitionErr;
+        }
+      }
+
+      // Optimistic concurrency control: when status is being mutated, only
+      // update the row if the status is still the value we just validated.
+      const whereClause = updates.status && oldStatus
+        ? and(
+            eq(eventPools.id, req.params.id),
+            eq(eventPools.status, oldStatus),
+          )
+        : eq(eventPools.id, req.params.id);
+
       const [pool] = await db
         .update(eventPools)
         .set(updates)
-        .where(eq(eventPools.id, req.params.id))
+        .where(whereClause)
         .returning();
       
       if (!pool) {
+        if (updates.status && oldStatus) {
+          const [latestPool] = await db
+            .select({ id: eventPools.id, status: eventPools.status })
+            .from(eventPools)
+            .where(eq(eventPools.id, req.params.id));
+
+          if (!latestPool) {
+            return res.status(404).json({ message: "Event pool not found" });
+          }
+
+          return res.status(409).json({
+            message: "Event pool status changed during update. Please retry.",
+            code: "STALE_STATUS",
+            from: oldStatus,
+            current: latestPool.status,
+            to: updates.status,
+          });
+        }
+
         return res.status(404).json({ message: "Event pool not found" });
       }
-      
+
+      // Emit audit log when the status is mutated
+      if (updates.status && updates.status !== oldStatus) {
+        logAdminAudit({
+          action: 'EVENT_POOL_STATUS_CHANGED',
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: 'event_pool',
+          targetEntityId: pool.id,
+          before: { status: oldStatus },
+          after: { status: pool.status },
+        });
+      }
+
       res.json(pool);
     } catch (error) {
-      console.error("Error updating event pool:", error);
+      logger.error("Error updating event pool", { poolId: req.params.id, error: String(error) });
       res.status(500).json({ message: "Failed to update event pool" });
     }
   });

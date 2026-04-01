@@ -44,6 +44,14 @@ export const ADMIN_AUDIT_ACTIONS = [
   'ATTENDANCE_OVERRIDE',
   // Financial
   'PAYMENT_REFUND_INITIATED',
+  // Venue management
+  'VENUE_CREATED',
+  'VENUE_UPDATED',
+  'VENUE_DELETED',
+  // Event management
+  'EVENT_STATUS_CHANGED',
+  // Event pool management
+  'EVENT_POOL_STATUS_CHANGED',
   // Runtime fallback for malformed / untyped callers
   'OTHER',
 ] as const;

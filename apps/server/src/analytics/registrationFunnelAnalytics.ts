@@ -273,14 +273,14 @@ async function getFunnelStages(): Promise<FunnelStage[]> {
     .where(sql`${users.hasCompletedInterestsCarousel} = true`);
   const l2Engaged = l2EngagedResult?.count || 0;
 
-  // 阶段4: L3推断 — personality test completed (modern completion signal)
+  // 阶段4: L3推断（完成人格测试，有AI推断数据）
   const [l3InferredResult] = await db
     .select({ count: count() })
     .from(users)
     .where(sql`${users.hasCompletedPersonalityTest} = true`);
   const l3Inferred = l3InferredResult?.count || 0;
 
-  // 阶段5: 注册完成 — personality test AND essential profile data present
+  // 阶段5: 注册完成（完成必要资料，hasCompletedRegistration=true）
   const [completedResult] = await db
     .select({ count: count() })
     .from(users)
