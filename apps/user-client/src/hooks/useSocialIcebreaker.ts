@@ -52,6 +52,10 @@ interface UseSocialIcebreakerReturn {
   completeDiceChallenge: () => Promise<void>;
   isStarting: boolean;
   isAdvancing: boolean;
+  /** The last action error, or null if no error. */
+  error: IcebreakerError | null;
+  /** Clear the current action error. */
+  clearError: () => void;
 }
 
 /**
@@ -101,6 +105,7 @@ export function useSocialIcebreaker({
   const [isStarting, setIsStarting] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [error, setError] = useState<IcebreakerError | null>(null);
   const [isDocumentVisible, setIsDocumentVisible] =
     useState(typeof document === 'undefined' || document.visibilityState === 'visible');
   const startedRef = useRef(false);
@@ -210,6 +215,7 @@ export function useSocialIcebreaker({
       setAndCacheSocialSessionId(data.socialSessionId);
     } catch (error) {
       console.error('[useSocialIcebreaker] startSession error:', error);
+      setError(await classifyError(error));
       startedRef.current = false;
     } finally {
       setIsStarting(false);
@@ -356,5 +362,7 @@ export function useSocialIcebreaker({
     completeDiceChallenge,
     isStarting,
     isAdvancing,
+    error,
+    clearError: () => setError(null),
   };
 }

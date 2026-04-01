@@ -28,6 +28,7 @@ import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 import { getMetricsText } from "./middleware/metrics";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
+import { broadcastPoolRegistrationAdded } from "./eventBroadcast";
 import {
   assertValidTransition as assertValidEventPoolTransition,
   InvalidTransitionError as InvalidPoolTransitionError,
@@ -51,6 +52,28 @@ import { z } from "zod";
 
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
+type UserInterestSignalRow = typeof userInterestSignals.$inferSelect;
+
+/**
+ * Batch-load interest signals for multiple users.
+ * Returns a Map<userId, UserInterestSignal[]>.
+ */
+async function loadInterestSignalsByUserIds(
+  userIds: string[],
+): Promise<Map<string, UserInterestSignalRow[]>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(userInterestSignals)
+    .where(inArray(userInterestSignals.userId, userIds));
+  const map = new Map<string, UserInterestSignalRow[]>();
+  for (const row of rows) {
+    const existing = map.get(row.userId) ?? [];
+    existing.push(row);
+    map.set(row.userId, existing);
+  }
+  return map;
+}
 
 function getActingAdminId(req: any): string {
   return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
@@ -257,6 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerAuthRoutes(app);
   registerOnboardingRoutes(app);
+  registerPaymentRoutes(app);
 
   // Profile stats endpoint
   app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
@@ -458,16 +482,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.end();
   });
-
-  app.post('/api/registration/chat/complete', async (_req: any, res) => {
-    return res.status(410).json({
-      code: "chat_registration_deprecated",
-      message: "聊天注册已下线，请使用新的 V4 引导流程（/personality-test）。Chat registration is no longer supported, please use the active V4 onboarding flow.",
-      route: '/personality-test',
-    });
-  });
-
-
   // ============ Registration Session Telemetry Routes ============
   
   // Create a new registration session (called when chat registration starts)
@@ -558,7 +572,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
-  registerPaymentRoutes(app);
   registerIcebreakerRoutes(app);
 
   // Profile routes
@@ -2382,6 +2395,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       console.log("[BlindBoxPayment] updated eventPool after registration:", updatedPool);
+
+      broadcastPoolRegistrationAdded(
+        pool.id,
+        undefined,
+        userId,
+        updatedPool?.totalRegistrations ?? pool.totalRegistrations + 1,
+      );
 
       // ✅ 返回报名信息（前端目前只需要知道成功了 & 池子信息）
       return res.json({

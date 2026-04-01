@@ -284,8 +284,7 @@ export function SocialIcebreakerOrchestrator({
     await generateDiceChallenges(participants);
   };
 
-  const handleCompleteDice = async (diceUserId: string) => {
-    if (diceUserId !== userId) return;
+  const handleCompleteDice = async () => {
     await completeDiceChallenge();
   };
 

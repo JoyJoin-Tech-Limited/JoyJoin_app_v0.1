@@ -269,7 +269,7 @@ describe("PaymentService — handleWebhook", () => {
       service.handleWebhook({
         headers: {},
         rawBody: "{}",
-      })
+      } as any)
     ).rejects.toMatchObject({ status: 400 });
   });
 });

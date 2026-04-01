@@ -87,7 +87,7 @@ export default function EventPoolDetailDrawer({
         // Toast notification
         toast({
           title: "🎉 新朋友加入",
-          description: `${message.data.archetype} 刚刚报名`,
+          description: `${message.data.archetype || "新朋友"} 刚刚报名`,
           duration: 3000,
         });
       }
