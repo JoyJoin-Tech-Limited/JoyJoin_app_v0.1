@@ -112,7 +112,7 @@ export default function MatchingStateLayout({
       )}
 
       {/* ── Main content ── */}
-      <div className="relative z-10 flex flex-col items-center px-5 pb-12 pt-4">
+      <div className="relative z-10 flex flex-col items-center px-5 pb-12 pb-safe pt-4">
         {/* Hero slot */}
         {hero}
 
