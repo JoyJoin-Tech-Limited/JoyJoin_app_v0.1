@@ -99,7 +99,12 @@ export default function MatchingStateLayout({
             </Button>
           )}
           {title && (
-            <h1 className="ml-2 flex-1 text-sm font-semibold text-white/90 line-clamp-1">
+            <h1
+              className={cn(
+                "flex-1 text-sm font-semibold text-white/90 line-clamp-1",
+                onBack && "ml-2",
+              )}
+            >
               {title}
             </h1>
           )}
