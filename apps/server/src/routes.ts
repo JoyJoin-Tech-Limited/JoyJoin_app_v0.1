@@ -10197,6 +10197,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
+        clientIp: getRequestClientIp(req),
       });
       
       res.json({
@@ -10230,6 +10231,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  const getRequestClientIp = (req: Request): string => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
+      || req.ip
+      || req.socket.remoteAddress
+      || "127.0.0.1";
+  };
+
   // ============ PAYMENT & WEBHOOKS ============
   
   // Create payment order for subscription
@@ -10258,6 +10267,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         relatedId,
         originalAmount,
         couponId,
+        clientIp: getRequestClientIp(req),
       });
       
       res.json(paymentResult);
@@ -10270,11 +10280,26 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // WeChat Pay webhook - receives payment status updates
   app.post("/api/webhooks/wechat-pay", async (req, res) => {
     try {
-      await paymentService.handleWebhook(req.body);
+      await paymentService.handleWebhook({
+        headers: req.headers,
+        rawBody: (req as typeof req & { rawBody?: Buffer }).rawBody,
+        payload: req.body,
+      });
       res.json({ code: "SUCCESS", message: "OK" });
     } catch (error) {
       console.error("Error processing WeChat Pay webhook:", error);
-      res.status(500).json({ code: "FAIL", message: "Internal server error" });
+      const status = typeof (error as { status?: unknown }).status === "number"
+        ? ((error as { status: number }).status)
+        : 500;
+      const message = status >= 500
+        ? "Internal server error"
+        : error instanceof Error
+          ? error.message
+          : "Request failed";
+      res.status(status).json({
+        code: "FAIL",
+        message,
+      });
     }
   });
   
