@@ -26,6 +26,16 @@ Core structure, ownership, and placement rules. Start here if you are new to the
 
 ---
 
+## Review and Quality
+
+Start here when reviewing a pull request or auditing code changes.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`code-review`](./code-review/SKILL.md) | Structured PR review using the Harness Engineering Framework — correctness, reliability, scalability, security, observability, and architecture fit. **Start here for all PR reviews.** Load domain-specific skills below for deeper review in affected areas. |
+
+---
+
 ## Safety, Correctness, and Operations
 
 Patterns for making the system reliable, secure, and observable.
