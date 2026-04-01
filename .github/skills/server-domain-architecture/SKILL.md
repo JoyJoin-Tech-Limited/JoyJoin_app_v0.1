@@ -103,14 +103,14 @@ Standalone auth and CLI modules remain at the `apps/server/src/` root:
 
 ## Quick examples
 
-**User says:** "Add a `POST /api/events/:id/publish` endpoint."
-**Apply this skill by:** Creating (or extending) `routes/domains/events.ts` for the handler, adding the persistence query to `repositories/eventsRepository.ts`, mounting the domain router in `routes.ts`, and keeping `storage.ts` unchanged.
+**User says:** "Add a `POST /api/payments/create` endpoint."
+**Apply this skill by:** Creating (or extending) `routes/domains/payments.ts` for the handler, adding the persistence query to `repositories/paymentsRepo.ts`, mounting the domain router in `routes.ts`, and keeping `storage.ts` unchanged.
 **Result:** New handler is in the correct domain module; `routes.ts` stays lean and `storage.ts` is not expanded.
 
 ---
 
-**User says:** "There is a `getUserInterests()` function in `storage.ts` — I need to modify it."
-**Apply this skill by:** Extracting the function to the nearest domain repository (e.g. `repositories/interestsRepository.ts`), updating `storage.ts` to delegate to the new location, and modifying the logic there. Do not add new code to `storage.ts` directly.
+**User says:** "There is a legacy payment helper in `storage.ts` — I need to modify it."
+**Apply this skill by:** Moving the logic into `repositories/paymentsRepo.ts`, updating `storage.ts` to delegate to the repository, and making the change there. Do not add new code to `storage.ts` directly.
 **Result:** Logic lives in a maintainable repository; `storage.ts` becomes a thinner facade.
 
 ## Troubleshooting

@@ -108,7 +108,7 @@ Sensitive flows should fail closed:
 ## Quick examples
 
 **User says:** "Add a new `/api/admin/reports` route that only operators can access."
-**Apply this skill by:** Adding `requireOperatorOrAbove` middleware from `adminAuth.ts` before the route handler. Log the admin action via `adminAuditLogger`. Do not duplicate inline auth logic.
+**Apply this skill by:** Adding `requireOperatorOrAbove` middleware from `adminAuth.ts` before the route handler. Log the admin action via `logAdminAudit`. Do not duplicate inline auth logic.
 **Result:** Route is consistently gated, audit-logged, and aligned with the existing admin RBAC matrix.
 
 ---
@@ -119,7 +119,8 @@ Sensitive flows should fail closed:
 
 ## Troubleshooting
 
-- **Unexpected 401 or 403 in production** — check whether the environment gate (`ENABLE_DEV_AUTH_TOOLS`) is mistakenly set, or whether the session cookie flags (`httpOnly`, `secure`, `sameSite`) are causing the cookie to be dropped. Also verify the auth middleware order in `routes.ts`.
+- **Unexpected 401 or 403 in production** — verify that the session cookie configuration (`domain`, `path`, `httpOnly`, `secure`, `sameSite`) matches the frontend origin and HTTPS settings so the cookie is not dropped. Also confirm the auth middleware order in `routes.ts`, that the expected guards (`requireUser`, `requireAdmin`, `requireOperatorOrAbove`) are present, and that RBAC role resolution returns the expected role.
+- **Unexpected 401 or 403 in local or CI when using dev auth tools** — verify that `ENABLE_DEV_AUTH_TOOLS=1` is set for the environment and that `isDevAuthToolsEnabled()` is only used in non-production code paths. Remember that dev auth tools remain hard-disabled in production regardless of this flag.
 - **Webhook signature verification failing** — confirm the raw request body is being read (not a parsed JSON body) for signature calculation. Also check that the WeChat Pay secret is correctly loaded from env.
 - **Dev-only route accessible in production** — the environment guard is missing or using the wrong env key. Always gate on `process.env.ENABLE_DEV_AUTH_TOOLS !== '1'` and verify the check exists server-side, not just client-side.
 - **New admin route returns 200 without auth** — `requireAdmin` middleware was omitted. Cross-reference against `docs/admin-rbac-matrix.md` and add the correct middleware.

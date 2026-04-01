@@ -144,7 +144,7 @@ Do not remove guardrail checks — if a convention changes, update the check, no
 
 - **Test added to the wrong workspace** — a server test was placed under `apps/user-client/` or vice versa. Move it to `apps/server/src/__tests__/` for server logic, or `apps/user-client/src/…/__tests__/` for client hooks and flows.
 - **`npm run test -w @joyjoin/user-client` exits without running tests** — the user-client `test` script is a placeholder. Run Vitest directly: `npx vitest run --config apps/user-client/vitest.config.ts`.
-- **Guardrail check fails in CI but passes locally** — the local env has a legacy identifier or real `.env` file that is not tracked. Check `scripts/check-guardrails.mjs` for the exact assertion that failed and clean the relevant file.
+- **Guardrail check passes in CI but fails locally** — the local env has a legacy identifier or real `.env` file that is not tracked. Check `scripts/check-guardrails.mjs` for the exact assertion that failed, then remove the legacy identifier from the local file or delete the untracked `.env` file.
 - **Invariant test passes even after a violation** — the test is reading a compiled/transpiled file instead of the TypeScript source. Point `fs.readFileSync` at the `.ts` source path, not `dist/`.
 
 ## Review checklist

@@ -100,7 +100,7 @@ if (nextStep !== 'discover') {
 ## Quick examples
 
 **User says:** "A user is stuck on the personality-test screen after completing it."
-**Apply this skill by:** Checking that `POST /api/personality-test/complete` correctly sets `hasCompletedPersonalityTest = true` on the `users` table, and that the client re-fetches `/api/auth/user` after completion so `nextStep` updates. Do not fix by client-side state override.
+**Apply this skill by:** Checking that `POST /api/auth/complete-personality-test` correctly sets `hasCompletedPersonalityTest = true` on the `users` table, and that the client re-fetches `/api/auth/user` after completion so `nextStep` updates. Do not fix by client-side state override.
 **Result:** Server state drives the step transition; the client follows the updated `nextStep`.
 
 ---

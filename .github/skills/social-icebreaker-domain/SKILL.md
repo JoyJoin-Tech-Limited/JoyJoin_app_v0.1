@@ -129,14 +129,14 @@ Lie detective phase — secrecy rules:
 ---
 
 **User says:** "Only the host should be able to advance the phase — how do I enforce this?"
-**Apply this skill by:** In the route handler for phase advancement, verify `req.user.id === session.hostId` server-side and return 403 if not. Do not rely on client-side conditional rendering alone.
+**Apply this skill by:** In the route handler for phase advancement, verify `req.session.userId === state.hostUserId` server-side and return 403 if not. Do not rely on client-side conditional rendering alone.
 **Result:** Host authority is enforced at the API layer regardless of client state.
 
 ## Troubleshooting
 
 - **Phase mismatch error — action rejected because phase is wrong** — the client submitted an action for a phase the server has already advanced past. Re-fetch current session state and re-render the correct phase UI before allowing the action.
 - **Reconnect restores stale state** — the client is using cached/memory state instead of re-fetching from `GET /api/social-icebreaker/:sessionId`. Ensure the hook re-fetches on mount/focus.
-- **Secrecy leak in lie-detective — player can see their own statements in the list** — the API is not filtering out the requesting user's own statements during the voting phase. Add a server-side filter: exclude statements where `authorId === req.user.id` when phase is `voting`.
+- **Secrecy leak in lie-detective — client payload includes `isLie` or other unrevealed truth data** — truth data should stay in the separate server-only lie-truths table. Store only sanitized statements in public session state and confirm the client reveals outcomes only after the server says they are resolved.
 - **Vote or statement not persisted before response returns** — the write is happening asynchronously after the response. Move `await tx.insert(...)` inside the transaction before `res.json(...)`.
 
 ## Review checklist
@@ -145,5 +145,5 @@ Lie detective phase — secrecy rules:
 - [ ] Session join is idempotent — joining an already-joined session returns current state
 - [ ] Phase actions are validated against the current phase before execution
 - [ ] Votes, statements, and completed challenges are persisted atomically before response
-- [ ] Lie-detective API filters out the requesting player's own statements during voting
+- [ ] Lie-detective truth data (`isLie`) stays server-only; public session state contains sanitized statements only
 - [ ] AI generation (topics, statements) is a side effect outside the transaction
