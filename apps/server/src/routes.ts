@@ -11,6 +11,7 @@ import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
+import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 import { paymentService } from "./paymentService";
 import { subscriptionService } from "./subscriptionService";
@@ -987,7 +988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', async (req: Request, res) => {
     // 🔧 DEBUG_AUTH logging (Phase 4.2)
-    if (process.env.DEBUG_AUTH === "1") {
+    if (isDebugAuthLoggingEnabled()) {
       console.log("[AUTH/USER]", {
         sid: req.sessionID,
         cookie: req.headers.cookie,
@@ -10517,7 +10518,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.post(
     "/api/webhooks/wechat-pay",
     webhookEndpointLimiter,
-    async (req: any, res) => {
+    async (req: Request, res) => {
       let rawBody: string;
       let payload: any;
       try {
@@ -13661,9 +13662,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // ============ Development Tools API Endpoints ============
-  // TODO: Restrict to development only before production launch
-  // Currently enabled in production for internal testing
-  
+  // Opt-in only outside production; omitted entirely from production registrations.
+  if (isDevAuthToolsEnabled()) {
+
   // Helper function to verify secret key
   function verifySecretKey(secretKey: string): { valid: boolean; error?: string; hint?: string } {
     const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
@@ -13673,18 +13674,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       return { 
         valid: false, 
         error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
-        hint: 'Add ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678 to .env'
+        hint: 'Add ADMIN_CREATE_SECRET_KEY to your local server environment before using dev auth tools.'
       };
     }
     
     if (secretKey !== expectedKey) {
       console.error('[DEV TOOLS] Secret key mismatch');
-      console.error('[DEV TOOLS] Expected length:', expectedKey.length);
-      console.error('[DEV TOOLS] Received length:', secretKey?.length || 0);
       return { 
         valid: false, 
         error: 'Invalid secret key',
-        hint: 'Use BYPASSSECRET12345678'
+        hint: 'Confirm the local ADMIN_CREATE_SECRET_KEY value matches your current shell/.env configuration.'
       };
     }
     
@@ -13692,7 +13691,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   }
 
   // Create admin account
-  app.post('/api/dev/admin/create', async (req: any, res) => {
+  app.post('/api/dev/admin/create', async (req: Request, res) => {
     try {
       const { phoneNumber, password, secretKey } = req.body;
 
@@ -13770,7 +13769,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Create user account with bypass
-  app.post('/api/dev/user/create', async (req: any, res) => {
+  app.post('/api/dev/user/create', async (req: Request, res) => {
     try {
       const { 
         phoneNumber, 
@@ -13819,7 +13818,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const existingUsers = await storage.getUserByPhone(phoneNumber);
       let user;
 
-      const userData: any = {
+      const userData: Record<string, unknown> = {
         password: hashedPassword,
         displayName,
         primaryArchetype: archetype,
@@ -13884,7 +13883,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Bypass personality test for current user
-  app.post('/api/dev/personality-test/bypass', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/dev/personality-test/bypass', isPhoneAuthenticated, async (req: Request, res) => {
     try {
       const { secretKey } = req.body;
       const userId = req.session.userId;
@@ -13912,7 +13911,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       }
 
       // Set default archetype if none exists
-      const updates: any = {
+      const updates: Record<string, unknown> = {
         hasCompletedPersonalityTest: true,
       };
 
@@ -13943,7 +13942,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Check secret key validity (debugging endpoint)
-  app.post('/api/dev/check-secret', async (req: any, res) => {
+  app.post('/api/dev/check-secret', async (req: Request, res) => {
     const { secretKey } = req.body;
     
     const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
@@ -13957,16 +13956,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     if (!DEV_SECRET_KEY) {
       return res.status(500).json({
         error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
-        hint: 'Server admin needs to add this to .env file'
+        hint: 'Add ADMIN_CREATE_SECRET_KEY to the local server environment before retrying.'
       });
     }
     
     if (secretKey !== DEV_SECRET_KEY) {
       return res.status(403).json({
         error: 'Secret key does not match',
-        hint: 'Expected: BYPASSSECRET12345678',
-        serverKeyLength: DEV_SECRET_KEY.length,
-        providedKeyLength: secretKey?.length || 0
+        hint: 'Confirm the local ADMIN_CREATE_SECRET_KEY value matches your current shell/.env configuration.'
       });
     }
     
@@ -13976,6 +13973,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       keyLength: secretKey.length
     });
   });
+
+  }
 
   app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
   app.use('/api/tts', isPhoneAuthenticated, ttsRoutes);

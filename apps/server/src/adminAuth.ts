@@ -8,16 +8,16 @@ type AdminRole = (typeof VALID_ADMIN_ROLES)[number];
 const INVALID_CREDENTIALS_MESSAGE = "用户名或密码错误";
 
 function getActingAdminId(req: Request): string {
-  return (req as any).adminAccount?.id ?? (req.session as any)?.userId ?? "unknown";
+  return req.adminAccount?.id ?? req.session.userId ?? "unknown";
 }
 
 async function establishAdminSession(req: Request, adminAccountId: string, adminRole: string) {
   await new Promise<void>((resolve, reject) => {
-    req.session.regenerate((err: any) => {
+    req.session.regenerate((err) => {
       if (err) return reject(err);
       req.session.adminAccountId = adminAccountId;
-      req.session.adminRole = adminRole;
-      req.session.save((saveErr: any) => {
+      req.session.adminRole = adminRole as AdminRole;
+      req.session.save((saveErr) => {
         if (saveErr) return reject(saveErr);
         resolve();
       });
@@ -26,16 +26,16 @@ async function establishAdminSession(req: Request, adminAccountId: string, admin
 }
 
 export const requireAdmin: RequestHandler = async (req, res, next) => {
-  const session = req.session as any;
+  const { adminAccountId, userId } = req.session;
 
-  if (session?.adminAccountId) {
+  if (adminAccountId) {
     try {
-      const adminAccount = await storage.getAdminAccountById(session.adminAccountId);
+      const adminAccount = await storage.getAdminAccountById(adminAccountId);
       if (!adminAccount || adminAccount.status !== "active") {
         return res.status(403).json({ message: "Forbidden - Admin access required" });
       }
-      (req as any).adminAccount = adminAccount;
-      (req as any).adminRole = adminAccount.role;
+      req.adminAccount = adminAccount;
+      req.adminRole = adminAccount.role;
       return next();
     } catch (error) {
       console.error("Error checking admin account status:", error);
@@ -43,13 +43,13 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
     }
   }
 
-  if (session?.userId) {
+  if (userId) {
     try {
-      const user = await storage.getUser(session.userId);
+      const user = await storage.getUser(userId);
       if (!user?.isAdmin) {
         return res.status(403).json({ message: "Forbidden - Admin access required" });
       }
-      (req as any).adminRole = "super_admin";
+      req.adminRole = "super_admin";
       return next();
     } catch (error) {
       console.error("Error checking admin status:", error);
@@ -61,7 +61,7 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
 };
 
 export const requireSuperAdmin: RequestHandler = (req, res, next) => {
-  const role = (req as any).adminRole;
+  const role = req.adminRole;
   if (role !== "super_admin") {
     return res.status(403).json({ message: "Forbidden - Super admin access required" });
   }
@@ -69,7 +69,7 @@ export const requireSuperAdmin: RequestHandler = (req, res, next) => {
 };
 
 export const requireOperatorOrAbove: RequestHandler = (req, res, next) => {
-  const role = (req as any).adminRole;
+  const role = req.adminRole;
   if (role !== "super_admin" && role !== "operator") {
     return res.status(403).json({ message: "Forbidden - Operator access required" });
   }
@@ -130,8 +130,7 @@ export function registerAdminAuthRoutes(app: Express) {
   });
 
   app.get("/api/admin/me", requireAdmin, async (req: Request, res) => {
-    const adminAccount = (req as any).adminAccount;
-    const session = req.session as any;
+    const adminAccount = req.adminAccount;
 
     if (adminAccount) {
       return res.json({
@@ -143,8 +142,8 @@ export function registerAdminAuthRoutes(app: Express) {
       });
     }
 
-    if (session?.userId) {
-      const user = await storage.getUser(session.userId);
+    if (req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
       return res.json({
         id: user?.id,
         username: user?.phoneNumber || user?.email,
@@ -191,7 +190,7 @@ export function registerAdminAuthRoutes(app: Express) {
       logAdminAudit({
         action: 'ADMIN_ACCOUNT_CREATED',
         adminId: getActingAdminId(req),
-        adminRole: (req as any).adminRole,
+        adminRole: req.adminRole,
         targetEntityType: 'admin_account',
         targetEntityId: account.id,
         context: { username: account.username, role: account.role, displayName: account.displayName },
@@ -228,7 +227,7 @@ export function registerAdminAuthRoutes(app: Express) {
       logAdminAudit({
         action: 'ADMIN_ACCOUNT_UPDATED',
         adminId: getActingAdminId(req),
-        adminRole: (req as any).adminRole,
+        adminRole: req.adminRole,
         targetEntityType: 'admin_account',
         targetEntityId: id,
         after: updates,
@@ -255,7 +254,7 @@ export function registerAdminAuthRoutes(app: Express) {
       logAdminAudit({
         action: 'ADMIN_PASSWORD_RESET',
         adminId: getActingAdminId(req),
-        adminRole: (req as any).adminRole,
+        adminRole: req.adminRole,
         targetEntityType: 'admin_account',
         targetEntityId: id,
         // newPassword is intentionally NOT logged

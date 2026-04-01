@@ -1,5 +1,4 @@
-// TODO: Restrict to development only before production launch
-// Currently enabled in production for internal testing
+// Development-only tools. These are loaded only for explicit local opt-in.
 
 const ARCHETYPES = [
   '开心柯基',
@@ -74,7 +73,7 @@ export const devTools = {
 Available Commands:
 ------------------
 window.dev.help()              - Show this help message
-window.dev.checkSecretKey()    - Test if secret key is valid (NEW!)
+window.dev.checkSecretKey()    - Validate local dev auth tool setup
 window.dev.archetypes()        - List all 12 archetypes
 window.dev.createAdmin()       - Create admin account (interactive)
 window.dev.createUser()        - Create user account (interactive)
@@ -90,7 +89,7 @@ window.dev.archetypes()
 
 // Create admin account
 window.dev.createAdmin()
-> Enter secret key: BYPASSSECRET12345678
+> Enter secret key from your local ADMIN_CREATE_SECRET_KEY config
 > Enter phone number: +8613800138000
 > Enter password: admin123
 
@@ -108,14 +107,14 @@ window.dev.bypassTest()
 Troubleshooting:
 ----------------
 - If getting "Invalid secret key", try window.dev.checkSecretKey()
-- Make sure you're using: BYPASSSECRET12345678
+- Confirm ADMIN_CREATE_SECRET_KEY is set in your local environment
 - Check server logs for detailed error messages
 
 Security:
 ---------
 ⚠️ All commands require secret key authentication
-⚠️ Currently enabled in production for internal testing
-⚠️ TODO: Disable in production before public launch
+⚠️ Requires explicit local opt-in and matching server-side dev flags
+⚠️ Not registered in production by default
     `);
   },
 

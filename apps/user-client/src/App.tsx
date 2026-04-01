@@ -328,16 +328,18 @@ function Router() {
 }
 
 function App() {
-  // Load dev tools in non-production environments for easier debugging
+  // Load dev tools only for explicit local opt-in. They are disabled in production builds by default.
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      import('./utils/devTools').then(module => {
-        (window as any).dev = module.devTools;
-        console.log('🔧 Dev tools loaded! Type window.dev.help() for commands');
-      }).catch(error => {
-        console.error('Failed to load dev tools:', error);
-      });
+    if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_TOOLS !== '1') {
+      return;
     }
+
+    import('./utils/devTools').then(module => {
+      window.dev = module.devTools;
+      console.log('🔧 Dev tools loaded! Type window.dev.help() for commands');
+    }).catch(error => {
+      console.error('Failed to load dev tools:', error);
+    });
   }, []);
 
   return (
