@@ -1,7 +1,65 @@
 # UI/UX Improvements: Matching & Reveal Flow
 
+> **Updated 2026-04-01** — expanded to document the full matching-state UI architecture including `MatchingStateLayout`, `MatchingWaitingScreen`, and the remaining matching-state screen family (PRs #387–#391).
+
 ## Overview
-This implementation adds a polished, animated reveal experience for the JoyJoin matching flow, featuring archetype-based visualizations and improved UX across the matching status and pool group detail pages.
+This document covers the polished matching-state UX and reveal experience for the JoyJoin pool matching flow, including the shared layout abstraction, the premium waiting screen, and the post-match ArchetypeOrbit reveal.
+
+---
+
+## Part 1 — Matching-State Architecture (PRs #387–#391)
+
+### Shared Layout: `MatchingStateLayout`
+**File**: `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
+
+All matching-state screens (waiting, no-match, join-error, etc.) use this shared layout shell. It provides:
+- The canonical dark background (`apps/user-client/src/assets/matching/shared/matching-bg.svg`)
+- A readability scrim overlay
+- Safe-area-aware header (optional back button + title)
+- Composition slots: `hero`, `copy`, `cta`, `footer`
+
+**New matching-state screens must extend `MatchingStateLayout`** — do not recreate the dark background or reimplement the layout shell for each screen.
+
+### `MatchingWaitingScreen` — Premium Blind-Pool Waiting UI
+**File**: `apps/user-client/src/components/MatchingWaitingScreen.tsx`
+
+A dark-mode premium waiting screen rendered via `MatchingStateLayout`. Supports three fill states:
+- `waiting` — pool has fewer than `minGroupSize` confirmed seats
+- `can_form` — pool has enough to form a group, final confirmation pending
+- `full` — pool is at capacity, matching imminent
+
+Props: `poolTitle`, `filledCount`, `minGroupSize` (default 4), `maxGroupSize` (default 6), `onRefresh`, `onWithdraw`, and optional `refreshIntervalSeconds`.
+
+### Full Matching-State Screen Family
+
+| Component | State | Location |
+|-----------|-------|----------|
+| `MatchingWaitingScreen` | Blind-pool waiting | `components/MatchingWaitingScreen.tsx` |
+| `NoMatchScreen` | No match found | `components/matching/NoMatchScreen.tsx` |
+| `JoinErrorScreen` | Registration/join error | `components/matching/JoinErrorScreen.tsx` |
+| `ExtendedDataEmptyScreen` | Insufficient profile data | `components/matching/ExtendedDataEmptyScreen.tsx` |
+| `TestIncompleteScreen` | Personality test not done | `components/matching/TestIncompleteScreen.tsx` |
+| `SurpriseMatchReveal` | Cinematic match reveal | `components/matching/SurpriseMatchReveal.tsx` |
+| `MatchPointsDisplay` | Match points summary | `components/matching/MatchPointsDisplay.tsx` |
+
+### Trigger-Based State Wiring
+
+`MatchingStatusPage.tsx` maps real app state (event status, pool fill count, WebSocket events) to the appropriate screen component. No placeholder timers or mocked transitions. Recovery / re-entry must be correct — a user who returns to the page after a refresh should land in the right state.
+
+### Asset Organisation
+
+```
+apps/user-client/src/assets/matching/
+├── shared/matching-bg.svg       ← canonical; imported by MatchingStateLayout
+├── waiting/matching-waiting-hero.svg
+├── no-match/no-match-hero.svg
+├── join-error/join-error-hero.svg
+└── extended-data-empty/extended-data-empty-hero.svg
+```
+
+---
+
+## Part 2 — Post-Match Reveal (ArchetypeOrbit)
 
 ## Changes Made
 

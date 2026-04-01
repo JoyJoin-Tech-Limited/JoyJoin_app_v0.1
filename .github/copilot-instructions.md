@@ -99,6 +99,8 @@ npm run db:push --force  # Force sync (use carefully)
 4. **Social Icebreaker** — primary in-event multi-phase session; see `docs/icebreaker-system.md`
 5. **WeChat Auth** — Mini Program `wx.login()` + OAuth2 web flow; see `wechatAuth.ts`
 6. **BottomNav Smart Routing** — center button dynamically routes based on user's current activity state
+7. **Matching-State UI** — shared `MatchingStateLayout` abstraction; canonical background; trigger-driven state mapping; see `docs/ui-matching-reveal-improvements.md`
+8. **AI Observability** — structured `AIResponseMeta` contract + `logAITrace()` trace logger; see `packages/shared/src/types/aiMeta.ts` and `apps/server/src/lib/aiTraceLogger.ts`
 
 ## CI/CD Pipeline
 
@@ -150,12 +152,17 @@ npm run db:push --force  # Force sync (use carefully)
 ## Key Documentation
 
 1. **`.github/copilot-instructions.md`** (this file) — Authoritative source of truth for active architecture
-2. **`PRODUCT_REQUIREMENTS.md`** — Full PRD (v1.3, last updated March 2026)
+2. **`PRODUCT_REQUIREMENTS.md`** — Full PRD (v1.3, last updated April 2026)
 3. **`DEVELOPER_QUICK_REFERENCE.md`** — Monorepo-aware developer quick reference
 4. **`QUICK_REFERENCE.md`** — ⚠️ Older reference, partially outdated; prefer DEVELOPER_QUICK_REFERENCE for file paths
 5. **`docs/onboarding-flow.md`** — Detailed onboarding flow documentation
 6. **`docs/icebreaker-system.md`** — Social Icebreaker full technical reference
-7. **`replit.md`** — Project architecture + history of recent changes
+7. **`docs/perf.md`** — Performance guardrails, lazy loading, WebP, matching asset centralization
+8. **`docs/ui-matching-reveal-improvements.md`** — Matching-state architecture and ArchetypeOrbit reveal
+9. **`docs/MATCHING_ALGORITHM_REFERENCE.md`** — Full pair scoring and group formation reference
+10. **`docs/interest-signal-boost.md`** — Interest Signal Boost feature and signal boundary invariant
+11. **`docs/AI_INTEGRATION_PLAN.md`** — AI roadmap, `AIResponseMeta` contract, observability
+12. **`replit.md`** — Project architecture + history of recent changes
 
 ### Onboarding Flow Architecture
 
@@ -449,7 +456,143 @@ activeAssessmentSessionId: string | null;
 - **Interest Fields Removed**: `interestsTop`, `primaryInterests`, `topicsHappy`, `topicsAvoid` moved to `user_interests` table (old fields deprecated but not dropped).
 - **Language Selection**: No longer collected in onboarding (moved to event pool registration).
 
+---
+
+## Matching-State UI Architecture
+
+> **Guardrail:** All matching-state screens must extend the shared `MatchingStateLayout` rather than creating one-off dark-background layouts. Do not duplicate `matching-bg.svg`.
+
+### Shared Layout — `MatchingStateLayout`
+
+**File:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
+
+Full-screen layout shell shared by all matching-state screens. Provides:
+- Canonical dark background (`apps/user-client/src/assets/matching/shared/matching-bg.svg`) + readability scrim
+- Safe-area-aware header (optional back button + title)
+- Composition slots: `hero`, `copy`, `cta`, `footer`
+
+### Active Matching-State Screens
+
+| Component | State | File |
+|-----------|-------|------|
+| `MatchingWaitingScreen` | Blind-pool waiting (fill states: `waiting` / `can_form` / `full`) | `components/MatchingWaitingScreen.tsx` |
+| `NoMatchScreen` | No match found | `components/matching/NoMatchScreen.tsx` |
+| `JoinErrorScreen` | Join / registration error | `components/matching/JoinErrorScreen.tsx` |
+| `ExtendedDataEmptyScreen` | Insufficient profile data | `components/matching/ExtendedDataEmptyScreen.tsx` |
+| `TestIncompleteScreen` | Personality test not done | `components/matching/TestIncompleteScreen.tsx` |
+| `SurpriseMatchReveal` | Cinematic match reveal | `components/matching/SurpriseMatchReveal.tsx` |
+| `MatchPointsDisplay` | Match points summary | `components/matching/MatchPointsDisplay.tsx` |
+
+### Rules
+
+1. **State must be trigger-driven** — `MatchingStatusPage.tsx` maps real app state (event status, fill count, WebSocket events) to the correct screen. No placeholder timers or mocked transitions.
+2. **Recovery / re-entry must be correct** — a user returning after a refresh should land in the right state.
+3. **Never duplicate `matching-bg.svg`** — always import via `MatchingStateLayout`.
+4. **Asset locations:** `apps/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
+
+Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
+
+---
+
+## Signal Boundaries & AI Metadata
+
+### `user_interest_signals` Boundary (enforced, PR #379)
+
+- `user_interest_signals` are **bounded enrichment inputs** — they feed AI explanation layers only (match explanation connection points, icebreaker topic generation).
+- They must **not** be reintroduced as deterministic pair-score inputs. `calculateInterestScoreAsync()` in `poolMatchingService.ts` reads **only** from `user_interests`.
+- This invariant is enforced by tests in `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
+- Do not add `user_interest_signals` reads to `calculateInterestScoreAsync` or any function in the deterministic scoring path.
+
+### Layer Separation
+
+Keep these three layers clearly separated:
+
+| Layer | What it does | Source of truth |
+|-------|-------------|-----------------|
+| **Deterministic matching** | Pair scores, group formation | `poolMatchingService.ts` — reads `user_interests` only |
+| **AI explanation metadata** | Human-readable reasoning, connection points | `matchExplanationService.ts` — may enrich from `user_interest_signals` |
+| **Optional personalization** | Interest signal boost, profile tagline, vibe brief | AI enrichment surfaces — no matching score impact |
+
+### `AIResponseMeta` Contract
+
+`packages/shared/src/types/aiMeta.ts` is the shared metadata contract for all AI-derived surfaces. Use the builder helpers:
+- `buildLiveAIMeta(provider, promptVersion?)` — fresh LLM response
+- `buildCachedAIMeta(provider?)` — cache-hit response
+- `buildFallbackAIMeta(promptVersion?)` — curated fallback
+
+New AI service code should attach `AIResponseMeta` to response shapes. Do not add ad-hoc `fromCache` / `provider` / `generatedAt` fields outside this contract.
+
+### AI Trace Logger
+
+`apps/server/src/lib/aiTraceLogger.ts` — `logAITrace()` emits `[AITrace] {json}` structured single-line logs. Instrument new AI service call sites with `logAITrace()`.
+
+---
+
+## Performance Defaults
+
+### Route Lazy Loading (active default, PR #386)
+
+All non-critical page components must use `React.lazy()` in `App.tsx`. Do **not** add static imports for non-critical pages.
+
+```typescript
+// ✅ Correct — non-critical pages
+const EventsPage = lazy(() => import("@/pages/EventsPage"));
+
+// ❌ Wrong — static import for non-critical page
+import EventsPage from "@/pages/EventsPage";
+```
+
+### Admin Code Separation (PR #385)
+
+Admin-only code must not be imported into `apps/user-client`. Keep it in `apps/admin-client`. Importing admin pages or utilities into the user bundle inflates it unnecessarily.
+
+### Asset Guidelines
+
+- **Hero images:** Use WebP format + `decoding="async"` on `<img>` elements (PR #388). PNG is no longer the default for above-fold images.
+- **Archetype PNGs:** 12 files × ~120–300 KB each. Defer/gate loading — do not preload all 12 in the critical path.
+- **Matching assets:** Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate per-screen.
+- **Asset prefetching:** Gate on real activity state. Do not unconditionally prefetch large assets for no-activity users.
+- **SVGs:** Optimise (SVGO) before committing.
+
+### Vite Chunk Strategy
+
+Vendor libraries (`react`, `framer-motion`, `@tanstack/react-query`) go into a stable vendor chunk. Feature routes are lazy-loaded. Only preload the critical vendor chunk and initial route.
+
+Full reference: `docs/perf.md`
+
+---
+
+## Onboarding Behavior Notes
+
+### Artificial Wait States
+
+Do **not** introduce artificial wait timers in onboarding steps. The profile review "analyzing" phase (PR #383) was reduced from 2500 ms to 1200 ms (500 ms for reduced-motion) and made skippable after 600 ms. Future onboarding animations should follow the same principle: minimum necessary duration, skippable once data is ready.
+
+### Post-Review Limited Browse Mode
+
+`FinalProfileReviewPage` includes a scoped experiment ("先浏览 →" CTA) that allows users to enter read-only event discovery after profile review without completing pool registration. This is controlled by `ENABLE_LIMITED_BROWSE_MODE` constant and `?exp=no_limited_browse` / `?exp=limited_browse` URL flags. **Do not generalize this pattern** or add permanent browse-mode routing without confirming the experiment status and reviewing the gating logic in `FinalProfileReviewPage.tsx` and `LimitedBrowseBanner`.
+
+### Onboarding Data Reuse
+
+Onboarding interest data (`user_interests`) is reused downstream:
+- Seeds the optional **Interest Signal Boost** pre-match calibration (surfaced after pool registration in `SuccessCelebration`)
+- Pre-selects the user's highest-heat interest for the boost UX (no re-asking)
+- Enthusiasm level in `user_interest_signals` is always **server-derived** from `user_interests.heat` — the client never sends it
+
+### Blind Pool Join Flow
+
+The current join flow includes (in order):
+1. `BlindPoolTrustExplainer` — explains how the blind pool works
+2. `PreJoinVibeBriefSheet` — pre-join vibe brief with atmosphere and intent signals
+3. `WhyThisFitsCard` — personalised AI-generated reasons for the pool fit
+4. Registration / payment flow
+5. `SuccessCelebration` → optional Interest Signal Boost CTA
+
+---
+
 ## Updated Pool Matching Algorithm (Active 6-Dimension Pair-Score Model)
+
+> **Signal boundary:** `user_interest_signals` are excluded from deterministic pair scoring. `calculateInterestScoreAsync()` reads only from `user_interests`. See **Signal Boundaries & AI Metadata** section above.
 
 ### Algorithm Overview
 
@@ -474,8 +617,6 @@ The matching algorithm calculates compatibility between users using **6 weighted
 - Preference: 现有酒吧/饭店场景分化有限，保留为轻量场景适配信号
 
 ### Dimension Details
-
-#### 1. Chemistry Score (28%) - `calculateChemistryScore()`
 
 #### 1. Chemistry Score (28%) — `calculateChemistryScore()`
 

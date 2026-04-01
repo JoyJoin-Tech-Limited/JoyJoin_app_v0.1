@@ -232,13 +232,7 @@ heatBonus += 10  // one level-3 + one level-2 (heat=10)
 heatBonus += 8   // both level-2
 heatBonus += 3   // both have any heat > 0
 
-// Step 3 — Signal Alignment Bonus (capped at +10, optional)
-// Applied only when both users have completed the Interest Signal Boost for the same interest.
-// signalBonus += 5  if discussionStyle matches exactly
-// signalBonus += 3  if |conversationDepth₁ - conversationDepth₂| ≤ 1
-// signalBonus = min(signalBonus, 10)
-
-interestScore = min(100, baseScore + heatBonus + signalBonus)
+interestScore = min(100, baseScore + heatBonus)
 ```
 
 Heat levels: `5` (level 1 / casual), `10` (level 2 / active), `25` (level 3 / passionate)
@@ -247,7 +241,15 @@ Default when one or both users have no interest data:
 - Both missing → 70 (neutral)
 - One missing → 30 (low)
 
-**Signal Alignment Bonus note:** The signal bonus is sourced from the optional `user_interest_signals` table (Interest Signal Boost feature). It fires only when both users have submitted a boost signal for the same shared interest. The bonus is intentionally small (+5/+3, cap +10) to avoid distorting the broader match score while still providing a real, measurable quality path for engaged users. `enthusiasmLevel` in this table is always server-derived from the user's onboarding heat data — it is never self-reported in the boost flow.
+> **Architectural boundary (enforced, PR #379):** `user_interest_signals` are **NOT** used in
+> deterministic pair-score computation. The `calculateSignalAlignmentBonus()` function and
+> `loadInterestSignalLookup()` have been removed from `poolMatchingService.ts`.
+> `calculateInterestScoreAsync` reads **only** from `user_interests` (topic overlaps + heat levels).
+> Changing or omitting `user_interest_signals` data does not affect pair scores or group formation.
+> This invariant is verified by `apps/server/src/__tests__/interestSignalBoundary.test.ts`.
+>
+> `user_interest_signals` feed AI enrichment layers only (match explanation connection points and
+> icebreaker topic generation prompts). See `docs/interest-signal-boost.md` for full details.
 
 **Interest model note:** Temporal heat decay was evaluated and rejected. The active model uses **stable declared interests** kept fresh by two explicit mechanisms: (1) an editable interest carousel at `/profile/edit/interests` (`EditInterestsCarouselPage`), and (2) a post-event interest nudge step in `EventFeedbackFlow` that bumps heat for relevant topics. `user_interests.updated_at` reflects intentional engagement, not time since signup. See `docs/AI_INTEGRATION_PLAN.md §2.2` for rationale.
 

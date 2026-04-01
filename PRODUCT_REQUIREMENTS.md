@@ -75,9 +75,75 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-03-23)
+## 🆕 Recent Updates (Last updated: 2026-04-01)
 
-### 2026 Milestones
+### 2026 Milestones (Mar–Apr 2026)
+
+**14. Matching-State UI System** 🎨 *(PRs #387–#391, 2026-03-27 to 2026-04-01)*
+- Shared `MatchingStateLayout` abstraction provides a canonical dark background and slot-based composition (hero / copy / CTA / footer) for all matching-state screens
+- `MatchingWaitingScreen` — premium dark-mode blind-pool waiting UI with real fill-state transitions (`waiting` → `can_form` → `full`)
+- Full matching-state screen family: `NoMatchScreen`, `JoinErrorScreen`, `ExtendedDataEmptyScreen`, `TestIncompleteScreen`, `SurpriseMatchReveal`, `MatchPointsDisplay`
+- All screens wired to real trigger conditions and app state — no placeholder timers or mocked transitions
+- Canonical background centralised in `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories
+
+**15. Blind Pool Join Flow Enhancements** 🎰 *(PRs #376, #381, #382, 2026-03-23 to 2026-03-27)*
+- `BlindPoolTrustExplainer` — in-flow trust explainer card explaining how the blind pool works (rendered in `JoinEventPoolSheet.tsx`)
+- `PreJoinVibeBriefSheet` — pre-join vibe brief surfacing pool atmosphere and intent signals before a user commits
+- `WhyThisFitsCard` — personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) shown before joining
+
+**16. Post-Match Group Theme & Companion** 🎭 *(PR #377)*
+- Group theme tags and a companion summary line in squad reveal (`SquadUnboxingFlow.tsx`)
+
+**17. AI Onboarding — Profile Tagline** 🤖 *(PR #375)*
+- AI insight tagline (`insightLine`) displayed inside `ProfilePortraitCard` on the Profile Review page
+- Served by `GET /api/onboarding/profile-tagline`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`
+- Presentation-only; does not affect onboarding state or `nextStep`
+
+**18. AI Observability — Trace Logger** 📊 *(PR #380)*
+- Structured AI call trace logger: `apps/server/src/lib/aiTraceLogger.ts` (`logAITrace()`)
+- Emits single-line `[AITrace] {json}` logs to stdout for every AI call
+- `matchExplanationService` and `socialIcebreakerAIService` instrumented
+
+**19. AIResponseMeta Normalization** 🔧 *(PR #378)*
+- `packages/shared/src/types/aiMeta.ts` — shared `AIResponseMeta` contract with `fromCache`, `generatedAt`, `provider`, `fallbackUsed`, `promptVersion`
+- Builder helpers: `buildLiveAIMeta()`, `buildCachedAIMeta()`, `buildFallbackAIMeta()`
+- Foundation for consistent observability across all AI surfaces; ongoing per-service migration
+
+**20. Interest Signal Boundary Enforcement** 🔒 *(PR #379)*
+- `user_interest_signals` removed from deterministic pair scoring
+- `calculateSignalAlignmentBonus()` and `loadInterestSignalLookup()` deleted from `poolMatchingService.ts`
+- Signals now feed AI enrichment only (match explanation connection points, icebreaker topics)
+- Invariant verified by `apps/server/src/__tests__/interestSignalBoundary.test.ts`
+
+**21. Interest Signal Boost Refinement** ✨ *(PR #372)*
+- Onboarding interest data reused to pre-select the boost interest and derive enthusiasm level server-side (no re-asking)
+- UX simplified to 2 steps (was 3); surfaced after pool registration in `SuccessCelebration` screen
+
+**22. Onboarding Clarity & Reduced Artificial Waits** ⚡ *(PR #383)*
+- Profile review "analyzing" phase reduced from 2500 ms to 1200 ms default (500 ms for reduced-motion users)
+- Skippable after 600 ms — no artificial waiting when data is already ready
+
+**23. Limited Browse Mode Experiment** 🔬 *(PR #384)*
+- Scoped experiment: a secondary "先浏览 →" CTA on the Profile Review page lets users enter read-only event discovery before registering
+- Controlled by `ENABLE_LIMITED_BROWSE_MODE` constant in `FinalProfileReviewPage.tsx`; per-session opt-out via `?exp=no_limited_browse`
+- Not a permanent product pattern — do not generalize without verifying gating logic
+
+**24. Frontend Performance Improvements** 🚀 *(PRs #385, #386, #388)*
+- Route-level lazy loading for all non-critical pages in `App.tsx`
+- Dead admin code removed from user-client bundle
+- Landing page hero images converted to WebP with `decoding="async"`
+- Deferred archetype asset loading; gated background prefetch for no-activity users (PR #363)
+- Vite chunk optimisation and empty-state SVG optimisation (PR #362)
+
+**25. Social Icebreaker v2 Phase Rollout** 🧊 *(PR #370)*
+- Server-driven phase rollout configuration for Social Icebreaker v2
+- Beta phase scaffolding added for future phases beyond MVP (warmup → micro_challenge → lie_detective → recap)
+
+**26. Center-Tab Empty-State Page** 📭 *(PRs #359, #362, #363)*
+- `CenterTabEmptyStatePage` — dedicated transition page for no-activity users accessed via the centre nav tab
+- Hybrid layout with optimised SVG assets; background asset prefetch gated on activity state
+
+### 2026 Milestones (Jan–Mar 2026)
 
 **8. Value-First Onboarding Flow** 🚀 *(2026-02-04)*
 - WeChat-first, post-test signup replaces phone-first registration
