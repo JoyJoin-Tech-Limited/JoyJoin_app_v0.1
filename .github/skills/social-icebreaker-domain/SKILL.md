@@ -1,6 +1,11 @@
 ---
-name: Social Icebreaker Domain
-description: Primary live in-event system — session lifecycle, host/player authority, persistence/rejoin behaviour, roster vs active presence, action integrity, and secrecy boundaries. Use when working on icebreaker sessions, phase transitions, or AI content generation for live events.
+name: social-icebreaker-domain
+description: >
+  Primary live in-event system — session lifecycle, host/player authority, persistence/rejoin
+  behaviour, roster vs active presence, action integrity, and secrecy boundaries. Use when working
+  on icebreaker sessions, phase transitions, or AI content generation for live events. Trigger
+  phrases: "player reconnects to session", "enforce host-only action", "advance icebreaker phase",
+  "lie detective secrecy", "session rejoin".
 ---
 
 # Social Icebreaker Domain
@@ -115,3 +120,31 @@ Lie detective phase — secrecy rules:
 - `apps/server/src/__tests__/socialIcebreakerPhaseConfig.test.ts`
 - `packages/shared/src/types/aiMeta.ts`
 - `docs/icebreaker-system.md` — full technical reference
+
+## Quick examples
+
+**User says:** "A player refreshed during the micro_challenge phase — how do they rejoin?"
+**Apply this skill by:** The `GET /api/social-icebreaker/:sessionId` endpoint returns full current state. The client calls it on mount; `useSocialIcebreaker` restores UI from server state. Do not rely on client-side memory after a refresh.
+**Result:** Player sees the current phase and their state without interruption.
+
+---
+
+**User says:** "Only the host should be able to advance the phase — how do I enforce this?"
+**Apply this skill by:** In the route handler for phase advancement, verify `req.session.userId === state.hostUserId` server-side and return 403 if not. Do not rely on client-side conditional rendering alone.
+**Result:** Host authority is enforced at the API layer regardless of client state.
+
+## Troubleshooting
+
+- **Phase mismatch error — action rejected because phase is wrong** — the client submitted an action for a phase the server has already advanced past. Re-fetch current session state and re-render the correct phase UI before allowing the action.
+- **Reconnect restores stale state** — the client is using cached/memory state instead of re-fetching from `GET /api/social-icebreaker/:sessionId`. Ensure the hook re-fetches on mount/focus.
+- **Secrecy leak in lie-detective — client payload includes `isLie` or other unrevealed truth data** — truth data should stay in the separate server-only lie-truths table. Store only sanitized statements in public session state and confirm the client reveals outcomes only after the server says they are resolved.
+- **Vote or statement not persisted before response returns** — the write is happening asynchronously after the response. Move `await tx.insert(...)` inside the transaction before `res.json(...)`.
+
+## Review checklist
+
+- [ ] Host-only actions are validated server-side (not client-gating only)
+- [ ] Session join is idempotent — joining an already-joined session returns current state
+- [ ] Phase actions are validated against the current phase before execution
+- [ ] Votes, statements, and completed challenges are persisted atomically before response
+- [ ] Lie-detective truth data (`isLie`) stays server-only; public session state contains sanitized statements only
+- [ ] AI generation (topics, statements) is a side effect outside the transaction

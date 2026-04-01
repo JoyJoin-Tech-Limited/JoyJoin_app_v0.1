@@ -1,6 +1,10 @@
 ---
-name: Onboarding State Architecture
-description: Server-driven nextStep model, active onboarding module ownership, routing authority, and legacy quarantine rules. Use when working on onboarding routing, completion flags, or any onboarding-related page.
+name: onboarding-state-architecture
+description: >
+  Server-driven nextStep model, active onboarding module ownership, routing authority, and legacy
+  quarantine rules. Use when working on onboarding routing, completion flags, or any
+  onboarding-related page. Trigger phrases: "user is stuck in onboarding", "add a new onboarding
+  step", "why is nextStep wrong?", "onboarding routing loop", "modify completion flags".
 ---
 
 # Onboarding State Architecture
@@ -92,3 +96,31 @@ if (nextStep !== 'discover') {
 - `apps/server/src/routes/domains/onboarding.ts` — onboarding completion endpoints
 - `docs/onboarding-flow.md` — detailed flow documentation
 - `docs/architecture/current-state.md` — authority chain and file placement
+
+## Quick examples
+
+**User says:** "A user is stuck on the personality-test screen after completing it."
+**Apply this skill by:** Checking that `POST /api/auth/complete-personality-test` correctly sets `hasCompletedPersonalityTest = true` on the `users` table, and that the client re-fetches `/api/auth/user` after completion so `nextStep` updates. Do not fix by client-side state override.
+**Result:** Server state drives the step transition; the client follows the updated `nextStep`.
+
+---
+
+**User says:** "Add a `photo-upload` step after `essential-data`."
+**Apply this skill by:** Adding a `nextStep` value (`'photo-upload'`) to the server computation in `routes/domains/auth.ts`, adding a `hasCompletedPhotoUpload` flag to the `users` table, adding the route/page under `features/onboarding/active/pages/`, and updating `flow.ts` with the new step → route mapping.
+**Result:** Step is fully server-driven; the client reads the new `nextStep` and routes accordingly.
+
+## Troubleshooting
+
+- **`nextStep` is stale — client shows old step after completing a step** — the client is not re-fetching `/api/auth/user` after the step completion call. Invalidate the auth query and re-fetch before navigating.
+- **Routing loop — user is redirected back to a step they already completed** — the completion flag is not being persisted on the server (check the POST handler), or the `nextStep` computation in `auth.ts` is not reflecting the updated flag.
+- **Client is deriving onboarding position from local flags** — remove client-side step reconstruction. All routing decisions must come from the `nextStep` value returned by `GET /api/auth/user`.
+- **Legacy quarantine identifier (`hasCompletedRegistration`) appearing in new code** — remove it immediately; this will also fail the `npm run guardrails` check. Use only the active completion flags listed in this skill.
+
+## Review checklist
+
+- [ ] `nextStep` is computed server-side in `routes/domains/auth.ts` — never derived on the client
+- [ ] New completion flag is a persisted column on the `users` table, not client-local state
+- [ ] Client re-fetches `/api/auth/user` after each step completes before navigating
+- [ ] New pages are placed under `features/onboarding/active/pages/`, not `legacy/`
+- [ ] `flow.ts` step → route mapping is updated for any new `nextStep` value
+- [ ] No legacy identifiers (`hasCompletedRegistration`, `registration_sessions`, etc.) in new code

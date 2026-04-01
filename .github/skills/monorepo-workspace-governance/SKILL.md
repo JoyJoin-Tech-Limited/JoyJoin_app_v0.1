@@ -1,6 +1,10 @@
 ---
-name: Monorepo Workspace Governance
-description: Root orchestration-only ownership, workspace dependency ownership, normalized scripts/tsconfig structure, and secret/env/legacy guardrails. Use when modifying root package.json, workspace configs, or adding/removing dependencies.
+name: monorepo-workspace-governance
+description: >
+  Root orchestration-only ownership, workspace dependency ownership, normalized scripts/tsconfig
+  structure, and secret/env/legacy guardrails. Use when modifying root package.json, workspace
+  configs, or adding/removing dependencies. Trigger phrases: "add a dependency", "change root
+  scripts", "move code between workspaces", "update tsconfig", "guardrails is failing".
 ---
 
 # Monorepo Workspace Governance
@@ -104,3 +108,31 @@ Rules enforced by `scripts/check-guardrails.mjs`:
 - `apps/*/package.json` — workspace configs
 - `packages/shared/package.json` — shared package config
 - `DEVELOPER_QUICK_REFERENCE.md` — guardrail runbook
+
+## Quick examples
+
+**User says:** "Add `date-fns` to the server package."
+**Apply this skill by:** Running `npm install date-fns -w @joyjoin/server` from the repo root. Confirm `date-fns` appears in `apps/server/package.json`, not the root `package.json`. Run `npm run guardrails` to verify.
+**Result:** Dependency is scoped correctly, root `package.json` stays orchestration-only.
+
+---
+
+**User says:** "I need to add a `db:seed` script accessible from the root."
+**Apply this skill by:** Adding the script to `apps/server/package.json` first, then adding a root delegation (`npm run db:seed -w @joyjoin/server`) to root `package.json`. Check whether `check-guardrails.mjs` needs updating if the script name is required by guardrails.
+**Result:** Script is accessible at the root without violating workspace ownership rules.
+
+## Troubleshooting
+
+- **`npm run guardrails` fails with "missing required script"** — a required root script was renamed or removed. Check `scripts/check-guardrails.mjs` for the expected script names and commands and restore the exact match.
+- **Dependency installed to the wrong workspace** — a package was added to root `package.json` instead of the workspace that uses it. Move it: remove from root, add to the correct workspace with `-w @joyjoin/<workspace>`.
+- **TypeScript errors after changing `tsconfig`** — workspace `tsconfig.json` may have lost its `extends` reference to `tsconfig.base.json`, or a new workspace path is missing from the root `tsconfig.json` `references` array.
+- **Admin-client code is being bundled into user-client** — a direct import from `apps/admin-client` was added to `apps/user-client`. Remove it and move the shared logic to `packages/shared` if needed.
+
+## Review checklist
+
+- [ ] New dependencies are added to the workspace that uses them, not the root
+- [ ] Root `package.json` does not own any runtime dependencies
+- [ ] Guardrail-enforced root scripts (`check`, `check:clients`, `check:server`, `check:full`, `set-admin`) are present and match exact commands
+- [ ] `npm run guardrails` passes after the change
+- [ ] `tsconfig` references are up to date if new workspaces were added
+- [ ] No cross-app imports (user-client ↔ admin-client)
