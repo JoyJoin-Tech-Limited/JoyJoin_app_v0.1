@@ -76,6 +76,7 @@ export function SocialIcebreakerOrchestrator({
     socialSessionId,
     startSession,
     isStarting,
+    sessionExpired,
     fetchTopics,
     advancePhase,
     submitPulseCheck,
@@ -213,6 +214,22 @@ export function SocialIcebreakerOrchestrator({
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <p className="text-muted-foreground text-sm">小悦正在准备破冰环节...</p>
+      </div>
+    );
+  }
+
+  if (sessionExpired) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6 text-center">
+        <p className="text-xl">⏰</p>
+        <p className="font-semibold text-foreground">破冰会话已过期</p>
+        <p className="text-sm text-muted-foreground">本次活动的破冰时间已结束，感谢参与！</p>
+        <button
+          onClick={onEnd}
+          className="mt-4 px-6 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium"
+        >
+          返回活动页
+        </button>
       </div>
     );
   }
