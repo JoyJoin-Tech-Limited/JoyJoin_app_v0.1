@@ -67,10 +67,10 @@ function signWebhook(rawBody: string) {
   const signature = sign("RSA-SHA256", Buffer.from(message, "utf8"), platformKeys.privateKey).toString("base64");
 
   return {
-    "wechatpay-timestamp": timestamp,
-    "wechatpay-nonce": nonce,
-    "wechatpay-signature": signature,
-    "wechatpay-serial": "platform-serial-001",
+    timestamp,
+    nonce,
+    signature,
+    serial: "platform-serial-001",
   };
 }
 
@@ -86,6 +86,7 @@ describe("PaymentService", () => {
       WECHAT_PAY_SERIAL_NO: "merchant-serial-001",
       WECHAT_PAY_PRIVATE_KEY: merchantKeys.privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
       WECHAT_PAY_APIV3_KEY: apiV3Key,
+      WECHAT_PAY_PLATFORM_CERT: platformKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
       WECHAT_PAY_PLATFORM_PUBLIC_KEY: platformKeys.publicKey.export({ type: "spki", format: "pem" }).toString(),
       WECHAT_PAY_PLATFORM_SERIAL: "platform-serial-001",
     };
@@ -156,11 +157,7 @@ describe("PaymentService", () => {
     const rawBody = JSON.stringify(payload);
 
     const service = new PaymentService();
-    await service.handleWebhook({
-      headers: signWebhook(rawBody),
-      rawBody: Buffer.from(rawBody, "utf8"),
-      payload,
-    });
+    await service.handleWebhook(payload, rawBody, signWebhook(rawBody));
 
     expect(payments[0]).toMatchObject({
       status: "completed",
@@ -183,13 +180,9 @@ describe("PaymentService", () => {
     const headers = signWebhook(rawBody);
 
     const service = new PaymentService();
-    await expect(service.handleWebhook({
-      headers: {
-        ...headers,
-        "wechatpay-signature": "invalid-signature",
-      },
-      rawBody,
-      payload,
+    await expect(service.handleWebhook(payload, rawBody, {
+      ...headers,
+      signature: 'invalid-signature',
     })).rejects.toMatchObject({ status: 401 });
   });
 
@@ -226,11 +219,7 @@ describe("PaymentService", () => {
     };
     const rawBody = JSON.stringify(refundPayload);
 
-    await service.handleWebhook({
-      headers: signWebhook(rawBody),
-      rawBody,
-      payload: refundPayload,
-    });
+    await service.handleWebhook(refundPayload, rawBody, signWebhook(rawBody));
 
     expect(payments[0].status).toBe("refunded");
     expect(storage.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_REFUND_001");

@@ -1,33 +1,17 @@
 {
-  "include": ["apps/user-client/src/**/*", "packages/shared/src/**/*", "apps/server/src/**/*", "server/**/*"],
-  "exclude": [
-    "node_modules", 
-    "build", 
-    "dist", 
-    "**/*.test.ts",
-    "apps/user-client/src/components/examples/**/*",
-    "apps/user-client/src/lib/animationTestSimulation.ts",
-    "apps/server/src/tests/**/*"
-  ],
-  "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
-    "noEmit": true,
-    "target": "ES2020",
-    "downlevelIteration": true,
-    "module": "ESNext",
-    "strict": true,
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
-    "baseUrl": ".",
-    "types": ["node", "vite/client"],
-    "paths": {
-      "@/*": ["./apps/user-client/src/*"],
-      "@shared/*": ["./packages/shared/src/*"]
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./apps/user-client"
+    },
+    {
+      "path": "./apps/admin-client"
+    },
+    {
+      "path": "./apps/server"
     }
-  }
+  ]
 }

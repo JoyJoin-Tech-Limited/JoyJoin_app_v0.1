@@ -117,7 +117,7 @@ describe("admin auth routes", () => {
         body: JSON.stringify({ username: superAdminAccount.username, password: superAdminPassword }),
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
 
       expect(response.status).toBe(200);
       expect(body.role).toBe("super_admin");
@@ -139,7 +139,7 @@ describe("admin auth routes", () => {
         body: JSON.stringify({ username: superAdminAccount.username, password: superAdminPassword }),
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       expect(response.status).toBe(401);
       expect(body.message).toBe("用户名或密码错误");
     });
@@ -155,7 +155,7 @@ describe("admin auth routes", () => {
         body: JSON.stringify({ username: superAdminAccount.username, password: "wrong-password" }),
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       expect(response.status).toBe(401);
       expect(body.message).toBe("用户名或密码错误");
     });
@@ -185,7 +185,7 @@ describe("admin auth routes", () => {
         body: JSON.stringify({ username: "new-admin", password: "1234567", role: "viewer" }),
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       expect(response.status).toBe(400);
       expect(body.message).toBe("密码至少需要8个字符");
       expect(storage.createAdminAccount).not.toHaveBeenCalled();
@@ -228,7 +228,7 @@ describe("admin auth routes", () => {
         body: JSON.stringify({ username: "new-admin", password: "12345678", role: "viewer" }),
       });
 
-      const body = await response.json();
+      const body: any = await response.json();
       expect(response.status).toBe(201);
       expect(body.username).toBe("new-admin");
       expect(storage.createAdminAccount).toHaveBeenCalled();
@@ -271,7 +271,7 @@ describe("admin auth routes", () => {
       const response = await fetch(`${baseUrl}/__test__/admin-only`, {
         headers: { Cookie: cookie },
       });
-      const body = await response.json();
+      const body: any = await response.json();
 
       expect(response.status).toBe(200);
       expect(body.role).toBe("super_admin");

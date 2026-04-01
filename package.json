@@ -9,12 +9,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w @joyjoin/server",
+    "dev": "npm run db:push && npm run dev:server",
+    "build": "npm run build -w @joyjoin/user-client && npm run build -w @joyjoin/admin-client && npm run build -w @joyjoin/server",
+    "typecheck": "npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w @joyjoin/server",
+    "lint": "npm run lint -w @joyjoin/shared && npm run lint -w @joyjoin/user-client && npm run lint -w @joyjoin/admin-client && npm run lint -w @joyjoin/server",
+    "test": "npm run test -w @joyjoin/shared && npm run test -w @joyjoin/user-client && npm run test -w @joyjoin/admin-client && npm run test -w @joyjoin/server",
     "dev:user": "npm run dev -w @joyjoin/user-client",
     "dev:admin": "npm run dev -w @joyjoin/admin-client",
     "dev:server": "npm run dev -w @joyjoin/server",
     "dev:all": "npm run dev",
-    "build": "npm run deps:check && npm run build:user && npm run build:admin && npm run build:server",
     "build:user": "npm run build -w @joyjoin/user-client",
     "build:admin": "npm run build -w @joyjoin/admin-client",
     "build:server": "npm run build -w @joyjoin/server",
@@ -25,7 +28,8 @@
     "set-admin": "node --env-file=.env set-admin.js",
     "admin:create": "node --env-file=.env --import tsx/esm apps/server/src/cli/createAdminAccount.ts",
     "user:create": "node --env-file=.env --import tsx/esm apps/server/src/cli/createUserAccount.ts",
-    "user:bypass": "node --env-file=.env --import tsx/esm apps/server/src/cli/bypassLogin.ts"
+    "user:bypass": "node --env-file=.env --import tsx/esm apps/server/src/cli/bypassLogin.ts",
+    "start": "npm run db:push && npm run start -w @joyjoin/server"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",

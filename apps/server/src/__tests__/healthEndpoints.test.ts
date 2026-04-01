@@ -46,7 +46,7 @@ describe("GET /api/health", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/health`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(res.status).toBe(200);
       expect(body.status).toBe("ok");
       expect(typeof body.uptime).toBe("number");
@@ -60,7 +60,7 @@ describe("GET /healthz", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/healthz`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(res.status).toBe(200);
       expect(body.status).toBe("ok");
     });
@@ -88,7 +88,7 @@ describe("GET /api/readyz", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/readyz`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(res.status).toBe(200);
       expect(body.status).toBe("ready");
       expect(body.checks.database).toBe("ok");
@@ -101,7 +101,7 @@ describe("GET /api/readyz", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/readyz`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(res.status).toBe(503);
       expect(body.status).toBe("not_ready");
       expect(body.checks.database).toBe("error");
@@ -115,7 +115,7 @@ describe("GET /api/readyz", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/readyz`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(res.status).toBe(503);
       expect(body.status).toBe("not_ready");
       expect(body.checks.config).toBe("error");
@@ -136,7 +136,7 @@ describe("GET /api/readyz", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/readyz`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(res.status).toBe(503);
       expect(body.checks.config).toBe("error");
     });
@@ -147,7 +147,7 @@ describe("GET /api/readyz", () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/readyz`);
-      const body = await res.json();
+      const body: any = await res.json();
       expect(body.timestamp).toMatch(/^\d{4}-/);
     });
   });

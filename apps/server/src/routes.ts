@@ -192,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${apiKey}&location=${encodedLocation}&extensions=base`;
       
       const response = await fetch(amapUrl);
-      const data = await response.json();
+      const data: any = await response.json();
       
       if (data.status === "1" && data.regeocode) {
         const addressComponent = data.regeocode.addressComponent;
