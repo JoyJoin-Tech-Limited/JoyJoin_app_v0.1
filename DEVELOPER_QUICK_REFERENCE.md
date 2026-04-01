@@ -973,7 +973,7 @@ import { Button } from "@/components/ui/button";
 >…</button>
 ```
 
-**Source of truth:** `packages/shared/src/ui/buttonVariants.ts`  
+**Source of truth:** `packages/shared/src/ui/Button.tsx` (runtime) · `packages/shared/src/ui/buttonVariants.ts` (styling)  
 **Full design reference:** `docs/button-design.md`
 
 ### Import Aliases
