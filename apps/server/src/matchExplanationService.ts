@@ -21,6 +21,7 @@ import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } 
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
 import type { AIProvider } from '@shared/types/aiMeta';
 import { getInterestById } from '@shared/interests';
+import { logAITrace } from './lib/aiTraceLogger';
 
 // ============ 配置常量 ============
 
@@ -688,8 +689,8 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
   } catch (primaryError) {
     if (provider === 'minimax') {
       console.warn(`[MatchExplanation] generatePairExplanation minimax failed after retries, trying deepseek fallback:`, primaryError);
+      const { client: fbClient, model: fbModel } = getDeepseekSelection();
       try {
-        const { client: fbClient, model: fbModel } = getDeepseekSelection();
         // Single attempt only — the primary path already exhausted its retries
         const fbResponse = await fbClient.chat.completions.create({
           model: fbModel,
@@ -711,7 +712,7 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
             connectionPoints,
           },
           providerUsed: 'deepseek',
-          fallbackUsed: false,
+          fallbackUsed: true,
         };
       } catch (fallbackError) {
         console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
@@ -1157,8 +1158,8 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
   } catch (primaryError) {
     if (provider === 'minimax') {
       console.warn(`[IceBreakers] generateIceBreakers minimax failed after retries, trying deepseek fallback:`, primaryError);
+      const { client: fbClient, model: fbModel } = getDeepseekSelection();
       try {
-        const { client: fbClient, model: fbModel } = getDeepseekSelection();
         // Single attempt only — the primary path already exhausted its retries
         const fbResponse = await fbClient.chat.completions.create({
           model: fbModel,
@@ -1176,7 +1177,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           .filter(line => line.length > 5 && line.length < 100)
           .slice(0, 5);
         if (iceBreakers.length >= 2) {
-          return { iceBreakers, providerUsed: 'deepseek', fallbackUsed: false };
+          return { iceBreakers, providerUsed: 'deepseek', fallbackUsed: true };
         }
       } catch (fallbackError) {
         console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);

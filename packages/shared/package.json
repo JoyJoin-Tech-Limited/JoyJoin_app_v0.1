@@ -34,5 +34,12 @@
   },
   "devDependencies": {
     "typescript": "5.6.3"
+  },
+  "scripts": {
+    "dev": "tsc -p tsconfig.json --noEmit --watch",
+    "build": "npm run typecheck",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "npm run typecheck",
+    "test": "node -e \"console.log('No tests for @joyjoin/shared')\""
   }
 }
