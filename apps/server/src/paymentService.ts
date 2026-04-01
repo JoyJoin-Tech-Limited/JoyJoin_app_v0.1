@@ -208,15 +208,15 @@ export class PaymentService {
     // ── 1. Signature verification ──────────────────────────────────────────
     const isDevMode = process.env.NODE_ENV === "development";
     if (!isDevMode) {
-      const signatureValid = this.verifySignature(normalizedRequest.rawBody, normalizedRequest.headers);
+      const signatureValid = this.verifySignature(rawBody, headers);
       if (!signatureValid) {
         console.warn("[Payment] Webhook rejected: invalid signature");
         throw this.createHttpError(401, "Invalid webhook signature");
       }
     }
 
-    const eventType = normalizedRequest.payload.event_type;
-    const resource = normalizedRequest.payload.resource;
+    const eventType = (payload as any).event_type;
+    const resource = (payload as any).resource;
 
     if (typeof eventType !== "string" || !resource || typeof resource !== "object") {
       throw this.createHttpError(400, "Invalid webhook payload");
