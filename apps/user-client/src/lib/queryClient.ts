@@ -53,6 +53,7 @@ export async function apiRequest(
     throw new Error("401: Session expired. Please log in again.");
   }
 
+  // 401 is intentionally handled above even if a caller includes it here.
   if (options?.allowStatuses?.includes(res.status)) {
     return res;
   }

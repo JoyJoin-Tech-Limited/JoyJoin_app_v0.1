@@ -134,9 +134,9 @@ router.post('/start', async (req: any, res) => {
     state.activePlayerCount = activeCount;
     // ensureSessionEnabledPhases mutates `state` in place for older persisted
     // sessions; only persist when that backfill actually changed the payload.
-    const enabledPhaseCount = state.enabledPhases?.length ?? 0;
+    const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
-    if ((state.enabledPhases?.length ?? 0) !== enabledPhaseCount) {
+    if (JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore) {
       await updateSession(existing.socialSessionId, state);
     }
 
