@@ -25,7 +25,8 @@ import { SiWechat } from "react-icons/si";
 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { calculateOnboardingRoute } from "@/hooks/useOnboardingRoute";
+import { nextStepToRoute, resolveOnboardingRoute } from "@/hooks/useOnboardingRoute";
+import type { AuthUser } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
@@ -238,8 +239,9 @@ export default function LoginPage() {
       }
       
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      
-      const nextRoute = calculateOnboardingRoute(userData);
+      const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
+      const nextRoute = resolveOnboardingRoute(updatedUser);
+
       if (nextRoute !== "/discover") {
         toast({
           title: "欢迎加入悦聚！",
@@ -336,35 +338,10 @@ export default function LoginPage() {
 
       if (data.success) {
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-        const updatedUser = await queryClient.fetchQuery({ queryKey: ["/api/auth/user"] }) as any;
-        const step = updatedUser?.nextStep;
-        let nextPath: string;
-        switch (step) {
-          case 'discover':
-            nextPath = '/discover';
-            break;
-          case 'guide':
-            nextPath = '/guide';
-            break;
-          case 'onboarding':
-            nextPath = '/onboarding';
-            break;
-          case 'personality-test':
-            nextPath = '/personality-test';
-            break;
-          case 'essential-data':
-            nextPath = '/onboarding/setup';
-            break;
-          case 'extended-data':
-            nextPath = '/onboarding/extended';
-            break;
-          case 'profile-review':
-            nextPath = '/onboarding/review';
-            break;
-          default:
-            nextPath = '/onboarding/setup';
-            break;
-        }
+        const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
+        const nextPath = updatedUser?.nextStep
+          ? nextStepToRoute(updatedUser.nextStep)
+          : resolveOnboardingRoute(updatedUser);
         setLocation(nextPath);
       }
     } catch (err) {
