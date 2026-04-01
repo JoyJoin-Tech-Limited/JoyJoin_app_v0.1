@@ -70,7 +70,7 @@ export default function IcebreakerTool() {
             size="sm" 
             className="flex-1"
             onClick={handleRefresh}
-            disabled={isLoading}
+            loading={isLoading}
             data-testid="button-draw-question"
           >
             <Sparkles className="h-4 w-4 mr-1" />
@@ -80,7 +80,7 @@ export default function IcebreakerTool() {
             size="sm" 
             variant="outline"
             onClick={handleRefresh}
-            disabled={isLoading}
+            loading={isLoading}
             data-testid="button-refresh-question"
           >
             <RefreshCw className="h-4 w-4" />

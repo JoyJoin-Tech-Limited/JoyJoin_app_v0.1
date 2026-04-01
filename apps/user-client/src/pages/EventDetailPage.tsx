@@ -150,6 +150,15 @@ export default function EventDetailPage() {
         <Card 
           className="border-0 bg-muted/30 cursor-pointer hover-elevate active-elevate-2 transition-all"
           onClick={() => setShowSafety(!showSafety)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={showSafety}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setShowSafety(!showSafety);
+            }
+          }}
           data-testid="card-safety-comfort"
         >
           <CardContent className="p-4">

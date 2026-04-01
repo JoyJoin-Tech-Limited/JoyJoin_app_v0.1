@@ -171,19 +171,19 @@ export default function EditIntentPage() {
             </p>
           )}
         </div>
-      </form>
 
-      {/* Bottom action */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
-        <Button 
-          onClick={form.handleSubmit(onSubmit)} 
-          className="w-full"
-          disabled={updateMutation.isPending}
-          data-testid="button-save"
-        >
-          {updateMutation.isPending ? "保存中..." : "保存"}
-        </Button>
-      </div>
+        {/* Bottom action */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <Button 
+            type="submit"
+            className="w-full"
+            loading={updateMutation.isPending}
+            data-testid="button-save"
+          >
+            保存
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
