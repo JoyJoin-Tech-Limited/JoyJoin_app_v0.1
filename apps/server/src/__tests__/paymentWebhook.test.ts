@@ -21,6 +21,7 @@ const mockPayment = {
 
 const mockStorage = {
   getAllPayments: vi.fn(),
+  getPaymentByWechatOrderId: vi.fn(),
   updatePayment: vi.fn(),
   createNotification: vi.fn(),
   updateSubscription: vi.fn(),
@@ -44,6 +45,7 @@ describe("PaymentService — handleWebhook", () => {
     service = new PaymentService();
     // Default: payment found in pending state
     mockStorage.getAllPayments.mockResolvedValue([{ ...mockPayment }]);
+    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({ ...mockPayment });
     mockStorage.updatePayment.mockResolvedValue(undefined);
     mockStorage.createNotification.mockResolvedValue(undefined);
     mockStorage.updateSubscription.mockResolvedValue(undefined);
@@ -79,6 +81,10 @@ describe("PaymentService — handleWebhook", () => {
     mockStorage.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "completed" },
     ]);
+    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({
+      ...mockPayment,
+      status: "completed",
+    });
 
     const payload = {
       event_type: "REFUND.SUCCESS",
@@ -100,6 +106,10 @@ describe("PaymentService — handleWebhook", () => {
     mockStorage.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "completed" },
     ]);
+    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({
+      ...mockPayment,
+      status: "completed",
+    });
 
     const payload = {
       event_type: "TRANSACTION.SUCCESS",
@@ -118,6 +128,10 @@ describe("PaymentService — handleWebhook", () => {
     mockStorage.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "refunded" },
     ]);
+    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({
+      ...mockPayment,
+      status: "refunded",
+    });
 
     const payload = {
       event_type: "REFUND.SUCCESS",

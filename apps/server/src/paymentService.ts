@@ -1,7 +1,6 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
 import { storage } from "./storage";
 import { getLevelDiscount } from "@shared/gamification";
-import { createDecipheriv, createVerify } from "crypto";
 
 /**
  * Payment Service for WeChat Pay Integration
@@ -66,18 +65,6 @@ export interface PaymentResult {
   prepayId?: string; // WeChat prepay_id for H5/JSAPI
   codeUrl?: string; // QR code URL for Native payment
   h5Url?: string; // H5 payment URL
-}
-
-/** Headers forwarded from WeChat Pay webhook POST requests. */
-export interface WechatWebhookHeaders {
-  /** Wechatpay-Timestamp header */
-  timestamp?: string;
-  /** Wechatpay-Nonce header */
-  nonce?: string;
-  /** Wechatpay-Signature header (base64) */
-  signature?: string;
-  /** Wechatpay-Serial header (merchant cert serial) */
-  serial?: string;
 }
 
 export class PaymentService {
