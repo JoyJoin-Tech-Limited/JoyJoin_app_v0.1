@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildEventPoolStatsResponse } from "../routes/domains/eventPools";
+import { vi } from "vitest";
+
+vi.mock("../db", () => ({ db: {} }));
+
+const { buildEventPoolStatsResponse } = await import("../routes/domains/eventPools");
 
 describe("event pool stats contract", () => {
   it("keeps the drawer stats response shape stable", () => {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildIcebreakerSessionDetailsResponse } from "../routes/domains/icebreakerSessions";
+import { vi } from "vitest";
+
+vi.mock("../db", () => ({ db: {} }));
+
+const { buildIcebreakerSessionDetailsResponse } = await import("../routes/domains/icebreakerSessions");
 
 describe("icebreaker session contract", () => {
   it("returns the session-details shape expected by the client", () => {

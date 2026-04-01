@@ -2,13 +2,13 @@ import express from "express";
 import session from "express-session";
 import type { AddressInfo } from "net";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { registerIcebreakerSessionRoutes } from "../routes/domains/icebreakerSessions";
 
 const accessMocks = vi.hoisted(() => ({
   getBlindBoxEventParticipantAccess: vi.fn(),
   getIcebreakerSessionParticipantAccess: vi.fn(),
 }));
 
+vi.mock("../db", () => ({ db: {} }));
 vi.mock("../lib/icebreakerAccess", () => accessMocks);
 vi.mock("../repositories/icebreakerRepo", () => ({
   icebreakerRepo: {
@@ -16,6 +16,8 @@ vi.mock("../repositories/icebreakerRepo", () => ({
     createIcebreakerSession: vi.fn(),
   },
 }));
+
+const { registerIcebreakerSessionRoutes } = await import("../routes/domains/icebreakerSessions");
 
 function createApp() {
   const app = express();
