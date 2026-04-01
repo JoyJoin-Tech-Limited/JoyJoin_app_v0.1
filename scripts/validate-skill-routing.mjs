@@ -120,17 +120,24 @@ function run() {
 
     if (!existsSync(routingPath)) {
       if (existsSync(exemptPath)) {
-        // Validate the exempt file has a reason field
-        let exemptReason = '(no reason provided)';
         try {
           const exemptRaw = readFileSync(exemptPath, 'utf8');
           const exemptData = parseRoutingYaml(exemptRaw);
-          exemptReason = typeof exemptData.reason === 'string' ? exemptData.reason : exemptReason;
-        } catch {
-          // best-effort; treat as exempt even if parse fails
+          const exemptReason = typeof exemptData.reason === 'string' ? exemptData.reason.trim() : '';
+
+          if (!exemptReason) {
+            console.log(`  ❌  ${skillDir}`);
+            console.log(`       error: routing-exempt.yml must contain a non-empty "reason" field.`);
+            totalErrors += 1;
+          } else {
+            exempted.push({ skill: skillDir, reason: exemptReason });
+            console.log(`  ⏭   ${skillDir} (exempt: ${exemptReason})`);
+          }
+        } catch (error) {
+          console.log(`  ❌  ${skillDir}`);
+          console.log(`       error: failed to parse routing-exempt.yml — ensure it is valid YAML with a non-empty "reason" field.`);
+          totalErrors += 1;
         }
-        exempted.push({ skill: skillDir, reason: exemptReason });
-        console.log(`  ⏭   ${skillDir} (exempt: ${exemptReason})`);
       } else {
         uncovered.push(skillDir);
         console.log(`  ❌  ${skillDir}`);
@@ -162,8 +169,10 @@ function run() {
     warnings.forEach(warning => console.log(`       warn:  ${warning}`));
   }
 
+  const validCount = results.filter(result => result.errors.length === 0).length;
+
   console.log('');
-  console.log(`Skills checked: ${results.length + uncovered.length + exempted.length}  |  Valid: ${results.length}  |  Exempt: ${exempted.length}  |  Uncovered: ${uncovered.length}  |  Errors: ${totalErrors}  |  Warnings: ${totalWarnings}`);
+  console.log(`Skills checked: ${entries.length}  |  Valid: ${validCount}  |  Exempt: ${exempted.length}  |  Uncovered: ${uncovered.length}  |  Errors: ${totalErrors}  |  Warnings: ${totalWarnings}`);
   console.log('');
 
   if (uncovered.length > 0) {

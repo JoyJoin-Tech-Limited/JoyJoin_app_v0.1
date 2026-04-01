@@ -19,6 +19,10 @@
  * To add a new test case, append an entry to the relevant section below.
  */
 
+import { execFileSync } from 'node:child_process';
+import { existsSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { routeSkill } from './skill-router.mjs';
 
 // ---------------------------------------------------------------------------
@@ -28,6 +32,8 @@ import { routeSkill } from './skill-router.mjs';
 let passed = 0;
 let failed = 0;
 const failures = [];
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, '..');
 
 /**
  * @param {string} label
@@ -579,18 +585,11 @@ test('improve micro-interactions → wow-elements', () => {
 // ---- Coverage-drift detection ----
 console.log('\nCoverage-drift detection:');
 
-test('validate-skill-routing.mjs fails when routing.yml is missing', async () => {
-  const { renameSync, existsSync: fsExists } = await import('node:fs');
-  const { join: pathJoin } = await import('node:path');
-  const { fileURLToPath } = await import('node:url');
-  const { dirname } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
-
-  const repoRoot = pathJoin(dirname(fileURLToPath(import.meta.url)), '..');
-  const target = pathJoin(repoRoot, '.github', 'skills', 'wow-elements', 'routing.yml');
+test('validate-skill-routing.mjs fails when routing.yml is missing', () => {
+  const target = join(REPO_ROOT, '.github', 'skills', 'wow-elements', 'routing.yml');
   const backup = target + '.bak';
 
-  if (!fsExists(target)) {
+  if (!existsSync(target)) {
     throw new Error('wow-elements/routing.yml not found — prerequisite for drift test');
   }
 
@@ -598,7 +597,7 @@ test('validate-skill-routing.mjs fails when routing.yml is missing', async () =>
   try {
     let exitCode = 0;
     try {
-      execFileSync(process.execPath, [pathJoin(repoRoot, 'scripts', 'validate-skill-routing.mjs')], {
+      execFileSync(process.execPath, [join(REPO_ROOT, 'scripts', 'validate-skill-routing.mjs')], {
         encoding: 'utf8',
         stdio: 'pipe',
       });
@@ -609,6 +608,39 @@ test('validate-skill-routing.mjs fails when routing.yml is missing', async () =>
       throw new Error('Expected validate-skill-routing.mjs to exit 1 when routing.yml is missing, but it exited 0');
     }
   } finally {
+    renameSync(backup, target);
+  }
+});
+
+test('validate-skill-routing.mjs fails when routing-exempt.yml has no reason', () => {
+  const skillDir = join(REPO_ROOT, '.github', 'skills', 'wow-elements');
+  const target = join(skillDir, 'routing.yml');
+  const backup = target + '.bak';
+  const exemptFile = join(skillDir, 'routing-exempt.yml');
+
+  if (!existsSync(target)) {
+    throw new Error('wow-elements/routing.yml not found — prerequisite for exemption test');
+  }
+
+  renameSync(target, backup);
+  writeFileSync(exemptFile, 'reason: ""\n', 'utf8');
+
+  try {
+    let exitCode = 0;
+    try {
+      execFileSync(process.execPath, [join(REPO_ROOT, 'scripts', 'validate-skill-routing.mjs')], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    } catch (err) {
+      exitCode = err.status ?? 1;
+    }
+
+    if (exitCode === 0) {
+      throw new Error('Expected validate-skill-routing.mjs to exit 1 when routing-exempt.yml has no reason, but it exited 0');
+    }
+  } finally {
+    unlinkSync(exemptFile);
     renameSync(backup, target);
   }
 });
