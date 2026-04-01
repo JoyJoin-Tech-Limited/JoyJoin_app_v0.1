@@ -199,7 +199,7 @@ Both pages now properly integrate with BottomNav:
 ### Manual Testing Steps
 
 1. **Test ArchetypeOrbit component**:
-   - Navigate to `/test/archetype-orbit` (requires login)
+   - Navigate to `/dev/archetype-orbit` (non-production sandbox route)
    - Verify logo wake-up animation
    - Verify staggered archetype fly-in
    - Test different sizes (small, medium, large)
