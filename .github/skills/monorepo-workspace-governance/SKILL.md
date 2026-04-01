@@ -132,7 +132,7 @@ Rules enforced by `scripts/check-guardrails.mjs`:
 
 - [ ] New dependencies are added to the workspace that uses them, not the root
 - [ ] Root `package.json` does not own any runtime dependencies
-- [ ] Required root scripts (`check`, `check:clients`, `check:server`, `check:full`, `set-admin`, `guardrails`) are present and match exact commands
+- [ ] Guardrail-enforced root scripts (`check`, `check:clients`, `check:server`, `check:full`, `set-admin`) are present and match exact commands
 - [ ] `npm run guardrails` passes after the change
 - [ ] `tsconfig` references are up to date if new workspaces were added
 - [ ] No cross-app imports (user-client ↔ admin-client)
