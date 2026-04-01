@@ -5,8 +5,10 @@ This folder contains the active backend for JoyJoin's user-facing app and admin 
 ## Source-of-truth entry points
 
 - `apps/server/src/index.ts` — server bootstrap
-- `apps/server/src/routes.ts` — primary API registration and many active user/admin routes
-- `apps/server/src/storage.ts` — storage interface and most persistence operations
+- `apps/server/src/routes.ts` — top-level composition root for domain routers
+- `apps/server/src/routes/domains/` — extracted route ownership by domain
+- `apps/server/src/storage.ts` — compatibility facade composed from domain repositories
+- `apps/server/src/repositories/` — domain-oriented data access modules
 - `apps/server/src/db.ts` — Drizzle database connection
 
 ## Active domain ownership
@@ -16,10 +18,12 @@ This folder contains the active backend for JoyJoin's user-facing app and admin 
 Owns authenticated user state, WeChat / phone auth integration, and server-driven onboarding decisions.
 
 Primary files:
-- `apps/server/src/routes.ts`
+- `apps/server/src/routes/domains/auth.ts`
+- `apps/server/src/routes/domains/onboarding.ts`
 - `apps/server/src/wechatAuth.ts`
 - `apps/server/src/phoneAuth.ts`
-- `apps/server/src/replitAuth.ts`
+- `apps/server/src/repositories/onboardingRepo.ts`
+- `apps/server/src/repositories/usersRepo.ts`
 
 Key rule:
 - `/api/auth/user` is the authority for `nextStep`, `profileEssentialComplete`, and `profileExtendedComplete`.
@@ -47,6 +51,7 @@ Primary files:
 - `apps/server/src/routes/socialIcebreaker.ts`
 - `apps/server/src/socialIcebreakerAIService.ts`
 - `apps/server/src/socialIcebreakerPhaseConfig.ts`
+- `apps/server/src/repositories/icebreakerRepo.ts`
 
 Boundary:
 - New in-event icebreaker work should integrate here, not into legacy toolkit-style flows.
@@ -56,21 +61,28 @@ Boundary:
 Owns payment initiation, webhook handling, subscription access, and monetization rules.
 
 Primary files:
+- `apps/server/src/routes/domains/payments.ts`
 - `apps/server/src/paymentService.ts`
 - `apps/server/src/subscriptionService.ts`
-- `apps/server/src/routes.ts`
+- `apps/server/src/repositories/paymentsRepo.ts`
 
 ### Admin APIs and operational controls
 
 Owns admin authentication, RBAC, moderation, venue/event operations, and KPI endpoints.
 
 Primary files:
+- `apps/server/src/routes/domains/admin.ts`
 - `apps/server/src/adminAuth.ts`
-- `apps/server/src/routes.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 
 Boundary:
 - All `/api/admin/*` routes must enforce admin middleware.
+
+### Repository and facade boundaries
+
+- Add new persistence logic to the nearest file in `apps/server/src/repositories/`.
+- Keep `apps/server/src/storage.ts` as a thin composition layer for existing call sites.
+- Put remaining legacy storage behavior behind `apps/server/src/repositories/legacyStorageRepo.ts` rather than expanding active domain repositories with unrelated concerns.
 
 ### Shared infrastructure inside the server app
 
@@ -82,8 +94,8 @@ Use these folders by responsibility:
 
 ## Where new server files go
 
-- **New HTTP endpoint in an existing domain:** add the route registration in `apps/server/src/routes.ts` unless the domain already has a dedicated router module.
-- **New isolated router for a cohesive subdomain:** add it under `apps/server/src/routes/` and mount it from `routes.ts`.
+- **New HTTP endpoint in an existing domain:** add it to the relevant file under `apps/server/src/routes/domains/` and mount it from `apps/server/src/routes.ts` if needed.
+- **New isolated router for a cohesive subdomain:** add it under `apps/server/src/routes/` when it already behaves as a standalone module.
 - **Business logic reused by routes or jobs:** add a service file in `apps/server/src/` or a domain subfolder; keep controllers thin.
 - **Cross-cutting helper or invariant:** add it under `apps/server/src/lib/`.
 - **Request/response middleware:** add it under `apps/server/src/middleware/`.

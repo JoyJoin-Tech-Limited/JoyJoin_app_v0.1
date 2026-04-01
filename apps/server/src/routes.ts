@@ -2,8 +2,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
-import socialIcebreakerRoutes from "./routes/socialIcebreaker";
-import ttsRoutes from "./routes/tts";
 import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
@@ -20,8 +18,6 @@ import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
 import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
-import { paymentService } from "./paymentService";
-import { subscriptionService } from "./subscriptionService";
 import { venueMatchingService } from "./venueMatchingService";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "./userMatchingService";
 import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceStatusUpdated } from "./eventBroadcast";
@@ -41,7 +37,7 @@ import {
   normalizeVenueQualityRecord,
 } from "./lib/venueDataQuality";
 
-import { aiEndpointLimiter, kpiEndpointLimiter, authEndpointLimiter, paymentEndpointLimiter, webhookEndpointLimiter } from "./rateLimiter";
+import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -574,6 +570,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
+  registerPaymentRoutes(app);
+  registerIcebreakerRoutes(app);
 
   // Profile routes
   app.post('/api/profile/setup', isPhoneAuthenticated, async (req: any, res) => {
@@ -12059,9 +12057,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   }
-
-  app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes);
-  app.use('/api/tts', isPhoneAuthenticated, ttsRoutes);
 
   // ============ Pre-event Attendance (Blind Box) ============
 
