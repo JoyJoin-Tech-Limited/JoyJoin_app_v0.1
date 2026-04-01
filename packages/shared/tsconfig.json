@@ -1,26 +1,22 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2020",
     "lib": [
-      "ES2022"
+      "ES2020"
     ],
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
       "@shared/*": [
-        "../../packages/shared/src/*"
+        "./src/*"
       ]
-    },
-    "types": [
-      "node"
-    ]
+    }
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
-    "dist"
+    "src/**/*.test.ts",
+    "src/**/__tests__/**/*"
   ]
 }

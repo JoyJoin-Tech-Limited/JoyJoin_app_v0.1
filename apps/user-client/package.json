@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite --port 5001",
     "build": "vite build",
-    "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "npm run typecheck",
+    "test": "node -e \"console.log('No tests for @joyjoin/user-client')\"",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

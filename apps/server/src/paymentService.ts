@@ -397,7 +397,9 @@ export class PaymentService {
    * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
    */
   private verifySignature(rawBody: string, headers: WechatWebhookHeaders): boolean {
-    const { timestamp, nonce, signature } = headers;
+    const timestamp = Array.isArray(headers.timestamp) ? headers.timestamp[0] : headers.timestamp;
+    const nonce = Array.isArray(headers.nonce) ? headers.nonce[0] : headers.nonce;
+    const signature = Array.isArray(headers.signature) ? headers.signature[0] : headers.signature;
 
     if (!timestamp || !nonce || !signature) {
       console.warn("[Payment] Webhook missing required signature headers");
