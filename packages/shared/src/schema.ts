@@ -104,6 +104,8 @@ export const users = pgTable("users", {
   intent: text("intent").array(), // Can include: networking, friends, discussion, fun, romance, flexible
   
   // Onboarding progress
+  // Legacy compatibility flag only. Do not use this for new onboarding logic;
+  // prefer server-calculated `nextStep` and `profileEssentialComplete`.
   hasCompletedRegistration: boolean("has_completed_registration").default(false),
   hasCompletedInterestsTopics: boolean("has_completed_interests_topics").default(false),
   hasCompletedPersonalityTest: boolean("has_completed_personality_test").default(false),
@@ -2338,6 +2340,7 @@ export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;
 // ============ 注册会话遥测系统 ============
 
 // Registration Sessions table - 追踪注册漏斗的完整生命周期
+// Legacy telemetry table retained for historical reporting only; do not use in new product flows.
 export const registrationSessions = pgTable("registration_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -3153,3 +3156,78 @@ export const insertUserInterestSignalSchema = createInsertSchema(userInterestSig
 
 export type UserInterestSignal = typeof userInterestSignals.$inferSelect;
 export type InsertUserInterestSignal = z.infer<typeof insertUserInterestSignalSchema>;
+
+// ============ Social Icebreaker Persistence ============
+
+/**
+ * Persisted Social Icebreaker session state.
+ *
+ * Replaces the previous in-memory Map store.  The full SocialSessionState
+ * is stored in `state_json` (JSONB) so schema migrations are not needed
+ * for individual phase-data fields.  Key fields are promoted to columns to
+ * support efficient index-based lookup and TTL sweeps.
+ *
+ * `expires_at` is set to sessionStartedAt + 6 hours on creation and is
+ * used for explicit TTL enforcement (clients receive a structured expiry
+ * error rather than an opaque 404).
+ */
+export const socialIcebreakerSessions = pgTable("social_icebreaker_sessions", {
+  id: varchar("id").primaryKey(),
+  icebreakerSessionId: varchar("icebreaker_session_id").unique().notNull(),
+  hostUserId: varchar("host_user_id").notNull(),
+  hostDisplayName: varchar("host_display_name").notNull(),
+  currentPhase: varchar("current_phase").notNull().default("warmup"),
+  phaseStartedAt: timestamp("phase_started_at").notNull(),
+  sessionStartedAt: timestamp("session_started_at").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  stateJson: jsonb("state_json").notNull().$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_social_icebreaker_sessions_icebreaker_session_id").on(table.icebreakerSessionId),
+  index("idx_social_icebreaker_sessions_expires_at").on(table.expiresAt),
+]);
+
+export type SocialIcebreakerSessionRow = typeof socialIcebreakerSessions.$inferSelect;
+
+/**
+ * Per-session participant roster with live presence tracking.
+ *
+ * A row is created (or updated) whenever a user joins/rejoins a Social
+ * Icebreaker session.  `last_seen_at` is bumped by the heartbeat endpoint
+ * so the server can distinguish active participants from those who have
+ * disconnected without explicitly leaving.
+ */
+export const socialIcebreakerParticipants = pgTable("social_icebreaker_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  displayName: varchar("display_name").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_social_icebreaker_participants_session_user").on(table.socialSessionId, table.userId),
+  index("idx_social_icebreaker_participants_last_seen").on(table.lastSeenAt),
+]);
+
+export type SocialIcebreakerParticipantRow = typeof socialIcebreakerParticipants.$inferSelect;
+
+/**
+ * Server-only lie-truth data for the Lie Detective phase.
+ *
+ * Stores the full statement set (including `isLie`) separately from the
+ * public session state so it is never accidentally exposed to clients via
+ * the state polling endpoint.  The route handler fetches this table only
+ * when it needs to reveal the answer after all votes are in.
+ */
+export const socialIcebreakerLieTruths = pgTable("social_icebreaker_lie_truths", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  statementsJson: jsonb("statements_json").notNull().$type<Array<{ index: number; text: string; isLie: boolean }>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_social_icebreaker_lie_truths_session_user").on(table.socialSessionId, table.userId),
+  index("idx_social_icebreaker_lie_truths_session").on(table.socialSessionId),
+]);

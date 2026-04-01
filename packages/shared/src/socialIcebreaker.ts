@@ -67,9 +67,14 @@ export interface SocialSessionState {
   currentPhase: SocialIcebreakerPhase;
   hostUserId: string;
   hostDisplayName: string;
+  /** Total number of users who have ever joined this session (roster count). */
   playerCount: number;
+  /** Number of participants who have sent a heartbeat in the last 30 seconds. */
+  activePlayerCount?: number;
   phaseStartedAt: number; // timestamp of current phase start
   sessionStartedAt: number; // timestamp of session creation
+  /** ISO timestamp when the session expires; undefined for in-memory legacy sessions. */
+  expiresAt?: string;
   completedPhases: SocialIcebreakerPhase[];
   eventType?: string;
   enabledPhases?: SocialIcebreakerPhase[];
