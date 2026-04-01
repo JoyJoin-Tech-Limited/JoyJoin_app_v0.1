@@ -174,6 +174,8 @@ export interface IStorage {
 
   // Admin Payment operations
   getAllPayments(): Promise<any[]>;
+  getPaymentById(id: string): Promise<any | undefined>;
+  getPaymentByWechatOrderId(wechatOrderId: string): Promise<any | undefined>;
   createPayment(data: any): Promise<any>;
   updatePayment(id: string, updates: any): Promise<any>;
 
@@ -2452,6 +2454,24 @@ export class DatabaseStorage implements IStorage {
       ORDER BY p.created_at DESC
     `);
     return result.rows;
+  }
+
+  async getPaymentById(id: string): Promise<any | undefined> {
+    const result = await db.execute(sql`
+      SELECT * FROM payments
+      WHERE id = ${id}
+      LIMIT 1
+    `);
+    return result.rows[0];
+  }
+
+  async getPaymentByWechatOrderId(wechatOrderId: string): Promise<any | undefined> {
+    const result = await db.execute(sql`
+      SELECT * FROM payments
+      WHERE wechat_order_id = ${wechatOrderId}
+      LIMIT 1
+    `);
+    return result.rows[0];
   }
 
   async getPaymentsByType(paymentType: string): Promise<any[]> {

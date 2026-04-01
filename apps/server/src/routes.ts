@@ -21,6 +21,7 @@ import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
 import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
+import { getMetricsText } from "./middleware/metrics";
 
 type Traits = {
   affinity: number;
@@ -10251,6 +10252,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
+        clientIp: getRequestClientIp(req),
       });
       
       res.json({
@@ -10283,6 +10285,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       res.status(500).json({ message: "Failed to cancel subscription" });
     }
   });
+
+  const getRequestClientIp = (req: Request): string => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
+      || req.ip
+      || req.socket.remoteAddress
+      || "127.0.0.1";
+  };
 
   // ============ PAYMENT & WEBHOOKS ============
   
@@ -10328,6 +10338,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         relatedId,
         originalAmount,
         couponId,
+        clientIp: getRequestClientIp(req),
       });
       
       res.json(paymentResult);

@@ -13,35 +13,37 @@ validateConfig();
 
 const app = express();
 
+// ── Observability middleware (must be first) ───────────────────────────────
+// 1. Attach a unique correlation ID to every request.
+app.use(requestIdMiddleware);
+// 2. Collect Prometheus-style metrics for every request.
+app.use(metricsMiddleware);
+
 // Body parsing middleware
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    if (req.originalUrl.startsWith("/api/webhooks/wechat-pay") || req.url.startsWith("/api/webhooks/wechat-pay")) {
+      (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: false }));
 
-// Request logging middleware
+// Request logging middleware — emits structured JSON instead of plain text
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      console.log(logLine);
+    if (path.startsWith("/api") && path !== "/api/metrics") {
+      logger.info("HTTP request", {
+        request_id: req.requestId,
+        method: req.method,
+        path,
+        status_code: res.statusCode,
+        duration_ms: duration,
+      });
     }
   });
 
@@ -66,28 +68,19 @@ app.use((req, res, next) => {
     // Start server
     const PORT = parseInt(process.env.PORT || "5001", 10);
     server.listen(PORT, "0.0.0.0", () => {
-      const formattedTime = new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
+      logger.info("JoyJoin Server started", {
+        port: PORT,
+        environment: process.env.NODE_ENV ?? "development",
+        admin_key_configured: Boolean(process.env.ADMIN_CREATE_SECRET_KEY),
       });
-
-      console.log(`\n🎉 JoyJoin Server Started Successfully!`);
-      console.log(`⏰ Time: ${formattedTime}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🚀 Server listening on port ${PORT}`);
-      console.log(`📍 API available at http://localhost:${PORT}/api`);
-      console.log(`🔑 Admin secret key: ${process.env.ADMIN_CREATE_SECRET_KEY ? "✅ Configured" : "❌ Missing"}`);
-      console.log(`\n`);
 
       // Warm TTS cache non-blocking (no-op if MINIMAX keys not configured)
       if (process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID) {
-        warmTTSCache().catch(err => console.warn('[startup] TTS cache warmup failed (non-fatal):', err));
+        warmTTSCache().catch(err => logger.warn('[startup] TTS cache warmup failed (non-fatal)', { error: String(err) }));
       }
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error("Failed to start server", { error: String(error) });
     process.exit(1);
   }
 })();

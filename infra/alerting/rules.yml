@@ -1,0 +1,142 @@
+# Prometheus alerting rules for JoyJoin
+# Docs: https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+#
+# Loaded by prometheus.yml via rule_files.
+# After editing, reload without restart:
+#   curl -X POST http://localhost:9090/-/reload
+
+groups:
+  - name: joyjoin.availability
+    rules:
+      # ── Health-check / service down ────────────────────────────────────────
+      - alert: JoyJoinServiceDown
+        expr: |
+          up{job="joyjoin_server"} == 0 OR absent(up{job="joyjoin_server"})
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "JoyJoin server is unreachable"
+          description: >
+            No metrics have been received from the JoyJoin server for 2 minutes.
+            The service may be down or the /api/metrics endpoint is failing.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinservicedown"
+
+  - name: joyjoin.errors
+    rules:
+      # ── High 5xx error rate ────────────────────────────────────────────────
+      - alert: JoyJoinHighErrorRate
+        expr: |
+          (
+            sum(rate(http_errors_total{job="joyjoin_server", status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="joyjoin_server"}[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "JoyJoin 5xx error rate is above 1%"
+          description: >
+            The 5xx error rate for JoyJoin has exceeded 1% over the last 5 minutes.
+            Current value: {{ $value | humanizePercentage }}.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinhigherrorrate"
+
+      # ── Elevated 4xx rate (warning only) ──────────────────────────────────
+      - alert: JoyJoinElevated4xxRate
+        expr: |
+          (
+            sum(rate(http_errors_total{job="joyjoin_server", status_code=~"4.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="joyjoin_server"}[5m]))
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JoyJoin 4xx error rate is above 5%"
+          description: >
+            The 4xx error rate for JoyJoin has exceeded 5% over the last 10 minutes.
+            Current value: {{ $value | humanizePercentage }}.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinelevated4xxrate"
+
+  - name: joyjoin.latency
+    rules:
+      # ── p95 latency static threshold ──────────────────────────────────────
+      # During beta, use a static threshold. Replace with a 1.5× baseline rule
+      # once a 7-day Prometheus baseline is available.
+      - alert: JoyJoinHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_ms_bucket{job="joyjoin_server"}[5m])) by (le, path)
+          ) > 1500
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JoyJoin p95 latency > 1500 ms on {{ $labels.path }}"
+          description: >
+            The p95 request latency on path {{ $labels.path }} has exceeded 1500 ms
+            for 5 minutes. Current p95: {{ $value | humanizeDuration }}.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinhighlatency"
+
+  - name: joyjoin.resources
+    rules:
+      # ── Memory exhaustion ─────────────────────────────────────────────────
+      - alert: JoyJoinHighMemory
+        expr: |
+          process_resident_memory_bytes{job="joyjoin_server"}
+          / 1024 / 1024
+          > 768
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JoyJoin process RSS > 768 MB"
+          description: >
+            The JoyJoin server resident memory has exceeded 768 MB for 10 minutes.
+            Current RSS: {{ $value | humanize }} MB.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinhighmemory"
+
+      # ── CPU exhaustion ────────────────────────────────────────────────────
+      # Detect sustained high CPU by monitoring the rate of CPU user-seconds.
+      # A rate of > 0.85 means the process consumed 85% of one core over 10m.
+      - alert: JoyJoinHighCPU
+        expr: |
+          rate(process_cpu_user_seconds_total{job="joyjoin_server"}[10m]) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JoyJoin CPU utilisation > 85%"
+          description: >
+            The JoyJoin process has consumed > 85% of one CPU core for 10 minutes.
+            Current rate: {{ $value | humanizePercentage }}.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinhighcpu"
+
+  - name: joyjoin.synthetic
+    rules:
+      # ── Synthetic probe failure ───────────────────────────────────────────
+      # The synthetic probe script pushes a 0/1 metric via Pushgateway or a
+      # simple HTTP gauge. Adjust the metric name to match your push setup.
+      - alert: JoyJoinSyntheticProbeFailed
+        expr: |
+          absent_over_time(joyjoin_synthetic_probe_success[10m]) OR
+          joyjoin_synthetic_probe_success == 0
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "JoyJoin synthetic happy-path probe is failing"
+          description: >
+            The automated synthetic probe that exercises the /api/health →
+            /api/auth/user flow has been reporting failure for 5 minutes.
+            This indicates a critical path regression in production.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinsyntheticprobefailed"
