@@ -266,7 +266,7 @@ Foster meaningful local connections through AI-powered matching that understands
 
 ### 1. User Onboarding & Registration
 
-**File Location:** `apps/user-client/src/pages/PersonalityTestPageV4.tsx` (primary entry point), `apps/user-client/src/pages/EssentialDataPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
+**File Location:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx` (primary active entry point; `apps/user-client/src/pages/PersonalityTestPageV4.tsx` is a compatibility re-export), `apps/user-client/src/features/onboarding/active/pages/EssentialDataPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
 
 #### 1.1 Authentication — WeChat-First (Current)
 
@@ -335,9 +335,9 @@ LandingPage → /personality-test (anonymous V4 test)
 
 ### 1.3 Personality Test System ⭐
 
-> **Note**: The user-client now uses V4 adaptive assessment (`PersonalityTestPageV4.tsx`). V2 has been deprecated.
+> **Note**: The active onboarding route uses the V4 adaptive assessment page at `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`. `apps/user-client/src/pages/PersonalityTestPageV4.tsx` is a compatibility re-export. V2 has been deprecated.
 
-**File Location:** `apps/user-client/src/pages/PersonalityTestPageV4.tsx`, `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
+**File Location:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
 
 #### Architecture Overview
 
@@ -360,20 +360,22 @@ LandingPage → /personality-test (anonymous V4 test)
 
 *See `packages/shared/src/personality/archetypeNames.ts` for canonical source*
 
-#### Test Structure - V4 Adaptive Assessment (8-18 Questions)
+#### Test Structure - V4 Adaptive Assessment (Server-Configured Range)
 
 **Adaptive System:**
 - 60-question bank divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation)
-- V4 engine selects 8-18 questions based on real-time confidence tracking
-- Stops when all trait confidences ≥ 0.7 OR 16 questions reached; 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) are always appended after the adaptive phase for a maximum of 18 total
-- See `docs/onboarding-flow.md` § Step 1 for the client-side question count details
+- Question count is controlled by `AssessmentConfig` in `packages/shared/src/personality/types.ts` and evaluated by `shouldTerminate()` in `adaptiveEngine.ts`
+- Default config (`DEFAULT_ASSESSMENT_CONFIG`): `minQuestions=10`, `softMaxQuestions=12`, `hardMaxQuestions=16`
+- V2/tiered config (`V2_ASSESSMENT_CONFIG`, used when the matcher-v2 path is enabled): `minQuestions=12`, `softMaxQuestions=16`, `hardMaxQuestions=20`
+- Completion is not based on a fixed appended-question sequence. The engine terminates when `shouldTerminate()` decides enough confidence has been reached after the configured minimum, or when `hardMaxQuestions` is reached
+- `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are part of the active question bank, but they are **not** guaranteed closing questions
 
 **Question Flow:**
 ```
 Phase 1: Ask 8 anchor questions (L1) → Establish baseline
 Phase 2: Check confidences → If low, ask adaptive questions (L2)
 Phase 3: Check confusion → If top-2 close, ask disambiguation (L3)
-Phase 4: 2 interactive closing questions appended (always)
+Phase 4: `shouldTerminate()` evaluates confidence / confusion / configured bounds
 Phase 5: V2 Matcher → Calculate final archetype
 ```
 
@@ -448,11 +450,11 @@ For each archetype, system provides:
 **Last Updated:** 2026-02-04 (Personality Test System V4)
 
 **During Test:**
-- ✨ **Progress Indicator:** Visual progress bar + question counter (1/8 to 1/18, adaptive)
+- ✨ **Progress Indicator:** Visual progress bar + question counter derived from server `progress.minQuestions`, `progress.softMaxQuestions`, and `progress.hardMaxQuestions`
 - 📊 **Mini Radar Chart:** Real-time progress visualization showing 6 traits (ACOEXP)
 - 🎉 **Milestone Animation:** Appears dynamically based on trait confidence levels
 - 🎁 **Blind Box Reveal:** 3-second rotating gift box animation on submission
-- 🔄 **Adaptive Flow:** Questions adjust based on confidence — may finish in 8-12 adaptive questions + 2 interactive closing questions
+- 🔄 **Adaptive Flow:** Questions adjust based on server-configured bounds and current confidence; the client shows an estimated total rather than a fixed question count
 
 **Results Page Components:**
 
@@ -671,9 +673,9 @@ The standard join sheet (`JoinEventPoolSheet.tsx`) now includes a three-stage pr
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| `BlindPoolTrustExplainer` | `apps/user-client/src/components/BlindPoolTrustExplainer.tsx` | Inline explainer card — explains how the blind pool works and what to expect |
+| `BlindPoolTrustExplainer` | `apps/user-client/src/components/event-pool-registration/BlindPoolTrustExplainer.tsx` | Inline explainer card — explains how the blind pool works and what to expect |
 | `PreJoinVibeBriefSheet` | `apps/user-client/src/components/PreJoinVibeBriefSheet.tsx` | Bottom-sheet surfacing pool atmosphere signals and intent context before commit |
-| `WhyThisFitsCard` | `apps/user-client/src/components/WhyThisFitsCard.tsx` | Personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) — shown after vibe brief, before join confirmation |
+| `WhyThisFitsCard` | `apps/user-client/src/components/event-pool-registration/WhyThisFitsCard.tsx` | Personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) — shown after vibe brief, before join confirmation |
 
 These components render in sequence within `JoinEventPoolSheet` and do not change pool registration state — they only inform and reassure the user before they tap the final join CTA.
 
@@ -687,7 +689,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `NoMatchScreen` | Pool closed without a match for this user |
 | `JoinErrorScreen` | Join attempt failed (network or server error) |
 | `TestIncompleteScreen` | User has not completed personality test — blocks join |
-| `ExtendedDataEmptyScreen` | User's extended profile (interest carousel) is incomplete — blocks join |
+| `ExtendedDataEmptyScreen` | Optional extended-profile nudge shown when `user.profileExtendedComplete === false`; user can skip; primary CTA routes to `/profile/edit` |
 | `SurpriseMatchReveal` | Match formed — squad reveal animation |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |
 
@@ -717,7 +719,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 
 **Service Files:**
 - `apps/server/src/routes/domains/payments.ts` — payment route handler (domain router)
-- `apps/server/src/paymentService.ts` — WeChat Pay v3 signed API integration, idempotency handling, kill switch
+- `apps/server/src/paymentService.ts` — WeChat Pay v3 H5 integration, verified webhook handling, kill switch
 
 > **Payment Kill Switch:** The server exposes a `paymentsEnabled` feature flag. When disabled (e.g., during incident mitigation or pre-launch hold), all payment creation requests are rejected with a clear error before any WeChat API call is made. This is the primary launch-safety lever for payment flows.
 
@@ -734,17 +736,19 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
    ↓
 3. Server checks paymentsEnabled flag (kill switch) — rejects if disabled
    ↓
-4. Backend creates payment record (status: "pending") with idempotency key
+4. Backend creates payment record (status: "pending")
    ↓
-5. WeChat Pay v3 signed JSAPI order created
-   (v3 signature: SHA-256 HMAC with API v3 key — NOT the legacy MD5/v2 method)
-   {
-     appId, timeStamp, nonceStr, package, signType, paySign
-   }
+5. Server calls WeChat Pay v3 H5 API `/v3/pay/transactions/h5`
+   - Request is signed with `WECHATPAY2-SHA256-RSA2048` using the merchant RSA private key
+   - The API v3 key is used for webhook resource decryption (AES-GCM), not HMAC request signing
+   - WeChat responds with:
+     {
+       h5_url
+     }
    ↓
 6. User completes payment in WeChat
    ↓
-7. WeChat webhook POST /api/payments/webhook
+7. WeChat webhook POST /api/webhooks/wechat-pay
    ↓
 8. Server verifies v3 webhook signature before processing
    (rejects requests with invalid or missing signatures)
@@ -759,7 +763,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
     "支付成功！权益已激活"
 ```
 
-> **Webhook security:** The server performs cryptographic signature verification on every incoming WeChat Pay webhook notification using the v3 protocol. Notifications that fail verification are rejected before any state change occurs. Duplicate notifications are handled via idempotency keys.
+> **Webhook security:** The server performs cryptographic signature verification on every incoming WeChat Pay webhook notification using the v3 protocol, then decrypts the resource payload with the API v3 key (AES-GCM). Notifications that fail verification are rejected before any state change occurs. Success handling is idempotent, so duplicate notifications are safe.
 
 **Database Schema:**
 ```sql
@@ -1010,7 +1014,7 @@ Phase progression is **server-authoritative**. The server determines the current
 | `lie_detective` | 🕵️ 侦探 | 25 min | Two Truths One Lie — AI-generated |
 | `recap` | ✨ 回顾 | 5 min | AI-generated session summary |
 
-> **Lie Detective secrecy:** The `isLie` truth-marker is stored server-side and only included in the current player's own session state. It is never included in the shared/public session state broadcast to other participants. See `apps/server/src/routes/socialIcebreaker.ts` for the sanitization boundary.
+> **Lie Detective secrecy:** The `isLie` truth-marker is stored server-side only and is never included in any client session payload (persisted or broadcast). When a target is revealed, the server fetches the ground-truth from its separate store and returns only a derived `lieIndex` from the vote endpoint. See `apps/server/src/routes/socialIcebreaker.ts` for the sanitization boundary.
 
 #### Entry
 - Available on event day when event status is `in_progress`
@@ -3171,7 +3175,7 @@ export function useWebSocket() {
 - PostgreSQL session store (7-day persistence)
 
 **Payment:**
-- WeChat Pay JSAPI v3 signed integration (SHA-256 HMAC with API v3 key)
+- WeChat Pay v3 H5 integration — requests signed with `WECHATPAY2-SHA256-RSA2048`; API v3 key used for notification decryption/validation
 - Verified webhook handling (v3 signature validation before any state change)
 - Idempotency handling for duplicate webhook delivery
 - Payment kill switch (`paymentsEnabled` flag) — disables payment creation without code deployment
@@ -3183,8 +3187,8 @@ export function useWebSocket() {
 
 **Observability & Operational Readiness** *(PRs #397, #402)*
 - Structured JSON logging via `apps/server/src/lib/logger.ts`; every request carries a unique `requestId` for log correlation
-- Prometheus-compatible metrics endpoint (`/metrics`) — request rate, latency, memory, CPU, and domain-specific counters
-- Health check: `GET /api/health` (liveness) and `GET /api/ready` (readiness — verifies DB connectivity before accepting traffic)
+- Prometheus-compatible metrics endpoint (`/api/metrics`) — request rate, latency, memory, CPU, and domain-specific counters
+- Health check: `GET /api/health` (liveness) and `GET /api/readyz` (readiness — verifies DB connectivity before accepting traffic; `/readyz` redirects here)
 - Admin action audit log: `apps/server/src/lib/adminAuditLogger.ts` — every sensitive admin action emits a structured audit event
 - AI call trace log: `apps/server/src/lib/aiTraceLogger.ts` — every AI invocation emits a single-line `[AITrace] {json}` to stdout
 - Full observability setup: `docs/observability.md`; incident runbooks: `docs/runbooks/observability.md`
@@ -3250,8 +3254,8 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 
 **Public / Operational Routes:**
 - `GET /api/health` - Liveness probe (always 200 if server is running)
-- `GET /api/ready` - Readiness probe (checks DB connectivity before accepting traffic)
-- `GET /metrics` - Prometheus-compatible metrics endpoint
+- `GET /api/readyz` - Readiness probe (checks DB connectivity before accepting traffic; `/readyz` redirects here)
+- `GET /api/metrics` - Prometheus-compatible metrics endpoint
 
 **Public Routes:**
 - `POST /api/phone/register` - Send SMS verification (legacy fallback)
@@ -3274,7 +3278,7 @@ For full details: `apps/server/src/README.md` and `docs/architecture/current-sta
 - `GET /api/events/:id` - Event details
 - `POST /api/events/:id/register` - Register for event
 - `POST /api/payments/create` - Create payment (subject to `paymentsEnabled` kill switch)
-- `POST /api/payments/webhook` - WeChat Pay v3 webhook (verified before processing)
+- `POST /api/webhooks/wechat-pay` - WeChat Pay v3 webhook (verified before processing)
 - `POST /api/coupons/validate` - Validate coupon code
 - `GET /api/chats/:eventId` - Get event chat messages
 - `POST /api/chats/:eventId/message` - Send message
@@ -3713,11 +3717,11 @@ CREATE TABLE event_pool_groups (
 | Module | Status | Primary Files | Notes |
 |--------|--------|-------|-------|
 | **WeChat-First Onboarding** | ✅ Complete | `features/onboarding/active/`, `routes/domains/auth.ts` | Anonymous test → WeChat login → server nextStep |
-| **Personality Test V4** | ✅ Complete | `PersonalityTestPageV4.tsx`, `packages/shared/src/personality/` | 12 archetypes, 8-18 questions |
-| **Profile Review + AI Tagline** | ✅ Complete | `FinalProfileReviewPage.tsx`, `profileTaglineService.ts` | Reduced wait, skippable, AI tagline |
+| **Personality Test V4** | ✅ Complete | `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `packages/shared/src/personality/` | 12 archetypes, server-configured question range (`minQuestions`–`hardMaxQuestions`) |
+| **Profile Review + AI Tagline** | ✅ Complete | `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`, `profileTaglineService.ts` | Reduced wait, skippable, AI tagline |
 | **Limited Browse Mode** | ✅ Experiment | `FinalProfileReviewPage.tsx` | Scoped by feature flag `ENABLE_LIMITED_BROWSE_MODE` |
 | **Event Discovery** | ✅ Complete | `DiscoverPage.tsx`, `BlindBoxEventDetailPage.tsx` | Blind box system |
-| **Blind Pool Join Flow** | ✅ Complete | `JoinEventPoolSheet.tsx`, `BlindPoolTrustExplainer.tsx`, `PreJoinVibeBriefSheet.tsx`, `WhyThisFitsCard.tsx` | Trust explainer + vibe brief + why-fits |
+| **Blind Pool Join Flow** | ✅ Complete | `JoinEventPoolSheet.tsx`, `components/event-pool-registration/BlindPoolTrustExplainer.tsx`, `PreJoinVibeBriefSheet.tsx`, `components/event-pool-registration/WhyThisFitsCard.tsx` | Trust explainer + vibe brief + why-fits |
 | **Matching-State UI** | ✅ Complete | `components/matching/` | 7-screen family: waiting, no-match, join-error, test-incomplete, extended-data-empty, reveal, points |
 | **Center-Tab Empty State** | ✅ Complete | `CenterTabEmptyStatePage.tsx` | No-activity users via center nav tab |
 | **Match Scoring** | ✅ Complete | `apps/server/src/poolMatchingService.ts` | 6-dimensional pair + group scoring; interest signals excluded from deterministic scoring |
@@ -3758,7 +3762,7 @@ CREATE TABLE event_pool_groups (
 
 **Payment Security:**
 - PCI DSS compliant (via WeChat Pay)
-- WeChat Pay v3 signed API (SHA-256 HMAC — not legacy MD5/v2 method)
+- WeChat Pay v3 H5 API with `WECHATPAY2-SHA256-RSA2048` request signing and verified webhook decryption
 - Cryptographic webhook signature verification (v3 protocol) — requests that fail verification are rejected before any state change
 - Idempotency keys for duplicate prevention
 - Payment kill switch (`paymentsEnabled`) for launch-safety control
@@ -3832,9 +3836,10 @@ joyjoin-monorepo/
 │   │   │   │   ├── JoinErrorScreen.tsx
 │   │   │   │   ├── TestIncompleteScreen.tsx
 │   │   │   │   └── ExtendedDataEmptyScreen.tsx
-│   │   │   ├── BlindPoolTrustExplainer.tsx
+│   │   │   ├── event-pool-registration/
+│   │   │   │   ├── BlindPoolTrustExplainer.tsx
+│   │   │   │   └── WhyThisFitsCard.tsx
 │   │   │   ├── PreJoinVibeBriefSheet.tsx
-│   │   │   ├── WhyThisFitsCard.tsx
 │   │   │   ├── AttendeePreviewCard.tsx
 │   │   │   └── feedback/
 │   │   │       ├── ConnectionRadar.tsx
@@ -3971,7 +3976,7 @@ joyjoin-monorepo/
 - ✅ PRD metadata updated to v1.4 / April 1, 2026
 
 **v1.3 (March 2026)**
-- ✅ V4 personality test: 8-18 questions (8-16 adaptive + 2 closing questions)
+- ✅ V4 personality test: server-configured question bounds (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) with adaptive termination
 - ✅ AI onboarding tagline on Profile Review page
 - ✅ Interest Signal Boost: 2-step UX, pre-seeded from onboarding interest data
 - ✅ Limited browse mode prototype

@@ -47,7 +47,7 @@ Essential Data → Extended Data → Profile Review → Discover Page
 - Answers saved to localStorage: `joyjoin_v4_presignup_answers`
 - No backend submission until login
 - **Back button is hidden** (`showBack={false}`) — no mid-test navigation to the landing page
-- The test now includes 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) after the adaptive phase, for a total of 8–18 questions
+- The question range is server-configured (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) and termination is determined by `shouldTerminate()` in `packages/shared/src/personality/adaptiveEngine.ts`. `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are part of the active question bank, but they are not guaranteed closing questions
 
 **Why This Works:**
 - Reduce friction: No upfront commitment required
