@@ -92,6 +92,18 @@ vi.mock('../socialIcebreakerAIService', () => ({
   ),
 }));
 
+vi.mock('../lib/icebreakerAccess', () => ({
+  getIcebreakerSessionParticipantAccess: vi.fn(async (sessionId: string) => {
+    if (sessionId.startsWith('forbidden')) {
+      return { allowed: false, status: 403, body: { message: 'Forbidden' } };
+    }
+    if (sessionId.startsWith('missing')) {
+      return { allowed: false, status: 404, body: { message: 'Icebreaker session not found' } };
+    }
+    return { allowed: true, session: { id: sessionId } };
+  }),
+}));
+
 const { default: socialIcebreakerRouter } = await import('../routes/socialIcebreaker');
 
 function createApp() {
@@ -272,6 +284,21 @@ describe('social icebreaker routes', () => {
       expect(completeResponse.status).toBe(200);
       expect(completeBody.diceCompletedBy).toContain('dice-guest-1');
       expect(completeBody.diceCompletedBy).not.toContain('dice-host');
+    });
+  });
+
+  it('rejects social start for unauthorized users before creating a social session', async () => {
+    await withServer(async (baseUrl) => {
+      const guestCookie = await login(baseUrl, 'guest-forbidden');
+
+      const response = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+        body: JSON.stringify({ sessionId: 'forbidden-session', displayName: 'Guest' }),
+      });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toMatchObject({ message: 'Forbidden' });
     });
   });
 });

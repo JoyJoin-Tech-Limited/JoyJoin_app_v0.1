@@ -114,6 +114,7 @@ export default function MatchingStatusPage() {
   const [showRevealAnimation, setShowRevealAnimation] = useState(false);
   const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
   const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
+  const [groupDataError, setGroupDataError] = useState<string | null>(null);
   const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
@@ -125,6 +126,7 @@ export default function MatchingStatusPage() {
   // Fetch registration from shared cache
   const { data: poolRegistrations, isLoading: isRegistrationLoading, isError: isRegistrationError, refetch: refetchRegistrations } = useQuery<Array<PoolRegistration>>({
     queryKey: ["/api/my-pool-registrations"],
+    staleTime: 0,
   });
 
   const registration = poolRegistrations?.find(r => r.id === registrationId);
@@ -196,13 +198,8 @@ export default function MatchingStatusPage() {
         return;
       }
 
-      console.log('[Analytics] matching_succeeded', {
-        waitTimeSeconds: message.data?.waitTimeSeconds,
-        groupSize: message.data?.groupSize,
-        matchScore: message.data?.matchScore,
-      });
-
       setMatchData(poolData);
+      setGroupDataError(null);
       
       // In-page transition: progress → 100%, ribbon changes
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
@@ -218,13 +215,12 @@ export default function MatchingStatusPage() {
             const groupData = await response.json();
             setGroupMembersData(groupData);
           } else {
-            console.error('Failed to fetch group data: non-OK response');
-            // Fallback: proceed without member data
+            setGroupDataError("已匹配成功，但暂时无法同步小队详情。你仍然可以继续查看活动状态。");
             setGroupMembersData(null);
           }
         } catch (error) {
           console.error('Failed to fetch group data:', error);
-          // Fallback: proceed without member data
+          setGroupDataError("已匹配成功，但暂时无法同步小队详情。你仍然可以继续查看活动状态。");
           setGroupMembersData(null);
         } finally {
           setIsLoadingGroupData(false);
@@ -259,11 +255,6 @@ export default function MatchingStatusPage() {
     const unsubscribeRegistrationAdded = subscribe('POOL_REGISTRATION_ADDED', async (message) => {
       const data = message.data as any;
       
-      console.log('[Analytics] matching_progress_updated', {
-        oldProgress: poolStats?.progress,
-        newProgress: data.currentGroupFill ? (data.currentGroupFill / (data.minGroupSize || 4)) * 100 : 0,
-      });
-
       // Show "+1 新朋友加入！" micro-interaction
       setNewMemberJoined(true);
       setNewMemberArchetype(data.archetype || null);
@@ -297,8 +288,6 @@ export default function MatchingStatusPage() {
         return;
       }
 
-      console.log('[User] Event theme title revealed:', message);
-      
       setThemeData(themeTitleData);
       
       // Haptic feedback
@@ -323,17 +312,6 @@ export default function MatchingStatusPage() {
       unsubscribeThemeTitle();
     };
   }, [subscribe, registration?.poolId, poolStats?.progress]);
-
-  // Analytics tracking
-  useEffect(() => {
-    if (registration) {
-      console.log('[Analytics] matching_page_viewed', {
-        registrationId: registration.id,
-        poolId: registration.poolId,
-        timeUntilEvent: countdown.totalMs,
-      });
-    }
-  }, []);
 
     // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
   const handleRevealContinue = useCallback(() => {
@@ -379,10 +357,6 @@ export default function MatchingStatusPage() {
 
   // Handle cancel
   const handleCancel = () => {
-    console.log('[Analytics] matching_cancel_confirmed', {
-      registrationId: registration?.id,
-    });
-
     cancelMutation.mutate(registration!.id, {
       onSuccess: () => {
         setLocation("/");
@@ -392,11 +366,6 @@ export default function MatchingStatusPage() {
 
   // Handle invite
   const handleInvite = async () => {
-    console.log('[Analytics] matching_invite_tapped', {
-      registrationId: registration?.id,
-      progress: poolStats?.progress,
-    });
-
     const poolTitle = registration?.poolTitle ?? "盲盒社交活动";
     const formattedDateTime = registration?.poolDateTime 
       ? formatDateInHongKong(registration.poolDateTime, 'full')
@@ -411,13 +380,8 @@ export default function MatchingStatusPage() {
           text: shareText,
           url: shareUrl,
         });
-        
-        console.log('[Analytics] matching_invite_shared', {
-          registrationId: registration?.id,
-        });
       } catch (error) {
-        // User cancelled or error
-        console.log('[Analytics] matching_invite_cancelled');
+        // User cancelled or share failed.
       }
     } else {
       // Fallback: copy to clipboard
@@ -639,6 +603,13 @@ export default function MatchingStatusPage() {
       </div>
 
       <div className="relative px-4 py-6 space-y-6 z-10">
+        {groupDataError && (
+          <Card className="border-amber-200 bg-amber-50/70">
+            <CardContent className="p-4 text-sm text-amber-900">
+              {groupDataError}
+            </CardContent>
+          </Card>
+        )}
         {/* Main matching card - only reached in matched state */}
         <Card className="relative overflow-hidden">
           {/* Status ribbon badge */}
@@ -934,7 +905,6 @@ export default function MatchingStatusPage() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        console.log('[Analytics] venue_navigation_tapped');
                         // Navigate to Google Maps or Amap
                         const address = registration.venueAddress || `${registration.poolCity} ${registration.poolDistrict}`;
                         if (registration.poolCity === '深圳') {
@@ -978,7 +948,6 @@ export default function MatchingStatusPage() {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    console.log('[Analytics] group_info_refresh_tapped');
                     queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
                   }}
                 >
@@ -997,9 +966,6 @@ export default function MatchingStatusPage() {
               className="w-full"
               size="lg"
               onClick={() => {
-                console.log('[Analytics] view_group_members_tapped', {
-                  groupId: registration.assignedGroupId,
-                });
                 setLocation(`/pool-groups/${registration.assignedGroupId}`);
               }}
             >
@@ -1017,9 +983,6 @@ export default function MatchingStatusPage() {
                 className="w-full"
                 size="lg"
                 onClick={() => {
-                  console.log('[Analytics] icebreaker_tapped', {
-                    groupId: registration.assignedGroupId,
-                  });
                   setLocation(`/icebreaker-game?groupId=${registration.assignedGroupId}`);
                 }}
               >

@@ -54,6 +54,7 @@ const InvitePage = lazy(() => import("@/pages/InvitePage"));
 const EventFeedbackFlow = lazy(() => import("@/pages/EventFeedbackFlow"));
 const DeepFeedbackFlow = lazy(() => import("@/pages/DeepFeedbackFlow"));
 const IcebreakerSessionPage = lazy(() => import("@/pages/IcebreakerSessionPage"));
+const EventPoolRegistrationPage = lazy(() => import("@/pages/EventPoolRegistrationPage"));
 const DevIcebreakerDemoPage = lazy(() => import("@/pages/dev/IcebreakerDemoPage"));
 const IcebreakerGamePage = lazy(() => import("@/pages/IcebreakerGamePage"));
 const RewardsPage = lazy(() => import("@/pages/RewardsPage"));
@@ -238,6 +239,7 @@ function AuthenticatedRouter() {
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
           <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
           <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
+          <Route path="/event-pool-registration/:id" component={EventPoolRegistrationPage} />
           <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
           <Route path="/icebreaker-game" component={IcebreakerGamePage} />
           <Route path="/events" component={EventsPage} />
