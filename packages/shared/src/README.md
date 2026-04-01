@@ -5,25 +5,25 @@ This package holds contracts and logic that are intentionally shared across mult
 ## What belongs here
 
 ### Canonical data contracts
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/schema.ts` — database schema and shared model types
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/wsEvents.ts` — websocket event contracts
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/eventDetail.ts` — event detail contract surface
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/types/` — stable shared types, including AI metadata
+- `packages/shared/src/schema.ts` — database schema and shared model types
+- `packages/shared/src/wsEvents.ts` — websocket event contracts
+- `packages/shared/src/eventDetail.ts` — event detail contract surface
+- `packages/shared/src/types/` — stable shared types, including AI metadata
 
 ### Shared product vocabularies and constants
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/constants.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/interests.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/districts.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/occupations.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/industryTaxonomy.ts`
+- `packages/shared/src/constants.ts`
+- `packages/shared/src/interests.ts`
+- `packages/shared/src/districts.ts`
+- `packages/shared/src/occupations.ts`
+- `packages/shared/src/industryTaxonomy.ts`
 
 ### Shared domain engines
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/personality/` — archetypes, adaptive engine, compatibility references
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/socialIcebreaker.ts` — Social Icebreaker contracts and phase config
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/ai/` and `/types/aiMeta.ts` — AI-facing shared contracts
+- `packages/shared/src/personality/` — archetypes, adaptive engine, compatibility references
+- `packages/shared/src/socialIcebreaker.ts` — Social Icebreaker contracts and phase config
+- `packages/shared/src/ai/` and `packages/shared/src/types/aiMeta.ts` — AI-facing shared contracts
 
 ### Truly shared UI primitives
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/ui/`
+- `packages/shared/src/ui/`
 
 Only put UI here when it is reusable across multiple apps without carrying user-client-only or admin-client-only behavior.
 
@@ -37,15 +37,15 @@ Only put UI here when it is reusable across multiple apps without carrying user-
 
 ## Where new shared files go
 
-- **New DB table or shared model type:** update `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/schema.ts`
-- **New cross-app type or response contract:** add under `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/types/`
+- **New DB table or shared model type:** update `packages/shared/src/schema.ts`
+- **New cross-app type or response contract:** add under `packages/shared/src/types/`
 - **New shared constant/taxonomy:** place in the existing closest domain file rather than inventing a near-duplicate
-- **New personality or matching reference data used by multiple apps:** place under `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/personality/`
-- **New shared UI primitive:** place under `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/ui/`
+- **New personality or matching reference data used by multiple apps:** place under `packages/shared/src/personality/`
+- **New shared UI primitive:** place under `packages/shared/src/ui/`
 
 ## Export boundary
 
-`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/index.ts` is the public barrel for general shared exports.
+`packages/shared/src/index.ts` is the public barrel for general shared exports.
 
 When adding a new shared contract, export it intentionally. Do not assume every internal helper should be public.
 

@@ -3,15 +3,15 @@
 This folder is a documentation anchor for the onboarding domain.
 
 The active onboarding implementation still lives across existing client entry points:
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/App.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useAuth.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useOnboardingProgress.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useOnboardingRoute.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/PersonalityTestPageV4.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/PersonalityTestResultPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/EssentialDataPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/ExtendedDataPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/FinalProfileReviewPage.tsx`
+- `apps/user-client/src/App.tsx`
+- `apps/user-client/src/hooks/useAuth.ts`
+- `apps/user-client/src/hooks/useOnboardingProgress.ts`
+- `apps/user-client/src/hooks/useOnboardingRoute.ts`
+- `apps/user-client/src/pages/PersonalityTestPageV4.tsx`
+- `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
+- `apps/user-client/src/pages/EssentialDataPage.tsx`
+- `apps/user-client/src/pages/ExtendedDataPage.tsx`
+- `apps/user-client/src/pages/FinalProfileReviewPage.tsx`
 
 ## Active onboarding architecture
 
@@ -20,7 +20,7 @@ JoyJoin onboarding is **server-driven and conditional**.
 ### Source of truth
 
 - The client reads `nextStep` from `GET /api/auth/user`.
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/App.tsx` decides which routes are available for the current user state.
+- `apps/user-client/src/App.tsx` decides which routes are available for the current user state.
 - The server computes `nextStep`; the client must not reconstruct the flow as a new source of truth.
 
 ### Active first-time flow
@@ -42,34 +42,34 @@ JoyJoin onboarding is **server-driven and conditional**.
 ## Ownership map
 
 ### Routing and access control
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/App.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/routes.ts`
+- `apps/user-client/src/App.tsx`
+- `apps/user-client/src/routes.ts`
 
 ### Auth and onboarding state readers
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useAuth.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useOnboardingProgress.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useOnboardingRoute.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useOnboardingCheckpoint.ts`
+- `apps/user-client/src/hooks/useAuth.ts`
+- `apps/user-client/src/hooks/useOnboardingProgress.ts`
+- `apps/user-client/src/hooks/useOnboardingRoute.ts`
+- `apps/user-client/src/hooks/useOnboardingCheckpoint.ts`
 
 ### Step-specific UI
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/PersonalityTestPageV4.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/PersonalityTestResultPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/EssentialDataPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/ExtendedDataPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/FinalProfileReviewPage.tsx`
+- `apps/user-client/src/pages/PersonalityTestPageV4.tsx`
+- `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
+- `apps/user-client/src/pages/EssentialDataPage.tsx`
+- `apps/user-client/src/pages/ExtendedDataPage.tsx`
+- `apps/user-client/src/pages/FinalProfileReviewPage.tsx`
 
 ## Where new onboarding files go
 
 Because this app has not yet been reorganized into a full `features/onboarding` implementation, place new files by responsibility:
 
-- **New onboarding page or route-level screen:** `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/`
-- **Reusable onboarding UI used by a page:** `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/components/`
-- **Onboarding-specific state, routing, or data-fetch hooks:** `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/` with `useOnboarding*` naming when appropriate
-- **Pure utilities/constants shared across client and server:** `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/`
-- **Server-owned onboarding decisions or persistence:** `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/`
+- **New onboarding page or route-level screen:** `apps/user-client/src/pages/`
+- **Reusable onboarding UI used by a page:** `apps/user-client/src/components/`
+- **Onboarding-specific state, routing, or data-fetch hooks:** `apps/user-client/src/hooks/` with `useOnboarding*` naming when appropriate
+- **Pure utilities/constants shared across client and server:** `packages/shared/src/`
+- **Server-owned onboarding decisions or persistence:** `apps/server/src/`
 
 ## Guardrails
 
 - Prefer server-returned `nextStep` over client-side inference.
 - Do not add new logic to deprecated onboarding surfaces.
-- If a change affects onboarding state semantics, update both this README and `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/docs/architecture/current-state.md`.
+- If a change affects onboarding state semantics, update both this README and `docs/architecture/current-state.md`.

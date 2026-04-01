@@ -3,25 +3,25 @@
 This document is the active architecture map for contributors working in the current JoyJoin codebase.
 
 Use it together with:
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.github/copilot-instructions.md`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/DEVELOPER_QUICK_REFERENCE.md`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/docs/onboarding-flow.md`
+- `.github/copilot-instructions.md`
+- `DEVELOPER_QUICK_REFERENCE.md`
+- `docs/onboarding-flow.md`
 
 ## Monorepo map
 
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client` — user-facing React app
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/admin-client` — separate admin React app
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server` — Express API and operational backend
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared` — shared schema, contracts, taxonomies, and engines
+- `apps/user-client` — user-facing React app
+- `apps/admin-client` — separate admin React app
+- `apps/server` — Express API and operational backend
+- `packages/shared` — shared schema, contracts, taxonomies, and engines
 
 ## Active architecture by domain
 
 ### 1. Onboarding and authenticated routing
 
 **Authority chain**
-1. `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/routes.ts` computes `nextStep`
-2. `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useAuth.ts` exposes that contract
-3. `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/App.tsx` gates routes from `nextStep`
+1. `apps/server/src/routes.ts` computes `nextStep`
+2. `apps/user-client/src/hooks/useAuth.ts` exposes that contract
+3. `apps/user-client/src/App.tsx` gates routes from `nextStep`
 
 **Active flow**
 - `/personality-test`
@@ -37,26 +37,26 @@ Use it together with:
 - Keep server-owned completion semantics aligned with the `users` table and `/api/auth/user` response.
 
 Primary files:
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/features/onboarding/README.md`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/App.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useAuth.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/routes.ts`
+- `apps/user-client/src/features/onboarding/README.md`
+- `apps/user-client/src/App.tsx`
+- `apps/user-client/src/hooks/useAuth.ts`
+- `apps/server/src/routes.ts`
 
 ### 2. Matching, events, and post-match experience
 
 **Deterministic matching**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/poolMatchingService.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/poolRealtimeMatchingService.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/personality/`
+- `apps/server/src/poolMatchingService.ts`
+- `apps/server/src/poolRealtimeMatchingService.ts`
+- `packages/shared/src/personality/`
 
 **AI explanation and enrichment**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/matchExplanationService.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/types/aiMeta.ts`
+- `apps/server/src/matchExplanationService.ts`
+- `packages/shared/src/types/aiMeta.ts`
 
 **Client surfaces**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/DiscoverPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/MatchingStatusPage.tsx`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/components/matching/`
+- `apps/user-client/src/pages/DiscoverPage.tsx`
+- `apps/user-client/src/pages/MatchingStatusPage.tsx`
+- `apps/user-client/src/components/matching/`
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
@@ -64,15 +64,15 @@ Boundary:
 ### 3. Social Icebreaker
 
 **Shared contract**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/socialIcebreaker.ts`
+- `packages/shared/src/socialIcebreaker.ts`
 
 **Server runtime**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/routes/socialIcebreaker.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/socialIcebreakerAIService.ts`
+- `apps/server/src/routes/socialIcebreaker.ts`
+- `apps/server/src/socialIcebreakerAIService.ts`
 
 **Client hook/surfaces**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/useSocialIcebreaker.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/IcebreakerSessionPage.tsx`
+- `apps/user-client/src/hooks/useSocialIcebreaker.ts`
+- `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
 
 Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
@@ -80,13 +80,13 @@ Boundary:
 ### 4. Shared contracts and schema ownership
 
 **Canonical schema**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/schema.ts`
+- `packages/shared/src/schema.ts`
 
 **Shared contract barrel**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/index.ts`
+- `packages/shared/src/index.ts`
 
 **Domain guide**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/README.md`
+- `packages/shared/src/README.md`
 
 Boundary:
 - If more than one app/runtime must agree on a contract, define it in `packages/shared`.
@@ -95,39 +95,39 @@ Boundary:
 ### 5. Server domain ownership
 
 **Auth / onboarding / sessions**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/routes.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/wechatAuth.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/phoneAuth.ts`
+- `apps/server/src/routes.ts`
+- `apps/server/src/wechatAuth.ts`
+- `apps/server/src/phoneAuth.ts`
 
 **Payments / subscriptions**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/paymentService.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/subscriptionService.ts`
+- `apps/server/src/paymentService.ts`
+- `apps/server/src/subscriptionService.ts`
 
 **Admin operations**
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/adminAuth.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/lib/adminAuditLogger.ts`
-- `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/README.md`
+- `apps/server/src/adminAuth.ts`
+- `apps/server/src/lib/adminAuditLogger.ts`
+- `apps/server/src/README.md`
 
 ## Where new files go
 
 ### User client
-- Route-level page: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/pages/`
-- Shared presentation component: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/components/`
-- Client hook or query adapter: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/hooks/`
-- Pure browser utility: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/src/lib/` or `/utils/`
+- Route-level page: `apps/user-client/src/pages/`
+- Shared presentation component: `apps/user-client/src/components/`
+- Client hook or query adapter: `apps/user-client/src/hooks/`
+- Pure browser utility: `apps/user-client/src/lib/` or `apps/user-client/src/utils/`
 
 ### Server
-- Route registration: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/routes.ts`
-- Cohesive router module: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/routes/`
-- Domain service: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/` or an existing domain subfolder
-- Cross-cutting invariant/helper: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/lib/`
-- Middleware: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/server/src/middleware/`
+- Route registration: `apps/server/src/routes.ts`
+- Cohesive router module: `apps/server/src/routes/`
+- Domain service: `apps/server/src/` or an existing domain subfolder
+- Cross-cutting invariant/helper: `apps/server/src/lib/`
+- Middleware: `apps/server/src/middleware/`
 
 ### Shared package
-- Shared schema/model: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/schema.ts`
-- Shared types/contracts: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/types/`
-- Shared product constants/taxonomies: existing closest file in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/`
-- Shared UI primitive: `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/packages/shared/src/ui/`
+- Shared schema/model: `packages/shared/src/schema.ts`
+- Shared types/contracts: `packages/shared/src/types/`
+- Shared product constants/taxonomies: existing closest file in `packages/shared/src/`
+- Shared UI primitive: `packages/shared/src/ui/`
 
 ## Contribution guardrails
 
