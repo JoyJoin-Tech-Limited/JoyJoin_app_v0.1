@@ -1,6 +1,6 @@
 # JoyJoin User Onboarding Flow
 
-## Overview (Updated 2026-03-23)
+## Overview (Updated 2026-04-01)
 
 JoyJoin uses a **value-first** onboarding approach:
 
@@ -9,6 +9,8 @@ JoyJoin uses a **value-first** onboarding approach:
 - `apps/user-client/src/features/onboarding/active/flow.ts` — `nextStep` → step/route mapping (source of truth on client)
 - `apps/user-client/src/features/onboarding/active/pages/*` — active onboarding pages
 - `apps/user-client/src/legacy/onboarding/pages/*` — quarantined legacy onboarding surfaces
+
+> **Module consolidation (PRs #401, #403, #423):** The `features/onboarding/active/` module is the single owner of all new onboarding navigation and page logic. Do not add new onboarding routes to `apps/user-client/src/pages/` directly — route-to-step mapping lives in `flow.ts`, and orchestration lives in `useOnboardingOrchestrator.ts`. Legacy surfaces under `legacy/onboarding/` are quarantined and must not be referenced by active code.
 
 1. **Show value (personality test) BEFORE asking for signup**
 2. Silent WeChat authentication after user is invested
@@ -45,7 +47,7 @@ Essential Data → Extended Data → Profile Review → Discover Page
 - Answers saved to localStorage: `joyjoin_v4_presignup_answers`
 - No backend submission until login
 - **Back button is hidden** (`showBack={false}`) — no mid-test navigation to the landing page
-- The test now includes 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) after the adaptive phase, for a total of 8–18 questions
+- The question range is server-configured (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) and termination is determined by `shouldTerminate()` in `packages/shared/src/personality/adaptiveEngine.ts`. `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are part of the active question bank, but they are not guaranteed closing questions
 
 **Why This Works:**
 - Reduce friction: No upfront commitment required
