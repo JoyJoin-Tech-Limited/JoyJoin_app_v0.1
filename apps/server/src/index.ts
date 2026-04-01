@@ -1,10 +1,15 @@
 // Load environment variables from .env file (MUST be first)
 import "dotenv/config";
 
-import express, { type Request, type Response, type NextFunction } from "express";
+import express from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
+import { validateConfig } from "./lib/configValidation";
+import { globalErrorHandler } from "./lib/errorResponse";
+
+// Validate required configuration early — exits in production if critical vars are missing
+validateConfig();
 
 const app = express();
 
@@ -49,12 +54,7 @@ app.use((req, res, next) => {
     const server = await registerRoutes(app);
 
     // Error handling middleware (must be after routes)
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      console.error("Error:", err);
-      res.status(status).json({ message });
-    });
+    app.use(globalErrorHandler);
 
     // Setup Vite in development or serve static files in production
     if (app.get("env") === "development") {
