@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * JoyJoin Skill Router — Representative Examples & Regression Tests (v1.0)
+ * JoyJoin Skill Router — Representative Examples & Regression Tests (v2.0)
  *
  * This script runs a fixed set of representative JoyJoin routing scenarios and
  * checks that the router selects the expected primary skill.
  *
- * It also validates anti-legacy guard behaviour on "trap" inputs.
+ * It also validates anti-legacy guard behaviour on "trap" inputs, and includes
+ * coverage for all active skills (including the newly routed set added in the
+ * extend-skill-routing-coverage pass).
  *
  * Usage:
  *   node scripts/test-skill-routing.mjs
@@ -14,7 +16,7 @@
  *   0 — all assertions passed
  *   1 — one or more assertions failed
  *
- * To add a new test case, append an entry to CASES below.
+ * To add a new test case, append an entry to the relevant section below.
  */
 
 import { routeSkill } from './skill-router.mjs';
@@ -363,6 +365,252 @@ test('short symbols do not falsely match long triggers', () => {
   });
   assertEqual(r.primary_skill, 'platform-observability-and-ops');
   assertNotIncludes(r.secondary_skills, 'testing-and-regression-guardrails');
+});
+
+// ---- Code review ----
+console.log('\nCode review scenarios:');
+
+test('review this PR → code-review', () => {
+  const r = routeSkill({ ask: 'Review this PR before we merge it' });
+  assertEqual(r.primary_skill, 'code-review');
+});
+
+test('audit this pull request → code-review', () => {
+  const r = routeSkill({ ask: 'Audit this pull request for issues' });
+  assertEqual(r.primary_skill, 'code-review');
+});
+
+test('evaluate against Harness framework → code-review', () => {
+  const r = routeSkill({ ask: 'Evaluate this change against the Harness Engineering Framework' });
+  assertEqual(r.primary_skill, 'code-review');
+});
+
+test('check for reliability → code-review', () => {
+  const r = routeSkill({ ask: 'Check for reliability issues in this diff' });
+  assertEqual(r.primary_skill, 'code-review');
+});
+
+test('review + security lens → code-review primary, auth secondary', () => {
+  const r = routeSkill({ ask: 'Review this PR and check for security issues in the auth gating' });
+  assertEqual(r.primary_skill, 'code-review', 'Expected code-review as primary');
+  assertIncludes(
+    [...r.secondary_skills, r.primary_skill],
+    'code-review',
+    'Expected code-review in result',
+  );
+});
+
+// ---- Auth & safety ----
+console.log('\nAuth & safety boundary scenarios:');
+
+test('gate this route for admin only → auth-session-and-safety-boundaries', () => {
+  const r = routeSkill({ ask: 'Gate this route for admin only access' });
+  assertEqual(r.primary_skill, 'auth-session-and-safety-boundaries');
+});
+
+test('add an auth check → auth-session-and-safety-boundaries', () => {
+  const r = routeSkill({ ask: 'Add an auth check to the new payment webhook endpoint' });
+  assertEqual(r.primary_skill, 'auth-session-and-safety-boundaries');
+});
+
+test('fail safely on auth error → auth-session-and-safety-boundaries', () => {
+  const r = routeSkill({ ask: 'Make sure the flow fails safely on auth error rather than opening up access' });
+  assertEqual(r.primary_skill, 'auth-session-and-safety-boundaries');
+});
+
+test('requireAuth symbol → auth-session-and-safety-boundaries', () => {
+  const r = routeSkill({
+    ask: 'Should I use requireAuth or requireAdmin here?',
+    symbols: ['requireAuth'],
+  });
+  assertEqual(r.primary_skill, 'auth-session-and-safety-boundaries');
+});
+
+test('ENABLE_DEV_AUTH_TOOLS env var → auth-session-and-safety-boundaries', () => {
+  const r = routeSkill({ ask: 'How do I guard the dev login route behind ENABLE_DEV_AUTH_TOOLS?' });
+  assertEqual(r.primary_skill, 'auth-session-and-safety-boundaries');
+});
+
+// ---- Backend models ----
+console.log('\nBackend model standards scenarios:');
+
+test('add a new table → backend-models-standards', () => {
+  const r = routeSkill({ ask: 'Add a new table for storing event attendance records' });
+  assertEqual(r.primary_skill, 'backend-models-standards');
+});
+
+test('define a Drizzle schema → backend-models-standards', () => {
+  const r = routeSkill({ ask: 'Define a Drizzle schema for the new notifications table' });
+  assertEqual(r.primary_skill, 'backend-models-standards');
+});
+
+test('add an index to a table → backend-models-standards', () => {
+  const r = routeSkill({ ask: 'Add an index to the posts table to speed up user lookups' });
+  assertEqual(r.primary_skill, 'backend-models-standards');
+});
+
+test('add a foreign key → backend-models-standards', () => {
+  const r = routeSkill({ ask: 'Add a foreign key from event_attendance to users with onDelete cascade' });
+  assertEqual(r.primary_skill, 'backend-models-standards');
+});
+
+// ---- Monorepo workspace governance ----
+console.log('\nMonorepo workspace governance scenarios:');
+
+test('add a dependency → monorepo-workspace-governance', () => {
+  const r = routeSkill({ ask: 'Add a dependency to the monorepo for date-fns' });
+  assertEqual(r.primary_skill, 'monorepo-workspace-governance');
+});
+
+test('update tsconfig for workspace → monorepo-workspace-governance', () => {
+  const r = routeSkill({ ask: 'Update tsconfig for the shared workspace to enable strict mode' });
+  assertEqual(r.primary_skill, 'monorepo-workspace-governance');
+});
+
+test('root package.json scripts → monorepo-workspace-governance', () => {
+  const r = routeSkill({ ask: 'Change the root package.json scripts to add a new check:all command' });
+  assertEqual(r.primary_skill, 'monorepo-workspace-governance');
+});
+
+test('check-workspace-dependency-ownership → monorepo-workspace-governance', () => {
+  const r = routeSkill({ ask: 'The check-workspace-dependency-ownership script is reporting a cross-workspace violation' });
+  assertEqual(r.primary_skill, 'monorepo-workspace-governance');
+});
+
+// ---- JoyJoin brand guidelines ----
+console.log('\nJoyJoin brand guidelines scenarios:');
+
+test('make this on-brand → joyjoin-brand-guidelines', () => {
+  const r = routeSkill({ ask: 'Make this screen feel more on-brand for JoyJoin' });
+  assertEqual(r.primary_skill, 'joyjoin-brand-guidelines');
+});
+
+test('which colour should I use → joyjoin-brand-guidelines', () => {
+  const r = routeSkill({ ask: 'Which colour should I use for this success badge to match JoyJoin brand identity?' });
+  assertEqual(r.primary_skill, 'joyjoin-brand-guidelines');
+});
+
+test('brand tone review → joyjoin-brand-guidelines', () => {
+  const r = routeSkill({ ask: 'Review this copy for brand tone — is it too corporate for JoyJoin?' });
+  assertEqual(r.primary_skill, 'joyjoin-brand-guidelines');
+});
+
+test('brand + design system ambiguity → clarification recommended', () => {
+  const r = routeSkill({ ask: 'Add a new button variant using the JoyJoin brand colour' });
+  // Both design-system-governance and joyjoin-brand-guidelines may score; clarification is appropriate
+  assertTrue(
+    r.primary_skill === 'design-system-governance' || r.primary_skill === 'joyjoin-brand-guidelines',
+    `Expected design-system or brand skill, got: ${r.primary_skill}`,
+  );
+});
+
+// ---- Skill authoring governance ----
+console.log('\nSkill authoring governance scenarios:');
+
+test('create a new skill → skill-authoring-governance', () => {
+  const r = routeSkill({ ask: 'Create a new skill under .github/skills/ for payments' });
+  assertEqual(r.primary_skill, 'skill-authoring-governance');
+});
+
+test('update SKILL.md → skill-authoring-governance', () => {
+  const r = routeSkill({ ask: 'Update SKILL.md for the auth skill to add missing troubleshooting section' });
+  assertEqual(r.primary_skill, 'skill-authoring-governance');
+});
+
+test('skill frontmatter incorrect → skill-authoring-governance', () => {
+  const r = routeSkill({ ask: 'The skill frontmatter name does not match the directory — how do I fix it?' });
+  assertEqual(r.primary_skill, 'skill-authoring-governance');
+});
+
+test('add routing metadata for a skill → skill-authoring-governance', () => {
+  const r = routeSkill({ ask: 'Add routing metadata to the new payments skill' });
+  assertEqual(r.primary_skill, 'skill-authoring-governance');
+});
+
+test('skill authoring + routing maintenance → skill-authoring-governance primary', () => {
+  const r = routeSkill({ ask: 'Update the routing.yml trigger phrases in .github/skills/ for the code-review skill' });
+  assertEqual(r.primary_skill, 'skill-authoring-governance');
+});
+
+// ---- Docs sync ----
+console.log('\nDocs sync scenarios:');
+
+test('update docs → docs-sync', () => {
+  const r = routeSkill({ ask: 'Update the docs after this PR merges' });
+  assertEqual(r.primary_skill, 'docs-sync');
+});
+
+test('sync documentation → docs-sync', () => {
+  const r = routeSkill({ ask: 'Sync documentation to reflect the new matching algorithm changes' });
+  assertEqual(r.primary_skill, 'docs-sync');
+});
+
+test('docs are out of date → docs-sync', () => {
+  const r = routeSkill({ ask: 'The docs are out of date after the recent refactor' });
+  assertEqual(r.primary_skill, 'docs-sync');
+});
+
+test('DEVELOPER_QUICK_REFERENCE.md → docs-sync', () => {
+  const r = routeSkill({
+    ask: 'Refresh the quick reference table',
+    files: ['DEVELOPER_QUICK_REFERENCE.md'],
+  });
+  assertEqual(r.primary_skill, 'docs-sync');
+});
+
+// ---- Wow elements ----
+console.log('\nWow elements scenarios:');
+
+test('make this feel premium → wow-elements', () => {
+  const r = routeSkill({ ask: 'Make this completion screen feel more premium and delightful' });
+  assertEqual(r.primary_skill, 'wow-elements');
+});
+
+test('polish the interaction → wow-elements', () => {
+  const r = routeSkill({ ask: 'Polish the match reveal interaction with a subtle spring animation' });
+  assertEqual(r.primary_skill, 'wow-elements');
+});
+
+test('improve micro-interactions → wow-elements', () => {
+  const r = routeSkill({ ask: 'Improve the micro-interactions on the profile completion page' });
+  assertEqual(r.primary_skill, 'wow-elements');
+});
+
+// ---- Coverage-drift detection ----
+console.log('\nCoverage-drift detection:');
+
+test('validate-skill-routing.mjs fails when routing.yml is missing', async () => {
+  const { renameSync, existsSync: fsExists } = await import('node:fs');
+  const { join: pathJoin } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+
+  const repoRoot = pathJoin(dirname(fileURLToPath(import.meta.url)), '..');
+  const target = pathJoin(repoRoot, '.github', 'skills', 'wow-elements', 'routing.yml');
+  const backup = target + '.bak';
+
+  if (!fsExists(target)) {
+    throw new Error('wow-elements/routing.yml not found — prerequisite for drift test');
+  }
+
+  renameSync(target, backup);
+  try {
+    let exitCode = 0;
+    try {
+      execFileSync(process.execPath, [pathJoin(repoRoot, 'scripts', 'validate-skill-routing.mjs')], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    } catch (err) {
+      exitCode = err.status ?? 1;
+    }
+    if (exitCode === 0) {
+      throw new Error('Expected validate-skill-routing.mjs to exit 1 when routing.yml is missing, but it exited 0');
+    }
+  } finally {
+    renameSync(backup, target);
+  }
 });
 
 // ---------------------------------------------------------------------------

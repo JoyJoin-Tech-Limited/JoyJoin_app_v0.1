@@ -1,0 +1,59 @@
+skill: docs-sync
+
+primary_ownership: >
+  Post-change documentation hygiene — scanning code changes, mapping them to the
+  correct documentation targets, and applying minimal active-flow-only updates to
+  keep reference docs aligned with the current codebase.
+
+use_when:
+  - user asks to update, sync, or refresh documentation after a code change
+  - a PR has merged and its changes are not yet reflected in reference docs
+  - an API, route, or data model has changed and docs are stale
+  - an architecture decision was made that is not yet documented
+  - a skill, quick-reference table, or onboarding guide is visibly out of date
+  - preparing docs before a release or onboarding sprint
+
+do_not_use_when:
+  - task is writing new product requirements (use PRODUCT_REQUIREMENTS.md directly)
+  - change is purely internal with no API, architecture, or user-facing flow impact
+  - documentation is already accurate and up-to-date for the changed area
+  - task is authoring or auditing a skill file (use skill-authoring-governance)
+
+strong_triggers:
+  - update docs
+  - sync documentation
+  - document recent changes
+  - refresh reference docs
+  - docs are out of date
+  - DEVELOPER_QUICK_REFERENCE.md
+  - docs/onboarding-flow.md
+  - docs/architecture
+  - docs/api
+  - apps/server/src/README.md
+  - packages/shared/src/README.md
+  - documentation sync
+  - keep docs in sync
+  - post-PR documentation
+
+owned_files:
+  - DEVELOPER_QUICK_REFERENCE.md
+  - docs/**
+  - docs/architecture/current-state.md
+  - docs/onboarding-flow.md
+  - apps/server/src/README.md
+  - apps/user-client/src/features/onboarding/README.md
+  - packages/shared/src/README.md
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: skill-authoring-governance
+    when: sync involves updating or auditing skill files under .github/skills/
+  - skill: server-domain-architecture
+    when: sync targets route or API documentation after a server-side change
+  - skill: onboarding-state-architecture
+    when: sync targets onboarding flow docs after a nextStep or completion flag change
+  - skill: matching-domain
+    when: sync targets matching or scoring documentation after an algorithm change

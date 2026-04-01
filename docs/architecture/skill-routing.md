@@ -1,6 +1,6 @@
 # Skill Routing — Architecture & Maintenance Guide
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Owner:** Platform team  
 **Last Updated:** April 2026
 
@@ -9,6 +9,8 @@
 ## Overview
 
 The JoyJoin skill routing system ensures that the right repo skill is loaded at the right time for every ask or task. It follows a **simple, observable, maintainable** design — a lightweight rule-based router rather than a learned model.
+
+**v2.0 coverage:** All 17 active skills under `.github/skills/` now participate in routing. The validator enforces complete coverage — every new skill directory must include a `routing.yml` (or an explicit `routing-exempt.yml`) before the branch is considered valid.
 
 ---
 
@@ -30,7 +32,8 @@ The JoyJoin skill routing system ensures that the right repo skill is loaded at 
 ├── routing-schema.yml                 # Documented metadata schema
 ├── <skill-name>/
 │   ├── SKILL.md                       # Skill content
-│   └── routing.yml                    # Routing metadata (new)
+│   ├── routing.yml                    # Routing metadata (required for all active skills)
+│   └── routing-exempt.yml             # Optional: explicit exemption from routing (rare)
 
 scripts/
 ├── skill-router.mjs                   # Router implementation (importable + CLI)
@@ -168,11 +171,15 @@ It is normal and expected for 2 skills to be loaded simultaneously. Common combi
 
 | Primary | Secondary | Scenario |
 |---------|-----------|----------|
+| `code-review` | `auth-session-and-safety-boundaries` | PR review with security/auth focus |
+| `code-review` | `reliability-and-state-integrity` | PR review with atomicity concern |
 | `onboarding-state-architecture` | `reliability-and-state-integrity` | Onboarding step with atomic write requirement |
 | `server-domain-architecture` | `platform-observability-and-ops` | New API route + structured logging |
 | `matching-domain` | `reliability-and-state-integrity` | Pool matching with idempotency guard |
 | `social-icebreaker-domain` | `testing-and-regression-guardrails` | Host/player invariant with regression test |
 | `frontend-component-architecture` | `design-system-governance` | New shared component with token requirements |
+| `design-system-governance` | `joyjoin-brand-guidelines` | New variant using a brand colour |
+| `docs-sync` | `skill-authoring-governance` | Post-PR doc pass that includes skill updates |
 
 The router caps secondary skills at 1 in the first version to avoid context bloat.
 
@@ -238,24 +245,92 @@ node scripts/skill-router.mjs "Refactor this hook" \
 ## Running validation
 
 ```bash
-# Validate routing metadata freshness (checks required fields, path existence, blocks legacy refs)
+# Validate routing metadata AND coverage (all skills must have routing.yml or routing-exempt.yml)
 node scripts/validate-skill-routing.mjs
 
-# Run representative routing examples (37 test cases)
+# Run representative routing examples (75 test cases covering all 17 active skills)
 node scripts/test-skill-routing.mjs
 ```
 
-Both scripts exit `0` on success and `1` on failure.
+Both scripts exit `0` on success and `1` on failure. The validator fails with actionable output listing any skill directories without routing coverage.
+
+---
+
+## Coverage enforcement
+
+Every active skill directory under `.github/skills/` **must** have either:
+- A valid `routing.yml` — the standard path for all routable skills, or
+- A `routing-exempt.yml` — an explicit exemption for intentionally non-routable skills (rare)
+
+If neither is present, `validate-skill-routing.mjs` exits `1` with a coverage-gap error listing the uncovered skills and a pointer to `routing-schema.yml`.
+
+### Exemption mechanism
+
+If a skill genuinely cannot be meaningfully routed (e.g. a pure reference document or a meta-layer skill with no trigger vocabulary), create a `routing-exempt.yml` in its directory:
+
+```yaml
+reason: >
+  One-sentence explanation of why this skill is intentionally non-routable
+  and what a contributor should do instead.
+```
+
+Exemptions are intentionally rare. Default expectation is that all active skills participate in routing.
 
 ---
 
 ## How to add or update routing metadata
 
-1. **Add a new skill:** create a `routing.yml` in `.github/skills/<skill-name>/` following the schema in `routing-schema.yml`. The `skill` field must match the directory name exactly.
-2. **Add a trigger:** update `strong_triggers` with the new keyword or symbol. Prefer repo-specific terms (TypeScript symbols, route paths, component names) over generic keywords.
+1. **Add a new skill:** create a `routing.yml` in `.github/skills/<skill-name>/` following the schema in `routing-schema.yml`. The `skill` field must match the directory name exactly. **The validator will fail until this file exists.**
+2. **Add a trigger:** update `strong_triggers` with the new keyword or symbol. Prefer repo-specific terms (TypeScript symbols, route paths, component names) over generic keywords. Avoid triggers that are substrings of unrelated common words.
 3. **Update owned files:** update `owned_files` when files are moved or renamed. Run `node scripts/validate-skill-routing.mjs` to catch stale paths.
 4. **Update related_skills:** when a new handoff pattern emerges, add it to both skills involved.
 5. **Test changes:** run `node scripts/test-skill-routing.mjs` to verify existing routing still works. Add a new test case for the new scenario.
+
+---
+
+## Routing examples — `code-review`
+
+`code-review` is the **mandatory entry point for all PR reviews**. `.github/copilot-instructions.md` explicitly says PR review should start with this skill, then load domain-specific skills for deeper review.
+
+The router should select `code-review` as primary for asks like:
+
+| Ask | Routing |
+|-----|---------|
+| "Review this PR before we merge it" | `code-review` (primary) |
+| "Audit this pull request for issues" | `code-review` (primary) |
+| "Evaluate against the Harness Engineering Framework" | `code-review` (primary) |
+| "Check for reliability gaps in this diff" | `code-review` (primary) |
+| "Review this PR and check the auth gating" | `code-review` (primary) + `auth-session-and-safety-boundaries` (secondary) |
+
+Domain skills are loaded as secondary when the review ask mentions a specific technical concern.
+
+---
+
+## Routing examples — `skill-authoring-governance`
+
+`skill-authoring-governance` routes asks about the skills system itself — writing, auditing, updating, and maintaining skill files and routing metadata.
+
+| Ask | Routing |
+|-----|---------|
+| "Create a new skill for payments" | `skill-authoring-governance` (primary) |
+| "Update SKILL.md — add a troubleshooting section" | `skill-authoring-governance` (primary) |
+| "The frontmatter name doesn't match the directory" | `skill-authoring-governance` (primary) |
+| "Add routing metadata to the new skill" | `skill-authoring-governance` (primary) |
+| "Audit all skills for missing review checklists" | `skill-authoring-governance` (primary) |
+
+This ensures the routing system can support its own maintenance path.
+
+---
+
+## Routing examples — `docs-sync`
+
+`docs-sync` routes post-change documentation hygiene tasks.
+
+| Ask | Routing |
+|-----|---------|
+| "Update the docs after this PR merges" | `docs-sync` (primary) |
+| "The DEVELOPER_QUICK_REFERENCE is out of date" | `docs-sync` (primary) |
+| "Sync documentation to reflect the new API routes" | `docs-sync` (primary) |
 
 ---
 
@@ -273,7 +348,7 @@ Both scripts exit `0` on success and `1` on failure.
 
 ---
 
-## Extending to phase 2 (future)
+## Extending to phase 3 (future)
 
 The current router is intentionally simple. If signal quality degrades, consider:
 
