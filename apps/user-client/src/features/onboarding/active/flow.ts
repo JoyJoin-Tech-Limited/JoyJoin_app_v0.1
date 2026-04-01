@@ -85,6 +85,10 @@ export function getStepRoute(step: ActiveOnboardingStep): OnboardingRoute {
 }
 
 export function nextStepToRoute(nextStep: NextStepType | undefined): OnboardingRoute {
+  if (!nextStep) {
+    return "/login";
+  }
+
   return getStepRoute(nextStepToOnboardingStep(nextStep));
 }
 

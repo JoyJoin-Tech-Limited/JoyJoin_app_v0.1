@@ -33,12 +33,13 @@ describe("resolveOnboardingRoute", () => {
     expect(resolveOnboardingRoute(buildUser({ nextStep: "profile-review" }))).toBe("/onboarding/review");
   });
 
-  it("falls back to personality test when the user is authenticated but the test is incomplete", () => {
-    expect(resolveOnboardingRoute(buildUser())).toBe("/personality-test");
+  it("routes to login when nextStep is missing", () => {
+    expect(resolveOnboardingRoute(buildUser())).toBe("/login");
   });
 
-  it("keeps guide and discover both mapped to discover", () => {
+  it("keeps guide and discover both mapped to discover and missing nextStep to login", () => {
     expect(nextStepToRoute("guide")).toBe("/discover");
     expect(nextStepToRoute("discover")).toBe("/discover");
+    expect(nextStepToRoute(undefined)).toBe("/login");
   });
 });

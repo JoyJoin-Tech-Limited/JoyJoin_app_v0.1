@@ -1,13 +1,22 @@
 import { useOnboardingOrchestrator } from "@/features/onboarding/active/useOnboardingOrchestrator";
 import {
+  buildOnboardingProgress,
   getStepLabel,
   getStepRoute as getActiveStepRoute,
   type ActiveOnboardingStep,
   type OnboardingProgress,
 } from "@/features/onboarding/active/flow";
+import type { AuthUser } from "./useAuth";
 
 export type OnboardingStep = ActiveOnboardingStep;
 export type { OnboardingProgress } from "@/features/onboarding/active/flow";
+
+/**
+ * @deprecated Prefer useOnboardingOrchestrator() for active onboarding flow state.
+ */
+export function calculateOnboardingProgress(user: AuthUser | undefined): OnboardingProgress {
+  return buildOnboardingProgress(user);
+}
 
 /**
  * @deprecated Prefer useOnboardingOrchestrator() for active onboarding flow state.

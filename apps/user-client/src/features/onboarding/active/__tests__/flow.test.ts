@@ -23,6 +23,7 @@ describe("active onboarding flow", () => {
   it("maps legacy onboarding nextStep to the active personality test step", () => {
     expect(nextStepToOnboardingStep("onboarding")).toBe("personality-test");
     expect(nextStepToRoute("guide")).toBe("/discover");
+    expect(nextStepToRoute(undefined)).toBe("/login");
     expect(getStepRoute("profile-review")).toBe("/onboarding/review");
   });
 
@@ -55,6 +56,6 @@ describe("active onboarding flow", () => {
 
     expect(state.source).toBe("missing-next-step");
     expect(state.currentStep).toBe("complete");
-    expect(state.currentRoute).toBe("/discover");
+    expect(state.currentRoute).toBe("/login");
   });
 });

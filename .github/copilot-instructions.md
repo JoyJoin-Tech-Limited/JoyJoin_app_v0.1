@@ -269,8 +269,8 @@ The guide is **server-persisted** but **currently conditional** in routing: `Aut
 - `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx` — Profile preview and review
 - `apps/user-client/src/legacy/onboarding/pages/` — Quarantined legacy onboarding pages
 - `apps/user-client/src/pages/LoginPage.tsx` — WeChat 微信授权登入
-- `apps/user-client/src/pages/GuidePage.tsx` — ⚠️ **Deprecated** (2026-02-16). Replaced by inline coach marks. The `/guide` route still renders this page for backward compatibility but `nextStep === 'guide'` routes directly to `DiscoverPage`. Do not add new features here.
-- `apps/user-client/src/pages/ProfileSetupPage.tsx` — ⚠️ **Unused** — imported in `App.tsx` but not routed. Candidate for removal.
+- `apps/user-client/src/legacy/onboarding/pages/GuidePage.tsx` — ⚠️ **Deprecated** (2026-02-16). Replaced by inline coach marks. The `/guide` route is kept only for backward compatibility while `nextStep === 'guide'` routes directly to `DiscoverPage`. Do not add new features here.
+- `apps/user-client/src/legacy/onboarding/pages/ProfileSetupPage.tsx` — ⚠️ **Unused legacy** — kept only for compatibility and not routed in `App.tsx`. Candidate for removal.
 
 #### Admin Portal Deployment Note
 

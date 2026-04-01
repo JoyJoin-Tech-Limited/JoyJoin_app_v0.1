@@ -316,7 +316,7 @@ export default function PersonalityTestPage() {
   const progressPercentage = useMemo(() => {
     if (!progress) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[PersonalityTestPageV4] Progress is null, returning 0');
+        console.log('[PersonalityTestPage] Progress is null, returning 0');
       }
       return 0;
     }
@@ -330,7 +330,7 @@ export default function PersonalityTestPage() {
       const total = Math.max(estimatedTotal, progress.answered + 1);
       const calculated = Math.min(100, Math.round((progress.answered / total) * 100));
       if (process.env.NODE_ENV === 'development') {
-        console.log('[PersonalityTestPageV4] Anchor phase progress:', { 
+        console.log('[PersonalityTestPage] Anchor phase progress:', { 
           answered: progress.answered, 
           estimatedRemaining, 
           total,
@@ -343,7 +343,7 @@ export default function PersonalityTestPage() {
     // After anchor phase: use unified progress calculation
     const calculated = Math.min(100, Math.round(getUnifiedProgress('assessment', displayCurrent, estimatedRemaining)));
     if (process.env.NODE_ENV === 'development') {
-      console.log('[PersonalityTestPageV4] Progress calculated:', { 
+      console.log('[PersonalityTestPage] Progress calculated:', { 
         answered: progress.answered, 
         estimatedRemaining, 
         calculated 
@@ -407,7 +407,7 @@ export default function PersonalityTestPage() {
         try {
           await saveCheckpoint.mutateAsync('personality-test');
         } catch (e) {
-          console.error('[PersonalityTestPageV4] Failed to save checkpoint:', e);
+          console.error('[PersonalityTestPage] Failed to save checkpoint:', e);
         }
         
         setLocation('/personality-test/auth-gate');
