@@ -117,7 +117,7 @@ export default function LoginPromptPage() {
           {/* Primary CTA - Login */}
           <Button
             size="lg"
-            className="w-full h-14 text-lg rounded-2xl mb-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="w-full h-14 text-lg rounded-2xl mb-3"
             onClick={handleLogin}
           >
             <Lock className="w-5 h-5 mr-2" />
