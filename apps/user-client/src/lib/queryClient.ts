@@ -7,6 +7,29 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * Handle a 401 (session expired) response from a mutation or action.
+ * Clears the React Query cache (so stale auth state is dropped) and
+ * redirects the user to the landing page so they can re-authenticate
+ * without being trapped in a broken or loading state.
+ *
+ * The redirect is intentionally deferred to the next microtask so that
+ * any synchronous caller cleanup (e.g. mutation onError handlers) can
+ * run first.
+ */
+function handleSessionExpired(): void {
+  // Clear all cached queries — session is gone, all user data is stale
+  queryClient.clear();
+
+  // Redirect to landing page (non-SPA navigation to ensure full app reset)
+  const target = "/";
+  if (window.location.pathname !== target) {
+    queueMicrotask(() => {
+      window.location.replace(target);
+    });
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -18,6 +41,12 @@ export async function apiRequest(
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  // Session expired mid-flow: clear state and redirect cleanly
+  if (res.status === 401) {
+    handleSessionExpired();
+    throw new Error("401: Session expired. Please log in again.");
+  }
 
   await throwIfResNotOk(res);
   return res;

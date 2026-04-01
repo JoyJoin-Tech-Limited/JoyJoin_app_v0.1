@@ -95,3 +95,33 @@ export const kpiEndpointLimiter = createRateLimiter({
   maxRequests: 30,
   keyPrefix: 'kpi',
 });
+
+/**
+ * Auth endpoint limiter — applied to WeChat login, phone auth, etc.
+ * Conservative limit for beta: 20 attempts per minute per IP/user.
+ */
+export const authEndpointLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 20,
+  keyPrefix: 'auth',
+});
+
+/**
+ * Payment endpoint limiter — applied to payment creation and subscription renewal.
+ * Prevents abuse of payment creation while keeping normal user flows unblocked.
+ */
+export const paymentEndpointLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 10,
+  keyPrefix: 'pay',
+});
+
+/**
+ * Webhook endpoint limiter — applied to /api/webhooks/wechat-pay.
+ * WeChat Pay may retry failed deliveries; allow a reasonable burst.
+ */
+export const webhookEndpointLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 120,
+  keyPrefix: 'wh',
+});

@@ -36,6 +36,7 @@ import { SiWechat } from "react-icons/si";
 import { getCurrencySymbol } from "@/lib/currency";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 // Default fallback prices (used while loading or if API fails)
 const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (原价)
@@ -64,6 +65,7 @@ interface PricingPlan {
 
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
+  const { paymentsEnabled, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [promoOpen, setPromoOpen] = useState(false);
   const [couponTab, setCouponTab] = useState("input");
   const [couponCode, setCouponCode] = useState("");
@@ -404,6 +406,35 @@ export default function BlindBoxPaymentPage() {
 
   // ✅ 到这里为止，下面就是你的 return (
 
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
+        <Loader className="h-10 w-10 text-purple-500 animate-spin mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">正在加载支付信息…</p>
+      </div>
+    );
+  }
+
+  // Payment kill switch: only show maintenance after auth has resolved
+  if (isAuthenticated && !paymentsEnabled) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
+        <button
+          onClick={() => setLocation("/discover")}
+          className="absolute top-4 right-4 bg-white/80 rounded-full p-2 shadow-md"
+          aria-label="返回"
+        >
+          <X className="h-6 w-6 text-gray-700" />
+        </button>
+        <Sparkles className="h-16 w-16 text-purple-400 mb-4" />
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">支付功能暂时关闭</h1>
+        <p className="text-gray-600 dark:text-gray-400 max-w-xs">
+          我们正在升级支付系统，请稍后再试。感谢您的耐心等待！
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-orange-950/20">

@@ -1,13 +1,15 @@
 // Load environment variables from .env file (MUST be first)
 import "dotenv/config";
 
-import express, { type Request, type Response, type NextFunction } from "express";
+import express from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
-import { logger } from "./lib/logger";
-import { requestIdMiddleware } from "./middleware/requestId";
-import { metricsMiddleware } from "./middleware/metrics";
+import { validateConfig } from "./lib/configValidation";
+import { globalErrorHandler } from "./lib/errorResponse";
+
+// Validate required configuration early — exits in production if critical vars are missing
+validateConfig();
 
 const app = express();
 
@@ -18,10 +20,15 @@ app.use(requestIdMiddleware);
 app.use(metricsMiddleware);
 
 // Body parsing middleware
+// Capture the original signed bytes for WeChat Pay webhook verification before
+// JSON parsing consumes the request stream.
 app.use(express.json({
-  verify: (req, _res, buf) => {
-    if (req.originalUrl.startsWith("/api/webhooks/wechat-pay") || req.url.startsWith("/api/webhooks/wechat-pay")) {
-      (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+  verify: (req: any, _res, buf) => {
+    const url = req.originalUrl ?? req.url ?? "";
+    if (url === "/api/webhooks/wechat-pay" || url.startsWith("/api/webhooks/wechat-pay?")) {
+      if (buf.length <= 1024 * 1024) {
+        req.rawBody = buf.toString("utf8");
+      }
     }
   },
 }));
@@ -54,17 +61,7 @@ app.use((req, res, next) => {
     const server = await registerRoutes(app);
 
     // Error handling middleware (must be after routes)
-    app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      logger.error("Unhandled request error", {
-        request_id: req.requestId,
-        status,
-        message,
-        stack: err.stack,
-      });
-      res.status(status).json({ message });
-    });
+    app.use(globalErrorHandler);
 
     // Setup Vite in development or serve static files in production
     if (app.get("env") === "development") {
