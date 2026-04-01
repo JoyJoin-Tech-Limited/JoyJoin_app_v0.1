@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Bell, ChevronRight, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import MatchingStateLayout from "@/components/matching/MatchingStateLayout";
 import {
   AlertDialog,
   AlertDialogAction,
