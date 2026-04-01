@@ -67,14 +67,11 @@ export function calculateOnboardingRoute(user: AuthUser | undefined): Onboarding
     return nextStepToRoute(user.nextStep);
   }
 
-  // Fallback: reconstruct from local booleans (used only when nextStep is absent).
-  if (!user.hasCompletedRegistration) {
-    return '/personality-test';
-  }
+  // Fallback: reconstruct from server-owned completion flags when nextStep is absent.
   if (!user.hasCompletedPersonalityTest) {
     return '/personality-test';
   }
-  const hasEssentialData = !!(user.displayName && user.gender && user.currentCity);
+  const hasEssentialData = user.profileEssentialComplete ?? !!(user.displayName && user.gender && user.currentCity);
   if (!hasEssentialData) {
     return '/onboarding/setup';
   }
