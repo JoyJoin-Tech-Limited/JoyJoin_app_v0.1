@@ -101,7 +101,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 ## Routing metadata
 
-Each core skill directory contains a `routing.yml` file alongside `SKILL.md`. This is the skill's **routing contract** — it tells the routing system when and why to load the skill.
+Each core skill directory contains a `routing.yml` file alongside `SKILL.md`. This is the skill's **routing contract** — `scripts/skill-router.mjs` reads the current `routing.yml` files at runtime to decide when and why to load a skill.
 
 ### Minimal required fields
 
@@ -121,7 +121,7 @@ See `.github/skills/routing-schema.yml` for the complete documented schema inclu
 ### Tooling
 
 ```bash
-# Validate all routing.yml files (required fields, path freshness, legacy refs)
+# Validate all routing.yml files (required fields, path freshness, legacy refs as blocking errors)
 node scripts/validate-skill-routing.mjs
 
 # Route an ask interactively

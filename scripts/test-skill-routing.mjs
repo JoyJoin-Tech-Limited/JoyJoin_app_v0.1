@@ -66,6 +66,17 @@ function assertIncludes(arr, item, msg) {
 }
 
 /**
+ * @param {unknown[]} arr
+ * @param {unknown} item
+ * @param {string} [msg]
+ */
+function assertNotIncludes(arr, item, msg) {
+  if (arr.includes(item)) {
+    throw new Error(msg ?? `Expected array not to include ${JSON.stringify(item)}, got: ${JSON.stringify(arr)}`);
+  }
+}
+
+/**
  * @param {boolean} value
  * @param {string} [msg]
  */
@@ -168,6 +179,11 @@ test('add a new API route → server-domain-architecture', () => {
   assertEqual(r.primary_skill, 'server-domain-architecture');
 });
 
+test('registerAuthRoutes symbol → server-domain-architecture', () => {
+  const r = routeSkill({ ask: 'Refactor registerAuthRoutes so auth routes mount from the right domain module' });
+  assertEqual(r.primary_skill, 'server-domain-architecture');
+});
+
 test('routes.ts file path → server-domain-architecture', () => {
   const r = routeSkill({
     ask: 'Migrate this logic',
@@ -224,7 +240,10 @@ test('apps/server/src/__tests__ path → testing-and-regression-guardrails', () 
 console.log('\nObservability scenarios:');
 
 test('add logging to route → platform-observability-and-ops', () => {
-  const r = routeSkill({ ask: 'Add structured logging to the new pool registration route' });
+  const r = routeSkill({
+    ask: 'Add structured logging with logger.info to the new pool registration route',
+    files: ['apps/server/src/lib/logger.ts'],
+  });
   assertEqual(r.primary_skill, 'platform-observability-and-ops');
 });
 
@@ -314,6 +333,11 @@ test('hasCompletedRegistration triggers anti-legacy warning', () => {
   assertTrue(r.anti_legacy.warnings.some(w => w.includes('legacy onboarding identifier')));
 });
 
+test('API v1 does not trigger archetype anti-legacy warning', () => {
+  const r = routeSkill({ ask: 'Keep the API v1 webhook response stable while we refactor payments' });
+  assertFalse(r.anti_legacy.warnings.some(w => w.includes('14-archetype')), 'Expected no archetype warning for generic API version text');
+});
+
 test('normal ask has no anti-legacy warnings', () => {
   const r = routeSkill({ ask: 'Add a regression test for the nextStep invariant' });
   assertFalse(r.anti_legacy.triggered, 'Expected no anti-legacy warnings for clean ask');
@@ -330,6 +354,15 @@ test('vague ask → clarification recommended', () => {
 test('high-confidence ask → no clarification', () => {
   const r = routeSkill({ ask: 'Add a regression test for nextStep invariant after profile-review is completed — the test should live in apps/server/src/__tests__/' });
   assertFalse(r.clarification_recommended, 'Expected no clarification for specific ask');
+});
+
+test('short symbols do not falsely match long triggers', () => {
+  const r = routeSkill({
+    ask: 'Add structured logging to this route',
+    symbols: ['it'],
+  });
+  assertEqual(r.primary_skill, 'platform-observability-and-ops');
+  assertNotIncludes(r.secondary_skills, 'testing-and-regression-guardrails');
 });
 
 // ---------------------------------------------------------------------------
