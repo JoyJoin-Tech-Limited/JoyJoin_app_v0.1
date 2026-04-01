@@ -1,7 +1,8 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import type { WSMessage, WSEventType } from '@shared/wsEvents';
-import { storage } from './storage';
+import { eventPoolsRepo } from './repositories/eventPoolsRepo';
+import { icebreakerRepo } from './repositories/icebreakerRepo';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
@@ -435,9 +436,9 @@ class WebSocketService {
 
     // Handle reconnection: if user already checked in but was offline, update isOnline=true
     try {
-      const existingCheckin = await storage.getUserCheckin(sessionId, userId);
+      const existingCheckin = await icebreakerRepo.getUserCheckin(sessionId, userId);
       if (existingCheckin && !existingCheckin.isOnline) {
-        await storage.updateCheckin(existingCheckin.id, { isOnline: true });
+        await icebreakerRepo.updateCheckin(existingCheckin.id, { isOnline: true });
         console.log(`[WS] User ${userId} reconnected - updated isOnline to true`);
         
         // Broadcast user back online
@@ -511,17 +512,17 @@ class WebSocketService {
   private async handleCheckin(sessionId: string, userId: string) {
     try {
       // Check if user already checked in
-      const existingCheckin = await storage.getUserCheckin(sessionId, userId);
+      const existingCheckin = await icebreakerRepo.getUserCheckin(sessionId, userId);
       if (!existingCheckin) {
         // Create new checkin
-        await storage.createCheckin({
+        await icebreakerRepo.createCheckin({
           sessionId,
           userId,
           isOnline: true,
         });
       } else {
         // Update existing checkin
-        await storage.updateCheckin(existingCheckin.id, { isOnline: true, checkedInAt: new Date() });
+        await icebreakerRepo.updateCheckin(existingCheckin.id, { isOnline: true, checkedInAt: new Date() });
       }
 
       // Award XP for checkin (only for new checkins)
@@ -543,8 +544,8 @@ class WebSocketService {
 
       // Get all checkins with user data - parallelize for better performance
       const [checkins, session] = await Promise.all([
-        storage.getSessionCheckins(sessionId),
-        storage.getIcebreakerSession(sessionId)
+        icebreakerRepo.getSessionCheckins(sessionId),
+        icebreakerRepo.getIcebreakerSession(sessionId)
       ]);
       const expectedAttendees = session?.expectedAttendees || checkins.length;
 
@@ -571,14 +572,14 @@ class WebSocketService {
       // Check if all attendees have checked in - trigger phase change
       if (checkins.length >= expectedAttendees && expectedAttendees > 0 && session?.currentPhase === 'checkin') {
         // Assign number plates and change phase
-        await storage.assignNumberPlates(sessionId);
-        await storage.updateIcebreakerSession(sessionId, { 
+        await icebreakerRepo.assignNumberPlates(sessionId);
+        await icebreakerRepo.updateIcebreakerSession(sessionId, { 
           currentPhase: 'number_assign',
           phaseStartedAt: new Date(),
         });
 
         // Re-fetch checkins with updated number plates
-        const updatedCheckins = await storage.getSessionCheckins(sessionId);
+        const updatedCheckins = await icebreakerRepo.getSessionCheckins(sessionId);
 
         // Broadcast number assignments
         this.broadcastToIcebreakerSession(sessionId, {
@@ -611,9 +612,9 @@ class WebSocketService {
   private async handleReadyVote(sessionId: string, userId: string, phase: string, isAutoVote: boolean) {
     try {
       // Check if user already voted for this phase
-      const existingVote = await storage.getUserReadyVote(sessionId, userId, phase);
+      const existingVote = await icebreakerRepo.getUserReadyVote(sessionId, userId, phase);
       if (!existingVote) {
-        await storage.createReadyVote({
+        await icebreakerRepo.createReadyVote({
           sessionId,
           userId,
           phase,
@@ -623,8 +624,8 @@ class WebSocketService {
 
       // Get all ready votes for this phase - parallelize for better performance
       const [votes, checkins] = await Promise.all([
-        storage.getSessionReadyVotes(sessionId, phase),
-        storage.getSessionCheckins(sessionId)
+        icebreakerRepo.getSessionReadyVotes(sessionId, phase),
+        icebreakerRepo.getSessionCheckins(sessionId)
       ]);
       // Only count online participants for ready vote calculation
       const onlineCheckins = checkins.filter(c => c.isOnline);
@@ -649,10 +650,10 @@ class WebSocketService {
       console.log(`[WS] User ${userId} voted ready (${readyCount}/${totalCount}) in session ${sessionId}`);
 
       // If all ready, trigger phase change
-      const session = await storage.getIcebreakerSession(sessionId);
+      const session = await icebreakerRepo.getIcebreakerSession(sessionId);
       if (readyCount >= totalCount && totalCount > 0 && session?.currentPhase === phase) {
         const nextPhase = phase === 'number_assign' ? 'icebreaker' : 'ended';
-        await storage.updateIcebreakerSession(sessionId, { 
+        await icebreakerRepo.updateIcebreakerSession(sessionId, { 
           currentPhase: nextPhase,
           phaseStartedAt: new Date(),
           ...(nextPhase === 'ended' ? { endedAt: new Date() } : {}),
@@ -662,15 +663,15 @@ class WebSocketService {
         if (nextPhase === 'ended') {
           if (session.eventId) {
             // For traditional event sessions, update eventAttendance
-            await storage.markSessionAttendanceCompleted(sessionId, session.eventId);
+            await icebreakerRepo.markSessionAttendanceCompleted(sessionId, session.eventId);
             console.log(`[WS] Session ${sessionId} ended - marked attendance as completed for event ${session.eventId}`);
           } else if (session.blindBoxEventId) {
             // For blind box events, update status to 'completed'
-            await storage.markBlindBoxEventCompleted(session.blindBoxEventId);
+            await eventPoolsRepo.markBlindBoxEventCompleted(session.blindBoxEventId);
             console.log(`[WS] Session ${sessionId} ended - marked blind box event ${session.blindBoxEventId} as completed`);
           } else if (session.groupId) {
             // For event pool group sessions, update status to 'completed'
-            await storage.markEventPoolGroupCompleted(session.groupId);
+            await eventPoolsRepo.markEventPoolGroupCompleted(session.groupId);
             console.log(`[WS] Session ${sessionId} ended - marked group ${session.groupId} as completed`);
           }
         }

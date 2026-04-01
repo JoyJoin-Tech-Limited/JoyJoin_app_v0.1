@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSign, generateKeyPairSync } from "crypto";
 
-// ── Storage mock ─────────────────────────────────────────────────────────────
+// ── Repository mocks ──────────────────────────────────────────────────────────
 const mockPayment = {
   id: "pay-001",
   userId: "user-1",
@@ -19,7 +19,7 @@ const mockPayment = {
   couponId: null,
 };
 
-const mockStorage = {
+const mockPaymentsRepo = {
   getAllPayments: vi.fn(),
   getPaymentByWechatOrderId: vi.fn(),
   updatePayment: vi.fn(),
@@ -28,7 +28,13 @@ const mockStorage = {
   recordCouponUsage: vi.fn(),
 };
 
-vi.mock("../storage", () => ({ storage: mockStorage }));
+const mockNotificationsRepo = {
+  createNotification: vi.fn(),
+};
+
+vi.mock("../repositories/paymentsRepo", () => ({ paymentsRepo: mockPaymentsRepo }));
+vi.mock("../repositories/notificationsRepo", () => ({ notificationsRepo: mockNotificationsRepo }));
+vi.mock("../repositories/usersRepo", () => ({ usersRepo: { getUser: vi.fn() } }));
 vi.mock("../gamification", () => ({ getLevelDiscount: vi.fn().mockReturnValue(0) }));
 
 // Use dynamic import after mocks are set up
@@ -44,11 +50,11 @@ describe("PaymentService — handleWebhook", () => {
     vi.clearAllMocks();
     service = new PaymentService();
     // Default: payment found in pending state
-    mockStorage.getAllPayments.mockResolvedValue([{ ...mockPayment }]);
-    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({ ...mockPayment });
-    mockStorage.updatePayment.mockResolvedValue(undefined);
-    mockStorage.createNotification.mockResolvedValue(undefined);
-    mockStorage.updateSubscription.mockResolvedValue(undefined);
+    mockPaymentsRepo.getAllPayments.mockResolvedValue([{ ...mockPayment }]);
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({ ...mockPayment });
+    mockPaymentsRepo.updatePayment.mockResolvedValue(undefined);
+    mockNotificationsRepo.createNotification.mockResolvedValue(undefined);
+    mockPaymentsRepo.updateSubscription.mockResolvedValue(undefined);
     // Dev mode by default (skips signature verification)
     process.env.NODE_ENV = "development";
   });
@@ -71,17 +77,17 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockStorage.updatePayment).toHaveBeenCalledWith(
+    expect(mockPaymentsRepo.updatePayment).toHaveBeenCalledWith(
       "pay-001",
       expect.objectContaining({ status: "completed", wechatTransactionId: "wx_txn_001" })
     );
   });
 
   it("processes a valid REFUND.SUCCESS webhook in dev mode", async () => {
-    mockStorage.getAllPayments.mockResolvedValue([
+    mockPaymentsRepo.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "completed" },
     ]);
-    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
       ...mockPayment,
       status: "completed",
     });
@@ -94,7 +100,7 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockStorage.updatePayment).toHaveBeenCalledWith(
+    expect(mockPaymentsRepo.updatePayment).toHaveBeenCalledWith(
       "pay-001",
       expect.objectContaining({ status: "refunded" })
     );
@@ -103,10 +109,10 @@ describe("PaymentService — handleWebhook", () => {
   // ── Idempotency ────────────────────────────────────────────────────────────
 
   it("skips duplicate TRANSACTION.SUCCESS — does not re-apply state when already completed", async () => {
-    mockStorage.getAllPayments.mockResolvedValue([
+    mockPaymentsRepo.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "completed" },
     ]);
-    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
       ...mockPayment,
       status: "completed",
     });
@@ -121,14 +127,14 @@ describe("PaymentService — handleWebhook", () => {
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
     // updatePayment must NOT be called again
-    expect(mockStorage.updatePayment).not.toHaveBeenCalled();
+    expect(mockPaymentsRepo.updatePayment).not.toHaveBeenCalled();
   });
 
   it("skips duplicate REFUND.SUCCESS — does not re-apply state when already refunded", async () => {
-    mockStorage.getAllPayments.mockResolvedValue([
+    mockPaymentsRepo.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "refunded" },
     ]);
-    mockStorage.getPaymentByWechatOrderId.mockResolvedValue({
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
       ...mockPayment,
       status: "refunded",
     });
@@ -141,7 +147,7 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockStorage.updatePayment).not.toHaveBeenCalled();
+    expect(mockPaymentsRepo.updatePayment).not.toHaveBeenCalled();
   });
 
   it("logs unknown event_type without throwing", async () => {
@@ -236,7 +242,7 @@ describe("PaymentService — handleWebhook", () => {
       const payload = JSON.parse(rawBody);
       await service.handleWebhook(payload, rawBody, { timestamp, nonce, signature });
 
-      expect(mockStorage.updatePayment).toHaveBeenCalledWith(
+      expect(mockPaymentsRepo.updatePayment).toHaveBeenCalledWith(
         "pay-001",
         expect.objectContaining({ status: "completed" })
       );
