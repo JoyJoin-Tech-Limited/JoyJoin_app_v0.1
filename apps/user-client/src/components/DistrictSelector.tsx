@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight, X, Sparkles, Flame, Zap } from "lucide-react";
 import { 
@@ -33,8 +32,8 @@ function DistrictChip({ district, selected, onSelect, showHeat = true }: Distric
         inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
         transition-all border-2
         ${selected 
-          ? 'bg-primary text-primary-foreground border-primary' 
-          : 'bg-background border-border hover-elevate'
+          ? '[background:var(--btn-primary-gradient)] text-primary-foreground border-primary shadow-[var(--btn-shadow-primary)]' 
+          : 'bg-background border-border hover-elevate active-elevate-2'
         }
       `}
       data-testid={`chip-district-${district.id}`}
@@ -199,8 +198,8 @@ function SingleSelectView({ clusters, selectedId, onSelect }: SingleSelectViewPr
               px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap
               transition-all border-2
               ${activeCluster === cluster.id
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background border-border hover-elevate'
+                ? '[background:var(--btn-primary-gradient)] text-primary-foreground border-primary shadow-[var(--btn-shadow-primary)]'
+                : 'bg-background border-border hover-elevate active-elevate-2'
               }
             `}
             data-testid={`tab-cluster-${cluster.id}`}

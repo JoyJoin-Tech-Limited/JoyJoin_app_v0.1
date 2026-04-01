@@ -204,21 +204,48 @@ Replace manual spinner + `disabled` pattern:
 
 ## Audit Summary
 
-### Inconsistencies found (April 2026)
+### Inconsistencies found (April 2026 — pre-PR-1)
 
 | Location | Issue |
 |----------|-------|
-| `apps/user-client/src/pages/LandingPage.tsx` | Hard-coded gradient + `h-16` override on primary CTA |
-| `apps/user-client/src/components/drawer-sections/CTAButton.tsx` | Hard-coded `from-violet-600 to-purple-600` gradient |
-| `apps/user-client/src/components/ui/multi-select-button.tsx` | `rounded-lg` radius inconsistent with brand; flat selected state |
-| `apps/admin-client/src/pages/EditIntentPage.tsx` | Raw `<button>` with `bg-primary/5` selected state; `rounded-lg` |
-| `apps/admin-client/src/pages/EditWorkPage.tsx` | Same pattern |
-| `apps/admin-client/src/pages/EditPersonalPage.tsx` | Same pattern |
-| Both app `button.tsx` | Identical implementations — no shared source of truth; `font-medium`, `rounded-md`, no loading prop |
+| `apps/user-client/src/pages/LandingPage.tsx` | Hard-coded inline `background` style instead of `var(--btn-primary-gradient)` token on primary CTA |
+| `apps/user-client/src/pages/LoginPromptPage.tsx` | Ad-hoc `bg-gradient-to-r from-purple-600 to-pink-600` override |
+| `apps/user-client/src/pages/EditProfilePage.tsx` | `bg-gradient-to-r from-primary via-purple-500 to-pink-500` on Xiaoyue CTA button |
+| `apps/user-client/src/components/DistrictSelector.tsx` | Selected chips used `bg-primary` flat fill instead of gradient token |
+| `apps/user-client/src/components/HeroWelcome.tsx` | Raw location-chip `<button>` missing `focus-visible:ring-*` |
+| `apps/admin-client/src/components/HeroWelcome.tsx` | Same as above |
+| `apps/admin-client/src/pages/EditIntentPage.tsx` | Save button used manual `disabled` + label swap instead of `loading` prop |
+| `apps/admin-client/src/pages/EditWorkPage.tsx` | Same as above |
+| `apps/admin-client/src/pages/EditPersonalPage.tsx` | Same as above |
+| `apps/user-client/src/components/drawer-sections/CTAButton.tsx` | Hard-coded `from-violet-600 to-purple-600` gradient *(fixed in PR 1/2)* |
+| `apps/user-client/src/components/ui/multi-select-button.tsx` | `rounded-lg` radius; flat `bg-primary` selected state *(fixed in PR 1/2)* |
+| `apps/admin-client/src/pages/EditIntentPage.tsx` | Raw `<button>` with `bg-primary/5` selected state; `rounded-lg` *(fixed in PR 1/2)* |
+| Both app `button.tsx` | Identical implementations, no shared source, no `loading` prop *(fixed in PR 1)* |
 
-### Fixed in this PR
+### Fixed in PR 1 (foundation)
 
 - Shared source of truth: `packages/shared/src/ui/buttonVariants.ts`
 - Premium gradient + shadow tokens in both apps' `index.css`
 - App wrappers re-export from shared; `loading` and `fullWidth` props added
-- CTAButton, MultiSelectButton, EditIntentPage, EditWorkPage, EditPersonalPage aligned to new tokens
+- `CTAButton` aligned to shared system
+
+### Fixed in PR 2 (interaction / accessibility)
+
+- `MultiSelectButton` + `SingleSelectButton`: `rounded-xl border-2` + gradient selected state
+- `EditIntentPage`, `EditWorkPage`, `EditPersonalPage` selectable options: gradient token + `rounded-xl border-2`
+
+### Fixed in PR 3 (visual consistency sweep)
+
+- `LandingPage.tsx` primary CTA: `style` background replaced with `[background:var(--btn-primary-gradient)]`; Duolingo 3D-press depth shadow documented as intentional exception
+- `LoginPromptPage.tsx` primary CTA: ad-hoc Tailwind gradient removed; shared `default` variant gradient used
+- `EditProfilePage.tsx` Xiaoyue CTA: `bg-gradient-to-r` replaced with `[background:var(--btn-primary-gradient)]`
+- `DistrictSelector.tsx` chips: flat `bg-primary` → `[background:var(--btn-primary-gradient)] shadow-[var(--btn-shadow-primary)]` on selected state; `active-elevate-2` on unselected
+- `HeroWelcome.tsx` (user + admin): location chip gets `focus-visible:ring-*` for keyboard parity
+- Save buttons in `EditIntentPage`, `EditWorkPage`, `EditPersonalPage`: `disabled` + label swap → `loading` prop
+
+### Intentional documented exceptions
+
+| Location | Exception | Reason |
+|----------|-----------|--------|
+| `LandingPage.tsx` primary CTA | Duolingo 3D-press depth shadow (`shadow-[0_6px_0_hsl(270_55%_35%)]`) | Conversion-critical landing CTA uses a special press-depth effect not covered by `--btn-shadow-primary` |
+| `HeroSection.tsx` CTAs | Redundant `px-8` alongside `size="lg"` | Minor harmless override; consistent in context |
