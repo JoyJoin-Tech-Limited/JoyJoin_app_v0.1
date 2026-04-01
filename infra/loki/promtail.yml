@@ -18,6 +18,7 @@ scrape_configs:
           - name: name
             values:
               - joyjoin
+              - joyjoin-api
     relabel_configs:
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.*)"
@@ -35,5 +36,3 @@ scrape_configs:
       - labels:
           level:
           service:
-      - output:
-          source: message

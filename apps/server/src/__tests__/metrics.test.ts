@@ -148,12 +148,26 @@ describe('metricsMiddleware', () => {
     // We test this by checking getMetricsText does not contain a metrics path
   });
 
+  it('skips non-API routes to avoid static asset cardinality growth', async () => {
+    const req = makeReq('GET', '/assets/app.123abc.js');
+    const { res, emitter } = makeRes(200);
+
+    metricsMiddleware(req, res, () => {});
+    emitter.emit('finish');
+
+    const text = await getMetricsText();
+    expect(text).not.toContain('/assets/app.123abc.js');
+    expect(text).not.toContain('path="/assets');
+  });
+
   it('getMetricsText includes process metrics', async () => {
     const text = await getMetricsText();
     expect(text).toContain('process_resident_memory_bytes');
     expect(text).toContain('process_heap_used_bytes');
     expect(text).toContain('process_uptime_seconds');
     expect(text).toContain('nodejs_event_loop_delay_ms');
+    expect(text).toContain('# TYPE process_cpu_user_seconds_total counter');
+    expect(text).toContain('# TYPE process_cpu_system_seconds_total counter');
   });
 
   it('includes histogram _bucket, _sum, _count lines', async () => {

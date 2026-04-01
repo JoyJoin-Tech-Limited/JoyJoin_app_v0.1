@@ -168,7 +168,7 @@
 ### JoyJoinSyntheticProbeFailed
 
 **Severity:** Critical  
-**Condition:** The `joyjoin_synthetic_probe_success` gauge == 0, sustained for 5 minutes.  
+**Condition:** The `joyjoin_synthetic_probe_success` gauge is `0`, or no fresh probe metric is received for 10 minutes; sustained for 5 minutes.  
 **Meaning:** The automated synthetic probe (running in GitHub Actions every 5 min) is failing at least one of its checks:
 - `GET /api/health` not returning 200 + `{"status":"ok"}`
 - `GET /api/metrics` not returning Prometheus text
@@ -185,7 +185,7 @@
 Update the `PRODUCTION_BASE_URL` secret whenever the production URL changes.  
 Update `scripts/synthetic/happy-path-probe.mjs` if the probed endpoints change.
 
-**Resolution:** Alert resolves when the probe exits 0 and the gauge returns to 1.
+**Resolution:** Alert resolves when the probe exits 0 and a fresh `joyjoin_synthetic_probe_success 1` sample is scraped.
 
 **Owner:** Platform team.
 

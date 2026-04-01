@@ -186,6 +186,14 @@ function renderGauge(name: string, help: string, value: number): string {
   ].join('\n');
 }
 
+function renderCounterValue(name: string, help: string, value: number): string {
+  return [
+    `# HELP ${name} ${help}`,
+    `# TYPE ${name} counter`,
+    `${name} ${value}`,
+  ].join('\n');
+}
+
 function renderProcessMetrics(): string {
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
@@ -205,12 +213,12 @@ function renderProcessMetrics(): string {
       'Process heap memory total in bytes.',
       mem.heapTotal,
     ),
-    renderGauge(
+    renderCounterValue(
       'process_cpu_user_seconds_total',
       'Total user CPU time used in seconds.',
       cpu.user / 1e6,
     ),
-    renderGauge(
+    renderCounterValue(
       'process_cpu_system_seconds_total',
       'Total system CPU time used in seconds.',
       cpu.system / 1e6,
@@ -252,8 +260,8 @@ export function metricsMiddleware(
   res: Response,
   next: NextFunction,
 ): void {
-  // Exclude the metrics endpoint itself from instrumentation
-  if (req.path === '/api/metrics') {
+  // Instrument API traffic only; skip Vite/dev assets and static files.
+  if (!req.path.startsWith('/api') || req.path === '/api/metrics') {
     return next();
   }
 
