@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { randomUUID } from "crypto";
-import { storage } from "./storage";
+import { usersRepo } from "./repositories/usersRepo";
 import { assessmentSessions, assessmentAnswers, users } from "@shared/schema";
 import { db } from "./db";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
@@ -285,11 +285,11 @@ export async function getWechatOAuthOpenId(
 export async function findOrCreateWechatUser(
   openid: string,
   session_key?: string
-): Promise<{ user: NonNullable<Awaited<ReturnType<typeof storage.getUserByWechatOpenId>>>; isNewUser: boolean }> {
-  const existingUser = await storage.getUserByWechatOpenId(openid);
+): Promise<{ user: NonNullable<Awaited<ReturnType<typeof usersRepo.getUserByWechatOpenId>>>; isNewUser: boolean }> {
+  const existingUser = await usersRepo.getUserByWechatOpenId(openid);
 
   if (!existingUser) {
-    const newUser = await storage.createUserWithWechat({
+    const newUser = await usersRepo.createUserWithWechat({
       wechatOpenId: openid,
       ...(session_key ? { wechatSessionKey: session_key } : {}),
     });
@@ -298,10 +298,10 @@ export async function findOrCreateWechatUser(
   }
 
   if (session_key) {
-    await storage.updateUser(existingUser.id, { wechatSessionKey: session_key });
+    await usersRepo.updateUser(existingUser.id, { wechatSessionKey: session_key });
   }
   console.log(`[WeChat Auth] Updated session for existing user: ${existingUser.id}`);
-  const updated = await storage.getUserById(existingUser.id);
+  const updated = await usersRepo.getUserById(existingUser.id);
   return { user: updated ?? existingUser, isNewUser: false };
 }
 
@@ -628,7 +628,7 @@ export function setupWechatAuth(app: Express) {
       const { openid } = await getWechatOAuthOpenId(code);
       const { user, isNewUser } = await findOrCreateWechatUser(openid);
 
-      const fullUser = (await storage.getUserById(user.id)) ?? user;
+      const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
       req.session.userId = fullUser.id;
 
       await new Promise<void>((resolve, reject) => {
@@ -717,7 +717,7 @@ export function setupWechatAuth(app: Express) {
       }
 
       // Fetch updated full user record
-      const fullUser = (await storage.getUserById(user.id)) ?? user;
+      const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
 
       if (isDebugAuthLoggingEnabled()) {
         console.log("[WeChat Auth] before session save", {
@@ -805,7 +805,7 @@ export function setupWechatAuth(app: Express) {
         session_key
       );
 
-      const fullUser = (await storage.getUserById(user.id)) ?? user;
+      const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
 
       req.session.userId = fullUser.id;
       req.session.save((err) => {

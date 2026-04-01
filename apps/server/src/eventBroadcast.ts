@@ -1,5 +1,6 @@
 import { wsService } from './wsService';
-import { storage } from './storage';
+import { eventPoolsRepo } from './repositories/eventPoolsRepo';
+import { notificationsRepo } from './repositories/notificationsRepo';
 import type {
   EventStatusChangedData,
   EventMatchedData,
@@ -79,7 +80,7 @@ export async function broadcastEventMatched(
   // 创建notification给所有参与者
   await Promise.all(
     userIds.map(userId =>
-      storage.createNotification({
+      notificationsRepo.createNotification({
         userId,
         category: 'activities',
         type: 'event_reminder',
@@ -222,7 +223,7 @@ function shouldCreateNotification(oldStatus: string, newStatus: string): boolean
 async function createStatusChangeNotification(eventId: string, newStatus: string) {
   try {
     // 获取活动参与者
-    const event = await storage.getBlindBoxEventAdmin(eventId);
+    const event = await eventPoolsRepo.getBlindBoxEventAdmin(eventId);
     if (!event || !event.matchedAttendees) return;
 
     const participants = (event.matchedAttendees as any[]).map((p: any) => p.userId);
@@ -250,7 +251,7 @@ async function createStatusChangeNotification(eventId: string, newStatus: string
     // 创建notifications
     await Promise.all(
       participants.map((userId: string) =>
-        storage.createNotification({
+        notificationsRepo.createNotification({
           userId,
           category: 'activities',
           type: 'event_reminder',
@@ -282,7 +283,7 @@ async function createAdminActionNotification(
   details?: any
 ) {
   try {
-    const event = await storage.getBlindBoxEventAdmin(eventId);
+    const event = await eventPoolsRepo.getBlindBoxEventAdmin(eventId);
     if (!event || !event.matchedAttendees) return;
 
     const participants = (event.matchedAttendees as any[]).map((p: any) => p.userId);
@@ -309,7 +310,7 @@ async function createAdminActionNotification(
 
     await Promise.all(
       participants.map((userId: string) =>
-        storage.createNotification({
+        notificationsRepo.createNotification({
           userId,
           category: 'system',
           type: 'system_alert',
