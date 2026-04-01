@@ -133,7 +133,13 @@ export function useWeChatLogin() {
             nextPath = '/onboarding/review';
             break;
           case 'essential-data':
+            nextPath = '/onboarding/setup';
+            break;
           case 'onboarding':
+            // Legacy/fallback: 'onboarding' maps to /personality-test
+            // (AuthenticatedRouter also handles this redirect).
+            nextPath = '/personality-test';
+            break;
           default:
             nextPath = '/onboarding/setup';
             break;

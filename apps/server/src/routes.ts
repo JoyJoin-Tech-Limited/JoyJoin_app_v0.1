@@ -1013,9 +1013,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
       
       let nextStep: OnboardingStep;
-      if (!user.hasCompletedRegistration) {
+      // NOTE: hasCompletedRegistration is a legacy flag (set when essential data is saved).
+      // We no longer use it as the primary gate so that users who authenticated via WeChat
+      // and completed the personality test (hasCompletedPersonalityTest=true) are correctly
+      // advanced to 'essential-data' rather than being looped back to 'onboarding'.
+      // The 'onboarding' step is kept as a legacy/fallback value that the AuthenticatedRouter
+      // maps to /personality-test; it is only returned when hasCompletedRegistration is false
+      // AND the personality test has also not been completed, so truly-new users still see it.
+      if (!user.hasCompletedPersonalityTest && !user.hasCompletedRegistration) {
+        // Truly new user: no personality test and no legacy registration — send to onboarding
+        // (AuthenticatedRouter treats 'onboarding' as a redirect to /personality-test).
         nextStep = 'onboarding';
       } else if (!user.hasCompletedPersonalityTest) {
+        // Personality test started but not finished (or legacy user missing the flag).
         nextStep = 'personality-test';
       } else if (!profileEssentialComplete) {
         nextStep = 'essential-data';
@@ -7532,7 +7542,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
       const profileEssentialComplete = !!(user.displayName && user.gender && user.currentCity);
       let nextStep: OnboardingStep;
-      if (!user.hasCompletedRegistration) nextStep = 'onboarding';
+      // Keep consistent with /api/auth/user: gate on hasCompletedPersonalityTest rather than
+      // hasCompletedRegistration so post-WeChat-auth users advance correctly.
+      if (!user.hasCompletedPersonalityTest && !user.hasCompletedRegistration) nextStep = 'onboarding';
       else if (!user.hasCompletedPersonalityTest) nextStep = 'personality-test';
       else if (!profileEssentialComplete) nextStep = 'essential-data';
       else if (!user.hasCompletedInterestsCarousel) nextStep = 'extended-data';
