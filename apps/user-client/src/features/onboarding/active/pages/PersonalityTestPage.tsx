@@ -278,7 +278,6 @@ export default function PersonalityTestPage() {
   const { milestoneReached, detectMilestone, getUnifiedProgress } = useUnifiedProgress();
   
   const {
-    sessionId,
     currentQuestion,
     progress,
     currentMatches,
