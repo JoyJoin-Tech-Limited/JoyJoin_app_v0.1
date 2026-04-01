@@ -3,7 +3,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { checkVenueDataQuality, type VenueRecord } from '../lib/venueDataQuality';
+import {
+  checkVenueDataQuality,
+  normalizeVenueQualityRecord,
+  type VenueRecord,
+} from '../lib/venueDataQuality';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -173,5 +177,35 @@ describe('checkVenueDataQuality', () => {
   it('uses venueName fallback for unnamed venues', () => {
     const report = checkVenueDataQuality([makeVenue({ id: 'v1', name: undefined })]);
     expect(report.results[0].venueName).toBe('(unnamed)');
+  });
+
+  it('normalizes snake_case and legacy venue fields before validation', () => {
+    const normalized = normalizeVenueQualityRecord({
+      id: 'venue-1',
+      name: 'Mapped Venue',
+      venue_type: 'bar',
+      address: '1 Main St',
+      city: '深圳',
+      district: '南山区',
+      contact_name: 'Legacy Contact',
+      contact_phone: '13800000000',
+      price_range: '150-200',
+      budget_categories: ['150-200'],
+      tags: ['cozy'],
+      commission_rate: 20,
+      operating_hours: '18:00-02:00',
+      partner_status: 'active',
+      is_active: true,
+    } as Record<string, unknown>);
+
+    expect(normalized.venueType).toBe('bar');
+    expect(normalized.area).toBe('南山区');
+    expect(normalized.contactPerson).toBe('Legacy Contact');
+    expect(normalized.contactPhone).toBe('13800000000');
+    expect(normalized.priceRange).toBe('150-200');
+    expect(normalized.operatingHours).toBe('18:00-02:00');
+
+    const report = checkVenueDataQuality([normalized]);
+    expect(report.results[0].quality).toBe('pass');
   });
 });
