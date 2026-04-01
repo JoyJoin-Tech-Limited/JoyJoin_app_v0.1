@@ -199,8 +199,12 @@ export default function WeChatAuthGatePage() {
         nextPath = '/onboarding/extended';
       } else if (step === 'profile-review') {
         nextPath = '/onboarding/review';
+      } else if (step === 'essential-data') {
+        nextPath = '/onboarding/setup';
+      } else if (step === 'onboarding' || step === 'personality-test') {
+        nextPath = '/personality-test';
       } else {
-        // 'essential-data', 'onboarding', 'personality-test', or any unknown step
+        // Unknown step fallback
         nextPath = '/onboarding/setup';
       }
 
