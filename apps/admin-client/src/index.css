@@ -123,6 +123,13 @@
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* === Button Design Tokens ===
+   * Used by the shared buttonVariants (packages/shared/src/ui/buttonVariants.ts)
+   * and available for custom overrides.
+   */
+  --btn-primary-gradient: linear-gradient(145deg, hsl(270 55% 62%) 0%, hsl(290 52% 56%) 100%);
+  --btn-shadow-primary: 0px 2px 8px -1px hsl(280 45% 55% / 0.22), 0px 1px 2px hsl(280 45% 55% / 0.14);
 }
 
 .dark {
@@ -235,6 +242,10 @@
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* === Button Design Tokens (dark) === */
+  --btn-primary-gradient: linear-gradient(145deg, hsl(270 55% 67%) 0%, hsl(290 52% 61%) 100%);
+  --btn-shadow-primary: 0px 2px 8px -1px hsl(280 50% 65% / 0.28), 0px 1px 2px hsl(280 50% 65% / 0.18);
 }
 
 @layer base {

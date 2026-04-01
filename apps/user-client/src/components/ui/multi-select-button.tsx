@@ -18,6 +18,12 @@ function triggerHaptic() {
   }
 }
 
+// Base classes shared between multi- and single-select buttons.
+// rounded-xl matches the standardized button radius; min-h-[44px] meets touch target.
+const selectButtonBase =
+  "relative flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm min-h-[44px]" +
+  " transition-all duration-150 ease-out active:scale-[0.97]";
+
 export function MultiSelectButton({
   selected,
   onClick,
@@ -38,11 +44,9 @@ export function MultiSelectButton({
       onClick={handleClick}
       disabled={disabled}
       className={cn(
-        "relative flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm min-h-[44px]",
-        "transition-all duration-150 ease-out",
-        "active:scale-[0.97]",
+        selectButtonBase,
         selected
-          ? "border-primary bg-primary text-primary-foreground font-medium shadow-sm"
+          ? "border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]"
           : disabled
           ? "border-muted bg-muted/50 text-muted-foreground cursor-not-allowed opacity-60"
           : "border-muted bg-muted/30 hover-elevate",
@@ -59,7 +63,7 @@ export function MultiSelectButton({
       {selected && icon && (
         <span className="flex-shrink-0">{icon}</span>
       )}
-      <span className={cn(!selected && icon ? "" : selected ? "" : "")}>{children}</span>
+      <span>{children}</span>
     </button>
   );
 }
@@ -131,11 +135,9 @@ export function SingleSelectButton({
       onClick={handleClick}
       disabled={disabled}
       className={cn(
-        "relative flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm min-h-[44px]",
-        "transition-all duration-150 ease-out",
-        "active:scale-[0.97]",
+        selectButtonBase,
         selected
-          ? "border-primary bg-primary text-primary-foreground font-medium shadow-sm"
+          ? "border-primary [background:var(--btn-primary-gradient)] text-primary-foreground font-semibold shadow-[var(--btn-shadow-primary)]"
           : disabled
           ? "border-muted bg-muted/50 text-muted-foreground cursor-not-allowed opacity-60"
           : "border-muted bg-muted/30 hover-elevate",
