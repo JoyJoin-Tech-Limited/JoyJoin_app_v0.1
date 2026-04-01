@@ -22,8 +22,10 @@
  *
  * Usage — register in index.ts before routes:
  *   import { metricsMiddleware, getMetricsText } from './middleware/metrics';
+ *   // Mount the middleware BEFORE route registration so all requests are instrumented.
  *   app.use(metricsMiddleware);
  *   // The /api/metrics route is registered in routes.ts using getMetricsText().
+ *   // The /api/metrics path itself is excluded from instrumentation to avoid noise.
  *
  * Design notes:
  *   - No external dependencies — this is a hand-rolled minimal implementation

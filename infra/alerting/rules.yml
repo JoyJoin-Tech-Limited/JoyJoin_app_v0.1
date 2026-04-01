@@ -42,7 +42,7 @@ groups:
           description: >
             The 5xx error rate for JoyJoin has exceeded 1% over the last 5 minutes.
             Current value: {{ $value | humanizePercentage }}.
-          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinHighErrorRate"
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinhigherrorrate"
 
       # ── Elevated 4xx rate (warning only) ──────────────────────────────────
       - alert: JoyJoinElevated4xxRate

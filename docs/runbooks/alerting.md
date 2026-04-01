@@ -13,7 +13,7 @@
 1. [General principles](#general-principles)
 2. [Alerts](#alerts)
    - [JoyJoinServiceDown](#joyjoinservicedown)
-   - [JoyJoinHighErrorRate](#joyjoinHighErrorRate)
+   - [JoyJoinHighErrorRate](#joyjoinhigherrorrate)
    - [JoyJoinElevated4xxRate](#joyjoinelevated4xxrate)
    - [JoyJoinHighLatency](#joyjoinhighlatency)
    - [JoyJoinHighMemory](#joyjoinhighmemory)
