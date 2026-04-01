@@ -31,6 +31,17 @@ vi.mock("../storage", () => ({
     createUserWithWechat: vi.fn(),
     updateUser: vi.fn(),
     getUserById: vi.fn(),
+    clearPreSignupData: vi.fn(),
+  },
+}));
+
+// ── usersRepo mock (wechatAuth.ts now calls usersRepo directly) ──────────────
+vi.mock("../repositories/usersRepo", () => ({
+  usersRepo: {
+    getUserByWechatOpenId: vi.fn(),
+    createUserWithWechat: vi.fn(),
+    updateUser: vi.fn(),
+    getUserById: vi.fn(),
   },
 }));
 
@@ -83,6 +94,7 @@ vi.mock("@shared/personality/matcherV2", () => ({
 // ── Import SUT after mocks are registered ──────────────────────────────────
 import { getWechatOpenId, findOrCreateWechatUser, processTestAnswers } from "../wechatAuth";
 import { storage } from "../storage";
+import { usersRepo } from "../repositories/usersRepo";
 import { findBestMatchingArchetypesV2 } from "@shared/personality/matcherV2";
 
 // ── global fetch mock ───────────────────────────────────────────────────────
@@ -190,13 +202,13 @@ describe("findOrCreateWechatUser", () => {
   });
 
   it("creates a new user when no user exists for openid", async () => {
-    vi.mocked(storage.getUserByWechatOpenId).mockResolvedValue(undefined);
-    vi.mocked(storage.createUserWithWechat).mockResolvedValue(mockUser as any);
-    vi.mocked(storage.getUserById).mockResolvedValue(mockUser as any);
+    vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(undefined);
+    vi.mocked(usersRepo.createUserWithWechat).mockResolvedValue(mockUser as any);
+    vi.mocked(usersRepo.getUserById).mockResolvedValue(mockUser as any);
 
     const result = await findOrCreateWechatUser("new_openid", "sk_new");
 
-    expect(storage.createUserWithWechat).toHaveBeenCalledWith({
+    expect(usersRepo.createUserWithWechat).toHaveBeenCalledWith({
       wechatOpenId: "new_openid",
       wechatSessionKey: "sk_new",
     });
@@ -204,13 +216,13 @@ describe("findOrCreateWechatUser", () => {
   });
 
   it("updates session key for existing user", async () => {
-    vi.mocked(storage.getUserByWechatOpenId).mockResolvedValue(mockUser as any);
-    vi.mocked(storage.updateUser).mockResolvedValue({ ...mockUser, wechatSessionKey: "sk_updated" } as any);
-    vi.mocked(storage.getUserById).mockResolvedValue({ ...mockUser, wechatSessionKey: "sk_updated" } as any);
+    vi.mocked(usersRepo.getUserByWechatOpenId).mockResolvedValue(mockUser as any);
+    vi.mocked(usersRepo.updateUser).mockResolvedValue({ ...mockUser, wechatSessionKey: "sk_updated" } as any);
+    vi.mocked(usersRepo.getUserById).mockResolvedValue({ ...mockUser, wechatSessionKey: "sk_updated" } as any);
 
     const result = await findOrCreateWechatUser(mockUser.wechatOpenId!, "sk_updated");
 
-    expect(storage.updateUser).toHaveBeenCalledWith(mockUser.id, { wechatSessionKey: "sk_updated" });
+    expect(usersRepo.updateUser).toHaveBeenCalledWith(mockUser.id, { wechatSessionKey: "sk_updated" });
     expect(result.isNewUser).toBe(false);
     expect((result.user as any).wechatSessionKey).toBe("sk_updated");
   });

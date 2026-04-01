@@ -3,6 +3,68 @@ import session from 'express-session';
 import type { AddressInfo } from 'net';
 import { describe, it, expect, vi } from 'vitest';
 
+// ── In-memory socialIcebreakerStore mock (replaces the PostgreSQL-backed store) ──
+// The store was migrated to PostgreSQL in PR #405; these tests exercise the HTTP
+// routing layer and need a working store but not a real database connection.
+vi.mock('../lib/socialIcebreakerStore', () => {
+  const sessions = new Map<string, any>();
+  const participants = new Map<string, Map<string, { userId: string; displayName: string; lastSeenAt: number }>>();
+  const lieTruthsStore = new Map<string, Map<string, any[]>>();
+
+  return {
+    SESSION_TTL_MS: 6 * 60 * 60 * 1000,
+    PRESENCE_THRESHOLD_MS: 30_000,
+    getSocialSessionId: (id: string) => `social_${id}`,
+    getSession: async (socialSessionId: string) => sessions.get(socialSessionId) ?? null,
+    getSessionWithExpiry: async (socialSessionId: string) => {
+      const state = sessions.get(socialSessionId) ?? null;
+      return { state, expired: false };
+    },
+    getSessionByIcebreakerSessionId: async (icebreakerSessionId: string) => {
+      const socialSessionId = `social_${icebreakerSessionId}`;
+      const state = sessions.get(socialSessionId);
+      return state ? { socialSessionId, state, expired: false } : null;
+    },
+    createSession: async (state: any) => {
+      sessions.set(state.socialSessionId, state);
+    },
+    updateSession: async (socialSessionId: string, state: any) => {
+      sessions.set(socialSessionId, state);
+    },
+    upsertParticipant: async (socialSessionId: string, userId: string, displayName: string) => {
+      if (!participants.has(socialSessionId)) participants.set(socialSessionId, new Map());
+      participants.get(socialSessionId)!.set(userId, { userId, displayName, lastSeenAt: Date.now() });
+    },
+    heartbeat: async (socialSessionId: string, userId: string) => {
+      const ps = participants.get(socialSessionId);
+      if (!ps) return;
+      const p = ps.get(userId);
+      if (p) p.lastSeenAt = Date.now();
+    },
+    getRosterCount: async (socialSessionId: string) => participants.get(socialSessionId)?.size ?? 0,
+    getActiveParticipantCount: async (socialSessionId: string) => {
+      const ps = participants.get(socialSessionId);
+      if (!ps) return 0;
+      const cutoff = Date.now() - 30_000;
+      return [...ps.values()].filter((p) => p.lastSeenAt > cutoff).length;
+    },
+    getParticipant: async (socialSessionId: string, userId: string) =>
+      participants.get(socialSessionId)?.get(userId) ?? null,
+    setLieTruths: async (socialSessionId: string, userId: string, truths: any[]) => {
+      if (!lieTruthsStore.has(socialSessionId)) lieTruthsStore.set(socialSessionId, new Map());
+      lieTruthsStore.get(socialSessionId)!.set(userId, truths);
+    },
+    getLieTruths: async (socialSessionId: string, userId: string) =>
+      lieTruthsStore.get(socialSessionId)?.get(userId) ?? null,
+    getAllSessionLieTruths: async (socialSessionId: string) => {
+      const m = lieTruthsStore.get(socialSessionId);
+      if (!m) return [];
+      return [...m.entries()].map(([userId, items]) => ({ userId, items }));
+    },
+    sweepExpiredSessions: async () => {},
+  };
+});
+
 vi.mock('../socialIcebreakerAIService', () => ({
   generateWarmupTopics: vi.fn().mockResolvedValue([
     { id: 't1', question: '你最近最开心的一件事？', mood: 'relaxed', emoji: '🌅' },

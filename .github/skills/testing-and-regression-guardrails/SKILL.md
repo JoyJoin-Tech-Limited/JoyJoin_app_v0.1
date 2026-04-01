@@ -110,6 +110,8 @@ Do not remove guardrail checks — if a convention changes, update the check, no
 - Skipping an invariant test because "everyone knows the rule" — written tests outlive memory
 - Adding a test to the wrong workspace (server tests in user-client, or vice versa)
 - Using `expect(true).toBe(true)` style no-op tests to pad coverage
+- Forgetting to mock `../repositories/usersRepo` when unit-testing code in `wechatAuth.ts` — it now calls `usersRepo` directly, not `storage`
+- Not mocking `../lib/socialIcebreakerStore` in icebreaker route integration tests — the store is PostgreSQL-backed and requires `DATABASE_URL`; integration tests must supply a full in-memory mock of all store functions
 
 ## Related files
 

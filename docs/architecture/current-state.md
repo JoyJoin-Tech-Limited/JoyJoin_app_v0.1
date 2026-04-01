@@ -72,6 +72,7 @@ Boundary:
 **Server runtime**
 - `apps/server/src/routes/socialIcebreaker.ts`
 - `apps/server/src/socialIcebreakerAIService.ts`
+- `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL-backed session persistence layer (sessions, participants, lie-truths); replaced the previous in-memory Maps
 
 **Client hook/surfaces**
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts`
@@ -79,6 +80,7 @@ Boundary:
 
 Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
+- All session reads and writes go through `lib/socialIcebreakerStore.ts`; do not add direct `db` calls in the route file.
 
 ### 4. Shared contracts and schema ownership
 
