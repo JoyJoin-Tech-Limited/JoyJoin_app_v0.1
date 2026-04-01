@@ -17,8 +17,10 @@ the server exits immediately with a descriptive error if any are missing or inva
 | `WECHAT_APPID` | WeChat Mini Program App ID | Required |
 | `WECHAT_SECRET` | WeChat Mini Program App Secret | Required |
 
-In non-production environments, missing required variables emit a warning but do
-**not** block startup.
+In non-production environments, the central validation emits warnings instead of
+exiting, but other components (for example, the database connection and session
+middleware) may still fail to initialize if required variables like
+`DATABASE_URL` or `SESSION_SECRET` are missing.
 
 ---
 
@@ -73,8 +75,8 @@ payments are disabled.
 | `WECHAT_PAY_MCH_ID` | WeChat Pay Merchant ID |
 | `WECHAT_PAY_SERIAL_NO` | WeChat Pay certificate serial number |
 | `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay API v3 private key (PEM) |
-| `WECHAT_PAY_APIV3_KEY` | WeChat Pay API v3 key (exactly 32 bytes). Used for AES-256-GCM webhook decryption and HMAC-SHA256 signature verification. |
-| `WECHAT_PAY_PLATFORM_CERT` | (Recommended) WeChat Pay platform certificate (PEM). When set, enables RSA-SHA256 webhook signature verification instead of the HMAC fallback. |
+| `WECHAT_PAY_APIV3_KEY` | WeChat Pay API v3 key (exactly 32 bytes). Used for AES-256-GCM webhook decryption. |
+| `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM. Required for spec-compliant RSA-SHA256 webhook signature verification outside development. |
 
 ### Webhook Signature Verification
 
@@ -84,15 +86,13 @@ The `/api/webhooks/wechat-pay` endpoint verifies incoming webhook signatures:
    contents of the WeChat Pay platform certificate downloaded from the merchant
    console. See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
 
-2. **HMAC-SHA256 fallback**: if `WECHAT_PAY_PLATFORM_CERT` is not set but
-   `WECHAT_PAY_APIV3_KEY` is configured, the endpoint uses HMAC-SHA256 over the
-   API v3 key. This protects against replay and tampering but is weaker than RSA.
-
-3. **Development mode** (`NODE_ENV=development`): signature verification is
+2. **Development mode** (`NODE_ENV=development`): signature verification is
    skipped entirely to simplify local testing.
 
-Webhooks with stale timestamps (> 5 minutes old) are always rejected regardless
-of mode.
+In non-development environments, webhooks with stale timestamps (> 5 minutes
+old) are rejected alongside signature verification. In
+`NODE_ENV=development`, both signature and timestamp validation are skipped for
+local testing.
 
 ---
 
@@ -169,8 +169,8 @@ their session expires mid-flow.
 
 ## Follow-ups for Later Batches
 
-- Replace HMAC-SHA256 webhook verification with RSA-SHA256 once the WeChat Pay
-  platform certificate is available and loaded into `WECHAT_PAY_PLATFORM_CERT`.
+- Automate WeChat Pay platform certificate rotation / selection by
+  `Wechatpay-Serial` once the merchant certificate management flow is wired in.
 - Integration-test the end-to-end AES-256-GCM decryption path against a real
   WeChat Pay sandbox environment (implementation is complete; requires merchant
   credentials and a real encrypted webhook payload to validate in staging).

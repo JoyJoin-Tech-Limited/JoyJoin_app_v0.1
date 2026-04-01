@@ -2,7 +2,7 @@
  * Tests for startup config validation
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 
 // Capture process.exit calls
 const exitSpy = vi.spyOn(process, "exit").mockImplementation((_code?: string | number | null) => {
@@ -24,6 +24,13 @@ describe("validateConfig", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.PAYMENTS_ENABLED;
+    delete process.env.WECHAT_PAY_APP_ID;
+    delete process.env.WECHAT_PAY_MCH_ID;
+    delete process.env.WECHAT_PAY_SERIAL_NO;
+    delete process.env.WECHAT_PAY_PRIVATE_KEY;
+    delete process.env.WECHAT_PAY_APIV3_KEY;
+    delete process.env.WECHAT_PAY_PLATFORM_CERT;
     // Reset to a known-good environment before each test
     Object.assign(process.env, REQUIRED_VARS);
   });
@@ -37,6 +44,10 @@ describe("validateConfig", () => {
         process.env[key] = originalEnv[key];
       }
     }
+  });
+
+  afterAll(() => {
+    exitSpy.mockRestore();
   });
 
   it("does not exit when all required vars are set (non-production)", () => {
@@ -73,6 +84,19 @@ describe("validateConfig", () => {
   it("calls process.exit(1) in production when WECHAT_APPID is missing", () => {
     process.env.NODE_ENV = "production";
     delete process.env.WECHAT_APPID;
+    expect(() => validateConfig()).toThrow("process.exit(1)");
+  });
+
+  it("calls process.exit(1) in production when payments are enabled but platform cert is missing", () => {
+    process.env.NODE_ENV = "production";
+    process.env.PAYMENTS_ENABLED = "true";
+    process.env.WECHAT_PAY_APP_ID = "wx-pay-app";
+    process.env.WECHAT_PAY_MCH_ID = "mch_123";
+    process.env.WECHAT_PAY_SERIAL_NO = "serial_123";
+    process.env.WECHAT_PAY_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----fake";
+    process.env.WECHAT_PAY_APIV3_KEY = "a".repeat(32);
+    delete process.env.WECHAT_PAY_PLATFORM_CERT;
+
     expect(() => validateConfig()).toThrow("process.exit(1)");
   });
 

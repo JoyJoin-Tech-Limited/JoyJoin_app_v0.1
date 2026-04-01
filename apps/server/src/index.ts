@@ -20,10 +20,15 @@ app.use(requestIdMiddleware);
 app.use(metricsMiddleware);
 
 // Body parsing middleware
+// Capture the original signed bytes for WeChat Pay webhook verification before
+// JSON parsing consumes the request stream.
 app.use(express.json({
-  verify: (req, _res, buf) => {
-    if (req.originalUrl.startsWith("/api/webhooks/wechat-pay") || req.url.startsWith("/api/webhooks/wechat-pay")) {
-      (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+  verify: (req: any, _res, buf) => {
+    const url = req.originalUrl ?? req.url ?? "";
+    if (url === "/api/webhooks/wechat-pay" || url.startsWith("/api/webhooks/wechat-pay?")) {
+      if (buf.length <= 1024 * 1024) {
+        req.rawBody = buf.toString("utf8");
+      }
     }
   },
 }));

@@ -1,6 +1,5 @@
 //my path:/Users/felixg/projects/JoyJoin3/server/routes.ts
 import type { Express, Request } from "express";
-import { raw as expressRaw } from "express";
 import { createServer, type Server } from "http";
 import { randomUUID } from "crypto";
 import socialIcebreakerRoutes from "./routes/socialIcebreaker";
@@ -22,6 +21,7 @@ import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
 import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 import { getMetricsText } from "./middleware/metrics";
+import { registerHealthRoutes } from "./healthRoutes";
 
 type Traits = {
   affinity: number;
@@ -340,60 +340,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Health check endpoint - must be before session middleware for cloud platform health checks
-  app.get('/api/health', (_req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime()
-    });
-  });
-
-  // Also expose as /healthz for compatibility with Kubernetes/Docker health checks
-  app.get('/healthz', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
-  });
-
-  /**
-   * Readiness endpoint — checks that critical dependencies are available.
-   * Returns 200 when the server is ready to serve traffic, 503 otherwise.
-   * Used by deployment orchestrators (k8s, Fly.io, etc.) before routing traffic.
-   */
-  app.get('/api/readyz', async (_req, res) => {
-    const checks: Record<string, 'ok' | 'error'> = {};
-    let allOk = true;
-
-    // ── Database connectivity ──────────────────────────────────────────────
-    try {
-      await db.execute("SELECT 1");
-      checks.database = 'ok';
-    } catch {
-      checks.database = 'error';
-      allOk = false;
-    }
-
-    // ── Critical env vars ─────────────────────────────────────────────────
-    const criticalEnvVars = ['DATABASE_URL', 'SESSION_SECRET', 'WECHAT_APPID', 'WECHAT_SECRET'];
-    const missingVars = criticalEnvVars.filter(v => !process.env[v]);
-    if (missingVars.length > 0) {
-      checks.config = 'error';
-      allOk = false;
-    } else {
-      checks.config = 'ok';
-    }
-
-    const status = allOk ? 200 : 503;
-    res.status(status).json({
-      status: allOk ? 'ready' : 'not_ready',
-      checks,
-      timestamp: new Date().toISOString(),
-    });
-  });
-
-  // Also expose as /readyz for compatibility
-  app.get('/readyz', async (_req, res) => {
-    res.redirect('/api/readyz');
-  });
+  // Health and readiness endpoints must be before session middleware for cloud checks
+  registerHealthRoutes(app);
 
   // Reverse geocode endpoint - converts GPS coordinates to city/district
   // Uses Amap API for accurate Chinese address resolution
@@ -10220,7 +10168,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // Create subscription renewal (returns payment details)
-  app.post("/api/subscription/renew", isPhoneAuthenticated, checkPaymentsEnabled, paymentEndpointLimiter, async (req, res) => {
+  app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -10313,7 +10261,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   }
 
   // Create payment order for subscription
-  app.post("/api/payments/create", isPhoneAuthenticated, checkPaymentsEnabled, paymentEndpointLimiter, async (req, res) => {
+  app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -10356,24 +10304,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.post(
     "/api/webhooks/wechat-pay",
     webhookEndpointLimiter,
-    expressRaw({ type: "application/json" }),
     async (req: any, res) => {
       let rawBody: string;
       let payload: any;
       try {
-        // express.raw() yields a Buffer; fall back to serializing parsed JSON
-        // if the body was already parsed by a prior middleware.
-        if (req.body instanceof Buffer) {
-          rawBody = req.body.toString("utf8");
-          payload = JSON.parse(rawBody);
-        } else if (typeof req.body === "string") {
-          rawBody = req.body;
-          payload = JSON.parse(rawBody);
-        } else {
-          // Already parsed object (e.g. test environments)
-          rawBody = JSON.stringify(req.body);
-          payload = req.body;
+        if (typeof req.rawBody !== "string" || req.rawBody.length === 0) {
+          return res.status(400).json({ code: "FAIL", message: "Missing raw body for signature verification" });
         }
+
+        rawBody = req.rawBody;
+        payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
       } catch {
         return res.status(400).json({ code: "FAIL", message: "Invalid request body" });
       }

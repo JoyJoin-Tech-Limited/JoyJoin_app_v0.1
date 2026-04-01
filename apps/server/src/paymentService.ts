@@ -1,7 +1,7 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
 import { storage } from "./storage";
 import { getLevelDiscount } from "@shared/gamification";
-import { createDecipheriv, createVerify, timingSafeEqual, createHmac } from "crypto";
+import { createDecipheriv, createVerify } from "crypto";
 
 /**
  * Payment Service for WeChat Pay Integration
@@ -13,15 +13,14 @@ import { createDecipheriv, createVerify, timingSafeEqual, createHmac } from "cry
  *    - WECHAT_PAY_MCH_ID (Merchant ID)
  *    - WECHAT_PAY_SERIAL_NO (Certificate serial number)
  *    - WECHAT_PAY_PRIVATE_KEY (API v3 private key, PEM format)
- *    - WECHAT_PAY_APIV3_KEY (32-byte API v3 key, used for AES decryption and signature)
+ *    - WECHAT_PAY_APIV3_KEY (32-byte API v3 key, used for AES decryption)
  *
  * Docs: https://pay.weixin.qq.com/wiki/doc/apiv3/index.shtml
  *
  * NOTE: Full RSA-SHA256 callback signature verification requires WeChat's platform
- * certificate (downloaded from the merchant console).  Until that cert is loaded into
- * WECHAT_PAY_PLATFORM_CERT, verification falls back to HMAC-SHA256 over the
- * APIV3_KEY — which is still far better than the previous no-op.  Set
- * WECHAT_PAY_PLATFORM_CERT (PEM) to enable the production-grade RSA path.
+ * certificate (downloaded from the merchant console). Configure
+ * WECHAT_PAY_PLATFORM_CERT (PEM) in non-development environments whenever
+ * PAYMENTS_ENABLED=true.
  */
 
 const WECHAT_PAY_API_BASE = "https://api.mch.weixin.qq.com";
@@ -369,6 +368,12 @@ export class PaymentService {
     nonce: string;
     associated_data: string;
   }): any {
+    if (resource.algorithm !== "AEAD_AES_256_GCM") {
+      throw new Error(
+        `Unsupported WeChat Pay resource algorithm: ${resource.algorithm ?? "missing"}`
+      );
+    }
+
     const apiv3Key = process.env.WECHAT_PAY_APIV3_KEY;
     if (!apiv3Key) {
       throw new Error(
@@ -400,10 +405,7 @@ export class PaymentService {
    *
    * Production path: RSA-SHA256 with the WeChat Pay platform certificate
    *   (set WECHAT_PAY_PLATFORM_CERT to the PEM certificate contents).
-   *
-   * Fallback path (no cert configured): HMAC-SHA256 over the APIV3_KEY.
-   *   This is weaker than RSA verification but still protects against replay
-   *   and tampering in the absence of the platform certificate.
+   *   Outside development, missing certs cause verification to fail closed.
    *
    * See: https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay4_1.shtml
    */
@@ -425,37 +427,21 @@ export class PaymentService {
 
     const message = `${timestamp}\n${nonce}\n${rawBody}\n`;
 
-    // ── RSA-SHA256 path (recommended for production) ──────────────────────
+    // ── RSA-SHA256 path (required outside development) ────────────────────
     const platformCert = process.env.WECHAT_PAY_PLATFORM_CERT;
-    if (platformCert) {
-      try {
-        const verifier = createVerify("RSA-SHA256");
-        verifier.update(message);
-        return verifier.verify(platformCert, signature, "base64");
-      } catch (err) {
-        console.error("[Payment] RSA signature verification failed:", err);
+    try {
+      if (!platformCert) {
+        console.warn(
+          "[Payment] WECHAT_PAY_PLATFORM_CERT is not configured — cannot verify webhook signature"
+        );
         return false;
       }
-    }
 
-    // ── HMAC-SHA256 fallback (requires WECHAT_PAY_APIV3_KEY) ─────────────
-    const apiv3Key = process.env.WECHAT_PAY_APIV3_KEY;
-    if (!apiv3Key) {
-      console.warn(
-        "[Payment] Neither WECHAT_PAY_PLATFORM_CERT nor WECHAT_PAY_APIV3_KEY configured — " +
-          "cannot verify webhook signature"
-      );
-      return false;
-    }
-
-    const expectedHmac = createHmac("sha256", apiv3Key).update(message).digest("base64");
-
-    try {
-      const expectedBuf = Buffer.from(expectedHmac, "base64");
-      const actualBuf = Buffer.from(signature, "base64");
-      if (expectedBuf.length !== actualBuf.length) return false;
-      return timingSafeEqual(expectedBuf, actualBuf);
-    } catch {
+      const verifier = createVerify("RSA-SHA256");
+      verifier.update(message);
+      return verifier.verify(platformCert, signature, "base64");
+    } catch (err) {
+      console.error("[Payment] RSA signature verification failed:", err);
       return false;
     }
   }

@@ -15,52 +15,12 @@ vi.mock("../db", () => ({
   },
 }));
 
-// ── Build a minimal test app with the health routes ─────────────────────────
+// ── Build a minimal test app with the shared health routes ──────────────────
 async function buildTestApp() {
-  const { db } = await import("../db");
+  const { registerHealthRoutes } = await import("../healthRoutes");
   const app = express();
   app.use(express.json());
-
-  app.get("/api/health", (_req, res) => {
-    res.status(200).json({
-      status: "ok",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    });
-  });
-
-  app.get("/healthz", (_req, res) => {
-    res.status(200).json({ status: "ok" });
-  });
-
-  app.get("/api/readyz", async (_req, res) => {
-    const checks: Record<string, "ok" | "error"> = {};
-    let allOk = true;
-
-    try {
-      await db.execute("SELECT 1");
-      checks.database = "ok";
-    } catch {
-      checks.database = "error";
-      allOk = false;
-    }
-
-    const criticalEnvVars = ["DATABASE_URL", "SESSION_SECRET", "WECHAT_APPID", "WECHAT_SECRET"];
-    const missingVars = criticalEnvVars.filter((v) => !process.env[v]);
-    if (missingVars.length > 0) {
-      checks.config = "error";
-      allOk = false;
-    } else {
-      checks.config = "ok";
-    }
-
-    res.status(allOk ? 200 : 503).json({
-      status: allOk ? "ready" : "not_ready",
-      checks,
-      timestamp: new Date().toISOString(),
-    });
-  });
-
+  registerHealthRoutes(app);
   return app;
 }
 
@@ -110,6 +70,13 @@ describe("GET /healthz", () => {
 describe("GET /api/readyz", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.PAYMENTS_ENABLED;
+    delete process.env.WECHAT_PAY_APP_ID;
+    delete process.env.WECHAT_PAY_MCH_ID;
+    delete process.env.WECHAT_PAY_SERIAL_NO;
+    delete process.env.WECHAT_PAY_PRIVATE_KEY;
+    delete process.env.WECHAT_PAY_APIV3_KEY;
+    delete process.env.WECHAT_PAY_PLATFORM_CERT;
     process.env.DATABASE_URL = "postgresql://test";
     process.env.SESSION_SECRET = "a".repeat(32);
     process.env.WECHAT_APPID = "wx123";
@@ -154,6 +121,25 @@ describe("GET /api/readyz", () => {
       expect(body.checks.config).toBe("error");
     });
     process.env.WECHAT_APPID = savedAppId;
+  });
+
+  it("returns 503 with config=error when payments are enabled without platform cert", async () => {
+    mockDbExecute.mockResolvedValueOnce([]);
+    process.env.PAYMENTS_ENABLED = "true";
+    process.env.WECHAT_PAY_APP_ID = "wx-pay-app";
+    process.env.WECHAT_PAY_MCH_ID = "mch_123";
+    process.env.WECHAT_PAY_SERIAL_NO = "serial_123";
+    process.env.WECHAT_PAY_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----fake";
+    process.env.WECHAT_PAY_APIV3_KEY = "a".repeat(32);
+    delete process.env.WECHAT_PAY_PLATFORM_CERT;
+
+    const app = await buildTestApp();
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/readyz`);
+      const body = await res.json();
+      expect(res.status).toBe(503);
+      expect(body.checks.config).toBe("error");
+    });
   });
 
   it("includes a timestamp in the response", async () => {

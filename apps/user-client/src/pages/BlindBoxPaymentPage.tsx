@@ -65,7 +65,7 @@ interface PricingPlan {
 
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
-  const { paymentsEnabled } = useAuth();
+  const { paymentsEnabled, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const [promoOpen, setPromoOpen] = useState(false);
   const [couponTab, setCouponTab] = useState("input");
   const [couponCode, setCouponCode] = useState("");
@@ -407,8 +407,17 @@ export default function BlindBoxPaymentPage() {
   // ✅ 到这里为止，下面就是你的 return (
 
 
-  // Payment kill switch: show maintenance screen when payments are disabled
-  if (!paymentsEnabled) {
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
+        <Loader className="h-10 w-10 text-purple-500 animate-spin mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">正在加载支付信息…</p>
+      </div>
+    );
+  }
+
+  // Payment kill switch: only show maintenance after auth has resolved
+  if (isAuthenticated && !paymentsEnabled) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
         <button
