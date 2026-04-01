@@ -4,6 +4,8 @@ import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { logger } from "../../lib/logger";
 
+const DEFAULT_MIN_GROUP_SIZE = 4;
+
 export interface EventPoolStatsResponse {
   totalRegistrations: number;
   archetypeBreakdown: Record<string, number>;
@@ -81,7 +83,7 @@ export function registerEventPoolRoutes(app: Express): void {
         .limit(3);
 
       const totalRegistrations = registrationCountRow?.count ?? 0;
-      const minGroupSize = Math.max(pool.minGroupSize ?? 4, 1);
+      const minGroupSize = Math.max(pool.minGroupSize ?? DEFAULT_MIN_GROUP_SIZE, 1);
 
       return res.json(
         buildEventPoolStatsResponse({

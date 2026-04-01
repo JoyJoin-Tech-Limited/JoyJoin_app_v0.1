@@ -24,6 +24,8 @@ export function describePoolRegistrationAvailability(
   registrationCount: number,
   now: Date = new Date(),
 ): EventPoolAvailabilityResult {
+  const defaultMinGroupSize = 4;
+
   if (pool.status === "cancelled") {
     return {
       allowed: false,
@@ -54,7 +56,7 @@ export function describePoolRegistrationAvailability(
     }
   }
 
-  const minGroupSize = Math.max(pool.minGroupSize ?? 0, 1);
+  const minGroupSize = Math.max(pool.minGroupSize ?? defaultMinGroupSize, 1);
   const maxGroupSize = Math.max(pool.maxGroupSize ?? minGroupSize, minGroupSize);
   const targetGroups = Math.max(pool.targetGroups ?? 1, 1);
   const capacity = maxGroupSize * targetGroups;
