@@ -78,13 +78,6 @@ const GENDER_OPTIONS = [
   { value: "男性", label: "男生", emoji: "👨" },
 ];
 
-const RELATIONSHIP_OPTIONS = [
-  { value: "single", label: "单身" },
-  { value: "dating", label: "恋爱中" },
-  { value: "married", label: "已婚" },
-  { value: "prefer_not_say", label: "不想说" },
-];
-
 // Icon map for intent options (keyed by IntentIconHint from shared constants — type-safe)
 const INTENT_ICON_MAP: Record<IntentIconHint, React.ComponentType<{ className?: string }>> = {
   "Users": Users,
