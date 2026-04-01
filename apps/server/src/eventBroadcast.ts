@@ -8,6 +8,7 @@ import type {
   MatchProgressUpdateData,
   AdminActionData,
   AttendanceStatusUpdatedData,
+  PoolRegistrationAddedData,
 } from '@shared/wsEvents';
 
 /**
@@ -197,6 +198,26 @@ export function broadcastAttendanceStatusUpdated(
   wsService.broadcastToEvent(eventId, {
     type: 'ATTENDANCE_STATUS_UPDATED',
     eventId,
+    data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export function broadcastPoolRegistrationAdded(
+  poolId: string,
+  archetype: string,
+  userId: string,
+  totalRegistrations: number,
+) {
+  const data: PoolRegistrationAddedData = {
+    poolId,
+    archetype,
+    userId,
+    totalRegistrations,
+  };
+
+  wsService.broadcastToAll({
+    type: 'POOL_REGISTRATION_ADDED',
     data,
     timestamp: new Date().toISOString(),
   });

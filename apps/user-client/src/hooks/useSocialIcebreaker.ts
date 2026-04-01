@@ -215,6 +215,7 @@ export function useSocialIcebreaker({
       setAndCacheSocialSessionId(data.socialSessionId);
     } catch (error) {
       console.error('[useSocialIcebreaker] startSession error:', error);
+      setError(await classifyError(error));
       startedRef.current = false;
     } finally {
       setIsStarting(false);
