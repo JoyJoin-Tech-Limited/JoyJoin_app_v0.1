@@ -10191,19 +10191,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
       
-      const forwardedFor = req.headers["x-forwarded-for"];
-      const clientIp = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
-        || req.ip
-        || req.socket.remoteAddress
-        || "127.0.0.1";
-
       const paymentResult = await paymentService.createPayment({
         userId,
         paymentType: "event_bundle",
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
-        clientIp,
+        clientIp: getRequestClientIp(req),
       });
       
       res.json({
@@ -10237,6 +10231,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  const getRequestClientIp = (req: Request): string => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    return (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
+      || req.ip
+      || req.socket.remoteAddress
+      || "127.0.0.1";
+  };
+
   // ============ PAYMENT & WEBHOOKS ============
   
   // Create payment order for subscription
@@ -10259,19 +10261,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
       
-      const forwardedFor = req.headers["x-forwarded-for"];
-      const clientIp = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(",")[0]?.trim()
-        || req.ip
-        || req.socket.remoteAddress
-        || "127.0.0.1";
-
       const paymentResult = await paymentService.createPayment({
         userId,
         paymentType,
         relatedId,
         originalAmount,
         couponId,
-        clientIp,
+        clientIp: getRequestClientIp(req),
       });
       
       res.json(paymentResult);
