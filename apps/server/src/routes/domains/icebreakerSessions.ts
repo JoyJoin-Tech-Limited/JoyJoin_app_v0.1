@@ -41,6 +41,14 @@ type MatchedAttendee = {
   topInterests?: string[];
 };
 
+type InterestPriority = {
+  label?: string;
+};
+
+type InterestSelection = {
+  label?: string;
+};
+
 export interface IcebreakerSessionDetailsResponse {
   id: string;
   eventId: string | null;
@@ -64,13 +72,13 @@ function buildInterestMap(rows: Array<{ userId: string; topPriorities: unknown; 
   return new Map(
     rows.map((row) => {
       const topPriorities = Array.isArray(row.topPriorities)
-        ? row.topPriorities
-            .map((entry: any) => (typeof entry?.label === "string" ? entry.label : null))
+        ? (row.topPriorities as InterestPriority[])
+            .map((entry) => (typeof entry?.label === "string" ? entry.label : null))
             .filter((label): label is string => Boolean(label))
         : [];
       const selections = Array.isArray(row.selections)
-        ? row.selections
-            .map((entry: any) => (typeof entry?.label === "string" ? entry.label : null))
+        ? (row.selections as InterestSelection[])
+            .map((entry) => (typeof entry?.label === "string" ? entry.label : null))
             .filter((label): label is string => Boolean(label))
         : [];
 

@@ -34,6 +34,8 @@ interface BlindBoxEventData {
   dateTime: string;
 }
 
+type SupportedEventType = "饭局" | "酒局" | "咖啡" | "徒步" | "桌游" | "其他";
+
 export default function IcebreakerSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
@@ -74,14 +76,7 @@ export default function IcebreakerSessionPage() {
 
   // Use event title from blind box event, fallback to session eventTitle or default
   const eventTitle = eventData?.title || sessionData?.eventTitle || '活动';
-  const sessionEventType = (eventData?.eventType || sessionData?.eventType) as
-    | "饭局"
-    | "酒局"
-    | "咖啡"
-    | "徒步"
-    | "桌游"
-    | "其他"
-    | undefined;
+  const sessionEventType = (eventData?.eventType || sessionData?.eventType) as SupportedEventType | undefined;
 
   const participantProfiles: ParticipantProfile[] = (sessionData?.participants || []).map(p => ({
     displayName: p.displayName,
