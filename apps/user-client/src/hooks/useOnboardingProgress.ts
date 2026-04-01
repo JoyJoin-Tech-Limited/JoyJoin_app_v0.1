@@ -71,11 +71,13 @@ function nextStepToOnboardingStep(nextStep: NextStepType): OnboardingStep {
  * fallback for the rare case where `nextStep` is absent.
  */
 export function useOnboardingProgress(): OnboardingProgress {
-  const { user, needsRegistration, needsPersonalityTest, needsProfileSetup } = useAuth();
+  const { user } = useAuth();
   
   const progress = useMemo(() => {
     // --- Completion signals (server-owned flags preferred) ---
-    const hasCompletedRegistration = user?.hasCompletedRegistration ?? false;
+    // registration: any authenticated user has an account — use personality test
+    // completion as the practical completion signal for the registration step, since
+    // hasCompletedRegistration is a legacy flag not set in the modern V4 flow.
     const hasCompletedPersonalityTest = user?.hasCompletedPersonalityTest ?? false;
     // Prefer server-computed flag; fall back to field-presence check only if unavailable.
     const hasCompletedEssentialData =
@@ -86,7 +88,7 @@ export function useOnboardingProgress(): OnboardingProgress {
     const hasSeenProfileReview = user?.hasSeenProfileReview ?? false;
 
     const steps = {
-      registration: hasCompletedRegistration,
+      registration: !!user,
       personalityTest: hasCompletedPersonalityTest,
       essentialData: hasCompletedEssentialData,
       extendedData: hasCompletedExtendedData,
@@ -100,11 +102,9 @@ export function useOnboardingProgress(): OnboardingProgress {
     } else {
       // Fallback: reconstruct from local booleans (used only when nextStep is absent).
       currentStep = 'complete';
-      if (needsRegistration) {
-        currentStep = 'registration';
-      } else if (needsPersonalityTest) {
+      if (!hasCompletedPersonalityTest) {
         currentStep = 'personality-test';
-      } else if (needsProfileSetup) {
+      } else if (!hasCompletedEssentialData) {
         currentStep = 'essential-data';
       } else if (!hasCompletedExtendedData) {
         currentStep = 'extended-data';
@@ -125,7 +125,7 @@ export function useOnboardingProgress(): OnboardingProgress {
       isComplete: currentStep === 'complete',
       steps,
     };
-  }, [user, needsRegistration, needsPersonalityTest, needsProfileSetup]);
+  }, [user]);
   
   return progress;
 }
