@@ -132,9 +132,9 @@ export default function EditIntentPage() {
                   onClick={() => toggleIntent(option.value)}
                   disabled={isDisabled}
                   className={`
-                    w-full px-5 py-4 text-left rounded-lg border transition-all
+                    w-full px-5 py-4 text-left rounded-xl border-2 transition-all duration-150
                     ${isSelected
-                      ? 'border-primary bg-primary/5 text-primary' 
+                      ? 'border-primary [background:var(--btn-primary-gradient)] text-primary-foreground shadow-[var(--btn-shadow-primary)]'
                       : isDisabled
                       ? 'border-border bg-muted/30 text-muted-foreground cursor-not-allowed'
                       : 'border-border hover-elevate active-elevate-2'
@@ -146,19 +146,19 @@ export default function EditIntentPage() {
                     <div className={`
                       mt-1 flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center
                       ${isSelected 
-                        ? 'bg-primary border-primary' 
+                        ? 'bg-primary-foreground border-primary-foreground' 
                         : 'border-border'
                       }
                     `}>
                       {isSelected && (
-                        <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-base">{option.label}</div>
-                      <div className="text-sm text-muted-foreground mt-1">{option.description}</div>
+                      <div className="font-semibold text-base">{option.label}</div>
+                      <div className="text-sm mt-1 opacity-75">{option.description}</div>
                     </div>
                   </div>
                 </button>
