@@ -325,7 +325,85 @@ The IcebreakerToolkit (pre-event game browser) is a LEGACY tool. Do not add new 
 
 ---
 
-## 12-Archetype Animal Social Vibe System
+## Matching-State UI Architecture
+
+> **Guardrail:** Full-screen matching-status pages must use the shared `MatchingStateLayout` abstraction. Do not create bespoke dark-background layouts for new screen-level matching states.
+
+### Shared Layout — `MatchingStateLayout`
+
+**File:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
+
+Provides:
+- Canonical dark background from `apps/user-client/src/assets/matching/shared/matching-bg.svg`
+- Safe-area header (optional back button + title)
+- Composition slots: `hero`, `copy`, `cta`, `footer`
+
+```tsx
+<MatchingStateLayout
+  hero={<img src={heroSvg} />}
+  copy={<StatusCopy />}
+  cta={<ActionButtons />}
+/>
+```
+
+#### Full-Screen Matching-State Screens *(must use `MatchingStateLayout`)*
+
+| Component | Screen state | File |
+|-----------|-------------|------|
+| `MatchingWaitingScreen` | Blind-pool waiting (fill states: waiting / can_form / full) | `components/MatchingWaitingScreen.tsx` |
+| `NoMatchScreen` | No match found | `components/matching/NoMatchScreen.tsx` |
+
+#### Join-Sheet Interstitial Screens *(used inside `JoinEventPoolSheet`, no direct `MatchingStateLayout`)*
+
+| Component | Screen state | File |
+|-----------|-------------|------|
+| `JoinErrorScreen` | Join / registration error | `components/matching/JoinErrorScreen.tsx` |
+| `ExtendedDataEmptyScreen` | Profile data insufficient | `components/matching/ExtendedDataEmptyScreen.tsx` |
+| `TestIncompleteScreen` | Personality test not done | `components/matching/TestIncompleteScreen.tsx` |
+
+#### Post-Match Reveal Components
+
+| Component | Role | File |
+|-----------|------|------|
+| `SurpriseMatchReveal` | Cinematic reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
+| `MatchPointsDisplay` | Match points renderer | `components/matching/MatchPointsDisplay.tsx` |
+
+### Key Rules
+
+1. **State must be trigger-driven.** `MatchingStatusPage.tsx` maps real app state (registration status, fill count, WebSocket events) to the correct screen. No placeholder timers or mocked transitions.
+2. **Recovery must be correct.** A user returning to the matching-status page after a forced refresh should land in the right state.
+3. **For full-screen matching-status screens, never duplicate `matching-bg.svg`.** Import the shared background only via `MatchingStateLayout`. Join-sheet interstitials inherit their presentation context from `JoinEventPoolSheet` and should not wrap themselves in `MatchingStateLayout`.
+4. **Asset locations:** `apps/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
+
+Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
+
+---
+
+## Post-Profile-Review Limited Browse Mode *(Scoped Experiment)*
+
+After `FinalProfileReviewPage`, a secondary CTA "先浏览 →" lets users enter read-only event discovery (Discover page) before committing to pool registration.
+
+- Controlled by `ENABLE_LIMITED_BROWSE_MODE` constant in `FinalProfileReviewPage.tsx` (currently `true`)
+- Per-session opt-out via `?exp=no_limited_browse`; per-session opt-in via `?exp=limited_browse`
+- Session flag set by `enterLimitedBrowseMode()` from `LimitedBrowseBanner`
+- **Do not generalise** this pattern or add permanent browse-mode routing without confirming the experiment is complete and the gating logic has been reviewed
+
+---
+
+## Performance Guardrails
+
+> Full reference: `docs/perf.md`
+
+| Guardrail | Rule |
+|-----------|------|
+| Non-critical routes | **Must** use `React.lazy()` in `App.tsx` — no static imports for non-critical pages |
+| Admin code | Must **not** be imported into `apps/user-client` — keep admin-only code in `apps/admin-client` |
+| Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
+| Hero images | Prefer WebP + `decoding="async"` over PNG for hero/above-fold images |
+| Archetype assets | Defer/gate — do not preload all 12 archetype PNGs in the critical path |
+| Asset prefetching | Gate on real activity state — do not prefetch for no-activity users |
+
+---
 
 ### Overview
 

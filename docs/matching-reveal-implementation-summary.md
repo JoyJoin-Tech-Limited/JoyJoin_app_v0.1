@@ -1,9 +1,84 @@
 # Matching & Reveal Flow Implementation Summary
 
-## Overview
-This document summarizes the implementation of the archetype-based reveal experience for the JoyJoin pool matching flow.
+> **Updated 2026-04-01** to reflect the shared `MatchingStateLayout` abstraction (PRs #387–#391) and the full matching-state screen family.
 
-## Components
+## Overview
+This document summarises the implementation of the archetype-based reveal experience and the wider matching-state screen family for the JoyJoin pool matching flow.
+
+---
+
+## Matching-State Architecture (PRs #387–#391)
+
+### Shared Layout Abstraction — `MatchingStateLayout`
+
+**Location:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
+
+All full-screen matching-status pages share a single layout shell that provides:
+- The canonical dark background (`apps/user-client/src/assets/matching/shared/matching-bg.svg`) with a readability scrim
+- Safe-area-aware header with optional back button and title
+- Centred content container exposing **hero / copy / CTA / footer** composition slots
+
+```tsx
+<MatchingStateLayout
+  hero={<img src={heroSvg} />}
+  copy={<HeadlineAndBadge />}
+  cta={<PrimaryButton />}
+  footer={<ReassuranceText />}
+/>
+```
+
+**Guardrail:** New full-screen matching-status pages **must** extend `MatchingStateLayout` rather than reimplementing their own dark background or layout shell. Duplicating `matching-bg.svg` is explicitly discouraged.
+
+### Full-Screen Matching-State Screen Family
+
+| Component | State | Asset |
+|-----------|-------|-------|
+| `MatchingWaitingScreen` | Premium dark-mode blind-pool waiting (fill states: waiting / can_form / full) | `matching/waiting/matching-waiting-hero.svg` |
+| `NoMatchScreen` | No match found for this pool round | `matching/no-match/no-match-hero.svg` |
+
+### Join-Sheet Interstitial Screens
+
+These are shown inside `JoinEventPoolSheet.tsx`, not as standalone full-screen pages:
+
+| Component | State | Asset |
+|-----------|-------|-------|
+| `JoinErrorScreen` | Registration / join error | `matching/join-error/join-error-hero.svg` |
+| `ExtendedDataEmptyScreen` | Profile data insufficient for matching | `matching/extended-data-empty/extended-data-empty-hero.svg` |
+| `TestIncompleteScreen` | Personality test not completed | `matching/test-incomplete/…` |
+
+### Post-Match Reveal Components
+
+| Component | Role | Asset |
+|-----------|------|-------|
+| `SurpriseMatchReveal` | Cinematic surprise match reveal overlay | (inline animation) |
+| `MatchPointsDisplay` | Match points and compatibility summary renderer | (inline) |
+
+These screens live under `apps/user-client/src/components/matching/`, except `MatchingWaitingScreen`, which is at `apps/user-client/src/components/MatchingWaitingScreen.tsx`.
+
+### Trigger-Based State Wiring
+
+`MatchingStatusPage.tsx` maps **real app state** (registration status, event status, fill counts, WebSocket events) to the appropriate matching-state screen. No placeholder timers or mocked state transitions. Recovery / re-entry correctness is enforced — a user returning to the page after a forced refresh should land in the correct state.
+
+### Asset Organisation (PR #390)
+
+```
+apps/user-client/src/assets/matching/
+├── shared/                  ← single canonical background (used by MatchingStateLayout)
+│   └── matching-bg.svg
+├── waiting/
+│   └── matching-waiting-hero.svg
+├── no-match/
+│   └── no-match-hero.svg
+├── join-error/
+│   └── join-error-hero.svg
+├── extended-data-empty/
+│   └── extended-data-empty-hero.svg
+└── test-incomplete/
+```
+
+---
+
+## Post-Match Reveal Flow (ArchetypeOrbit)
 
 ### ArchetypeOrbit Component
 **Location**: `apps/user-client/src/components/ArchetypeOrbit.tsx`
