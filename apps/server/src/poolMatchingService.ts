@@ -25,15 +25,13 @@ import {
   eventAttendance,
   users, 
   userInterests,
-  matchingConfig,
   invitationUses,
   invitations,
   coupons,
   userCoupons
 } from "@shared/schema";
-import { eq, and, inArray, ne } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { calculateAge } from "@shared/utils";
-import { EDU_ORDINAL } from "@shared/constants";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
 import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
@@ -1066,7 +1064,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
   // Collect per-group data needed for WebSocket notifications (populated inside tx)
   const notificationQueue: Array<{ memberUserIds: string[]; notificationData: PoolMatchedData }> = [];
   // Collect fire-and-forget theme generation tasks (kicked off after tx commit)
-  const themeGenTasks: Array<{ groupId: string; memberUserIds: string[]; groupIndex: number }> = [];
+  const themeGenTasks: Array<{ groupId: string; memberUserIds: string[] }> = [];
 
   try {
     // A: Single transaction wrapping all core DB mutations
@@ -1165,7 +1163,7 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
         });
 
         // Queue theme generation for post-commit fire-and-forget
-        themeGenTasks.push({ groupId: groupRecord.id, memberUserIds, groupIndex: i });
+        themeGenTasks.push({ groupId: groupRecord.id, memberUserIds });
       }
 
       // 4. 更新活动池状态 → 'matched'
