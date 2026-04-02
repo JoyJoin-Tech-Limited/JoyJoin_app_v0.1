@@ -17,7 +17,7 @@ interface PoolVibeBadgeProps {
 export default function PoolVibeBadge({ sampleArchetypes = [], avgMatchScore, chemistry }: PoolVibeBadgeProps) {
   // Prefer explicit chemistry > avgMatchScore > archetype derivation
   const resolved: OverallChemistry = chemistry
-    ?? (avgMatchScore !== undefined ? deriveChemistryFromScore(avgMatchScore) : undefined)
+    ?? deriveChemistryFromScore(avgMatchScore)
     ?? deriveChemistryFromArchetypes(sampleArchetypes);
 
   // Only show badge if we have some archetype data or explicit score
