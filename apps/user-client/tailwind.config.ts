@@ -95,6 +95,13 @@ export default {
         jiangdou: ["FLJiangdou", "Outfit", "sans-serif"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        // ── Semantic typography roles ─────────────────────────────────
+        // font-ui          → system Chinese stack, default for all body/UI text
+        // font-cn-display  → AlibabaPuHuiTi-3 for branded Chinese headings
+        // font-en-brand    → Quicksand for English wordmark and accent labels
+        ui: ["var(--font-ui)"],
+        "cn-display": ["var(--font-cn-display)"],
+        "en-brand": ["var(--font-en-brand)"],
       },
       boxShadow: {
         "neon": "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)",

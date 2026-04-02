@@ -1,131 +1,103 @@
 /*
  * ============================================================
- * Self-hosted web fonts — JoyJoin user client
+ * JoyJoin Typography System — user client
  * ============================================================
  *
- * HOW TO ADD FONT FILES
- * ─────────────────────
- * 1. Place the .woff2 files inside the matching sub-folder:
+ * FONT STRATEGY
+ * ─────────────
+ * Three semantic roles, each with a clear purpose:
  *
- *      apps/user-client/src/assets/fonts/AlibabaPuHuiTi-3/
- *        AlibabaPuHuiTi-3-55-Regular.woff2
- *        AlibabaPuHuiTi-3-65-Medium.woff2
- *        AlibabaPuHuiTi-3-75-SemiBold.woff2
- *        AlibabaPuHuiTi-3-85-Bold.woff2
+ *   --font-ui         System-native Chinese stack.  Used for all
+ *                     everyday UI text — labels, body copy, forms,
+ *                     legal text, helper text.  Feels native and
+ *                     fast; no custom font needed here.
  *
- *      apps/user-client/src/assets/fonts/Quicksand/
- *        Quicksand-Regular.woff2
- *        Quicksand-Medium.woff2
- *        Quicksand-SemiBold.woff2
- *        Quicksand-Bold.woff2
+ *   --font-cn-display AlibabaPuHuiTi-3 (Regular, TTF) with system
+ *                     fallback.  Used selectively for emotionally
+ *                     charged headings, hero titles, branded Chinese
+ *                     callouts, and milestone / success moments.
  *
- * 2. Uncomment the @font-face blocks below that match the files
- *    you have uploaded.
+ *   --font-en-brand   Quicksand (Variable, TTF) with rounded, warm,
+ *                     youthful character.  Used for the "JoyJoin"
+ *                     wordmark, English labels and numbers where
+ *                     brand presence matters.
  *
- * 3. The CSS custom properties in :root already reference these
- *    font families — no further edits should be needed once you
- *    uncomment the declarations.
+ * TARO / WECHAT MINI PROGRAM MIGRATION NOTE
+ * ──────────────────────────────────────────
+ * TTF format is intentionally chosen over WOFF2.  WeChat Mini
+ * Program and Taro's loadFontFace() API work best with TTF/WOFF,
+ * not WOFF2.  When migrating to a true Taro build:
+ *   1. Move font files to the Taro static asset folder.
+ *   2. Call Taro.loadFontFace({ family, source, … }) from app.ts
+ *      before rendering font-sensitive screens.
+ *   3. For large Chinese fonts, consider hosting remotely (CDN)
+ *      and using an HTTPS URL; Taro loadFontFace requires a URL
+ *      source, not a bundled path, in mini program mode.
+ *   4. This file (fonts.css) can be removed in the Taro build in
+ *      favour of the loadFontFace calls — the CSS variables below
+ *      should be preserved as-is because components reference them.
  *
- * WHY THE DECLARATIONS ARE COMMENTED OUT
- * ───────────────────────────────────────
- * Vite resolves url() references in CSS at build time.
- * Uncommenting a declaration before its font file exists will
- * cause the build to fail with a "file not found" error.
- * Keep each block commented out until the matching file is
- * present in the folder.
+ * FONT FILES PRESENT
+ * ──────────────────
+ *   AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular.ttf  ✓
+ *   Quicksand/Quicksand-VariableFont_wght.ttf           ✓
  * ============================================================
  */
 
-/* ─── Simplified Chinese: Alibaba PuHuiTi 3 ─────────────── */
+/* ─── Chinese display: Alibaba PuHuiTi 3 (Regular) ──────── */
 
-/*
 @font-face {
   font-family: 'AlibabaPuHuiTi';
-  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular.woff2') format('woff2');
+  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
+  /* swap: body text is always readable while the custom font loads */
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'AlibabaPuHuiTi';
-  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-65-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'AlibabaPuHuiTi';
-  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-75-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'AlibabaPuHuiTi';
-  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-85-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-*/
-
-/* ─── English / Latin: Quicksand ────────────────────────── */
-
-/*
-@font-face {
-  font-family: 'Quicksand';
-  src: url('./Quicksand/Quicksand-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+/* ─── English brand: Quicksand (variable weight) ────────── */
 
 @font-face {
   font-family: 'Quicksand';
-  src: url('./Quicksand/Quicksand-Medium.woff2') format('woff2');
-  font-weight: 500;
+  src: url('./Quicksand/Quicksand-VariableFont_wght.ttf') format('truetype');
+  /* Variable font covers the full weight range 300–700 in a single file */
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
 }
-
-@font-face {
-  font-family: 'Quicksand';
-  src: url('./Quicksand/Quicksand-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Quicksand';
-  src: url('./Quicksand/Quicksand-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-*/
 
 /* ─── Semantic CSS custom properties ────────────────────── */
 /*
- * These variables are always active.  Before the font files are
- * uploaded they fall back gracefully to system fonts, so they
- * are safe to reference from components right now.
+ * Reference these variables in components instead of hard-coding
+ * font-family strings.  They fall back gracefully to system fonts
+ * if a custom font has not yet loaded.
  *
- * Usage:
- *   font-family: var(--font-body);    ← default UI / Chinese text
- *   font-family: var(--font-display); ← headings, English labels
- *   font-family: var(--font-brand);   ← logo, marketing copy
+ * Tailwind utilities (configured in tailwind.config.ts):
+ *   font-ui          → var(--font-ui)
+ *   font-cn-display  → var(--font-cn-display)
+ *   font-en-brand    → var(--font-en-brand)
+ *
+ * Inline style when a Tailwind class is not possible:
+ *   style={{ fontFamily: 'var(--font-cn-display)' }}
  */
 :root {
-  /* Primary body / Chinese-first font stack */
-  --font-body: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /*
+   * UI / body — system Chinese font stack, no custom file needed.
+   * Renders natively on both iOS (PingFang SC) and Android/Windows
+   * (Microsoft YaHei / Noto Sans CJK).  This is the app default.
+   */
+  --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+             'Noto Sans CJK SC', 'WenQuanYi Micro Hei', system-ui, sans-serif;
 
-  /* Display / English-accent font stack */
-  --font-display: 'Quicksand', 'AlibabaPuHuiTi', 'PingFang SC', sans-serif;
+  /*
+   * Chinese display — AlibabaPuHuiTi-3 for emotional, branded
+   * headings and hero text.  Use selectively, not for body copy.
+   */
+  --font-cn-display: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
-  /* Brand / marketing copy — same as display for now */
-  --font-brand: 'Quicksand', 'AlibabaPuHuiTi', 'PingFang SC', sans-serif;
+  /*
+   * English brand — Quicksand for the wordmark, English product
+   * name, and accent numerals where warmth and roundness matter.
+   */
+  --font-en-brand: 'Quicksand', 'Outfit', 'Nunito', 'Varela Round', sans-serif;
 }

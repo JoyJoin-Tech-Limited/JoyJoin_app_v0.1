@@ -40,6 +40,12 @@
 - In active onboarding / auth / CLI code, do not reintroduce these legacy identifiers: `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`.
 - If you ever copied values from the removed tracked `.env` or the old hard-coded deployment database URL, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, and `ADMIN_CREATE_SECRET_KEY`.
 
+### Guardrails: latent-state and multimodal AI work stays planning-only until gates pass
+- `docs/AI_INTEGRATION_PLAN.md` Phase 3 (`user_latent_state`, behavioral-history explanations, multimodal enrichment) is a **strategy / planning document**, not an instruction to add runtime code now.
+- Do **not** add schema migrations, background jobs, scoring inputs, API routes, consent/upload flows, or user-facing UI for latent-state or multimodal features until the documented prerequisites, consent requirements, fairness review, observability, and explicit product/engineering gate approval are all satisfied.
+- Planning-only shared contracts are allowed only when they are clearly marked as non-runtime and remain disconnected from active imports/callers.
+- Existing deterministic authority still applies: `poolMatchingService.ts` remains the matching authority, and no latent-state or multimodal signal may partially influence matching or user-facing explanations before its rollout gate is formally cleared.
+
 ---
 
 ## Quick Start

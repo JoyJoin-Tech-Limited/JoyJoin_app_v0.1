@@ -58,14 +58,12 @@ export default function WechatServiceQRCard({
       {/* Title */}
       <div className="text-center space-y-1">
         <p
-          className="font-brand text-base font-semibold"
-          style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}
+          className="font-cn-display text-base font-semibold"
         >
           {title}
         </p>
         <p
-          className="font-brand text-xs text-muted-foreground"
-          style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}
+          className="font-cn-display text-xs text-muted-foreground"
         >
           {subtitle}
         </p>
@@ -93,8 +91,7 @@ export default function WechatServiceQRCard({
 
       {/* Footer */}
       <p
-        className="font-brand text-xs text-center bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent"
-        style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}
+        className="font-cn-display text-xs text-center bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent"
       >
         {footer}
       </p>
