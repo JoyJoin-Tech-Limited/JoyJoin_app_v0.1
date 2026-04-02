@@ -18,8 +18,14 @@ export type OutcomeCalibrationSnapshot = {
   avgAtmosphereScore: number | null;
 };
 
+type OutcomeFeedbackRow = {
+  atmosphereScore: number | null;
+  wouldAttendAgain: boolean | null;
+  connectionStatus: string | null;
+};
+
 export async function getOutcomeCalibrationSnapshot(): Promise<OutcomeCalibrationSnapshot> {
-  const feedbackRows = await db
+  const feedbackRows: OutcomeFeedbackRow[] = await db
     .select({
       atmosphereScore: eventFeedback.atmosphereScore,
       wouldAttendAgain: eventFeedback.wouldAttendAgain,
@@ -35,7 +41,7 @@ export async function getOutcomeCalibrationSnapshot(): Promise<OutcomeCalibratio
     };
   }
 
-  const positiveCount = feedbackRows.filter((row) => {
+  const positiveCount = feedbackRows.filter((row: OutcomeFeedbackRow) => {
     const atmospherePositive = (row.atmosphereScore ?? 0) >= 4;
     const wouldAttendAgainPositive = row.wouldAttendAgain === true;
     const connectionPositive = row.connectionStatus
@@ -46,11 +52,11 @@ export async function getOutcomeCalibrationSnapshot(): Promise<OutcomeCalibratio
   }).length;
 
   const atmosphereRows = feedbackRows
-    .map((row) => row.atmosphereScore)
-    .filter((score): score is number => typeof score === "number");
+    .map((row: OutcomeFeedbackRow) => row.atmosphereScore)
+    .filter((score: number | null): score is number => typeof score === "number");
 
   const avgAtmosphereScore = atmosphereRows.length > 0
-    ? atmosphereRows.reduce((sum, score) => sum + score, 0) / atmosphereRows.length
+    ? atmosphereRows.reduce((sum: number, score: number) => sum + score, 0) / atmosphereRows.length
     : null;
 
   return {
