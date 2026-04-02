@@ -66,30 +66,77 @@ vi.mock('../lib/socialIcebreakerStore', () => {
 });
 
 vi.mock('../socialIcebreakerAIService', () => ({
-  generateWarmupTopics: vi.fn().mockResolvedValue([
-    { id: 't1', question: '你最近最开心的一件事？', mood: 'relaxed', emoji: '🌅' },
-  ]),
-  generateMicroChallenges: vi.fn().mockResolvedValue([
-    { id: 'c1', title: '击掌', description: '和你左边的人击掌', durationSeconds: 30, completionCTA: '完成了' },
-  ]),
-  generateLieDetectiveStatements: vi.fn().mockImplementation(async ({ displayName }: { displayName: string }) => ([
-    { index: 0, text: `${displayName}-0`, isLie: false },
-    { index: 1, text: `${displayName}-1`, isLie: true },
-    { index: 2, text: `${displayName}-2`, isLie: false },
-  ])),
+  generateWarmupTopics: vi.fn().mockResolvedValue({
+    data: [
+      { id: 't1', question: '你最近最开心的一件事？', mood: 'relaxed', emoji: '🌅' },
+    ],
+    meta: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      fromCache: false,
+      provider: 'deepseek',
+      fallbackUsed: false,
+      promptVersion: 'social-warmup-topics-v1',
+    },
+  }),
+  generateMicroChallenges: vi.fn().mockResolvedValue({
+    data: [
+      { id: 'c1', title: '击掌', description: '和你左边的人击掌', durationSeconds: 30, completionCTA: '完成了' },
+    ],
+    meta: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      fromCache: false,
+      provider: 'deepseek',
+      fallbackUsed: false,
+      promptVersion: 'social-micro-challenges-v1',
+    },
+  }),
+  generateLieDetectiveStatements: vi.fn().mockImplementation(async ({ displayName }) => {
+    return {
+      data: [
+        { index: 0, text: `${displayName}-0`, isLie: false },
+        { index: 1, text: `${displayName}-1`, isLie: true },
+        { index: 2, text: `${displayName}-2`, isLie: false },
+      ],
+      meta: {
+        generatedAt: '2026-04-02T00:00:00.000Z',
+        fromCache: false,
+        provider: 'deepseek',
+        fallbackUsed: false,
+        promptVersion: 'social-lie-detective-v1',
+      },
+    };
+  }),
   generateXiaoYueComment: vi.fn().mockResolvedValue('ok'),
-  generateRecapSummary: vi.fn().mockResolvedValue('summary'),
-  generatePersonalityDiceChallenges: vi.fn().mockImplementation(async (participants: Array<{ userId: string; displayName: string }>) =>
-    participants.map((participant, i) => ({
-      userId: participant.userId,
-      displayName: participant.displayName,
-      dominantTrait: 'A' as const,
-      challengeTitle: `challenge-${i}`,
-      challengeBody: 'do thing',
-      challengeEmoji: '🎲',
-      difficulty: 'easy' as const,
-    })),
-  ),
+  generateRecapSummary: vi.fn().mockResolvedValue({
+    data: { headline: 'summary', moments: ['m1'], closingLine: 'bye' },
+    meta: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      fromCache: false,
+      provider: 'deepseek',
+      fallbackUsed: false,
+      promptVersion: 'social-recap-summary-v1',
+    },
+  }),
+  generatePersonalityDiceChallenges: vi.fn().mockImplementation(async (participants: Array<{ userId: string; displayName: string }>) => {
+    return {
+      data: participants.map((participant: { userId: string; displayName: string }, i: number) => ({
+        userId: participant.userId,
+        displayName: participant.displayName,
+        dominantTrait: 'A' as const,
+        challengeTitle: `challenge-${i}`,
+        challengeBody: 'do thing',
+        challengeEmoji: '🎲',
+        difficulty: 'easy' as const,
+      })),
+      meta: {
+        generatedAt: '2026-04-02T00:00:00.000Z',
+        fromCache: false,
+        provider: 'deepseek',
+        fallbackUsed: false,
+        promptVersion: 'social-personality-dice-v1',
+      },
+    };
+  }),
 }));
 
 vi.mock('../lib/icebreakerAccess', () => ({
@@ -153,6 +200,36 @@ async function login(baseUrl: string, userId: string) {
 }
 
 describe('social icebreaker routes', () => {
+  it('returns normalized AI metadata for warmup topics', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'topics-host');
+      const sessionId = `session-topics-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const topicsResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ mood: 'relaxed' }),
+      });
+      const topicsBody = await topicsResponse.json() as any;
+
+      expect(topicsResponse.status).toBe(200);
+      expect(topicsBody.topics).toHaveLength(1);
+      expect(topicsBody.meta).toMatchObject({
+        provider: 'deepseek',
+        fromCache: false,
+        fallbackUsed: false,
+        promptVersion: 'social-warmup-topics-v1',
+      });
+    });
+  });
+
   it('accepts guessedStatementIndex=0 in lie-detective votes', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'host');
@@ -188,10 +265,17 @@ describe('social icebreaker routes', () => {
         body: JSON.stringify({ currentPhase: 'micro_challenge' }),
       });
 
-      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
+      const statementResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({ displayName: 'Host' }),
+      });
+      const statementBody = await statementResponse.json() as any;
+
+      expect(statementBody.meta).toMatchObject({
+        provider: 'deepseek',
+        fallbackUsed: false,
+        promptVersion: 'social-lie-detective-v1',
       });
 
       const voteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/vote`, {
@@ -262,7 +346,7 @@ describe('social icebreaker routes', () => {
         });
       }
 
-      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/generate`, {
+      const generateResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({
@@ -272,6 +356,14 @@ describe('social icebreaker routes', () => {
             { userId: 'dice-guest-2', displayName: 'Guest 2' },
           ],
         }),
+      });
+      const generateBody = await generateResponse.json() as any;
+
+      expect(generateBody.meta).toMatchObject({
+        provider: 'deepseek',
+        fromCache: false,
+        fallbackUsed: false,
+        promptVersion: 'social-personality-dice-v1',
       });
 
       const completeResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {
