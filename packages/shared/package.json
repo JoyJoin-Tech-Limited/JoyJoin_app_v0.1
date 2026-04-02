@@ -18,6 +18,7 @@
     "./topicCards": "./src/topicCards.ts",
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
     "./interests": "./src/interests.ts",
+    "./matchingWeights": "./src/matchingWeights.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
     "./types/groupAnalysis": "./src/types/groupAnalysis.ts",

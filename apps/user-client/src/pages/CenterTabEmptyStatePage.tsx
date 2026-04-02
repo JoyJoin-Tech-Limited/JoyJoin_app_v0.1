@@ -35,7 +35,7 @@ export default function CenterTabEmptyStatePage() {
         </div>
 
         <div className="mt-8 w-full max-w-sm space-y-3 text-center">
-          <h1 className="text-[26px] font-black leading-snug tracking-tight text-gray-900">
+          <h1 className="font-cn-display text-[26px] font-black leading-snug tracking-tight text-gray-900">
             {TITLE}
           </h1>
           <p className="whitespace-pre-line text-[15px] leading-7 text-gray-500">
@@ -47,7 +47,7 @@ export default function CenterTabEmptyStatePage() {
           <Button
             onClick={handleDiscoverClick}
             size="lg"
-            className="h-14 w-full rounded-full border-0 bg-gradient-to-r from-purple-600 to-pink-500 text-base font-semibold text-white shadow-lg shadow-purple-400/30 transition-all duration-200 hover:from-purple-700 hover:to-pink-600 active:scale-[0.98]"
+            className="h-14 w-full rounded-full border-0 bg-gradient-to-r from-purple-600 to-pink-500 text-base font-semibold font-cn-display text-white shadow-lg shadow-purple-400/30 transition-all duration-200 hover:from-purple-700 hover:to-pink-600 active:scale-[0.98]"
             data-testid="center-empty-state-cta"
             aria-label="去发现活动"
           >

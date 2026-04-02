@@ -64,6 +64,10 @@ interface HistogramEntry {
 const requestCounters = new Map<string, CounterEntry>();
 const errorCounters = new Map<string, CounterEntry>();
 const durationHistograms = new Map<string, HistogramEntry>();
+const runtimeLLMFallbackCounters = new Map<string, CounterEntry>();
+const llmFallbackRequestCounters = new Map<string, CounterEntry>();
+const llmFallbackCostTotals = new Map<string, CounterEntry>();
+const llmFallbackLatencyHistograms = new Map<string, HistogramEntry>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -104,6 +108,20 @@ function incCounter(
     existing.count += 1;
   } else {
     store.set(key, { count: 1, labels });
+  }
+}
+
+function addCounterValue(
+  store: Map<string, CounterEntry>,
+  labels: Record<string, string>,
+  value: number,
+): void {
+  const key = labelKey(labels);
+  const existing = store.get(key);
+  if (existing) {
+    existing.count += value;
+  } else {
+    store.set(key, { count: value, labels });
   }
 }
 
@@ -305,9 +323,29 @@ export async function getMetricsText(): Promise<string> {
       durationHistograms,
     ),
     renderCounter(
+      'llm_fallback_inference_requests_total',
+      'Total number of shadow LLM fallback inference calls.',
+      llmFallbackRequestCounters,
+    ),
+    renderHistogram(
+      'llm_fallback_inference_latency_ms',
+      'Shadow LLM fallback inference latency in milliseconds.',
+      llmFallbackLatencyHistograms,
+    ),
+    renderCounter(
+      'llm_fallback_inference_estimated_cost_usd_total',
+      'Estimated USD cost of shadow LLM fallback inference calls.',
+      llmFallbackCostTotals,
+    ),
+    renderCounter(
       'http_errors_total',
       'Total number of HTTP error responses (4xx and 5xx).',
       errorCounters,
+    ),
+    renderCounter(
+      'inference_runtime_llm_fallback_total',
+      'Total number of runtime LLM fallback outcomes by field.',
+      runtimeLLMFallbackCounters,
     ),
     renderGauge(
       'nodejs_event_loop_delay_ms',
@@ -320,9 +358,42 @@ export async function getMetricsText(): Promise<string> {
   return sections.join('\n\n') + '\n';
 }
 
+export function recordLLMFallbackInferenceMetric(params: {
+  provider: string;
+  mode: string;
+  success: boolean;
+  latencyMs: number;
+  estimatedCostUsd: number;
+}): void {
+  const labels = {
+    provider: params.provider,
+    mode: params.mode,
+    success: String(params.success),
+  };
+
+  incCounter(llmFallbackRequestCounters, labels);
+  observeHistogram(llmFallbackLatencyHistograms, labels, params.latencyMs);
+  addCounterValue(llmFallbackCostTotals, {
+    provider: params.provider,
+    mode: params.mode,
+  }, params.estimatedCostUsd);
+}
+
 /** Reset all counters and histograms — intended for use in tests only. */
 export function _resetMetricsForTest(): void {
   requestCounters.clear();
   errorCounters.clear();
   durationHistograms.clear();
+  runtimeLLMFallbackCounters.clear();
+}
+
+export function recordRuntimeLLMFallbackMetric(
+  field: string,
+  outcome: 'applied' | 'rejected_unapproved' | 'rejected_low_confidence' | 'skipped_user_declared',
+): void {
+  const boundedField = outcome === 'rejected_unapproved' ? '__unapproved__' : field;
+  incCounter(runtimeLLMFallbackCounters, { field: boundedField, outcome });
+  llmFallbackRequestCounters.clear();
+  llmFallbackCostTotals.clear();
+  llmFallbackLatencyHistograms.clear();
 }

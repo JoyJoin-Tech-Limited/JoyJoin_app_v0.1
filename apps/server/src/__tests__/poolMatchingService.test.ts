@@ -136,6 +136,10 @@ vi.mock('../archetypeChemistry', () => ({
   chemistryMatrix: { '暖心熊': { '暖心熊': 90 } },
   ARCHETYPE_ENERGY: { '暖心熊': 60 },
 }));
+vi.mock('../archetypeChemistryCalibration', () => ({
+  getArchetypePairCalibrationMap: vi.fn().mockResolvedValue(new Map()),
+  getCalibratedChemistryScore: vi.fn().mockImplementation((_a: string, _b: string) => 90),
+}));
 
 const { calculateInterestScoreAsync, preloadUserInterests, saveMatchResults } = await import('../poolMatchingService');
 
