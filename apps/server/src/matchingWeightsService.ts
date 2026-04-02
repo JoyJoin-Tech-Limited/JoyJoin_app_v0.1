@@ -329,9 +329,8 @@ export function buildShadowRecommendation(
     const rawScore = dimensionScores[dimension.key];
     const hasSignal = typeof rawScore === 'number' && Number.isFinite(rawScore);
     const score = hasSignal ? clamp(rawScore, 0, 100) : null;
-    const effectiveScore = score ?? 0;
-    const posteriorAlpha = priorAlpha + (hasSignal && isSuccessfulOutcome && effectiveScore >= 60 ? 1 : 0);
-    const posteriorBeta = priorBeta + (hasSignal && !isSuccessfulOutcome && effectiveScore < 60 ? 1 : 0);
+    const posteriorAlpha = priorAlpha + (hasSignal && score !== null && isSuccessfulOutcome && score >= 60 ? 1 : 0);
+    const posteriorBeta = priorBeta + (hasSignal && score !== null && !isSuccessfulOutcome && score < 60 ? 1 : 0);
     const posteriorMean = posteriorAlpha / (posteriorAlpha + posteriorBeta);
 
     posteriorMeans[dimension.key] = posteriorMean;
