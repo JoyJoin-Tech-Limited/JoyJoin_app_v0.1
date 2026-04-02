@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted font declarations and semantic font tokens.
+   @font-face rules inside this file are commented out until the
+   actual font files are placed in src/assets/fonts/.
+   See that file for upload instructions. */
+@import './assets/fonts/fonts.css';
+
 /* 品牌标题字体 - 使用站酷庆科黄油体 (ZCOOL QingKe HuangYou) */
 /* 圆润如黄油，温暖亲和，免费商用 (SIL OFL 1.1) */
 
