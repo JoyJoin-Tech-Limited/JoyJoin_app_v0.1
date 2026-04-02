@@ -636,10 +636,13 @@ async function calculatePairScore(
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
   semanticProfileCache?: SemanticProfileCache,
+  semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
 ): Promise<number> {
-  const semanticSimilarityEnabled = isSemanticSimilarityEnabled();
   // Use a sorted key so (A,B) and (B,A) map to the same cache entry
-  const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}|${[user1.userId, user2.userId].sort().join('|')}`;
+  const sortedUserIds = user1.userId < user2.userId
+    ? `${user1.userId}|${user2.userId}`
+    : `${user2.userId}|${user1.userId}`;
+  const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}|${sortedUserIds}`;
   if (pairScoreCache?.has(cacheKey)) {
     return pairScoreCache.get(cacheKey)!;
   }
@@ -687,6 +690,7 @@ async function calculateGroupPairScore(
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
   semanticProfileCache?: SemanticProfileCache,
+  semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -695,7 +699,14 @@ async function calculateGroupPairScore(
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += await calculatePairScore(members[i], members[j], interestsCache, pairScoreCache, semanticProfileCache);
+      totalScore += await calculatePairScore(
+        members[i],
+        members[j],
+        interestsCache,
+        pairScoreCache,
+        semanticProfileCache,
+        semanticSimilarityEnabled,
+      );
       pairCount++;
     }
   }
@@ -886,10 +897,11 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   }
 
   const eligibleUserIds = eligibleUsers.map(user => user.userId);
+  const semanticSimilarityEnabled = isSemanticSimilarityEnabled();
 
   // 3.5 Preload user_interests for all eligible users in one batch query (C: runtime hardening)
   const interestsCache = await preloadUserInterests(eligibleUserIds);
-  const semanticProfileCache = isSemanticSimilarityEnabled()
+  const semanticProfileCache = semanticSimilarityEnabled
     ? buildSemanticProfileCache(eligibleUsers, interestsCache)
     : undefined;
 
@@ -940,7 +952,14 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
       const user1 = eligibleUsers[i] as UserWithProfile;
       const user2 = eligibleUsers[j] as UserWithProfile;
-      let score = await calculatePairScore(user1, user2, interestsCache, pairScoreCache, semanticProfileCache);
+      let score = await calculatePairScore(
+        user1,
+        user2,
+        interestsCache,
+        pairScoreCache,
+        semanticProfileCache,
+        semanticSimilarityEnabled,
+      );
       
       // Check if this pair has an invitation relationship
       const isInvited = invitationPairs.some(pair => 
@@ -985,7 +1004,14 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
         let totalScore = 0;
         for (const member of groupMembers) {
-          totalScore += await calculatePairScore(candidate, member, interestsCache, pairScoreCache, semanticProfileCache);
+          totalScore += await calculatePairScore(
+            candidate,
+            member,
+            interestsCache,
+            pairScoreCache,
+            semanticProfileCache,
+            semanticSimilarityEnabled,
+          );
         }
         const avgScore = totalScore / groupMembers.length;
         
@@ -1005,7 +1031,13 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     // 只保留达到最小人数的小组
     if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = await calculateGroupPairScore(groupMembers, interestsCache, pairScoreCache, semanticProfileCache);
+      const avgPairScore = await calculateGroupPairScore(
+        groupMembers,
+        interestsCache,
+        pairScoreCache,
+        semanticProfileCache,
+        semanticSimilarityEnabled,
+      );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers);
       const diversity = calculateGroupDiversity(groupMembers);
