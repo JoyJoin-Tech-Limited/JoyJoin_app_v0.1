@@ -60,13 +60,13 @@ export default function WhyThisFitsCard({
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="mb-5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3.5"
+          className="mb-5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/8 to-primary/4 px-4 py-3.5 shadow-sm"
           role="region"
           aria-label="为什么适合你"
           data-testid="why-this-fits-card"
         >
           {/* Header */}
-          <div className="flex items-center gap-1.5 mb-2.5">
+          <div className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 mb-3">
             <Sparkles
               className="w-3.5 h-3.5 text-primary shrink-0"
               aria-hidden="true"
@@ -106,6 +106,11 @@ export default function WhyThisFitsCard({
                 </motion.li>
               ))}
             </ul>
+          )}
+          {brief?.matchingPromise && (
+            <p className="mt-2.5 pt-2 border-t border-primary/10 text-[10px] text-primary/60 italic leading-snug">
+              {brief.matchingPromise}
+            </p>
           )}
         </motion.div>
       )}
