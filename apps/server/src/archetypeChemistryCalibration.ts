@@ -13,6 +13,7 @@ import {
 
 export const CHEMISTRY_CALIBRATION_MIN_SAMPLES = 30;
 export const CHEMISTRY_CALIBRATION_MAX_DELTA = 2;
+export const CHEMISTRY_CALIBRATION_DAMPENING_FACTOR = 0.05;
 const CHEMISTRY_SCORE_FLOOR = 10;
 const CHEMISTRY_SCORE_CEILING = 100;
 const CHEMISTRY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -92,7 +93,10 @@ export function calculateCalibratedChemistryBreakdown(
 
   const empiricalScore = calculateEmpiricalChemistryScore(avgMeetAgain, avgAtmosphere);
   const rawDelta = empiricalScore - baseScore;
-  const boundedDelta = Math.sign(rawDelta) * Math.min(Math.abs(rawDelta) * 0.05, CHEMISTRY_CALIBRATION_MAX_DELTA);
+  const boundedDelta = Math.sign(rawDelta) * Math.min(
+    Math.abs(rawDelta) * CHEMISTRY_CALIBRATION_DAMPENING_FACTOR,
+    CHEMISTRY_CALIBRATION_MAX_DELTA,
+  );
   const calibratedScore = roundToTwo(
     Math.max(
       CHEMISTRY_SCORE_FLOOR,
