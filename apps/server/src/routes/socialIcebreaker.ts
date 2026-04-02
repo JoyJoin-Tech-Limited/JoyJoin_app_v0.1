@@ -37,6 +37,9 @@ import {
   getAllSessionLieTruths,
   sweepExpiredSessions,
 } from '../lib/socialIcebreakerStore';
+import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
+import { logger } from '../lib/logger';
+import { requireAuthenticatedUserId } from '../lib/requestAuth';
 
 const router = Router();
 
@@ -104,11 +107,17 @@ async function resolveSession(
 // POST /api/social-icebreaker/start
 // ---------------------------------------------------------------------------
 router.post('/start', async (req: any, res) => {
-  const userId: string = req.session?.userId;
   const { sessionId, displayName, eventType } = req.body;
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
 
-  if (!sessionId || !userId) {
-    return res.status(400).json({ error: 'sessionId and authenticated userId are required' });
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  const access = await getIcebreakerSessionParticipantAccess(sessionId, userId);
+  if (!access.allowed) {
+    return res.status(access.status).json(access.body);
   }
 
   // Check for an existing session by the icebreaker session key first.
@@ -170,6 +179,11 @@ router.post('/start', async (req: any, res) => {
   try {
     await createSession(newState);
     await upsertParticipant(socialSessionId, userId, displayName || '主持人');
+    logger.info('Started social icebreaker session', {
+      sessionId,
+      socialSessionId,
+      userId,
+    });
   } catch (error) {
     if (!isUniqueConstraintError(error)) {
       throw error;

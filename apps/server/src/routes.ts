@@ -6,7 +6,9 @@ import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
 import { registerAuthRoutes } from "./routes/domains/auth";
+import { registerEventPoolRoutes } from "./routes/domains/eventPools";
 import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
+import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
 import { registerOnboardingRoutes } from "./routes/domains/onboarding";
 import { registerPaymentRoutes } from "./routes/domains/payments";
 import { storage } from "./storage";
@@ -28,6 +30,8 @@ import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
 import { getMetricsText } from "./middleware/metrics";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
+import { describePoolRegistrationAvailability } from "./lib/poolRegistrationRules";
+import { getAuthenticatedUserId } from "./lib/requestAuth";
 import { broadcastPoolRegistrationAdded } from "./eventBroadcast";
 import {
   assertValidTransition as assertValidEventPoolTransition,
@@ -53,6 +57,7 @@ import { z } from "zod";
 // Type alias for database transaction
 type DbTransaction = NeonDatabase<typeof schema>;
 type UserInterestSignalRow = typeof userInterestSignals.$inferSelect;
+const SAMPLE_ARCHETYPE_COUNT = 3;
 
 /**
  * Batch-load interest signals for multiple users.
@@ -573,6 +578,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerAssessmentRoutes(app);
   registerIcebreakerRoutes(app);
+  registerIcebreakerSessionRoutes(app);
+  registerEventPoolRoutes(app);
 
   // Profile routes
   app.post('/api/profile/setup', isPhoneAuthenticated, async (req: any, res) => {
@@ -3154,85 +3161,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ EVENT SESSION (ICEBREAKER) ROUTES ============
-  
-  // GET /api/events/:eventId/session - Get existing icebreaker session for a blind box event
-  app.get('/api/events/:eventId/session', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const { eventId } = req.params;
-      
-      // Use blindBoxEventId for blind box events (no foreign key constraint)
-      const session = await storage.getIcebreakerSessionByBlindBoxEventId(eventId);
-      
-      if (session) {
-        // Get check-in count
-        const checkins = await storage.getSessionCheckins(session.id);
-        res.json({ 
-          sessionId: session.id,
-          checkedInCount: checkins.length,
-          expectedAttendees: session.expectedAttendees || 0,
-          currentPhase: session.currentPhase
-        });
-      } else {
-        res.json(null);
-      }
-    } catch (error) {
-      console.error("[EventSession] Error getting session:", error);
-      res.status(500).json({ message: "Failed to get session" });
-    }
-  });
-
-  // POST /api/events/:eventId/session - Create new icebreaker session for a blind box event
-  app.post('/api/events/:eventId/session', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const { eventId } = req.params;
-      const userId = req.session.userId;
-      
-      // Check if session already exists (using blindBoxEventId)
-      const existingSession = await storage.getIcebreakerSessionByBlindBoxEventId(eventId);
-      if (existingSession) {
-        return res.json({ sessionId: existingSession.id });
-      }
-      
-      // Get the event to get attendee count
-      const event = await db
-        .select()
-        .from(blindBoxEvents)
-        .where(eq(blindBoxEvents.id, eventId))
-        .limit(1);
-      
-      if (!event || event.length === 0) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-      
-      const eventData = event[0];
-      
-      // Create new session using blindBoxEventId (no foreign key constraint)
-      const newSession = await storage.createIcebreakerSession({
-        blindBoxEventId: eventId,
-        currentPhase: 'warmup',
-        expectedAttendees: eventData.totalParticipants || 4,
-        atmosphereType: eventData.eventType === '酒局' ? 'lively' : 'balanced',
-        hostUserId: userId,
-        startedAt: new Date(),
-      });
-      
-      res.json({ sessionId: newSession.id });
-    } catch (error: any) {
-      // Handle unique constraint violation (concurrent creation)
-      if (error?.code === '23505' || error?.message?.includes('unique constraint')) {
-        console.log("[EventSession] Unique constraint hit, returning existing session");
-        // Another request already created the session, fetch and return it
-        const existingSession = await storage.getIcebreakerSessionByBlindBoxEventId(req.params.eventId);
-        if (existingSession) {
-          return res.json({ sessionId: existingSession.id });
-        }
-      }
-      console.error("[EventSession] Error creating session:", error);
-      res.status(500).json({ message: "Failed to create session" });
-    }
-  });
-
   // ============ ATTENDANCE STATUS ROUTES ============
 
   function getUserDisplayName(user: any): string {
@@ -5351,8 +5279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ AUTH MIDDLEWARE ============
   
   async function requireAuth(req: Request, res: any, next: any) {
-    const session = req.session as any;
-    if (!session?.userId) {
+    if (!getAuthenticatedUserId(req)) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     next();
@@ -7355,40 +7282,83 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       // 过滤掉已经报名过的池子
       const visiblePools = (pools as any[]).filter((p: any) => !registeredPoolIds.has(p.id));
 
-      // 获取每个池子的报名人数和前3个报名者的原型
-      const poolsWithSocialProof = await Promise.all(
-        visiblePools.map(async (pool: any) => {
-          const registrations = await db
+      const visiblePoolIds = visiblePools.map((pool: any) => pool.id);
+      const registrationCountRows = visiblePoolIds.length > 0
+        ? await db
             .select({
-              id: eventPoolRegistrations.id,
-              userId: eventPoolRegistrations.userId,
+              poolId: eventPoolRegistrations.poolId,
+              count: sql<number>`count(*)::int`,
             })
             .from(eventPoolRegistrations)
-            .where(eq(eventPoolRegistrations.poolId, pool.id))
-            .limit(10);
+            .where(inArray(eventPoolRegistrations.poolId, visiblePoolIds))
+            .groupBy(eventPoolRegistrations.poolId)
+        : [];
 
-          // 获取前3个报名者的原型信息
-          const sampleUserIds = registrations.slice(0, 3).map((r: any) => r.userId);
-          let sampleArchetypes: string[] = [];
-          
-          if (sampleUserIds.length > 0) {
-            const sampleUsers = await db
-              .select({ archetype: users.archetype })
-              .from(users)
-              .where(inArray(users.id, sampleUserIds));
-            sampleArchetypes = (sampleUsers as any[])
-              .map((u: any) => u.archetype)
-              .filter((a: any): a is string => a !== null);
-          }
+      const registrationCountByPool = new Map<string, number>();
+      for (const row of registrationCountRows as Array<{ poolId: string; count: number }>) {
+        registrationCountByPool.set(row.poolId, row.count);
+      }
 
-          return {
-            ...pool,
-            registrationCount: registrations.length,
-            spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrations.length,
-            sampleArchetypes,
-          };
-        })
+      const sampleRegistrationRows = visiblePoolIds.length > 0
+        ? await db.execute(sql<{ poolId: string; userId: string }>`
+            SELECT ranked.pool_id AS "poolId", ranked.user_id AS "userId"
+            FROM (
+              SELECT
+                pool_id,
+                user_id,
+                row_number() OVER (
+                  PARTITION BY pool_id
+                  ORDER BY registered_at ASC
+                ) AS sample_rank
+              FROM event_pool_registrations
+              WHERE pool_id = ANY(${visiblePoolIds})
+            ) ranked
+            WHERE ranked.sample_rank <= ${SAMPLE_ARCHETYPE_COUNT}
+          `)
+        : { rows: [] as Array<{ poolId: string; userId: string }> };
+
+      const sampleRegistrationsByPool = new Map<string, Array<{ userId: string }>>();
+      for (const row of sampleRegistrationRows.rows as Array<{ poolId: string; userId: string }>) {
+        const entries = sampleRegistrationsByPool.get(row.poolId) ?? [];
+        entries.push({ userId: row.userId });
+        sampleRegistrationsByPool.set(row.poolId, entries);
+      }
+
+      const sampleUserIds = Array.from(
+        new Set(
+          [...sampleRegistrationsByPool.values()]
+            .flatMap((registrations) => registrations.slice(0, SAMPLE_ARCHETYPE_COUNT).map((registration) => registration.userId)),
+        ),
       );
+
+      const sampleUserRows = sampleUserIds.length > 0
+        ? await db
+            .select({
+              id: users.id,
+              archetype: sql<string | null>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
+            })
+            .from(users)
+            .where(inArray(users.id, sampleUserIds))
+        : [];
+
+      const userArchetypeMap = new Map<string, string | null>(
+        sampleUserRows.map((row: { id: string; archetype: string | null }) => [row.id, row.archetype]),
+      );
+
+      const poolsWithSocialProof = visiblePools.map((pool: any) => {
+        const registrations = sampleRegistrationsByPool.get(pool.id) ?? [];
+        const registrationCount = registrationCountByPool.get(pool.id) ?? 0;
+        const sampleArchetypes = registrations
+          .map((registration) => userArchetypeMap.get(registration.userId))
+          .filter((archetype): archetype is string => Boolean(archetype));
+
+        return {
+          ...pool,
+          registrationCount,
+          spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrationCount,
+          sampleArchetypes,
+        };
+      });
 
       console.log("[EventPools] visible pools for user:", {
         userId,
@@ -7492,10 +7462,6 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         return res.status(404).json({ message: "Event pool not found" });
       }
 
-      if (pool.status !== 'active') {
-        return res.status(400).json({ message: "This event pool is no longer accepting registrations" });
-      }
-
       // Check if user already registered
       const existingReg = await db.query.eventPoolRegistrations.findFirst({
         where: (regs: any, { eq, and }: any) => and(
@@ -7506,6 +7472,29 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       if (existingReg) {
         return res.status(400).json({ message: "You have already registered for this event pool" });
+      }
+
+      const [registrationCountRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventPoolRegistrations)
+        .where(eq(eventPoolRegistrations.poolId, poolId));
+
+      const availability = describePoolRegistrationAvailability(
+        {
+          status: pool.status,
+          registrationDeadline: pool.registrationDeadline,
+          minGroupSize: pool.minGroupSize,
+          maxGroupSize: pool.maxGroupSize,
+          targetGroups: pool.targetGroups,
+        },
+        registrationCountRow?.count ?? 0,
+      );
+
+      if (!availability.allowed) {
+        return res.status(availability.status).json({
+          message: availability.message,
+          code: availability.code,
+        });
       }
 
       // Check if user has active subscription
@@ -7668,91 +7657,153 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
     console.log("[MyPoolRegistrations] base registrations count:", registrations.length);
 
-    // 原来的邀请关系 enrichment 逻辑我全部保留，只是包了一层 Promise.all
-    const enrichedRegistrations = await Promise.all(
-      (registrations as any[]).map(async (reg: any) => {
-        const [inviteUse] = await db
-          .select()
-          .from(invitationUses)
-          .where(eq(invitationUses.poolRegistrationId, reg.id))
-          .limit(1);
-        
-        let invitationRole: "inviter" | "invitee" | null = null;
-        let relatedUserName: string | null = null;
-        
-        if (inviteUse && inviteUse.invitationId) {
-          // 用户是被邀请的一方
-          const [invitation] = await db
-            .select()
-            .from(invitations)
-            .where(eq(invitations.code, inviteUse.invitationId))
-            .limit(1);
-          
-          if (invitation) {
-            const [inviter] = await db
-              .select({ firstName: users.firstName, lastName: users.lastName })
-              .from(users)
-              .where(eq(users.id, invitation.inviterId))
-              .limit(1);
-            
-            if (inviter) {
-              invitationRole = "invitee";
-              relatedUserName =
-                `${inviter.firstName || ""} ${inviter.lastName || ""}`.trim() ||
-                "好友";
-            }
-          }
-        } else {
-          // 看看当前用户是不是邀请人
-          const userInvitations = await db
-            .select({ code: invitations.code })
-            .from(invitations)
-            .where(eq(invitations.inviterId, userId))
-            .limit(10);
-          
-          if (userInvitations.length > 0) {
-            const codes = userInvitations.map((inv: any) => inv.code);
-            const [relatedInviteUse] = await db
-              .select({
-                inviteeId: invitationUses.inviteeId,
-              })
-              .from(invitationUses)
-              .innerJoin(
-                eventPoolRegistrations,
-                eq(invitationUses.poolRegistrationId, eventPoolRegistrations.id)
-              )
-              .where(
-                and(
-                  inArray(invitationUses.invitationId, codes),
-                  eq(eventPoolRegistrations.poolId, reg.poolId)
-                )
-              )
-              .limit(1);
-            
-            if (relatedInviteUse) {
-              const [invitee] = await db
-                .select({ firstName: users.firstName, lastName: users.lastName })
-                .from(users)
-                .where(eq(users.id, relatedInviteUse.inviteeId))
-                .limit(1);
-              
-              if (invitee) {
-                invitationRole = "inviter";
-                relatedUserName =
-                  `${invitee.firstName || ""} ${invitee.lastName || ""}`.trim() ||
-                  "好友";
-              }
-            }
-          }
-        }
-        
-        return {
-          ...reg,
-          invitationRole,
-          relatedUserName,
-        };
-      })
+    const registrationIds = (registrations as any[]).map((registration: any) => registration.id);
+    const registrationPoolIds = Array.from(
+      new Set((registrations as any[]).map((registration: any) => registration.poolId)),
     );
+
+    const inviteUses = registrationIds.length > 0
+      ? await db
+          .select({
+            poolRegistrationId: invitationUses.poolRegistrationId,
+            invitationId: invitationUses.invitationId,
+            inviteeId: invitationUses.inviteeId,
+          })
+          .from(invitationUses)
+          .where(inArray(invitationUses.poolRegistrationId, registrationIds))
+      : [];
+
+    const inviteUseByRegistrationId = new Map<
+      string,
+      { poolRegistrationId: string; invitationId: string | null; inviteeId: string | null }
+    >(
+      inviteUses.map((inviteUse: {
+        poolRegistrationId: string;
+        invitationId: string | null;
+        inviteeId: string | null;
+      }) => [inviteUse.poolRegistrationId, inviteUse]),
+    );
+
+    const invitationIds = Array.from(
+      new Set(
+        inviteUses
+          .map((inviteUse: { invitationId: string | null }) => inviteUse.invitationId)
+          .filter((invitationId: string | null): invitationId is string => Boolean(invitationId)),
+      ),
+    );
+
+    const invitationRows = invitationIds.length > 0
+      ? await db
+          .select({
+            id: invitations.id,
+            code: invitations.code,
+            inviterId: invitations.inviterId,
+          })
+          .from(invitations)
+          .where(inArray(invitations.id, invitationIds as string[]))
+      : [];
+
+    const invitationById = new Map<string, { id: string; code: string; inviterId: string }>(
+      invitationRows.map((invitation: { id: string; code: string; inviterId: string }) => [invitation.id, invitation]),
+    );
+
+    const userInvitations = await db
+      .select({ id: invitations.id })
+      .from(invitations)
+      .where(eq(invitations.inviterId, userId))
+      .limit(10);
+
+    const userInvitationIds = userInvitations.map((invitation: { id: string }) => invitation.id);
+
+    const relatedInviteUses = userInvitationIds.length > 0 && registrationPoolIds.length > 0
+      ? await db
+          .select({
+            invitationId: invitationUses.invitationId,
+            inviteeId: invitationUses.inviteeId,
+            poolId: eventPoolRegistrations.poolId,
+          })
+          .from(invitationUses)
+          .innerJoin(
+            eventPoolRegistrations,
+            eq(invitationUses.poolRegistrationId, eventPoolRegistrations.id),
+          )
+          .where(
+            and(
+              inArray(invitationUses.invitationId, userInvitationIds),
+              inArray(eventPoolRegistrations.poolId, registrationPoolIds),
+            ),
+          )
+      : [];
+
+    const relatedInviteUseByPoolId = new Map<string, { inviteeId: string | null }>();
+    for (const relatedInviteUse of relatedInviteUses) {
+      if (!relatedInviteUseByPoolId.has(relatedInviteUse.poolId)) {
+        relatedInviteUseByPoolId.set(relatedInviteUse.poolId, {
+          inviteeId: relatedInviteUse.inviteeId,
+        });
+      }
+    }
+
+    const relatedUserIds = Array.from(
+      new Set(
+        [
+          ...invitationRows.map((invitation: { inviterId: string }) => invitation.inviterId),
+          ...Array.from(relatedInviteUseByPoolId.values()).map((inviteUse) => inviteUse.inviteeId),
+        ].filter((candidate): candidate is string => Boolean(candidate)),
+      ),
+    );
+
+    const relatedUsers = relatedUserIds.length > 0
+      ? await db
+          .select({
+            id: users.id,
+            displayName: users.displayName,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          })
+          .from(users)
+          .where(inArray(users.id, relatedUserIds))
+      : [];
+
+    const relatedUserMap = new Map<string, string>(
+      relatedUsers.map((relatedUser: {
+        id: string;
+        displayName: string | null;
+        firstName: string | null;
+        lastName: string | null;
+      }) => [
+        relatedUser.id,
+        relatedUser.displayName ||
+          `${relatedUser.firstName || ""} ${relatedUser.lastName || ""}`.trim() ||
+          "好友",
+      ]),
+    );
+
+    const enrichedRegistrations = (registrations as any[]).map((reg: any) => {
+      const inviteUse = inviteUseByRegistrationId.get(reg.id);
+      let invitationRole: "inviter" | "invitee" | null = null;
+      let relatedUserName: string | null = null;
+
+      if (inviteUse?.invitationId) {
+        const invitation = invitationById.get(inviteUse.invitationId);
+        if (invitation?.inviterId) {
+          invitationRole = "invitee";
+          relatedUserName = relatedUserMap.get(invitation.inviterId) ?? "好友";
+        }
+      } else {
+        const relatedInviteUse = relatedInviteUseByPoolId.get(reg.poolId);
+        if (relatedInviteUse?.inviteeId) {
+          invitationRole = "inviter";
+          relatedUserName = relatedUserMap.get(relatedInviteUse.inviteeId) ?? "好友";
+        }
+      }
+
+      return {
+        ...reg,
+        invitationRole,
+        relatedUserName,
+      };
+    });
 
     console.log("[MyPoolRegistrations] enriched registrations:", enrichedRegistrations);
 

@@ -8,6 +8,7 @@ import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
 import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
 import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
+import JoinEventPoolSheet from "@/components/event-pool-registration/JoinEventPoolSheet";
 import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
 import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
 import LimitedBrowseBanner from "@/components/LimitedBrowseBanner";
@@ -22,6 +23,7 @@ import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { archetypeConfig } from "@/lib/archetypes";
+import { getDiscoverJoinRoute, getJoinPoolIdFromUrl } from "@/lib/poolRegistrationRouting";
 
 interface EventPool {
   id: string;
@@ -164,7 +166,7 @@ function transformEventPool(pool: EventPool): {
 
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   
   // Use user's registered city as fallback when no localStorage selection exists
   const savedLocation = getSavedLocation(user?.currentCity ?? undefined);
@@ -176,6 +178,7 @@ export default function DiscoverPage() {
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedPoolData, setSelectedPoolData] = useState<EventPool | null>(null);
+  const [showJoinSheet, setShowJoinSheet] = useState(false);
   
   // Coach marks state
   const [coachMarkState, setCoachMarkState] = useState<CoachMarkState>(getCoachMarkState);
@@ -283,8 +286,7 @@ export default function DiscoverPage() {
   const handleRegister = () => {
     if (selectedPoolData?.id) {
       setShowDrawer(false);
-      // Navigate to registration page
-      setLocation(`/event-pool-registration/${selectedPoolData.id}`);
+      setLocation(getDiscoverJoinRoute(selectedPoolData.id));
     }
   };
 
@@ -305,6 +307,31 @@ export default function DiscoverPage() {
     () => new Map(eventPools.map(pool => [pool.id, pool])),
     [eventPools]
   );
+
+  useEffect(() => {
+    const joinPoolId = getJoinPoolIdFromUrl(location);
+
+    if (!joinPoolId) {
+      setShowJoinSheet(false);
+      return;
+    }
+
+    if (eventPools.length === 0) {
+      return;
+    }
+
+    const pool = poolMap.get(joinPoolId);
+    if (!pool) {
+      setShowJoinSheet(false);
+      setLocation("/discover");
+      return;
+    }
+
+    setSelectedPoolId(pool.id);
+    setSelectedPoolData(pool);
+    setShowDrawer(false);
+    setShowJoinSheet(true);
+  }, [location, eventPools.length, poolMap, setLocation]);
   
   // Show event tooltip after a delay if first time (must be after filteredBlindBoxEvents is defined)
   useEffect(() => {
@@ -534,6 +561,27 @@ export default function DiscoverPage() {
             location: `${selectedPoolData.city}•${selectedPoolData.district}`,
             groupSize: "4-6人",
             minGroupSize: selectedPoolData.minGroupSize || 4,
+          }}
+        />
+      )}
+
+      {showJoinSheet && selectedPoolData && (
+        <JoinEventPoolSheet
+          open={showJoinSheet}
+          onOpenChange={(open) => {
+            setShowJoinSheet(open);
+            if (!open) {
+              setLocation("/discover");
+            }
+          }}
+          poolData={{
+            poolId: selectedPoolData.id,
+            title: selectedPoolData.title || `神秘${selectedPoolData.eventType}｜等你揭晓`,
+            date: formatChineseDateOnly(selectedPoolData.dateTime),
+            area: selectedPoolData.district,
+            city: selectedPoolData.city,
+            eventType: (selectedPoolData.eventType === "其他" ? "饭局" : selectedPoolData.eventType) as "饭局" | "酒局",
+            registrationCount: selectedPoolData.registrationCount || 0,
           }}
         />
       )}

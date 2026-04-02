@@ -17,25 +17,15 @@ import { IcebreakerOverlayProvider, IcebreakerSurface } from "@/components/icebr
 import { SocialIcebreakerOrchestrator } from "@/components/social-icebreaker/SocialIcebreakerOrchestrator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, WifiOff, RefreshCcw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { TopicCard } from "@shared/topicCards";
 import type { IcebreakerGame } from "@shared/icebreakerGames";
-
-interface SessionData {
-  id: string;
-  eventId: string;
-  eventTitle?: string;
-  expectedAttendees: number;
-  atmosphereType: string;
-  participants: Array<{
-    userId: string;
-    displayName: string;
-    archetype: string | null;
-    interests?: string[];
-    topicsHappy?: string[];
-    topicsAvoid?: string[];
-  }>;
-}
+import {
+  fetchIcebreakerSessionDetails,
+  getIcebreakerSessionErrorCopy,
+  type IcebreakerSessionDetails,
+  type IcebreakerSessionRequestError,
+} from "@/lib/icebreakerSessionRequest";
 
 interface BlindBoxEventData {
   id: string;
@@ -43,6 +33,8 @@ interface BlindBoxEventData {
   eventType: string;
   dateTime: string;
 }
+
+type SupportedEventType = "饭局" | "酒局" | "咖啡" | "徒步" | "桌游" | "其他";
 
 export default function IcebreakerSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -62,21 +54,29 @@ export default function IcebreakerSessionPage() {
     queryKey: ['/api/auth/user'],
   });
 
-  const { data: sessionData, isLoading: sessionLoading } = useQuery<SessionData>({
+  const {
+    data: sessionData,
+    isLoading: sessionLoading,
+    isError: isSessionError,
+    error: sessionError,
+  } = useQuery<IcebreakerSessionDetails>({
     queryKey: ['/api/icebreaker/session', sessionId],
+    queryFn: async () => fetchIcebreakerSessionDetails(sessionId!),
     enabled: !!sessionId,
+    staleTime: 0,
   });
 
   // Get blind box event details for title (silently fails for non-blind-box events)
   const { data: eventData } = useQuery<BlindBoxEventData>({
     queryKey: ['/api/blind-box-events', sessionData?.eventId],
-    enabled: !!sessionData?.eventId,
+    enabled: !!sessionData?.eventId && sessionData?.eventSource === 'blind_box',
     retry: false,
     staleTime: Infinity,
   });
 
   // Use event title from blind box event, fallback to session eventTitle or default
   const eventTitle = eventData?.title || sessionData?.eventTitle || '活动';
+  const sessionEventType = (eventData?.eventType || sessionData?.eventType) as SupportedEventType | undefined;
 
   const participantProfiles: ParticipantProfile[] = (sessionData?.participants || []).map(p => ({
     displayName: p.displayName,
@@ -278,6 +278,21 @@ export default function IcebreakerSessionPage() {
     );
   }
 
+  if (isSessionError || !sessionData) {
+    const copy = getIcebreakerSessionErrorCopy(sessionError as IcebreakerSessionRequestError);
+    return (
+      <div className="flex items-center justify-center min-h-screen px-6" data-testid="icebreaker-session-error">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center space-y-4">
+            <p className="text-lg font-semibold">{copy.title}</p>
+            <p className="text-sm text-muted-foreground">{copy.description}</p>
+            <Button onClick={() => setLocation('/events')}>返回活动列表</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <IcebreakerOverlayProvider>
@@ -361,7 +376,7 @@ export default function IcebreakerSessionPage() {
                     sessionId={sessionId || ''}
                     userId={user?.id || ''}
                     displayName={user?.displayName || '参与者'}
-                    eventType={eventData?.eventType}
+                    eventType={sessionEventType}
                     eventId={urlEventId || sessionData?.eventId}
                     participants={(sessionData?.participants || []).map(p => ({ userId: p.userId, displayName: p.displayName, archetype: p.archetype || undefined }))}
                     onEnd={handleLeave}
@@ -405,8 +420,8 @@ export default function IcebreakerSessionPage() {
                       onRecommendGame={handleRecommendGame}
                       isRecommendingGame={isRecommendingGame}
                       recommendedGame={recommendedGame}
-                      eventType={eventData?.eventType as "饭局" | "酒局" | "咖啡" | "徒步" | "桌游" | "其他" | undefined}
-                    />
+                        eventType={sessionEventType}
+                      />
                   </>
                 )}
               </motion.div>
@@ -441,7 +456,7 @@ export default function IcebreakerSessionPage() {
                   durationMinutes={Math.max(1, Math.round(icebreakerState.duration / 60))}
                   participantCount={icebreakerState.checkedInCount}
                   onLeave={handleLeave}
-                  eventId={sessionData?.eventId}
+                   eventId={sessionData?.eventId || undefined}
                 />
               </motion.div>
             )}
