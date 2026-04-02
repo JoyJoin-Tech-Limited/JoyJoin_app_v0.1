@@ -87,6 +87,10 @@ vi.mock('../archetypeChemistry', () => ({
   chemistryMatrix: {},
   ARCHETYPE_ENERGY: {},
 }));
+vi.mock('../archetypeChemistryCalibration', () => ({
+  getArchetypePairCalibrationMap: vi.fn().mockResolvedValue(new Map()),
+  getCalibratedChemistryScore: vi.fn().mockReturnValue(50),
+}));
 vi.mock('@shared/utils', () => ({ calculateAge: vi.fn().mockReturnValue(28) }));
 vi.mock('@shared/constants', () => ({
   EDU_ORDINAL: {},

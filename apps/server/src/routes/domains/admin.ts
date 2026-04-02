@@ -1,5 +1,10 @@
 import type { Express } from "express";
 import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
+import {
+  CHEMISTRY_CALIBRATION_MAX_DELTA,
+  CHEMISTRY_CALIBRATION_MIN_SAMPLES,
+  listArchetypePairCalibrationDetails,
+} from "../../archetypeChemistryCalibration";
 import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../inference/runtimeLLMFallback";
 import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
@@ -21,6 +26,23 @@ export function registerAdminRoutes(app: Express): void {
       apiKey,
       securityKey,
     });
+  });
+
+  app.get("/api/admin/matching/chemistry-calibration", requireAdmin, async (req, res) => {
+    try {
+      const forceRefresh = req.query.refresh === "1";
+      const rows = await listArchetypePairCalibrationDetails(forceRefresh);
+
+      res.json({
+        minSamples: CHEMISTRY_CALIBRATION_MIN_SAMPLES,
+        maxDelta: CHEMISTRY_CALIBRATION_MAX_DELTA,
+        generatedAt: new Date().toISOString(),
+        rows,
+      });
+    } catch (error) {
+      console.error("Error fetching chemistry calibration details:", error);
+      res.status(500).json({ message: "Failed to fetch chemistry calibration details" });
+    }
   });
 
   app.get('/api/admin/inference/runtime-fallback', requireAdmin, (_req, res) => {
