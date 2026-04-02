@@ -89,7 +89,7 @@ export class StateManager {
             // 使用新值
             newState[inf.field] = {
               value: inf.value,
-              source: 'inferred',
+              source: inf.source || 'inferred',
               confidence: inf.confidence,
               evidence: inf.evidence,
               timestamp: new Date()
@@ -109,7 +109,7 @@ export class StateManager {
         // 新属性，直接添加
         newState[inf.field] = {
           value: inf.value,
-          source: 'inferred',
+          source: inf.source || 'inferred',
           confidence: inf.confidence,
           evidence: inf.evidence,
           timestamp: new Date()
@@ -128,13 +128,13 @@ export class StateManager {
     newInference: InferredAttribute
   ): ConflictInfo {
     // 策略1：显式信息优先于推断
-    if (existing.source === 'explicit' && newInference.confidence < 0.95) {
+    if (existing.source === 'explicit') {
       return {
         field: newInference.field,
         existingValue: String(existing.value),
         newValue: newInference.value,
         resolution: 'keep_existing',
-        reason: '已有用户直接提供的信息，保持不变'
+        reason: '用户直接提供的信息不会被静默覆盖'
       };
     }
     
@@ -183,7 +183,11 @@ export class StateManager {
     
     for (const [field, attr] of Object.entries(state)) {
       const fieldName = this.getFieldDisplayName(field);
-      const sourceLabel = attr.source === 'explicit' ? '用户说的' : '推断的';
+      const sourceLabel = attr.source === 'explicit'
+        ? '用户说的'
+        : attr.source === 'llm_fallback'
+          ? 'LLM兜底推断'
+          : '推断的';
       
       if (attr.confidence >= 0.85) {
         highConfidence.push(`- ${fieldName}: ${attr.value} (${sourceLabel})`);
