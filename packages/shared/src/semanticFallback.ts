@@ -233,6 +233,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "culture_sports",
       segment: "performing_arts",
+      niche: "musician",
     },
     confidence: 0.88,
     reasoning: "识别为音乐相关从业者"
@@ -253,6 +254,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "culture_sports",
       segment: "sports",
+      niche: "athlete",
     },
     confidence: 0.88,
     reasoning: "识别为运动员或体育从业者"
@@ -273,6 +275,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "consumer_retail",
       segment: "food_service",
+      niche: "chef",
     },
     confidence: 0.88,
     reasoning: "识别为烹饪或餐饮从业者"
