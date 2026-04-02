@@ -38,7 +38,7 @@ describe("matchingSemantic", () => {
       alcoholComfort: null,
       eventType: "饭局",
     },
-  ] as const;
+  ];
 
   it("preserves the legacy 6D score when semantic scoring is disabled", () => {
     const score = calculateWeightedPairScore(
