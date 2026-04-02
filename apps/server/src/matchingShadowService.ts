@@ -80,11 +80,7 @@ export function buildMatchingShadowExperiment(groups: MatchGroup[], calibration:
   results: MatchingShadowComparison[];
   summary: MatchingShadowSummary;
 } {
-  const deterministicOrdered = [...groups].sort(
-    (a, b) =>
-      safeScore(b.overallScore) - safeScore(a.overallScore) ||
-      safeScore(b.avgChemistryScore) - safeScore(a.avgChemistryScore),
-  );
+  const deterministicOrdered = [...groups];
 
   const draftResults = deterministicOrdered.map((group, index) => {
     const predictedOutcomeRate = calculatePredictedOutcomeRate(group, calibration);
