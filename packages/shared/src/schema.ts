@@ -471,6 +471,25 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const eventGroupOutcomes = pgTable("event_group_outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  groupId: varchar("group_id").notNull().references(() => eventPoolGroups.id),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  atmosphereScore: integer("atmosphere_score").notNull(),
+  wouldMeetAgain: boolean("would_meet_again").notNull(),
+  connectionRadar: jsonb("connection_radar").notNull(),
+  icebreakerRatings: jsonb("icebreaker_ratings").notNull(),
+  freeTextSignal: text("free_text_signal"),
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_event_group_outcomes_pool_id").on(table.poolId),
+  index("idx_event_group_outcomes_group_id").on(table.groupId),
+  index("idx_event_group_outcomes_submitted_by").on(table.submittedBy),
+  uniqueIndex("idx_event_group_outcomes_group_submitter").on(table.groupId, table.submittedBy),
+]);
+
 // ============ 实时匹配系统配置 ============
 
 // Matching Thresholds table - 动态匹配阈值配置（管理员可调整）
@@ -788,6 +807,33 @@ export const insertEventFeedbackSchema = createInsertSchema(eventFeedback).omit(
   
   // Venue style rating validation
   venueStyleRating: z.enum(["like", "neutral", "dislike"]).optional(),
+});
+
+const eventGroupOutcomeConnectionRadarSchema = z
+  .record(z.string().min(1), z.number().int().min(0).max(5))
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "connectionRadar must include at least one rating",
+  });
+
+const eventGroupOutcomeIcebreakerRatingsSchema = z
+  .record(z.string().min(1), z.enum(["helpful", "neutral", "awkward"]))
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "icebreakerRatings must include at least one rating",
+  });
+
+export const insertEventGroupOutcomeSchema = createInsertSchema(eventGroupOutcomes).omit({
+  id: true,
+  poolId: true,
+  submittedBy: true,
+  submittedAt: true,
+  updatedAt: true,
+}).extend({
+  groupId: z.string().min(1),
+  atmosphereScore: z.number().int().min(1).max(5),
+  wouldMeetAgain: z.boolean(),
+  connectionRadar: eventGroupOutcomeConnectionRadarSchema,
+  icebreakerRatings: eventGroupOutcomeIcebreakerRatingsSchema,
+  freeTextSignal: z.string().trim().max(1000).optional().nullable(),
 });
 
 // Blind Box Events table
@@ -1477,6 +1523,7 @@ export type EventAttendance = typeof eventAttendance.$inferSelect;
 export type EventPool = typeof eventPools.$inferSelect;
 export type EventPoolRegistration = typeof eventPoolRegistrations.$inferSelect;
 export type EventPoolGroup = typeof eventPoolGroups.$inferSelect;
+export type EventGroupOutcome = typeof eventGroupOutcomes.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type EventFeedback = typeof eventFeedback.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
@@ -1489,6 +1536,7 @@ export type InsertEventAttendance = z.infer<typeof insertEventAttendanceSchema>;
 export type InsertEventPool = z.infer<typeof insertEventPoolSchema>;
 export type InsertEventPoolRegistration = z.infer<typeof insertEventPoolRegistrationSchema>;
 export type InsertEventPoolGroup = z.infer<typeof insertEventPoolGroupSchema>;
+export type InsertEventGroupOutcome = z.infer<typeof insertEventGroupOutcomeSchema>;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type InsertEventFeedback = z.infer<typeof insertEventFeedbackSchema>;
 export type InsertBlindBoxEvent = z.infer<typeof insertBlindBoxEventSchema>;
@@ -2495,7 +2543,8 @@ export const matchingWeightsHistory = pgTable("matching_weights_history", {
   // 当时的统计
   matchesSinceLastUpdate: integer("matches_since_last_update").default(0),
   satisfactionSinceLastUpdate: numeric("satisfaction_since_last_update", { precision: 5, scale: 4 }),
-  
+  shadowMetadata: jsonb("shadow_metadata"),
+
   recordedAt: timestamp("recorded_at").defaultNow(),
 }, (table) => [
   index("idx_weights_history_config").on(table.configId),

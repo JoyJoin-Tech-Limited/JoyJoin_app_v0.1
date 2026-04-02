@@ -11,8 +11,8 @@ import { matchingWeightsService, type MatchingWeights } from './matchingWeightsS
 // 重新导出类型以保持向后兼容
 export type { MatchingWeights } from './matchingWeightsService';
 
-// 默认权重配置 (6维度) - 作为fallback使用
-// 实际运行时会从数据库动态加载
+// 默认权重配置 (6维度) - 仅作为 fallback 使用
+// 实际运行时优先走 matchingWeightsService.ts（Thompson Sampling 自适应权重路径）
 export const DEFAULT_WEIGHTS: MatchingWeights = {
   personalityWeight: 23,
   interestsWeight: 24,
@@ -22,7 +22,7 @@ export const DEFAULT_WEIGHTS: MatchingWeights = {
   conversationSignatureWeight: 15,
 };
 
-// 获取动态权重的辅助函数
+// 获取当前自适应权重的辅助函数（首选 Thompson Sampling 路径）
 export async function getDynamicWeights(): Promise<MatchingWeights> {
   try {
     return await matchingWeightsService.getActiveWeights();
