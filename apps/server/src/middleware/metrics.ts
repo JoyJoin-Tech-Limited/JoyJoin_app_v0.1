@@ -387,6 +387,9 @@ export function _resetMetricsForTest(): void {
   errorCounters.clear();
   durationHistograms.clear();
   runtimeLLMFallbackCounters.clear();
+  llmFallbackRequestCounters.clear();
+  llmFallbackCostTotals.clear();
+  llmFallbackLatencyHistograms.clear();
 }
 
 export function recordRuntimeLLMFallbackMetric(
@@ -395,7 +398,4 @@ export function recordRuntimeLLMFallbackMetric(
 ): void {
   const boundedField = outcome === 'rejected_unapproved' ? '__unapproved__' : field;
   incCounter(runtimeLLMFallbackCounters, { field: boundedField, outcome });
-  llmFallbackRequestCounters.clear();
-  llmFallbackCostTotals.clear();
-  llmFallbackLatencyHistograms.clear();
 }

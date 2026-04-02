@@ -29,7 +29,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
   {
     patterns: [/农民|farmer|种地|务农|农业|种植|养殖/i],
     classification: {
-      category: "agriculture",
+      category: "agriculture_food",
       segment: "farming",
     },
     confidence: 0.85,
@@ -41,7 +41,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/学生|student|在读|大学生|本科|研究生|硕士|博士|phd/i],
     classification: {
       category: "education",
-      segment: "student",
+      segment: "k12",
     },
     confidence: 0.90,
     reasoning: "识别为在读学生身份"
@@ -50,7 +50,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/实习生|intern|实习/i],
     classification: {
       category: "education",
-      segment: "student",
+      segment: "k12",
     },
     confidence: 0.88,
     reasoning: "识别为实习生身份"
@@ -70,7 +70,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/全职主妇|全职太太|家庭主妇|家庭主夫|housewife|stay.?at.?home/i],
     classification: {
       category: "life_services",
-      segment: "household",
+      segment: "hospitality",
     },
     confidence: 0.85,
     reasoning: "识别为全职家庭照护者"
@@ -101,7 +101,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/退休|retired|退休人员|养老/i],
     classification: {
       category: "life_services",
-      segment: "household",
+      segment: "hospitality",
     },
     confidence: 0.85,
     reasoning: "识别为退休人员"
@@ -110,7 +110,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/待业|求职|找工作|job.?seeking|失业|待业中/i],
     classification: {
       category: "professional_services",
-      segment: "hr",
+      segment: "consulting",
     },
     confidence: 0.70,
     reasoning: "识别为职业过渡期或求职状态"
@@ -121,7 +121,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/快递|外卖|delivery|外卖员|快递员|骑手|rider/i],
     classification: {
       category: "logistics",
-      segment: "logistics_mgmt",
+      segment: "express_delivery",
     },
     confidence: 0.88,
     reasoning: "识别为物流配送相关从业者"
@@ -130,7 +130,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/司机|driver|网约车|滴滴|出租车|taxi/i],
     classification: {
       category: "logistics",
-      segment: "logistics_mgmt",
+      segment: "express_delivery",
     },
     confidence: 0.85,
     reasoning: "识别为驾驶员或网约车司机"
@@ -148,7 +148,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/清洁工|cleaner|保洁|cleaning/i],
     classification: {
       category: "life_services",
-      segment: "household",
+      segment: "hospitality",
     },
     confidence: 0.85,
     reasoning: "识别为清洁服务人员"
@@ -159,7 +159,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/工人|worker|打工|劳动者|蓝领/i],
     classification: {
       category: "manufacturing",
-      segment: "machinery",
+      segment: "consumer_electronics",
     },
     confidence: 0.70,
     reasoning: "识别为制造业或劳动密集型从业者"
@@ -178,8 +178,8 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
   {
     patterns: [/公务员|civil.?servant|政府|government|公职/i],
     classification: {
-      category: "government",
-      segment: "public_service",
+      category: "government_public",
+      segment: "civil_service",
     },
     confidence: 0.88,
     reasoning: "识别为政府公务员或公职人员"
@@ -187,8 +187,8 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
   {
     patterns: [/军人|soldier|军队|部队|military/i],
     classification: {
-      category: "government",
-      segment: "military",
+      category: "government_public",
+      segment: "civil_service",
     },
     confidence: 0.90,
     reasoning: "识别为军人或军队从业者"
@@ -199,7 +199,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/网红|influencer|up主|博主|kol/i],
     classification: {
       category: "media_creative",
-      segment: "content",
+      segment: "marketing",
     },
     confidence: 0.80,
     reasoning: "识别为网络内容创作者或影响者"
@@ -208,7 +208,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/主播|streamer|直播|live.?stream/i],
     classification: {
       category: "media_creative",
-      segment: "live_streaming",
+      segment: "marketing",
     },
     confidence: 0.85,
     reasoning: "识别为直播主播或内容创作者"
@@ -229,7 +229,6 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "culture_sports",
       segment: "performing_arts",
-      niche: "musician",
     },
     confidence: 0.88,
     reasoning: "识别为音乐相关从业者"
@@ -238,7 +237,7 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     patterns: [/画家|painter|artist|艺术家/i],
     classification: {
       category: "media_creative",
-      segment: "design",
+      segment: "marketing",
     },
     confidence: 0.85,
     reasoning: "识别为艺术创作者"
@@ -250,7 +249,6 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "culture_sports",
       segment: "sports",
-      niche: "professional_athlete",
     },
     confidence: 0.88,
     reasoning: "识别为运动员或体育从业者"
@@ -260,7 +258,6 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "culture_sports",
       segment: "sports",
-      niche: "fitness_coach",
     },
     confidence: 0.85,
     reasoning: "识别为教练或健身相关从业者"
@@ -272,7 +269,6 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     classification: {
       category: "consumer_retail",
       segment: "food_service",
-      niche: "chef",
     },
     confidence: 0.88,
     reasoning: "识别为烹饪或餐饮从业者"
@@ -285,6 +281,97 @@ export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
     },
     confidence: 0.85,
     reasoning: "识别为服务行业从业者"
+  },
+  
+  // ========== Tech & Engineering ==========
+  {
+    patterns: [/云计算|物联网|iot|cloud|大数据|big.?data|区块链|blockchain/i],
+    classification: {
+      category: "tech",
+      segment: "software_dev",
+    },
+    confidence: 0.85,
+    reasoning: "识别为技术领域从业者"
+  },
+  {
+    patterns: [/机械工程|mechanical.?engineer/i],
+    classification: {
+      category: "manufacturing",
+      segment: "automotive",
+    },
+    confidence: 0.85,
+    reasoning: "识别为机械工程领域从业者"
+  },
+  
+  // ========== Legal ==========
+  {
+    patterns: [/律师|lawyer|attorney|法律|法务/i],
+    classification: {
+      category: "professional_services",
+      segment: "legal",
+    },
+    confidence: 0.90,
+    reasoning: "识别为法律从业者"
+  },
+  
+  // ========== Media & Journalism ==========
+  {
+    patterns: [/记者|journalist|新闻|reporter/i],
+    classification: {
+      category: "media_creative",
+      segment: "marketing",
+    },
+    confidence: 0.85,
+    reasoning: "识别为新闻传媒从业者"
+  },
+  {
+    patterns: [/编辑|editor|编纂/i],
+    classification: {
+      category: "media_creative",
+      segment: "marketing",
+    },
+    confidence: 0.82,
+    reasoning: "识别为编辑或出版从业者"
+  },
+  {
+    patterns: [/视频剪辑|video.?edit|剪辑师/i],
+    classification: {
+      category: "media_creative",
+      segment: "marketing",
+    },
+    confidence: 0.85,
+    reasoning: "识别为视频制作从业者"
+  },
+  {
+    patterns: [/摄影师|photographer|摄影|摄像/i],
+    classification: {
+      category: "media_creative",
+      segment: "marketing",
+    },
+    confidence: 0.85,
+    reasoning: "识别为摄影摄像从业者"
+  },
+  
+  // ========== Architecture & Design ==========
+  {
+    patterns: [/建筑设计|architect|建筑师/i],
+    classification: {
+      category: "real_estate",
+      segment: "construction",
+    },
+    confidence: 0.85,
+    reasoning: "识别为建筑设计从业者"
+  },
+  
+  // ========== Energy & Environment ==========
+  {
+    patterns: [/环境工程|环保|环境|environmental/i],
+    classification: {
+      category: "energy_environment",
+      segment: "new_energy",
+    },
+    confidence: 0.82,
+    reasoning: "识别为环保或环境工程从业者"
   },
 ];
 
