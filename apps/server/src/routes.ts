@@ -9688,7 +9688,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
   app.get('/api/admin/evolution/weight-recommendations', requireAdmin, async (req: any, res) => {
     try {
-      const parsedLimit = Number.parseInt(req.query.limit as string, 10);
+      const parsedLimit = Number.parseInt(req.query.limit?.toString() ?? '', 10);
       const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
         ? Math.min(parsedLimit, 100)
         : 20;
