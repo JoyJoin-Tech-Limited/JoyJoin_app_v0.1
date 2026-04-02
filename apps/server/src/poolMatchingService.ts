@@ -34,8 +34,13 @@ import { eq, and, inArray } from "drizzle-orm";
 import { calculateAge } from "@shared/utils";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
-import { chemistryMatrix as CHEMISTRY_MATRIX, ARCHETYPE_ENERGY } from "./archetypeChemistry";
+import { ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
+import {
+  getArchetypePairCalibrationMap,
+  getCalibratedChemistryScore,
+  type ChemistryCalibrationMap,
+} from "./archetypeChemistryCalibration";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
@@ -182,18 +187,22 @@ function meetsHardConstraints(
  * 计算两个用户之间的性格化学反应分数 (0-100)
  * 考虑主角色（70%）和次要角色的交叉兼容性（各15%，共30%）
  */
-function calculateChemistryScore(user1: UserWithProfile, user2: UserWithProfile): number {
+function calculateChemistryScore(
+  user1: UserWithProfile,
+  user2: UserWithProfile,
+  chemistryCalibrationMap?: ChemistryCalibrationMap,
+): number {
   const primary1 = (user1.archetype || "暖心熊") as ArchetypeName;
   const primary2 = (user2.archetype || "暖心熊") as ArchetypeName;
   const secondary1 = (user1.secondaryArchetype || "暖心熊") as ArchetypeName;
   const secondary2 = (user2.secondaryArchetype || "暖心熊") as ArchetypeName;
   
   // 主角色化学反应（70%权重）
-  const primaryChemistry = (CHEMISTRY_MATRIX[primary1]?.[primary2] || 50) * 0.70;
+  const primaryChemistry = getCalibratedChemistryScore(primary1, primary2, chemistryCalibrationMap) * 0.70;
   
   // 次要角色交叉加成（各15%权重，共30%）
-  const crossChemistry1 = (CHEMISTRY_MATRIX[primary1]?.[secondary2] || 50) * 0.15;
-  const crossChemistry2 = (CHEMISTRY_MATRIX[secondary1]?.[primary2] || 50) * 0.15;
+  const crossChemistry1 = getCalibratedChemistryScore(primary1, secondary2, chemistryCalibrationMap) * 0.15;
+  const crossChemistry2 = getCalibratedChemistryScore(secondary1, primary2, chemistryCalibrationMap) * 0.15;
   
   return Math.round(primaryChemistry + crossChemistry1 + crossChemistry2);
 }
@@ -631,6 +640,7 @@ async function calculatePairScore(
   user2: UserWithProfile,
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
+  chemistryCalibrationMap?: ChemistryCalibrationMap,
 ): Promise<number> {
   // Use a sorted key so (A,B) and (B,A) map to the same cache entry
   const cacheKey = [user1.userId, user2.userId].sort().join('|');
@@ -638,7 +648,7 @@ async function calculatePairScore(
     return pairScoreCache.get(cacheKey)!;
   }
 
-  const chemistry = calculateChemistryScore(user1, user2);
+  const chemistry = calculateChemistryScore(user1, user2, chemistryCalibrationMap);
   const interest = await calculateInterestScoreAsync(user1.userId, user2.userId, interestsCache);
   const language = calculateLanguageScore(user1, user2);
   const preference = calculatePreferenceScore(user1, user2);
@@ -679,6 +689,7 @@ async function calculateGroupPairScore(
   members: UserWithProfile[],
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
+  chemistryCalibrationMap?: ChemistryCalibrationMap,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -687,7 +698,13 @@ async function calculateGroupPairScore(
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += await calculatePairScore(members[i], members[j], interestsCache, pairScoreCache);
+      totalScore += await calculatePairScore(
+        members[i],
+        members[j],
+        interestsCache,
+        pairScoreCache,
+        chemistryCalibrationMap,
+      );
       pairCount++;
     }
   }
@@ -699,13 +716,16 @@ async function calculateGroupPairScore(
  * Calculate the average chemistry-only score for the group members.
  * Used to populate avgChemistryScore (distinct from avgPairScore).
  */
-function calculateGroupChemistryScore(members: UserWithProfile[]): number {
+function calculateGroupChemistryScore(
+  members: UserWithProfile[],
+  chemistryCalibrationMap?: ChemistryCalibrationMap,
+): number {
   if (members.length < 2) return 0;
   let total = 0;
   let count = 0;
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      total += calculateChemistryScore(members[i], members[j]);
+      total += calculateChemistryScore(members[i], members[j], chemistryCalibrationMap);
       count++;
     }
   }
@@ -881,6 +901,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
 
   // 3.5 Preload user_interests for all eligible users in one batch query (C: runtime hardening)
   const interestsCache = await preloadUserInterests(eligibleUserIds);
+  const chemistryCalibrationMap = await getArchetypePairCalibrationMap();
 
   // In-memory pair score cache for this run (C: avoid recomputing the same pair twice)
   const pairScoreCache = new Map<string, number>();
@@ -929,7 +950,13 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
       const user1 = eligibleUsers[i] as UserWithProfile;
       const user2 = eligibleUsers[j] as UserWithProfile;
-      let score = await calculatePairScore(user1, user2, interestsCache, pairScoreCache);
+      let score = await calculatePairScore(
+        user1,
+        user2,
+        interestsCache,
+        pairScoreCache,
+        chemistryCalibrationMap,
+      );
       
       // Check if this pair has an invitation relationship
       const isInvited = invitationPairs.some(pair => 
@@ -974,7 +1001,13 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
         let totalScore = 0;
         for (const member of groupMembers) {
-          totalScore += await calculatePairScore(candidate, member, interestsCache, pairScoreCache);
+          totalScore += await calculatePairScore(
+            candidate,
+            member,
+            interestsCache,
+            pairScoreCache,
+            chemistryCalibrationMap,
+          );
         }
         const avgScore = totalScore / groupMembers.length;
         
@@ -994,9 +1027,14 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     // 只保留达到最小人数的小组
     if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = await calculateGroupPairScore(groupMembers, interestsCache, pairScoreCache);
+      const avgPairScore = await calculateGroupPairScore(
+        groupMembers,
+        interestsCache,
+        pairScoreCache,
+        chemistryCalibrationMap,
+      );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
-      const avgChemistryScore = calculateGroupChemistryScore(groupMembers);
+      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
       const diversity = calculateGroupDiversity(groupMembers);
       const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
