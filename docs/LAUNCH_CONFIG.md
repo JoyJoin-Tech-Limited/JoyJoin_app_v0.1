@@ -96,6 +96,44 @@ local testing.
 
 ---
 
+## Matching Feature Flags
+
+### `ENABLE_SEMANTIC_SIMILARITY`
+
+Controls whether the **7th scoring dimension** (semantic similarity) is applied during pool matching.
+
+| Value | Behaviour |
+|---|---|
+| `false` (default) | Standard 6D pair scoring — chemistry 28% / interest 28% / socialAffinity 20% / backgroundDiversity 15% / preference 5% / language 4%. Behavior is identical to pre-feature code. |
+| `true` | 7D pair scoring — weights shift conservatively to accommodate a bounded semantic similarity score at 6%: chemistry 26% / interest 26% / socialAffinity 19% / backgroundDiversity 14% / preference 5% / language 4% / semanticSimilarity 6%. |
+
+```bash
+# Enable semantic similarity (7D scoring)
+ENABLE_SEMANTIC_SIMILARITY=true
+
+# Disable semantic similarity (default 6D scoring)
+ENABLE_SEMANTIC_SIMILARITY=false
+```
+
+**Profile source:** The semantic score is built from cached, deterministic profile fields
+(`archetype`, `workMode`, `educationLevel`, `industryNiche`, `hometown`, `preferredLanguages`,
+`eventIntent`, bar preferences) plus `user_interests` topic and heat data. It does **not** read
+`user_interest_signals` — that boundary is enforced by the signal boundary invariant test.
+
+**Score bounds:** Semantic similarity is clamped to `[35, 100]`. Pairs with missing profiles
+fall back to `50` (neutral). The 6% weight keeps the maximum possible score shift at ±2–4 points,
+preserving group formation stability.
+
+**Admin visibility:** The admin dashboard (`/admin`) shows the 🧠 语义匹配观测 panel with
+real-time average semantic score, pair-score deltas, and flag status. Prometheus metrics are
+available at the `/ops/metrics` endpoint.
+
+> **Rollout guidance:** Leave `ENABLE_SEMANTIC_SIMILARITY=false` until semantic profile quality
+> has been validated against a live pool. When enabling, monitor the admin dashboard for
+> unexpected score shifts before removing the flag.
+
+---
+
 ## Social Icebreaker Phase Flags
 
 | Variable | Description | Default |

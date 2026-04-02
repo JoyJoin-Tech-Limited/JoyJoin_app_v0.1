@@ -82,10 +82,11 @@ npm run dev              # Start on http://localhost:5000
 
 ---
 
-## 🔀 Pool Matching Algorithm — Active Pair-Score Model (6 Dimensions)
+## 🔀 Pool Matching Algorithm — Active Pair-Score Model (6D default / 7D feature-flagged)
 
 **Active weights** (`apps/server/src/poolMatchingService.ts`):
 ```typescript
+// Default (ENABLE_SEMANTIC_SIMILARITY=false) — 6 dimensions
 {
   chemistry:           28%,  // 性格化学反应 — archetype chemistry matrix
   interest:            28%,  // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
@@ -93,6 +94,17 @@ npm run dev              # Start on http://localhost:5000
   backgroundDiversity: 15%,  // 背景多样性  — industry + gender diversity
   preference:           5%,  // 活动偏好    — event intent / bar preferences (light signal)
   language:             4%,  // 语言沟通    — common languages (light signal)
+}
+
+// Flagged path (ENABLE_SEMANTIC_SIMILARITY=true) — 7 dimensions
+{
+  chemistry:           26%,  // 性格化学反应
+  interest:            26%,  // 兴趣重叠度
+  socialAffinity:      19%,  // 社交同频度
+  backgroundDiversity: 14%,  // 背景多样性
+  preference:           5%,  // 活动偏好
+  language:             4%,  // 语言沟通
+  semanticSimilarity:   6%,  // 语义相似度 — mapped score range 35–100 (cosine similarity scaled: 35 + cos×65)
 }
 ```
 
