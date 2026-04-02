@@ -89,7 +89,7 @@ export default function SlidingTabs({
             data-testid={`tab-${tab.value}`}
           >
             <span className="flex items-center justify-center gap-1">
-              <span className={isActive ? 'font-semibold' : 'font-medium'}>
+              <span className={`font-cn-display ${isActive ? 'font-semibold' : 'font-medium'}`}>
                 {tab.label}
               </span>
               {tab.count !== undefined && tab.count > 0 && (

@@ -190,7 +190,7 @@ export function GuideStepper({
           <>
             {/* 最后一步: 两个 CTA */}
             <Button
-              className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+              className="w-full h-14 rounded-2xl text-lg font-bold font-cn-display bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
               onClick={handleComplete}
               data-testid="guide-complete"
             >
@@ -210,7 +210,7 @@ export function GuideStepper({
         ) : (
           /* 非最后一步: 继续按钮 */
           <Button
-            className="w-full h-14 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+            className="w-full h-14 rounded-2xl text-lg font-bold font-cn-display bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
             onClick={onNext}
             data-testid="guide-next"
           >

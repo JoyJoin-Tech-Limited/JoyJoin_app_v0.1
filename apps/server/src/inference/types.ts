@@ -5,9 +5,11 @@
 
 // ============ 属性状态 ============
 
+export type AttributeSource = 'explicit' | 'inferred' | 'llm_fallback';
+
 export interface AttributeState {
   value: string | number | boolean | string[];
-  source: 'explicit' | 'inferred';  // 显式提供 vs 推断
+  source: AttributeSource;           // 显式提供 vs 推断 vs LLM兜底
   confidence: number;                // 0-1 置信度
   evidence: string;                  // 证据（哪句话推出来的）
   timestamp: Date;
@@ -22,6 +24,7 @@ export interface InferredAttribute {
   value: string;
   confidence: number;
   evidence: string;
+  source?: Exclude<AttributeSource, 'explicit'>;
   reasoning?: string;  // 推理过程
 }
 
@@ -215,6 +218,9 @@ export interface InferenceEngineConfig {
   // 性能配置
   enableLLMFallback: boolean; // 是否启用LLM回退
   maxLLMLatencyMs: number;    // LLM最大延迟
+  enableRuntimeLLMFallback: boolean; // 是否启用运行时LLM字段兜底
+  runtimeLLMFallbackMinConfidence: number; // 运行时LLM字段兜底最小置信度
+  runtimeLLMFallbackApprovedFields: string[]; // 允许LLM字段兜底的字段白名单
   
   // 调试配置
   enableLogging: boolean;
@@ -226,6 +232,9 @@ export const DEFAULT_CONFIG: InferenceEngineConfig = {
   confirmThreshold: 0.6,
   enableLLMFallback: true,
   maxLLMLatencyMs: 3000,
+  enableRuntimeLLMFallback: true,
+  runtimeLLMFallbackMinConfidence: 0.75,
+  runtimeLLMFallbackApprovedFields: ['lifeStage', 'industry', 'occupation', 'education', 'languages'],
   enableLogging: true,
   logLevel: 'info',
 };

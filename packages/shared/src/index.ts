@@ -6,6 +6,7 @@ export * from './icebreakerGames';
 export * from './topicCards';
 export * from './wsEvents';
 export * from './interests';
+export * from './matchingWeights';
 export { 
   type Industry,
   type Occupation,
