@@ -14,7 +14,26 @@
 
 import type { SmartInsight } from '../deepseekClient';
 import type { InsightDimension } from './dialogGuidanceSystem';
+import type { UserAttributeMap } from './types';
 import OpenAI from 'openai';
+import { logger } from '../lib/logger';
+import { logAITrace } from '../lib/aiTraceLogger';
+import { recordLLMFallbackInferenceMetric } from '../middleware/metrics';
+
+const SHADOW_ONLY_MODE = 'shadow';
+const MAX_SHADOW_FALLBACK_DIMENSIONS = 2;
+const DEEPSEEK_PROVIDER = 'deepseek';
+const DEEPSEEK_MODEL = 'deepseek-chat';
+const ESTIMATED_COST_PER_1K_TOKENS_USD = 0.0014;
+
+const DIMENSION_TO_STATE_FIELDS: Record<InsightDimension, string[]> = {
+  interest: ['topInterests', 'primaryInterests', 'interests', 'hobbies'],
+  lifestyle: ['activityTimePreference', 'groupSizeComfort', 'lifestyle', 'lifeStage'],
+  personality: ['socialStyle', 'personality', 'personalityTraits'],
+  social: ['groupSizeComfort', 'socialStyle', 'socialPreference', 'icebreakerRole'],
+  career: ['occupationHint', 'industryHint', 'seniority', 'educationLevel', 'occupation', 'industry', 'seniorityLevel', 'companyName', 'structuredOccupation'],
+  expectation: ['intent', 'relationshipStatus', 'expectation', 'matchingGoal']
+};
 
 export interface LLMInferenceRequest {
   text: string;
@@ -29,6 +48,42 @@ export interface LLMInferenceResult {
   confidence: number;
   reasoning?: string;
 }
+
+export interface ShadowFallbackCandidate {
+  dimension: InsightDimension;
+  confidence: number;
+  insightsCount: number;
+  questionsAsked: number;
+}
+
+export interface ShadowFallbackLogEntry {
+  timestamp: string;
+  mode: 'shadow';
+  sessionId?: string;
+  dimension: InsightDimension;
+  provider: 'deepseek';
+  model: string;
+  triggered: boolean;
+  success: boolean;
+  confidence: number;
+  reasoning?: string;
+  inferredAttributes: string[];
+  latencyMs: number;
+  estimatedCostUsd: number;
+  questionsAsked: number;
+  sourceConfidence: number;
+  sourceInsightsCount: number;
+  errorCode?: string;
+}
+
+export interface ShadowFallbackSummary {
+  mode: 'shadow' | 'disabled';
+  triggered: boolean;
+  calls: ShadowFallbackLogEntry[];
+  totalLatencyMs: number;
+}
+
+const shadowFallbackLogs: ShadowFallbackLogEntry[] = [];
 
 const DIMENSION_PROMPTS: Record<InsightDimension, string> = {
   interest: `分析用户的兴趣爱好。提取具体的兴趣点（如游戏类型、影视偏好、运动项目等）。`,
@@ -111,18 +166,133 @@ export function parseInferenceResponse(responseText: string): LLMInferenceResult
 }
 
 const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
+  apiKey: process.env.DEEPSEEK_API_KEY || 'shadow-fallback-disabled',
   baseURL: 'https://api.deepseek.com',
 });
+
+export function getLLMFallbackInferenceMode(env: NodeJS.ProcessEnv = process.env): 'shadow' | 'disabled' {
+  return env.LLM_FALLBACK_INFERENCE_MODE === SHADOW_ONLY_MODE ? SHADOW_ONLY_MODE : 'disabled';
+}
+
+export function getShadowFallbackLogs(): ShadowFallbackLogEntry[] {
+  return [...shadowFallbackLogs];
+}
+
+export function clearShadowFallbackLogs(): void {
+  shadowFallbackLogs.length = 0;
+}
+
+function rememberShadowFallbackLog(entry: ShadowFallbackLogEntry): void {
+  shadowFallbackLogs.push(entry);
+  if (shadowFallbackLogs.length > 1000) {
+    shadowFallbackLogs.shift();
+  }
+}
+
+function estimateTokenCount(text: string): number {
+  return Math.max(1, Math.ceil(text.trim().length / 1.5));
+}
+
+function estimateCostUsd(prompt: string, result: LLMInferenceResult): number {
+  const estimatedTokens = estimateTokenCount(prompt) +
+    estimateTokenCount(result.insights.join(' ')) +
+    estimateTokenCount(result.reasoning ?? '');
+  return Number(((estimatedTokens / 1000) * ESTIMATED_COST_PER_1K_TOKENS_USD).toFixed(6));
+}
+
+function buildShadowFallbackContext(
+  conversationHistory: Array<{ role: string; content: string }>
+): string | undefined {
+  const context = conversationHistory
+    .slice(-4)
+    .map((message) => `${message.role}: ${message.content}`)
+    .join('\n')
+    .trim();
+
+  return context || undefined;
+}
+
+function getDimensionSignalSnapshot(
+  dimension: InsightDimension,
+  currentState: UserAttributeMap
+): { confidence: number; insightsCount: number; previousAttempts: string[] } {
+  const fields = DIMENSION_TO_STATE_FIELDS[dimension];
+  const values = fields
+    .map((field) => currentState[field])
+    .filter((value): value is NonNullable<UserAttributeMap[string]> => Boolean(value));
+
+  const confidence = values.reduce((max, value) => Math.max(max, value.confidence), 0);
+  const previousAttempts = values.map((value) => String(value.value)).filter(Boolean);
+
+  return {
+    confidence,
+    insightsCount: previousAttempts.length,
+    previousAttempts,
+  };
+}
+
+export function buildShadowFallbackCandidates(params: {
+  conversationHistory: Array<{ role: string; content: string }>;
+  currentState: UserAttributeMap;
+  matcherConfidence: number;
+}): ShadowFallbackCandidate[] {
+  const { conversationHistory, currentState, matcherConfidence } = params;
+
+  if (matcherConfidence >= 0.6) {
+    return [];
+  }
+
+  const questionsAsked =
+    conversationHistory.filter((message) => message.role === 'user').length + 1;
+
+  return (Object.keys(DIMENSION_TO_STATE_FIELDS) as InsightDimension[])
+    .map((dimension) => {
+      const snapshot = getDimensionSignalSnapshot(dimension, currentState);
+      return {
+        dimension,
+        confidence: snapshot.confidence,
+        insightsCount: snapshot.insightsCount,
+        questionsAsked,
+      };
+    })
+    .filter((candidate) => {
+      if (!shouldTriggerLLM(
+        candidate.dimension,
+        candidate.confidence,
+        candidate.insightsCount,
+        candidate.questionsAsked,
+      )) {
+        return false;
+      }
+
+      return candidate.insightsCount > 0 || candidate.dimension === 'career' || candidate.dimension === 'expectation';
+    })
+    .sort((a, b) => {
+      const aCritical = a.dimension === 'career' || a.dimension === 'expectation' ? 1 : 0;
+      const bCritical = b.dimension === 'career' || b.dimension === 'expectation' ? 1 : 0;
+      if (aCritical !== bCritical) {
+        return bCritical - aCritical;
+      }
+      return a.confidence - b.confidence;
+    })
+    .slice(0, MAX_SHADOW_FALLBACK_DIMENSIONS);
+}
 
 export async function callLLMForInference(
   request: LLMInferenceRequest
 ): Promise<LLMInferenceResult> {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    logger.warn('LLM fallback inference skipped because DEEPSEEK_API_KEY is missing', {
+      provider: DEEPSEEK_PROVIDER,
+    });
+    return { success: false, insights: [], confidence: 0 };
+  }
+
   const prompt = buildInferencePrompt(request);
   
   try {
     const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+      model: DEEPSEEK_MODEL,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -133,9 +303,146 @@ export async function callLLMForInference(
     const content = response.choices?.[0]?.message?.content || '';
     return parseInferenceResponse(content);
   } catch (error) {
-    console.error('[LLM Fallback] Request failed:', error);
+    logger.error('LLM fallback inference request failed', {
+      provider: DEEPSEEK_PROVIDER,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, insights: [], confidence: 0 };
   }
+}
+
+export async function runShadowLLMFallbackInference(params: {
+  userMessage: string;
+  conversationHistory: Array<{ role: string; content: string }>;
+  currentState: UserAttributeMap;
+  matcherConfidence: number;
+  sessionId?: string;
+  executeInference?: (request: LLMInferenceRequest) => Promise<LLMInferenceResult>;
+}): Promise<ShadowFallbackSummary> {
+  if (getLLMFallbackInferenceMode() !== SHADOW_ONLY_MODE) {
+    return {
+      mode: 'disabled',
+      triggered: false,
+      calls: [],
+      totalLatencyMs: 0,
+    };
+  }
+
+  const candidates = buildShadowFallbackCandidates({
+    conversationHistory: params.conversationHistory,
+    currentState: params.currentState,
+    matcherConfidence: params.matcherConfidence,
+  });
+
+  if (candidates.length === 0) {
+    return {
+      mode: SHADOW_ONLY_MODE,
+      triggered: false,
+      calls: [],
+      totalLatencyMs: 0,
+    };
+  }
+
+  const context = buildShadowFallbackContext(params.conversationHistory);
+  const executeInference = params.executeInference ?? callLLMForInference;
+
+  const calls = await Promise.all(
+    candidates.map(async (candidate) => {
+      const snapshot = getDimensionSignalSnapshot(candidate.dimension, params.currentState);
+      const request: LLMInferenceRequest = {
+        text: params.userMessage,
+        dimension: candidate.dimension,
+        context,
+        previousAttempts: snapshot.previousAttempts,
+      };
+      const prompt = buildInferencePrompt(request);
+      const startedAt = Date.now();
+      let result: LLMInferenceResult;
+      let errorCode: string | undefined;
+
+      try {
+        result = await executeInference(request);
+        if (!result.success) {
+          errorCode = 'inference_failed';
+        }
+      } catch (error) {
+        errorCode = 'llm_error';
+        result = {
+          success: false,
+          insights: [],
+          confidence: 0,
+          reasoning: error instanceof Error ? error.message : String(error),
+        };
+      }
+
+      const latencyMs = Date.now() - startedAt;
+      const estimatedCostUsd = estimateCostUsd(prompt, result);
+      const entry: ShadowFallbackLogEntry = {
+        timestamp: new Date().toISOString(),
+        mode: SHADOW_ONLY_MODE,
+        sessionId: params.sessionId,
+        dimension: candidate.dimension,
+        provider: DEEPSEEK_PROVIDER,
+        model: DEEPSEEK_MODEL,
+        triggered: true,
+        success: result.success,
+        confidence: result.confidence,
+        reasoning: result.reasoning,
+        inferredAttributes: result.insights,
+        latencyMs,
+        estimatedCostUsd,
+        questionsAsked: candidate.questionsAsked,
+        sourceConfidence: candidate.confidence,
+        sourceInsightsCount: candidate.insightsCount,
+        errorCode,
+      };
+
+      rememberShadowFallbackLog(entry);
+      logger.info('Shadow LLM fallback inference completed', {
+        session_id: params.sessionId,
+        mode: SHADOW_ONLY_MODE,
+        dimension: candidate.dimension,
+        provider: DEEPSEEK_PROVIDER,
+        model: DEEPSEEK_MODEL,
+        success: result.success,
+        source_confidence: candidate.confidence,
+        inferred_attributes: result.insights,
+        inferred_confidence: result.confidence,
+        reasoning: result.reasoning,
+        latency_ms: latencyMs,
+        estimated_cost_usd: estimatedCostUsd,
+        error_code: errorCode,
+      });
+      logAITrace({
+        domain: 'attribute_inference',
+        feature: 'shadowLLMFallbackInference',
+        provider: DEEPSEEK_PROVIDER,
+        model: DEEPSEEK_MODEL,
+        latencyMs,
+        success: result.success,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: 'shadow-v1',
+        errorCode,
+      });
+      recordLLMFallbackInferenceMetric({
+        provider: DEEPSEEK_PROVIDER,
+        mode: SHADOW_ONLY_MODE,
+        success: result.success,
+        latencyMs,
+        estimatedCostUsd,
+      });
+
+      return entry;
+    }),
+  );
+
+  return {
+    mode: SHADOW_ONLY_MODE,
+    triggered: true,
+    totalLatencyMs: calls.reduce((sum, call) => sum + call.latencyMs, 0),
+    calls,
+  };
 }
 
 export function convertToSmartInsights(
