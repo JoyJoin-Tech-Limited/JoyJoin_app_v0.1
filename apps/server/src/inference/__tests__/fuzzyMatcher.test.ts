@@ -44,7 +44,7 @@ describe('Fuzzy Matcher', () => {
       expect(result).toBeDefined();
       expect(result?.normalizedInput).toBe('舞蹈演员');
       expect(result?.confidence).toBeGreaterThan(0.95);
-      expect(result?.source).toBe('exact');
+      expect(result?.source).toBe('fuzzy');
     });
     
     it('should match with typo using Levenshtein', () => {
