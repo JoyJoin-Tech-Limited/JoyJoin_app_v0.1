@@ -904,13 +904,8 @@ export default function MatchingStatusPage() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        // Navigate to Google Maps or Amap
                         const address = registration.venueAddress || `${registration.poolCity} ${registration.poolDistrict}`;
-                        if (registration.poolCity === '深圳') {
-                          window.open(`https://uri.amap.com/marker?address=${encodeURIComponent(address)}`, '_blank');
-                        } else {
-                          window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
-                        }
+                        window.open(`https://uri.amap.com/marker?address=${encodeURIComponent(address)}`, '_blank');
                       }}
                     >
                       <Navigation className="h-4 w-4 mr-1" />

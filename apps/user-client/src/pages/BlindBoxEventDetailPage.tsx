@@ -349,18 +349,10 @@ export default function BlindBoxEventDetailPage() {
     const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
     const queryParts = [event.restaurantName, event.restaurantAddress].filter(Boolean).join(' ');
 
-    if (event.city === '深圳') {
-      if (hasCoords) {
-        window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
-      } else if (queryParts) {
-        window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}&city=深圳`, '_blank');
-      }
-    } else {
-      if (hasCoords) {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${event.restaurantLat},${event.restaurantLng}`, '_blank');
-      } else if (queryParts) {
-        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts)}`, '_blank');
-      }
+    if (hasCoords) {
+      window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
+    } else if (queryParts) {
+      window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}`, '_blank');
     }
   };
 
