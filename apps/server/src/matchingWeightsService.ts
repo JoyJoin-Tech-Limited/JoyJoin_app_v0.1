@@ -16,17 +16,8 @@ import {
   DEFAULT_MATCHING_WEIGHTS_RATIO,
   type MatchingWeightsShape
 } from '@joyjoin/shared/matchingWeights';
-import { eq, desc } from 'drizzle-orm';
 
 export type MatchingWeights = MatchingWeightsShape;
-export interface MatchingWeights {
-  personalityWeight: number;
-  interestsWeight: number;
-  intentWeight: number;
-  backgroundWeight: number;
-  cultureWeight: number;
-  conversationSignatureWeight: number;
-}
 
 export interface MatchingWeightsRolloutStatus {
   adaptiveWeightsEnabled: boolean;

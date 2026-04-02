@@ -167,8 +167,11 @@ export async function getPredictiveRerankOutcomeMetrics(days = 14): Promise<Pred
     `)
     .groupBy(eventPoolGroups.predictiveExperimentArm);
 
-  return rows
-    .filter((row): row is typeof row & { arm: "control" | "treatment" } => row.arm === "control" || row.arm === "treatment")
+  type OutcomeRow = { arm: string | null; sampleCount: number; positiveRate: string; avgAtmosphereScore: string | null };
+  type NarrowedRow = OutcomeRow & { arm: "control" | "treatment" };
+
+  return (rows as OutcomeRow[])
+    .filter((row): row is NarrowedRow => row.arm === "control" || row.arm === "treatment")
     .map((row) => ({
       arm: row.arm,
       sampleCount: row.sampleCount,

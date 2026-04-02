@@ -10,8 +10,8 @@ describe('Semantic Fallback & New Occupations Test', () => {
     console.log('\n🔍 Testing semantic fallback for edge cases...\n');
     
     const edgeCases = [
-      { input: 'farmer', expectedCategory: 'agriculture' },
-      { input: '农民', expectedCategory: 'agriculture' },
+      { input: 'farmer', expectedCategory: 'agriculture_food' },
+      { input: '农民', expectedCategory: 'agriculture_food' },
       { input: '富二代', expectedCategory: 'professional_services' },
       { input: '学生', expectedCategory: 'education' },
       { input: 'student', expectedCategory: 'education' },

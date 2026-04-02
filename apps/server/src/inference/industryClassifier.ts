@@ -26,6 +26,10 @@ const CONFIDENCE_THRESHOLDS = {
   NICHE_INFERENCE_AI: 0.80,      // Niche inference for AI results
 };
 
+// Default fallback category when no classification is possible.
+// Uses life_services as a neutral default (avoids finance which was misleading).
+const DEFAULT_FALLBACK_CATEGORY_ID = "life_services";
+
 export interface IndustryClassificationResult {
   category: {
     id: string;
@@ -626,7 +630,7 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
     const aiDescription = await generateSemanticDescription(userInput);
     
     // Return "unclassified" state with AI description
-    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY[0];
+    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === DEFAULT_FALLBACK_CATEGORY_ID) || INDUSTRY_TAXONOMY[0];
     const unknownSegment = unknownCategory.segments[0];
     
     return {
@@ -643,7 +647,7 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
     console.error('[Fallback] AI description generation failed:', error);
     
     // AI failed too, return basic unclassified state
-    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY[0];
+    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === DEFAULT_FALLBACK_CATEGORY_ID) || INDUSTRY_TAXONOMY[0];
     const unknownSegment = unknownCategory.segments[0];
     
     return {
@@ -903,6 +907,31 @@ export async function classifyIndustry(
   if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_DECENT) {
     const normalizedInput = await normalizeUserInput(cleanInput);
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
+  }
+  
+  // Semantic fallback for well-known edge cases (farmer, student, etc.)
+  // Applied after fuzzy/seed to preserve occupation-specific matching (e.g. typo correction)
+  const earlySemanticMatch = applySemanticFallback(cleanInput);
+  if (earlySemanticMatch) {
+    const category = findCategoryById(earlySemanticMatch.category);
+    const segment = category ? findSegmentById(earlySemanticMatch.category, earlySemanticMatch.segment) : null;
+    if (category && segment) {
+      const result: IndustryClassificationResult = {
+        category: { id: category.id, label: category.label },
+        segment: { id: segment.id, label: segment.label },
+        niche: earlySemanticMatch.niche ? (() => {
+          const nicheFound = findNicheById(earlySemanticMatch.category, earlySemanticMatch.segment, earlySemanticMatch.niche!);
+          return nicheFound ? { id: earlySemanticMatch.niche!, label: nicheFound.label } : undefined;
+        })() : undefined,
+        confidence: earlySemanticMatch.confidence,
+        source: "fallback",
+        reasoning: earlySemanticMatch.reasoning,
+        processingTimeMs: Date.now() - startTime,
+        rawInput: cleanInput,
+        normalizedInput: cleanInput,
+      };
+      return ensureReasoning(result, cleanInput);
+    }
   }
   
   // Tier 2: Taxonomy直接匹配
