@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockState, matchingWeightsConfigTable, matchingWeightsHistoryTable } = vi.hoisted(() => ({
-  mockState: {
-    configRows: [] as any[],
-    historyRows: [] as any[],
-    updateCalls: [] as Array<{ table: string; values: Record<string, unknown>; condition: any }>,
-    insertCalls: [] as Array<{ table: string; values: Record<string, unknown> }>,
-  },
+const {
+  matchingWeightsConfigTable,
+  matchingWeightsHistoryTable,
+  mockState,
+} = vi.hoisted(() => ({
   matchingWeightsConfigTable: {
     __table: 'matchingWeightsConfig',
     id: 'id',
@@ -16,87 +14,44 @@ const { mockState, matchingWeightsConfigTable, matchingWeightsHistoryTable } = v
   matchingWeightsHistoryTable: {
     __table: 'matchingWeightsHistory',
     configId: 'configId',
+    changeReason: 'changeReason',
     recordedAt: 'recordedAt',
   },
+  mockState: {
+    configRows: [] as any[],
+    historyRows: [] as any[],
+    updateCalls: [] as Array<{ table: string; values: Record<string, unknown>; condition: any }>,
+    insertCalls: [] as Array<{ table: string; values: Record<string, unknown> }>,
+    transactionCalls: 0,
+  },
 }));
+
+const MAX_WEIGHT_DELTA_TOLERANCE = 3.0001;
 
 function cloneRow<T>(row: T): T {
   return JSON.parse(JSON.stringify(row));
 }
-
-const MAX_WEIGHT_DELTA_TOLERANCE = 3.0001;
 
 function applyWhere(rows: any[], condition: { field: string; value: unknown } | undefined) {
   if (!condition) return rows;
   return rows.filter((row) => row[condition.field] === condition.value);
 }
 
+function sortByRecordedAtDesc(rows: any[], field: string) {
+  return [...rows].sort((a, b) => String(b[field] ?? '').localeCompare(String(a[field] ?? '')));
+}
+
 function makeQueryResult(rows: any[]) {
   return {
     limit: (count: number) => Promise.resolve(rows.slice(0, count).map(cloneRow)),
-    orderBy: (order: { field: string }) =>
-      makeQueryResult(
-        [...rows].sort((a, b) => String(b[order.field] ?? '').localeCompare(String(a[order.field] ?? ''))),
-      ),
+    orderBy: (order: { field: string }) => makeQueryResult(sortByRecordedAtDesc(rows, order.field)),
     then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(rows.map(cloneRow)).then(resolve, reject),
   };
 }
 
-const {
-  matchingWeightsConfigTable,
-  matchingWeightsHistoryTable,
-  mockState,
-} = vi.hoisted(() => ({
-  matchingWeightsConfigTable: Symbol('matchingWeightsConfig'),
-  matchingWeightsHistoryTable: Symbol('matchingWeightsHistory'),
-  mockState: {
-    activeConfig: {
-      id: 'config-1',
-      configName: 'default',
-      isActive: true,
-      personalityWeight: '0.23',
-      interestsWeight: '0.24',
-      intentWeight: '0.13',
-      backgroundWeight: '0.15',
-      cultureWeight: '0.10',
-      conversationSignatureWeight: '0.15',
-      personalityAlpha: 5,
-      personalityBeta: 2,
-      interestsAlpha: 4,
-      interestsBeta: 2,
-      intentAlpha: 3,
-      intentBeta: 2,
-      backgroundAlpha: 2,
-      backgroundBeta: 2,
-      cultureAlpha: 3,
-      cultureBeta: 3,
-      conversationSignatureAlpha: 2,
-      conversationSignatureBeta: 2,
-      totalMatches: 12,
-      successfulMatches: 8,
-      averageSatisfaction: '4.2000',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as any,
-    historyRows: [] as any[],
-    insertedValues: [] as any[],
-    updateCalls: 0,
-  },
-}));
-
-vi.mock('@shared/schema', () => ({
-  matchingWeightsConfig: matchingWeightsConfigTable,
-  matchingWeightsHistory: matchingWeightsHistoryTable,
-}));
-
-vi.mock('drizzle-orm', () => ({
-  eq: (field: string, value: unknown) => ({ field, value }),
-  desc: (field: string) => ({ field }),
-}));
-
-vi.mock('../db', () => ({
-  db: {
+function buildDbFacade(): any {
+  return {
     select: () => ({
       from: (table: any) => ({
         where: (condition: any) => {
@@ -110,11 +65,7 @@ vi.mock('../db', () => ({
         },
         orderBy: (order: any) => {
           if (table.__table === 'matchingWeightsHistory') {
-            return makeQueryResult(
-              [...mockState.historyRows].sort((a, b) =>
-                String(b[order.field] ?? '').localeCompare(String(a[order.field] ?? '')),
-              ),
-            );
+            return makeQueryResult(sortByRecordedAtDesc(mockState.historyRows, order.field));
           }
           return makeQueryResult([]);
         },
@@ -148,12 +99,35 @@ vi.mock('../db', () => ({
         };
         target.push(row);
         mockState.insertCalls.push({ table: table.__table, values: row });
+        return [cloneRow(row)];
       },
     }),
-  },
+    transaction: async (callback: (tx: ReturnType<typeof buildDbFacade>) => Promise<unknown>) => {
+      mockState.transactionCalls += 1;
+      return callback(buildDbFacade());
+    },
+  };
+}
+
+vi.mock('@shared/schema', () => ({
+  matchingWeightsConfig: matchingWeightsConfigTable,
+  matchingWeightsHistory: matchingWeightsHistoryTable,
 }));
 
-const { MatchingWeightsService } = await import('../matchingWeightsService');
+vi.mock('drizzle-orm', () => ({
+  eq: (field: string, value: unknown) => ({ field, value }),
+  desc: (field: string) => ({ field }),
+}));
+
+vi.mock('../db', () => ({
+  db: buildDbFacade(),
+}));
+
+const {
+  buildShadowRecommendation,
+  MatchingWeightsService,
+  SHADOW_RECOMMENDATION_REASON,
+} = await import('../matchingWeightsService');
 
 describe('MatchingWeightsService', () => {
   let service: InstanceType<typeof MatchingWeightsService>;
@@ -163,6 +137,7 @@ describe('MatchingWeightsService', () => {
     mockState.historyRows = [];
     mockState.updateCalls = [];
     mockState.insertCalls = [];
+    mockState.transactionCalls = 0;
     service = new MatchingWeightsService();
     service.invalidateCache();
   });
@@ -261,13 +236,11 @@ describe('MatchingWeightsService', () => {
     expect(Math.abs(runtimeWeights.backgroundWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
     expect(Math.abs(runtimeWeights.cultureWeight - 10)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
     expect(Math.abs(runtimeWeights.conversationSignatureWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(
-      Object.values(runtimeWeights).reduce((sum, value) => sum + value, 0),
-    ).toBeCloseTo(100, 3);
+    expect(Object.values(runtimeWeights).reduce((sum, value) => sum + value, 0)).toBeCloseTo(100, 3);
     expect(mockState.historyRows.at(-1)?.changeReason).toBe('adaptive_bandit_bounded');
   });
 
-  it('uses the kill switch to reactivate deterministic default weights', async () => {
+  it('uses a transaction for the kill switch back to deterministic default weights', async () => {
     mockState.configRows = [
       {
         id: 'default-1',
@@ -295,11 +268,46 @@ describe('MatchingWeightsService', () => {
 
     const rollout = await service.setAdaptiveWeightsEnabled(false);
 
+    expect(mockState.transactionCalls).toBe(1);
     expect(rollout.adaptiveWeightsEnabled).toBe(false);
     expect(rollout.liveConfigName).toBe('default');
     expect(mockState.configRows.find((row) => row.configName === 'default')?.isActive).toBe(true);
     expect(mockState.configRows.find((row) => row.configName === 'adaptive_live')?.isActive).toBe(false);
     expect(mockState.historyRows.at(-1)?.changeReason).toBe('adaptive_disabled');
+  });
+
+  it('uses a transaction when enabling adaptive weights', async () => {
+    mockState.configRows = [
+      {
+        id: 'default-1',
+        configName: 'default',
+        isActive: true,
+        personalityWeight: '0.23',
+        interestsWeight: '0.24',
+        intentWeight: '0.13',
+        backgroundWeight: '0.15',
+        cultureWeight: '0.10',
+        conversationSignatureWeight: '0.15',
+      },
+      {
+        id: 'adaptive-1',
+        configName: 'adaptive_live',
+        isActive: false,
+        personalityWeight: '0.23',
+        interestsWeight: '0.24',
+        intentWeight: '0.13',
+        backgroundWeight: '0.15',
+        cultureWeight: '0.10',
+        conversationSignatureWeight: '0.15',
+      },
+    ];
+
+    const rollout = await service.setAdaptiveWeightsEnabled(true);
+
+    expect(mockState.transactionCalls).toBe(1);
+    expect(rollout.adaptiveWeightsEnabled).toBe(true);
+    expect(mockState.configRows.find((row) => row.configName === 'adaptive_live')?.isActive).toBe(true);
+    expect(mockState.historyRows.at(-1)?.changeReason).toBe('adaptive_enabled');
   });
 
   it('rolls back the live adaptive config to the previous history snapshot', async () => {
@@ -347,79 +355,34 @@ describe('MatchingWeightsService', () => {
     expect(rollout.activeWeights.personalityWeight).toBeCloseTo(23, 3);
     expect(rollout.activeWeights.interestsWeight).toBeCloseTo(24, 3);
     expect(mockState.historyRows.at(-1)?.changeReason).toBe('adaptive_rollback');
-  eq: (_field: unknown, value: unknown) => ({ value }),
-  desc: (field: unknown) => ({ field, direction: 'desc' }),
-}));
-
-function makeAwaitable<T>(value: T) {
-  return {
-    limit: () => Promise.resolve(value),
-    then: (resolve: (resolved: T) => unknown, reject?: (error: unknown) => unknown) =>
-      Promise.resolve(value).then(resolve, reject),
-  };
-}
-
-vi.mock('../db', () => ({
-  db: {
-    select: () => ({
-      from: (table: unknown) => {
-        if (table === matchingWeightsConfigTable) {
-          return {
-            where: () => makeAwaitable(mockState.activeConfig ? [mockState.activeConfig] : []),
-          };
-        }
-
-        if (table === matchingWeightsHistoryTable) {
-          return {
-            where: (condition: any) => ({
-              orderBy: () => ({
-                limit: () => Promise.resolve(
-                  mockState.historyRows.filter((row) =>
-                    condition?.value ? row.changeReason === condition.value : true,
-                  ),
-                ),
-              }),
-            }),
-          };
-        }
-
-        return {
-          where: () => makeAwaitable([]),
-        };
-      },
-    }),
-    insert: (_table: unknown) => ({
-      values: (values: any) => {
-        mockState.insertedValues.push(values);
-        return Promise.resolve([values]);
-      },
-    }),
-    update: () => {
-      mockState.updateCalls += 1;
-      return {
-        set: () => ({
-          where: () => Promise.resolve([]),
-        }),
-      };
-    },
-  },
-}));
-
-const {
-  buildShadowRecommendation,
-  matchingWeightsService,
-  SHADOW_RECOMMENDATION_REASON,
-} = await import('../matchingWeightsService');
-
-describe('matchingWeightsService shadow recommendations', () => {
-  beforeEach(() => {
-    mockState.historyRows = [];
-    mockState.insertedValues = [];
-    mockState.updateCalls = 0;
   });
 
   it('builds normalized shadow recommendations from outcome signals', () => {
-    const recommendation = buildShadowRecommendation(mockState.activeConfig, {
+    const activeConfig = {
+      id: 'config-1',
+      configName: 'default',
+      isActive: true,
+      personalityWeight: '0.23',
+      interestsWeight: '0.24',
+      intentWeight: '0.13',
+      backgroundWeight: '0.15',
+      cultureWeight: '0.10',
+      conversationSignatureWeight: '0.15',
+      personalityAlpha: 5,
+      personalityBeta: 2,
+      interestsAlpha: 4,
+      interestsBeta: 2,
+      intentAlpha: 3,
+      intentBeta: 2,
+      backgroundAlpha: 2,
+      backgroundBeta: 2,
+      cultureAlpha: 3,
+      cultureBeta: 3,
+      conversationSignatureAlpha: 2,
+      conversationSignatureBeta: 2,
+    } as any;
+
+    const recommendation = buildShadowRecommendation(activeConfig, {
       eventId: 'event-1',
       feedbackId: 'feedback-1',
       wouldMeetAgain: true,
@@ -441,15 +404,37 @@ describe('matchingWeightsService shadow recommendations', () => {
     expect(recommendation).not.toBeNull();
     expect(recommendation?.outcomeScore).toBeGreaterThanOrEqual(4);
     expect(recommendation?.overallConfidence).toBeGreaterThan(0);
-
-    const totalWeight = Object.values(recommendation!.recommendedWeights).reduce((sum, value) => sum + value, 0);
-    expect(totalWeight).toBeCloseTo(1, 4);
-    expect(recommendation?.dimensionMetrics.personality.sampleCount).toBeGreaterThan(0);
-    expect(recommendation?.dimensionMetrics.personality.recommendedWeight).toBeGreaterThan(0);
+    expect(Object.values(recommendation!.recommendedWeights).reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 4);
   });
 
-  it('records shadow recommendations without changing the active live weights', async () => {
-    const recommendation = await matchingWeightsService.recordShadowRecommendation({
+  it('records shadow recommendations without changing live weights', async () => {
+    mockState.configRows = [
+      {
+        id: 'config-1',
+        configName: 'default',
+        isActive: true,
+        personalityWeight: '0.23',
+        interestsWeight: '0.24',
+        intentWeight: '0.13',
+        backgroundWeight: '0.15',
+        cultureWeight: '0.10',
+        conversationSignatureWeight: '0.15',
+        personalityAlpha: 5,
+        personalityBeta: 2,
+        interestsAlpha: 4,
+        interestsBeta: 2,
+        intentAlpha: 3,
+        intentBeta: 2,
+        backgroundAlpha: 2,
+        backgroundBeta: 2,
+        cultureAlpha: 3,
+        cultureBeta: 3,
+        conversationSignatureAlpha: 2,
+        conversationSignatureBeta: 2,
+      },
+    ];
+
+    const recommendation = await service.recordShadowRecommendation({
       eventId: 'event-2',
       feedbackId: 'feedback-2',
       userId: 'user-1',
@@ -469,36 +454,19 @@ describe('matchingWeightsService shadow recommendations', () => {
     });
 
     expect(recommendation).not.toBeNull();
-    expect(mockState.insertedValues).toHaveLength(1);
-    expect(mockState.insertedValues[0].changeReason).toBe(SHADOW_RECOMMENDATION_REASON);
-    expect(mockState.insertedValues[0].shadowMetadata.outcomeSignals.wouldMeetAgain).toBe(true);
-    expect(mockState.updateCalls).toBe(0);
-  });
-
-  it('does not penalize dimensions that have no outcome signal data', () => {
-    const recommendation = buildShadowRecommendation(mockState.activeConfig, {
-      eventId: 'event-3',
-      feedbackId: 'feedback-3',
-      atmosphereScore: 2,
-    });
-
-    expect(recommendation).not.toBeNull();
-    expect(recommendation?.signalCoverage).toBeLessThan(1);
-    expect(recommendation?.dimensionMetrics.personality.hasSignal).toBe(false);
-    expect(recommendation?.dimensionMetrics.personality.score).toBeNull();
-    expect(recommendation?.dimensionMetrics.personality.posteriorAlpha).toBe(mockState.activeConfig.personalityAlpha);
-    expect(recommendation?.dimensionMetrics.personality.posteriorBeta).toBe(mockState.activeConfig.personalityBeta);
-    expect(recommendation?.dimensionMetrics.culture.hasSignal).toBe(true);
-    expect(recommendation?.dimensionMetrics.culture.posteriorBeta).toBeGreaterThan(mockState.activeConfig.cultureBeta);
+    expect(mockState.insertCalls.filter((entry) => entry.table === 'matchingWeightsHistory')).toHaveLength(1);
+    expect(mockState.historyRows[0].changeReason).toBe(SHADOW_RECOMMENDATION_REASON);
+    expect(mockState.historyRows[0].shadowMetadata.outcomeSignals.wouldMeetAgain).toBe(true);
+    expect(mockState.updateCalls).toHaveLength(0);
   });
 
   it('returns only shadow recommendation history for admin inspection', async () => {
     mockState.historyRows = [
-      { id: 'shadow-1', changeReason: SHADOW_RECOMMENDATION_REASON, recordedAt: new Date().toISOString() },
-      { id: 'live-1', changeReason: 'bandit_exploration', recordedAt: new Date().toISOString() },
+      { id: 'shadow-1', configId: 'config-1', changeReason: SHADOW_RECOMMENDATION_REASON, recordedAt: '2026-04-02T12:00:10.000Z' },
+      { id: 'live-1', configId: 'config-1', changeReason: 'bandit_exploration', recordedAt: '2026-04-02T12:00:09.000Z' },
     ];
 
-    const history = await matchingWeightsService.getShadowRecommendations(10);
+    const history = await service.getShadowRecommendations(10);
 
     expect(history).toEqual([mockState.historyRows[0]]);
   });

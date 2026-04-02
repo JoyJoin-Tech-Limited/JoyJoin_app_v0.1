@@ -650,6 +650,20 @@ export class MatchingWeightsService {
   }
 
   async getActiveConfig(): Promise<MatchingWeightsConfig | null> {
+    try {
+      const config = await db
+        .select()
+        .from(matchingWeightsConfig)
+        .where(eq(matchingWeightsConfig.isActive, true))
+        .limit(1);
+
+      return config[0] || null;
+    } catch (error) {
+      console.error('[MatchingWeightsService] Failed to get active config:', error);
+      return null;
+    }
+  }
+
   async recordShadowRecommendation(outcomeSignals: ShadowOutcomeSignals): Promise<ShadowWeightRecommendation | null> {
     try {
       const config = await this.getActiveConfig();
@@ -693,21 +707,6 @@ export class MatchingWeightsService {
     }
   }
 
-  private async recalculateWeightsFromBandit(configId: string): Promise<void> {
-    try {
-      const config = await db
-        .select()
-        .from(matchingWeightsConfig)
-        .where(eq(matchingWeightsConfig.isActive, true))
-        .limit(1);
-
-      return config[0] || null;
-    } catch (error) {
-      console.error('[MatchingWeightsService] Failed to get active config:', error);
-      return null;
-    }
-  }
-
   async getRolloutStatus(): Promise<MatchingWeightsRolloutStatus> {
     const activeConfig = await this.getActiveConfig();
     const activeWeights = activeConfig ? runtimeWeightsFromRecord(activeConfig) : { ...DEFAULT_WEIGHTS };
@@ -726,26 +725,44 @@ export class MatchingWeightsService {
     const defaultConfig = await this.ensureDefaultConfig();
 
     if (!enabled) {
-      await this.deactivateAllConfigs();
-      await db
-        .update(matchingWeightsConfig)
-        .set({ isActive: true, updatedAt: new Date() })
-        .where(eq(matchingWeightsConfig.id, defaultConfig.id));
+      await db.transaction(async (tx: typeof db) => {
+        await this.deactivateAllConfigs(tx as typeof db);
+        await tx
+          .update(matchingWeightsConfig)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(matchingWeightsConfig.id, defaultConfig.id));
 
-      await this.recordHistorySnapshot(defaultConfig.id, runtimeWeightsFromRecord(defaultConfig), ADAPTIVE_DISABLED_REASON);
+        await this.recordHistorySnapshot(
+          defaultConfig.id,
+          runtimeWeightsFromRecord(defaultConfig),
+          ADAPTIVE_DISABLED_REASON,
+          0,
+          tx as typeof db,
+        );
+      });
+
       this.invalidateCache();
       return this.getRolloutStatus();
     }
 
     const adaptiveConfig = await this.ensureAdaptiveConfig();
 
-    await this.deactivateAllConfigs();
-    await db
-      .update(matchingWeightsConfig)
-      .set({ isActive: true, updatedAt: new Date() })
-      .where(eq(matchingWeightsConfig.id, adaptiveConfig.id));
+    await db.transaction(async (tx: typeof db) => {
+      await this.deactivateAllConfigs(tx as typeof db);
+      await tx
+        .update(matchingWeightsConfig)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(matchingWeightsConfig.id, adaptiveConfig.id));
 
-    await this.recordHistorySnapshot(adaptiveConfig.id, runtimeWeightsFromRecord(adaptiveConfig), ADAPTIVE_ENABLED_REASON);
+      await this.recordHistorySnapshot(
+        adaptiveConfig.id,
+        runtimeWeightsFromRecord(adaptiveConfig),
+        ADAPTIVE_ENABLED_REASON,
+        0,
+        tx as typeof db,
+      );
+    });
+
     this.invalidateCache();
     return this.getRolloutStatus();
   }
@@ -932,16 +949,10 @@ export class MatchingWeightsService {
     const created = await this.getConfigByName(DEFAULT_CONFIG_NAME);
     if (!created) {
       throw new Error('Failed to initialize default matching weights config');
-  async getWeightsHistory(limit: number = 30): Promise<MatchingWeightsHistory[]> {
-    try {
-      return await db.select()
-        .from(matchingWeightsHistory)
-        .orderBy(desc(matchingWeightsHistory.recordedAt))
-        .limit(limit);
-    } catch (error) {
-      console.error('[MatchingWeightsService] Failed to get weights history:', error);
-      return [];
     }
+
+    console.log('[MatchingWeightsService] Initialized default config');
+    return created;
   }
 
   async getShadowRecommendations(limit: number = 20): Promise<MatchingWeightsHistory[]> {
@@ -955,22 +966,6 @@ export class MatchingWeightsService {
       console.error('[MatchingWeightsService] Failed to get shadow recommendations:', error);
       return [];
     }
-  }
-
-  async getActiveConfig(): Promise<MatchingWeightsConfig | null> {
-    try {
-      const config = await db.select()
-        .from(matchingWeightsConfig)
-        .where(eq(matchingWeightsConfig.isActive, true))
-        .limit(1);
-      return config[0] || null;
-    } catch (error) {
-      console.error('[MatchingWeightsService] Failed to get active config:', error);
-      return null;
-    }
-
-    console.log('[MatchingWeightsService] Initialized default config');
-    return created;
   }
 
   private async ensureAdaptiveConfig(): Promise<MatchingWeightsConfig> {
@@ -1012,8 +1007,9 @@ export class MatchingWeightsService {
     weights: MatchingWeights,
     changeReason: string,
     matchesSinceLastUpdate = 0,
+    executor: Pick<typeof db, 'insert'> = db,
   ): Promise<void> {
-    await db.insert(matchingWeightsHistory).values({
+    await executor.insert(matchingWeightsHistory).values({
       configId,
       ...runtimeWeightsToStored(weights),
       changeReason,
@@ -1021,8 +1017,8 @@ export class MatchingWeightsService {
     });
   }
 
-  private async deactivateAllConfigs(): Promise<void> {
-    await db
+  private async deactivateAllConfigs(executor: Pick<typeof db, 'update'> = db): Promise<void> {
+    await executor
       .update(matchingWeightsConfig)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(matchingWeightsConfig.isActive, true));
