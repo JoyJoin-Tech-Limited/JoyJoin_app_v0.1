@@ -93,7 +93,6 @@ export const eventGroupOutcomesRepo = {
           connectionRadar: input.connectionRadar,
           icebreakerRatings: input.icebreakerRatings,
           freeTextSignal: input.freeTextSignal ?? null,
-          submittedAt: now,
           updatedAt: now,
         },
       })
