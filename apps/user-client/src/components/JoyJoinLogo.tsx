@@ -26,11 +26,11 @@ export default function JoyJoinLogo({ size = "md", showEnglish = true }: JoyJoin
         className={`${logoSizes[size]} w-auto object-contain`}
       />
       <div className="flex items-center gap-1.5">
-        <span className={`${textSizes[size]} font-bold font-cn-display`}>悦聚</span>
+        <span className={`font-cn-display ${textSizes[size]} font-bold`}>悦聚</span>
         {showEnglish && (
           <>
             <span className="text-muted-foreground">·</span>
-            <span className={`${textSizes[size]} font-semibold text-muted-foreground font-en-brand`}>JoyJoin</span>
+            <span className={`font-en-brand ${textSizes[size]} font-semibold text-muted-foreground`}>JoyJoin</span>
           </>
         )}
       </div>

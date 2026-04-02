@@ -12,7 +12,13 @@ import {
   type InsertMatchingWeightsHistory
 } from '@shared/schema';
 import { desc, eq } from 'drizzle-orm';
+import {
+  DEFAULT_MATCHING_WEIGHTS_RATIO,
+  type MatchingWeightsShape
+} from '@joyjoin/shared/matchingWeights';
+import { eq, desc } from 'drizzle-orm';
 
+export type MatchingWeights = MatchingWeightsShape;
 export interface MatchingWeights {
   personalityWeight: number;
   interestsWeight: number;
@@ -525,13 +531,51 @@ export class MatchingWeightsService {
       } else {
         const defaultConfig = await this.ensureDefaultConfig();
         cachedWeights = runtimeWeightsFromRecord(defaultConfig);
+      if (config.length > 0) {
+        const c = config[0];
+        cachedWeights = {
+          personalityWeight: parseFloat(c.personalityWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.personalityWeight)),
+          interestsWeight: parseFloat(c.interestsWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.interestsWeight)),
+          intentWeight: parseFloat(c.intentWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.intentWeight)),
+          backgroundWeight: parseFloat(c.backgroundWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundWeight)),
+          cultureWeight: parseFloat(c.cultureWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.cultureWeight)),
+          conversationSignatureWeight: parseFloat(c.conversationSignatureWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.conversationSignatureWeight)),
+        };
+      } else {
+        cachedWeights = { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
+        await this.initializeDefaultConfig();
       }
 
       cacheTimestamp = now;
       return cachedWeights;
     } catch (error) {
       console.error('[MatchingWeightsService] Failed to fetch weights:', error);
-      return { ...DEFAULT_WEIGHTS };
+      return { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
+    }
+  }
+
+  private async initializeDefaultConfig(): Promise<void> {
+    try {
+      const existing = await db.select()
+        .from(matchingWeightsConfig)
+        .where(eq(matchingWeightsConfig.configName, 'default'))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(matchingWeightsConfig).values({
+          configName: 'default',
+          isActive: true,
+          personalityWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.personalityWeight.toFixed(2),
+          interestsWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.interestsWeight.toFixed(2),
+          intentWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.intentWeight.toFixed(2),
+          backgroundWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundWeight.toFixed(2),
+          cultureWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.cultureWeight.toFixed(2),
+          conversationSignatureWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.conversationSignatureWeight.toFixed(2),
+        });
+        console.log('[MatchingWeightsService] Initialized default config');
+      }
+    } catch (error) {
+      console.error('[MatchingWeightsService] Failed to initialize default config:', error);
     }
   }
 

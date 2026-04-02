@@ -526,9 +526,11 @@ body {
     animation: progressFill 0.6s ease-out forwards;
   }
 
-  /* 品牌字体 - 用于情感时刻的标题 */
+  /* 品牌字体 - 情感/展示时刻专用 (font-cn-display 语义角色的 CSS 类别名)
+   * 用于：问候语、英雄标题、品牌标签、庆典文字。
+   * 密集功能性 UI 请使用 font-ui（系统字体）。 */
   .font-brand {
-    font-family: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-cn-display);
   }
 
   /* 隐藏滚动条 */
