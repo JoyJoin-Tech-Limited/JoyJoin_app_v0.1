@@ -12,6 +12,7 @@ describe('LLM fallback shadow mode', () => {
 
   beforeEach(() => {
     process.env.LLM_FALLBACK_INFERENCE_MODE = 'shadow';
+    delete process.env.DEEPSEEK_API_KEY;
     clearShadowFallbackLogs();
     _resetMetricsForTest();
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -19,6 +20,7 @@ describe('LLM fallback shadow mode', () => {
 
   afterEach(() => {
     delete process.env.LLM_FALLBACK_INFERENCE_MODE;
+    delete process.env.DEEPSEEK_API_KEY;
     clearShadowFallbackLogs();
     _resetMetricsForTest();
     consoleSpy.mockRestore();
@@ -108,5 +110,39 @@ describe('LLM fallback shadow mode', () => {
     expect(metricsText).toContain('llm_fallback_inference_estimated_cost_usd_total');
     expect(metricsText).toContain('provider="deepseek"');
     expect(metricsText).toContain('mode="shadow"');
+  });
+
+  it('does not emit live-provider traces or cost metrics when credentials are missing', async () => {
+    const summary = await runShadowLLMFallbackInference({
+      sessionId: 'session-shadow-missing-key',
+      userMessage: '我做产品，想认识新朋友',
+      conversationHistory: [
+        { role: 'assistant', content: '你平时做什么呀？' },
+        { role: 'user', content: '我做产品' },
+      ],
+      currentState: {
+        occupationHint: {
+          value: '产品',
+          source: 'inferred',
+          confidence: 0.4,
+          evidence: '我做产品',
+          timestamp: new Date('2026-04-02T00:00:00.000Z'),
+        },
+      },
+      matcherConfidence: 0.3,
+    });
+
+    expect(summary.triggered).toBe(true);
+    expect(summary.calls).toHaveLength(2);
+    expect(summary.calls.every((call) => call.liveCallAttempted === false)).toBe(true);
+    expect(summary.calls.every((call) => call.provider === null)).toBe(true);
+    expect(summary.calls.every((call) => call.estimatedCostUsd === 0)).toBe(true);
+    expect(summary.calls.every((call) => call.errorCode === 'missing_credentials')).toBe(true);
+
+    expect(consoleSpy).not.toHaveBeenCalled();
+
+    const metricsText = await getMetricsText();
+    expect(metricsText).not.toContain('provider="deepseek"');
+    expect(metricsText).not.toContain('mode="shadow",success=');
   });
 });
