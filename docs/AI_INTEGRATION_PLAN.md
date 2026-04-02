@@ -254,6 +254,17 @@ Before creating a new orchestration service file, verify whether the work can be
 
 New orchestrator files (`matchIntelligenceOrchestrator.ts`, `eventMomentumOrchestrator.ts`, etc.) are appropriate when role separation clearly benefits the feature — not as a default first step. See the strategy paper §4 for the v1 recommendation.
 
+### 1.6 Planning-Only Boundary for Phase 3 Work
+
+> **Current delivery rule (2026-04-02):** Latent-state and multimodal work remain **planning-only** until the gate criteria in this document are explicitly passed. This section documents prerequisites and design contracts; it does **not** authorize partial runtime rollout.
+
+| Allowed before gates | Not allowed before gates |
+|---|---|
+| Strategy docs, evaluation design, fairness/consent requirements, and clearly marked planning-only contract sketches | Runtime schema changes, scheduled computation, prompt wiring, scoring inputs, new API routes, user-facing uploads/consent UI, or client-visible explanations that depend on latent/multimodal signals |
+| Shared type stubs only when they are explicitly marked planning-only and have zero runtime imports/callers | "Shadow" code that silently computes latent or multimodal signals in production without an approved gate, audit trail, and kill-switch |
+
+**Explicit non-goal until the gate is passed:** No PR should land partial latent-state or multimodal runtime in the hope that the rest will follow later. Shipping starts only when prerequisites, observability, and rollback controls are ready together.
+
 ---
 
 ## 2. Phase 1 — AI-Enhanced Social Experience & Match Quality Infrastructure
@@ -722,6 +733,8 @@ const finalScore = confidence >= CONFIDENCE_THRESHOLD
 
 ## 4. Phase 3 — Latent Compatibility Intelligence
 
+> **Status:** Planning-only. No production runtime, background computation, schema, or user-facing latent-state / multimodal feature should be added until the prerequisites in this section and the gating rules in §10.5 are formally cleared.
+
 ### 4.1 Design Goals
 
 Phase 3 shifts from *feature engineering on declared attributes* to *learning latent representations of social compatibility from behavioral evidence*. The goal is not to replace the Phase 1/2 scoring system but to enrich it with signals that users cannot easily declare and that the rule-based system cannot compute.
@@ -731,6 +744,18 @@ Phase 3 shifts from *feature engineering on declared attributes* to *learning la
 ### 4.2 Latent User State Modeling
 
 **Concept:** Build a dynamic user representation that captures not just *who the user is* (declared profile) but *how they show up socially* — based on behavioral traces accumulated across events.
+
+#### Release prerequisites before any latent-state runtime
+
+| Requirement | Why it must exist first |
+|-------------|-------------------------|
+| **Phase 2 scoring stack stable in production** | Latent-state work is an enrichment layer on top of the validated deterministic + Phase 2 baseline, not a shortcut around it |
+| **≥ 1,000 outcome records with representative coverage** | Behavioral embeddings are not credible without enough event-outcome history across cities, archetypes, and event formats |
+| **Behavioral signal inventory + consent review approved** | Every contributing signal must be documented, justified, and reviewed for fairness / dignity impact before collection or computation |
+| **Admin observability + kill-switch coverage** | Any future latent-state compute must be traceable, reversible, and explicitly disableable before it can run in production |
+| **Deletion / retention path defined** | Users must be able to understand, delete, and age out behavioral state; otherwise the system should not store it |
+
+Until every prerequisite above is satisfied, this section is architecture planning only — **do not** create `user_latent_state`, `latentStateService.ts`, background recompute jobs, or score-path integrations.
 
 **Behavioral signals to harvest (with consent):**
 
@@ -783,6 +808,8 @@ Explanations must be positioned as *AI-assisted reasoning*, not *compatibility p
 
 **Integration point:** Extended `matchExplanationService.ts` — add `generatePersonalizedExplanation(member, groupContext, latentState)`.
 
+**Deferral rule:** This explanation path must stay out of runtime until latent state is live behind the approved gates. Do not partially wire behavioral-history prompts, payload fields, or UI copy ahead of the supporting data, consent, and audit layers.
+
 ### 4.5 Optional Multimodal Signal Enrichment (多模态能力)
 
 **Long-term capability:** As LLM multimodal capabilities (多模态能力) mature — and as MiniMax's `minimax-m2.7` model evolves — JoyJoin can optionally enrich compatibility signals with non-text modalities, subject to strict user consent and fairness safeguards (see Section 7).
@@ -802,6 +829,18 @@ Explanations must be positioned as *AI-assisted reasoning*, not *compatibility p
 - Users can request deletion of all multimodal data independently of their core profile.
 
 **Architecture:** Multimodal inputs are processed via `apps/server/src/ai/minimaxClient.ts` (MiniMax `minimax-m2.7`, already integrated) or a dedicated multimodal embedding model, producing a latent vector that supplements the behavioral latent state from Section 4.2.
+
+#### Release prerequisites before any multimodal runtime
+
+| Requirement | Why it must exist first |
+|-------------|-------------------------|
+| **Per-modality consent UI is shipped and user-tested** | Voice / photo / video collection must be explicit, understandable, and independently revocable |
+| **Latent-state foundation is already approved** | Multimodal enrichment is a supplement to an approved latent-state system, not a separate fast path |
+| **Fairness + model audit complete** | Multimodal models can learn appearance or demographic proxies unless they are explicitly audited and constrained |
+| **Deletion / retention controls verified end-to-end** | Raw audio/video and derived features require stronger lifecycle controls than profile text |
+| **Latency / budget analysis documented and approved** | Existing MiniMax capability does not justify adding critical-path multimodal calls without an approved cost and SLA plan |
+
+The existing MiniMax client support mentioned in this document is **not** a rollout approval. Until the prerequisites above are satisfied, do not add upload endpoints, consent surfaces, multimodal prompt wiring, modality-vector storage, or user-visible copy that implies multimodal analysis is active.
 
 ---
 
@@ -953,6 +992,8 @@ The system must not produce or surface any ranking that implies a user is "less 
 | Offline backtest framework + A/B test infrastructure | Phase 1 data pipeline | New `apps/server/src/experiments/` directory |
 
 ### Phase 3 — Latent Compatibility Intelligence (Q2 2027+)
+
+> **Planning-only until gates clear:** The tasks below are roadmap items. They must not be partially introduced into runtime or user-facing code before the prerequisites in §4 and §10.5 are met.
 
 | Task | Prerequisite | Files Affected |
 |------|-------------|----------------|
@@ -1266,6 +1307,8 @@ The following **must not happen** before the corresponding gate is passed:
 - ❌ AI-authored compatibility scores surfaced to users before G4
 - ❌ Auto-injected AI icebreakers in user-facing Social Icebreaker flow before G5
 - ❌ Personalized explanations using behavioral history (Phase 3) before G4 + 1,000+ `event_group_outcomes` records
+- ❌ `user_latent_state` schema, latent recompute jobs, or latent-signal score inputs before the Phase 3 prerequisites in §4.2 are satisfied and explicitly approved together
+- ❌ Multimodal uploads, consent surfaces, modality extraction calls, or multimodal-derived vectors in any production path before the prerequisites in §4.5 are satisfied and explicitly approved together
 - ❌ Any new MiniMax model calls in the critical render path before a latency budget analysis is documented and approved
 
 Each gate is a documented checkpoint reviewed by the product and engineering leads. Gate passage is logged in this document's revision history.
