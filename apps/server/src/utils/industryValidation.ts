@@ -135,7 +135,7 @@ export function sanitizeIndustryInput(input: string): string {
       .trim()
       .replace(/\s+/g, ' ')
       // Remove encoded opening tags entirely before decoding, while preserving encoded closing tags.
-      .replace(/(?:&lt;|&#\d+;|&#x[0-9a-f]+;)\s*[a-z][\w:-]*\s*(?:&gt;|&#\d+;|&#x[0-9a-f]+;)/gi, '')
+      .replace(/(?:&lt;|&#0*60;|&#x0*3[cC];)\s*[a-z][\w:-]*\s*(?:&gt;|&#0*62;|&#x0*3[eE];)/gi, '')
   )
     .replace(/[<>{}[\]\\()"']/g, '')
     .slice(0, 200);
