@@ -38,6 +38,24 @@ CSS custom properties are the bridge between the design system and component cod
 - Tokens must be defined in the app's `index.css` (light + dark blocks), not inline in components
 - When adding a new token, add it to **both** apps' `index.css` files and document the design intent
 
+## Typography token ownership
+
+JoyJoin uses a three-role semantic typography system. All font-family decisions should use these tokens and their corresponding Tailwind utilities — never ad-hoc `fontFamily` inline styles or raw font-family declarations in component files.
+
+| Role | CSS variable | Tailwind class | Use for |
+|------|-------------|----------------|---------|
+| System UI | `--font-ui` | `font-ui` | All dense / functional UI — forms, body, labels, legal, settings, transactional |
+| Chinese display | `--font-cn-display` | `font-cn-display` | Short high-impact Chinese moments — hero headlines, tab labels, premium CTAs, celebratory text |
+| English brand | `--font-en-brand` | `font-en-brand` | JoyJoin English wordmark / brand accent only |
+
+These variables are defined in `apps/user-client/src/assets/fonts/fonts.css` and mapped to Tailwind utilities in `apps/user-client/tailwind.config.ts`.
+
+The `.font-brand` CSS utility class in `index.css` is a backward-compatible alias for `font-cn-display`.
+
+**Do not** scatter `style={{ fontFamily: '...' }}` inline overrides in component files. Use the semantic Tailwind classes instead. If an existing component uses an inline override, migrate it to the appropriate class as part of any related change.
+
+See `.github/skills/joyjoin-brand-guidelines/SKILL.md` for the full typography decision guide including WeChat Mini Program constraints.
+
 ## Variant discipline
 
 - All button variants are defined in `packages/shared/src/ui/buttonVariants.ts` using CVA
@@ -117,3 +135,5 @@ When standardising an existing component to use the shared primitive:
 - [ ] Focus ring is visible and uses the `--ring` token
 - [ ] Touch target for primary CTAs is at least 44 px (meets WCAG 2.5.5)
 - [ ] Visual exceptions are documented with a comment and rationale in the component
+- [ ] Font family is set via semantic Tailwind class (`font-ui`, `font-cn-display`, `font-en-brand`) not inline `style={{ fontFamily: ... }}`
+- [ ] Custom display font (`font-cn-display` / `font-en-brand`) is applied only to the specific element — not a parent container — to avoid inheriting onto dense UI children
