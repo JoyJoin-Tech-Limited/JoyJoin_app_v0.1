@@ -18,8 +18,8 @@ export interface TopicCue {
   text: string;
 }
 
-interface ThemeTitle {
-  themeTitle: string;
+export interface TopicHeatThemeTitle {
+  themeTitle: string | null;
   themeEmoji: string;
 }
 
@@ -36,19 +36,19 @@ interface ThemeTitle {
  * corresponding entry here.  If no entry exists the code falls back to
  * archetypeConfig.traits (see third-tier fallback below).
  */
-const ARCHETYPE_TOPIC_HINTS: Record<string, Array<{ emoji: string; text: string }>> = {
+export const ARCHETYPE_TOPIC_HINTS: Record<string, Array<{ emoji: string; text: string }>> = {
   "开心柯基":  [{ emoji: "😂", text: "轻松搞笑" }, { emoji: "🎉", text: "破冰活动" }],
   "太阳鸡":    [{ emoji: "☀️", text: "正能量分享" }, { emoji: "💛", text: "暖心故事" }],
   "夸夸豚":    [{ emoji: "🎯", text: "真心话" }, { emoji: "💬", text: "深度聊天" }],
   "机智狐":    [{ emoji: "🗺️", text: "城市探索" }, { emoji: "🔍", text: "隐藏好物" }],
   "淡定海豚":  [{ emoji: "🧘", text: "慢生活" }, { emoji: "🌊", text: "随性聊聊" }],
-  "冷静猫头鹰":[{ emoji: "📖", text: "深度观察" }, { emoji: "🔭", text: "思维碰撞" }],
-  "搞笑河马":  [{ emoji: "🎭", text: "幽默段子" }, { emoji: "🎪", text: "搞笑分享" }],
-  "神秘狐猴":  [{ emoji: "🌙", text: "奇思妙想" }, { emoji: "🎨", text: "创意碰撞" }],
-  "哲思猴":    [{ emoji: "💭", text: "人生哲学" }, { emoji: "🧩", text: "深度探讨" }],
-  "慢热树懒":  [{ emoji: "🌱", text: "真实自我" }, { emoji: "🍵", text: "慢慢发现" }],
-  "文艺鸽":    [{ emoji: "🎵", text: "文艺美学" }, { emoji: "📸", text: "生活灵感" }],
-  "探索蝙蝠":  [{ emoji: "🌍", text: "旅行体验" }, { emoji: "⚡", text: "新鲜刺激" }],
+  "织网蛛":    [{ emoji: "🕸️", text: "人脉连接" }, { emoji: "🤝", text: "社交网络" }],
+  "暖心熊":    [{ emoji: "🫶", text: "温暖陪伴" }, { emoji: "🏡", text: "生活近况" }],
+  "灵感章鱼":  [{ emoji: "🎨", text: "创意碰撞" }, { emoji: "💡", text: "灵感发散" }],
+  "沉思猫头鹰":[{ emoji: "📖", text: "深度观察" }, { emoji: "🔭", text: "思维碰撞" }],
+  "定心大象":  [{ emoji: "🧭", text: "人生方向" }, { emoji: "🌿", text: "稳定成长" }],
+  "稳如龟":    [{ emoji: "🍵", text: "慢慢发现" }, { emoji: "🌱", text: "真实自我" }],
+  "隐身猫":    [{ emoji: "🌙", text: "安静共鸣" }, { emoji: "📚", text: "小众兴趣" }],
 };
 
 /** Fallback topics used when neither theme nor archetype data is available. */
@@ -63,7 +63,7 @@ const GENERIC_FALLBACKS: TopicCue[] = [
  * The first cue is treated as the "hottest" and receives the strongest visual weight.
  */
 export function deriveTopicCues(
-  recentThemeTitles: ThemeTitle[],
+  recentThemeTitles: TopicHeatThemeTitle[],
   archetypeBreakdown: Record<string, number> = {}
 ): TopicCue[] {
   const cues: TopicCue[] = [];
@@ -116,6 +116,17 @@ export function deriveTopicCues(
       if (cues.length >= 5) break;
     }
     if (cues.length >= 5) break;
+  }
+
+  if (cues.length < 3) {
+    for (const fallback of GENERIC_FALLBACKS) {
+      const key = fallback.text.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        cues.push(fallback);
+      }
+      if (cues.length >= 3) break;
+    }
   }
 
   if (cues.length > 0) return cues.slice(0, 5);
