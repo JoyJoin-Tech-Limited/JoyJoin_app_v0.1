@@ -1,5 +1,7 @@
 // Social Icebreaker System - Shared Types
 
+import type { AIResponseMeta } from './types/aiMeta';
+
 export type SocialIcebreakerPhase =
   | 'warmup'
   | 'micro_challenge'
@@ -80,9 +82,11 @@ export interface SocialSessionState {
   enabledPhases?: SocialIcebreakerPhase[];
   // Per-phase data
   warmupTopics?: SocialTopic[];
+  warmupTopicsMeta?: AIResponseMeta;
   currentTopicIndex?: number;
   selectedMood?: AtmosphereMood;
   currentChallenge?: MicroChallenge;
+  currentChallengeMeta?: AIResponseMeta;
   challengeCompletedBy?: string[];
   lieDetectivePlayers?: LieDetectivePlayer[];
   currentLieDetectivePlayerIndex?: number;
@@ -90,6 +94,7 @@ export interface SocialSessionState {
   pulseChecks?: PulseCheckResult[];
   // PersonalityDice phase data
   personalityDiceChallenges?: PersonalityDiceChallenge[];
+  personalityDiceChallengesMeta?: AIResponseMeta;
   currentDicePlayerIndex?: number;
   diceCompletedBy?: string[];
   // Recap data

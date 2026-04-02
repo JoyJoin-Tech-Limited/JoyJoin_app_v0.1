@@ -51,7 +51,6 @@ export default function LandingPage() {
     <main
       className="h-screen overflow-hidden flex flex-col items-center"
       style={{
-        fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
         backgroundImage:
           "linear-gradient(180deg, #FFF0E8 0%, #F5E6FF 35%, #EDE4FF 55%, #F8F4FF 80%, #FFFBF9 100%)," +
           "radial-gradient(circle at 20% 15%, rgba(255, 200, 160, 0.5), transparent 55%)," +
@@ -176,7 +175,7 @@ export default function LandingPage() {
               background: "linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              fontFamily: '"ZCOOL QingKe HuangYou", "Noto Sans SC", sans-serif',
+              fontFamily: 'var(--font-cn-display)',
               fontSize: "clamp(26px, 8vw, 36px)",
               fontWeight: 800,
               lineHeight: 1.2,
@@ -234,7 +233,6 @@ export default function LandingPage() {
           {/* Legal footer */}
           <p
             className="text-center text-[11px] text-[#8B7AAD]"
-            style={{ fontFamily: '"Noto Sans SC", system-ui, sans-serif' }}
           >
             我已阅读并同意
             <a

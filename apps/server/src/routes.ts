@@ -6,6 +6,7 @@ import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
 import { registerAuthRoutes } from "./routes/domains/auth";
+import { registerEventGroupOutcomeRoutes } from "./routes/domains/eventGroupOutcomes";
 import { registerEventPoolRoutes } from "./routes/domains/eventPools";
 import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
@@ -577,6 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
+  registerEventGroupOutcomeRoutes(app);
   registerIcebreakerRoutes(app);
   registerIcebreakerSessionRoutes(app);
   registerEventPoolRoutes(app);
@@ -1602,11 +1604,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       // Note: In a real app, you'd update user points here
       // await storage.awardFeedbackPoints(userId, 50);
-      
-      res.json({ ...feedback, mutualMatches });
+
+      const responsePayload = { ...feedback, mutualMatches };
+      const shadowRecommendationInput = {
+        source: 'event_feedback',
+        eventId,
+        feedbackId: feedback.id,
+        userId,
+        wouldMeetAgain:
+          feedback.hasNewConnections ??
+          (Array.isArray(feedback.connections) ? feedback.connections.length > 0 : mutualMatches.length > 0),
+        wouldAttendAgain: feedback.wouldAttendAgain ?? null,
+        hasNewConnections: feedback.hasNewConnections ?? (mutualMatches.length > 0 ? true : null),
+        atmosphereScore: feedback.atmosphereScore ?? feedback.rating ?? null,
+        connectionStatus: feedback.connectionStatus ?? null,
+        connectionCount: Array.isArray(feedback.connections) ? feedback.connections.length : null,
+        mutualConnectionCount: mutualMatches.length,
+        conversationComfort: feedback.conversationComfort ?? null,
+        connectionRadar:
+          feedback.connectionRadar && typeof feedback.connectionRadar === 'object'
+            ? feedback.connectionRadar
+            : null,
+      };
+
+      res.json(responsePayload);
+
+      setImmediate(() => {
+        void import('./matchingWeightsService')
+          .then(({ matchingWeightsService }) => matchingWeightsService.recordShadowRecommendation(shadowRecommendationInput))
+          .catch((shadowError) => {
+            logger.error('Failed to record shadow recommendation from event_feedback', {
+              eventId,
+              feedbackId: feedback.id,
+              userId,
+              error: String(shadowError),
+            });
+          });
+      });
     } catch (error) {
       console.error("Error creating feedback:", error);
       res.status(500).json({ message: "Failed to create feedback" });
@@ -8113,6 +8150,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
         provider: analysis.provider ?? null,
         fallbackUsed: analysis.fallbackUsed ?? false,
+        promptVersion: analysis.promptVersion,
+        meta: {
+          generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+          fromCache: analysis.fromCache ?? false,
+          provider: analysis.provider ?? null,
+          fallbackUsed: analysis.fallbackUsed ?? false,
+          promptVersion: analysis.promptVersion,
+        },
         // Convenience field: pairs involving the authenticated viewer
         myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
         // Post-match theme layer
@@ -9653,6 +9698,24 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
+  app.get('/api/admin/evolution/weight-recommendations', requireAdmin, async (req: any, res) => {
+    try {
+      const parsedLimit = Number.parseInt(req.query.limit?.toString() ?? '', 10);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 100)
+        : 20;
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const recommendations = await matchingWeightsService.getShadowRecommendations(limit);
+      res.json({
+        latest: recommendations[0] ?? null,
+        recommendations,
+      });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get shadow recommendations:', error);
+      res.status(500).json({ message: 'Failed to get shadow recommendations', error: error.message });
+    }
+  });
+
   // 获取触发器性能统计
   app.get('/api/admin/evolution/triggers', requireAdmin, async (req: any, res) => {
     try {
@@ -9895,6 +9958,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         groupDynamics: groupAnalysis.groupDynamics,
         explanations: groupAnalysis.pairExplanations,
         iceBreakers: groupAnalysis.iceBreakers,
+        meta: {
+          generatedAt: groupAnalysis.generatedAt,
+          fromCache: groupAnalysis.fromCache,
+          provider: groupAnalysis.provider,
+          fallbackUsed: groupAnalysis.fallbackUsed,
+          promptVersion: groupAnalysis.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Match Explanations] Error:', error);
@@ -9996,6 +10066,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         iceBreakers: iceBreakerResult.iceBreakers,
         provider: iceBreakerResult.providerUsed,
         fallbackUsed: iceBreakerResult.fallbackUsed,
+        promptVersion: iceBreakerResult.promptVersion,
+        meta: {
+          generatedAt: new Date().toISOString(),
+          fromCache: false,
+          provider: iceBreakerResult.providerUsed,
+          fallbackUsed: iceBreakerResult.fallbackUsed,
+          promptVersion: iceBreakerResult.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Ice-Breakers] Error:', error);
@@ -10092,6 +10170,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         explanations: groupAnalysis.pairExplanations,
         iceBreakers: groupAnalysis.iceBreakers,
         existingExplanation: event.matchExplanation,
+        meta: {
+          generatedAt: groupAnalysis.generatedAt,
+          fromCache: groupAnalysis.fromCache,
+          provider: groupAnalysis.provider,
+          fallbackUsed: groupAnalysis.fallbackUsed,
+          promptVersion: groupAnalysis.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Match Explanations] Error:', error);
