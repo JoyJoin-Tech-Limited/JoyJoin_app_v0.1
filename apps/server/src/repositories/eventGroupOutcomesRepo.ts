@@ -22,7 +22,6 @@ export interface UpsertEventGroupOutcomeInput {
 
 export interface UpsertEventGroupOutcomeResult {
   outcome: EventGroupOutcome;
-  replacedExisting: boolean;
 }
 
 export const eventGroupOutcomesRepo = {
@@ -58,22 +57,27 @@ export const eventGroupOutcomesRepo = {
   async upsertEventGroupOutcome(
     input: UpsertEventGroupOutcomeInput,
   ): Promise<UpsertEventGroupOutcomeResult> {
-    const [existing] = await db
-      .select({ id: eventGroupOutcomes.id })
-      .from(eventGroupOutcomes)
-      .where(
-        and(
-          eq(eventGroupOutcomes.groupId, input.groupId),
-          eq(eventGroupOutcomes.submittedBy, input.submittedBy),
-        ),
-      )
+    const [group] = await db
+      .select({ poolId: eventPoolGroups.poolId })
+      .from(eventPoolGroups)
+      .where(eq(eventPoolGroups.id, input.groupId))
       .limit(1);
+
+    if (!group) {
+      throw new Error(`Event group not found for upsert: ${input.groupId}`);
+    }
+
+    if (group.poolId !== input.poolId) {
+      throw new Error(
+        `Event group pool mismatch for upsert: expected ${group.poolId}, received ${input.poolId}`,
+      );
+    }
 
     const now = new Date();
     const [outcome] = await db
       .insert(eventGroupOutcomes)
       .values({
-        poolId: input.poolId,
+        poolId: group.poolId,
         groupId: input.groupId,
         submittedBy: input.submittedBy,
         atmosphereScore: input.atmosphereScore,
@@ -87,7 +91,6 @@ export const eventGroupOutcomesRepo = {
       .onConflictDoUpdate({
         target: [eventGroupOutcomes.groupId, eventGroupOutcomes.submittedBy],
         set: {
-          poolId: input.poolId,
           atmosphereScore: input.atmosphereScore,
           wouldMeetAgain: input.wouldMeetAgain,
           connectionRadar: input.connectionRadar,
@@ -100,7 +103,6 @@ export const eventGroupOutcomesRepo = {
 
     return {
       outcome,
-      replacedExisting: Boolean(existing),
     };
   },
 };

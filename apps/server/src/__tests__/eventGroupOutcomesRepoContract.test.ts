@@ -22,4 +22,13 @@ describe("event group outcomes persistence contract", () => {
     expect(repoSource).toContain(".onConflictDoUpdate({");
     expect(repoSource).toContain("target: [eventGroupOutcomes.groupId, eventGroupOutcomes.submittedBy]");
   });
+
+  it("keeps pool ownership immutable and avoids a race-prone duplicate pre-read", () => {
+    const repoSource = readRepoFile("apps/server/src/repositories/eventGroupOutcomesRepo.ts");
+
+    // guards against regression: duplicate status should not rely on a separate existence read
+    expect(repoSource).not.toContain(".from(eventGroupOutcomes)");
+    expect(repoSource).toContain("Event group pool mismatch for upsert:");
+    expect(repoSource).not.toContain("poolId: input.poolId,");
+  });
 });

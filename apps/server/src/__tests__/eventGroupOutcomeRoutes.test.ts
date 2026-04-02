@@ -214,7 +214,6 @@ describe("event group outcome routes", () => {
         id: "outcome-1",
         submittedAt: new Date("2026-04-02T11:00:00.000Z"),
       },
-      replacedExisting: false,
     });
 
     await withServer(async (baseUrl) => {
@@ -228,11 +227,10 @@ describe("event group outcome routes", () => {
         body: JSON.stringify(buildValidPayload()),
       });
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
         message: "Group outcome submitted",
         duplicateSubmissionStrategy: "replace",
-        replacedExisting: false,
         outcomeId: "outcome-1",
       });
       expect(routeMocks.upsertEventGroupOutcome).toHaveBeenCalledWith({
@@ -260,7 +258,7 @@ describe("event group outcome routes", () => {
     });
   });
 
-  it("updates the existing submission when the same member submits again", async () => {
+  it("returns the same success contract for duplicate submissions", async () => {
     routeMocks.getGroupMembershipContext.mockResolvedValue({
       group: { id: "group-1", poolId: "pool-1" },
       memberUserIds: ["member-1", "member-2"],
@@ -271,7 +269,6 @@ describe("event group outcome routes", () => {
         id: "outcome-1",
         submittedAt: new Date("2026-04-02T11:05:00.000Z"),
       },
-      replacedExisting: true,
     });
 
     await withServer(async (baseUrl) => {
@@ -287,9 +284,23 @@ describe("event group outcome routes", () => {
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
-        message: "Group outcome updated",
+        message: "Group outcome submitted",
         duplicateSubmissionStrategy: "replace",
-        replacedExisting: true,
+        outcomeId: "outcome-1",
+      });
+      expect(routeMocks.upsertEventGroupOutcome).toHaveBeenCalledWith({
+        poolId: "pool-1",
+        groupId: "group-1",
+        submittedBy: "member-1",
+        atmosphereScore: 4,
+        wouldMeetAgain: true,
+        connectionRadar: {
+          "member-2": 5,
+        },
+        icebreakerRatings: {
+          warmup_intro: "helpful",
+        },
+        freeTextSignal: "Great chemistry",
       });
     });
   });

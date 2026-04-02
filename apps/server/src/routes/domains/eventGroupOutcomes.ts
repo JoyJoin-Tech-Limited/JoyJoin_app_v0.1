@@ -88,8 +88,7 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
         });
       }
 
-      const { outcome, replacedExisting } =
-        await eventGroupOutcomesRepo.upsertEventGroupOutcome({
+      const { outcome } = await eventGroupOutcomesRepo.upsertEventGroupOutcome({
           poolId: req.params.poolId,
           groupId,
           submittedBy: userId,
@@ -102,7 +101,7 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
 
       reqLogger.info("Stored event group outcome submission", {
         groupId,
-        replacedExisting,
+        duplicateSubmissionStrategy: DUPLICATE_SUBMISSION_STRATEGY,
       });
 
       logAITrace({
@@ -115,10 +114,9 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
         fromCache: false,
       });
 
-      return res.status(replacedExisting ? 200 : 201).json({
-        message: replacedExisting ? "Group outcome updated" : "Group outcome submitted",
+      return res.status(200).json({
+        message: "Group outcome submitted",
         duplicateSubmissionStrategy: DUPLICATE_SUBMISSION_STRATEGY,
-        replacedExisting,
         outcomeId: outcome.id,
         submittedAt: outcome.submittedAt,
       });
