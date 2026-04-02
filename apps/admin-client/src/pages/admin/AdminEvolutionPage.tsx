@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Brain, Zap, MessageSquare, TrendingUp, Target, Sparkles, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  getCurrentWeights,
+  getRecommendationConfidence,
+  getRecommendedWeights,
+  getRecommendationReadiness,
+  getSuccessfulMatchRate,
+  getWeightHistorySeries,
+  STATIC_MATCHING_WEIGHTS,
+  WEIGHT_DIMENSIONS,
+} from "@/lib/adminEvolutionWeights";
 
 interface EvolutionOverview {
   weights: {
@@ -52,7 +64,35 @@ interface WeightsData {
     cultureWeight: number;
     conversationSignatureWeight: number;
   };
-  config: any;
+  config: {
+    totalMatches?: number;
+    successfulMatches?: number;
+    updatedAt?: string | null;
+    personalityAlpha?: number;
+    personalityBeta?: number;
+    interestsAlpha?: number;
+    interestsBeta?: number;
+    intentAlpha?: number;
+    intentBeta?: number;
+    backgroundAlpha?: number;
+    backgroundBeta?: number;
+    cultureAlpha?: number;
+    cultureBeta?: number;
+    conversationSignatureAlpha?: number;
+    conversationSignatureBeta?: number;
+  } | null;
+}
+
+interface WeightHistoryEntry {
+  recordedAt: string;
+  changeReason: string | null;
+  matchesSinceLastUpdate: number | null;
+  personalityWeight: number | string | null;
+  interestsWeight: number | string | null;
+  intentWeight: number | string | null;
+  backgroundWeight: number | string | null;
+  cultureWeight: number | string | null;
+  conversationSignatureWeight: number | string | null;
 }
 
 interface GoldenDialogue {
@@ -78,6 +118,10 @@ export default function AdminEvolutionPage() {
 
   const { data: weightsData, isLoading: weightsLoading } = useQuery<WeightsData>({
     queryKey: ["/api/admin/evolution/weights"],
+  });
+
+  const { data: weightsHistoryData, isLoading: weightsHistoryLoading } = useQuery<WeightHistoryEntry[]>({
+    queryKey: ["/api/admin/evolution/weights-history?limit=12"],
   });
 
   const { data: triggersData, isLoading: triggersLoading } = useQuery<{ all: TriggerStats[]; topPerforming: TriggerStats[]; underperforming: TriggerStats[] }>({
@@ -127,6 +171,36 @@ export default function AdminEvolutionPage() {
     { value: "encouragement", label: "鼓励话术" },
     { value: "humor", label: "幽默话术" },
   ];
+
+  const weightInsights = useMemo(() => {
+    const currentWeights = getCurrentWeights(weightsData?.weights);
+    const recommendedWeights = getRecommendedWeights(weightsData?.config);
+    const readiness = getRecommendationReadiness(weightsData?.config);
+    const confidence = getRecommendationConfidence(weightsData?.config);
+    const successRate = getSuccessfulMatchRate(weightsData?.config);
+    const historySeries = getWeightHistorySeries(weightsHistoryData);
+
+    return {
+      currentWeights,
+      recommendedWeights,
+      readiness,
+      confidence,
+      successRate,
+      historySeries,
+      totalMatches: weightsData?.config?.totalMatches || 0,
+      successfulMatches: weightsData?.config?.successfulMatches || 0,
+      updatedAt: weightsData?.config?.updatedAt || null,
+    };
+  }, [weightsData, weightsHistoryData]);
+
+  const readinessBadgeClassName =
+    weightInsights.readiness.tone === "positive"
+      ? "bg-green-100 text-green-700"
+      : weightInsights.readiness.tone === "warning"
+        ? "bg-amber-100 text-amber-700"
+        : "bg-red-100 text-red-700";
+
+  const historyAvailable = weightInsights.historySeries.length >= 2;
 
   return (
     <div className="p-6 space-y-6" data-testid="admin-evolution-page">
@@ -227,47 +301,170 @@ export default function AdminEvolutionPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
-                匹配维度权重 (Thompson Sampling优化)
+                自适应权重建议面板
               </CardTitle>
               <CardDescription>
-                系统会根据用户反馈自动调整各维度权重
+                对比默认静态权重、当前线上权重与学习建议，并查看权重变化趋势
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {weightsLoading ? (
+              {weightsLoading || weightsHistoryLoading ? (
                 <div className="space-y-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                  {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="animate-pulse h-8 bg-muted rounded" />
                   ))}
                 </div>
               ) : weightsData?.weights ? (
-                <div className="space-y-4">
-                  {[
-                    { key: "personalityWeight", label: "人格匹配", color: "bg-purple-500" },
-                    { key: "interestsWeight", label: "兴趣匹配", color: "bg-blue-500" },
-                    { key: "intentWeight", label: "意图匹配", color: "bg-green-500" },
-                    { key: "backgroundWeight", label: "背景多样性", color: "bg-orange-500" },
-                    { key: "cultureWeight", label: "文化语言", color: "bg-pink-500" },
-                    { key: "conversationSignatureWeight", label: "对话签名", color: "bg-cyan-500" },
-                  ].map(({ key, label, color }) => {
-                    const rawValue = weightsData.weights[key as keyof typeof weightsData.weights] || 0;
-                    const value = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
-                    const percentage = value < 1 ? value * 100 : value;
-                    return (
-                      <div key={key} className="space-y-2" data-testid={`weight-${key}`}>
-                        <div className="flex justify-between text-sm">
-                          <span>{label}</span>
-                          <span className="font-medium">{percentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <Card className="border-dashed">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">默认静态权重</CardTitle>
+                        <CardDescription>当前产品基线</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">100%</div>
+                        <p className="text-xs text-muted-foreground">6 个固定维度，便于与学习建议对照</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">反馈样本量</CardTitle>
+                        <CardDescription>用于学习建议的历史反馈</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{weightInsights.totalMatches}</div>
+                        <p className="text-xs text-muted-foreground">
+                          成功匹配 {weightInsights.successfulMatches} · 成功率 {weightInsights.successRate.toFixed(0)}%
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">建议置信度</CardTitle>
+                        <CardDescription>依据 Thompson Sampling 后验强度</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="text-2xl font-bold">{weightInsights.confidence}%</div>
+                        <Progress value={weightInsights.confidence} className="h-2" />
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">采纳就绪度</CardTitle>
+                        <CardDescription>
+                          {weightInsights.updatedAt
+                            ? `最近更新 ${new Intl.DateTimeFormat("zh-CN", {
+                                month: "numeric",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }).format(new Date(weightInsights.updatedAt))}`
+                            : "暂无更新时间"}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Badge variant="secondary" className={readinessBadgeClassName}>
+                          {weightInsights.readiness.label}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">{weightInsights.readiness.description}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {weightInsights.readiness.tone !== "positive" && (
+                    <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>数据仍在积累中</AlertTitle>
+                      <AlertDescription>
+                        {weightInsights.readiness.description}
+                        {!historyAvailable && " 当前历史点位较少，趋势图将展示不足数据状态。"}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="rounded-lg border">
+                    <div className="grid grid-cols-[minmax(120px,1.5fr)_repeat(3,minmax(90px,1fr))_minmax(88px,.8fr)] gap-3 border-b bg-muted/40 px-4 py-3 text-xs font-medium text-muted-foreground">
+                      <span>维度</span>
+                      <span>静态基线</span>
+                      <span>当前线上</span>
+                      <span>学习建议</span>
+                      <span>变化</span>
+                    </div>
+                    <div className="divide-y">
+                      {WEIGHT_DIMENSIONS.map((dimension) => {
+                        const baseline = STATIC_MATCHING_WEIGHTS[dimension.key];
+                        const current = weightInsights.currentWeights[dimension.key];
+                        const recommended = weightInsights.recommendedWeights[dimension.key];
+                        const change = Number((recommended - current).toFixed(1));
+                        return (
                           <div
-                            className={`h-full ${color} transition-all duration-500`}
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
+                            key={dimension.key}
+                            className="grid grid-cols-[minmax(120px,1.5fr)_repeat(3,minmax(90px,1fr))_minmax(88px,.8fr)] gap-3 px-4 py-4 text-sm items-center"
+                            data-testid={`weight-${dimension.key}`}
+                          >
+                            <div className="space-y-2">
+                              <span className="font-medium">{dimension.label}</span>
+                              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.min(recommended, 100)}%`, backgroundColor: dimension.color }}
+                                />
+                              </div>
+                            </div>
+                            <span>{baseline.toFixed(1)}%</span>
+                            <span>{current.toFixed(1)}%</span>
+                            <span className="font-medium">{recommended.toFixed(1)}%</span>
+                            <span className={change === 0 ? "text-muted-foreground" : change > 0 ? "text-green-600" : "text-amber-600"}>
+                              {change > 0 ? "+" : ""}
+                              {change.toFixed(1)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>权重变化趋势</CardTitle>
+                      <CardDescription>展示每次学习更新后的线上权重，便于回看变化方向</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {historyAvailable ? (
+                        <div className="h-[320px]" data-testid="weights-history-chart">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={weightInsights.historySeries}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="label" />
+                              <YAxis unit="%" />
+                              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                              <Legend />
+                              {WEIGHT_DIMENSIONS.map((dimension) => (
+                                <Line
+                                  key={dimension.key}
+                                  type="monotone"
+                                  dataKey={dimension.key}
+                                  name={dimension.label}
+                                  stroke={dimension.color}
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                              ))}
+                            </LineChart>
+                          </ResponsiveContainer>
                         </div>
-                      </div>
-                    );
-                  })}
+                      ) : (
+                        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground" data-testid="weights-history-empty">
+                          历史更新点不足，暂时无法形成有效趋势图。建议累计至少 2 次权重更新后再观察时间序列变化。
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               ) : (
                 <p className="text-muted-foreground">暂无权重数据</p>
