@@ -348,11 +348,12 @@ export default function BlindBoxEventDetailPage() {
     const hasCoords = event.restaurantLat && event.restaurantLng;
     const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
     const queryParts = [event.restaurantName, event.restaurantAddress].filter(Boolean).join(' ');
+    const cityParam = event.city ? `&city=${encodeURIComponent(event.city)}` : '';
 
     if (hasCoords) {
       window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
     } else if (queryParts) {
-      window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}`, '_blank');
+      window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}${cityParam}`, '_blank');
     }
   };
 
