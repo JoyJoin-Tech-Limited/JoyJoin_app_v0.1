@@ -30,7 +30,7 @@ interface PoolStats {
   estimatedGroups: number;
   avgMatchScore: number;
   recentThemeTitles: Array<{
-    themeTitle: string;
+    themeTitle: string | null;
     themeEmoji: string;
   }>;
 }
@@ -163,6 +163,10 @@ export default function EventPoolDetailDrawer({
   }
 
   if (!stats) return null;
+  const recentThemeTitles = stats.recentThemeTitles.filter(
+    (theme): theme is { themeTitle: string; themeEmoji: string } =>
+      typeof theme.themeTitle === "string" && theme.themeTitle.trim().length > 0,
+  );
   
   const spotsNeeded = eventData.minGroupSize - (stats.totalRegistrations % eventData.minGroupSize);
   const isHot = spotsNeeded <= 2 && spotsNeeded > 0;
@@ -188,8 +192,8 @@ export default function EventPoolDetailDrawer({
           <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-700 z-50" />
           
           {/* Ambient Floating Tags Background */}
-          {stats.recentThemeTitles.length > 0 && (
-            <AmbientFloatingTags themeTags={stats.recentThemeTitles} />
+          {recentThemeTitles.length > 0 && (
+            <AmbientFloatingTags themeTags={recentThemeTitles} />
           )}
           
           {/* Main Content */}
@@ -231,6 +235,7 @@ export default function EventPoolDetailDrawer({
                       <EmergingGroupsPanel
                         estimatedGroups={stats.estimatedGroups}
                         totalRegistrations={stats.totalRegistrations}
+                        minGroupSize={eventData.minGroupSize}
                       />
                       <TopicHeatStrip
                         recentThemeTitles={stats.recentThemeTitles}

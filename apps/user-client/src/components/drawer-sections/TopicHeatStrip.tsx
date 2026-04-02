@@ -11,11 +11,12 @@
  * Future work: a dedicated pool-level topic aggregation endpoint would allow real-time
  * interest-frequency ranking instead of the archetype-fallback approach used here.
  */
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { deriveTopicCues } from "@/lib/topicHeatUtils";
+import type { TopicHeatThemeTitle } from "@/lib/topicHeatUtils";
 
 interface TopicHeatStripProps {
-  recentThemeTitles: Array<{ themeTitle: string; themeEmoji: string }>;
+  recentThemeTitles: TopicHeatThemeTitle[];
   archetypeBreakdown?: Record<string, number>;
 }
 
@@ -39,6 +40,7 @@ export default function TopicHeatStrip({
   recentThemeTitles,
   archetypeBreakdown = {},
 }: TopicHeatStripProps) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const topics = deriveTopicCues(recentThemeTitles, archetypeBreakdown);
 
   if (topics.length === 0) return null;
@@ -55,9 +57,9 @@ export default function TopicHeatStrip({
           return (
             <motion.div
               key={`${topic.emoji}-${topic.text}`}
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.2, delay: i * 0.06, ease: "easeOut" }}
+              initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.85 }}
+              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, delay: i * 0.06, ease: "easeOut" }}
               className={`flex items-center gap-1.5 rounded-full ${TIER_CLASSES[tier]}`}
             >
               <span className="leading-none" aria-hidden="true">
@@ -69,8 +71,8 @@ export default function TopicHeatStrip({
               {tier === "hot" && (
                 <motion.span
                   className="ml-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-500"
-                  animate={{ opacity: [0.55, 1, 0.55] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { opacity: [0.55, 1, 0.55] }}
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   aria-hidden="true"
                 >
                   热

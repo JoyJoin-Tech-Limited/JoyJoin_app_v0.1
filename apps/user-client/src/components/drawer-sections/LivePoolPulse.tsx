@@ -14,8 +14,8 @@
  *  - No per-card real-time subscription cost (data comes from the existing
  *    15 s poll + WebSocket already wired in EventPoolDetailDrawer).
  *  - No misleading "queue" or capacity language.
- *  - Reduced-motion: animations use `prefers-reduced-motion` via Framer Motion's
- *    `reducedMotion` prop which gracefully strips transforms.
+ *  - Reduced-motion: animations are simplified with `useReducedMotion()` so
+ *    users who opt out of motion see static states instead of transform pulses.
  */
 import { motion, useReducedMotion } from "framer-motion";
 
@@ -30,7 +30,7 @@ export default function LivePoolPulse({
   recentArrivals,
   totalRegistrations,
 }: LivePoolPulseProps) {
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
   const hasRecentActivity = recentArrivals > 0;
 
@@ -43,9 +43,9 @@ export default function LivePoolPulse({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: "easeOut" }}
+      initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: "easeOut" }}
       className="flex items-center justify-between mb-5 px-1"
     >
       {/* Left: pulse dot + activity label */}
@@ -71,9 +71,9 @@ export default function LivePoolPulse({
       {hasRecentActivity && (
         <motion.div
           key={recentArrivals}
-          initial={{ opacity: 0, scale: 0.75, x: 6 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
+          initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.75, x: 6 }}
+          animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/25"
         >
           <span className="text-[10px] leading-none" aria-hidden="true">🎉</span>
