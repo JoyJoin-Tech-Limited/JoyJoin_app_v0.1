@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { blindBoxEvents, eventPoolGroups, eventPoolRegistrations, eventPools, icebreakerSessions, userInterests, users } from "@shared/schema";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../../db";
 import { getBlindBoxEventParticipantAccess, getIcebreakerSessionParticipantAccess } from "../../lib/icebreakerAccess";
 import { logger } from "../../lib/logger";
