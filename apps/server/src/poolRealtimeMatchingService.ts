@@ -319,11 +319,11 @@ export async function scanPoolAndMatch(
   // 9. 决策：是否立即匹配
   if (evaluation.shouldMatch) {
     // 立即匹配！保存结果
-    await saveMatchResults(poolId, groups, predictiveDecisionSummary ? {
+    await saveMatchResults(poolId, groups, {
       predictiveExperimentArm: predictiveDecisionArm ?? "control",
       predictiveRerankApplied,
       predictiveRerankSummary: predictiveDecisionSummary,
-    } : undefined);
+    });
 
     const usersMatched = groups.reduce((sum, g) => sum + g.members.length, 0);
 
