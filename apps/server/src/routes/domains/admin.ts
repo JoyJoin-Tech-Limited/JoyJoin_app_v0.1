@@ -50,6 +50,8 @@ export function registerAdminRoutes(app: Express): void {
       config: getRuntimeLLMFallbackConfig(),
       stats: getRuntimeLLMFallbackStats(),
     });
+  });
+
   app.get("/api/admin/outcome-analytics", requireAdmin, async (_req, res) => {
     try {
       const dashboard = await adminOutcomeAnalyticsRepo.getDashboard();
