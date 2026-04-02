@@ -23,6 +23,7 @@ describe('profileTaglineService', () => {
     expect(result.meta.provider).toBeNull();
     expect(result.meta.fromCache).toBe(false);
     expect(result.meta.fallbackUsed).toBe(true);
+    expect(result.meta.promptVersion).toBe('profile-tagline-v1');
     expect(result.meta.evaluatorRejectionReason).toBe('no_context');
   });
 
@@ -65,6 +66,7 @@ describe('profileTaglineService', () => {
     expect(result.insightLine).toBeTruthy();
     expect(result.meta.provider).toBeNull();
     expect(result.meta.fallbackUsed).toBe(true);
+    expect(result.meta.promptVersion).toBe('profile-tagline-v1');
     expect(result.meta.evaluatorRejectionReason).toBe('low_quality_score');
   });
 
@@ -82,6 +84,7 @@ describe('profileTaglineService', () => {
     expect(result.meta.provider).toBeNull();
     expect(result.meta.fromCache).toBe(false);
     expect(result.meta.fallbackUsed).toBe(true);
+    expect(result.meta.promptVersion).toBe('profile-tagline-v1');
     expect(result.meta.evaluatorRejectionReason).toBe('provider_error');
   });
 });

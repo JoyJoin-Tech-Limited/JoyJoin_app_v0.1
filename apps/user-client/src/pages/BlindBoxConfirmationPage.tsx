@@ -264,7 +264,7 @@ export default function BlindBoxConfirmationPage() {
               data-testid="service-added-confirmation"
             >
               <CheckCircle2 className="h-4 w-4" />
-              <span style={{ fontFamily: "'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif" }}>
+              <span style={{ fontFamily: 'var(--font-cn-display)' }}>
                 已成功添加客服，有问题随时找我们 💬
               </span>
             </motion.div>
