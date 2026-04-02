@@ -172,9 +172,6 @@ export function planPredictiveRerank(params: {
   const keyByDeterministicRank = new Map(
     experiment.results.map((result) => [result.deterministicRank, `${result.deterministicRank}:${result.groupKey}`]),
   );
-  const resultByKey = new Map(
-    experiment.results.map((result) => [`${result.deterministicRank}:${result.groupKey}`, result]),
-  );
   const predictedOrderKeys = [...experiment.results]
     .sort(
       (a, b) =>
