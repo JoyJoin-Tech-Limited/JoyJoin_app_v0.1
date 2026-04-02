@@ -9,7 +9,7 @@ import {
   triggerPerformance,
   users,
 } from "@shared/schema";
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 
 import { db } from "../db";
 
@@ -42,6 +42,33 @@ type DialogueFeedbackRow = {
   userId: string | null;
   overallRating: number | null;
 };
+
+export function summarizeDialogueFeedbackRows(rows: DialogueFeedbackRow[]): {
+  ratedUserCount: number;
+  avgDialogueRating: number;
+} {
+  const ratedDialogueFeedbackRows = rows.filter(
+    (row: DialogueFeedbackRow) => row.overallRating !== null,
+  );
+  const ratedUserCount = new Set(
+    ratedDialogueFeedbackRows
+      .map((row: DialogueFeedbackRow) => row.userId)
+      .filter((userId: string | null): userId is string => Boolean(userId)),
+  ).size;
+  const avgDialogueRating =
+    ratedDialogueFeedbackRows.length > 0
+      ? ratedDialogueFeedbackRows.reduce(
+          (sum: number, row: DialogueFeedbackRow) =>
+            sum + toNumber(row.overallRating),
+          0,
+        ) / ratedDialogueFeedbackRows.length
+      : 0;
+
+  return {
+    ratedUserCount,
+    avgDialogueRating,
+  };
+}
 
 type ModelInput = {
   activeConfigName: string | null;
@@ -162,6 +189,10 @@ function rate(numerator: number, denominator: number): number {
   }
 
   return numerator / denominator;
+}
+
+function clampRate(numerator: number, denominator: number): number {
+  return Math.min(1, rate(numerator, denominator));
 }
 
 function getMetricStatus(
@@ -383,27 +414,41 @@ export function buildOutcomeAnalyticsDashboard(input: {
     })
     .sort((a, b) => b.submissionCount - a.submissionCount);
 
-  const userSignalValues = Array.from(userSignals.values());
-  const atmosphereLabelCount = userSignalValues.filter(
+  const registeredUserSignalValues = Array.from(allUsers).map((userId) => {
+    return userSignals.get(userId) ?? {
+      hasAtmosphereLabel: false,
+      hasConnectionLabel: false,
+      hasDeepFeedback: false,
+      hasTriggerLabel: false,
+      hasDialogueFeedback: false,
+    };
+  });
+  const atmosphereLabelCount = registeredUserSignalValues.filter(
     (signals) => signals.hasAtmosphereLabel,
   ).length;
-  const connectionLabelCount = userSignalValues.filter(
+  const connectionLabelCount = registeredUserSignalValues.filter(
     (signals) => signals.hasConnectionLabel,
   ).length;
-  const deepFeedbackCount = userSignalValues.filter(
+  const deepFeedbackCount = registeredUserSignalValues.filter(
     (signals) => signals.hasDeepFeedback,
   ).length;
-  const triggerLabelCount = userSignalValues.filter(
+  const triggerLabelCount = registeredUserSignalValues.filter(
     (signals) => signals.hasTriggerLabel,
   ).length;
-  const labeledUsers = userSignalValues.filter(
+  const dialogueFeedbackUserCount = registeredUserSignalValues.filter(
+    (signals) => signals.hasDialogueFeedback,
+  ).length;
+  const labeledUsers = registeredUserSignalValues.filter(
     (signals) => signals.hasAtmosphereLabel || signals.hasConnectionLabel,
   ).length;
-  const atmosphereCoverageRate = rate(atmosphereLabelCount, allUsers.size);
-  const connectionCoverageRate = rate(connectionLabelCount, allUsers.size);
-  const deepFeedbackCoverage = rate(deepFeedbackCount, allUsers.size);
-  const triggerCoverageRate = rate(triggerLabelCount, allUsers.size);
-  const dialogueFeedbackCoverage = rate(input.model.dialogueFeedbackCount, allUsers.size);
+  const atmosphereCoverageRate = clampRate(atmosphereLabelCount, allUsers.size);
+  const connectionCoverageRate = clampRate(connectionLabelCount, allUsers.size);
+  const deepFeedbackCoverage = clampRate(deepFeedbackCount, allUsers.size);
+  const triggerCoverageRate = clampRate(triggerLabelCount, allUsers.size);
+  const dialogueFeedbackCoverage = clampRate(
+    dialogueFeedbackUserCount,
+    allUsers.size,
+  );
 
   const overview = {
     submissionCount: input.registrations.length,
@@ -465,11 +510,11 @@ export function buildOutcomeAnalyticsDashboard(input: {
     {
       id: "dialogue-feedback",
       label: "对话反馈标签",
-      count: input.model.dialogueFeedbackCount,
+      count: dialogueFeedbackUserCount,
       target: 20,
       coverageRate: dialogueFeedbackCoverage,
       status: getMetricStatus(
-        input.model.dialogueFeedbackCount,
+        dialogueFeedbackUserCount,
         20,
         dialogueFeedbackCoverage,
       ),
@@ -478,10 +523,10 @@ export function buildOutcomeAnalyticsDashboard(input: {
 
   const modelStatus =
     input.model.totalMatches >= 50 &&
-    input.model.dialogueFeedbackCount >= 20 &&
+    dialogueFeedbackUserCount >= 20 &&
     input.model.avgTriggerEffectiveness >= 0.4
       ? "ready"
-      : input.model.totalMatches >= 20 || input.model.dialogueFeedbackCount >= 10
+      : input.model.totalMatches >= 20 || dialogueFeedbackUserCount >= 10
         ? "watch"
         : "needs_data";
 
@@ -519,7 +564,7 @@ export function buildOutcomeAnalyticsDashboard(input: {
         input.model.latestWeightsRecordedAt?.toISOString() ?? null,
       triggerCount: input.model.triggerCount,
       avgTriggerEffectiveness: input.model.avgTriggerEffectiveness,
-      dialogueFeedbackCount: input.model.dialogueFeedbackCount,
+      dialogueFeedbackCount: dialogueFeedbackUserCount,
       avgDialogueRating: input.model.avgDialogueRating,
       outcomeSummaryCount: input.model.outcomeSummaryCount,
       status: modelStatus,
@@ -536,7 +581,7 @@ export const adminOutcomeAnalyticsRepo = {
       activeConfigs,
       latestHistoryRows,
       triggerRows,
-      outcomeSummaryRows,
+      outcomeSummaryCountRows,
     ] = await Promise.all([
       db
         .select({
@@ -584,13 +629,15 @@ export const adminOutcomeAnalyticsRepo = {
         })
         .from(matchingWeightsConfig)
         .where(eq(matchingWeightsConfig.isActive, true))
-        .orderBy(desc(matchingWeightsConfig.updatedAt)),
+        .orderBy(desc(matchingWeightsConfig.updatedAt))
+        .limit(1),
       db
         .select({
           recordedAt: matchingWeightsHistory.recordedAt,
         })
         .from(matchingWeightsHistory)
-        .orderBy(desc(matchingWeightsHistory.recordedAt)),
+        .orderBy(desc(matchingWeightsHistory.recordedAt))
+        .limit(1),
       db
         .select({
           effectivenessScore: triggerPerformance.effectivenessScore,
@@ -598,21 +645,15 @@ export const adminOutcomeAnalyticsRepo = {
         .from(triggerPerformance),
       db
         .select({
-          eventId: eventSatisfactionSummary.eventId,
+          count: count(),
         })
         .from(eventSatisfactionSummary),
     ]);
 
     const activeConfig = activeConfigs[0];
     const latestHistory = latestHistoryRows[0];
-    const avgDialogueRating =
-      dialogueFeedbackRows.length > 0
-        ? dialogueFeedbackRows.reduce(
-            (sum: number, row: DialogueFeedbackRow) =>
-              sum + toNumber(row.overallRating),
-            0,
-          ) / dialogueFeedbackRows.length
-        : 0;
+    const { ratedUserCount: dialogueFeedbackUserCount, avgDialogueRating } =
+      summarizeDialogueFeedbackRows(dialogueFeedbackRows);
     const avgTriggerEffectiveness =
       triggerRows.length > 0
         ? triggerRows.reduce(
@@ -635,9 +676,9 @@ export const adminOutcomeAnalyticsRepo = {
         latestWeightsRecordedAt: latestHistory?.recordedAt ?? null,
         triggerCount: triggerRows.length,
         avgTriggerEffectiveness,
-        dialogueFeedbackCount: dialogueFeedbackRows.length,
+        dialogueFeedbackCount: dialogueFeedbackUserCount,
         avgDialogueRating,
-        outcomeSummaryCount: outcomeSummaryRows.length,
+        outcomeSummaryCount: toNumber(outcomeSummaryCountRows[0]?.count ?? 0),
       },
     });
   },
