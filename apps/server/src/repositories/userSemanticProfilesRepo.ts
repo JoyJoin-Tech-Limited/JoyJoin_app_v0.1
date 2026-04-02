@@ -15,9 +15,11 @@ export interface SemanticProfileGenerationInput {
   interests: UserInterests | null;
 }
 
+export type SemanticProfileStatus = 'pending' | 'ready' | 'degraded';
+
 export interface UpsertSemanticProfileRecord {
   userId: string;
-  status: string;
+  status: SemanticProfileStatus;
   profileDocument: string;
   versionVector: SemanticProfileVersionVector;
   generatorVersion: string;
