@@ -95,10 +95,12 @@ export default {
         jiangdou: ["FLJiangdou", "Outfit", "sans-serif"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
-        // ── Semantic typography roles ─────────────────────────────────
-        // font-ui          → system Chinese stack, default for all body/UI text
-        // font-cn-display  → AlibabaPuHuiTi-3 for branded Chinese headings
-        // font-en-brand    → Quicksand for English wordmark and accent labels
+        // ─── JoyJoin semantic font roles ──────────────────────────────────
+        // font-ui          → system Chinese stack; default for all dense/functional UI
+        // font-cn-display  → AlibabaPuHuiTi-3 (falls back to ZCOOL QingKe HuangYou);
+        //                    for short high-impact Chinese display moments
+        // font-en-brand    → Quicksand (falls back to Outfit);
+        //                    for JoyJoin English wordmark / brand accent moments only
         ui: ["var(--font-ui)"],
         "cn-display": ["var(--font-cn-display)"],
         "en-brand": ["var(--font-en-brand)"],
