@@ -162,7 +162,7 @@ export default function RewardsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm opacity-80">我的悦币</div>
-                  <div className="text-3xl font-bold flex items-center gap-2" data-testid="text-total-coins">
+                  <div className="font-cn-display text-3xl font-bold flex items-center gap-2" data-testid="text-total-coins">
                     <Coins className="h-6 w-6" />
                     {joyCoins}
                   </div>

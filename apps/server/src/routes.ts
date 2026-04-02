@@ -6,6 +6,7 @@ import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
 import { registerAuthRoutes } from "./routes/domains/auth";
+import { registerEventGroupOutcomeRoutes } from "./routes/domains/eventGroupOutcomes";
 import { registerEventPoolRoutes } from "./routes/domains/eventPools";
 import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
@@ -33,6 +34,7 @@ import { logger } from "./lib/logger";
 import { describePoolRegistrationAvailability } from "./lib/poolRegistrationRules";
 import { getAuthenticatedUserId } from "./lib/requestAuth";
 import { broadcastPoolRegistrationAdded } from "./eventBroadcast";
+import { queueSemanticProfileRecompute } from "./userSemanticProfileService";
 import {
   assertValidTransition as assertValidEventPoolTransition,
   InvalidTransitionError as InvalidPoolTransitionError,
@@ -82,6 +84,16 @@ async function loadInterestSignalsByUserIds(
 
 function getActingAdminId(req: any): string {
   return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+}
+
+function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
+  for (const value of values) {
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
@@ -577,6 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
+  registerEventGroupOutcomeRoutes(app);
   registerIcebreakerRoutes(app);
   registerIcebreakerSessionRoutes(app);
   registerEventPoolRoutes(app);
@@ -593,6 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.updateProfile(userId, result.data);
       await storage.markProfileSetupComplete(userId);
+      queueSemanticProfileRecompute(userId, 'profile_setup');
       
       res.json(user);
     } catch (error) {
@@ -747,6 +761,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return interestRecord;
       });
 
+      queueSemanticProfileRecompute(userId, 'interests_update');
+
       res.json({
         success: true,
         message: "兴趣已保存",
@@ -868,6 +884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update(userInterests)
         .set({ selections, totalHeat, totalSelections, categoryHeat, topPriorities, updatedAt: new Date() })
         .where(eq(userInterests.userId, userId));
+
+      queueSemanticProfileRecompute(userId, 'interests_nudge');
 
       res.json({ success: true, boostedCount });
     } catch (error) {
@@ -1086,8 +1104,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set hasCompletedRegistration if profile is being set with essential data
       if (user && (req.body.displayName || req.body.gender || req.body.currentCity)) {
         const updatedUser = await storage.updateUser(user.id, { hasCompletedRegistration: true });
+        queueSemanticProfileRecompute(userId, 'full_profile_update');
         res.json(updatedUser);
       } else {
+        queueSemanticProfileRecompute(userId, 'full_profile_update');
         res.json(user);
       }
     } catch (error) {
@@ -1602,11 +1622,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       // Note: In a real app, you'd update user points here
       // await storage.awardFeedbackPoints(userId, 50);
-      
-      res.json({ ...feedback, mutualMatches });
+
+      const responsePayload = { ...feedback, mutualMatches };
+      const shadowRecommendationInput = {
+        source: 'event_feedback',
+        eventId,
+        feedbackId: feedback.id,
+        userId,
+        wouldMeetAgain:
+          feedback.hasNewConnections ??
+          (Array.isArray(feedback.connections) ? feedback.connections.length > 0 : mutualMatches.length > 0),
+        wouldAttendAgain: feedback.wouldAttendAgain ?? null,
+        hasNewConnections: feedback.hasNewConnections ?? (mutualMatches.length > 0 ? true : null),
+        atmosphereScore: feedback.atmosphereScore ?? feedback.rating ?? null,
+        connectionStatus: feedback.connectionStatus ?? null,
+        connectionCount: Array.isArray(feedback.connections) ? feedback.connections.length : null,
+        mutualConnectionCount: mutualMatches.length,
+        conversationComfort: feedback.conversationComfort ?? null,
+        connectionRadar:
+          feedback.connectionRadar && typeof feedback.connectionRadar === 'object'
+            ? feedback.connectionRadar
+            : null,
+      };
+
+      res.json(responsePayload);
+
+      setImmediate(() => {
+        void import('./matchingWeightsService')
+          .then(({ matchingWeightsService }) => matchingWeightsService.recordShadowRecommendation(shadowRecommendationInput))
+          .catch((shadowError) => {
+            logger.error('Failed to record shadow recommendation from event_feedback', {
+              eventId,
+              feedbackId: feedback.id,
+              userId,
+              error: String(shadowError),
+            });
+          });
+      });
     } catch (error) {
       console.error("Error creating feedback:", error);
       res.status(500).json({ message: "Failed to create feedback" });
@@ -8113,6 +8168,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
         provider: analysis.provider ?? null,
         fallbackUsed: analysis.fallbackUsed ?? false,
+        promptVersion: analysis.promptVersion,
+        meta: {
+          generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+          fromCache: analysis.fromCache ?? false,
+          provider: analysis.provider ?? null,
+          fallbackUsed: analysis.fallbackUsed ?? false,
+          promptVersion: analysis.promptVersion,
+        },
         // Convenience field: pairs involving the authenticated viewer
         myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
         // Post-match theme layer
@@ -9633,10 +9696,88 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { matchingWeightsService } = await import('./matchingWeightsService');
       const config = await matchingWeightsService.getActiveConfig();
       const weights = await matchingWeightsService.getActiveWeights();
-      res.json({ config, weights });
+      const rollout = await matchingWeightsService.getRolloutStatus();
+      res.json({ config, weights, rollout });
     } catch (error: any) {
       console.error('[Evolution API] Failed to get weights:', error);
       res.status(500).json({ message: 'Failed to get weights', error: error.message });
+    }
+  });
+
+  app.post('/api/admin/evolution/weights/activation', requireAdmin, async (req: any, res) => {
+    try {
+      const { enabled } = req.body ?? {};
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: 'enabled must be a boolean' });
+      }
+
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const before = await matchingWeightsService.getRolloutStatus();
+      const after = await matchingWeightsService.setAdaptiveWeightsEnabled(enabled);
+
+      logAdminAudit({
+        action: enabled ? 'MATCHING_WEIGHTS_ACTIVATED' : 'MATCHING_WEIGHTS_DISABLED',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'matching_weights_config',
+        targetEntityId: firstNonEmptyString(after.activeConfigId, before.activeConfigId),
+        before: {
+          adaptiveWeightsEnabled: before.adaptiveWeightsEnabled,
+          liveConfigName: before.liveConfigName,
+          activeWeights: before.activeWeights,
+        },
+        after: {
+          adaptiveWeightsEnabled: after.adaptiveWeightsEnabled,
+          liveConfigName: after.liveConfigName,
+          activeWeights: after.activeWeights,
+        },
+        context: {
+          maxWeightMovementPercent: after.maxWeightMovementPercent,
+          fallbackConfigName: after.fallbackConfigName,
+        },
+      });
+
+      return res.json(after);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to toggle adaptive weights:', error);
+      return res.status(500).json({ message: 'Failed to toggle adaptive weights', error: error.message });
+    }
+  });
+
+  app.post('/api/admin/evolution/weights/rollback', requireAdmin, async (req: any, res) => {
+    try {
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const before = await matchingWeightsService.getRolloutStatus();
+
+      if (!before.adaptiveWeightsEnabled) {
+        return res.status(409).json({ message: 'Adaptive weights must be active before rollback' });
+      }
+
+      const after = await matchingWeightsService.rollbackAdaptiveWeights();
+
+      logAdminAudit({
+        action: 'MATCHING_WEIGHTS_ROLLED_BACK',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'matching_weights_config',
+        targetEntityId: firstNonEmptyString(after.activeConfigId, before.activeConfigId),
+        before: {
+          liveConfigName: before.liveConfigName,
+          activeWeights: before.activeWeights,
+        },
+        after: {
+          liveConfigName: after.liveConfigName,
+          activeWeights: after.activeWeights,
+        },
+        context: {
+          maxWeightMovementPercent: after.maxWeightMovementPercent,
+        },
+      });
+
+      return res.json(after);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to rollback adaptive weights:', error);
+      return res.status(500).json({ message: 'Failed to rollback adaptive weights', error: error.message });
     }
   });
 
@@ -9650,6 +9791,24 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     } catch (error: any) {
       console.error('[Evolution API] Failed to get weights history:', error);
       res.status(500).json({ message: 'Failed to get history', error: error.message });
+    }
+  });
+
+  app.get('/api/admin/evolution/weight-recommendations', requireAdmin, async (req: any, res) => {
+    try {
+      const parsedLimit = Number.parseInt(req.query.limit?.toString() ?? '', 10);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 100)
+        : 20;
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const recommendations = await matchingWeightsService.getShadowRecommendations(limit);
+      res.json({
+        latest: recommendations[0] ?? null,
+        recommendations,
+      });
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to get shadow recommendations:', error);
+      res.status(500).json({ message: 'Failed to get shadow recommendations', error: error.message });
     }
   });
 
@@ -9895,6 +10054,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         groupDynamics: groupAnalysis.groupDynamics,
         explanations: groupAnalysis.pairExplanations,
         iceBreakers: groupAnalysis.iceBreakers,
+        meta: {
+          generatedAt: groupAnalysis.generatedAt,
+          fromCache: groupAnalysis.fromCache,
+          provider: groupAnalysis.provider,
+          fallbackUsed: groupAnalysis.fallbackUsed,
+          promptVersion: groupAnalysis.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Match Explanations] Error:', error);
@@ -9996,6 +10162,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         iceBreakers: iceBreakerResult.iceBreakers,
         provider: iceBreakerResult.providerUsed,
         fallbackUsed: iceBreakerResult.fallbackUsed,
+        promptVersion: iceBreakerResult.promptVersion,
+        meta: {
+          generatedAt: new Date().toISOString(),
+          fromCache: false,
+          provider: iceBreakerResult.providerUsed,
+          fallbackUsed: iceBreakerResult.fallbackUsed,
+          promptVersion: iceBreakerResult.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Ice-Breakers] Error:', error);
@@ -10092,6 +10266,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         explanations: groupAnalysis.pairExplanations,
         iceBreakers: groupAnalysis.iceBreakers,
         existingExplanation: event.matchExplanation,
+        meta: {
+          generatedAt: groupAnalysis.generatedAt,
+          fromCache: groupAnalysis.fromCache,
+          provider: groupAnalysis.provider,
+          fallbackUsed: groupAnalysis.fallbackUsed,
+          promptVersion: groupAnalysis.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Match Explanations] Error:', error);

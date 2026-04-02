@@ -95,6 +95,15 @@ export default {
         jiangdou: ["FLJiangdou", "Outfit", "sans-serif"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        // ─── JoyJoin semantic font roles ──────────────────────────────────
+        // font-ui          → system Chinese stack; default for all dense/functional UI
+        // font-cn-display  → AlibabaPuHuiTi-3 (falls back to ZCOOL QingKe HuangYou);
+        //                    for short high-impact Chinese display moments
+        // font-en-brand    → Quicksand (falls back to Outfit);
+        //                    for JoyJoin English wordmark / brand accent moments only
+        ui: ["var(--font-ui)"],
+        "cn-display": ["var(--font-cn-display)"],
+        "en-brand": ["var(--font-en-brand)"],
       },
       boxShadow: {
         "neon": "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)",
