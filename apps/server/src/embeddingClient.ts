@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 import { logger } from './lib/logger';
 
+const EMBEDDING_TIMEOUT_MS = parseInt(process.env.EMBEDDING_TIMEOUT_MS || '10000', 10);
+const EMBEDDING_MAX_RETRIES = parseInt(process.env.EMBEDDING_MAX_RETRIES || '2', 10);
+
 export interface EmbeddingResult {
   vector: number[];
   model: string;
@@ -45,6 +48,8 @@ export class EmbeddingClient {
       this.client = new OpenAI({
         apiKey: this.providerConfig.apiKey,
         baseURL: this.providerConfig.baseURL,
+        timeout: EMBEDDING_TIMEOUT_MS,
+        maxRetries: EMBEDDING_MAX_RETRIES,
       });
     }
 

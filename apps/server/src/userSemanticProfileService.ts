@@ -21,7 +21,8 @@ function toIsoString(value: Date | string | null | undefined): string | null {
   }
 
   if (value instanceof Date) {
-    return value.toISOString();
+    const time = value.getTime();
+    return Number.isNaN(time) ? null : value.toISOString();
   }
 
   const parsed = new Date(value);
@@ -103,6 +104,8 @@ export function buildSemanticProfileDocument(
 }
 
 export class UserSemanticProfileService {
+  // Best-effort coalescing is process-local only. If this pipeline needs
+  // cross-instance dedupe in the future, move this to a shared queue/lock.
   private pendingRecomputes = new Map<string, Promise<void>>();
   private queuedReasons = new Map<string, string>();
 

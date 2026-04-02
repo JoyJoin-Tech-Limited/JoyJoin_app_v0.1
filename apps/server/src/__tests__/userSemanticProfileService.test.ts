@@ -203,4 +203,19 @@ describe('userSemanticProfileService', () => {
       versionVector,
     } as any, versionVector)).toBe(true);
   });
+
+  it('treats invalid dates in the version vector as null instead of throwing', () => {
+    const invalidDate = new Date('not-a-date');
+
+    const versionVector = buildSemanticProfileVersionVector(
+      { updatedAt: invalidDate } as any,
+      { updatedAt: invalidDate } as any,
+    );
+
+    expect(versionVector).toEqual({
+      profileUpdatedAt: null,
+      interestsUpdatedAt: null,
+      generatorVersion: SEMANTIC_PROFILE_GENERATOR_VERSION,
+    });
+  });
 });
