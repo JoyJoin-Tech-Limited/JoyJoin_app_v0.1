@@ -15,6 +15,13 @@ import { llmReasoner, type LLMReasonerResult, getTelemetryLogs } from './llmReas
 import { stateManager } from './stateManager';
 import { matchIndustryFromText } from './industryOntology';
 import { asyncInferenceQueue, type AsyncInferenceStatus } from './asyncInferenceQueue';
+import {
+  buildShadowFallbackCandidates,
+  getLLMFallbackInferenceMode,
+  getShadowFallbackLogs,
+  runShadowLLMFallbackInference,
+} from './llmFallbackInference';
+import { logger } from '../lib/logger';
 
 export interface InferenceEngineResult {
   extracted: Record<string, ExtractedValue>;
@@ -32,6 +39,24 @@ export interface InferenceEngineResult {
     asyncMode?: boolean;
     usedPreviousAsyncResult?: boolean;
     asyncInferenceTriggered?: boolean;
+    shadowLLMFallback?: {
+      mode: 'shadow' | 'disabled';
+      triggered: boolean;
+      scheduled: boolean;
+      totalLatencyMs: number;
+      scheduledDimensions?: string[];
+      calls: Array<{
+        dimension: string;
+        provider: string | null;
+        success: boolean;
+        confidence: number;
+        inferredAttributes: string[];
+        reasoning?: string;
+        latencyMs: number;
+        estimatedCostUsd: number;
+        liveCallAttempted?: boolean;
+      }>;
+    };
   };
 }
 
@@ -137,6 +162,30 @@ export class InferenceEngine {
       currentState
     );
     
+    const shadowFallbackMode = getLLMFallbackInferenceMode();
+    const shadowFallbackCandidates = buildShadowFallbackCandidates({
+      conversationHistory,
+      currentState: reconciledResult.newState,
+      matcherConfidence: matcherResult.confidence,
+    });
+    const shadowFallbackScheduled =
+      shadowFallbackMode === 'shadow' && shadowFallbackCandidates.length > 0;
+
+    if (shadowFallbackScheduled) {
+      void runShadowLLMFallbackInference({
+        userMessage,
+        conversationHistory,
+        currentState: reconciledResult.newState,
+        matcherConfidence: matcherResult.confidence,
+        sessionId,
+        timeoutMs: this.config.maxLLMLatencyMs,
+      }).catch((error) => {
+        logger.error('Shadow LLM fallback inference failed', {
+          session_id: sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
     const totalLatencyMs = Date.now() - startTime;
     
     const result: InferenceEngineResult = {
@@ -149,7 +198,17 @@ export class InferenceEngine {
         totalLatencyMs,
         asyncMode,
         usedPreviousAsyncResult,
-        asyncInferenceTriggered
+        asyncInferenceTriggered,
+        shadowLLMFallback: {
+          mode: shadowFallbackMode,
+          triggered: false,
+          scheduled: shadowFallbackScheduled,
+          totalLatencyMs: 0,
+          scheduledDimensions: shadowFallbackScheduled
+            ? shadowFallbackCandidates.map((candidate) => candidate.dimension)
+            : [],
+          calls: [],
+        },
       }
     };
     
@@ -336,7 +395,8 @@ export function generateXiaoyueContext(state: UserAttributeMap): string {
 export function getInferenceTelemetry() {
   return {
     llmTelemetry: getTelemetryLogs(),
-    inferenceLogs: inferenceEngine.getLogs()
+    inferenceLogs: inferenceEngine.getLogs(),
+    shadowLLMFallbackLogs: getShadowFallbackLogs(),
   };
 }
 
