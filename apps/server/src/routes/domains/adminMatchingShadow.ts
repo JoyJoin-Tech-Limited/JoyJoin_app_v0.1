@@ -1,0 +1,63 @@
+import type { Express } from "express";
+import { z } from "zod";
+import { requireAdmin } from "../../adminAuth";
+import { matchEventPool } from "../../poolMatchingService";
+import { buildMatchingShadowExperiment } from "../../matchingShadowService";
+import {
+  createMatchingShadowExperiment,
+  getOutcomeCalibrationSnapshot,
+  listMatchingShadowExperiments,
+} from "../../repositories/matchingShadowExperimentsRepo";
+
+const runMatchingShadowSchema = z.object({
+  poolId: z.string().min(1),
+});
+
+export function registerAdminMatchingShadowRoutes(app: Express): void {
+  app.get("/api/admin/matching-shadow-experiments", requireAdmin, async (req: any, res) => {
+    try {
+      const poolId = typeof req.query.poolId === "string" ? req.query.poolId : undefined;
+      const parsedLimit = Number.parseInt(String(req.query.limit ?? "10"), 10);
+      const limit = Number.isFinite(parsedLimit) ? parsedLimit : 10;
+
+      const experiments = await listMatchingShadowExperiments({ poolId, limit });
+      res.json(experiments);
+    } catch (error: any) {
+      console.error("Error fetching matching shadow experiments:", error);
+      res.status(500).json({ message: "Failed to fetch matching shadow experiments" });
+    }
+  });
+
+  app.post("/api/admin/matching-shadow-experiments", requireAdmin, async (req: any, res) => {
+    try {
+      const { poolId } = runMatchingShadowSchema.parse(req.body);
+      const groups = await matchEventPool(poolId);
+      const calibration = await getOutcomeCalibrationSnapshot();
+      const experiment = buildMatchingShadowExperiment(groups, calibration);
+
+      const created = await createMatchingShadowExperiment({
+        poolId,
+        mode: experiment.mode,
+        modelVersion: experiment.modelVersion,
+        deterministicGroupCount: experiment.summary.deterministicGroupCount,
+        deterministicAverageScore: experiment.summary.deterministicAverageScore,
+        outcomeSampleCount: experiment.summary.outcomeValidation.sampleCount,
+        outcomePositiveRate: experiment.summary.outcomeValidation.positiveRate.toFixed(4),
+        averageConfidence: experiment.summary.averageConfidence.toFixed(4),
+        rankAgreementRate: experiment.summary.rankAgreementRate.toFixed(4),
+        averageScoreDelta: experiment.summary.averageScoreDelta,
+        results: experiment.results,
+        summary: experiment.summary,
+        createdBy: req.adminAccount?.id ?? null,
+      });
+
+      res.status(201).json(created);
+    } catch (error: any) {
+      console.error("Error running matching shadow experiment:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid shadow experiment request", issues: error.issues });
+      }
+      res.status(500).json({ message: error.message || "Failed to run matching shadow experiment" });
+    }
+  });
+}
