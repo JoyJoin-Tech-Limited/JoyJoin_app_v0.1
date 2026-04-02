@@ -100,15 +100,24 @@ export default function PoolGroupDetailPage() {
   };
 
   const handleNavigation = () => {
+    const locationHint = [group.venueName, group.venueAddress, pool.city, pool.district].filter(Boolean).join(' ');
+
     if (group.venueName && group.venueAddress) {
       const venueName = encodeURIComponent(group.venueName);
-      
-      // 深圳使用高德地图，香港使用Google Maps
-      if (pool.city === '深圳') {
-        window.open(`https://uri.amap.com/marker?name=${venueName}&address=${encodeURIComponent(group.venueAddress)}`, '_blank');
-      } else {
-        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(group.venueAddress)}`, '_blank');
-      }
+      window.open(
+        `https://uri.amap.com/marker?name=${venueName}&address=${encodeURIComponent(group.venueAddress)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      return;
+    }
+
+    if (locationHint) {
+      window.open(
+        `https://uri.amap.com/search?query=${encodeURIComponent(locationHint)}&city=${encodeURIComponent(pool.city)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
     }
   };
 
