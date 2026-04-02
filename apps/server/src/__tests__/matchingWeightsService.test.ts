@@ -176,6 +176,23 @@ describe('matchingWeightsService shadow recommendations', () => {
     expect(mockState.updateCalls).toBe(0);
   });
 
+  it('does not penalize dimensions that have no outcome signal data', () => {
+    const recommendation = buildShadowRecommendation(mockState.activeConfig, {
+      eventId: 'event-3',
+      feedbackId: 'feedback-3',
+      atmosphereScore: 2,
+    });
+
+    expect(recommendation).not.toBeNull();
+    expect(recommendation?.signalCoverage).toBeLessThan(1);
+    expect(recommendation?.dimensionMetrics.personality.hasSignal).toBe(false);
+    expect(recommendation?.dimensionMetrics.personality.score).toBeNull();
+    expect(recommendation?.dimensionMetrics.personality.posteriorAlpha).toBe(mockState.activeConfig.personalityAlpha);
+    expect(recommendation?.dimensionMetrics.personality.posteriorBeta).toBe(mockState.activeConfig.personalityBeta);
+    expect(recommendation?.dimensionMetrics.culture.hasSignal).toBe(true);
+    expect(recommendation?.dimensionMetrics.culture.posteriorBeta).toBeGreaterThan(mockState.activeConfig.cultureBeta);
+  });
+
   it('returns only shadow recommendation history for admin inspection', async () => {
     mockState.historyRows = [
       { id: 'shadow-1', changeReason: SHADOW_RECOMMENDATION_REASON, recordedAt: new Date().toISOString() },

@@ -55,7 +55,8 @@ export interface ShadowOutcomeSignals {
 
 export interface ShadowDimensionRecommendationMetric {
   dimension: MatchingDimension;
-  score: number;
+  score: number | null;
+  hasSignal: boolean;
   priorAlpha: number;
   priorBeta: number;
   posteriorAlpha: number;
@@ -325,14 +326,18 @@ export function buildShadowRecommendation(
   for (const dimension of DIMENSIONS) {
     const priorAlpha = Number(config[dimension.alphaField] ?? 1) || 1;
     const priorBeta = Number(config[dimension.betaField] ?? 1) || 1;
-    const score = clamp(dimensionScores[dimension.key] ?? 50, 0, 100);
-    const posteriorAlpha = priorAlpha + (isSuccessfulOutcome && score >= 60 ? 1 : 0);
-    const posteriorBeta = priorBeta + (!isSuccessfulOutcome && score < 60 ? 1 : 0);
+    const rawScore = dimensionScores[dimension.key];
+    const hasSignal = typeof rawScore === 'number' && Number.isFinite(rawScore);
+    const score = hasSignal ? clamp(rawScore, 0, 100) : null;
+    const scoredSignal = score ?? 0;
+    const posteriorAlpha = priorAlpha + (hasSignal && isSuccessfulOutcome && scoredSignal >= 60 ? 1 : 0);
+    const posteriorBeta = priorBeta + (hasSignal && !isSuccessfulOutcome && scoredSignal < 60 ? 1 : 0);
     const posteriorMean = posteriorAlpha / (posteriorAlpha + posteriorBeta);
 
     posteriorMeans[dimension.key] = posteriorMean;
     dimensionMetrics[dimension.key] = {
       dimension: dimension.key,
+      hasSignal,
       score,
       priorAlpha,
       priorBeta,
