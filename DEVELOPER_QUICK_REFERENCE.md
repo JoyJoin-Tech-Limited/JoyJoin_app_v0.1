@@ -807,10 +807,10 @@ Stage 2: AI Matching
 
 ### Matching Algorithm Formula
 
-#### Pair Compatibility Score (6 Dimensions)
+#### Pair Compatibility Score (6D default / 7D feature-flagged)
 
 ```typescript
-// ✅ ACTIVE weights (poolMatchingService.ts)
+// Default path (ENABLE_SEMANTIC_SIMILARITY=false) — 6 dimensions
 pairScore =
   chemistry           × 0.28 +   // 性格化学反应 — archetype chemistry matrix
   interest            × 0.28 +   // 兴趣重叠度  — heat-weighted Jaccard (user_interests table)
@@ -818,7 +818,22 @@ pairScore =
   backgroundDiversity × 0.15 +   // 背景多样性  — industry + gender diversity
   preference          × 0.05 +   // 活动偏好    — event intent / bar preferences (light signal)
   language            × 0.04;    // 语言沟通    — common languages (light signal)
+
+// Flagged path (ENABLE_SEMANTIC_SIMILARITY=true) — 7 dimensions
+pairScore =
+  chemistry           × 0.26 +   // 性格化学反应
+  interest            × 0.26 +   // 兴趣重叠度
+  socialAffinity      × 0.19 +   // 社交同频度
+  backgroundDiversity × 0.14 +   // 背景多样性
+  preference          × 0.05 +   // 活动偏好
+  language            × 0.04 +   // 语言沟通
+  semanticSimilarity  × 0.06;    // 语义相似度 — hash-embedding cosine similarity (bounded 35–100)
 ```
+
+**Semantic similarity:** Built from `archetype`, `workMode`, `educationLevel`, `industryNiche`,
+`preferredLanguages`, `eventIntent`, bar preferences, and top-10 interest topics with heat weighting.
+Reads `user_interests` only — `user_interest_signals` is **never** used in pair scoring.
+See `apps/server/src/matchingSemantic.ts` for the full implementation.
 
 **Note — Language (4%):** 普通话覆盖率高，区分力有限，保留为轻量兼容信号。  
 **Note — Preference (5%):** 目前酒吧/饭店场景分化有限，保留为轻量场景适配信号。
