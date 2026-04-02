@@ -8,6 +8,7 @@ import {
   matchingWeightsConfig,
   matchingWeightsHistory,
   type MatchingWeightsConfig,
+  type MatchingWeightsHistory,
 } from '@shared/schema';
 import { desc, eq } from 'drizzle-orm';
 
@@ -47,8 +48,16 @@ const ADAPTIVE_ROLLBACK_REASON = 'adaptive_rollback';
 const MATCHES_PER_RECALCULATION = 50;
 const MAX_WEIGHT_MOVEMENT_PERCENT = 3;
 const CACHE_TTL_MS = 60000;
+const STORED_WEIGHT_RATIO_THRESHOLD = 1;
 
 type WeightKey = keyof MatchingWeights;
+type FeedbackDimensionKey =
+  | 'personality'
+  | 'interests'
+  | 'intent'
+  | 'background'
+  | 'culture'
+  | 'conversationSignature';
 
 const WEIGHT_KEYS: WeightKey[] = [
   'personalityWeight',
@@ -79,7 +88,11 @@ function parseWeightValue(value: unknown, fallbackPercent: number): number {
     return fallbackPercent;
   }
 
-  return Math.abs(parsed) <= 1 ? parsed * 100 : parsed;
+  // Existing rows are mixed: legacy/default inserts store ratios like `0.23`,
+  // while some callers may already persist expanded percentages like `23`.
+  // Values up to and including `1` therefore represent ratios and are scaled
+  // back into runtime percentages; larger values are treated as percentages.
+  return Math.abs(parsed) <= STORED_WEIGHT_RATIO_THRESHOLD ? parsed * 100 : parsed;
 }
 
 function normalizeRuntimeWeights(weights: MatchingWeights): MatchingWeights {
@@ -197,27 +210,23 @@ export class MatchingWeightsService {
         updatedAt: new Date(),
       };
 
-      const dimensions = [
+      const dimensions: FeedbackDimensionKey[] = [
         'personality',
         'interests',
         'intent',
         'background',
         'culture',
         'conversationSignature',
-      ] as const;
+      ];
 
       for (const dimension of dimensions) {
-        const alphaKey = `${dimension}Alpha` as keyof typeof config;
-        const betaKey = `${dimension}Beta` as keyof typeof config;
         const score = dimensionScores[dimension] || 50;
         const highScore = score >= 60;
 
         if (isSuccess && highScore) {
-          (updates as Record<string, unknown>)[alphaKey as string] =
-            ((config[alphaKey] as number) || 1) + 1;
+          this.incrementBanditCounter(updates, config, dimension, true);
         } else if (!isSuccess && !highScore) {
-          (updates as Record<string, unknown>)[betaKey as string] =
-            ((config[betaKey] as number) || 1) + 1;
+          this.incrementBanditCounter(updates, config, dimension, false);
         }
       }
 
@@ -234,7 +243,7 @@ export class MatchingWeightsService {
     }
   }
 
-  async getWeightsHistory(limit = 30): Promise<any[]> {
+  async getWeightsHistory(limit = 30): Promise<MatchingWeightsHistory[]> {
     try {
       return await db
         .select()
@@ -419,6 +428,58 @@ export class MatchingWeightsService {
     return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   }
 
+  private incrementBanditCounter(
+    updates: Partial<MatchingWeightsConfig>,
+    config: MatchingWeightsConfig,
+    dimension: FeedbackDimensionKey,
+    incrementAlpha: boolean,
+  ): void {
+    switch (dimension) {
+      case 'personality':
+        if (incrementAlpha) {
+          updates.personalityAlpha = (config.personalityAlpha || 1) + 1;
+        } else {
+          updates.personalityBeta = (config.personalityBeta || 1) + 1;
+        }
+        return;
+      case 'interests':
+        if (incrementAlpha) {
+          updates.interestsAlpha = (config.interestsAlpha || 1) + 1;
+        } else {
+          updates.interestsBeta = (config.interestsBeta || 1) + 1;
+        }
+        return;
+      case 'intent':
+        if (incrementAlpha) {
+          updates.intentAlpha = (config.intentAlpha || 1) + 1;
+        } else {
+          updates.intentBeta = (config.intentBeta || 1) + 1;
+        }
+        return;
+      case 'background':
+        if (incrementAlpha) {
+          updates.backgroundAlpha = (config.backgroundAlpha || 1) + 1;
+        } else {
+          updates.backgroundBeta = (config.backgroundBeta || 1) + 1;
+        }
+        return;
+      case 'culture':
+        if (incrementAlpha) {
+          updates.cultureAlpha = (config.cultureAlpha || 1) + 1;
+        } else {
+          updates.cultureBeta = (config.cultureBeta || 1) + 1;
+        }
+        return;
+      case 'conversationSignature':
+        if (incrementAlpha) {
+          updates.conversationSignatureAlpha = (config.conversationSignatureAlpha || 1) + 1;
+        } else {
+          updates.conversationSignatureBeta = (config.conversationSignatureBeta || 1) + 1;
+        }
+        return;
+    }
+  }
+
   private async ensureDefaultConfig(): Promise<MatchingWeightsConfig> {
     const existing = await this.getConfigByName(DEFAULT_CONFIG_NAME);
     if (existing) {
@@ -460,7 +521,7 @@ export class MatchingWeightsService {
     return created;
   }
 
-  private async getAdaptiveHistory(limit: number): Promise<any[]> {
+  private async getAdaptiveHistory(limit: number): Promise<MatchingWeightsHistory[]> {
     const adaptiveConfig = await this.getConfigByName(ADAPTIVE_CONFIG_NAME);
     if (!adaptiveConfig) {
       return [];

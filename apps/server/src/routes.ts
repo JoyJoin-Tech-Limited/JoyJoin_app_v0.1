@@ -84,6 +84,16 @@ function getActingAdminId(req: any): string {
   return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
 }
 
+function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
+  for (const value of values) {
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!body) return {};
 
@@ -9657,7 +9667,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         adminId: getActingAdminId(req),
         adminRole: req.adminRole,
         targetEntityType: 'matching_weights_config',
-        targetEntityId: after.activeConfigId ?? before.activeConfigId ?? undefined,
+        targetEntityId: firstNonEmptyString(after.activeConfigId, before.activeConfigId),
         before: {
           adaptiveWeightsEnabled: before.adaptiveWeightsEnabled,
           liveConfigName: before.liveConfigName,
@@ -9697,7 +9707,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         adminId: getActingAdminId(req),
         adminRole: req.adminRole,
         targetEntityType: 'matching_weights_config',
-        targetEntityId: after.activeConfigId ?? before.activeConfigId ?? undefined,
+        targetEntityId: firstNonEmptyString(after.activeConfigId, before.activeConfigId),
         before: {
           liveConfigName: before.liveConfigName,
           activeWeights: before.activeWeights,
