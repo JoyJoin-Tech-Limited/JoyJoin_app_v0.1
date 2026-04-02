@@ -125,7 +125,15 @@ const WARNING_LABELS: Record<WarningLevel, { label: string; className: string }>
 const CHART_COLORS = ["#7c3aed", "#06b6d4", "#f97316", "#22c55e", "#ec4899", "#6366f1"];
 
 function percent(value: number): string {
-  return `${(value * 100).toFixed(0)}%`;
+  return `${(Math.min(Math.max(value, 0), 1) * 100).toFixed(0)}%`;
+}
+
+function clampCoverage(numerator: number, denominator: number): number {
+  if (denominator <= 0) {
+    return 0;
+  }
+
+  return Math.min(1, numerator / denominator);
 }
 
 function downloadCsv(rows: OutcomeAnalyticsCohort[]) {
@@ -264,27 +272,27 @@ export default function AdminOutcomeAnalyticsPage() {
       {
         label: "完整报名",
         count: totals.completeSubmissions,
-        coverageRate: totals.completeSubmissions / submissions,
+        coverageRate: clampCoverage(totals.completeSubmissions, submissions),
       },
       {
         label: "氛围评分",
         count: totals.atmosphere,
-        coverageRate: totals.atmosphere / sampleUsers,
+        coverageRate: clampCoverage(totals.atmosphere, sampleUsers),
       },
       {
         label: "连接结果",
         count: totals.connection,
-        coverageRate: totals.connection / sampleUsers,
+        coverageRate: clampCoverage(totals.connection, sampleUsers),
       },
       {
         label: "深度反馈",
         count: totals.deep,
-        coverageRate: totals.deep / sampleUsers,
+        coverageRate: clampCoverage(totals.deep, sampleUsers),
       },
       {
         label: "触发器效果",
         count: totals.trigger,
-        coverageRate: totals.trigger / sampleUsers,
+        coverageRate: clampCoverage(totals.trigger, sampleUsers),
       },
     ];
   }, [filteredCohorts]);
