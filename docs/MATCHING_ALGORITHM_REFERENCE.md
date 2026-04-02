@@ -188,17 +188,32 @@ If top-2 scores are within a close gap, `breakTie()` uses secondary differentiat
 **File:** `apps/server/src/poolMatchingService.ts`  
 **Function:** `calculatePairScore(user1, user2): Promise<number>`
 
-### 3.1 Active Weights (6 Dimensions)
+### 3.1 Active Weights (Feature-Flagged 6D / 7D)
 
 ```typescript
+// Default (ENABLE_SEMANTIC_SIMILARITY=false)
 pairScore =
-  chemistry           × 0.28 +   // 性格化学反应
-  interest            × 0.28 +   // 兴趣重叠度
-  socialAffinity      × 0.20 +   // 社交同频度
-  backgroundDiversity × 0.15 +   // 背景多样性
-  preference          × 0.05 +   // 活动偏好
-  language            × 0.04;    // 语言沟通
+  chemistry           × 0.28 +
+  interest            × 0.28 +
+  socialAffinity      × 0.20 +
+  backgroundDiversity × 0.15 +
+  preference          × 0.05 +
+  language            × 0.04;
+
+// Flagged rollout (ENABLE_SEMANTIC_SIMILARITY=true)
+pairScore =
+  chemistry           × 0.26 +
+  interest            × 0.26 +
+  socialAffinity      × 0.19 +
+  backgroundDiversity × 0.14 +
+  preference          × 0.05 +
+  language            × 0.04 +
+  semanticSimilarity  × 0.06;
 ```
+
+`semanticSimilarity` is a bounded, cached semantic-profile score built from existing deterministic
+profile fields plus `user_interests` topic/heat data. It is rollout-gated so the disabled path
+preserves the exact legacy 6-dimensional formula.
 
 ### 3.2 Dimension Detail
 
