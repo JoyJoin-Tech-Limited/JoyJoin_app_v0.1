@@ -5,12 +5,7 @@ import {
   matchingShadowExperiments,
   type InsertMatchingShadowExperiment,
 } from "@shared/schema";
-import { desc, eq } from "drizzle-orm";
-
-const POSITIVE_CONNECTION_STATUSES = new Set([
-  "已交换联系方式",
-  "有但还没联系",
-]);
+import { desc, eq, sql } from "drizzle-orm";
 
 export type OutcomeCalibrationSnapshot = {
   sampleCount: number;
@@ -18,22 +13,22 @@ export type OutcomeCalibrationSnapshot = {
   avgAtmosphereScore: number | null;
 };
 
-type OutcomeFeedbackRow = {
-  atmosphereScore: number | null;
-  wouldAttendAgain: boolean | null;
-  connectionStatus: string | null;
-};
-
 export async function getOutcomeCalibrationSnapshot(): Promise<OutcomeCalibrationSnapshot> {
-  const feedbackRows: OutcomeFeedbackRow[] = await db
+  const positiveFeedbackPredicate = sql`
+    coalesce(${eventFeedback.atmosphereScore}, 0) >= 4
+    or ${eventFeedback.wouldAttendAgain} = true
+    or ${eventFeedback.connectionStatus} in ('已交换联系方式', '有但还没联系')
+  `;
+
+  const [aggregateRow] = await db
     .select({
-      atmosphereScore: eventFeedback.atmosphereScore,
-      wouldAttendAgain: eventFeedback.wouldAttendAgain,
-      connectionStatus: eventFeedback.connectionStatus,
+      sampleCount: sql<number>`count(*)::int`,
+      positiveCount: sql<number>`count(*) filter (where ${positiveFeedbackPredicate})::int`,
+      avgAtmosphereScore: sql<string | null>`avg(${eventFeedback.atmosphereScore})::text`,
     })
     .from(eventFeedback);
 
-  if (feedbackRows.length === 0) {
+  if (!aggregateRow || aggregateRow.sampleCount === 0) {
     return {
       sampleCount: 0,
       positiveRate: 0,
@@ -41,27 +36,13 @@ export async function getOutcomeCalibrationSnapshot(): Promise<OutcomeCalibratio
     };
   }
 
-  const positiveCount = feedbackRows.filter((row: OutcomeFeedbackRow) => {
-    const atmospherePositive = (row.atmosphereScore ?? 0) >= 4;
-    const wouldAttendAgainPositive = row.wouldAttendAgain === true;
-    const connectionPositive = row.connectionStatus
-      ? POSITIVE_CONNECTION_STATUSES.has(row.connectionStatus)
-      : false;
-
-    return atmospherePositive || wouldAttendAgainPositive || connectionPositive;
-  }).length;
-
-  const atmosphereRows = feedbackRows
-    .map((row: OutcomeFeedbackRow) => row.atmosphereScore)
-    .filter((score: number | null): score is number => typeof score === "number");
-
-  const avgAtmosphereScore = atmosphereRows.length > 0
-    ? atmosphereRows.reduce((sum: number, score: number) => sum + score, 0) / atmosphereRows.length
-    : null;
+  const avgAtmosphereScore = aggregateRow.avgAtmosphereScore === null
+    ? null
+    : Number.parseFloat(aggregateRow.avgAtmosphereScore);
 
   return {
-    sampleCount: feedbackRows.length,
-    positiveRate: positiveCount / feedbackRows.length,
+    sampleCount: aggregateRow.sampleCount,
+    positiveRate: aggregateRow.positiveCount / aggregateRow.sampleCount,
     avgAtmosphereScore,
   };
 }
@@ -97,7 +78,6 @@ export async function listMatchingShadowExperiments(options?: {
       averageConfidence: matchingShadowExperiments.averageConfidence,
       rankAgreementRate: matchingShadowExperiments.rankAgreementRate,
       averageScoreDelta: matchingShadowExperiments.averageScoreDelta,
-      results: matchingShadowExperiments.results,
       summary: matchingShadowExperiments.summary,
       createdBy: matchingShadowExperiments.createdBy,
       createdAt: matchingShadowExperiments.createdAt,
@@ -112,4 +92,32 @@ export async function listMatchingShadowExperiments(options?: {
   return query
     .orderBy(desc(matchingShadowExperiments.createdAt))
     .limit(limit);
+}
+
+export async function getMatchingShadowExperimentById(id: string) {
+  const [experiment] = await db
+    .select({
+      id: matchingShadowExperiments.id,
+      poolId: matchingShadowExperiments.poolId,
+      poolTitle: eventPools.title,
+      mode: matchingShadowExperiments.mode,
+      modelVersion: matchingShadowExperiments.modelVersion,
+      deterministicGroupCount: matchingShadowExperiments.deterministicGroupCount,
+      deterministicAverageScore: matchingShadowExperiments.deterministicAverageScore,
+      outcomeSampleCount: matchingShadowExperiments.outcomeSampleCount,
+      outcomePositiveRate: matchingShadowExperiments.outcomePositiveRate,
+      averageConfidence: matchingShadowExperiments.averageConfidence,
+      rankAgreementRate: matchingShadowExperiments.rankAgreementRate,
+      averageScoreDelta: matchingShadowExperiments.averageScoreDelta,
+      results: matchingShadowExperiments.results,
+      summary: matchingShadowExperiments.summary,
+      createdBy: matchingShadowExperiments.createdBy,
+      createdAt: matchingShadowExperiments.createdAt,
+    })
+    .from(matchingShadowExperiments)
+    .leftJoin(eventPools, eq(eventPools.id, matchingShadowExperiments.poolId))
+    .where(eq(matchingShadowExperiments.id, id))
+    .limit(1);
+
+  return experiment ?? null;
 }

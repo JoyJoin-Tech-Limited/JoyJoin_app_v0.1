@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS "matching_shadow_experiments" (
   "average_score_delta" integer DEFAULT 0,
   "results" jsonb NOT NULL,
   "summary" jsonb NOT NULL,
-  "created_by" varchar REFERENCES "users"("id"),
+  "created_by" varchar,
   "created_at" timestamp DEFAULT now()
 );
 

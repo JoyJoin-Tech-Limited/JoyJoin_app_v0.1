@@ -1701,7 +1701,7 @@ export const matchingShadowExperiments = pgTable("matching_shadow_experiments", 
   averageScoreDelta: integer("average_score_delta").default(0),
   results: jsonb("results").notNull().$type<MatchingShadowComparison[]>(),
   summary: jsonb("summary").notNull().$type<MatchingShadowSummary>(),
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: varchar("created_by"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_matching_shadow_experiments_pool").on(table.poolId),

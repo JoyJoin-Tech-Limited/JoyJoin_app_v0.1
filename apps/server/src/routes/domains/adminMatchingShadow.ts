@@ -3,8 +3,10 @@ import { z } from "zod";
 import { requireAdmin } from "../../adminAuth";
 import { matchEventPool } from "../../poolMatchingService";
 import { buildMatchingShadowExperiment } from "../../matchingShadowService";
+import { classifyShadowExperimentError } from "./matchingShadowErrors";
 import {
   createMatchingShadowExperiment,
+  getMatchingShadowExperimentById,
   getOutcomeCalibrationSnapshot,
   listMatchingShadowExperiments,
 } from "../../repositories/matchingShadowExperimentsRepo";
@@ -25,6 +27,20 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
     } catch (error: any) {
       console.error("Error fetching matching shadow experiments:", error);
       res.status(500).json({ message: "Failed to fetch matching shadow experiments" });
+    }
+  });
+
+  app.get("/api/admin/matching-shadow-experiments/:id", requireAdmin, async (req, res) => {
+    try {
+      const experiment = await getMatchingShadowExperimentById(req.params.id);
+      if (!experiment) {
+        return res.status(404).json({ message: "Matching shadow experiment not found" });
+      }
+
+      res.json(experiment);
+    } catch (error: any) {
+      console.error("Error fetching matching shadow experiment detail:", error);
+      res.status(500).json({ message: "Failed to fetch matching shadow experiment" });
     }
   });
 
@@ -57,7 +73,9 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid shadow experiment request", issues: error.issues });
       }
-      res.status(500).json({ message: error.message || "Failed to run matching shadow experiment" });
+
+      const classified = classifyShadowExperimentError(error);
+      res.status(classified.status).json({ message: classified.message });
     }
   });
 }
