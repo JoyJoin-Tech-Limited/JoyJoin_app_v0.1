@@ -53,6 +53,12 @@ interface WeightsData {
     conversationSignatureWeight: number;
   };
   config: any;
+  rollout: {
+    adaptiveWeightsEnabled: boolean;
+    liveConfigName: string;
+    fallbackConfigName: string;
+    maxWeightMovementPercent: number;
+  };
 }
 
 interface GoldenDialogue {
@@ -115,6 +121,30 @@ export default function AdminEvolutionPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/triggers"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/golden-dialogues"] });
     toast({ title: "数据已刷新" });
+  };
+
+  const handleAdaptiveWeightsToggle = async (enabled: boolean) => {
+    try {
+      await apiRequest("POST", "/api/admin/evolution/weights/activation", { enabled });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights-history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
+      toast({ title: enabled ? "已启用自适应权重" : "已切回默认权重" });
+    } catch (error) {
+      toast({ title: enabled ? "启用失败" : "停用失败", variant: "destructive" });
+    }
+  };
+
+  const handleAdaptiveWeightsRollback = async () => {
+    try {
+      await apiRequest("POST", "/api/admin/evolution/weights/rollback");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights-history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
+      toast({ title: "已回滚上一版自适应权重" });
+    } catch (error) {
+      toast({ title: "回滚失败", variant: "destructive" });
+    }
   };
 
   const categories = [
@@ -242,6 +272,43 @@ export default function AdminEvolutionPage() {
                 </div>
               ) : weightsData?.weights ? (
                 <div className="space-y-4">
+                  <div
+                    className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+                    data-testid="adaptive-weights-controls"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={weightsData.rollout?.adaptiveWeightsEnabled ? "default" : "secondary"}>
+                          {weightsData.rollout?.adaptiveWeightsEnabled ? "自适应已启用" : "默认权重生效中"}
+                        </Badge>
+                        <Badge variant="outline">
+                          单次最大变动 ±{weightsData.rollout?.maxWeightMovementPercent ?? 0}pp
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        当前配置：{weightsData.rollout?.liveConfigName || "default"} · 关闭后立即回退到
+                        {" "}
+                        {weightsData.rollout?.fallbackConfigName || "default"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() => handleAdaptiveWeightsToggle(!weightsData.rollout?.adaptiveWeightsEnabled)}
+                        variant={weightsData.rollout?.adaptiveWeightsEnabled ? "destructive" : "default"}
+                        data-testid="button-toggle-adaptive-weights"
+                      >
+                        {weightsData.rollout?.adaptiveWeightsEnabled ? "立即停用（Kill Switch）" : "启用自适应权重"}
+                      </Button>
+                      <Button
+                        onClick={handleAdaptiveWeightsRollback}
+                        variant="outline"
+                        disabled={!weightsData.rollout?.adaptiveWeightsEnabled}
+                        data-testid="button-rollback-adaptive-weights"
+                      >
+                        回滚上一版
+                      </Button>
+                    </div>
+                  </div>
                   {[
                     { key: "personalityWeight", label: "人格匹配", color: "bg-purple-500" },
                     { key: "interestsWeight", label: "兴趣匹配", color: "bg-blue-500" },

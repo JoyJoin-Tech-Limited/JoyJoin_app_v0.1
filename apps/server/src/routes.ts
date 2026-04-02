@@ -9633,10 +9633,88 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { matchingWeightsService } = await import('./matchingWeightsService');
       const config = await matchingWeightsService.getActiveConfig();
       const weights = await matchingWeightsService.getActiveWeights();
-      res.json({ config, weights });
+      const rollout = await matchingWeightsService.getRolloutStatus();
+      res.json({ config, weights, rollout });
     } catch (error: any) {
       console.error('[Evolution API] Failed to get weights:', error);
       res.status(500).json({ message: 'Failed to get weights', error: error.message });
+    }
+  });
+
+  app.post('/api/admin/evolution/weights/activation', requireAdmin, async (req: any, res) => {
+    try {
+      const { enabled } = req.body ?? {};
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: 'enabled must be a boolean' });
+      }
+
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const before = await matchingWeightsService.getRolloutStatus();
+      const after = await matchingWeightsService.setAdaptiveWeightsEnabled(enabled);
+
+      logAdminAudit({
+        action: enabled ? 'MATCHING_WEIGHTS_ACTIVATED' : 'MATCHING_WEIGHTS_DISABLED',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'matching_weights_config',
+        targetEntityId: after.activeConfigId ?? before.activeConfigId ?? undefined,
+        before: {
+          adaptiveWeightsEnabled: before.adaptiveWeightsEnabled,
+          liveConfigName: before.liveConfigName,
+          activeWeights: before.activeWeights,
+        },
+        after: {
+          adaptiveWeightsEnabled: after.adaptiveWeightsEnabled,
+          liveConfigName: after.liveConfigName,
+          activeWeights: after.activeWeights,
+        },
+        context: {
+          maxWeightMovementPercent: after.maxWeightMovementPercent,
+          fallbackConfigName: after.fallbackConfigName,
+        },
+      });
+
+      return res.json(after);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to toggle adaptive weights:', error);
+      return res.status(500).json({ message: 'Failed to toggle adaptive weights', error: error.message });
+    }
+  });
+
+  app.post('/api/admin/evolution/weights/rollback', requireAdmin, async (req: any, res) => {
+    try {
+      const { matchingWeightsService } = await import('./matchingWeightsService');
+      const before = await matchingWeightsService.getRolloutStatus();
+
+      if (!before.adaptiveWeightsEnabled) {
+        return res.status(409).json({ message: 'Adaptive weights must be active before rollback' });
+      }
+
+      const after = await matchingWeightsService.rollbackAdaptiveWeights();
+
+      logAdminAudit({
+        action: 'MATCHING_WEIGHTS_ROLLED_BACK',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'matching_weights_config',
+        targetEntityId: after.activeConfigId ?? before.activeConfigId ?? undefined,
+        before: {
+          liveConfigName: before.liveConfigName,
+          activeWeights: before.activeWeights,
+        },
+        after: {
+          liveConfigName: after.liveConfigName,
+          activeWeights: after.activeWeights,
+        },
+        context: {
+          maxWeightMovementPercent: after.maxWeightMovementPercent,
+        },
+      });
+
+      return res.json(after);
+    } catch (error: any) {
+      console.error('[Evolution API] Failed to rollback adaptive weights:', error);
+      return res.status(500).json({ message: 'Failed to rollback adaptive weights', error: error.message });
     }
   });
 

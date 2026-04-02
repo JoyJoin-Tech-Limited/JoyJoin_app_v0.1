@@ -52,6 +52,10 @@ export const ADMIN_AUDIT_ACTIONS = [
   'EVENT_STATUS_CHANGED',
   // Event pool management
   'EVENT_POOL_STATUS_CHANGED',
+  // Matching weights rollout
+  'MATCHING_WEIGHTS_ACTIVATED',
+  'MATCHING_WEIGHTS_DISABLED',
+  'MATCHING_WEIGHTS_ROLLED_BACK',
   // Runtime fallback for malformed / untyped callers
   'OTHER',
 ] as const;
