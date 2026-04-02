@@ -3,6 +3,7 @@ import { buildMatchingShadowExperiment } from "./matchingShadowService";
 import type { OutcomeCalibrationSnapshot, PredictiveRerankOutcomeMetric } from "./repositories/matchingShadowExperimentsRepo";
 
 export type PredictiveExperimentArm = "control" | "treatment";
+export type PredictiveDecisionArm = PredictiveExperimentArm | null;
 
 type PredictiveRerankConfig = {
   predictiveRerankEnabled?: boolean | null;
@@ -16,7 +17,7 @@ type PredictiveRerankConfig = {
 };
 
 export type PredictiveRerankDecision = {
-  arm: PredictiveExperimentArm;
+  arm: PredictiveDecisionArm;
   applied: boolean;
   modelVersion: string | null;
   reason: string;
@@ -149,6 +150,7 @@ export function planPredictiveRerank(params: {
   const confidenceThreshold = clamp(config.predictiveRerankConfidenceThreshold ?? 70, 0, 100) / 100;
   const minShadowExperiments = Math.max(0, config.predictiveRerankMinShadowExperiments ?? 10);
   const configuredDisabledReason = config.predictiveRerankAutoDisabledReason ?? null;
+  const overrideForceEnabled = poolOverrideEnabled === true;
   const autoDisableAssessment = config.predictiveRerankAutoDisableEnabled
     ? assessAutoDisable(outcomeMetrics)
     : { autoDisabled: false, reason: null };
@@ -156,15 +158,15 @@ export function planPredictiveRerank(params: {
   let reason = "eligible";
   if (groups.length <= 1) {
     reason = "insufficient_groups";
-  } else if (!config.predictiveRerankEnabled) {
-    reason = "feature_flag_off";
   } else if (poolOverrideEnabled === false) {
     reason = "pool_override_disabled";
-  } else if (config.predictiveRerankAutoDisabledAt) {
+  } else if (!overrideForceEnabled && !config.predictiveRerankEnabled) {
+    reason = "feature_flag_off";
+  } else if (!overrideForceEnabled && config.predictiveRerankAutoDisabledAt) {
     reason = "previously_auto_disabled";
-  } else if (autoDisableAssessment.autoDisabled) {
+  } else if (!overrideForceEnabled && autoDisableAssessment.autoDisabled) {
     reason = "auto_disabled_by_regression_guard";
-  } else if (shadowPoolCount < minShadowExperiments) {
+  } else if (!overrideForceEnabled && shadowPoolCount < minShadowExperiments) {
     reason = "shadow_gate_not_met";
   }
 
@@ -226,8 +228,7 @@ export function planPredictiveRerank(params: {
   const eligibleGroupCount = experiment.results.filter((result) => result.confidence >= confidenceThreshold).length;
 
   return {
-    // Ineligible pools are reported as control so downstream reporting never treats gated-off runs as treatment.
-    arm: shouldApply ? assignedArm : "control",
+    arm: reason === "eligible" ? assignedArm : null,
     applied,
     modelVersion: experiment.modelVersion,
     reason,
