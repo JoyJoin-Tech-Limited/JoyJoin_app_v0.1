@@ -41,7 +41,7 @@ export interface IndustryClassificationResult {
   };
   confidence: number;
   reasoning?: string;
-  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy" | "exact";
+  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
   processingTimeMs: number;
   rawInput: string;           // original user input
   normalizedInput: string;    // AI-cleaned version
