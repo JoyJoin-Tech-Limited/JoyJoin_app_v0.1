@@ -83,6 +83,7 @@ function applyBoundedRerank(
   maxPositionShift: number,
   confidenceThreshold: number,
 ): string[] {
+  const targetIndexByKey = new Map(predictedOrderKeys.map((key, index) => [key, index]));
   const currentOrder = [...predictedOrderKeys].sort((a, b) => {
     const [aRank] = a.split(":");
     const [bRank] = b.split(":");
@@ -97,7 +98,10 @@ function applyBoundedRerank(
       continue;
     }
 
-    const targetIndex = predictedOrderKeys.indexOf(groupKey);
+    const targetIndex = targetIndexByKey.get(groupKey);
+    if (targetIndex === undefined) {
+      continue;
+    }
     let currentIndex = currentOrder.indexOf(groupKey);
 
     while (currentIndex > targetIndex) {
@@ -141,7 +145,7 @@ export function planPredictiveRerank(params: {
   } = params;
 
   const exposurePercent = clamp(config.predictiveRerankExposurePercent ?? 50, 0, 100);
-  const maxPositionShift = Math.max(0, config.predictiveRerankMaxPositionShift ?? 2);
+  const maxPositionShift = clamp(config.predictiveRerankMaxPositionShift ?? 2, 0, 2);
   const confidenceThreshold = clamp(config.predictiveRerankConfidenceThreshold ?? 70, 0, 100) / 100;
   const minShadowExperiments = Math.max(0, config.predictiveRerankMinShadowExperiments ?? 10);
   const configuredDisabledReason = config.predictiveRerankAutoDisabledReason ?? null;
@@ -187,8 +191,8 @@ export function planPredictiveRerank(params: {
     ]),
   );
 
-  const arm: PredictiveExperimentArm = stableBucket(poolId) < exposurePercent ? "treatment" : "control";
-  const shouldApply = reason === "eligible" && arm === "treatment";
+  const assignedArm: PredictiveExperimentArm = stableBucket(poolId) < exposurePercent ? "treatment" : "control";
+  const shouldApply = reason === "eligible" && assignedArm === "treatment";
   const finalOrderKeys = shouldApply
     ? applyBoundedRerank(predictedOrderKeys, confidenceByKey, maxPositionShift, confidenceThreshold)
     : [...predictedOrderKeys].sort((a, b) => {
@@ -198,7 +202,16 @@ export function planPredictiveRerank(params: {
       });
 
   const finalRankByKey = new Map(finalOrderKeys.map((key, index) => [key, index + 1]));
-  const reorderedGroups = finalOrderKeys.map((key) => groups[(Number.parseInt(key.split(":")[0], 10) || 1) - 1]);
+  const reorderedGroups = finalOrderKeys.map((key) => {
+    const [deterministicRankToken] = key.split(":");
+    const deterministicRank = Number.parseInt(deterministicRankToken, 10);
+    if (!Number.isFinite(deterministicRank) || deterministicRank < 1 || deterministicRank > groups.length) {
+      throw new Error(
+        `Invalid predictive rerank key: ${key}; parsed rank ${deterministicRankToken} is outside 1..${groups.length}`,
+      );
+    }
+    return groups[deterministicRank - 1];
+  });
   const audits = experiment.results.map((result) => {
     const key = keyByDeterministicRank.get(result.deterministicRank)!;
     return {
@@ -216,7 +229,8 @@ export function planPredictiveRerank(params: {
   const eligibleGroupCount = experiment.results.filter((result) => result.confidence >= confidenceThreshold).length;
 
   return {
-    arm: shouldApply ? arm : "control",
+    // Ineligible pools are reported as control so downstream reporting never treats gated-off runs as treatment.
+    arm: shouldApply ? assignedArm : "control",
     applied,
     modelVersion: experiment.modelVersion,
     reason,
@@ -229,7 +243,7 @@ export function planPredictiveRerank(params: {
       shadowPoolCount,
       eligibleGroupCount,
       movedGroupCount,
-      autoDisabled: Boolean(config.predictiveRerankAutoDisabledAt) || autoDisableAssessment.autoDisabled,
+      autoDisabled: reason === "previously_auto_disabled" || autoDisableAssessment.autoDisabled,
       autoDisabledReason: configuredDisabledReason ?? autoDisableAssessment.reason,
       outcomeMetrics,
     },

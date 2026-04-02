@@ -193,7 +193,7 @@ export async function scanPoolAndMatch(
   const pendingUsersCount = pendingRegistrations.length;
 
   // 3. 获取当前匹配配置
-  const config = await getActiveThresholds();
+  let config = await getActiveThresholds();
 
   // 4. 计算距离活动开始的小时数
   const now = new Date();
@@ -259,9 +259,7 @@ export async function scanPoolAndMatch(
       runtimeAutoDisableReason
     ) {
       await persistPredictiveRerankAutoDisable(runtimeAutoDisableReason);
-      config.predictiveRerankEnabled = false;
-      config.predictiveRerankAutoDisabledAt = new Date();
-      config.predictiveRerankAutoDisabledReason = runtimeAutoDisableReason;
+      config = await getActiveThresholds();
     }
 
     const predictiveDecision = planPredictiveRerank({
