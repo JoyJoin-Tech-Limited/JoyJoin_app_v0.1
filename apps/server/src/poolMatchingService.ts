@@ -644,12 +644,9 @@ async function calculatePairScore(
   user2: UserWithProfile,
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
-<<<<<<< copilot/add-semantic-similarity-dimension
   semanticProfileCache?: SemanticProfileCache,
   semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
-=======
   chemistryCalibrationMap?: ChemistryCalibrationMap,
->>>>>>> main
 ): Promise<number> {
   // Use a sorted key so (A,B) and (B,A) map to the same cache entry
   const sortedUserIds = user1.userId < user2.userId
@@ -702,12 +699,9 @@ async function calculateGroupPairScore(
   members: UserWithProfile[],
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
-<<<<<<< copilot/add-semantic-similarity-dimension
   semanticProfileCache?: SemanticProfileCache,
   semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
-=======
   chemistryCalibrationMap?: ChemistryCalibrationMap,
->>>>>>> main
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -721,12 +715,9 @@ async function calculateGroupPairScore(
         members[j],
         interestsCache,
         pairScoreCache,
-<<<<<<< copilot/add-semantic-similarity-dimension
         semanticProfileCache,
         semanticSimilarityEnabled,
-=======
         chemistryCalibrationMap,
->>>>>>> main
       );
       pairCount++;
     }
@@ -925,13 +916,10 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
 
   // 3.5 Preload user_interests for all eligible users in one batch query (C: runtime hardening)
   const interestsCache = await preloadUserInterests(eligibleUserIds);
-<<<<<<< copilot/add-semantic-similarity-dimension
   const semanticProfileCache = semanticSimilarityEnabled
     ? buildSemanticProfileCache(eligibleUsers, interestsCache)
     : undefined;
-=======
   const chemistryCalibrationMap = await getArchetypePairCalibrationMap();
->>>>>>> main
 
   // In-memory pair score cache for this run (C: avoid recomputing the same pair twice)
   const pairScoreCache = new Map<string, number>();
@@ -985,12 +973,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         user2,
         interestsCache,
         pairScoreCache,
-<<<<<<< copilot/add-semantic-similarity-dimension
         semanticProfileCache,
         semanticSimilarityEnabled,
-=======
         chemistryCalibrationMap,
->>>>>>> main
       );
       
       // Check if this pair has an invitation relationship
@@ -1041,12 +1026,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
             member,
             interestsCache,
             pairScoreCache,
-<<<<<<< copilot/add-semantic-similarity-dimension
             semanticProfileCache,
             semanticSimilarityEnabled,
-=======
             chemistryCalibrationMap,
->>>>>>> main
           );
         }
         const avgScore = totalScore / groupMembers.length;
@@ -1071,12 +1053,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         groupMembers,
         interestsCache,
         pairScoreCache,
-<<<<<<< copilot/add-semantic-similarity-dimension
         semanticProfileCache,
         semanticSimilarityEnabled,
-=======
         chemistryCalibrationMap,
->>>>>>> main
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);

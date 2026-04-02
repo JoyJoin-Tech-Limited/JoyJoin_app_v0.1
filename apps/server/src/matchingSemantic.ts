@@ -39,6 +39,8 @@ export type PairScoreWeights = {
 const HASH_DIMENSIONS = 64;
 const SEMANTIC_SCORE_MIN = 35;
 const SEMANTIC_SCORE_MAX = 100;
+const SEMANTIC_PROFILE_NEUTRAL_SCORE = 50;
+const SEMANTIC_PROFILE_PARTIAL_DATA_SCORE = 45;
 
 export const LEGACY_PAIR_SCORE_WEIGHTS: PairScoreWeights = {
   chemistry: 0.28,
@@ -199,16 +201,16 @@ export function calculateSemanticSimilarityScore(
   const profile2 = cache?.get(user2.userId);
 
   if (!profile1 && !profile2) {
-    return 50;
+    return SEMANTIC_PROFILE_NEUTRAL_SCORE;
   }
   if (!profile1 || !profile2) {
-    return 45;
+    return SEMANTIC_PROFILE_PARTIAL_DATA_SCORE;
   }
   if (profile1.featureCount === 0 && profile2.featureCount === 0) {
-    return 50;
+    return SEMANTIC_PROFILE_NEUTRAL_SCORE;
   }
   if (profile1.featureCount === 0 || profile2.featureCount === 0) {
-    return 45;
+    return SEMANTIC_PROFILE_PARTIAL_DATA_SCORE;
   }
 
   const similarity = cosineSimilarity(profile1.vector, profile2.vector);
