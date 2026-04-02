@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
+import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../inference/runtimeLLMFallback";
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -16,6 +17,13 @@ export function registerAdminRoutes(app: Express): void {
     res.json({
       apiKey,
       securityKey,
+    });
+  });
+
+  app.get('/api/admin/inference/runtime-fallback', requireAdmin, (_req, res) => {
+    res.json({
+      config: getRuntimeLLMFallbackConfig(),
+      stats: getRuntimeLLMFallbackStats(),
     });
   });
 }

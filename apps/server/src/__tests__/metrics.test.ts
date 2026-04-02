@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { metricsMiddleware, getMetricsText, _resetMetricsForTest } from '../middleware/metrics';
+import { metricsMiddleware, getMetricsText, _resetMetricsForTest, recordRuntimeLLMFallbackMetric } from '../middleware/metrics';
 import type { Request, Response } from 'express';
 import { EventEmitter } from 'events';
 
@@ -182,5 +182,16 @@ describe('metricsMiddleware', () => {
     expect(text).toContain('http_request_duration_ms_sum');
     expect(text).toContain('http_request_duration_ms_count');
     expect(text).toContain('le="+Inf"');
+  });
+
+  it('exposes runtime llm fallback counters for ops visibility', async () => {
+    recordRuntimeLLMFallbackMetric('occupation', 'applied');
+    recordRuntimeLLMFallbackMetric('occupation', 'rejected_low_confidence');
+
+    const text = await getMetricsText();
+    expect(text).toContain('inference_runtime_llm_fallback_total');
+    expect(text).toContain('field="occupation"');
+    expect(text).toContain('outcome="applied"');
+    expect(text).toContain('outcome="rejected_low_confidence"');
   });
 });
