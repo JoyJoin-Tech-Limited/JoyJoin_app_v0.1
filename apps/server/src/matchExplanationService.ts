@@ -268,6 +268,13 @@ function mergeProviders(...providers: AIProvider[]): AIProvider {
   return null;
 }
 
+function didComponentUseLLM(metadata: {
+  provider: AIProvider;
+  fallbackUsed: boolean;
+}): boolean {
+  return metadata.provider !== null || metadata.fallbackUsed === false;
+}
+
 // ============ 缓存函数 ============
 
 /**
@@ -874,6 +881,7 @@ export async function generateGroupAnalysis(
   let provider: AIProvider = null;
   let fallbackUsed = false;
   let promptVersion = GROUP_ANALYSIS_PROMPT_VERSION;
+  let llmOutputUsed = false;
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -891,6 +899,9 @@ export async function generateGroupAnalysis(
       fromCache = true;
       provider = mergeProviders(cachedExplanations.provider, cachedIceBreakers.provider);
       fallbackUsed = cachedExplanations.fallbackUsed || cachedIceBreakers.fallbackUsed;
+      llmOutputUsed =
+        didComponentUseLLM(cachedExplanations) ||
+        didComponentUseLLM(cachedIceBreakers);
     } else {
       // Cache miss, expired, or roster changed - regenerate in parallel
       const [pairExplanationResult, iceBreakerResult] = await Promise.all([
@@ -901,6 +912,15 @@ export async function generateGroupAnalysis(
       iceBreakers = iceBreakerResult.iceBreakers;
       provider = mergeProviders(pairExplanationResult.providerUsed, iceBreakerResult.providerUsed);
       fallbackUsed = pairExplanationResult.fallbackUsed || iceBreakerResult.fallbackUsed;
+      llmOutputUsed =
+        didComponentUseLLM({
+          provider: pairExplanationResult.providerUsed,
+          fallbackUsed: pairExplanationResult.fallbackUsed,
+        }) ||
+        didComponentUseLLM({
+          provider: iceBreakerResult.providerUsed,
+          fallbackUsed: iceBreakerResult.fallbackUsed,
+        });
       
       // Save to cache with roster metadata (fire and forget with error handling)
       savePairExplanationsCache(groupId, members, pairExplanations, {
@@ -928,6 +948,15 @@ export async function generateGroupAnalysis(
     iceBreakers = iceBreakerResult.iceBreakers;
     provider = mergeProviders(pairExplanationResult.providerUsed, iceBreakerResult.providerUsed);
     fallbackUsed = pairExplanationResult.fallbackUsed || iceBreakerResult.fallbackUsed;
+    llmOutputUsed =
+      didComponentUseLLM({
+        provider: pairExplanationResult.providerUsed,
+        fallbackUsed: pairExplanationResult.fallbackUsed,
+      }) ||
+      didComponentUseLLM({
+        provider: iceBreakerResult.providerUsed,
+        fallbackUsed: iceBreakerResult.fallbackUsed,
+      });
   }
 
   logAITrace({
@@ -935,7 +964,7 @@ export async function generateGroupAnalysis(
     feature: 'generateGroupAnalysis',
     provider,
     latencyMs: Date.now() - startedAt,
-    success: true,
+    success: llmOutputUsed,
     fallbackUsed,
     fromCache,
     promptVersion,

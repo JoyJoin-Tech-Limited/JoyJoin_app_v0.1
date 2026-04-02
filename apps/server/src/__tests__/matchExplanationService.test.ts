@@ -52,6 +52,10 @@ vi.mock('../ai/socialModelRouter', () => ({
   }),
 }));
 
+vi.mock('../lib/aiTraceLogger', () => ({
+  logAITrace: vi.fn(),
+}));
+
 import { 
   matchExplanationService,
   getPairExplanationForUser,
@@ -60,6 +64,7 @@ import {
 } from '../matchExplanationService';
 import { db } from '../db';
 import { getClientForFunction, getDeepseekSelection } from '../ai/socialModelRouter';
+import { logAITrace } from '../lib/aiTraceLogger';
 
 describe('matchExplanationService', () => {
   const defaultSingleLineResponse = {
@@ -637,6 +642,91 @@ describe('matchExplanationService', () => {
         '周末最喜欢的放松方式是什么？',
         '最近在追什么剧或者看什么书？',
       ]);
+    });
+
+    it('logs generateGroupAnalysis success=false when only deterministic fallback content is used', async () => {
+      vi.mocked(getClientForFunction).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('primary failed')),
+            },
+          },
+        } as any,
+        model: 'minimax-chat',
+        provider: 'minimax',
+      } as any);
+      vi.mocked(getDeepseekSelection).mockReturnValue({
+        client: {
+          chat: {
+            completions: {
+              create: vi.fn().mockRejectedValue(new Error('deepseek failed')),
+            },
+          },
+        } as any,
+        model: 'deepseek-chat',
+        provider: 'deepseek',
+      } as any);
+
+      await matchExplanationService.generateGroupAnalysis(
+        'group-deterministic-fallback',
+        [mockMember1, mockMember2],
+        '饭局',
+        false
+      );
+
+      expect(vi.mocked(logAITrace)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          feature: 'generateGroupAnalysis',
+          success: false,
+          provider: null,
+          fallbackUsed: true,
+          fromCache: false,
+        })
+      );
+    });
+
+    it('logs generateGroupAnalysis success=true for cached responses with unknown provider but no fallback', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: '缓存的配对解释',
+            chemistryScore: 80,
+            sharedInterests: ['美食'],
+            connectionPoints: ['同乡（深圳）'],
+          }],
+          provider: null,
+          fallbackUsed: false,
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: '2026-03-30T00:00:00.000Z',
+          topics: ['缓存破冰 1', '缓存破冰 2'],
+          provider: null,
+          fallbackUsed: false,
+        },
+      } as any);
+
+      await matchExplanationService.generateGroupAnalysis(
+        'group-cached-unknown-provider',
+        [mockMember1, mockMember2],
+        '饭局'
+      );
+
+      expect(vi.mocked(logAITrace)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          feature: 'generateGroupAnalysis',
+          success: true,
+          provider: null,
+          fallbackUsed: false,
+          fromCache: true,
+        })
+      );
     });
   });
 
