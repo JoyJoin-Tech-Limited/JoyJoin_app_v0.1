@@ -15,6 +15,7 @@ import { llmReasoner, type LLMReasonerResult, getTelemetryLogs } from './llmReas
 import { stateManager } from './stateManager';
 import { matchIndustryFromText } from './industryOntology';
 import { asyncInferenceQueue, type AsyncInferenceStatus } from './asyncInferenceQueue';
+import { getShadowFallbackLogs, runShadowLLMFallbackInference } from './llmFallbackInference';
 
 export interface InferenceEngineResult {
   extracted: Record<string, ExtractedValue>;
@@ -32,6 +33,21 @@ export interface InferenceEngineResult {
     asyncMode?: boolean;
     usedPreviousAsyncResult?: boolean;
     asyncInferenceTriggered?: boolean;
+    shadowLLMFallback?: {
+      mode: 'shadow' | 'disabled';
+      triggered: boolean;
+      totalLatencyMs: number;
+      calls: Array<{
+        dimension: string;
+        provider: string;
+        success: boolean;
+        confidence: number;
+        inferredAttributes: string[];
+        reasoning?: string;
+        latencyMs: number;
+        estimatedCostUsd: number;
+      }>;
+    };
   };
 }
 
@@ -137,6 +153,13 @@ export class InferenceEngine {
       currentState
     );
     
+    const shadowLLMFallback = await runShadowLLMFallbackInference({
+      userMessage,
+      conversationHistory,
+      currentState: reconciledResult.newState,
+      matcherConfidence: matcherResult.confidence,
+      sessionId,
+    });
     const totalLatencyMs = Date.now() - startTime;
     
     const result: InferenceEngineResult = {
@@ -149,7 +172,22 @@ export class InferenceEngine {
         totalLatencyMs,
         asyncMode,
         usedPreviousAsyncResult,
-        asyncInferenceTriggered
+        asyncInferenceTriggered,
+        shadowLLMFallback: {
+          mode: shadowLLMFallback.mode,
+          triggered: shadowLLMFallback.triggered,
+          totalLatencyMs: shadowLLMFallback.totalLatencyMs,
+          calls: shadowLLMFallback.calls.map((call) => ({
+            dimension: call.dimension,
+            provider: call.provider,
+            success: call.success,
+            confidence: call.confidence,
+            inferredAttributes: call.inferredAttributes,
+            reasoning: call.reasoning,
+            latencyMs: call.latencyMs,
+            estimatedCostUsd: call.estimatedCostUsd,
+          })),
+        },
       }
     };
     
@@ -336,7 +374,8 @@ export function generateXiaoyueContext(state: UserAttributeMap): string {
 export function getInferenceTelemetry() {
   return {
     llmTelemetry: getTelemetryLogs(),
-    inferenceLogs: inferenceEngine.getLogs()
+    inferenceLogs: inferenceEngine.getLogs(),
+    shadowLLMFallbackLogs: getShadowFallbackLogs(),
   };
 }
 
