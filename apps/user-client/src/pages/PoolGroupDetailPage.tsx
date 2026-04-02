@@ -102,13 +102,7 @@ export default function PoolGroupDetailPage() {
   const handleNavigation = () => {
     if (group.venueName && group.venueAddress) {
       const venueName = encodeURIComponent(group.venueName);
-      
-      // 深圳使用高德地图，香港使用Google Maps
-      if (pool.city === '深圳') {
-        window.open(`https://uri.amap.com/marker?name=${venueName}&address=${encodeURIComponent(group.venueAddress)}`, '_blank');
-      } else {
-        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(group.venueAddress)}`, '_blank');
-      }
+      window.open(`https://uri.amap.com/marker?name=${venueName}&address=${encodeURIComponent(group.venueAddress)}`, '_blank');
     }
   };
 
