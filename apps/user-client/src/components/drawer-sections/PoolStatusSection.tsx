@@ -121,9 +121,14 @@ export default function PoolStatusSection({
       
       {/* Archetype Coins Grid */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50 px-1">
-          谁在活动池？
-        </h3>
+        <div className="px-1">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50">
+            谁在活动池？
+          </h3>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            根据参与者原型分布
+          </p>
+        </div>
         
         {sortedArchetypes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -154,10 +159,15 @@ export default function PoolStatusSection({
       {/* Theme Showcase */}
       {stats.recentThemeTitles.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50">
-              成功组队案例
-            </h3>
+        <div className="flex items-center justify-between px-1">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50">
+                近期话题方向
+              </h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                以往活动池产生的话题风格
+              </p>
+            </div>
             
             {successfulThemes.length > 0 && (
               <Button

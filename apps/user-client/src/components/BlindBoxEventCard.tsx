@@ -9,6 +9,8 @@ import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
 import PreJoinVibeBriefSheet from "./PreJoinVibeBriefSheet";
 import { PoolMomentumVisual } from "./PoolMomentumVisual";
+import FitHintBadge from "./FitHintBadge";
+import PoolVibeBadge from "./PoolVibeBadge";
 import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";
@@ -199,8 +201,14 @@ export default function BlindBoxEventCard({
                 <PoolMomentumVisual
                   sampleArchetypes={sampleArchetypes}
                   registrationCount={registrationCount}
-                  className="mb-3"
+                  className="mb-1.5"
                 />
+
+                {/* Compact vibe + fit signals */}
+                <div className="flex items-center gap-1.5 mb-2 min-h-0">
+                  <PoolVibeBadge sampleArchetypes={sampleArchetypes} />
+                  <FitHintBadge sampleArchetypes={sampleArchetypes} eventType={eventType} isGirlsNight={isGirlsNight} />
+                </div>
 
                 <div className="flex gap-2 mt-auto">
                   <Button

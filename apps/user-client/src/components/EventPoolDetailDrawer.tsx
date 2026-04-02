@@ -17,6 +17,9 @@ import HowItWorksMinimal from "./drawer-sections/HowItWorksMinimal";
 import FAQMinimal from "./drawer-sections/FAQMinimal";
 import CTAButton from "./drawer-sections/CTAButton";
 import AmbientFloatingTags from "./AmbientFloatingTags";
+import PoolVibePanel from "./drawer-sections/PoolVibePanel";
+import ConnectionCuePanel from "./drawer-sections/ConnectionCuePanel";
+import ArchetypeCompositionPanel from "./drawer-sections/ArchetypeCompositionPanel";
 
 interface PoolStats {
   totalRegistrations: number;
@@ -208,6 +211,12 @@ export default function EventPoolDetailDrawer({
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.2 }}
                     >
+                      <PoolVibePanel
+                        avgMatchScore={stats.avgMatchScore}
+                        archetypeBreakdown={stats.archetypeBreakdown}
+                      />
+                      <ConnectionCuePanel stats={stats} />
+                      <ArchetypeCompositionPanel archetypeBreakdown={stats.archetypeBreakdown} />
                       <PoolStatusSection
                         poolId={poolId}
                         stats={stats}
