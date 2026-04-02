@@ -351,9 +351,17 @@ export default function BlindBoxEventDetailPage() {
     const cityParam = event.city ? `&city=${encodeURIComponent(event.city)}` : '';
 
     if (hasCoords) {
-      window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
+      window.open(
+        `https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`,
+        '_blank',
+        'noopener,noreferrer',
+      );
     } else if (queryParts) {
-      window.open(`https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}${cityParam}`, '_blank');
+      window.open(
+        `https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}${cityParam}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
     }
   };
 

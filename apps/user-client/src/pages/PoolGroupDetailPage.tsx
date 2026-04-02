@@ -100,9 +100,24 @@ export default function PoolGroupDetailPage() {
   };
 
   const handleNavigation = () => {
+    const locationHint = [group.venueName, group.venueAddress, pool.city, pool.district].filter(Boolean).join(' ');
+
     if (group.venueName && group.venueAddress) {
       const venueName = encodeURIComponent(group.venueName);
-      window.open(`https://uri.amap.com/marker?name=${venueName}&address=${encodeURIComponent(group.venueAddress)}`, '_blank');
+      window.open(
+        `https://uri.amap.com/marker?name=${venueName}&address=${encodeURIComponent(group.venueAddress)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      return;
+    }
+
+    if (locationHint) {
+      window.open(
+        `https://uri.amap.com/search?query=${encodeURIComponent(locationHint)}&city=${encodeURIComponent(pool.city)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
     }
   };
 
