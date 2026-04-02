@@ -26,6 +26,10 @@ const CONFIDENCE_THRESHOLDS = {
   NICHE_INFERENCE_AI: 0.80,      // Niche inference for AI results
 };
 
+// Default fallback category when no classification is possible.
+// Uses life_services as a neutral default (avoids finance which was misleading).
+const DEFAULT_FALLBACK_CATEGORY_ID = "life_services";
+
 export interface IndustryClassificationResult {
   category: {
     id: string;
@@ -626,7 +630,7 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
     const aiDescription = await generateSemanticDescription(userInput);
     
     // Return "unclassified" state with AI description
-    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === "life_services") || INDUSTRY_TAXONOMY[0];
+    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === DEFAULT_FALLBACK_CATEGORY_ID) || INDUSTRY_TAXONOMY[0];
     const unknownSegment = unknownCategory.segments[0];
     
     return {
@@ -643,7 +647,7 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
     console.error('[Fallback] AI description generation failed:', error);
     
     // AI failed too, return basic unclassified state
-    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === "life_services") || INDUSTRY_TAXONOMY[0];
+    const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === DEFAULT_FALLBACK_CATEGORY_ID) || INDUSTRY_TAXONOMY[0];
     const unknownSegment = unknownCategory.segments[0];
     
     return {
