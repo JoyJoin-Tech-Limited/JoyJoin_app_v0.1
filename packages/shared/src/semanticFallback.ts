@@ -23,6 +23,10 @@ export interface SemanticRule {
 /**
  * Semantic classification rules for edge cases
  * Organized by category for maintainability
+ *
+ * NOTE: Segment mappings use the closest available segment from the taxonomy.
+ * Some segments (e.g. "k12" for all education, "hospitality" for general life services)
+ * are broader than the literal term because the taxonomy has limited segment granularity.
  */
 export const SEMANTIC_FALLBACK_RULES: SemanticRule[] = [
   // ========== Agriculture & Farming ==========
