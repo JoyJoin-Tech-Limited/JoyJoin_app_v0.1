@@ -120,13 +120,14 @@ ENABLE_SEMANTIC_SIMILARITY=false
 `eventIntent`, bar preferences) plus `user_interests` topic and heat data. It does **not** read
 `user_interest_signals` — that boundary is enforced by the signal boundary invariant test.
 
-**Score bounds:** Semantic similarity is clamped to `[35, 100]`. Pairs with missing profiles
-fall back to `50` (neutral). The 6% weight keeps the maximum possible score shift at ±2–4 points,
-preserving group formation stability.
+**Score bounds:** Semantic similarity is clamped to `[35, 100]`. If both profiles are missing or
+empty, the score falls back to `50` (neutral); if exactly one side is missing or empty, it falls
+back to `45` (slightly conservative). The 6% weight keeps the maximum possible score shift to
+≤3.9 points, preserving group formation stability.
 
 **Admin visibility:** The admin dashboard (`/admin`) shows the 🧠 语义匹配观测 panel with
 real-time average semantic score, pair-score deltas, and flag status. Prometheus metrics are
-available at the `/ops/metrics` endpoint.
+available at the `/api/metrics` endpoint.
 
 > **Rollout guidance:** Leave `ENABLE_SEMANTIC_SIMILARITY=false` until semantic profile quality
 > has been validated against a live pool. When enabling, monitor the admin dashboard for

@@ -382,7 +382,7 @@ Maximum score shift from enabling: ≤3.9 points (6% weight × 65-point semantic
 
 **Admin visibility:** Metrics are exposed via:
 - Admin dashboard `/admin` → 🧠 语义匹配观测 card (average score, pair-delta range, flag status)
-- Prometheus endpoint `GET /ops/metrics` → `joyjoin_matching_semantic_similarity_score` histogram
+- Prometheus endpoint `GET /api/metrics` → `joyjoin_matching_semantic_similarity_score` histogram
   and `joyjoin_matching_semantic_pair_score_delta` histogram
 
 ---
