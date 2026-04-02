@@ -669,14 +669,6 @@ export default function AdminEvolutionPage() {
                       </Button>
                     </div>
                   </div>
-                  {[
-                    { key: "personalityWeight", label: "人格匹配", color: "bg-purple-500" },
-                    { key: "interestsWeight", label: "兴趣匹配", color: "bg-blue-500" },
-                    { key: "intentWeight", label: "意图匹配", color: "bg-green-500" },
-                    { key: "backgroundWeight", label: "背景多样性", color: "bg-orange-500" },
-                    { key: "cultureWeight", label: "文化语言", color: "bg-pink-500" },
-                    { key: "conversationSignatureWeight", label: "对话签名", color: "bg-cyan-500" },
-                  ].map(({ key, label, color }) => {
                   {weightDefinitions.map(({ key, label, color }) => {
                     const rawValue = weightsData.weights[key as keyof typeof weightsData.weights] || 0;
                     const value = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
