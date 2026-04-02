@@ -1,0 +1,131 @@
+/*
+ * ============================================================
+ * Self-hosted web fonts — JoyJoin user client
+ * ============================================================
+ *
+ * HOW TO ADD FONT FILES
+ * ─────────────────────
+ * 1. Place the .woff2 files inside the matching sub-folder:
+ *
+ *      apps/user-client/src/assets/fonts/AlibabaPuHuiTi-3/
+ *        AlibabaPuHuiTi-3-55-Regular.woff2
+ *        AlibabaPuHuiTi-3-65-Medium.woff2
+ *        AlibabaPuHuiTi-3-75-SemiBold.woff2
+ *        AlibabaPuHuiTi-3-85-Bold.woff2
+ *
+ *      apps/user-client/src/assets/fonts/Quicksand/
+ *        Quicksand-Regular.woff2
+ *        Quicksand-Medium.woff2
+ *        Quicksand-SemiBold.woff2
+ *        Quicksand-Bold.woff2
+ *
+ * 2. Uncomment the @font-face blocks below that match the files
+ *    you have uploaded.
+ *
+ * 3. The CSS custom properties in :root already reference these
+ *    font families — no further edits should be needed once you
+ *    uncomment the declarations.
+ *
+ * WHY THE DECLARATIONS ARE COMMENTED OUT
+ * ───────────────────────────────────────
+ * Vite resolves url() references in CSS at build time.
+ * Uncommenting a declaration before its font file exists will
+ * cause the build to fail with a "file not found" error.
+ * Keep each block commented out until the matching file is
+ * present in the folder.
+ * ============================================================
+ */
+
+/* ─── Simplified Chinese: Alibaba PuHuiTi 3 ─────────────── */
+
+/*
+@font-face {
+  font-family: 'AlibabaPuHuiTi';
+  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AlibabaPuHuiTi';
+  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-65-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AlibabaPuHuiTi';
+  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-75-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AlibabaPuHuiTi';
+  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-85-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* ─── English / Latin: Quicksand ────────────────────────── */
+
+/*
+@font-face {
+  font-family: 'Quicksand';
+  src: url('./Quicksand/Quicksand-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  src: url('./Quicksand/Quicksand-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  src: url('./Quicksand/Quicksand-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Quicksand';
+  src: url('./Quicksand/Quicksand-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* ─── Semantic CSS custom properties ────────────────────── */
+/*
+ * These variables are always active.  Before the font files are
+ * uploaded they fall back gracefully to system fonts, so they
+ * are safe to reference from components right now.
+ *
+ * Usage:
+ *   font-family: var(--font-body);    ← default UI / Chinese text
+ *   font-family: var(--font-display); ← headings, English labels
+ *   font-family: var(--font-brand);   ← logo, marketing copy
+ */
+:root {
+  /* Primary body / Chinese-first font stack */
+  --font-body: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* Display / English-accent font stack */
+  --font-display: 'Quicksand', 'AlibabaPuHuiTi', 'PingFang SC', sans-serif;
+
+  /* Brand / marketing copy — same as display for now */
+  --font-brand: 'Quicksand', 'AlibabaPuHuiTi', 'PingFang SC', sans-serif;
+}
