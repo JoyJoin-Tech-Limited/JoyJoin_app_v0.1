@@ -8,6 +8,7 @@ import {
   matchingWeightsConfig, 
   matchingWeightsHistory,
   type MatchingWeightsConfig,
+  type MatchingWeightsHistory,
   type InsertMatchingWeightsHistory
 } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -615,7 +616,7 @@ export class MatchingWeightsService {
     return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   }
 
-  async getWeightsHistory(limit: number = 30): Promise<any[]> {
+  async getWeightsHistory(limit: number = 30): Promise<MatchingWeightsHistory[]> {
     try {
       return await db.select()
         .from(matchingWeightsHistory)
@@ -627,7 +628,7 @@ export class MatchingWeightsService {
     }
   }
 
-  async getShadowRecommendations(limit: number = 20): Promise<any[]> {
+  async getShadowRecommendations(limit: number = 20): Promise<MatchingWeightsHistory[]> {
     try {
       return await db.select()
         .from(matchingWeightsHistory)
