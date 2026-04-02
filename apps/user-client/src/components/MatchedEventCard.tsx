@@ -105,11 +105,29 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
   };
 
   const handleNavigation = () => {
+    const queryParts = [event.restaurantName, event.restaurantAddress].filter(Boolean).join(' ');
+    const cityParam = event.city ? `&city=${encodeURIComponent(event.city)}` : '';
+
     if (event.restaurantLat && event.restaurantLng) {
       const restaurantName = encodeURIComponent(event.restaurantName || '目的地');
-      window.open(`https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`, '_blank');
+      window.open(
+        `https://uri.amap.com/navigation?to=${event.restaurantLng},${event.restaurantLat},${restaurantName}&mode=car&coordinate=gaode`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      return;
+    }
+
+    if (queryParts) {
+      window.open(
+        `https://uri.amap.com/search?query=${encodeURIComponent(queryParts)}${cityParam}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
     }
   };
+
+  const canNavigate = Boolean(event.restaurantLat && event.restaurantLng) || Boolean(event.restaurantName || event.restaurantAddress);
 
   return (
     <Card 
@@ -258,6 +276,7 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
               <Button 
                 size="sm" 
                 variant="outline"
+                disabled={!canNavigate}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleNavigation();
@@ -295,6 +314,7 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
               <Button 
                 size="sm" 
                 variant="outline"
+                disabled={!canNavigate}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleNavigation();

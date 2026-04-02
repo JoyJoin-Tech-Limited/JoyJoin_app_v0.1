@@ -905,7 +905,11 @@ export default function MatchingStatusPage() {
                       size="sm"
                       onClick={() => {
                         const address = registration.venueAddress || `${registration.poolCity} ${registration.poolDistrict}`;
-                        window.open(`https://uri.amap.com/marker?address=${encodeURIComponent(address)}`, '_blank');
+                        window.open(
+                          `https://uri.amap.com/marker?address=${encodeURIComponent(address)}`,
+                          '_blank',
+                          'noopener,noreferrer',
+                        );
                       }}
                     >
                       <Navigation className="h-4 w-4 mr-1" />
