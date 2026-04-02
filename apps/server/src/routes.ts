@@ -7349,7 +7349,6 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         const registrations = sampleRegistrationsByPool.get(pool.id) ?? [];
         const registrationCount = registrationCountByPool.get(pool.id) ?? 0;
         const sampleArchetypes = registrations
-          .slice(0, SAMPLE_ARCHETYPE_COUNT)
           .map((registration) => userArchetypeMap.get(registration.userId))
           .filter((archetype): archetype is string => Boolean(archetype));
 
