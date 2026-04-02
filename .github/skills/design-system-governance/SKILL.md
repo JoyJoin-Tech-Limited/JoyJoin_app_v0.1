@@ -40,7 +40,7 @@ CSS custom properties are the bridge between the design system and component cod
 
 ## Typography token ownership
 
-JoyJoin uses a three-role semantic typography system. All font-family decisions should use these tokens and their corresponding Tailwind utilities — never ad-hoc `fontFamily` inline styles or raw font-family declarations in component files.
+JoyJoin uses a three-role semantic typography system. Product UI surfaces should use these tokens and their corresponding Tailwind utilities instead of ad-hoc `fontFamily` inline styles or raw font-family declarations in component files.
 
 | Role | CSS variable | Tailwind class | Use for |
 |------|-------------|----------------|---------|
@@ -52,7 +52,7 @@ These variables are defined in `apps/user-client/src/assets/fonts/fonts.css` and
 
 The `.font-brand` CSS utility class in `index.css` is a backward-compatible alias for `font-cn-display`.
 
-**Do not** scatter `style={{ fontFamily: '...' }}` inline overrides in component files. Use the semantic Tailwind classes instead. If an existing component uses an inline override, migrate it to the appropriate class as part of any related change.
+**Do not** scatter `style={{ fontFamily: '...' }}` inline overrides across normal product UI components. Use the semantic Tailwind classes instead. Current exceptions are limited to rendering contexts where utility classes are not practical or are serialized into generated assets (for example SVG/canvas/share-card renderers), plus older surfaces not yet migrated. When touching those areas, migrate to semantic classes if the runtime supports them; otherwise document the exception clearly.
 
 See `.github/skills/joyjoin-brand-guidelines/SKILL.md` for the full typography decision guide including WeChat Mini Program constraints.
 
@@ -135,5 +135,5 @@ When standardising an existing component to use the shared primitive:
 - [ ] Focus ring is visible and uses the `--ring` token
 - [ ] Touch target for primary CTAs is at least 44 px (meets WCAG 2.5.5)
 - [ ] Visual exceptions are documented with a comment and rationale in the component
-- [ ] Font family is set via semantic Tailwind class (`font-ui`, `font-cn-display`, `font-en-brand`) not inline `style={{ fontFamily: ... }}`
+- [ ] Font family is set via semantic Tailwind class (`font-ui`, `font-cn-display`, `font-en-brand`) for normal product UI; any inline `style={{ fontFamily: ... }}` exception is limited to renderer-style contexts (SVG/canvas/share assets) or documented legacy surfaces
 - [ ] Custom display font (`font-cn-display` / `font-en-brand`) is applied only to the specific element — not a parent container — to avoid inheriting onto dense UI children

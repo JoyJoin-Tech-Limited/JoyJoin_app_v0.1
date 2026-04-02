@@ -111,14 +111,15 @@
   --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
 
   /* ── Role 2: Chinese display (short high-impact emotional moments) ──── */
-  /* AlibabaPuHuiTi-3 leads once the self-hosted files are uploaded.
-     ZCOOL QingKe HuangYou bridges the gap — it is already loaded via
-     Google Fonts in index.html so this role is immediately effective. */
+  /* AlibabaPuHuiTi-3 is already wired through the self-hosted @font-face
+     above. ZCOOL QingKe HuangYou remains the next fallback — it is loaded
+     via Google Fonts in index.html and preserves display warmth if the
+     self-hosted font fails to load for any reason. */
   --font-cn-display: 'AlibabaPuHuiTi', 'ZCOOL QingKe HuangYou', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   /* ── Role 3: English brand accent (JoyJoin identity moments only) ───── */
-  /* Quicksand leads once the self-hosted files are uploaded.
-     Outfit bridges the gap — already loaded via Google Fonts. */
+  /* Quicksand is already wired through the self-hosted @font-face above.
+     Outfit remains the next fallback and is already loaded via Google Fonts. */
   --font-en-brand: 'Quicksand', 'Outfit', system-ui, sans-serif;
 
   /* ── Legacy aliases (kept for backward compatibility) ─────────────── */
