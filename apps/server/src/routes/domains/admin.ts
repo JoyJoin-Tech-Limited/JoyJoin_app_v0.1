@@ -39,6 +39,9 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error("Error fetching chemistry calibration details:", error);
       res.status(500).json({ message: "Failed to fetch chemistry calibration details" });
+    }
+  });
+
   app.get("/api/admin/outcome-analytics", requireAdmin, async (_req, res) => {
     try {
       const dashboard = await adminOutcomeAnalyticsRepo.getDashboard();
