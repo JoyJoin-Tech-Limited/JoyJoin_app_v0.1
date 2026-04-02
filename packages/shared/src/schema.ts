@@ -273,6 +273,25 @@ export const userInterests = pgTable("user_interests", {
   index("idx_user_interests_user_id").on(table.userId),
 ]);
 
+export const userSemanticProfiles = pgTable("user_semantic_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status").notNull().default("pending"), // pending | ready | degraded
+  profileDocument: text("profile_document").notNull(),
+  versionVector: jsonb("version_vector").notNull().default('{}'),
+  generatorVersion: varchar("generator_version").notNull().default("semantic-profile-v1"),
+  embedding: jsonb("embedding"),
+  embeddingModel: varchar("embedding_model"),
+  embeddingDimension: integer("embedding_dimension"),
+  lastError: text("last_error"),
+  lastComputedAt: timestamp("last_computed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_user_semantic_profiles_user").on(table.userId),
+  index("idx_user_semantic_profiles_status").on(table.status),
+]);
+
 // User Social Tag Generations table - Tag generation history and selections
 export const userSocialTagGenerations = pgTable("user_social_tag_generations", {
   id: serial("id").primaryKey(),
@@ -471,6 +490,25 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const eventGroupOutcomes = pgTable("event_group_outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  groupId: varchar("group_id").notNull().references(() => eventPoolGroups.id),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  atmosphereScore: integer("atmosphere_score").notNull(),
+  wouldMeetAgain: boolean("would_meet_again").notNull(),
+  connectionRadar: jsonb("connection_radar").notNull(),
+  icebreakerRatings: jsonb("icebreaker_ratings").notNull(),
+  freeTextSignal: text("free_text_signal"),
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_event_group_outcomes_pool_id").on(table.poolId),
+  index("idx_event_group_outcomes_group_id").on(table.groupId),
+  index("idx_event_group_outcomes_submitted_by").on(table.submittedBy),
+  uniqueIndex("idx_event_group_outcomes_group_submitter").on(table.groupId, table.submittedBy),
+]);
+
 // ============ 实时匹配系统配置 ============
 
 // Matching Thresholds table - 动态匹配阈值配置（管理员可调整）
@@ -539,6 +577,26 @@ export const matchHistory = pgTable("match_history", {
   wouldMeetAgain: boolean("would_meet_again"), // Whether they'd want to be matched again
   connectionPointTypes: text("connection_point_types").array(), // Types of connection points that led to this match (for feedback correlation)
 });
+
+// Empirical chemistry calibration stats aggregated from post-event pair outcomes.
+export const archetypePairFeedbackStats = pgTable("archetype_pair_feedback_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  archetypeA: varchar("archetype_a", { length: 50 }).notNull(),
+  archetypeB: varchar("archetype_b", { length: 50 }).notNull(),
+  baseScore: integer("base_score").notNull(),
+  sampleCount: integer("sample_count").notNull().default(0),
+  avgMeetAgain: numeric("avg_meet_again", { precision: 4, scale: 3 }),
+  avgAtmosphere: numeric("avg_atmosphere", { precision: 4, scale: 3 }),
+  empiricalScore: numeric("empirical_score", { precision: 5, scale: 2 }),
+  appliedDelta: numeric("applied_delta", { precision: 5, scale: 2 }).notNull().default("0"),
+  calibratedScore: numeric("calibrated_score", { precision: 5, scale: 2 }).notNull(),
+  lastAggregatedAt: timestamp("last_aggregated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_archetype_pair_feedback_stats_pair").on(table.archetypeA, table.archetypeB),
+  index("idx_archetype_pair_feedback_stats_samples").on(table.sampleCount),
+]);
 
 // Chat messages table (for event group chats)
 export const chatMessages = pgTable("chat_messages", {
@@ -788,6 +846,33 @@ export const insertEventFeedbackSchema = createInsertSchema(eventFeedback).omit(
   
   // Venue style rating validation
   venueStyleRating: z.enum(["like", "neutral", "dislike"]).optional(),
+});
+
+const eventGroupOutcomeConnectionRadarSchema = z
+  .record(z.string().min(1), z.number().int().min(0).max(5))
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "connectionRadar must include at least one rating",
+  });
+
+const eventGroupOutcomeIcebreakerRatingsSchema = z
+  .record(z.string().min(1), z.enum(["helpful", "neutral", "awkward"]))
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "icebreakerRatings must include at least one rating",
+  });
+
+export const insertEventGroupOutcomeSchema = createInsertSchema(eventGroupOutcomes).omit({
+  id: true,
+  poolId: true,
+  submittedBy: true,
+  submittedAt: true,
+  updatedAt: true,
+}).extend({
+  groupId: z.string().min(1),
+  atmosphereScore: z.number().int().min(1).max(5),
+  wouldMeetAgain: z.boolean(),
+  connectionRadar: eventGroupOutcomeConnectionRadarSchema,
+  icebreakerRatings: eventGroupOutcomeIcebreakerRatingsSchema,
+  freeTextSignal: z.string().trim().max(1000).optional().nullable(),
 });
 
 // Blind Box Events table
@@ -1469,6 +1554,7 @@ export type UpdateFullProfile = z.infer<typeof updateFullProfileSchema>;
 export type UpdatePersonality = z.infer<typeof updatePersonalitySchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type InterestsTopics = z.infer<typeof interestsTopicsSchema>;
+export type UserInterests = typeof userInterests.$inferSelect;
 
 export type UserSocialTagGeneration = typeof userSocialTagGenerations.$inferSelect;
 
@@ -1477,6 +1563,7 @@ export type EventAttendance = typeof eventAttendance.$inferSelect;
 export type EventPool = typeof eventPools.$inferSelect;
 export type EventPoolRegistration = typeof eventPoolRegistrations.$inferSelect;
 export type EventPoolGroup = typeof eventPoolGroups.$inferSelect;
+export type EventGroupOutcome = typeof eventGroupOutcomes.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type EventFeedback = typeof eventFeedback.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
@@ -1489,6 +1576,7 @@ export type InsertEventAttendance = z.infer<typeof insertEventAttendanceSchema>;
 export type InsertEventPool = z.infer<typeof insertEventPoolSchema>;
 export type InsertEventPoolRegistration = z.infer<typeof insertEventPoolRegistrationSchema>;
 export type InsertEventPoolGroup = z.infer<typeof insertEventPoolGroupSchema>;
+export type InsertEventGroupOutcome = z.infer<typeof insertEventGroupOutcomeSchema>;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type InsertEventFeedback = z.infer<typeof insertEventFeedbackSchema>;
 export type InsertBlindBoxEvent = z.infer<typeof insertBlindBoxEventSchema>;
@@ -1604,6 +1692,69 @@ export const insertMatchingResultSchema = createInsertSchema(matchingResults).om
 
 export type MatchingResult = typeof matchingResults.$inferSelect;
 export type InsertMatchingResult = z.infer<typeof insertMatchingResultSchema>;
+
+export type MatchingShadowComparison = {
+  groupKey: string;
+  memberUserIds: string[];
+  memberCount: number;
+  deterministicScore: number;
+  deterministicRank: number;
+  predictedScore: number;
+  predictedRank: number;
+  scoreDelta: number;
+  rankDelta: number;
+  confidence: number;
+  predictedOutcomeRate: number;
+  avgChemistryScore: number;
+  diversityScore: number;
+  communicationBalance: number;
+  temperatureLevel: string;
+};
+
+export type MatchingShadowSummary = {
+  modelVersion: string;
+  liveRankingProtected: boolean;
+  deterministicGroupCount: number;
+  deterministicAverageScore: number;
+  averageConfidence: number;
+  averageScoreDelta: number;
+  rankAgreementRate: number;
+  topRankChanged: boolean;
+  outcomeValidation: {
+    sampleCount: number;
+    positiveRate: number;
+    avgAtmosphereScore: number | null;
+  };
+};
+
+export const matchingShadowExperiments = pgTable("matching_shadow_experiments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  mode: varchar("mode").notNull().default("batch"),
+  modelVersion: varchar("model_version").notNull(),
+  deterministicGroupCount: integer("deterministic_group_count").notNull().default(0),
+  deterministicAverageScore: integer("deterministic_average_score"),
+  outcomeSampleCount: integer("outcome_sample_count").notNull().default(0),
+  outcomePositiveRate: numeric("outcome_positive_rate", { precision: 5, scale: 4 }).default("0"),
+  averageConfidence: numeric("average_confidence", { precision: 5, scale: 4 }).default("0"),
+  rankAgreementRate: numeric("rank_agreement_rate", { precision: 5, scale: 4 }).default("0"),
+  averageScoreDelta: integer("average_score_delta").default(0),
+  results: jsonb("results").notNull().$type<MatchingShadowComparison[]>(),
+  summary: jsonb("summary").notNull().$type<MatchingShadowSummary>(),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_matching_shadow_experiments_pool").on(table.poolId),
+  index("idx_matching_shadow_experiments_created_at").on(table.createdAt),
+]);
+
+export const insertMatchingShadowExperimentSchema = createInsertSchema(matchingShadowExperiments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MatchingShadowExperiment = typeof matchingShadowExperiments.$inferSelect;
+export type InsertMatchingShadowExperiment = z.infer<typeof insertMatchingShadowExperimentSchema>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {
@@ -2495,7 +2646,8 @@ export const matchingWeightsHistory = pgTable("matching_weights_history", {
   // 当时的统计
   matchesSinceLastUpdate: integer("matches_since_last_update").default(0),
   satisfactionSinceLastUpdate: numeric("satisfaction_since_last_update", { precision: 5, scale: 4 }),
-  
+  shadowMetadata: jsonb("shadow_metadata"),
+
   recordedAt: timestamp("recorded_at").defaultNow(),
 }, (table) => [
   index("idx_weights_history_config").on(table.configId),
@@ -2625,6 +2777,12 @@ export const insertMatchingWeightsHistorySchema = createInsertSchema(matchingWei
 export const insertDialogueEmbeddingSchema = createInsertSchema(dialogueEmbeddings).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertUserSemanticProfileSchema = createInsertSchema(userSemanticProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertTriggerPerformanceSchema = createInsertSchema(triggerPerformance).omit({
@@ -2803,6 +2961,9 @@ export type InsertMatchingWeightsHistory = z.infer<typeof insertMatchingWeightsH
 
 export type DialogueEmbedding = typeof dialogueEmbeddings.$inferSelect;
 export type InsertDialogueEmbedding = z.infer<typeof insertDialogueEmbeddingSchema>;
+
+export type UserSemanticProfile = typeof userSemanticProfiles.$inferSelect;
+export type InsertUserSemanticProfile = z.infer<typeof insertUserSemanticProfileSchema>;
 
 export type TriggerPerformance = typeof triggerPerformance.$inferSelect;
 export type InsertTriggerPerformance = z.infer<typeof insertTriggerPerformanceSchema>;

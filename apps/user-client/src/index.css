@@ -2,14 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Self-hosted font declarations and semantic font tokens.
-   @font-face rules inside this file are commented out until the
-   actual font files are placed in src/assets/fonts/.
-   See that file for upload instructions. */
+/* Self-hosted font declarations and semantic font tokens (AlibabaPuHuiTi + Quicksand TTF). */
 @import './assets/fonts/fonts.css';
 
-/* 品牌标题字体 - 使用站酷庆科黄油体 (ZCOOL QingKe HuangYou) */
-/* 圆润如黄油，温暖亲和，免费商用 (SIL OFL 1.1) */
+/* ─── Typography defaults ────────────────────────────────────
+ * body uses --font-ui (system Chinese stack) so all text is
+ * natively readable without loading any custom font.
+ * Components can opt in to --font-cn-display or --font-en-brand
+ * for emotional / branded moments.
+ * ───────────────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-ui);
+}
 
 /* Dynamic accent color variables for personality-based theming */
 :root {
@@ -522,9 +526,22 @@
     animation: progressFill 0.6s ease-out forwards;
   }
 
+  /* Archetype chip gentle float — used by PoolMomentumVisual */
+  @keyframes chip-float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-3px); }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-chip-float {
+      animation: chip-float var(--float-duration, 3s) ease-in-out infinite;
+      animation-delay: var(--float-delay, 0s);
+    }
+  }
+
   /* 品牌字体 - 用于情感时刻的标题 */
   .font-brand {
-    font-family: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-cn-display);
   }
 
   /* 隐藏滚动条 */
