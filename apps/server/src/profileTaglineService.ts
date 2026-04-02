@@ -21,6 +21,7 @@ import {
   GENERIC_PROFILE_TAGLINE_FALLBACK,
   type ProfileTaglineResponse,
 } from '@shared/ai/onboarding';
+import { logAITrace } from './lib/aiTraceLogger';
 
 const PROMPT_VERSION = 'profile-tagline-v1';
 
@@ -98,6 +99,7 @@ export interface ProfileTaglineInput {
 export async function generateProfileTagline(
   input?: ProfileTaglineInput | null
 ): Promise<ProfileTaglineResponse> {
+  const startedAt = Date.now();
   const archetype = input?.archetype;
   const categoryHeat = input?.categoryHeat ?? {};
   const intentKeys = input?.intentKeys ?? [];
@@ -128,9 +130,21 @@ export async function generateProfileTagline(
 
   if (!contextLines) {
     // No usable context — return fallback immediately without an LLM call
+    const meta = buildFallbackAIMeta('no_context', PROMPT_VERSION);
+    logAITrace({
+      domain: 'onboarding',
+      feature: 'generateProfileTagline',
+      provider: meta.provider,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: meta.fallbackUsed,
+      fromCache: meta.fromCache,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
     return {
       insightLine: getFallbackLine(archetype),
-      meta: buildFallbackAIMeta('no_context'),
+      meta,
     };
   }
 
@@ -162,21 +176,56 @@ export async function generateProfileTagline(
       console.warn(
         `[profileTagline] LLM output failed quality check (length=${raw.length}), using fallback`
       );
+      const meta = buildFallbackAIMeta('low_quality_score', PROMPT_VERSION);
+      logAITrace({
+        domain: 'onboarding',
+        feature: 'generateProfileTagline',
+        provider: result.provider,
+        latencyMs: Date.now() - startedAt,
+        success: false,
+        fallbackUsed: meta.fallbackUsed,
+        fromCache: meta.fromCache,
+        promptVersion: meta.promptVersion,
+        errorCode: meta.evaluatorRejectionReason,
+      });
       return {
         insightLine: getFallbackLine(archetype),
-        meta: buildFallbackAIMeta('low_quality_score'),
+        meta,
       };
     }
 
+    const meta = buildLiveAIMeta(result.provider, PROMPT_VERSION);
+    logAITrace({
+      domain: 'onboarding',
+      feature: 'generateProfileTagline',
+      provider: meta.provider,
+      latencyMs: Date.now() - startedAt,
+      success: true,
+      fallbackUsed: meta.fallbackUsed,
+      fromCache: meta.fromCache,
+      promptVersion: meta.promptVersion,
+    });
     return {
       insightLine: raw,
-      meta: buildLiveAIMeta(result.provider, PROMPT_VERSION),
+      meta,
     };
   } catch (err) {
     console.error('[profileTagline] LLM call failed, using fallback:', err);
+    const meta = buildFallbackAIMeta('provider_error', PROMPT_VERSION);
+    logAITrace({
+      domain: 'onboarding',
+      feature: 'generateProfileTagline',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: meta.fallbackUsed,
+      fromCache: meta.fromCache,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
     return {
       insightLine: getFallbackLine(archetype),
-      meta: buildFallbackAIMeta('provider_error'),
+      meta,
     };
   }
 }
