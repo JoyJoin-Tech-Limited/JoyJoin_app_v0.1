@@ -41,6 +41,21 @@ interface AdminStats {
     activeStreakUsers: number;
     avgLevel: number;
   };
+  matchingMetrics?: {
+    semanticFeatureEnabled: boolean;
+    semanticSimilarity: {
+      sampleCount: number;
+      average: number | null;
+      min: number | null;
+      max: number | null;
+    };
+    semanticPairDelta: {
+      sampleCount: number;
+      average: number | null;
+      min: number | null;
+      max: number | null;
+    };
+  };
 }
 
 export default function AdminDashboard() {
@@ -267,6 +282,50 @@ export default function AdminDashboard() {
                   </div>
                 );
               })()}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {stats?.matchingMetrics && (
+        <Card className="mb-6" data-testid="card-semantic-matching-metrics">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              🧠 语义匹配观测
+              <Badge variant={stats.matchingMetrics.semanticFeatureEnabled ? "default" : "secondary"}>
+                {stats.matchingMetrics.semanticFeatureEnabled ? "已启用" : "未启用"}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">语义相似度均值</div>
+                <div className="mt-1 text-2xl font-semibold">
+                  {stats.matchingMetrics.semanticSimilarity.average ?? "—"}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  样本 {stats.matchingMetrics.semanticSimilarity.sampleCount} 对
+                </div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">平均配对分数变化</div>
+                <div className="mt-1 text-2xl font-semibold">
+                  {stats.matchingMetrics.semanticPairDelta.average ?? "—"}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  范围 {stats.matchingMetrics.semanticPairDelta.min ?? "—"} ~ {stats.matchingMetrics.semanticPairDelta.max ?? "—"}
+                </div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">语义相似度范围</div>
+                <div className="mt-1 text-2xl font-semibold">
+                  {stats.matchingMetrics.semanticSimilarity.min ?? "—"} ~ {stats.matchingMetrics.semanticSimilarity.max ?? "—"}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  仅统计新计算的配对样本
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
