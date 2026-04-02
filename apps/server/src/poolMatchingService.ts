@@ -110,8 +110,8 @@ export interface MatchGroup {
   explanation: string;
 }
 
-interface SaveMatchResultsOptions {
-  predictiveExperimentArm: "control" | "treatment";
+export interface SaveMatchResultsOptions {
+  predictiveExperimentArm: "control" | "treatment" | null;
   predictiveRerankApplied: boolean;
   predictiveRerankSummary: {
     modelVersion?: string | null;
@@ -1183,7 +1183,7 @@ export async function saveMatchResults(
           predictiveRerankApplied: options?.predictiveRerankApplied ?? false,
           predictiveRerankAudit: predictiveAudit ? {
             ...predictiveAudit,
-            experimentArm: options?.predictiveExperimentArm ?? "control",
+            experimentArm: options?.predictiveExperimentArm ?? null,
             applied: options?.predictiveRerankApplied ?? false,
             confidenceThreshold: options?.predictiveRerankSummary?.confidenceThreshold ?? null,
             maxPositionShift: options?.predictiveRerankSummary?.maxPositionShift ?? null,

@@ -101,8 +101,9 @@ describe("predictiveRerankingService", () => {
       poolOverrideEnabled: null,
     });
 
-    expect(decision.arm).toBe("control");
+    expect(decision.arm).toBeNull();
     expect(decision.applied).toBe(false);
+    expect(decision.reason).toBe("auto_disabled_by_regression_guard");
     expect(decision.summary.autoDisabled).toBe(true);
     expect(decision.summary.autoDisabledReason).toMatch(/Auto-disabled/);
   });
@@ -128,8 +129,34 @@ describe("predictiveRerankingService", () => {
       poolOverrideEnabled: false,
     });
 
-    expect(decision.arm).toBe("control");
+    expect(decision.arm).toBeNull();
     expect(decision.applied).toBe(false);
     expect(decision.reason).toBe("pool_override_disabled");
+  });
+
+  it("allows a force-enabled pool override to bypass global gates", () => {
+    const decision = planPredictiveRerank({
+      poolId: "pool-force-enabled",
+      groups: [
+        makeGroup(["u1", "u2", "u3", "u4"], { overallScore: 81 }),
+        makeGroup(["u5", "u6", "u7", "u8"], { overallScore: 79, avgChemistryScore: 96, diversityScore: 90 }),
+      ],
+      calibration: { sampleCount: 0, positiveRate: 0, avgAtmosphereScore: null },
+      config: {
+        predictiveRerankEnabled: false,
+        predictiveRerankExposurePercent: 100,
+        predictiveRerankMaxPositionShift: 2,
+        predictiveRerankConfidenceThreshold: 70,
+        predictiveRerankAutoDisableEnabled: true,
+        predictiveRerankMinShadowExperiments: 10,
+        predictiveRerankAutoDisabledAt: new Date().toISOString(),
+      },
+      shadowPoolCount: 0,
+      outcomeMetrics: [],
+      poolOverrideEnabled: true,
+    });
+
+    expect(decision.reason).toBe("eligible");
+    expect(decision.arm).toBe("treatment");
   });
 });
