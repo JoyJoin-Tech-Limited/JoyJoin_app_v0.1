@@ -24,6 +24,8 @@ function cloneRow<T>(row: T): T {
   return JSON.parse(JSON.stringify(row));
 }
 
+const MAX_WEIGHT_DELTA_TOLERANCE = 3.0001;
+
 function applyWhere(rows: any[], condition: { field: string; value: unknown } | undefined) {
   if (!condition) return rows;
   return rows.filter((row) => row[condition.field] === condition.value);
@@ -211,12 +213,12 @@ describe('MatchingWeightsService', () => {
       conversationSignatureWeight: Number(activeRow.conversationSignatureWeight) * 100,
     };
 
-    expect(Math.abs(runtimeWeights.personalityWeight - 23)).toBeLessThanOrEqual(3.0001);
-    expect(Math.abs(runtimeWeights.interestsWeight - 24)).toBeLessThanOrEqual(3.0001);
-    expect(Math.abs(runtimeWeights.intentWeight - 13)).toBeLessThanOrEqual(3.0001);
-    expect(Math.abs(runtimeWeights.backgroundWeight - 15)).toBeLessThanOrEqual(3.0001);
-    expect(Math.abs(runtimeWeights.cultureWeight - 10)).toBeLessThanOrEqual(3.0001);
-    expect(Math.abs(runtimeWeights.conversationSignatureWeight - 15)).toBeLessThanOrEqual(3.0001);
+    expect(Math.abs(runtimeWeights.personalityWeight - 23)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.interestsWeight - 24)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.intentWeight - 13)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.backgroundWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.cultureWeight - 10)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.conversationSignatureWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
     expect(
       Object.values(runtimeWeights).reduce((sum, value) => sum + value, 0),
     ).toBeCloseTo(100, 3);
