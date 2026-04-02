@@ -273,6 +273,25 @@ export const userInterests = pgTable("user_interests", {
   index("idx_user_interests_user_id").on(table.userId),
 ]);
 
+export const userSemanticProfiles = pgTable("user_semantic_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status").notNull().default("pending"), // pending | ready | degraded
+  profileDocument: text("profile_document").notNull(),
+  versionVector: jsonb("version_vector").notNull().default('{}'),
+  generatorVersion: varchar("generator_version").notNull().default("semantic-profile-v1"),
+  embedding: jsonb("embedding"),
+  embeddingModel: varchar("embedding_model"),
+  embeddingDimension: integer("embedding_dimension"),
+  lastError: text("last_error"),
+  lastComputedAt: timestamp("last_computed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_user_semantic_profiles_user").on(table.userId),
+  index("idx_user_semantic_profiles_status").on(table.status),
+]);
+
 // User Social Tag Generations table - Tag generation history and selections
 export const userSocialTagGenerations = pgTable("user_social_tag_generations", {
   id: serial("id").primaryKey(),
@@ -1469,6 +1488,7 @@ export type UpdateFullProfile = z.infer<typeof updateFullProfileSchema>;
 export type UpdatePersonality = z.infer<typeof updatePersonalitySchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type InterestsTopics = z.infer<typeof interestsTopicsSchema>;
+export type UserInterests = typeof userInterests.$inferSelect;
 
 export type UserSocialTagGeneration = typeof userSocialTagGenerations.$inferSelect;
 
@@ -2627,6 +2647,12 @@ export const insertDialogueEmbeddingSchema = createInsertSchema(dialogueEmbeddin
   createdAt: true,
 });
 
+export const insertUserSemanticProfileSchema = createInsertSchema(userSemanticProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTriggerPerformanceSchema = createInsertSchema(triggerPerformance).omit({
   id: true,
   lastUpdatedAt: true,
@@ -2803,6 +2829,9 @@ export type InsertMatchingWeightsHistory = z.infer<typeof insertMatchingWeightsH
 
 export type DialogueEmbedding = typeof dialogueEmbeddings.$inferSelect;
 export type InsertDialogueEmbedding = z.infer<typeof insertDialogueEmbeddingSchema>;
+
+export type UserSemanticProfile = typeof userSemanticProfiles.$inferSelect;
+export type InsertUserSemanticProfile = z.infer<typeof insertUserSemanticProfileSchema>;
 
 export type TriggerPerformance = typeof triggerPerformance.$inferSelect;
 export type InsertTriggerPerformance = z.infer<typeof insertTriggerPerformanceSchema>;
