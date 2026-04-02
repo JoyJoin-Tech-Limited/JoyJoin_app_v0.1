@@ -39,6 +39,14 @@ import type { ArchetypeName } from "./archetypeConfig";
 import { assignVenuesToGroups, saveVenueAssignments } from "./venueAssignmentService";
 import { generateAndSaveEventTheme } from "./eventThemeGeneratorService";
 import { generateEventThemeTitle } from "./services/eventThemeTitleGenerator";
+import {
+  buildSemanticProfileCache,
+  calculateSemanticSimilarityScore,
+  calculateWeightedPairScore,
+  isSemanticSimilarityEnabled,
+  type SemanticProfileCache,
+} from "./matchingSemantic";
+import { observeSemanticSimilarityMetrics } from "./matchingMetrics";
 
 
 
@@ -96,7 +104,7 @@ export interface UserWithProfile {
 
 export interface MatchGroup {
   members: UserWithProfile[];
-  avgPairScore: number;  // 平均配对兼容性分数（chemistry + interest + socialAffinity + backgroundDiversity + preference + language）
+  avgPairScore: number;  // 平均配对兼容性分数（默认 6D；启用语义特性后为 7D）
   avgChemistryScore: number;  // 平均化学反应分数
   diversityScore: number;  // 小组多样性分数
   communicationBalance: number;  // 能量平衡分数（0-100，评估小组社交能量分布的健康程度，来自ARCHETYPE_ENERGY）
@@ -615,13 +623,9 @@ function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWi
 /**
  * 计算两个用户的配对兼容性分数 (0-100)
  * 
- * ✅ ACTIVE 匹配权重配置 (6维度):
- * - Chemistry          (性格化学反应):  28%  — 原型兼容性矩阵
- * - Interest           (兴趣重叠度):    28%  — Heat 加权 Jaccard 相似度
- * - Social Affinity    (社交同频度):    20%  — 人生阶段亲和力 + 学历同频 + 同乡亲和（可选）
- * - Background Diversity (背景多样性): 15%  — 行业多样性 + 性别多样性
- * - Preference         (活动偏好):       5%  — 社交目的 + 酒局偏好
- * - Language           (语言沟通):       4%  — 语言共同覆盖
+ * ✅ ACTIVE 匹配权重配置:
+ * - Legacy path (default, 6维度): chemistry 28 / interest 28 / socialAffinity 20 / backgroundDiversity 15 / preference 5 / language 4
+ * - Flagged path (ENABLE_SEMANTIC_SIMILARITY=true, 7维度): chemistry 26 / interest 26 / socialAffinity 19 / backgroundDiversity 14 / preference 5 / language 4 / semanticSimilarity 6
  * 
  * Note — Language (4%): 普通话覆盖率高，语言维度区分力有限，保留为轻量兼容信号。
  * Note — Preference (5%): 目前酒吧/饭店活动场景分化有限，保留为轻量场景适配信号。
@@ -631,9 +635,11 @@ async function calculatePairScore(
   user2: UserWithProfile,
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
+  semanticProfileCache?: SemanticProfileCache,
 ): Promise<number> {
+  const semanticSimilarityEnabled = isSemanticSimilarityEnabled();
   // Use a sorted key so (A,B) and (B,A) map to the same cache entry
-  const cacheKey = [user1.userId, user2.userId].sort().join('|');
+  const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}|${[user1.userId, user2.userId].sort().join('|')}`;
   if (pairScoreCache?.has(cacheKey)) {
     return pairScoreCache.get(cacheKey)!;
   }
@@ -648,37 +654,39 @@ async function calculatePairScore(
 
   // Background Diversity: industry diversity + gender diversity
   const backgroundDiversity = calculateBackgroundDiversityScore(user1, user2);
+  const semanticSimilarity = semanticSimilarityEnabled
+    ? calculateSemanticSimilarityScore(user1, user2, semanticProfileCache)
+    : undefined;
 
-  const weights = {
-    chemistry:           0.28,  // 性格化学反应 28%
-    interest:            0.28,  // 兴趣重叠度 28%
-    socialAffinity:      0.20,  // 社交同频度 20%
-    backgroundDiversity: 0.15,  // 背景多样性 15%
-    preference:          0.05,  // 活动偏好 5%
-    language:            0.04,  // 语言沟通 4%
+  const dimensions = {
+    chemistry,
+    interest,
+    socialAffinity,
+    backgroundDiversity,
+    preference,
+    language,
+    semanticSimilarity,
   };
+  const legacyScore = calculateWeightedPairScore(dimensions, false);
+  const result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled);
 
-  const totalScore =
-    chemistry           * weights.chemistry +
-    interest            * weights.interest +
-    socialAffinity      * weights.socialAffinity +
-    backgroundDiversity * weights.backgroundDiversity +
-    preference          * weights.preference +
-    language            * weights.language;
+  if (semanticSimilarityEnabled && typeof semanticSimilarity === "number") {
+    observeSemanticSimilarityMetrics(semanticSimilarity, result - legacyScore);
+  }
 
-  const result = Math.round(totalScore);
   pairScoreCache?.set(cacheKey, result);
   return result;
 }
 
 /**
  * 计算小组内所有成员的平均配对兼容性分数
- * 包含所有6个维度：chemistry + interest + socialAffinity + backgroundDiversity + preference + language
+ * 包含默认 6D，或启用特性开关后的 7D（额外包含 semanticSimilarity）
  */
 async function calculateGroupPairScore(
   members: UserWithProfile[],
   interestsCache?: UserInterestsCache,
   pairScoreCache?: Map<string, number>,
+  semanticProfileCache?: SemanticProfileCache,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -687,7 +695,7 @@ async function calculateGroupPairScore(
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
-      totalScore += await calculatePairScore(members[i], members[j], interestsCache, pairScoreCache);
+      totalScore += await calculatePairScore(members[i], members[j], interestsCache, pairScoreCache, semanticProfileCache);
       pairCount++;
     }
   }
@@ -881,6 +889,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
 
   // 3.5 Preload user_interests for all eligible users in one batch query (C: runtime hardening)
   const interestsCache = await preloadUserInterests(eligibleUserIds);
+  const semanticProfileCache = isSemanticSimilarityEnabled()
+    ? buildSemanticProfileCache(eligibleUsers, interestsCache)
+    : undefined;
 
   // In-memory pair score cache for this run (C: avoid recomputing the same pair twice)
   const pairScoreCache = new Map<string, number>();
@@ -929,7 +940,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     for (let j = i + 1; j < eligibleUsers.length; j++) {
       const user1 = eligibleUsers[i] as UserWithProfile;
       const user2 = eligibleUsers[j] as UserWithProfile;
-      let score = await calculatePairScore(user1, user2, interestsCache, pairScoreCache);
+      let score = await calculatePairScore(user1, user2, interestsCache, pairScoreCache, semanticProfileCache);
       
       // Check if this pair has an invitation relationship
       const isInvited = invitationPairs.some(pair => 
@@ -974,7 +985,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
         // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
         let totalScore = 0;
         for (const member of groupMembers) {
-          totalScore += await calculatePairScore(candidate, member, interestsCache, pairScoreCache);
+          totalScore += await calculatePairScore(candidate, member, interestsCache, pairScoreCache, semanticProfileCache);
         }
         const avgScore = totalScore / groupMembers.length;
         
@@ -994,7 +1005,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     
     // 只保留达到最小人数的小组
     if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = await calculateGroupPairScore(groupMembers, interestsCache, pairScoreCache);
+      const avgPairScore = await calculateGroupPairScore(groupMembers, interestsCache, pairScoreCache, semanticProfileCache);
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers);
       const diversity = calculateGroupDiversity(groupMembers);
