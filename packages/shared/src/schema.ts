@@ -2495,7 +2495,8 @@ export const matchingWeightsHistory = pgTable("matching_weights_history", {
   // 当时的统计
   matchesSinceLastUpdate: integer("matches_since_last_update").default(0),
   satisfactionSinceLastUpdate: numeric("satisfaction_since_last_update", { precision: 5, scale: 4 }),
-  
+  shadowMetadata: jsonb("shadow_metadata"),
+
   recordedAt: timestamp("recorded_at").defaultNow(),
 }, (table) => [
   index("idx_weights_history_config").on(table.configId),
