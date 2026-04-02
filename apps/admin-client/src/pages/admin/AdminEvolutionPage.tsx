@@ -136,7 +136,6 @@ interface ShadowExperiment {
   averageConfidence: number | string;
   rankAgreementRate: number | string;
   averageScoreDelta: number | null;
-  results: ShadowExperimentResult[];
   summary: {
     outcomeValidation: {
       sampleCount: number;
@@ -150,6 +149,10 @@ interface ShadowExperiment {
     liveRankingProtected: boolean;
   };
   createdAt: string;
+}
+
+interface ShadowExperimentDetail extends ShadowExperiment {
+  results: ShadowExperimentResult[];
 }
 
 function toPercent(value: number | string | null | undefined): string {
@@ -236,6 +239,22 @@ export default function AdminEvolutionPage() {
     },
   });
 
+  const latestShadowExperimentId = shadowExperiments?.[0]?.id;
+
+  const { data: latestShadowExperiment, isLoading: latestShadowExperimentLoading } = useQuery<ShadowExperimentDetail>({
+    queryKey: ["/api/admin/matching-shadow-experiments", latestShadowExperimentId, "detail"],
+    enabled: Boolean(latestShadowExperimentId),
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/matching-shadow-experiments/${latestShadowExperimentId}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load matching shadow experiment");
+      }
+      return response.json();
+    },
+  });
+
   const runShadowExperimentMutation = useMutation({
     mutationFn: async (poolId: string) => {
       const response = await apiRequest("POST", "/api/admin/matching-shadow-experiments", { poolId });
@@ -249,8 +268,6 @@ export default function AdminEvolutionPage() {
       toast({ title: "影子批处理失败", description: "请稍后重试", variant: "destructive" });
     },
   });
-
-  const latestShadowExperiment = shadowExperiments?.[0];
 
   const handleAddGoldenDialogue = async () => {
     if (!newDialogueContent.trim() || !newDialogueCategory) {
@@ -601,7 +618,7 @@ export default function AdminEvolutionPage() {
             </CardContent>
           </Card>
 
-          {shadowLoading ? (
+          {shadowLoading || latestShadowExperimentLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="animate-pulse">
