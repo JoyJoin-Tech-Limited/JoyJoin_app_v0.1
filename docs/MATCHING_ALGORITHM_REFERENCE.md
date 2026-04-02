@@ -319,6 +319,72 @@ Matches event-level preferences from registration:
 - **Scope: pair-level only.** Language is intentionally kept as a lightweight pair signal (4%). Group-level social dynamics are captured by Energy Balance (§4.1) which uses archetype energy, not language.
 - Low discriminative power in current Mandarin-dominant pools — retained as a safety net for genuine multilingual mismatches.
 
+#### 3.2.7 Semantic Similarity Score (语义相似度) — 6% *(feature-flagged)*
+
+> Active only when `ENABLE_SEMANTIC_SIMILARITY=true`. Disabled path is identical to 6D scoring.
+
+**Purpose:** Captures semantic proximity that categorical matching misses — two users whose
+interests share no tagged topic but are conceptually adjacent (e.g., "探索本地文化" vs "发现城市角落宝藏")
+will have similar hash-embedded vectors.
+
+**Implementation file:** `apps/server/src/matchingSemantic.ts`
+
+**Profile inputs (deterministic — no AI signals):**
+
+| Field | Weight | Source |
+|-------|--------|--------|
+| `archetype` | 2.5 | `users` |
+| `secondaryArchetype` | 1.25 | `users` |
+| `workMode` | 1.5 | `users` |
+| `educationLevel` | 1.25 | `users` |
+| `industryNiche` | 1.25 | `users` |
+| `hometown` | 0.75 | `users` |
+| `preferredLanguages[]` | 0.75 each | registration |
+| `eventIntent[]` / `userIntent[]` | 1.0 each | registration / `users` |
+| `barThemes[]` | 0.75 each | registration (酒局 events only) |
+| `alcoholComfort[]` | 0.5 each | registration (酒局 events only) |
+| Top-10 interest topics | 1.0 – 2.0 heat-scaled | `user_interests` |
+
+> **Signal boundary:** `user_interest_signals` is **never** read. This invariant is shared with
+> the interest score boundary (`interestSignalBoundary.test.ts`).
+
+**Vector construction:** 64-dimension feature-hashing vector. Each token is hashed to a primary
+and secondary bucket with 2:1 weighting, then L2-normalised.
+
+**Cosine similarity → score mapping:**
+```
+similarity ∈ [0, 1] (cosine)
+semanticScore = clamp(35 + similarity × 65, 35, 100)
+```
+
+**Fallback values:**
+
+| Condition | Score | Notes |
+|-----------|-------|-------|
+| Both profiles **absent from cache** | 50 (neutral) | User data not available at matching time |
+| One profile **absent from cache** | 45 (slight penalty) | Asymmetric data — partial comparison |
+| Both profiles **present but empty** (zero weighted features after construction) | 50 (neutral) | User exists but has no scoreable profile fields |
+| One profile **present but empty** | 45 (slight penalty) | One side has no scoreable features |
+
+**Weight shift:** When semantic scoring is enabled, existing weights are reduced conservatively:
+
+| Dimension | 6D weight | 7D weight | Change |
+|-----------|-----------|-----------|--------|
+| chemistry | 28% | 26% | −2% |
+| interest | 28% | 26% | −2% |
+| socialAffinity | 20% | 19% | −1% |
+| backgroundDiversity | 15% | 14% | −1% |
+| preference | 5% | 5% | 0% |
+| language | 4% | 4% | 0% |
+| **semanticSimilarity** | — | **6%** | +6% |
+
+Maximum score shift from enabling: ≤3.9 points (6% weight × 65-point semantic score range). Observed pair-score deltas typically fall in the 1–4 point range, bounded by the weight redistribution across dimensions.
+
+**Admin visibility:** Metrics are exposed via:
+- Admin dashboard `/admin` → 🧠 语义匹配观测 card (average score, pair-delta range, flag status)
+- Prometheus endpoint `GET /api/metrics` → `joyjoin_matching_semantic_similarity_score` histogram
+  and `joyjoin_matching_semantic_pair_score_delta` histogram
+
 ---
 
 ## 4. Layer 3 — Group Formation Algorithm
