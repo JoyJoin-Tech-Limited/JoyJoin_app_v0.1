@@ -834,7 +834,7 @@ export default function PersonalityTestResultPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold" data-testid="text-primary-archetype">{finalResult.primaryArchetype}</h1>
+            <h1 className="font-cn-display text-4xl font-bold" data-testid="text-primary-archetype">{finalResult.primaryArchetype}</h1>
             {nickname && <p className="text-xl font-medium text-primary">{nickname}</p>}
             {tagline && <p className="text-base text-muted-foreground italic">{tagline}</p>}
           </div>
