@@ -31,6 +31,10 @@ const API_CONFIG = {
   CONCURRENCY_LIMIT: 3, // Max concurrent API calls
 };
 
+const GROUP_ANALYSIS_PROMPT_VERSION = 'group-analysis-v1';
+const PAIR_EXPLANATION_PROMPT_VERSION = 'pair-explanation-v1';
+const GROUP_ICEBREAKERS_PROMPT_VERSION = 'group-icebreakers-v1';
+
 // ============ 重试与并发控制 ============
 
 /**
@@ -146,6 +150,10 @@ export interface GroupAnalysis extends GroupAnalysisContract {
    * this analysis. Aligned with AIResponseMeta.fallbackUsed.
    */
   fallbackUsed?: boolean;
+  /**
+   * Response-level prompt version for the group analysis contract.
+   */
+  promptVersion?: string;
 }
 
 // ============ 缓存类型 ============
@@ -153,6 +161,7 @@ export interface GroupAnalysis extends GroupAnalysisContract {
 interface CachedAIMetadata {
   provider?: AIProvider;
   fallbackUsed?: boolean;
+  promptVersion?: string;
 }
 
 interface PairExplanationsCache extends CachedAIMetadata {
@@ -183,18 +192,21 @@ interface PairExplanationGenerationResult {
   explanation: MatchExplanation;
   providerUsed: AIProvider;
   fallbackUsed: boolean;
+  promptVersion: string;
 }
 
 interface BatchPairExplanationGenerationResult {
   explanations: MatchExplanation[];
   providerUsed: AIProvider;
   fallbackUsed: boolean;
+  promptVersion: string;
 }
 
 interface IceBreakerGenerationResult {
   iceBreakers: string[];
   providerUsed: AIProvider;
   fallbackUsed: boolean;
+  promptVersion: string;
 }
 
 // Cache expiry: 7 days
@@ -226,10 +238,12 @@ function calculatePairCount(memberCount: number): number {
 function coerceCachedAIMetadata(cache: CachedAIMetadata | null | undefined): {
   provider: AIProvider;
   fallbackUsed: boolean;
+  promptVersion?: string;
 } {
   return {
     provider: cache?.provider ?? null,
     fallbackUsed: cache?.fallbackUsed === true,
+    promptVersion: cache?.promptVersion,
   };
 }
 
@@ -262,7 +276,7 @@ function mergeProviders(...providers: AIProvider[]): AIProvider {
 async function loadCachedPairExplanations(
   groupId: string,
   members: MatchMember[]
-): Promise<{ explanations: MatchExplanation[]; generatedAt: string; provider: AIProvider; fallbackUsed: boolean } | null> {
+): Promise<{ explanations: MatchExplanation[]; generatedAt: string; provider: AIProvider; fallbackUsed: boolean; promptVersion?: string } | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -303,6 +317,7 @@ async function loadCachedPairExplanations(
         generatedAt: cached.generatedAt,
         provider: metadata.provider,
         fallbackUsed: metadata.fallbackUsed,
+        promptVersion: metadata.promptVersion,
       };
     }
     
@@ -326,7 +341,7 @@ async function savePairExplanationsCache(
   groupId: string, 
   members: MatchMember[],
   explanations: MatchExplanation[],
-  metadata: { provider: AIProvider; fallbackUsed: boolean }
+  metadata: { provider: AIProvider; fallbackUsed: boolean; promptVersion: string }
 ): Promise<void> {
   try {
     const cache: PairExplanationsCache = {
@@ -336,6 +351,7 @@ async function savePairExplanationsCache(
       explanations,
       provider: metadata.provider,
       fallbackUsed: metadata.fallbackUsed,
+      promptVersion: metadata.promptVersion,
     };
     
     await db.update(eventPoolGroups)
@@ -358,7 +374,7 @@ async function loadCachedIceBreakers(
   groupId: string,
   members: MatchMember[],
   eventType: string
-): Promise<{ topics: string[]; generatedAt: string; provider: AIProvider; fallbackUsed: boolean } | null> {
+): Promise<{ topics: string[]; generatedAt: string; provider: AIProvider; fallbackUsed: boolean; promptVersion?: string } | null> {
   try {
     const group = await db.query.eventPoolGroups.findFirst({
       where: eq(eventPoolGroups.id, groupId),
@@ -398,6 +414,7 @@ async function loadCachedIceBreakers(
         generatedAt: cached.generatedAt,
         provider: metadata.provider,
         fallbackUsed: metadata.fallbackUsed,
+        promptVersion: metadata.promptVersion,
       };
     }
     
@@ -422,7 +439,7 @@ async function saveIceBreakersCache(
   members: MatchMember[],
   eventType: string,
   topics: string[],
-  metadata: { provider: AIProvider; fallbackUsed: boolean }
+  metadata: { provider: AIProvider; fallbackUsed: boolean; promptVersion: string }
 ): Promise<void> {
   try {
     const cache: IceBreakersCache = {
@@ -432,6 +449,7 @@ async function saveIceBreakersCache(
       topics,
       provider: metadata.provider,
       fallbackUsed: metadata.fallbackUsed,
+      promptVersion: metadata.promptVersion,
     };
     
     await db.update(eventPoolGroups)
@@ -670,7 +688,17 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
     });
     const latencyMs = Date.now() - t0;
     console.log(`[MatchExplanation] generatePairExplanation provider=${provider} latency=${latencyMs}ms`);
-    logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false });
+    logAITrace({
+      domain: 'match_explanation',
+      feature: 'generatePairExplanation',
+      provider,
+      model,
+      latencyMs,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+    });
     
     const explanation = response.choices[0]?.message?.content?.trim() || 
       `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
@@ -685,6 +713,7 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       },
       providerUsed: provider,
       fallbackUsed: false,
+      promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
     };
   } catch (primaryError) {
     if (provider === 'minimax') {
@@ -700,7 +729,17 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
         });
         const latencyMs = Date.now() - t0;
         console.log(`[MatchExplanation] generatePairExplanation provider=deepseek (fallback) latency=${latencyMs}ms`);
-        logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: 'deepseek', model: fbModel, latencyMs, success: true, fallbackUsed: true, fromCache: false });
+        logAITrace({
+          domain: 'match_explanation',
+          feature: 'generatePairExplanation',
+          provider: 'deepseek',
+          model: fbModel,
+          latencyMs,
+          success: true,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+        });
         const explanation = fbResponse.choices[0]?.message?.content?.trim() ||
           `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
         return {
@@ -713,14 +752,37 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
           },
           providerUsed: 'deepseek',
           fallbackUsed: true,
+          promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
         };
       } catch (fallbackError) {
         console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
-        logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider: 'deepseek', model: fbModel, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
+        logAITrace({
+          domain: 'match_explanation',
+          feature: 'generatePairExplanation',
+          provider: 'deepseek',
+          model: fbModel,
+          latencyMs: Date.now() - t0,
+          success: false,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+          errorCode: 'deepseek_fallback_error',
+        });
       }
     } else {
       console.error('[MatchExplanation] Error generating explanation after retries:', primaryError);
-      logAITrace({ domain: 'match_explanation', feature: 'generatePairExplanation', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
+      logAITrace({
+        domain: 'match_explanation',
+        feature: 'generatePairExplanation',
+        provider,
+        model,
+        latencyMs: Date.now() - t0,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
+        errorCode: 'primary_retry_exhausted',
+      });
     }
     // 降级处理：返回基于化学反应分数的模板解释
     return {
@@ -733,6 +795,7 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       },
       providerUsed: null,
       fallbackUsed: true,
+      promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
     };
   }
 }
@@ -778,6 +841,7 @@ async function generateFreshPairExplanations(members: MatchMember[]): Promise<Ba
     explanations: results.map((result) => result.explanation),
     providerUsed: mergeProviders(...results.map((result) => result.providerUsed)),
     fallbackUsed: results.some((result) => result.fallbackUsed),
+    promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
   };
 }
 
@@ -800,7 +864,8 @@ export async function generateGroupAnalysis(
   members: MatchMember[],
   eventType: string = "饭局",
   useCache: boolean = true
-): Promise<GroupAnalysis & { fromCache: boolean; generatedAt: string; provider: AIProvider; fallbackUsed: boolean }> {
+): Promise<GroupAnalysis & { fromCache: boolean; generatedAt: string; provider: AIProvider; fallbackUsed: boolean; promptVersion: string }> {
+  const startedAt = Date.now();
   let pairExplanations: MatchExplanation[] = [];
   let iceBreakers: string[] = [];
   let fromCache = false;
@@ -808,6 +873,7 @@ export async function generateGroupAnalysis(
   // Normalized metadata fields (aligned with AIResponseMeta)
   let provider: AIProvider = null;
   let fallbackUsed = false;
+  let promptVersion = GROUP_ANALYSIS_PROMPT_VERSION;
   
   // Try to load from cache first (with roster validation)
   if (useCache) {
@@ -840,12 +906,14 @@ export async function generateGroupAnalysis(
       savePairExplanationsCache(groupId, members, pairExplanations, {
         provider: pairExplanationResult.providerUsed,
         fallbackUsed: pairExplanationResult.fallbackUsed,
+        promptVersion: pairExplanationResult.promptVersion,
       }).catch((err) => {
         console.error('[MatchExplanation] Failed to save pair explanations cache:', err);
       });
       saveIceBreakersCache(groupId, members, eventType, iceBreakers, {
         provider: iceBreakerResult.providerUsed,
         fallbackUsed: iceBreakerResult.fallbackUsed,
+        promptVersion: iceBreakerResult.promptVersion,
       }).catch((err) => {
         console.error('[MatchExplanation] Failed to save ice breakers cache:', err);
       });
@@ -861,6 +929,17 @@ export async function generateGroupAnalysis(
     provider = mergeProviders(pairExplanationResult.providerUsed, iceBreakerResult.providerUsed);
     fallbackUsed = pairExplanationResult.fallbackUsed || iceBreakerResult.fallbackUsed;
   }
+
+  logAITrace({
+    domain: 'match_explanation',
+    feature: 'generateGroupAnalysis',
+    provider,
+    latencyMs: Date.now() - startedAt,
+    success: true,
+    fallbackUsed,
+    fromCache,
+    promptVersion,
+  });
   
   // 计算整体化学反应
   const totalChemistry = pairExplanations.reduce((sum, exp) => sum + exp.chemistryScore, 0);
@@ -894,6 +973,7 @@ export async function generateGroupAnalysis(
     generatedAt: fromCache && cacheGeneratedAt ? cacheGeneratedAt : new Date().toISOString(),
     provider,
     fallbackUsed,
+    promptVersion,
   };
 }
 
@@ -1143,7 +1223,17 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
     });
     const latencyMs = Date.now() - t0;
     console.log(`[IceBreakers] generateIceBreakers provider=${provider} latency=${latencyMs}ms`);
-    logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false });
+    logAITrace({
+      domain: 'match_explanation',
+      feature: 'generateIceBreakers',
+      provider,
+      model,
+      latencyMs,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+    });
     
     const content = response.choices[0]?.message?.content?.trim() || '';
     const iceBreakers = content
@@ -1153,7 +1243,12 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
       .slice(0, 5);
     
     if (iceBreakers.length >= 2) { // Lowered threshold from 3 to 2
-      return { iceBreakers, providerUsed: provider, fallbackUsed: false };
+      return {
+        iceBreakers,
+        providerUsed: provider,
+        fallbackUsed: false,
+        promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+      };
     }
   } catch (primaryError) {
     if (provider === 'minimax') {
@@ -1169,7 +1264,17 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
         });
         const latencyMs = Date.now() - t0;
         console.log(`[IceBreakers] generateIceBreakers provider=deepseek (fallback) latency=${latencyMs}ms`);
-        logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: 'deepseek', model: fbModel, latencyMs, success: true, fallbackUsed: true, fromCache: false });
+        logAITrace({
+          domain: 'match_explanation',
+          feature: 'generateIceBreakers',
+          provider: 'deepseek',
+          model: fbModel,
+          latencyMs,
+          success: true,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+        });
         const content = fbResponse.choices[0]?.message?.content?.trim() || '';
         const iceBreakers = content
           .split('\n')
@@ -1177,20 +1282,52 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           .filter(line => line.length > 5 && line.length < 100)
           .slice(0, 5);
         if (iceBreakers.length >= 2) {
-          return { iceBreakers, providerUsed: 'deepseek', fallbackUsed: true };
+          return {
+            iceBreakers,
+            providerUsed: 'deepseek',
+            fallbackUsed: true,
+            promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+          };
         }
       } catch (fallbackError) {
         console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
-        logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider: 'deepseek', model: fbModel, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'deepseek_fallback_error' });
+        logAITrace({
+          domain: 'match_explanation',
+          feature: 'generateIceBreakers',
+          provider: 'deepseek',
+          model: fbModel,
+          latencyMs: Date.now() - t0,
+          success: false,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+          errorCode: 'deepseek_fallback_error',
+        });
       }
     } else {
       console.error('[IceBreakers] Error generating ice-breakers after retries:', primaryError);
-      logAITrace({ domain: 'match_explanation', feature: 'generateIceBreakers', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, errorCode: 'primary_retry_exhausted' });
+      logAITrace({
+        domain: 'match_explanation',
+        feature: 'generateIceBreakers',
+        provider,
+        model,
+        latencyMs: Date.now() - t0,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+        errorCode: 'primary_retry_exhausted',
+      });
     }
   }
   
   // 降级：返回预设话题
-  return { iceBreakers: getFallbackIceBreakers(eventType, commonInterests), providerUsed: null, fallbackUsed: true };
+  return {
+    iceBreakers: getFallbackIceBreakers(eventType, commonInterests),
+    providerUsed: null,
+    fallbackUsed: true,
+    promptVersion: GROUP_ICEBREAKERS_PROMPT_VERSION,
+  };
 }
 
 /**
