@@ -207,8 +207,8 @@ export function validateTheme(
     warnings.push(`Theme length ${themeLength} is outside recommended 12-18 characters`);
   }
   
-  if (subtitleLength < 15 || subtitleLength > 25) {
-    warnings.push(`Subtitle length ${subtitleLength} is outside recommended 15-25 characters`);
+  if (subtitleLength < 14 || subtitleLength > 25) {
+    warnings.push(`Subtitle length ${subtitleLength} is outside recommended 14-25 characters`);
   }
   
   // CHECK 3: Archetype presence (CRITICAL)
@@ -238,8 +238,12 @@ export function validateTheme(
   const lowEnergyTerms = ['沉静', '安静', '深度', '沉思'];
   const highEnergyTerms = ['高能', '活力', '爆发', '超高能'];
   
-  const hasLowEnergyTerms = lowEnergyTerms.some(term => theme.theme.includes(term));
-  const hasHighEnergyTerms = highEnergyTerms.some(term => theme.theme.includes(term));
+  const themeWithoutArchetypes = [...ARCHETYPE_NAMES, ...ARCHETYPE_ALIASES].reduce(
+    (currentTheme, token) => currentTheme.replaceAll(token, ''),
+    theme.theme
+  );
+  const hasLowEnergyTerms = lowEnergyTerms.some(term => themeWithoutArchetypes.includes(term));
+  const hasHighEnergyTerms = highEnergyTerms.some(term => themeWithoutArchetypes.includes(term));
   
   if (avgEnergy > 80 && hasLowEnergyTerms && !hasHighEnergyTerms) {
     errors.push('Energy mismatch: high energy group (>80) but theme suggests low energy');

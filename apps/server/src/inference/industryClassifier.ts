@@ -875,6 +875,11 @@ export async function classifyIndustry(
 ): Promise<IndustryClassificationResult> {
   const startTime = Date.now();
   const cleanInput = userInput.trim();
+  const resolveNormalizedInput = async (result: IndustryClassificationResult) => (
+    result.normalizedInput && result.normalizedInput !== result.rawInput
+      ? result.normalizedInput
+      : await normalizeUserInput(cleanInput)
+  );
   
   if (!cleanInput) {
     return await intelligentFallback(cleanInput, startTime);
@@ -883,14 +888,14 @@ export async function classifyIndustry(
   // Tier 0: Fuzzy matching for typos and variations
   const fuzzyResult = fuzzyMatch(cleanInput);
   if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_HIGH) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
+    const normalizedInput = await resolveNormalizedInput(fuzzyResult);
     return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 1: Seed库精确匹配
   const seedResult = matchViaSeed(cleanInput);
   if (seedResult && seedResult.confidence >= CONFIDENCE_THRESHOLDS.SEED_MIN) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
+    const normalizedInput = await resolveNormalizedInput(seedResult);
     return { ...seedResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
@@ -903,7 +908,7 @@ export async function classifyIndustry(
   // Tier 2: Taxonomy直接匹配
   const taxonomyResult = matchViaTaxonomy(cleanInput);
   if (taxonomyResult && taxonomyResult.confidence >= CONFIDENCE_THRESHOLDS.TAXONOMY_MIN) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
+    const normalizedInput = await resolveNormalizedInput(taxonomyResult);
     return { ...taxonomyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
   }
   
@@ -921,7 +926,7 @@ export async function classifyIndustry(
   if (bestResult && bestResult.confidence < 0.7) {
     // Low confidence, generate candidate list
     const candidates = generateCandidates(cleanInput, bestResult);
-    const normalizedInput = await normalizeUserInput(cleanInput);
+    const normalizedInput = await resolveNormalizedInput(bestResult);
     
     return {
       ...bestResult,
@@ -932,7 +937,7 @@ export async function classifyIndustry(
   }
   
   if (bestResult) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
+    const normalizedInput = await resolveNormalizedInput(bestResult);
     return {
       ...bestResult,
       normalizedInput,
