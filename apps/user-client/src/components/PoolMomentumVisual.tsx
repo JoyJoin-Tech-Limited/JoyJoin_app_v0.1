@@ -50,11 +50,11 @@ function ArchetypeChip({
 
   const floatStyle: CSSProperties = prefersReducedMotion
     ? {}
-    : {
+    : ({
         // CSS custom properties drive the CSS @keyframes chip-float
-        ["--float-duration" as string]: `${FLOAT_DURATION_BASE + (index % 3) * FLOAT_DURATION_VARIANCE}s`,
-        ["--float-delay" as string]: `${index * FLOAT_DELAY_STEP}s`,
-      };
+        "--float-duration": `${FLOAT_DURATION_BASE + (index % 3) * FLOAT_DURATION_VARIANCE}s`,
+        "--float-delay": `${index * FLOAT_DELAY_STEP}s`,
+      } as CSSProperties);
 
   return (
     <motion.div
@@ -109,7 +109,7 @@ function GhostChip({ index, prefersReducedMotion }: ChipProps) {
       style={{ marginLeft: "-8px", zIndex: 20 - index }}
       aria-hidden="true"
     >
-      <div className="w-9 h-9 rounded-full ring-2 ring-dashed ring-muted-foreground/25 bg-muted/40 flex items-center justify-center">
+      <div className="w-9 h-9 rounded-full border-2 border-dashed border-muted-foreground/25 bg-muted/40 flex items-center justify-center">
         <span className="text-muted-foreground/30 text-[10px] font-semibold select-none">
           ?
         </span>
@@ -170,7 +170,7 @@ function EmptyInvitation({ prefersReducedMotion }: { prefersReducedMotion: boole
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="w-9 h-9 rounded-full ring-2 ring-dashed ring-muted-foreground/20 bg-muted/25 flex-shrink-0"
+          className="w-9 h-9 rounded-full border-2 border-dashed border-muted-foreground/20 bg-muted/25 flex-shrink-0"
           style={{ marginLeft: i === 0 ? 0 : "-8px", zIndex: 4 - i }}
           aria-hidden="true"
         />
@@ -233,7 +233,7 @@ export function PoolMomentumVisual({
         <div className="flex items-center">
           {featuredChips.map((archetype, i) => (
             <ArchetypeChip
-              key={archetype}
+              key={`${archetype}-${i}`}
               archetype={archetype}
               index={i}
               prefersReducedMotion={prefersReducedMotion}
