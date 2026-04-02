@@ -258,7 +258,7 @@ export function calculateGroupStats(
   // Energy statistics
   const energyLevels = members.map((m) => m.energyLevel);
   const totalEnergy = energyLevels.reduce((a, b) => a + b, 0);
-  const avgEnergy = energyLevels.length > 0 ? totalEnergy / energyLevels.length : 0;
+  const avgEnergy = energyLevels.length > 0 ? totalEnergy / energyLevels.length : Number.NaN;
   
   const energyDistribution = {
     high: energyLevels.filter((e) => e >= 80).length,
