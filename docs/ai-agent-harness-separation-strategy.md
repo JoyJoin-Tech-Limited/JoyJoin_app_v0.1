@@ -56,7 +56,7 @@ These components exhibit patterns from the strategy's three-role model but were 
 | Prompt version tagging on all model calls | 🔲 Proposed | Not consistently implemented; provider + latency are logged but prompt version is not |
 | Evaluator rejection reason in observability output | 🔲 Proposed | `fromCache` + `generatedAt` are logged; rejection reasons are `console.warn` only |
 | `callLLMForInference()` (attribute inference fallback) | ⚡ Implemented, not wired | `apps/server/src/inference/llmFallbackInference.ts` — implemented but no runtime callers yet |
-| Thompson Sampling weight learning in pool matching | ⚡ Implemented, not wired | `apps/server/src/matchingWeightsService.ts` — not yet active in `poolMatchingService.ts` |
+| Thompson Sampling weight learning in pool matching | ⚡ Primary adaptive-weight path, implemented but not wired | `apps/server/src/matchingWeightsService.ts` — preferred over legacy experiments; not yet active in `poolMatchingService.ts` |
 
 ---
 
@@ -461,7 +461,7 @@ Every orchestrator service should implement the same 7-stage structural pipeline
 | `apps/server/src/routes.ts` | ✅ Active | All API route registrations; new orchestrator routes register here; `loadInterestSignalsByUserIds()` defined here |
 | `packages/shared/src/schema.ts` | ✅ Active | Database schema source of truth; agent services read but do not own schema definition |
 | `apps/server/src/inference/llmFallbackInference.ts` | ⚡ Implemented, not wired | Attribute inference fallback via direct DeepSeek; `callLLMForInference()` has no runtime callers yet |
-| `apps/server/src/matchingWeightsService.ts` | ⚡ Implemented, not wired | Thompson Sampling weight learning; not yet connected to `poolMatchingService.ts` |
+| `apps/server/src/matchingWeightsService.ts` | ⚡ Primary adaptive-weight path, implemented but not wired | Thompson Sampling weight learning; not yet connected to `poolMatchingService.ts` |
 | `docs/icebreaker-system.md` | ✅ Active | Full technical reference for Social Icebreaker system |
 | `docs/MATCHING_ALGORITHM_REFERENCE.md` | ✅ Active | Matching algorithm documentation; cross-reference when scoping Match Intelligence evaluator |
 | `docs/PERSONALITY_TEST_SYSTEM.md` | ✅ Active | Personality test system documentation; cross-reference when scoping Onboarding Discovery |
