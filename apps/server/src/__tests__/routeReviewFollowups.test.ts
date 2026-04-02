@@ -34,4 +34,14 @@ describe('route review follow-ups', () => {
     expect(routesSource).toContain('const [completedEventsResult] = await db');
     expect(routesSource).toContain('const [connectionsResult] = await db');
   });
+
+  it('emits normalized AI metadata on legacy pair-explanation responses', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+
+    expect(routesSource).toContain("app.get('/api/event-pool-groups/:groupId/match-explanations'");
+    expect(routesSource).toContain("app.get('/api/blind-box-events/:eventId/match-explanations'");
+    expect(routesSource).toContain('promptVersion: groupAnalysis.promptVersion');
+    expect(routesSource).toContain('fromCache: groupAnalysis.fromCache');
+    expect(routesSource).toContain('provider: groupAnalysis.provider');
+  });
 });

@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
+import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -17,5 +18,15 @@ export function registerAdminRoutes(app: Express): void {
       apiKey,
       securityKey,
     });
+  });
+
+  app.get("/api/admin/outcome-analytics", requireAdmin, async (_req, res) => {
+    try {
+      const dashboard = await adminOutcomeAnalyticsRepo.getDashboard();
+      res.json(dashboard);
+    } catch (error) {
+      console.error("[AdminOutcomeAnalytics] Failed to build dashboard:", error);
+      res.status(500).json({ message: "Failed to load outcome analytics dashboard" });
+    }
   });
 }
