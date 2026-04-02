@@ -89,23 +89,61 @@ Color usage principles:
 
 ## Typography
 
-Primary brand font:
-- **ZhanKuQingKeHuangYouTi**
+JoyJoin uses a **three-role semantic typography system**. Every typographic decision maps to one of these roles.
 
-Use it for:
-- brand-led headlines
-- key campaign text
-- emotionally expressive headings
-- JoyJoin identity moments
+### Official font roles
 
-For dense UI copy or long reading, pair it with a clean supporting sans-serif only when needed for readability.
+| Role | Tailwind class | CSS variable | Font (when loaded) | Fallback |
+|------|---------------|--------------|-------------------|----------|
+| **UI** | `font-ui` | `var(--font-ui)` | System Chinese stack | PingFang SC → Microsoft YaHei → system-ui |
+| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | ZCOOL QingKe HuangYou → PingFang SC |
+| **English brand** | `font-en-brand` | `var(--font-en-brand)` | Quicksand | Outfit → system-ui |
 
-Typography should feel:
-- rounded
-- friendly
-- soft
-- legible
-- polished
+The legacy `.font-brand` CSS class is an alias for `font-cn-display` and is kept for backward compatibility.
+
+### When to use each role
+
+#### `font-ui` — invisible, reliable default
+Use for everything dense and functional:
+- form labels, input fields, helper text, legal text
+- body copy and long-form reading
+- settings pages and transactional flows
+- utility buttons (save, cancel, retry, location)
+- coupon input / payment screens
+
+**Do not** apply a custom display font here.
+
+#### `font-cn-display` — warm, expressive Chinese display layer
+Use for short, high-impact emotional moments only:
+- hero headlines and large greeting text (`HeroWelcome`)
+- branded tab labels (`SlidingTabs`, `TabNavigation`, `TabsTrigger`)
+- large full-screen write-ups and premium empty-state headlines
+- celebratory / milestone / reveal moments
+- high-emotion primary CTAs ("看看我会遇见谁", "去发现活动", guide stepper next/complete)
+
+**Keep to short bursts** — do not apply to body copy or dense lists.
+
+#### `font-en-brand` — Quicksand accent for English identity moments
+Use only for:
+- JoyJoin English wordmark ("JoyJoin" in `JoyJoinLogo`)
+- English brand accent text in marketing/identity contexts
+- premium numerals only where visually appropriate
+
+**Do not** apply to all English text. Most English in the app should stay on `font-ui`.
+
+### Taro / WeChat Mini Program notes
+
+- Font loading via self-hosted `.woff2` requires the files to be present in `src/assets/fonts/`. The `@font-face` blocks in `fonts.css` are commented out until the files are uploaded.
+- Until then, ZCOOL QingKe HuangYou (loaded via Google Fonts in `index.html`) acts as the effective `font-cn-display` display font.
+- Outfit (loaded via Google Fonts) acts as the effective `font-en-brand` fallback.
+- WeChat Mini Program / WebView: avoid `backdrop-filter`, `hover:` states, and loading many font weights.
+- Self-hosted fonts in mini programs must be uploaded as CDN assets, not bundled inline.
+
+### Key design rules
+- Do **not** apply custom display fonts globally or at the container level — only on the specific element.
+- Typography should feel: rounded, friendly, soft, legible, polished.
+- Do **not** mix `font-cn-display` and `font-en-brand` on the same Chinese-language surface.
+- Body copy always uses `font-ui` regardless of visual context.
 
 ## Mascots & Illustration
 
@@ -184,13 +222,13 @@ Every JoyJoin design output should feel:
 
 - **Looks too corporate or cold** — check whether background colour and typography are using warm tones. Replace stark white or dark-mode grays with Warm Beige or the `--background` token. Prefer rounded forms over sharp angles.
 - **Too many colours or mascots in one view** — secondary colours should support, not compete. Reduce to purple as the anchor; demote other colours to accents only. Mascots should appear once per screen, intentionally.
-- **Inconsistent typography** — brand headlines must use ZhanKuQingKeHuangYouTi; body copy pairs with a clean sans-serif only when needed for legibility. Do not mix multiple display fonts on the same screen.
+- **Inconsistent typography** — check which role applies: `font-cn-display` for short emotional/display Chinese text, `font-en-brand` for English brand identity moments only, `font-ui` (or no explicit class) for everything else. Do not mix multiple display fonts on the same screen.
 - **Motion feels loud or distracting** — review against motion guidance: transitions should be gentle, smooth, and restrained. Remove bouncy keyframes or aggressive fade speeds.
 
 ## Review checklist
 
 - [ ] Primary action colour is Vibrant Purple; secondary colours are used as accents only
-- [ ] Typography uses the brand font for identity moments; body copy is clean and legible
+- [ ] Typography uses `font-cn-display` for Chinese identity/display moments; `font-en-brand` for English brand moments; `font-ui` (or no class) for body and dense UI; body copy is clean and legible
 - [ ] Layout feels breathable — rounded corners, soft spacing, no harsh contrast
 - [ ] Mascots or illustrations are used intentionally and only once per view
 - [ ] Motion is gentle and premium — no loud or bouncy animations

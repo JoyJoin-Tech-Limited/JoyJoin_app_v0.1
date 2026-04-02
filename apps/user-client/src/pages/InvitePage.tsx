@@ -115,7 +115,7 @@ export default function InvitePage() {
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-2">
             <Gift className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold">邀请好友 赢取奖励</h1>
+          <h1 className="font-cn-display text-2xl font-bold">邀请好友 赢取奖励</h1>
           <p className="text-muted-foreground text-sm">
             分享邀请链接，好友注册即享双重福利
           </p>

@@ -541,7 +541,7 @@ body {
 
   /* 品牌字体 - 用于情感时刻的标题 */
   .font-brand {
-    font-family: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-cn-display);
   }
 
   /* 隐藏滚动条 */

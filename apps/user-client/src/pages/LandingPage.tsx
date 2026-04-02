@@ -171,11 +171,11 @@ export default function LandingPage() {
         {/* Headline, subtitle and pill badges */}
         <div className="w-full text-center mt-4 space-y-2">
           <h1
+            className="font-cn-display"
             style={{
               background: "linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              fontFamily: 'var(--font-cn-display)',
               fontSize: "clamp(26px, 8vw, 36px)",
               fontWeight: 800,
               lineHeight: 1.2,
@@ -212,7 +212,7 @@ export default function LandingPage() {
             onClick={handlePrimaryCTA}
             type="button"
             size="lg"
-            className="w-full h-16 rounded-2xl text-xl font-bold border-0 [background:var(--btn-primary-gradient)] shadow-[0_6px_0_hsl(270_55%_35%)] no-default-hover-elevate no-default-active-elevate transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_hsl(270_55%_35%)]"
+            className="w-full h-16 rounded-2xl text-xl font-bold font-cn-display border-0 [background:var(--btn-primary-gradient)] shadow-[0_6px_0_hsl(270_55%_35%)] no-default-hover-elevate no-default-active-elevate transition-all duration-75 ease-in-out active:translate-y-[4px] active:shadow-[0_2px_0_hsl(270_55%_35%)]"
             style={{ touchAction: "manipulation" }}
           >
             看看我会遇见谁
