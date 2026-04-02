@@ -22,6 +22,7 @@ import {
   countMatchingShadowExperimentPools,
   getOutcomeCalibrationSnapshot,
   getPredictiveRerankOutcomeMetrics,
+  type PredictiveRerankOutcomeMetrics,
 } from "./repositories/matchingShadowExperimentsRepo";
 import {
   getPredictiveRerankAutoDisableReason,
@@ -246,14 +247,14 @@ export async function scanPoolAndMatch(
   try {
     groups = await matchEventPool(poolId);
     const overrideForceEnabled = pool.predictiveRerankEnabledOverride === true;
-    const shouldEvaluatePredictiveRerank =
+    const predictiveRerankEligibleForEvaluation =
       pool.predictiveRerankEnabledOverride !== false &&
       (overrideForceEnabled || config.predictiveRerankEnabled);
 
-    if (shouldEvaluatePredictiveRerank) {
+    if (predictiveRerankEligibleForEvaluation) {
       const calibration = await getOutcomeCalibrationSnapshot();
       let shadowPoolCount = 0;
-      let outcomeMetrics: Awaited<ReturnType<typeof getPredictiveRerankOutcomeMetrics>> = [];
+      let outcomeMetrics: PredictiveRerankOutcomeMetrics = [];
 
       if (!overrideForceEnabled) {
         [shadowPoolCount, outcomeMetrics] = await Promise.all([

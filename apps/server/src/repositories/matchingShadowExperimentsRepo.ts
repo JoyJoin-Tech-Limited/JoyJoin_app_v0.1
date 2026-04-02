@@ -22,6 +22,8 @@ export type PredictiveRerankOutcomeMetric = {
   avgAtmosphereScore: number | null;
 };
 
+export type PredictiveRerankOutcomeMetrics = PredictiveRerankOutcomeMetric[];
+
 export async function getOutcomeCalibrationSnapshot(): Promise<OutcomeCalibrationSnapshot> {
   const positiveFeedbackPredicate = sql`
     coalesce(${eventFeedback.atmosphereScore}, 0) >= 4
