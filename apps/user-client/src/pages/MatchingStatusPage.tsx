@@ -234,8 +234,8 @@ export default function MatchingStatusPage() {
         clearTimeout(matchTransitionTimeoutRef.current);
       }
       
-      // Wait 1 second for visual transition, then show celebration
-      // If we have member data, show reveal animation; otherwise go straight to celebration
+      // Wait 1 second for the visual transition, then branch based on whether
+      // the group fetch produced member data during the async fetch above.
       matchTransitionTimeoutRef.current = setTimeout(() => {
         if (poolData.groupId) {
           if (fetchedGroupData) {
