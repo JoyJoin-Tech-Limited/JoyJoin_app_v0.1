@@ -11,25 +11,13 @@ import {
   type InsertMatchingWeightsConfig,
   type InsertMatchingWeightsHistory
 } from '@shared/schema';
+import {
+  DEFAULT_MATCHING_WEIGHTS_RATIO,
+  type MatchingWeightsShape
+} from '@joyjoin/shared/matchingWeights';
 import { eq, desc } from 'drizzle-orm';
 
-export interface MatchingWeights {
-  personalityWeight: number;
-  interestsWeight: number;
-  intentWeight: number;
-  backgroundWeight: number;
-  cultureWeight: number;
-  conversationSignatureWeight: number;
-}
-
-const DEFAULT_WEIGHTS: MatchingWeights = {
-  personalityWeight: 23,
-  interestsWeight: 24,
-  intentWeight: 13,
-  backgroundWeight: 15,
-  cultureWeight: 10,
-  conversationSignatureWeight: 15,
-};
+export type MatchingWeights = MatchingWeightsShape;
 
 let cachedWeights: MatchingWeights | null = null;
 let cacheTimestamp: number = 0;
@@ -52,15 +40,15 @@ export class MatchingWeightsService {
       if (config.length > 0) {
         const c = config[0];
         cachedWeights = {
-          personalityWeight: parseFloat(c.personalityWeight || '23'),
-          interestsWeight: parseFloat(c.interestsWeight || '24'),
-          intentWeight: parseFloat(c.intentWeight || '13'),
-          backgroundWeight: parseFloat(c.backgroundWeight || '15'),
-          cultureWeight: parseFloat(c.cultureWeight || '10'),
-          conversationSignatureWeight: parseFloat(c.conversationSignatureWeight || '15'),
+          personalityWeight: parseFloat(c.personalityWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.personalityWeight)),
+          interestsWeight: parseFloat(c.interestsWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.interestsWeight)),
+          intentWeight: parseFloat(c.intentWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.intentWeight)),
+          backgroundWeight: parseFloat(c.backgroundWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundWeight)),
+          cultureWeight: parseFloat(c.cultureWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.cultureWeight)),
+          conversationSignatureWeight: parseFloat(c.conversationSignatureWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.conversationSignatureWeight)),
         };
       } else {
-        cachedWeights = { ...DEFAULT_WEIGHTS };
+        cachedWeights = { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
         await this.initializeDefaultConfig();
       }
 
@@ -68,7 +56,7 @@ export class MatchingWeightsService {
       return cachedWeights;
     } catch (error) {
       console.error('[MatchingWeightsService] Failed to fetch weights:', error);
-      return { ...DEFAULT_WEIGHTS };
+      return { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
     }
   }
 
@@ -83,12 +71,12 @@ export class MatchingWeightsService {
         await db.insert(matchingWeightsConfig).values({
           configName: 'default',
           isActive: true,
-          personalityWeight: '0.23',
-          interestsWeight: '0.24',
-          intentWeight: '0.13',
-          backgroundWeight: '0.15',
-          cultureWeight: '0.10',
-          conversationSignatureWeight: '0.15',
+          personalityWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.personalityWeight.toFixed(2),
+          interestsWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.interestsWeight.toFixed(2),
+          intentWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.intentWeight.toFixed(2),
+          backgroundWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundWeight.toFixed(2),
+          cultureWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.cultureWeight.toFixed(2),
+          conversationSignatureWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.conversationSignatureWeight.toFixed(2),
         });
         console.log('[MatchingWeightsService] Initialized default config');
       }

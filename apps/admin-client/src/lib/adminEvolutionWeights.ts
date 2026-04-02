@@ -1,11 +1,6 @@
-export const STATIC_MATCHING_WEIGHTS = {
-  personalityWeight: 23,
-  interestsWeight: 24,
-  intentWeight: 13,
-  backgroundWeight: 15,
-  cultureWeight: 10,
-  conversationSignatureWeight: 15,
-} as const;
+import { DEFAULT_MATCHING_WEIGHTS } from "@joyjoin/shared/matchingWeights";
+
+export const STATIC_MATCHING_WEIGHTS = DEFAULT_MATCHING_WEIGHTS;
 
 export const WEIGHT_DIMENSIONS = [
   {
