@@ -34,6 +34,7 @@ import { logger } from "./lib/logger";
 import { describePoolRegistrationAvailability } from "./lib/poolRegistrationRules";
 import { getAuthenticatedUserId } from "./lib/requestAuth";
 import { broadcastPoolRegistrationAdded } from "./eventBroadcast";
+import { queueSemanticProfileRecompute } from "./userSemanticProfileService";
 import {
   assertValidTransition as assertValidEventPoolTransition,
   InvalidTransitionError as InvalidPoolTransitionError,
@@ -605,6 +606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.updateProfile(userId, result.data);
       await storage.markProfileSetupComplete(userId);
+      queueSemanticProfileRecompute(userId, 'profile_setup');
       
       res.json(user);
     } catch (error) {
@@ -759,6 +761,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return interestRecord;
       });
 
+      queueSemanticProfileRecompute(userId, 'interests_update');
+
       res.json({
         success: true,
         message: "兴趣已保存",
@@ -880,6 +884,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update(userInterests)
         .set({ selections, totalHeat, totalSelections, categoryHeat, topPriorities, updatedAt: new Date() })
         .where(eq(userInterests.userId, userId));
+
+      queueSemanticProfileRecompute(userId, 'interests_nudge');
 
       res.json({ success: true, boostedCount });
     } catch (error) {
@@ -1098,8 +1104,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set hasCompletedRegistration if profile is being set with essential data
       if (user && (req.body.displayName || req.body.gender || req.body.currentCity)) {
         const updatedUser = await storage.updateUser(user.id, { hasCompletedRegistration: true });
+        queueSemanticProfileRecompute(userId, 'full_profile_update');
         res.json(updatedUser);
       } else {
+        queueSemanticProfileRecompute(userId, 'full_profile_update');
         res.json(user);
       }
     } catch (error) {
