@@ -72,7 +72,7 @@ export function validateUserIndustryData(data: any): UserIndustryData {
     );
   }
   
-  const validSources = ['seed', 'ontology', 'ai', 'fallback'];
+  const validSources = ['seed', 'ontology', 'ai', 'fallback', 'fuzzy', 'exact'];
   if (!validSources.includes(data.source)) {
     throw new IndustryValidationError(
       `source must be one of: ${validSources.join(', ')}`,
@@ -130,15 +130,27 @@ function decodeHTMLEntities(text: string): string {
  * Decodes HTML entities first to prevent bypass, then removes dangerous characters
  */
 export function sanitizeIndustryInput(input: string): string {
-  return input
+  let text = input.trim();
+
+  // Patterns matching encoded variants of < and >
+  const ltEnt = '(?:&lt;|&#60;|&#x3[Cc];)';
+  const gtEnt = '(?:&gt;|&#62;|&#x3[Ee];)';
+
+  // Remove encoded opening HTML tags entirely (e.g. &lt;script&gt; → '')
+  text = text.replace(new RegExp(`${ltEnt}([a-zA-Z][a-zA-Z0-9]*)${gtEnt}`, 'gi'), '');
+
+  // Convert encoded closing HTML tags to just /tagname (e.g. &lt;/script&gt; → /script)
+  text = text.replace(new RegExp(`${ltEnt}/([a-zA-Z][a-zA-Z0-9]*)${gtEnt}`, 'gi'), '/$1');
+
+  // Handle remaining HTML entities – decode safe ones, drop dangerous ones
+  text = text.replace(/&[a-zA-Z]+;|&#\d+;|&#x[0-9a-fA-F]+;/gi, (match) => {
+    const decoded = decodeHTMLEntities(match);
+    return /[<>{}[\]\\]/.test(decoded) ? '' : decoded;
+  });
+
+  return text
+    .replace(/[<>{}[\]\\"'()]/g, '')  // Remove XSS and dangerous chars including quotes and parens
+    .replace(/ {3,}/g, ' ')           // Normalize runs of 3+ spaces (preserve 1-2 spaces)
     .trim()
-    // First decode any HTML entities to prevent bypass attacks
-    .replace(/&[a-z]+;|&#\d+;|&#x[0-9a-f]+;/gi, (match) => {
-      const decoded = decodeHTMLEntities(match);
-      // If decoded contains dangerous chars, remove the entire entity
-      return /[<>{}[\]\\]/.test(decoded) ? '' : decoded;
-    })
-    .replace(/[<>{}[\]\\]/g, '')  // Remove potential XSS characters
-    .replace(/\s+/g, ' ')          // Normalize whitespace
-    .slice(0, 200);                // Max length
+    .slice(0, 200);
 }
