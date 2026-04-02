@@ -88,8 +88,8 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 | **★ Event Momentum orchestration** | Social Icebreaker AI generation with curated fallbacks — de facto Level-1 Event Momentum orchestration | ✅ Live — `socialIcebreakerAIService.ts` (curated fallback library active; extend here first before creating `eventMomentumOrchestrator.ts`) |
 | **Event Momentum phase lifecycle** | Server-owned phase progression and enabled-phase resolution | ✅ Live — `apps/server/src/socialIcebreakerPhaseConfig.ts` + `apps/server/src/routes/socialIcebreaker.ts` |
 | **Interest signal enrichment** | Per-user discussion style + depth signals used in prompts and conversation topic generation | ✅ Live — `user_interest_signals` table — **prompt enrichment only**; not used in `poolMatchingService.ts` pair-score computation |
-| Weight learning | Thompson Sampling bandit | ✅ Implemented, not yet wired — `matchingWeightsService.ts` (available in admin evolution + `userMatchingService.ts`; wiring into `poolMatchingService.ts` is a Phase 1 task) |
-| Weight learning | Gradient descent | ⚠️ Legacy / experimental — `dynamicWeights.ts` (not active in current pool matching) |
+| Weight learning | Thompson Sampling bandit | ✅ Primary adaptive-weight path — `matchingWeightsService.ts` (available in admin evolution + `userMatchingService.ts`; wiring into `poolMatchingService.ts` is a Phase 1 task) |
+| Weight learning | Gradient descent | ⚠️ Deprecated legacy tombstone — `dynamicWeights.ts` is intentionally non-runnable and must not be used for runtime adaptive weights |
 | **LLM attribute inference** | Structured attribute inference from low-confidence conversational data | ✅ Implemented, not yet wired — `apps/server/src/inference/llmFallbackInference.ts` (`callLLMForInference()` has no active callers; planned Phase 1 activation) |
 | Interest matching | Static Jaccard + heat bonus | ✅ Live — `poolMatchingService.ts` |
 | Temporal interest decay | Heat-weighted by recency | ❌ Dropped — see §2.2 |
@@ -386,8 +386,8 @@ CREATE TABLE event_group_outcomes (
 ```
 
 **Downstream consumers (Phase 1 — instrument only; Phase 2 — learn from):**
-- `apps/server/src/matchingWeightsService.ts` — Thompson Sampling already needs `wouldMeetAgain`; wire it here
-- `apps/server/src/dynamicWeights.ts` — legacy flow, same signal
+- `apps/server/src/matchingWeightsService.ts` — Thompson Sampling is the preferred adaptive-weight path and already needs `wouldMeetAgain`; wire it here
+- `apps/server/src/dynamicWeights.ts` — deprecated legacy tombstone kept only to document the retired gradient-descent experiment
 - Future: Phase 2 chemistry calibration reads `atmosphere_score + would_meet_again` per archetype pair from this table
 
 **Route:** `POST /api/event-pools/:poolId/group-outcome` — protected by authenticated session access, validates group membership before writing, and replaces the submitter's prior row on duplicate re-submission.
@@ -981,8 +981,8 @@ The system must not produce or surface any ranking that implies a user is "less 
 | `apps/server/src/eventThemeTitleGenerator.ts` | Async assign/broadcast wrapper; env gating + provider routing for theme titles (gated by `ENABLE_EVENT_THEME_TITLE_GENERATION`) | 1 |
 | `apps/server/src/eventThemeGeneratorService.ts` | Orchestrates `generateAndSaveEventTheme()` | 1 |
 | `apps/server/src/venueAssignmentService.ts` | Venue-to-group assignment logic | 1 |
-| `apps/server/src/dynamicWeights.ts` | Legacy gradient descent weight update (blind-box flow) | 1, 2 |
-| `apps/server/src/matchingWeightsService.ts` | Thompson Sampling bandit weight learning — **implemented, not yet wired** (used in admin evolution + `userMatchingService.ts`); wiring into `poolMatchingService.ts` is a Phase 1 task | 1, 2 |
+| `apps/server/src/dynamicWeights.ts` | Deprecated legacy tombstone for the retired gradient-descent weight update; no runtime entry points remain | 1, 2 |
+| `apps/server/src/matchingWeightsService.ts` | Primary Thompson Sampling adaptive-weight path — **implemented, not yet wired into `poolMatchingService.ts`** (used in admin evolution + `userMatchingService.ts`) | 1, 2 |
 | `apps/server/src/inference/hybridSemantic.ts` | DeepSeek-assisted semantic attribute inference (low-confidence attribute validation; not embedding similarity) | 2 |
 | **`apps/server/src/inference/llmFallbackInference.ts`** | Direct DeepSeek attribute inference — **implemented, not yet wired** (`callLLMForInference()` has no active callers; planned Phase 1 activation for low-confidence attribute inference) | 1 |
 | `apps/server/src/ai/minimaxClient.ts` | MiniMax client (`minimax-m2.7`); also used for multimodal in Phase 3 | 1, 3 |
