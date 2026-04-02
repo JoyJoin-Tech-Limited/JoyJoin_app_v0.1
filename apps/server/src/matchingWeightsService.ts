@@ -8,7 +8,6 @@ import {
   matchingWeightsConfig, 
   matchingWeightsHistory,
   type MatchingWeightsConfig,
-  type InsertMatchingWeightsConfig,
   type InsertMatchingWeightsHistory
 } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -22,6 +21,110 @@ export interface MatchingWeights {
   conversationSignatureWeight: number;
 }
 
+type MatchingDimension =
+  | 'personality'
+  | 'interests'
+  | 'intent'
+  | 'background'
+  | 'culture'
+  | 'conversationSignature';
+
+type WeightField = keyof MatchingWeights;
+
+export interface ShadowOutcomeSignals {
+  eventId?: string;
+  feedbackId?: string;
+  userId?: string;
+  source?: string;
+  wouldMeetAgain?: boolean | null;
+  wouldAttendAgain?: boolean | null;
+  hasNewConnections?: boolean | null;
+  atmosphereScore?: number | null;
+  connectionStatus?: string | null;
+  connectionCount?: number | null;
+  mutualConnectionCount?: number | null;
+  conversationComfort?: number | null;
+  connectionRadar?: {
+    topicResonance?: number | null;
+    personalityMatch?: number | null;
+    backgroundDiversity?: number | null;
+    overallFit?: number | null;
+  } | null;
+}
+
+export interface ShadowDimensionRecommendationMetric {
+  dimension: MatchingDimension;
+  score: number;
+  priorAlpha: number;
+  priorBeta: number;
+  posteriorAlpha: number;
+  posteriorBeta: number;
+  posteriorMean: number;
+  sampleCount: number;
+  confidence: number;
+  liveWeight: number;
+  recommendedWeight: number;
+  delta: number;
+}
+
+export interface ShadowWeightRecommendation {
+  configId: string;
+  outcomeScore: number;
+  signalCoverage: number;
+  sampleSize: number;
+  overallConfidence: number;
+  liveWeights: MatchingWeights;
+  recommendedWeights: MatchingWeights;
+  dimensionMetrics: Record<MatchingDimension, ShadowDimensionRecommendationMetric>;
+  outcomeSignals: ShadowOutcomeSignals;
+}
+
+export const SHADOW_RECOMMENDATION_REASON = 'shadow_feedback_recommendation';
+
+const DIMENSIONS: ReadonlyArray<{
+  key: MatchingDimension;
+  weightField: WeightField;
+  alphaField: keyof MatchingWeightsConfig;
+  betaField: keyof MatchingWeightsConfig;
+}> = [
+  {
+    key: 'personality',
+    weightField: 'personalityWeight',
+    alphaField: 'personalityAlpha',
+    betaField: 'personalityBeta',
+  },
+  {
+    key: 'interests',
+    weightField: 'interestsWeight',
+    alphaField: 'interestsAlpha',
+    betaField: 'interestsBeta',
+  },
+  {
+    key: 'intent',
+    weightField: 'intentWeight',
+    alphaField: 'intentAlpha',
+    betaField: 'intentBeta',
+  },
+  {
+    key: 'background',
+    weightField: 'backgroundWeight',
+    alphaField: 'backgroundAlpha',
+    betaField: 'backgroundBeta',
+  },
+  {
+    key: 'culture',
+    weightField: 'cultureWeight',
+    alphaField: 'cultureAlpha',
+    betaField: 'cultureBeta',
+  },
+  {
+    key: 'conversationSignature',
+    weightField: 'conversationSignatureWeight',
+    alphaField: 'conversationSignatureAlpha',
+    betaField: 'conversationSignatureBeta',
+  },
+] as const;
+
 const DEFAULT_WEIGHTS: MatchingWeights = {
   personalityWeight: 23,
   interestsWeight: 24,
@@ -34,6 +137,246 @@ const DEFAULT_WEIGHTS: MatchingWeights = {
 let cachedWeights: MatchingWeights | null = null;
 let cacheTimestamp: number = 0;
 const CACHE_TTL_MS = 60000;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function parseNumericWeight(value: string | number | null | undefined, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+function average(values: Array<number | null | undefined>): number | null {
+  const valid = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+  if (valid.length === 0) {
+    return null;
+  }
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
+function normalizeFivePointScore(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+  return clamp(value, 1, 5) * 20;
+}
+
+function normalizeBooleanScore(value: boolean | null | undefined, truthyScore = 100, falsyScore = 20): number | null {
+  if (typeof value !== 'boolean') {
+    return null;
+  }
+  return value ? truthyScore : falsyScore;
+}
+
+function normalizeStatusScore(status: string | null | undefined): number | null {
+  switch (status) {
+    case '已交换联系方式':
+      return 100;
+    case '有但还没联系':
+      return 80;
+    case '没有但很愉快':
+      return 65;
+    case '没有不太合适':
+      return 25;
+    default:
+      return null;
+  }
+}
+
+function normalizeConnectionCountScore(count: number | null | undefined): number | null {
+  if (typeof count !== 'number' || !Number.isFinite(count)) {
+    return null;
+  }
+  if (count <= 0) {
+    return 20;
+  }
+  return clamp(40 + count * 20, 40, 100);
+}
+
+function normalizeConversationComfort(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+  return clamp(value, 0, 100);
+}
+
+function buildDimensionScores(outcomeSignals: ShadowOutcomeSignals): Partial<Record<MatchingDimension, number>> {
+  const statusScore = normalizeStatusScore(outcomeSignals.connectionStatus);
+  const atmosphereScore = normalizeFivePointScore(outcomeSignals.atmosphereScore);
+  const wouldMeetAgainScore = normalizeBooleanScore(outcomeSignals.wouldMeetAgain);
+  const wouldAttendAgainScore = normalizeBooleanScore(outcomeSignals.wouldAttendAgain);
+  const hasNewConnectionsScore = normalizeBooleanScore(outcomeSignals.hasNewConnections, 90, 25);
+  const connectionCountScore = normalizeConnectionCountScore(outcomeSignals.connectionCount);
+  const mutualConnectionScore = normalizeConnectionCountScore(outcomeSignals.mutualConnectionCount);
+  const overallFitScore = normalizeFivePointScore(outcomeSignals.connectionRadar?.overallFit);
+
+  return {
+    personality: average([
+      normalizeFivePointScore(outcomeSignals.connectionRadar?.personalityMatch),
+      wouldMeetAgainScore,
+      statusScore,
+    ]) ?? undefined,
+    interests: average([
+      normalizeFivePointScore(outcomeSignals.connectionRadar?.topicResonance),
+      connectionCountScore,
+      wouldMeetAgainScore,
+    ]) ?? undefined,
+    intent: average([
+      overallFitScore,
+      wouldMeetAgainScore,
+      wouldAttendAgainScore,
+      statusScore,
+    ]) ?? undefined,
+    background: average([
+      normalizeFivePointScore(outcomeSignals.connectionRadar?.backgroundDiversity),
+      hasNewConnectionsScore,
+      mutualConnectionScore,
+    ]) ?? undefined,
+    culture: average([
+      atmosphereScore,
+      wouldAttendAgainScore,
+      statusScore,
+    ]) ?? undefined,
+    conversationSignature: average([
+      normalizeConversationComfort(outcomeSignals.conversationComfort),
+      atmosphereScore,
+      overallFitScore,
+    ]) ?? undefined,
+  };
+}
+
+function buildOutcomeScore(outcomeSignals: ShadowOutcomeSignals): number | null {
+  const normalized = average([
+    normalizeFivePointScore(outcomeSignals.atmosphereScore),
+    normalizeBooleanScore(outcomeSignals.wouldMeetAgain),
+    normalizeBooleanScore(outcomeSignals.wouldAttendAgain),
+    normalizeStatusScore(outcomeSignals.connectionStatus),
+    normalizeConnectionCountScore(outcomeSignals.mutualConnectionCount ?? outcomeSignals.connectionCount),
+  ]);
+
+  if (normalized === null) {
+    return null;
+  }
+
+  return clamp(normalized / 20, 1, 5);
+}
+
+function normalizePosteriorWeights(
+  posteriorMeans: Record<MatchingDimension, number>,
+): Record<MatchingDimension, number> {
+  const total = Object.values(posteriorMeans).reduce((sum, value) => sum + value, 0);
+  if (total <= 0) {
+    return {
+      personality: DEFAULT_WEIGHTS.personalityWeight / 100,
+      interests: DEFAULT_WEIGHTS.interestsWeight / 100,
+      intent: DEFAULT_WEIGHTS.intentWeight / 100,
+      background: DEFAULT_WEIGHTS.backgroundWeight / 100,
+      culture: DEFAULT_WEIGHTS.cultureWeight / 100,
+      conversationSignature: DEFAULT_WEIGHTS.conversationSignatureWeight / 100,
+    };
+  }
+
+  return Object.fromEntries(
+    Object.entries(posteriorMeans).map(([key, value]) => [key, value / total]),
+  ) as Record<MatchingDimension, number>;
+}
+
+function calculateConfidence(alpha: number, beta: number): number {
+  const sampleCount = Math.max(alpha + beta - 2, 0);
+  return clamp(sampleCount / (sampleCount + 5), 0, 1);
+}
+
+export function buildShadowRecommendation(
+  config: MatchingWeightsConfig,
+  outcomeSignals: ShadowOutcomeSignals,
+): ShadowWeightRecommendation | null {
+  const outcomeScore = buildOutcomeScore(outcomeSignals);
+  if (outcomeScore === null) {
+    return null;
+  }
+
+  const liveWeights = DIMENSIONS.reduce((acc, dimension) => {
+    acc[dimension.weightField] = parseNumericWeight(
+      config[dimension.weightField] as string | number | null | undefined,
+      DEFAULT_WEIGHTS[dimension.weightField] / 100,
+    );
+    return acc;
+  }, {} as MatchingWeights);
+
+  const dimensionScores = buildDimensionScores(outcomeSignals);
+  const signalCoverage =
+    Object.values(dimensionScores).filter((score) => typeof score === 'number' && Number.isFinite(score)).length /
+    DIMENSIONS.length;
+  const isSuccessfulOutcome = outcomeScore >= 4;
+
+  const posteriorMeans = {} as Record<MatchingDimension, number>;
+  const dimensionMetrics = {} as Record<MatchingDimension, ShadowDimensionRecommendationMetric>;
+
+  for (const dimension of DIMENSIONS) {
+    const priorAlpha = Number(config[dimension.alphaField] ?? 1) || 1;
+    const priorBeta = Number(config[dimension.betaField] ?? 1) || 1;
+    const score = clamp(dimensionScores[dimension.key] ?? 50, 0, 100);
+    const posteriorAlpha = priorAlpha + (isSuccessfulOutcome && score >= 60 ? 1 : 0);
+    const posteriorBeta = priorBeta + (!isSuccessfulOutcome && score < 60 ? 1 : 0);
+    const posteriorMean = posteriorAlpha / (posteriorAlpha + posteriorBeta);
+
+    posteriorMeans[dimension.key] = posteriorMean;
+    dimensionMetrics[dimension.key] = {
+      dimension: dimension.key,
+      score,
+      priorAlpha,
+      priorBeta,
+      posteriorAlpha,
+      posteriorBeta,
+      posteriorMean,
+      sampleCount: Math.max(posteriorAlpha + posteriorBeta - 2, 0),
+      confidence: calculateConfidence(posteriorAlpha, posteriorBeta),
+      liveWeight: liveWeights[dimension.weightField],
+      recommendedWeight: 0,
+      delta: 0,
+    };
+  }
+
+  const normalizedWeights = normalizePosteriorWeights(posteriorMeans);
+  const overallConfidence =
+    average(Object.values(dimensionMetrics).map((metric) => metric.confidence)) ?? 0;
+  const sampleSize = Math.max(...Object.values(dimensionMetrics).map((metric) => metric.sampleCount), 0);
+
+  for (const dimension of DIMENSIONS) {
+    const recommendedWeight = normalizedWeights[dimension.key];
+    const liveWeight = liveWeights[dimension.weightField];
+    dimensionMetrics[dimension.key].recommendedWeight = recommendedWeight;
+    dimensionMetrics[dimension.key].delta = Number((recommendedWeight - liveWeight).toFixed(4));
+  }
+
+  return {
+    configId: config.id,
+    outcomeScore: Number(outcomeScore.toFixed(2)),
+    signalCoverage: Number(signalCoverage.toFixed(2)),
+    sampleSize,
+    overallConfidence: Number(overallConfidence.toFixed(2)),
+    liveWeights,
+    recommendedWeights: {
+      personalityWeight: normalizedWeights.personality,
+      interestsWeight: normalizedWeights.interests,
+      intentWeight: normalizedWeights.intent,
+      backgroundWeight: normalizedWeights.background,
+      cultureWeight: normalizedWeights.culture,
+      conversationSignatureWeight: normalizedWeights.conversationSignature,
+    },
+    dimensionMetrics,
+    outcomeSignals,
+  };
+}
 
 export class MatchingWeightsService {
   
@@ -148,6 +491,49 @@ export class MatchingWeightsService {
     }
   }
 
+  async recordShadowRecommendation(outcomeSignals: ShadowOutcomeSignals): Promise<ShadowWeightRecommendation | null> {
+    try {
+      const config = await this.getActiveConfig();
+      if (!config) {
+        return null;
+      }
+
+      const recommendation = buildShadowRecommendation(config, outcomeSignals);
+      if (!recommendation) {
+        return null;
+      }
+
+      const historyRow: InsertMatchingWeightsHistory = {
+        configId: config.id,
+        personalityWeight: recommendation.recommendedWeights.personalityWeight.toFixed(4),
+        interestsWeight: recommendation.recommendedWeights.interestsWeight.toFixed(4),
+        intentWeight: recommendation.recommendedWeights.intentWeight.toFixed(4),
+        backgroundWeight: recommendation.recommendedWeights.backgroundWeight.toFixed(4),
+        cultureWeight: recommendation.recommendedWeights.cultureWeight.toFixed(4),
+        conversationSignatureWeight: recommendation.recommendedWeights.conversationSignatureWeight.toFixed(4),
+        changeReason: SHADOW_RECOMMENDATION_REASON,
+        matchesSinceLastUpdate: recommendation.sampleSize,
+        satisfactionSinceLastUpdate: recommendation.outcomeScore.toFixed(4),
+        shadowMetadata: recommendation as unknown as Record<string, unknown>,
+      };
+
+      await db.insert(matchingWeightsHistory).values(historyRow);
+
+      console.log('[MatchingWeightsService] Shadow recommendation generated:', {
+        eventId: outcomeSignals.eventId,
+        feedbackId: outcomeSignals.feedbackId,
+        overallConfidence: recommendation.overallConfidence,
+        sampleSize: recommendation.sampleSize,
+        recommendedWeights: recommendation.recommendedWeights,
+      });
+
+      return recommendation;
+    } catch (error) {
+      console.error('[MatchingWeightsService] Failed to record shadow recommendation:', error);
+      return null;
+    }
+  }
+
   private async recalculateWeightsFromBandit(configId: string): Promise<void> {
     try {
       const config = await db.select()
@@ -237,6 +623,19 @@ export class MatchingWeightsService {
         .limit(limit);
     } catch (error) {
       console.error('[MatchingWeightsService] Failed to get weights history:', error);
+      return [];
+    }
+  }
+
+  async getShadowRecommendations(limit: number = 20): Promise<any[]> {
+    try {
+      return await db.select()
+        .from(matchingWeightsHistory)
+        .where(eq(matchingWeightsHistory.changeReason, SHADOW_RECOMMENDATION_REASON))
+        .orderBy(desc(matchingWeightsHistory.recordedAt))
+        .limit(limit);
+    } catch (error) {
+      console.error('[MatchingWeightsService] Failed to get shadow recommendations:', error);
       return [];
     }
   }
