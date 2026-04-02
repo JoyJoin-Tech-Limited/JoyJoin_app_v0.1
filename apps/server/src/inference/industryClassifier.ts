@@ -41,7 +41,7 @@ export interface IndustryClassificationResult {
   };
   confidence: number;
   reasoning?: string;
-  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy";
+  source: "seed" | "ontology" | "ai" | "fallback" | "fuzzy" | "exact";
   processingTimeMs: number;
   rawInput: string;           // original user input
   normalizedInput: string;    // AI-cleaned version
@@ -883,8 +883,7 @@ export async function classifyIndustry(
   // Tier 0: Fuzzy matching for typos and variations
   const fuzzyResult = fuzzyMatch(cleanInput);
   if (fuzzyResult && fuzzyResult.confidence >= CONFIDENCE_THRESHOLDS.FUZZY_HIGH) {
-    const normalizedInput = await normalizeUserInput(cleanInput);
-    return { ...fuzzyResult, normalizedInput, processingTimeMs: Date.now() - startTime };
+    return { ...fuzzyResult, processingTimeMs: Date.now() - startTime };
   }
   
   // Tier 1: Seed库精确匹配

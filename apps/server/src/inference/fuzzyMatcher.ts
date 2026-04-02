@@ -37,7 +37,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
     
     // Exact match (highest priority)
     if (displayName === input) {
-      return createResult(occ, 1.0, 'fuzzy', '精确匹配', userInput, startTime);
+      return createResult(occ, 1.0, 'exact', '精确匹配', userInput, startTime);
     }
     
     // Levenshtein distance for typos (very high priority)
@@ -45,7 +45,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
     const maxDistance = Math.min(2, Math.floor(displayName.length * 0.25)); // Allow up to 25% errors
     
     if (distance <= maxDistance) {
-      score += (maxDistance + 1 - distance) * 35;
+      score += (maxDistance + 1 - distance) * 75;
       matchType = 'levenshtein';
     }
     
@@ -70,8 +70,9 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
       
       // Levenshtein for synonyms
       const synDistance = levenshteinDistance(input, synLower);
-      if (synDistance <= 2) {
-        score += (3 - synDistance) * 20;
+      const maxSynDistance = Math.min(2, Math.floor(synLower.length * 0.25));
+      if (synDistance <= maxSynDistance && maxSynDistance > 0) {
+        score += (maxSynDistance + 1 - synDistance) * 20;
         matchType = 'synonym';
       }
     }
@@ -99,7 +100,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
   let confidence = Math.min(0.95, best.score / 100);
   
   // Boost confidence for high-quality matches
-  if (best.matchType === 'levenshtein' && best.score > 80) {
+  if (best.matchType === 'levenshtein' && best.score >= 60) {
     confidence = Math.min(0.92, confidence + 0.1);
   }
   

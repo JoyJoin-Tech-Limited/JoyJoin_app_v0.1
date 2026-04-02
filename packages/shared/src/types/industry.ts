@@ -15,7 +15,7 @@ export interface UserIndustryData {
   segment: IndustryLevel;           // L2 (e.g., { id: "ai_ml", label: "AI/机器学习" })
   niche?: IndustryLevel | null;     // L3 (optional, e.g., { id: "healthcare_ai", label: "医疗AI" })
   confidence: number;               // 0-100
-  source: 'seed' | 'ontology' | 'ai' | 'fallback';
+  source: 'seed' | 'ontology' | 'ai' | 'fallback' | 'fuzzy' | 'exact';
   updatedAt?: Date;
 }
 
@@ -29,7 +29,7 @@ export interface IndustryClassificationResponse {
   niche?: IndustryLevel;
   confidence: number;
   reasoning?: string;
-  source: 'seed' | 'ontology' | 'ai' | 'fallback';
+  source: 'seed' | 'ontology' | 'ai' | 'fallback' | 'fuzzy' | 'exact';
   processingTimeMs: number;
   rawInput: string;
   normalizedInput: string;
@@ -59,6 +59,6 @@ export function isValidUserIndustryData(obj: any): obj is UserIndustryData {
     typeof obj.confidence === 'number' &&
     obj.confidence >= 0 &&
     obj.confidence <= 100 &&
-    ['seed', 'ontology', 'ai', 'fallback'].includes(obj.source)
+    ['seed', 'ontology', 'ai', 'fallback', 'fuzzy', 'exact'].includes(obj.source)
   );
 }
