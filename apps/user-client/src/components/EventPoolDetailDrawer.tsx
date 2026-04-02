@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,9 @@ import AmbientFloatingTags from "./AmbientFloatingTags";
 import PoolVibePanel from "./drawer-sections/PoolVibePanel";
 import ConnectionCuePanel from "./drawer-sections/ConnectionCuePanel";
 import ArchetypeCompositionPanel from "./drawer-sections/ArchetypeCompositionPanel";
+import EmergingGroupsPanel from "./drawer-sections/EmergingGroupsPanel";
+import TopicHeatStrip from "./drawer-sections/TopicHeatStrip";
+import LivePoolPulse from "./drawer-sections/LivePoolPulse";
 
 interface PoolStats {
   totalRegistrations: number;
@@ -55,6 +58,8 @@ export default function EventPoolDetailDrawer({
   eventData,
 }: EventPoolDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState<"pool" | "flow" | "faq">("pool");
+  /** Count of POOL_REGISTRATION_ADDED events observed since the drawer was opened. */
+  const [recentArrivals, setRecentArrivals] = useState(0);
   const { toast } = useToast();
   
   // Fetch pool stats
@@ -76,36 +81,40 @@ export default function EventPoolDetailDrawer({
   // WebSocket subscription
   const { subscribe } = useWebSocket({ autoConnect: isOpen });
   
+  const handleNewArrival = useCallback(async (message: { data?: { poolId?: string; archetype?: string } }) => {
+    if (message.data?.poolId === poolId) {
+      await refetchStats();
+      setRecentArrivals((n) => n + 1);
+      
+      // Haptic feedback
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      
+      // Toast notification
+      toast({
+        title: "🎉 新朋友加入",
+        description: `${message.data.archetype || "新朋友"} 刚刚报名`,
+        duration: 3000,
+      });
+    }
+  }, [poolId, refetchStats, toast]);
+
   useEffect(() => {
     if (!isOpen || !poolId) return;
     
-    const unsubscribe = subscribe("POOL_REGISTRATION_ADDED", async (message) => {
-      if (message.data?.poolId === poolId) {
-        await refetchStats();
-        
-        // Haptic feedback
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-        
-        // Toast notification
-        toast({
-          title: "🎉 新朋友加入",
-          description: `${message.data.archetype || "新朋友"} 刚刚报名`,
-          duration: 3000,
-        });
-      }
-    });
+    const unsubscribe = subscribe("POOL_REGISTRATION_ADDED", handleNewArrival);
     
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [isOpen, poolId, subscribe, refetchStats, toast]);
+  }, [isOpen, poolId, subscribe, handleNewArrival]);
   
-  // Reset tab when drawer closes
+  // Reset tab and recent arrivals counter when drawer closes
   useEffect(() => {
     if (!isOpen) {
       setActiveTab("pool");
+      setRecentArrivals(0);
     }
   }, [isOpen]);
   
@@ -211,8 +220,20 @@ export default function EventPoolDetailDrawer({
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.2 }}
                     >
+                      <LivePoolPulse
+                        recentArrivals={recentArrivals}
+                        totalRegistrations={stats.totalRegistrations}
+                      />
                       <PoolVibePanel
                         avgMatchScore={stats.avgMatchScore}
+                        archetypeBreakdown={stats.archetypeBreakdown}
+                      />
+                      <EmergingGroupsPanel
+                        estimatedGroups={stats.estimatedGroups}
+                        totalRegistrations={stats.totalRegistrations}
+                      />
+                      <TopicHeatStrip
+                        recentThemeTitles={stats.recentThemeTitles}
                         archetypeBreakdown={stats.archetypeBreakdown}
                       />
                       <ConnectionCuePanel stats={stats} />
