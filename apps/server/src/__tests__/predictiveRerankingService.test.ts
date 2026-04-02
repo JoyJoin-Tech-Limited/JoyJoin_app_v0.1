@@ -158,5 +158,6 @@ describe("predictiveRerankingService", () => {
 
     expect(decision.reason).toBe("eligible");
     expect(decision.arm).toBe("treatment");
+    expect(decision.applied).toBe(true);
   });
 });
