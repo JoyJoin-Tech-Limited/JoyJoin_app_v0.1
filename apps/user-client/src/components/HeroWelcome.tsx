@@ -40,7 +40,7 @@ export default function HeroWelcome({
 
       <div className="relative z-10 space-y-2">
       {/* 问候语 */}
-      <h1 className="text-3xl font-bold font-brand" data-testid="text-hero-greeting">
+      <h1 className="text-3xl font-bold font-cn-display" data-testid="text-hero-greeting">
         {timeGreeting}，{userName} {timeEmoji}
       </h1>
       

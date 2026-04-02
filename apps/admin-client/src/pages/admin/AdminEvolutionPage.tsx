@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +98,88 @@ interface GoldenDialogue {
   createdAt: string;
 }
 
+interface EventPoolOption {
+  id: string;
+  title: string;
+  status: string;
+  totalRegistrations: number;
+}
+
+interface ShadowExperimentResult {
+  groupKey: string;
+  memberUserIds: string[];
+  memberCount: number;
+  deterministicScore: number;
+  deterministicRank: number;
+  predictedScore: number;
+  predictedRank: number;
+  scoreDelta: number;
+  rankDelta: number;
+  confidence: number | string;
+  predictedOutcomeRate: number | string;
+  avgChemistryScore: number;
+  diversityScore: number;
+  communicationBalance: number;
+  temperatureLevel: string;
+}
+
+interface ShadowExperiment {
+  id: string;
+  poolId: string;
+  poolTitle: string | null;
+  mode: string;
+  modelVersion: string;
+  deterministicGroupCount: number;
+  deterministicAverageScore: number | null;
+  outcomeSampleCount: number;
+  outcomePositiveRate: number | string;
+  averageConfidence: number | string;
+  rankAgreementRate: number | string;
+  averageScoreDelta: number | null;
+  summary: {
+    outcomeValidation: {
+      sampleCount: number;
+      positiveRate: number | string;
+      avgAtmosphereScore: number | string | null;
+    };
+    averageConfidence: number | string;
+    averageScoreDelta: number;
+    rankAgreementRate: number | string;
+    topRankChanged: boolean;
+    liveRankingProtected: boolean;
+  };
+  createdAt: string;
+}
+
+interface ShadowExperimentDetail extends ShadowExperiment {
+  results: ShadowExperimentResult[];
+}
+
+function toPercent(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (Number.isNaN(parsed)) {
+    return "—";
+  }
+
+  return `${(parsed * 100).toFixed(1)}%`;
+}
+
+function toFixedNumber(value: number | string | null | undefined, digits = 1): string {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (Number.isNaN(parsed)) {
+    return "—";
+  }
+
+  return parsed.toFixed(digits);
+}
 const weightDefinitions = [
   { key: "personalityWeight", label: "人格匹配", color: "bg-purple-500", metricKey: "personality" },
   { key: "interestsWeight", label: "兴趣匹配", color: "bg-blue-500", metricKey: "interests" },
@@ -111,6 +193,7 @@ export default function AdminEvolutionPage() {
   const { toast } = useToast();
   const [newDialogueContent, setNewDialogueContent] = useState("");
   const [newDialogueCategory, setNewDialogueCategory] = useState("");
+  const [selectedShadowPoolId, setSelectedShadowPoolId] = useState("");
 
   const { data: overview, isLoading: overviewLoading } = useQuery<EvolutionOverview>({
     queryKey: ["/api/admin/evolution/overview"],
@@ -130,6 +213,60 @@ export default function AdminEvolutionPage() {
 
   const { data: dialoguesData, isLoading: dialoguesLoading } = useQuery<{ dialogues: GoldenDialogue[]; stats: any }>({
     queryKey: ["/api/admin/evolution/golden-dialogues"],
+  });
+
+  const { data: eventPools } = useQuery<EventPoolOption[]>({
+    queryKey: ["/api/admin/event-pools"],
+  });
+
+  const { data: shadowExperiments, isLoading: shadowLoading } = useQuery<ShadowExperiment[]>({
+    queryKey: [
+      "/api/admin/matching-shadow-experiments",
+      { poolId: selectedShadowPoolId || null, limit: 10 },
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: "10" });
+      if (selectedShadowPoolId) {
+        params.set("poolId", selectedShadowPoolId);
+      }
+      const response = await fetch(`/api/admin/matching-shadow-experiments?${params.toString()}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load shadow experiments");
+      }
+      return response.json();
+    },
+  });
+
+  const latestShadowExperimentId = shadowExperiments?.[0]?.id;
+
+  const { data: latestShadowExperiment, isLoading: latestShadowExperimentLoading } = useQuery<ShadowExperimentDetail>({
+    queryKey: ["/api/admin/matching-shadow-experiments", latestShadowExperimentId, "detail"],
+    enabled: Boolean(latestShadowExperimentId),
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/matching-shadow-experiments/${latestShadowExperimentId}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load matching shadow experiment");
+      }
+      return response.json();
+    },
+  });
+
+  const runShadowExperimentMutation = useMutation({
+    mutationFn: async (poolId: string) => {
+      const response = await apiRequest("POST", "/api/admin/matching-shadow-experiments", { poolId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-shadow-experiments"] });
+      toast({ title: "影子批处理完成", description: "已生成预测兼容性对比结果" });
+    },
+    onError: () => {
+      toast({ title: "影子批处理失败", description: "请稍后重试", variant: "destructive" });
+    },
   });
 
   const handleAddGoldenDialogue = async () => {
@@ -159,9 +296,18 @@ export default function AdminEvolutionPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weight-recommendations"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/triggers"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/golden-dialogues"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-shadow-experiments"] });
     toast({ title: "数据已刷新" });
   };
 
+  const handleRunShadowExperiment = () => {
+    if (!selectedShadowPoolId) {
+      toast({ title: "请选择活动池", description: "影子批处理需要指定一个活动池", variant: "destructive" });
+      return;
+    }
+
+    runShadowExperimentMutation.mutate(selectedShadowPoolId);
+  };
   const latestShadowRecommendation = shadowRecommendationData?.latest;
   const latestShadowMetrics = latestShadowRecommendation?.shadowMetadata?.dimensionMetrics;
 
@@ -266,6 +412,7 @@ export default function AdminEvolutionPage() {
       <Tabs defaultValue="weights" className="space-y-4">
         <TabsList>
           <TabsTrigger value="weights" data-testid="tab-weights">权重优化</TabsTrigger>
+          <TabsTrigger value="shadow" data-testid="tab-shadow">影子实验</TabsTrigger>
           <TabsTrigger value="triggers" data-testid="tab-triggers">触发器效果</TabsTrigger>
           <TabsTrigger value="dialogues" data-testid="tab-dialogues">黄金话术</TabsTrigger>
         </TabsList>
@@ -430,6 +577,215 @@ export default function AdminEvolutionPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="shadow" className="space-y-4">
+          <Card data-testid="shadow-experiment-controls">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                预测兼容性影子批处理
+              </CardTitle>
+              <CardDescription>
+                仅在管理后台运行预测模型，对照确定性分组排名；不会写入实时匹配结果。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 md:flex-row">
+                <Select value={selectedShadowPoolId} onValueChange={setSelectedShadowPoolId}>
+                  <SelectTrigger className="md:w-[320px]" data-testid="select-shadow-pool">
+                    <SelectValue placeholder="选择活动池" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventPools?.map((pool) => (
+                      <SelectItem key={pool.id} value={pool.id}>
+                        {pool.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleRunShadowExperiment}
+                  disabled={runShadowExperimentMutation.isPending}
+                  data-testid="button-run-shadow"
+                >
+                  {runShadowExperimentMutation.isPending ? "运行中..." : "运行影子批处理"}
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                批处理读取历史反馈样本做结果校准，只输出影子实验记录与置信度对比。
+              </p>
+            </CardContent>
+          </Card>
+
+          {shadowLoading || latestShadowExperimentLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="pb-2">
+                    <div className="h-4 bg-muted rounded w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-8 bg-muted rounded w-1/3" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : latestShadowExperiment ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card data-testid="shadow-outcome-sample">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">验证样本</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {latestShadowExperiment.summary.outcomeValidation.sampleCount}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      正向率 {toPercent(latestShadowExperiment.summary.outcomeValidation.positiveRate)}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="shadow-confidence">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">平均置信度</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {toPercent(latestShadowExperiment.summary.averageConfidence)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      模型版本 {latestShadowExperiment.modelVersion}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="shadow-rank-agreement">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">排名一致率</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {toPercent(latestShadowExperiment.summary.rankAgreementRate)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      实时风险 {latestShadowExperiment.summary.liveRankingProtected ? "已隔离" : "需检查"}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card data-testid="shadow-delta">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">平均分差</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {latestShadowExperiment.summary.averageScoreDelta > 0 ? "+" : ""}
+                      {latestShadowExperiment.summary.averageScoreDelta}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      最新实验：{latestShadowExperiment.poolTitle || latestShadowExperiment.poolId}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card data-testid="shadow-latest-run">
+                <CardHeader>
+                  <CardTitle>最新影子实验对比</CardTitle>
+                  <CardDescription>
+                    确定性排名 vs 预测排名、置信度与分差，用于运营侧观察模型影响。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {latestShadowExperiment.results.map((result) => (
+                    <div
+                      key={result.groupKey}
+                      className="rounded-lg border p-4 space-y-2"
+                      data-testid={`shadow-result-${result.groupKey}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="font-medium">{result.groupKey}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {result.memberCount} 人 · 温度 {result.temperatureLevel}
+                          </div>
+                        </div>
+                        <Badge variant={result.rankDelta === 0 ? "secondary" : "default"}>
+                          Δ排名 {result.rankDelta > 0 ? "+" : ""}
+                          {result.rankDelta}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                        <div>
+                          <div className="text-muted-foreground">确定性</div>
+                          <div className="font-medium">
+                            #{result.deterministicRank} · {result.deterministicScore}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">预测</div>
+                          <div className="font-medium">
+                            #{result.predictedRank} · {result.predictedScore}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">置信度</div>
+                          <div className="font-medium">{toPercent(result.confidence)}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">预测成功率</div>
+                          <div className="font-medium">{toPercent(result.predictedOutcomeRate)}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">分差</div>
+                          <div className="font-medium">
+                            {result.scoreDelta > 0 ? "+" : ""}
+                            {result.scoreDelta}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card data-testid="shadow-history">
+                <CardHeader>
+                  <CardTitle>最近批处理记录</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {shadowExperiments?.map((experiment) => (
+                    <div
+                      key={experiment.id}
+                      className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                    >
+                      <div>
+                        <div className="font-medium">{experiment.poolTitle || experiment.poolId}</div>
+                        <div className="text-muted-foreground">
+                          样本 {experiment.outcomeSampleCount} · 一致率 {toPercent(experiment.rankAgreementRate)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{toPercent(experiment.averageConfidence)}</div>
+                        <div className="text-muted-foreground">
+                          气氛均值 {toFixedNumber(experiment.summary.outcomeValidation.avgAtmosphereScore)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                还没有影子实验记录，选择活动池后可运行首个批处理。
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="triggers" className="space-y-4">
