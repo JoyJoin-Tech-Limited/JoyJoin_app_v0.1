@@ -15,6 +15,7 @@
 import type { SmartInsight } from '../deepseekClient';
 import type { InsightDimension } from './dialogGuidanceSystem';
 import type { UserAttributeMap } from './types';
+import type { AIProvider } from '@shared/types/aiMeta';
 import OpenAI from 'openai';
 import { logger } from '../lib/logger';
 import { logAITrace } from '../lib/aiTraceLogger';
@@ -25,6 +26,7 @@ const MAX_SHADOW_FALLBACK_DIMENSIONS = 2;
 const DEEPSEEK_PROVIDER = 'deepseek';
 const DEEPSEEK_MODEL = 'deepseek-chat';
 const ESTIMATED_COST_PER_1K_TOKENS_USD = 0.0014;
+const DEFAULT_SHADOW_TIMEOUT_MS = 1500;
 
 const DIMENSION_TO_STATE_FIELDS: Record<InsightDimension, string[]> = {
   interest: ['topInterests', 'primaryInterests', 'interests', 'hobbies'],
@@ -47,6 +49,10 @@ export interface LLMInferenceResult {
   insights: string[];
   confidence: number;
   reasoning?: string;
+  liveCallAttempted?: boolean;
+  provider?: AIProvider;
+  model?: string;
+  errorCode?: string;
 }
 
 export interface ShadowFallbackCandidate {
@@ -61,8 +67,8 @@ export interface ShadowFallbackLogEntry {
   mode: 'shadow';
   sessionId?: string;
   dimension: InsightDimension;
-  provider: 'deepseek';
-  model: string;
+  provider: AIProvider;
+  model?: string;
   triggered: boolean;
   success: boolean;
   confidence: number;
@@ -73,6 +79,7 @@ export interface ShadowFallbackLogEntry {
   questionsAsked: number;
   sourceConfidence: number;
   sourceInsightsCount: number;
+  liveCallAttempted: boolean;
   errorCode?: string;
 }
 
@@ -81,6 +88,7 @@ export interface ShadowFallbackSummary {
   triggered: boolean;
   calls: ShadowFallbackLogEntry[];
   totalLatencyMs: number;
+  scheduledDimensions?: InsightDimension[];
 }
 
 const shadowFallbackLogs: ShadowFallbackLogEntry[] = [];
@@ -149,7 +157,7 @@ export function parseInferenceResponse(responseText: string): LLMInferenceResult
   try {
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return { success: false, insights: [], confidence: 0 };
+      return { success: false, insights: [], confidence: 0, errorCode: 'parse_error' };
     }
     
     const parsed = JSON.parse(jsonMatch[0]);
@@ -161,7 +169,7 @@ export function parseInferenceResponse(responseText: string): LLMInferenceResult
       reasoning: parsed.reasoning
     };
   } catch (error) {
-    return { success: false, insights: [], confidence: 0 };
+    return { success: false, insights: [], confidence: 0, errorCode: 'parse_error' };
   }
 }
 
@@ -198,6 +206,26 @@ function estimateCostUsd(prompt: string, result: LLMInferenceResult): number {
     estimateTokenCount(result.insights.join(' ')) +
     estimateTokenCount(result.reasoning ?? '');
   return Number(((estimatedTokens / 1000) * ESTIMATED_COST_PER_1K_TOKENS_USD).toFixed(6));
+}
+
+async function withShadowTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('shadow_timeout')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 function buildShadowFallbackContext(
@@ -285,7 +313,14 @@ export async function callLLMForInference(
     logger.warn('LLM fallback inference skipped because DEEPSEEK_API_KEY is missing', {
       provider: DEEPSEEK_PROVIDER,
     });
-    return { success: false, insights: [], confidence: 0 };
+    return {
+      success: false,
+      insights: [],
+      confidence: 0,
+      liveCallAttempted: false,
+      provider: null,
+      errorCode: 'missing_credentials',
+    };
   }
 
   const prompt = buildInferencePrompt(request);
@@ -301,13 +336,28 @@ export async function callLLMForInference(
     });
     
     const content = response.choices?.[0]?.message?.content || '';
-    return parseInferenceResponse(content);
+    const parsed = parseInferenceResponse(content);
+    return {
+      ...parsed,
+      liveCallAttempted: true,
+      provider: DEEPSEEK_PROVIDER,
+      model: DEEPSEEK_MODEL,
+      errorCode: parsed.success ? undefined : parsed.errorCode ?? 'parse_error',
+    };
   } catch (error) {
     logger.error('LLM fallback inference request failed', {
       provider: DEEPSEEK_PROVIDER,
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, insights: [], confidence: 0 };
+    return {
+      success: false,
+      insights: [],
+      confidence: 0,
+      liveCallAttempted: true,
+      provider: DEEPSEEK_PROVIDER,
+      model: DEEPSEEK_MODEL,
+      errorCode: 'llm_error',
+    };
   }
 }
 
@@ -318,6 +368,7 @@ export async function runShadowLLMFallbackInference(params: {
   matcherConfidence: number;
   sessionId?: string;
   executeInference?: (request: LLMInferenceRequest) => Promise<LLMInferenceResult>;
+  timeoutMs?: number;
 }): Promise<ShadowFallbackSummary> {
   if (getLLMFallbackInferenceMode() !== SHADOW_ONLY_MODE) {
     return {
@@ -345,6 +396,7 @@ export async function runShadowLLMFallbackInference(params: {
 
   const context = buildShadowFallbackContext(params.conversationHistory);
   const executeInference = params.executeInference ?? callLLMForInference;
+  const timeoutMs = params.timeoutMs ?? DEFAULT_SHADOW_TIMEOUT_MS;
 
   const calls = await Promise.all(
     candidates.map(async (candidate) => {
@@ -358,32 +410,37 @@ export async function runShadowLLMFallbackInference(params: {
       const prompt = buildInferencePrompt(request);
       const startedAt = Date.now();
       let result: LLMInferenceResult;
-      let errorCode: string | undefined;
 
       try {
-        result = await executeInference(request);
-        if (!result.success) {
-          errorCode = 'inference_failed';
-        }
+        result = await withShadowTimeout(executeInference(request), timeoutMs);
       } catch (error) {
-        errorCode = 'llm_error';
         result = {
           success: false,
           insights: [],
           confidence: 0,
-          reasoning: error instanceof Error ? error.message : String(error),
+          liveCallAttempted: true,
+          provider: DEEPSEEK_PROVIDER,
+          model: DEEPSEEK_MODEL,
+          errorCode:
+            error instanceof Error && error.message === 'shadow_timeout'
+              ? 'shadow_timeout'
+              : 'llm_error',
         };
       }
 
       const latencyMs = Date.now() - startedAt;
-      const estimatedCostUsd = estimateCostUsd(prompt, result);
+      const liveCallAttempted = result.liveCallAttempted ?? true;
+      const provider = result.provider ?? (liveCallAttempted ? DEEPSEEK_PROVIDER : null);
+      const model = result.model ?? (liveCallAttempted ? DEEPSEEK_MODEL : undefined);
+      const errorCode = result.errorCode ?? (result.success ? undefined : 'inference_failed');
+      const estimatedCostUsd = liveCallAttempted ? estimateCostUsd(prompt, result) : 0;
       const entry: ShadowFallbackLogEntry = {
         timestamp: new Date().toISOString(),
         mode: SHADOW_ONLY_MODE,
         sessionId: params.sessionId,
         dimension: candidate.dimension,
-        provider: DEEPSEEK_PROVIDER,
-        model: DEEPSEEK_MODEL,
+        provider,
+        model,
         triggered: true,
         success: result.success,
         confidence: result.confidence,
@@ -394,6 +451,7 @@ export async function runShadowLLMFallbackInference(params: {
         questionsAsked: candidate.questionsAsked,
         sourceConfidence: candidate.confidence,
         sourceInsightsCount: candidate.insightsCount,
+        liveCallAttempted,
         errorCode,
       };
 
@@ -402,36 +460,37 @@ export async function runShadowLLMFallbackInference(params: {
         session_id: params.sessionId,
         mode: SHADOW_ONLY_MODE,
         dimension: candidate.dimension,
-        provider: DEEPSEEK_PROVIDER,
-        model: DEEPSEEK_MODEL,
+        provider,
+        model,
+        live_call_attempted: liveCallAttempted,
         success: result.success,
         source_confidence: candidate.confidence,
-        inferred_attributes: result.insights,
         inferred_confidence: result.confidence,
-        reasoning: result.reasoning,
         latency_ms: latencyMs,
         estimated_cost_usd: estimatedCostUsd,
         error_code: errorCode,
       });
-      logAITrace({
-        domain: 'attribute_inference',
-        feature: 'shadowLLMFallbackInference',
-        provider: DEEPSEEK_PROVIDER,
-        model: DEEPSEEK_MODEL,
-        latencyMs,
-        success: result.success,
-        fallbackUsed: true,
-        fromCache: false,
-        promptVersion: 'shadow-v1',
-        errorCode,
-      });
-      recordLLMFallbackInferenceMetric({
-        provider: DEEPSEEK_PROVIDER,
-        mode: SHADOW_ONLY_MODE,
-        success: result.success,
-        latencyMs,
-        estimatedCostUsd,
-      });
+      if (liveCallAttempted) {
+        logAITrace({
+          domain: 'attribute_inference',
+          feature: 'shadowLLMFallbackInference',
+          provider,
+          model,
+          latencyMs,
+          success: result.success,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: 'shadow-v1',
+          errorCode,
+        });
+        recordLLMFallbackInferenceMetric({
+          provider: provider ?? 'unknown',
+          mode: SHADOW_ONLY_MODE,
+          success: result.success,
+          latencyMs,
+          estimatedCostUsd,
+        });
+      }
 
       return entry;
     }),
@@ -442,6 +501,7 @@ export async function runShadowLLMFallbackInference(params: {
     triggered: true,
     totalLatencyMs: calls.reduce((sum, call) => sum + call.latencyMs, 0),
     calls,
+    scheduledDimensions: candidates.map((candidate) => candidate.dimension),
   };
 }
 
