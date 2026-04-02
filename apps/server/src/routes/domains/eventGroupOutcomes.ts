@@ -24,6 +24,7 @@ function getInvalidConnectionRadarTargets(
 ): string[] {
   const memberSet = new Set(memberUserIds);
 
+  // Connection radar captures perceived chemistry with other attendees only.
   return Object.keys(connectionRadar).filter(
     (targetUserId) => targetUserId === submittedBy || !memberSet.has(targetUserId),
   );
@@ -112,7 +113,6 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
         success: true,
         fallbackUsed: false,
         fromCache: false,
-        errorCode: replacedExisting ? "replaced_existing_submission" : undefined,
       });
 
       return res.status(replacedExisting ? 200 : 201).json({
