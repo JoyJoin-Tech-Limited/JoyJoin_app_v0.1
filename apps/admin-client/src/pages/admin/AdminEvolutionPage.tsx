@@ -61,6 +61,37 @@ interface WeightsData {
   };
 }
 
+interface ShadowRecommendationDimensionMetric {
+  score: number;
+  sampleCount: number;
+  confidence: number;
+  liveWeight: number;
+  recommendedWeight: number;
+  delta: number;
+}
+
+interface ShadowRecommendation {
+  id: string;
+  recordedAt: string;
+  shadowMetadata?: {
+    outcomeScore?: number;
+    signalCoverage?: number;
+    sampleSize?: number;
+    overallConfidence?: number;
+    outcomeSignals?: {
+      wouldMeetAgain?: boolean | null;
+      mutualConnectionCount?: number | null;
+      eventId?: string;
+    };
+    dimensionMetrics?: Record<string, ShadowRecommendationDimensionMetric>;
+  } | null;
+}
+
+interface ShadowRecommendationData {
+  latest: ShadowRecommendation | null;
+  recommendations: ShadowRecommendation[];
+}
+
 interface GoldenDialogue {
   id: string;
   category: string;
@@ -73,6 +104,15 @@ interface GoldenDialogue {
   createdAt: string;
 }
 
+const weightDefinitions = [
+  { key: "personalityWeight", label: "人格匹配", color: "bg-purple-500", metricKey: "personality" },
+  { key: "interestsWeight", label: "兴趣匹配", color: "bg-blue-500", metricKey: "interests" },
+  { key: "intentWeight", label: "意图匹配", color: "bg-green-500", metricKey: "intent" },
+  { key: "backgroundWeight", label: "背景多样性", color: "bg-orange-500", metricKey: "background" },
+  { key: "cultureWeight", label: "文化语言", color: "bg-pink-500", metricKey: "culture" },
+  { key: "conversationSignatureWeight", label: "对话签名", color: "bg-cyan-500", metricKey: "conversationSignature" },
+] as const;
+
 export default function AdminEvolutionPage() {
   const { toast } = useToast();
   const [newDialogueContent, setNewDialogueContent] = useState("");
@@ -84,6 +124,10 @@ export default function AdminEvolutionPage() {
 
   const { data: weightsData, isLoading: weightsLoading } = useQuery<WeightsData>({
     queryKey: ["/api/admin/evolution/weights"],
+  });
+
+  const { data: shadowRecommendationData, isLoading: shadowRecommendationsLoading } = useQuery<ShadowRecommendationData>({
+    queryKey: ["/api/admin/evolution/weight-recommendations"],
   });
 
   const { data: triggersData, isLoading: triggersLoading } = useQuery<{ all: TriggerStats[]; topPerforming: TriggerStats[]; underperforming: TriggerStats[] }>({
@@ -118,6 +162,7 @@ export default function AdminEvolutionPage() {
   const handleRefreshData = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weight-recommendations"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/triggers"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/golden-dialogues"] });
     toast({ title: "数据已刷新" });
@@ -146,6 +191,8 @@ export default function AdminEvolutionPage() {
       toast({ title: "回滚失败", variant: "destructive" });
     }
   };
+  const latestShadowRecommendation = shadowRecommendationData?.latest;
+  const latestShadowMetrics = latestShadowRecommendation?.shadowMetadata?.dimensionMetrics;
 
   const categories = [
     { value: "greeting", label: "开场白" },
@@ -317,6 +364,7 @@ export default function AdminEvolutionPage() {
                     { key: "cultureWeight", label: "文化语言", color: "bg-pink-500" },
                     { key: "conversationSignatureWeight", label: "对话签名", color: "bg-cyan-500" },
                   ].map(({ key, label, color }) => {
+                  {weightDefinitions.map(({ key, label, color }) => {
                     const rawValue = weightsData.weights[key as keyof typeof weightsData.weights] || 0;
                     const value = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
                     const percentage = value < 1 ? value * 100 : value;
@@ -335,6 +383,121 @@ export default function AdminEvolutionPage() {
                       </div>
                     );
                   })}
+
+                  <div className="rounded-lg border border-dashed p-4 space-y-4" data-testid="shadow-weight-recommendations">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          影子模式推荐
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          基于真实反馈生成建议，仅供管理员观察与比较，不会影响线上匹配排序。
+                        </p>
+                      </div>
+                      {latestShadowRecommendation?.shadowMetadata?.overallConfidence != null && (
+                        <Badge variant="secondary">
+                          置信度 {(latestShadowRecommendation.shadowMetadata.overallConfidence * 100).toFixed(0)}%
+                        </Badge>
+                      )}
+                    </div>
+
+                    {shadowRecommendationsLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="animate-pulse h-10 bg-muted rounded" />
+                        ))}
+                      </div>
+                    ) : latestShadowRecommendation?.shadowMetadata ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div className="rounded-md bg-muted/50 p-3">
+                            <p className="text-muted-foreground">推荐样本</p>
+                            <p className="font-semibold">{latestShadowRecommendation.shadowMetadata.sampleSize ?? 0}</p>
+                          </div>
+                          <div className="rounded-md bg-muted/50 p-3">
+                            <p className="text-muted-foreground">信号覆盖</p>
+                            <p className="font-semibold">
+                              {(((latestShadowRecommendation.shadowMetadata.signalCoverage ?? 0) as number) * 100).toFixed(0)}%
+                            </p>
+                          </div>
+                          <div className="rounded-md bg-muted/50 p-3">
+                            <p className="text-muted-foreground">结果评分</p>
+                            <p className="font-semibold">{latestShadowRecommendation.shadowMetadata.outcomeScore?.toFixed(2) ?? "—"}</p>
+                          </div>
+                          <div className="rounded-md bg-muted/50 p-3">
+                            <p className="text-muted-foreground">再见意愿</p>
+                            <p className="font-semibold">
+                              {latestShadowRecommendation.shadowMetadata.outcomeSignals?.wouldMeetAgain == null
+                                ? "未知"
+                                : latestShadowRecommendation.shadowMetadata.outcomeSignals?.wouldMeetAgain
+                                  ? "是"
+                                  : "否"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {weightDefinitions.map(({ key, label, metricKey }) => {
+                            const liveRawValue = weightsData.weights[key as keyof typeof weightsData.weights] || 0;
+                            const liveValue = typeof liveRawValue === 'string' ? parseFloat(liveRawValue) : liveRawValue;
+                            const livePercentage = liveValue < 1 ? liveValue * 100 : liveValue;
+                            const metric = latestShadowMetrics?.[metricKey];
+                            const recommendedPercentage = metric ? metric.recommendedWeight * 100 : livePercentage;
+
+                            return (
+                              <div key={`${key}-shadow`} className="rounded-md border p-3 space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                  <span className="font-medium">{label}</span>
+                                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                    <span>线上 {livePercentage.toFixed(1)}%</span>
+                                    <span>建议 {recommendedPercentage.toFixed(1)}%</span>
+                                    <span>
+                                      Δ {metric ? `${metric.delta >= 0 ? "+" : ""}${(metric.delta * 100).toFixed(1)}%` : "0.0%"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                  <span>维度评分 {metric?.score?.toFixed(0) ?? "—"}</span>
+                                  <span>样本 {metric?.sampleCount ?? 0}</span>
+                                  <span>置信度 {metric ? `${(metric.confidence * 100).toFixed(0)}%` : "—"}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">最近推荐记录</p>
+                          <div className="space-y-2">
+                            {shadowRecommendationData?.recommendations?.slice(0, 5).map((recommendation) => (
+                              <div
+                                key={recommendation.id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm"
+                              >
+                                <div className="space-x-3">
+                                  <span>{new Date(recommendation.recordedAt).toLocaleString()}</span>
+                                  <span className="text-muted-foreground">
+                                    结果 {recommendation.shadowMetadata?.outcomeScore?.toFixed(2) ?? "—"}
+                                  </span>
+                                </div>
+                                <div className="space-x-3 text-muted-foreground">
+                                  <span>样本 {recommendation.shadowMetadata?.sampleSize ?? 0}</span>
+                                  <span>
+                                    置信度 {recommendation.shadowMetadata?.overallConfidence != null
+                                      ? `${(recommendation.shadowMetadata.overallConfidence * 100).toFixed(0)}%`
+                                      : "—"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">暂无影子模式推荐数据</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="text-muted-foreground">暂无权重数据</p>
