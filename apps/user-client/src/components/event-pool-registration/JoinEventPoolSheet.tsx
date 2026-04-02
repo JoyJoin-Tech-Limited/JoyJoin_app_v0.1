@@ -275,6 +275,27 @@ export default function JoinEventPoolSheet({
                         area={poolData.area}
                         enabled={open}
                       />
+
+                      {/* Compact reassurance row — only shown when there are registrations */}
+                      {poolData.registrationCount > 0 && (
+                        <div className="flex items-center justify-center gap-3 mb-4 px-2 py-2 rounded-xl bg-muted/40 border border-border/50">
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span className="text-green-500">✓</span>
+                            <span>实名认证</span>
+                          </div>
+                          <div className="h-3 w-px bg-border" />
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span>👥</span>
+                            <span>{poolData.registrationCount} 人已报名</span>
+                          </div>
+                          <div className="h-3 w-px bg-border" />
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span>✨</span>
+                            <span>AI智能匹配</span>
+                          </div>
+                        </div>
+                      )}
+
                       <BudgetSelectionStep
                         eventType={poolData.eventType}
                         selectedBudget={preferences.budget}
