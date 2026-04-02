@@ -1603,36 +1603,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      try {
-        const { matchingWeightsService } = await import('./matchingWeightsService');
-        await matchingWeightsService.recordShadowRecommendation({
-          source: 'event_feedback',
-          eventId,
-          feedbackId: feedback.id,
-          userId,
-          wouldMeetAgain:
-            feedback.hasNewConnections ??
-            (Array.isArray(feedback.connections) ? feedback.connections.length > 0 : mutualMatches.length > 0),
-          wouldAttendAgain: feedback.wouldAttendAgain ?? null,
-          hasNewConnections: feedback.hasNewConnections ?? (mutualMatches.length > 0 ? true : null),
-          atmosphereScore: feedback.atmosphereScore ?? feedback.rating ?? null,
-          connectionStatus: feedback.connectionStatus ?? null,
-          connectionCount: Array.isArray(feedback.connections) ? feedback.connections.length : null,
-          mutualConnectionCount: mutualMatches.length,
-          conversationComfort: feedback.conversationComfort ?? null,
-          connectionRadar:
-            feedback.connectionRadar && typeof feedback.connectionRadar === 'object'
-              ? feedback.connectionRadar
-              : null,
-        });
-      } catch (shadowError) {
-        console.error('[MatchingWeightsService] Failed to generate shadow recommendation:', shadowError);
-      }
-      
       // Note: In a real app, you'd update user points here
       // await storage.awardFeedbackPoints(userId, 50);
-      
-      res.json({ ...feedback, mutualMatches });
+
+      const responsePayload = { ...feedback, mutualMatches };
+      const shadowRecommendationInput = {
+        source: 'event_feedback',
+        eventId,
+        feedbackId: feedback.id,
+        userId,
+        wouldMeetAgain:
+          feedback.hasNewConnections ??
+          (Array.isArray(feedback.connections) ? feedback.connections.length > 0 : mutualMatches.length > 0),
+        wouldAttendAgain: feedback.wouldAttendAgain ?? null,
+        hasNewConnections: feedback.hasNewConnections ?? (mutualMatches.length > 0 ? true : null),
+        atmosphereScore: feedback.atmosphereScore ?? feedback.rating ?? null,
+        connectionStatus: feedback.connectionStatus ?? null,
+        connectionCount: Array.isArray(feedback.connections) ? feedback.connections.length : null,
+        mutualConnectionCount: mutualMatches.length,
+        conversationComfort: feedback.conversationComfort ?? null,
+        connectionRadar:
+          feedback.connectionRadar && typeof feedback.connectionRadar === 'object'
+            ? feedback.connectionRadar
+            : null,
+      };
+
+      res.json(responsePayload);
+
+      void import('./matchingWeightsService')
+        .then(({ matchingWeightsService }) => matchingWeightsService.recordShadowRecommendation(shadowRecommendationInput))
+        .catch((shadowError) => {
+          logger.error('Failed to record shadow recommendation from event_feedback', {
+            eventId,
+            feedbackId: feedback.id,
+            userId,
+            error: String(shadowError),
+          });
+        });
     } catch (error) {
       console.error("Error creating feedback:", error);
       res.status(500).json({ message: "Failed to create feedback" });
@@ -9681,7 +9688,10 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
   app.get('/api/admin/evolution/weight-recommendations', requireAdmin, async (req: any, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 20;
+      const parsedLimit = Number.parseInt(req.query.limit as string, 10);
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 100)
+        : 20;
       const { matchingWeightsService } = await import('./matchingWeightsService');
       const recommendations = await matchingWeightsService.getShadowRecommendations(limit);
       res.json({
