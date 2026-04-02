@@ -102,7 +102,7 @@ export const PokemonShareCard = forwardRef<HTMLDivElement, PokemonShareCardProps
           // Fixed height with overflow hidden to prevent mobile overflow
           height: 'clamp(560px, 78vh, 720px)',
           overflow: 'hidden',
-          fontFamily: 'ZCOOL QingKe HuangYou, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
+          fontFamily: 'var(--font-cn-display)'
         }}
       >
         {/* Card container with dual-layer border - gradient applied to border */}
