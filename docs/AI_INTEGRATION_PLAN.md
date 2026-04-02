@@ -371,15 +371,17 @@ function blendedChemistryScore(
 ```sql
 CREATE TABLE event_group_outcomes (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pool_id             UUID NOT NULL REFERENCES event_pools(id),
   group_id            UUID NOT NULL REFERENCES event_pool_groups(id),
-  event_id            UUID NOT NULL,
   submitted_by        UUID NOT NULL REFERENCES users(id),
   atmosphere_score    SMALLINT,          -- 1-5
   would_meet_again    BOOLEAN,
   connection_radar    JSONB,             -- {userId: strength_0_to_5} per respondent
   icebreaker_ratings  JSONB,             -- {questionId: helpful|neutral|awkward}
   free_text_signal    TEXT,              -- optional short reflection (not used for training directly)
-  submitted_at        TIMESTAMP NOT NULL DEFAULT NOW()
+  submitted_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (group_id, submitted_by)
 );
 ```
 
@@ -388,7 +390,7 @@ CREATE TABLE event_group_outcomes (
 - `apps/server/src/dynamicWeights.ts` — legacy flow, same signal
 - Future: Phase 2 chemistry calibration reads `atmosphere_score + would_meet_again` per archetype pair from this table
 
-**Route:** `POST /api/event-pools/:poolId/group-outcome` — protected by `requireAuth`, validates group membership before writing.
+**Route:** `POST /api/event-pools/:poolId/group-outcome` — protected by authenticated session access, validates group membership before writing, and replaces the submitter's prior row on duplicate re-submission.
 
 ### 2.5 AI-Enhanced Social Experience
 
