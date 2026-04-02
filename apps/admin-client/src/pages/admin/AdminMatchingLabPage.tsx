@@ -10,6 +10,7 @@ import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, Che
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface MatchingConfig {
   configName: string;
@@ -434,7 +435,7 @@ export default function AdminMatchingLabPage() {
               disabled={chemistryCalibrationFetching}
               data-testid="button-refresh-chemistry-calibration"
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${chemistryCalibrationFetching ? "animate-spin" : ""}`} />
+              <RefreshCw className={cn("mr-2 h-4 w-4", chemistryCalibrationFetching && "animate-spin")} />
               刷新聚合
             </Button>
           </div>
