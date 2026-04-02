@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Brain, Zap, MessageSquare, TrendingUp, Target, Sparkles, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
+import type { MatchingWeightsConfig } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -64,23 +65,27 @@ interface WeightsData {
     cultureWeight: number;
     conversationSignatureWeight: number;
   };
-  config: {
-    totalMatches?: number;
-    successfulMatches?: number;
-    updatedAt?: string | null;
-    personalityAlpha?: number;
-    personalityBeta?: number;
-    interestsAlpha?: number;
-    interestsBeta?: number;
-    intentAlpha?: number;
-    intentBeta?: number;
-    backgroundAlpha?: number;
-    backgroundBeta?: number;
-    cultureAlpha?: number;
-    cultureBeta?: number;
-    conversationSignatureAlpha?: number;
-    conversationSignatureBeta?: number;
-  } | null;
+  config: (
+    Pick<
+      MatchingWeightsConfig,
+      | "totalMatches"
+      | "successfulMatches"
+      | "personalityAlpha"
+      | "personalityBeta"
+      | "interestsAlpha"
+      | "interestsBeta"
+      | "intentAlpha"
+      | "intentBeta"
+      | "backgroundAlpha"
+      | "backgroundBeta"
+      | "cultureAlpha"
+      | "cultureBeta"
+      | "conversationSignatureAlpha"
+      | "conversationSignatureBeta"
+    > & {
+      updatedAt?: string | null;
+    }
+  ) | null;
 }
 
 interface WeightHistoryEntry {
@@ -156,6 +161,7 @@ export default function AdminEvolutionPage() {
   const handleRefreshData = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights-history?limit=12"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/triggers"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/golden-dialogues"] });
     toast({ title: "数据已刷新" });
