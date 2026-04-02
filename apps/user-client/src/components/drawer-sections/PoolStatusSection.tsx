@@ -13,7 +13,7 @@ interface PoolStats {
   estimatedGroups: number;
   avgMatchScore: number;
   recentThemeTitles: Array<{
-    themeTitle: string;
+    themeTitle: string | null;
     themeEmoji: string;
   }>;
 }
@@ -42,6 +42,10 @@ export default function PoolStatusSection({
   onThemeClick,
 }: PoolStatusSectionProps) {
   const [showAllThemes, setShowAllThemes] = useState(false);
+  const recentThemeTitles = stats.recentThemeTitles.filter(
+    (theme): theme is { themeTitle: string; themeEmoji: string } =>
+      typeof theme.themeTitle === "string" && theme.themeTitle.trim().length > 0,
+  );
   
   const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
   const isHot = spotsNeeded <= 2 && spotsNeeded > 0 && spotsNeeded !== minGroupSize;
@@ -157,7 +161,7 @@ export default function PoolStatusSection({
       </div>
       
       {/* Theme Showcase */}
-      {stats.recentThemeTitles.length > 0 && (
+      {recentThemeTitles.length > 0 && (
         <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
             <div>
@@ -195,11 +199,11 @@ export default function PoolStatusSection({
               onThemeClick={onThemeClick}
             />
           ) : (
-            <FloatingThemeTags
-              themeTags={stats.recentThemeTitles}
-              maxTags={5}
-              autoRotate={true}
-            />
+              <FloatingThemeTags
+                themeTags={recentThemeTitles}
+                maxTags={5}
+                autoRotate={true}
+              />
           )}
         </div>
       )}
