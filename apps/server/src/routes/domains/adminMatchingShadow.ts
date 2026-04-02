@@ -1,13 +1,18 @@
 import type { Express } from "express";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { requireAdmin } from "../../adminAuth";
+import { db } from "../../db";
+import { matchingThresholds } from "@shared/schema";
 import { matchEventPool } from "../../poolMatchingService";
 import { buildMatchingShadowExperiment } from "../../matchingShadowService";
 import { classifyShadowExperimentError } from "./matchingShadowErrors";
 import {
+  countMatchingShadowExperimentPools,
   createMatchingShadowExperiment,
   getMatchingShadowExperimentById,
   getOutcomeCalibrationSnapshot,
+  getPredictiveRerankOutcomeMetrics,
   listMatchingShadowExperiments,
 } from "../../repositories/matchingShadowExperimentsRepo";
 
@@ -16,6 +21,39 @@ const runMatchingShadowSchema = z.object({
 });
 
 export function registerAdminMatchingShadowRoutes(app: Express): void {
+  app.get("/api/admin/predictive-rerank-status", requireAdmin, async (_req, res) => {
+    try {
+      const [config] = await db
+        .select()
+        .from(matchingThresholds)
+        .where(eq(matchingThresholds.isActive, true))
+        .limit(1);
+
+      const [shadowPoolCount, outcomeMetrics] = await Promise.all([
+        countMatchingShadowExperimentPools(),
+        getPredictiveRerankOutcomeMetrics(),
+      ]);
+
+      res.json({
+        shadowPoolCount,
+        outcomeMetrics,
+        config: config ? {
+          predictiveRerankEnabled: config.predictiveRerankEnabled ?? false,
+          predictiveRerankExposurePercent: config.predictiveRerankExposurePercent ?? 50,
+          predictiveRerankMaxPositionShift: config.predictiveRerankMaxPositionShift ?? 2,
+          predictiveRerankConfidenceThreshold: config.predictiveRerankConfidenceThreshold ?? 70,
+          predictiveRerankAutoDisableEnabled: config.predictiveRerankAutoDisableEnabled ?? true,
+          predictiveRerankMinShadowExperiments: config.predictiveRerankMinShadowExperiments ?? 10,
+          predictiveRerankAutoDisabledAt: config.predictiveRerankAutoDisabledAt,
+          predictiveRerankAutoDisabledReason: config.predictiveRerankAutoDisabledReason,
+        } : null,
+      });
+    } catch (error: any) {
+      console.error("Error fetching predictive rerank status:", error);
+      res.status(500).json({ message: "Failed to fetch predictive rerank status" });
+    }
+  });
+
   app.get("/api/admin/matching-shadow-experiments", requireAdmin, async (req: any, res) => {
     try {
       const poolId = typeof req.query.poolId === "string" ? req.query.poolId : undefined;

@@ -1,6 +1,8 @@
 import { db } from "../db";
 import {
+  eventGroupOutcomes,
   eventFeedback,
+  eventPoolGroups,
   eventPools,
   matchingShadowExperiments,
   type InsertMatchingShadowExperiment,
@@ -8,6 +10,13 @@ import {
 import { desc, eq, sql } from "drizzle-orm";
 
 export type OutcomeCalibrationSnapshot = {
+  sampleCount: number;
+  positiveRate: number;
+  avgAtmosphereScore: number | null;
+};
+
+export type PredictiveRerankOutcomeMetric = {
+  arm: "control" | "treatment";
   sampleCount: number;
   positiveRate: number;
   avgAtmosphereScore: number | null;
@@ -56,6 +65,16 @@ export async function createMatchingShadowExperiment(
     .returning();
 
   return created;
+}
+
+export async function countMatchingShadowExperimentPools(): Promise<number> {
+  const [row] = await db
+    .select({
+      count: sql<number>`count(distinct ${matchingShadowExperiments.poolId})::int`,
+    })
+    .from(matchingShadowExperiments);
+
+  return row?.count ?? 0;
 }
 
 export async function listMatchingShadowExperiments(options?: {
@@ -120,4 +139,38 @@ export async function getMatchingShadowExperimentById(id: string) {
     .limit(1);
 
   return experiment ?? null;
+}
+
+export async function getPredictiveRerankOutcomeMetrics(days = 14): Promise<PredictiveRerankOutcomeMetric[]> {
+  const positivePredicate = sql<number>`
+    case
+      when ${eventGroupOutcomes.wouldMeetAgain} = true or coalesce(${eventGroupOutcomes.atmosphereScore}, 0) >= 4
+        then 1
+      else 0
+    end
+  `;
+
+  const rows = await db
+    .select({
+      arm: eventPoolGroups.predictiveExperimentArm,
+      sampleCount: sql<number>`count(*)::int`,
+      positiveRate: sql<string>`avg(${positivePredicate})::text`,
+      avgAtmosphereScore: sql<string | null>`avg(${eventGroupOutcomes.atmosphereScore})::text`,
+    })
+    .from(eventGroupOutcomes)
+    .innerJoin(eventPoolGroups, eq(eventPoolGroups.id, eventGroupOutcomes.groupId))
+    .where(sql`
+      ${eventPoolGroups.predictiveExperimentArm} in ('control', 'treatment')
+      and ${eventGroupOutcomes.updatedAt} >= now() - (${days} * interval '1 day')
+    `)
+    .groupBy(eventPoolGroups.predictiveExperimentArm);
+
+  return rows
+    .filter((row): row is typeof row & { arm: "control" | "treatment" } => row.arm === "control" || row.arm === "treatment")
+    .map((row) => ({
+      arm: row.arm,
+      sampleCount: row.sampleCount,
+      positiveRate: Number.parseFloat(row.positiveRate ?? "0"),
+      avgAtmosphereScore: row.avgAtmosphereScore === null ? null : Number.parseFloat(row.avgAtmosphereScore),
+    }));
 }

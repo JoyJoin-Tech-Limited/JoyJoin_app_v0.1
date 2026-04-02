@@ -1,6 +1,3 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,20 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Brain, Zap, MessageSquare, TrendingUp, Target, Sparkles, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
-import type { MatchingWeightsConfig } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import {
-  getCurrentWeights,
-  getRecommendationConfidence,
-  getRecommendedWeights,
-  getRecommendationReadiness,
-  getSuccessfulMatchRate,
-  getWeightHistorySeries,
-  STATIC_MATCHING_WEIGHTS,
-  WEIGHT_DIMENSIONS,
-} from "@/lib/adminEvolutionWeights";
 
 interface EvolutionOverview {
   weights: {
@@ -68,45 +53,6 @@ interface WeightsData {
     conversationSignatureWeight: number;
   };
   config: any;
-  rollout: {
-    adaptiveWeightsEnabled: boolean;
-    liveConfigName: string;
-    fallbackConfigName: string;
-    maxWeightMovementPercent: number;
-  };
-  config: (
-    Pick<
-      MatchingWeightsConfig,
-      | "totalMatches"
-      | "successfulMatches"
-      | "personalityAlpha"
-      | "personalityBeta"
-      | "interestsAlpha"
-      | "interestsBeta"
-      | "intentAlpha"
-      | "intentBeta"
-      | "backgroundAlpha"
-      | "backgroundBeta"
-      | "cultureAlpha"
-      | "cultureBeta"
-      | "conversationSignatureAlpha"
-      | "conversationSignatureBeta"
-    > & {
-      updatedAt?: string | null;
-    }
-  ) | null;
-}
-
-interface WeightHistoryEntry {
-  recordedAt: string;
-  changeReason: string | null;
-  matchesSinceLastUpdate: number | null;
-  personalityWeight: number | string | null;
-  interestsWeight: number | string | null;
-  intentWeight: number | string | null;
-  backgroundWeight: number | string | null;
-  cultureWeight: number | string | null;
-  conversationSignatureWeight: number | string | null;
 }
 
 interface ShadowRecommendationDimensionMetric {
@@ -157,6 +103,7 @@ interface EventPoolOption {
   title: string;
   status: string;
   totalRegistrations: number;
+  predictiveRerankEnabledOverride?: boolean | null;
 }
 
 interface ShadowExperimentResult {
@@ -209,6 +156,26 @@ interface ShadowExperimentDetail extends ShadowExperiment {
   results: ShadowExperimentResult[];
 }
 
+interface PredictiveRerankStatus {
+  shadowPoolCount: number;
+  outcomeMetrics: Array<{
+    arm: "control" | "treatment";
+    sampleCount: number;
+    positiveRate: number | string;
+    avgAtmosphereScore: number | string | null;
+  }>;
+  config: {
+    predictiveRerankEnabled: boolean;
+    predictiveRerankExposurePercent: number;
+    predictiveRerankMaxPositionShift: number;
+    predictiveRerankConfidenceThreshold: number;
+    predictiveRerankAutoDisableEnabled: boolean;
+    predictiveRerankMinShadowExperiments: number;
+    predictiveRerankAutoDisabledAt: string | null;
+    predictiveRerankAutoDisabledReason: string | null;
+  } | null;
+}
+
 function toPercent(value: number | string | null | undefined): string {
   if (value === null || value === undefined) {
     return "—";
@@ -257,10 +224,12 @@ export default function AdminEvolutionPage() {
     queryKey: ["/api/admin/evolution/weights"],
   });
 
-  const { data: weightsHistoryData, isLoading: weightsHistoryLoading } = useQuery<WeightHistoryEntry[]>({
-    queryKey: ["/api/admin/evolution/weights-history?limit=12"],
   const { data: shadowRecommendationData, isLoading: shadowRecommendationsLoading } = useQuery<ShadowRecommendationData>({
     queryKey: ["/api/admin/evolution/weight-recommendations"],
+  });
+
+  const { data: predictiveRerankStatus, isLoading: predictiveRerankStatusLoading } = useQuery<PredictiveRerankStatus>({
+    queryKey: ["/api/admin/predictive-rerank-status"],
   });
 
   const { data: triggersData, isLoading: triggersLoading } = useQuery<{ all: TriggerStats[]; topPerforming: TriggerStats[]; underperforming: TriggerStats[] }>({
@@ -325,6 +294,26 @@ export default function AdminEvolutionPage() {
     },
   });
 
+  const poolOverrideMutation = useMutation({
+    mutationFn: async (override: boolean | null) => {
+      if (!selectedShadowPoolId) {
+        throw new Error("请先选择活动池");
+      }
+
+      const response = await apiRequest("PATCH", `/api/admin/event-pools/${selectedShadowPoolId}`, {
+        predictiveRerankEnabledOverride: override,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
+      toast({ title: "活动池实验开关已更新" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "更新失败", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleAddGoldenDialogue = async () => {
     if (!newDialogueContent.trim() || !newDialogueCategory) {
       toast({ title: "请填写话术内容和分类", variant: "destructive" });
@@ -349,36 +338,15 @@ export default function AdminEvolutionPage() {
   const handleRefreshData = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights-history?limit=12"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weight-recommendations"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/triggers"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/golden-dialogues"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/matching-shadow-experiments"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/predictive-rerank-status"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/event-pools"] });
     toast({ title: "数据已刷新" });
   };
 
-  const handleAdaptiveWeightsToggle = async (enabled: boolean) => {
-    try {
-      await apiRequest("POST", "/api/admin/evolution/weights/activation", { enabled });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights-history"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
-      toast({ title: enabled ? "已启用自适应权重" : "已切回默认权重" });
-    } catch (error) {
-      toast({ title: enabled ? "启用失败" : "停用失败", variant: "destructive" });
-    }
-  };
-
-  const handleAdaptiveWeightsRollback = async () => {
-    try {
-      await apiRequest("POST", "/api/admin/evolution/weights/rollback");
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/weights-history"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/evolution/overview"] });
-      toast({ title: "已回滚上一版自适应权重" });
-    } catch (error) {
-      toast({ title: "回滚失败", variant: "destructive" });
-    }
   const handleRunShadowExperiment = () => {
     if (!selectedShadowPoolId) {
       toast({ title: "请选择活动池", description: "影子批处理需要指定一个活动池", variant: "destructive" });
@@ -389,6 +357,9 @@ export default function AdminEvolutionPage() {
   };
   const latestShadowRecommendation = shadowRecommendationData?.latest;
   const latestShadowMetrics = latestShadowRecommendation?.shadowMetadata?.dimensionMetrics;
+  const selectedPool = eventPools?.find((pool) => pool.id === selectedShadowPoolId);
+  const controlMetrics = predictiveRerankStatus?.outcomeMetrics.find((metric) => metric.arm === "control");
+  const treatmentMetrics = predictiveRerankStatus?.outcomeMetrics.find((metric) => metric.arm === "treatment");
 
   const categories = [
     { value: "greeting", label: "开场白" },
@@ -400,36 +371,6 @@ export default function AdminEvolutionPage() {
     { value: "encouragement", label: "鼓励话术" },
     { value: "humor", label: "幽默话术" },
   ];
-
-  const weightInsights = useMemo(() => {
-    const currentWeights = getCurrentWeights(weightsData?.weights);
-    const recommendedWeights = getRecommendedWeights(weightsData?.config);
-    const readiness = getRecommendationReadiness(weightsData?.config);
-    const confidence = getRecommendationConfidence(weightsData?.config);
-    const successRate = getSuccessfulMatchRate(weightsData?.config);
-    const historySeries = getWeightHistorySeries(weightsHistoryData);
-
-    return {
-      currentWeights,
-      recommendedWeights,
-      readiness,
-      confidence,
-      successRate,
-      historySeries,
-      totalMatches: weightsData?.config?.totalMatches || 0,
-      successfulMatches: weightsData?.config?.successfulMatches || 0,
-      updatedAt: weightsData?.config?.updatedAt || null,
-    };
-  }, [weightsData, weightsHistoryData]);
-
-  const readinessBadgeClassName =
-    weightInsights.readiness.tone === "positive"
-      ? "bg-green-100 text-green-700"
-      : weightInsights.readiness.tone === "warning"
-        ? "bg-amber-100 text-amber-700"
-        : "bg-red-100 text-red-700";
-
-  const historyAvailable = weightInsights.historySeries.length >= 2;
 
   return (
     <div className="p-6 space-y-6" data-testid="admin-evolution-page">
@@ -531,144 +472,21 @@ export default function AdminEvolutionPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
-                自适应权重建议面板
+                匹配维度权重 (Thompson Sampling优化)
               </CardTitle>
               <CardDescription>
-                对比默认静态权重、当前线上权重与学习建议，并查看权重变化趋势
+                系统会根据用户反馈自动调整各维度权重
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {weightsLoading || weightsHistoryLoading ? (
+              {weightsLoading ? (
                 <div className="space-y-4">
-                  {[1, 2, 3, 4].map((i) => (
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div key={i} className="animate-pulse h-8 bg-muted rounded" />
                   ))}
                 </div>
               ) : weightsData?.weights ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <Card className="border-dashed">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">默认静态权重</CardTitle>
-                        <CardDescription>当前产品基线</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">100%</div>
-                        <p className="text-xs text-muted-foreground">6 个固定维度，便于与学习建议对照</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">反馈样本量</CardTitle>
-                        <CardDescription>用于学习建议的历史反馈</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{weightInsights.totalMatches}</div>
-                        <p className="text-xs text-muted-foreground">
-                          成功匹配 {weightInsights.successfulMatches} · 成功率 {weightInsights.successRate.toFixed(0)}%
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">建议置信度</CardTitle>
-                        <CardDescription>依据 Thompson Sampling 后验强度</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="text-2xl font-bold">{weightInsights.confidence}%</div>
-                        <Progress value={weightInsights.confidence} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">采纳就绪度</CardTitle>
-                        <CardDescription>
-                          {weightInsights.updatedAt
-                            ? `最近更新 ${new Intl.DateTimeFormat("zh-CN", {
-                                month: "numeric",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }).format(new Date(weightInsights.updatedAt))}`
-                            : "暂无更新时间"}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <Badge variant="secondary" className={readinessBadgeClassName}>
-                          {weightInsights.readiness.label}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground">{weightInsights.readiness.description}</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {weightInsights.readiness.tone !== "positive" && (
-                    <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>数据仍在积累中</AlertTitle>
-                      <AlertDescription>
-                        {weightInsights.readiness.description}
-                        {!historyAvailable && " 当前历史点位较少，趋势图将展示不足数据状态。"}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="rounded-lg border">
-                    <div className="grid grid-cols-[minmax(120px,1.5fr)_repeat(3,minmax(90px,1fr))_minmax(88px,.8fr)] gap-3 border-b bg-muted/40 px-4 py-3 text-xs font-medium text-muted-foreground">
-                      <span>维度</span>
-                      <span>静态基线</span>
-                      <span>当前线上</span>
-                      <span>学习建议</span>
-                      <span>变化</span>
-                    </div>
-                    <div className="divide-y">
-                      {WEIGHT_DIMENSIONS.map((dimension) => {
-                        const baseline = STATIC_MATCHING_WEIGHTS[dimension.key];
-                        const current = weightInsights.currentWeights[dimension.key];
-                        const recommended = weightInsights.recommendedWeights[dimension.key];
-                        const change = Number((recommended - current).toFixed(1));
-                        return (
                 <div className="space-y-4">
-                  <div
-                    className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
-                    data-testid="adaptive-weights-controls"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={weightsData.rollout?.adaptiveWeightsEnabled ? "default" : "secondary"}>
-                          {weightsData.rollout?.adaptiveWeightsEnabled ? "自适应已启用" : "默认权重生效中"}
-                        </Badge>
-                        <Badge variant="outline">
-                          单次最大变动 ±{weightsData.rollout?.maxWeightMovementPercent ?? 0}pp
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        当前配置：{weightsData.rollout?.liveConfigName || "default"} · 关闭后立即回退到
-                        {" "}
-                        {weightsData.rollout?.fallbackConfigName || "default"}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={() => handleAdaptiveWeightsToggle(!weightsData.rollout?.adaptiveWeightsEnabled)}
-                        variant={weightsData.rollout?.adaptiveWeightsEnabled ? "destructive" : "default"}
-                        data-testid="button-toggle-adaptive-weights"
-                      >
-                        {weightsData.rollout?.adaptiveWeightsEnabled ? "立即停用（Kill Switch）" : "启用自适应权重"}
-                      </Button>
-                      <Button
-                        onClick={handleAdaptiveWeightsRollback}
-                        variant="outline"
-                        disabled={!weightsData.rollout?.adaptiveWeightsEnabled}
-                        data-testid="button-rollback-adaptive-weights"
-                      >
-                        回滚上一版
-                      </Button>
-                    </div>
-                  </div>
                   {weightDefinitions.map(({ key, label, color }) => {
                     const rawValue = weightsData.weights[key as keyof typeof weightsData.weights] || 0;
                     const value = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
@@ -681,69 +499,10 @@ export default function AdminEvolutionPage() {
                         </div>
                         <div className="h-3 bg-muted rounded-full overflow-hidden">
                           <div
-                            key={dimension.key}
-                            className="grid grid-cols-[minmax(120px,1.5fr)_repeat(3,minmax(90px,1fr))_minmax(88px,.8fr)] gap-3 px-4 py-4 text-sm items-center"
-                            data-testid={`weight-${dimension.key}`}
-                          >
-                            <div className="space-y-2">
-                              <span className="font-medium">{dimension.label}</span>
-                              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-500"
-                                  style={{ width: `${Math.min(recommended, 100)}%`, backgroundColor: dimension.color }}
-                                />
-                              </div>
-                            </div>
-                            <span>{baseline.toFixed(1)}%</span>
-                            <span>{current.toFixed(1)}%</span>
-                            <span className="font-medium">{recommended.toFixed(1)}%</span>
-                            <span className={change === 0 ? "text-muted-foreground" : change > 0 ? "text-green-600" : "text-amber-600"}>
-                              {change > 0 ? "+" : ""}
-                              {change.toFixed(1)}%
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>权重变化趋势</CardTitle>
-                      <CardDescription>展示每次学习更新后的线上权重，便于回看变化方向</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {historyAvailable ? (
-                        <div className="h-[320px]" data-testid="weights-history-chart">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={weightInsights.historySeries}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="label" />
-                              <YAxis unit="%" />
-                              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
-                              <Legend />
-                              {WEIGHT_DIMENSIONS.map((dimension) => (
-                                <Line
-                                  key={dimension.key}
-                                  type="monotone"
-                                  dataKey={dimension.key}
-                                  name={dimension.label}
-                                  stroke={dimension.color}
-                                  strokeWidth={2}
-                                  dot={{ r: 3 }}
-                                  activeDot={{ r: 5 }}
-                                />
-                              ))}
-                            </LineChart>
-                          </ResponsiveContainer>
+                            className={`h-full ${color} transition-all duration-500`}
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
                         </div>
-                      ) : (
-                        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground" data-testid="weights-history-empty">
-                          历史更新点不足，暂时无法形成有效趋势图。建议累计至少 2 次权重更新后再观察时间序列变化。
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
                       </div>
                     );
                   })}
@@ -871,6 +630,85 @@ export default function AdminEvolutionPage() {
         </TabsContent>
 
         <TabsContent value="shadow" className="space-y-4">
+          <Card data-testid="predictive-rerank-live-status">
+            <CardHeader>
+              <CardTitle>线上受限重排状态</CardTitle>
+              <CardDescription>
+                观察 Phase D A/B 实验的门槛、自动停用状态，以及 control / treatment 的近两周结果差异。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {predictiveRerankStatusLoading ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">影子门槛</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{predictiveRerankStatus?.shadowPoolCount ?? 0}</div>
+                        <p className="text-xs text-muted-foreground">
+                          需要 ≥ {predictiveRerankStatus?.config?.predictiveRerankMinShadowExperiments ?? 0} 个活动池
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">实验开关</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {predictiveRerankStatus?.config?.predictiveRerankEnabled ? "ON" : "OFF"}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Treatment {predictiveRerankStatus?.config?.predictiveRerankExposurePercent ?? 0}% ·
+                          最大位移 ±{predictiveRerankStatus?.config?.predictiveRerankMaxPositionShift ?? 0}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Control 近两周</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{toPercent(controlMetrics?.positiveRate)}</div>
+                        <p className="text-xs text-muted-foreground">
+                          样本 {controlMetrics?.sampleCount ?? 0} · 气氛 {toFixedNumber(controlMetrics?.avgAtmosphereScore)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Treatment 近两周</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{toPercent(treatmentMetrics?.positiveRate)}</div>
+                        <p className="text-xs text-muted-foreground">
+                          样本 {treatmentMetrics?.sampleCount ?? 0} · 气氛 {toFixedNumber(treatmentMetrics?.avgAtmosphereScore)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {predictiveRerankStatus?.config?.predictiveRerankAutoDisabledAt && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+                      <p className="font-medium text-destructive">实验已被自动停用</p>
+                      <p className="text-muted-foreground">
+                        {predictiveRerankStatus.config.predictiveRerankAutoDisabledReason || "未记录停用原因"}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <Card data-testid="shadow-experiment-controls">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -901,6 +739,35 @@ export default function AdminEvolutionPage() {
                   data-testid="button-run-shadow"
                 >
                   {runShadowExperimentMutation.isPending ? "运行中..." : "运行影子批处理"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={selectedPool?.predictiveRerankEnabledOverride === false ? "destructive" : "secondary"}>
+                  {selectedPool?.predictiveRerankEnabledOverride === false
+                    ? "该池已禁用线上重排"
+                    : selectedPool?.predictiveRerankEnabledOverride === true
+                      ? "该池强制允许线上重排"
+                      : "该池跟随全局开关"}
+                </Badge>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!selectedShadowPoolId || poolOverrideMutation.isPending}
+                  onClick={() => poolOverrideMutation.mutate(false)}
+                  data-testid="button-disable-pool-rerank"
+                >
+                  禁用当前池线上重排
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!selectedShadowPoolId || poolOverrideMutation.isPending}
+                  onClick={() => poolOverrideMutation.mutate(null)}
+                  data-testid="button-reset-pool-rerank"
+                >
+                  清除池级覆盖
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
