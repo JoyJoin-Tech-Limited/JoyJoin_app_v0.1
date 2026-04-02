@@ -9,7 +9,7 @@ export type AttributeSource = 'explicit' | 'inferred' | 'llm_fallback';
 
 export interface AttributeState {
   value: string | number | boolean | string[];
-  source: AttributeSource;           // 显式提供 vs 推断
+  source: AttributeSource;           // 显式提供 vs 推断 vs LLM兜底
   confidence: number;                // 0-1 置信度
   evidence: string;                  // 证据（哪句话推出来的）
   timestamp: Date;
