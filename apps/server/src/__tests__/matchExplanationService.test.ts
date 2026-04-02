@@ -493,6 +493,7 @@ describe('matchExplanationService', () => {
       expect(typeof analysis.generatedAt).toBe('string');
       expect(analysis.generatedAt).toBeTruthy();
       expect(new Date(analysis.generatedAt).toString()).not.toBe('Invalid Date');
+      expect(analysis.promptVersion).toBe('group-analysis-v1');
     });
 
     it('should restore provider and fallbackUsed from cache metadata on cache hit', async () => {
@@ -531,6 +532,7 @@ describe('matchExplanationService', () => {
       expect(analysis.generatedAt).toBe('2026-03-30T00:00:00.000Z');
       expect(analysis.provider).toBe('deepseek');
       expect(analysis.fallbackUsed).toBe(true);
+      expect(analysis.promptVersion).toBe('group-analysis-v1');
       expect(analysis.iceBreakers).toEqual(['缓存破冰 1', '缓存破冰 2']);
     });
 
@@ -565,6 +567,7 @@ describe('matchExplanationService', () => {
       expect(analysis.fromCache).toBe(true);
       expect(analysis.provider).toBe(null);
       expect(analysis.fallbackUsed).toBe(false);
+      expect(analysis.promptVersion).toBe('group-analysis-v1');
     });
 
     it('should set fallbackUsed=false when LLM returns valid ice-breakers', async () => {
@@ -591,6 +594,7 @@ describe('matchExplanationService', () => {
 
       expect(analysis.fallbackUsed).toBe(false);
       expect(analysis.provider).toBe('deepseek');
+      expect(analysis.promptVersion).toBe('group-analysis-v1');
     });
 
     it('should set fallbackUsed=true and return deterministic topics when both LLM paths fail', async () => {

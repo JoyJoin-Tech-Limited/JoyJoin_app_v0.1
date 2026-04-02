@@ -140,13 +140,15 @@ export function buildLiveAIMeta(
  */
 export function buildCachedAIMeta(
   generatedAt: string,
-  provider: AIProvider
+  provider: AIProvider,
+  promptVersion?: string
 ): AIResponseMeta {
   return {
     generatedAt,
     fromCache: true,
     provider,
     fallbackUsed: false,
+    promptVersion,
   };
 }
 
@@ -158,13 +160,15 @@ export function buildCachedAIMeta(
  * @param evaluatorRejectionReason  Optional structured reason slug.
  */
 export function buildFallbackAIMeta(
-  evaluatorRejectionReason?: string
+  evaluatorRejectionReason?: string,
+  promptVersion?: string
 ): AIResponseMeta {
   return {
     generatedAt: new Date().toISOString(),
     fromCache: false,
     provider: null,
     fallbackUsed: true,
+    promptVersion,
     evaluatorRejectionReason,
   };
 }
