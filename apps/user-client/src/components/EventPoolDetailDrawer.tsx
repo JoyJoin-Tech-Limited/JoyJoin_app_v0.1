@@ -211,7 +211,10 @@ export default function EventPoolDetailDrawer({
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <PoolVibePanel avgMatchScore={stats.avgMatchScore} />
+                      <PoolVibePanel
+                        avgMatchScore={stats.avgMatchScore}
+                        archetypeBreakdown={stats.archetypeBreakdown}
+                      />
                       <ConnectionCuePanel stats={stats} />
                       <ArchetypeCompositionPanel archetypeBreakdown={stats.archetypeBreakdown} />
                       <PoolStatusSection
