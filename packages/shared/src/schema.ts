@@ -1605,6 +1605,69 @@ export const insertMatchingResultSchema = createInsertSchema(matchingResults).om
 export type MatchingResult = typeof matchingResults.$inferSelect;
 export type InsertMatchingResult = z.infer<typeof insertMatchingResultSchema>;
 
+export type MatchingShadowComparison = {
+  groupKey: string;
+  memberUserIds: string[];
+  memberCount: number;
+  deterministicScore: number;
+  deterministicRank: number;
+  predictedScore: number;
+  predictedRank: number;
+  scoreDelta: number;
+  rankDelta: number;
+  confidence: number;
+  predictedOutcomeRate: number;
+  avgChemistryScore: number;
+  diversityScore: number;
+  communicationBalance: number;
+  temperatureLevel: string;
+};
+
+export type MatchingShadowSummary = {
+  modelVersion: string;
+  liveRankingProtected: boolean;
+  deterministicGroupCount: number;
+  deterministicAverageScore: number;
+  averageConfidence: number;
+  averageScoreDelta: number;
+  rankAgreementRate: number;
+  topRankChanged: boolean;
+  outcomeValidation: {
+    sampleCount: number;
+    positiveRate: number;
+    avgAtmosphereScore: number | null;
+  };
+};
+
+export const matchingShadowExperiments = pgTable("matching_shadow_experiments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  mode: varchar("mode").notNull().default("batch"),
+  modelVersion: varchar("model_version").notNull(),
+  deterministicGroupCount: integer("deterministic_group_count").notNull().default(0),
+  deterministicAverageScore: integer("deterministic_average_score"),
+  outcomeSampleCount: integer("outcome_sample_count").notNull().default(0),
+  outcomePositiveRate: numeric("outcome_positive_rate", { precision: 5, scale: 4 }).default("0"),
+  averageConfidence: numeric("average_confidence", { precision: 5, scale: 4 }).default("0"),
+  rankAgreementRate: numeric("rank_agreement_rate", { precision: 5, scale: 4 }).default("0"),
+  averageScoreDelta: integer("average_score_delta").default(0),
+  results: jsonb("results").notNull().$type<MatchingShadowComparison[]>(),
+  summary: jsonb("summary").notNull().$type<MatchingShadowSummary>(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_matching_shadow_experiments_pool").on(table.poolId),
+  index("idx_matching_shadow_experiments_created_at").on(table.createdAt),
+]);
+
+export const insertMatchingShadowExperimentSchema = createInsertSchema(matchingShadowExperiments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MatchingShadowExperiment = typeof matchingShadowExperiments.$inferSelect;
+export type InsertMatchingShadowExperiment = z.infer<typeof insertMatchingShadowExperimentSchema>;
+
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

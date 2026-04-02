@@ -1,8 +1,10 @@
 import type { Express } from "express";
 import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
+import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
+  registerAdminMatchingShadowRoutes(app);
 
   // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
   app.get('/api/config/amap', requireAdmin, (_req, res) => {
