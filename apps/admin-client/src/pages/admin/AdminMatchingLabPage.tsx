@@ -270,7 +270,7 @@ export default function AdminMatchingLabPage() {
     },
   });
 
-  const { data: chemistryCalibrationData, isLoading: chemistryCalibrationLoading, isFetching: chemistryCalibrationFetching, refetch: refetchChemistryCalibration } = useQuery<ChemistryCalibrationResponse>({
+  const { data: chemistryCalibrationData, isLoading: chemistryCalibrationLoading, isFetching: chemistryCalibrationFetching } = useQuery<ChemistryCalibrationResponse>({
     queryKey: ["/api/admin/matching/chemistry-calibration"],
     queryFn: async () => {
       const res = await fetch("/api/admin/matching/chemistry-calibration", {
@@ -296,8 +296,8 @@ export default function AdminMatchingLabPage() {
       return;
     }
 
-    await queryClient.setQueryData(["/api/admin/matching/chemistry-calibration"], await res.json());
-    await refetchChemistryCalibration();
+    const refreshedData = await res.json();
+    queryClient.setQueryData(["/api/admin/matching/chemistry-calibration"], refreshedData);
     toast({
       title: "经验校准已刷新",
       description: "已基于活动反馈重新聚合原型配对表现",

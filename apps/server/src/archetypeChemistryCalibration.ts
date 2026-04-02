@@ -72,13 +72,7 @@ export function calculateCalibratedChemistryBreakdown(
   ChemistryCalibrationBreakdown,
   "baseScore" | "sampleCount" | "avgMeetAgain" | "avgAtmosphere" | "empiricalScore" | "appliedDelta" | "calibratedScore" | "hasSufficientSamples"
 > {
-  const hasSufficientSamples = sampleCount >= CHEMISTRY_CALIBRATION_MIN_SAMPLES;
-
-  if (
-    !hasSufficientSamples ||
-    avgMeetAgain === null ||
-    avgAtmosphere === null
-  ) {
+  if (avgMeetAgain === null || avgAtmosphere === null) {
     return {
       baseScore,
       sampleCount,
@@ -87,11 +81,26 @@ export function calculateCalibratedChemistryBreakdown(
       empiricalScore: null,
       appliedDelta: 0,
       calibratedScore: baseScore,
+      hasSufficientSamples: sampleCount >= CHEMISTRY_CALIBRATION_MIN_SAMPLES,
+    };
+  }
+
+  const hasSufficientSamples = sampleCount >= CHEMISTRY_CALIBRATION_MIN_SAMPLES;
+  const empiricalScore = calculateEmpiricalChemistryScore(avgMeetAgain, avgAtmosphere);
+
+  if (!hasSufficientSamples) {
+    return {
+      baseScore,
+      sampleCount,
+      avgMeetAgain,
+      avgAtmosphere,
+      empiricalScore,
+      appliedDelta: 0,
+      calibratedScore: baseScore,
       hasSufficientSamples,
     };
   }
 
-  const empiricalScore = calculateEmpiricalChemistryScore(avgMeetAgain, avgAtmosphere);
   const rawDelta = empiricalScore - baseScore;
   const boundedDelta = Math.sign(rawDelta) * Math.min(
     Math.abs(rawDelta) * CHEMISTRY_CALIBRATION_DAMPENING_FACTOR,
@@ -145,41 +154,40 @@ function buildCalibrationMap(rows: Array<any>): ChemistryCalibrationMap {
 }
 
 async function refreshCalibrationMap(): Promise<ChemistryCalibrationMap> {
-  try {
-    const aggregatedRows = await aggregateArchetypePairFeedbackRows();
-    const upsertRows = aggregatedRows
-      .filter((row) => isArchetypeName(row.archetypeA) && isArchetypeName(row.archetypeB))
-      .map((row) => {
-        const baseScore = getChemistryScore(row.archetypeA as ArchetypeName, row.archetypeB as ArchetypeName);
-        const breakdown = calculateCalibratedChemistryBreakdown(
-          baseScore,
-          row.sampleCount,
-          row.avgMeetAgain,
-          row.avgAtmosphere,
-        );
+  const aggregatedRows = await aggregateArchetypePairFeedbackRows();
+  const upsertRows = aggregatedRows
+    .filter((row) => isArchetypeName(row.archetypeA) && isArchetypeName(row.archetypeB))
+    .map((row) => {
+      const baseScore = getChemistryScore(row.archetypeA as ArchetypeName, row.archetypeB as ArchetypeName);
+      const breakdown = calculateCalibratedChemistryBreakdown(
+        baseScore,
+        row.sampleCount,
+        row.avgMeetAgain,
+        row.avgAtmosphere,
+      );
 
-        return {
-          archetypeA: row.archetypeA,
-          archetypeB: row.archetypeB,
-          baseScore,
-          sampleCount: row.sampleCount,
-          avgMeetAgain: breakdown.avgMeetAgain?.toFixed(3) ?? null,
-          avgAtmosphere: breakdown.avgAtmosphere?.toFixed(3) ?? null,
-          empiricalScore: breakdown.empiricalScore?.toFixed(2) ?? null,
-          appliedDelta: breakdown.appliedDelta.toFixed(2),
-          calibratedScore: breakdown.calibratedScore.toFixed(2),
-          lastAggregatedAt: new Date(),
-          updatedAt: new Date(),
-        };
-      });
+      return {
+        archetypeA: row.archetypeA,
+        archetypeB: row.archetypeB,
+        baseScore,
+        sampleCount: row.sampleCount,
+        avgMeetAgain: breakdown.avgMeetAgain?.toFixed(3) ?? null,
+        avgAtmosphere: breakdown.avgAtmosphere?.toFixed(3) ?? null,
+        empiricalScore: breakdown.empiricalScore?.toFixed(2) ?? null,
+        appliedDelta: breakdown.appliedDelta.toFixed(2),
+        calibratedScore: breakdown.calibratedScore.toFixed(2),
+        lastAggregatedAt: new Date(),
+        updatedAt: new Date(),
+      };
+    });
 
-    const storedRows = await upsertArchetypePairFeedbackStats(upsertRows);
-    return buildCalibrationMap(storedRows);
-  } catch (error) {
-    console.warn("[Matching] Failed to refresh archetype chemistry calibration stats, falling back to stored data.", error);
-    const storedRows = await listArchetypePairFeedbackStats();
-    return buildCalibrationMap(storedRows);
-  }
+  const storedRows = await upsertArchetypePairFeedbackStats(upsertRows);
+  return buildCalibrationMap(storedRows);
+}
+
+async function loadPersistedCalibrationMap(): Promise<ChemistryCalibrationMap> {
+  const storedRows = await listArchetypePairFeedbackStats();
+  return buildCalibrationMap(storedRows);
 }
 
 export async function getArchetypePairCalibrationMap(forceRefresh: boolean = false): Promise<ChemistryCalibrationMap> {
@@ -189,7 +197,11 @@ export async function getArchetypePairCalibrationMap(forceRefresh: boolean = fal
   }
 
   if (!inFlightRefresh) {
-    inFlightRefresh = refreshCalibrationMap()
+    const loadPromise = forceRefresh
+      ? refreshCalibrationMap()
+      : loadPersistedCalibrationMap();
+
+    inFlightRefresh = loadPromise
       .then((map) => {
         cachedCalibrationMap = map;
         cachedAt = Date.now();
@@ -203,8 +215,26 @@ export async function getArchetypePairCalibrationMap(forceRefresh: boolean = fal
   return inFlightRefresh;
 }
 
+export async function refreshArchetypePairCalibrationMap(): Promise<ChemistryCalibrationMap> {
+  cachedCalibrationMap = null;
+  cachedAt = 0;
+  return getArchetypePairCalibrationMap(true);
+}
+
 export async function listArchetypePairCalibrationDetails(forceRefresh: boolean = false): Promise<ChemistryCalibrationBreakdown[]> {
-  const calibrationMap = await getArchetypePairCalibrationMap(forceRefresh);
+  let calibrationMap: ChemistryCalibrationMap;
+
+  if (forceRefresh) {
+    try {
+      calibrationMap = await refreshArchetypePairCalibrationMap();
+    } catch (error) {
+      console.warn("[Matching] Failed to refresh archetype chemistry calibration stats, falling back to stored data.", error);
+      calibrationMap = await getArchetypePairCalibrationMap(false);
+    }
+  } else {
+    calibrationMap = await getArchetypePairCalibrationMap(false);
+  }
+
   return getAllArchetypePairs()
     .map(({ archetypeA, archetypeB, baseScore }) => {
       const fallback = calibrationMap.get(createCalibrationKey(archetypeA, archetypeB));
