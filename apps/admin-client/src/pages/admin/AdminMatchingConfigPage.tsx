@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+const MAX_PREDICTIVE_RERANK_SHIFT = 2;
+
 interface MatchingThresholds {
   id?: string;
   highCompatibilityThreshold: number;
@@ -21,6 +23,14 @@ interface MatchingThresholds {
   minGroupSizeForMatch: number;
   optimalGroupSize: number;
   scanIntervalMinutes: number;
+  predictiveRerankEnabled: boolean;
+  predictiveRerankExposurePercent: number;
+  predictiveRerankMaxPositionShift: number;
+  predictiveRerankConfidenceThreshold: number;
+  predictiveRerankAutoDisableEnabled: boolean;
+  predictiveRerankMinShadowExperiments: number;
+  predictiveRerankAutoDisabledAt?: string | null;
+  predictiveRerankAutoDisabledReason?: string | null;
   notes?: string;
 }
 
@@ -36,6 +46,14 @@ export default function AdminMatchingConfigPage() {
     minGroupSizeForMatch: 4,
     optimalGroupSize: 6,
     scanIntervalMinutes: 60,
+    predictiveRerankEnabled: false,
+    predictiveRerankExposurePercent: 50,
+    predictiveRerankMaxPositionShift: 2,
+    predictiveRerankConfidenceThreshold: 70,
+    predictiveRerankAutoDisableEnabled: true,
+    predictiveRerankMinShadowExperiments: 10,
+    predictiveRerankAutoDisabledAt: null,
+    predictiveRerankAutoDisabledReason: null,
     notes: "",
   });
 
@@ -342,6 +360,136 @@ export default function AdminMatchingConfigPage() {
                   （注意：修改后需要重启服务器生效）
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-predictive-rerank">
+            <CardHeader>
+              <CardTitle>预测重排 A/B 实验</CardTitle>
+              <CardDescription>
+                在确定性分组结果之上启用受限的预测排序实验；默认关闭，最大位移受硬性限制保护。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="predictiveRerankEnabled">启用实验</Label>
+                  <p className="text-sm text-muted-foreground">
+                    开启后仅部分活动池进入 treatment，control 继续保持原始顺序。
+                  </p>
+                </div>
+                <Switch
+                  id="predictiveRerankEnabled"
+                  checked={formData.predictiveRerankEnabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, predictiveRerankEnabled: checked })
+                  }
+                  data-testid="switch-predictive-rerank"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="predictiveExposure">Treatment 覆盖率（%）</Label>
+                  <Input
+                    id="predictiveExposure"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.predictiveRerankExposurePercent}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        predictiveRerankExposurePercent: parseInt(e.target.value),
+                      })
+                    }
+                    data-testid="input-predictive-exposure"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="predictiveMaxShift">最大位移（名次）</Label>
+                  <Input
+                    id="predictiveMaxShift"
+                    type="number"
+                    min="0"
+                    max={MAX_PREDICTIVE_RERANK_SHIFT}
+                    value={formData.predictiveRerankMaxPositionShift}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        predictiveRerankMaxPositionShift: parseInt(e.target.value),
+                      })
+                    }
+                    data-testid="input-predictive-max-shift"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    生产实验上限固定建议为 ±{MAX_PREDICTIVE_RERANK_SHIFT}，保持确定性核心为主排序权威。
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="predictiveConfidence">最低置信度（%）</Label>
+                  <Input
+                    id="predictiveConfidence"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.predictiveRerankConfidenceThreshold}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        predictiveRerankConfidenceThreshold: parseInt(e.target.value),
+                      })
+                    }
+                    data-testid="input-predictive-confidence"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="predictiveShadowGate">影子实验门槛（活动池数）</Label>
+                  <Input
+                    id="predictiveShadowGate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.predictiveRerankMinShadowExperiments}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        predictiveRerankMinShadowExperiments: parseInt(e.target.value),
+                      })
+                    }
+                    data-testid="input-predictive-shadow-gate"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="predictiveAutoDisable">回滚保护</Label>
+                  <p className="text-sm text-muted-foreground">
+                    treatment 近两周相较 control 下降超过 5 个百分点时自动停用实验。
+                  </p>
+                </div>
+                <Switch
+                  id="predictiveAutoDisable"
+                  checked={formData.predictiveRerankAutoDisableEnabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, predictiveRerankAutoDisableEnabled: checked })
+                  }
+                  data-testid="switch-predictive-auto-disable"
+                />
+              </div>
+
+              {formData.predictiveRerankAutoDisabledAt && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                  <p className="font-medium text-destructive">当前实验已被自动停用</p>
+                  <p className="text-muted-foreground">
+                    {formData.predictiveRerankAutoDisabledReason || "未记录具体原因"}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

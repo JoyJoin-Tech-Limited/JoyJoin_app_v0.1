@@ -6926,14 +6926,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ageRangeMax: eventPools.ageRangeMax,
           minGroupSize: eventPools.minGroupSize,
           maxGroupSize: eventPools.maxGroupSize,
-          targetGroups: eventPools.targetGroups,
-          status: eventPools.status,
-          totalRegistrations: eventPools.totalRegistrations,
-          successfulMatches: eventPools.successfulMatches,
-          createdBy: eventPools.createdBy,
-          createdAt: eventPools.createdAt,
-          updatedAt: eventPools.updatedAt,
-          matchedAt: eventPools.matchedAt,
+           targetGroups: eventPools.targetGroups,
+           status: eventPools.status,
+           totalRegistrations: eventPools.totalRegistrations,
+           successfulMatches: eventPools.successfulMatches,
+           predictiveRerankEnabledOverride: eventPools.predictiveRerankEnabledOverride,
+           createdBy: eventPools.createdBy,
+           createdAt: eventPools.createdAt,
+           updatedAt: eventPools.updatedAt,
+           matchedAt: eventPools.matchedAt,
         })
         .from(eventPools)
         .orderBy(desc(eventPools.createdAt));
@@ -9012,6 +9013,21 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // ============ REALTIME MATCHING CONFIGURATION ROUTES ============
+  const resolveMatchingThresholdCreatorId = (req: any): string | null => {
+    if (req.adminAccount) {
+      return null;
+    }
+
+    return req.session.userId ?? (req.user as User | undefined)?.id ?? null;
+  };
+  const clampPercent = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.min(100, Math.max(0, Math.round(parsed))) : fallback;
+  };
+  const clampPredictiveRerankShift = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.min(2, Math.max(0, Math.round(parsed))) : fallback;
+  };
   
   // GET /api/admin/matching-thresholds - Get current matching threshold config
   app.get("/api/admin/matching-thresholds", requireAdmin, async (req, res) => {
@@ -9034,6 +9050,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           minGroupSizeForMatch: 4,
           optimalGroupSize: 6,
           scanIntervalMinutes: 60,
+          predictiveRerankEnabled: false,
+          predictiveRerankExposurePercent: 50,
+          predictiveRerankMaxPositionShift: 2,
+          predictiveRerankConfidenceThreshold: 70,
+          predictiveRerankAutoDisableEnabled: true,
+          predictiveRerankMinShadowExperiments: 10,
+          predictiveRerankAutoDisabledAt: null,
+          predictiveRerankAutoDisabledReason: null,
         });
       }
       
@@ -9047,7 +9071,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // PUT /api/admin/matching-thresholds - Update matching threshold config
   app.put("/api/admin/matching-thresholds", requireAdmin, async (req, res) => {
     try {
-      const userId = (req.user as User).id;
+      const userId = resolveMatchingThresholdCreatorId(req);
       
       // Deactivate current config
       await db
@@ -9068,6 +9092,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           minGroupSizeForMatch: req.body.minGroupSizeForMatch || 4,
           optimalGroupSize: req.body.optimalGroupSize || 6,
           scanIntervalMinutes: req.body.scanIntervalMinutes || 60,
+          predictiveRerankEnabled: req.body.predictiveRerankEnabled ?? false,
+          predictiveRerankExposurePercent: clampPercent(req.body.predictiveRerankExposurePercent, 50),
+          predictiveRerankMaxPositionShift: clampPredictiveRerankShift(req.body.predictiveRerankMaxPositionShift, 2),
+          predictiveRerankConfidenceThreshold: clampPercent(req.body.predictiveRerankConfidenceThreshold, 70),
+          predictiveRerankAutoDisableEnabled: req.body.predictiveRerankAutoDisableEnabled ?? true,
+          predictiveRerankMinShadowExperiments: req.body.predictiveRerankMinShadowExperiments ?? 10,
+          predictiveRerankAutoDisabledAt: null,
+          predictiveRerankAutoDisabledReason: null,
           isActive: true,
           createdBy: userId,
           notes: req.body.notes || null,

@@ -531,19 +531,6 @@ export class MatchingWeightsService {
       } else {
         const defaultConfig = await this.ensureDefaultConfig();
         cachedWeights = runtimeWeightsFromRecord(defaultConfig);
-      if (config.length > 0) {
-        const c = config[0];
-        cachedWeights = {
-          personalityWeight: parseFloat(c.personalityWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.personalityWeight)),
-          interestsWeight: parseFloat(c.interestsWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.interestsWeight)),
-          intentWeight: parseFloat(c.intentWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.intentWeight)),
-          backgroundWeight: parseFloat(c.backgroundWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundWeight)),
-          cultureWeight: parseFloat(c.cultureWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.cultureWeight)),
-          conversationSignatureWeight: parseFloat(c.conversationSignatureWeight || String(DEFAULT_MATCHING_WEIGHTS_RATIO.conversationSignatureWeight)),
-        };
-      } else {
-        cachedWeights = { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
-        await this.initializeDefaultConfig();
       }
 
       cacheTimestamp = now;

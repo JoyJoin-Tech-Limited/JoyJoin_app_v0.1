@@ -118,6 +118,26 @@ export interface MatchGroup {
   explanation: string;
 }
 
+export interface SaveMatchResultsOptions {
+  predictiveExperimentArm: "control" | "treatment" | null;
+  predictiveRerankApplied: boolean;
+  predictiveRerankSummary: {
+    modelVersion?: string | null;
+    audits?: Array<{
+      deterministicRank: number;
+      finalRank: number;
+      predictedRank: number;
+      predictedScore: number;
+      predictedOutcomeRate: number;
+      confidence: number;
+    }>;
+    confidenceThreshold?: number;
+    maxPositionShift?: number;
+    reason?: string;
+    autoDisabledReason?: string | null;
+  };
+}
+
 /**
  * 硬约束检查：验证用户是否符合活动池的所有限制
  * ✅ UPDATED: Added budget as L1 hard constraint
@@ -1107,7 +1127,11 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
  *   - Async theme generation / title broadcast (fire-and-forget)
  *   - Invitation reward coupons (best-effort, separate idempotency guard)
  */
-export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Promise<void> {
+export async function saveMatchResults(
+  poolId: string,
+  groups: MatchGroup[],
+  options?: SaveMatchResultsOptions,
+): Promise<void> {
   // 获取活动池信息用于通知
   const [pool] = await db.select().from(eventPools).where(eq(eventPools.id, poolId));
 
@@ -1163,6 +1187,9 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
         const group = groups[i];
         const memberUserIds = group.members.map(m => m.userId);
         const { eventThemeTitle, themeTagline, themeEmoji, themeReasoning } = themeMetadata[i];
+        const predictiveAudit = options?.predictiveRerankSummary?.audits?.find(
+          (audit) => audit.finalRank === i + 1,
+        );
 
         // 1. 创建小组记录
         const [groupRecord] = await tx.insert(eventPoolGroups).values({
@@ -1175,6 +1202,18 @@ export async function saveMatchResults(poolId: string, groups: MatchGroup[]): Pr
           overallScore: group.overallScore,
           temperatureLevel: group.temperatureLevel,
           matchExplanation: group.explanation,
+          predictiveExperimentArm: options?.predictiveExperimentArm ?? null,
+          predictiveModelVersion: options?.predictiveRerankSummary?.modelVersion ?? null,
+          predictiveRerankApplied: options?.predictiveRerankApplied ?? false,
+          predictiveRerankAudit: predictiveAudit ? {
+            ...predictiveAudit,
+            experimentArm: options?.predictiveExperimentArm ?? null,
+            applied: options?.predictiveRerankApplied ?? false,
+            confidenceThreshold: options?.predictiveRerankSummary?.confidenceThreshold ?? null,
+            maxPositionShift: options?.predictiveRerankSummary?.maxPositionShift ?? null,
+            reason: options?.predictiveRerankSummary?.reason ?? null,
+            autoDisabledReason: options?.predictiveRerankSummary?.autoDisabledReason ?? null,
+          } : null,
           theme: eventThemeTitle,
           subtitle: themeTagline,
           themeEmoji: themeEmoji,
