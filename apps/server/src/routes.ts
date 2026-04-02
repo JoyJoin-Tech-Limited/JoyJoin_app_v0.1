@@ -1630,16 +1630,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(responsePayload);
 
-      void import('./matchingWeightsService')
-        .then(({ matchingWeightsService }) => matchingWeightsService.recordShadowRecommendation(shadowRecommendationInput))
-        .catch((shadowError) => {
-          logger.error('Failed to record shadow recommendation from event_feedback', {
-            eventId,
-            feedbackId: feedback.id,
-            userId,
-            error: String(shadowError),
+      setImmediate(() => {
+        void import('./matchingWeightsService')
+          .then(({ matchingWeightsService }) => matchingWeightsService.recordShadowRecommendation(shadowRecommendationInput))
+          .catch((shadowError) => {
+            logger.error('Failed to record shadow recommendation from event_feedback', {
+              eventId,
+              feedbackId: feedback.id,
+              userId,
+              error: String(shadowError),
+            });
           });
-        });
+      });
     } catch (error) {
       console.error("Error creating feedback:", error);
       res.status(500).json({ message: "Failed to create feedback" });
