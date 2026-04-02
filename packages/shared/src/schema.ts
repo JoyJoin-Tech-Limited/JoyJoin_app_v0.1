@@ -540,6 +540,26 @@ export const matchHistory = pgTable("match_history", {
   connectionPointTypes: text("connection_point_types").array(), // Types of connection points that led to this match (for feedback correlation)
 });
 
+// Empirical chemistry calibration stats aggregated from post-event pair outcomes.
+export const archetypePairFeedbackStats = pgTable("archetype_pair_feedback_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  archetypeA: varchar("archetype_a", { length: 50 }).notNull(),
+  archetypeB: varchar("archetype_b", { length: 50 }).notNull(),
+  baseScore: integer("base_score").notNull(),
+  sampleCount: integer("sample_count").notNull().default(0),
+  avgMeetAgain: numeric("avg_meet_again", { precision: 4, scale: 3 }),
+  avgAtmosphere: numeric("avg_atmosphere", { precision: 4, scale: 3 }),
+  empiricalScore: numeric("empirical_score", { precision: 5, scale: 2 }),
+  appliedDelta: numeric("applied_delta", { precision: 5, scale: 2 }).notNull().default("0"),
+  calibratedScore: numeric("calibrated_score", { precision: 5, scale: 2 }).notNull(),
+  lastAggregatedAt: timestamp("last_aggregated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_archetype_pair_feedback_stats_pair").on(table.archetypeA, table.archetypeB),
+  index("idx_archetype_pair_feedback_stats_samples").on(table.sampleCount),
+]);
+
 // Chat messages table (for event group chats)
 export const chatMessages = pgTable("chat_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
