@@ -174,7 +174,10 @@ export default function AdminEvolutionPage() {
   });
 
   const { data: shadowExperiments, isLoading: shadowLoading } = useQuery<ShadowExperiment[]>({
-    queryKey: ["/api/admin/matching-shadow-experiments", selectedShadowPoolId || "all"],
+    queryKey: [
+      "/api/admin/matching-shadow-experiments",
+      { poolId: selectedShadowPoolId || null, limit: 10 },
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: "10" });
       if (selectedShadowPoolId) {
