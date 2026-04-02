@@ -7283,28 +7283,50 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const visiblePools = (pools as any[]).filter((p: any) => !registeredPoolIds.has(p.id));
 
       const visiblePoolIds = visiblePools.map((pool: any) => pool.id);
-      const registrationRows = visiblePoolIds.length > 0
+      const registrationCountRows = visiblePoolIds.length > 0
         ? await db
             .select({
               poolId: eventPoolRegistrations.poolId,
-              userId: eventPoolRegistrations.userId,
-              registeredAt: eventPoolRegistrations.registeredAt,
+              count: sql<number>`count(*)::int`,
             })
             .from(eventPoolRegistrations)
             .where(inArray(eventPoolRegistrations.poolId, visiblePoolIds))
-            .orderBy(eventPoolRegistrations.registeredAt)
+            .groupBy(eventPoolRegistrations.poolId)
         : [];
 
-      const registrationsByPool = new Map<string, Array<{ userId: string }>>();
-      for (const row of registrationRows as Array<{ poolId: string; userId: string }>) {
-        const entries = registrationsByPool.get(row.poolId) ?? [];
+      const registrationCountByPool = new Map<string, number>();
+      for (const row of registrationCountRows as Array<{ poolId: string; count: number }>) {
+        registrationCountByPool.set(row.poolId, row.count);
+      }
+
+      const sampleRegistrationRows = visiblePoolIds.length > 0
+        ? await db.execute(sql<{ poolId: string; userId: string }>`
+            SELECT ranked.pool_id AS "poolId", ranked.user_id AS "userId"
+            FROM (
+              SELECT
+                pool_id,
+                user_id,
+                row_number() OVER (
+                  PARTITION BY pool_id
+                  ORDER BY registered_at ASC
+                ) AS sample_rank
+              FROM event_pool_registrations
+              WHERE pool_id = ANY(${visiblePoolIds})
+            ) ranked
+            WHERE ranked.sample_rank <= ${SAMPLE_ARCHETYPE_COUNT}
+          `)
+        : { rows: [] as Array<{ poolId: string; userId: string }> };
+
+      const sampleRegistrationsByPool = new Map<string, Array<{ userId: string }>>();
+      for (const row of sampleRegistrationRows.rows as Array<{ poolId: string; userId: string }>) {
+        const entries = sampleRegistrationsByPool.get(row.poolId) ?? [];
         entries.push({ userId: row.userId });
-        registrationsByPool.set(row.poolId, entries);
+        sampleRegistrationsByPool.set(row.poolId, entries);
       }
 
       const sampleUserIds = Array.from(
         new Set(
-          [...registrationsByPool.values()]
+          [...sampleRegistrationsByPool.values()]
             .flatMap((registrations) => registrations.slice(0, SAMPLE_ARCHETYPE_COUNT).map((registration) => registration.userId)),
         ),
       );
@@ -7324,7 +7346,8 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       );
 
       const poolsWithSocialProof = visiblePools.map((pool: any) => {
-        const registrations = registrationsByPool.get(pool.id) ?? [];
+        const registrations = sampleRegistrationsByPool.get(pool.id) ?? [];
+        const registrationCount = registrationCountByPool.get(pool.id) ?? 0;
         const sampleArchetypes = registrations
           .slice(0, SAMPLE_ARCHETYPE_COUNT)
           .map((registration) => userArchetypeMap.get(registration.userId))
@@ -7332,8 +7355,8 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
         return {
           ...pool,
-          registrationCount: registrations.length,
-          spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrations.length,
+          registrationCount,
+          spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrationCount,
           sampleArchetypes,
         };
       });
@@ -7662,37 +7685,38 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       }) => [inviteUse.poolRegistrationId, inviteUse]),
     );
 
-    const invitationCodes = Array.from(
+    const invitationIds = Array.from(
       new Set(
         inviteUses
           .map((inviteUse: { invitationId: string | null }) => inviteUse.invitationId)
-          .filter((code: string | null): code is string => Boolean(code)),
+          .filter((invitationId: string | null): invitationId is string => Boolean(invitationId)),
       ),
     );
 
-    const invitationRows = invitationCodes.length > 0
+    const invitationRows = invitationIds.length > 0
       ? await db
           .select({
+            id: invitations.id,
             code: invitations.code,
             inviterId: invitations.inviterId,
           })
           .from(invitations)
-          .where(inArray(invitations.code, invitationCodes as string[]))
+          .where(inArray(invitations.id, invitationIds as string[]))
       : [];
 
-    const invitationByCode = new Map<string, { code: string; inviterId: string }>(
-      invitationRows.map((invitation: { code: string; inviterId: string }) => [invitation.code, invitation]),
+    const invitationById = new Map<string, { id: string; code: string; inviterId: string }>(
+      invitationRows.map((invitation: { id: string; code: string; inviterId: string }) => [invitation.id, invitation]),
     );
 
     const userInvitations = await db
-      .select({ code: invitations.code })
+      .select({ id: invitations.id })
       .from(invitations)
       .where(eq(invitations.inviterId, userId))
       .limit(10);
 
-    const userInvitationCodes = userInvitations.map((invitation: { code: string }) => invitation.code);
+    const userInvitationIds = userInvitations.map((invitation: { id: string }) => invitation.id);
 
-    const relatedInviteUses = userInvitationCodes.length > 0 && registrationPoolIds.length > 0
+    const relatedInviteUses = userInvitationIds.length > 0 && registrationPoolIds.length > 0
       ? await db
           .select({
             invitationId: invitationUses.invitationId,
@@ -7706,7 +7730,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           )
           .where(
             and(
-              inArray(invitationUses.invitationId, userInvitationCodes),
+              inArray(invitationUses.invitationId, userInvitationIds),
               inArray(eventPoolRegistrations.poolId, registrationPoolIds),
             ),
           )
@@ -7762,7 +7786,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       let relatedUserName: string | null = null;
 
       if (inviteUse?.invitationId) {
-        const invitation = invitationByCode.get(inviteUse.invitationId);
+        const invitation = invitationById.get(inviteUse.invitationId);
         if (invitation?.inviterId) {
           invitationRole = "invitee";
           relatedUserName = relatedUserMap.get(invitation.inviterId) ?? "好友";
