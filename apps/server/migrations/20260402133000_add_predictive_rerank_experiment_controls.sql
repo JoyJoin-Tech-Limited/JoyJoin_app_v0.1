@@ -1,6 +1,9 @@
 ALTER TABLE "event_pools"
   ADD COLUMN IF NOT EXISTS "predictive_rerank_enabled_override" boolean;
 
+COMMENT ON COLUMN "event_pools"."predictive_rerank_enabled_override" IS
+  'Tri-state override: true forces pool into global rerank eligibility, false force-disables rerank for the pool, null follows the global experiment config.';
+
 ALTER TABLE "event_pool_groups"
   ADD COLUMN IF NOT EXISTS "predictive_experiment_arm" varchar(20),
   ADD COLUMN IF NOT EXISTS "predictive_model_version" varchar(50),

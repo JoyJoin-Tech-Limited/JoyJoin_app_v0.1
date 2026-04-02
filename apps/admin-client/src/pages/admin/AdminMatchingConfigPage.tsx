@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+const MAX_PREDICTIVE_RERANK_SHIFT = 2;
+
 interface MatchingThresholds {
   id?: string;
   highCompatibilityThreshold: number;
@@ -411,7 +413,7 @@ export default function AdminMatchingConfigPage() {
                     id="predictiveMaxShift"
                     type="number"
                     min="0"
-                    max="2"
+                    max={MAX_PREDICTIVE_RERANK_SHIFT}
                     value={formData.predictiveRerankMaxPositionShift}
                     onChange={(e) =>
                       setFormData({
@@ -422,7 +424,7 @@ export default function AdminMatchingConfigPage() {
                     data-testid="input-predictive-max-shift"
                   />
                   <p className="text-sm text-muted-foreground">
-                    生产实验上限固定建议为 ±2，保持确定性核心为主排序权威。
+                    生产实验上限固定建议为 ±{MAX_PREDICTIVE_RERANK_SHIFT}，保持确定性核心为主排序权威。
                   </p>
                 </div>
 

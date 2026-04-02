@@ -9011,6 +9011,21 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // ============ REALTIME MATCHING CONFIGURATION ROUTES ============
+  const resolveMatchingThresholdCreatorId = (req: any): string | null => {
+    if (req.adminAccount) {
+      return null;
+    }
+
+    return req.session.userId ?? (req.user as User | undefined)?.id ?? null;
+  };
+  const clampPercent = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.min(100, Math.max(0, Math.round(parsed))) : fallback;
+  };
+  const clampPredictiveRerankShift = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.min(2, Math.max(0, Math.round(parsed))) : fallback;
+  };
   
   // GET /api/admin/matching-thresholds - Get current matching threshold config
   app.get("/api/admin/matching-thresholds", requireAdmin, async (req, res) => {
@@ -9054,7 +9069,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // PUT /api/admin/matching-thresholds - Update matching threshold config
   app.put("/api/admin/matching-thresholds", requireAdmin, async (req, res) => {
     try {
-      const userId = req.adminAccount ? null : (req.user as User | undefined)?.id ?? req.session.userId ?? null;
+      const userId = resolveMatchingThresholdCreatorId(req);
       
       // Deactivate current config
       await db
@@ -9076,9 +9091,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           optimalGroupSize: req.body.optimalGroupSize || 6,
           scanIntervalMinutes: req.body.scanIntervalMinutes || 60,
           predictiveRerankEnabled: req.body.predictiveRerankEnabled ?? false,
-          predictiveRerankExposurePercent: req.body.predictiveRerankExposurePercent ?? 50,
-          predictiveRerankMaxPositionShift: req.body.predictiveRerankMaxPositionShift ?? 2,
-          predictiveRerankConfidenceThreshold: req.body.predictiveRerankConfidenceThreshold ?? 70,
+          predictiveRerankExposurePercent: clampPercent(req.body.predictiveRerankExposurePercent, 50),
+          predictiveRerankMaxPositionShift: clampPredictiveRerankShift(req.body.predictiveRerankMaxPositionShift, 2),
+          predictiveRerankConfidenceThreshold: clampPercent(req.body.predictiveRerankConfidenceThreshold, 70),
           predictiveRerankAutoDisableEnabled: req.body.predictiveRerankAutoDisableEnabled ?? true,
           predictiveRerankMinShadowExperiments: req.body.predictiveRerankMinShadowExperiments ?? 10,
           predictiveRerankAutoDisabledAt: null,

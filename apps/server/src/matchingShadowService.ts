@@ -80,9 +80,9 @@ export function buildMatchingShadowExperiment(groups: MatchGroup[], calibration:
   results: MatchingShadowComparison[];
   summary: MatchingShadowSummary;
 } {
-  const deterministicOrdered = [...groups];
+  const originalGroups = [...groups];
 
-  const draftResults = deterministicOrdered.map((group, index) => {
+  const draftResults = originalGroups.map((group, index) => {
     const predictedOutcomeRate = calculatePredictedOutcomeRate(group, calibration);
     const predictedScore = Math.round(predictedOutcomeRate * 100);
     const confidence = calculateConfidence(group, calibration, predictedOutcomeRate);
