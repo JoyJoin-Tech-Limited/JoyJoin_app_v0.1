@@ -64,6 +64,7 @@ interface HistogramEntry {
 const requestCounters = new Map<string, CounterEntry>();
 const errorCounters = new Map<string, CounterEntry>();
 const durationHistograms = new Map<string, HistogramEntry>();
+const runtimeLLMFallbackCounters = new Map<string, CounterEntry>();
 const llmFallbackRequestCounters = new Map<string, CounterEntry>();
 const llmFallbackCostTotals = new Map<string, CounterEntry>();
 const llmFallbackLatencyHistograms = new Map<string, HistogramEntry>();
@@ -341,6 +342,11 @@ export async function getMetricsText(): Promise<string> {
       'Total number of HTTP error responses (4xx and 5xx).',
       errorCounters,
     ),
+    renderCounter(
+      'inference_runtime_llm_fallback_total',
+      'Total number of runtime LLM fallback outcomes by field.',
+      runtimeLLMFallbackCounters,
+    ),
     renderGauge(
       'nodejs_event_loop_delay_ms',
       'Approximate Node.js event-loop delay in milliseconds.',
@@ -378,6 +384,15 @@ export function _resetMetricsForTest(): void {
   requestCounters.clear();
   errorCounters.clear();
   durationHistograms.clear();
+  runtimeLLMFallbackCounters.clear();
+}
+
+export function recordRuntimeLLMFallbackMetric(
+  field: string,
+  outcome: 'applied' | 'rejected_unapproved' | 'rejected_low_confidence' | 'skipped_user_declared',
+): void {
+  const boundedField = outcome === 'rejected_unapproved' ? '__unapproved__' : field;
+  incCounter(runtimeLLMFallbackCounters, { field: boundedField, outcome });
   llmFallbackRequestCounters.clear();
   llmFallbackCostTotals.clear();
   llmFallbackLatencyHistograms.clear();

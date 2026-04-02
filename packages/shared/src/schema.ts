@@ -273,6 +273,25 @@ export const userInterests = pgTable("user_interests", {
   index("idx_user_interests_user_id").on(table.userId),
 ]);
 
+export const userSemanticProfiles = pgTable("user_semantic_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status").notNull().default("pending"), // pending | ready | degraded
+  profileDocument: text("profile_document").notNull(),
+  versionVector: jsonb("version_vector").notNull().default('{}'),
+  generatorVersion: varchar("generator_version").notNull().default("semantic-profile-v1"),
+  embedding: jsonb("embedding"),
+  embeddingModel: varchar("embedding_model"),
+  embeddingDimension: integer("embedding_dimension"),
+  lastError: text("last_error"),
+  lastComputedAt: timestamp("last_computed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_user_semantic_profiles_user").on(table.userId),
+  index("idx_user_semantic_profiles_status").on(table.status),
+]);
+
 // User Social Tag Generations table - Tag generation history and selections
 export const userSocialTagGenerations = pgTable("user_social_tag_generations", {
   id: serial("id").primaryKey(),
@@ -1535,6 +1554,7 @@ export type UpdateFullProfile = z.infer<typeof updateFullProfileSchema>;
 export type UpdatePersonality = z.infer<typeof updatePersonalitySchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type InterestsTopics = z.infer<typeof interestsTopicsSchema>;
+export type UserInterests = typeof userInterests.$inferSelect;
 
 export type UserSocialTagGeneration = typeof userSocialTagGenerations.$inferSelect;
 
@@ -1672,6 +1692,69 @@ export const insertMatchingResultSchema = createInsertSchema(matchingResults).om
 
 export type MatchingResult = typeof matchingResults.$inferSelect;
 export type InsertMatchingResult = z.infer<typeof insertMatchingResultSchema>;
+
+export type MatchingShadowComparison = {
+  groupKey: string;
+  memberUserIds: string[];
+  memberCount: number;
+  deterministicScore: number;
+  deterministicRank: number;
+  predictedScore: number;
+  predictedRank: number;
+  scoreDelta: number;
+  rankDelta: number;
+  confidence: number;
+  predictedOutcomeRate: number;
+  avgChemistryScore: number;
+  diversityScore: number;
+  communicationBalance: number;
+  temperatureLevel: string;
+};
+
+export type MatchingShadowSummary = {
+  modelVersion: string;
+  liveRankingProtected: boolean;
+  deterministicGroupCount: number;
+  deterministicAverageScore: number;
+  averageConfidence: number;
+  averageScoreDelta: number;
+  rankAgreementRate: number;
+  topRankChanged: boolean;
+  outcomeValidation: {
+    sampleCount: number;
+    positiveRate: number;
+    avgAtmosphereScore: number | null;
+  };
+};
+
+export const matchingShadowExperiments = pgTable("matching_shadow_experiments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  mode: varchar("mode").notNull().default("batch"),
+  modelVersion: varchar("model_version").notNull(),
+  deterministicGroupCount: integer("deterministic_group_count").notNull().default(0),
+  deterministicAverageScore: integer("deterministic_average_score"),
+  outcomeSampleCount: integer("outcome_sample_count").notNull().default(0),
+  outcomePositiveRate: numeric("outcome_positive_rate", { precision: 5, scale: 4 }).default("0"),
+  averageConfidence: numeric("average_confidence", { precision: 5, scale: 4 }).default("0"),
+  rankAgreementRate: numeric("rank_agreement_rate", { precision: 5, scale: 4 }).default("0"),
+  averageScoreDelta: integer("average_score_delta").default(0),
+  results: jsonb("results").notNull().$type<MatchingShadowComparison[]>(),
+  summary: jsonb("summary").notNull().$type<MatchingShadowSummary>(),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_matching_shadow_experiments_pool").on(table.poolId),
+  index("idx_matching_shadow_experiments_created_at").on(table.createdAt),
+]);
+
+export const insertMatchingShadowExperimentSchema = createInsertSchema(matchingShadowExperiments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MatchingShadowExperiment = typeof matchingShadowExperiments.$inferSelect;
+export type InsertMatchingShadowExperiment = z.infer<typeof insertMatchingShadowExperimentSchema>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {
@@ -2696,6 +2779,12 @@ export const insertDialogueEmbeddingSchema = createInsertSchema(dialogueEmbeddin
   createdAt: true,
 });
 
+export const insertUserSemanticProfileSchema = createInsertSchema(userSemanticProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertTriggerPerformanceSchema = createInsertSchema(triggerPerformance).omit({
   id: true,
   lastUpdatedAt: true,
@@ -2872,6 +2961,9 @@ export type InsertMatchingWeightsHistory = z.infer<typeof insertMatchingWeightsH
 
 export type DialogueEmbedding = typeof dialogueEmbeddings.$inferSelect;
 export type InsertDialogueEmbedding = z.infer<typeof insertDialogueEmbeddingSchema>;
+
+export type UserSemanticProfile = typeof userSemanticProfiles.$inferSelect;
+export type InsertUserSemanticProfile = z.infer<typeof insertUserSemanticProfileSchema>;
 
 export type TriggerPerformance = typeof triggerPerformance.$inferSelect;
 export type InsertTriggerPerformance = z.infer<typeof insertTriggerPerformanceSchema>;

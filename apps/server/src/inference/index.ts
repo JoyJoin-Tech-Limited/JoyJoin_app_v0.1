@@ -44,6 +44,16 @@ export { SemanticMatcher, semanticMatcher } from './semanticMatcher';
 
 // LLM推理器
 export { LLMReasoner, llmReasoner, type LLMReasonerResult } from './llmReasoner';
+export {
+  applyRuntimeLLMFallbackPolicy,
+  getRuntimeLLMFallbackConfig,
+  getRuntimeLLMFallbackStats,
+  resetRuntimeLLMFallbackStatsForTest,
+  type RuntimeLLMFallbackConfig,
+  type RuntimeLLMFallbackEvaluation,
+  type RuntimeLLMFallbackEvent,
+  type RuntimeLLMFallbackOutcome,
+} from './runtimeLLMFallback';
 
 // 状态管理器
 export { StateManager, stateManager } from './stateManager';

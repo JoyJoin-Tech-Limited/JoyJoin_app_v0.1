@@ -5,10 +5,13 @@ import {
   CHEMISTRY_CALIBRATION_MIN_SAMPLES,
   listArchetypePairCalibrationDetails,
 } from "../../archetypeChemistryCalibration";
+import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../inference/runtimeLLMFallback";
+import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
+  registerAdminMatchingShadowRoutes(app);
 
   // Amap config endpoint - provides map API keys for frontend (Admin Portal only)
   app.get('/api/config/amap', requireAdmin, (_req, res) => {
@@ -42,6 +45,11 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
+  app.get('/api/admin/inference/runtime-fallback', requireAdmin, (_req, res) => {
+    res.json({
+      config: getRuntimeLLMFallbackConfig(),
+      stats: getRuntimeLLMFallbackStats(),
+    });
   app.get("/api/admin/outcome-analytics", requireAdmin, async (_req, res) => {
     try {
       const dashboard = await adminOutcomeAnalyticsRepo.getDashboard();

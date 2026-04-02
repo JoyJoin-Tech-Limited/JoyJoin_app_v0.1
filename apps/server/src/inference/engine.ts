@@ -7,7 +7,6 @@ import type {
   InferenceResult, 
   UserAttributeMap, 
   InferenceEngineConfig,
-  DEFAULT_CONFIG,
   ExtractedValue
 } from './types';
 import { semanticMatcher } from './semanticMatcher';
@@ -15,6 +14,8 @@ import { llmReasoner, type LLMReasonerResult, getTelemetryLogs } from './llmReas
 import { stateManager } from './stateManager';
 import { matchIndustryFromText } from './industryOntology';
 import { asyncInferenceQueue, type AsyncInferenceStatus } from './asyncInferenceQueue';
+import { logAITrace } from '../lib/aiTraceLogger';
+import { applyRuntimeLLMFallbackPolicy, getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from './runtimeLLMFallback';
 import {
   buildShadowFallbackCandidates,
   getLLMFallbackInferenceMode,
@@ -39,6 +40,15 @@ export interface InferenceEngineResult {
     asyncMode?: boolean;
     usedPreviousAsyncResult?: boolean;
     asyncInferenceTriggered?: boolean;
+    runtimeLLMFallback: {
+      enabled: boolean;
+      minConfidence: number;
+      approvedFields: string[];
+      attempted: number;
+      applied: number;
+      acceptedFields: string[];
+      rejectedFields: string[];
+      skippedUserDeclaredFields: string[];
     shadowLLMFallback?: {
       mode: 'shadow' | 'disabled';
       triggered: boolean;
@@ -82,11 +92,16 @@ export class InferenceEngine {
   private config: InferenceEngineConfig;
   
   constructor(config?: Partial<InferenceEngineConfig>) {
+    const runtimeFallbackConfig = getRuntimeLLMFallbackConfig(config);
+
     this.config = {
       skipThreshold: 0.85,
       confirmThreshold: 0.6,
       enableLLMFallback: true,
       maxLLMLatencyMs: 3000,
+      enableRuntimeLLMFallback: runtimeFallbackConfig.enabled,
+      runtimeLLMFallbackMinConfidence: runtimeFallbackConfig.minConfidence,
+      runtimeLLMFallbackApprovedFields: runtimeFallbackConfig.approvedFields,
       enableLogging: true,
       logLevel: 'info',
       ...config
@@ -122,6 +137,17 @@ export class InferenceEngine {
     let llmCalled = false;
     let usedPreviousAsyncResult = false;
     let asyncInferenceTriggered = false;
+    const runtimeFallbackConfig = getRuntimeLLMFallbackConfig(this.config);
+    let runtimeLLMFallback = {
+      enabled: runtimeFallbackConfig.enabled,
+      minConfidence: runtimeFallbackConfig.minConfidence,
+      approvedFields: runtimeFallbackConfig.approvedFields,
+      attempted: 0,
+      applied: 0,
+      acceptedFields: [] as string[],
+      rejectedFields: [] as string[],
+      skippedUserDeclaredFields: [] as string[],
+    };
     
     if (this.config.enableLLMFallback && !matcherHit) {
       if (asyncMode && sessionId) {
@@ -146,6 +172,58 @@ export class InferenceEngine {
           conversationHistory,
           currentState
         );
+      }
+    }
+
+    if (llmResult) {
+      const protectedState = stateManager.updateExplicit(currentState, llmResult.extracted);
+      const { acceptedInferred, evaluation } = applyRuntimeLLMFallbackPolicy(
+        llmResult.inferred,
+        protectedState,
+        {
+          sessionId,
+          config: this.config,
+        },
+      );
+      const acceptedFields = new Set(acceptedInferred.map((inf) => inf.field));
+
+      llmResult = {
+        ...llmResult,
+        inferred: acceptedInferred,
+        skipQuestions: llmResult.skipQuestions.filter((field) => acceptedFields.has(field)),
+        confirmQuestions: llmResult.confirmQuestions.filter((question) => acceptedFields.has(question.field)),
+      };
+
+      runtimeLLMFallback = {
+        enabled: evaluation.config.enabled,
+        minConfidence: evaluation.config.minConfidence,
+        approvedFields: evaluation.config.approvedFields,
+        attempted: evaluation.attempted,
+        applied: evaluation.applied,
+        acceptedFields: evaluation.acceptedFields,
+        rejectedFields: evaluation.rejectedFields,
+        skippedUserDeclaredFields: evaluation.skippedUserDeclaredFields,
+      };
+
+      if (evaluation.attempted > 0) {
+        logAITrace({
+          domain: 'profile_inference',
+          feature: 'runtimeFieldFallback',
+          provider: 'deepseek',
+          model: 'deepseek-chat',
+          latencyMs: llmResult.latencyMs,
+          success: evaluation.applied > 0,
+          fallbackUsed: evaluation.attempted > 0,
+          fromCache: usedPreviousAsyncResult,
+          promptVersion: evaluation.config.promptVersion,
+          errorCode: evaluation.applied > 0
+            ? undefined
+            : evaluation.skippedUserDeclaredFields.length > 0
+              ? 'user_declared_protected'
+              : evaluation.rejectedFields.length > 0
+                ? 'runtime_fallback_rejected'
+                : 'runtime_fallback_empty',
+        });
       }
     }
     
@@ -199,6 +277,7 @@ export class InferenceEngine {
         asyncMode,
         usedPreviousAsyncResult,
         asyncInferenceTriggered,
+        runtimeLLMFallback,
         shadowLLMFallback: {
           mode: shadowFallbackMode,
           triggered: false,
@@ -396,6 +475,10 @@ export function getInferenceTelemetry() {
   return {
     llmTelemetry: getTelemetryLogs(),
     inferenceLogs: inferenceEngine.getLogs(),
+    runtimeLLMFallback: {
+      config: getRuntimeLLMFallbackConfig(),
+      stats: getRuntimeLLMFallbackStats(),
+    },
     shadowLLMFallbackLogs: getShadowFallbackLogs(),
   };
 }
