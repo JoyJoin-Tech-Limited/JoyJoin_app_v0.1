@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { applyRuntimeLLMFallbackPolicy, getRuntimeLLMFallbackStats, resetRuntimeLLMFallbackStatsForTest } from '../runtimeLLMFallback';
+import { applyRuntimeLLMFallbackPolicy, getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats, resetRuntimeLLMFallbackStatsForTest } from '../runtimeLLMFallback';
 import { stateManager } from '../stateManager';
 
 describe('runtimeLLMFallback', () => {
@@ -91,6 +91,24 @@ describe('runtimeLLMFallback', () => {
     expect(stats.totals.applied).toBe(1);
     expect(stats.totals.skippedUserDeclared).toBe(1);
     expect(stats.byField.lifeStage.skipped_user_declared).toBe(1);
+    expect(stats.byField.occupation.applied).toBe(1);
+  });
+
+  it('trims the env toggle before interpreting disabled values', () => {
+    // guards against regression: whitespace in the env flag must not re-enable runtime fallback
+    const original = process.env.INFERENCE_RUNTIME_LLM_FALLBACK_ENABLED;
+    process.env.INFERENCE_RUNTIME_LLM_FALLBACK_ENABLED = ' false ';
+
+    try {
+      const config = getRuntimeLLMFallbackConfig();
+      expect(config.enabled).toBe(false);
+    } finally {
+      if (original === undefined) {
+        delete process.env.INFERENCE_RUNTIME_LLM_FALLBACK_ENABLED;
+      } else {
+        process.env.INFERENCE_RUNTIME_LLM_FALLBACK_ENABLED = original;
+      }
+    }
   });
 
   it('does not silently overwrite user-declared values with llm fallback output', () => {

@@ -338,5 +338,6 @@ export function recordRuntimeLLMFallbackMetric(
   field: string,
   outcome: 'applied' | 'rejected_unapproved' | 'rejected_low_confidence' | 'skipped_user_declared',
 ): void {
-  incCounter(runtimeLLMFallbackCounters, { field, outcome });
+  const boundedField = outcome === 'rejected_unapproved' ? '__unapproved__' : field;
+  incCounter(runtimeLLMFallbackCounters, { field: boundedField, outcome });
 }

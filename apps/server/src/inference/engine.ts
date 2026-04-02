@@ -125,7 +125,7 @@ export class InferenceEngine {
       skippedUserDeclaredFields: [] as string[],
     };
     
-    if (this.config.enableLLMFallback && this.config.enableRuntimeLLMFallback && !matcherHit) {
+    if (this.config.enableLLMFallback && !matcherHit) {
       if (asyncMode && sessionId) {
         // 异步模式：先检查是否有上一轮的异步结果
         const previousResult = asyncInferenceQueue.getLatestCompletedResult(sessionId);
