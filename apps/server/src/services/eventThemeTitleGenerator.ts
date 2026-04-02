@@ -15,9 +15,6 @@
  * - eventPoolRegistrations: budgetRange, cuisinePreferences, eventIntent
  */
 
-import { db } from "../db";
-import { users, userInterests, eventPoolRegistrations } from "@shared/schema";
-import { and, eq, inArray } from "drizzle-orm";
 import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
 import { calculateAge } from "@shared/utils";
 
@@ -122,6 +119,12 @@ export async function fetchEnrichedMemberProfiles(
   if (memberIds.length === 0) {
     return [];
   }
+
+  const [{ db }, { users, userInterests, eventPoolRegistrations }, { and, eq, inArray }] = await Promise.all([
+    import('../db'),
+    import('@shared/schema'),
+    import('drizzle-orm'),
+  ]);
 
   // 1. Fetch user profiles
   const userProfiles = await db
@@ -255,7 +258,7 @@ export function calculateGroupStats(
   // Energy statistics
   const energyLevels = members.map((m) => m.energyLevel);
   const totalEnergy = energyLevels.reduce((a, b) => a + b, 0);
-  const avgEnergy = energyLevels.length > 0 ? totalEnergy / energyLevels.length : 0;
+  const avgEnergy = energyLevels.length > 0 ? totalEnergy / energyLevels.length : Number.NaN;
   
   const energyDistribution = {
     high: energyLevels.filter((e) => e >= 80).length,

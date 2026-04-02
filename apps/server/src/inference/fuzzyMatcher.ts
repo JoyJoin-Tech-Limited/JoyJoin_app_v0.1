@@ -7,7 +7,7 @@
 import { OCCUPATIONS } from '@shared/occupations';
 import { findCategoryById, findSegmentById, findNicheById } from '@shared/industryTaxonomy';
 import type { IndustryClassificationResult } from './industryClassifier';
-import { levenshteinDistance } from '../utils/stringUtils';
+import { levenshteinDistance, similarityRatio } from '../utils/stringUtils';
 
 interface OccupationMatch {
   occupation: typeof OCCUPATIONS[0];
@@ -37,7 +37,7 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
     
     // Exact match (highest priority)
     if (displayName === input) {
-      return createResult(occ, 1.0, 'fuzzy', '精确匹配', userInput, startTime);
+      return createResult(occ, 1.0, 'exact', '精确匹配', userInput, startTime);
     }
     
     // Levenshtein distance for typos (very high priority)
@@ -45,13 +45,13 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
     const maxDistance = Math.min(2, Math.floor(displayName.length * 0.25)); // Allow up to 25% errors
     
     if (distance <= maxDistance) {
-      score += (maxDistance + 1 - distance) * 35;
+      score += (maxDistance + 1 - distance) * 50;
       matchType = 'levenshtein';
     }
     
     // Substring match in display name
     if (displayName.includes(input) || input.includes(displayName)) {
-      score += 30;
+      score += 20 * (Math.min(displayName.length, input.length) / Math.max(displayName.length, input.length));
       if (matchType === 'keyword') matchType = 'exact';
     }
     
@@ -64,23 +64,26 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
       }
       
       if (synLower.includes(input) || input.includes(synLower)) {
-        score += 25;
+        score += 15 * (Math.min(synLower.length, input.length) / Math.max(synLower.length, input.length));
         matchType = 'synonym';
       }
       
-      // Levenshtein for synonyms
+      // Levenshtein for close synonym typos only
       const synDistance = levenshteinDistance(input, synLower);
-      if (synDistance <= 2) {
+      if (synDistance <= 2 && similarityRatio(input, synLower) >= 0.75) {
         score += (3 - synDistance) * 20;
         matchType = 'synonym';
       }
     }
     
-    // Keyword partial match
+    // Keyword matching
     for (const keyword of occ.keywords) {
       const keywordLower = keyword.toLowerCase();
+      if (keywordLower === input) {
+        return createResult(occ, 0.96, 'fuzzy', `精确匹配关键词"${keyword}"`, userInput, startTime);
+      }
       if (input.includes(keywordLower) || keywordLower.includes(input)) {
-        score += 15;
+        score += 15 * (Math.min(keywordLower.length, input.length) / Math.max(keywordLower.length, input.length));
       }
     }
     
@@ -99,8 +102,8 @@ export function fuzzyMatch(userInput: string): IndustryClassificationResult | nu
   let confidence = Math.min(0.95, best.score / 100);
   
   // Boost confidence for high-quality matches
-  if (best.matchType === 'levenshtein' && best.score > 80) {
-    confidence = Math.min(0.92, confidence + 0.1);
+  if (best.matchType === 'levenshtein' && best.score >= 50) {
+    confidence = Math.min(0.92, confidence + 0.35);
   }
   
   const matchTypeLabel = {
