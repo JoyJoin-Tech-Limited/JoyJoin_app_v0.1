@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface MatchingConfig {
   configName: string;
@@ -87,6 +88,25 @@ interface TestResult {
     overallMatchQuality: number;
     executionTimeMs: number;
   };
+}
+
+interface ChemistryCalibrationRow {
+  archetypeA: string;
+  archetypeB: string;
+  baseScore: number;
+  empiricalScore: number | null;
+  calibratedScore: number;
+  appliedDelta: number;
+  sampleCount: number;
+  avgMeetAgain: number | null;
+  avgAtmosphere: number | null;
+  hasSufficientSamples: boolean;
+}
+
+interface ChemistryCalibrationResponse {
+  minSamples: number;
+  maxDelta: number;
+  rows: ChemistryCalibrationRow[];
 }
 
 const DEFAULT_CONFIG: MatchingConfig = {
@@ -250,6 +270,40 @@ export default function AdminMatchingLabPage() {
     },
   });
 
+  const { data: chemistryCalibrationData, isLoading: chemistryCalibrationLoading, isFetching: chemistryCalibrationFetching } = useQuery<ChemistryCalibrationResponse>({
+    queryKey: ["/api/admin/matching/chemistry-calibration"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/matching/chemistry-calibration", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Failed to load chemistry calibration");
+      }
+      return res.json();
+    },
+  });
+
+  const handleRefreshChemistryCalibration = async () => {
+    const res = await fetch("/api/admin/matching/chemistry-calibration?refresh=1", {
+      credentials: "include",
+    });
+    if (!res.ok) {
+      toast({
+        title: "刷新失败",
+        description: "无法刷新经验校准数据",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const refreshedData = await res.json();
+    queryClient.setQueryData(["/api/admin/matching/chemistry-calibration"], refreshedData);
+    toast({
+      title: "经验校准已刷新",
+      description: "已基于活动反馈重新聚合原型配对表现",
+    });
+  };
+
   if (configLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -361,6 +415,79 @@ export default function AdminMatchingLabPage() {
               <p className="mt-1">groupDiversity 维度：行业 + 性别 + 原型 + 人生阶段（均为多样性信号）</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-chemistry-calibration">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>化学反应经验校准</CardTitle>
+              <CardDescription>
+                基于活动后配对结果聚合的经验修正。样本不足时保持静态矩阵不变，单次修正幅度限制在 ±{chemistryCalibrationData?.maxDelta ?? "—"} 分。
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshChemistryCalibration}
+              disabled={chemistryCalibrationFetching}
+              data-testid="button-refresh-chemistry-calibration"
+            >
+              <RefreshCw className={cn("mr-2 h-4 w-4", chemistryCalibrationFetching && "animate-spin")} />
+              刷新聚合
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <Badge variant="secondary">启用阈值 ≥ {chemistryCalibrationData?.minSamples ?? "—"} 样本</Badge>
+            <Badge variant="outline">Sparse pairs 保持静态矩阵</Badge>
+            <Badge variant="outline">展示 Base / Empirical / Final</Badge>
+          </div>
+
+          <ScrollArea className="h-[280px] rounded-md border">
+            <div className="min-w-[760px]">
+              <div className="grid grid-cols-[160px_90px_90px_90px_90px_90px_90px_120px] gap-3 border-b bg-muted/40 px-4 py-3 text-xs font-medium text-muted-foreground">
+                <div>原型配对</div>
+                <div>Base</div>
+                <div>Empirical</div>
+                <div>Final</div>
+                <div>Δ</div>
+                <div>样本</div>
+                <div>Meet-again</div>
+                <div>Atmosphere</div>
+              </div>
+
+              {chemistryCalibrationLoading ? (
+                <div className="px-4 py-6 text-sm text-muted-foreground">加载经验校准数据...</div>
+              ) : (
+                chemistryCalibrationData?.rows.map((row) => (
+                  <div
+                    key={`${row.archetypeA}-${row.archetypeB}`}
+                    className="grid grid-cols-[160px_90px_90px_90px_90px_90px_90px_120px] gap-3 border-b px-4 py-3 text-sm"
+                  >
+                    <div className="font-medium">{row.archetypeA} × {row.archetypeB}</div>
+                    <div>{row.baseScore}</div>
+                    <div>{row.empiricalScore?.toFixed(1) ?? "—"}</div>
+                    <div className="font-semibold">{row.calibratedScore.toFixed(1)}</div>
+                    <div className={row.appliedDelta === 0 ? "text-muted-foreground" : row.appliedDelta > 0 ? "text-green-700" : "text-amber-700"}>
+                      {row.appliedDelta > 0 ? "+" : ""}
+                      {row.appliedDelta.toFixed(1)}
+                    </div>
+                    <div>
+                      <Badge variant={row.hasSufficientSamples ? "default" : "outline"}>
+                        {row.sampleCount}
+                      </Badge>
+                    </div>
+                    <div>{row.avgMeetAgain === null ? "—" : `${Math.round(row.avgMeetAgain * 100)}%`}</div>
+                    <div>{row.avgAtmosphere === null ? "—" : row.avgAtmosphere.toFixed(2)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 

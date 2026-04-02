@@ -3,12 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, MapPin, Sparkles, Users, Shield, Heart, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Shield, Heart, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
 import PreJoinVibeBriefSheet from "./PreJoinVibeBriefSheet";
-import { getArchetypeImage } from "@/lib/archetypeImages";
+import { PoolMomentumVisual } from "./PoolMomentumVisual";
 import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";
@@ -195,60 +195,12 @@ export default function BlindBoxEventCard({
                   <span>{area}</span>
                 </div>
 
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>4-6人</span>
-                    <span className="text-xs">
-                      • {isGirlsNight ? "仅限女生" : "男女比例平衡"}
-                    </span>
-                  </div>
-                  
-                  {registrationCount >= 10 ? (
-                    <div className="flex items-center gap-1.5" data-testid={`social-proof-${id}`}>
-                      <div className="flex -space-x-2">
-                        {sampleArchetypes.slice(0, 3).map((archetype, index) => {
-                          const imgSrc = getArchetypeImage(archetype);
-                          return imgSrc ? (
-                            <div
-                              key={index}
-                              className="w-6 h-6 rounded-full border-2 border-background bg-muted overflow-hidden"
-                              style={{ zIndex: 3 - index }}
-                            >
-                              <img 
-                                src={imgSrc} 
-                                alt={archetype}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                      <span className="text-xs text-muted-foreground font-medium">
-                        {registrationCount}人已报名
-                      </span>
-                    </div>
-                  ) : sampleArchetypes.length > 0 && (
-                    <div className="flex -space-x-2" data-testid={`avatars-${id}`}>
-                      {sampleArchetypes.slice(0, 3).map((archetype, index) => {
-                        const imgSrc = getArchetypeImage(archetype);
-                        return imgSrc ? (
-                          <div
-                            key={index}
-                            className="w-6 h-6 rounded-full border-2 border-background bg-muted overflow-hidden"
-                            style={{ zIndex: 3 - index }}
-                          >
-                            <img 
-                              src={imgSrc} 
-                              alt={archetype}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
-                </div>
+                {/* Premium live-queue momentum visual — replaces old avatar stack + text */}
+                <PoolMomentumVisual
+                  sampleArchetypes={sampleArchetypes}
+                  registrationCount={registrationCount}
+                  className="mb-3"
+                />
 
                 <div className="flex gap-2 mt-auto">
                   <Button

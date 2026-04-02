@@ -44,7 +44,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
               )}
               
               <Icon className="h-4 w-4 relative z-10" />
-              <span className="relative z-10">{tab.label}</span>
+              <span className="relative z-10 font-cn-display">{tab.label}</span>
             </button>
           );
         })}

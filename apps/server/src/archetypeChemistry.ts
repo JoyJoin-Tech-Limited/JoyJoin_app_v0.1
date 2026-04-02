@@ -296,6 +296,47 @@ export const ARCHETYPE_DESCRIPTIONS: Record<ArchetypeName, {
   },
 };
 
+export const ARCHETYPE_NAMES = Object.keys(chemistryMatrix) as ArchetypeName[];
+
+export function isArchetypeName(value: string | null | undefined): value is ArchetypeName {
+  return Boolean(value && value in chemistryMatrix);
+}
+
+export function normalizeArchetypePair(
+  archetype1: ArchetypeName,
+  archetype2: ArchetypeName,
+): [ArchetypeName, ArchetypeName] {
+  return archetype1 <= archetype2
+    ? [archetype1, archetype2]
+    : [archetype2, archetype1];
+}
+
+export function getAllArchetypePairs(): Array<{
+  archetypeA: ArchetypeName;
+  archetypeB: ArchetypeName;
+  baseScore: number;
+}> {
+  const pairs: Array<{
+    archetypeA: ArchetypeName;
+    archetypeB: ArchetypeName;
+    baseScore: number;
+  }> = [];
+
+  for (let i = 0; i < ARCHETYPE_NAMES.length; i++) {
+    for (let j = i; j < ARCHETYPE_NAMES.length; j++) {
+      const archetypeA = ARCHETYPE_NAMES[i];
+      const archetypeB = ARCHETYPE_NAMES[j];
+      pairs.push({
+        archetypeA,
+        archetypeB,
+        baseScore: getChemistryScore(archetypeA, archetypeB),
+      });
+    }
+  }
+
+  return pairs;
+}
+
 /**
  * 获取两个原型之间的化学反应分数
  */
