@@ -230,6 +230,9 @@ describe('logAdminAudit', () => {
       'VENUE_DELETED',
       'EVENT_STATUS_CHANGED',
       'EVENT_POOL_STATUS_CHANGED',
+      'MATCHING_WEIGHTS_ACTIVATED',
+      'MATCHING_WEIGHTS_DISABLED',
+      'MATCHING_WEIGHTS_ROLLED_BACK',
     ] as const;
     for (const action of required) {
       expect(ADMIN_AUDIT_ACTIONS).toContain(action);

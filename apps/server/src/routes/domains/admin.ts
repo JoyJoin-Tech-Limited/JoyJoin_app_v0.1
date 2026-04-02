@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
+import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../inference/runtimeLLMFallback";
 import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
 
@@ -22,6 +23,11 @@ export function registerAdminRoutes(app: Express): void {
     });
   });
 
+  app.get('/api/admin/inference/runtime-fallback', requireAdmin, (_req, res) => {
+    res.json({
+      config: getRuntimeLLMFallbackConfig(),
+      stats: getRuntimeLLMFallbackStats(),
+    });
   app.get("/api/admin/outcome-analytics", requireAdmin, async (_req, res) => {
     try {
       const dashboard = await adminOutcomeAnalyticsRepo.getDashboard();
