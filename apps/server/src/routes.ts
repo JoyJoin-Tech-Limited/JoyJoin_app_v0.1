@@ -6,6 +6,7 @@ import { registerAdminRoutes } from "./routes/domains/admin";
 import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
 import { registerAuthRoutes } from "./routes/domains/auth";
+import { registerEventGroupOutcomeRoutes } from "./routes/domains/eventGroupOutcomes";
 import { registerEventPoolRoutes } from "./routes/domains/eventPools";
 import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
@@ -577,6 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   registerAssessmentRoutes(app);
+  registerEventGroupOutcomeRoutes(app);
   registerIcebreakerRoutes(app);
   registerIcebreakerSessionRoutes(app);
   registerEventPoolRoutes(app);
