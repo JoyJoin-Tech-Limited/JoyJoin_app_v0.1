@@ -130,15 +130,13 @@ function decodeHTMLEntities(text: string): string {
  * Decodes HTML entities first to prevent bypass, then removes dangerous characters
  */
 export function sanitizeIndustryInput(input: string): string {
-  return input
-    .trim()
-    // First decode any HTML entities to prevent bypass attacks
-    .replace(/&[a-z]+;|&#\d+;|&#x[0-9a-f]+;/gi, (match) => {
-      const decoded = decodeHTMLEntities(match);
-      // If decoded contains dangerous chars, remove the entire entity
-      return /[<>{}[\]\\]/.test(decoded) ? '' : decoded;
-    })
-    .replace(/[<>{}[\]\\]/g, '')  // Remove potential XSS characters
-    .replace(/\s+/g, ' ')          // Normalize whitespace
-    .slice(0, 200);                // Max length
+  return decodeHTMLEntities(
+    input
+      .trim()
+      .replace(/\s+/g, ' ')
+      // Remove encoded opening tags entirely before decoding, while preserving encoded closing tags.
+      .replace(/(?:&lt;|&#\d+;|&#x[0-9a-f]+;)\s*[a-z][\w:-]*\s*(?:&gt;|&#\d+;|&#x[0-9a-f]+;)/gi, '')
+  )
+    .replace(/[<>{}[\]\\()"']/g, '')
+    .slice(0, 200);
 }

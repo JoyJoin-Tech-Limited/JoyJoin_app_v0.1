@@ -108,7 +108,7 @@ export default function IcebreakerSessionPage() {
   
   const { data: welcomeData } = useWelcomeMessage(
     welcomeParticipants,
-    sessionData?.eventId,
+    sessionData?.eventId ?? undefined,
     participantProfiles.length > 0
   );
   
@@ -377,7 +377,7 @@ export default function IcebreakerSessionPage() {
                     userId={user?.id || ''}
                     displayName={user?.displayName || '参与者'}
                     eventType={sessionEventType}
-                    eventId={urlEventId || sessionData?.eventId}
+                    eventId={urlEventId ?? sessionData?.eventId ?? undefined}
                     participants={(sessionData?.participants || []).map(p => ({ userId: p.userId, displayName: p.displayName, archetype: p.archetype || undefined }))}
                     onEnd={handleLeave}
                   />
