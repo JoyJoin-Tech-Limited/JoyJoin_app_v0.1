@@ -96,7 +96,7 @@ export function buildSemanticProfileDocument(
   ]);
 
   if (profileLines.length === 0) {
-    return 'Semantic profile placeholder: insufficient profile context.';
+    return 'Semantic profile unavailable: add a bio, interests, or archetype to enable semantic matching enrichment.';
   }
 
   return profileLines.join('\n');
