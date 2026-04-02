@@ -370,10 +370,10 @@ function blendedChemistryScore(
 **New DB table:** `event_group_outcomes`
 ```sql
 CREATE TABLE event_group_outcomes (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pool_id             UUID NOT NULL REFERENCES event_pools(id),
-  group_id            UUID NOT NULL REFERENCES event_pool_groups(id),
-  submitted_by        UUID NOT NULL REFERENCES users(id),
+  id                  VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  pool_id             VARCHAR NOT NULL REFERENCES event_pools(id),
+  group_id            VARCHAR NOT NULL REFERENCES event_pool_groups(id),
+  submitted_by        VARCHAR NOT NULL REFERENCES users(id),
   atmosphere_score    SMALLINT,          -- 1-5
   would_meet_again    BOOLEAN,
   connection_radar    JSONB,             -- {userId: strength_0_to_5} per respondent
