@@ -114,18 +114,52 @@
  * uploaded they fall back gracefully to system fonts, so they
  * are safe to reference from components right now.
  *
- * Usage:
- *   font-family: var(--font-body);    ← default UI / Chinese text
- *   font-family: var(--font-display); ← headings, English labels
- *   font-family: var(--font-brand);   ← logo, marketing copy
+ * JoyJoin Official Typography Roles
+ * ──────────────────────────────────
+ * Three semantic layers control every typographic decision in the product.
+ *
+ * font-ui          → font-family: var(--font-ui)
+ *   System Chinese stack. The invisible reliable default.
+ *   Use for: all dense / functional UI — forms, body copy, helper text,
+ *   labels, legal, settings, coupon flows, transactional buttons.
+ *   Do NOT use a custom display font here.
+ *
+ * font-cn-display  → font-family: var(--font-cn-display)
+ *   AlibabaPuHuiTi-3 (self-hosted when available), falls back to
+ *   ZCOOL QingKe HuangYou (loaded via Google Fonts), then system Chinese.
+ *   Use for: short high-impact Chinese display moments — hero headlines,
+ *   branded tab labels, celebratory text, premium empty-state headlines,
+ *   high-emotion primary CTAs.
+ *
+ * font-en-brand    → font-family: var(--font-en-brand)
+ *   Quicksand (self-hosted when available), falls back to Outfit (loaded
+ *   via Google Fonts), then system.
+ *   Use for: JoyJoin English wordmark, English brand accent moments.
+ *   Keep limited to English identity surfaces only.
+ *
+ * Legacy aliases (--font-body / --font-display / --font-brand) are kept
+ * as compatibility shims that resolve to the new role variables.
+ *
+ * Tailwind utilities: font-ui, font-cn-display, font-en-brand
+ * (defined in apps/user-client/tailwind.config.ts)
  */
 :root {
-  /* Primary body / Chinese-first font stack */
-  --font-body: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* ── Role 1: System UI (default for all dense / functional surfaces) ── */
+  --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
 
-  /* Display / English-accent font stack */
-  --font-display: 'Quicksand', 'AlibabaPuHuiTi', 'PingFang SC', sans-serif;
+  /* ── Role 2: Chinese display (short high-impact emotional moments) ──── */
+  /* AlibabaPuHuiTi-3 leads once the self-hosted files are uploaded.
+     ZCOOL QingKe HuangYou bridges the gap — it is already loaded via
+     Google Fonts in index.html so this role is immediately effective. */
+  --font-cn-display: 'AlibabaPuHuiTi', 'ZCOOL QingKe HuangYou', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
-  /* Brand / marketing copy — same as display for now */
-  --font-brand: 'Quicksand', 'AlibabaPuHuiTi', 'PingFang SC', sans-serif;
+  /* ── Role 3: English brand accent (JoyJoin identity moments only) ───── */
+  /* Quicksand leads once the self-hosted files are uploaded.
+     Outfit bridges the gap — already loaded via Google Fonts. */
+  --font-en-brand: 'Quicksand', 'Outfit', system-ui, sans-serif;
+
+  /* ── Legacy aliases (kept for backward compatibility) ─────────────── */
+  --font-body: var(--font-cn-display);
+  --font-display: var(--font-en-brand);
+  --font-brand: var(--font-cn-display);
 }
