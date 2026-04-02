@@ -33,6 +33,7 @@ import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import { describePoolRegistrationAvailability } from "./lib/poolRegistrationRules";
 import { getAuthenticatedUserId } from "./lib/requestAuth";
+import { getMatchingMetricsSnapshot } from "./matchingMetrics";
 import { broadcastPoolRegistrationAdded } from "./eventBroadcast";
 import { queueSemanticProfileRecompute } from "./userSemanticProfileService";
 import {
@@ -5517,6 +5518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weeklyMatchingSatisfaction,
         lowScoringMatches,
         gamificationStats,
+        matchingMetrics: getMatchingMetricsSnapshot(),
       });
     } catch (error) {
       console.error("Error fetching admin stats:", error);

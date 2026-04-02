@@ -39,6 +39,7 @@
  */
 
 import { type Request, type Response, type NextFunction } from 'express';
+import { getMatchingMetricsText } from "../matchingMetrics";
 
 // ---------------------------------------------------------------------------
 // Histogram bucket boundaries (milliseconds)
@@ -353,6 +354,7 @@ export async function getMetricsText(): Promise<string> {
       _lastEventLoopDelayMs,
     ),
     renderProcessMetrics(),
+    getMatchingMetricsText(),
   ];
 
   return sections.join('\n\n') + '\n';
