@@ -192,6 +192,7 @@ export default function MatchingStatusPage() {
   useEffect(() => {
     const unsubscribePoolMatched = subscribe('POOL_MATCHED', async (message) => {
       const poolData = message.data as PoolMatchedData;
+      let fetchedGroupData: PoolGroupResponse | null = null;
       
       // Guard: only react to matches for the currently viewed registration's pool
       if (!registration || poolData.poolId !== registration.poolId) {
@@ -213,6 +214,7 @@ export default function MatchingStatusPage() {
           });
           if (response.ok) {
             const groupData = await response.json();
+            fetchedGroupData = groupData;
             setGroupMembersData(groupData);
           } else {
             setGroupDataError("已匹配成功，但暂时无法同步小队详情。你仍然可以继续查看活动状态。");
@@ -235,16 +237,13 @@ export default function MatchingStatusPage() {
       // Wait 1 second for visual transition, then show celebration
       // If we have member data, show reveal animation; otherwise go straight to celebration
       matchTransitionTimeoutRef.current = setTimeout(() => {
-        if (groupMembersData || poolData.groupId) {
-          // Wait a bit more for member data to load if it's still loading
-          const checkDataTimer = setTimeout(() => {
-            if (groupMembersData) {
-              setShowRevealAnimation(true);
-            } else {
-              // Fallback: no member data, skip reveal and go straight to celebration
-              setShowMatchCelebration(true);
-            }
-          }, isLoadingGroupData ? 500 : 0);
+        if (poolData.groupId) {
+          if (fetchedGroupData) {
+            setShowRevealAnimation(true);
+          } else {
+            // Fallback: no member data, skip reveal and go straight to celebration
+            setShowMatchCelebration(true);
+          }
         } else {
           // No groupId, skip reveal and go straight to celebration
           setShowMatchCelebration(true);
