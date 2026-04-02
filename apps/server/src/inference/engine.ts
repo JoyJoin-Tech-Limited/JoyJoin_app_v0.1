@@ -49,6 +49,7 @@ export interface InferenceEngineResult {
       acceptedFields: string[];
       rejectedFields: string[];
       skippedUserDeclaredFields: string[];
+    };
     shadowLLMFallback?: {
       mode: 'shadow' | 'disabled';
       triggered: boolean;

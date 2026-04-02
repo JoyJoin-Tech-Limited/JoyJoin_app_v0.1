@@ -396,6 +396,7 @@ export const eventPools = pgTable("event_pools", {
   status: varchar("status").default("active"), // active (招募中) | matching | matched | completed | cancelled
   totalRegistrations: integer("total_registrations").default(0), // 总报名人数
   successfulMatches: integer("successful_matches").default(0), // 成功匹配人数
+  predictiveRerankEnabledOverride: boolean("predictive_rerank_enabled_override"),
   
   // 元数据
   createdBy: varchar("created_by").notNull().references(() => users.id), // Admin用户ID
@@ -468,6 +469,10 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   matchExplanation: text("match_explanation"), // AI生成的匹配解释
   pairExplanationsCache: jsonb("pair_explanations_cache"), // 缓存的配对解释: [{pairKey, explanation, chemistryScore, sharedInterests, connectionPoints, generatedAt}]
   iceBreakersCache: jsonb("ice_breakers_cache"), // 缓存的破冰话题: {topics: string[], generatedAt: string}
+  predictiveExperimentArm: varchar("predictive_experiment_arm", { length: 20 }),
+  predictiveModelVersion: varchar("predictive_model_version", { length: 50 }),
+  predictiveRerankApplied: boolean("predictive_rerank_applied").default(false),
+  predictiveRerankAudit: jsonb("predictive_rerank_audit"),
   
   // Event Theme (Mystery Box 盲盒主题)
   theme: varchar("theme", { length: 50 }), // Main theme (12-18 chars): "高能充电站：柯基×狐狸的周末探险"
@@ -531,6 +536,16 @@ export const matchingThresholds = pgTable("matching_thresholds", {
   
   // 扫描频率
   scanIntervalMinutes: integer("scan_interval_minutes").default(60), // 定时扫描间隔（分钟）
+
+  // Predictive rerank experiment controls
+  predictiveRerankEnabled: boolean("predictive_rerank_enabled").default(false),
+  predictiveRerankExposurePercent: integer("predictive_rerank_exposure_percent").default(50),
+  predictiveRerankMaxPositionShift: integer("predictive_rerank_max_position_shift").default(2),
+  predictiveRerankConfidenceThreshold: integer("predictive_rerank_confidence_threshold").default(70),
+  predictiveRerankAutoDisableEnabled: boolean("predictive_rerank_auto_disable_enabled").default(true),
+  predictiveRerankMinShadowExperiments: integer("predictive_rerank_min_shadow_experiments").default(10),
+  predictiveRerankAutoDisabledAt: timestamp("predictive_rerank_auto_disabled_at"),
+  predictiveRerankAutoDisabledReason: text("predictive_rerank_auto_disabled_reason"),
   
   // 元数据
   isActive: boolean("is_active").default(true), // 是否为当前使用的配置
@@ -560,6 +575,9 @@ export const poolMatchingLogs = pgTable("pool_matching_logs", {
   // 决策信息
   decision: varchar("decision").notNull(), // "matched" | "waiting" | "insufficient"
   reason: text("reason"), // 决策原因说明
+  predictiveExperimentArm: varchar("predictive_experiment_arm", { length: 20 }),
+  predictiveRerankApplied: boolean("predictive_rerank_applied").default(false),
+  predictiveRerankSummary: jsonb("predictive_rerank_summary"),
   
   // 元数据
   triggeredBy: varchar("triggered_by"), // "user_registration" | "cron_job" | "admin_manual"

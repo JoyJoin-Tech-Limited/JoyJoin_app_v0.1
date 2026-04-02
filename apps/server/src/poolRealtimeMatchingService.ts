@@ -17,7 +17,17 @@ import {
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
-import type { MatchGroup } from "./poolMatchingService";
+import type { MatchGroup, SaveMatchResultsOptions } from "./poolMatchingService";
+import {
+  countMatchingShadowExperimentPools,
+  getOutcomeCalibrationSnapshot,
+  getPredictiveRerankOutcomeMetrics,
+  type PredictiveRerankOutcomeMetrics,
+} from "./repositories/matchingShadowExperimentsRepo";
+import {
+  getPredictiveRerankAutoDisableReason,
+  planPredictiveRerank,
+} from "./predictiveRerankingService";
 
 interface ScanResult {
   decision: "matched" | "waiting" | "insufficient";
@@ -49,10 +59,30 @@ async function getActiveThresholds() {
       minThresholdAfterDecay: 50,
       minGroupSizeForMatch: 4,
       optimalGroupSize: 6,
+      predictiveRerankEnabled: false,
+      predictiveRerankExposurePercent: 50,
+      predictiveRerankMaxPositionShift: 2,
+      predictiveRerankConfidenceThreshold: 70,
+      predictiveRerankAutoDisableEnabled: true,
+      predictiveRerankMinShadowExperiments: 10,
+      predictiveRerankAutoDisabledAt: null,
+      predictiveRerankAutoDisabledReason: null,
     };
   }
 
   return config;
+}
+
+async function persistPredictiveRerankAutoDisable(reason: string) {
+  await db
+    .update(matchingThresholds)
+    .set({
+      predictiveRerankEnabled: false,
+      predictiveRerankAutoDisabledAt: new Date(),
+      predictiveRerankAutoDisabledReason: reason,
+      updatedAt: new Date(),
+    })
+    .where(eq(matchingThresholds.isActive, true));
 }
 
 /**
@@ -164,7 +194,7 @@ export async function scanPoolAndMatch(
   const pendingUsersCount = pendingRegistrations.length;
 
   // 3. 获取当前匹配配置
-  const config = await getActiveThresholds();
+  let config = await getActiveThresholds();
 
   // 4. 计算距离活动开始的小时数
   const now = new Date();
@@ -211,8 +241,59 @@ export async function scanPoolAndMatch(
 
   // 7. 运行匹配算法（不保存，仅评估）
   let groups: MatchGroup[] = [];
+  let predictiveDecisionSummary: SaveMatchResultsOptions["predictiveRerankSummary"] | undefined;
+  let predictiveDecisionArm: SaveMatchResultsOptions["predictiveExperimentArm"] | undefined;
+  let predictiveRerankApplied = false;
   try {
     groups = await matchEventPool(poolId);
+    const overrideForceEnabled = pool.predictiveRerankEnabledOverride === true;
+    const predictiveRerankEligibleForEvaluation =
+      pool.predictiveRerankEnabledOverride !== false &&
+      (overrideForceEnabled || config.predictiveRerankEnabled);
+
+    if (predictiveRerankEligibleForEvaluation) {
+      const calibration = await getOutcomeCalibrationSnapshot();
+      let shadowPoolCount = 0;
+      let outcomeMetrics: PredictiveRerankOutcomeMetrics = [];
+
+      if (!overrideForceEnabled) {
+        [shadowPoolCount, outcomeMetrics] = await Promise.all([
+          countMatchingShadowExperimentPools(),
+          getPredictiveRerankOutcomeMetrics(),
+        ]);
+
+        const runtimeAutoDisableReason = getPredictiveRerankAutoDisableReason(outcomeMetrics);
+        if (
+          config.predictiveRerankEnabled &&
+          !config.predictiveRerankAutoDisabledAt &&
+          config.predictiveRerankAutoDisableEnabled &&
+          runtimeAutoDisableReason
+        ) {
+          await persistPredictiveRerankAutoDisable(runtimeAutoDisableReason);
+          config = await getActiveThresholds();
+        }
+      }
+
+      const predictiveDecision = planPredictiveRerank({
+        poolId,
+        groups,
+        calibration,
+        config,
+        shadowPoolCount,
+        outcomeMetrics,
+        poolOverrideEnabled: pool.predictiveRerankEnabledOverride,
+      });
+
+      groups = predictiveDecision.groups;
+      predictiveDecisionArm = predictiveDecision.arm;
+      predictiveRerankApplied = predictiveDecision.applied;
+      predictiveDecisionSummary = {
+        reason: predictiveDecision.reason,
+        modelVersion: predictiveDecision.modelVersion,
+        ...predictiveDecision.summary,
+        audits: predictiveDecision.audits,
+      };
+    }
   } catch (error: any) {
     await db.insert(poolMatchingLogs).values({
       poolId,
@@ -225,6 +306,9 @@ export async function scanPoolAndMatch(
       avgGroupScore: 0,
       decision: "insufficient",
       reason: `匹配算法失败: ${error.message}`,
+      predictiveExperimentArm: predictiveDecisionArm,
+      predictiveRerankApplied,
+      predictiveRerankSummary: predictiveDecisionSummary,
       triggeredBy,
     });
 
@@ -248,7 +332,15 @@ export async function scanPoolAndMatch(
   // 9. 决策：是否立即匹配
   if (evaluation.shouldMatch) {
     // 立即匹配！保存结果
-    await saveMatchResults(poolId, groups);
+    if (predictiveDecisionSummary) {
+      await saveMatchResults(poolId, groups, {
+        predictiveExperimentArm: predictiveDecisionArm ?? null,
+        predictiveRerankApplied,
+        predictiveRerankSummary: predictiveDecisionSummary,
+      });
+    } else {
+      await saveMatchResults(poolId, groups);
+    }
 
     const usersMatched = groups.reduce((sum, g) => sum + g.members.length, 0);
 
@@ -264,6 +356,9 @@ export async function scanPoolAndMatch(
       avgGroupScore,
       decision: "matched",
       reason: evaluation.reason,
+      predictiveExperimentArm: predictiveDecisionArm,
+      predictiveRerankApplied,
+      predictiveRerankSummary: predictiveDecisionSummary,
       triggeredBy,
     });
 
@@ -290,6 +385,9 @@ export async function scanPoolAndMatch(
       avgGroupScore,
       decision: "waiting",
       reason: evaluation.reason,
+      predictiveExperimentArm: predictiveDecisionArm,
+      predictiveRerankApplied,
+      predictiveRerankSummary: predictiveDecisionSummary,
       triggeredBy,
     });
 
