@@ -142,28 +142,63 @@ describe('MatchingWeightsService', () => {
     service.invalidateCache();
   });
 
+  it('uses active-flow dimension vocabulary — 6 dimensions matching poolMatchingService', async () => {
+    mockState.configRows = [
+      {
+        id: 'adaptive-1',
+        configName: 'adaptive_live',
+        isActive: true,
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
+      },
+    ];
+
+    const weights = await service.getActiveWeights();
+    // Confirm the 6 active-flow dimension keys are present
+    expect(Object.keys(weights)).toEqual(
+      expect.arrayContaining([
+        'chemistryWeight',
+        'interestWeight',
+        'socialAffinityWeight',
+        'backgroundDiversityWeight',
+        'preferenceWeight',
+        'languageWeight',
+      ]),
+    );
+    // Confirm old vocabulary keys are absent
+    expect(Object.keys(weights)).not.toContain('personalityWeight');
+    expect(Object.keys(weights)).not.toContain('interestsWeight');
+    expect(Object.keys(weights)).not.toContain('intentWeight');
+    expect(Object.keys(weights)).not.toContain('cultureWeight');
+    expect(Object.keys(weights)).not.toContain('conversationSignatureWeight');
+  });
+
   it('normalizes stored decimal weights into runtime percentages and exposes rollout status', async () => {
     mockState.configRows = [
       {
         id: 'adaptive-1',
         configName: 'adaptive_live',
         isActive: true,
-        personalityWeight: '0.20',
-        interestsWeight: '0.25',
-        intentWeight: '0.12',
-        backgroundWeight: '0.18',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.20',
+        interestWeight: '0.25',
+        socialAffinityWeight: '0.22',
+        backgroundDiversityWeight: '0.18',
+        preferenceWeight: '0.08',
+        languageWeight: '0.07',
       },
     ];
 
     await expect(service.getActiveWeights()).resolves.toEqual({
-      personalityWeight: 20,
-      interestsWeight: 25,
-      intentWeight: 12,
-      backgroundWeight: 18,
-      cultureWeight: 10,
-      conversationSignatureWeight: 15,
+      chemistryWeight: 20,
+      interestWeight: 25,
+      socialAffinityWeight: 22,
+      backgroundDiversityWeight: 18,
+      preferenceWeight: 8,
+      languageWeight: 7,
     });
 
     await expect(service.getRolloutStatus()).resolves.toMatchObject({
@@ -179,27 +214,27 @@ describe('MatchingWeightsService', () => {
         id: 'adaptive-1',
         configName: 'adaptive_live',
         isActive: true,
-        personalityWeight: '0.23',
-        interestsWeight: '0.24',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
         totalMatches: 49,
         successfulMatches: 20,
         averageSatisfaction: '4.0000',
-        personalityAlpha: 4,
-        personalityBeta: 1,
-        interestsAlpha: 1,
-        interestsBeta: 4,
-        intentAlpha: 1,
-        intentBeta: 4,
-        backgroundAlpha: 1,
-        backgroundBeta: 4,
-        cultureAlpha: 1,
-        cultureBeta: 4,
-        conversationSignatureAlpha: 1,
-        conversationSignatureBeta: 4,
+        chemistryAlpha: 4,
+        chemistryBeta: 1,
+        interestAlpha: 1,
+        interestBeta: 4,
+        socialAffinityAlpha: 1,
+        socialAffinityBeta: 4,
+        backgroundDiversityAlpha: 1,
+        backgroundDiversityBeta: 4,
+        preferenceAlpha: 1,
+        preferenceBeta: 4,
+        languageAlpha: 1,
+        languageBeta: 4,
       },
     ];
 
@@ -212,31 +247,31 @@ describe('MatchingWeightsService', () => {
       .mockReturnValueOnce(0.02);
 
     await service.updateWeightsAfterFeedback(5, {
-      personality: 80,
-      interests: 40,
-      intent: 40,
-      background: 40,
-      culture: 40,
-      conversationSignature: 40,
+      chemistry: 80,
+      interest: 40,
+      socialAffinity: 40,
+      backgroundDiversity: 40,
+      preference: 40,
+      language: 40,
     });
 
     const activeRow = mockState.configRows[0];
     const runtimeWeights = {
-      personalityWeight: Number(activeRow.personalityWeight) * 100,
-      interestsWeight: Number(activeRow.interestsWeight) * 100,
-      intentWeight: Number(activeRow.intentWeight) * 100,
-      backgroundWeight: Number(activeRow.backgroundWeight) * 100,
-      cultureWeight: Number(activeRow.cultureWeight) * 100,
-      conversationSignatureWeight: Number(activeRow.conversationSignatureWeight) * 100,
+      chemistryWeight: Number(activeRow.chemistryWeight) * 100,
+      interestWeight: Number(activeRow.interestWeight) * 100,
+      socialAffinityWeight: Number(activeRow.socialAffinityWeight) * 100,
+      backgroundDiversityWeight: Number(activeRow.backgroundDiversityWeight) * 100,
+      preferenceWeight: Number(activeRow.preferenceWeight) * 100,
+      languageWeight: Number(activeRow.languageWeight) * 100,
     };
 
-    expect(Math.abs(runtimeWeights.personalityWeight - 23)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(Math.abs(runtimeWeights.interestsWeight - 24)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(Math.abs(runtimeWeights.intentWeight - 13)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(Math.abs(runtimeWeights.backgroundWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(Math.abs(runtimeWeights.cultureWeight - 10)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(Math.abs(runtimeWeights.conversationSignatureWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
-    expect(Object.values(runtimeWeights).reduce((sum, value) => sum + value, 0)).toBeCloseTo(100, 3);
+    expect(Math.abs(runtimeWeights.chemistryWeight - 28)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.interestWeight - 28)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.socialAffinityWeight - 20)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.backgroundDiversityWeight - 15)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.preferenceWeight - 5)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Math.abs(runtimeWeights.languageWeight - 4)).toBeLessThanOrEqual(MAX_WEIGHT_DELTA_TOLERANCE);
+    expect(Object.values(runtimeWeights).reduce((sum, value) => sum + value, 0)).toBeCloseTo(100, 1);
     expect(mockState.historyRows.at(-1)?.changeReason).toBe('adaptive_bandit_bounded');
   });
 
@@ -246,23 +281,23 @@ describe('MatchingWeightsService', () => {
         id: 'default-1',
         configName: 'default',
         isActive: false,
-        personalityWeight: '0.23',
-        interestsWeight: '0.24',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
       },
       {
         id: 'adaptive-1',
         configName: 'adaptive_live',
         isActive: true,
-        personalityWeight: '0.26',
-        interestsWeight: '0.21',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.31',
+        interestWeight: '0.25',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
       },
     ];
 
@@ -282,23 +317,23 @@ describe('MatchingWeightsService', () => {
         id: 'default-1',
         configName: 'default',
         isActive: true,
-        personalityWeight: '0.23',
-        interestsWeight: '0.24',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
       },
       {
         id: 'adaptive-1',
         configName: 'adaptive_live',
         isActive: false,
-        personalityWeight: '0.23',
-        interestsWeight: '0.24',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
       },
     ];
 
@@ -316,35 +351,35 @@ describe('MatchingWeightsService', () => {
         id: 'adaptive-1',
         configName: 'adaptive_live',
         isActive: true,
-        personalityWeight: '0.26',
-        interestsWeight: '0.21',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.31',
+        interestWeight: '0.25',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
       },
     ];
     mockState.historyRows = [
       {
         id: 'history-current',
         configId: 'adaptive-1',
-        personalityWeight: '0.26',
-        interestsWeight: '0.21',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.31',
+        interestWeight: '0.25',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
         recordedAt: '2026-04-02T12:00:10.000Z',
       },
       {
         id: 'history-previous',
         configId: 'adaptive-1',
-        personalityWeight: '0.23',
-        interestsWeight: '0.24',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
         recordedAt: '2026-04-02T11:59:10.000Z',
       },
     ];
@@ -352,34 +387,34 @@ describe('MatchingWeightsService', () => {
     const rollout = await service.rollbackAdaptiveWeights();
 
     expect(rollout.adaptiveWeightsEnabled).toBe(true);
-    expect(rollout.activeWeights.personalityWeight).toBeCloseTo(23, 3);
-    expect(rollout.activeWeights.interestsWeight).toBeCloseTo(24, 3);
+    expect(rollout.activeWeights.chemistryWeight).toBeCloseTo(28, 3);
+    expect(rollout.activeWeights.interestWeight).toBeCloseTo(28, 3);
     expect(mockState.historyRows.at(-1)?.changeReason).toBe('adaptive_rollback');
   });
 
-  it('builds normalized shadow recommendations from outcome signals', () => {
+  it('builds normalized shadow recommendations from outcome signals using active-flow dimensions', () => {
     const activeConfig = {
       id: 'config-1',
       configName: 'default',
       isActive: true,
-      personalityWeight: '0.23',
-      interestsWeight: '0.24',
-      intentWeight: '0.13',
-      backgroundWeight: '0.15',
-      cultureWeight: '0.10',
-      conversationSignatureWeight: '0.15',
-      personalityAlpha: 5,
-      personalityBeta: 2,
-      interestsAlpha: 4,
-      interestsBeta: 2,
-      intentAlpha: 3,
-      intentBeta: 2,
-      backgroundAlpha: 2,
-      backgroundBeta: 2,
-      cultureAlpha: 3,
-      cultureBeta: 3,
-      conversationSignatureAlpha: 2,
-      conversationSignatureBeta: 2,
+      chemistryWeight: '0.28',
+      interestWeight: '0.28',
+      socialAffinityWeight: '0.20',
+      backgroundDiversityWeight: '0.15',
+      preferenceWeight: '0.05',
+      languageWeight: '0.04',
+      chemistryAlpha: 5,
+      chemistryBeta: 2,
+      interestAlpha: 4,
+      interestBeta: 2,
+      socialAffinityAlpha: 3,
+      socialAffinityBeta: 2,
+      backgroundDiversityAlpha: 2,
+      backgroundDiversityBeta: 2,
+      preferenceAlpha: 3,
+      preferenceBeta: 3,
+      languageAlpha: 2,
+      languageBeta: 2,
     } as any;
 
     const recommendation = buildShadowRecommendation(activeConfig, {
@@ -404,7 +439,25 @@ describe('MatchingWeightsService', () => {
     expect(recommendation).not.toBeNull();
     expect(recommendation?.outcomeScore).toBeGreaterThanOrEqual(4);
     expect(recommendation?.overallConfidence).toBeGreaterThan(0);
+
+    // Recommended weights should sum to ~1 (ratio form)
     expect(Object.values(recommendation!.recommendedWeights).reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 4);
+
+    // Confirm recommended weights use active-flow vocabulary
+    expect(recommendation?.recommendedWeights).toHaveProperty('chemistryWeight');
+    expect(recommendation?.recommendedWeights).toHaveProperty('interestWeight');
+    expect(recommendation?.recommendedWeights).toHaveProperty('socialAffinityWeight');
+    expect(recommendation?.recommendedWeights).toHaveProperty('backgroundDiversityWeight');
+    expect(recommendation?.recommendedWeights).toHaveProperty('preferenceWeight');
+    expect(recommendation?.recommendedWeights).toHaveProperty('languageWeight');
+
+    // Confirm dimension metrics use active-flow vocabulary
+    expect(recommendation?.dimensionMetrics).toHaveProperty('chemistry');
+    expect(recommendation?.dimensionMetrics).toHaveProperty('interest');
+    expect(recommendation?.dimensionMetrics).toHaveProperty('socialAffinity');
+    expect(recommendation?.dimensionMetrics).toHaveProperty('backgroundDiversity');
+    expect(recommendation?.dimensionMetrics).toHaveProperty('preference');
+    expect(recommendation?.dimensionMetrics).toHaveProperty('language');
   });
 
   it('records shadow recommendations without changing live weights', async () => {
@@ -413,24 +466,24 @@ describe('MatchingWeightsService', () => {
         id: 'config-1',
         configName: 'default',
         isActive: true,
-        personalityWeight: '0.23',
-        interestsWeight: '0.24',
-        intentWeight: '0.13',
-        backgroundWeight: '0.15',
-        cultureWeight: '0.10',
-        conversationSignatureWeight: '0.15',
-        personalityAlpha: 5,
-        personalityBeta: 2,
-        interestsAlpha: 4,
-        interestsBeta: 2,
-        intentAlpha: 3,
-        intentBeta: 2,
-        backgroundAlpha: 2,
-        backgroundBeta: 2,
-        cultureAlpha: 3,
-        cultureBeta: 3,
-        conversationSignatureAlpha: 2,
-        conversationSignatureBeta: 2,
+        chemistryWeight: '0.28',
+        interestWeight: '0.28',
+        socialAffinityWeight: '0.20',
+        backgroundDiversityWeight: '0.15',
+        preferenceWeight: '0.05',
+        languageWeight: '0.04',
+        chemistryAlpha: 5,
+        chemistryBeta: 2,
+        interestAlpha: 4,
+        interestBeta: 2,
+        socialAffinityAlpha: 3,
+        socialAffinityBeta: 2,
+        backgroundDiversityAlpha: 2,
+        backgroundDiversityBeta: 2,
+        preferenceAlpha: 3,
+        preferenceBeta: 3,
+        languageAlpha: 2,
+        languageBeta: 2,
       },
     ];
 
@@ -458,6 +511,15 @@ describe('MatchingWeightsService', () => {
     expect(mockState.historyRows[0].changeReason).toBe(SHADOW_RECOMMENDATION_REASON);
     expect(mockState.historyRows[0].shadowMetadata.outcomeSignals.wouldMeetAgain).toBe(true);
     expect(mockState.updateCalls).toHaveLength(0);
+
+    // Shadow history row should use active-flow vocabulary
+    const historyRow = mockState.historyRows[0];
+    expect(historyRow).toHaveProperty('chemistryWeight');
+    expect(historyRow).toHaveProperty('interestWeight');
+    expect(historyRow).toHaveProperty('socialAffinityWeight');
+    expect(historyRow).toHaveProperty('backgroundDiversityWeight');
+    expect(historyRow).toHaveProperty('preferenceWeight');
+    expect(historyRow).toHaveProperty('languageWeight');
   });
 
   it('returns only shadow recommendation history for admin inspection', async () => {
@@ -469,5 +531,19 @@ describe('MatchingWeightsService', () => {
     const history = await service.getShadowRecommendations(10);
 
     expect(history).toEqual([mockState.historyRows[0]]);
+  });
+
+  it('falls back to default active-flow weights when no config row exists', async () => {
+    mockState.configRows = [];
+
+    const weights = await service.getActiveWeights();
+
+    // Should use active-flow default weights
+    expect(weights.chemistryWeight).toBeCloseTo(28, 3);
+    expect(weights.interestWeight).toBeCloseTo(28, 3);
+    expect(weights.socialAffinityWeight).toBeCloseTo(20, 3);
+    expect(weights.backgroundDiversityWeight).toBeCloseTo(15, 3);
+    expect(weights.preferenceWeight).toBeCloseTo(5, 3);
+    expect(weights.languageWeight).toBeCloseTo(4, 3);
   });
 });

@@ -13,13 +13,14 @@ export type { MatchingWeights } from './matchingWeightsService';
 
 // 默认权重配置 (6维度) - 仅作为 fallback 使用
 // 实际运行时优先走 matchingWeightsService.ts（Thompson Sampling 自适应权重路径）
+// Vocabulary aligned with active poolMatchingService.ts pair-score dimensions.
 export const DEFAULT_WEIGHTS: MatchingWeights = {
-  personalityWeight: 23,
-  interestsWeight: 24,
-  intentWeight: 13,
-  backgroundWeight: 15,
-  cultureWeight: 10,
-  conversationSignatureWeight: 15,
+  chemistryWeight: 28,
+  interestWeight: 28,
+  socialAffinityWeight: 20,
+  backgroundDiversityWeight: 15,
+  preferenceWeight: 5,
+  languageWeight: 4,
 };
 
 // 获取当前自适应权重的辅助函数（首选 Thompson Sampling 路径）
@@ -34,15 +35,14 @@ export async function getDynamicWeights(): Promise<MatchingWeights> {
 // 用户匹配分数接口
 export interface UserMatchScore {
   userId: string;
-  overallScore: number;       // 总分 (0-100)
-  personalityScore: number;   // 性格兼容性分数
-  interestsScore: number;     // 兴趣匹配分数
-  intentScore: number;        // 意图匹配分数
-  backgroundScore: number;    // 背景多样性分数
-  cultureScore: number;       // 文化语言分数
-  conversationSignatureScore: number; // 对话签名分数 - 第6维度
-  chemistryScore: number;     // 化学反应分数（基于原型）
-  matchPoints: string[];      // 匹配点（用于解释）
+  overallScore: number;              // 总分 (0-100)
+  chemistryScore: number;            // 性格化学反应分数
+  interestScore: number;             // 兴趣重叠分数
+  socialAffinityScore: number;       // 社交同频分数
+  backgroundDiversityScore: number;  // 背景多样性分数
+  preferenceScore: number;           // 活动偏好分数
+  languageScore: number;             // 语言沟通分数
+  matchPoints: string[];             // 匹配点（用于解释）
 }
 
 // 小组匹配结果
@@ -345,31 +345,31 @@ export function calculateUserMatchScore(
   user2: Partial<User>,
   weights: MatchingWeights = DEFAULT_WEIGHTS
 ): UserMatchScore {
-  const personalityScore = calculatePersonalityScore(user1, user2);
-  const interestsScore = calculateInterestsScore(user1, user2);
-  const intentScore = calculateIntentScore(user1, user2);
-  const backgroundScore = calculateBackgroundScore(user1, user2);
-  const cultureScore = calculateCultureScore(user1, user2);
-  const conversationSignatureScore = calculateConversationSignatureScore(user1, user2);
+  const chemistryScore = calculatePersonalityScore(user1, user2);
+  const interestScore = calculateInterestsScore(user1, user2);
+  const socialAffinityScore = calculateIntentScore(user1, user2);
+  const backgroundDiversityScore = calculateBackgroundScore(user1, user2);
+  const preferenceScore = calculateCultureScore(user1, user2);
+  const languageScore = calculateConversationSignatureScore(user1, user2);
   
-  // 计算加权总分 (6维度)
+  // 计算加权总分 (6维度 — active-flow vocabulary)
   const overallScore = Math.round(
-    (personalityScore * weights.personalityWeight +
-     interestsScore * weights.interestsWeight +
-     intentScore * weights.intentWeight +
-     backgroundScore * weights.backgroundWeight +
-     cultureScore * weights.cultureWeight +
-     conversationSignatureScore * weights.conversationSignatureWeight) / 100
+    (chemistryScore * weights.chemistryWeight +
+     interestScore * weights.interestWeight +
+     socialAffinityScore * weights.socialAffinityWeight +
+     backgroundDiversityScore * weights.backgroundDiversityWeight +
+     preferenceScore * weights.preferenceWeight +
+     languageScore * weights.languageWeight) / 100
   );
   
   // 生成匹配点（更精细的解释）
   const matchPoints: string[] = [];
   
-  if (personalityScore >= 80) {
-    matchPoints.push(`性格高度互补 (${personalityScore}分)`);
+  if (chemistryScore >= 80) {
+    matchPoints.push(`性格高度互补 (${chemistryScore}分)`);
   }
   
-  if (interestsScore >= 70) {
+  if (interestScore >= 70) {
     const interests1 = getUserInterests(user1);
     const interests2 = getUserInterests(user2);
     const common = interests1.filter(i => interests2.includes(i));
@@ -381,12 +381,12 @@ export function calculateUserMatchScore(
     // The field was moved to user_interests table as part of Interest Carousel system
   }
   
-  if (intentScore >= 75) {
+  if (socialAffinityScore >= 75) {
     matchPoints.push('活动意图一致');
   }
   
   // 背景匹配细分
-  if (backgroundScore >= 70) {
+  if (backgroundDiversityScore >= 70) {
     // 年龄相近
     const age1 = getUserAge(user1);
     const age2 = getUserAge(user2);
@@ -404,25 +404,24 @@ export function calculateUserMatchScore(
     // Commenting out as seniority is no longer collected
   }
   
-  // 文化匹配细分
-  if (cultureScore >= 70) {
-    matchPoints.push('语言文化相通');
+  // 活动偏好匹配细分
+  if (preferenceScore >= 70) {
+    matchPoints.push('活动偏好契合');
   }
   
-  if (conversationSignatureScore >= 75) {
+  if (languageScore >= 75) {
     matchPoints.push('沟通风格契合');
   }
   
   return {
     userId: user2.id || '',
     overallScore,
-    personalityScore,
-    interestsScore,
-    intentScore,
-    backgroundScore,
-    cultureScore,
-    conversationSignatureScore,
-    chemistryScore: personalityScore, // 化学反应分数即性格分数
+    chemistryScore,
+    interestScore,
+    socialAffinityScore,
+    backgroundDiversityScore,
+    preferenceScore,
+    languageScore,
     matchPoints,
   };
 }
@@ -631,11 +630,12 @@ export function validateWeights(weights: MatchingWeights): {
   error?: string 
 } {
   const total = 
-    weights.personalityWeight +
-    weights.interestsWeight +
-    weights.intentWeight +
-    weights.backgroundWeight +
-    weights.cultureWeight;
+    weights.chemistryWeight +
+    weights.interestWeight +
+    weights.socialAffinityWeight +
+    weights.backgroundDiversityWeight +
+    weights.preferenceWeight +
+    weights.languageWeight;
   
   if (total !== 100) {
     return {

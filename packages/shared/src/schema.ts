@@ -2605,6 +2605,7 @@ export const goldenDialogues = pgTable("golden_dialogues", {
 ]);
 
 // 匹配权重配置 - Dynamic Matching Weights (Multi-Armed Bandit)
+// Vocabulary aligned with active poolMatchingService.ts pair-score dimensions.
 export const matchingWeightsConfig = pgTable("matching_weights_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -2612,27 +2613,27 @@ export const matchingWeightsConfig = pgTable("matching_weights_config", {
   configName: varchar("config_name").notNull().unique(), // 'default', 'experiment_a', 'experiment_b'
   isActive: boolean("is_active").default(false), // 当前是否生效
   
-  // 6维权重 (Thompson Sampling参数)
-  personalityWeight: numeric("personality_weight", { precision: 5, scale: 4 }).default("0.23"), // 人格 23%
-  interestsWeight: numeric("interests_weight", { precision: 5, scale: 4 }).default("0.24"), // 兴趣 24%
-  intentWeight: numeric("intent_weight", { precision: 5, scale: 4 }).default("0.13"), // 意图 13%
-  backgroundWeight: numeric("background_weight", { precision: 5, scale: 4 }).default("0.15"), // 背景 15%
-  cultureWeight: numeric("culture_weight", { precision: 5, scale: 4 }).default("0.10"), // 文化 10%
-  conversationSignatureWeight: numeric("conversation_signature_weight", { precision: 5, scale: 4 }).default("0.15"), // 对话签名 15%
+  // 6维权重 — active-flow vocabulary (Thompson Sampling参数)
+  chemistryWeight: numeric("chemistry_weight", { precision: 5, scale: 4 }).default("0.28"), // 性格化学反应 28%
+  interestWeight: numeric("interest_weight", { precision: 5, scale: 4 }).default("0.28"), // 兴趣重叠度 28%
+  socialAffinityWeight: numeric("social_affinity_weight", { precision: 5, scale: 4 }).default("0.20"), // 社交同频度 20%
+  backgroundDiversityWeight: numeric("background_diversity_weight", { precision: 5, scale: 4 }).default("0.15"), // 背景多样性 15%
+  preferenceWeight: numeric("preference_weight", { precision: 5, scale: 4 }).default("0.05"), // 活动偏好 5%
+  languageWeight: numeric("language_weight", { precision: 5, scale: 4 }).default("0.04"), // 语言沟通 4%
   
-  // Thompson Sampling 统计 (Beta分布参数)
-  personalityAlpha: integer("personality_alpha").default(1),
-  personalityBeta: integer("personality_beta").default(1),
-  interestsAlpha: integer("interests_alpha").default(1),
-  interestsBeta: integer("interests_beta").default(1),
-  intentAlpha: integer("intent_alpha").default(1),
-  intentBeta: integer("intent_beta").default(1),
-  backgroundAlpha: integer("background_alpha").default(1),
-  backgroundBeta: integer("background_beta").default(1),
-  cultureAlpha: integer("culture_alpha").default(1),
-  cultureBeta: integer("culture_beta").default(1),
-  conversationSignatureAlpha: integer("conversation_signature_alpha").default(1),
-  conversationSignatureBeta: integer("conversation_signature_beta").default(1),
+  // Thompson Sampling 统计 (Beta分布参数) — active-flow vocabulary
+  chemistryAlpha: integer("chemistry_alpha").default(1),
+  chemistryBeta: integer("chemistry_beta").default(1),
+  interestAlpha: integer("interest_alpha").default(1),
+  interestBeta: integer("interest_beta").default(1),
+  socialAffinityAlpha: integer("social_affinity_alpha").default(1),
+  socialAffinityBeta: integer("social_affinity_beta").default(1),
+  backgroundDiversityAlpha: integer("background_diversity_alpha").default(1),
+  backgroundDiversityBeta: integer("background_diversity_beta").default(1),
+  preferenceAlpha: integer("preference_alpha").default(1),
+  preferenceBeta: integer("preference_beta").default(1),
+  languageAlpha: integer("language_alpha").default(1),
+  languageBeta: integer("language_beta").default(1),
   
   // 累计统计
   totalMatches: integer("total_matches").default(0),
@@ -2645,18 +2646,19 @@ export const matchingWeightsConfig = pgTable("matching_weights_config", {
 });
 
 // 权重变化历史 - Weight Change History for visualization
+// Vocabulary aligned with active poolMatchingService.ts pair-score dimensions.
 export const matchingWeightsHistory = pgTable("matching_weights_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
   configId: varchar("config_id").notNull().references(() => matchingWeightsConfig.id),
   
-  // 快照时间点的权重
-  personalityWeight: numeric("personality_weight", { precision: 5, scale: 4 }),
-  interestsWeight: numeric("interests_weight", { precision: 5, scale: 4 }),
-  intentWeight: numeric("intent_weight", { precision: 5, scale: 4 }),
-  backgroundWeight: numeric("background_weight", { precision: 5, scale: 4 }),
-  cultureWeight: numeric("culture_weight", { precision: 5, scale: 4 }),
-  conversationSignatureWeight: numeric("conversation_signature_weight", { precision: 5, scale: 4 }),
+  // 快照时间点的权重 — active-flow vocabulary
+  chemistryWeight: numeric("chemistry_weight", { precision: 5, scale: 4 }),
+  interestWeight: numeric("interest_weight", { precision: 5, scale: 4 }),
+  socialAffinityWeight: numeric("social_affinity_weight", { precision: 5, scale: 4 }),
+  backgroundDiversityWeight: numeric("background_diversity_weight", { precision: 5, scale: 4 }),
+  preferenceWeight: numeric("preference_weight", { precision: 5, scale: 4 }),
+  languageWeight: numeric("language_weight", { precision: 5, scale: 4 }),
   
   // 触发变更的原因
   changeReason: varchar("change_reason"), // 'scheduled_update', 'manual_adjustment', 'bandit_exploration'
