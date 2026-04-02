@@ -115,13 +115,18 @@ joyjoin-monorepo/
 │           ├── db.ts                 # Drizzle database connection
 │           ├── index.ts              # Server entry point
 │           ├── wsService.ts          # WebSocket service
-│           ├── poolMatchingService.ts       # Group matching logic
-│           ├── poolRealtimeMatchingService.ts  # Auto-matching scheduler
-│           ├── archetypeChemistry.ts        # Chemistry calculations
-│           ├── matchExplanationService.ts   # AI match explanations
-│           ├── xiaoyueAnalysisService.ts    # AI personality analysis
-│           ├── icebreakerAIService.ts       # AI conversation topics
-│           └── ...                          # Other services
+│           ├── poolMatchingService.ts              # Group matching logic (deterministic authority)
+│           ├── poolRealtimeMatchingService.ts       # Auto-matching scheduler
+│           ├── archetypeChemistry.ts               # Chemistry calculations
+│           ├── archetypeChemistryCalibration.ts    # Bounded empirical chemistry calibration
+│           ├── matchExplanationService.ts           # AI match explanations
+│           ├── matchingSemantic.ts                  # Feature-flagged 7th scoring dimension (semantic similarity)
+│           ├── matchingMetrics.ts                   # Matching-specific Prometheus metrics
+│           ├── embeddingClient.ts                   # Embedding API client (OpenAI/DeepSeek provider)
+│           ├── predictiveRerankingService.ts        # Shadow predictive reranking A/B experiment
+│           ├── xiaoyueAnalysisService.ts            # AI personality analysis
+│           ├── icebreakerAIService.ts               # AI conversation topics
+│           └── ...                                  # Other services
 │
 ├── packages/
 │   └── shared/               # Shared types, schemas, personality system
@@ -175,6 +180,8 @@ Active domain modules in `routes/domains/`:
 | `analytics.ts` | Analytics and KPI endpoints |
 | `payments.ts` | WeChat Pay v3 signed integration + webhook verification |
 | `icebreaker.ts` | Social Icebreaker session endpoints |
+| `eventGroupOutcomes.ts` | Protected `POST /api/event-pools/:poolId/group-outcome` outcome submission endpoint |
+| `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
 | `helpers.ts` | Shared route helpers |
 
 ---
@@ -366,6 +373,7 @@ These are commented out in schema but kept for backward compatibility.
 | `/admin/coupons` | AdminCouponsPage | Coupon management |
 | `/admin/venues` | AdminVenuesPage | Venue partners |
 | `/admin/evolution` | AdminEvolutionPage | AI evolution dashboard |
+| `/admin/outcome-analytics` | AdminOutcomeAnalyticsPage | Outcome & readiness coverage analytics |
 | `/admin/accounts` | AdminAccountsPage | Admin account management (super_admin only) |
 
 ### Admin Authentication
@@ -945,8 +953,10 @@ interface PoolMatchedData {
 | `invitations` | Referral tracking |
 | `userCoupons` | Discount coupons |
 | `subscriptions` | Premium subscriptions |
-| `matchingThresholds` | Per-pool matching config |
+| `matchingThresholds` | Per-pool matching config (includes predictive rerank controls) |
 | `poolMatchingLogs` | Matching decision history |
+| `user_semantic_profiles` | Persisted semantic embedding cache for pair scoring (invalidated on profile/interests changes) |
+| `event_group_outcomes` | Post-event outcome submissions (one per member per group; used for chemistry calibration + admin analytics) |
 
 ### Schema Location
 
@@ -1034,6 +1044,10 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `DEBUG_AUTH` | `1` to enable verbose auth debug logging (non-production only) |
 | `ENABLE_EVENT_THEME_TITLE_GENERATION` | `true`/`false` to toggle AI event theme generation |
 | `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
+| `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
+| `OPENAI_API_KEY` | OpenAI API key — used by `embeddingClient.ts` for async semantic profile embedding; takes precedence over `DEEPSEEK_API_KEY` in the embedding provider chain |
+| `EMBEDDING_TIMEOUT_MS` | Embedding API call timeout (default: 10000) |
+| `EMBEDDING_MAX_RETRIES` | Embedding API retry count (default: 2) |
 
 ### Auto-Populated (via Replit)
 

@@ -1,6 +1,6 @@
 # JoyJoin AI Integration Plan
 
-> **Status:** Living document — last revised 2026-03-30  
+> **Status:** Living document — last revised 2026-04-02  
 > **Scope:** Phased AI roadmap for latent social compatibility modeling — from near-term experience enhancements through predictive learning to long-horizon latent intelligence.
 
 ---
@@ -88,9 +88,9 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 | **★ Event Momentum orchestration** | Social Icebreaker AI generation with curated fallbacks — de facto Level-1 Event Momentum orchestration | ✅ Live — `socialIcebreakerAIService.ts` (curated fallback library active; extend here first before creating `eventMomentumOrchestrator.ts`) |
 | **Event Momentum phase lifecycle** | Server-owned phase progression and enabled-phase resolution | ✅ Live — `apps/server/src/socialIcebreakerPhaseConfig.ts` + `apps/server/src/routes/socialIcebreaker.ts` |
 | **Interest signal enrichment** | Per-user discussion style + depth signals used in prompts and conversation topic generation | ✅ Live — `user_interest_signals` table — **prompt enrichment only**; not used in `poolMatchingService.ts` pair-score computation |
-| Weight learning | Thompson Sampling bandit | ✅ Primary adaptive-weight path — `matchingWeightsService.ts` (available in admin evolution + `userMatchingService.ts`; wiring into `poolMatchingService.ts` is a Phase 1 task) |
+| Weight learning | Thompson Sampling bandit | ✅ Primary adaptive-weight path — `matchingWeightsService.ts` (available in admin evolution + `userMatchingService.ts`; wiring into `poolMatchingService.ts` is a Phase 1 task). This is now the **only documented adaptive-weight route** — legacy gradient-descent path is deprecated. |
 | Weight learning | Gradient descent | ⚠️ Deprecated legacy tombstone — `dynamicWeights.ts` is intentionally non-runnable and must not be used for runtime adaptive weights |
-| **LLM attribute inference** | Structured attribute inference from low-confidence conversational data | ✅ Implemented, not yet wired — `apps/server/src/inference/llmFallbackInference.ts` (`callLLMForInference()` has no active callers; planned Phase 1 activation) |
+| **LLM attribute inference** | Structured attribute inference from low-confidence conversational data | ⚡ Shadow telemetry active — `apps/server/src/inference/llmFallbackInference.ts`; shadow-only inference calls emit `llm_fallback_inference_*` Prometheus metrics; `callLLMForInference()` is bounded to approved low-confidence fields (`career`, `expectation`); no live callers yet |
 | Interest matching | Static Jaccard + heat bonus | ✅ Live — `poolMatchingService.ts` |
 | Temporal interest decay | Heat-weighted by recency | ❌ Dropped — see §2.2 |
 | Interest profile editability | User can revisit and update full interest carousel | ✅ Shipped — `EditInterestsCarouselPage` |
@@ -102,12 +102,13 @@ LLMs are excellent **orchestration and explanation layers**. They should not be 
 | Post-event feedback loop | Atmosphere + connection radar pipeline | 🔲 Phase 1 |
 | Adaptive icebreaker sequencing | Phase-aware ordering by group energy | 🔲 Phase 1 |
 | Observability metadata normalization | `AIResponseMeta` foundation shipped; ongoing per-service migration | ✅ Foundation shipped (PR #378); see §1.3 above |
-| Hybrid embedding layer | Semantic cosine similarity dimension | 🔲 Phase 2 |
-| Chemistry matrix calibration | Feedback-bounded empirical correction | 🔲 Phase 2 |
+| **Semantic pair scoring** | Feature-flagged 7th scoring dimension (semantic similarity, `ENABLE_SEMANTIC_SIMILARITY`) | ✅ Shipped — `matchingSemantic.ts`; active when flag enabled; pair score deltas ≤3.9 points |
+| **Semantic profile embeddings pipeline** | Async persisted embedding cache with invalidation on profile/interest mutations | ✅ Shipped — `embeddingClient.ts` + `user_semantic_profiles` table; embedding provider: OpenAI (preferred) or DeepSeek |
+| **Chemistry matrix calibration** | Feedback-bounded empirical correction of archetype-pair chemistry scores | ✅ Shipped — `archetypeChemistryCalibration.ts`; bounded delta ±2 with ≥30 sample requirement and admin inspection panel |
+| **Predictive compatibility scoring** | Shadow A/B experiment: outcome-trained predictive reranking | ⚡ Shadow-only — `predictiveRerankingService.ts`; runs as shadow experiment collecting telemetry; live reranking not enabled until gate criteria pass |
 | Group role / energy balance | Pre-formation role composition scoring | 🔲 Phase 2 |
-| Predictive compatibility scoring | Outcome-trained compatibility model | 🔲 Phase 2 |
-| Latent user state modeling | Behavioral embeddings, contextual memory | 🔲 Phase 3 |
-| Multimodal signal enrichment | Audio/visual cues with consent & fairness | 🔲 Phase 3 |
+| Latent user state modeling | Behavioral embeddings, contextual memory | 🔲 Phase 3 (planning-only — gates not cleared) |
+| Multimodal signal enrichment | Audio/visual cues with consent & fairness | 🔲 Phase 3 (planning-only — gates not cleared) |
 
 ### 1.4 LLM Provider Architecture
 
@@ -225,7 +226,7 @@ Configuration: `temperature: 0.3`, `max_tokens: 500`. Returns structured JSON `{
 | Phase | Provider layer change |
 |---|---|
 | **Phase 1 (current)** | Both providers active as described above. Phase 1 feature work (icebreaker sequencing, scenario service, group-context explanations) slots into the existing routing with no changes to the provider layer. |
-| **Phase 2** | `embeddingClient.ts` (new file, modelled after `minimaxClient.ts`) added as a **third provider slot** dedicated to vector embedding API calls. Embedding calls are not routed through `socialModelRouter` or `creativeModelRouter` — they are a separate background compute path consumed by `hybridSemantic.ts`. |
+| **Phase 2** | `embeddingClient.ts` is **now present** (`apps/server/src/embeddingClient.ts`) — shipped as part of the async semantic profile embeddings pipeline. It resolves provider from `OPENAI_API_KEY` (preferred) or `DEEPSEEK_API_KEY`. Embedding calls are background-only and are not routed through `socialModelRouter` or `creativeModelRouter`. The neural embedding path is available but the current live semantic scoring (`matchingSemantic.ts`) uses deterministic feature-hash vectors, not neural embeddings. |
 | **Phase 3** | `minimaxClient.ts` is extended for multimodal input processing (`minimax-m2.7` already supports this natively). No new infrastructure client is needed — multimodal is an additional call pattern on the existing MiniMax client, gated by consent UI and fairness audit. |
 
 ---
@@ -574,8 +575,8 @@ Phase 2 introduces the first **genuinely predictive** signals into the matching 
 **Proposed architecture:**
 
 ```typescript
-// New file: apps/server/src/ai/embeddingClient.ts (model pattern as per minimaxClient.ts)
-// Extend existing: apps/server/src/inference/hybridSemantic.ts
+// Shipped: apps/server/src/embeddingClient.ts (provider: OPENAI_API_KEY preferred / DEEPSEEK_API_KEY fallback)
+// See also: apps/server/src/inference/hybridSemantic.ts for DeepSeek-assisted semantic attribute inference
 
 export interface UserSemanticProfile {
   userId: string;
@@ -983,9 +984,9 @@ The system must not produce or surface any ranking that implies a user is "less 
 
 | Task | Prerequisite | Files Affected |
 |------|-------------|----------------|
-| Implement `embeddingClient.ts`; build user semantic profiles | Phase 1 data (500+ events) | New `apps/server/src/ai/embeddingClient.ts`, `inference/hybridSemantic.ts` |
-| Add `semanticSimilarity` as 7th pair score dimension | Embedding client live | `apps/server/src/poolMatchingService.ts` |
-| Create `archetype_pair_feedback_stats` table + calibration logic | Phase 1 feedback pipeline | `packages/shared/src/schema.ts`, `poolMatchingService.ts`, `archetypeChemistry.ts` |
+| Implement `embeddingClient.ts`; build user semantic profiles | Phase 1 data (500+ events) | ✅ `apps/server/src/embeddingClient.ts` shipped; `user_semantic_profiles` schema present |
+| Add `semanticSimilarity` as 7th pair score dimension | Embedding client live | ✅ `apps/server/src/matchingSemantic.ts` shipped; feature-flagged via `ENABLE_SEMANTIC_SIMILARITY` |
+| Create `archetype_pair_feedback_stats` table + calibration logic | Phase 1 feedback pipeline | ✅ `archetypeChemistryCalibration.ts` shipped; `event_group_outcomes` feeds calibration |
 | Add group role balance scoring to `calculateGroupDiversity()` | None | `apps/server/src/poolMatchingService.ts` |
 | Train first lightweight predictive compatibility model | 500+ labeled outcomes | New `apps/server/src/models/compatibilityModel/` directory |
 | Implement confidence-aware reranking in `matchEventPool()` | Trained model | `apps/server/src/poolMatchingService.ts` |
@@ -1025,7 +1026,11 @@ The system must not produce or surface any ranking that implies a user is "less 
 | `apps/server/src/dynamicWeights.ts` | Deprecated legacy tombstone for the retired gradient-descent weight update; no runtime entry points remain | 1, 2 |
 | `apps/server/src/matchingWeightsService.ts` | Primary Thompson Sampling adaptive-weight path — **implemented, not yet wired into `poolMatchingService.ts`** (used in admin evolution + `userMatchingService.ts`) | 1, 2 |
 | `apps/server/src/inference/hybridSemantic.ts` | DeepSeek-assisted semantic attribute inference (low-confidence attribute validation; not embedding similarity) | 2 |
-| **`apps/server/src/inference/llmFallbackInference.ts`** | Direct DeepSeek attribute inference — **implemented, not yet wired** (`callLLMForInference()` has no active callers; planned Phase 1 activation for low-confidence attribute inference) | 1 |
+| **`apps/server/src/inference/llmFallbackInference.ts`** | Direct DeepSeek attribute inference — shadow telemetry active (`llm_fallback_inference_*` Prometheus metrics); bounded to `career`/`expectation` low-confidence fields; `callLLMForInference()` has no live callers yet | 1 |
+| `apps/server/src/embeddingClient.ts` | Embedding API client (OpenAI preferred / DeepSeek fallback) — used by the async semantic profile pipeline (`user_semantic_profiles`); not routed through social/creative model routers | 2 |
+| `apps/server/src/matchingSemantic.ts` | Feature-flagged 7th pair-scoring dimension — 64-dim feature-hash vector + cosine similarity; active when `ENABLE_SEMANTIC_SIMILARITY=true` | 2 |
+| `apps/server/src/archetypeChemistryCalibration.ts` | Bounded empirical chemistry calibration (±2 pts, ≥30 samples, 0.05 dampening factor); reads from `archetype_pair_feedback_stats`; admin inspection panel available | 2 |
+| `apps/server/src/predictiveRerankingService.ts` | Shadow predictive reranking A/B experiment — shadow-only; does not affect live group ordering | 2 |
 | `apps/server/src/ai/minimaxClient.ts` | MiniMax client (`minimax-m2.7`); also used for multimodal in Phase 3 | 1, 3 |
 | `apps/server/src/ai/socialModelRouter.ts` | Routes social AI calls to MiniMax or DeepSeek based on `SOCIAL_AI_PROVIDER` env | 1, 2 |
 | `apps/server/src/ai/creativeModelRouter.ts` | Routes creative AI calls (themes, scenarios) | 1 |
