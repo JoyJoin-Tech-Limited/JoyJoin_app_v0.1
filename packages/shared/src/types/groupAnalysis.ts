@@ -16,7 +16,7 @@
  *   import type { GroupAnalysisResponse } from '@joyjoin/shared/types/groupAnalysis';
  */
 
-import type { AIProvider } from './aiMeta';
+import type { AIProvider, AIResponseMeta } from './aiMeta';
 
 /**
  * AI-generated explanation for a single user pair within a group.
@@ -160,4 +160,17 @@ export interface GroupAnalysisResponse {
    * Mirrors AIResponseMeta.fallbackUsed.
    */
   fallbackUsed: boolean;
+
+  /**
+   * Prompt/template version used for the response-level group analysis flow.
+   * Mirrors AIResponseMeta.promptVersion.
+   */
+  promptVersion?: string;
+
+  /**
+   * Normalized AI observability metadata envelope for downstream ops tooling.
+   * Duplicates the inline fields above for backward compatibility with
+   * existing clients that already read top-level metadata fields.
+   */
+  meta?: AIResponseMeta;
 }

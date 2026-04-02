@@ -16,6 +16,7 @@ import {
   generateRecapSummary,
   generatePersonalityDiceChallenges,
 } from '../socialIcebreakerAIService';
+import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
   cleanupPhaseStateForNextPhase,
   ensureSessionEnabledPhases,
@@ -300,19 +301,20 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   }
 
   try {
-    const topics = await generateWarmupTopics({
+    const topicResult = await generateWarmupTopics({
       mood,
       eventType,
       participantCount: state.playerCount || participantCount,
       avoidTopics,
     });
 
-    state.warmupTopics = topics;
+    state.warmupTopics = topicResult.data;
+    state.warmupTopicsMeta = topicResult.meta;
     state.selectedMood = mood;
     state.currentTopicIndex = 0;
     await updateSession(socialSessionId, state);
 
-    return res.json({ topics });
+    return res.json({ topics: topicResult.data, meta: topicResult.meta });
   } catch (error) {
     console.error('[SocialIcebreaker] topics error:', error);
     return res.status(500).json({ error: 'Failed to generate topics' });
@@ -356,16 +358,19 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   await updateSession(socialSessionId, state);
 
   let content: any = null;
+  let meta: AIResponseMeta | undefined;
   if (effectiveNextPhase === 'micro_challenge') {
     try {
-      const challenges = await generateMicroChallenges({
+      const challengeResult = await generateMicroChallenges({
         eventType: state.eventType || '活动',
         participantCount: state.playerCount,
       });
-      state.currentChallenge = challenges[0];
+      state.currentChallenge = challengeResult.data[0];
+      state.currentChallengeMeta = challengeResult.meta;
       state.challengeCompletedBy = [];
       await updateSession(socialSessionId, state);
       content = { challenge: state.currentChallenge };
+      meta = challengeResult.meta;
     } catch {
       // fallback silently handled in AI service
     }
@@ -380,6 +385,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     nextPhase: effectiveNextPhase,
     content,
     xiaoYueComment: comment,
+    meta,
     state: sanitizeStateForClient(state),
   });
 });
@@ -480,7 +486,7 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
   }
 
   try {
-    const statements = await generateLieDetectiveStatements({
+    const statementResult = await generateLieDetectiveStatements({
       userId,
       displayName,
       archetype,
@@ -488,12 +494,12 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     });
 
     // Persist server-only truth data (isLie) in the separate lie-truths table.
-    await setLieTruths(socialSessionId, userId, statements);
+    await setLieTruths(socialSessionId, userId, statementResult.data);
 
     // Store sanitized statements (no isLie) in public session state.
     const players: LieDetectivePlayer[] = state.lieDetectivePlayers || [];
     const existingPlayer = players.findIndex((p: LieDetectivePlayer) => p.userId === userId);
-    const sanitizedStatements = statements.map(s => ({ index: s.index, text: s.text }));
+    const sanitizedStatements = statementResult.data.map(s => ({ index: s.index, text: s.text }));
 
     if (existingPlayer >= 0) {
       players[existingPlayer].statements = sanitizedStatements;
@@ -508,7 +514,7 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     state.votes = state.votes || [];
     await updateSession(socialSessionId, state);
 
-    return res.json({ statements: sanitizedStatements });
+    return res.json({ statements: sanitizedStatements, meta: statementResult.meta });
   } catch (error) {
     console.error('[SocialIcebreaker] lie-detective/generate error:', error);
     return res.status(500).json({ error: 'Failed to generate statements' });
@@ -596,17 +602,20 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 
   // Idempotent retry: if challenges already exist, return them instead of regenerating
   if ((state.personalityDiceChallenges || []).length > 0) {
-    return res.json({ challenges: state.personalityDiceChallenges });
+    const cachedMeta = state.personalityDiceChallengesMeta
+      ?? buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-personality-dice-v1');
+    return res.json({ challenges: state.personalityDiceChallenges, meta: cachedMeta });
   }
 
   try {
-    const challenges = await generatePersonalityDiceChallenges(participants || []);
-    state.personalityDiceChallenges = challenges;
+    const challengeResult = await generatePersonalityDiceChallenges(participants || []);
+    state.personalityDiceChallenges = challengeResult.data;
+    state.personalityDiceChallengesMeta = challengeResult.meta;
     state.currentDicePlayerIndex = 0;
     state.diceCompletedBy = [];
     await updateSession(socialSessionId, state);
 
-    return res.json({ challenges });
+    return res.json({ challenges: challengeResult.data, meta: challengeResult.meta });
   } catch (error) {
     console.error('[SocialIcebreaker] personality-dice/generate error:', error);
     return res.status(500).json({ error: 'Failed to generate dice challenges' });
@@ -731,14 +740,14 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
 
   try {
     const players = state.lieDetectivePlayers || [];
-    const summary = await generateRecapSummary({
+    const summaryResult = await generateRecapSummary({
       participants: players.map((p: LieDetectivePlayer) => ({ displayName: p.displayName })),
       topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
       challengesCompleted: state.challengeCompletedBy?.length || 0,
       durationMinutes,
     });
 
-    return res.json({ summary, medals, state: sanitizeStateForClient(state) });
+    return res.json({ summary: summaryResult.data, meta: summaryResult.meta, medals, state: sanitizeStateForClient(state) });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to generate recap' });
   }

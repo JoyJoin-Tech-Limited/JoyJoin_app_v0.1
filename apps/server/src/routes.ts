@@ -8150,6 +8150,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         generatedAt: analysis.generatedAt ?? new Date().toISOString(),
         provider: analysis.provider ?? null,
         fallbackUsed: analysis.fallbackUsed ?? false,
+        promptVersion: analysis.promptVersion,
+        meta: {
+          generatedAt: analysis.generatedAt ?? new Date().toISOString(),
+          fromCache: analysis.fromCache ?? false,
+          provider: analysis.provider ?? null,
+          fallbackUsed: analysis.fallbackUsed ?? false,
+          promptVersion: analysis.promptVersion,
+        },
         // Convenience field: pairs involving the authenticated viewer
         myPairs: getPairExplanationForUser(analysis, userId).map(mapPe),
         // Post-match theme layer
@@ -9950,6 +9958,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         groupDynamics: groupAnalysis.groupDynamics,
         explanations: groupAnalysis.pairExplanations,
         iceBreakers: groupAnalysis.iceBreakers,
+        meta: {
+          generatedAt: groupAnalysis.generatedAt,
+          fromCache: groupAnalysis.fromCache,
+          provider: groupAnalysis.provider,
+          fallbackUsed: groupAnalysis.fallbackUsed,
+          promptVersion: groupAnalysis.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Match Explanations] Error:', error);
@@ -10051,6 +10066,14 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         iceBreakers: iceBreakerResult.iceBreakers,
         provider: iceBreakerResult.providerUsed,
         fallbackUsed: iceBreakerResult.fallbackUsed,
+        promptVersion: iceBreakerResult.promptVersion,
+        meta: {
+          generatedAt: new Date().toISOString(),
+          fromCache: false,
+          provider: iceBreakerResult.providerUsed,
+          fallbackUsed: iceBreakerResult.fallbackUsed,
+          promptVersion: iceBreakerResult.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Ice-Breakers] Error:', error);
@@ -10147,6 +10170,13 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         explanations: groupAnalysis.pairExplanations,
         iceBreakers: groupAnalysis.iceBreakers,
         existingExplanation: event.matchExplanation,
+        meta: {
+          generatedAt: groupAnalysis.generatedAt,
+          fromCache: groupAnalysis.fromCache,
+          provider: groupAnalysis.provider,
+          fallbackUsed: groupAnalysis.fallbackUsed,
+          promptVersion: groupAnalysis.promptVersion,
+        },
       });
     } catch (error: any) {
       console.error('[Match Explanations] Error:', error);
