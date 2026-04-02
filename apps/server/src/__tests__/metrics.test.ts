@@ -186,12 +186,14 @@ describe('metricsMiddleware', () => {
 
   it('exposes runtime llm fallback counters for ops visibility', async () => {
     recordRuntimeLLMFallbackMetric('occupation', 'applied');
-    recordRuntimeLLMFallbackMetric('occupation', 'rejected_low_confidence');
+    recordRuntimeLLMFallbackMetric('surpriseField', 'rejected_unapproved');
 
     const text = await getMetricsText();
     expect(text).toContain('inference_runtime_llm_fallback_total');
     expect(text).toContain('field="occupation"');
+    expect(text).toContain('field="__unapproved__"');
     expect(text).toContain('outcome="applied"');
-    expect(text).toContain('outcome="rejected_low_confidence"');
+    expect(text).toContain('outcome="rejected_unapproved"');
+    expect(text).not.toContain('field="surpriseField"');
   });
 });

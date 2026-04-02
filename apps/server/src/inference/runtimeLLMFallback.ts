@@ -62,13 +62,18 @@ export function getRuntimeLLMFallbackConfig(
   overrides: Partial<InferenceEngineConfig> = {},
 ): RuntimeLLMFallbackConfig {
   const enabledFromEnv = process.env.INFERENCE_RUNTIME_LLM_FALLBACK_ENABLED;
+  const normalizedEnabledFromEnv = enabledFromEnv === undefined
+    ? undefined
+    : enabledFromEnv.trim().toLowerCase();
   const minConfidenceFromEnv = process.env.INFERENCE_RUNTIME_LLM_FALLBACK_MIN_CONFIDENCE;
   const approvedFieldsFromEnv = process.env.INFERENCE_RUNTIME_LLM_FALLBACK_APPROVED_FIELDS;
   const promptVersion = process.env.INFERENCE_RUNTIME_LLM_FALLBACK_PROMPT_VERSION?.trim()
     || 'runtime_llm_fallback_v1';
 
   const enabled = overrides.enableRuntimeLLMFallback
-    ?? (enabledFromEnv === undefined ? true : !['0', 'false'].includes(enabledFromEnv.toLowerCase()));
+    ?? (normalizedEnabledFromEnv === undefined
+      ? true
+      : !['0', 'false'].includes(normalizedEnabledFromEnv));
   const minConfidence = clampConfidence(
     overrides.runtimeLLMFallbackMinConfidence
       ?? (minConfidenceFromEnv ? Number(minConfidenceFromEnv) : 0.75),
