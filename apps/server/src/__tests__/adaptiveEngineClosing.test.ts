@@ -278,59 +278,59 @@ describe('skip-alternative bypass regression – adaptive skip cannot surface a 
     let state = initializeEngineState();
     const anchors = getAnchorQuestions();
 
-    // Answer all anchors to get past the anchor phase.
+    // Answer all anchors to advance past the anchor phase.
     for (const anchor of anchors) {
       state = processAnswer(state, anchor, anchor.options[0].value);
     }
 
-    // Exhaust a few adaptive questions without terminating.
-    for (let i = 0; i < 3 && !shouldTerminate(state); i++) {
-      const next = selectNextQuestion(state);
-      if (!next) break;
-      state = processAnswer(state, next, next.options[0].value);
-    }
+    // After only anchor questions the adaptive phase must still be active
+    // (confidence cannot reach the termination threshold in 8 questions).
+    expect(shouldTerminate(state)).toBe(false);
 
-    if (shouldTerminate(state)) {
-      // Engine terminated before we could test – skip the check.
-      return;
-    }
-
-    // Skip the current question and verify the alternative is not a closing question.
+    // Get the next adaptive question and skip it.  The alternative returned
+    // must not be a universal closing question.
     const current = selectNextQuestion(state);
-    if (!current) return;
+    expect(current).not.toBeNull();
+    expect(UNIVERSAL_CLOSING_QUESTION_IDS).not.toContain(current!.id);
 
-    const result = skipQuestion(state, current.id);
-    if (!result || !result.newQuestion) return;
+    const result = skipQuestion(state, current!.id);
+    expect(result).not.toBeNull();
 
-    expect(UNIVERSAL_CLOSING_QUESTION_IDS).not.toContain(result.newQuestion.id);
+    if (result!.newQuestion) {
+      expect(UNIVERSAL_CLOSING_QUESTION_IDS).not.toContain(result!.newQuestion.id);
+    }
   });
 });
 
 describe('stable option order regression – closing question options not randomized', () => {
   it('closing question returned via skipQuestion fallback has native option order', () => {
-    // Build a state where adaptive has terminated, then simulate a skip that
-    // falls through to selectNextQuestion (closing phase fallback).
+    // Build a terminated adaptive state, then exhaust all non-closing questions
+    // so that selectAlternativeQuestion is forced to fall back to selectNextQuestion
+    // and must return a closing question.
     let state = buildTerminatedAdaptiveState();
+
+    // Mark every non-closing question as answered.
+    const exhaustedIds = new Set(state.answeredQuestionIds);
+    for (const q of questionsV4) {
+      if (!UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id)) {
+        exhaustedIds.add(q.id);
+      }
+    }
+    state = { ...state, answeredQuestionIds: exhaustedIds };
 
     const sliderSource = questionsV4.find(q => q.id === 'Q_PLAYFUL_SLIDER')!;
     const nativeOptionValues = sliderSource.options.map(o => o.value);
 
-    // Find a non-closing question available for skipping to trigger the fallback.
-    const candidate = questionsV4.find(
-      q => !UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id) &&
-           !state.answeredQuestionIds.has(q.id) &&
-           !state.skippedQuestionIds.has(q.id)
-    );
-    if (!candidate) return; // no question to skip – skip the regression check
+    // skipQuestion with a fake ID to trigger the selectAlternativeQuestion
+    // → selectNextQuestion fallback path.  All non-closing questions are
+    // exhausted so the closing question is the only possible return value.
+    const result = skipQuestion(state, 'fake-id-for-fallback-trigger');
+    expect(result).not.toBeNull();
+    expect(result!.newQuestion).not.toBeNull();
+    expect(result!.newQuestion!.id).toBe('Q_PLAYFUL_SLIDER');
 
-    const result = skipQuestion(state, candidate.id);
-    if (!result || !result.newQuestion) return;
-
-    // If the returned question is a closing question, its options must be in
-    // the same order as defined in questionsV4 (not randomized).
-    if (UNIVERSAL_CLOSING_QUESTION_IDS.includes(result.newQuestion.id)) {
-      const returnedOptionValues = result.newQuestion.options.map(o => o.value);
-      expect(returnedOptionValues).toEqual(nativeOptionValues);
-    }
+    // Options must be in native order (not re-randomized by skipQuestion).
+    const returnedOptionValues = result!.newQuestion!.options.map(o => o.value);
+    expect(returnedOptionValues).toEqual(nativeOptionValues);
   });
 });
