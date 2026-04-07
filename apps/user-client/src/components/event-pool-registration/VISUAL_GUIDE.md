@@ -1,5 +1,7 @@
 # Event Pool Registration - Component Showcase
 
+> **Deprecated snapshot (not canonical).** Visual details in this file predate the current blind-pool entry and reveal flow. Refer to `DEVELOPER_QUICK_REFERENCE.md` and `docs/ui-matching-reveal-improvements.md` for active behavior.
+
 ## 🎨 Visual Component Guide
 
 ### Step 1: Budget Selection

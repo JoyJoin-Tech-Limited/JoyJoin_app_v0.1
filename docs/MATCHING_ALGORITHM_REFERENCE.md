@@ -70,7 +70,7 @@ User completes personality quiz
 | `X` | 外向性 (Extraversion) | Sociability, energy, talkativeness |
 | `P` | 耐心 (Patience) | Tolerance, deliberateness, steady pace |
 
-All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment (8–18 questions: 8–16 adaptive + 2 interactive closing questions).
+All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment. Total question count is config-driven: the active standard-question range comes from `AssessmentConfig`, and 2 interactive closing questions are then appended before scoring final secondary signals.
 
 ### 2.2 The 12 Social Archetypes
 

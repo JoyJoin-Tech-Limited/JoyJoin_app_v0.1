@@ -1,5 +1,7 @@
 # Event Pool Registration - Implementation Complete ✅
 
+> **Deprecated duplicate (not canonical).** This admin-client markdown should not be used as a source of truth for the active blind-pool flow. Use the user-client implementation plus the canonical docs in `DEVELOPER_QUICK_REFERENCE.md` and `docs/matching-reveal-implementation-summary.md`.
+
 ## 📊 Implementation Statistics
 
 ### Files Created: 21

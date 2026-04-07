@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-03-26  
+**Last Updated:** 2026-04-07  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -26,7 +26,7 @@
 The JoyJoin Personality Test System uses a scientifically calibrated adaptive assessment to match users to 1 of 12 carefully designed personality archetypes. The system consists of:
 
 - **60-Question Bank**: Divided into 3 levels (L1 Anchor, L2 Adaptive, L3 Disambiguation) plus 2 interactive closing questions
-- **V4 Adaptive Engine**: Dynamically selects 8-16 standard questions based on real-time confidence tracking, followed by 2 fixed interactive closing questions (`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI`)
+- **V4 Adaptive Engine**: Uses a config-driven standard-question range (`minQuestions` / `softMaxQuestions` / `hardMaxQuestions`) based on real-time confidence tracking, followed by 2 fixed interactive closing questions (`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI`)
 - **V2 Matcher Algorithm**: Weighted Manhattan distance with asymmetric penalties and VETO filters
 - **6-Trait Model (ACOEXP)**: Affinity, Conscientiousness, Emotional Stability, Openness, Extraversion, Positivity
 - **Secondary Data Pipeline**: A secondary differentiator (`conflictPosture`) captured through the playful closing questions and fed to the V2 Matcher tiebreaker (with `motivationDirection` reserved for future use)
@@ -38,7 +38,7 @@ The JoyJoin Personality Test System uses a scientifically calibrated adaptive as
 - Confusion pair disambiguation
 - Two interactive closing questions for richer secondary signals
 - Decisive match detection (confidence ≥ 70%)
-- **Back button hidden** in `PersonalityTestPageV4` — users cannot navigate back to the landing page mid-test
+- **Back button available** in the active `PersonalityTestPage` — it rewinds through local answered-question history and only exits to the landing page when there is no earlier answer to review
 
 **Supported Question Types:**
 
@@ -125,7 +125,7 @@ The system measures 6 core personality traits, each scored on a 0-100 scale:
 
 **Trait Scoring:**
 - Each question option has a trait score vector (e.g., `{ A: 0, C: 2, E: 1, O: 0, X: -1, P: 0 }`)
-- Scores accumulate across 8-16 questions
+- Scores accumulate across the active standard-question range before the 2 fixed closing questions
 - Final scores normalized to 0-100 scale
 - Z-score standardization: `z = (raw - 50) / 15` (μ=50, σ=15)
 
@@ -373,7 +373,7 @@ The adaptive phase stops when **either** condition is met:
 1. **Confidence threshold met**: All 6 traits have confidence ≥ 0.7
 2. **Hard limit reached**: 16 standard questions answered
 
-After the adaptive phase stops, the two closing questions (`Q_PLAYFUL_SLIDER` then `Q_PLAYFUL_EMOJI`) are always shown before the final result is calculated. Total possible session length: **8–18 questions** (8–16 adaptive + 2 closing).
+After the adaptive phase stops, the two closing questions (`Q_PLAYFUL_SLIDER` then `Q_PLAYFUL_EMOJI`) are always shown before the final result is calculated. Total session length equals the active standard-question config plus these 2 closing questions — currently **12–18 questions** under `DEFAULT_ASSESSMENT_CONFIG` or **14–22 questions** under `V2_ASSESSMENT_CONFIG`.
 
 **Typical Session Lengths:**
 - **Decisive users** (strong, consistent responses): 10–12 questions (8–10 adaptive + 2 closing)
@@ -392,7 +392,7 @@ This overlay uses a glass-morphism dark backdrop with a subtle purple ambient gl
 
 ### Back Button
 
-The back button is **hidden** (`showBack={false}`) throughout `PersonalityTestPageV4`. Users cannot navigate back to the landing page mid-test. This prevents the previous regression where the back button routed users away from the test unexpectedly.
+The active `PersonalityTestPage` keeps the back button visible. Back navigation first moves through the local answered-question history for read-only review; only when no earlier answer exists does it exit back to `/`.
 
 ---
 
@@ -788,7 +788,7 @@ positivity_score INTEGER
   question: Question | null; // null if assessment complete
   progress: {
     current: number;
-    total: number; // estimated (8-16)
+    total: number; // estimated from the active assessment config
     phase: 'anchor' | 'adaptive' | 'disambiguation';
   };
 }
@@ -1014,16 +1014,16 @@ for (const pair of confusionPairs) {
 ### Manual Testing Checklist
 
 **UI/UX Validation:**
-- [ ] Progress bar updates correctly (1/8 → 1/16, then shows closing questions)
+- [ ] Progress bar updates correctly across the config-driven range, then shows the 2 closing questions
 - [ ] Slider question renders with draggable dial (not radio buttons)
 - [ ] Emoji tap question renders with tap-selectable emoji reactions
 - [ ] Premium calibration overlay (`TransitionOverlay`) shows at adaptive phase transition
-- [ ] Back button is **not visible** during the test (no navigation back to landing)
+- [ ] Back button rewinds through answered-question history and only exits to landing at the start
 - [ ] Radar chart displays all 6 traits (ACOEXP)
 - [ ] Archetype icons match canonical list (🐕, 🐓, etc.)
 - [ ] Results show correct archetype name (开心柯基, not 火花塞)
 - [ ] Decisive match badge shows when confidence ≥ 70%
-- [ ] Question flow adapts (may end at 10–12 for decisive users)
+- [ ] Question flow adapts according to the active config and confidence thresholds (including the fixed 2-question closing sequence)
 - [ ] No references to deprecated archetypes (火花塞, 探索者, etc.)
 
 **Data Validation:**
@@ -1075,12 +1075,12 @@ for (const pair of confusionPairs) {
 **V4 System (Current):**
 - 60-question standard bank (3 levels) + 2 interactive closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`)
 - 12 archetypes (canonical names)
-- Adaptive 8–18 questions total
+- Adaptive total is config-driven: current production configs yield 12–18 or 14–22 questions including the 2 closing questions
 - V2 Matcher with soul trait weighting
 - Asymmetric penalties and VETO filters
 - Secondary data (`conflictPosture`) captured via `Q_PLAYFUL_EMOJI` and fed to tiebreaker
 - Three question types: `choice`, `slider`, `emoji_tap`
-- Back button hidden (no mid-test navigation to landing page)
+- Back button rewinds through local answered-question history before exiting to landing
 - Premium calibration overlay at adaptive phase transition
 
 ---

@@ -36,15 +36,15 @@ All full-screen matching-status pages share a single layout shell that provides:
 | `MatchingWaitingScreen` | Premium dark-mode blind-pool waiting (fill states: waiting / can_form / full) | `matching/waiting/matching-waiting-hero.svg` |
 | `NoMatchScreen` | No match found for this pool round | `matching/no-match/no-match-hero.svg` |
 
-### Join-Sheet Interstitial Screens
+### Join-Sheet / Pre-Entry Interstitial Screens
 
-These are shown inside `JoinEventPoolSheet.tsx`, not as standalone full-screen pages:
+These are shown either inside `JoinEventPoolSheet.tsx` or as a pre-entry gate on `DiscoverPage`, not as standalone full-screen pages:
 
 | Component | State | Asset |
 |-----------|-------|-------|
 | `JoinErrorScreen` | Registration / join error | `matching/join-error/join-error-hero.svg` |
 | `ExtendedDataEmptyScreen` | Profile data insufficient for matching | `matching/extended-data-empty/extended-data-empty-hero.svg` |
-| `TestIncompleteScreen` | Personality test not completed | `matching/test-incomplete/…` |
+| `TestIncompleteScreen` | Personality test incomplete pre-entry gate on `DiscoverPage` | `matching/test-incomplete/…` |
 
 ### Post-Match Reveal Components
 
