@@ -28,6 +28,10 @@ import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import MatchSuccessSheet from "@/components/MatchSuccessSheet";
 import MatchingWaitingScreen from "@/components/MatchingWaitingScreen";
+import NoMatchScreen from "@/components/matching/NoMatchScreen";
+import JoinEventPoolSheet from "@/components/event-pool-registration/JoinEventPoolSheet";
+import type { EventPreferences } from "@/hooks/useEventPoolRegistration";
+import type { NoMatchRecommendation } from "@/components/matching/NoMatchRecommendations";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
 import { calculateAge } from "@/lib/userFieldMappings";
@@ -42,6 +46,9 @@ interface PoolRegistration {
   poolId: string;
   matchStatus: "pending" | "matched" | "completed";
   assignedGroupId: string | null;
+  budgetRange?: string[] | null;
+  preferredLanguages?: string[] | null;
+  eventIntent?: string[] | null;
   poolTitle: string;
   poolEventType: string;
   poolCity: string;
@@ -94,6 +101,17 @@ interface PoolStats {
   minGroupSize: number;
   maxGroupSize: number;
   progress: number;
+  archetypeDistribution?: Record<string, number>;
+}
+
+interface RecommendedPool {
+  id: string;
+  title: string;
+  eventType: "饭局" | "酒局" | "其他";
+  city: "香港" | "深圳";
+  district: string;
+  dateTime: string;
+  registrationCount: number;
 }
 
 export default function MatchingStatusPage() {
@@ -118,6 +136,9 @@ export default function MatchingStatusPage() {
   const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
+  const [livePoolArchetypes, setLivePoolArchetypes] = useState<string[]>([]);
+  const [liveArchetypeDistribution, setLiveArchetypeDistribution] = useState<Record<string, number>>({});
+  const [recoverJoinPool, setRecoverJoinPool] = useState<RecommendedPool | null>(null);
 
   // Refs for timeout cleanup
   const matchTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -130,6 +151,15 @@ export default function MatchingStatusPage() {
   });
 
   const registration = poolRegistrations?.find(r => r.id === registrationId);
+  const rejoinPreferences = useMemo<Partial<EventPreferences>>(
+    () => ({
+      eventType: registration?.poolEventType === "酒局" ? "酒局" : "饭局",
+      budget: registration?.budgetRange?.[0] ?? "",
+      socialGoals: registration?.eventIntent ?? [],
+      languages: registration?.preferredLanguages ?? [],
+    }),
+    [registration],
+  );
 
   // Fetch pool stats for progress
   const { data: poolStats } = useQuery<PoolStats>({
@@ -140,6 +170,33 @@ export default function MatchingStatusPage() {
       const msUntilEvent = new Date(registration.poolDateTime).getTime() - Date.now();
       return msUntilEvent > 0 && msUntilEvent <= 5 * 60 * 1000 ? 1_000 : 30_000;
     })(),
+  });
+
+  const { data: recommendedPools = [] } = useQuery<RecommendedPool[]>({
+    queryKey: ["/api/event-pools", registration?.poolCity, "recover-options"],
+    enabled: !!registration?.poolCity,
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/event-pools?city=${encodeURIComponent(registration?.poolCity ?? "")}`,
+        { credentials: "include" },
+      );
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${await response.text()}`);
+      }
+      return response.json();
+    },
+    select: (pools) =>
+      pools
+        .filter((pool) => pool.id !== registration?.poolId)
+        .filter((pool) => pool.eventType === registration?.poolEventType)
+        .sort((a, b) => {
+          const districtBoost =
+            Number(b.district === registration?.poolDistrict) -
+            Number(a.district === registration?.poolDistrict);
+          if (districtBoost !== 0) return districtBoost;
+          return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+        })
+        .slice(0, 3),
   });
 
   // Fetch group members when matched
@@ -170,6 +227,19 @@ export default function MatchingStatusPage() {
   const userArchetypeAvatar = user?.archetype 
     ? getArchetypeAvatar(user.archetype) 
     : null;
+  const userArchetype = user?.archetype ?? null;
+  const noMatchRecommendations = useMemo<NoMatchRecommendation[]>(
+    () =>
+      recommendedPools.map((pool) => ({
+        id: pool.id,
+        title: pool.title,
+        eventType: pool.eventType === "酒局" ? "酒局" : "饭局",
+        district: `${pool.city} · ${pool.district}`,
+        dateTime: pool.dateTime,
+        registrationCount: pool.registrationCount,
+      })),
+    [recommendedPools],
+  );
 
   // Build UserContext for spark-prediction engine in MatchSuccessSheet
   const currentUserContext = useMemo<UserContext | undefined>(() => {
@@ -187,6 +257,16 @@ export default function MatchingStatusPage() {
     if (user.hometownAffinityOptin != null) ctx.hometownAffinityOptin = user.hometownAffinityOptin;
     return ctx;
   }, [user]);
+
+  useEffect(() => {
+    if (!poolStats?.archetypeDistribution) return;
+    setLiveArchetypeDistribution(poolStats.archetypeDistribution);
+    setLivePoolArchetypes(
+      Object.entries(poolStats.archetypeDistribution).flatMap(([archetype, count]) =>
+        Array.from({ length: count }, () => archetype),
+      ),
+    );
+  }, [poolStats?.archetypeDistribution]);
 
   // WebSocket subscriptions
   useEffect(() => {
@@ -253,10 +333,21 @@ export default function MatchingStatusPage() {
 
     const unsubscribeRegistrationAdded = subscribe('POOL_REGISTRATION_ADDED', async (message) => {
       const data = message.data as any;
+
+      if (!registration || data.poolId !== registration.poolId) {
+        return;
+      }
       
       // Show "+1 新朋友加入！" micro-interaction
       setNewMemberJoined(true);
       setNewMemberArchetype(data.archetype || null);
+      if (data.archetype) {
+        setLivePoolArchetypes((current) => [...current, data.archetype]);
+        setLiveArchetypeDistribution((current) => ({
+          ...current,
+          [data.archetype]: (current[data.archetype] ?? 0) + 1,
+        }));
+      }
       
       // Haptic feedback
       if (navigator.vibrate) {
@@ -475,23 +566,46 @@ export default function MatchingStatusPage() {
 
   if (countdown.isExpired && registration.matchStatus === "pending") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
-              <XCircle className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-bold">本次活动未能成局</h2>
-            <p className="text-sm text-muted-foreground">
-              很遗憾，本次活动未达到最少人数要求。报名费用将原路退回。
-            </p>
-            <p className="text-sm font-medium">下次再来 💜</p>
-            <Button onClick={() => setLocation("/")} className="w-full">
-              探索更多活动
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        <NoMatchScreen
+          poolTitle={registration.poolTitle}
+          onNotify={() =>
+            toast({
+              title: "安排上了",
+              description: "有相似新局时，我们会优先提醒你。",
+            })
+          }
+          onBrowse={() => setLocation("/")}
+          onBack={() => setLocation("/events")}
+          recommendations={noMatchRecommendations}
+          originalBudget={registration.budgetRange?.[0] ?? null}
+          onJoinRecommendation={(poolId) => {
+            const nextPool = recommendedPools.find((pool) => pool.id === poolId) ?? null;
+            setRecoverJoinPool(nextPool);
+          }}
+        />
+
+        {recoverJoinPool && (
+          <JoinEventPoolSheet
+            open={Boolean(recoverJoinPool)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setRecoverJoinPool(null);
+              }
+            }}
+            poolData={{
+              poolId: recoverJoinPool.id,
+              title: recoverJoinPool.title,
+              date: formatDateInHongKong(recoverJoinPool.dateTime, "full"),
+              area: recoverJoinPool.district,
+              city: recoverJoinPool.city,
+              eventType: recoverJoinPool.eventType === "酒局" ? "酒局" : "饭局",
+              registrationCount: recoverJoinPool.registrationCount,
+            }}
+            initialPreferences={rejoinPreferences}
+          />
+        )}
+      </>
     );
   }
 
@@ -516,6 +630,9 @@ export default function MatchingStatusPage() {
           onBack={() => setLocation("/events")}
           newMemberJoined={newMemberJoined}
           newMemberArchetype={newMemberArchetype}
+          userArchetype={userArchetype}
+          archetypes={livePoolArchetypes}
+          archetypeDistribution={liveArchetypeDistribution}
         />
 
         {/* Celebration overlays still needed when a match arrives while waiting */}

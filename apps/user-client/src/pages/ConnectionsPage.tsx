@@ -3,6 +3,7 @@ import BottomNav from "@/components/BottomNav";
 import { Users, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { convertToHongKongTime } from "@/lib/hongKongTime";
+import { archetypeAvatars } from "@/lib/archetypeAvatars";
+import ConnectionRevealOverlay from "@/components/connections/ConnectionRevealOverlay";
 
 interface MyConnection {
   id: string;
@@ -25,6 +28,8 @@ interface MyConnection {
   nextStepPreference?: string | null;
   createdAt: string;
 }
+
+const CONNECTIONS_SEEN_AT_KEY = "joyjoin_connections_last_seen_at";
 
 const CONNECTION_REASON_OPTIONS = [
   "交流很自然",
@@ -67,7 +72,10 @@ function formatEventLabel(eventType?: string | null, eventDate?: string | null):
  * stood out and how you'd like to continue it.
  */
 export default function ConnectionsPage() {
+  const { user } = useAuth();
   const markAsRead = useMarkNotificationsAsRead();
+  const [focusConnectionId, setFocusConnectionId] = useState<string | null>(null);
+  const [showReveal, setShowReveal] = useState(false);
 
   useEffect(() => {
     markAsRead.mutate('chat');
@@ -76,6 +84,24 @@ export default function ConnectionsPage() {
   const { data: myConnections = [], isLoading } = useQuery<MyConnection[]>({
     queryKey: ["/api/my-connections"],
   });
+  const lastSeenAt =
+    typeof window !== "undefined" ? localStorage.getItem(CONNECTIONS_SEEN_AT_KEY) : null;
+  const newConnections = myConnections.filter((connection) =>
+    lastSeenAt ? new Date(connection.createdAt).getTime() > new Date(lastSeenAt).getTime() : false,
+  );
+
+  useEffect(() => {
+    if (newConnections.length > 0) {
+      setShowReveal(true);
+    }
+  }, [newConnections.length]);
+
+  const markConnectionsSeen = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CONNECTIONS_SEEN_AT_KEY, new Date().toISOString());
+    }
+    setShowReveal(false);
+  };
 
   if (isLoading) {
     return (
@@ -114,6 +140,7 @@ export default function ConnectionsPage() {
             <ConnectionCard
               key={conn.id}
               connection={conn}
+              initiallyExpanded={focusConnectionId === conn.id}
               onFeedbackSaved={() =>
                 queryClient.invalidateQueries({ queryKey: ["/api/my-connections"] })
               }
@@ -121,6 +148,23 @@ export default function ConnectionsPage() {
           ))}
         </div>
       )}
+
+      <ConnectionRevealOverlay
+        open={showReveal && newConnections.length > 0}
+        currentUserArchetype={user?.archetype ?? null}
+        items={newConnections.map((connection) => ({
+          id: connection.id,
+          peerDisplayName: connection.peerDisplayName,
+          peerArchetype: connection.peerArchetype,
+          peerWechatId: connection.peerWechatId,
+          connectionReasons: connection.connectionReasons,
+        }))}
+        onClose={markConnectionsSeen}
+        onFocusConnection={(connectionId) => {
+          setFocusConnectionId(connectionId);
+          markConnectionsSeen();
+        }}
+      />
 
       <BottomNav />
     </div>
@@ -153,13 +197,21 @@ function parseSavedReasons(saved: string[] | null | undefined): {
 
 function ConnectionCard({
   connection,
+  initiallyExpanded = false,
   onFeedbackSaved,
 }: {
   connection: MyConnection;
+  initiallyExpanded?: boolean;
   onFeedbackSaved: () => void;
 }) {
   const { toast } = useToast();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
+
+  useEffect(() => {
+    if (initiallyExpanded) {
+      setExpanded(true);
+    }
+  }, [initiallyExpanded]);
 
   const { canonicalReasons: initReasons, otherText: initOtherText } =
     parseSavedReasons(connection.connectionReasons);
@@ -225,29 +277,40 @@ function ConnectionCard({
     !!connection.nextStepPreference;
 
   const eventLabel = formatEventLabel(connection.eventType, connection.eventDate);
+  const avatar = connection.peerArchetype ? archetypeAvatars[connection.peerArchetype] : null;
 
   return (
     <motion.div
       layout
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+      className="overflow-hidden rounded-[24px] border border-gray-100 bg-white shadow-sm"
     >
       {/* Card header */}
       <div className="p-4 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-xl flex-shrink-0">
-          {connection.peerArchetype ? "✨" : <Users className="h-6 w-6 text-primary/40" />}
+        <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-violet-500/10">
+          {avatar ? (
+            <img
+              src={avatar}
+              alt={connection.peerArchetype ?? connection.peerDisplayName}
+              className="h-11 w-11 rounded-full object-contain"
+            />
+          ) : (
+            <Users className="h-6 w-6 text-primary/40" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold truncate">{connection.peerDisplayName}</p>
-          {connection.peerArchetype && (
-            <Badge variant="secondary" className="text-xs mt-0.5">
-              {connection.peerArchetype}
-            </Badge>
-          )}
-          {eventLabel && (
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              来自：{eventLabel}
-            </p>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {connection.peerArchetype && (
+              <Badge variant="secondary" className="text-xs">
+                {connection.peerArchetype}
+              </Badge>
+            )}
+            {eventLabel && (
+              <Badge variant="outline" className="text-xs">
+                {eventLabel}
+              </Badge>
+            )}
+          </div>
         </div>
         {connection.peerWechatId && (
           <Button
@@ -265,7 +328,7 @@ function ConnectionCard({
 
       {/* Saved feedback summary (collapsed) */}
       {hasSavedFeedback && !expanded && (
-        <div className="px-4 pb-3 space-y-1">
+        <div className="space-y-2 px-4 pb-3">
           {(connection.connectionReasons?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-1">
               {(() => {

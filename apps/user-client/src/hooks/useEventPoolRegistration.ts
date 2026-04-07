@@ -10,7 +10,7 @@ interface UserProfile {
   intent?: string[];
 }
 
-interface EventPreferences {
+export interface EventPreferences {
   eventType: "饭局" | "酒局";
   budget: string;
   socialGoals: string[];
@@ -29,12 +29,14 @@ interface UseEventPoolRegistrationProps {
   poolId: string;
   eventType: "饭局" | "酒局";
   onSuccess?: () => void;
+  initialPreferences?: Partial<EventPreferences>;
 }
 
 export function useEventPoolRegistration({ 
   poolId, 
   eventType,
-  onSuccess 
+  onSuccess,
+  initialPreferences,
 }: UseEventPoolRegistrationProps) {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
@@ -43,6 +45,7 @@ export function useEventPoolRegistration({
     socialGoals: [],
     districts: [],
     languages: [],
+    ...initialPreferences,
   });
   const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
   // Track whether the initial draft/pre-fill check on mount is done
@@ -95,12 +98,17 @@ export function useEventPoolRegistration({
     }
 
     // No draft: pre-fill social goals from profile intent if available
+    if (initialPreferences && Object.keys(initialPreferences).length > 0) {
+      setPreferences((prev) => ({ ...prev, ...initialPreferences, eventType }));
+      return;
+    }
+
     if (user?.intent && user.intent.length > 0) {
       setPreferences(prev => ({ ...prev, socialGoals: user.intent as string[] }));
       setIsPrefilledFromProfile(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, poolId]);
+  }, [user, poolId, initialPreferences, eventType]);
 
   // Auto-advance Step 1 → Step 2 after budget selection
   useEffect(() => {

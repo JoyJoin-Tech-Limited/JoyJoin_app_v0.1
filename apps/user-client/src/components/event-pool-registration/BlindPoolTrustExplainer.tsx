@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ChevronDown, EyeOff, Eye, Sparkles, ArrowRight, Lock } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Lock, Sparkles } from "lucide-react";
 
 interface BlindPoolTrustExplainerProps {
   poolData: {
@@ -12,14 +12,6 @@ interface BlindPoolTrustExplainerProps {
   selectedBudget?: string;
 }
 
-interface TrustPillar {
-  icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  title: string;
-  summary: string;
-  detail: string;
-}
-
 export default function BlindPoolTrustExplainer({
   poolData,
   selectedBudget,
@@ -28,160 +20,119 @@ export default function BlindPoolTrustExplainer({
   const prefersReducedMotion = useReducedMotion();
   const hasLoggedViewRef = useRef(false);
 
-  // Log "viewed" once on mount
   useEffect(() => {
-    if (!hasLoggedViewRef.current) {
-      hasLoggedViewRef.current = true;
-      console.log("[Analytics] trust_explainer_viewed", {
-        poolArea: poolData.area,
-        eventType: poolData.eventType,
-      });
-    }
-  }, [poolData.area, poolData.eventType]);
-
-  const handleToggle = () => {
-    const next = !expanded;
-    setExpanded(next);
-    console.log("[Analytics] trust_explainer_toggled", {
-      expanded: next,
+    if (hasLoggedViewRef.current) return;
+    hasLoggedViewRef.current = true;
+    console.log("[Analytics] trust_explainer_viewed", {
       poolArea: poolData.area,
+      eventType: poolData.eventType,
     });
-  };
+  }, [poolData.area, poolData.eventType]);
 
   const knownItems = [
     poolData.date,
-    poolData.city ? `${poolData.city} · ${poolData.area}` : poolData.area,
+    `${poolData.city} · ${poolData.area}`,
     poolData.eventType,
     selectedBudget ? `预算 ${selectedBudget}` : null,
   ].filter(Boolean) as string[];
 
-  const pillars: TrustPillar[] = [
-    {
-      icon: EyeOff,
-      iconBg: "from-violet-500/20 to-purple-500/20",
-      title: "暂时保密",
-      summary: "同伴身份 · 最终分组",
-      detail:
-        "具体参与者的姓名与个人资料、以及最终分组方案，会在匹配完成后才向小组成员揭晓。这是盲盒玩法的核心：让初次见面自然又有趣。",
-    },
-    {
-      icon: Eye,
-      iconBg: "from-sky-500/20 to-blue-500/20",
-      title: "已确认",
-      summary: knownItems.join(" · "),
-      detail:
-        "你现在已知晓的信息：活动时间、区域、类型和你选择的预算区间。这些都是硬条件，不会在匹配后改变。",
-    },
-    {
-      icon: Sparkles,
-      iconBg: "from-amber-500/20 to-yellow-500/20",
-      title: "智能匹配",
-      summary: "性格 · 兴趣 · 社交偏好",
-      detail:
-        "小悦会综合你的性格原型、兴趣热度和本次填写的社交偏好来计算兼容度，尽量让同桌的人有聊不完的话题——但不保证百分百契合，毕竟人生在于意外惊喜。",
-    },
-    {
-      icon: ArrowRight,
-      iconBg: "from-emerald-500/20 to-green-500/20",
-      title: "接下来",
-      summary: "等待匹配 → 组队确认 → 见面",
-      detail:
-        "提交后进入候补池，截止日期前小悦完成分组。你会收到通知，查看组员基本信息（性格原型 + 社交标签），然后就是期待见面啦！",
-    },
-    {
-      icon: Lock,
-      iconBg: "from-rose-500/20 to-pink-500/20",
-      title: "你的掌控",
-      summary: "可修改偏好 · 隐私保护",
-      detail:
-        "匹配完成前，你可以回到报名页修改本次偏好设置。你的个人资料仅会以脱敏形式（性格原型 + 标签）展示给组内成员，不会对外公开详细个人信息。",
-    },
-  ];
-
   return (
     <motion.div
-      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.35 }}
-      className="rounded-2xl border border-primary/20 bg-gradient-to-br from-background to-primary/5 overflow-hidden"
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.28 }}
+      className="overflow-hidden rounded-[28px] border border-primary/15 bg-gradient-to-br from-[#1d1331] via-[#271744] to-[#120d24] text-white shadow-[0_20px_70px_rgba(76,29,149,0.22)]"
     >
-      {/* Collapsed header — always visible */}
-      <button
-        type="button"
-        onClick={handleToggle}
-        aria-expanded={expanded}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="text-base select-none" aria-hidden role="presentation">🔍</span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground leading-tight">
-              盲盒规则 · 一目了然
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              什么保密 · 怎么匹配 · 你有哪些掌控权
+      <div className="relative overflow-hidden px-5 py-5">
+        <div className="absolute right-4 top-3 h-20 w-20 rounded-full bg-fuchsia-400/15 blur-3xl" />
+        <div className="absolute left-6 top-12 h-16 w-16 rounded-full bg-amber-300/10 blur-2xl" />
+
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-white/45">Seal the Blind Box</p>
+            <h3 className="mt-2 text-xl font-cn-display font-semibold">准备封盒</h3>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/65">
+              你现在确认的是硬条件，真正的惊喜会在匹配完成后揭晓。
             </p>
           </div>
-        </div>
-        <motion.div
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.25 }}
-          className="shrink-0 text-muted-foreground"
-        >
-          <ChevronDown className="h-4 w-4" />
-        </motion.div>
-      </button>
 
-      {/* Quick-scan pill row — always visible */}
-      <div className="flex flex-wrap gap-1.5 px-4 pb-3">
-        {pillars.map((p) => (
-          <span
-            key={p.title}
-            aria-label={p.title}
-            className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground border border-border/60"
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="rounded-full bg-white/10 p-2 text-white/70 ring-1 ring-white/10 transition hover:bg-white/15"
+            aria-expanded={expanded}
+            aria-label={expanded ? "收起盲盒说明" : "展开盲盒说明"}
           >
-            <p.icon className="h-2.5 w-2.5" aria-hidden />
-            {p.title}
-          </span>
-        ))}
+            <motion.div
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+            >
+              <ChevronDown className="h-4 w-4" />
+            </motion.div>
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-[24px] border border-white/10 bg-white/6 p-4 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-300/15 ring-1 ring-amber-200/20">
+              <Lock className="h-5 w-5 text-amber-200" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">已封存的，是你的意图</p>
+              <p className="text-xs text-white/55">时间、区域、类型和预算会一起装进这只盲盒里。</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {knownItems.map((item) => (
+              <span
+                key={item}
+                className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/75 ring-1 ring-white/10"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Expanded detail section */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
-            key="detail"
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.3 }}
-            className="overflow-hidden"
+            initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.24 }}
+            className="overflow-hidden border-t border-white/10 bg-black/10"
           >
-            <div className="px-4 pb-4 space-y-3 border-t border-border/50 pt-3">
-              {pillars.map((pillar) => (
-                <div
-                  key={pillar.title}
-                  className="flex items-start gap-3"
-                >
-                  <div
-                    className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg bg-gradient-to-br ${pillar.iconBg} flex items-center justify-center`}
-                    aria-hidden
-                  >
-                    <pillar.icon className="h-3.5 w-3.5 text-foreground/70" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground leading-tight">
-                      {pillar.title}
-                      <span className="font-normal text-muted-foreground ml-1.5">
-                        {pillar.summary}
-                      </span>
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                      {pillar.detail}
-                    </p>
-                  </div>
+            <div className="grid gap-3 px-5 py-4 text-sm">
+              <div className="flex gap-3">
+                <EyeOff className="mt-0.5 h-4 w-4 text-violet-200" />
+                <div>
+                  <p className="font-medium text-white">暂时保密</p>
+                  <p className="text-xs leading-relaxed text-white/55">
+                    同伴身份和最终分组会在匹配完成后才向组员揭晓，保证盲盒的惊喜感。
+                  </p>
                 </div>
-              ))}
+              </div>
+              <div className="flex gap-3">
+                <Sparkles className="mt-0.5 h-4 w-4 text-amber-200" />
+                <div>
+                  <p className="font-medium text-white">智能匹配</p>
+                  <p className="text-xs leading-relaxed text-white/55">
+                    小悦会综合人格原型、兴趣热度和你这次填写的社交意图来决定更适合的一桌。
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Eye className="mt-0.5 h-4 w-4 text-sky-200" />
+                <div>
+                  <p className="font-medium text-white">你仍有掌控感</p>
+                  <p className="text-xs leading-relaxed text-white/55">
+                    在匹配完成前，你都可以回来修改偏好；展示给他人的信息也会保持脱敏。
+                  </p>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

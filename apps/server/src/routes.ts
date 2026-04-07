@@ -7475,6 +7475,21 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
           )
         );
 
+      const archetypeRows = await db
+        .select({
+          archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, '未设置')`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(eventPoolRegistrations)
+        .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            eq(eventPoolRegistrations.matchStatus, "pending")
+          )
+        )
+        .groupBy(sql`coalesce(${users.primaryArchetype}, ${users.archetype}, '未设置')`);
+
       // Get pool config for min/max group size
       const pool = await db.query.eventPools.findFirst({
         where: (pools: any, { eq }: any) => eq(pools.id, poolId),
@@ -7497,6 +7512,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         minGroupSize: minSize,
         maxGroupSize: maxSize,
         progress,
+        archetypeDistribution: Object.fromEntries(
+          archetypeRows.map((row) => [row.archetype, row.count]),
+        ),
       });
     } catch (error) {
       console.error("Error fetching group-fill progress:", error);
