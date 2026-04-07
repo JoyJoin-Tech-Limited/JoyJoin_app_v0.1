@@ -141,15 +141,13 @@ export function getPoolForecast(input: {
   const bucket = PHASE_COPY[phase];
   const primaryLine = bucket[registrationCount % bucket.length];
 
-  // For the momentum phase, generate a precise seat-count bridge line
+  // For the momentum phase, add a precise seat-count bridge line
   // to orient the user toward the matching threshold without overpromising.
   const seatsNeeded = Math.max(minGroupSize - registrationCount, 0);
-  const primaryLineFinal =
-    phase === "momentum" && seatsNeeded > 0
-      ? `再来 ${seatsNeeded} 位，系统就会优先开始成桌匹配`
-      : primaryLine;
-
-  const lines: string[] = [primaryLineFinal];
+  const lines: string[] = [primaryLine];
+  if (phase === "momentum" && seatsNeeded > 0) {
+    lines.push(`再来 ${seatsNeeded} 位，系统就会优先开始成桌匹配`);
+  }
 
   // Supplement: archetype diversity / energy signal
   const uniqueCount = uniqueArchetypeCount(sampleArchetypes);

@@ -112,24 +112,25 @@ export default function BlindBoxEventCard({
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
-  const MIN_TABLE_SIZE = 4;
   const MAX_TABLE_SIZE = 6;
-  const seatsNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
-  const progressPercent = Math.min((registrationCount / MIN_TABLE_SIZE) * 100, 100);
+  const thresholdGroupSize = Math.max(minGroupSize, 1);
+  const displayMaxGroupSize = Math.max(MAX_TABLE_SIZE, thresholdGroupSize);
+  const seatsNeeded = Math.max(thresholdGroupSize - registrationCount, 0);
+  const progressPercent = Math.min((registrationCount / thresholdGroupSize) * 100, 100);
   const currencySymbol = getCurrencySymbol(city ?? "深圳");
   const priceSummary = priceTier ? `${currencySymbol}${priceTier}` : null;
   const formationHeadline =
-    registrationCount >= MIN_TABLE_SIZE
+    registrationCount >= thresholdGroupSize
       ? "这一桌已满足成桌条件"
       : registrationCount > 0
         ? `再有 ${seatsNeeded} 位桌友入座即可成桌`
         : "等你来开启这一桌";
   const formationDetail =
-    registrationCount >= MIN_TABLE_SIZE
+    registrationCount >= thresholdGroupSize
       ? `${registrationCount} 位桌友已在等揭晓 · 当前可优先成桌`
       : registrationCount > 0
-        ? `${registrationCount} 位桌友已入座 · ${MIN_TABLE_SIZE} 人成桌，最多 ${MAX_TABLE_SIZE} 人`
-        : `${MIN_TABLE_SIZE} 人成桌 · 时间区域已定`;
+        ? `${registrationCount} 位桌友已入座 · ${thresholdGroupSize} 人成桌，最多 ${displayMaxGroupSize} 人`
+        : `${thresholdGroupSize} 人成桌 · 时间区域已定`;
   const promiseLine = "时间区域已定 · 桌友成桌后揭晓";
 
   const handleJoinClick = (e: React.MouseEvent) => {
@@ -270,7 +271,7 @@ export default function BlindBoxEventCard({
                   </p>
                 </div>
                 <span className="text-[11px] font-semibold text-primary/80 shrink-0">
-                  {Math.min(registrationCount, MAX_TABLE_SIZE)}/{MAX_TABLE_SIZE}
+                  {Math.min(registrationCount, displayMaxGroupSize)}/{displayMaxGroupSize}
                 </span>
               </div>
 
