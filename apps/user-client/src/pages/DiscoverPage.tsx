@@ -16,7 +16,7 @@ import { SparkSectionHeader } from "@/components/spark/SparkSectionHeader";
 import { EventCardSkeleton } from "@/components/spark/EventCardSkeleton";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -170,6 +170,7 @@ function transformEventPool(pool: EventPool): {
 export default function DiscoverPage() {
   const { user, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
+  const prefersReducedMotion = useReducedMotion();
   
   // Use user's registered city as fallback when no localStorage selection exists
   const savedLocation = getSavedLocation(user?.currentCity ?? undefined);
@@ -488,13 +489,15 @@ export default function DiscoverPage() {
                     <motion.div
                       key={event.id}
                       className="relative"
-                      initial={{ opacity: 0, y: 12 }}
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.35,
-                        delay: index * 0.08,
-                        ease: "easeOut",
-                      }}
+                      transition={prefersReducedMotion
+                        ? { duration: 0 }
+                        : {
+                            duration: 0.35,
+                            delay: index * 0.08,
+                            ease: "easeOut",
+                          }}
                     >
                       {/* Coach Mark: Event Tooltip on first card */}
                       {shouldShowCoachMarks && 
