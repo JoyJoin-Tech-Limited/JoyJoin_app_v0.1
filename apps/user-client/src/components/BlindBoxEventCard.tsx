@@ -132,7 +132,7 @@ export default function BlindBoxEventCard({
   ];
 
   const trustPoints = [
-    { icon: Shield, text: "实名认证" },
+    { icon: Shield, text: "手机号验证" },
     { icon: Heart, text: "匿名评价" },
   ];
 
