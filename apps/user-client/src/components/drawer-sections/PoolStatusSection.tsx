@@ -49,14 +49,12 @@ export default function PoolStatusSection({
   );
   
   const registrationRemainder = stats.totalRegistrations % minGroupSize;
-  const thresholdProgress = stats.totalRegistrations === 0
-    ? 0
-    : registrationRemainder === 0
-      ? minGroupSize
-      : registrationRemainder;
-  const spotsNeeded = thresholdProgress === minGroupSize
-    ? 0
-    : minGroupSize - thresholdProgress;
+  let thresholdProgress = 0;
+  if (stats.totalRegistrations > 0) {
+    thresholdProgress = registrationRemainder === 0 ? minGroupSize : registrationRemainder;
+  }
+  const isThresholdMet = thresholdProgress === minGroupSize;
+  const spotsNeeded = isThresholdMet ? 0 : minGroupSize - thresholdProgress;
   const isHot = spotsNeeded <= 2 && spotsNeeded > 0;
   
   // Sort archetypes by count
@@ -110,7 +108,7 @@ export default function PoolStatusSection({
           </div>
           
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {thresholdProgress === minGroupSize && stats.totalRegistrations > 0
+            {isThresholdMet && stats.totalRegistrations > 0
               ? "已满足匹配门槛！"
               : spotsNeeded > 0 
                 ? `再来 ${spotsNeeded} 人即可触发匹配`
