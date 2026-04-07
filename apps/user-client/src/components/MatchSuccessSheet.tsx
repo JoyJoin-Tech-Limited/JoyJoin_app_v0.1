@@ -26,7 +26,7 @@ interface MatchSuccessSheetProps {
   currentUser?: UserContext;
   isUserLoading?: boolean;
   onDismiss: () => void;
-  /** Optional: navigate to the group/reflection page after dismissing */
+  /** Optional: navigate to the group/reflection page. */
   onReflect?: () => void;
 }
 
@@ -353,7 +353,10 @@ export default function MatchSuccessSheet({
                       variant="ghost"
                       size="sm"
                       className="mt-1 text-xs text-white/40 hover:text-white/70"
-                      onClick={onReflect}
+                      onClick={() => {
+                        onDismiss();
+                        onReflect();
+                      }}
                     >
                       记录这次相遇 ✨
                     </Button>

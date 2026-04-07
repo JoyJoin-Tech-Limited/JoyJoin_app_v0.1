@@ -145,7 +145,7 @@ export default function NoMatchScreen({
               key={pool.id}
               type="button"
               onClick={() => onRejoin?.(pool.id)}
-              className="w-full rounded-2xl bg-white/8 px-4 py-3 text-left ring-1 ring-white/15 transition-colors hover:bg-white/12 active:scale-[0.98]"
+              className="w-full rounded-2xl bg-white/8 px-4 py-3 text-left ring-1 ring-white/15 transition-colors hover:bg-white/12 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             >
               <p className="text-sm font-semibold text-white/90 line-clamp-1">{pool.title}</p>
               <p className="mt-0.5 text-xs text-white/45">
