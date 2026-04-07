@@ -31,6 +31,11 @@ interface BlindBoxEventCardProps {
   sampleArchetypes?: string[];
   registrationDeadline?: string;
   onDetailsClick?: () => void;
+  /**
+   * Wave 3 featured-card treatment: applies a premium glow halo and
+   * upgraded CTA copy to the first card in the discovery list.
+   */
+  isFeatured?: boolean;
 }
 
 function triggerHaptic() {
@@ -93,6 +98,7 @@ export default function BlindBoxEventCard({
   sampleArchetypes = [],
   registrationDeadline,
   onDetailsClick,
+  isFeatured = false,
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
   const [vibeBriefOpen, setVibeBriefOpen] = useState(false);
@@ -130,14 +136,39 @@ export default function BlindBoxEventCard({
     { icon: Heart, text: "匿名评价" },
   ];
 
+  // Wave 3: intent-aware CTA copy for the featured (first) card
+  const featuredCtaCopy = eventType === "酒局" ? "点燃这一局" : "开启这场缘";
+  const featuredCtaIcon = eventType === "酒局" ? Flame : Sparkles;
+  const FeaturedCtaIcon = featuredCtaIcon;
+
   return (
     <>
-      <div 
+      {/* Wave 3: featured-card glow halo — soft living ring for the first card */}
+      <div
         className="relative h-[240px]"
         style={{ perspective: "1000px" }}
       >
+        {isFeatured && !prefersReducedMotion && (
+          <motion.div
+            className="absolute -inset-[3px] rounded-xl pointer-events-none z-0"
+            style={{
+              background: eventType === "酒局"
+                ? "linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(139,92,246,0.18) 100%)"
+                : "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(236,72,153,0.18) 100%)",
+            }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            aria-hidden="true"
+          />
+        )}
+        {isFeatured && (
+          <div
+            className="absolute -inset-[3px] rounded-xl pointer-events-none z-0 border border-primary/20"
+            aria-hidden="true"
+          />
+        )}
         <motion.div
-          className="relative w-full h-full cursor-pointer"
+          className="relative z-10 w-full h-full cursor-pointer"
           style={{ transformStyle: "preserve-3d" }}
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, ease: "easeInOut" }}
@@ -159,6 +190,17 @@ export default function BlindBoxEventCard({
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
               
               <div className="p-4 h-full flex flex-col">
+                {/* Wave 3: featured badge — premium "今日推荐" signal for the first card */}
+                {isFeatured && (
+                  <div className="flex items-center gap-1 mb-1.5 -mt-0.5">
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-primary/90 to-violet-500/90 text-white select-none"
+                      aria-label="今日推荐活动"
+                    >
+                      ✦ 今日推荐
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex-1">
                     <h3 className="font-brand font-bold text-lg text-muted-foreground/60 mb-2">
@@ -216,14 +258,27 @@ export default function BlindBoxEventCard({
 
                 <div className="flex gap-2 mt-auto">
                   <Button
-                    className="flex-1"
+                    className={`flex-1 transition-all duration-150 active:scale-[0.98] ${
+                      isFeatured
+                        ? "bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-md"
+                        : ""
+                    }`}
                     size="default"
                     onClick={handleJoinClick}
                     disabled={!poolId}
                     data-testid={`button-join-${id}`}
                   >
-                    <Sparkles className="h-4 w-4 mr-1.5" />
-                    立即参与
+                    {isFeatured ? (
+                      <>
+                        <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
+                        {featuredCtaCopy}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-1.5" />
+                        立即参与
+                      </>
+                    )}
                   </Button>
                   {onDetailsClick ? (
                     <Button

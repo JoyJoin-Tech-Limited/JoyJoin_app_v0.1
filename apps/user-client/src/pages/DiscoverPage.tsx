@@ -12,8 +12,11 @@ import JoinEventPoolSheet from "@/components/event-pool-registration/JoinEventPo
 import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
 import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
 import LimitedBrowseBanner from "@/components/LimitedBrowseBanner";
-import { AlertCircle, RefreshCw, Sparkles } from "lucide-react";
+import { SparkSectionHeader } from "@/components/spark/SparkSectionHeader";
+import { EventCardSkeleton } from "@/components/spark/EventCardSkeleton";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -444,16 +447,21 @@ export default function DiscoverPage() {
 
         <BlindBoxSection className="py-6">
           <div className="px-4 space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="font-medium">盲盒模式</span>
-            </div>
+            {/* Wave 3: SparkSectionHeader — replaces generic "盲盒模式" label */}
+            <SparkSectionHeader
+              liveCount={
+                !isLoading && filteredBlindBoxEvents.length > 0
+                  ? filteredBlindBoxEvents.reduce((acc, e) => acc + (e.registrationCount ?? 0), 0)
+                  : undefined
+              }
+            />
 
             <div className="space-y-5" ref={eventListRef}>
               {isLoading ? (
-                <div className="text-center py-8">
-                  <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-sm text-muted-foreground mt-4">加载中...</p>
+                /* Wave 3: premium shimmer skeleton cards replace the spinner */
+                <div className="space-y-5">
+                  <EventCardSkeleton />
+                  <EventCardSkeleton />
                 </div>
               ) : isEventPoolsError ? (
                 <div className="text-center py-8 px-4 border border-dashed rounded-2xl bg-muted/20 space-y-3">
@@ -476,7 +484,18 @@ export default function DiscoverPage() {
                   const isFirstCard = index === 0;
                   
                   return (
-                    <div key={event.id} className="relative">
+                    /* Wave 3: staggered card entrance — each card fades+rises in sequence */
+                    <motion.div
+                      key={event.id}
+                      className="relative"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.35,
+                        delay: index * 0.08,
+                        ease: "easeOut",
+                      }}
+                    >
                       {/* Coach Mark: Event Tooltip on first card */}
                       {shouldShowCoachMarks && 
                        isFirstCard && 
@@ -506,12 +525,14 @@ export default function DiscoverPage() {
                         tabIndex={isFirstCard && showEventTooltip ? 0 : undefined}
                         aria-label={isFirstCard && showEventTooltip ? "关闭提示" : undefined}
                       >
+                        {/* Wave 3: isFeatured={true} for first card — premium glow + upgraded CTA */}
                         <BlindBoxEventCard 
                           {...event}
+                          isFeatured={isFirstCard}
                           onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
                         />
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })
               ) : (
