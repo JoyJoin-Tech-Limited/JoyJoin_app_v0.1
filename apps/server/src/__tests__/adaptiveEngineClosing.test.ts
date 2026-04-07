@@ -115,7 +115,6 @@ describe('selectNextQuestion – closing phase', () => {
 describe('selectNextQuestion – adaptive phase exclusion', () => {
   it('never returns a closing question during the anchor phase', () => {
     let state = initializeEngineState();
-    const anchors = getAnchorQuestions();
 
     // Answer only half of the anchors — still in anchor phase
     for (let i = 0; i < 4; i++) {
