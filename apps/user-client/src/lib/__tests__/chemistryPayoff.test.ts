@@ -71,6 +71,8 @@ describe("chemistryPayoff", () => {
     });
 
     it("breaks equal-count ties deterministically by key", () => {
+      // Equal counts are tie-broken by the raw interest key, so
+      // `music_concerts` sorts before `travel_exploration`.
       const members = [
         { topInterests: ["travel_exploration", "music_concerts"] },
         { topInterests: ["travel_exploration", "music_concerts"] },
