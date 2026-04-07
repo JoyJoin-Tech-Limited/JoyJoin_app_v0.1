@@ -94,6 +94,19 @@ export function useEventPoolRegistration({
       }
     }
 
+    // No per-pool draft: try last preferences for this event type
+    const lastPrefs = localStorage.getItem(`joyjoin_last_prefs_${eventType}`);
+    if (lastPrefs) {
+      try {
+        const parsed = JSON.parse(lastPrefs);
+        setPreferences(prev => ({ ...prev, ...parsed, eventType }));
+        // Silent pre-fill — no toast, as this is just convenience pre-population
+        return;
+      } catch (_e) {
+        // Fall through to profile prefill
+      }
+    }
+
     // No draft: pre-fill social goals from profile intent if available
     if (user?.intent && user.intent.length > 0) {
       setPreferences(prev => ({ ...prev, socialGoals: user.intent as string[] }));
@@ -159,6 +172,24 @@ export function useEventPoolRegistration({
       
       // Clear draft
       localStorage.removeItem(`draft-${poolId}`);
+
+      // Save last preferences for this event type for future rejoin pre-fill
+      try {
+        const toSave = {
+          budget: preferences.budget,
+          socialGoals: preferences.socialGoals,
+          languages: preferences.languages,
+          districts: preferences.districts,
+          // conditional fields
+          ...(preferences.cuisines ? { cuisines: preferences.cuisines } : {}),
+          ...(preferences.dietary ? { dietary: preferences.dietary } : {}),
+          ...(preferences.barThemes ? { barThemes: preferences.barThemes } : {}),
+          ...(preferences.alcoholComfort ? { alcoholComfort: preferences.alcoholComfort } : {}),
+        };
+        localStorage.setItem(`joyjoin_last_prefs_${eventType}`, JSON.stringify(toSave));
+      } catch (_e) {
+        // Storage failures are non-fatal
+      }
       
       // Trigger success callback
       onSuccess?.();

@@ -26,6 +26,8 @@ interface MatchSuccessSheetProps {
   currentUser?: UserContext;
   isUserLoading?: boolean;
   onDismiss: () => void;
+  /** Optional: navigate to the group/reflection page after dismissing */
+  onReflect?: () => void;
 }
 
 type Phase = "intro" | "merging" | "deck";
@@ -112,6 +114,7 @@ export default function MatchSuccessSheet({
   currentUser,
   isUserLoading,
   onDismiss,
+  onReflect,
 }: MatchSuccessSheetProps) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [showDeck, setShowDeck] = useState(false);
@@ -345,6 +348,16 @@ export default function MatchSuccessSheet({
                     <Sparkles className="w-4 h-4 mr-2" />
                     开始认识伙伴！
                   </Button>
+                  {onReflect && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 text-xs text-white/40 hover:text-white/70"
+                      onClick={onReflect}
+                    >
+                      记录这次相遇 ✨
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             )}
