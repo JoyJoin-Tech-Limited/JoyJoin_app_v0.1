@@ -125,11 +125,11 @@ export default function BlindBoxEventCard({
     registrationCount >= MIN_TABLE_SIZE
       ? `${registrationCount} 人已入池 · 小悦正在拼局`
       : registrationCount > 0
-        ? `已有 ${registrationCount} 人入池 · 4–6 人才够热闹`
-        : `4–6 人组局 · 你来第一个`;
+        ? `已有 ${registrationCount} 人入池 · ${MIN_TABLE_SIZE}–${MAX_TABLE_SIZE} 人才够热闹`
+        : `${MIN_TABLE_SIZE}–${MAX_TABLE_SIZE} 人组局 · 你来第一个`;
 
-  // [Bridge layer] — known info now; tablemates revealed only after 成局
-  const promiseLine = "时间地点已定 · 伙伴是成局的惊喜";
+  // [Bridge layer] — only time and area are known now; tablemates revealed only after 成局
+  const promiseLine = "时间区域已定 · 伙伴是成局的惊喜";
 
   // [Event Pool layer] — CTA uses pool-join language, never "take a seat at this table"
   const ctaLabel = eventType === "酒局" ? "来凑这局酒" : "来凑这顿饭";
@@ -289,11 +289,18 @@ export default function BlindBoxEventCard({
                 </span>
               </div>
 
-              <div className="h-1.5 rounded-full bg-background/80 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full bg-background/80 overflow-hidden"
+                role="progressbar"
+                aria-label="活动池成桌门槛进度"
+                aria-valuenow={Math.round(progressPercent)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-[width] duration-500 ease-out"
                   style={{ width: `${Math.max(progressPercent, registrationCount > 0 ? 18 : 0)}%` }}
-                  aria-label={`活动池成桌门槛进度 ${Math.round(progressPercent)}%`}
+                  aria-hidden="true"
                 />
               </div>
             </div>
