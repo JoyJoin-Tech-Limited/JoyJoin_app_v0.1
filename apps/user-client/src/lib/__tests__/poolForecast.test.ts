@@ -100,19 +100,25 @@ describe("getPoolForecast — result shape", () => {
 // ── getPoolForecast — momentum bridge line ────────────────────────────────────
 
 describe("getPoolForecast — momentum bridge line", () => {
-  it("includes seatsNeeded in the primary line for momentum phase", () => {
+  it("keeps the momentum vibe line as primary copy", () => {
+    const result = getPoolForecast({ registrationCount: 3, sampleArchetypes: [], minGroupSize: 4 });
+    expect(result.phase).toBe("momentum");
+    expect(result.lines[0]).toContain("这池");
+  });
+
+  it("adds seatsNeeded as a secondary bridge line for momentum phase", () => {
     // count=3, minGroupSize=4 → seatsNeeded=1
     const result = getPoolForecast({ registrationCount: 3, sampleArchetypes: [], minGroupSize: 4 });
     expect(result.phase).toBe("momentum");
-    expect(result.lines[0]).toContain("1 位");
-    expect(result.lines[0]).toContain("成桌匹配");
+    expect(result.lines[1]).toContain("1 位");
+    expect(result.lines[1]).toContain("成桌匹配");
   });
 
   it("adjusts seatsNeeded for larger minGroupSize", () => {
     // count=4, minGroupSize=6 → seatsNeeded=2
     const result = getPoolForecast({ registrationCount: 4, sampleArchetypes: [], minGroupSize: 6 });
     expect(result.phase).toBe("momentum");
-    expect(result.lines[0]).toContain("2 位");
+    expect(result.lines[1]).toContain("2 位");
   });
 });
 
@@ -226,7 +232,7 @@ describe("getPoolForecast — pool language safety", () => {
   ];
 
   it.each(scenarios)(
-    "no output line implies formed table or promises exact match — count=%i",
+    "no output line implies formed table or promises exact match — count=$registrationCount",
     (scenario) => {
       const { lines } = getPoolForecast(scenario);
       for (const line of lines) {
