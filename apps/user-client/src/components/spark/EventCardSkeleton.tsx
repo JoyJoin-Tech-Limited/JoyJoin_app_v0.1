@@ -12,7 +12,7 @@
 export function EventCardSkeleton() {
   return (
     <div
-      className="rounded-xl overflow-hidden border border-border/60 bg-card"
+      className="relative rounded-xl overflow-hidden border border-border/60 bg-card"
       style={{ height: "240px" }}
       aria-hidden="true"
       role="presentation"
