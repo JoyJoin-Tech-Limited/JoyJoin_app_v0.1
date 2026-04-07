@@ -18,7 +18,7 @@
  * - Preserves existing websocket/data architecture — caller owns data fetching.
  */
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Sparkles, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -112,46 +112,45 @@ export default function MatchRevealSequenceV2({
 
   const [stage, setStage] = useState<RevealStage>("lock_in");
   const [orbitAnimating, setOrbitAnimating] = useState(false);
-  const payoff = useRef<ChemistryPayoff>(
-    generateChemistryPayoff(members, currentUser),
+
+  // Recompute when members/currentUser change so chemistry reflects latest data.
+  const payoff = useMemo(
+    () => generateChemistryPayoff(members, currentUser),
+    [members, currentUser],
   );
 
   const archetypes = members.map((m) => m.archetype ?? "").filter(Boolean);
 
-  // ── Auto-advance stages ──────────────────────────────────────────────────────
+  // ── Stage machine ────────────────────────────────────────────────────────────
 
-  const advanceTo = useCallback(
-    (next: RevealStage) => {
+  useEffect(() => {
+    // Helper: schedule next stage transition (returns a cleanup function).
+    function advance(next: RevealStage) {
       const delay = getStageDuration(stage, reduced);
       if (delay === 0) {
         setStage(next);
-      } else {
-        const t = setTimeout(() => setStage(next), delay);
-        return () => clearTimeout(t);
+        return undefined;
       }
-      return undefined;
-    },
-    [stage, reduced],
-  );
+      const t = setTimeout(() => setStage(next), delay);
+      return () => clearTimeout(t);
+    }
 
-  // Stage machine
-  useEffect(() => {
     if (stage === "lock_in") {
       hapticPulse();
-      return advanceTo(reduced ? "chemistry" : "prelude");
+      return advance(reduced ? "chemistry" : "prelude");
     }
     if (stage === "prelude") {
       hapticTick();
-      return advanceTo("member_entrance");
+      return advance("member_entrance");
     }
     if (stage === "member_entrance") {
       setOrbitAnimating(true);
-      // ArchetypeOrbit fires onAnimationComplete — handled in handler below
+      // ArchetypeOrbit fires onAnimationComplete which drives the next transition.
       return undefined;
     }
     if (stage === "formation") {
       hapticDoublePulse();
-      return advanceTo("chemistry");
+      return advance("chemistry");
     }
     if (stage === "celebration") {
       hapticCelebrate();
@@ -159,7 +158,7 @@ export default function MatchRevealSequenceV2({
       return undefined;
     }
     return undefined;
-  }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stage, reduced, onComplete]);
 
   const handleOrbitComplete = useCallback(() => {
     setOrbitAnimating(false);
@@ -329,7 +328,7 @@ export default function MatchRevealSequenceV2({
         {/* ── Stage: chemistry ──────────────────────────────────────────── */}
         {stage === "chemistry" && (
           <ChemistryPayoffCard
-            payoff={payoff.current}
+            payoff={payoff}
             members={members}
             reduced={reduced}
             onContinue={handleChemistryContinue}
