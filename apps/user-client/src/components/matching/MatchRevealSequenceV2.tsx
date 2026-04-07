@@ -18,7 +18,7 @@
  * - Preserves existing websocket/data architecture — caller owns data fetching.
  */
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Sparkles, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,7 @@ export default function MatchRevealSequenceV2({
   onComplete,
 }: MatchRevealSequenceV2Props) {
   const reduced = useReducedMotion() ?? false;
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const [stage, setStage] = useState<RevealStage>("lock_in");
   const [orbitAnimating, setOrbitAnimating] = useState(false);
@@ -120,6 +121,10 @@ export default function MatchRevealSequenceV2({
   );
 
   const archetypes = members.map((m) => m.archetype ?? "").filter(Boolean);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
 
   // ── Stage machine ────────────────────────────────────────────────────────────
 
@@ -182,10 +187,14 @@ export default function MatchRevealSequenceV2({
 
   return (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
       style={BACKDROP_STYLE}
+      role="dialog"
+      aria-modal="true"
       aria-live="polite"
       aria-label="匹配揭晓"
+      tabIndex={-1}
     >
       {/* Ambient glow */}
       {!reduced && (

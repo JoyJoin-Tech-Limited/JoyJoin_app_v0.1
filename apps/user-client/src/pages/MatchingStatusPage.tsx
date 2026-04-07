@@ -351,7 +351,7 @@ export default function MatchingStatusPage() {
     };
   }, [subscribe, registration?.poolId, poolStats?.progress]);
 
-    // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
+  // Handle MatchRevealSequenceV2 completion and transition into the celebration overlay
   const handleRevealContinue = useCallback(() => {
     // Compute chemistry line from current group data so the celebration overlay
     // can continue the V2 reveal narrative.
