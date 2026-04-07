@@ -10,7 +10,8 @@ import InteractiveThemeBubbles from "../InteractiveThemeBubbles";
 interface PoolStats {
   totalRegistrations: number;
   archetypeBreakdown: Record<string, number>;
-  estimatedGroups: number;
+  /** [Event Pool] Pool-formable group count — see EventPoolStatsResponse for semantics. */
+  poolFormableGroupCount: number;
   avgMatchScore: number;
   recentThemeTitles: Array<{
     themeTitle: string | null;
@@ -47,9 +48,14 @@ export default function PoolStatusSection({
       typeof theme.themeTitle === "string" && theme.themeTitle.trim().length > 0,
   );
   
-  const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
-  const isHot = spotsNeeded <= 2 && spotsNeeded > 0 && spotsNeeded !== minGroupSize;
-  const currentProgress = stats.totalRegistrations % minGroupSize;
+  const registrationRemainder = stats.totalRegistrations % minGroupSize;
+  let thresholdProgress = 0;
+  if (stats.totalRegistrations > 0) {
+    thresholdProgress = registrationRemainder === 0 ? minGroupSize : registrationRemainder;
+  }
+  const isThresholdMet = thresholdProgress === minGroupSize;
+  const spotsNeeded = isThresholdMet ? 0 : minGroupSize - thresholdProgress;
+  const isHot = spotsNeeded <= 2 && spotsNeeded > 0;
   
   // Sort archetypes by count
   const sortedArchetypes = Object.entries(stats.archetypeBreakdown)
@@ -68,7 +74,7 @@ export default function PoolStatusSection({
           {isHot && (
             <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 gap-1">
               <Flame className="h-3 w-3" />
-              即将组队
+              即将触发匹配
             </Badge>
           )}
         </div>
@@ -77,7 +83,7 @@ export default function PoolStatusSection({
         <div className="space-y-2 mb-4">
           <div className="flex gap-1">
             {Array.from({ length: minGroupSize }).map((_, index) => {
-              const isFilled = index < currentProgress;
+              const isFilled = index < thresholdProgress;
               
               return (
                 <motion.div
@@ -102,19 +108,20 @@ export default function PoolStatusSection({
           </div>
           
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {currentProgress === 0 && stats.totalRegistrations > 0
-              ? "已满足组队条件！"
+            {isThresholdMet && stats.totalRegistrations > 0
+              ? "已满足匹配门槛！"
               : spotsNeeded > 0 
-                ? `还差 ${spotsNeeded} 人即可组队`
-                : "已满足组队条件！"}
+                ? `再来 ${spotsNeeded} 人即可触发匹配`
+                : "已满足匹配门槛！"}
           </p>
         </div>
         
         {/* Stats Row */}
         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
           <div>
-            <span className="font-medium">预计组队：</span>
-            <span className="ml-1">{stats.estimatedGroups} 组</span>
+            {/* [Event Pool] Pool-formable groups — NOT confirmed 成桌 instances */}
+            <span className="font-medium">可匹配组数：</span>
+            <span className="ml-1">{stats.poolFormableGroupCount} 组</span>
           </div>
           <div>
             <span className="font-medium">平均匹配度：</span>
