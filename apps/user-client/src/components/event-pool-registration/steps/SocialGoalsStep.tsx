@@ -1,9 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import SocialGoalCard from "../shared/SocialGoalCard";
 import { SHARED_OPTIONS } from "@/lib/event-pool-options";
 import { getMatchPreviewCopy } from "@/lib/matchPreviewCopy";
 
@@ -24,130 +21,170 @@ export default function SocialGoalsStep({
 }: SocialGoalsStepProps) {
   const { toast } = useToast();
   const isFlexibleMode = selectedGoals.includes("flexible");
-  const matchPreview = useMemo(
-    () => getMatchPreviewCopy(selectedGoals),
-    [selectedGoals]
-  );
+  const primaryGoal = isFlexibleMode ? "flexible" : selectedGoals[0] ?? "";
+  const secondaryGoals = isFlexibleMode ? [] : selectedGoals.slice(1, 3);
+  const matchPreview = useMemo(() => getMatchPreviewCopy(selectedGoals), [selectedGoals]);
 
-  const handleToggleGoal = (goalValue: string) => {
-    // Any manual change clears the pre-filled state
+  const clearPrefillIfNeeded = () => {
     if (isPrefilledFromProfile && onClearPrefill) {
       onClearPrefill();
     }
+  };
+
+  const handleSelectPrimaryGoal = (goalValue: string) => {
+    clearPrefillIfNeeded();
 
     if (goalValue === "flexible") {
-      // Toggle flexible mode
-      if (isFlexibleMode) {
-        onSelectGoals([]);
-      } else {
-        onSelectGoals(["flexible"]);
-      }
-    } else {
-      // Regular goal selection
-      if (isFlexibleMode) {
-        // Exit flexible mode and select this goal
-        onSelectGoals([goalValue]);
-      } else {
-        if (selectedGoals.includes(goalValue)) {
-          onSelectGoals(selectedGoals.filter(g => g !== goalValue));
-        } else {
-          const newGoals = [...selectedGoals, goalValue];
-          
-          // If user selects all 5 goals, suggest flexible mode
-          if (newGoals.length === 5) {
-            toast({
-              title: "试试随缘模式？",
-              description: "选择所有目标等同于随缘匹配，AI会帮你找到最合适的组合",
-            });
-          }
-          
-          onSelectGoals(newGoals);
-        }
-      }
+      onSelectGoals(isFlexibleMode ? [] : ["flexible"]);
+      return;
     }
+
+    const nextSecondary = secondaryGoals.filter((goal) => goal !== goalValue);
+    onSelectGoals([goalValue, ...nextSecondary]);
+  };
+
+  const handleToggleSecondaryGoal = (goalValue: string) => {
+    if (!primaryGoal || isFlexibleMode) return;
+    clearPrefillIfNeeded();
+
+    if (secondaryGoals.includes(goalValue)) {
+      onSelectGoals([primaryGoal, ...secondaryGoals.filter((goal) => goal !== goalValue)]);
+      return;
+    }
+
+    if (secondaryGoals.length >= 2) {
+      toast({
+        title: "最多补充两张加分卡",
+        description: "把信号留得清晰一点，匹配会更懂你。",
+      });
+      return;
+    }
+
+    onSelectGoals([primaryGoal, ...secondaryGoals, goalValue]);
   };
 
   return (
     <div className="space-y-6">
-      {/* Title */}
       <div>
-        <h2 className="text-xl font-bold mb-2">这次想怎么玩？</h2>
+        <h2 className="mb-2 text-xl font-bold">今晚最想收获什么？</h2>
         <p className="text-sm text-muted-foreground">
-          已有 {registrationCount} 人报名，小悦会根据你选的，帮你凑一桌最聊得来的人
+          已有 {registrationCount} 人报名。先选一个主愿望，再补 0–2 个顺带想要的感觉。
         </p>
       </div>
 
-      {/* Pre-filled indicator */}
       {isPrefilledFromProfile && selectedGoals.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2"
+          className="flex items-center justify-between gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs text-muted-foreground"
         >
-          <span>✨ 已沿用你的默认社交偏好，精准度翻倍！</span>
+          <span>✨ 已沿用你的默认社交偏好，想换也完全可以。</span>
           <button
             type="button"
             onClick={() => {
               onSelectGoals([]);
-              if (onClearPrefill) onClearPrefill();
+              onClearPrefill?.();
             }}
-            className="text-primary underline shrink-0"
+            className="shrink-0 text-primary underline"
           >
             重新选择
           </button>
         </motion.div>
       )}
 
-      {/* Flexible Mode Toggle */}
-      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
-        <div className="flex-1">
-          <Label htmlFor="flexible-mode" className="text-sm font-semibold cursor-pointer">
-            随缘模式
-          </Label>
-          <p className="text-xs text-muted-foreground mt-1">
-            什么人都想认识，小悦帮你惊喜搭配 ✨
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium">主愿望</p>
+          <span className="text-xs text-muted-foreground">只选 1 项</span>
         </div>
-        <Switch
-          id="flexible-mode"
-          checked={isFlexibleMode}
-          onCheckedChange={() => handleToggleGoal("flexible")}
-        />
+
+        <div className="grid gap-3">
+          {SHARED_OPTIONS.socialGoals.map((goal, index) => {
+            const isSelected = primaryGoal === goal.value;
+            return (
+              <motion.button
+                key={goal.value}
+                type="button"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => handleSelectPrimaryGoal(goal.value)}
+                className={`rounded-[24px] border px-4 py-4 text-left transition-all ${
+                  isSelected
+                    ? "border-primary bg-gradient-to-br from-primary/10 to-violet-500/10 shadow-sm"
+                    : "border-border bg-background/70 hover:border-primary/40"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">{goal.emoji}</div>
+                  <div>
+                    <p className="text-base font-semibold text-foreground">{goal.label}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{goal.description}</p>
+                  </div>
+                </div>
+              </motion.button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => handleSelectPrimaryGoal("flexible")}
+            className={`rounded-[24px] border px-4 py-4 text-left transition-all ${
+              isFlexibleMode
+                ? "border-primary bg-gradient-to-br from-primary/10 to-fuchsia-500/10 shadow-sm"
+                : "border-border bg-background/70 hover:border-primary/40"
+            }`}
+          >
+            <p className="text-base font-semibold text-foreground">✨ 随心随缘</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              不先框住自己，让小悦用整体气场为你配出最惊喜的一桌。
+            </p>
+          </button>
+        </div>
       </div>
 
-      {/* Social Goals Grid */}
-      {!isFlexibleMode && (
-        <div className="grid grid-cols-2 gap-3">
-          {SHARED_OPTIONS.socialGoals.map((option, index) => (
-            <motion.div
-              key={option.value}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <SocialGoalCard
-                option={option}
-                selected={selectedGoals.includes(option.value)}
-                onClick={() => handleToggleGoal(option.value)}
-              />
-            </motion.div>
-          ))}
+      {!isFlexibleMode && primaryGoal && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">如果顺便能...</p>
+            <span className="text-xs text-muted-foreground">最多再选 2 项</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {SHARED_OPTIONS.socialGoals
+              .filter((goal) => goal.value !== primaryGoal)
+              .map((goal) => {
+                const isSelected = secondaryGoals.includes(goal.value);
+                return (
+                  <button
+                    key={goal.value}
+                    type="button"
+                    onClick={() => handleToggleSecondaryGoal(goal.value)}
+                    className={`rounded-full border px-4 py-2 text-sm transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:border-primary/40"
+                    }`}
+                  >
+                    {goal.emoji} {goal.label}
+                  </button>
+                );
+              })}
+          </div>
         </div>
       )}
 
-      {/* Match Preview Card */}
       {selectedGoals.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-primary/5 rounded-xl px-4 py-3"
+          className="rounded-[24px] border border-primary/10 bg-primary/5 px-4 py-3"
         >
           <div className="flex items-start gap-2">
             <span className="text-lg">{matchPreview.emoji}</span>
             <div>
               <p className="text-sm font-medium text-foreground">{matchPreview.title}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{matchPreview.subtitle}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{matchPreview.subtitle}</p>
             </div>
           </div>
         </motion.div>
