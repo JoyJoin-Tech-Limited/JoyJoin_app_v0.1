@@ -195,7 +195,7 @@ describe("admin auth routes", () => {
   });
 
   it("falls back to legacy admin login when admin_accounts lookup is unavailable", async () => {
-    vi.mocked(storage.getAdminAccountByUsername).mockRejectedValue(new Error('relation "admin_accounts" does not exist'));
+    vi.mocked(storage.getAdminAccountByUsername).mockRejectedValue(new Error("relation \"admin_accounts\" does not exist"));
     vi.mocked(storage.getUserByPhone).mockImplementation(async (phoneNumber: string) =>
       phoneNumber === legacyAdminUser.phoneNumber ? [legacyAdminUser as any] : [],
     );
@@ -212,6 +212,26 @@ describe("admin auth routes", () => {
       expect(response.status).toBe(200);
       expect(body.id).toBe(legacyAdminUser.id);
       expect(body.role).toBe("super_admin");
+    });
+  });
+
+  it("falls back to legacy admin login when admin_accounts lookup fails with postgres undefined-table code", async () => {
+    const missingTableError = Object.assign(new Error("relation \"admin_accounts\" does not exist"), {
+      code: "42P01",
+    });
+    vi.mocked(storage.getAdminAccountByUsername).mockRejectedValue(missingTableError);
+    vi.mocked(storage.getUserByPhone).mockImplementation(async (phoneNumber: string) =>
+      phoneNumber === legacyAdminUser.phoneNumber ? [legacyAdminUser as any] : [],
+    );
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: legacyAdminUser.phoneNumber, password: legacyAdminPassword }),
+      });
+
+      expect(response.status).toBe(200);
     });
   });
 

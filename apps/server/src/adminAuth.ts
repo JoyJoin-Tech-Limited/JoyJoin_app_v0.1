@@ -1,4 +1,5 @@
 import type { Express, Request, RequestHandler } from "express";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 
@@ -6,9 +7,32 @@ const VALID_ADMIN_ROLES = ["super_admin", "operator", "viewer"] as const;
 type AdminRole = (typeof VALID_ADMIN_ROLES)[number];
 
 const INVALID_CREDENTIALS_MESSAGE = "用户名或密码错误";
+const LEGACY_ADMIN_FALLBACK_USERNAME = "legacy-admin";
+const PG_UNDEFINED_TABLE = "42P01";
+const PG_UNDEFINED_COLUMN = "42703";
+const MISSING_ADMIN_ACCOUNTS_RELATION_PATTERN = /relation "admin_accounts" does not exist/i;
+const MISSING_ADMIN_ACCOUNTS_COLUMN_PATTERN = /column .*admin_accounts/i;
 
 function getActingAdminId(req: Request): string {
   return req.adminAccount?.id ?? req.session.userId ?? "unknown";
+}
+
+function extractLoginIdentifier(body: unknown): string {
+  if (!body || typeof body !== "object") {
+    return "";
+  }
+
+  const username = typeof (body as { username?: unknown }).username === "string"
+    ? (body as { username: string }).username.trim()
+    : "";
+  if (username) {
+    return username;
+  }
+
+  const phoneNumber = typeof (body as { phoneNumber?: unknown }).phoneNumber === "string"
+    ? (body as { phoneNumber: string }).phoneNumber.trim()
+    : "";
+  return phoneNumber;
 }
 
 async function establishAdminSession(req: Request, adminAccountId: string, adminRole: string) {
@@ -40,11 +64,18 @@ async function establishLegacyAdminSession(req: Request, userId: string) {
 
 function isMissingAdminAccountsRelation(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return message.includes("admin_accounts") && (
-    message.includes("does not exist") ||
-    message.includes("relation") ||
-    message.includes("column")
-  );
+  const matchesAdminAccountsMessage = MISSING_ADMIN_ACCOUNTS_RELATION_PATTERN.test(message)
+    || MISSING_ADMIN_ACCOUNTS_COLUMN_PATTERN.test(message);
+  if (!matchesAdminAccountsMessage) {
+    return false;
+  }
+
+  if (error && typeof error === "object" && "code" in error) {
+    const code = String((error as { code?: unknown }).code);
+    return code === PG_UNDEFINED_TABLE || code === PG_UNDEFINED_COLUMN;
+  }
+
+  return true;
 }
 
 async function getAdminAccountByLoginId(loginId: string) {
@@ -52,10 +83,7 @@ async function getAdminAccountByLoginId(loginId: string) {
     return await storage.getAdminAccountByUsername(loginId);
   } catch (error) {
     if (isMissingAdminAccountsRelation(error)) {
-      console.warn("admin_accounts lookup unavailable during admin login; falling back to legacy admin auth", {
-        loginId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      console.warn("admin_accounts lookup unavailable during admin login; falling back to legacy admin auth");
       return undefined;
     }
     throw error;
@@ -63,20 +91,16 @@ async function getAdminAccountByLoginId(loginId: string) {
 }
 
 async function comparePasswordOrFailClosed(password: string, hash: string, context: string): Promise<boolean> {
-  const bcrypt = await import("bcrypt");
   try {
     return await bcrypt.compare(password, hash);
   } catch (error) {
-    console.warn(`Invalid password hash during ${context}; treating as invalid credentials`, {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.warn(`Invalid password hash during ${context}; treating as invalid credentials`);
     return false;
   }
 }
 
-async function tryLegacyAdminLogin(req: Request, loginId: string, password: string) {
-  const users = await storage.getUserByPhone(loginId);
-  const user = users[0];
+async function tryLegacyPhoneAdminLogin(req: Request, loginId: string, password: string) {
+  const [user] = await storage.getUserByPhone(loginId);
   if (!user?.isAdmin || !user.password) {
     return null;
   }
@@ -89,7 +113,7 @@ async function tryLegacyAdminLogin(req: Request, loginId: string, password: stri
   await establishLegacyAdminSession(req, user.id);
   return {
     id: user.id,
-    username: user.phoneNumber || user.email || loginId,
+    username: user.phoneNumber ?? user.email ?? LEGACY_ADMIN_FALLBACK_USERNAME,
     role: "super_admin" as const,
     displayName: user.displayName,
   };
@@ -149,11 +173,7 @@ export const requireOperatorOrAbove: RequestHandler = (req, res, next) => {
 export function registerAdminAuthRoutes(app: Express) {
   app.post("/api/admin/login", async (req: Request, res) => {
     try {
-      const loginId = typeof req.body?.username === "string" && req.body.username.trim()
-        ? req.body.username.trim()
-        : typeof req.body?.phoneNumber === "string" && req.body.phoneNumber.trim()
-          ? req.body.phoneNumber.trim()
-          : "";
+      const loginId = extractLoginIdentifier(req.body);
       const password = typeof req.body?.password === "string" ? req.body.password : "";
 
       if (!loginId || !password) {
@@ -179,10 +199,10 @@ export function registerAdminAuthRoutes(app: Express) {
         await establishAdminSession(req, adminAccount.id, adminAccount.role);
 
         logAdminAudit({
-          action: 'ADMIN_LOGIN',
+          action: "ADMIN_LOGIN",
           adminId: adminAccount.id,
           adminRole: adminAccount.role,
-          targetEntityType: 'admin_account',
+          targetEntityType: "admin_account",
           targetEntityId: adminAccount.id,
           context: { username: adminAccount.username },
         });
@@ -196,7 +216,7 @@ export function registerAdminAuthRoutes(app: Express) {
         });
       }
 
-      const legacyAdmin = await tryLegacyAdminLogin(req, loginId, password);
+      const legacyAdmin = await tryLegacyPhoneAdminLogin(req, loginId, password);
       if (legacyAdmin) {
         return res.json({
           message: "登录成功",
@@ -270,10 +290,10 @@ export function registerAdminAuthRoutes(app: Express) {
       const { passwordHash: _ph, ...safe } = account;
 
       logAdminAudit({
-        action: 'ADMIN_ACCOUNT_CREATED',
+        action: "ADMIN_ACCOUNT_CREATED",
         adminId: getActingAdminId(req),
         adminRole: req.adminRole,
-        targetEntityType: 'admin_account',
+        targetEntityType: "admin_account",
         targetEntityId: account.id,
         context: { username: account.username, role: account.role, displayName: account.displayName },
       });
@@ -307,10 +327,10 @@ export function registerAdminAuthRoutes(app: Express) {
       const { passwordHash: _ph, ...safe } = account;
 
       logAdminAudit({
-        action: 'ADMIN_ACCOUNT_UPDATED',
+        action: "ADMIN_ACCOUNT_UPDATED",
         adminId: getActingAdminId(req),
         adminRole: req.adminRole,
-        targetEntityType: 'admin_account',
+        targetEntityType: "admin_account",
         targetEntityId: id,
         after: updates,
       });
@@ -334,10 +354,10 @@ export function registerAdminAuthRoutes(app: Express) {
       await storage.updateAdminAccount(id, { passwordHash });
 
       logAdminAudit({
-        action: 'ADMIN_PASSWORD_RESET',
+        action: "ADMIN_PASSWORD_RESET",
         adminId: getActingAdminId(req),
         adminRole: req.adminRole,
-        targetEntityType: 'admin_account',
+        targetEntityType: "admin_account",
         targetEntityId: id,
         // newPassword is intentionally NOT logged
       });
