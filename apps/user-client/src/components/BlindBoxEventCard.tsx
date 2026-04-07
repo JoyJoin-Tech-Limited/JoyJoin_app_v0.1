@@ -262,9 +262,10 @@ export default function BlindBoxEventCard({
                 <div className="min-w-0">
                   {/* [Event Pool] Pool Pulse header: live indicator + module label */}
                   <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <span className="flex items-center gap-1 shrink-0" aria-hidden="true">
+                    <span className="flex items-center gap-1 shrink-0">
                       <span className="text-[9px] font-bold text-primary/55 tracking-widest select-none">热度</span>
-                      <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      {/* Decorative live pulse dot — aria-hidden as it is purely visual */}
+                      <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden="true">
                         {!prefersReducedMotion && registrationCount > 0 && (
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
                         )}
