@@ -8782,7 +8782,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         chemistryWeight:          config.chemistryWeight          ?? config.personalityWeight          ?? 0,
         interestWeight:           config.interestWeight           ?? config.interestsWeight            ?? 0,
         preferenceWeight:         config.preferenceWeight         ?? config.intentWeight               ?? 0,
-        backgroundDiversityWeight:config.backgroundDiversityWeight ?? config.backgroundWeight          ?? 0,
+        backgroundDiversityWeight: config.backgroundDiversityWeight ?? config.backgroundWeight          ?? 0,
         languageWeight:           config.languageWeight           ?? config.cultureWeight              ?? config.conversationSignatureWeight ?? 0,
         socialAffinityWeight:     config.socialAffinityWeight     ?? 0,
       };
