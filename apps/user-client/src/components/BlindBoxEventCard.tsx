@@ -285,7 +285,7 @@ export default function BlindBoxEventCard({
                 className="h-2 rounded-full bg-background/80 overflow-hidden"
                 role="progressbar"
                 aria-label="活动池匹配门槛进度"
-                aria-valuenow={registrationCount}
+                aria-valuenow={Math.min(registrationCount, MIN_TABLE_SIZE)}
                 aria-valuemin={0}
                 aria-valuemax={MIN_TABLE_SIZE}
               >
