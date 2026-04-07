@@ -6,11 +6,33 @@ import { logger } from "../../lib/logger";
 
 const DEFAULT_MIN_GROUP_SIZE = 4;
 
+/**
+ * Event Pool stats response.
+ *
+ * Separation of concerns — every field belongs to one of two layers:
+ *   [Event Pool]  — signals about the pool itself (registrations, archetype mix).
+ *   [成桌 outcome] — historical data produced *from* the pool after matching ran.
+ *
+ * Never treat pool-layer fields as evidence that a 成桌 has formed.
+ */
 export interface EventPoolStatsResponse {
+  /** [Event Pool] Total number of registrations currently in this pool. */
   totalRegistrations: number;
+  /** [Event Pool] Breakdown of participant personality archetypes in the pool. */
   archetypeBreakdown: Record<string, number>;
-  estimatedGroups: number;
+  /**
+   * [Event Pool] How many groups *could* be formed right now if matching ran
+   * immediately.  Computed as floor(totalRegistrations / minGroupSize).
+   *
+   * floor() is intentional: a partial batch cannot form a complete group.
+   * This is a pool-readiness signal, NOT confirmation that groups have formed.
+   * Do NOT surface this as "X tables ready" — groups form only after the
+   * matching service runs and produces actual 成桌 records.
+   */
+  poolFormableGroupCount: number;
+  /** [成桌 outcome] Average match score across historically formed groups from this pool. */
   avgMatchScore: number;
+  /** [成桌 outcome] Theme titles from previously formed groups (past 成桌 data, not current pool). */
   recentThemeTitles: Array<{ themeTitle: string | null; themeEmoji: string }>;
 }
 
@@ -26,7 +48,9 @@ export function buildEventPoolStatsResponse(input: {
     archetypeBreakdown: Object.fromEntries(
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
-    estimatedGroups: Math.ceil(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
+    // floor(): a partial batch does not produce a complete group.
+    // This is a pool-readiness signal — not a confirmation that groups exist.
+    poolFormableGroupCount: Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
   };
