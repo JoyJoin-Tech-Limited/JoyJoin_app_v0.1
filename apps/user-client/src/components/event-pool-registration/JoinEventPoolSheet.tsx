@@ -302,7 +302,7 @@ export default function JoinEventPoolSheet({
                         <div className="flex items-center justify-center gap-3 mb-4 px-2 py-2 rounded-xl bg-muted/40 border border-border/50">
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                             <span className="text-green-500">✓</span>
-                            <span>实名认证</span>
+                            <span>手机号验证</span>
                           </div>
                           <div className="h-3 w-px bg-border" />
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
