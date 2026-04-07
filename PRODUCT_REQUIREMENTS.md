@@ -99,7 +99,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 **17. Personality Test Flow Sync** 🧠 *(2026-04-07)*
 - V4 question count is config-driven (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) rather than a fixed 10-question or fixed 8–16-question flow
 - `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are universal closing questions that must both be answered before the assessment is complete
-- The active test page keeps back navigation for local question-history review instead of hiding the back button entirely
+- The active test page keeps back navigation for local question-history review; when the user is already at the start with no earlier answers, the exit path returns to `/`
 
 **18. Post-Match Group Theme & Companion** 🎭 *(PR #377)*
 - Group theme tags and a companion summary line in squad reveal (`SquadUnboxingFlow.tsx`)
