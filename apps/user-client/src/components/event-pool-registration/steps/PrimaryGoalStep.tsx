@@ -118,17 +118,11 @@ export default function PrimaryGoalStep({
 
   return (
     <div className="space-y-6">
-      {/* Experiment badge */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/8 border border-primary/20 w-fit">
-        <span className="text-xs">🧪</span>
-        <span className="text-xs font-medium text-primary/80">体验新版目标选择</span>
-      </div>
-
-      {/* Title */}
+      {/* Title — intent expression, not data capture */}
       <div>
-        <h2 className="text-xl font-bold mb-2">这次最想要什么？</h2>
+        <h2 className="text-xl font-bold mb-2">这一桌你最想发生什么？</h2>
         <p className="text-sm text-muted-foreground">
-          已有 {registrationCount} 人报名，小悦会帮你找最聊得来的人
+          已有 {registrationCount} 人入座，小悦会帮你找最合拍的桌友
         </p>
       </div>
 
@@ -139,7 +133,7 @@ export default function PrimaryGoalStep({
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2"
         >
-          <span>✨ 已沿用你的默认社交偏好，精准度翻倍！</span>
+          <span>✨ 已沿用你的默认社交偏好，帮你更快找到同频桌友！</span>
           <button
             type="button"
             onClick={() => {
@@ -160,7 +154,7 @@ export default function PrimaryGoalStep({
             随缘模式
           </Label>
           <p className="text-xs text-muted-foreground mt-1">
-            什么人都想认识，小悦帮你惊喜搭配 ✨
+            什么人都想认识，让缘分来安排这一桌 ✨
           </p>
         </div>
         <Switch

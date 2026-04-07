@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Sparkles, ArrowRight, Loader2, Lock, Shield } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { buildPreJoinVibeBriefUrl } from "@/lib/preJoinVibeBrief";
@@ -49,17 +49,17 @@ export default function PreJoinVibeBriefSheet({
         style={{ maxHeight: "65vh" }}
       >
         <div className="flex flex-col gap-4 px-1 pt-2 pb-6">
-          {/* Header — branded identity, not generic AI label */}
+          {/* Header — threshold moment before entering the table */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
             <div>
               <p className="text-xs font-semibold text-foreground/80 leading-none">
-                你的 JoyJoin 画像
+                入座前的一段话
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                基于你的性格 &amp; 偏好，AI 为你读了一段
+                基于你的性格画像，为你准备的入席指南
               </p>
             </div>
           </div>
@@ -75,7 +75,7 @@ export default function PreJoinVibeBriefSheet({
                 className="flex items-center gap-2 text-muted-foreground text-sm py-4"
               >
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>正在解读你的社交画像…</span>
+                <span>正在为你准备入席指南…</span>
               </motion.div>
             ) : (
               <motion.div
@@ -99,12 +99,12 @@ export default function PreJoinVibeBriefSheet({
                     </motion.span>
                   )}
                   <p className="text-base font-medium leading-snug text-foreground pl-2">
-                    {brief?.insight ?? "我们的算法已初步读懂你的社交画像"}
+                    {brief?.insight ?? "算法已读懂你的社交画像，这一桌正适合你"}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {brief?.matchingPromise ??
-                    "我们会以此为基础，为你匹配更对 vibe 的小组"}
+                    "我们会以此为基础，帮你找到同频的桌友"}
                 </p>
               </motion.div>
             )}
@@ -123,14 +123,14 @@ export default function PreJoinVibeBriefSheet({
             </span>
           </div>
 
-          {/* CTA — branded handoff to join flow */}
+          {/* CTA — handoff to join flow */}
           <Button
             size="lg"
             className="w-full mt-1 gap-2 transition-all duration-150 active:scale-[0.98]"
             onClick={handleProceed}
             disabled={isLoading}
           >
-            进入这个圈子
+            准备入座
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
