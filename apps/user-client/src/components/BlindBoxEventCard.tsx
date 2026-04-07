@@ -272,7 +272,10 @@ export default function BlindBoxEventCard({
                   </p>
                 </div>
                 {/* Show pool registration count only — not table seat count */}
-                <span className="text-[11px] font-semibold text-primary/80 shrink-0">
+                <span
+                  className="text-[11px] font-semibold text-primary/80 shrink-0"
+                  aria-label={`${registrationCount} 人已加入活动池`}
+                >
                   {registrationCount} 人
                 </span>
               </div>
