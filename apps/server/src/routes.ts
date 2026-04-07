@@ -8792,12 +8792,19 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       };
 
       const configForStorage = {
-        ...config,
+        configName: config.configName,
         personalityWeight: weightsForValidation.chemistryWeight,
         interestsWeight: weightsForValidation.interestWeight,
         intentWeight: weightsForValidation.preferenceWeight,
         backgroundWeight: weightsForValidation.backgroundDiversityWeight,
         cultureWeight: weightsForValidation.languageWeight,
+        minGroupSize: config.minGroupSize,
+        maxGroupSize: config.maxGroupSize,
+        preferredGroupSize: config.preferredGroupSize,
+        maxSameArchetypeRatio: config.maxSameArchetypeRatio,
+        minChemistryScore: config.minChemistryScore,
+        notes: config.notes,
+        createdBy: config.createdBy,
       };
 
       // 验证权重
