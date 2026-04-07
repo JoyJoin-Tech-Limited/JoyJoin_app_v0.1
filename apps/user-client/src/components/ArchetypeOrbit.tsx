@@ -174,7 +174,7 @@ export default function ArchetypeOrbit({
           {validArchetypes.map((item, idx) => {
             const angle = (360 / validArchetypes.length) * idx;
             const delay = idx * 0.1;
-            const isHighlighted = highlightedArchetype != null && item.name === highlightedArchetype;
+            const isHighlighted = highlightedArchetype !== null && item.name === highlightedArchetype;
             
             return (
               <div

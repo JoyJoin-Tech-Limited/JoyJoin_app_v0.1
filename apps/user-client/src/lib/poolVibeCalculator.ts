@@ -46,7 +46,9 @@ export function getPoolVibeLabel(archetypeDistribution: Record<string, number>):
   if (!topSlice) return "静待成形";
 
   const total = Object.values(archetypeDistribution).reduce((sum, count) => sum + count, 0);
-  const uniqueArchetypes = Object.values(archetypeDistribution).filter(Boolean).length;
+  const uniqueArchetypes = Object.keys(archetypeDistribution).filter(
+    (archetype) => archetypeDistribution[archetype] > 0,
+  ).length;
 
   if (uniqueArchetypes >= 5 && total >= 4) return "均衡";
   if (topSlice.key === "highEnergy") return "活跃";
