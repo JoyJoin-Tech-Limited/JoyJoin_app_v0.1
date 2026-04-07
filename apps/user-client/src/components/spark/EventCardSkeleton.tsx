@@ -19,7 +19,7 @@ export function EventCardSkeleton() {
       data-testid="event-card-skeleton"
     >
       {/* Left accent bar placeholder */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-muted animate-pulse" />
+      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-muted animate-shimmer" />
 
       <div className="p-4 h-full flex flex-col gap-3">
         {/* Title area */}

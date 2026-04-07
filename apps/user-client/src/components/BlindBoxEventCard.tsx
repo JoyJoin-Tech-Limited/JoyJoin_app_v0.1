@@ -136,10 +136,14 @@ export default function BlindBoxEventCard({
     { icon: Heart, text: "匿名评价" },
   ];
 
-  // Wave 3: intent-aware CTA copy for the featured (first) card
-  const featuredCtaCopy = eventType === "酒局" ? "点燃这一局" : "开启这场缘";
-  const featuredCtaIcon = eventType === "酒局" ? Flame : Sparkles;
-  const FeaturedCtaIcon = featuredCtaIcon;
+  // Wave 3: intent-aware CTA copy and glow gradients for the featured (first) card
+  const isWineEvent = eventType === "酒局";
+  const featuredCtaCopy = isWineEvent ? "点燃这一局" : "开启这场缘";
+  const FeaturedCtaIcon = isWineEvent ? Flame : Sparkles;
+  const featuredGlowGradient = isWineEvent
+    ? "linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(139,92,246,0.18) 100%)"
+    : "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(236,72,153,0.18) 100%)";
+  const featuredCtaClass = "bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-md";
 
   return (
     <>
@@ -151,11 +155,7 @@ export default function BlindBoxEventCard({
         {isFeatured && !prefersReducedMotion && (
           <motion.div
             className="absolute -inset-[3px] rounded-xl pointer-events-none z-0"
-            style={{
-              background: eventType === "酒局"
-                ? "linear-gradient(135deg, rgba(251,191,36,0.25) 0%, rgba(139,92,246,0.18) 100%)"
-                : "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(236,72,153,0.18) 100%)",
-            }}
+            style={{ background: featuredGlowGradient }}
             animate={{ opacity: [0.6, 1, 0.6] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             aria-hidden="true"
@@ -259,9 +259,7 @@ export default function BlindBoxEventCard({
                 <div className="flex gap-2 mt-auto">
                   <Button
                     className={`flex-1 transition-all duration-150 active:scale-[0.98] ${
-                      isFeatured
-                        ? "bg-gradient-to-r from-primary to-violet-500 hover:from-primary/90 hover:to-violet-500/90 shadow-md"
-                        : ""
+                      isFeatured ? featuredCtaClass : ""
                     }`}
                     size="default"
                     onClick={handleJoinClick}
