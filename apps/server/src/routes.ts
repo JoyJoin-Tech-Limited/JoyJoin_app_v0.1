@@ -8770,21 +8770,51 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       const config = req.body;
       
+      const normalizedLanguageWeight =
+        config.languageWeight ??
+        ((config.cultureWeight ?? 0) + (config.conversationSignatureWeight ?? 0));
+
+      // Translate legacy admin payload keys to the active 6-dimension vocabulary.
+      // Legacy key                               → Active vocabulary key
+      // personalityWeight                        → chemistryWeight
+      // interestsWeight                          → interestWeight
+      // intentWeight                             → preferenceWeight
+      // backgroundWeight                         → backgroundDiversityWeight
+      // cultureWeight + conversationSignatureWeight → languageWeight
+      // (no legacy source)                       → socialAffinityWeight (default 0 for validation pass-through)
+      const weightsForValidation: MatchingWeights = {
+        chemistryWeight: config.chemistryWeight ?? config.personalityWeight ?? 0,
+        interestWeight: config.interestWeight ?? config.interestsWeight ?? 0,
+        preferenceWeight: config.preferenceWeight ?? config.intentWeight ?? 0,
+        backgroundDiversityWeight: config.backgroundDiversityWeight ?? config.backgroundWeight ?? 0,
+        languageWeight: normalizedLanguageWeight,
+        socialAffinityWeight: config.socialAffinityWeight ?? 0,
+      };
+
+      const configForStorage = {
+        configName: config.configName,
+        personalityWeight: weightsForValidation.chemistryWeight,
+        interestsWeight: weightsForValidation.interestWeight,
+        intentWeight: weightsForValidation.preferenceWeight,
+        backgroundWeight: weightsForValidation.backgroundDiversityWeight,
+        cultureWeight: weightsForValidation.languageWeight,
+        minGroupSize: config.minGroupSize,
+        maxGroupSize: config.maxGroupSize,
+        preferredGroupSize: config.preferredGroupSize,
+        maxSameArchetypeRatio: config.maxSameArchetypeRatio,
+        minChemistryScore: config.minChemistryScore,
+        notes: config.notes,
+        createdBy: config.createdBy,
+      };
+
       // 验证权重
-      const validation = validateWeights({
-        personalityWeight: config.personalityWeight,
-        interestsWeight: config.interestsWeight,
-        intentWeight: config.intentWeight,
-        backgroundWeight: config.backgroundWeight,
-        cultureWeight: config.cultureWeight,
-        conversationSignatureWeight: config.conversationSignatureWeight || 0,
-      });
+      const validation = validateWeights(weightsForValidation);
       
       if (!validation.valid) {
         return res.status(400).json({ message: validation.error });
       }
       
-      const updatedConfig = await storage.updateMatchingConfig(config);
+      const updatedConfig = await storage.updateMatchingConfig(configForStorage);
       res.json(updatedConfig);
     } catch (error) {
       console.error("Error updating matching config:", error);
