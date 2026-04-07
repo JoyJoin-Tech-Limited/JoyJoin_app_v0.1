@@ -106,31 +106,31 @@ function getCopy(
   switch (fillState) {
     case "full":
       return {
-        headline: "人数已满！即将组队 🎉",
-        subtext: "小悦正在精心配对，很快就能和新朋友见面啦！",
-        badge: "满员",
+        headline: "这一桌齐了 🎉",
+        subtext: "桌友已就位，揭晓正在准备中……",
+        badge: "即将揭晓",
         badgeGradient: "from-emerald-500/80 to-green-400/80",
-        nextStepHint: "配对即将开始！",
+        nextStepHint: "揭晓即将开始！",
       };
     case "can_form": {
       const remaining = maxGroupSize - filledCount;
       return {
-        headline: `已可成团！再等 ${remaining} 人更完美`,
-        subtext: "人数已达门槛，小悦持续寻找最佳搭配组合中。我们马上就开始配对了。",
-        badge: "可成团",
+        headline: `这一桌快要成了`,
+        subtext: `桌友正在聚齐。再来 ${remaining} 位，这一桌就完美了。`,
+        badge: "即将成桌",
         badgeGradient: "from-amber-500/80 to-yellow-400/80",
-        nextStepHint: "再等一等 → 配对开始 → 揭晓队友",
+        nextStepHint: "再等一等 → 成桌 → 揭晓桌友",
       };
     }
     case "waiting":
     default: {
       const need = minGroupSize - filledCount;
       return {
-        headline: `再来 ${need} 位，就能凑一桌好局`,
-        subtext: `小悦正在帮你物色气场相合的人。成局后你会第一时间收到通知。`,
+        headline: `再来 ${need} 位，这一桌就开了`,
+        subtext: `有缘人正在路上。成桌后你会第一时间收到通知。`,
         badge: null,
         badgeGradient: "",
-        nextStepHint: "成局 → 系统配对 → 揭晓队友",
+        nextStepHint: "聚齐 → 成桌 → 揭晓桌友",
       };
     }
   }
@@ -248,7 +248,7 @@ export default function MatchingWaitingScreen({
           >
             <span className="text-lg" aria-hidden="true">✨</span>
             <p className="text-sm font-bold text-gray-900">
-              {newMemberArchetype ? `${newMemberArchetype} 加入了！` : "新朋友加入！"}
+              {newMemberArchetype ? `${newMemberArchetype} 入座了！` : "新桌友入座！"}
             </p>
           </motion.div>
         )}
@@ -312,16 +312,16 @@ export default function MatchingWaitingScreen({
       </AnimatePresence>
 
       {/* Next-step hint capsule */}
-      {copy.nextStepHint && (
+      {!archetypeCopy && genericCopy.nextStepHint && (
         <p className="mt-2 text-center text-[11px] text-white/35 tracking-wide">
-          {copy.nextStepHint}
+          {genericCopy.nextStepHint}
         </p>
       )}
 
       {/* ── Segmented progress bar ── */}
       <div className="mt-8 w-full max-w-sm">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-medium text-white/50">匹配进度</span>
+          <span className="text-xs font-medium text-white/50">成桌进度</span>
           <span className="text-xs font-bold text-white/80">
             {displayFilledCount}&thinsp;/&thinsp;{normalizedMaxGroupSize} 人
           </span>
@@ -333,7 +333,7 @@ export default function MatchingWaitingScreen({
          * Segments beyond the threshold (indices >= minGroupSize) are "bonus"
          * seats and rendered at medium height.
          */}
-        <div className="flex items-end gap-1.5" role="progressbar" aria-valuenow={displayFilledCount} aria-valuemin={0} aria-valuemax={normalizedMaxGroupSize} aria-label="匹配进度" aria-valuetext={`${displayFilledCount} 人已加入，共 ${normalizedMaxGroupSize} 个席位${displayFilledCount < normalizedMinGroupSize ? `，还需 ${normalizedMinGroupSize - displayFilledCount} 人可成局` : displayFilledCount < normalizedMaxGroupSize ? "，已可成团" : "，人数已满"}`}>
+        <div className="flex items-end gap-1.5" role="progressbar" aria-valuenow={displayFilledCount} aria-valuemin={0} aria-valuemax={normalizedMaxGroupSize} aria-label="成桌进度" aria-valuetext={`${displayFilledCount} 人已入座，共 ${normalizedMaxGroupSize} 个席位${displayFilledCount < normalizedMinGroupSize ? `，还需 ${normalizedMinGroupSize - displayFilledCount} 人可成桌` : displayFilledCount < normalizedMaxGroupSize ? "，即将成桌" : "，即将揭晓"}`}>
           {Array.from({ length: normalizedMaxGroupSize }).map((_, i) => {
             const isFilled = i < displayFilledCount;
             const isThreshold = i === normalizedMinGroupSize - 1;
@@ -354,7 +354,7 @@ export default function MatchingWaitingScreen({
                   }`}
                   aria-hidden="true"
                 >
-                  最少成局
+                  最少成桌
                 </span>
 
                 <motion.div
@@ -383,24 +383,24 @@ export default function MatchingWaitingScreen({
   // ── Slot: CTA ────────────────────────────────────────────────────────────────
   const ctaSlot = (
     <div className="mt-8 w-full max-w-sm space-y-3">
-      {/* Primary: invite / notify */}
+      {/* Primary: invite friends to fill the table */}
       <Button
         onClick={primaryInviteHandler}
         size="lg"
         className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
       >
         <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
-        邀请好友加速成团
+        邀请朋友一起入座
       </Button>
 
-      {/* Secondary: browse */}
+      {/* Secondary: browse while waiting */}
       <Button
         onClick={onBrowse}
         variant="ghost"
         size="lg"
         className="h-12 w-full rounded-2xl text-sm font-medium text-white/55 hover:bg-white/10 hover:text-white/90"
       >
-        先去逛逛其他活动
+        先去看看其他桌
         <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" />
       </Button>
 
@@ -414,20 +414,20 @@ export default function MatchingWaitingScreen({
               className="w-full rounded-xl text-xs font-medium text-white/30 hover:bg-white/5 hover:text-white/50"
             >
               <XCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-              取消匹配
+              离开这一桌
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>确认取消匹配？</AlertDialogTitle>
+              <AlertDialogTitle>确认离开这一桌？</AlertDialogTitle>
               <AlertDialogDescription>
-                取消后需要重新报名才能参加此活动池。
+                离开后需要重新入座才能参加这一桌。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>不取消</AlertDialogCancel>
+              <AlertDialogCancel>留下来</AlertDialogCancel>
               <AlertDialogAction onClick={onCancel} disabled={isCancelling}>
-                {isCancelling ? "取消中…" : "确认取消"}
+                {isCancelling ? "离开中…" : "确认离开"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -446,7 +446,7 @@ export default function MatchingWaitingScreen({
         cta={ctaSlot}
         footer={
           <p className="mt-8 px-6 text-center text-[11px] leading-relaxed text-white/30">
-            你已在队列中，无需重新报名。有结果时我们会立即通知你。
+            你的席位已锁定，无需重复操作。成桌时我们会立即通知你。
           </p>
         }
       />

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, MapPin, Sparkles, Shield, Eye, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils, Lock } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Shield, Eye, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils, Lock, Heart } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
@@ -193,9 +193,7 @@ export default function BlindBoxEventCard({
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
               
               <div className="p-4 h-full flex flex-col">
-                {/* ── HIERARCHY: Vibe / promise first ── */}
-                <div className="flex items-start justify-between gap-3 mb-1.5">
-                {/* Wave 3: featured badge — premium "今日推荐" signal for the first card */}
+                {/* Wave 3: featured badge */}
                 {isFeatured && (
                   <div className="flex items-center gap-1 mb-1.5 -mt-0.5">
                     <span
@@ -206,6 +204,15 @@ export default function BlindBoxEventCard({
                     </span>
                   </div>
                 )}
+
+                {/* ── HERO: Blind-box promise first ── */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Lock className="h-3 w-3 text-primary/70 shrink-0" aria-hidden="true" />
+                  <span className="text-[11px] font-semibold text-primary/80 tracking-wide">
+                    活动已定，桌友待揭晓
+                  </span>
+                </div>
+
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex-1">
                     {/* Eyebrow — event type + girls-night framing */}
@@ -240,7 +247,6 @@ export default function BlindBoxEventCard({
                 </div>
 
                 {/* ── HIERARCHY: Formation signal (who's coming) ── */}
-                {/* Compact vibe + fit signals */}
                 <div className="flex items-center gap-1.5 mb-1.5 min-h-0">
                   <PoolVibeBadge sampleArchetypes={sampleArchetypes} />
                   <FitHintBadge sampleArchetypes={sampleArchetypes} eventType={eventType} isGirlsNight={isGirlsNight} />
@@ -265,7 +271,7 @@ export default function BlindBoxEventCard({
                   </span>
                 </div>
 
-                {/* CTA row */}
+                {/* ── Single dominant CTA ── */}
                 <div className="flex gap-2 mt-auto">
                   <motion.div
                     className="flex-1"
@@ -275,14 +281,20 @@ export default function BlindBoxEventCard({
                     whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                   >
                     <Button
-                      className="w-full relative overflow-hidden"
+                      className={`w-full relative overflow-hidden transition-all duration-150 active:scale-[0.98] ${
+                        isFeatured ? featuredCtaClass : ""
+                      }`}
                       size="default"
                       onClick={handleJoinClick}
                       disabled={!poolId}
                       data-testid={`button-join-${id}`}
                     >
-                      <Sparkles className="h-4 w-4 mr-1.5" />
-                      进入这个圈子
+                      {isFeatured ? (
+                        <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-1.5" />
+                      )}
+                      {isFeatured ? featuredCtaCopy : "入座这一桌"}
                       {/* Subtle shimmer sweep on hover */}
                       {!prefersReducedMotion && (
                         <motion.span
@@ -295,27 +307,6 @@ export default function BlindBoxEventCard({
                       )}
                     </Button>
                   </motion.div>
-                  <Button
-                    className={`flex-1 transition-all duration-150 active:scale-[0.98] ${
-                      isFeatured ? featuredCtaClass : ""
-                    }`}
-                    size="default"
-                    onClick={handleJoinClick}
-                    disabled={!poolId}
-                    data-testid={`button-join-${id}`}
-                  >
-                    {isFeatured ? (
-                      <>
-                        <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
-                        {featuredCtaCopy}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 mr-1.5" />
-                        立即参与
-                      </>
-                    )}
-                  </Button>
                   {onDetailsClick ? (
                     <Button
                       variant="outline"
@@ -345,14 +336,13 @@ export default function BlindBoxEventCard({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>盲盒怎么玩？</p>
+                        <p>怎么玩？</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
                 </div>
 
-                {/* ── Trust framing at moment of curiosity ── */}
-                {/* Compact inline trust strip: what's known vs what stays blind */}
+                {/* ── Trust framing: sealed invitation language ── */}
                 <div className="flex items-center justify-center gap-2 mt-1.5 pt-1.5 border-t border-border/30">
                   <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
                     <Eye className="h-2.5 w-2.5" aria-hidden="true" />
@@ -361,7 +351,7 @@ export default function BlindBoxEventCard({
                   <span className="text-[9px] text-muted-foreground/30">·</span>
                   <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
                     <Lock className="h-2.5 w-2.5" aria-hidden="true" />
-                    桌友报名后揭晓
+                    桌友入座后揭晓
                   </span>
                   <span className="text-[9px] text-muted-foreground/30">·</span>
                   <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
@@ -370,7 +360,7 @@ export default function BlindBoxEventCard({
                   </span>
                 </div>
 
-                {/* Flip hint — pulses briefly, then stays subtle */}
+                {/* Flip hint */}
                 <motion.div
                   className="flex items-center justify-center gap-1 mt-0.5"
                   initial={{ opacity: 0.8 }}
@@ -449,7 +439,7 @@ export default function BlindBoxEventCard({
                     data-testid={`button-join-back-${id}`}
                   >
                     <Sparkles className="h-4 w-4 mr-1.5" />
-                    进入这个圈子
+                    入座这一桌
                   </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
