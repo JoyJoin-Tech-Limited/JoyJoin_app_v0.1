@@ -11,6 +11,7 @@ import FitHintBadge from "./FitHintBadge";
 import PoolVibeBadge from "./PoolVibeBadge";
 import { getCountdown, type UrgencyLevel } from "@/lib/chineseDateTime";
 import { getCurrencySymbol } from "@/lib/currency";
+import { PoolForecastStrip } from "./PoolForecastStrip";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";
 
@@ -30,6 +31,12 @@ interface BlindBoxEventCardProps {
   sampleArchetypes?: string[];
   registrationDeadline?: string;
   onDetailsClick?: () => void;
+  /**
+   * Pool matching threshold — used by the Pool Forecast strip to
+   * contextualise how many more people are needed before matching begins.
+   * Defaults to 4.
+   */
+  minGroupSize?: number;
   /**
    * Wave 3 featured-card treatment: applies a premium glow halo and
    * upgraded emphasis to the first card in the discovery list.
@@ -97,6 +104,7 @@ export default function BlindBoxEventCard({
   sampleArchetypes = [],
   registrationDeadline,
   onDetailsClick,
+  minGroupSize = 4,
   isFeatured = false,
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
@@ -170,7 +178,7 @@ export default function BlindBoxEventCard({
     <>
       {/* Wave 3: featured-card glow halo — soft living ring for the first card */}
       <div
-        className="relative h-[280px]"
+        className="relative h-[308px]"
       >
         {isFeatured && !prefersReducedMotion && (
           <motion.div
@@ -303,6 +311,15 @@ export default function BlindBoxEventCard({
                   aria-hidden="true"
                 />
               </div>
+
+              {/* Pool Forecast strip — deterministic pool-level atmosphere teaser.
+                  Pool layer only: describes momentum/tendency, not formed-table certainty. */}
+              <PoolForecastStrip
+                registrationCount={registrationCount}
+                sampleArchetypes={sampleArchetypes}
+                minGroupSize={minGroupSize}
+                eventType={eventType}
+              />
             </div>
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
