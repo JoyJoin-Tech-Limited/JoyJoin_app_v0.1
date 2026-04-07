@@ -25,6 +25,76 @@ async function establishAdminSession(req: Request, adminAccountId: string, admin
   });
 }
 
+async function establishLegacyAdminSession(req: Request, userId: string) {
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      req.session.userId = userId;
+      req.session.save((saveErr) => {
+        if (saveErr) return reject(saveErr);
+        resolve();
+      });
+    });
+  });
+}
+
+function isMissingAdminAccountsRelation(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("admin_accounts") && (
+    message.includes("does not exist") ||
+    message.includes("relation") ||
+    message.includes("column")
+  );
+}
+
+async function getAdminAccountByLoginId(loginId: string) {
+  try {
+    return await storage.getAdminAccountByUsername(loginId);
+  } catch (error) {
+    if (isMissingAdminAccountsRelation(error)) {
+      console.warn("admin_accounts lookup unavailable during admin login; falling back to legacy admin auth", {
+        loginId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+async function comparePasswordOrFailClosed(password: string, hash: string, context: string): Promise<boolean> {
+  const bcrypt = await import("bcrypt");
+  try {
+    return await bcrypt.compare(password, hash);
+  } catch (error) {
+    console.warn(`Invalid password hash during ${context}; treating as invalid credentials`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+async function tryLegacyAdminLogin(req: Request, loginId: string, password: string) {
+  const users = await storage.getUserByPhone(loginId);
+  const user = users[0];
+  if (!user?.isAdmin || !user.password) {
+    return null;
+  }
+
+  const isValid = await comparePasswordOrFailClosed(password, user.password, "legacy admin login");
+  if (!isValid) {
+    return null;
+  }
+
+  await establishLegacyAdminSession(req, user.id);
+  return {
+    id: user.id,
+    username: user.phoneNumber || user.email || loginId,
+    role: "super_admin" as const,
+    displayName: user.displayName,
+  };
+}
+
 export const requireAdmin: RequestHandler = async (req, res, next) => {
   const { adminAccountId, userId } = req.session;
 
@@ -79,50 +149,62 @@ export const requireOperatorOrAbove: RequestHandler = (req, res, next) => {
 export function registerAdminAuthRoutes(app: Express) {
   app.post("/api/admin/login", async (req: Request, res) => {
     try {
-      const { username, password } = req.body;
+      const loginId = typeof req.body?.username === "string" && req.body.username.trim()
+        ? req.body.username.trim()
+        : typeof req.body?.phoneNumber === "string" && req.body.phoneNumber.trim()
+          ? req.body.phoneNumber.trim()
+          : "";
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
 
-      if (!username || !password) {
+      if (!loginId || !password) {
         return res.status(400).json({ message: "用户名和密码不能为空" });
       }
 
-      const adminAccount = await storage.getAdminAccountByUsername(username);
-      if (!adminAccount) {
-        return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
-      }
+      const adminAccount = await getAdminAccountByLoginId(loginId);
+      if (adminAccount) {
+        if (adminAccount.status !== "active") {
+          console.warn("Admin login attempt for disabled account", {
+            username: adminAccount.username,
+            status: adminAccount.status,
+          });
+          return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
+        }
 
-      if (adminAccount.status !== "active") {
-        console.warn("Admin login attempt for disabled account", {
-          username: adminAccount.username,
-          status: adminAccount.status,
+        const isValid = await comparePasswordOrFailClosed(password, adminAccount.passwordHash, "admin login");
+        if (!isValid) {
+          return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
+        }
+
+        await storage.updateAdminLastLogin(adminAccount.id);
+        await establishAdminSession(req, adminAccount.id, adminAccount.role);
+
+        logAdminAudit({
+          action: 'ADMIN_LOGIN',
+          adminId: adminAccount.id,
+          adminRole: adminAccount.role,
+          targetEntityType: 'admin_account',
+          targetEntityId: adminAccount.id,
+          context: { username: adminAccount.username },
         });
-        return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
+
+        return res.json({
+          message: "登录成功",
+          id: adminAccount.id,
+          username: adminAccount.username,
+          role: adminAccount.role,
+          displayName: adminAccount.displayName,
+        });
       }
 
-      const bcrypt = await import("bcrypt");
-      const isValid = await bcrypt.compare(password, adminAccount.passwordHash);
-      if (!isValid) {
-        return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
+      const legacyAdmin = await tryLegacyAdminLogin(req, loginId, password);
+      if (legacyAdmin) {
+        return res.json({
+          message: "登录成功",
+          ...legacyAdmin,
+        });
       }
 
-      await storage.updateAdminLastLogin(adminAccount.id);
-      await establishAdminSession(req, adminAccount.id, adminAccount.role);
-
-      logAdminAudit({
-        action: 'ADMIN_LOGIN',
-        adminId: adminAccount.id,
-        adminRole: adminAccount.role,
-        targetEntityType: 'admin_account',
-        targetEntityId: adminAccount.id,
-        context: { username: adminAccount.username },
-      });
-
-      return res.json({
-        message: "登录成功",
-        id: adminAccount.id,
-        username: adminAccount.username,
-        role: adminAccount.role,
-        displayName: adminAccount.displayName,
-      });
+      return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
     } catch (error) {
       console.error("Error during admin login:", error);
       return res.status(500).json({ message: "登录失败" });
