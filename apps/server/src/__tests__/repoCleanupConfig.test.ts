@@ -21,6 +21,14 @@ describe('repo cleanup config follow-ups', () => {
     expect(workflow).toContain("if: ${{ !inputs.dry_run && inputs.confirm == 'DELETE_BRANCHES' }}");
   });
 
+  it('skips protected branches in merged-pr cleanup before deleting refs', () => {
+    const workflow = readRepoFile('.github/workflows/delete-merged-branches.yml');
+
+    expect(workflow).toContain('const branchInfo = await github.rest.repos.getBranch({');
+    expect(workflow).toContain('if (branchInfo.data.protected) {');
+    expect(workflow).toContain('Skipping protected branch: ${branch}');
+  });
+
   it('keeps bulk branch cleanup scoped to explicit live-delete candidates', () => {
     const workflow = readRepoFile('.github/workflows/delete-merged-branches.yml');
 
