@@ -1,0 +1,177 @@
+name: Branch Cleanup
+
+on:
+  # Auto-delete head branch whenever a PR is merged
+  pull_request:
+    types: [closed]
+
+  # One-time bulk cleanup of all existing stale branches
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: >
+          Dry run: list branches that would be deleted without actually
+          deleting them. Set to false to perform real deletions.
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+# Branches that must never be deleted by this workflow
+env:
+  ALWAYS_KEEP: '["main","feat/mini-program-foundation"]'
+
+jobs:
+  # ── Job 1: triggered automatically when a PR is closed/merged ──────────────
+  delete-merged-branch:
+    name: Delete merged PR branch
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete head branch
+        uses: actions/github-script@v7
+        env:
+          ALWAYS_KEEP: ${{ env.ALWAYS_KEEP }}
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const ALWAYS_KEEP = new Set(JSON.parse(process.env.ALWAYS_KEEP));
+
+            if (ALWAYS_KEEP.has(branch)) {
+              console.log(`Skipping always-kept branch: ${branch}`);
+              return;
+            }
+
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${branch}`,
+              });
+              console.log(`✅ Deleted branch: ${branch}`);
+            } catch (err) {
+              // Branch may already be gone (GitHub auto-delete enabled later, etc.)
+              console.log(`⚠️  Could not delete ${branch}: ${err.message}`);
+            }
+
+  # ── Job 2: one-time bulk cleanup via workflow_dispatch ─────────────────────
+  bulk-cleanup:
+    name: Bulk cleanup stale branches
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect open-PR branches
+        id: open-prs
+        uses: actions/github-script@v7
+        env:
+          ALWAYS_KEEP: ${{ env.ALWAYS_KEEP }}
+        with:
+          result-encoding: string
+          script: |
+            const ALWAYS_KEEP = new Set(JSON.parse(process.env.ALWAYS_KEEP));
+
+            // Paginate through all open PRs
+            let page = 1;
+            while (true) {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100,
+                page,
+              });
+              for (const pr of prs) ALWAYS_KEEP.add(pr.head.ref);
+              if (prs.length < 100) break;
+              page++;
+            }
+
+            return JSON.stringify([...ALWAYS_KEEP]);
+
+      - name: Delete stale branches
+        uses: actions/github-script@v7
+        env:
+          KEEP_JSON: ${{ steps.open-prs.outputs.result }}
+        with:
+          script: |
+            const dryRun = ${{ inputs.dry_run }};
+            const keepBranches = new Set(JSON.parse(process.env.KEEP_JSON));
+
+            console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
+            console.log(`Protected branches (${keepBranches.size}):`, [...keepBranches].sort().join(', '));
+
+            // Paginate through all remote branches
+            let page = 1;
+            const allBranches = [];
+            while (true) {
+              const { data: branches } = await github.rest.repos.listBranches({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+                page,
+              });
+              allBranches.push(...branches);
+              if (branches.length < 100) break;
+              page++;
+            }
+
+            const toDelete = allBranches.filter(
+              b => !keepBranches.has(b.name) && !b.protected
+            );
+
+            console.log(`\nTotal branches: ${allBranches.length}`);
+            console.log(`To keep/skip:   ${allBranches.length - toDelete.length}`);
+            console.log(`To delete:      ${toDelete.length}\n`);
+
+            let deleted = 0;
+            let failed  = 0;
+            for (const branch of toDelete) {
+              if (dryRun) {
+                console.log(`[DRY RUN] would delete: ${branch.name}`);
+                continue;
+              }
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${branch.name}`,
+                });
+                console.log(`✅ Deleted: ${branch.name}`);
+                deleted++;
+              } catch (err) {
+                console.log(`❌ Failed to delete ${branch.name}: ${err.message}`);
+                failed++;
+              }
+            }
+
+            if (!dryRun) {
+              console.log(`\nDone. Deleted: ${deleted}, Failed: ${failed}`);
+            } else {
+              console.log(`\nDry run complete. Re-run with dry_run=false to delete ${toDelete.length} branches.`);
+            }
+
+      # Best-effort: enable the built-in "delete branch on merge" repo setting.
+      # Requires the GITHUB_TOKEN to have admin write access to the repository.
+      # This step is intentionally non-fatal if the token lacks those permissions.
+      - name: Enable delete_branch_on_merge repository setting
+        if: inputs.dry_run == false
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.repos.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                delete_branch_on_merge: true,
+              });
+              console.log('✅ Repository setting delete_branch_on_merge = true');
+            } catch (err) {
+              console.log(
+                '⚠️  Could not set delete_branch_on_merge automatically ' +
+                `(token may lack admin scope): ${err.message}\n` +
+                'Please enable it manually: Settings → General → ' +
+                '"Automatically delete head branches"'
+              );
+            }
