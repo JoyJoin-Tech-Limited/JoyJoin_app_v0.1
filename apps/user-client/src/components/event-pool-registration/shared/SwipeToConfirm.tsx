@@ -70,14 +70,25 @@ export default function SwipeToConfirm({
   const [confirmed, setConfirmed] = useState(false);
   const dragStartXRef = useRef<number | null>(null);
   const hasReportedStartRef = useRef(false);
+  const progressRef = useRef(0);
+  const previousIsSubmittingRef = useRef(isSubmitting);
 
-  // Reset when isSubmitting transitions back to false (on error recovery)
+  // Reset local swipe state once a submission attempt finishes so retry remains
+  // possible after an error and the UI does not stay latched in the confirmed state.
   useEffect(() => {
-    if (!isSubmitting && !confirmed) {
+    const wasSubmitting = previousIsSubmittingRef.current;
+
+    if (wasSubmitting && !isSubmitting) {
+      setConfirmed(false);
       setProgress(0);
+      progressRef.current = 0;
       setIsDragging(false);
+      dragStartXRef.current = null;
+      hasReportedStartRef.current = false;
     }
-  }, [isSubmitting, confirmed]);
+
+    previousIsSubmittingRef.current = isSubmitting;
+  }, [isSubmitting]);
 
   const getTrackWidth = useCallback((): number => {
     return trackRef.current?.getBoundingClientRect().width ?? 1;
@@ -101,6 +112,7 @@ export default function SwipeToConfirm({
       const trackWidth = getTrackWidth();
       const raw = delta / trackWidth;
       const clamped = Math.max(0, Math.min(1, raw));
+      progressRef.current = clamped;
       setProgress(clamped);
 
       if (!hasReportedStartRef.current && clamped > 0.05) {
@@ -116,21 +128,23 @@ export default function SwipeToConfirm({
     if (!isDragging) return;
     setIsDragging(false);
     dragStartXRef.current = null;
+    const latestProgress = progressRef.current;
 
-    if (progress >= CONFIRM_THRESHOLD) {
+    if (latestProgress >= CONFIRM_THRESHOLD) {
       setConfirmed(true);
       haptics.heavy();
       onSwipeCompleted?.();
       onConfirm();
     } else {
-      const progressPct = Math.round(progress * 100);
+      const progressPct = Math.round(latestProgress * 100);
       if (hasReportedStartRef.current) {
         onSwipeAbandoned?.(progressPct);
       }
+      progressRef.current = 0;
       setProgress(0);
     }
     hasReportedStartRef.current = false;
-  }, [isDragging, progress, onSwipeCompleted, onSwipeAbandoned, onConfirm]);
+  }, [isDragging, onSwipeCompleted, onSwipeAbandoned, onConfirm]);
 
   const handleFallback = useCallback(() => {
     if (disabled || isSubmitting) return;
