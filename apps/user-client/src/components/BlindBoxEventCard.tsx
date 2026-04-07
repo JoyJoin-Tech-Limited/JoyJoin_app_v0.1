@@ -141,7 +141,10 @@ export default function BlindBoxEventCard({
   const handleDetailsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     triggerHaptic();
-    onDetailsClick?.();
+    if (onDetailsClick) {
+      onDetailsClick();
+      return;
+    }
     setInfoSheetOpen(true);
   };
 

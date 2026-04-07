@@ -370,7 +370,7 @@ export default function DiscoverPage() {
 
     // Pre-entry interception: if personality test isn't done, show the
     // TestIncompleteScreen overlay instead of opening the join sheet.
-    if (!user?.hasCompletedPersonalityTest) {
+    if (user && !user.hasCompletedPersonalityTest) {
       setShowTestIncomplete(true);
       return;
     }
