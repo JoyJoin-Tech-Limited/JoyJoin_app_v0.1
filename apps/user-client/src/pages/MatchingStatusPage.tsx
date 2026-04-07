@@ -107,7 +107,7 @@ interface PoolStats {
 interface RecommendedPool {
   id: string;
   title: string;
-  eventType: "饭局" | "酒局" | "其他";
+  eventType: "饭局" | "酒局";
   city: "香港" | "深圳";
   district: string;
   dateTime: string;
@@ -153,7 +153,6 @@ export default function MatchingStatusPage() {
   const registration = poolRegistrations?.find(r => r.id === registrationId);
   const rejoinPreferences = useMemo<Partial<EventPreferences>>(
     () => ({
-      eventType: registration?.poolEventType === "酒局" ? "酒局" : "饭局",
       budget: registration?.budgetRange?.[0] ?? "",
       socialGoals: registration?.eventIntent ?? [],
       languages: registration?.preferredLanguages ?? [],
@@ -187,6 +186,7 @@ export default function MatchingStatusPage() {
     },
     select: (pools) =>
       pools
+        .filter((pool): pool is RecommendedPool => pool.eventType === "饭局" || pool.eventType === "酒局")
         .filter((pool) => pool.id !== registration?.poolId)
         .filter((pool) => pool.eventType === registration?.poolEventType)
         .sort((a, b) => {
@@ -233,7 +233,7 @@ export default function MatchingStatusPage() {
       recommendedPools.map((pool) => ({
         id: pool.id,
         title: pool.title,
-        eventType: pool.eventType === "酒局" ? "酒局" : "饭局",
+        eventType: pool.eventType,
         district: `${pool.city} · ${pool.district}`,
         dateTime: pool.dateTime,
         registrationCount: pool.registrationCount,
@@ -599,7 +599,7 @@ export default function MatchingStatusPage() {
               date: formatDateInHongKong(recoverJoinPool.dateTime, "full"),
               area: recoverJoinPool.district,
               city: recoverJoinPool.city,
-              eventType: recoverJoinPool.eventType === "酒局" ? "酒局" : "饭局",
+              eventType: recoverJoinPool.eventType,
               registrationCount: recoverJoinPool.registrationCount,
             }}
             initialPreferences={rejoinPreferences}

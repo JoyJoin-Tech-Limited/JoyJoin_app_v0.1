@@ -99,8 +99,8 @@ export default function JoinEventPoolSheet({
       const userLanguages: string[] = user.preferredLanguages ?? [];
 
       const updates: Parameters<typeof updatePreferences>[0] = {
-        districts: (preferences.districts?.length ?? 0) > 0 ? preferences.districts : defaultDistricts,
-        languages: (preferences.languages?.length ?? 0) > 0 ? preferences.languages : userLanguages,
+        districts: preferences.districts?.length ? preferences.districts : defaultDistricts,
+        languages: preferences.languages?.length ? preferences.languages : userLanguages,
       };
 
       // Pre-fill dietary restrictions from user profile (only when no selection yet)
