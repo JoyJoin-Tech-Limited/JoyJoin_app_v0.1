@@ -1,6 +1,12 @@
 /**
  * 匹配权重服务 - AI进化系统核心组件
  * 实现动态权重读取、Thompson Sampling优化、权重历史记录
+ *
+ * Vocabulary aligned with active poolMatchingService.ts pair-score dimensions:
+ *   chemistry | interest | socialAffinity | backgroundDiversity | preference | language
+ *
+ * Note: semanticSimilarity is intentionally excluded — it is controlled separately via
+ * ENABLE_SEMANTIC_SIMILARITY and must not be learned by the Thompson Sampling bandit.
  */
 
 import { db } from './db';
@@ -28,13 +34,17 @@ export interface MatchingWeightsRolloutStatus {
   activeWeights: MatchingWeights;
 }
 
+/**
+ * Active-flow dimension vocabulary — matches poolMatchingService.ts pair-score dimensions.
+ * semanticSimilarity is excluded; it is controlled by a separate feature flag.
+ */
 type MatchingDimension =
-  | 'personality'
-  | 'interests'
-  | 'intent'
-  | 'background'
-  | 'culture'
-  | 'conversationSignature';
+  | 'chemistry'
+  | 'interest'
+  | 'socialAffinity'
+  | 'backgroundDiversity'
+  | 'preference'
+  | 'language';
 
 type WeightField = keyof MatchingWeights;
 
@@ -96,50 +106,50 @@ const DIMENSIONS: ReadonlyArray<{
   betaField: keyof MatchingWeightsConfig;
 }> = [
   {
-    key: 'personality',
-    weightField: 'personalityWeight',
-    alphaField: 'personalityAlpha',
-    betaField: 'personalityBeta',
+    key: 'chemistry',
+    weightField: 'chemistryWeight',
+    alphaField: 'chemistryAlpha',
+    betaField: 'chemistryBeta',
   },
   {
-    key: 'interests',
-    weightField: 'interestsWeight',
-    alphaField: 'interestsAlpha',
-    betaField: 'interestsBeta',
+    key: 'interest',
+    weightField: 'interestWeight',
+    alphaField: 'interestAlpha',
+    betaField: 'interestBeta',
   },
   {
-    key: 'intent',
-    weightField: 'intentWeight',
-    alphaField: 'intentAlpha',
-    betaField: 'intentBeta',
+    key: 'socialAffinity',
+    weightField: 'socialAffinityWeight',
+    alphaField: 'socialAffinityAlpha',
+    betaField: 'socialAffinityBeta',
   },
   {
-    key: 'background',
-    weightField: 'backgroundWeight',
-    alphaField: 'backgroundAlpha',
-    betaField: 'backgroundBeta',
+    key: 'backgroundDiversity',
+    weightField: 'backgroundDiversityWeight',
+    alphaField: 'backgroundDiversityAlpha',
+    betaField: 'backgroundDiversityBeta',
   },
   {
-    key: 'culture',
-    weightField: 'cultureWeight',
-    alphaField: 'cultureAlpha',
-    betaField: 'cultureBeta',
+    key: 'preference',
+    weightField: 'preferenceWeight',
+    alphaField: 'preferenceAlpha',
+    betaField: 'preferenceBeta',
   },
   {
-    key: 'conversationSignature',
-    weightField: 'conversationSignatureWeight',
-    alphaField: 'conversationSignatureAlpha',
-    betaField: 'conversationSignatureBeta',
+    key: 'language',
+    weightField: 'languageWeight',
+    alphaField: 'languageAlpha',
+    betaField: 'languageBeta',
   },
 ] as const;
 
 const DEFAULT_WEIGHTS: MatchingWeights = {
-  personalityWeight: 23,
-  interestsWeight: 24,
-  intentWeight: 13,
-  backgroundWeight: 15,
-  cultureWeight: 10,
-  conversationSignatureWeight: 15,
+  chemistryWeight: 28,
+  interestWeight: 28,
+  socialAffinityWeight: 20,
+  backgroundDiversityWeight: 15,
+  preferenceWeight: 5,
+  languageWeight: 4,
 };
 
 const DEFAULT_CONFIG_NAME = 'default';
@@ -155,29 +165,29 @@ const STORED_WEIGHT_RATIO_THRESHOLD = 1;
 
 type WeightKey = keyof MatchingWeights;
 type FeedbackDimensionKey =
-  | 'personality'
-  | 'interests'
-  | 'intent'
-  | 'background'
-  | 'culture'
-  | 'conversationSignature';
+  | 'chemistry'
+  | 'interest'
+  | 'socialAffinity'
+  | 'backgroundDiversity'
+  | 'preference'
+  | 'language';
 
 const WEIGHT_KEYS: WeightKey[] = [
-  'personalityWeight',
-  'interestsWeight',
-  'intentWeight',
-  'backgroundWeight',
-  'cultureWeight',
-  'conversationSignatureWeight',
+  'chemistryWeight',
+  'interestWeight',
+  'socialAffinityWeight',
+  'backgroundDiversityWeight',
+  'preferenceWeight',
+  'languageWeight',
 ];
 
 const WEIGHT_COLUMN_DEFAULTS: Record<WeightKey, string> = {
-  personalityWeight: '0.23',
-  interestsWeight: '0.24',
-  intentWeight: '0.13',
-  backgroundWeight: '0.15',
-  cultureWeight: '0.10',
-  conversationSignatureWeight: '0.15',
+  chemistryWeight: '0.28',
+  interestWeight: '0.28',
+  socialAffinityWeight: '0.20',
+  backgroundDiversityWeight: '0.15',
+  preferenceWeight: '0.05',
+  languageWeight: '0.04',
 };
 
 let cachedWeights: MatchingWeights | null = null;
@@ -221,15 +231,12 @@ function normalizeRuntimeWeights(weights: MatchingWeights): MatchingWeights {
 
 function runtimeWeightsFromRecord(record: Partial<Record<WeightKey, unknown>> | null | undefined): MatchingWeights {
   return normalizeRuntimeWeights({
-    personalityWeight: parseWeightValue(record?.personalityWeight, DEFAULT_WEIGHTS.personalityWeight),
-    interestsWeight: parseWeightValue(record?.interestsWeight, DEFAULT_WEIGHTS.interestsWeight),
-    intentWeight: parseWeightValue(record?.intentWeight, DEFAULT_WEIGHTS.intentWeight),
-    backgroundWeight: parseWeightValue(record?.backgroundWeight, DEFAULT_WEIGHTS.backgroundWeight),
-    cultureWeight: parseWeightValue(record?.cultureWeight, DEFAULT_WEIGHTS.cultureWeight),
-    conversationSignatureWeight: parseWeightValue(
-      record?.conversationSignatureWeight,
-      DEFAULT_WEIGHTS.conversationSignatureWeight,
-    ),
+    chemistryWeight: parseWeightValue(record?.chemistryWeight, DEFAULT_WEIGHTS.chemistryWeight),
+    interestWeight: parseWeightValue(record?.interestWeight, DEFAULT_WEIGHTS.interestWeight),
+    socialAffinityWeight: parseWeightValue(record?.socialAffinityWeight, DEFAULT_WEIGHTS.socialAffinityWeight),
+    backgroundDiversityWeight: parseWeightValue(record?.backgroundDiversityWeight, DEFAULT_WEIGHTS.backgroundDiversityWeight),
+    preferenceWeight: parseWeightValue(record?.preferenceWeight, DEFAULT_WEIGHTS.preferenceWeight),
+    languageWeight: parseWeightValue(record?.languageWeight, DEFAULT_WEIGHTS.languageWeight),
   });
 }
 
@@ -346,36 +353,43 @@ function buildDimensionScores(outcomeSignals: ShadowOutcomeSignals): Partial<Rec
   const overallFitScore = normalizeFivePointScore(outcomeSignals.connectionRadar?.overallFit);
 
   return {
-    personality: average([
+    // chemistry — archetype personality match + whether users want to meet again + connection status
+    chemistry: average([
       normalizeFivePointScore(outcomeSignals.connectionRadar?.personalityMatch),
       wouldMeetAgainScore,
       statusScore,
     ]) ?? undefined,
-    interests: average([
+    // interest — topic resonance + connection count + would meet again
+    interest: average([
       normalizeFivePointScore(outcomeSignals.connectionRadar?.topicResonance),
       connectionCountScore,
       wouldMeetAgainScore,
     ]) ?? undefined,
-    intent: average([
+    // socialAffinity — overall social fit + whether users want to meet/attend again + connection status
+    // statusScore included here (not preference) because it reflects broad social outcome, not venue preference.
+    socialAffinity: average([
       overallFitScore,
       wouldMeetAgainScore,
       wouldAttendAgainScore,
       statusScore,
     ]) ?? undefined,
-    background: average([
+    // backgroundDiversity — background diversity signal + new connections made + mutual connections
+    backgroundDiversity: average([
       normalizeFivePointScore(outcomeSignals.connectionRadar?.backgroundDiversity),
       hasNewConnectionsScore,
       mutualConnectionScore,
     ]) ?? undefined,
-    culture: average([
+    // preference — event/venue preference signals (atmosphere + would attend again).
+    // overallFit is excluded here; it is a broad social signal that belongs to socialAffinity.
+    preference: average([
       atmosphereScore,
       wouldAttendAgainScore,
-      statusScore,
     ]) ?? undefined,
-    conversationSignature: average([
+    // language — conversation comfort + atmosphere as a communication-quality proxy.
+    // overallFit is excluded here; it is a broad social signal that belongs to socialAffinity.
+    language: average([
       normalizeConversationComfort(outcomeSignals.conversationComfort),
       atmosphereScore,
-      overallFitScore,
     ]) ?? undefined,
   };
 }
@@ -402,12 +416,12 @@ function normalizePosteriorWeights(
   const total = Object.values(posteriorMeans).reduce((sum, value) => sum + value, 0);
   if (total <= 0) {
     return {
-      personality: DEFAULT_WEIGHTS.personalityWeight / 100,
-      interests: DEFAULT_WEIGHTS.interestsWeight / 100,
-      intent: DEFAULT_WEIGHTS.intentWeight / 100,
-      background: DEFAULT_WEIGHTS.backgroundWeight / 100,
-      culture: DEFAULT_WEIGHTS.cultureWeight / 100,
-      conversationSignature: DEFAULT_WEIGHTS.conversationSignatureWeight / 100,
+      chemistry: DEFAULT_WEIGHTS.chemistryWeight / 100,
+      interest: DEFAULT_WEIGHTS.interestWeight / 100,
+      socialAffinity: DEFAULT_WEIGHTS.socialAffinityWeight / 100,
+      backgroundDiversity: DEFAULT_WEIGHTS.backgroundDiversityWeight / 100,
+      preference: DEFAULT_WEIGHTS.preferenceWeight / 100,
+      language: DEFAULT_WEIGHTS.languageWeight / 100,
     };
   }
 
@@ -495,12 +509,12 @@ export function buildShadowRecommendation(
     overallConfidence: Number(overallConfidence.toFixed(2)),
     liveWeights,
     recommendedWeights: {
-      personalityWeight: normalizedWeights.personality,
-      interestsWeight: normalizedWeights.interests,
-      intentWeight: normalizedWeights.intent,
-      backgroundWeight: normalizedWeights.background,
-      cultureWeight: normalizedWeights.culture,
-      conversationSignatureWeight: normalizedWeights.conversationSignature,
+      chemistryWeight: normalizedWeights.chemistry,
+      interestWeight: normalizedWeights.interest,
+      socialAffinityWeight: normalizedWeights.socialAffinity,
+      backgroundDiversityWeight: normalizedWeights.backgroundDiversity,
+      preferenceWeight: normalizedWeights.preference,
+      languageWeight: normalizedWeights.language,
     },
     dimensionMetrics,
     outcomeSignals,
@@ -528,7 +542,7 @@ export class MatchingWeightsService {
       return cachedWeights;
     } catch (error) {
       console.error('[MatchingWeightsService] Failed to fetch weights:', error);
-      return { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
+      return { ...DEFAULT_WEIGHTS };
     }
   }
 
@@ -543,12 +557,12 @@ export class MatchingWeightsService {
         await db.insert(matchingWeightsConfig).values({
           configName: 'default',
           isActive: true,
-          personalityWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.personalityWeight.toFixed(2),
-          interestsWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.interestsWeight.toFixed(2),
-          intentWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.intentWeight.toFixed(2),
-          backgroundWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundWeight.toFixed(2),
-          cultureWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.cultureWeight.toFixed(2),
-          conversationSignatureWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.conversationSignatureWeight.toFixed(2),
+          chemistryWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.chemistryWeight.toFixed(2),
+          interestWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.interestWeight.toFixed(2),
+          socialAffinityWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.socialAffinityWeight.toFixed(2),
+          backgroundDiversityWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.backgroundDiversityWeight.toFixed(2),
+          preferenceWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.preferenceWeight.toFixed(2),
+          languageWeight: DEFAULT_MATCHING_WEIGHTS_RATIO.languageWeight.toFixed(2),
         });
         console.log('[MatchingWeightsService] Initialized default config');
       }
@@ -582,12 +596,12 @@ export class MatchingWeightsService {
       };
 
       const dimensions: FeedbackDimensionKey[] = [
-        'personality',
-        'interests',
-        'intent',
-        'background',
-        'culture',
-        'conversationSignature',
+        'chemistry',
+        'interest',
+        'socialAffinity',
+        'backgroundDiversity',
+        'preference',
+        'language',
       ];
 
       for (const dimension of dimensions) {
@@ -656,12 +670,12 @@ export class MatchingWeightsService {
 
       const historyRow: InsertMatchingWeightsHistory = {
         configId: config.id,
-        personalityWeight: recommendation.recommendedWeights.personalityWeight.toFixed(4),
-        interestsWeight: recommendation.recommendedWeights.interestsWeight.toFixed(4),
-        intentWeight: recommendation.recommendedWeights.intentWeight.toFixed(4),
-        backgroundWeight: recommendation.recommendedWeights.backgroundWeight.toFixed(4),
-        cultureWeight: recommendation.recommendedWeights.cultureWeight.toFixed(4),
-        conversationSignatureWeight: recommendation.recommendedWeights.conversationSignatureWeight.toFixed(4),
+        chemistryWeight: recommendation.recommendedWeights.chemistryWeight.toFixed(4),
+        interestWeight: recommendation.recommendedWeights.interestWeight.toFixed(4),
+        socialAffinityWeight: recommendation.recommendedWeights.socialAffinityWeight.toFixed(4),
+        backgroundDiversityWeight: recommendation.recommendedWeights.backgroundDiversityWeight.toFixed(4),
+        preferenceWeight: recommendation.recommendedWeights.preferenceWeight.toFixed(4),
+        languageWeight: recommendation.recommendedWeights.languageWeight.toFixed(4),
         changeReason: SHADOW_RECOMMENDATION_REASON,
         matchesSinceLastUpdate: recommendation.sampleSize,
         satisfactionSinceLastUpdate: recommendation.outcomeScore.toFixed(4),
@@ -794,13 +808,13 @@ export class MatchingWeightsService {
       }
 
       const samples = {
-        personalityWeight: this.sampleBeta(config.personalityAlpha || 1, config.personalityBeta || 1) * 100,
-        interestsWeight: this.sampleBeta(config.interestsAlpha || 1, config.interestsBeta || 1) * 100,
-        intentWeight: this.sampleBeta(config.intentAlpha || 1, config.intentBeta || 1) * 100,
-        backgroundWeight: this.sampleBeta(config.backgroundAlpha || 1, config.backgroundBeta || 1) * 100,
-        cultureWeight: this.sampleBeta(config.cultureAlpha || 1, config.cultureBeta || 1) * 100,
-        conversationSignatureWeight:
-          this.sampleBeta(config.conversationSignatureAlpha || 1, config.conversationSignatureBeta || 1) * 100,
+        chemistryWeight: this.sampleBeta(config.chemistryAlpha || 1, config.chemistryBeta || 1) * 100,
+        interestWeight: this.sampleBeta(config.interestAlpha || 1, config.interestBeta || 1) * 100,
+        socialAffinityWeight: this.sampleBeta(config.socialAffinityAlpha || 1, config.socialAffinityBeta || 1) * 100,
+        backgroundDiversityWeight: this.sampleBeta(config.backgroundDiversityAlpha || 1, config.backgroundDiversityBeta || 1) * 100,
+        preferenceWeight: this.sampleBeta(config.preferenceAlpha || 1, config.preferenceBeta || 1) * 100,
+        languageWeight:
+          this.sampleBeta(config.languageAlpha || 1, config.languageBeta || 1) * 100,
       } satisfies MatchingWeights;
 
       const candidateWeights = normalizeRuntimeWeights(samples);
@@ -867,46 +881,46 @@ export class MatchingWeightsService {
     incrementAlpha: boolean,
   ): void {
     switch (dimension) {
-      case 'personality':
+      case 'chemistry':
         if (incrementAlpha) {
-          updates.personalityAlpha = (config.personalityAlpha || 1) + 1;
+          updates.chemistryAlpha = (config.chemistryAlpha || 1) + 1;
         } else {
-          updates.personalityBeta = (config.personalityBeta || 1) + 1;
+          updates.chemistryBeta = (config.chemistryBeta || 1) + 1;
         }
         return;
-      case 'interests':
+      case 'interest':
         if (incrementAlpha) {
-          updates.interestsAlpha = (config.interestsAlpha || 1) + 1;
+          updates.interestAlpha = (config.interestAlpha || 1) + 1;
         } else {
-          updates.interestsBeta = (config.interestsBeta || 1) + 1;
+          updates.interestBeta = (config.interestBeta || 1) + 1;
         }
         return;
-      case 'intent':
+      case 'socialAffinity':
         if (incrementAlpha) {
-          updates.intentAlpha = (config.intentAlpha || 1) + 1;
+          updates.socialAffinityAlpha = (config.socialAffinityAlpha || 1) + 1;
         } else {
-          updates.intentBeta = (config.intentBeta || 1) + 1;
+          updates.socialAffinityBeta = (config.socialAffinityBeta || 1) + 1;
         }
         return;
-      case 'background':
+      case 'backgroundDiversity':
         if (incrementAlpha) {
-          updates.backgroundAlpha = (config.backgroundAlpha || 1) + 1;
+          updates.backgroundDiversityAlpha = (config.backgroundDiversityAlpha || 1) + 1;
         } else {
-          updates.backgroundBeta = (config.backgroundBeta || 1) + 1;
+          updates.backgroundDiversityBeta = (config.backgroundDiversityBeta || 1) + 1;
         }
         return;
-      case 'culture':
+      case 'preference':
         if (incrementAlpha) {
-          updates.cultureAlpha = (config.cultureAlpha || 1) + 1;
+          updates.preferenceAlpha = (config.preferenceAlpha || 1) + 1;
         } else {
-          updates.cultureBeta = (config.cultureBeta || 1) + 1;
+          updates.preferenceBeta = (config.preferenceBeta || 1) + 1;
         }
         return;
-      case 'conversationSignature':
+      case 'language':
         if (incrementAlpha) {
-          updates.conversationSignatureAlpha = (config.conversationSignatureAlpha || 1) + 1;
+          updates.languageAlpha = (config.languageAlpha || 1) + 1;
         } else {
-          updates.conversationSignatureBeta = (config.conversationSignatureBeta || 1) + 1;
+          updates.languageBeta = (config.languageBeta || 1) + 1;
         }
         return;
     }
