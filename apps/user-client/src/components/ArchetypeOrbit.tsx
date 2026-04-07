@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 
 // Import archetype PNG assets
@@ -54,9 +54,6 @@ interface ArchetypeOrbitProps {
   size?: "small" | "medium" | "large";
   animated?: boolean;
   onAnimationComplete?: () => void;
-  mode?: "default" | "anonymous";
-  highlightedArchetype?: string | null;
-  pulseState?: "idle" | "warming" | "ready";
 }
 
 export default function ArchetypeOrbit({ 
@@ -64,9 +61,6 @@ export default function ArchetypeOrbit({
   size = "medium",
   animated = true,
   onAnimationComplete,
-  mode = "default",
-  highlightedArchetype = null,
-  pulseState = "idle",
 }: ArchetypeOrbitProps) {
   const [showLogo, setShowLogo] = useState(!animated);
   const [showOrbiters, setShowOrbiters] = useState(!animated);
@@ -96,14 +90,10 @@ export default function ArchetypeOrbit({
   const config = sizeConfig[size];
   
   // Filter archetypes to valid ones and limit to 6
-  const validArchetypes = useMemo(
-    () =>
-      archetypes
-        .map((name) => ({ name, asset: getArchetypeAsset(name) }))
-        .filter((item) => item.asset !== null)
-        .slice(0, 6),
-    [archetypes],
-  );
+  const validArchetypes = archetypes
+    .map(name => ({ name, asset: getArchetypeAsset(name) }))
+    .filter(item => item.asset !== null)
+    .slice(0, 6);
   
   // Animation sequence
   useEffect(() => {
@@ -152,15 +142,6 @@ export default function ArchetypeOrbit({
           animation: showLogo && animated ? "logoWakeUp 0.5s ease-out" : undefined,
         }}
       >
-        <div
-          className={`absolute inset-0 rounded-full blur-2xl transition-opacity duration-500 ${
-            pulseState === "ready"
-              ? "bg-fuchsia-400/35 opacity-100"
-              : pulseState === "warming"
-              ? "bg-violet-400/30 opacity-100"
-              : "opacity-0"
-          }`}
-        />
         <img 
           src={joyJoinLogo} 
           alt="JoyJoin" 
@@ -174,7 +155,6 @@ export default function ArchetypeOrbit({
           {validArchetypes.map((item, idx) => {
             const angle = (360 / validArchetypes.length) * idx;
             const delay = idx * 0.1;
-            const isHighlighted = highlightedArchetype !== null && item.name === highlightedArchetype;
             
             return (
               <div
@@ -189,30 +169,19 @@ export default function ArchetypeOrbit({
                     ? `flyIn 0.6s ease-out ${delay}s both` 
                     : undefined,
                 }}
+              >
+                <div 
+                  style={{ transform: `rotate(-${angle}deg)` }}
+                  className="relative"
                 >
-                  <div 
-                    style={{ transform: `rotate(-${angle}deg)` }}
-                    className="relative"
-                  >
-                    <div
-                      className={`absolute inset-0 rounded-full blur-xl transition-opacity duration-300 ${
-                        isHighlighted ? "bg-white/30 opacity-100" : "opacity-0"
-                      }`}
-                    />
-                    <img 
-                      src={item.asset!} 
-                      alt={item.name} 
-                      className={`${config.orbiter} object-contain drop-shadow-md transition-all duration-300 ${
-                        mode === "anonymous"
-                          ? isHighlighted
-                            ? "opacity-100 saturate-100"
-                            : "opacity-55 saturate-0 brightness-125"
-                          : ""
-                      } ${isHighlighted ? "scale-110" : ""}`}
-                    />
-                  </div>
+                  <img 
+                    src={item.asset!} 
+                    alt={item.name} 
+                    className={`${config.orbiter} object-contain drop-shadow-md`}
+                  />
                 </div>
-              );
+              </div>
+            );
           })}
         </div>
       )}

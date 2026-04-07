@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
@@ -10,7 +10,7 @@ interface UserProfile {
   intent?: string[];
 }
 
-export interface EventPreferences {
+interface EventPreferences {
   eventType: "饭局" | "酒局";
   budget: string;
   socialGoals: string[];
@@ -25,35 +25,24 @@ export interface EventPreferences {
   musicPreference?: string[];
 }
 
-type InitialEventPreferences = Partial<Omit<EventPreferences, "eventType">>;
-
 interface UseEventPoolRegistrationProps {
   poolId: string;
   eventType: "饭局" | "酒局";
   onSuccess?: () => void;
-  initialPreferences?: InitialEventPreferences;
 }
 
 export function useEventPoolRegistration({ 
   poolId, 
   eventType,
-  onSuccess,
-  initialPreferences,
+  onSuccess 
 }: UseEventPoolRegistrationProps) {
   const { toast } = useToast();
-  const normalizedInitialPreferences = useMemo<InitialEventPreferences>(
-    () => ({
-      ...initialPreferences,
-    }),
-    [JSON.stringify(initialPreferences ?? {})],
-  );
   const [step, setStep] = useState(1);
   const [preferences, setPreferences] = useState<Partial<EventPreferences>>({
+    eventType,
     socialGoals: [],
     districts: [],
     languages: [],
-    ...normalizedInitialPreferences,
-    eventType,
   });
   const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
   // Track whether the initial draft/pre-fill check on mount is done
@@ -106,17 +95,12 @@ export function useEventPoolRegistration({
     }
 
     // No draft: pre-fill social goals from profile intent if available
-    if (normalizedInitialPreferences && Object.keys(normalizedInitialPreferences).length > 0) {
-      setPreferences((prev) => ({ ...prev, ...normalizedInitialPreferences, eventType }));
-      return;
-    }
-
     if (user?.intent && user.intent.length > 0) {
       setPreferences(prev => ({ ...prev, socialGoals: user.intent as string[] }));
       setIsPrefilledFromProfile(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, poolId, normalizedInitialPreferences, eventType]);
+  }, [user, poolId]);
 
   // Auto-advance Step 1 → Step 2 after budget selection
   useEffect(() => {
