@@ -271,8 +271,8 @@ export default function BlindBoxEventCard({
                   </p>
                 </div>
                 <span className="text-[11px] font-semibold text-primary/80 shrink-0">
-                  {/* Pool registrations / matching threshold — not table occupancy */}
-                  {registrationCount}/{MIN_TABLE_SIZE}
+                  {/* Display capped progress against the matching threshold — not table occupancy */}
+                  {Math.min(registrationCount, MIN_TABLE_SIZE)}/{MIN_TABLE_SIZE}
                 </span>
               </div>
 

@@ -97,7 +97,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
           已成功加入活动池
         </h2>
         <p className="text-muted-foreground">
-          系统将在截止后，从活动池中为你匹配成桌
+          条件满足后，系统将从活动池中为你匹配成桌
         </p>
       </motion.div>
 
