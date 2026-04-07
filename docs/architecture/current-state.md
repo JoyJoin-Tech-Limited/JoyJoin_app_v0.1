@@ -68,7 +68,10 @@ Primary files:
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
-- Active blind-pool entry is `DiscoverPage` query-param join sheet → `MatchingStatusPage`; `BlindBoxConfirmationPage` is quarantined and must not be revived as the success path.
+- **Updated 2026-04-07:** Active blind-pool discovery is pool-first: `BlindBoxEventCard` + `PreJoinVibeBriefSheet` + `JoinEventPoolSheet` are the client entry surfaces, while `MatchingStatusPage` owns the waiting / reveal path after a pending registration exists.
+- `PoolForecastStrip` is deterministic client-side atmosphere guidance only; it does not participate in pair scoring or group formation.
+- Matching is not deadline-only: `poolRealtimeMatchingService.ts` supports registration-triggered realtime scans and scheduled scans via `scanPoolAndMatch`.
+- `BlindBoxConfirmationPage` is quarantined and must not be revived as the success path.
 
 ### 3. Social Icebreaker
 

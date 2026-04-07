@@ -9,6 +9,8 @@ This document covers the polished matching-state UX and reveal experience for th
 
 ## Part 1 — Matching-State Architecture (PRs #387–#391)
 
+> **Updated 2026-04-07** — `TestIncompleteScreen` is now a Discover-page pre-entry intercept only. `ExtendedDataEmptyScreen` remains an in-sheet optional nudge, and `MatchRevealSequenceV2` remains the active reveal system.
+
 ### Shared Layout: `MatchingStateLayout`
 **File**: `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
 
@@ -44,8 +46,8 @@ These components are used either inside `JoinEventPoolSheet.tsx` or as a pre-ent
 | Component | State | Location |
 |-----------|-------|----------|
 | `JoinErrorScreen` | Registration/join error | `components/matching/JoinErrorScreen.tsx` |
-| `ExtendedDataEmptyScreen` | Insufficient profile data | `components/matching/ExtendedDataEmptyScreen.tsx` |
-| `TestIncompleteScreen` | Personality test incomplete pre-entry gate on `DiscoverPage` | `components/matching/TestIncompleteScreen.tsx` |
+| `ExtendedDataEmptyScreen` | Optional extended-profile nudge shown inside `JoinEventPoolSheet` before the main steps | `components/matching/ExtendedDataEmptyScreen.tsx` |
+| `TestIncompleteScreen` | Personality test incomplete pre-entry gate shown from `DiscoverPage` before the join sheet opens | `components/matching/TestIncompleteScreen.tsx` |
 
 ### Post-Match Reveal Components
 

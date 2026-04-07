@@ -1,6 +1,6 @@
 # Event Pool Registration - Implementation Complete ✅
 
-> **Deprecated snapshot (not canonical).** This summary reflects an earlier join-sheet implementation milestone. For the active blind-pool flow and screen ownership, use `DEVELOPER_QUICK_REFERENCE.md`, `docs/ui-matching-reveal-improvements.md`, and `docs/matching-reveal-implementation-summary.md`.
+> **Updated 2026-04-07 / still non-canonical.** This summary is kept as a historical implementation companion. The active flow is pool-first and should be read together with `DEVELOPER_QUICK_REFERENCE.md`, `docs/ui-matching-reveal-improvements.md`, and `docs/matching-reveal-implementation-summary.md`.
 
 ## 📊 Implementation Statistics
 
@@ -28,11 +28,11 @@
 
 ### 1. Main Container
 **File**: `JoinEventPoolSheet.tsx` (244 lines)
-- 3-step registration flow
+- 3-step pool-entry flow
 - Sheet state management
 - Conditional rendering for 饭局/酒局
 - Auto-advance logic
-- Success celebration orchestration
+- Success celebration orchestration for "joined the pool"
 
 ### 2. Core UI Components (6 files)
 - **SheetHeader** (68 lines) - Progress bar + event info card
@@ -41,9 +41,11 @@
 - **FooterActions** (107 lines) - Navigation buttons with validation
 - **SuccessCelebration** (131 lines) - Confetti + checkmark animation
 
-### 3. Step Components (5 files)
-- **BudgetSelectionStep** (74 lines) - Budget cards with auto-advance
-- **SocialGoalsStep** (129 lines) - Multi-select goals + flexible mode
+### 3. Step Components (7 files)
+- **BudgetSelectionStep** - Default Step 1 budget cards with auto-advance
+- **AtmosphereSelectionStep** - Wave 2 Step 1 experiment for atmosphere-led framing
+- **SocialGoalsStep** - Default Step 2 multi-select goals
+- **PrimaryGoalStep** - Wave 2 Step 2 reframing experiment
 - **SmartDefaultsStep** (146 lines) - Pre-filled preferences with customization
 - **DinnerPreferencesStep** (138 lines) - 饭局 cuisines, taste, dietary
 - **BarPreferencesStep** (144 lines) - 酒局 themes, alcohol, music
@@ -120,10 +122,10 @@
 ## 🔌 Integration
 
 ### Automatic Integration
-The new sheet is already integrated into `BlindBoxEventCard.tsx`:
+The active user flow reaches this sheet from discovery surfaces (`BlindBoxEventCard` and, when enabled, `PreJoinVibeBriefSheet`):
 
 ```tsx
-// User clicks "立即参与" → Opens new JoinEventPoolSheet
+// User taps the pool CTA → optional vibe brief → JoinEventPoolSheet
 <JoinEventPoolSheet
   open={newJoinSheetOpen}
   onOpenChange={setNewJoinSheetOpen}
@@ -195,9 +197,9 @@ POST /api/event-pools/:poolId/register
 ```
 
 ### Response Handling
-- **Success**: Shows celebration, invalidates cache, redirects to `/events`
-- **Error**: Shows toast with error message, enables retry
-- **Loading**: Shows "AI匹配中..." spinner
+- **Success**: Shows the pool-entry celebration (`已成功加入活动池`), invalidates cache, and hands control back to the caller; active waiting / reveal ownership is outside this sheet
+- **Error**: Shows `JoinErrorScreen` with retry / browse recovery
+- **Loading**: Primary CTA shows `正在提交报名…`
 
 ## 🧪 Testing Coverage
 
@@ -216,7 +218,7 @@ Created comprehensive test checklists in:
 - [ ] Form validation
 - [ ] Draft save/restore
 - [ ] Success celebration
-- [ ] Auto-redirect
+- [ ] Success state confirms pool entry, not immediate matching
 - [ ] Keyboard navigation
 - [ ] Screen reader compatibility
 - [ ] Haptic feedback (mobile)
@@ -236,10 +238,10 @@ Based on the problem statement goals:
 
 ## 🚀 Next Steps
 
-### Immediate (Ready Now)
-1. ✅ Code complete and tested locally
-2. ✅ TypeScript compilation verified
-3. ✅ Documentation complete
+### Immediate (Current Reality)
+1. ✅ Current component flow includes experiment-backed Step 1 / Step 2 variants
+2. ✅ Optional extended-data nudge is handled inside the sheet
+3. ✅ Success copy is pool-entry-first (`已成功加入活动池`)
 4. ⏳ Manual UI testing needed
 5. ⏳ Visual regression testing needed
 
