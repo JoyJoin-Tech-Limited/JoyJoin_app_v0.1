@@ -259,6 +259,7 @@ export default function BlindBoxEventCard({
               </div>
             </div>
 
+            {/* [Event Pool] Matching-threshold progress — pool readiness, not table occupancy */}
             <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -276,7 +277,15 @@ export default function BlindBoxEventCard({
                 </span>
               </div>
 
-              <div className="h-2 rounded-full bg-background/80 overflow-hidden">
+              {/* Pool matching-threshold progress bar: 100% = minGroupSize reached */}
+              <div
+                className="h-2 rounded-full bg-background/80 overflow-hidden"
+                role="progressbar"
+                aria-label="活动池匹配门槛进度"
+                aria-valuenow={Math.min(registrationCount, MIN_TABLE_SIZE)}
+                aria-valuemin={0}
+                aria-valuemax={MIN_TABLE_SIZE}
+              >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500"
                   style={{ width: `${Math.max(progressPercent, registrationCount > 0 ? 18 : 0)}%` }}
@@ -319,6 +328,7 @@ export default function BlindBoxEventCard({
               </div>
             </div>
 
+            {/* [Event Pool] CTA — joins the pool, not a formed table */}
             <Button
               className={`w-full mt-auto transition-all duration-150 active:scale-[0.98] ${
                 isFeatured ? featuredCtaClass : ""

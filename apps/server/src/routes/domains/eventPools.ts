@@ -6,6 +6,15 @@ import { logger } from "../../lib/logger";
 
 const DEFAULT_MIN_GROUP_SIZE = 4;
 
+/**
+ * Event Pool stats response.
+ *
+ * Separation of concerns — every field belongs to one of two layers:
+ *   [Event Pool]  — signals about the pool itself (registrations, archetype mix).
+ *   [成桌 outcome] — historical data produced *from* the pool after matching ran.
+ *
+ * Never treat pool-layer fields as evidence that a 成桌 has formed.
+ */
 export interface EventPoolStatsResponse {
   /** [Event Pool layer] — total registrations in the pool (not table members). */
   totalRegistrations: number;
