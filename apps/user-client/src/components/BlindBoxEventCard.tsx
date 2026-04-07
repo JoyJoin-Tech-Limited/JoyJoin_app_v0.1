@@ -104,25 +104,34 @@ export default function BlindBoxEventCard({
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
+  // [Event Pool] thresholds — pool needs MIN_TABLE_SIZE to trigger matching;
+  // actual 成桌 groups are formed by the system afterward (up to MAX_TABLE_SIZE).
   const MIN_TABLE_SIZE = 4;
   const MAX_TABLE_SIZE = 6;
   const seatsNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
+  // Progress toward the pool matching threshold (not table occupancy).
   const progressPercent = Math.min((registrationCount / MIN_TABLE_SIZE) * 100, 100);
   const currencySymbol = getCurrencySymbol(city ?? "深圳");
   const priceSummary = priceTier ? `${currencySymbol}${priceTier}` : null;
+
+  // [Event Pool] — pool readiness copy; never implies seats are assigned or a table is formed.
   const formationHeadline =
     registrationCount >= MIN_TABLE_SIZE
-      ? "这一桌已满足成桌条件"
+      ? "活动池热度已满，等待系统触发匹配"
       : registrationCount > 0
-        ? `再有 ${seatsNeeded} 位桌友入座即可成桌`
-        : "等你来开启这一桌";
+        ? `再有 ${seatsNeeded} 人加入，活动池即可触发匹配`
+        : "成为第一个加入这个活动池的人";
+
+  // [Event Pool] — registration count, not table membership.
   const formationDetail =
     registrationCount >= MIN_TABLE_SIZE
-      ? `${registrationCount} 位桌友已在等揭晓 · 当前可优先成桌`
+      ? `${registrationCount} 人已在活动池 · 系统将从中匹配 ${MIN_TABLE_SIZE}–${MAX_TABLE_SIZE} 人成桌`
       : registrationCount > 0
-        ? `${registrationCount} 位桌友已入座 · ${MIN_TABLE_SIZE} 人成桌，最多 ${MAX_TABLE_SIZE} 人`
-        : `${MIN_TABLE_SIZE} 人成桌 · 时间区域已定`;
-  const promiseLine = "时间区域已定 · 桌友成桌后揭晓";
+        ? `池内已有 ${registrationCount} 人报名 · 满 ${MIN_TABLE_SIZE} 人触发匹配，最多 ${MAX_TABLE_SIZE} 人`
+        : `满 ${MIN_TABLE_SIZE} 人后触发匹配 · 时间与区域已定`;
+
+  // [Bridge] — tablemates exist only after 成桌; surface that expectation without collapsing layers.
+  const promiseLine = "时间与区域已定 · 桌友匹配后揭晓";
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -262,7 +271,8 @@ export default function BlindBoxEventCard({
                   </p>
                 </div>
                 <span className="text-[11px] font-semibold text-primary/80 shrink-0">
-                  {Math.min(registrationCount, MAX_TABLE_SIZE)}/{MAX_TABLE_SIZE}
+                  {/* Pool registrations / matching threshold — not table occupancy */}
+                  {registrationCount}/{MIN_TABLE_SIZE}
                 </span>
               </div>
 
@@ -305,7 +315,7 @@ export default function BlindBoxEventCard({
             <div className="rounded-lg border border-border/50 bg-muted/35 px-3 py-2 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Shield className="h-3 w-3 text-primary/70 shrink-0" aria-hidden="true" />
-                <span>已知时间与区域 · 桌友成桌后揭晓 · 成桌前可退出</span>
+                <span>已知时间与区域 · 桌友匹配后揭晓 · 成桌前可退出</span>
               </div>
             </div>
 
@@ -319,7 +329,7 @@ export default function BlindBoxEventCard({
               data-testid={`button-join-${id}`}
             >
               <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
-              入座这一桌
+              加入活动池
             </Button>
           </div>
         </Card>

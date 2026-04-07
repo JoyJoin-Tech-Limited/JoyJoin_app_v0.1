@@ -86,7 +86,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         ))}
       </motion.div>
 
-      {/* Success Text — formation-forward, not task completion */}
+      {/* Success Text — [Bridge] confirms pool registration; sets expectation that 成桌 is a later system step */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -94,10 +94,10 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         className="text-center space-y-2 mb-8"
       >
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-          席位已锁定
+          已成功加入活动池
         </h2>
         <p className="text-muted-foreground">
-          这一桌正在成形中……
+          系统将在截止后，从活动池中为你匹配成桌
         </p>
       </motion.div>
 
@@ -126,7 +126,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
           className="w-full bg-gradient-to-r from-primary to-purple-600"
           size="lg"
         >
-          查看成桌进度
+          查看匹配状态
         </Button>
         
         {/* Countdown dots */}

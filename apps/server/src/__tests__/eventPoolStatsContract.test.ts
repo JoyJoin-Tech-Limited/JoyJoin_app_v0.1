@@ -24,7 +24,8 @@ describe("event pool stats contract", () => {
         柯基: 3,
         狐狸: 4,
       },
-      estimatedGroups: 2,
+      // floor(7 / 4) = 1 — conservative: only fully-formable groups are counted.
+      estimatedGroups: 1,
       avgMatchScore: 82,
       recentThemeTitles: [{ themeTitle: "城市夜游", themeEmoji: "🌃" }],
     });

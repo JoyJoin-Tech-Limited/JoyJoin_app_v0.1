@@ -7,10 +7,29 @@ import { logger } from "../../lib/logger";
 const DEFAULT_MIN_GROUP_SIZE = 4;
 
 export interface EventPoolStatsResponse {
+  /** [Event Pool layer] — total registrations in the pool (not table members). */
   totalRegistrations: number;
+  /** [Event Pool layer] — archetype distribution across pool registrants. */
   archetypeBreakdown: Record<string, number>;
+  /**
+   * [Event Pool layer] — floor-based estimate of how many 成桌 groups the current
+   * pool could support.  Uses Math.floor (not ceil) so the value is conservative
+   * and honest: partial groups are not counted as formable.
+   *
+   * TODO (later PR): rename to `projectedGroups` and split stats response into
+   * separate `poolSignals` and `groupOutcomes` sections to avoid mixing pool-layer
+   * data with historical 成桌 outcomes on the same response object.
+   */
   estimatedGroups: number;
+  /**
+   * [成桌 layer] — average match score across already-formed groups in this pool.
+   * This is a historical outcome metric, not a current pool-state signal.
+   */
   avgMatchScore: number;
+  /**
+   * [成桌 layer] — theme titles from groups already formed from this pool.
+   * Historical 成桌 examples; do NOT present these as the current pool's state.
+   */
   recentThemeTitles: Array<{ themeTitle: string | null; themeEmoji: string }>;
 }
 
@@ -26,7 +45,10 @@ export function buildEventPoolStatsResponse(input: {
     archetypeBreakdown: Object.fromEntries(
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
-    estimatedGroups: Math.ceil(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
+    // Math.floor: conservative — only fully-formable groups are counted.
+    // (ceil was previously used but over-counted: 7 people ÷ min 4 → ceil=2, floor=1.
+    //  With floor, a partial remainder is not presented as a complete group.)
+    estimatedGroups: Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
   };
