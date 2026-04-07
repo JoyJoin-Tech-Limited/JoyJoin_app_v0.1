@@ -2,12 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReducedMotion } from "framer-motion";
 import { Sparkles, CheckCircle2 } from "lucide-react";
+import { buildPreJoinVibeBriefUrl } from "@/lib/preJoinVibeBrief";
 import { getQueryFn } from "@/lib/queryClient";
 import type { PreJoinVibeBrief } from "@shared/ai/onboarding";
 
 interface WhyThisFitsCardProps {
-  /** Pool-specific cache key segment. */
-  poolId: string;
   /** Event type used to tailor fit reasons. */
   eventType: "饭局" | "酒局";
   /** Area/district used to tailor fit reasons. */
@@ -28,17 +27,12 @@ interface WhyThisFitsCardProps {
  * - Respects prefers-reduced-motion.
  */
 export default function WhyThisFitsCard({
-  poolId,
   eventType,
   area,
   enabled = true,
 }: WhyThisFitsCardProps) {
   const prefersReducedMotion = useReducedMotion();
-  const params = new URLSearchParams();
-  params.set("poolId", poolId);
-  params.set("eventType", eventType);
-  if (area) params.set("area", area);
-  const url = `/api/ai/pre-join-vibe-brief?${params.toString()}`;
+  const url = buildPreJoinVibeBriefUrl({ eventType, area });
 
   const { data: brief, isLoading } = useQuery<PreJoinVibeBrief | null>({
     queryKey: [url],
