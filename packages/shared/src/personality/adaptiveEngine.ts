@@ -57,7 +57,7 @@ export const UNIVERSAL_CLOSING_QUESTION_IDS: readonly string[] = [
  * complete once answered (not merely skipped).
  */
 export function isUniversalClosingQuestionId(id: string): boolean {
-  return (UNIVERSAL_CLOSING_QUESTION_IDS as readonly string[]).includes(id);
+  return UNIVERSAL_CLOSING_QUESTION_IDS.includes(id);
 }
 
 /**
