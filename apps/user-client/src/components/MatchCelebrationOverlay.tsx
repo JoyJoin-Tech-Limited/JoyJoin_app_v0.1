@@ -101,7 +101,7 @@ export default function MatchCelebrationOverlay({
                   匹配成功！
                 </h2>
                 <p className="text-muted-foreground">
-                  {groupSize != null
+                  {groupSize != null && groupSize > 0
                     ? `${groupSize} 位${eventType}小伙伴已就位`
                     : `${eventType}小伙伴已就位`}
                 </p>

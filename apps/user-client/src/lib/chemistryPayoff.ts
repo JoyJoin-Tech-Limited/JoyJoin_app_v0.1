@@ -64,7 +64,7 @@ const GENERIC_HEADLINES = [
 
 /** Pick a headline seeded on the groupSize so it's stable across re-renders. */
 export function pickHeadline(groupSize: number): string {
-  const idx = groupSize % GENERIC_HEADLINES.length;
+  const idx = Math.abs(groupSize) % GENERIC_HEADLINES.length;
   return GENERIC_HEADLINES[idx];
 }
 
@@ -154,8 +154,11 @@ const CHEMISTRY_LINE_FALLBACKS = [
   "风格相投，今晚可以放开聊",
 ];
 
-/** Stable seed-based pick from an array. */
+/** Stable seed-based pick from an array. Throws if the array is empty. */
 function seedPick<T>(arr: T[], seed: number): T {
+  if (arr.length === 0) {
+    throw new Error("seedPick called with empty array");
+  }
   return arr[Math.abs(seed) % arr.length];
 }
 
