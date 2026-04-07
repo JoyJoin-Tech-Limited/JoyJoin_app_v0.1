@@ -373,7 +373,7 @@ export default function MatchingWaitingScreen({
           className={`h-3 w-3 ${shouldReduceMotion ? "" : "refresh-spin"}`}
           aria-hidden="true"
         />
-        <span>保持刷新中</span>
+        <span>自动刷新中</span>
       </div>
     </>
   );
