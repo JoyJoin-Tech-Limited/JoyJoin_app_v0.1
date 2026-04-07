@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Bell, ChevronRight, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -188,15 +188,22 @@ export default function MatchingWaitingScreen({
     : null;
 
   const copy = archetypeCopy ?? genericCopy;
+  const hasTrackedArchetypeWaitingRef = useRef(false);
 
-  // Analytics: track archetype waiting experiment shown (fires once per mount
-  // when the experiment is active and the fill state is "waiting")
+  // Analytics: track archetype waiting experiment once when the personalised
+  // copy actually becomes visible. `userArchetype` / `poolId` may arrive after
+  // the initial mount, so keying this on mount alone can miss the exposure.
   useEffect(() => {
-    if (useArchetypeCopy && userArchetype && poolId) {
+    if (
+      !hasTrackedArchetypeWaitingRef.current &&
+      useArchetypeCopy &&
+      userArchetype &&
+      poolId
+    ) {
+      hasTrackedArchetypeWaitingRef.current = true;
       participationExperimentAnalytics.archetypeWaitingShown(poolId, userArchetype);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [poolId, useArchetypeCopy, userArchetype]);
 
   // Reset countdown when the refresh interval prop changes.
   useEffect(() => {

@@ -5,6 +5,7 @@ import {
   socialGoalReframingEnabled,
   ignitionConfirmationEnabled,
   archetypeWaitingEnabled,
+  parseExperimentOverrides,
   ENABLE_ATMOSPHERE_FRAMING,
   ENABLE_SOCIAL_GOAL_REFRAMING,
   ENABLE_IGNITION_CONFIRMATION,
@@ -33,6 +34,26 @@ describe("wave2Experiments — isExperimentEnabled (node env: no URL overrides)"
   });
 });
 
+describe("wave2Experiments — override parsing", () => {
+  it("parses repeated exp params", () => {
+    expect(parseExperimentOverrides("?exp=atmosphere_on&exp=ignition_off")).toEqual(
+      new Set(["atmosphere_on", "ignition_off"]),
+    );
+  });
+
+  it("parses comma-separated exp params", () => {
+    expect(parseExperimentOverrides("?exp=atmosphere_on,ignition_off")).toEqual(
+      new Set(["atmosphere_on", "ignition_off"]),
+    );
+  });
+
+  it("ignores blank override tokens", () => {
+    expect(parseExperimentOverrides("?exp=atmosphere_on,,")).toEqual(
+      new Set(["atmosphere_on"]),
+    );
+  });
+});
+
 describe("wave2Experiments — convenience accessors reflect compile-time flags", () => {
   it("atmosphereFramingEnabled matches ENABLE_ATMOSPHERE_FRAMING", () => {
     expect(atmosphereFramingEnabled()).toBe(ENABLE_ATMOSPHERE_FRAMING);
@@ -56,5 +77,11 @@ describe("wave2Experiments — convenience accessors reflect compile-time flags"
     expect(typeof ENABLE_IGNITION_CONFIRMATION).toBe("boolean");
     expect(typeof ENABLE_ARCHETYPE_WAITING).toBe("boolean");
   });
-});
 
+  it("Wave 2 flags default off for production-safe rollout", () => {
+    expect(ENABLE_ATMOSPHERE_FRAMING).toBe(false);
+    expect(ENABLE_SOCIAL_GOAL_REFRAMING).toBe(false);
+    expect(ENABLE_IGNITION_CONFIRMATION).toBe(false);
+    expect(ENABLE_ARCHETYPE_WAITING).toBe(false);
+  });
+});

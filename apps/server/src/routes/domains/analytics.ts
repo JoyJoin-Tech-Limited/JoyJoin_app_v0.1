@@ -3,6 +3,61 @@ import { getMetricsText } from "../../middleware/metrics";
 import { logger } from "../../lib/logger";
 import { db } from "../../db";
 import { participationExperimentEvents } from "@shared/schema";
+import { createRateLimiter } from "../../rateLimiter";
+
+const participationAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 60,
+  keyPrefix: "participation-analytics",
+});
+
+const PARTICIPATION_EVENT_TYPES = [
+  "atmosphere_framing_shown",
+  "atmosphere_framing_selected",
+  "goal_reframe_shown",
+  "goal_reframe_primary_selected",
+  "goal_reframe_secondary_added",
+  "ignition_shown",
+  "ignition_swipe_started",
+  "ignition_swipe_completed",
+  "ignition_swipe_abandoned",
+  "ignition_fallback_used",
+  "archetype_waiting_shown",
+] as const;
+
+type ParticipationEventType = (typeof PARTICIPATION_EVENT_TYPES)[number];
+
+const ALLOWED_PARTICIPATION_EVENT_TYPES = new Set<ParticipationEventType>(
+  PARTICIPATION_EVENT_TYPES,
+);
+
+const MAX_METADATA_BYTES = 4_096;
+const MAX_POOL_ID_LENGTH = 120;
+
+function sanitizeMetadata(metadata: unknown): Record<string, unknown> | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  try {
+    const encoded = JSON.stringify(metadata);
+    if (encoded.length > MAX_METADATA_BYTES) {
+      return null;
+    }
+    return metadata as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function parseTimestamp(timestamp: unknown): Date {
+  if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) {
+    return new Date();
+  }
+
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
 
 export function registerAnalyticsRoutes(app: Express): void {
   // Prometheus-style metrics endpoint — internal use only.
@@ -31,30 +86,38 @@ export function registerAnalyticsRoutes(app: Express): void {
    * Auth is optional: events are accepted from both authenticated and anonymous
    * sessions (anonymous events have userId = null).
    */
-  app.post("/api/analytics/participation_experiment", async (req: Request, res) => {
+  app.post("/api/analytics/participation_experiment", participationAnalyticsLimiter, async (req: Request, res) => {
     try {
       const { eventType, poolId, metadata, timestamp } = req.body as {
-        eventType?: string;
-        poolId?: string;
-        metadata?: Record<string, unknown>;
-        timestamp?: number;
+        eventType?: unknown;
+        poolId?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
       };
 
-      if (!eventType) {
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_PARTICIPATION_EVENT_TYPES.has(eventType as ParticipationEventType)
+      ) {
         // Silently ignore malformed events — analytics must never error loudly
-        return res.status(200).json({ success: false, error: "eventType required" });
+        return res.status(200).json({ success: false, error: "invalid eventType" });
       }
 
-      const userId: string | null = (req.session as any)?.userId ?? null;
-      const sessionId: string | null = (req.session as any)?.id ?? null;
+      const normalizedPoolId =
+        typeof poolId === "string" && poolId.length > 0 && poolId.length <= MAX_POOL_ID_LENGTH
+          ? poolId
+          : null;
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session.userId ?? null;
+      const sessionId = req.sessionID ?? null;
 
       await db.insert(participationExperimentEvents).values({
         userId,
         sessionId,
         eventType,
-        poolId: poolId ?? null,
-        metadata: metadata ?? null,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        poolId: normalizedPoolId,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
       });
 
       return res.status(200).json({ success: true });
