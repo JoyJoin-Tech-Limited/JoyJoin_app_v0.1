@@ -546,4 +546,17 @@ describe('MatchingWeightsService', () => {
     expect(weights.preferenceWeight).toBeCloseTo(5, 3);
     expect(weights.languageWeight).toBeCloseTo(4, 3);
   });
+
+  it('returns runtime percentage defaults when fetching active weights fails', async () => {
+    vi.spyOn(service, 'getActiveConfig').mockRejectedValueOnce(new Error('db unavailable'));
+
+    await expect(service.getActiveWeights()).resolves.toEqual({
+      chemistryWeight: 28,
+      interestWeight: 28,
+      socialAffinityWeight: 20,
+      backgroundDiversityWeight: 15,
+      preferenceWeight: 5,
+      languageWeight: 4,
+    });
+  });
 });

@@ -542,7 +542,7 @@ export class MatchingWeightsService {
       return cachedWeights;
     } catch (error) {
       console.error('[MatchingWeightsService] Failed to fetch weights:', error);
-      return { ...DEFAULT_MATCHING_WEIGHTS_RATIO };
+      return { ...DEFAULT_WEIGHTS };
     }
   }
 
