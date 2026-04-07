@@ -118,7 +118,7 @@ jobs:
             const liveConfirmationPhrase = process.env.LIVE_CONFIRMATION_PHRASE;
 
             if (!deletePrefix.trim()) {
-              throw new Error('delete_prefix must not be empty.');
+              throw new Error('The delete_prefix input must not be empty.');
             }
 
             if (!dryRun && confirm !== liveConfirmationPhrase) {
@@ -143,7 +143,7 @@ jobs:
                   return;
                 } catch (err) {
                   lastErr = err;
-                  const message = String(err?.message ?? '');
+                  const message = err?.message ?? '';
                   const retryable =
                     attempt < 4 &&
                     (err?.status === 403 ||

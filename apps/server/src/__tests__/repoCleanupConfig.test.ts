@@ -25,8 +25,10 @@ describe('repo cleanup config follow-ups', () => {
     const workflow = readRepoFile('.github/workflows/delete-merged-branches.yml');
 
     expect(workflow).toContain('const staleBranches = allBranches.filter(');
-    expect(workflow).toContain('const liveDeleteCandidates = staleBranches.filter(branch => branch.name.startsWith(deletePrefix));');
-    expect(workflow).toContain('const manualReviewBranches = staleBranches.filter(branch => !branch.name.startsWith(deletePrefix));');
+    expect(workflow).toContain('const liveDeleteCandidates = staleBranches.filter(');
+    expect(workflow).toContain('const manualReviewBranches = staleBranches.filter(');
+    expect(workflow).toContain('branch.name.startsWith(deletePrefix)');
+    expect(workflow).toContain('!branch.name.startsWith(deletePrefix)');
     expect(workflow).toContain('async function deleteBranchWithRetry(branchName)');
     expect(workflow).toContain('await sleep(250);');
   });
