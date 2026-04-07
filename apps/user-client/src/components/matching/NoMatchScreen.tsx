@@ -6,6 +6,16 @@ import noMatchHero from "@/assets/matching/no-match/no-match-hero.svg";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface SimilarPool {
+  id: string;
+  title: string;
+  eventType: string;
+  city: string;
+  district: string | null;
+  dateTime: string;
+  registrationCount: number;
+}
+
 export interface NoMatchScreenProps {
   /** Pool title shown in the header. */
   poolTitle?: string;
@@ -15,6 +25,10 @@ export interface NoMatchScreenProps {
   onBrowse?: () => void;
   /** Called when the user taps the back arrow. */
   onBack?: () => void;
+  /** Similar open pools to show as quick rejoin cards */
+  similarPools?: SimilarPool[];
+  /** Called with the pool ID when user taps a quick-rejoin card */
+  onRejoin?: (poolId: string) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -24,6 +38,8 @@ export default function NoMatchScreen({
   onNotify,
   onBrowse,
   onBack,
+  similarPools,
+  onRejoin,
 }: NoMatchScreenProps) {
   const shouldReduceMotion = useReducedMotion();
   const shouldShowNotifyButton = Boolean(onNotify);
@@ -116,6 +132,32 @@ export default function NoMatchScreen({
     </div>
   );
 
+  // ── Slot: Footer (similar pools) ─────────────────────────────────────────────
+  const footerSlot =
+    similarPools && similarPools.length > 0 ? (
+      <div className="mt-6 w-full max-w-sm">
+        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-white/40">
+          附近还有这些局
+        </p>
+        <div className="space-y-2">
+          {similarPools.map((pool) => (
+            <button
+              key={pool.id}
+              type="button"
+              onClick={() => onRejoin?.(pool.id)}
+              className="w-full rounded-2xl bg-white/8 px-4 py-3 text-left ring-1 ring-white/15 transition-colors hover:bg-white/12 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            >
+              <p className="text-sm font-semibold text-white/90 line-clamp-1">{pool.title}</p>
+              <p className="mt-0.5 text-xs text-white/45">
+                {pool.eventType} · {pool.city}
+                {pool.district ? ` ${pool.district}` : ""} · {pool.registrationCount} 人已报名
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
   return (
     <MatchingStateLayout
       onBack={onBack}
@@ -123,6 +165,7 @@ export default function NoMatchScreen({
       hero={heroSlot}
       copy={copySlot}
       cta={ctaSlot}
+      footer={footerSlot}
     />
   );
 }
