@@ -35,7 +35,7 @@ export default function ConnectionRevealOverlay({
     if (open) {
       setIndex(0);
     }
-  }, [open, items.length]);
+  }, [open, items]);
 
   const quotedReasons = useMemo(
     () => (item?.connectionReasons ?? []).filter(Boolean).slice(0, 2),

@@ -18,6 +18,9 @@ interface NoMatchRecommendationsProps {
 
 function formatDate(dateTime: string): string {
   const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) {
+    return "时间待定";
+  }
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 

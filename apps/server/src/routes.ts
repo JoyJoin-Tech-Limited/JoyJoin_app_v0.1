@@ -7463,6 +7463,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
   app.get("/api/event-pools/:poolId/group-fill", async (req, res) => {
     try {
       const { poolId } = req.params;
+      const UNKNOWN_ARCHETYPE_LABEL = "未设置";
 
       // Count pending registrations in this pool
       const pendingRegs = await db
@@ -7477,7 +7478,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       const archetypeRows = await db
         .select({
-          archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, '未设置')`,
+          archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, ${UNKNOWN_ARCHETYPE_LABEL})`,
           count: sql<number>`count(*)::int`,
         })
         .from(eventPoolRegistrations)
@@ -7488,7 +7489,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
             eq(eventPoolRegistrations.matchStatus, "pending")
           )
         )
-        .groupBy(sql`coalesce(${users.primaryArchetype}, ${users.archetype}, '未设置')`);
+        .groupBy(sql`coalesce(${users.primaryArchetype}, ${users.archetype}, ${UNKNOWN_ARCHETYPE_LABEL})`);
 
       // Get pool config for min/max group size
       const pool = await db.query.eventPools.findFirst({
