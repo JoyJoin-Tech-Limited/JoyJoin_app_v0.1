@@ -102,6 +102,10 @@ export default function BlindBoxEventCard({
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!poolId) {
+      console.warn("[BlindBoxEventCard] join clicked but no poolId — button should be disabled");
+      return;
+    }
     setVibeBriefOpen(true);
   };
 
@@ -215,6 +219,7 @@ export default function BlindBoxEventCard({
                     className="flex-1"
                     size="default"
                     onClick={handleJoinClick}
+                    disabled={!poolId}
                     data-testid={`button-join-${id}`}
                   >
                     <Sparkles className="h-4 w-4 mr-1.5" />
@@ -329,6 +334,7 @@ export default function BlindBoxEventCard({
                     className="flex-1"
                     size="default"
                     onClick={handleJoinClick}
+                    disabled={!poolId}
                     data-testid={`button-join-back-${id}`}
                   >
                     <Sparkles className="h-4 w-4 mr-1.5" />
@@ -379,6 +385,8 @@ export default function BlindBoxEventCard({
           open={vibeBriefOpen}
           onOpenChange={setVibeBriefOpen}
           onProceedToJoin={handleProceedToJoin}
+          eventType={eventType}
+          area={area}
         />
       )}
 

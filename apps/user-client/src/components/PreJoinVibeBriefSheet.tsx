@@ -1,23 +1,36 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { buildPreJoinVibeBriefUrl } from "@/lib/preJoinVibeBrief";
+import { getQueryFn } from "@/lib/queryClient";
 import type { PreJoinVibeBrief } from "@shared/ai/onboarding";
 
 interface PreJoinVibeBriefSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProceedToJoin: () => void;
+  eventType: "饭局" | "酒局";
+  area?: string;
 }
 
 export default function PreJoinVibeBriefSheet({
   open,
   onOpenChange,
   onProceedToJoin,
+  eventType,
+  area,
 }: PreJoinVibeBriefSheetProps) {
+  const url = useMemo(
+    () => buildPreJoinVibeBriefUrl({ eventType, area }),
+    [eventType, area],
+  );
+
   const { data: brief, isLoading } = useQuery<PreJoinVibeBrief | null>({
-    queryKey: ["/api/ai/pre-join-vibe-brief"],
+    queryKey: [url],
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: open,
     staleTime: 5 * 60 * 1000,
   });
