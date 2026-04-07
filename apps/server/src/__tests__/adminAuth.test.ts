@@ -8,6 +8,7 @@ vi.mock("../storage", () => ({
   storage: {
     getAdminAccountByUsername: vi.fn(),
     getAdminAccountById: vi.fn(),
+    getUserByPhone: vi.fn(),
     listAdminAccounts: vi.fn(),
     createAdminAccount: vi.fn(),
     updateAdminAccount: vi.fn(),
@@ -21,6 +22,7 @@ const { registerAdminAuthRoutes, requireAdmin, requireSuperAdmin } = await impor
 
 const superAdminPassword = "correct-password";
 const operatorPassword = "operator-password";
+const legacyAdminPassword = "legacy-password";
 
 const superAdminAccount = {
   id: "admin-1",
@@ -41,6 +43,15 @@ const operatorAccount = {
   passwordHash: await bcrypt.hash(operatorPassword, 12),
   role: "operator",
   displayName: "Operator Admin",
+};
+
+const legacyAdminUser = {
+  id: "legacy-admin-user-1",
+  phoneNumber: "13800138000",
+  email: "legacy-admin@joyjoin.app",
+  password: await bcrypt.hash(legacyAdminPassword, 12),
+  isAdmin: true,
+  displayName: "Legacy Admin",
 };
 
 function createApp() {
@@ -158,6 +169,49 @@ describe("admin auth routes", () => {
       const body: any = await response.json();
       expect(response.status).toBe(401);
       expect(body.message).toBe("用户名或密码错误");
+    });
+  });
+
+  it("allows login for legacy phone-based admins via the admin portal endpoint", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue(undefined);
+    vi.mocked(storage.getUserByPhone).mockImplementation(async (phoneNumber: string) =>
+      phoneNumber === legacyAdminUser.phoneNumber ? [legacyAdminUser as any] : [],
+    );
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: legacyAdminUser.phoneNumber, password: legacyAdminPassword }),
+      });
+
+      const body: any = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.role).toBe("super_admin");
+      expect(body.username).toBe(legacyAdminUser.phoneNumber);
+      expect(cookieHeader(response)).toContain("connect.sid=");
+    });
+  });
+
+  it("falls back to legacy admin login when admin_accounts lookup is unavailable", async () => {
+    vi.mocked(storage.getAdminAccountByUsername).mockRejectedValue(new Error('relation "admin_accounts" does not exist'));
+    vi.mocked(storage.getUserByPhone).mockImplementation(async (phoneNumber: string) =>
+      phoneNumber === legacyAdminUser.phoneNumber ? [legacyAdminUser as any] : [],
+    );
+
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: legacyAdminUser.phoneNumber, password: legacyAdminPassword }),
+      });
+
+      const body: any = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.id).toBe(legacyAdminUser.id);
+      expect(body.role).toBe("super_admin");
     });
   });
 
