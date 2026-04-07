@@ -73,7 +73,7 @@ export default function SocialGoalsStep({
       <div>
         <h2 className="text-xl font-bold mb-2">这次想怎么玩？</h2>
         <p className="text-sm text-muted-foreground">
-          已有 {registrationCount} 人报名，小悦会根据你选的，帮你凑一桌最聊得来的人
+          已有 {registrationCount} 人入座，小悦会帮你找最聊得来的桌友
         </p>
       </div>
 
