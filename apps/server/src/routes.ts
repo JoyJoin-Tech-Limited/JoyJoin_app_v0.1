@@ -8770,21 +8770,34 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       
       const config = req.body;
       
+      const normalizedLanguageWeight =
+        config.languageWeight ??
+        ((config.cultureWeight ?? 0) + (config.conversationSignatureWeight ?? 0));
+
       // Translate legacy admin payload keys to the active 6-dimension vocabulary.
-      // Legacy key          → Active vocabulary key
-      // personalityWeight   → chemistryWeight
-      // interestsWeight     → interestWeight
-      // intentWeight        → preferenceWeight
-      // backgroundWeight    → backgroundDiversityWeight
-      // cultureWeight       → languageWeight
-      // (no legacy source)  → socialAffinityWeight (default 0 for validation pass-through)
+      // Legacy key                               → Active vocabulary key
+      // personalityWeight                        → chemistryWeight
+      // interestsWeight                          → interestWeight
+      // intentWeight                             → preferenceWeight
+      // backgroundWeight                         → backgroundDiversityWeight
+      // cultureWeight + conversationSignatureWeight → languageWeight
+      // (no legacy source)                       → socialAffinityWeight (default 0 for validation pass-through)
       const weightsForValidation: MatchingWeights = {
-        chemistryWeight:          config.chemistryWeight          ?? config.personalityWeight          ?? 0,
-        interestWeight:           config.interestWeight           ?? config.interestsWeight            ?? 0,
-        preferenceWeight:         config.preferenceWeight         ?? config.intentWeight               ?? 0,
-        backgroundDiversityWeight: config.backgroundDiversityWeight ?? config.backgroundWeight          ?? 0,
-        languageWeight:           config.languageWeight           ?? config.cultureWeight              ?? config.conversationSignatureWeight ?? 0,
-        socialAffinityWeight:     config.socialAffinityWeight     ?? 0,
+        chemistryWeight: config.chemistryWeight ?? config.personalityWeight ?? 0,
+        interestWeight: config.interestWeight ?? config.interestsWeight ?? 0,
+        preferenceWeight: config.preferenceWeight ?? config.intentWeight ?? 0,
+        backgroundDiversityWeight: config.backgroundDiversityWeight ?? config.backgroundWeight ?? 0,
+        languageWeight: normalizedLanguageWeight,
+        socialAffinityWeight: config.socialAffinityWeight ?? 0,
+      };
+
+      const configForStorage = {
+        ...config,
+        personalityWeight: weightsForValidation.chemistryWeight,
+        interestsWeight: weightsForValidation.interestWeight,
+        intentWeight: weightsForValidation.preferenceWeight,
+        backgroundWeight: weightsForValidation.backgroundDiversityWeight,
+        cultureWeight: weightsForValidation.languageWeight,
       };
 
       // 验证权重
@@ -8794,7 +8807,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         return res.status(400).json({ message: validation.error });
       }
       
-      const updatedConfig = await storage.updateMatchingConfig(config);
+      const updatedConfig = await storage.updateMatchingConfig(configForStorage);
       res.json(updatedConfig);
     } catch (error) {
       console.error("Error updating matching config:", error);
