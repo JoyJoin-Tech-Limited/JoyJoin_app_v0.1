@@ -42,7 +42,7 @@ Discover → Browse Pools → Register (Preferences) → Wait/Queue → Match Re
 | **Pool Detail** | `EventPoolDetailDrawer.tsx` + drawer sections | Bottom sheet over Discover | `PoolVibePanel`, `TopicHeatStrip`, `ArchetypeCompositionPanel`, `EmergingGroupsPanel`, `ConnectionCuePanel` |
 | **Registration** | `JoinEventPoolSheet.tsx` (multi-step sheet) | In-page sheet from Discover | Steps: `SmartDefaultsStep` → `BudgetSelectionStep` → `SocialGoalsStep` → `DinnerPreferencesStep` / `BarPreferencesStep` → `SuccessCelebration` |
 | **Queue / Wait** | `MatchingStatusPage.tsx` + `MatchingWaitingScreen.tsx` | `/pool-matching/:registrationId` | WebSocket subscription for `POOL_MATCHED` and `EVENT_THEME_TITLE_REVEALED`; fill-state tracking (`waiting` → `can_form` → `full`) |
-| **Match Reveal** | `MatchCelebrationOverlay.tsx` → `MatchSuccessSheet.tsx` | Overlay, then `/pool-groups/:groupId` | `MatchSuccessSheet` contains `CardDeckReveal`; includes haptic vibration, confetti, and theme/vibe reveal. `SquadUnboxingFlow.tsx` is routed separately at `/squad-unboxing` and `/squad-unboxing/:groupId` rather than as the next required step in this sequence |
+| **Match Reveal** | `MatchCelebrationOverlay.tsx` → `MatchSuccessSheet.tsx` | Overlay, then `/pool-groups/:groupId` | `MatchSuccessSheet` contains `CardDeckReveal` with haptic/confetti effects; `SquadUnboxingFlow.tsx` is routed separately at `/squad-unboxing` and `/squad-unboxing/:groupId` |
 | **Icebreaker** | `SocialIcebreakerOrchestrator.tsx` | `/icebreaker/:sessionId` | 4-phase flow: 热身 → 挑战 → 侦探 → 回顾 |
 | **Feedback** | `EventFeedbackFlow.tsx` / `DeepFeedbackFlow.tsx` | `/events/:eventId/feedback` | Atmosphere score, connection radar, match point validation |
 
