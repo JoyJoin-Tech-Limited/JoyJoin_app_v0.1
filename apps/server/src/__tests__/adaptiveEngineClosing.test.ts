@@ -216,7 +216,7 @@ describe('resume / duplicate-prevention', () => {
     const slider = questionsV4.find(q => q.id === 'Q_PLAYFUL_SLIDER')!;
     state = processAnswer(state, slider, 'slider_50');
     const emoji = questionsV4.find(q => q.id === 'Q_PLAYFUL_EMOJI')!;
-    state = processAnswer(state, emoji, 'dm');
+    state = processAnswer(state, emoji, 'dm'); // 'dm' = private message one friend (conflictPosture: mediate)
 
     const next = selectNextQuestion(state);
     expect(next).toBeNull();

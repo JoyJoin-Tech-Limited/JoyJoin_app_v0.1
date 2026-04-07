@@ -364,7 +364,7 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
           q.level <= 2 &&
           !answeredQuestionIds.has(q.id) &&
           !skippedQuestionIds.has(q.id) &&
-          !(UNIVERSAL_CLOSING_QUESTION_IDS as readonly string[]).includes(q.id) &&
+          !(UNIVERSAL_CLOSING_QUESTION_IDS).includes(q.id) &&
           q.targetPairs &&
           q.targetPairs.includes(confusionDetection.pair![0]) &&
           q.targetPairs.includes(confusionDetection.pair![1])
@@ -412,7 +412,7 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   const availableQuestions = questionsV4.filter(q => 
     !answeredQuestionIds.has(q.id) &&
     !skippedQuestionIds.has(q.id) &&
-    !(UNIVERSAL_CLOSING_QUESTION_IDS as readonly string[]).includes(q.id)
+    !(UNIVERSAL_CLOSING_QUESTION_IDS).includes(q.id)
   );
   if (availableQuestions.length === 0) {
     return null;
