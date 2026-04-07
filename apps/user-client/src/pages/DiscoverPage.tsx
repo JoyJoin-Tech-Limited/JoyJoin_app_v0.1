@@ -16,12 +16,11 @@ import EventCardSkeleton from "@/components/EventCardSkeleton";
 import SparkSectionHeader from "@/components/SparkSectionHeader";
 import { AlertCircle, RefreshCw, Sparkles, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 import { useLocation } from "wouter";

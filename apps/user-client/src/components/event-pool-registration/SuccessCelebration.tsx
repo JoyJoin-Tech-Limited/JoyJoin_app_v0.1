@@ -86,7 +86,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         ))}
       </motion.div>
 
-      {/* Success Text */}
+      {/* Success Text — formation-forward, not task completion */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -94,10 +94,10 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         className="text-center space-y-2 mb-8"
       >
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-          🎉 报名成功！
+          🎉 席位已锁定！
         </h2>
         <p className="text-muted-foreground">
-          AI正在为您匹配最适合的小组
+          你的一桌正在成形，桌友揭晓前请保持期待
         </p>
       </motion.div>
 
@@ -117,7 +117,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
             size="lg"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            精调同频设置（2步完成）
+            精调同频设置，让这一桌更合拍
           </Button>
         )}
 
@@ -126,12 +126,12 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
           className="w-full bg-gradient-to-r from-primary to-purple-600"
           size="lg"
         >
-          查看我的活动
+          查看这一桌的进展
         </Button>
         
         {/* Countdown dots */}
         <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <span>{countdown}秒后自动跳转</span>
+          <span>{countdown}秒后查看成桌进度</span>
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <motion.div
