@@ -61,7 +61,6 @@ describe("getArchetypeWaitingCopy", () => {
     for (const archetype of knownArchetypes) {
       expect(getArchetypeWaitingCopy(archetype)).not.toBe(
         GENERIC_ARCHETYPE_WAITING_COPY,
-        `${archetype} should return personalised copy`,
       );
     }
   });
