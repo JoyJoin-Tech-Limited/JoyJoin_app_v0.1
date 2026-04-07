@@ -15,7 +15,9 @@ import FooterActions from "./FooterActions";
 import SuccessCelebration from "./SuccessCelebration";
 import WhyThisFitsCard from "./WhyThisFitsCard";
 import BudgetSelectionStep from "./steps/BudgetSelectionStep";
+import AtmosphereSelectionStep from "./steps/AtmosphereSelectionStep";
 import SocialGoalsStep from "./steps/SocialGoalsStep";
+import PrimaryGoalStep from "./steps/PrimaryGoalStep";
 import SmartDefaultsStep from "./steps/SmartDefaultsStep";
 import DinnerPreferencesStep from "./steps/DinnerPreferencesStep";
 import BarPreferencesStep from "./steps/BarPreferencesStep";
@@ -24,6 +26,12 @@ import JoinErrorScreen from "@/components/matching/JoinErrorScreen";
 import TestIncompleteScreen from "@/components/matching/TestIncompleteScreen";
 import ExtendedDataEmptyScreen from "@/components/matching/ExtendedDataEmptyScreen";
 import { shenzhenClusters } from "@shared/districts";
+import {
+  atmosphereFramingEnabled,
+  socialGoalReframingEnabled,
+  ignitionConfirmationEnabled,
+} from "@/lib/wave2Experiments";
+import { participationExperimentAnalytics } from "@/lib/participationExperimentAnalytics";
 
 interface JoinEventPoolSheetProps {
   open: boolean;
@@ -50,6 +58,12 @@ export default function JoinEventPoolSheet({
   const [showSuccess, setShowSuccess] = useState(false);
   const [showMascot, setShowMascot] = useState(false);
   const [mascotMessage, setMascotMessage] = useState("");
+
+  // ── Wave 2 experiment flags (resolved once per sheet open) ──────────────────
+  // Flags are resolved at runtime so per-session URL overrides take effect.
+  const useAtmosphereFraming = atmosphereFramingEnabled();
+  const useSocialGoalReframing = socialGoalReframingEnabled();
+  const useIgnitionConfirmation = ignitionConfirmationEnabled();
   // Tracks whether the extended-data nudge has been dismissed in this session.
   // Once the user explicitly skips or acts on it, we don't re-show it.
   const [extendedDataNudgeDismissed, setExtendedDataNudgeDismissed] = useState(false);
@@ -148,6 +162,14 @@ export default function JoinEventPoolSheet({
       return () => clearTimeout(timer);
     }
   }, [step, preferences.budget]);
+
+  // Analytics: track ignition experiment shown when reaching the final step
+  useEffect(() => {
+    if (step === 3 && useIgnitionConfirmation && open) {
+      participationExperimentAnalytics.ignitionShown(poolData.poolId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, open]);
 
   const handleSubmit = () => {
     if (isFormValid()) {
@@ -295,22 +317,44 @@ export default function JoinEventPoolSheet({
                         </div>
                       )}
 
-                      <BudgetSelectionStep
-                        eventType={poolData.eventType}
-                        selectedBudget={preferences.budget}
-                        onSelectBudget={(budget) => updatePreferences({ budget })}
-                      />
+                      {/* Exp 1: Atmosphere framing vs. standard budget selection */}
+                      {useAtmosphereFraming ? (
+                        <AtmosphereSelectionStep
+                          poolId={poolData.poolId}
+                          eventType={poolData.eventType}
+                          selectedBudget={preferences.budget}
+                          onSelectBudget={(budget) => updatePreferences({ budget })}
+                        />
+                      ) : (
+                        <BudgetSelectionStep
+                          eventType={poolData.eventType}
+                          selectedBudget={preferences.budget}
+                          onSelectBudget={(budget) => updatePreferences({ budget })}
+                        />
+                      )}
                     </>
                   )}
 
                   {step === 2 && (
-                    <SocialGoalsStep
-                      selectedGoals={preferences.socialGoals || []}
-                      onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
-                      registrationCount={poolData.registrationCount}
-                      isPrefilledFromProfile={isPrefilledFromProfile}
-                      onClearPrefill={() => setIsPrefilledFromProfile(false)}
-                    />
+                    /* Exp 2: Social-goal reframing vs. standard multi-select */
+                    useSocialGoalReframing ? (
+                      <PrimaryGoalStep
+                        poolId={poolData.poolId}
+                        selectedGoals={preferences.socialGoals || []}
+                        onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
+                        registrationCount={poolData.registrationCount}
+                        isPrefilledFromProfile={isPrefilledFromProfile}
+                        onClearPrefill={() => setIsPrefilledFromProfile(false)}
+                      />
+                    ) : (
+                      <SocialGoalsStep
+                        selectedGoals={preferences.socialGoals || []}
+                        onSelectGoals={(goals) => updatePreferences({ socialGoals: goals })}
+                        registrationCount={poolData.registrationCount}
+                        isPrefilledFromProfile={isPrefilledFromProfile}
+                        onClearPrefill={() => setIsPrefilledFromProfile(false)}
+                      />
+                    )
                   )}
 
                   {step === 3 && (
@@ -384,6 +428,19 @@ export default function JoinEventPoolSheet({
                 canSubmit={isFormValid()}
                 showSaveDraft={step === 3}
                 showSkipOptional={step === 3}
+                experimentVariant={useIgnitionConfirmation ? "ignition" : undefined}
+                onIgnitionSwipeStarted={() =>
+                  participationExperimentAnalytics.ignitionSwipeStarted(poolData.poolId)
+                }
+                onIgnitionSwipeCompleted={() =>
+                  participationExperimentAnalytics.ignitionSwipeCompleted(poolData.poolId)
+                }
+                onIgnitionSwipeAbandoned={(pct) =>
+                  participationExperimentAnalytics.ignitionSwipeAbandoned(poolData.poolId, pct)
+                }
+                onIgnitionFallbackUsed={() =>
+                  participationExperimentAnalytics.ignitionFallbackUsed(poolData.poolId)
+                }
               />
             </div>
           </div>
