@@ -56,10 +56,10 @@ export default function PreJoinVibeBriefSheet({
             </div>
             <div>
               <p className="text-xs font-semibold text-foreground/80 leading-none">
-                入座前的一段话
+                入座前的一封信
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                基于你的性格画像，为你准备的入席指南
+                基于你的性格画像，写给即将入座的你
               </p>
             </div>
           </div>
@@ -99,12 +99,12 @@ export default function PreJoinVibeBriefSheet({
                     </motion.span>
                   )}
                   <p className="text-base font-medium leading-snug text-foreground pl-2">
-                    {brief?.insight ?? "算法已读懂你的社交画像，这一桌正适合你"}
+                    {brief?.insight ?? "我们已读懂你的社交画像，这一桌正等你入座"}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {brief?.matchingPromise ??
-                    "我们会以此为基础，帮你找到同频的桌友"}
+                    "入座后，我们会为你找到最同频的桌友"}
                 </p>
               </motion.div>
             )}
@@ -114,7 +114,7 @@ export default function PreJoinVibeBriefSheet({
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/30 border border-border/40">
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Lock className="h-3 w-3 text-primary/60" aria-hidden="true" />
-              桌友匿名到线下
+              桌友成桌后揭晓
             </span>
             <span className="text-[10px] text-muted-foreground/30">·</span>
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -130,7 +130,7 @@ export default function PreJoinVibeBriefSheet({
             onClick={handleProceed}
             disabled={isLoading}
           >
-            准备入座
+            确认入座
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
