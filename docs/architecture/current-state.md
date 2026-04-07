@@ -32,6 +32,10 @@ Use it together with:
 - `apps/user-client/src/features/onboarding/active/pages/ExtendedDataPage.tsx`
 - `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`
 
+**Active pre-auth route sequence**
+- `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`
+- After auth succeeds, the server-owned `nextStep` contract takes over for `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
+
 **Boundary rules**
 - Do not reconstruct onboarding progress as a new client-side source of truth.
 - Treat `guide` and `onboarding` as compatibility values, not new feature targets.
@@ -60,9 +64,11 @@ Primary files:
 - `apps/user-client/src/pages/DiscoverPage.tsx`
 - `apps/user-client/src/pages/MatchingStatusPage.tsx`
 - `apps/user-client/src/components/matching/`
+- `apps/user-client/src/components/event-pool-registration/`
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
+- Active blind-pool entry is `DiscoverPage` query-param join sheet → `MatchingStatusPage`; `BlindBoxConfirmationPage` is quarantined and must not be revived as the success path.
 
 ### 3. Social Icebreaker
 

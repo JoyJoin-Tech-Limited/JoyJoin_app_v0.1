@@ -75,14 +75,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-04-01)
+## 🆕 Recent Updates (Last updated: 2026-04-07)
 
 ### 2026 Milestones (Mar–Apr 2026)
 
 **14. Matching-State UI System** 🎨 *(PRs #387–#391, 2026-03-27 to 2026-04-01)*
 - Shared `MatchingStateLayout` abstraction provides a canonical dark background and slot-based composition (hero / copy / CTA / footer) for all matching-state screens
 - `MatchingWaitingScreen` — premium dark-mode blind-pool waiting UI with real fill-state transitions (`waiting` → `can_form` → `full`)
-- Full matching-state screen family: `NoMatchScreen`, `JoinErrorScreen`, `ExtendedDataEmptyScreen`, `TestIncompleteScreen`, `SurpriseMatchReveal`, `MatchPointsDisplay`
+- Full matching-state screen family: `NoMatchScreen`, `JoinErrorScreen`, `ExtendedDataEmptyScreen`, `MatchRevealSequenceV2`, `SurpriseMatchReveal` (legacy), `MatchPointsDisplay`; `TestIncompleteScreen` is now a Discover-page pre-entry gate rather than a join-sheet state
 - All screens wired to real trigger conditions and app state — no placeholder timers or mocked transitions
 - Canonical background centralised in `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories
 
@@ -91,10 +91,20 @@ See §1.10 Connection Feedback Flow for full documentation.
 - `PreJoinVibeBriefSheet` — pre-join vibe brief surfacing pool atmosphere and intent signals before a user commits
 - `WhyThisFitsCard` — personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) shown before joining
 
-**16. Post-Match Group Theme & Companion** 🎭 *(PR #377)*
+**16. Onboarding Flow Sync** 🧭 *(2026-04-07)*
+- Active value-first entry flow is `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate` before authenticated onboarding begins
+- After auth, onboarding remains server-driven via `nextStep` for `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
+- `profileExtendedComplete` is not the onboarding-step gate for extended data; `hasCompletedInterestsCarousel` remains the canonical completion signal
+
+**17. Personality Test Flow Sync** 🧠 *(2026-04-07)*
+- V4 question count is config-driven (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) rather than a fixed 10-question or fixed 8–16-question flow
+- `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are universal closing questions that must both be answered before the assessment is complete
+- The active test page keeps back navigation for local question-history review instead of hiding the back button entirely
+
+**18. Post-Match Group Theme & Companion** 🎭 *(PR #377)*
 - Group theme tags and a companion summary line in squad reveal (`SquadUnboxingFlow.tsx`)
 
-**17. AI Onboarding — Profile Tagline** 🤖 *(PR #375)*
+**19. AI Onboarding — Profile Tagline** 🤖 *(PR #375)*
 - AI insight tagline (`insightLine`) displayed inside `ProfilePortraitCard` on the Profile Review page
 - Served by `GET /api/onboarding/profile-tagline`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`
 - Presentation-only; does not affect onboarding state or `nextStep`
@@ -689,7 +699,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `MatchingWaitingScreen` | Pool is open and fill is in progress (`waiting` → `can_form` → `full` fill-state transitions) |
 | `NoMatchScreen` | Pool closed without a match for this user |
 | `JoinErrorScreen` | Join attempt failed (network or server error) |
-| `TestIncompleteScreen` | User has not completed personality test — blocks join |
+| `TestIncompleteScreen` | User has not completed personality test — shown as a Discover-page pre-entry gate before join is available |
 | `ExtendedDataEmptyScreen` | Optional extended-profile nudge shown when `user.profileExtendedComplete === false`; user can skip; primary CTA routes to `/profile/edit` |
 | `SurpriseMatchReveal` | Match formed — squad reveal animation |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |

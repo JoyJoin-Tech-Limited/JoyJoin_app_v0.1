@@ -41,11 +41,14 @@ JoyJoin onboarding is **server-driven and conditional**.
 6. `/onboarding/review` — final profile review
 7. `/discover` — main app
 
+The pre-auth route sequence above is the active value-first entry path. After WeChat auth succeeds, onboarding authority switches to the server-owned `nextStep` returned by `GET /api/auth/user`.
+
 ### Important nuances
 
 - `nextStep === 'guide'` currently routes users to discover behavior, not a blocking guide screen.
 - `nextStep === 'onboarding'` is a legacy/fallback server value that redirects to `/personality-test`.
 - `profileExtendedComplete` is **not** the same thing as `hasCompletedInterestsCarousel`.
+- The personality test is only fully complete after the adaptive phase stops **and** both universal closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) have been answered.
 - Legacy onboarding surfaces remain under `apps/user-client/src/legacy/onboarding/`; do not add new feature work there.
 
 ## Ownership map

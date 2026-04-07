@@ -1,5 +1,7 @@
 # Event Pool Registration Bottom Sheet
 
+> **Deprecated snapshot (not canonical).** This file predates the current blind-pool flow. The active entry path is `DiscoverPage` query-param join sheet → `MatchingStatusPage`, and the canonical references are `DEVELOPER_QUICK_REFERENCE.md`, `docs/ui-matching-reveal-improvements.md`, and `docs/matching-reveal-implementation-summary.md`.
+
 ## Overview
 A playful, funky bottom sheet component with Duolingo-style animations and progressive disclosure for event pool registration. This replaces the full-page `EventPoolRegistrationPage.tsx` with a more engaging, mobile-friendly experience.
 

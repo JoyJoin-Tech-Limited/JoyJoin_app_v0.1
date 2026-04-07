@@ -1,5 +1,7 @@
 # Event Pool Registration - Implementation Complete ✅
 
+> **Deprecated snapshot (not canonical).** This summary reflects an earlier join-sheet implementation milestone. For the active blind-pool flow and screen ownership, use `DEVELOPER_QUICK_REFERENCE.md`, `docs/ui-matching-reveal-improvements.md`, and `docs/matching-reveal-implementation-summary.md`.
+
 ## 📊 Implementation Statistics
 
 ### Files Created: 21
