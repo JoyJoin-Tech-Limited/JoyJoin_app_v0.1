@@ -144,6 +144,9 @@ export default function SwipeToConfirm({
       setProgress(0);
     }
     hasReportedStartRef.current = false;
+    // `progressRef.current` is the source of truth here so the pointer-up
+    // handler always sees the latest drag distance, even if React state for
+    // `progress` has not flushed yet.
   }, [isDragging, onSwipeCompleted, onSwipeAbandoned, onConfirm]);
 
   const handleFallback = useCallback(() => {
