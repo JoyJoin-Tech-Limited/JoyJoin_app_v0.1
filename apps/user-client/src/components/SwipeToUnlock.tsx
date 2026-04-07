@@ -25,6 +25,7 @@ const DEFAULT_LABEL_STAGES = [
 ];
 
 function getLabel(pct: number, labelStages: Array<{ threshold: number; label: string }>): string {
+  if (labelStages.length === 0) return "继续滑动";
   let label = labelStages[0].label;
   for (const stage of labelStages) {
     if (pct >= stage.threshold) label = stage.label;

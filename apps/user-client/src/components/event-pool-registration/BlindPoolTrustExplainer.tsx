@@ -18,16 +18,17 @@ export default function BlindPoolTrustExplainer({
 }: BlindPoolTrustExplainerProps) {
   const [expanded, setExpanded] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const hasLoggedViewRef = useRef(false);
+  const lastLoggedPoolKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (hasLoggedViewRef.current) return;
-    hasLoggedViewRef.current = true;
+    const poolKey = `${poolData.city}:${poolData.area}:${poolData.eventType}:${poolData.date}`;
+    if (lastLoggedPoolKeyRef.current === poolKey) return;
+    lastLoggedPoolKeyRef.current = poolKey;
     console.log("[Analytics] trust_explainer_viewed", {
       poolArea: poolData.area,
       eventType: poolData.eventType,
     });
-  }, [poolData.area, poolData.eventType]);
+  }, [poolData.area, poolData.city, poolData.date, poolData.eventType]);
 
   const knownItems = [
     poolData.date,

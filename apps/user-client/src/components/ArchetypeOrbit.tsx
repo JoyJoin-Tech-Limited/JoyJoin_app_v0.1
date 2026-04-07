@@ -99,7 +99,7 @@ export default function ArchetypeOrbit({
   const validArchetypes = useMemo(
     () =>
       archetypes
-        .map((name, index) => ({ name, asset: getArchetypeAsset(name), index }))
+        .map((name) => ({ name, asset: getArchetypeAsset(name) }))
         .filter((item) => item.asset !== null)
         .slice(0, 6),
     [archetypes],
