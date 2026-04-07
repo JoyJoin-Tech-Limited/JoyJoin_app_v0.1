@@ -24,8 +24,6 @@ describe("event pool stats contract", () => {
         柯基: 3,
         狐狸: 4,
       },
-      // floor(7/4) = 1 — only 1 complete group can form from 7 registrations with minGroupSize 4.
-      // Previously used ceil() which over-reported; floor() reflects actual pool-formable groups.
       poolFormableGroupCount: 1,
       avgMatchScore: 82,
       recentThemeTitles: [{ themeTitle: "城市夜游", themeEmoji: "🌃" }],
