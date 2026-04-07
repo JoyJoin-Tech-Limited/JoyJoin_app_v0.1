@@ -234,7 +234,7 @@ export default function EventPoolDetailDrawer({
                         archetypeBreakdown={stats.archetypeBreakdown}
                       />
                       <EmergingGroupsPanel
-                        estimatedGroups={stats.poolFormableGroupCount}
+                        poolFormableGroupCount={stats.poolFormableGroupCount}
                         totalRegistrations={stats.totalRegistrations}
                         minGroupSize={eventData.minGroupSize}
                       />

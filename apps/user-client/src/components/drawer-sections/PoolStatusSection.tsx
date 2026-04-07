@@ -48,9 +48,16 @@ export default function PoolStatusSection({
       typeof theme.themeTitle === "string" && theme.themeTitle.trim().length > 0,
   );
   
-  const spotsNeeded = minGroupSize - (stats.totalRegistrations % minGroupSize);
-  const isHot = spotsNeeded <= 2 && spotsNeeded > 0 && spotsNeeded !== minGroupSize;
-  const currentProgress = stats.totalRegistrations % minGroupSize;
+  const registrationRemainder = stats.totalRegistrations % minGroupSize;
+  const thresholdProgress = stats.totalRegistrations === 0
+    ? 0
+    : registrationRemainder === 0
+      ? minGroupSize
+      : registrationRemainder;
+  const spotsNeeded = thresholdProgress === minGroupSize
+    ? 0
+    : minGroupSize - thresholdProgress;
+  const isHot = spotsNeeded <= 2 && spotsNeeded > 0;
   
   // Sort archetypes by count
   const sortedArchetypes = Object.entries(stats.archetypeBreakdown)
@@ -78,7 +85,7 @@ export default function PoolStatusSection({
         <div className="space-y-2 mb-4">
           <div className="flex gap-1">
             {Array.from({ length: minGroupSize }).map((_, index) => {
-              const isFilled = index < currentProgress;
+              const isFilled = index < thresholdProgress;
               
               return (
                 <motion.div
@@ -103,7 +110,7 @@ export default function PoolStatusSection({
           </div>
           
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {currentProgress === 0 && stats.totalRegistrations > 0
+            {thresholdProgress === minGroupSize && stats.totalRegistrations > 0
               ? "已满足匹配门槛！"
               : spotsNeeded > 0 
                 ? `再来 ${spotsNeeded} 人即可触发匹配`
