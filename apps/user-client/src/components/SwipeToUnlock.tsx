@@ -7,27 +7,24 @@
  * • Placeholder text changes at 0%, 30%, 80% thresholds.
  */
 
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 
 interface SwipeToUnlockProps {
   onUnlock: () => void;
   disabled?: boolean;
-  labelStages?: Array<{ threshold: number; label: string }>;
-  ariaLabel?: string;
 }
 
-const DEFAULT_LABEL_STAGES = [
+const LABEL_STAGES = [
   { threshold: 0, label: "探索本桌伙伴 >" },
   { threshold: 30, label: "滑动解封..." },
   { threshold: 80, label: "准备揭晓!" },
 ];
 
-function getLabel(pct: number, labelStages: Array<{ threshold: number; label: string }>): string {
-  if (labelStages.length === 0) return "继续滑动";
-  let label = labelStages[0].label;
-  for (const stage of labelStages) {
+function getLabel(pct: number): string {
+  let label = LABEL_STAGES[0].label;
+  for (const stage of LABEL_STAGES) {
     if (pct >= stage.threshold) label = stage.label;
   }
   return label;
@@ -36,16 +33,7 @@ function getLabel(pct: number, labelStages: Array<{ threshold: number; label: st
 /** Width of the draggable handle in pixels (keep in sync with w-14 class below). */
 const HANDLE_W = 56;
 
-export default function SwipeToUnlock({
-  onUnlock,
-  disabled = false,
-  labelStages = DEFAULT_LABEL_STAGES,
-  ariaLabel = "滑动解锁",
-}: SwipeToUnlockProps) {
-  const sortedLabelStages = useMemo(
-    () => [...labelStages].sort((a, b) => a.threshold - b.threshold),
-    [labelStages],
-  );
+export default function SwipeToUnlock({ onUnlock, disabled = false }: SwipeToUnlockProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [pct, setPct] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -127,7 +115,7 @@ export default function SwipeToUnlock({
     [disabled, triggerUnlock]
   );
 
-  const label = getLabel(pct, sortedLabelStages);
+  const label = getLabel(pct);
   // Position the handle so its left edge is proportional to pct,
   // accounting for the handle's own width to keep it fully within the track.
   const handleLeft = `calc(${pct}% * (100% - ${HANDLE_W}px) / 100)`;
@@ -135,7 +123,7 @@ export default function SwipeToUnlock({
   return (
     <div
       className="w-full px-1 select-none"
-      aria-label={ariaLabel}
+      aria-label="滑动解锁"
       role="slider"
       aria-valuemin={0}
       aria-valuemax={100}
