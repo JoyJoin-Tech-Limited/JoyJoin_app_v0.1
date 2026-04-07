@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Sparkles, Shield, HelpCircle, Timer, Flame, Lock, DollarSign, Users } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Shield, HelpCircle, Timer, Flame, Lock, DollarSign } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
@@ -112,26 +112,35 @@ export default function BlindBoxEventCard({
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
+  // [Event Pool] thresholds — pool needs MIN_TABLE_SIZE to trigger matching;
+  // actual 成桌 groups are formed by the system afterward (up to MAX_TABLE_SIZE).
+  const MIN_TABLE_SIZE = 4;
   const MAX_TABLE_SIZE = 6;
-  const thresholdGroupSize = Math.max(minGroupSize, 1);
-  const displayMaxGroupSize = Math.max(MAX_TABLE_SIZE, thresholdGroupSize);
-  const seatsNeeded = Math.max(thresholdGroupSize - registrationCount, 0);
-  const progressPercent = Math.min((registrationCount / thresholdGroupSize) * 100, 100);
+  const seatsNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
+  // Progress toward the pool matching threshold (not table occupancy).
+  const progressPercent = Math.min((registrationCount / MIN_TABLE_SIZE) * 100, 100);
   const currencySymbol = getCurrencySymbol(city ?? "深圳");
   const priceSummary = priceTier ? `${currencySymbol}${priceTier}` : null;
-  const formationHeadline =
-    registrationCount >= thresholdGroupSize
-      ? "这一桌已满足成桌条件"
+
+  // [Event Pool layer] — pool readiness/threshold copy, never table-seating language
+  const poolHeadline =
+    registrationCount >= MIN_TABLE_SIZE
+      ? "人已凑齐，揭晓来了"
       : registrationCount > 0
-        ? `再有 ${seatsNeeded} 位桌友入座即可成桌`
-        : "等你来开启这一桌";
-  const formationDetail =
-    registrationCount >= thresholdGroupSize
-      ? `${registrationCount} 位桌友已在等揭晓 · 当前可优先成桌`
+        ? `差 ${seatsNeeded} 人就能见真章`
+        : "你来，局就热了";
+  const poolDetail =
+    registrationCount >= MIN_TABLE_SIZE
+      ? `${registrationCount} 人已入池 · 小悦正在拼局`
       : registrationCount > 0
-        ? `${registrationCount} 位桌友已入座 · ${thresholdGroupSize} 人成桌，最多 ${displayMaxGroupSize} 人`
-        : `${thresholdGroupSize} 人成桌 · 时间区域已定`;
-  const promiseLine = "时间区域已定 · 桌友成桌后揭晓";
+        ? `已有 ${registrationCount} 人入池 · ${MIN_TABLE_SIZE}–${MAX_TABLE_SIZE} 人才够热闹`
+        : `${MIN_TABLE_SIZE}–${MAX_TABLE_SIZE} 人组局 · 你来第一个`;
+
+  // [Bridge layer] — only time and area are known now; tablemates revealed only after 成局
+  const promiseLine = "时间区域已定 · 伙伴是成局的惊喜";
+
+  // [Event Pool layer] — CTA uses pool-join language, never "take a seat at this table"
+  const ctaLabel = eventType === "酒局" ? "来凑这局酒" : "来凑这顿饭";
 
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -250,7 +259,7 @@ export default function BlindBoxEventCard({
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-cn-display font-bold text-lg leading-snug text-foreground">
+              <h3 className="font-cn-display font-bold text-xl leading-snug text-foreground">
                 {mysteryTitle}
               </h3>
               <div className="flex items-center gap-1.5 flex-wrap min-h-0">
@@ -259,26 +268,47 @@ export default function BlindBoxEventCard({
               </div>
             </div>
 
-            <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 space-y-2">
+            <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/6 px-3 py-2.5 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
+                  {/* [Event Pool] Pool Pulse header: live indicator + module label */}
                   <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-primary/70 shrink-0" aria-hidden="true" />
-                    <span>{formationHeadline}</span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <span className="text-[9px] font-bold text-primary/55 tracking-widest select-none">热度</span>
+                      {/* Decorative live pulse dot — aria-hidden as it is purely visual */}
+                      <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden="true">
+                        {!prefersReducedMotion && registrationCount > 0 && (
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                        )}
+                        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${registrationCount > 0 ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                      </span>
+                    </span>
+                    <span>{poolHeadline}</span>
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {formationDetail}
+                    {poolDetail}
                   </p>
                 </div>
+                {/* [Event Pool] Pool count — never implies table occupancy */}
                 <span className="text-[11px] font-semibold text-primary/80 shrink-0">
-                  {Math.min(registrationCount, displayMaxGroupSize)}/{displayMaxGroupSize}
+                  {registrationCount > 0
+                    ? (registrationCount >= MIN_TABLE_SIZE ? `${registrationCount} 人就位` : `${registrationCount} 人候局`)
+                    : "虚位以待"}
                 </span>
               </div>
 
-              <div className="h-2 rounded-full bg-background/80 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full bg-background/80 overflow-hidden"
+                role="progressbar"
+                aria-label="活动池成桌门槛进度"
+                aria-valuenow={Math.round(progressPercent)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500 transition-[width] duration-500 ease-out"
                   style={{ width: `${Math.max(progressPercent, registrationCount > 0 ? 18 : 0)}%` }}
+                  aria-hidden="true"
                 />
               </div>
 
@@ -316,17 +346,18 @@ export default function BlindBoxEventCard({
                 </span>
               )}
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/60 bg-background/80 text-foreground/80">
-                未成桌自动退
+                未成局自动退
               </span>
             </div>
 
             <div className="rounded-lg border border-border/50 bg-muted/35 px-3 py-2 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Shield className="h-3 w-3 text-primary/70 shrink-0" aria-hidden="true" />
-                <span>已知时间与区域 · 桌友成桌后揭晓 · 成桌前可退出</span>
+                <span>已知时间与区域 · 成局前随时退 · 伙伴成局才揭晓</span>
               </div>
             </div>
 
+            {/* [Event Pool] CTA — joins the pool, not a formed table */}
             <Button
               className={`w-full mt-auto transition-all duration-150 active:scale-[0.98] ${
                 isFeatured ? featuredCtaClass : ""
@@ -337,7 +368,7 @@ export default function BlindBoxEventCard({
               data-testid={`button-join-${id}`}
             >
               <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
-              入座这一桌
+              {ctaLabel}
             </Button>
           </div>
         </Card>

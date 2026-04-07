@@ -49,17 +49,18 @@ export default function PreJoinVibeBriefSheet({
         style={{ maxHeight: "65vh" }}
       >
         <div className="flex flex-col gap-4 px-1 pt-2 pb-6">
-          {/* Header — threshold moment before entering the table */}
+          {/* Header — pre-pool-join moment; user is about to enter the registration flow */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
             <div>
+              {/* [Event Pool layer] — user is joining a pool, not taking a table seat */}
               <p className="text-xs font-semibold text-foreground/80 leading-none">
-                入座前的一封信
+                加入活动池前的一封信
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                基于你的性格画像，写给即将入座的你
+                基于你的性格画像，写给即将报名的你
               </p>
             </div>
           </div>
@@ -75,7 +76,7 @@ export default function PreJoinVibeBriefSheet({
                 className="flex items-center gap-2 text-muted-foreground text-sm py-4"
               >
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>正在为你准备入席指南…</span>
+                <span>正在为你准备活动池简报…</span>
               </motion.div>
             ) : (
               <motion.div
@@ -99,22 +100,22 @@ export default function PreJoinVibeBriefSheet({
                     </motion.span>
                   )}
                   <p className="text-base font-medium leading-snug text-foreground pl-2">
-                    {brief?.insight ?? "我们已读懂你的社交画像，这一桌正等你入座"}
+                    {brief?.insight ?? "我们已读懂你的社交画像，这个活动池正等你加入"}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {brief?.matchingPromise ??
-                    "入座后，我们会为你找到最同频的桌友"}
+                    "报名后，系统将从活动池中，为你匹配最同频的桌友"}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Compact continuity trust row — bridges vibe brief → join flow */}
+          {/* Compact continuity trust row — bridges vibe brief → join flow; [Bridge] */}
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted/30 border border-border/40">
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Lock className="h-3 w-3 text-primary/60" aria-hidden="true" />
-              桌友成桌后揭晓
+              桌友匹配后揭晓
             </span>
             <span className="text-[10px] text-muted-foreground/30">·</span>
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -123,14 +124,14 @@ export default function PreJoinVibeBriefSheet({
             </span>
           </div>
 
-          {/* CTA — handoff to join flow */}
+          {/* CTA — [Bridge] handoff: confirms pool registration intent, not table seating */}
           <Button
             size="lg"
             className="w-full mt-1 gap-2 transition-all duration-150 active:scale-[0.98]"
             onClick={handleProceed}
             disabled={isLoading}
           >
-            确认入座
+            确认加入
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>

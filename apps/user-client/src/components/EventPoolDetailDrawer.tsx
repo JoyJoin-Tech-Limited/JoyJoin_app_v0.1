@@ -27,7 +27,8 @@ import LivePoolPulse from "./drawer-sections/LivePoolPulse";
 interface PoolStats {
   totalRegistrations: number;
   archetypeBreakdown: Record<string, number>;
-  estimatedGroups: number;
+  /** [Event Pool] How many groups could be formed right now from pool registrations. */
+  poolFormableGroupCount: number;
   avgMatchScore: number;
   recentThemeTitles: Array<{
     themeTitle: string | null;
@@ -233,7 +234,7 @@ export default function EventPoolDetailDrawer({
                         archetypeBreakdown={stats.archetypeBreakdown}
                       />
                       <EmergingGroupsPanel
-                        estimatedGroups={stats.estimatedGroups}
+                        poolFormableGroupCount={stats.poolFormableGroupCount}
                         totalRegistrations={stats.totalRegistrations}
                         minGroupSize={eventData.minGroupSize}
                       />
