@@ -96,7 +96,7 @@ jobs:
           KEEP_JSON: ${{ steps.open-prs.outputs.result }}
         with:
           script: |
-            const dryRun = ${{ inputs.dry_run }};
+            const dryRun = ${{ toJSON(inputs.dry_run) }};
             const keepBranches = new Set(JSON.parse(process.env.KEEP_JSON));
 
             console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
@@ -156,7 +156,7 @@ jobs:
       # Requires the GITHUB_TOKEN to have admin write access to the repository.
       # This step is intentionally non-fatal if the token lacks those permissions.
       - name: Enable delete_branch_on_merge repository setting
-        if: inputs.dry_run == false
+        if: ${{ !inputs.dry_run }}
         uses: actions/github-script@v7
         with:
           script: |
