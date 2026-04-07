@@ -55,6 +55,7 @@ export default function PreJoinVibeBriefSheet({
               <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
             <div>
+              {/* [Event Pool layer] — user is joining a pool, not taking a table seat */}
               <p className="text-xs font-semibold text-foreground/80 leading-none">
                 加入活动池前的一封信
               </p>

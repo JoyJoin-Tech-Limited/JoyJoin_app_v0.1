@@ -1,7 +1,7 @@
 /**
  * EmergingGroupsPanel
  * Phase 2: Visualises the blind-box social circles / clusters that are actively
- * taking shape inside a pool.  Uses `estimatedGroups` to communicate "circles
+ * taking shape inside a pool. Uses `poolFormableGroupCount` to communicate "circles
  * forming" — NOT "seats filling up".  No single-group progress bar or capacity
  * metaphor is used here.
  *
@@ -10,7 +10,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 interface EmergingGroupsPanelProps {
-  estimatedGroups: number;
+  poolFormableGroupCount: number;
   totalRegistrations: number;
   minGroupSize: number;
 }
@@ -75,7 +75,7 @@ function ClusterIcon({ index, reducedMotion }: { index: number; reducedMotion: b
 }
 
 export default function EmergingGroupsPanel({
-  estimatedGroups,
+  poolFormableGroupCount,
   totalRegistrations,
   minGroupSize,
 }: EmergingGroupsPanelProps) {
@@ -84,7 +84,7 @@ export default function EmergingGroupsPanel({
   if (totalRegistrations === 0) return null;
 
   const groupCount = totalRegistrations >= Math.max(minGroupSize, 1)
-    ? Math.max(0, estimatedGroups)
+    ? Math.max(0, poolFormableGroupCount)
     : 0;
   const renderedClusters = Math.min(groupCount, MAX_RENDERED_CLUSTERS);
   const overflow = groupCount - MAX_RENDERED_CLUSTERS;
