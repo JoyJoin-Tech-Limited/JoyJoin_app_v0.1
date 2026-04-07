@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Bell, ChevronRight, RefreshCw, Sparkles, XCircle } from "lucide-react";
+import { Bell, ChevronRight, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MatchingStateLayout from "@/components/matching/MatchingStateLayout";
-import ArchetypeOrbit from "@/components/ArchetypeOrbit";
-import PoolPersonalityMosaic from "@/components/matching/PoolPersonalityMosaic";
-import { getArchetypeWaitingCopy } from "@/lib/archetypeWaitingCopy";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import matchingWaitingHero from "@/assets/matching/waiting/matching-waiting-hero.svg";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -68,12 +66,6 @@ export interface MatchingWaitingScreenProps {
   newMemberJoined?: boolean;
   /** Archetype name of the new member (optional, shown in micro-interaction). */
   newMemberArchetype?: string | null;
-  /** Current user's archetype for personalized copy. */
-  userArchetype?: string | null;
-  /** Anonymous archetypes currently in the pool. */
-  archetypes?: string[];
-  /** Aggregated pool personality distribution. */
-  archetypeDistribution?: Record<string, number>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -93,15 +85,35 @@ function getCopy(
   filledCount: number,
   minGroupSize: number,
   maxGroupSize: number,
-  userArchetype?: string | null,
 ): StateCopy {
-  return getArchetypeWaitingCopy({
-    archetype: userArchetype,
-    fillState,
-    filledCount,
-    minGroupSize,
-    maxGroupSize,
-  });
+  switch (fillState) {
+    case "full":
+      return {
+        headline: "人数已满！即将组队 🎉",
+        subtext: "小悦正在精心配对，很快就能和新朋友见面啦！",
+        badge: "满员",
+        badgeGradient: "from-emerald-500/80 to-green-400/80",
+      };
+    case "can_form": {
+      const remaining = maxGroupSize - filledCount;
+      return {
+        headline: `已可成团！再等 ${remaining} 人更完美`,
+        subtext: "人数已达门槛，小悦持续寻找最佳搭配组合中。",
+        badge: "可成团",
+        badgeGradient: "from-amber-500/80 to-yellow-400/80",
+      };
+    }
+    case "waiting":
+    default: {
+      const need = minGroupSize - filledCount;
+      return {
+        headline: `再来 ${need} 位伙伴就能成局`,
+        subtext: "小悦正在为你寻找气场相符的伙伴，稍等片刻。",
+        badge: null,
+        badgeGradient: "",
+      };
+    }
+  }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -121,9 +133,6 @@ export default function MatchingWaitingScreen({
   onBack,
   newMemberJoined = false,
   newMemberArchetype = null,
-  userArchetype = null,
-  archetypes = [],
-  archetypeDistribution = {},
 }: MatchingWaitingScreenProps) {
   const [refreshCountdown, setRefreshCountdown] = useState(refreshIntervalSeconds);
   const shouldReduceMotion = useReducedMotion();
@@ -148,9 +157,7 @@ export default function MatchingWaitingScreen({
     displayFilledCount,
     normalizedMinGroupSize,
     normalizedMaxGroupSize,
-    userArchetype,
   );
-  const orbitArchetypes = archetypes.length > 0 ? archetypes : userArchetype ? [userArchetype] : [];
 
   // Reset countdown when the refresh interval prop changes.
   useEffect(() => {
@@ -177,7 +184,7 @@ export default function MatchingWaitingScreen({
 
   // ── Slot: Hero ──────────────────────────────────────────────────────────────
   const heroSlot = (
-    <div className="relative flex w-full max-w-[340px] flex-col items-center">
+    <div className="relative flex w-full max-w-[320px] justify-center">
       <AnimatePresence>
         {newMemberJoined && (
           <motion.div
@@ -196,33 +203,13 @@ export default function MatchingWaitingScreen({
         )}
       </AnimatePresence>
 
-      <motion.div
-        className="relative w-full rounded-[32px] border border-white/10 bg-white/5 px-4 py-5 shadow-[0_24px_80px_rgba(76,29,149,0.22)] backdrop-blur-xl"
-        animate={
-          shouldReduceMotion
-            ? undefined
-            : fillState === "full"
-            ? { scale: [1, 1.02, 1] }
-            : fillState === "can_form"
-            ? { y: [0, -3, 0] }
-            : undefined
-        }
-        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <div className="pointer-events-none absolute inset-x-8 top-4 h-24 rounded-full bg-violet-500/10 blur-3xl" />
-        <ArchetypeOrbit
-          archetypes={orbitArchetypes}
-          size="medium"
-          animated={!shouldReduceMotion}
-          mode="anonymous"
-          highlightedArchetype={userArchetype}
-          pulseState={fillState === "full" ? "ready" : fillState === "can_form" ? "warming" : "idle"}
-        />
-        <div className="mt-1 flex items-center justify-center gap-2 text-xs text-white/55">
-          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-          <span>每位新朋友加入，这片星轨都会更完整一点</span>
-        </div>
-      </motion.div>
+      <motion.img
+        src={matchingWaitingHero}
+        alt="匹配等待中的插画"
+        className="h-auto w-full max-w-[260px] object-contain drop-shadow-2xl"
+        animate={shouldReduceMotion ? {} : { y: [0, -8, 0] }}
+        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+      />
     </div>
   );
 
@@ -245,11 +232,6 @@ export default function MatchingWaitingScreen({
         )}
       </AnimatePresence>
 
-      {/* Eyebrow */}
-      <p className="mt-4 text-center text-xs font-medium uppercase tracking-widest text-white/45">
-        The Gathering
-      </p>
-
       {/* Headline */}
       <AnimatePresence mode="wait">
         <motion.h2
@@ -258,7 +240,7 @@ export default function MatchingWaitingScreen({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ type: "spring", stiffness: 300, damping: 26 }}
-          className="mt-3 text-center text-[24px] font-cn-display font-semibold leading-tight tracking-tight text-white"
+          className="mt-4 text-center text-[22px] font-black leading-tight tracking-tight text-white"
         >
           {copy.headline}
         </motion.h2>
@@ -272,7 +254,7 @@ export default function MatchingWaitingScreen({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35 }}
-          className="mt-3 px-4 text-center text-sm leading-relaxed text-white/60"
+          className="mt-2 px-4 text-center text-sm leading-relaxed text-white/55"
         >
           {copy.subtext}
         </motion.p>
@@ -349,9 +331,9 @@ export default function MatchingWaitingScreen({
         size="lg"
         className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
       >
-          <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
-          邀请好友一起凑这场局
-        </Button>
+        <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
+        邀请好友加速成团
+      </Button>
 
       {/* Secondary: browse */}
       <Button
@@ -405,15 +387,9 @@ export default function MatchingWaitingScreen({
         copy={copySlot}
         cta={ctaSlot}
         footer={
-          <>
-            <PoolPersonalityMosaic
-              archetypeDistribution={archetypeDistribution}
-              userArchetype={userArchetype}
-            />
-            <p className="mt-6 px-6 text-center text-[11px] leading-relaxed text-white/30">
-              你已在队列中，无需重新报名。有结果时我们会第一时间通知你。
-            </p>
-          </>
+          <p className="mt-8 px-6 text-center text-[11px] leading-relaxed text-white/30">
+            你已在队列中，无需重新报名。有结果时我们会立即通知你。
+          </p>
         }
       />
 
