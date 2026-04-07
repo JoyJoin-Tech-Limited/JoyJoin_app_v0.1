@@ -21,7 +21,11 @@ export default function SheetHeader({ currentStep, totalSteps, poolData }: Sheet
           <div
             key={i}
             className={`h-1.5 rounded-full transition-all duration-300 ${
-              i < currentStep ? "w-4 bg-primary" : i === currentStep ? "w-4 bg-primary/60" : "w-1.5 bg-muted-foreground/20"
+              i + 1 < currentStep
+                ? "w-4 bg-primary"
+                : i + 1 === currentStep
+                  ? "w-4 bg-primary/60"
+                  : "w-1.5 bg-muted-foreground/20"
             }`}
           />
         ))}
