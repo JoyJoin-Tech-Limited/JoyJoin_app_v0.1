@@ -7,7 +7,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
-import { useEventPoolRegistration } from "@/hooks/useEventPoolRegistration";
+import { type EventPreferences, useEventPoolRegistration } from "@/hooks/useEventPoolRegistration";
 import SheetHeader from "./SheetHeader";
 import FloatingOrbs from "./FloatingOrbs";
 import TransitionMascot from "./TransitionMascot";
@@ -37,12 +37,14 @@ interface JoinEventPoolSheetProps {
     eventType: "饭局" | "酒局";
     registrationCount: number;
   };
+  initialPreferences?: Partial<EventPreferences>;
 }
 
 export default function JoinEventPoolSheet({
   open,
   onOpenChange,
   poolData,
+  initialPreferences,
 }: JoinEventPoolSheetProps) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -78,6 +80,7 @@ export default function JoinEventPoolSheet({
     onSuccess: () => {
       setShowSuccess(true);
     },
+    initialPreferences,
   });
 
   const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
@@ -96,8 +99,8 @@ export default function JoinEventPoolSheet({
       const userLanguages: string[] = user.preferredLanguages ?? [];
 
       const updates: Parameters<typeof updatePreferences>[0] = {
-        districts: defaultDistricts,
-        languages: userLanguages,
+        districts: (preferences.districts?.length ?? 0) > 0 ? preferences.districts : defaultDistricts,
+        languages: (preferences.languages?.length ?? 0) > 0 ? preferences.languages : userLanguages,
       };
 
       // Pre-fill dietary restrictions from user profile (only when no selection yet)
@@ -118,7 +121,7 @@ export default function JoinEventPoolSheet({
 
       updatePreferences(updates);
     }
-  }, [open, user, poolData.area, preferences.socialGoals]);
+  }, [open, user, poolData.area, preferences.socialGoals, preferences.districts, preferences.languages]);
 
   // Reset prefill flag when the sheet closes so each session starts clean
   useEffect(() => {
@@ -150,9 +153,12 @@ export default function JoinEventPoolSheet({
   }, [step, preferences.budget]);
 
   const handleSubmit = () => {
-    if (isFormValid()) {
-      registerMutation.mutate();
+    if (!isFormValid()) return;
+    if (step < totalSteps) {
+      setStep(step + 1);
+      return;
     }
+    registerMutation.mutate();
   };
 
   const handleBack = () => {
