@@ -33,6 +33,7 @@ export default defineConfig<'vite'>(async (merge, { command, mode }) => {
     compiler: 'vite',
     alias: {
       '@': path.resolve(__dirname, '..', 'src'),
+      '@tarojs/plugin-framework-react/dist/runtime': path.resolve(__dirname, '..', 'node_modules/@tarojs/plugin-framework-react/dist/runtime.js'),
     },
     sass: {
       resource: [

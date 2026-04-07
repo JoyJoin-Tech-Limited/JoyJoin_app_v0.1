@@ -133,9 +133,8 @@ export default function BlindBoxEventCard({
   ];
 
   const trustPoints = [
-    { icon: Shield, text: "实名认证保障安全" },
-    { icon: Eye, text: "匿名评价保护隐私" },
-    { icon: Lock, text: "你随时可以退出" },
+    { icon: Shield, text: "手机号验证" },
+    { icon: Heart, text: "匿名评价" },
   ];
 
   // Wave 3: intent-aware CTA copy and glow gradients for the featured (first) card
