@@ -60,6 +60,17 @@ jobs:
             }
 
             try {
+              const branchInfo = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch,
+              });
+
+              if (branchInfo.data.protected) {
+                console.log(`Skipping protected branch: ${branch}`);
+                return;
+              }
+
               await github.rest.git.deleteRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,

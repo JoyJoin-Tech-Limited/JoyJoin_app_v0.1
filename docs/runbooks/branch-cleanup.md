@@ -17,7 +17,7 @@ The **Branch Cleanup** workflow (`delete-merged-branches.yml`) handles two thing
 
 ## Automatic cleanup on PR merge
 
-The workflow listens for `pull_request` events with type `closed`. When a PR is merged, it automatically deletes the head branch unless it is on the always-keep list.
+The workflow listens for `pull_request` events with type `closed`. When a PR is merged, it automatically deletes the head branch unless it is on the always-keep list or is currently marked as protected.
 
 **Always-kept branches** (never deleted automatically):
 
@@ -61,7 +61,7 @@ The workflow will:
 - Skip all branches that have an **open pull request**.
 - Skip all branches marked as **protected** in repository settings.
 - Delete remaining branches that match the prefix, with automatic retry on rate-limit errors.
-- Enable the repository setting **"Automatically delete head branches"** so future merged PRs are cleaned up without manual intervention (requires admin token scope; the step is non-fatal if the token lacks that permission).
+- Attempt to enable the repository setting **"Automatically delete head branches"** so future merged PRs are cleaned up without manual intervention. This step needs a token with repository administration write access (for example an admin PAT or GitHub App token with repository administration permission); the default workflow `GITHUB_TOKEN` commonly lacks that scope, so the step is intentionally non-fatal and may log a warning instead.
 
 ---
 
@@ -70,7 +70,7 @@ The workflow will:
 | Protection | How it works |
 |---|---|
 | Default branch (`main`) never deleted | Listed in `ALWAYS_KEEP` env var |
-| Protected branches never deleted | `!b.protected` filter on every branch |
+| Protected branches never deleted | `repos.getBranch()` guard in merged-PR cleanup and `!b.protected` filter in bulk cleanup |
 | Open-PR branches never deleted | Paginated open-PR list built before any deletion |
 | Live deletion requires confirmation | `confirm` input must equal `DELETE_BRANCHES` |
 | Default mode is dry run | `dry_run` input defaults to `true` |
@@ -90,4 +90,4 @@ Always supply a non-empty `delete_prefix`. Use `copilot/` to target Copilot bran
 The branch either has an open PR, is in the always-keep list, or is marked as protected. Check the job log for a `[MANUAL REVIEW]` line for that branch.
 
 **"Could not set delete_branch_on_merge automatically"**  
-The `GITHUB_TOKEN` used in the workflow run does not have admin scope. Enable the setting manually under **Settings → General → "Automatically delete head branches"**.
+The token used in the workflow run does not have repository administration write access. Re-run with a token that has repository administration permission, or enable the setting manually under **Settings → General → "Automatically delete head branches"**.
