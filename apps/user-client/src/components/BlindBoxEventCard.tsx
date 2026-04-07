@@ -104,24 +104,33 @@ export default function BlindBoxEventCard({
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
+  // MIN/MAX here describe 成桌 formation thresholds, not pool capacity.
+  // The pool itself can hold many more users — these values drive the
+  // matching threshold progress bar and copy only.
   const MIN_TABLE_SIZE = 4;
   const MAX_TABLE_SIZE = 6;
-  const seatsNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
+  // How many more pool registrations are needed to cross the matching threshold.
+  const usersNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
+  // Pool matching-threshold progress: 100% = enough registrations to trigger a match.
+  // This is NOT table occupancy — it is pool readiness-to-match.
   const progressPercent = Math.min((registrationCount / MIN_TABLE_SIZE) * 100, 100);
   const currencySymbol = getCurrencySymbol(city ?? "深圳");
   const priceSummary = priceTier ? `${currencySymbol}${priceTier}` : null;
+
+  // [Event Pool layer] — copy describes pool state, never a formed table.
   const formationHeadline =
     registrationCount >= MIN_TABLE_SIZE
-      ? "这一桌已满足成桌条件"
+      ? "活动池能量拉满 ✦ 即将触发匹配"
       : registrationCount > 0
-        ? `再有 ${seatsNeeded} 位桌友入座即可成桌`
-        : "等你来开启这一桌";
+        ? `再来 ${usersNeeded} 人，匹配就能启动！`
+        : "来开启这波活动！";
+  // Sub-line reinforcing pool-registration count, never seat-fill count.
   const formationDetail =
     registrationCount >= MIN_TABLE_SIZE
-      ? `${registrationCount} 位桌友已在等揭晓 · 当前可优先成桌`
+      ? `已有 ${registrationCount} 人加入活动池 · 系统即将从池中匹配成桌`
       : registrationCount > 0
-        ? `${registrationCount} 位桌友已入座 · ${MIN_TABLE_SIZE} 人成桌，最多 ${MAX_TABLE_SIZE} 人`
-        : `${MIN_TABLE_SIZE} 人成桌 · 时间区域已定`;
+        ? `已有 ${registrationCount} 人加入活动池 · 满 ${MIN_TABLE_SIZE} 人触发匹配`
+        : `满 ${MIN_TABLE_SIZE} 人后触发匹配 · 最多可成 ${MAX_TABLE_SIZE} 人桌`;
   const promiseLine = "时间区域已定 · 桌友成桌后揭晓";
 
   const handleJoinClick = (e: React.MouseEvent) => {
@@ -250,6 +259,7 @@ export default function BlindBoxEventCard({
               </div>
             </div>
 
+            {/* [Event Pool] Matching-threshold progress — pool readiness, not table occupancy */}
             <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -261,12 +271,21 @@ export default function BlindBoxEventCard({
                     {formationDetail}
                   </p>
                 </div>
+                {/* Show pool registration count only — not table seat count */}
                 <span className="text-[11px] font-semibold text-primary/80 shrink-0">
-                  {Math.min(registrationCount, MAX_TABLE_SIZE)}/{MAX_TABLE_SIZE}
+                  {registrationCount} 人
                 </span>
               </div>
 
-              <div className="h-2 rounded-full bg-background/80 overflow-hidden">
+              {/* Pool matching-threshold progress bar: 100% = minGroupSize reached */}
+              <div
+                className="h-2 rounded-full bg-background/80 overflow-hidden"
+                role="progressbar"
+                aria-label="活动池匹配门槛进度"
+                aria-valuenow={registrationCount}
+                aria-valuemin={0}
+                aria-valuemax={MIN_TABLE_SIZE}
+              >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500"
                   style={{ width: `${Math.max(progressPercent, registrationCount > 0 ? 18 : 0)}%` }}
@@ -309,6 +328,7 @@ export default function BlindBoxEventCard({
               </div>
             </div>
 
+            {/* [Event Pool] CTA — joins the pool, not a formed table */}
             <Button
               className={`w-full mt-auto transition-all duration-150 active:scale-[0.98] ${
                 isFeatured ? featuredCtaClass : ""
@@ -319,7 +339,7 @@ export default function BlindBoxEventCard({
               data-testid={`button-join-${id}`}
             >
               <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
-              入座这一桌
+              加入活动池
             </Button>
           </div>
         </Card>

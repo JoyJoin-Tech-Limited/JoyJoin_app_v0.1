@@ -10,7 +10,8 @@ import InteractiveThemeBubbles from "../InteractiveThemeBubbles";
 interface PoolStats {
   totalRegistrations: number;
   archetypeBreakdown: Record<string, number>;
-  estimatedGroups: number;
+  /** [Event Pool] Pool-formable group count — see EventPoolStatsResponse for semantics. */
+  poolFormableGroupCount: number;
   avgMatchScore: number;
   recentThemeTitles: Array<{
     themeTitle: string | null;
@@ -68,7 +69,7 @@ export default function PoolStatusSection({
           {isHot && (
             <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 gap-1">
               <Flame className="h-3 w-3" />
-              即将组队
+              即将触发匹配
             </Badge>
           )}
         </div>
@@ -103,18 +104,19 @@ export default function PoolStatusSection({
           
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {currentProgress === 0 && stats.totalRegistrations > 0
-              ? "已满足组队条件！"
+              ? "已满足匹配门槛！"
               : spotsNeeded > 0 
-                ? `还差 ${spotsNeeded} 人即可组队`
-                : "已满足组队条件！"}
+                ? `再来 ${spotsNeeded} 人即可触发匹配`
+                : "已满足匹配门槛！"}
           </p>
         </div>
         
         {/* Stats Row */}
         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
           <div>
-            <span className="font-medium">预计组队：</span>
-            <span className="ml-1">{stats.estimatedGroups} 组</span>
+            {/* [Event Pool] Pool-formable groups — NOT confirmed 成桌 instances */}
+            <span className="font-medium">可匹配组数：</span>
+            <span className="ml-1">{stats.poolFormableGroupCount} 组</span>
           </div>
           <div>
             <span className="font-medium">平均匹配度：</span>

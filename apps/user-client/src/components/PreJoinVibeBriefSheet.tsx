@@ -49,17 +49,18 @@ export default function PreJoinVibeBriefSheet({
         style={{ maxHeight: "65vh" }}
       >
         <div className="flex flex-col gap-4 px-1 pt-2 pb-6">
-          {/* Header — threshold moment before entering the table */}
+          {/* Header — threshold moment before entering the activity pool */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
             <div>
+              {/* [Event Pool layer] — user is joining a pool, not taking a table seat */}
               <p className="text-xs font-semibold text-foreground/80 leading-none">
-                入座前的一封信
+                加入活动池前，先看这里
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                基于你的性格画像，写给即将入座的你
+                基于你的性格画像，为你预判活动池契合度
               </p>
             </div>
           </div>
@@ -75,7 +76,7 @@ export default function PreJoinVibeBriefSheet({
                 className="flex items-center gap-2 text-muted-foreground text-sm py-4"
               >
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>正在为你准备入席指南…</span>
+                <span>正在解读你的活动池契合度…</span>
               </motion.div>
             ) : (
               <motion.div
@@ -99,12 +100,13 @@ export default function PreJoinVibeBriefSheet({
                     </motion.span>
                   )}
                   <p className="text-base font-medium leading-snug text-foreground pl-2">
-                    {brief?.insight ?? "我们已读懂你的社交画像，这一桌正等你入座"}
+                    {/* [Event Pool layer] — fallback insight describes pool, not a formed table */}
+                    {brief?.insight ?? "我们已读懂你的社交基因 ✦ 活动池里正等着你"}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {brief?.matchingPromise ??
-                    "入座后，我们会为你找到最同频的桌友"}
+                    "加入活动池后，小悦会从候选中匹配最同频的桌友"}
                 </p>
               </motion.div>
             )}
@@ -123,14 +125,14 @@ export default function PreJoinVibeBriefSheet({
             </span>
           </div>
 
-          {/* CTA — handoff to join flow */}
+          {/* CTA — handoff to pool registration flow */}
           <Button
             size="lg"
             className="w-full mt-1 gap-2 transition-all duration-150 active:scale-[0.98]"
             onClick={handleProceed}
             disabled={isLoading}
           >
-            确认入座
+            确认加入活动池
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
