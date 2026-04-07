@@ -7,7 +7,7 @@
  * • Placeholder text changes at 0%, 30%, 80% thresholds.
  */
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 
@@ -42,6 +42,10 @@ export default function SwipeToUnlock({
   labelStages = DEFAULT_LABEL_STAGES,
   ariaLabel = "滑动解锁",
 }: SwipeToUnlockProps) {
+  const sortedLabelStages = useMemo(
+    () => [...labelStages].sort((a, b) => a.threshold - b.threshold),
+    [labelStages],
+  );
   const trackRef = useRef<HTMLDivElement>(null);
   const [pct, setPct] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -123,7 +127,7 @@ export default function SwipeToUnlock({
     [disabled, triggerUnlock]
   );
 
-  const label = getLabel(pct, labelStages);
+  const label = getLabel(pct, sortedLabelStages);
   // Position the handle so its left edge is proportional to pct,
   // accounting for the handle's own width to keep it fully within the track.
   const handleLeft = `calc(${pct}% * (100% - ${HANDLE_W}px) / 100)`;
