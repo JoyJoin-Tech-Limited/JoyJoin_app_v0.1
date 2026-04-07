@@ -16,41 +16,52 @@ const DEFAULT_MIN_GROUP_SIZE = 4;
  * Never treat pool-layer fields as evidence that a 成桌 has formed.
  */
 export interface EventPoolStatsResponse {
-  /** [Event Pool] Total number of registrations currently in this pool. */
+  /** [Event Pool layer] — total registrations in the pool (not table members). */
   totalRegistrations: number;
-  /** [Event Pool] Breakdown of participant personality archetypes in the pool. */
+  /** [Event Pool layer] — archetype distribution across pool registrants. */
   archetypeBreakdown: Record<string, number>;
   /**
-   * [Event Pool] How many groups *could* be formed right now if matching ran
-   * immediately.  Computed as floor(totalRegistrations / minGroupSize).
+   * [Event Pool layer] — floor-based estimate of how many 成桌 groups the current
+   * pool could support.  Uses Math.floor (not ceil) so the value is conservative
+   * and honest: partial groups are not counted as formable.
    *
-   * floor() is intentional: a partial batch cannot form a complete group.
-   * This is a pool-readiness signal, NOT confirmation that groups have formed.
-   * Do NOT surface this as "X tables ready" — groups form only after the
-   * matching service runs and produces actual 成桌 records.
+   * TODO (later PR): rename to `projectedGroups` and split stats response into
+   * separate `poolSignals` and `groupOutcomes` sections to avoid mixing pool-layer
+   * data with historical 成桌 outcomes on the same response object.
    */
-  poolFormableGroupCount: number;
-  /** [成桌 outcome] Average match score across historically formed groups from this pool. */
+  estimatedGroups: number;
+  /**
+   * [成桌 layer] — average match score across already-formed groups in this pool.
+   * This is a historical outcome metric, not a current pool-state signal.
+   */
   avgMatchScore: number;
-  /** [成桌 outcome] Theme titles from previously formed groups (past 成桌 data, not current pool). */
+  /**
+   * [成桌 layer] — theme titles from groups already formed from this pool.
+   * Historical 成桌 examples; do NOT present these as the current pool's state.
+   */
   recentThemeTitles: Array<{ themeTitle: string | null; themeEmoji: string }>;
 }
 
 export function buildEventPoolStatsResponse(input: {
   totalRegistrations: number;
   minGroupSize: number;
+  targetGroups?: number | null;
   archetypeRows: Array<{ archetype: string; count: number }>;
   avgMatchScore: number;
   recentThemeTitles: Array<{ themeTitle: string | null; themeEmoji: string }>;
 }): EventPoolStatsResponse {
+  const formableGroups = Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1));
+  // Pool configuration elsewhere in the codebase treats a missing targetGroups as 1,
+  // so the stats endpoint follows the same default rather than inventing an unlimited mode.
+  const configuredGroupLimit = Math.max(input.targetGroups ?? 1, 1);
+
   return {
     totalRegistrations: input.totalRegistrations,
     archetypeBreakdown: Object.fromEntries(
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
-    // floor(): a partial batch does not produce a complete group.
-    // This is a pool-readiness signal — not a confirmation that groups exist.
-    poolFormableGroupCount: Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
+    // Conservative floor-based calculation capped by the pool's configured group limit.
+    estimatedGroups: Math.min(formableGroups, configuredGroupLimit),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
   };
@@ -63,6 +74,7 @@ export function registerEventPoolRoutes(app: Express): void {
         .select({
           id: eventPools.id,
           minGroupSize: eventPools.minGroupSize,
+          targetGroups: eventPools.targetGroups,
         })
         .from(eventPools)
         .where(eq(eventPools.id, req.params.poolId))
@@ -113,6 +125,7 @@ export function registerEventPoolRoutes(app: Express): void {
         buildEventPoolStatsResponse({
           totalRegistrations,
           minGroupSize,
+          targetGroups: pool.targetGroups,
           archetypeRows: archetypeRows as Array<{ archetype: string; count: number }>,
           avgMatchScore: avgMatchScoreRow?.avgMatchScore ?? 0,
           recentThemeTitles,

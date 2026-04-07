@@ -104,15 +104,12 @@ export default function BlindBoxEventCard({
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
-  // MIN/MAX here describe 成桌 formation thresholds, not pool capacity.
-  // The pool itself can hold many more users — these values drive the
-  // matching threshold progress bar and copy only.
+  // [Event Pool] thresholds — pool needs MIN_TABLE_SIZE to trigger matching;
+  // actual 成桌 groups are formed by the system afterward (up to MAX_TABLE_SIZE).
   const MIN_TABLE_SIZE = 4;
   const MAX_TABLE_SIZE = 6;
-  // How many more pool registrations are needed to cross the matching threshold.
-  const usersNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
-  // Pool matching-threshold progress: 100% = enough registrations to trigger a match.
-  // This is NOT table occupancy — it is pool readiness-to-match.
+  const seatsNeeded = Math.max(MIN_TABLE_SIZE - registrationCount, 0);
+  // Progress toward the pool matching threshold (not table occupancy).
   const progressPercent = Math.min((registrationCount / MIN_TABLE_SIZE) * 100, 100);
   const currencySymbol = getCurrencySymbol(city ?? "深圳");
   const priceSummary = priceTier ? `${currencySymbol}${priceTier}` : null;

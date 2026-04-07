@@ -294,7 +294,8 @@ export default function JoinEventPoolSheet({
                           <div className="h-3 w-px bg-border" />
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                             <span>👥</span>
-                            <span>{poolData.registrationCount} 人已入座</span>
+                            {/* [Event Pool] pool registrations — not table members */}
+                            <span>{poolData.registrationCount} 人已报名</span>
                           </div>
                           <div className="h-3 w-px bg-border" />
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
