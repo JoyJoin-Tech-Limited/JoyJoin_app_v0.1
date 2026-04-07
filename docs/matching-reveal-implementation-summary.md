@@ -9,6 +9,8 @@ This document summarises the implementation of the archetype-based reveal experi
 
 ## Matching-State Architecture (PRs #387–#391)
 
+> **Updated 2026-04-07** — `TestIncompleteScreen` now belongs to the Discover-page pre-entry interception path. `ExtendedDataEmptyScreen` remains sheet-owned, and `MatchRevealSequenceV2` is still the canonical reveal orchestrator.
+
 ### Shared Layout Abstraction — `MatchingStateLayout`
 
 **Location:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
@@ -43,8 +45,8 @@ These are shown either inside `JoinEventPoolSheet.tsx` or as a pre-entry gate on
 | Component | State | Asset |
 |-----------|-------|-------|
 | `JoinErrorScreen` | Registration / join error | `matching/join-error/join-error-hero.svg` |
-| `ExtendedDataEmptyScreen` | Profile data insufficient for matching | `matching/extended-data-empty/extended-data-empty-hero.svg` |
-| `TestIncompleteScreen` | Personality test incomplete pre-entry gate on `DiscoverPage` | `matching/test-incomplete/…` |
+| `ExtendedDataEmptyScreen` | Optional extended-profile nudge shown inside `JoinEventPoolSheet` | `matching/extended-data-empty/extended-data-empty-hero.svg` |
+| `TestIncompleteScreen` | Personality test incomplete pre-entry gate on `DiscoverPage` before the join sheet opens | `matching/test-incomplete/…` |
 
 ### Post-Match Reveal Components
 

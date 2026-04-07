@@ -336,11 +336,11 @@ These are commented out in schema but kept for backward compatibility.
 
 | Route | Component | Description |
 |-------|-----------|-------------|
-| `/event-pool/:id/register` | EventPoolRegistrationPage | Register for blind box event |
+| `/event-pool-registration/:id` | EventPoolRegistrationPage | Legacy full-page event-pool registration surface |
 | `/pool-groups/:groupId` | PoolGroupDetailPage | View matched group details |
 | `/blind-box-events/:eventId` | BlindBoxEventDetailPage | Event details |
 | `/blindbox/payment` | BlindBoxPaymentPage | Payment flow |
-| `/blindbox/confirmation` | BlindBoxConfirmationPage | Payment confirmation |
+| `/blindbox/confirmation` | RedirectToDiscover | Quarantined legacy route — redirects to `/discover` |
 | `/events/:eventId/feedback` | EventFeedbackFlow | Post-event feedback |
 | `/events/:eventId/deep-feedback` | DeepFeedbackFlow | Anonymous deep feedback |
 | `/icebreaker/:sessionId` | IcebreakerSessionPage | Social Icebreaker — **PRIMARY in-event icebreaking flow (use this)** |
@@ -793,6 +793,7 @@ interface XiaoyueChatBubbleProps {
 | Component | Purpose |
 |-----------|---------|
 | `BlindBoxEventCard.tsx` | Event pool discovery cards |
+| `PoolForecastStrip.tsx` | Deterministic pool-atmosphere teaser on discovery cards |
 | `PoolRegistrationCard.tsx` | Registration status display |
 | `ProfileSpotlight.tsx` | Tablemate profile drawer |
 | `JoyOrbit.tsx` | Full-screen group member orbital |
@@ -805,17 +806,20 @@ interface XiaoyueChatBubbleProps {
 
 ### Two-Stage Model
 
-```
-Stage 1: Pool Registration
-├── User discovers event pool on DiscoverPage
-├── Submits soft preferences (budget, cuisine, social goals)
-└── Status: "pending"
+> **Updated 2026-04-07** — active blind-pool discovery is pool-first, not payment-first. Discovery surfaces can describe pool momentum and threshold progress, but only the server matching pipeline decides when a group actually forms.
 
-Stage 2: AI Matching
-├── Scheduler scans pool periodically
-├── Forms optimal groups based on chemistry
-├── Assigns venue and time
-└── Status: "matched"
+```
+Stage 1: Pool Discovery + Join
+├── User discovers pool on DiscoverPage / BlindBoxEventCard
+├── Card can show threshold progress + PoolForecastStrip atmosphere cues
+├── Entry can pass through PreJoinVibeBriefSheet → JoinEventPoolSheet
+└── Success state means "joined the pool", not "already matched"
+
+Stage 2: Matching Execution + Reveal
+├── poolRealtimeMatchingService can scan on registration (realtime)
+├── scanPoolAndMatch also runs on scheduled scans
+├── MatchingStatusPage owns waiting / reveal / no-match states
+└── MatchRevealSequenceV2 is the active cinematic reveal when a group forms
 ```
 
 ### Matching Algorithm Formula
