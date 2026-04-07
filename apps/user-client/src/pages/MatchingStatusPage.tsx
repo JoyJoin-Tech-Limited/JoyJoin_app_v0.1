@@ -28,8 +28,10 @@ import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import MatchSuccessSheet from "@/components/MatchSuccessSheet";
 import MatchingWaitingScreen from "@/components/MatchingWaitingScreen";
+import NoMatchScreen from "@/components/matching/NoMatchScreen";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
+import { getDiscoverJoinRoute } from "@/lib/poolRegistrationRouting";
 import { calculateAge } from "@/lib/userFieldMappings";
 import type { AttendeeData, UserContext } from "@/lib/attendeeAnalytics";
 
@@ -96,6 +98,17 @@ interface PoolStats {
   progress: number;
 }
 
+interface EventPoolListItem {
+  id: string;
+  title: string;
+  eventType: string;
+  city: string;
+  district: string | null;
+  dateTime: string;
+  status: string;
+  registrationCount: number;
+}
+
 export default function MatchingStatusPage() {
   const { registrationId } = useParams();
   const [, setLocation] = useLocation();
@@ -160,6 +173,29 @@ export default function MatchingStatusPage() {
 
   // Countdown to event
   const countdown = useCountdown(registration?.poolDateTime);
+
+  // Fetch similar pools only when in no-match state (needs countdown, so placed after it)
+  const { data: similarPools } = useQuery<EventPoolListItem[]>({
+    queryKey: [`/api/event-pools?city=${encodeURIComponent(registration?.poolCity ?? "")}`],
+    enabled: countdown.isExpired && registration?.matchStatus === "pending",
+    queryFn: async ({ queryKey }) => {
+      const response = await fetch(queryKey[0] as string, { credentials: "include" });
+      if (!response.ok) {
+        throw new Error("无法加载相似活动");
+      }
+
+      return response.json();
+    },
+    select: (pools) =>
+      pools
+        .filter(
+          (p) =>
+            p.id !== registration?.poolId &&
+            p.status === "open" &&
+            p.eventType === registration?.poolEventType,
+        )
+        .slice(0, 3),
+  });
 
   // Check if venue should be unlocked (< 24h and matched)
   const isVenueUnlocked = registration?.matchStatus === "matched" && 
@@ -363,6 +399,25 @@ export default function MatchingStatusPage() {
     });
   };
 
+  // Handle no-match notify: persist a lightweight opt-in hint and show a toast
+  const handleNoMatchNotify = useCallback(() => {
+    try {
+      window.localStorage.setItem(
+        "matching:no-match-notify-preference",
+        JSON.stringify({
+          optedIn: true,
+          notedAt: new Date().toISOString(),
+          poolId: registration?.poolId ?? null,
+          registrationId: registration?.id ?? null,
+        }),
+      );
+    } catch (_error) {
+      // Ignore storage failures so the acknowledgement toast still appears.
+    }
+
+    toast({ title: "已记下！", description: "有类似活动时我们会通知你。" });
+  }, [registration?.id, registration?.poolId, toast]);
+
   // Handle invite
   const handleInvite = async () => {
     const poolTitle = registration?.poolTitle ?? "盲盒社交活动";
@@ -475,23 +530,14 @@ export default function MatchingStatusPage() {
 
   if (countdown.isExpired && registration.matchStatus === "pending") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
-              <XCircle className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-bold">本次活动未能成局</h2>
-            <p className="text-sm text-muted-foreground">
-              很遗憾，本次活动未达到最少人数要求。报名费用将原路退回。
-            </p>
-            <p className="text-sm font-medium">下次再来 💜</p>
-            <Button onClick={() => setLocation("/")} className="w-full">
-              探索更多活动
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <NoMatchScreen
+        poolTitle={registration.poolTitle}
+        onBrowse={() => setLocation("/")}
+        onNotify={handleNoMatchNotify}
+        onBack={() => setLocation("/")}
+        similarPools={similarPools ?? []}
+        onRejoin={(poolId) => setLocation(getDiscoverJoinRoute(poolId))}
+      />
     );
   }
 
@@ -545,6 +591,11 @@ export default function MatchingStatusPage() {
             }))}
             currentUser={currentUserContext}
             onDismiss={handleRevealContinue}
+            onReflect={() => {
+              if (registration?.assignedGroupId) {
+                setLocation(`/pool-groups/${registration.assignedGroupId}`);
+              }
+            }}
           />
         )}
         {themeData && (

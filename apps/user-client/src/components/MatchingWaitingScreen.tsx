@@ -31,6 +31,8 @@ interface StateCopy {
   subtext: string;
   badge: string | null;
   badgeGradient: string;
+  /** Short pipeline hint shown below subtext as a small progress capsule. */
+  nextStepHint: string;
 }
 
 export interface MatchingWaitingScreenProps {
@@ -93,24 +95,27 @@ function getCopy(
         subtext: "小悦正在精心配对，很快就能和新朋友见面啦！",
         badge: "满员",
         badgeGradient: "from-emerald-500/80 to-green-400/80",
+        nextStepHint: "配对即将开始！",
       };
     case "can_form": {
       const remaining = maxGroupSize - filledCount;
       return {
         headline: `已可成团！再等 ${remaining} 人更完美`,
-        subtext: "人数已达门槛，小悦持续寻找最佳搭配组合中。",
+        subtext: "人数已达门槛，小悦持续寻找最佳搭配组合中。我们马上就开始配对了。",
         badge: "可成团",
         badgeGradient: "from-amber-500/80 to-yellow-400/80",
+        nextStepHint: "再等一等 → 配对开始 → 揭晓队友",
       };
     }
     case "waiting":
     default: {
       const need = minGroupSize - filledCount;
       return {
-        headline: `再来 ${need} 位伙伴就能成局`,
-        subtext: "小悦正在为你寻找气场相符的伙伴，稍等片刻。",
+        headline: `再来 ${need} 位，就能凑一桌好局`,
+        subtext: `小悦正在帮你物色气场相合的人。成局后你会第一时间收到通知。`,
         badge: null,
         badgeGradient: "",
+        nextStepHint: "成局 → 系统配对 → 揭晓队友",
       };
     }
   }
@@ -259,6 +264,13 @@ export default function MatchingWaitingScreen({
           {copy.subtext}
         </motion.p>
       </AnimatePresence>
+
+      {/* Next-step hint capsule */}
+      {copy.nextStepHint && (
+        <p className="mt-2 text-center text-[11px] text-white/35 tracking-wide">
+          {copy.nextStepHint}
+        </p>
+      )}
 
       {/* ── Segmented progress bar ── */}
       <div className="mt-8 w-full max-w-sm">
