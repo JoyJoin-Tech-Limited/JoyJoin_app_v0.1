@@ -27,6 +27,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { archetypeConfig } from "@/lib/archetypes";
 import { getDiscoverJoinRoute, getJoinPoolIdFromUrl } from "@/lib/poolRegistrationRouting";
+import TestIncompleteScreen from "@/components/matching/TestIncompleteScreen";
 
 interface EventPool {
   id: string;
@@ -214,6 +215,7 @@ export default function DiscoverPage() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedPoolData, setSelectedPoolData] = useState<EventPool | null>(null);
   const [showJoinSheet, setShowJoinSheet] = useState(false);
+  const [showTestIncomplete, setShowTestIncomplete] = useState(false);
   
   // Coach marks state
   const [coachMarkState, setCoachMarkState] = useState<CoachMarkState>(getCoachMarkState);
@@ -365,8 +367,16 @@ export default function DiscoverPage() {
     setSelectedPoolId(pool.id);
     setSelectedPoolData(pool);
     setShowDrawer(false);
+
+    // Pre-entry interception: if personality test isn't done, show the
+    // TestIncompleteScreen overlay instead of opening the join sheet.
+    if (!user?.hasCompletedPersonalityTest) {
+      setShowTestIncomplete(true);
+      return;
+    }
+
     setShowJoinSheet(true);
-  }, [location, eventPools.length, poolMap, setLocation]);
+  }, [location, eventPools.length, poolMap, setLocation, user?.hasCompletedPersonalityTest]);
   
   // Show event tooltip after a delay if first time (must be after filteredBlindBoxEvents is defined)
   useEffect(() => {
@@ -668,6 +678,19 @@ export default function DiscoverPage() {
             registrationCount: selectedPoolData.registrationCount || 0,
           }}
         />
+      )}
+
+      {/* Pre-entry personality test interception overlay */}
+      {showTestIncomplete && (
+        <div className="fixed inset-0 z-50 bg-background">
+          <TestIncompleteScreen
+            onContinueTest={() => {
+              setShowTestIncomplete(false);
+              setLocation("/personality-test");
+            }}
+            onDismiss={() => setShowTestIncomplete(false)}
+          />
+        </div>
       )}
     </div>
   );

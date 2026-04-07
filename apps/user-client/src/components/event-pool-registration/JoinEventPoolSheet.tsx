@@ -23,7 +23,6 @@ import DinnerPreferencesStep from "./steps/DinnerPreferencesStep";
 import BarPreferencesStep from "./steps/BarPreferencesStep";
 import BlindPoolTrustExplainer from "./BlindPoolTrustExplainer";
 import JoinErrorScreen from "@/components/matching/JoinErrorScreen";
-import TestIncompleteScreen from "@/components/matching/TestIncompleteScreen";
 import ExtendedDataEmptyScreen from "@/components/matching/ExtendedDataEmptyScreen";
 import { shenzhenClusters } from "@shared/districts";
 import {
@@ -195,14 +194,11 @@ export default function JoinEventPoolSheet({
     setExtendedDataNudgeDismissed(false);
   };
 
-  // Personality test incomplete: derived from auth state
-  const isTestIncomplete = !!user && !user.hasCompletedPersonalityTest;
 
   // Extended data nudge: show once per sheet open when profile enrichment is incomplete.
   // The server computes `profileExtendedComplete` from education + industry + hometown,
   // so the CTA should route to a real profile-edit surface instead of the interests carousel.
   const showExtendedDataNudge =
-    !isTestIncomplete &&
     !extendedDataNudgeDismissed &&
     user?.profileExtendedComplete === false;
 
@@ -221,21 +217,12 @@ export default function JoinEventPoolSheet({
         className="h-[90vh] overflow-hidden flex flex-col"
       >
         {/* Floating Orbs Background — hidden when a matching-state screen is active */}
-        {!isTestIncomplete && !showExtendedDataNudge && !showJoinError && <FloatingOrbs />}
+        {!showExtendedDataNudge && !showJoinError && <FloatingOrbs />}
 
         {/* Mascot */}
         <TransitionMascot show={showMascot} message={mascotMessage} />
 
-        {/* ── Personality test incomplete gate ── */}
-        {isTestIncomplete ? (
-          <TestIncompleteScreen
-            onContinueTest={() => {
-              onOpenChange(false);
-              setLocation("/personality-test");
-            }}
-            onDismiss={() => onOpenChange(false)}
-          />
-        ) : showExtendedDataNudge ? (
+        {showExtendedDataNudge ? (
           /* ── Extended data optional nudge ── */
           <ExtendedDataEmptyScreen
             onFillProfile={() => {
