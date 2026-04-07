@@ -10653,7 +10653,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { 
         initializeEngineState, 
         processAnswer, 
-        selectNextQuestion, 
+        selectNextQuestion,
+        shouldTerminate,
+        getClosingQuestionsRemaining,
         DEFAULT_ASSESSMENT_CONFIG,
         V2_ASSESSMENT_CONFIG 
       } = await import('@shared/personality');
@@ -10824,7 +10826,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           minQuestions: engineState.config.minQuestions,
           softMaxQuestions: engineState.config.softMaxQuestions,
           hardMaxQuestions: engineState.config.hardMaxQuestions,
-          estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
+          estimatedRemaining: shouldTerminate(engineState)
+            ? getClosingQuestionsRemaining(engineState)
+            : Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size) + getClosingQuestionsRemaining(engineState),
         },
         currentMatches: engineState.currentMatches.slice(0, 3),
         isComplete: nextQuestion === null,
@@ -10874,6 +10878,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         processAnswer, 
         selectNextQuestion,
         shouldTerminate,
+        isAssessmentComplete,
+        getClosingQuestionsRemaining,
         getFinalResult,
         DEFAULT_ASSESSMENT_CONFIG,
         V2_ASSESSMENT_CONFIG,
@@ -10938,8 +10944,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
       
-      // Check if complete
-      const isComplete = shouldTerminate(engineState);
+      // Check if complete (adaptive phase done AND all universal closing questions answered)
+      const isComplete = isAssessmentComplete(engineState);
       
       if (isComplete) {
         // Load secondary data accumulated from playful questions (re-fetch to pick up any update above)
@@ -11045,7 +11051,12 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
             minQuestions: engineState.config.minQuestions,
             softMaxQuestions: engineState.config.softMaxQuestions,
             hardMaxQuestions: engineState.config.hardMaxQuestions,
-            estimatedRemaining: Math.max(0, engineState.config.minQuestions - answers.length),
+            // After adaptive phase, only closing questions remain; during adaptive,
+            // add the 2 closing questions to the estimate so the progress bar doesn't
+            // jump at the adaptive→closing transition.
+            estimatedRemaining: shouldTerminate(engineState)
+              ? getClosingQuestionsRemaining(engineState)
+              : Math.max(0, engineState.config.minQuestions - answers.length) + getClosingQuestionsRemaining(engineState),
           },
           currentMatches: engineState.currentMatches.slice(0, 3),
           encouragement,
@@ -11229,7 +11240,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { 
         initializeEngineState, 
         processAnswer, 
-        selectNextQuestion, 
+        selectNextQuestion,
+        shouldTerminate,
+        getClosingQuestionsRemaining,
         DEFAULT_ASSESSMENT_CONFIG,
         V2_ASSESSMENT_CONFIG 
       } = await import('@shared/personality');
@@ -11274,7 +11287,9 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           minQuestions: engineState.config.minQuestions,
           softMaxQuestions: engineState.config.softMaxQuestions,
           hardMaxQuestions: engineState.config.hardMaxQuestions,
-          estimatedRemaining: Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size),
+          estimatedRemaining: shouldTerminate(engineState)
+            ? getClosingQuestionsRemaining(engineState)
+            : Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size) + getClosingQuestionsRemaining(engineState),
         },
         currentMatches: engineState.currentMatches.slice(0, 3),
       };
