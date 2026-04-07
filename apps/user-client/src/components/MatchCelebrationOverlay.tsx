@@ -8,6 +8,12 @@ interface MatchCelebrationOverlayProps {
   isVisible: boolean;
   onContinue: () => void;
   eventType?: string;
+  /**
+   * V2 reveal context — when supplied the overlay continues the reveal rather
+   * than resetting to a generic success modal.
+   */
+  chemistryLine?: string;
+  groupSize?: number;
 }
 
 const XIAOYUE_CELEBRATION_MESSAGES = [
@@ -21,6 +27,8 @@ export default function MatchCelebrationOverlay({
   isVisible,
   onContinue,
   eventType = "活动",
+  chemistryLine,
+  groupSize,
 }: MatchCelebrationOverlayProps) {
   const message = XIAOYUE_CELEBRATION_MESSAGES[
     Math.floor(Math.random() * XIAOYUE_CELEBRATION_MESSAGES.length)
@@ -93,7 +101,9 @@ export default function MatchCelebrationOverlay({
                   匹配成功！
                 </h2>
                 <p className="text-muted-foreground">
-                  {eventType}小伙伴已就位
+                  {groupSize != null && groupSize > 0
+                    ? `${groupSize} 位${eventType}小伙伴已就位`
+                    : `${eventType}小伙伴已就位`}
                 </p>
               </motion.div>
 
@@ -110,7 +120,7 @@ export default function MatchCelebrationOverlay({
                     </AvatarFallback>
                   </Avatar>
                   <p className="text-sm text-left leading-relaxed">
-                    {message}
+                    {chemistryLine ?? message}
                   </p>
                 </div>
               </motion.div>
