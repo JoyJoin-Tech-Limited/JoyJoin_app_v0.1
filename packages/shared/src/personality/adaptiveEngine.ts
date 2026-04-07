@@ -51,6 +51,16 @@ export const UNIVERSAL_CLOSING_QUESTION_IDS: readonly string[] = [
 ] as const;
 
 /**
+ * Returns true when the given question ID is a universal closing question.
+ * Used to enforce special handling: closing questions are never selected
+ * during the adaptive phase, are never randomized, and are only considered
+ * complete once answered (not merely skipped).
+ */
+export function isUniversalClosingQuestionId(id: string): boolean {
+  return (UNIVERSAL_CLOSING_QUESTION_IDS as readonly string[]).includes(id);
+}
+
+/**
  * Instrumentation for tracking targetPair question selection
  * Used for debugging and calibration analysis
  */
@@ -394,9 +404,11 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   
   if (shouldTerminate(updatedState)) {
     // Adaptive phase is complete – now guarantee the universal closing questions.
-    // Return the first one that hasn't been answered or skipped yet.
+    // Return the first one that hasn't been answered yet.  Skipped state is
+    // intentionally ignored here: closing questions are only complete once
+    // answered, so a skipped closing question must be re-surfaced.
     const pendingClosingId = UNIVERSAL_CLOSING_QUESTION_IDS.find(
-      id => !updatedState.answeredQuestionIds.has(id) && !updatedState.skippedQuestionIds.has(id)
+      id => !updatedState.answeredQuestionIds.has(id)
     );
     if (pendingClosingId) {
       const closingQuestion = questionsV4.find(q => q.id === pendingClosingId) || null;
@@ -453,8 +465,14 @@ export function skipQuestion(
   
   const newQuestion = selectAlternativeQuestion(newState, currentLevel);
   
-  // Implement option randomization for skipped question
+  // Implement option randomization for skipped question, but preserve native
+  // option order for universal closing questions (slider/emoji_tap UX requires
+  // stable layout and closing questions are never selected via this path in
+  // the adaptive phase anyway).
   if (newQuestion) {
+    if (isUniversalClosingQuestionId(newQuestion.id)) {
+      return { newState, newQuestion };
+    }
     const randomizedOptions = [...newQuestion.options].sort(() => Math.random() - 0.5);
     return { newState, newQuestion: { ...newQuestion, options: randomizedOptions } };
   }
@@ -471,7 +489,8 @@ export function selectAlternativeQuestion(
   const sameLevelQuestions = questionsV4.filter(q => 
     q.level === preferredLevel &&
     !answeredQuestionIds.has(q.id) && 
-    !skippedQuestionIds.has(q.id)
+    !skippedQuestionIds.has(q.id) &&
+    !isUniversalClosingQuestionId(q.id)
   );
   
   if (sameLevelQuestions.length > 0) {
@@ -792,11 +811,13 @@ export function shouldTerminate(state: EngineState): boolean {
 
 /**
  * Returns the number of universal closing questions that have not yet been
- * answered (and have not been skipped) in the given engine state.
+ * answered in the given engine state.  Skipped state is intentionally ignored:
+ * closing questions are only complete once answered, so a skipped closing
+ * question is still counted as pending.
  */
 export function getClosingQuestionsRemaining(state: EngineState): number {
   return UNIVERSAL_CLOSING_QUESTION_IDS.filter(
-    id => !state.answeredQuestionIds.has(id) && !state.skippedQuestionIds.has(id)
+    id => !state.answeredQuestionIds.has(id)
   ).length;
 }
 
