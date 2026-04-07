@@ -1,7 +1,7 @@
 # JoyJoin AI Agent Harness Separation Strategy
 
 **Status:** Current-State + Next-State Architecture — Internal Engineering / Product Use  
-**Last updated:** 2026-03-30  
+**Last updated:** 2026-04-02  
 **Scope:** AI product agent systems for Onboarding Discovery, Match Intelligence, and Event Momentum
 
 > **Audit note (2026-03-30):** This document has been revised from a forward-looking reference memo
@@ -28,8 +28,10 @@ This section maps the three agent systems to what is **actually shipped in the r
 | **Match Intelligence** | Shared typed contract for group analysis | `packages/shared/src/groupAnalysis.ts`, `packages/shared/src/types/groupAnalysis.ts` | `MatchExplanationContract`, `GroupAnalysisContract`, `GroupAnalysisResponse` — consumed by both server and `user-client` |
 | **Match Intelligence** | Interest signal boost for icebreakers / conversation topics | `apps/server/src/matchExplanationService.ts` (l.104+), `apps/server/src/conversationTopicsService.ts` | `MatchMember.interestSignals[]` — loaded via `loadInterestSignalsByUserIds()` in `routes.ts`; used to enrich prompts for group analysis and blind-box conversation topics; does **not** affect `poolMatchingService.ts` pair scores |
 | **Match Intelligence** | Dual-provider LLM routing (social + creative) | `apps/server/src/ai/socialModelRouter.ts`, `apps/server/src/ai/creativeModelRouter.ts` | `callSocialAI()` MiniMax-first + DeepSeek fallback; `getClientForFunction()` per-function routing; logs `provider=` + `latency=ms` on every call |
+| **Match Intelligence** | Embedding client (background semantic profiles) | `apps/server/src/embeddingClient.ts` | `EmbeddingClient` class; resolves provider from `OPENAI_API_KEY` (preferred) or `DEEPSEEK_API_KEY`; used by the async semantic profile pipeline; not routed through social/creative model routers |
 | **Onboarding Discovery** | Canonical adaptive V4 personality engine (deterministic) | `packages/shared/src/personality/` | Authoritative — AI layer must not replace this |
 | **Onboarding Discovery** | Server-driven onboarding state via `nextStep` | `apps/server/src/routes.ts`, `apps/user-client/src/App.tsx` | All progression flags (`hasCompletedPersonalityTest`, `profileEssentialComplete`, etc.) are server-owned; client reads only |
+| **Onboarding Discovery** | Shared AI onboarding contract | `packages/shared/src/ai/onboarding.ts` | Exports `ProfileTaglineResponse`; consumed by `profileTaglineService.ts` and the client hook |
 
 ### 0.2 Adjacent Patterns Already in Repo (Partially Realized)
 
@@ -50,13 +52,13 @@ These components exhibit patterns from the strategy's three-role model but were 
 | `apps/server/src/services/onboardingDiscoveryOrchestrator.ts` | 🔲 Proposed | No file exists; Onboarding Discovery has no dedicated AI layer yet |
 | `apps/server/src/services/matchIntelligenceOrchestrator.ts` | 🔲 Proposed | No file exists; `matchExplanationService.ts` is the de facto adjacent implementation |
 | `apps/server/src/services/eventMomentumOrchestrator.ts` | 🔲 Proposed | No file exists; `socialIcebreakerAIService.ts` is the de facto implementation |
-| `packages/shared/src/ai/onboarding.ts` | 🔲 Proposed | Directory `packages/shared/src/ai/` does not exist |
+| `packages/shared/src/ai/onboarding.ts` | ✅ Shipped | File exists at `packages/shared/src/ai/onboarding.ts`; exports `ProfileTaglineResponse` contract |
 | `packages/shared/src/ai/matching.ts` | 🔲 Proposed | Actual contract is in `packages/shared/src/groupAnalysis.ts` + `packages/shared/src/types/groupAnalysis.ts` |
 | `packages/shared/src/ai/icebreaker.ts` | 🔲 Proposed | No dedicated shared contract; schema lives inline in `socialIcebreakerAIService.ts` |
 | Prompt version tagging on all model calls | 🔲 Proposed | Not consistently implemented; provider + latency are logged but prompt version is not |
 | Evaluator rejection reason in observability output | 🔲 Proposed | `fromCache` + `generatedAt` are logged; rejection reasons are `console.warn` only |
-| `callLLMForInference()` (attribute inference fallback) | ⚡ Implemented, not wired | `apps/server/src/inference/llmFallbackInference.ts` — implemented but no runtime callers yet |
-| Thompson Sampling weight learning in pool matching | ⚡ Primary adaptive-weight path, implemented but not wired | `apps/server/src/matchingWeightsService.ts` — preferred over legacy experiments; not yet active in `poolMatchingService.ts` |
+| `callLLMForInference()` (attribute inference fallback) | ⚡ Shadow telemetry active | `apps/server/src/inference/llmFallbackInference.ts` — shadow-only; currently focused on low-confidence `career` / `expectation` fields, with additional dimensions scheduled when prior insights exist and allowed by `INFERENCE_RUNTIME_LLM_FALLBACK_APPROVED_FIELDS`; `llm_fallback_inference_*` Prometheus metrics active; no live callers yet |
+| Thompson Sampling weight learning in pool matching | ⚡ Primary adaptive-weight path, implemented but not wired | `apps/server/src/matchingWeightsService.ts` — now the only documented adaptive-weight route; legacy `dynamicWeights.ts` gradient-descent path is deprecated |
 
 ---
 
