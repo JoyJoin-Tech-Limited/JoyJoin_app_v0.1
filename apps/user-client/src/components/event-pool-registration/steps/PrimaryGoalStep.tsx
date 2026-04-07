@@ -120,9 +120,9 @@ export default function PrimaryGoalStep({
     <div className="space-y-6">
       {/* Title — intent expression, not data capture */}
       <div>
-        <h2 className="text-xl font-bold mb-2">这一桌你最想发生什么？</h2>
+        <h2 className="text-xl font-bold mb-2">调一调这桌的氛围</h2>
         <p className="text-sm text-muted-foreground">
-          已有 {registrationCount} 人入座，小悦会帮你找最合拍的桌友
+          你的选择会影响系统为你匹配的桌友
         </p>
       </div>
 
@@ -133,7 +133,7 @@ export default function PrimaryGoalStep({
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2"
         >
-          <span>✨ 已沿用你的默认社交偏好，帮你更快找到同频桌友！</span>
+          <span>✨ 已沿用你上次的偏好</span>
           <button
             type="button"
             onClick={() => {
@@ -154,7 +154,7 @@ export default function PrimaryGoalStep({
             随缘模式
           </Label>
           <p className="text-xs text-muted-foreground mt-1">
-            什么人都想认识，让缘分来安排这一桌 ✨
+            不挑氛围，交给缘分安排 ✨
           </p>
         </div>
         <Switch
@@ -167,12 +167,7 @@ export default function PrimaryGoalStep({
       {/* Primary goal selection */}
       {!isFlexibleMode && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="h-5 w-5 rounded-full bg-primary text-white text-[11px] flex items-center justify-center font-bold shrink-0">
-              1
-            </span>
-            <p className="text-sm font-semibold">选择你的主要目标 <span className="text-destructive">*</span></p>
-          </div>
+          <p className="text-sm font-semibold">你最想要的氛围</p>
           <div className="grid grid-cols-2 gap-3">
             {SHARED_OPTIONS.socialGoals.map((option, index) => (
               <motion.div
@@ -207,9 +202,6 @@ export default function PrimaryGoalStep({
               <ChevronDown className="h-4 w-4" aria-hidden="true" />
             )}
             <span className="flex items-center gap-1.5">
-              <span className="h-5 w-5 rounded-full bg-muted text-foreground/60 text-[11px] flex items-center justify-center font-bold shrink-0">
-                2
-              </span>
               还有其他期待吗？<span className="text-xs text-muted-foreground/60">（可选）</span>
             </span>
           </button>
