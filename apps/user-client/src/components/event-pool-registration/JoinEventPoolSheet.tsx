@@ -270,7 +270,6 @@ export default function JoinEventPoolSheet({
                   {step === 1 && (
                     <>
                       <WhyThisFitsCard
-                        poolId={poolData.poolId}
                         eventType={poolData.eventType}
                         area={poolData.area}
                         enabled={open}

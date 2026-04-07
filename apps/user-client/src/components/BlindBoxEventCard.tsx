@@ -385,7 +385,6 @@ export default function BlindBoxEventCard({
           open={vibeBriefOpen}
           onOpenChange={setVibeBriefOpen}
           onProceedToJoin={handleProceedToJoin}
-          poolId={poolId}
           eventType={eventType}
           area={area}
         />
