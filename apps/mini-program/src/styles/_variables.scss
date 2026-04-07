@@ -1,0 +1,90 @@
+// ─── Brand Gradient ───────────────────────────────────────────────
+$brand-gradient-from: #FF6B9D;
+$brand-gradient-to:   #A86BFF;
+$brand-gradient:      linear-gradient(135deg, #{$brand-gradient-from}, #{$brand-gradient-to});
+
+// ─── Colors ───────────────────────────────────────────────────────
+$color-primary:        #8B5CF6;
+$color-primary-dark:   #7C3AED;
+$color-primary-light:  #EDE9FE;
+$color-secondary:      #FF6B9D;
+
+$color-bg:             #FAFAFA;
+$color-surface:        #FFFFFF;
+
+$color-text-primary:   #2D3142;
+$color-text-secondary: #6B7280;
+$color-text-link:      #A86BFF;
+$color-text-white:     #FFFFFF;
+$color-text-muted:     #9CA3AF;
+
+$color-border:         #E2E5ED;
+$color-divider:        #F3F4F6;
+
+$color-success:        #2ECC71;
+$color-warning:        #F0A030;
+$color-error:          #EF4444;
+
+// ─── Typography ───────────────────────────────────────────────────
+$font-brand: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+$font-body:  -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
+
+$font-size-xs:    22rpx;
+$font-size-sm:    24rpx;
+$font-size-base:  28rpx;
+$font-size-md:    32rpx;
+$font-size-lg:    36rpx;
+$font-size-xl:    40rpx;
+$font-size-2xl:   48rpx;
+$font-size-brand: 64rpx;
+
+$font-weight-normal:   400;
+$font-weight-medium:   500;
+$font-weight-semibold: 600;
+$font-weight-bold:     700;
+$font-weight-black:    900;
+
+// ─── Spacing ──────────────────────────────────────────────────────
+$spacing-xs:   8rpx;
+$spacing-sm:   16rpx;
+$spacing-md:   24rpx;
+$spacing-lg:   40rpx;
+$spacing-xl:   60rpx;
+$spacing-2xl:  80rpx;
+
+$container-padding: 40rpx;
+$grid-gap:          30rpx;
+
+// ─── Sizing ───────────────────────────────────────────────────────
+$button-height:    96rpx;
+$button-height-sm: 72rpx;
+$button-radius:    48rpx;
+$card-radius:      32rpx;
+$card-radius-sm:   24rpx;
+$input-height:     88rpx;
+$tab-bar-height:   120rpx;
+
+// ─── Shadows ──────────────────────────────────────────────────────
+$shadow-sm:   0 2rpx 12rpx rgba(0, 0, 0, 0.07);
+$shadow-md:   0 4rpx 24rpx rgba(0, 0, 0, 0.10);
+$shadow-lg:   0 8rpx 40rpx rgba(0, 0, 0, 0.14);
+$shadow-card: 0 2rpx 12rpx rgba(0, 0, 0, 0.07);
+
+// ─── Archetype Colors ─────────────────────────────────────────────
+$archetype-kaixin-keji:    hsl(43, 96%, 56%);
+$archetype-taiyang-ji:     hsl(50, 90%, 55%);
+$archetype-kuakua-tun:     hsl(340, 75%, 65%);
+$archetype-jizhi-hu:       hsl(25, 95%, 53%);
+$archetype-danding-haitun: hsl(187, 85%, 53%);
+$archetype-zhiwang-zhu:    hsl(270, 70%, 60%);
+$archetype-nuanxin-xiong:  hsl(350, 80%, 60%);
+$archetype-lingan-zhangyu: hsl(280, 65%, 60%);
+$archetype-chensi-maotouying: hsl(230, 60%, 55%);
+$archetype-dingxin-daxiang: hsl(210, 15%, 55%);
+$archetype-poke-xiaoji:    hsl(55, 85%, 55%);
+$archetype-qiqu-huanxiong: hsl(15, 80%, 58%);
+
+// ─── Z-index ──────────────────────────────────────────────────────
+$z-tab-bar: 100;
+$z-modal:   200;
+$z-toast:   300;
