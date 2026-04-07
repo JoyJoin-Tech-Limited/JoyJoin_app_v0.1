@@ -478,7 +478,7 @@ export default function LoginPage() {
           >
             <div className="flex items-center gap-1.5 text-white/80 text-sm">
               <Shield className="h-4 w-4" />
-              <span>实名认证</span>
+              <span>手机号验证</span>
             </div>
             <div className="flex items-center gap-1.5 text-white/80 text-sm">
               <CheckCircle2 className="h-4 w-4" />
