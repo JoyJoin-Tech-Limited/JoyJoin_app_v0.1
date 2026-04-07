@@ -367,8 +367,8 @@ LandingPage → /personality-test (anonymous V4 test)
 - Question count is controlled by `AssessmentConfig` in `packages/shared/src/personality/types.ts` and evaluated by `shouldTerminate()` in `adaptiveEngine.ts`
 - Default config (`DEFAULT_ASSESSMENT_CONFIG`): `minQuestions=10`, `softMaxQuestions=12`, `hardMaxQuestions=16`
 - V2/tiered config (`V2_ASSESSMENT_CONFIG`, used when the matcher-v2 path is enabled): `minQuestions=12`, `softMaxQuestions=16`, `hardMaxQuestions=20`
-- Completion is not based on a fixed appended-question sequence. The engine terminates when `shouldTerminate()` decides enough confidence has been reached after the configured minimum, or when `hardMaxQuestions` is reached
-- `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are part of the active question bank, but they are **not** guaranteed closing questions
+- Completion is not based on a fixed number of standard questions; the adaptive engine terminates when `shouldTerminate()` decides enough confidence has been reached after the configured minimum, or when `hardMaxQuestions` is reached
+- After the adaptive phase terminates, **`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are always presented to every user** as universal closing questions (in that order). The full assessment is complete only after both have been answered.
 
 **Question Flow:**
 ```
@@ -376,7 +376,8 @@ Phase 1: Ask 8 anchor questions (L1) → Establish baseline
 Phase 2: Check confidences → If low, ask adaptive questions (L2)
 Phase 3: Check confusion → If top-2 close, ask disambiguation (L3)
 Phase 4: `shouldTerminate()` evaluates confidence / confusion / configured bounds
-Phase 5: V2 Matcher → Calculate final archetype
+Phase 5: Universal closing — Q_PLAYFUL_SLIDER (slider) then Q_PLAYFUL_EMOJI (emoji_tap)
+Phase 6: V2 Matcher → Calculate final archetype (with conflictPosture from closing questions)
 ```
 
 **Example Adaptive Question:**
