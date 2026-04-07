@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Bell, ChevronRight, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import matchingWaitingHero from "@/assets/matching/waiting/matching-waiting-hero.svg";
+import { archetypeWaitingEnabled } from "@/lib/wave2Experiments";
+import { getArchetypeWaitingCopy } from "@/lib/archetypeWaitingCopy";
+import { participationExperimentAnalytics } from "@/lib/participationExperimentAnalytics";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -31,6 +34,8 @@ interface StateCopy {
   subtext: string;
   badge: string | null;
   badgeGradient: string;
+  /** Short pipeline hint shown below subtext as a small progress capsule. */
+  nextStepHint: string;
 }
 
 export interface MatchingWaitingScreenProps {
@@ -66,6 +71,18 @@ export interface MatchingWaitingScreenProps {
   newMemberJoined?: boolean;
   /** Archetype name of the new member (optional, shown in micro-interaction). */
   newMemberArchetype?: string | null;
+  /**
+   * The current user's primary archetype (Wave 2 EXP_ARCHETYPE_WAITING).
+   * When provided and `archetypeWaitingEnabled()` is true, personalised copy
+   * is shown instead of the generic waiting copy.
+   * Optional — falls back gracefully to generic copy when absent.
+   */
+  userArchetype?: string | null;
+  /**
+   * Pool ID used for analytics instrumentation of the archetype waiting experiment.
+   * Required when `userArchetype` is supplied for correct event attribution.
+   */
+  poolId?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -93,24 +110,27 @@ function getCopy(
         subtext: "小悦正在精心配对，很快就能和新朋友见面啦！",
         badge: "满员",
         badgeGradient: "from-emerald-500/80 to-green-400/80",
+        nextStepHint: "配对即将开始！",
       };
     case "can_form": {
       const remaining = maxGroupSize - filledCount;
       return {
         headline: `已可成团！再等 ${remaining} 人更完美`,
-        subtext: "人数已达门槛，小悦持续寻找最佳搭配组合中。",
+        subtext: "人数已达门槛，小悦持续寻找最佳搭配组合中。我们马上就开始配对了。",
         badge: "可成团",
         badgeGradient: "from-amber-500/80 to-yellow-400/80",
+        nextStepHint: "再等一等 → 配对开始 → 揭晓队友",
       };
     }
     case "waiting":
     default: {
       const need = minGroupSize - filledCount;
       return {
-        headline: `再来 ${need} 位伙伴就能成局`,
-        subtext: "小悦正在为你寻找气场相符的伙伴，稍等片刻。",
+        headline: `再来 ${need} 位，就能凑一桌好局`,
+        subtext: `小悦正在帮你物色气场相合的人。成局后你会第一时间收到通知。`,
         badge: null,
         badgeGradient: "",
+        nextStepHint: "成局 → 系统配对 → 揭晓队友",
       };
     }
   }
@@ -133,6 +153,8 @@ export default function MatchingWaitingScreen({
   onBack,
   newMemberJoined = false,
   newMemberArchetype = null,
+  userArchetype = null,
+  poolId,
 }: MatchingWaitingScreenProps) {
   const [refreshCountdown, setRefreshCountdown] = useState(refreshIntervalSeconds);
   const shouldReduceMotion = useReducedMotion();
@@ -152,12 +174,41 @@ export default function MatchingWaitingScreen({
     normalizedMinGroupSize,
     normalizedMaxGroupSize,
   );
-  const copy = getCopy(
+  const genericCopy = getCopy(
     fillState,
     displayFilledCount,
     normalizedMinGroupSize,
     normalizedMaxGroupSize,
   );
+
+  // ── Wave 2 EXP_ARCHETYPE_WAITING ──────────────────────────────────────────
+  // Use archetype-personalised copy only when the experiment is active, the
+  // fill state is "waiting" (most impactful moment), and we have an archetype.
+  const useArchetypeCopy =
+    archetypeWaitingEnabled() &&
+    fillState === "waiting" &&
+    !!userArchetype;
+  const archetypeCopy = useArchetypeCopy
+    ? getArchetypeWaitingCopy(userArchetype)
+    : null;
+
+  const copy = archetypeCopy ?? genericCopy;
+  const hasTrackedArchetypeWaitingRef = useRef(false);
+
+  // Analytics: track archetype waiting experiment once when the personalised
+  // copy actually becomes visible. `userArchetype` / `poolId` may arrive after
+  // the initial mount, so keying this on mount alone can miss the exposure.
+  useEffect(() => {
+    if (
+      !hasTrackedArchetypeWaitingRef.current &&
+      useArchetypeCopy &&
+      userArchetype &&
+      poolId
+    ) {
+      hasTrackedArchetypeWaitingRef.current = true;
+      participationExperimentAnalytics.archetypeWaitingShown(poolId, userArchetype);
+    }
+  }, [poolId, useArchetypeCopy, userArchetype]);
 
   // Reset countdown when the refresh interval prop changes.
   useEffect(() => {
@@ -259,6 +310,13 @@ export default function MatchingWaitingScreen({
           {copy.subtext}
         </motion.p>
       </AnimatePresence>
+
+      {/* Next-step hint capsule */}
+      {copy.nextStepHint && (
+        <p className="mt-2 text-center text-[11px] text-white/35 tracking-wide">
+          {copy.nextStepHint}
+        </p>
+      )}
 
       {/* ── Segmented progress bar ── */}
       <div className="mt-8 w-full max-w-sm">

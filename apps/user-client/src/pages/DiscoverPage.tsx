@@ -16,6 +16,7 @@ import EventCardSkeleton from "@/components/EventCardSkeleton";
 import SparkSectionHeader from "@/components/SparkSectionHeader";
 import { AlertCircle, RefreshCw, Sparkles, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -575,8 +576,10 @@ export default function DiscoverPage() {
                         tabIndex={isFirstCard && showEventTooltip ? 0 : undefined}
                         aria-label={isFirstCard && showEventTooltip ? "关闭提示" : undefined}
                       >
+                        {/* Wave 3: isFeatured={true} for first card — premium glow + upgraded CTA */}
                         <BlindBoxEventCard 
                           {...event}
+                          isFeatured={isFirstCard}
                           onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
                         />
                       </div>

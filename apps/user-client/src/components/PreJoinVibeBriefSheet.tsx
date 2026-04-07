@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowRight, Loader2, Shield, Lock } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { buildPreJoinVibeBriefUrl } from "@/lib/preJoinVibeBrief";
@@ -27,6 +27,7 @@ export default function PreJoinVibeBriefSheet({
     () => buildPreJoinVibeBriefUrl({ eventType, area }),
     [eventType, area],
   );
+  const reduceMotion = useReducedMotion();
 
   const { data: brief, isLoading } = useQuery<PreJoinVibeBrief | null>({
     queryKey: [url],
@@ -79,14 +80,28 @@ export default function PreJoinVibeBriefSheet({
             ) : (
               <motion.div
                 key="content"
-                initial={{ opacity: 0, y: 8 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
                 className="space-y-3"
               >
-                <p className="text-base font-medium leading-snug text-foreground">
-                  {brief?.insight ?? "我们的算法已初步读懂你的社交画像"}
-                </p>
+                {/* Wave 3: sparkle accent on insight reveal */}
+                <div className="relative">
+                  {!reduceMotion && (
+                    <motion.span
+                      className="absolute -top-1 -left-1 text-primary/60 text-sm select-none pointer-events-none"
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] }}
+                      transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
+                      aria-hidden="true"
+                    >
+                      ✦
+                    </motion.span>
+                  )}
+                  <p className="text-base font-medium leading-snug text-foreground pl-2">
+                    {brief?.insight ?? "我们的算法已初步读懂你的社交画像"}
+                  </p>
+                </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {brief?.matchingPromise ??
                     "我们会以此为基础，为你匹配更对 vibe 的小组"}
@@ -111,7 +126,7 @@ export default function PreJoinVibeBriefSheet({
           {/* CTA — branded handoff to join flow */}
           <Button
             size="lg"
-            className="w-full mt-1 gap-2"
+            className="w-full mt-1 gap-2 transition-all duration-150 active:scale-[0.98]"
             onClick={handleProceed}
             disabled={isLoading}
           >
