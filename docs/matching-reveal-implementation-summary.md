@@ -50,7 +50,8 @@ These are shown inside `JoinEventPoolSheet.tsx`, not as standalone full-screen p
 
 | Component | Role | Asset |
 |-----------|------|-------|
-| `SurpriseMatchReveal` | Cinematic surprise match reveal overlay | (inline animation) |
+| `MatchRevealSequenceV2` | **V2 cinematic reveal orchestrator** (active) — stages: lock_in → prelude → member_entrance → formation → chemistry → celebration | (inline, Framer Motion + ArchetypeOrbit) |
+| `SurpriseMatchReveal` | Legacy rarity-first reveal overlay (superseded by V2, preserved) | (inline animation) |
 | `MatchPointsDisplay` | Match points and compatibility summary renderer | (inline) |
 
 These screens live under `apps/user-client/src/components/matching/`, except `MatchingWaitingScreen`, which is at `apps/user-client/src/components/MatchingWaitingScreen.tsx`.
@@ -78,110 +79,95 @@ apps/user-client/src/assets/matching/
 
 ---
 
-## Post-Match Reveal Flow (ArchetypeOrbit)
+## Post-Match Reveal Flow V2 (MatchRevealSequenceV2)
 
-### ArchetypeOrbit Component
+> **Updated 2026-04-07** — V2 replaces the direct `MatchSuccessSheet` call with a staged, member-first cinematic reveal. `ArchetypeOrbit` is composed inside the new orchestrator rather than called directly from the page.
+
+### MatchRevealSequenceV2
+**Location**: `apps/user-client/src/components/matching/MatchRevealSequenceV2.tsx`
+
+Member-first staged reveal orchestrator. Sequence:
+
+```
+lock_in → prelude → member_entrance → formation → chemistry → celebration
+```
+
+- **lock_in**: Faint group icon, haptic pulse (900 ms)
+- **prelude**: Sparkle icon + Xiaoyue copy, light haptic tick (1 200 ms)
+- **member_entrance**: Animated `ArchetypeOrbit` flies in all archetypes (2 300 ms)
+- **formation**: Static orbit hero shot + member count (1 500 ms) + double-pulse haptic
+- **chemistry**: Personalised payoff card (user-driven CTA) — forwards chemistryLine to celebration
+- **celebration**: Fires `onComplete` callback instantly; hapticCelebrate fires once
+
+`prefers-reduced-motion`: the sequence jumps from `lock_in` directly to `chemistry` with no animated stages. All content is preserved.
+
+### chemistryPayoff Helper
+**Location**: `apps/user-client/src/lib/chemistryPayoff.ts`
+
+Deterministic helper that generates `{ headline, chemistryLine, tags }` from member data:
+1. Shared interests (≥ 2 members) → localised Chinese interest-based line
+2. Archetype energies → "活力 × 探索" style label
+3. Editorial fallback
+
+21 unit tests in `src/lib/__tests__/chemistryPayoff.test.ts`.
+
+### revealHaptics Helper
+**Location**: `apps/user-client/src/lib/revealHaptics.ts`
+
+4 restrained vibration functions (`hapticTick`, `hapticPulse`, `hapticDoublePulse`, `hapticCelebrate`). All no-ops when `navigator.vibrate` is unavailable.
+
+### ArchetypeOrbit (unchanged, reused)
 **Location**: `apps/user-client/src/components/ArchetypeOrbit.tsx`
 
-Reusable component that renders:
-- JoyJoin logo at center
-- 4-6 orbiting archetype PNGs
-- Configurable sizes (small/medium/large)
-- Animated or static mode
-- Maps 12 JoyJoin archetypes to transparent PNG assets
+Used inside `MatchRevealSequenceV2`:
+- `member_entrance` stage: `animated={true}` with `onAnimationComplete` callback
+- `formation` stage: `animated={false}` static hero tableau
 
-**Key Features**:
-- Logo wake-up animation (0.5s)
-- Staggered archetype fly-in (0.6s + 0.1s delays)
-- Graceful fallback for unknown archetypes
-- Only calls `onAnimationComplete` in animated mode
-- Resets states when `animated` prop changes
+Continues to power the static orbit in `PoolGroupDetailPage`.
 
 ## Pages Updated
 
 ### MatchingStatusPage
-**Changes**:
-1. Fetches group members from `/api/pool-groups/:groupId` after POOL_MATCHED event
-2. Shows full-screen reveal overlay with animated ArchetypeOrbit
-3. Separates animation completion from user interaction:
-   - Animation completes → enables click
-   - User clicks → dismisses overlay → shows celebration
-4. Fallback handling if group data fetch fails
-5. Added safe-area padding for mobile
+**V2 changes**:
+1. Replaced `MatchSuccessSheet` with `MatchRevealSequenceV2` (both pending-state and matched-state overlays)
+2. Added `revealChemistryLine` state — generated via `generateChemistryPayoff` in `handleRevealContinue` and forwarded to `MatchCelebrationOverlay`
+3. `MatchCelebrationOverlay` now receives `chemistryLine` and `groupSize` props for a continued narrative
 
 **Flow**:
 ```
 POOL_MATCHED event → Fetch member data → Progress to 100%
   ↓ (1s delay)
-Reveal overlay with animated orbit
-  ↓ (animation completes ~2.3s)
-"点击任意位置继续" becomes active
-  ↓ (user clicks)
-Hide reveal → Show MatchCelebrationOverlay → Navigate
+MatchRevealSequenceV2 (lock_in → … → chemistry)
+  ↓ (user taps CTA)
+Hide reveal → Generate chemistryLine → Show MatchCelebrationOverlay → Navigate
 ```
 
+**Preserved**:
+- Websocket trigger and group fetch flow unchanged
+- Fallback: if group fetch fails, `MatchCelebrationOverlay` fires directly
+- Navigation to group detail, theme reveal follow-up, re-entry correctness all unchanged
+
+### MatchCelebrationOverlay
+**V2 changes**:
+- New optional props: `chemistryLine?: string`, `groupSize?: number`
+- When `chemistryLine` is provided, replaces random Xiaoyue message with the personalised line (continued reveal narrative)
+- `groupSize` renders "{N} 位活动小伙伴已就位" instead of "活动小伙伴已就位"
+
 ### PoolGroupDetailPage
-**Changes**:
-1. Added hero section with static ArchetypeOrbit
-2. Shows all group member archetypes
-3. Fixed matchScore check to handle 0 values (`!= null` instead of truthy)
-4. Added gradient overlay above BottomNav
-5. Added safe-area padding for mobile
-
-## Test Page
-
-### TestArchetypeOrbit
-**Location**: `apps/user-client/src/pages/TestArchetypeOrbit.tsx`
-
-- Route: `/dev/archetype-orbit` (dev sandbox only, gated by `NODE_ENV !== "production"`)
-- Reveals overlay now gated behind button click
-- Allows testing different sizes and animation modes
+No changes in V2. Static `ArchetypeOrbit` hero remains as before.
 
 ## Documentation Updated
 
 ### Performance & Accessibility
-Updated `docs/ui-matching-reveal-improvements.md` to accurately reflect:
-- All 12 archetype PNGs imported at build time (~2-3MB total)
-- No current tree-shaking of unused archetypes
-- Reduced-motion support planned as future improvement (not currently implemented)
-
-## Bug Fixes
-
-1. **Reveal overlay dismissal**: Now properly sets `showRevealAnimation` to false
-2. **Fallback handling**: Added fallback path if group data fetch fails
-3. **Animation state reset**: ArchetypeOrbit resets states when `animated` prop changes
-4. **Static mode callback**: Removed `onAnimationComplete` call in static mode
-5. **Match score display**: Fixed to show score of 0 (changed from truthy to null check)
-6. **Dual triggers**: Separated animation completion from user interaction
-7. **Test page overlay**: Gated behind button click to allow normal page interaction
-8. **Production route**: Test route only available in non-production environments
-
-## Key Improvements
-
-- **Better UX**: Users can't skip animation, must wait for completion
-- **Clearer feedback**: UI shows "正在加载..." until animation completes, then "点击任意位置继续"
-- **More robust**: Handles fetch failures gracefully
-- **More predictable**: Animation states reset properly on prop changes
-- **Production-ready**: Test routes excluded from production builds
-
-## Technical Details
-
-**Assets Used**:
-- JoyJoin logo: `JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png`
-- 12 archetype PNGs: `{archetype}_transparent_{1-12}.png`
-
-**API Integration**:
-- Endpoint: `GET /api/pool-groups/:groupId`
-- Called after: POOL_MATCHED websocket event
-- Returns: Group info, pool info, and member data with archetypes
-
-**CSS Utilities**:
-- `.bottom-nav-gradient`: Gradient transition above BottomNav
-- `.safe-area-bottom`: iOS notch/Android nav bar padding
+- V2 reveal uses only `transform`/`opacity` animations — no layout-triggering properties
+- `prefers-reduced-motion` fully implemented in V2 (was previously planned only)
 
 ## Status
 
-✅ All feedback addressed
-✅ TypeScript compilation successful
-✅ No breaking changes
-✅ Backward compatible
+✅ V2 reveal orchestrator implemented  
+✅ Chemistry payoff helper with 21 unit tests  
+✅ Staged haptics with graceful no-op  
+✅ `prefers-reduced-motion` supported  
+✅ Fallback behavior preserved  
+✅ TypeScript type-checks pass (no new errors)  
+✅ No breaking changes to existing websocket/state architecture
