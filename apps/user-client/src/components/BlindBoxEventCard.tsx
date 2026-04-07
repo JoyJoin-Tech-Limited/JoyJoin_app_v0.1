@@ -98,6 +98,7 @@ export default function BlindBoxEventCard({
   const [vibeBriefOpen, setVibeBriefOpen] = useState(false);
   const [joinSheetOpen, setJoinSheetOpen] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isJoinHovered, setIsJoinHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const handleJoinClick = (e: React.MouseEvent) => {
@@ -133,13 +134,9 @@ export default function BlindBoxEventCard({
 
   return (
     <>
-      {/* Entrance animation wrapper — stagger-friendly via custom delay prop on parent */}
-      <motion.div
+      <div
         className="relative h-[240px]"
         style={{ perspective: "1000px" }}
-        initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
         <motion.div
           className="relative w-full h-full cursor-pointer"
@@ -230,6 +227,8 @@ export default function BlindBoxEventCard({
                 <div className="flex gap-2 mt-auto">
                   <motion.div
                     className="flex-1"
+                    onHoverStart={() => setIsJoinHovered(true)}
+                    onHoverEnd={() => setIsJoinHovered(false)}
                     whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
                     whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                   >
@@ -247,7 +246,7 @@ export default function BlindBoxEventCard({
                         <motion.span
                           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
                           initial={{ x: "-100%" }}
-                          whileHover={{ x: "100%" }}
+                          animate={{ x: isJoinHovered ? "100%" : "-100%" }}
                           transition={{ duration: 0.5, ease: "easeInOut" }}
                           aria-hidden="true"
                         />
@@ -413,7 +412,7 @@ export default function BlindBoxEventCard({
             </Card>
           </div>
         </motion.div>
-      </motion.div>
+      </div>
 
       <BlindBoxInfoSheet
         open={infoSheetOpen}
