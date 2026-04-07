@@ -162,7 +162,7 @@ export default function BlindBoxInfoSheet({
               </div>
             </div>
 
-            {/* 3. 成局与退款 */}
+            {/* 3. 成桌与退款 */}
             <div className="mb-6">
               <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />

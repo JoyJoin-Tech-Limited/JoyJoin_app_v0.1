@@ -88,9 +88,9 @@ export default function MatchedEventCard({ event }: MatchedEventCardProps) {
     
     if (totalMinutes >= 60) {
       const totalHours = Math.ceil(diff / (1000 * 60 * 60));
-      return `报名截止 · ${totalHours}小时`;
+      return `入座截止 · ${totalHours}小时`;
     } else {
-      return `报名截止 · ${totalMinutes}分钟`;
+      return `入座截止 · ${totalMinutes}分钟`;
     }
   };
 

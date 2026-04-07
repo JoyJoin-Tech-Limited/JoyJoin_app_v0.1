@@ -48,8 +48,8 @@ export default function FirstTimeRegistrationGuide({
   const steps = [
     {
       icon: CalendarCheck,
-      title: "确认报名",
-      description: "选择偏好后完成报名，系统开始为你匹配",
+      title: "锁定席位",
+      description: "选择偏好后锁定席位，系统开始匹配桌友",
     },
     {
       icon: Clock,
@@ -81,7 +81,7 @@ export default function FirstTimeRegistrationGuide({
             第一次参加盲盒活动？
           </DialogTitle>
           <DialogDescription className="text-base">
-            了解报名后会发生什么
+            了解入座后会发生什么
           </DialogDescription>
         </DialogHeader>
 
@@ -124,7 +124,7 @@ export default function FirstTimeRegistrationGuide({
             className="w-full"
             data-testid="button-continue-registration"
           >
-            知道了，继续报名
+            知道了，继续入座
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
           <Button
