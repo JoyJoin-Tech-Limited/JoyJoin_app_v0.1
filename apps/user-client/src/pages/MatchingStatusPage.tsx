@@ -31,6 +31,7 @@ import MatchingWaitingScreen from "@/components/MatchingWaitingScreen";
 import NoMatchScreen from "@/components/matching/NoMatchScreen";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
+import { getDiscoverJoinRoute } from "@/lib/poolRegistrationRouting";
 import { calculateAge } from "@/lib/userFieldMappings";
 import type { AttendeeData, UserContext } from "@/lib/attendeeAnalytics";
 
@@ -175,8 +176,16 @@ export default function MatchingStatusPage() {
 
   // Fetch similar pools only when in no-match state (needs countdown, so placed after it)
   const { data: similarPools } = useQuery<EventPoolListItem[]>({
-    queryKey: ["/api/event-pools", registration?.poolCity],
+    queryKey: [`/api/event-pools?city=${encodeURIComponent(registration?.poolCity ?? "")}`],
     enabled: countdown.isExpired && registration?.matchStatus === "pending",
+    queryFn: async ({ queryKey }) => {
+      const response = await fetch(queryKey[0] as string, { credentials: "include" });
+      if (!response.ok) {
+        throw new Error("无法加载相似活动");
+      }
+
+      return response.json();
+    },
     select: (pools) =>
       pools
         .filter(
@@ -390,10 +399,24 @@ export default function MatchingStatusPage() {
     });
   };
 
-  // Handle no-match notify: note preference and show a toast
+  // Handle no-match notify: persist a lightweight opt-in hint and show a toast
   const handleNoMatchNotify = useCallback(() => {
+    try {
+      window.localStorage.setItem(
+        "matching:no-match-notify-preference",
+        JSON.stringify({
+          optedIn: true,
+          notedAt: new Date().toISOString(),
+          poolId: registration?.poolId ?? null,
+          registrationId: registration?.id ?? null,
+        }),
+      );
+    } catch (_error) {
+      // Ignore storage failures so the acknowledgement toast still appears.
+    }
+
     toast({ title: "已记下！", description: "有类似活动时我们会通知你。" });
-  }, [toast]);
+  }, [registration?.id, registration?.poolId, toast]);
 
   // Handle invite
   const handleInvite = async () => {
@@ -513,7 +536,7 @@ export default function MatchingStatusPage() {
         onNotify={handleNoMatchNotify}
         onBack={() => setLocation("/")}
         similarPools={similarPools ?? []}
-        onRejoin={(poolId) => setLocation(`/events?highlight=${poolId}`)}
+        onRejoin={(poolId) => setLocation(getDiscoverJoinRoute(poolId))}
       />
     );
   }
@@ -570,7 +593,7 @@ export default function MatchingStatusPage() {
             onDismiss={handleRevealContinue}
             onReflect={() => {
               if (registration?.assignedGroupId) {
-                setLocation(`/group/${registration.assignedGroupId}`);
+                setLocation(`/pool-groups/${registration.assignedGroupId}`);
               }
             }}
           />

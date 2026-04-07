@@ -31,6 +31,54 @@ interface UseEventPoolRegistrationProps {
   onSuccess?: () => void;
 }
 
+const LAST_PREFS_KEYS = [
+  "budget",
+  "socialGoals",
+  "languages",
+  "districts",
+  "cuisines",
+  "dietary",
+  "tasteIntensity",
+  "barThemes",
+  "alcoholComfort",
+  "musicPreference",
+] as const;
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function pickStoredPreferences(value: unknown): Partial<EventPreferences> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const picked: Partial<EventPreferences> = {};
+
+  for (const key of LAST_PREFS_KEYS) {
+    const storedValue = candidate[key];
+    if (storedValue == null) continue;
+
+    switch (key) {
+      case "budget":
+      case "tasteIntensity":
+      case "alcoholComfort":
+        if (typeof storedValue === "string") {
+          picked[key] = storedValue;
+        }
+        break;
+      default:
+        if (isStringArray(storedValue)) {
+          picked[key] = storedValue;
+        }
+        break;
+    }
+  }
+
+  return picked;
+}
+
 export function useEventPoolRegistration({ 
   poolId, 
   eventType,
@@ -79,32 +127,38 @@ export function useEventPoolRegistration({
     if (user === undefined) return; // Wait for user query to resolve
     initializedRef.current = true;
 
-    const draft = localStorage.getItem(`draft-${poolId}`);
-    if (draft) {
-      try {
+    try {
+      const draft = localStorage.getItem(`draft-${poolId}`);
+      if (draft) {
         const parsed = JSON.parse(draft);
-        setPreferences({ ...parsed, eventType }); // Ensure eventType is current
-        toast({
-          title: "已恢复草稿",
-          description: "继续之前的填写",
-        });
-        return; // Draft takes priority — skip profile pre-fill
-      } catch (e) {
-        console.error("Failed to parse draft:", e);
+        const safeDraft = pickStoredPreferences(parsed);
+        if (safeDraft) {
+          setPreferences({ ...safeDraft, eventType }); // Ensure eventType is current
+          toast({
+            title: "已恢复草稿",
+            description: "继续之前的填写",
+          });
+          return; // Draft takes priority — skip profile pre-fill
+        }
       }
+    } catch (error) {
+      console.error("Failed to restore draft:", error);
     }
 
     // No per-pool draft: try last preferences for this event type
-    const lastPrefs = localStorage.getItem(`joyjoin_last_prefs_${eventType}`);
-    if (lastPrefs) {
-      try {
+    try {
+      const lastPrefs = localStorage.getItem(`joyjoin_last_prefs_${eventType}`);
+      if (lastPrefs) {
         const parsed = JSON.parse(lastPrefs);
-        setPreferences(prev => ({ ...prev, ...parsed, eventType }));
-        // Silent pre-fill — no toast, as this is just convenience pre-population
-        return;
-      } catch (_e) {
-        // Fall through to profile prefill
+        const safeLastPrefs = pickStoredPreferences(parsed);
+        if (safeLastPrefs) {
+          setPreferences(prev => ({ ...prev, ...safeLastPrefs, eventType }));
+          // Silent pre-fill — no toast, as this is just convenience pre-population
+          return;
+        }
       }
+    } catch (_error) {
+      // Fall through to profile prefill
     }
 
     // No draft: pre-fill social goals from profile intent if available
@@ -183,8 +237,10 @@ export function useEventPoolRegistration({
           // conditional fields
           ...(preferences.cuisines ? { cuisines: preferences.cuisines } : {}),
           ...(preferences.dietary ? { dietary: preferences.dietary } : {}),
+          ...(preferences.tasteIntensity ? { tasteIntensity: preferences.tasteIntensity } : {}),
           ...(preferences.barThemes ? { barThemes: preferences.barThemes } : {}),
           ...(preferences.alcoholComfort ? { alcoholComfort: preferences.alcoholComfort } : {}),
+          ...(preferences.musicPreference ? { musicPreference: preferences.musicPreference } : {}),
         };
         localStorage.setItem(`joyjoin_last_prefs_${eventType}`, JSON.stringify(toSave));
       } catch (_e) {
