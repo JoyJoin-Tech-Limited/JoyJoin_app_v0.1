@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, MapPin, Sparkles, Shield, Eye, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils, Lock, Heart } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Shield, Eye, HelpCircle, Timer, Flame, Gift, Utensils, Lock } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
@@ -97,7 +97,6 @@ export default function BlindBoxEventCard({
   registrationCount = 0,
   sampleArchetypes = [],
   registrationDeadline,
-  onDetailsClick,
   isFeatured = false,
 }: BlindBoxEventCardProps) {
   const [infoSheetOpen, setInfoSheetOpen] = useState(false);
@@ -127,14 +126,14 @@ export default function BlindBoxEventCard({
   };
 
   const gameplaySteps = [
-    { icon: Gift, title: "AI 盲配", desc: "从真实喜好出发，不靠脸，靠缘分" },
-    { icon: UserCheck, title: "组队成功", desc: "确认参与，见见新朋友" },
-    { icon: Utensils, title: "线下见面", desc: "一起吃饭 / 小酌，轻松真实" },
+    { icon: Lock, title: "入座锁席", desc: "选好偏好，锁定你的席位" },
+    { icon: Gift, title: "等待成桌", desc: "桌友聚齐，揭晓同桌伙伴" },
+    { icon: Utensils, title: "线下见面", desc: "一起吃饭 / 小酌，真实连接" },
   ];
 
   const trustPoints = [
-    { icon: Shield, text: "手机号验证" },
-    { icon: Heart, text: "匿名评价" },
+    { icon: Shield, text: "实名认证" },
+    { icon: Lock, text: "成桌前可退" },
   ];
 
   // Wave 3: intent-aware CTA copy and glow gradients for the featured (first) card
@@ -209,7 +208,7 @@ export default function BlindBoxEventCard({
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Lock className="h-3 w-3 text-primary/70 shrink-0" aria-hidden="true" />
                   <span className="text-[11px] font-semibold text-primary/80 tracking-wide">
-                    活动已定，桌友待揭晓
+                    桌友待揭晓 · 入座即锁席
                   </span>
                 </div>
 
@@ -272,81 +271,46 @@ export default function BlindBoxEventCard({
                 </div>
 
                 {/* ── Single dominant CTA ── */}
-                <div className="flex gap-2 mt-auto">
-                  <motion.div
-                    className="flex-1"
-                    onHoverStart={() => setIsJoinHovered(true)}
-                    onHoverEnd={() => setIsJoinHovered(false)}
-                    whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
-                    whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+                <motion.div
+                  className="mt-auto"
+                  onHoverStart={() => setIsJoinHovered(true)}
+                  onHoverEnd={() => setIsJoinHovered(false)}
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+                >
+                  <Button
+                    className={`w-full relative overflow-hidden transition-all duration-150 active:scale-[0.98] ${
+                      isFeatured ? featuredCtaClass : ""
+                    }`}
+                    size="default"
+                    onClick={handleJoinClick}
+                    disabled={!poolId}
+                    data-testid={`button-join-${id}`}
                   >
-                    <Button
-                      className={`w-full relative overflow-hidden transition-all duration-150 active:scale-[0.98] ${
-                        isFeatured ? featuredCtaClass : ""
-                      }`}
-                      size="default"
-                      onClick={handleJoinClick}
-                      disabled={!poolId}
-                      data-testid={`button-join-${id}`}
-                    >
-                      {isFeatured ? (
-                        <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
-                      ) : (
-                        <Sparkles className="h-4 w-4 mr-1.5" />
-                      )}
-                      {isFeatured ? featuredCtaCopy : "入座这一桌"}
-                      {/* Subtle shimmer sweep on hover */}
-                      {!prefersReducedMotion && (
-                        <motion.span
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
-                          initial={{ x: "-100%" }}
-                          animate={{ x: isJoinHovered ? "100%" : "-100%" }}
-                          transition={{ duration: 0.5, ease: "easeInOut" }}
-                          aria-hidden="true"
-                        />
-                      )}
-                    </Button>
-                  </motion.div>
-                  {onDetailsClick ? (
-                    <Button
-                      variant="outline"
-                      size="default"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDetailsClick();
-                      }}
-                      data-testid={`button-details-${id}`}
-                    >
-                      了解
-                    </Button>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFlip();
-                          }}
-                          aria-label="了解盲盒玩法"
-                          data-testid={`button-flip-${id}`}
-                        >
-                          <HelpCircle className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>怎么玩？</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
+                    {isFeatured ? (
+                      <FeaturedCtaIcon className="h-4 w-4 mr-1.5" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-1.5" />
+                    )}
+                    {isFeatured ? featuredCtaCopy : "入座这一桌"}
+                    {/* Subtle shimmer sweep on hover */}
+                    {!prefersReducedMotion && (
+                      <motion.span
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
+                        initial={{ x: "-100%" }}
+                        animate={{ x: isJoinHovered ? "100%" : "-100%" }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </Button>
+                </motion.div>
 
                 {/* ── Trust framing: sealed invitation language ── */}
                 <div className="flex items-center justify-center gap-2 mt-1.5 pt-1.5 border-t border-border/30">
                   <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
                     <Eye className="h-2.5 w-2.5" aria-hidden="true" />
-                    活动公开
+                    时间地点已定
                   </span>
                   <span className="text-[9px] text-muted-foreground/30">·</span>
                   <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
@@ -356,7 +320,7 @@ export default function BlindBoxEventCard({
                   <span className="text-[9px] text-muted-foreground/30">·</span>
                   <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
                     <Shield className="h-2.5 w-2.5" aria-hidden="true" />
-                    可随时退出
+                    成桌前可退出
                   </span>
                 </div>
 
