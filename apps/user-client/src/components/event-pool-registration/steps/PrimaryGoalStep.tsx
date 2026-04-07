@@ -133,7 +133,7 @@ export default function PrimaryGoalStep({
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2"
         >
-          <span>✨ 已沿用你上次的偏好</span>
+          <span>✨ 已沿用你上次的偏好，帮你更快入座</span>
           <button
             type="button"
             onClick={() => {
