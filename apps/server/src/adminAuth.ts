@@ -218,6 +218,14 @@ export function registerAdminAuthRoutes(app: Express) {
 
       const legacyAdmin = await tryLegacyPhoneAdminLogin(req, loginId, password);
       if (legacyAdmin) {
+        logAdminAudit({
+          action: "ADMIN_LOGIN",
+          adminId: legacyAdmin.id,
+          adminRole: legacyAdmin.role,
+          targetEntityType: "user",
+          targetEntityId: legacyAdmin.id,
+        });
+
         return res.json({
           message: "登录成功",
           ...legacyAdmin,
