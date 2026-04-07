@@ -17,7 +17,7 @@
  * micro-magic layer before the user taps in.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { getPoolForecast } from "@/lib/poolForecast";
@@ -65,7 +65,7 @@ export function PoolForecastStrip({
       setLineIndex((i) => (i + 1) % forecast.lines.length);
     }, CYCLE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [forecast.lines.length, forecastKey, prefersReducedMotion]);
+  }, [forecast.lines.length, prefersReducedMotion]);
 
   const staticLine = forecast.lines[0];
   const currentLine = forecast.lines[Math.min(lineIndex, forecast.lines.length - 1)];
