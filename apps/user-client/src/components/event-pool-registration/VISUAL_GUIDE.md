@@ -1,6 +1,6 @@
 # Event Pool Registration - Component Showcase
 
-> **Updated 2026-04-07 / still non-canonical.** This guide is retained as a component snapshot. Active blind-pool flow ownership now spans discovery, pre-entry gating, and matching-status docs, so any stale redirect or copy assumptions below should defer to the canonical docs.
+> **Updated 2026-04-07 / supplementary only.** This guide is maintained only as a component-level visual companion for `JoinEventPoolSheet`. Flow ownership and canonical behavior still live in `DEVELOPER_QUICK_REFERENCE.md` plus the matching docs, so treat this file as illustrative rather than source-of-truth.
 
 ## 🎨 Visual Component Guide
 
