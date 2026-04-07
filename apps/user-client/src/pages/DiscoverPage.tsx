@@ -9,18 +9,19 @@ import InviteFriendCard from "@/components/InviteFriendCard";
 import JourneyProgressCard from "@/components/JourneyProgressCard";
 import EventPoolDetailDrawer from "@/components/EventPoolDetailDrawer";
 import JoinEventPoolSheet from "@/components/event-pool-registration/JoinEventPoolSheet";
-import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB, PulsingIndicator } from "@/components/coach-marks";
+import { CoachMarkBanner, ProfileCompletionNudge, XiaoyueFAB } from "@/components/coach-marks";
 import { ProfileEnrichmentCard } from "@/components/ProfileEnrichmentCard";
 import LimitedBrowseBanner from "@/components/LimitedBrowseBanner";
-import { SparkSectionHeader } from "@/components/spark/SparkSectionHeader";
-import { EventCardSkeleton } from "@/components/spark/EventCardSkeleton";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import EventCardSkeleton from "@/components/EventCardSkeleton";
+import SparkSectionHeader from "@/components/SparkSectionHeader";
+import { AlertCircle, RefreshCw, Sparkles, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 import { formatChineseDateOnly, extractChineseTime } from "@/lib/chineseDateTime";
 import { useLocation } from "wouter";
@@ -121,6 +122,33 @@ const saveCoachMarkState = (state: CoachMarkState) => {
 };
 
 // Pure transformation: module-level so it's stable across renders (no component state deps).
+// Also enriches mysteryTitle with a social-invitation fallback when title is generic.
+const MYSTERY_TITLE_FALLBACKS: Record<string, string[]> = {
+  饭局: [
+    "这顿饭，或许会改变什么",
+    "一桌陌生人，一段真实故事",
+    "今晚的饭，不知道和谁吃",
+    "认识一个新朋友，从这顿饭开始",
+    "神秘饭局，等你揭晓",
+  ],
+  酒局: [
+    "今晚喝一杯，认识点有意思的人",
+    "不知道对面坐着谁，但肯定有缘",
+    "小酌一杯，盲约新朋友",
+    "酒局里的缘分，从不靠脸",
+    "神秘酒局，等你揭晓",
+  ],
+};
+
+function getEnrichedMysteryTitle(rawTitle: string | undefined, eventType: "饭局" | "酒局", poolId: string): string {
+  if (rawTitle && rawTitle !== `神秘${eventType}｜等你揭晓`) return rawTitle;
+  // Use a stable hash of poolId to pick consistently for the same pool
+  const options = MYSTERY_TITLE_FALLBACKS[eventType] ?? MYSTERY_TITLE_FALLBACKS["饭局"];
+  let hash = 0;
+  for (let i = 0; i < poolId.length; i++) hash = (hash * 31 + poolId.charCodeAt(i)) | 0;
+  return options[Math.abs(hash) % options.length];
+}
+
 function transformEventPool(pool: EventPool): {
   id: string;
   poolId: string;
@@ -140,7 +168,11 @@ function transformEventPool(pool: EventPool): {
     const chineseDate = formatChineseDateOnly(pool.dateTime);
     const chineseTime = extractChineseTime(pool.dateTime);
     const area = `${pool.city}•${pool.district}`;
-    const mysteryTitle = pool.title || `神秘${pool.eventType}｜等你揭晓`;
+    const mysteryTitle = getEnrichedMysteryTitle(
+      pool.title,
+      (pool.eventType === "其他" ? "饭局" : pool.eventType) as "饭局" | "酒局",
+      pool.id,
+    );
     const isGirlsNight = pool.genderRestriction === '仅限女性' ||
                         pool.title?.toLowerCase().includes('girls') ||
                         pool.title?.includes('女性') ||
@@ -448,19 +480,16 @@ export default function DiscoverPage() {
 
         <BlindBoxSection className="py-6">
           <div className="px-4 space-y-4">
-            {/* Wave 3: SparkSectionHeader — replaces generic "盲盒模式" label */}
+            {/* Branded section header — replaces generic "盲盒模式" label */}
             <SparkSectionHeader
-              liveCount={
-                !isLoading && filteredBlindBoxEvents.length > 0
-                  ? filteredBlindBoxEvents.reduce((acc, e) => acc + (e.registrationCount ?? 0), 0)
-                  : undefined
-              }
+              eventCount={isLoading ? undefined : filteredBlindBoxEvents.length}
+              city={selectedCity}
             />
 
             <div className="space-y-5" ref={eventListRef}>
               {isLoading ? (
-                /* Wave 3: premium shimmer skeleton cards replace the spinner */
-                <div className="space-y-5">
+                /* Launch-grade skeleton loading — 2 placeholder cards */
+                <div className="space-y-5" aria-label="活动加载中">
                   <EventCardSkeleton />
                   <EventCardSkeleton />
                 </div>
@@ -485,31 +514,50 @@ export default function DiscoverPage() {
                   const isFirstCard = index === 0;
                   
                   return (
-                    /* Wave 3: staggered card entrance — each card fades+rises in sequence */
                     <motion.div
                       key={event.id}
                       className="relative"
-                      initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={prefersReducedMotion
                         ? { duration: 0 }
-                        : {
-                            duration: 0.35,
-                            delay: index * 0.08,
-                            ease: "easeOut",
-                          }}
+                        : { duration: 0.42, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }
+                      }
                     >
-                      {/* Coach Mark: Event Tooltip on first card */}
-                      {shouldShowCoachMarks && 
-                       isFirstCard && 
-                       showEventTooltip && (
-                        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-                          <PulsingIndicator size="md" />
-                          <div className="bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg text-sm font-medium max-w-xs">
-                            盲盒活动：报名后才能看到匹配的桌友~
-                          </div>
-                        </div>
-                      )}
+                      {/* Coach Mark: first-session onboarding cue — premium styled tooltip */}
+                      <AnimatePresence>
+                        {shouldShowCoachMarks && isFirstCard && showEventTooltip && (
+                          <motion.div
+                            className="absolute -top-3 left-3 right-3 z-10"
+                            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: -6, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.97 }}
+                            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
+                          >
+                            <div className="flex items-start gap-2 bg-primary text-primary-foreground px-3 py-2.5 rounded-xl shadow-lg text-xs font-medium">
+                              <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                              <span className="flex-1 leading-relaxed">
+                                报名后 AI 匹配桌友，全程匿名直到见面 — 点卡片翻面了解更多 🎲
+                              </span>
+                              <button
+                                className="shrink-0 opacity-80 hover:opacity-100 ml-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDismissEventTooltip();
+                                }}
+                                aria-label="关闭提示"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            {/* Downward pointer */}
+                            <div className="ml-4 w-3 h-1.5 overflow-hidden">
+                              <div className="w-3 h-3 bg-primary rotate-45 -translate-y-1.5 ml-0" />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
                       <div 
                         onClick={(e) => {
                           if (isFirstCard && showEventTooltip) {
@@ -539,10 +587,23 @@ export default function DiscoverPage() {
                   );
                 })
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>暂无{selectedCity}{selectedArea ? `·${selectedArea}` : ''}的盲盒活动</p>
-                  <p className="text-sm mt-2">Admin还没创建活动池，或当前筛选条件下没有可用活动</p>
-                </div>
+                /* Launch-grade empty state — warm and on-brand, not generic */
+                <motion.div
+                  className="text-center py-10 px-5 rounded-2xl border border-dashed border-primary/20 bg-primary/3 space-y-3"
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.4, ease: "easeOut" }}
+                >
+                  <div className="text-3xl" aria-hidden="true">🌙</div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-foreground/80">
+                      {selectedCity}{selectedArea ? `·${selectedArea}` : ''} 今晚还没活动
+                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      新的圈子正在组建中，先去别的板块逛逛，活动上线我们会通知你~
+                    </p>
+                  </div>
+                </motion.div>
               )}
             </div>
           </div>
