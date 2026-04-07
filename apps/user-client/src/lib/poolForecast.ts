@@ -173,7 +173,7 @@ export function getPoolForecast(input: {
   }
 
   return {
-    lines: [lines[0], ...lines.slice(1)] as [string, ...string[]],
+    lines: lines as [string, ...string[]],
     phase,
   };
 }
