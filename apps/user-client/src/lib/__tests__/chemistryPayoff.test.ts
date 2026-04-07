@@ -62,6 +62,22 @@ describe("chemistryPayoff", () => {
       expect(findCommonInterests(members).length).toBeLessThanOrEqual(3);
     });
 
+    it("does not double-count the same interest within one member", () => {
+      const members = [
+        { topInterests: ["travel_exploration"], primaryInterests: ["travel_exploration"] },
+        { topInterests: [] },
+      ];
+      expect(findCommonInterests(members)).toEqual([]);
+    });
+
+    it("breaks equal-count ties deterministically by key", () => {
+      const members = [
+        { topInterests: ["travel_exploration", "music_concerts"] },
+        { topInterests: ["travel_exploration", "music_concerts"] },
+      ];
+      expect(findCommonInterests(members)).toEqual(["音乐", "旅行"]);
+    });
+
     it("falls back gracefully for unknown interest keys", () => {
       const members = [
         { topInterests: ["unknown_interest_key"] },
@@ -87,7 +103,7 @@ describe("chemistryPayoff", () => {
     });
 
     it("deduplicates the same energy from multiple archetypes", () => {
-      // 机智狐 and 灵感章鱼 share 'creative' energy — each maps to a unique label
+      // Repeating the same archetype should not duplicate its energy label in the result.
       const label = buildArchetypeChemistryLabel(["开心柯基", "开心柯基", "暖心熊"]);
       expect(label).toBe("活力 × 温暖");
     });

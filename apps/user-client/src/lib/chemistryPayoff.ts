@@ -80,23 +80,33 @@ export function findCommonInterests(
 ): string[] {
   const counts = new Map<string, number>();
 
-  const addInterests = (interests: string[] | undefined) => {
-    (interests ?? []).forEach((key) => {
+  const addUniqueInterests = (...interestGroups: Array<string[] | undefined>) => {
+    const uniqueInterests = new Set<string>();
+
+    interestGroups.forEach((interests) => {
+      (interests ?? []).forEach((key) => {
+        uniqueInterests.add(key);
+      });
+    });
+
+    uniqueInterests.forEach((key) => {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     });
   };
 
   members.forEach((m) => {
-    addInterests(m.topInterests);
-    addInterests(m.primaryInterests);
+    addUniqueInterests(m.topInterests, m.primaryInterests);
   });
   if (currentUser) {
-    addInterests(currentUser.interests);
+    addUniqueInterests(currentUser.interests);
   }
 
   return Array.from(counts.entries())
     .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => {
+      const countDiff = b[1] - a[1];
+      return countDiff !== 0 ? countDiff : a[0].localeCompare(b[0]);
+    })
     .slice(0, 3)
     .map(([key]) => localiseInterest(key));
 }
@@ -163,9 +173,9 @@ function seedPick<T>(arr: T[], seed: number): T {
 }
 
 export interface ChemistryPayoff {
-  /** Short emotional headline (≤ 20 characters). */
+  /** Short emotional headline for the reveal card UI. */
   headline: string;
-  /** Personalised chemistry sentence (≤ 40 characters). */
+  /** Short personalised chemistry sentence for the reveal card UI. */
   chemistryLine: string;
   /** Optional display tags (common interests or archetype energies). */
   tags: string[];
