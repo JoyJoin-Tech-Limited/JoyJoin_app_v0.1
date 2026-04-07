@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Sparkles } from "lucide-react";
+import { Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import InterestSignalBoostSheet from "@/components/InterestSignalBoostSheet";
@@ -65,15 +65,15 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         }}
         className="relative mb-8"
       >
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
-          <Check className="w-12 h-12 text-white" strokeWidth={3} />
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl">
+          <Lock className="w-12 h-12 text-white" strokeWidth={2.5} />
         </div>
         
         {/* Pulsing rings */}
         {!prefersReducedMotion && [0, 1, 2].map((index) => (
           <motion.div
             key={index}
-            className="absolute inset-0 rounded-full border-2 border-green-500/50"
+            className="absolute inset-0 rounded-full border-2 border-primary/40"
             initial={{ scale: 1, opacity: 0.5 }}
             animate={{ scale: 2.5, opacity: 0 }}
             transition={{
@@ -94,10 +94,10 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
         className="text-center space-y-2 mb-8"
       >
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-          🎉 席位已锁定！
+          席位已锁定
         </h2>
         <p className="text-muted-foreground">
-          你的一桌正在成形，桌友揭晓前请保持期待
+          这一桌正在成形中……
         </p>
       </motion.div>
 
@@ -117,7 +117,7 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
             size="lg"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            精调同频设置，让这一桌更合拍
+            微调匹配偏好
           </Button>
         )}
 
@@ -126,12 +126,12 @@ export default function SuccessCelebration({ onNavigate, boostInterestKey, boost
           className="w-full bg-gradient-to-r from-primary to-purple-600"
           size="lg"
         >
-          查看这一桌的进展
+          查看成桌进度
         </Button>
         
         {/* Countdown dots */}
         <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <span>{countdown}秒后查看成桌进度</span>
+          <span>{countdown}秒后自动跳转</span>
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <motion.div
