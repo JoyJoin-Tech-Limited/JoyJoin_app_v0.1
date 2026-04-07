@@ -83,10 +83,10 @@ export default function FooterActions({
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              正在锁定你的席位…
+              正在提交报名…
             </>
           ) : (
-            "锁定这一席"
+            "确认加入活动池"
           )}
         </Button>
       )}
