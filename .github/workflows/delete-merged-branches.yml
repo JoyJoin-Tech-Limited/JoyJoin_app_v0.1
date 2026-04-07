@@ -14,13 +14,27 @@ on:
           deleting them. Set to false to perform real deletions.
         type: boolean
         default: true
+      confirm:
+        description: >
+          Required for live deletion. Must exactly match DELETE_BRANCHES when
+          dry_run is false.
+        type: string
+        default: ""
+      delete_prefix:
+        description: >
+          Live runs only delete branches with this prefix. Everything else is
+          reported for manual review.
+        type: string
+        default: "copilot/"
 
 permissions:
   contents: write
+  pull-requests: read
 
 # Branches that must never be deleted by this workflow
 env:
   ALWAYS_KEEP: '["main","feat/mini-program-foundation"]'
+  LIVE_CONFIRMATION_PHRASE: "DELETE_BRANCHES"
 
 jobs:
   # ── Job 1: triggered automatically when a PR is closed/merged ──────────────
@@ -94,13 +108,67 @@ jobs:
         uses: actions/github-script@v7
         env:
           KEEP_JSON: ${{ steps.open-prs.outputs.result }}
+          LIVE_CONFIRMATION_PHRASE: ${{ env.LIVE_CONFIRMATION_PHRASE }}
         with:
           script: |
             const dryRun = ${{ toJSON(inputs.dry_run) }};
+            const confirm = ${{ toJSON(inputs.confirm) }};
+            const deletePrefix = ${{ toJSON(inputs.delete_prefix) }};
             const keepBranches = new Set(JSON.parse(process.env.KEEP_JSON));
+            const liveConfirmationPhrase = process.env.LIVE_CONFIRMATION_PHRASE;
+
+            if (!deletePrefix.trim()) {
+              throw new Error('delete_prefix must not be empty.');
+            }
+
+            if (!dryRun && confirm !== liveConfirmationPhrase) {
+              throw new Error(
+                `Live deletion requires confirm=${liveConfirmationPhrase}. ` +
+                'Re-run in dry-run mode first if you only want a preview.'
+              );
+            }
+
+            const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            async function deleteBranchWithRetry(branchName) {
+              let lastErr;
+
+              for (let attempt = 1; attempt <= 4; attempt++) {
+                try {
+                  await github.rest.git.deleteRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: `heads/${branchName}`,
+                  });
+                  return;
+                } catch (err) {
+                  lastErr = err;
+                  const message = String(err?.message ?? '');
+                  const retryable =
+                    attempt < 4 &&
+                    (err?.status === 403 ||
+                      err?.status === 429 ||
+                      /secondary rate limit|rate limit|abuse/i.test(message));
+
+                  if (!retryable) {
+                    throw err;
+                  }
+
+                  const waitMs = attempt * 2000;
+                  console.log(
+                    `⚠️  Retryable delete failure for ${branchName} on attempt ${attempt}: ${message}`
+                  );
+                  console.log(`   Waiting ${waitMs}ms before retrying...`);
+                  await sleep(waitMs);
+                }
+              }
+
+              throw lastErr;
+            }
 
             console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
             console.log(`Protected branches (${keepBranches.size}):`, [...keepBranches].sort().join(', '));
+            console.log(`Live delete prefix: ${deletePrefix}`);
 
             // Paginate through all remote branches
             let page = 1;
@@ -117,29 +185,36 @@ jobs:
               page++;
             }
 
-            const toDelete = allBranches.filter(
+            const staleBranches = allBranches.filter(
               b => !keepBranches.has(b.name) && !b.protected
             );
+            const liveDeleteCandidates = staleBranches.filter(branch => branch.name.startsWith(deletePrefix));
+            const manualReviewBranches = staleBranches.filter(branch => !branch.name.startsWith(deletePrefix));
 
             console.log(`\nTotal branches: ${allBranches.length}`);
-            console.log(`To keep/skip:   ${allBranches.length - toDelete.length}`);
-            console.log(`To delete:      ${toDelete.length}\n`);
+            console.log(`To keep/skip:   ${allBranches.length - staleBranches.length}`);
+            console.log(`Live delete:    ${liveDeleteCandidates.length}`);
+            console.log(`Manual review:  ${manualReviewBranches.length}\n`);
+
+            for (const branch of liveDeleteCandidates) {
+              console.log(`${dryRun ? '[DRY RUN]' : '[LIVE]'} ${branch.name}`);
+            }
+
+            for (const branch of manualReviewBranches) {
+              console.log(`[MANUAL REVIEW] ${branch.name}`);
+            }
 
             let deleted = 0;
             let failed  = 0;
-            for (const branch of toDelete) {
+            for (const branch of liveDeleteCandidates) {
               if (dryRun) {
-                console.log(`[DRY RUN] would delete: ${branch.name}`);
                 continue;
               }
               try {
-                await github.rest.git.deleteRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `heads/${branch.name}`,
-                });
+                await deleteBranchWithRetry(branch.name);
                 console.log(`✅ Deleted: ${branch.name}`);
                 deleted++;
+                await sleep(250);
               } catch (err) {
                 console.log(`❌ Failed to delete ${branch.name}: ${err.message}`);
                 failed++;
@@ -149,14 +224,17 @@ jobs:
             if (!dryRun) {
               console.log(`\nDone. Deleted: ${deleted}, Failed: ${failed}`);
             } else {
-              console.log(`\nDry run complete. Re-run with dry_run=false to delete ${toDelete.length} branches.`);
+              console.log(
+                `\nDry run complete. Re-run with dry_run=false, confirm=${liveConfirmationPhrase}, ` +
+                `and delete_prefix=${deletePrefix} to delete ${liveDeleteCandidates.length} branches.`
+              );
             }
 
       # Best-effort: enable the built-in "delete branch on merge" repo setting.
       # Requires the GITHUB_TOKEN to have admin write access to the repository.
       # This step is intentionally non-fatal if the token lacks those permissions.
       - name: Enable delete_branch_on_merge repository setting
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && inputs.confirm == 'DELETE_BRANCHES' }}
         uses: actions/github-script@v7
         with:
           script: |
