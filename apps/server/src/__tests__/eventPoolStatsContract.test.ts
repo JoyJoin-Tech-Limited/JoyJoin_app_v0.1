@@ -10,7 +10,6 @@ describe("event pool stats contract", () => {
     const result = buildEventPoolStatsResponse({
       totalRegistrations: 7,
       minGroupSize: 4,
-      targetGroups: 3,
       archetypeRows: [
         { archetype: "柯基", count: 3 },
         { archetype: "狐狸", count: 4 },
