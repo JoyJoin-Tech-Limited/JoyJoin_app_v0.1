@@ -26,6 +26,8 @@
 
 ### Current Participation Flow (End-to-End)
 
+> **Terminology note:** 盲盒社交 (blind-box social) refers to the category of social apps in China where users are randomly matched into small-group events — similar to mystery-box mechanics applied to social participation. 饭局 (dinner gathering) and 酒局 (bar/drinks gathering) are the two primary event types in JoyJoin.
+
 Based on analysis of the full codebase, JoyJoin's current participation model is a **seven-stage linear pipeline**:
 
 ```
@@ -754,7 +756,7 @@ Sprint 2 (Week 3-4):
 | Anti-pattern | Why it's dangerous | How to prevent |
 |-------------|-------------------|----------------|
 | **Visual reskin disguised as innovation** | Changing cards to be prettier doesn't change the participation model | Validate: does the user DO something fundamentally different, or just see something different? |
-| **Excessive interaction complexity** | Users should complete the spark ritual in <60 seconds, not 5 minutes | Strict time budget: Intent (10s) + Attunement (30s, Stage 2 only) + Ignition (5s) |
+| **Excessive interaction complexity** | Users should complete the spark ritual in <60 seconds, not 5 minutes | Strict time budget: Intent (10s) + Ignition (5s) = 15s for Stage 1; add Attunement (30s) in Stage 2 for a total of ~45s |
 | **Dark patterns around urgency** | "Only 2 spots left!" / "Join NOW or miss out!" creates anxiety, not excitement | No scarcity messaging. Urgency comes from ritual pacing, not FOMO pressure |
 | **Fake randomness** | If the system is matching deterministically, don't pretend it's random discovery | Be transparent: "Our AI matched you" not "You randomly found each other" |
 | **Trust-damaging ambiguity** | Users must understand what happens after ignition — where their data goes, what happens next | Reuse `BlindPoolTrustExplainer` logic; add clear "What happens next" state in SparkWaitingScreen |
