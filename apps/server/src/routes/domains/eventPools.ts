@@ -42,7 +42,9 @@ export function buildEventPoolStatsResponse(input: {
   recentThemeTitles: Array<{ themeTitle: string | null; themeEmoji: string }>;
 }): EventPoolStatsResponse {
   const formableGroups = Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1));
-  const targetGroupsCap = Math.max(input.targetGroups ?? 1, 1);
+  // Pool configuration elsewhere in the codebase treats a missing targetGroups as 1,
+  // so the stats endpoint follows the same default rather than inventing an unlimited mode.
+  const configuredGroupLimit = Math.max(input.targetGroups ?? 1, 1);
 
   return {
     totalRegistrations: input.totalRegistrations,
@@ -50,7 +52,7 @@ export function buildEventPoolStatsResponse(input: {
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
     // Conservative floor-based calculation capped by the pool's configured group limit.
-    estimatedGroups: Math.min(formableGroups, targetGroupsCap),
+    estimatedGroups: Math.min(formableGroups, configuredGroupLimit),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
   };
