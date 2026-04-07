@@ -57,7 +57,7 @@ These components exhibit patterns from the strategy's three-role model but were 
 | `packages/shared/src/ai/icebreaker.ts` | 🔲 Proposed | No dedicated shared contract; schema lives inline in `socialIcebreakerAIService.ts` |
 | Prompt version tagging on all model calls | 🔲 Proposed | Not consistently implemented; provider + latency are logged but prompt version is not |
 | Evaluator rejection reason in observability output | 🔲 Proposed | `fromCache` + `generatedAt` are logged; rejection reasons are `console.warn` only |
-| `callLLMForInference()` (attribute inference fallback) | ⚡ Shadow telemetry active | `apps/server/src/inference/llmFallbackInference.ts` — shadow-only; bounded to `career`/`expectation` low-confidence fields; `llm_fallback_inference_*` Prometheus metrics active; no live callers yet |
+| `callLLMForInference()` (attribute inference fallback) | ⚡ Shadow telemetry active | `apps/server/src/inference/llmFallbackInference.ts` — shadow-only; currently focused on low-confidence `career` / `expectation` fields, with additional dimensions scheduled when prior insights exist and allowed by `INFERENCE_RUNTIME_LLM_FALLBACK_APPROVED_FIELDS`; `llm_fallback_inference_*` Prometheus metrics active; no live callers yet |
 | Thompson Sampling weight learning in pool matching | ⚡ Primary adaptive-weight path, implemented but not wired | `apps/server/src/matchingWeightsService.ts` — now the only documented adaptive-weight route; legacy `dynamicWeights.ts` gradient-descent path is deprecated |
 
 ---
