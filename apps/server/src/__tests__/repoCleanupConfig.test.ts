@@ -11,6 +11,28 @@ function readRepoFile(relativePath: string): string {
 }
 
 describe('repo cleanup config follow-ups', () => {
+  it('keeps branch cleanup workflow destructive runs explicitly gated', () => {
+    const workflow = readRepoFile('.github/workflows/delete-merged-branches.yml');
+
+    expect(workflow).toContain('pull-requests: read');
+    expect(workflow).toContain('LIVE_CONFIRMATION_PHRASE: "DELETE_BRANCHES"');
+    expect(workflow).toContain('delete_prefix:');
+    expect(workflow).toContain('default: "copilot/"');
+    expect(workflow).toContain("if: ${{ !inputs.dry_run && inputs.confirm == 'DELETE_BRANCHES' }}");
+  });
+
+  it('keeps bulk branch cleanup scoped to explicit live-delete candidates', () => {
+    const workflow = readRepoFile('.github/workflows/delete-merged-branches.yml');
+
+    expect(workflow).toContain('const staleBranches = allBranches.filter(');
+    expect(workflow).toContain('const liveDeleteCandidates = staleBranches.filter(');
+    expect(workflow).toContain('const manualReviewBranches = staleBranches.filter(');
+    expect(workflow).toContain('branch.name.startsWith(deletePrefix)');
+    expect(workflow).toContain('!branch.name.startsWith(deletePrefix)');
+    expect(workflow).toContain('async function deleteBranchWithRetry(branchName)');
+    expect(workflow).toContain('await sleep(250);');
+  });
+
   it('keeps root workspace verification scripts normalized', () => {
     const pkg = JSON.parse(readRepoFile('package.json'));
 
