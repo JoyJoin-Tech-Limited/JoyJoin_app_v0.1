@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, MapPin, Sparkles, Shield, Heart, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Shield, Eye, HelpCircle, Timer, Flame, Gift, UserCheck, Utensils, Lock } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
 import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
@@ -120,21 +120,26 @@ export default function BlindBoxEventCard({
   };
 
   const gameplaySteps = [
-    { icon: Gift, title: "盲抽匹配", desc: "AI为你挑选志趣相投的同伴" },
-    { icon: UserCheck, title: "组队成功", desc: "确认参与，认识新朋友" },
-    { icon: Utensils, title: "线下见面", desc: "享受精心策划的小聚" },
+    { icon: Gift, title: "AI 盲配", desc: "从真实喜好出发，不靠脸，靠缘分" },
+    { icon: UserCheck, title: "组队成功", desc: "确认参与，见见新朋友" },
+    { icon: Utensils, title: "线下见面", desc: "一起吃饭 / 小酌，轻松真实" },
   ];
 
   const trustPoints = [
-    { icon: Shield, text: "实名认证" },
-    { icon: Heart, text: "匿名评价" },
+    { icon: Shield, text: "实名认证保障安全" },
+    { icon: Eye, text: "匿名评价保护隐私" },
+    { icon: Lock, text: "你随时可以退出" },
   ];
 
   return (
     <>
-      <div 
+      {/* Entrance animation wrapper — stagger-friendly via custom delay prop on parent */}
+      <motion.div
         className="relative h-[240px]"
         style={{ perspective: "1000px" }}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
         <motion.div
           className="relative w-full h-full cursor-pointer"
@@ -142,6 +147,8 @@ export default function BlindBoxEventCard({
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, ease: "easeInOut" }}
           onClick={handleFlip}
+          whileHover={prefersReducedMotion ? {} : { scale: 1.015, transition: { duration: 0.18 } }}
+          whileTap={prefersReducedMotion ? {} : { scale: 0.985, transition: { duration: 0.1 } }}
         >
           {/* 正面 - 活动信息 */}
           <div 
@@ -159,22 +166,14 @@ export default function BlindBoxEventCard({
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
               
               <div className="p-4 h-full flex flex-col">
-                <div className="flex items-start justify-between gap-3 mb-2">
+                {/* ── HIERARCHY: Vibe / promise first ── */}
+                <div className="flex items-start justify-between gap-3 mb-1.5">
                   <div className="flex-1">
-                    <h3 className="font-brand font-bold text-lg text-muted-foreground/60 mb-2">
-                      {mysteryTitle}
-                    </h3>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span>
-                          {date} {time}
-                        </span>
-                      </div>
+                    {/* Eyebrow — event type + girls-night framing */}
+                    <div className="flex items-center gap-1.5 mb-1">
                       <Badge
                         variant="secondary"
-                        className="text-xs px-2 py-0.5 rounded-md"
+                        className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold"
                         data-testid={`badge-event-type-${eventType}`}
                       >
                         {eventType}
@@ -182,13 +181,18 @@ export default function BlindBoxEventCard({
                       {isGirlsNight && (
                         <Badge
                           variant="default"
-                          className="text-xs px-2 py-0.5 rounded-md bg-pink-500 hover:bg-pink-600"
+                          className="text-[10px] px-1.5 py-0.5 rounded-md bg-pink-500 hover:bg-pink-600"
                           data-testid="badge-girls-night"
                         >
                           Girls Night
                         </Badge>
                       )}
                     </div>
+
+                    {/* Title — vibe promise, styled as an invitation not a listing */}
+                    <h3 className="font-brand font-bold text-base leading-snug text-foreground/75 mb-0">
+                      {mysteryTitle}
+                    </h3>
                   </div>
 
                   {registrationDeadline && (
@@ -196,35 +200,60 @@ export default function BlindBoxEventCard({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <MapPin className="h-4 w-4" />
-                  <span>{area}</span>
+                {/* ── HIERARCHY: Formation signal (who's coming) ── */}
+                {/* Compact vibe + fit signals */}
+                <div className="flex items-center gap-1.5 mb-1.5 min-h-0">
+                  <PoolVibeBadge sampleArchetypes={sampleArchetypes} />
+                  <FitHintBadge sampleArchetypes={sampleArchetypes} eventType={eventType} isGirlsNight={isGirlsNight} />
                 </div>
 
-                {/* Premium live-queue momentum visual — replaces old avatar stack + text */}
+                {/* Premium live-queue momentum visual */}
                 <PoolMomentumVisual
                   sampleArchetypes={sampleArchetypes}
                   registrationCount={registrationCount}
                   className="mb-1.5"
                 />
 
-                {/* Compact vibe + fit signals */}
-                <div className="flex items-center gap-1.5 mb-2 min-h-0">
-                  <PoolVibeBadge sampleArchetypes={sampleArchetypes} />
-                  <FitHintBadge sampleArchetypes={sampleArchetypes} eventType={eventType} isGirlsNight={isGirlsNight} />
+                {/* ── HIERARCHY: Logistics (time & place) — secondary ── */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-primary/70" />
+                    {date} {time}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-primary/70" />
+                    {area}
+                  </span>
                 </div>
 
+                {/* CTA row */}
                 <div className="flex gap-2 mt-auto">
-                  <Button
+                  <motion.div
                     className="flex-1"
-                    size="default"
-                    onClick={handleJoinClick}
-                    disabled={!poolId}
-                    data-testid={`button-join-${id}`}
+                    whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                    whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                   >
-                    <Sparkles className="h-4 w-4 mr-1.5" />
-                    立即参与
-                  </Button>
+                    <Button
+                      className="w-full relative overflow-hidden"
+                      size="default"
+                      onClick={handleJoinClick}
+                      disabled={!poolId}
+                      data-testid={`button-join-${id}`}
+                    >
+                      <Sparkles className="h-4 w-4 mr-1.5" />
+                      进入这个圈子
+                      {/* Subtle shimmer sweep on hover */}
+                      {!prefersReducedMotion && (
+                        <motion.span
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
+                          initial={{ x: "-100%" }}
+                          whileHover={{ x: "100%" }}
+                          transition={{ duration: 0.5, ease: "easeInOut" }}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </Button>
+                  </motion.div>
                   {onDetailsClick ? (
                     <Button
                       variant="outline"
@@ -235,7 +264,7 @@ export default function BlindBoxEventCard({
                       }}
                       data-testid={`button-details-${id}`}
                     >
-                      详情
+                      了解
                     </Button>
                   ) : (
                     <Tooltip>
@@ -254,19 +283,39 @@ export default function BlindBoxEventCard({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>了解盲盒玩法</p>
+                        <p>盲盒怎么玩？</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
                 </div>
+
+                {/* ── Trust framing at moment of curiosity ── */}
+                {/* Compact inline trust strip: what's known vs what stays blind */}
+                <div className="flex items-center justify-center gap-2 mt-1.5 pt-1.5 border-t border-border/30">
+                  <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
+                    <Eye className="h-2.5 w-2.5" aria-hidden="true" />
+                    活动公开
+                  </span>
+                  <span className="text-[9px] text-muted-foreground/30">·</span>
+                  <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
+                    <Lock className="h-2.5 w-2.5" aria-hidden="true" />
+                    桌友报名后揭晓
+                  </span>
+                  <span className="text-[9px] text-muted-foreground/30">·</span>
+                  <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
+                    <Shield className="h-2.5 w-2.5" aria-hidden="true" />
+                    可随时退出
+                  </span>
+                </div>
+
                 {/* Flip hint — pulses briefly, then stays subtle */}
                 <motion.div
-                  className="flex items-center justify-center gap-1 mt-1"
+                  className="flex items-center justify-center gap-1 mt-0.5"
                   initial={{ opacity: 0.8 }}
                   animate={prefersReducedMotion ? { opacity: 0.8 } : { opacity: [0.8, 0.3, 0.8] }}
                   transition={prefersReducedMotion ? { duration: 0 } : { duration: 2.5, repeat: 2, ease: "easeInOut" }}
                 >
-                  <span className="text-[10px] text-muted-foreground/60 select-none">🎲 点击卡片查看盲盒玩法</span>
+                  <span className="text-[9px] text-muted-foreground/50 select-none">🎲 点卡片了解玩法</span>
                 </motion.div>
               </div>
             </Card>
@@ -290,7 +339,7 @@ export default function BlindBoxEventCard({
               <div className="p-3 h-full flex flex-col relative">
                 <div className="flex items-center gap-1.5 mb-2">
                   <Gift className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold text-sm">盲盒玩法</h3>
+                  <h3 className="font-semibold text-sm">JoyJoin 怎么玩？</h3>
                 </div>
 
                 {/* 三步流程 */}
@@ -319,12 +368,12 @@ export default function BlindBoxEventCard({
                   <div className="h-1 w-8 rounded-full bg-primary/20" />
                 </div>
 
-                {/* 安心保障 */}
-                <div className="flex items-center justify-center gap-3 py-1.5 px-2 rounded-lg bg-background/60 border border-primary/10 mb-2">
+                {/* 安心保障 — 3-point trust (what's known / blind / exit) */}
+                <div className="flex items-center justify-between gap-1 py-1.5 px-2 rounded-lg bg-background/60 border border-primary/10 mb-2">
                   {trustPoints.map((point, index) => (
                     <div key={index} className="flex items-center gap-1">
                       <point.icon className="h-3 w-3 text-primary" />
-                      <span className="text-[10px] text-muted-foreground">{point.text}</span>
+                      <span className="text-[9px] text-muted-foreground">{point.text}</span>
                     </div>
                   ))}
                 </div>
@@ -338,7 +387,7 @@ export default function BlindBoxEventCard({
                     data-testid={`button-join-back-${id}`}
                   >
                     <Sparkles className="h-4 w-4 mr-1.5" />
-                    立即参与
+                    进入这个圈子
                   </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -364,7 +413,7 @@ export default function BlindBoxEventCard({
             </Card>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
 
       <BlindBoxInfoSheet
         open={infoSheetOpen}
