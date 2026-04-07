@@ -36,17 +36,21 @@ export interface EventPoolStatsResponse {
 export function buildEventPoolStatsResponse(input: {
   totalRegistrations: number;
   minGroupSize: number;
+  targetGroups?: number | null;
   archetypeRows: Array<{ archetype: string; count: number }>;
   avgMatchScore: number;
   recentThemeTitles: Array<{ themeTitle: string | null; themeEmoji: string }>;
 }): EventPoolStatsResponse {
+  const formableGroups = Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1));
+  const targetGroupsCap = Math.max(input.targetGroups ?? 1, 1);
+
   return {
     totalRegistrations: input.totalRegistrations,
     archetypeBreakdown: Object.fromEntries(
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
-    // Conservative floor-based calculation — see JSDoc on estimatedGroups above.
-    estimatedGroups: Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
+    // Conservative floor-based calculation capped by the pool's configured group limit.
+    estimatedGroups: Math.min(formableGroups, targetGroupsCap),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
   };
@@ -59,6 +63,7 @@ export function registerEventPoolRoutes(app: Express): void {
         .select({
           id: eventPools.id,
           minGroupSize: eventPools.minGroupSize,
+          targetGroups: eventPools.targetGroups,
         })
         .from(eventPools)
         .where(eq(eventPools.id, req.params.poolId))
@@ -109,6 +114,7 @@ export function registerEventPoolRoutes(app: Express): void {
         buildEventPoolStatsResponse({
           totalRegistrations,
           minGroupSize,
+          targetGroups: pool.targetGroups,
           archetypeRows: archetypeRows as Array<{ archetype: string; count: number }>,
           avgMatchScore: avgMatchScoreRow?.avgMatchScore ?? 0,
           recentThemeTitles,

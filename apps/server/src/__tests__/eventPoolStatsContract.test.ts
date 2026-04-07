@@ -10,6 +10,7 @@ describe("event pool stats contract", () => {
     const result = buildEventPoolStatsResponse({
       totalRegistrations: 7,
       minGroupSize: 4,
+      targetGroups: 3,
       archetypeRows: [
         { archetype: "柯基", count: 3 },
         { archetype: "狐狸", count: 4 },
@@ -29,5 +30,18 @@ describe("event pool stats contract", () => {
       avgMatchScore: 82,
       recentThemeTitles: [{ themeTitle: "城市夜游", themeEmoji: "🌃" }],
     });
+  });
+
+  it("does not report more groups than the pool is configured to form", () => {
+    const result = buildEventPoolStatsResponse({
+      totalRegistrations: 12,
+      minGroupSize: 4,
+      targetGroups: 2,
+      archetypeRows: [],
+      avgMatchScore: 0,
+      recentThemeTitles: [],
+    });
+
+    expect(result.estimatedGroups).toBe(2);
   });
 });
