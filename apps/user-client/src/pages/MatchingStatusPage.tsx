@@ -26,13 +26,14 @@ import { queryClient } from "@/lib/queryClient";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
 import EventThemeTitleReveal from "@/components/EventThemeTitleReveal";
 import ArchetypeOrbit from "@/components/ArchetypeOrbit";
-import MatchSuccessSheet from "@/components/MatchSuccessSheet";
+import MatchRevealSequenceV2 from "@/components/matching/MatchRevealSequenceV2";
 import MatchingWaitingScreen from "@/components/MatchingWaitingScreen";
 import NoMatchScreen from "@/components/matching/NoMatchScreen";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
 import { getDiscoverJoinRoute } from "@/lib/poolRegistrationRouting";
 import { calculateAge } from "@/lib/userFieldMappings";
+import { generateChemistryPayoff } from "@/lib/chemistryPayoff";
 import type { AttendeeData, UserContext } from "@/lib/attendeeAnalytics";
 
 // Constants
@@ -131,6 +132,8 @@ export default function MatchingStatusPage() {
   const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
+  // Chemistry payoff line forwarded from V2 reveal to celebration overlay
+  const [revealChemistryLine, setRevealChemistryLine] = useState<string | undefined>(undefined);
 
   // Refs for timeout cleanup
   const matchTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -350,11 +353,17 @@ export default function MatchingStatusPage() {
 
     // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
   const handleRevealContinue = useCallback(() => {
+    // Compute chemistry line from current group data so the celebration overlay
+    // can continue the V2 reveal narrative.
+    if (groupMembersData?.members) {
+      const payoff = generateChemistryPayoff(groupMembersData.members, currentUserContext);
+      setRevealChemistryLine(payoff.chemistryLine);
+    }
     // Hide the reveal overlay and show match celebration
     setShowRevealAnimation(false);
     setRevealAnimationComplete(false);
     setShowMatchCelebration(true);
-  }, []);
+  }, [groupMembersData, currentUserContext]);
 
   // Handle match celebration flow
   const handleCelebrationContinue = useCallback(() => {
@@ -571,33 +580,22 @@ export default function MatchingStatusPage() {
           <MatchCelebrationOverlay
             isVisible={showMatchCelebration}
             onContinue={handleCelebrationContinue}
+            chemistryLine={revealChemistryLine}
+            groupSize={groupMembersData?.members.length}
           />
         )}
         {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
-          <MatchSuccessSheet
+          <MatchRevealSequenceV2
             members={groupMembersData.members.map((m) => ({
               userId: m.userId,
               displayName: m.displayName,
               archetype: m.archetype,
-              age: m.age,
               topInterests: m.topInterests,
               primaryInterests: m.primaryInterests,
               socialTag: m.socialTag,
-              educationLevel: m.educationLevel,
-              industry: m.industry,
-              gender: m.gender,
-              relationshipStatus: m.relationshipStatus,
-              children: m.children,
-              hometownRegionCity: m.hometownRegionCity,
-              hometownAffinityOptin: m.hometownAffinityOptin,
             }))}
             currentUser={currentUserContext}
-            onDismiss={handleRevealContinue}
-            onReflect={() => {
-              if (registration?.assignedGroupId) {
-                setLocation(`/pool-groups/${registration.assignedGroupId}`);
-              }
-            }}
+            onComplete={handleRevealContinue}
           />
         )}
         {themeData && (
@@ -1078,30 +1076,24 @@ export default function MatchingStatusPage() {
         <MatchCelebrationOverlay
           isVisible={showMatchCelebration}
           onContinue={handleCelebrationContinue}
+          chemistryLine={revealChemistryLine}
+          groupSize={groupMembersData?.members.length}
         />
       )}
 
-      {/* Premium Match Success Sheet */}
+      {/* V2 Match Reveal Sequence */}
       {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
-        <MatchSuccessSheet
+        <MatchRevealSequenceV2
           members={groupMembersData.members.map((m) => ({
             userId: m.userId,
             displayName: m.displayName,
             archetype: m.archetype,
-            age: m.age,
             topInterests: m.topInterests,
             primaryInterests: m.primaryInterests,
             socialTag: m.socialTag,
-            educationLevel: m.educationLevel,
-            industry: m.industry,
-            gender: m.gender,
-            relationshipStatus: m.relationshipStatus,
-            children: m.children,
-            hometownRegionCity: m.hometownRegionCity,
-            hometownAffinityOptin: m.hometownAffinityOptin,
           }))}
           currentUser={currentUserContext}
-          onDismiss={handleRevealContinue}
+          onComplete={handleRevealContinue}
         />
       )}
 

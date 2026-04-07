@@ -53,7 +53,8 @@ These are part of the reveal / celebration experience, not `MatchingStateLayout`
 
 | Component | Role | Location |
 |-----------|------|----------|
-| `SurpriseMatchReveal` | Cinematic match reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
+| `MatchRevealSequenceV2` | **V2 cinematic, member-first reveal orchestrator** (active) | `components/matching/MatchRevealSequenceV2.tsx` |
+| `SurpriseMatchReveal` | Legacy rarity-first reveal overlay (superseded by V2) | `components/matching/SurpriseMatchReveal.tsx` |
 | `MatchPointsDisplay` | Match points renderer used inside reveal/details surfaces | `components/matching/MatchPointsDisplay.tsx` |
 
 ### Trigger-Based State Wiring
@@ -73,158 +74,130 @@ apps/user-client/src/assets/matching/
 
 ---
 
-## Part 2 — Post-Match Reveal (ArchetypeOrbit)
+## Part 2 — Post-Match Reveal V2 (MatchRevealSequenceV2)
 
-## Changes Made
+> **Updated 2026-04-07** — Part 2 now documents the V2 reveal system. The original ArchetypeOrbit-only reveal is preserved (ArchetypeOrbit.tsx remains) but is now composed inside the V2 orchestrator rather than called directly from the page.
 
-### 1. New Component: ArchetypeOrbit
-**File**: `apps/user-client/src/components/ArchetypeOrbit.tsx`
+### V2 Reveal Flow
 
-A reusable component that displays the JoyJoin logo at the center with orbiting archetype PNG images.
+The V2 reveal centers the hero moment on **members and chemistry** rather than a rarity card. It runs a staged sequence:
 
-**Features**:
-- **Logo wake-up animation**: Smooth scale and fade-in effect
-- **Staggered fly-in**: Archetype images appear with 0.1s delays
-- **Three sizes**: small (h-40), medium (h-56), large (h-72)
-- **Configurable animation**: Can be static or animated
-- **Graceful fallback**: Handles unknown archetype names
-- **Asset mapping**: Maps 12 archetype names to their transparent PNG assets
-
-**Archetype Assets Mapped**:
-- 开心柯基 → `开心柯基_transparent_1.png`
-- 机智狐 → `机智狐_transparent_2.png`
-- 暖心熊 → `暖心熊_transparent_3.png`
-- 织网蛛 → `织网蛛_transparent_4.png`
-- 夸夸豚 → `夸夸豚_transparent_5.png`
-- 太阳鸡 → `太阳鸡_transparent_6.png`
-- 淡定海豚 → `淡定海豚_transparent_7.png`
-- 沉思猫头鹰 → `沉思猫头鹰_transparent_8.png`
-- 稳如龟 → `稳如龟_transparent_9.png`
-- 隐身猫 → `隐身猫_transparent_10.png`
-- 定心大象 → `定心大象_transparent_11.png`
-- 灵感章鱼 → `灵感章鱼_transparent_12.png`
-
-**Usage**:
-```tsx
-<ArchetypeOrbit
-  archetypes={["开心柯基", "机智狐", "暖心熊", "织网蛛"]}
-  size="medium"
-  animated={true}
-  onAnimationComplete={() => console.log("Done!")}
-/>
+```
+lock_in  →  prelude  →  member_entrance  →  formation  →  chemistry  →  celebration
 ```
 
-### 2. Updated MatchingStatusPage
-**File**: `apps/user-client/src/pages/MatchingStatusPage.tsx`
+| Stage | Description | Duration |
+|-------|-------------|----------|
+| `lock_in` | Match progress completion beat | 900 ms |
+| `prelude` | JoyJoin-branded logo/sparkle moment with Xiaoyue copy | 1 200 ms |
+| `member_entrance` | Staggered archetype fly-in via `ArchetypeOrbit` (animated) | ~2 300 ms |
+| `formation` | Group formation hero tableau (static orbit, group count) | 1 500 ms |
+| `chemistry` | Personalised chemistry payoff card — user must tap CTA | User-driven |
+| `celebration` | Fires `onComplete` → hands off to `MatchCelebrationOverlay` | Instant |
 
-**Key Changes**:
-1. **Group members fetching**: On POOL_MATCHED event, fetches member details from `/api/pool-groups/:groupId` before starting reveal
-2. **Reveal animation overlay**: Full-screen overlay with animated ArchetypeOrbit and member archetypes
-3. **Animation sequence**:
-   - Progress bar reaches 100%
-   - 1 second transition delay
-   - Reveal overlay appears with ArchetypeOrbit animation
-   - Logo wake-up (0.5s)
-   - Archetype PNGs fly in with stagger (0.6s + delays)
-   - User can click to continue
-   - Transitions to MatchCelebrationOverlay
-4. **Post-match UI**: After match, shows ArchetypeOrbit in the main card (static)
-5. **Enhanced CTAs**:
-   - Primary: "查看小组详情" (View group details)
-   - Secondary: "准备破冰话题 💬" (Prepare icebreaker topics) - shown when venue unlocked
-6. **Safe-area padding**: Added `safe-area-bottom` class for mobile devices
+When `prefers-reduced-motion` is active the sequence collapses: `lock_in` runs for 100 ms then jumps directly to `chemistry`, skipping all animated stages.
 
-**Animation Flow**:
-```
-POOL_MATCHED event received
-  ↓
-Fetch /api/pool-groups/:groupId (wait for response)
-  ↓
-1 second visual transition (progress → 100%)
-  ↓
-Reveal overlay appears with animated ArchetypeOrbit
-  ↓
-User clicks anywhere
-  ↓
-MatchCelebrationOverlay (existing)
-  ↓
-Navigate to PoolGroupDetailPage
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `apps/user-client/src/components/matching/MatchRevealSequenceV2.tsx` | V2 reveal orchestrator |
+| `apps/user-client/src/lib/chemistryPayoff.ts` | Deterministic chemistry copy generator |
+| `apps/user-client/src/lib/revealHaptics.ts` | Staged haptic helpers with no-op fallback |
+| `apps/user-client/src/lib/__tests__/chemistryPayoff.test.ts` | Unit tests (21) for payoff helper |
+
+### Chemistry Payoff Helper (`chemistryPayoff.ts`)
+
+Generates a `{ headline, chemistryLine, tags }` object deterministically from available client-side group data.
+
+Priority order:
+1. **Shared interests** (≥ 2 members share an interest key) → interest-based line with Chinese labels
+2. **Archetype energies** (mapped to short energy words) → "活力 × 探索 × 温暖" style label
+3. **Editorial fallback** → warm, generic but not robotic copy
+
+```typescript
+const payoff = generateChemistryPayoff(members, currentUser);
+// { headline: "小悦凑齐了这一桌有趣的灵魂", chemistryLine: "你们都爱旅行和音乐…", tags: ["旅行","音乐"] }
 ```
 
-### 3. Updated PoolGroupDetailPage
-**File**: `apps/user-client/src/pages/PoolGroupDetailPage.tsx`
+### Haptics Helper (`revealHaptics.ts`)
 
-**Key Changes**:
-1. **Reveal section**: Added ArchetypeOrbit at top with all group member archetypes
-2. **Simplified layout**:
-   - Badge with group number (#{groupNumber}组)
-   - ArchetypeOrbit with member archetypes (medium size, static)
-   - Event title and date/time
-   - Match score badge (if available)
-3. **Card-stack aesthetic**: Maintains clean, focused design with archetype orbit as hero element
-4. **"Reveal already happened" posture**: Static (non-animated) ArchetypeOrbit to show group is already formed
-5. **Safe-area padding**: Added `safe-area-bottom` class
-6. **Bottom nav gradient**: Added gradient overlay above BottomNav for smooth visual transition
+Four restrained patterns — all no-ops when `navigator.vibrate` is unavailable:
 
-**Before vs After**:
-- **Before**: Simple list of members with basic info
-- **After**: Hero section with archetype orbit, followed by streamlined member cards
+| Function | Pattern | Stage |
+|----------|---------|-------|
+| `hapticTick()` | 10 ms | Prelude / member arrival |
+| `hapticPulse()` | 25 ms | Stage transition |
+| `hapticDoublePulse()` | 30/60/30 ms | Group formation |
+| `hapticCelebrate()` | 40/80/40/80/80 ms | Chemistry CTA / celebration |
 
-### 4. CSS Enhancements
-**File**: `apps/user-client/src/index.css`
+### Updated Components
 
-**Added**:
-```css
-/* Bottom nav gradient transition */
-.bottom-nav-gradient {
-  background: linear-gradient(to top, hsl(var(--background)), transparent);
-}
-```
+**`MatchCelebrationOverlay.tsx`**
+Now accepts `chemistryLine?: string` and `groupSize?: number`. When `chemistryLine` is provided (forwarded from the V2 reveal) it replaces the random Xiaoyue message with the same personalised line, making the celebration feel like a continuation of the reveal rather than a reset.
 
-**Existing safe-area classes** (already present):
-- `.safe-area-pb` - Bottom padding with safe-area-inset
-- `.safe-area-bottom` - Generic safe-area bottom padding
-- `.safe-area-bottom-with-padding` - Safe-area with additional 1rem padding
+**`MatchingStatusPage.tsx`**
+- Replaced `MatchSuccessSheet` render with `MatchRevealSequenceV2` (both the pending-state overlay and the matched-state overlay).
+- Added `revealChemistryLine` state to forward the generated chemistry line to `MatchCelebrationOverlay`.
+- All existing websocket trigger logic, group fetch flow, fallback behavior, and navigation remain unchanged.
 
-### 5. Bottom Nav Integration
-**File**: `apps/user-client/src/components/BottomNav.tsx` (no changes needed)
+### ArchetypeOrbit (still used, unchanged)
 
-Both pages now properly integrate with BottomNav:
-- Pages use `safe-area-bottom` class for proper spacing
-- PoolGroupDetailPage has gradient overlay above nav (20px height, z-40)
-- Content doesn't visually clash with fixed nav bar
+`ArchetypeOrbit.tsx` is reused inside `MatchRevealSequenceV2` for both the `member_entrance` (animated) and `formation` (static) stages. It continues to power the static orbit in `PoolGroupDetailPage` as before.
+
+### Fallback Behavior (preserved)
+
+When group data fetch fails, `MatchingStatusPage` still falls back directly to `MatchCelebrationOverlay` (no V2 reveal). This path is identical to the pre-V2 behavior.
 
 ## Testing
 
+### Unit Tests
+
+Run with:
+```bash
+cd apps/user-client && npx vitest run src/lib/__tests__/chemistryPayoff.test.ts
+```
+
+21 tests cover: `pickHeadline`, `findCommonInterests`, `buildArchetypeChemistryLabel`, and `generateChemistryPayoff` (happy path, reduced-motion fallback, groups of 3–6, no data fallback, determinism).
+
 ### Manual Testing Steps
 
-1. **Test ArchetypeOrbit component**:
-   - Navigate to `/dev/archetype-orbit` (non-production sandbox route)
-   - Verify logo wake-up animation
-   - Verify staggered archetype fly-in
-   - Test different sizes (small, medium, large)
-   - Test with 4-6 archetypes
+1. **Happy path reveal (V2)**:
+   - Wait for `POOL_MATCHED` websocket event while on `MatchingStatusPage`
+   - Verify staged sequence: lock_in → prelude (sparkle) → member archetype fly-in → formation hero → chemistry payoff card
+   - Verify chemistry card shows a headline, a warm personalised line, and optional tags
+   - Tap "开始认识伙伴" CTA to proceed
+   - Verify `MatchCelebrationOverlay` shows the same chemistry line (continued narrative)
+   - Navigate to `PoolGroupDetailPage`
 
-2. **Test MatchingStatusPage reveal**:
-   - Register for an event pool
-   - Wait for POOL_MATCHED websocket event
-   - Verify progress bar reaches 100%
-   - Verify 1-second transition delay
-   - Verify reveal overlay appears with animated orbit
-   - Click anywhere to continue
-   - Verify transition to MatchCelebrationOverlay
+2. **Reduced-motion mode**:
+   - Enable "Reduce Motion" in OS accessibility settings (or DevTools)
+   - Trigger a match reveal
+   - Verify the sequence collapses: only `lock_in` beat → chemistry payoff card; no animated stages
+   - Verify all content (headline, chemistry line, CTA) is still visible and readable
 
-3. **Test PoolGroupDetailPage**:
-   - Navigate to a matched pool group
-   - Verify ArchetypeOrbit displays all member archetypes
-   - Verify static (non-animated) orbit
-   - Verify clean card-stack layout
-   - Verify gradient transition above BottomNav
-   - Verify safe-area padding on mobile
+3. **Group fetch failure fallback**:
+   - Simulate a failing `/api/pool-groups/:groupId` fetch (network tab block or 500 response)
+   - Verify no V2 reveal appears
+   - Verify `MatchCelebrationOverlay` appears directly (fallback path unchanged)
+
+4. **Groups of different sizes (3–6 members)**:
+   - Trigger match reveals for groups with 3, 4, 5, and 6 members
+   - Verify ArchetypeOrbit renders all archetypes
+   - Verify chemistry payoff text adapts appropriately
+
+5. **No vibration support**:
+   - Test on a browser/device where `navigator.vibrate` is undefined
+   - Verify no JS errors; reveal proceeds normally
+
+6. **Re-entry / refresh correctness**:
+   - Navigate away and return to a matched `MatchingStatusPage`
+   - Verify no spurious V2 reveal appears (trigger is websocket-only, not re-entry)
+   - Verify static `ArchetypeOrbit` shows in the main card
 
 ### Key User Flows
 
-**Flow 1: New Match (Happy Path)**
+**Flow 1: New Match V2 (Happy Path)**
 ```
 User waits in MatchingStatusPage
   ↓
@@ -236,26 +209,37 @@ Progress bar animates to 100%
   ↓
 1 second delay
   ↓
-Reveal overlay with animated ArchetypeOrbit
+MatchRevealSequenceV2: lock_in → prelude → member_entrance → formation → chemistry
   ↓
-User clicks
+User taps CTA
   ↓
-MatchCelebrationOverlay
+MatchCelebrationOverlay (with forwarded chemistryLine)
   ↓
 Navigate to PoolGroupDetailPage
   ↓
 See static ArchetypeOrbit with all members
 ```
 
-**Flow 2: View Existing Group**
+**Flow 2: Fallback (Group Fetch Fails)**
+```
+POOL_MATCHED event → group fetch fails
+  ↓
+No V2 reveal
+  ↓
+MatchCelebrationOverlay (direct, generic Xiaoyue message)
+  ↓
+Navigate to PoolGroupDetailPage
+```
+
+**Flow 3: View Existing Group**
 ```
 User navigates to PoolGroupDetailPage
   ↓
-See ArchetypeOrbit with all member archetypes (static)
+See static ArchetypeOrbit with all member archetypes
   ↓
 Scroll to see member cards and event details
   ↓
-No animation (reveal already happened)
+No V2 animation (reveal already happened)
 ```
 
 ## Assets Used
@@ -318,7 +302,8 @@ No animation (reveal already happened)
 - All images have `alt` attributes with archetype names
 - Click/tap targets meet minimum size requirements (44x44px)
 - Safe-area padding ensures content is visible on all devices
-- Animations are always enabled in the current implementation; integration with user's motion preferences (e.g. CSS `@media (prefers-reduced-motion)`) is planned as a future improvement
+- **V2: `prefers-reduced-motion` is fully supported** — when active, the reveal collapses to a single chemistry payoff card with no animated stages
+- All animated stages use only `transform` and `opacity` — no layout-triggering properties
 
 ## Mobile Optimization
 
@@ -327,15 +312,15 @@ No animation (reveal already happened)
 - **Gradient transition**: Smooth visual blend into BottomNav
 - **Responsive sizing**: ArchetypeOrbit scales appropriately on small screens
 - **Portrait-first**: Layout optimized for mobile portrait orientation
+- **V2 haptics**: Stage-based vibration patterns (10–150 ms total); no-op on unsupported devices
 
 ## Future Enhancements
 
-1. **Haptic feedback**: Add vibration on reveal animation start
-2. **Sound effects**: Optional sound for logo wake-up and fly-in
-3. **Confetti**: Add confetti effect on reveal (optional)
-4. **Skip animation**: Add "Skip" button for impatient users
-5. **Archetype details**: Tap on archetype to see brief description
-6. **Group photo**: Add optional group photo in PoolGroupDetailPage
+1. **Sound effects**: Optional ambient sound for logo wake-up and formation beat
+2. **Skip animation**: Add "Skip" button for users who have already seen the reveal
+3. **Archetype details**: Tap on orbiting archetype to see brief description
+4. **Share card**: Screenshot-worthy match card CTA at chemistry payoff stage
+5. **Group photo**: Optional group photo in PoolGroupDetailPage
 
 ## Known Issues
 
