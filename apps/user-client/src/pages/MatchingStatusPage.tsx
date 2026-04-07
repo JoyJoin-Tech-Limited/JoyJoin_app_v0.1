@@ -461,7 +461,7 @@ export default function MatchingStatusPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">正在同步匹配进度...</p>
+          <p className="text-sm text-muted-foreground">正在加载……</p>
         </div>
       </div>
     );
@@ -499,8 +499,8 @@ export default function MatchingStatusPage() {
             <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
               <XCircle className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h2 className="text-xl font-bold">未找到这次报名</h2>
-            <p className="text-sm text-muted-foreground">可能是状态刚更新完成，或这次报名已被取消。</p>
+            <h2 className="text-xl font-bold">未找到入座记录</h2>
+            <p className="text-sm text-muted-foreground">可能是状态刚更新，或此席位已取消。</p>
             <div className="flex flex-col gap-2">
               <Button onClick={() => refetchRegistrations()} variant="outline" className="w-full">
                 刷新状态
@@ -526,7 +526,7 @@ export default function MatchingStatusPage() {
             </div>
             <h2 className="text-xl font-bold">活动已取消</h2>
             <p className="text-sm text-muted-foreground">
-              抱歉，此活动已被管理员取消。报名费用将原路退回。
+              抱歉，此活动已取消。费用将原路退回。
             </p>
             <Button onClick={() => setLocation("/")} className="w-full">
               返回首页
@@ -671,7 +671,7 @@ export default function MatchingStatusPage() {
               }}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
-              ✅ 组队成功
+              ✅ 成桌了
             </Badge>
           </div>
 
@@ -699,10 +699,10 @@ export default function MatchingStatusPage() {
             {/* Status text */}
             <div className="text-center space-y-2">
               <h2 className="text-lg font-black">
-                你的小队已组好，准备解锁这场相遇
+                这一桌成了，准备揭晓
               </h2>
               <p className="text-sm text-muted-foreground font-medium">
-                我们已为你锁定同组伙伴，活动细节会按时间逐步揭晓。
+                桌友已锁定，活动细节会逐步揭晓。
               </p>
             </div>
 
@@ -723,7 +723,7 @@ export default function MatchingStatusPage() {
             {/* Progress bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">匹配进度</span>
+                <span className="font-medium">成桌进度</span>
                 <span className="text-muted-foreground">
                   {poolStats?.currentFill || 0}/{poolStats?.minGroupSize || DEFAULT_MIN_GROUP_SIZE} 人已就绪
                 </span>
@@ -753,7 +753,7 @@ export default function MatchingStatusPage() {
                   </div>
                 )}
               </div>
-              <p className="text-sm text-center font-medium text-primary">组队完成！🎉</p>
+              <p className="text-sm text-center font-medium text-primary">已成桌 🎉</p>
             </div>
           </CardContent>
         </Card>
@@ -768,8 +768,8 @@ export default function MatchingStatusPage() {
             <Card className="relative overflow-hidden">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">🎉 你的桌友来了！</h3>
-                  <Badge className="bg-green-500 hover:bg-green-600">已组队</Badge>
+                  <h3 className="text-lg font-bold">你的桌友</h3>
+                  <Badge className="bg-green-500 hover:bg-green-600">已成桌</Badge>
                 </div>
 
                 {/* Horizontal scrolling member cards */}
