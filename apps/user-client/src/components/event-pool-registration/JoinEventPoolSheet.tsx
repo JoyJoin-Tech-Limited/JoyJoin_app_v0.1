@@ -152,7 +152,7 @@ export default function JoinEventPoolSheet({
   // Show mascot during step transitions
   useEffect(() => {
     if (step === 2 && preferences.budget) {
-      setMascotMessage("太棒了！继续加油 🎉");
+      setMascotMessage("很好！继续完善你的偏好 🎉");
       setShowMascot(true);
       
       const timer = setTimeout(() => {
@@ -307,7 +307,7 @@ export default function JoinEventPoolSheet({
                           <div className="h-3 w-px bg-border" />
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                             <span>👥</span>
-                            <span>{poolData.registrationCount} 人已报名</span>
+                            <span>{poolData.registrationCount} 人已入座</span>
                           </div>
                           <div className="h-3 w-px bg-border" />
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">

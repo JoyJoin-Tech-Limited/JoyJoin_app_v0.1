@@ -16,8 +16,9 @@ export interface TestIncompleteScreenProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
- * Shown inside `JoinEventPoolSheet` when the user has not yet completed
- * the personality test, which is required for blind-pool matching.
+ * Shown inside `JoinEventPoolSheet` as a fallback-only recovery surface
+ * when auth state is inconsistent (personality test should be completed
+ * during onboarding, before the user reaches Discover).
  *
  * This is a soft gate: the user is directed to complete the test
  * but can also choose to come back later.
@@ -70,7 +71,7 @@ export default function TestIncompleteScreen({
 
         {/* Eyebrow */}
         <p className="mt-4 text-center text-xs font-medium uppercase tracking-widest text-white/45">
-          还差一点点
+          差一步就能入座
         </p>
 
         {/* Headline */}
@@ -84,7 +85,7 @@ export default function TestIncompleteScreen({
           }
           className="mt-3 text-center text-xl font-black leading-tight tracking-tight text-white"
         >
-          完成性格测试，更容易遇到聊得来的人
+          补完测试，才能帮你配到最合拍的桌友
         </motion.h2>
 
         {/* Support copy */}
@@ -94,7 +95,7 @@ export default function TestIncompleteScreen({
           transition={shouldReduceMotion ? undefined : { duration: 0.4, delay: 0.2 }}
           className="mt-3 px-4 text-center text-sm leading-relaxed text-white/55"
         >
-          再花一点时间补完测试，我们会更懂你，也更容易帮你安排合适的一桌。
+          再花一点时间完成性格测试，我们才能读懂你，把你安排到最对的那一桌。
         </motion.p>
 
         {/* CTAs */}
@@ -122,7 +123,7 @@ export default function TestIncompleteScreen({
 
         {/* Helper text */}
         <p className="mt-5 px-6 text-center text-[11px] leading-relaxed text-white/30">
-          当前进度会为你保留
+          你的进度已保存，随时可以继续
         </p>
       </div>
     </div>
