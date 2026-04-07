@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Copy, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export default function ConnectionRevealOverlay({
 }: ConnectionRevealOverlayProps) {
   const prefersReducedMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const item = items[index];
 
   useEffect(() => {
@@ -36,6 +37,25 @@ export default function ConnectionRevealOverlay({
       setIndex(0);
     }
   }, [open, items]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [open, onClose]);
 
   const quotedReasons = useMemo(
     () => (item?.connectionReasons ?? []).filter(Boolean).slice(0, 2),
@@ -72,16 +92,24 @@ export default function ConnectionRevealOverlay({
           exit={{ y: 16, opacity: 0 }}
           transition={{ duration: prefersReducedMotion ? 0 : 0.32, ease: "easeOut" }}
           className="w-full max-w-md rounded-[32px] border border-white/10 bg-white/8 p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="connection-reveal-title"
+          aria-describedby="connection-reveal-description"
+          tabIndex={-1}
+          ref={dialogRef}
         >
           <div className="text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/10">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <p className="mt-4 text-xs uppercase tracking-[0.3em] text-white/45">Something happened</p>
-            <h2 className="mt-2 text-2xl font-cn-display font-semibold">
+            <h2 id="connection-reveal-title" className="mt-2 text-2xl font-cn-display font-semibold">
               你和 {item.peerDisplayName} 互相选择了
             </h2>
-            <p className="mt-2 text-sm text-white/65">这一刻值得被认真揭晓。</p>
+            <p id="connection-reveal-description" className="mt-2 text-sm text-white/65">
+              这一刻值得被认真揭晓。按 Escape 可以关闭。
+            </p>
           </div>
 
           <ConnectionArchetypeReveal

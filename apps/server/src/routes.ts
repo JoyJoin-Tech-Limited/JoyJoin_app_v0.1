@@ -7460,10 +7460,23 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
   });
 
   // Get group-fill progress for a pool (lightweight progress tracking)
-  app.get("/api/event-pools/:poolId/group-fill", async (req, res) => {
+  app.get("/api/event-pools/:poolId/group-fill", requireAuth, async (req, res) => {
     try {
       const { poolId } = req.params;
-      const UNKNOWN_ARCHETYPE_LABEL = "未设置";
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const poolRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: (regs: any, { and, eq }: any) =>
+          and(eq(regs.poolId, poolId), eq(regs.userId, userId)),
+        columns: { id: true },
+      });
+
+      if (!poolRegistration) {
+        return res.status(403).json({ message: "You are not registered for this event pool" });
+      }
 
       // Count pending registrations in this pool
       const pendingRegs = await db
@@ -7478,7 +7491,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 
       const archetypeRows = await db
         .select({
-          archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, ${UNKNOWN_ARCHETYPE_LABEL})`,
+          archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
           count: sql<number>`count(*)::int`,
         })
         .from(eventPoolRegistrations)
@@ -7489,7 +7502,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
             eq(eventPoolRegistrations.matchStatus, "pending")
           )
         )
-        .groupBy(sql`coalesce(${users.primaryArchetype}, ${users.archetype}, ${UNKNOWN_ARCHETYPE_LABEL})`);
+        .groupBy(sql`coalesce(${users.primaryArchetype}, ${users.archetype})`);
 
       // Get pool config for min/max group size
       const pool = await db.query.eventPools.findFirst({
@@ -7514,7 +7527,9 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         maxGroupSize: maxSize,
         progress,
         archetypeDistribution: Object.fromEntries(
-          archetypeRows.map((row) => [row.archetype, row.count]),
+          archetypeRows
+            .filter((row) => typeof row.archetype === "string" && row.archetype.trim().length > 0)
+            .map((row) => [row.archetype, row.count]),
         ),
       });
     } catch (error) {

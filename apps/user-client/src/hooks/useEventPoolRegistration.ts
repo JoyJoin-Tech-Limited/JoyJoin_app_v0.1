@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
@@ -25,11 +25,13 @@ export interface EventPreferences {
   musicPreference?: string[];
 }
 
+type InitialEventPreferences = Partial<Omit<EventPreferences, "eventType">>;
+
 interface UseEventPoolRegistrationProps {
   poolId: string;
   eventType: "饭局" | "酒局";
   onSuccess?: () => void;
-  initialPreferences?: Partial<EventPreferences>;
+  initialPreferences?: InitialEventPreferences;
 }
 
 export function useEventPoolRegistration({ 
@@ -39,13 +41,19 @@ export function useEventPoolRegistration({
   initialPreferences,
 }: UseEventPoolRegistrationProps) {
   const { toast } = useToast();
+  const normalizedInitialPreferences = useMemo<InitialEventPreferences>(
+    () => ({
+      ...initialPreferences,
+    }),
+    [JSON.stringify(initialPreferences ?? {})],
+  );
   const [step, setStep] = useState(1);
   const [preferences, setPreferences] = useState<Partial<EventPreferences>>({
-    eventType,
     socialGoals: [],
     districts: [],
     languages: [],
-    ...initialPreferences,
+    ...normalizedInitialPreferences,
+    eventType,
   });
   const [isPrefilledFromProfile, setIsPrefilledFromProfile] = useState(false);
   // Track whether the initial draft/pre-fill check on mount is done
@@ -98,8 +106,8 @@ export function useEventPoolRegistration({
     }
 
     // No draft: pre-fill social goals from profile intent if available
-    if (initialPreferences && Object.keys(initialPreferences).length > 0) {
-      setPreferences((prev) => ({ ...prev, ...initialPreferences, eventType }));
+    if (normalizedInitialPreferences && Object.keys(normalizedInitialPreferences).length > 0) {
+      setPreferences((prev) => ({ ...prev, ...normalizedInitialPreferences, eventType }));
       return;
     }
 
@@ -108,7 +116,7 @@ export function useEventPoolRegistration({
       setIsPrefilledFromProfile(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, poolId, initialPreferences, eventType]);
+  }, [user, poolId, normalizedInitialPreferences, eventType]);
 
   // Auto-advance Step 1 → Step 2 after budget selection
   useEffect(() => {

@@ -136,7 +136,6 @@ export default function MatchingStatusPage() {
   const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
   const [newMemberJoined, setNewMemberJoined] = useState(false);
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null);
-  const [livePoolArchetypes, setLivePoolArchetypes] = useState<string[]>([]);
   const [liveArchetypeDistribution, setLiveArchetypeDistribution] = useState<Record<string, number>>({});
   const [recoverJoinPool, setRecoverJoinPool] = useState<RecommendedPool | null>(null);
 
@@ -240,6 +239,31 @@ export default function MatchingStatusPage() {
       })),
     [recommendedPools],
   );
+  const orbitArchetypes = useMemo(() => {
+    const cappedArchetypes: string[] = [];
+    const distributionEntries = Object.entries(liveArchetypeDistribution)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1]);
+
+    if (userArchetype) {
+      cappedArchetypes.push(userArchetype);
+    }
+
+    for (const [archetype, count] of distributionEntries) {
+      const availableCount =
+        archetype === userArchetype ? Math.max(count - 1, 0) : count;
+
+      for (let index = 0; index < availableCount && cappedArchetypes.length < 6; index += 1) {
+        cappedArchetypes.push(archetype);
+      }
+
+      if (cappedArchetypes.length >= 6) {
+        break;
+      }
+    }
+
+    return cappedArchetypes.slice(0, 6);
+  }, [liveArchetypeDistribution, userArchetype]);
 
   // Build UserContext for spark-prediction engine in MatchSuccessSheet
   const currentUserContext = useMemo<UserContext | undefined>(() => {
@@ -261,11 +285,6 @@ export default function MatchingStatusPage() {
   useEffect(() => {
     if (!poolStats?.archetypeDistribution) return;
     setLiveArchetypeDistribution(poolStats.archetypeDistribution);
-    setLivePoolArchetypes(
-      Object.entries(poolStats.archetypeDistribution).flatMap(([archetype, count]) =>
-        Array.from({ length: count }, () => archetype),
-      ),
-    );
   }, [poolStats?.archetypeDistribution]);
 
   // WebSocket subscriptions
@@ -342,7 +361,6 @@ export default function MatchingStatusPage() {
       setNewMemberJoined(true);
       setNewMemberArchetype(data.archetype || null);
       if (data.archetype) {
-        setLivePoolArchetypes((current) => [...current, data.archetype]);
         setLiveArchetypeDistribution((current) => ({
           ...current,
           [data.archetype]: (current[data.archetype] ?? 0) + 1,
@@ -401,7 +419,7 @@ export default function MatchingStatusPage() {
       unsubscribeRegistrationAdded();
       unsubscribeThemeTitle();
     };
-  }, [subscribe, registration?.poolId, poolStats?.progress]);
+  }, [subscribe, registration?.poolId]);
 
     // Handle user dismissing the MatchSuccessSheet (animation is handled internally by the sheet)
   const handleRevealContinue = useCallback(() => {
@@ -631,7 +649,7 @@ export default function MatchingStatusPage() {
           newMemberJoined={newMemberJoined}
           newMemberArchetype={newMemberArchetype}
           userArchetype={userArchetype}
-          archetypes={livePoolArchetypes}
+          archetypes={orbitArchetypes}
           archetypeDistribution={liveArchetypeDistribution}
         />
 
