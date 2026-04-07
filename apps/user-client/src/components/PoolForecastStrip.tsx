@@ -17,7 +17,7 @@
  * micro-magic layer before the user taps in.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { getPoolForecast } from "@/lib/poolForecast";
@@ -52,10 +52,17 @@ export function PoolForecastStrip({
 
   const [lineIndex, setLineIndex] = useState(0);
 
+  // Stable key that only changes when the archetypes list actually changes
+  const archetypesKey = useMemo(
+    () => sampleArchetypes.join(","),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sampleArchetypes.length, ...sampleArchetypes],
+  );
+
   useEffect(() => {
     // Reset index when inputs change (e.g. real-time count update)
     setLineIndex(0);
-  }, [registrationCount, sampleArchetypes.join(",")]);
+  }, [registrationCount, archetypesKey]);
 
   useEffect(() => {
     if (prefersReducedMotion || forecast.lines.length <= 1) return;
@@ -75,7 +82,7 @@ export function PoolForecastStrip({
       aria-label={`池子预报：${staticLine}`}
     >
       <Sparkles
-        className="h-3 w-3 shrink-0 text-primary/60 flex-shrink-0"
+        className="h-3 w-3 shrink-0 text-primary/60"
         aria-hidden="true"
       />
 
