@@ -14,7 +14,7 @@
 5. [Supporting Matrices & Data](#5-supporting-matrices--data)
 6. [Hard Constraints (Pre-filter)](#6-hard-constraints-pre-filter)
    - [6.5 AI Group Analysis](#65-ai-group-analysis)
-   - [6.7 Predictive Reranking Shadow Experiment](#67-predictive-reranking-shadow-experiment)
+   - [6.7 Predictive Reranking Experiment](#67-predictive-reranking-experiment)
 7. [Key Source Files](#7-key-source-files)
 8. [Glossary](#8-glossary)
 
@@ -555,11 +555,11 @@ The chemistry calibration layer applies a small, evidence-bounded correction to 
 
 **How it works:**
 
-1. After events, users submit outcomes (via `event_group_outcomes`) including `meetAgain` (boolean) and `atmosphere` (1–5 rating).
-2. Outcomes are aggregated per archetype pair in the `archetype_pair_feedback_stats` table.
+1. After events, users submit outcomes through the protected `event_group_outcomes` route using payload fields such as `wouldMeetAgain` and `atmosphereScore`.
+2. The chemistry calibration aggregation reads from `match_history` (`would_meet_again`, `connection_quality`) and rolls those results up per archetype pair into `archetype_pair_feedback_stats`.
 3. If a pair has **≥ 30 samples**, an empirical chemistry score is computed:
    ```
-   empiricalScore = (avgMeetAgain × 60) + ((avgAtmosphere − 1) / 4 × 40)
+   empiricalScore = (avgWouldMeetAgain × 60) + ((avgConnectionQuality − 1) / 4 × 40)
    ```
 4. The calibrated score applies a dampened delta (factor: 0.05) capped to ±2 points:
    ```
@@ -580,7 +580,7 @@ The chemistry calibration layer applies a small, evidence-bounded correction to 
 | `CHEMISTRY_CALIBRATION_MAX_DELTA` | 2 | Hard cap: empirical correction cannot exceed ±2 points |
 | `CHEMISTRY_CALIBRATION_DAMPENING_FACTOR` | 0.05 | Slows convergence — requires persistent evidence to move the score |
 
-**Admin visibility:** The admin dashboard exposes a chemistry calibration inspection panel showing per-pair breakdown (`baseScore`, `empiricalScore`, `appliedDelta`, `calibratedScore`, `sampleCount`) for all 66 archetype pairs.
+**Admin visibility:** The admin dashboard exposes a chemistry calibration inspection panel showing per-pair breakdown (`baseScore`, `empiricalScore`, `appliedDelta`, `calibratedScore`, `sampleCount`) for all 78 archetype pairs (including same-archetype pairs).
 
 **Cache:** The calibration map is cached in-process with a 5-minute TTL. Concurrent requests share a single in-flight refresh (`inFlightRefresh` guard).
 
@@ -661,28 +661,29 @@ The flow uses `useGroupAnalysis` to poll the `/analysis` endpoint and waits for 
 
 ---
 
-## 6.7 Predictive Reranking Shadow Experiment
+## 6.7 Predictive Reranking Experiment
 
 **File:** `apps/server/src/predictiveRerankingService.ts`  
-**Status:** Shadow-only — collects telemetry and determines what reranking *would* have done without affecting live results. Live reranking is not enabled until gate criteria pass.
+**Status:** Experimented — supports both shadow-only (control) and gated live reranking (treatment) depending on configuration and experiment arm.
 
 ### What it does
 
-After `poolMatchingService.ts` forms groups deterministically, the predictive reranking service computes a shadow decision:
+After `poolMatchingService.ts` forms groups deterministically, the predictive reranking service evaluates an alternate ordering decision:
 
-1. Reads a predicted outcome score for each group (from `matching_shadow_experiments` telemetry).
-2. Attempts to reorder groups so higher predicted-outcome groups appear earlier.
-3. Records the shadow rerank audit (deterministic rank, predicted rank, confidence) to `matching_shadow_experiments`.
-4. The original deterministic group order is **always returned** to callers — the shadow decision has no user-visible effect.
+1. Computes a predicted outcome score for each group in-process via `buildMatchingShadowExperiment(groups, calibration)`; it does **not** read predictions from `matching_shadow_experiments`.
+2. Attempts to reorder groups so higher predicted-outcome groups appear earlier, subject to confidence thresholds and `predictiveRerankMaxPositionShift`.
+3. Returns `PredictiveRerankDecision.groups`; `poolRealtimeMatchingService.ts` always assigns `groups = predictiveDecision.groups` before persistence.
+4. In the **control / shadow** path (feature disabled, pool ineligible, confidence too low, auto-disabled, or assigned control arm), the returned order stays deterministic and only the summary / audit metadata is persisted alongside matched groups.
+5. In the **treatment** path, bounded live reranking can change the persisted group order before `saveMatchResults()` writes the final `event_pool_groups` rows.
 
 ### Experiment design
 
 | Concept | Value |
 |---|---|
 | Rollout pool (tri-state override) | `event_pools.predictive_rerank_enabled_override`: `true` = force-eligible, `false` = disabled, `null` = follow global config |
-| Exposure percent | Configurable — pool-level hash bucket determines arm assignment |
-| Max position shift | Configurable — prevents large rank changes from low-confidence predictions |
-| Confidence threshold | Configurable — predictions below threshold use `control` arm |
+| Exposure percent | Configurable — pool-level hash bucket determines arm assignment (`control` vs `treatment`) |
+| Max position shift | Configurable — bounds how far a group's rank may move from the deterministic baseline |
+| Confidence threshold | Configurable — predictions below threshold stay on the deterministic order even in treatment |
 | Auto-disable | Automatically disables treatment if treatment positive rate falls > 5 pp below control |
 
 ### Admin visibility
@@ -707,7 +708,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | `apps/server/src/matchingSemantic.ts` | Feature-flagged 7th scoring dimension — 64-dim feature-hash vector + cosine similarity |
 | `apps/server/src/matchingMetrics.ts` | Matching-specific Prometheus metrics (`joyjoin_matching_semantic_similarity_score`, `joyjoin_matching_semantic_pair_score_delta`) |
 | `apps/server/src/embeddingClient.ts` | Embedding API client (OpenAI preferred / DeepSeek fallback) for async semantic profile pipeline |
-| `apps/server/src/predictiveRerankingService.ts` | Shadow predictive reranking A/B experiment (shadow-only; does not affect live group order) |
+| `apps/server/src/predictiveRerankingService.ts` | Predictive reranking A/B experiment; primarily shadow, but under gated config realtime matching can apply reordered groups to live ordering |
 | `apps/server/src/matchExplanationService.ts` | AI pair explanations + icebreakers + `generateGroupAnalysis()` |
 | `apps/user-client/src/hooks/useGroupAnalysis.ts` | Client hook for `GET /api/pool-groups/:groupId/analysis` |
 | `apps/server/src/userMatchingService.ts` | Legacy 6-dimensional user matching (used for admin lab / older flows) |
@@ -742,7 +743,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | **GroupAnalysisResponse** | Shared TypeScript contract for the AI group analysis returned by `GET /api/pool-groups/:groupId/analysis`. Includes pair explanations, icebreakers, `groupDynamics` summary, overall chemistry level, and cache metadata (`fromCache`, `generatedAt`, optional `myPairs`). |
 | **conflictPosture** | Secondary differentiator with values `approach` / `mediate` / `avoid`, derived from `Q_PLAYFUL_EMOJI` answer. Used in `secondaryBonus` tiebreaker step of MatcherV2. |
 | **semanticSimilarity** | Feature-flagged 7th pair-scoring dimension. 64-dim feature-hash vector built from deterministic profile fields + interest topics; L2-normalised; cosine similarity mapped to [35, 100]. Active only when `ENABLE_SEMANTIC_SIMILARITY=true`. |
-| **user_semantic_profiles** | Persisted cache of semantic profile vectors in the database. Invalidated when a user's profile fields or interest heat changes. Used as the cache layer so pair scoring does not recompute vectors on every matching run. |
+| **user_semantic_profiles** | DB table storing neural embedding-based semantic profiles for the async similarity pipeline. Kept in sync when a user's profile fields or interest heat changes. Not yet consumed by live pair scoring, which currently builds in-memory feature-hash profiles. |
 | **empirical chemistry calibration** | Post-event feedback-bounded correction applied to archetype-pair chemistry scores. Delta is capped to ±2 points with a 0.05 dampening factor; only applied when ≥30 outcome samples are available for a pair. |
-| **predictive reranking (shadow)** | Shadow A/B experiment that records what group ordering a predictive model would have produced, without changing the live group ordering. Produces telemetry in `matching_shadow_experiments` for future calibration. |
-| **event_group_outcomes** | DB table capturing per-member post-event outcome submissions (`meetAgain`, `atmosphere`, `connectionRadar`). Feeds the chemistry calibration pipeline and admin outcome analytics. |
+| **predictive reranking** | A/B experiment that always computes an alternate ordering, persists audit metadata with matched groups, and can apply bounded live reordering only when the feature is enabled, the pool is eligible, and the pool falls into the treatment arm. |
+| **event_group_outcomes** | DB table capturing per-member post-event outcome submissions (`wouldMeetAgain`, `atmosphereScore`, `connectionRadar`). Feeds admin outcome analytics directly and informs downstream outcome datasets used by chemistry calibration. |

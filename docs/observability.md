@@ -184,7 +184,7 @@ Emitted during pool matching runs (appended to the `/api/metrics` scrape endpoin
 |--------|------|--------|--------|
 | `joyjoin_matching_semantic_similarity_score` | Histogram | — | Raw semantic score per user pair; active only when `ENABLE_SEMANTIC_SIMILARITY=true` |
 | `joyjoin_matching_semantic_pair_score_delta` | Histogram | — | Score delta introduced by enabling the 7th dimension; bucket bounds: −5, 0, 5, 10, 20 |
-| `joyjoin_matching_semantic_flag_enabled` | Gauge | — | `1` when `ENABLE_SEMANTIC_SIMILARITY=true`, `0` otherwise |
+| `joyjoin_matching_semantic_feature_enabled` | Gauge | — | `1` when `ENABLE_SEMANTIC_SIMILARITY=true`, `0` otherwise |
 
 ### LLM fallback inference metrics (`apps/server/src/middleware/metrics.ts`)
 
@@ -192,9 +192,9 @@ Emitted for shadow and runtime LLM attribute inference calls:
 
 | Metric | Type | Labels | Source |
 |--------|------|--------|--------|
-| `llm_fallback_inference_requests_total` | Counter | `field`, `outcome` | Shadow inference call completions (per low-confidence field) |
-| `llm_fallback_inference_latency_ms` | Histogram | `field`, `outcome` | Per-call latency for shadow LLM fallback calls |
-| `llm_fallback_inference_estimated_cost_usd_total` | Counter | `field`, `outcome` | Estimated USD cost of shadow LLM fallback inference |
+| `llm_fallback_inference_requests_total` | Counter | `provider`, `mode`, `success` | Shadow inference call completions (per provider / mode / success tuple) |
+| `llm_fallback_inference_latency_ms` | Histogram | `provider`, `mode`, `success` | Per-call latency for shadow LLM fallback calls |
+| `llm_fallback_inference_estimated_cost_usd_total` | Counter | `provider`, `mode` | Estimated USD cost of shadow LLM fallback inference |
 | `inference_runtime_llm_fallback_total` | Counter | `field`, `outcome` | Runtime (live) LLM fallback calls — emitted when a bounded field uses the LLM path |
 
 Path segments that are numeric IDs or UUID v4 values are automatically normalised
