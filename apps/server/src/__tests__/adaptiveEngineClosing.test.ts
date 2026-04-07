@@ -16,6 +16,7 @@ import {
   initializeEngineState,
   processAnswer,
   selectNextQuestion,
+  skipQuestion,
   shouldTerminate,
   isAssessmentComplete,
   getClosingQuestionsRemaining,
@@ -220,5 +221,126 @@ describe('resume / duplicate-prevention', () => {
     const next = selectNextQuestion(state);
     expect(next).toBeNull();
     expect(isAssessmentComplete(state)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression tests (review-thread follow-up)
+// ---------------------------------------------------------------------------
+
+describe('skip bypass regression – closing questions cannot be bypassed via skip', () => {
+  it('skipped closing question is still counted as pending by getClosingQuestionsRemaining', () => {
+    let state = buildTerminatedAdaptiveState();
+
+    // Artificially place a closing question ID into the skipped set as if
+    // skipQuestion() were called on it (most direct state manipulation).
+    const skippedIds = new Set(state.skippedQuestionIds);
+    skippedIds.add('Q_PLAYFUL_SLIDER');
+    state = { ...state, skippedQuestionIds: skippedIds };
+
+    // Must still count as 2 remaining – skip does not satisfy the closing requirement.
+    expect(getClosingQuestionsRemaining(state)).toBe(2);
+    expect(isAssessmentComplete(state)).toBe(false);
+  });
+
+  it('selectNextQuestion re-surfaces a skipped closing question', () => {
+    let state = buildTerminatedAdaptiveState();
+
+    // Simulate Q_PLAYFUL_SLIDER being in the skipped set.
+    const skippedIds = new Set(state.skippedQuestionIds);
+    skippedIds.add('Q_PLAYFUL_SLIDER');
+    state = { ...state, skippedQuestionIds: skippedIds };
+
+    // The engine must still return Q_PLAYFUL_SLIDER as the next question.
+    const next = selectNextQuestion(state);
+    expect(next).not.toBeNull();
+    expect(next!.id).toBe('Q_PLAYFUL_SLIDER');
+  });
+
+  it('assessment is not complete until skipped closing question is actually answered', () => {
+    let state = buildTerminatedAdaptiveState();
+
+    // Simulate Q_PLAYFUL_SLIDER being skipped (not answered).
+    const skippedIds = new Set(state.skippedQuestionIds);
+    skippedIds.add('Q_PLAYFUL_SLIDER');
+    state = { ...state, skippedQuestionIds: skippedIds };
+
+    // Answer Q_PLAYFUL_EMOJI only.
+    const emoji = questionsV4.find(q => q.id === 'Q_PLAYFUL_EMOJI')!;
+    state = processAnswer(state, emoji, 'dove');
+
+    expect(isAssessmentComplete(state)).toBe(false);
+  });
+});
+
+describe('skip-alternative bypass regression – adaptive skip cannot surface a closing question', () => {
+  it('skipQuestion during adaptive phase never returns a closing question as the alternative', () => {
+    let state = initializeEngineState();
+    const anchors = getAnchorQuestions();
+
+    // Answer all anchors to advance past the anchor phase.
+    for (const anchor of anchors) {
+      state = processAnswer(state, anchor, anchor.options[0].value);
+    }
+
+    // After only anchor questions the adaptive phase must still be active
+    // (confidence cannot reach the termination threshold in 8 questions).
+    expect(shouldTerminate(state)).toBe(false);
+
+    // Get the next adaptive question and skip it.  The alternative returned
+    // must not be a universal closing question.
+    const current = selectNextQuestion(state);
+    expect(current).not.toBeNull();
+    expect(UNIVERSAL_CLOSING_QUESTION_IDS).not.toContain(current!.id);
+
+    const result = skipQuestion(state, current!.id);
+    expect(result).not.toBeNull();
+
+    if (result!.newQuestion) {
+      expect(UNIVERSAL_CLOSING_QUESTION_IDS).not.toContain(result!.newQuestion.id);
+    }
+  });
+});
+
+describe('stable option order regression – closing question options not randomized', () => {
+  it('closing question returned via skipQuestion fallback has native option order', () => {
+    // Build a terminated adaptive state, then exhaust all non-closing questions
+    // so that selectAlternativeQuestion is forced to fall back to selectNextQuestion
+    // and must return a closing question.
+    let state = buildTerminatedAdaptiveState();
+
+    const fallbackTriggerQuestion = questionsV4.find(
+      q =>
+        !UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id) &&
+        !state.answeredQuestionIds.has(q.id) &&
+        !state.skippedQuestionIds.has(q.id)
+    );
+    expect(fallbackTriggerQuestion).toBeDefined();
+
+    // Mark every other non-closing question as answered so skipping the real
+    // unanswered question above leaves no same-level alternative and forces the
+    // selectAlternativeQuestion() → selectNextQuestion() fallback path.
+    const exhaustedIds = new Set(state.answeredQuestionIds);
+    for (const q of questionsV4) {
+      if (!UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id) && q.id !== fallbackTriggerQuestion!.id) {
+        exhaustedIds.add(q.id);
+      }
+    }
+    state = { ...state, answeredQuestionIds: exhaustedIds };
+
+    const sliderSource = questionsV4.find(q => q.id === 'Q_PLAYFUL_SLIDER')!;
+    const nativeOptionValues = sliderSource.options.map(o => o.value);
+
+    // Guards against the PR #503 option-order fallback regression: use a real
+    // adaptive question ID so this test stays valid even if skipQuestion adds
+    // input validation for unknown question IDs.
+    const result = skipQuestion(state, fallbackTriggerQuestion!.id);
+    expect(result).not.toBeNull();
+    expect(result!.newQuestion).not.toBeNull();
+    expect(result!.newQuestion!.id).toBe('Q_PLAYFUL_SLIDER');
+
+    // Options must be in native order (not re-randomized by skipQuestion).
+    const returnedOptionValues = result!.newQuestion!.options.map(o => o.value);
+    expect(returnedOptionValues).toEqual(nativeOptionValues);
   });
 });
