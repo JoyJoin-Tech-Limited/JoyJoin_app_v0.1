@@ -3220,6 +3220,35 @@ export type OnboardingAnalytics = typeof onboardingAnalytics.$inferSelect;
 export type InsertOnboardingAnalytics = z.infer<typeof insertOnboardingAnalyticsSchema>;
 
 // ================================
+// Wave 2 Participation Experiment Analytics
+// ================================
+
+/**
+ * Stores individual interaction events emitted by the Wave 2 experiment
+ * components (atmosphere framing, social-goal reframing, ignition confirmation,
+ * archetype waiting). Used for post-experiment funnel analysis.
+ *
+ * See: apps/user-client/src/lib/participationExperimentAnalytics.ts
+ */
+export const participationExperimentEvents = pgTable("participation_experiment_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  sessionId: varchar("session_id"),
+  eventType: varchar("event_type", { length: 80 }).notNull(),
+  poolId: varchar("pool_id"),
+  metadata: jsonb("metadata"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_pex_user_id").on(table.userId),
+  index("idx_pex_event_type").on(table.eventType),
+  index("idx_pex_pool_id").on(table.poolId),
+  index("idx_pex_timestamp").on(table.timestamp),
+]);
+
+export type ParticipationExperimentEvent = typeof participationExperimentEvents.$inferSelect;
+
+// ================================
 // Pre-event Attendance (Blind Box)
 // ================================
 
