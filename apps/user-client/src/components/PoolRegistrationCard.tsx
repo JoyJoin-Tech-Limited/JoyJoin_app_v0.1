@@ -61,15 +61,15 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
     },
     onSuccess: () => {
       toast({
-        title: "已取消报名",
-        description: "你已成功取消此活动池报名",
+        title: "已取消入座",
+        description: "你已取消此活动的席位",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
     },
     onError: (error: any) => {
       toast({
         title: "取消失败",
-        description: error.message || "无法取消报名，请稍后再试",
+        description: error.message || "无法取消入座，请稍后再试",
         variant: "destructive",
       });
     },
@@ -213,7 +213,7 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
                 <Clock className="h-4 w-4" />
                 <span>AI正在为你寻找最佳匹配...</span>
               </div>
-              <p className="text-xs text-primary">点击查看匹配进度 →</p>
+              <p className="text-xs text-primary">点击查看成桌进度 →</p>
             </div>
             
             <AlertDialog>
@@ -226,14 +226,14 @@ export default function PoolRegistrationCard({ registration }: PoolRegistrationC
                   onClick={(e) => e.stopPropagation()}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  取消报名
+                  取消入座
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>确认取消报名？</AlertDialogTitle>
+                  <AlertDialogTitle>确认取消入座？</AlertDialogTitle>
                   <AlertDialogDescription>
-                    你确定要取消报名吗？取消后需要重新报名才能参加此活动池。
+                    你确定要取消入座吗？取消后需要重新入座才能参加此活动池。
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -83,7 +83,7 @@ export default function FooterActions({
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              正在锁定席位...
+              正在锁定你的席位…
             </>
           ) : (
             "锁定这一席"
@@ -101,7 +101,7 @@ export default function FooterActions({
             className="flex-1"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            返回修改
+            返回调整
           </Button>
         )}
         
@@ -116,7 +116,7 @@ export default function FooterActions({
             className="flex-1"
           >
             <Save className="mr-2 h-4 w-4" />
-            稍后继续
+            下次再来
           </Button>
         )}
         

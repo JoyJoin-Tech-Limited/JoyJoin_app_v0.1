@@ -173,7 +173,7 @@ export function DistrictSelector(props: DistrictSelectorProps) {
         <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="text-sm text-primary">
-            多选2-3个商圈，成局率提升42%
+            多选 2–3 个商圈，成桌更快
           </span>
         </div>
       )}

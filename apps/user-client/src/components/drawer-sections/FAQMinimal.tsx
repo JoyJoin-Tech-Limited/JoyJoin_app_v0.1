@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 const faqs = [
   {
     question: "匹配需要多久？",
-    answer: "通常在报名截止后24小时内完成匹配。人数越多，匹配速度越快。我们会通过微信和APP通知你匹配结果。",
+    answer: "通常在入座截止后 24 小时内完成成桌。人数越多，成桌越快。我们会通过微信和APP通知你结果。",
   },
   {
     question: "不满意匹配结果怎么办？",

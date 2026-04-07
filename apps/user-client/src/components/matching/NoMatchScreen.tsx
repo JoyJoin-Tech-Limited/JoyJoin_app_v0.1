@@ -19,7 +19,7 @@ interface SimilarPool {
 export interface NoMatchScreenProps {
   /** Pool title shown in the header. */
   poolTitle?: string;
-  /** Called when the user taps "成局后通知我". */
+  /** Called when the user taps "成桌后通知我". */
   onNotify?: () => void;
   /** Called when the user taps "看看别的活动". */
   onBrowse?: () => void;
@@ -62,7 +62,7 @@ export default function NoMatchScreen({
     <>
       {/* Status chip */}
       <span className="mt-5 inline-block rounded-full bg-white/10 px-3 py-0.5 text-xs font-semibold text-white/70 ring-1 ring-white/20">
-        建议 4–6 人成局
+        建议 4–6 人成桌
       </span>
 
       {/* Eyebrow */}
@@ -106,7 +106,7 @@ export default function NoMatchScreen({
           className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
         >
           <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
-          成局后通知我
+          成桌后通知我
         </Button>
       )}
 
@@ -150,7 +150,7 @@ export default function NoMatchScreen({
               <p className="text-sm font-semibold text-white/90 line-clamp-1">{pool.title}</p>
               <p className="mt-0.5 text-xs text-white/45">
                 {pool.eventType} · {pool.city}
-                {pool.district ? ` ${pool.district}` : ""} · {pool.registrationCount} 人已报名
+                {pool.district ? ` ${pool.district}` : ""} · {pool.registrationCount} 人已入座
               </p>
             </button>
           ))}

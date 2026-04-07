@@ -59,9 +59,9 @@ export default function CTAButton({
             
             {/* Button Content */}
             <div className="relative z-10 flex flex-col items-center">
-              <span className="text-base font-bold">立即报名</span>
+              <span className="text-base font-bold">立即入座</span>
               <span className="text-[10px] font-normal opacity-90">
-                已有 {registrationCount} 人报名
+                已有 {registrationCount} 人入座
               </span>
             </div>
           </Button>

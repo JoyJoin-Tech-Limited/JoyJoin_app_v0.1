@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users } from "lucide-react";
 
@@ -14,33 +13,32 @@ interface SheetHeaderProps {
 }
 
 export default function SheetHeader({ currentStep, totalSteps, poolData }: SheetHeaderProps) {
-  const progressPercentage = (currentStep / totalSteps) * 100;
-
   return (
     <div className="space-y-4">
-      {/* Subtle progress — atmospheric, not workflow-centric */}
-      <div className="space-y-1.5">
-        <div className="h-1 bg-muted rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-primary to-purple-600"
-            initial={{ width: 0 }}
-            animate={{ width: `${progressPercentage}%` }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+      {/* Step indicator — soft dots, not a workflow progress bar */}
+      <div className="flex items-center justify-center gap-2">
+        {Array.from({ length: totalSteps }).map((_, i) => (
+          <div
+            key={i}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              i + 1 < currentStep
+                ? "w-4 bg-primary"
+                : i + 1 === currentStep
+                  ? "w-4 bg-primary/60"
+                  : "w-1.5 bg-muted-foreground/20"
+            }`}
           />
-        </div>
+        ))}
       </div>
 
       {/* Event card — invitation style, not logistics panel */}
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
+      <div
         className="bg-gradient-to-br from-background to-muted/30 backdrop-blur-sm rounded-xl p-4 border shadow-sm"
       >
         <div className="flex items-start justify-between gap-2 mb-3">
           <h3 className="font-semibold text-base">{poolData.title}</h3>
           <Badge variant="secondary" className="shrink-0">
-            盲盒入座
+            正在入座
           </Badge>
         </div>
         
@@ -55,10 +53,10 @@ export default function SheetHeader({ currentStep, totalSteps, poolData }: Sheet
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="w-3 h-3" />
-            <span>{poolData.registrationCount} 人正在入座</span>
+            <span>{poolData.registrationCount} 位桌友已就位</span>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

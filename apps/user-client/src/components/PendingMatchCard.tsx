@@ -157,7 +157,7 @@ export default function PendingMatchCard({ event, onCancel }: PendingMatchCardPr
             </Collapsible>
           )}
 
-          {/* 匹配进度 */}
+          {/* 成桌进度 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">正在为你匹配同频伙伴…</span>
@@ -188,12 +188,12 @@ export default function PendingMatchCard({ event, onCancel }: PendingMatchCardPr
                   data-testid={`button-cancel-${event.id}`}
                 >
                   <X className="h-4 w-4 mr-1" />
-                  取消报名
+                  取消入座
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>确认取消报名？</AlertDialogTitle>
+                  <AlertDialogTitle>确认取消入座？</AlertDialogTitle>
                   <AlertDialogDescription>
                     取消后将退还全额费用。确定要取消吗？
                   </AlertDialogDescription>
