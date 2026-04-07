@@ -37,6 +37,20 @@ const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 export const MAX_SKIP_COUNT = 3;
 
 /**
+ * Universal closing questions appended to every V4 session after the adaptive
+ * phase completes.  They are served in order and are never selected by the
+ * adaptive utility scorer – their appearance is guaranteed rather than
+ * conditional.
+ *
+ * Q_PLAYFUL_SLIDER  – continuous X/P intensity dial (slider UX)
+ * Q_PLAYFUL_EMOJI   – conflict-instinct tap (emoji_tap UX, feeds conflictPosture)
+ */
+export const UNIVERSAL_CLOSING_QUESTION_IDS: readonly string[] = [
+  'Q_PLAYFUL_SLIDER',
+  'Q_PLAYFUL_EMOJI',
+] as const;
+
+/**
  * Instrumentation for tracking targetPair question selection
  * Used for debugging and calibration analysis
  */
@@ -345,10 +359,12 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
       // If we detect a persistent pair EARLY with close scores (relaxed threshold for early detection)
       if (confusionDetection.isPersistentPair && confusionDetection.scoreGap < 0.12) {
         // Look for L1 or L2 questions that target this pair
+        // (closing questions are excluded from early adaptive selection)
         const targetedQuestions = questionsV4.filter(q => 
           q.level <= 2 &&
           !answeredQuestionIds.has(q.id) &&
           !skippedQuestionIds.has(q.id) &&
+          !(UNIVERSAL_CLOSING_QUESTION_IDS).includes(q.id) &&
           q.targetPairs &&
           q.targetPairs.includes(confusionDetection.pair![0]) &&
           q.targetPairs.includes(confusionDetection.pair![1])
@@ -377,11 +393,26 @@ export function selectNextQuestion(state: EngineState): AdaptiveQuestion | null 
   }
   
   if (shouldTerminate(updatedState)) {
+    // Adaptive phase is complete – now guarantee the universal closing questions.
+    // Return the first one that hasn't been answered or skipped yet.
+    const pendingClosingId = UNIVERSAL_CLOSING_QUESTION_IDS.find(
+      id => !updatedState.answeredQuestionIds.has(id) && !updatedState.skippedQuestionIds.has(id)
+    );
+    if (pendingClosingId) {
+      const closingQuestion = questionsV4.find(q => q.id === pendingClosingId) || null;
+      // Return closing questions with their native option order (slider/emoji_tap don't benefit
+      // from randomization and the UX components expect a stable layout).
+      return closingQuestion;
+    }
     return null;
   }
-  
+
+  // Exclude universal closing questions from the adaptive pool – they are
+  // reserved for the guaranteed closing phase and must not be selected early.
   const availableQuestions = questionsV4.filter(q => 
-    !answeredQuestionIds.has(q.id) && !skippedQuestionIds.has(q.id)
+    !answeredQuestionIds.has(q.id) &&
+    !skippedQuestionIds.has(q.id) &&
+    !(UNIVERSAL_CLOSING_QUESTION_IDS).includes(q.id)
   );
   if (availableQuestions.length === 0) {
     return null;
@@ -757,6 +788,28 @@ export function shouldTerminate(state: EngineState): boolean {
   }
   
   return false;
+}
+
+/**
+ * Returns the number of universal closing questions that have not yet been
+ * answered (and have not been skipped) in the given engine state.
+ */
+export function getClosingQuestionsRemaining(state: EngineState): number {
+  return UNIVERSAL_CLOSING_QUESTION_IDS.filter(
+    id => !state.answeredQuestionIds.has(id) && !state.skippedQuestionIds.has(id)
+  ).length;
+}
+
+/**
+ * Returns true when the entire V4 assessment is finished:
+ *  1. The adaptive phase has terminated (`shouldTerminate` is true), AND
+ *  2. All universal closing questions have been answered.
+ *
+ * The server answer route should call this instead of `shouldTerminate` to
+ * determine when to generate the final result.
+ */
+export function isAssessmentComplete(state: EngineState): boolean {
+  return shouldTerminate(state) && getClosingQuestionsRemaining(state) === 0;
 }
 
 function checkTieredThresholdConditions(state: EngineState, config: AssessmentConfig): boolean {
