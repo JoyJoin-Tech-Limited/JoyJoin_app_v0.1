@@ -38,11 +38,11 @@ Discover → Browse Pools → Register (Preferences) → Wait/Queue → Match Re
 
 | Stage | Screen / Component | Route | Key Files |
 |-------|-------------------|-------|-----------|
-| **Discovery** | `DiscoverPage.tsx` + `BlindBoxEventCard.tsx` | `/` or `/discover` | Fetches `GET /api/event-pools` with server-side `city` filtering; applies `area`/district filtering client-side after fetch |
+| **Discovery** | `DiscoverPage.tsx` + `BlindBoxEventCard.tsx` | `/` or `/discover` | Server-side `city` filtering via `GET /api/event-pools`; client-side `area`/district filtering |
 | **Pool Detail** | `EventPoolDetailDrawer.tsx` + drawer sections | Bottom sheet over Discover | `PoolVibePanel`, `TopicHeatStrip`, `ArchetypeCompositionPanel`, `EmergingGroupsPanel`, `ConnectionCuePanel` |
 | **Registration** | `JoinEventPoolSheet.tsx` (multi-step sheet) | In-page sheet from Discover | Steps: `SmartDefaultsStep` → `BudgetSelectionStep` → `SocialGoalsStep` → `DinnerPreferencesStep` / `BarPreferencesStep` → `SuccessCelebration` |
 | **Queue / Wait** | `MatchingStatusPage.tsx` + `MatchingWaitingScreen.tsx` | `/pool-matching/:registrationId` | WebSocket subscription for `POOL_MATCHED` and `EVENT_THEME_TITLE_REVEALED`; fill-state tracking (`waiting` → `can_form` → `full`) |
-| **Match Reveal** | `MatchCelebrationOverlay.tsx` → `MatchSuccessSheet.tsx` | Overlay, then `/pool-groups/:groupId` | `MatchSuccessSheet` contains `CardDeckReveal` with haptic/confetti effects; `SquadUnboxingFlow.tsx` is routed separately at `/squad-unboxing` and `/squad-unboxing/:groupId` |
+| **Match Reveal** | `MatchCelebrationOverlay.tsx` → `MatchSuccessSheet.tsx` | Overlay, then `/pool-groups/:groupId`; `/squad-unboxing` and `/squad-unboxing/:groupId` for `SquadUnboxingFlow.tsx` | `MatchSuccessSheet` contains `CardDeckReveal` with haptic/confetti effects; separate `SquadUnboxingFlow.tsx` |
 | **Icebreaker** | `SocialIcebreakerOrchestrator.tsx` | `/icebreaker/:sessionId` | 4-phase flow: 热身 → 挑战 → 侦探 → 回顾 |
 | **Feedback** | `EventFeedbackFlow.tsx` / `DeepFeedbackFlow.tsx` | `/events/:eventId/feedback` | Atmosphere score, connection radar, match point validation |
 
@@ -556,7 +556,7 @@ New states for the `SparkWaitingScreen`:
 
 The micro-reveals endpoint queries existing matching data (pair scores, archetype compositions) and returns anonymized snippets. This must be enforced as an authenticated, server-side authorized read: only the user who owns the referenced pool registration may access its micro-reveals, and requests for any other user's `registrationId` should fail closed.
 
-Privacy constraints should be explicit in the payload contract. Responses should contain only coarse-grained, non-unique hints and should not expose raw pair scores, exact rankings, direct identifiers, or combinations of attributes that could reasonably re-identify another participant. In particular, avoid low-cardinality or uniquely identifying details (for example exact niche interests, precise demographics, or rare archetype combinations) even if presented as \"anonymized\" hints.
+Privacy constraints should be explicit in the payload contract. Responses should contain only coarse-grained, non-unique hints and should not expose raw pair scores, exact rankings, direct identifiers, or combinations of attributes that could reasonably re-identify another participant. In particular, avoid low-cardinality or uniquely identifying details (for example exact niche interests, precise demographics, or rare archetype combinations) even if presented as "anonymized" hints.
 
 This remains a read-only view over existing matching data, but it should be treated as derived sensitive data because it reveals information about other participants and match quality.
 
