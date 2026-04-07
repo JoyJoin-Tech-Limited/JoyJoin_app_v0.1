@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Bell, ChevronRight, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import matchingWaitingHero from "@/assets/matching/waiting/matching-waiting-hero.svg";
+import { archetypeWaitingEnabled } from "@/lib/wave2Experiments";
+import { getArchetypeWaitingCopy } from "@/lib/archetypeWaitingCopy";
+import { participationExperimentAnalytics } from "@/lib/participationExperimentAnalytics";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -68,6 +71,18 @@ export interface MatchingWaitingScreenProps {
   newMemberJoined?: boolean;
   /** Archetype name of the new member (optional, shown in micro-interaction). */
   newMemberArchetype?: string | null;
+  /**
+   * The current user's primary archetype (Wave 2 EXP_ARCHETYPE_WAITING).
+   * When provided and `archetypeWaitingEnabled()` is true, personalised copy
+   * is shown instead of the generic waiting copy.
+   * Optional — falls back gracefully to generic copy when absent.
+   */
+  userArchetype?: string | null;
+  /**
+   * Pool ID used for analytics instrumentation of the archetype waiting experiment.
+   * Required when `userArchetype` is supplied for correct event attribution.
+   */
+  poolId?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,6 +153,8 @@ export default function MatchingWaitingScreen({
   onBack,
   newMemberJoined = false,
   newMemberArchetype = null,
+  userArchetype = null,
+  poolId,
 }: MatchingWaitingScreenProps) {
   const [refreshCountdown, setRefreshCountdown] = useState(refreshIntervalSeconds);
   const shouldReduceMotion = useReducedMotion();
@@ -157,12 +174,41 @@ export default function MatchingWaitingScreen({
     normalizedMinGroupSize,
     normalizedMaxGroupSize,
   );
-  const copy = getCopy(
+  const genericCopy = getCopy(
     fillState,
     displayFilledCount,
     normalizedMinGroupSize,
     normalizedMaxGroupSize,
   );
+
+  // ── Wave 2 EXP_ARCHETYPE_WAITING ──────────────────────────────────────────
+  // Use archetype-personalised copy only when the experiment is active, the
+  // fill state is "waiting" (most impactful moment), and we have an archetype.
+  const useArchetypeCopy =
+    archetypeWaitingEnabled() &&
+    fillState === "waiting" &&
+    !!userArchetype;
+  const archetypeCopy = useArchetypeCopy
+    ? getArchetypeWaitingCopy(userArchetype)
+    : null;
+
+  const copy = archetypeCopy ?? genericCopy;
+  const hasTrackedArchetypeWaitingRef = useRef(false);
+
+  // Analytics: track archetype waiting experiment once when the personalised
+  // copy actually becomes visible. `userArchetype` / `poolId` may arrive after
+  // the initial mount, so keying this on mount alone can miss the exposure.
+  useEffect(() => {
+    if (
+      !hasTrackedArchetypeWaitingRef.current &&
+      useArchetypeCopy &&
+      userArchetype &&
+      poolId
+    ) {
+      hasTrackedArchetypeWaitingRef.current = true;
+      participationExperimentAnalytics.archetypeWaitingShown(poolId, userArchetype);
+    }
+  }, [poolId, useArchetypeCopy, userArchetype]);
 
   // Reset countdown when the refresh interval prop changes.
   useEffect(() => {
