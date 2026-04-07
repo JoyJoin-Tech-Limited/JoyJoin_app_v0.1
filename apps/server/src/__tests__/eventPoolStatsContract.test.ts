@@ -24,9 +24,23 @@ describe("event pool stats contract", () => {
         柯基: 3,
         狐狸: 4,
       },
-      estimatedGroups: 2,
+      // floor(7/4) = 1 — only 1 complete group can form from 7 registrations with minGroupSize 4.
+      // Previously used ceil() which over-reported; floor() reflects actual pool-formable groups.
+      poolFormableGroupCount: 1,
       avgMatchScore: 82,
       recentThemeTitles: [{ themeTitle: "城市夜游", themeEmoji: "🌃" }],
     });
+  });
+
+  it("returns 0 poolFormableGroupCount when registrations are below minGroupSize", () => {
+    const result = buildEventPoolStatsResponse({
+      totalRegistrations: 3,
+      minGroupSize: 4,
+      archetypeRows: [],
+      avgMatchScore: 0,
+      recentThemeTitles: [],
+    });
+    // A partial batch cannot form a complete group — pool readiness is 0.
+    expect(result.poolFormableGroupCount).toBe(0);
   });
 });
