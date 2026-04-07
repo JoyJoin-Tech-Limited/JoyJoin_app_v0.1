@@ -40,14 +40,14 @@ export default function BlindBoxInfoSheet({
   const faqs = [
     {
       q: "我能带朋友吗？",
-      a: "可在报名后添加 1–2 位同行，统一匹配。"
+      a: "入座后可添加 1–2 位同行，统一成桌。"
     },
     {
       q: "临时有事？",
-      a: "成局后按活动退改规则处理。"
+      a: "成桌后按活动退改规则处理。"
     },
     {
-      q: "匹配多久？",
+      q: "多久能成桌？",
       a: "通常 2–6 小时，繁忙时段更快。"
     }
   ];
@@ -86,10 +86,10 @@ export default function BlindBoxInfoSheet({
                 </div>
                 <div className="bg-muted/50 rounded-lg rounded-tl-none p-3">
                   <p className="text-sm">
-                    嗨～我是小悦！让我来告诉你<span className="font-medium text-primary">盲盒模式</span>是怎么玩的吧～
+                    嗨～我是小悦！让我带你了解<span className="font-medium text-primary">这一桌</span>是怎么成的～
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    详情在成局后解锁哦
+                    桌友在成桌后揭晓哦
                   </p>
                 </div>
               </div>
@@ -123,7 +123,7 @@ export default function BlindBoxInfoSheet({
             <div className="mb-6">
               <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                盲盒怎么玩
+                这一桌怎么成
               </h3>
               <div className="space-y-3">
                 <div className="flex gap-3">
@@ -131,9 +131,9 @@ export default function BlindBoxInfoSheet({
                     1
                   </div>
                   <div>
-                    <p className="text-sm font-medium">先报名，再揭晓</p>
+                    <p className="text-sm font-medium">入座锁席</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      选择时间与类型，提交后进入匹配
+                      选好偏好，锁定你在这一桌的席位
                     </p>
                   </div>
                 </div>
@@ -142,9 +142,9 @@ export default function BlindBoxInfoSheet({
                     2
                   </div>
                   <div>
-                    <p className="text-sm font-medium">智能配对</p>
+                    <p className="text-sm font-medium">等待成桌</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      按兴趣、距离与人数自动成局
+                      桌友聚齐后，系统自动成桌
                     </p>
                   </div>
                 </div>
@@ -153,33 +153,33 @@ export default function BlindBoxInfoSheet({
                     3
                   </div>
                   <div>
-                    <p className="text-sm font-medium">成局即通知</p>
+                    <p className="text-sm font-medium">揭晓桌友</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      解锁活动名称、具体地点与群聊
+                      成桌后揭晓同桌伙伴、地点与群聊
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 3. 成局与退款 */}
+            {/* 3. 成桌与退款 */}
             <div className="mb-6">
               <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                成局与退款
+                成桌与退出
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                  <p><span className="font-medium">成局条件：</span>满足最低4人即成局，6人封顶</p>
+                  <p><span className="font-medium">成桌条件：</span>聚齐 4 人即成桌，最多 6 人</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                  <p><span className="font-medium">未成局：</span>自动取消并原路退款</p>
+                  <p><span className="font-medium">未成桌：</span>自动取消，费用原路退回</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                  <p><span className="font-medium">超时保护：</span>活动前48小时未成局，系统自动退款</p>
+                  <p><span className="font-medium">超时保护：</span>活动前 48 小时未成桌，费用自动退回</p>
                 </div>
               </div>
             </div>

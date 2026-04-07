@@ -317,7 +317,7 @@ export default function BlindBoxEventDetailPage() {
     if (diff <= 0) return "活动进行中";
     
     const isMatchedOrCompleted = status === "matched" || status === "completed";
-    const label = isMatchedOrCompleted ? "距开场" : "报名截止";
+    const label = isMatchedOrCompleted ? "距开场" : "入座截止";
 
     // Convert to total minutes
     const totalMinutes = Math.floor(diff / (1000 * 60));

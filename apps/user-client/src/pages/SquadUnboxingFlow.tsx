@@ -338,7 +338,7 @@ export default function SquadUnboxingFlow() {
   // Human-readable label for the current flow state (read by screen readers)
   const flowStateLabel =
     flowState === "ready"
-      ? "盲盒已就绪，点击按钮开启"
+      ? "桌友即将揭晓"
       : flowState === "shaking"
       ? "正在开盒"
       : "桌友卡片已揭晓";
@@ -380,7 +380,7 @@ export default function SquadUnboxingFlow() {
       <div className="px-5 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-foreground">你的{eventTypeLabel}桌友 🎉</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {squadMembers.length}人同桌 · {squadCompatibilityPercent}% 匹配度
+          {squadMembers.length}人同桌 · {squadCompatibilityPercent}% 默契度
         </p>
       </div>
 
@@ -426,8 +426,8 @@ export default function SquadUnboxingFlow() {
               </div>
 
               <div className="text-center space-y-2">
-                <p className="text-base font-semibold text-foreground">盲盒已就绪</p>
-                <p className="text-sm text-muted-foreground">为你匹配了 {squadMembers.length} 位桌友</p>
+                <p className="text-base font-semibold text-foreground">你的桌友来了</p>
+                <p className="text-sm text-muted-foreground">这一桌 {squadMembers.length} 位桌友已就位</p>
               </div>
 
               <Button
@@ -438,7 +438,7 @@ export default function SquadUnboxingFlow() {
                 data-testid="button-open-blind-box"
               >
                 <Sparkles className="h-5 w-5 mr-2" aria-hidden="true" />
-                立即开启盲盒
+                揭晓桌友
               </Button>
             </motion.div>
           )}

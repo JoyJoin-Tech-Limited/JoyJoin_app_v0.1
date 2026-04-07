@@ -107,7 +107,7 @@ function getCopy(
     case "full":
       return {
         headline: "这一桌齐了 🎉",
-        subtext: "桌友已就位，揭晓正在准备中……",
+        subtext: "桌友已聚齐，准备揭晓……",
         badge: "即将揭晓",
         badgeGradient: "from-emerald-500/80 to-green-400/80",
         nextStepHint: "揭晓即将开始！",
@@ -116,10 +116,10 @@ function getCopy(
       const remaining = maxGroupSize - filledCount;
       return {
         headline: `这一桌快要成了`,
-        subtext: `桌友正在聚齐。再来 ${remaining} 位，这一桌就完美了。`,
+        subtext: `差 ${remaining} 位就满桌了……`,
         badge: "即将成桌",
         badgeGradient: "from-amber-500/80 to-yellow-400/80",
-        nextStepHint: "再等一等 → 成桌 → 揭晓桌友",
+        nextStepHint: "再等一等 → 揭晓",
       };
     }
     case "waiting":
@@ -127,10 +127,10 @@ function getCopy(
       const need = minGroupSize - filledCount;
       return {
         headline: `再来 ${need} 位，这一桌就开了`,
-        subtext: `有缘人正在路上。成桌后你会第一时间收到通知。`,
+        subtext: `有缘人正在路上……`,
         badge: null,
         badgeGradient: "",
-        nextStepHint: "聚齐 → 成桌 → 揭晓桌友",
+        nextStepHint: "入座 → 聚齐 → 揭晓",
       };
     }
   }
@@ -321,7 +321,7 @@ export default function MatchingWaitingScreen({
       {/* ── Segmented progress bar ── */}
       <div className="mt-8 w-full max-w-sm">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-medium text-white/50">成桌进度</span>
+          <span className="text-xs font-medium text-white/50">这一桌</span>
           <span className="text-xs font-bold text-white/80">
             {displayFilledCount}&thinsp;/&thinsp;{normalizedMaxGroupSize} 人
           </span>
@@ -347,14 +347,12 @@ export default function MatchingWaitingScreen({
 
             return (
               <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                {/* Threshold label sits above the 4th segment */}
+                {/* Threshold segment is visually taller — no label needed */}
                 <span
-                  className={`text-[9px] font-semibold leading-none ${
-                    isThreshold ? "text-amber-400" : "invisible"
-                  }`}
+                  className="text-[9px] font-semibold leading-none invisible"
                   aria-hidden="true"
                 >
-                  最少成桌
+                  &nbsp;
                 </span>
 
                 <motion.div
@@ -369,13 +367,13 @@ export default function MatchingWaitingScreen({
         </div>
       </div>
 
-      {/* Auto-refresh countdown */}
+      {/* Auto-refresh indicator */}
       <div className="mt-5 flex items-center gap-1.5 text-white/35 text-xs">
         <RefreshCw
           className={`h-3 w-3 ${shouldReduceMotion ? "" : "refresh-spin"}`}
           aria-hidden="true"
         />
-        <span>{refreshCountdown} 秒后自动刷新</span>
+        <span>自动刷新中</span>
       </div>
     </>
   );
@@ -390,7 +388,7 @@ export default function MatchingWaitingScreen({
         className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
       >
         <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
-        邀请朋友一起入座
+        叫朋友来凑一桌
       </Button>
 
       {/* Secondary: browse while waiting */}
@@ -446,7 +444,7 @@ export default function MatchingWaitingScreen({
         cta={ctaSlot}
         footer={
           <p className="mt-8 px-6 text-center text-[11px] leading-relaxed text-white/30">
-            你的席位已锁定，无需重复操作。成桌时我们会立即通知你。
+            你的席位已锁定。成桌时第一时间通知你。
           </p>
         }
       />

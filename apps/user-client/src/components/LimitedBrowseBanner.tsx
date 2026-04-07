@@ -122,9 +122,9 @@ export default function LimitedBrowseBanner({
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div>
-              <p className="font-semibold text-sm leading-tight">先浏览，随时可以报名</p>
+              <p className="font-semibold text-sm leading-tight">先浏览，随时可以入座</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                你的档案已准备好，报名后小悦为你精准匹配
+                你的档案已准备好，入座后小悦为你精准匹配
               </p>
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function LimitedBrowseBanner({
           {/* Unlocked after joining */}
           <div className="space-y-1.5">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-              报名后解锁
+              入座后解锁
             </p>
             {lockedItems.map((item) => (
               <div key={item} className="flex items-start gap-1.5">

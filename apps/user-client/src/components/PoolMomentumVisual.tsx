@@ -206,7 +206,7 @@ export function PoolMomentumVisual({
       data-testid="pool-momentum-visual"
       aria-label={
         registrationCount > 0
-          ? `${registrationCount} 人已报名`
+          ? `${registrationCount} 人已入座`
           : "待参与"
       }
       role="img"

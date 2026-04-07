@@ -259,7 +259,7 @@ export default function LocationPickerSheet({
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
                   <MapPin className="h-4 w-4" />
-                  <span>换个商圈看看，成局更快</span>
+                  <span>换个商圈看看，成桌更快</span>
                 </div>
               </TabsContent>
 
