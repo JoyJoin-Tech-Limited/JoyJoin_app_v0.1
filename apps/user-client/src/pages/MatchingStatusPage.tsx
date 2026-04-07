@@ -562,6 +562,8 @@ export default function MatchingStatusPage() {
           onBack={() => setLocation("/events")}
           newMemberJoined={newMemberJoined}
           newMemberArchetype={newMemberArchetype}
+          userArchetype={user?.primaryArchetype ?? null}
+          poolId={registration.poolId}
         />
 
         {/* Celebration overlays still needed when a match arrives while waiting */}
