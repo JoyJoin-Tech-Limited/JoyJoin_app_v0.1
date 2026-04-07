@@ -309,10 +309,20 @@ describe('stable option order regression – closing question options not random
     // and must return a closing question.
     let state = buildTerminatedAdaptiveState();
 
-    // Mark every non-closing question as answered.
+    const fallbackTriggerQuestion = questionsV4.find(
+      q =>
+        !UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id) &&
+        !state.answeredQuestionIds.has(q.id) &&
+        !state.skippedQuestionIds.has(q.id)
+    );
+    expect(fallbackTriggerQuestion).toBeDefined();
+
+    // Mark every other non-closing question as answered so skipping the real
+    // unanswered question above leaves no same-level alternative and forces the
+    // selectAlternativeQuestion() → selectNextQuestion() fallback path.
     const exhaustedIds = new Set(state.answeredQuestionIds);
     for (const q of questionsV4) {
-      if (!UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id)) {
+      if (!UNIVERSAL_CLOSING_QUESTION_IDS.includes(q.id) && q.id !== fallbackTriggerQuestion!.id) {
         exhaustedIds.add(q.id);
       }
     }
@@ -321,10 +331,10 @@ describe('stable option order regression – closing question options not random
     const sliderSource = questionsV4.find(q => q.id === 'Q_PLAYFUL_SLIDER')!;
     const nativeOptionValues = sliderSource.options.map(o => o.value);
 
-    // skipQuestion with a fake ID to trigger the selectAlternativeQuestion
-    // → selectNextQuestion fallback path.  All non-closing questions are
-    // exhausted so the closing question is the only possible return value.
-    const result = skipQuestion(state, 'fake-id-for-fallback-trigger');
+    // Guards against the PR #503 option-order fallback regression: use a real
+    // adaptive question ID so this test stays valid even if skipQuestion adds
+    // input validation for unknown question IDs.
+    const result = skipQuestion(state, fallbackTriggerQuestion!.id);
     expect(result).not.toBeNull();
     expect(result!.newQuestion).not.toBeNull();
     expect(result!.newQuestion!.id).toBe('Q_PLAYFUL_SLIDER');
