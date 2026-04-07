@@ -45,9 +45,7 @@ export function buildEventPoolStatsResponse(input: {
     archetypeBreakdown: Object.fromEntries(
       input.archetypeRows.map((row) => [row.archetype, row.count]),
     ),
-    // Math.floor: conservative — only fully-formable groups are counted.
-    // (ceil was previously used but over-counted: 7 people ÷ min 4 → ceil=2, floor=1.
-    //  With floor, a partial remainder is not presented as a complete group.)
+    // Conservative floor-based calculation — see JSDoc on estimatedGroups above.
     estimatedGroups: Math.floor(input.totalRegistrations / Math.max(input.minGroupSize, 1)),
     avgMatchScore: input.avgMatchScore,
     recentThemeTitles: input.recentThemeTitles,
