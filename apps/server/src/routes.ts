@@ -7460,9 +7460,23 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
   });
 
   // Get group-fill progress for a pool (lightweight progress tracking)
-  app.get("/api/event-pools/:poolId/group-fill", async (req, res) => {
+  app.get("/api/event-pools/:poolId/group-fill", requireAuth, async (req, res) => {
     try {
       const { poolId } = req.params;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const poolRegistration = await db.query.eventPoolRegistrations.findFirst({
+        where: (regs: any, { and, eq }: any) =>
+          and(eq(regs.poolId, poolId), eq(regs.userId, userId)),
+        columns: { id: true },
+      });
+
+      if (!poolRegistration) {
+        return res.status(403).json({ message: "You are not registered for this event pool" });
+      }
 
       // Count pending registrations in this pool
       const pendingRegs = await db
@@ -7474,6 +7488,21 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
             eq(eventPoolRegistrations.matchStatus, "pending")
           )
         );
+
+      const archetypeRows = await db
+        .select({
+          archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(eventPoolRegistrations)
+        .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
+        .where(
+          and(
+            eq(eventPoolRegistrations.poolId, poolId),
+            eq(eventPoolRegistrations.matchStatus, "pending")
+          )
+        )
+        .groupBy(sql`coalesce(${users.primaryArchetype}, ${users.archetype})`);
 
       // Get pool config for min/max group size
       const pool = await db.query.eventPools.findFirst({
@@ -7497,6 +7526,11 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         minGroupSize: minSize,
         maxGroupSize: maxSize,
         progress,
+        archetypeDistribution: Object.fromEntries(
+          archetypeRows
+            .filter((row) => typeof row.archetype === "string" && row.archetype.trim().length > 0)
+            .map((row) => [row.archetype, row.count]),
+        ),
       });
     } catch (error) {
       console.error("Error fetching group-fill progress:", error);

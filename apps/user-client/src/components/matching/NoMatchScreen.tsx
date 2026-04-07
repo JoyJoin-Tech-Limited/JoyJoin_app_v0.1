@@ -3,6 +3,9 @@ import { Bell, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MatchingStateLayout from "./MatchingStateLayout";
 import noMatchHero from "@/assets/matching/no-match/no-match-hero.svg";
+import NoMatchRecommendations, {
+  type NoMatchRecommendation,
+} from "@/components/matching/NoMatchRecommendations";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +18,9 @@ export interface NoMatchScreenProps {
   onBrowse?: () => void;
   /** Called when the user taps the back arrow. */
   onBack?: () => void;
+  recommendations?: NoMatchRecommendation[];
+  onJoinRecommendation?: (poolId: string) => void;
+  originalBudget?: string | null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -24,9 +30,13 @@ export default function NoMatchScreen({
   onNotify,
   onBrowse,
   onBack,
+  recommendations = [],
+  onJoinRecommendation,
+  originalBudget = null,
 }: NoMatchScreenProps) {
   const shouldReduceMotion = useReducedMotion();
   const shouldShowNotifyButton = Boolean(onNotify);
+  const hasRecommendations = recommendations.length > 0;
 
   // ── Slot: Hero ──────────────────────────────────────────────────────────────
   const heroSlot = (
@@ -51,7 +61,7 @@ export default function NoMatchScreen({
 
       {/* Eyebrow */}
       <p className="mt-4 text-center text-xs font-medium uppercase tracking-widest text-white/45">
-        暂时还没有合适的一桌
+        Not this one — but we've got you
       </p>
 
       {/* Headline */}
@@ -65,7 +75,7 @@ export default function NoMatchScreen({
         }
         className="mt-3 text-center text-[22px] font-black leading-tight tracking-tight text-white"
       >
-        先别急，我们在等更对味的人齐
+        这次没凑齐 — 没关系，好局值得等
       </motion.h2>
 
       {/* Support copy */}
@@ -75,8 +85,18 @@ export default function NoMatchScreen({
         transition={shouldReduceMotion ? undefined : { duration: 0.4, delay: 0.25 }}
         className="mt-3 px-4 text-center text-sm leading-relaxed text-white/55"
       >
-        这场局我们还在慢慢凑人。与其随便把你塞进一桌，不如等一个更聊得来的组合。
+          {hasRecommendations
+            ? "小悦已经记住了你的口味。下面这些新局，和你刚才选的感觉很接近。"
+            : "你的偏好我们先替你收好了。与其硬凑一桌，不如把这份期待留给更对味的人。"}
       </motion.p>
+
+      {hasRecommendations && (
+        <NoMatchRecommendations
+          items={recommendations}
+          originalBudget={originalBudget}
+          onJoin={(poolId) => onJoinRecommendation?.(poolId)}
+        />
+      )}
     </>
   );
 
@@ -90,7 +110,7 @@ export default function NoMatchScreen({
           className="h-14 w-full rounded-2xl border-0 bg-gradient-to-r from-purple-600 to-violet-500 text-base font-semibold text-white shadow-lg shadow-purple-900/40 transition-all duration-200 hover:from-purple-700 hover:to-violet-600 active:scale-[0.98]"
         >
           <Bell className="mr-2 h-5 w-5" aria-hidden="true" />
-          成局后通知我
+          下次有相似局先通知我
         </Button>
       )}
 
@@ -101,7 +121,7 @@ export default function NoMatchScreen({
         size="lg"
         className="h-12 w-full rounded-2xl text-sm font-medium text-white/55 hover:bg-white/10 hover:text-white/90"
       >
-        看看别的活动
+        {hasRecommendations ? "去发现更多活动" : "看看别的活动"}
         <ChevronRight className="ml-1 h-4 w-4" aria-hidden="true" />
       </Button>
 
