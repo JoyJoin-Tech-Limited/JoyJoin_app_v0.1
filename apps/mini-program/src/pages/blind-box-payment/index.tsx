@@ -210,7 +210,7 @@ export default function BlindBoxPaymentPage() {
       <View className='payment-page__summary-card'>
         <Text className='payment-page__summary-label'>可用优惠</Text>
         <Text className='payment-page__summary-value'>{couponCount} 张</Text>
-        <Text className='payment-page__summary-note'>价格会在页面回前台时自动刷新</Text>
+        <Text className='payment-page__summary-note'>价格会在页面重新显示时自动刷新</Text>
       </View>
 
       <View className='payment-page__plans'>
