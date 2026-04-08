@@ -336,11 +336,11 @@ These are commented out in schema but kept for backward compatibility.
 
 | Route | Component | Description |
 |-------|-----------|-------------|
-| `/event-pool-registration/:id` | EventPoolRegistrationPage | Legacy full-page event-pool registration surface |
+| `/event-pool-registration/:id` | EventPoolRegistrationPage | Legacy deep-link route — redirects to `/discover?joinPool=...` join flow |
 | `/pool-groups/:groupId` | PoolGroupDetailPage | View matched group details |
 | `/blind-box-events/:eventId` | BlindBoxEventDetailPage | Event details |
 | `/blindbox/payment` | BlindBoxPaymentPage | Payment flow |
-| `/blindbox/confirmation` | RedirectToDiscover | Quarantined legacy route — redirects to `/discover` |
+| `/blindbox/confirmation` | RedirectToDiscover | Quarantined legacy route — redirects to DiscoverPage |
 | `/events/:eventId/feedback` | EventFeedbackFlow | Post-event feedback |
 | `/events/:eventId/deep-feedback` | DeepFeedbackFlow | Anonymous deep feedback |
 | `/icebreaker/:sessionId` | IcebreakerSessionPage | Social Icebreaker — **PRIMARY in-event icebreaking flow (use this)** |
