@@ -548,15 +548,25 @@ describe('MatchingWeightsService', () => {
   });
 
   it('returns runtime percentage defaults when fetching active weights fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(service, 'getActiveConfig').mockRejectedValueOnce(new Error('db unavailable'));
 
-    await expect(service.getActiveWeights()).resolves.toEqual({
-      chemistryWeight: 28,
-      interestWeight: 28,
-      socialAffinityWeight: 20,
-      backgroundDiversityWeight: 15,
-      preferenceWeight: 5,
-      languageWeight: 4,
-    });
+    try {
+      await expect(service.getActiveWeights()).resolves.toEqual({
+        chemistryWeight: 28,
+        interestWeight: 28,
+        socialAffinityWeight: 20,
+        backgroundDiversityWeight: 15,
+        preferenceWeight: 5,
+        languageWeight: 4,
+      });
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[MatchingWeightsService] Failed to fetch weights:',
+        expect.any(Error),
+      );
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 });
