@@ -1,5 +1,6 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
-import { notificationsRepo } from "./repositories/notificationsRepo";
+import { logger } from "./lib/logger";
+import { paymentFulfillmentRepo } from "./repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "./repositories/paymentsRepo";
 import { usersRepo } from "./repositories/usersRepo";
 import { getLevelDiscount } from "@shared/gamification";
@@ -69,76 +70,30 @@ export interface PaymentResult {
   h5Url?: string; // H5 payment URL
 }
 
+export interface CreateMiniProgramPaymentParams extends CreatePaymentParams {
+  openid: string;
+}
+
+export interface MiniProgramPaymentResult extends PaymentResult {
+  timeStamp: string;
+  nonceStr: string;
+  package: string;
+  signType: "RSA";
+  paySign: string;
+}
+
+interface PreparedPaymentOrder {
+  payment: any;
+  wechatOrderId: string;
+  finalAmount: number;
+}
+
 export class PaymentService {
   /**
    * Create a new payment order
    */
   async createPayment(params: CreatePaymentParams): Promise<PaymentResult> {
-    const { userId, paymentType, relatedId, originalAmount, couponId, applyLevelDiscount = true, clientIp } = params;
-
-    // Calculate discount from multiple sources
-    let couponDiscountAmount = 0;
-    let levelDiscountAmount = 0;
-    let finalAmount = originalAmount;
-
-    // 1. Apply level discount first (for event payments)
-    if (applyLevelDiscount && paymentType === "event") {
-      const user = await usersRepo.getUser(userId);
-      if (user) {
-        const userLevel = user.currentLevel || 1;
-        const levelDiscountPercent = getLevelDiscount(userLevel);
-        if (levelDiscountPercent > 0) {
-          levelDiscountAmount = Math.floor(originalAmount * (levelDiscountPercent / 100));
-          console.log(`[Payment] Applied level ${userLevel} discount: ${levelDiscountPercent}% = ¥${levelDiscountAmount / 100}`);
-        }
-      }
-    }
-
-    // Calculate amount after level discount
-    const amountAfterLevelDiscount = originalAmount - levelDiscountAmount;
-
-    // 2. Apply coupon discount on top of level discount
-    if (couponId) {
-      const coupon = await paymentsRepo.getCoupon(couponId);
-      if (coupon && coupon.isActive) {
-        // Validate coupon
-        const now = new Date();
-        const validFrom = new Date(coupon.validFrom);
-        const validUntil = coupon.validUntil ? new Date(coupon.validUntil) : null;
-
-        if (now >= validFrom && (!validUntil || now <= validUntil)) {
-          // Check usage limits
-          if (coupon.maxUses === null || coupon.currentUses < coupon.maxUses) {
-            // Calculate discount on the remaining amount
-            if (coupon.discountType === "fixed_amount") {
-              couponDiscountAmount = coupon.discountValue;
-            } else if (coupon.discountType === "percentage") {
-              couponDiscountAmount = Math.floor(amountAfterLevelDiscount * (coupon.discountValue / 100));
-            }
-          }
-        }
-      }
-    }
-
-    // Calculate total discount and final amount
-    const totalDiscountAmount = levelDiscountAmount + couponDiscountAmount;
-    finalAmount = Math.max(0, originalAmount - totalDiscountAmount);
-
-    // Generate unique order ID
-    const wechatOrderId = `JJ${Date.now()}${Math.random().toString(36).slice(2, 11)}`;
-
-    // Create payment record (discountAmount stores the total discount)
-    const payment = await paymentsRepo.createPayment({
-      userId,
-      paymentType,
-      relatedId,
-      originalAmount,
-      discountAmount: totalDiscountAmount,
-      finalAmount,
-      couponId,
-      wechatOrderId,
-      status: "pending",
-    });
+    const { payment, wechatOrderId, finalAmount } = await this.preparePaymentOrder(params);
 
     if (finalAmount === 0) {
       await this.handlePaymentSuccess(wechatOrderId, `FREE_${payment.id}`);
@@ -170,14 +125,66 @@ export class PaymentService {
       },
     });
 
-    console.log(`[Payment] Created payment ${payment.id} for user ${userId}, amount: ¥${finalAmount / 100}`);
-
     return {
       paymentId: payment.id,
       wechatOrderId,
       prepayId: response.prepay_id,
       codeUrl: response.code_url,
       h5Url: response.h5_url,
+    };
+  }
+
+  async createMiniProgramPayment(
+    params: CreateMiniProgramPaymentParams
+  ): Promise<MiniProgramPaymentResult> {
+    const { openid } = params;
+    const { payment, wechatOrderId, finalAmount } = await this.preparePaymentOrder(params);
+
+    const response = await this.wechatRequest<{ prepay_id: string }>({
+      method: "POST",
+      path: "/v3/pay/transactions/jsapi",
+      body: {
+        appid: this.getWechatPayConfig().appId,
+        mchid: this.getWechatPayConfig().mchId,
+        description: this.getPaymentDescription(params.paymentType),
+        out_trade_no: wechatOrderId,
+        notify_url: this.getWechatPayConfig().notifyUrl,
+        amount: {
+          total: finalAmount,
+          currency: "CNY",
+        },
+        payer: {
+          openid,
+        },
+      },
+    });
+
+    if (!response.prepay_id) {
+      throw new Error("WeChat Pay JSAPI response missing prepay_id");
+    }
+
+    await paymentsRepo.updatePayment(payment.id, {
+      wechatPrepayId: response.prepay_id,
+    });
+
+    const nonceStr = randomBytes(16).toString("hex");
+    const timeStamp = Math.floor(Date.now() / 1000).toString();
+    const packageValue = `prepay_id=${response.prepay_id}`;
+    const paySign = this.signMiniProgramPayment({
+      timeStamp,
+      nonceStr,
+      packageValue,
+    });
+
+    return {
+      paymentId: payment.id,
+      wechatOrderId,
+      prepayId: response.prepay_id,
+      timeStamp,
+      nonceStr,
+      package: packageValue,
+      signType: "RSA",
+      paySign,
     };
   }
 
@@ -210,7 +217,7 @@ export class PaymentService {
     if (!isDevMode) {
       const signatureValid = this.verifySignature(rawBody, headers);
       if (!signatureValid) {
-        console.warn("[Payment] Webhook rejected: invalid signature");
+        logger.warn("Payment webhook rejected due to invalid signature");
         throw this.createHttpError(401, "Invalid webhook signature");
       }
     }
@@ -242,7 +249,7 @@ export class PaymentService {
         this.getRequiredWebhookString(refundPayload.out_trade_no, "out_trade_no")
       );
     } else {
-      console.log(`[Payment] Received unhandled webhook event_type: ${eventType}`);
+      logger.info("Payment webhook received unhandled event type", { event_type: eventType });
     }
   }
 
@@ -251,64 +258,25 @@ export class PaymentService {
    * Idempotent: safe to call multiple times for the same order.
    */
   private async handlePaymentSuccess(wechatOrderId: string, transactionId: string): Promise<void> {
-    console.log(`[Payment] Processing successful payment: ${wechatOrderId}`);
-
-    // Find payment by WeChat order ID
-    const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
-
-    if (!payment) {
-      console.error(`[Payment] Payment not found for order ${wechatOrderId}`);
-      return;
-    }
-
-    // ── Idempotency guard ──────────────────────────────────────────────────
-    // If the payment has already been completed (e.g. duplicate webhook delivery),
-    // skip all downstream mutations to avoid double-applying state transitions.
-    if (payment.status === "completed") {
-      console.log(
-        `[Payment] Duplicate webhook for already-completed order ${wechatOrderId} — skipping`
-      );
-      return;
-    }
-    
-    // Update payment status
-    await paymentsRepo.updatePayment(payment.id, {
-      status: "completed",
-      wechatTransactionId: transactionId,
-      paidAt: new Date(),
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId,
+      transactionId,
     });
 
-    // Record coupon usage if applicable
-    if (payment.couponId) {
-      await paymentsRepo.recordCouponUsage({
-        couponId: payment.couponId,
-        userId: payment.userId,
-        paymentId: payment.id,
-        discountApplied: payment.discountAmount,
+    if (!result.payment) {
+      logger.error("Payment fulfillment failed because the order was not found", {
+        order_id: wechatOrderId,
       });
+      return;
     }
 
-    // Activate subscription or confirm event registration
-    if (payment.paymentType === "subscription" || payment.paymentType === "event_bundle") {
-      await this.activateSubscription(payment.relatedId, payment.id);
-    } else if (payment.paymentType === "event") {
-      await this.confirmEventRegistration(payment.relatedId, payment.userId);
+    if (result.alreadyCompleted) {
+      logger.info("Payment fulfillment skipped duplicate confirmation", {
+        order_id: wechatOrderId,
+        payment_id: result.payment.id,
+      });
+      return;
     }
-
-    const isBundle = payment.paymentType === "event_bundle";
-    const isSubscription = payment.paymentType === "subscription";
-    await notificationsRepo.createNotification({
-      userId: payment.userId,
-      category: "activities",
-      type: (isSubscription || isBundle) ? "subscription_activated" : "event_confirmed",
-      title: isBundle ? "悦聚月度礼包已激活" : isSubscription ? "会员订阅成功" : "活动报名成功",
-      message: isBundle
-        ? "你的本月活动礼包已生效，尽情参加本月所有悦聚活动吧！"
-        : isSubscription
-          ? "您的JoyJoin会员已激活，开始探索精彩活动吧！"
-          : "您的活动报名已确认，期待与您见面！",
-      relatedResourceId: payment.relatedId,
-    });
   }
 
   /**
@@ -319,15 +287,13 @@ export class PaymentService {
       status: "active",
       paymentId,
     });
-
-    console.log(`[Payment] Activated subscription ${subscriptionId}`);
   }
 
   /**
    * Confirm event registration after successful payment
    */
   private async confirmEventRegistration(eventId: string, userId: string): Promise<void> {
-    console.log(`[Payment] Confirmed event registration for event ${eventId}, user ${userId}`);
+    logger.info("Payment confirmed event registration", { event_id: eventId, user_id: userId });
   }
 
   /**
@@ -335,20 +301,21 @@ export class PaymentService {
    * Idempotent: safe to call multiple times for the same order.
    */
   private async handleRefundSuccess(wechatOrderId: string): Promise<void> {
-    console.log(`[Payment] Processing refund for order: ${wechatOrderId}`);
-
     const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
 
     if (!payment) {
-      console.error(`[Payment] Payment not found for refund ${wechatOrderId}`);
+      logger.error("Refund fulfillment failed because the order was not found", {
+        order_id: wechatOrderId,
+      });
       return;
     }
 
     // Idempotency guard
     if (payment.status === "refunded") {
-      console.log(
-        `[Payment] Duplicate refund webhook for already-refunded order ${wechatOrderId} — skipping`
-      );
+      logger.info("Refund fulfillment skipped duplicate confirmation", {
+        order_id: wechatOrderId,
+        payment_id: payment.id,
+      });
       return;
     }
     
@@ -425,7 +392,7 @@ export class PaymentService {
     const signature = getSingleHeaderValue(headers.signature ?? headers["wechatpay-signature"]);
 
     if (!timestamp || !nonce || !signature) {
-      console.warn("[Payment] Webhook missing required signature headers");
+      logger.warn("Payment webhook missing required signature headers");
       return false;
     }
 
@@ -433,7 +400,7 @@ export class PaymentService {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const requestSeconds = parseInt(timestamp, 10);
     if (isNaN(requestSeconds) || Math.abs(nowSeconds - requestSeconds) > WEBHOOK_TOLERANCE_SECONDS) {
-      console.warn("[Payment] Webhook rejected: stale or invalid timestamp");
+      logger.warn("Payment webhook rejected due to stale or invalid timestamp");
       return false;
     }
 
@@ -443,9 +410,7 @@ export class PaymentService {
     const platformCert = process.env.WECHAT_PAY_PLATFORM_CERT ?? process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY;
     try {
       if (!platformCert) {
-        console.warn(
-          "[Payment] WECHAT_PAY_PLATFORM_CERT is not configured — cannot verify webhook signature"
-        );
+        logger.warn("Payment webhook signature verification unavailable because platform cert is missing");
         return false;
       }
 
@@ -453,7 +418,9 @@ export class PaymentService {
       verifier.update(message);
       return verifier.verify(platformCert, signature, "base64");
     } catch (err) {
-      console.error("[Payment] RSA signature verification failed:", err);
+      logger.error("Payment webhook RSA signature verification failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       return false;
     }
   }
@@ -462,7 +429,16 @@ export class PaymentService {
    * Query payment status from WeChat Pay
    */
   async queryPaymentStatus(wechatOrderId: string): Promise<string> {
-    console.log(`[Payment] Querying status for order ${wechatOrderId}`);
+    const existingPayment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
+    if (existingPayment?.status === "completed") {
+      return "completed";
+    }
+    if (existingPayment?.status === "refunded") {
+      return "refunded";
+    }
+    if (existingPayment?.status === "failed") {
+      return "failed";
+    }
 
     const response = await this.wechatRequest<{ trade_state: string; transaction_id?: string }>({
       method: "GET",
@@ -510,8 +486,6 @@ export class PaymentService {
     await paymentsRepo.updatePayment(payment.id, {
       status: "refund_pending",
     });
-
-    console.log(`[Payment] Initiated refund for payment ${paymentId}, reason: ${reason}`);
   }
 
   private async wechatRequest<T = any>(params: { method: WechatApiMethod; path: string; body?: Record<string, unknown> }): Promise<T> {
@@ -549,6 +523,118 @@ export class PaymentService {
     const signature = signer.sign(privateKey, "base64");
 
     return `WECHATPAY2-SHA256-RSA2048 mchid="${mchId}",nonce_str="${nonce}",timestamp="${timestamp}",serial_no="${serialNo}",signature="${signature}"`;
+  }
+
+  private async preparePaymentOrder(params: CreatePaymentParams): Promise<PreparedPaymentOrder> {
+    const {
+      userId,
+      paymentType,
+      relatedId,
+      originalAmount,
+      couponId,
+      applyLevelDiscount = true,
+    } = params;
+
+    const { levelDiscountAmount, couponDiscountAmount } = await this.calculateDiscounts({
+      userId,
+      paymentType,
+      originalAmount,
+      couponId,
+      applyLevelDiscount,
+    });
+
+    const totalDiscountAmount = levelDiscountAmount + couponDiscountAmount;
+    const finalAmount = Math.max(0, originalAmount - totalDiscountAmount);
+    const wechatOrderId = `JJ${Date.now()}${Math.random().toString(36).slice(2, 11)}`;
+
+    const payment = await paymentsRepo.createPayment({
+      userId,
+      paymentType,
+      relatedId,
+      originalAmount,
+      discountAmount: totalDiscountAmount,
+      finalAmount,
+      couponId,
+      wechatOrderId,
+      status: "pending",
+    });
+
+    return {
+      payment,
+      wechatOrderId,
+      finalAmount,
+    };
+  }
+
+  private async calculateDiscounts(params: {
+    userId: string;
+    paymentType: CreatePaymentParams["paymentType"];
+    originalAmount: number;
+    couponId?: string;
+    applyLevelDiscount: boolean;
+  }): Promise<{ levelDiscountAmount: number; couponDiscountAmount: number }> {
+    const { userId, paymentType, originalAmount, couponId, applyLevelDiscount } = params;
+
+    let couponDiscountAmount = 0;
+    let levelDiscountAmount = 0;
+
+    if (applyLevelDiscount && paymentType === "event") {
+      const user = await usersRepo.getUser(userId);
+      if (user) {
+        const userLevel = user.currentLevel || 1;
+        const levelDiscountPercent = getLevelDiscount(userLevel);
+        if (levelDiscountPercent > 0) {
+          levelDiscountAmount = Math.floor(originalAmount * (levelDiscountPercent / 100));
+        }
+      }
+    }
+
+    const amountAfterLevelDiscount = originalAmount - levelDiscountAmount;
+    if (!couponId) {
+      return { levelDiscountAmount, couponDiscountAmount };
+    }
+
+    const coupon = await paymentsRepo.getCoupon(couponId);
+    if (!coupon || !coupon.isActive) {
+      return { levelDiscountAmount, couponDiscountAmount };
+    }
+
+    const now = new Date();
+    const validFrom = new Date(coupon.validFrom);
+    const validUntil = coupon.validUntil ? new Date(coupon.validUntil) : null;
+    const usageLimit =
+      coupon.maxUses ?? coupon.usageLimit ?? null;
+    const currentUses =
+      coupon.currentUses ?? coupon.usedCount ?? 0;
+
+    if (now < validFrom || (validUntil && now > validUntil)) {
+      return { levelDiscountAmount, couponDiscountAmount };
+    }
+
+    if (usageLimit !== null && currentUses >= usageLimit) {
+      return { levelDiscountAmount, couponDiscountAmount };
+    }
+
+    if (coupon.discountType === "fixed_amount") {
+      couponDiscountAmount = coupon.discountValue;
+    } else if (coupon.discountType === "percentage") {
+      couponDiscountAmount = Math.floor(amountAfterLevelDiscount * (coupon.discountValue / 100));
+    }
+
+    return { levelDiscountAmount, couponDiscountAmount };
+  }
+
+  private signMiniProgramPayment(params: {
+    timeStamp: string;
+    nonceStr: string;
+    packageValue: string;
+  }): string {
+    const { appId, privateKey } = this.getWechatPayConfig();
+    const message = `${appId}\n${params.timeStamp}\n${params.nonceStr}\n${params.packageValue}\n`;
+    const signer = createSign("RSA-SHA256");
+    signer.update(message);
+    signer.end();
+    return signer.sign(privateKey, "base64");
   }
 
   private getWechatPayConfig(): WechatPayConfig {

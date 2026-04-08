@@ -267,8 +267,8 @@ export const paymentsRepo: PaymentsRepository = {
 
   async createPayment(data: any): Promise<any> {
     const result = await db.execute(sql`
-      INSERT INTO payments (user_id, payment_type, related_id, original_amount, discount_amount, final_amount, coupon_id, wechat_order_id, status)
-      VALUES (${data.userId}, ${data.paymentType}, ${data.relatedId || null}, ${data.originalAmount}, ${data.discountAmount || 0}, ${data.finalAmount}, ${data.couponId || null}, ${data.wechatOrderId}, ${data.status || 'pending'})
+      INSERT INTO payments (user_id, payment_type, related_id, original_amount, discount_amount, final_amount, coupon_id, wechat_order_id, wechat_prepay_id, status)
+      VALUES (${data.userId}, ${data.paymentType}, ${data.relatedId || null}, ${data.originalAmount}, ${data.discountAmount || 0}, ${data.finalAmount}, ${data.couponId || null}, ${data.wechatOrderId}, ${data.wechatPrepayId || null}, ${data.status || 'pending'})
       RETURNING *
     `);
     return result.rows[0];
@@ -285,6 +285,10 @@ export const paymentsRepo: PaymentsRepository = {
     if (updates.wechatTransactionId !== undefined) {
       setClauses.push(`wechat_transaction_id = $${values.length + 1}`);
       values.push(updates.wechatTransactionId);
+    }
+    if (updates.wechatPrepayId !== undefined) {
+      setClauses.push(`wechat_prepay_id = $${values.length + 1}`);
+      values.push(updates.wechatPrepayId);
     }
     if (updates.paidAt !== undefined) {
       setClauses.push(`paid_at = $${values.length + 1}`);
