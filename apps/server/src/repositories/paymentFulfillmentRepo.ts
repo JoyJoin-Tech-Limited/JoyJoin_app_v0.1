@@ -59,7 +59,7 @@ export const paymentFulfillmentRepo = {
   async finalizeConfirmedPayment(
     params: FinalizeConfirmedPaymentParams
   ): Promise<FinalizeConfirmedPaymentResult> {
-    return db.transaction(async (tx) => {
+    return db.transaction(async (tx: any) => {
       const [payment] = await tx
         .select()
         .from(payments)

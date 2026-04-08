@@ -8,8 +8,11 @@ import { createSign, generateKeyPairSync } from "crypto";
 // ── Repository mocks ──────────────────────────────────────────────────────────
 const mockPayment = {
   id: "pay-001",
+  createdAt: new Date(),
   userId: "user-1",
   wechatOrderId: "JJ123456",
+  wechatTransactionId: null,
+  wechatPrepayId: null,
   status: "pending",
   paymentType: "subscription",
   relatedId: "sub-001",
@@ -17,6 +20,7 @@ const mockPayment = {
   discountAmount: 0,
   finalAmount: 9800,
   couponId: null,
+  paidAt: null,
 };
 
 const mockPaymentsRepo = {
@@ -32,20 +36,19 @@ const mockNotificationsRepo = {
   createNotification: vi.fn(),
 };
 
-const mockPaymentFulfillmentRepo = {
-  finalizeConfirmedPayment: vi.fn(),
-};
-
 vi.mock("../repositories/paymentsRepo", () => ({ paymentsRepo: mockPaymentsRepo }));
 vi.mock("../repositories/notificationsRepo", () => ({ notificationsRepo: mockNotificationsRepo }));
 vi.mock("../repositories/paymentFulfillmentRepo", () => ({
-  paymentFulfillmentRepo: mockPaymentFulfillmentRepo,
+  paymentFulfillmentRepo: {
+    finalizeConfirmedPayment: vi.fn(),
+  },
 }));
 vi.mock("../repositories/usersRepo", () => ({ usersRepo: { getUser: vi.fn() } }));
 vi.mock("@shared/gamification", () => ({ getLevelDiscount: vi.fn().mockReturnValue(0) }));
 
 // Use dynamic import after mocks are set up
 const { PaymentService } = await import("../paymentService");
+const { paymentFulfillmentRepo } = await import("../repositories/paymentFulfillmentRepo");
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -62,7 +65,7 @@ describe("PaymentService — handleWebhook", () => {
     mockPaymentsRepo.updatePayment.mockResolvedValue(undefined);
     mockNotificationsRepo.createNotification.mockResolvedValue(undefined);
     mockPaymentsRepo.updateSubscription.mockResolvedValue(undefined);
-    mockPaymentFulfillmentRepo.finalizeConfirmedPayment.mockResolvedValue({
+    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockResolvedValue({
       payment: { ...mockPayment, status: "completed" },
       alreadyCompleted: false,
     });
@@ -88,7 +91,7 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockPaymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
+    expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
       wechatOrderId: "JJ123456",
       transactionId: "wx_txn_001",
     });
@@ -98,7 +101,7 @@ describe("PaymentService — handleWebhook", () => {
     mockPaymentsRepo.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "completed" },
     ]);
-    mockPaymentFulfillmentRepo.finalizeConfirmedPayment.mockResolvedValue({
+    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockResolvedValue({
       payment: { ...mockPayment, status: "completed" },
       alreadyCompleted: true,
     });
@@ -137,7 +140,7 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockPaymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledTimes(1);
+    expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledTimes(1);
   });
 
   it("skips duplicate REFUND.SUCCESS — does not re-apply state when already refunded", async () => {
@@ -246,7 +249,7 @@ describe("PaymentService — handleWebhook", () => {
       const payload = JSON.parse(rawBody);
       await service.handleWebhook(payload, rawBody, { timestamp, nonce, signature });
 
-      expect(mockPaymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
+      expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
         wechatOrderId: "JJ123456",
         transactionId: "tx999",
       });

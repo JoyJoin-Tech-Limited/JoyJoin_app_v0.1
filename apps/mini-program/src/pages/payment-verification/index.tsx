@@ -98,6 +98,10 @@ export default function PaymentVerificationPage() {
   }, [navigateAfterPaid])
 
   const bootstrap = useCallback((incomingOrderId?: string) => {
+    if (isPollingRef.current) {
+      return
+    }
+
     clearTimer()
 
     const storedOrderId = typeof incomingOrderId === 'string' && incomingOrderId.length > 0
@@ -105,6 +109,10 @@ export default function PaymentVerificationPage() {
       : wx.getStorageSync('pending_order')
 
     if (!storedOrderId || typeof storedOrderId !== 'string') {
+      void Taro.showToast({
+        title: '未找到待确认订单',
+        icon: 'none',
+      })
       Taro.switchTab({ url: '/pages/discover/index' })
       return
     }

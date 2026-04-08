@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 
 const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? '').replace(/\/$/, '')
+const REQUEST_TIMEOUT_MS = 15000
 
 export interface ApiError extends Error {
   statusCode?: number
@@ -36,7 +37,7 @@ export async function apiRequest<T>(options: {
     method: options.method ?? 'GET',
     data: options.data,
     enableCookie: true,
-    timeout: 15000,
+    timeout: REQUEST_TIMEOUT_MS,
     header: {
       'content-type': 'application/json',
     },

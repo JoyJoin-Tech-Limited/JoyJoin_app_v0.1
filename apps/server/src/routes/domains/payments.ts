@@ -80,7 +80,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       const paymentResult = await paymentService.createPayment({
         userId,
-        paymentType: "event_bundle",
+        paymentType: "subscription",
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
@@ -193,7 +193,7 @@ export function registerPaymentRoutes(app: Express): void {
 
           const pricing = await storage.getActivePricingSettings().catch(() => []);
           const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
-          const amountInCents = Math.round((eventSinglePlan?.price ?? 88) * 100);
+          const amountInCents = eventSinglePlan?.priceInCents ?? 8800;
           const paymentResult = await paymentService.createMiniProgramPayment({
             userId,
             paymentType: "event",
@@ -226,7 +226,7 @@ export function registerPaymentRoutes(app: Express): void {
         const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
         const paymentResult = await paymentService.createMiniProgramPayment({
           userId,
-          paymentType: "event_bundle",
+          paymentType: "subscription",
           relatedId: renewalData.subscriptionId,
           originalAmount: renewalData.amount,
           clientIp: getRequestClientIp(req),
