@@ -603,9 +603,8 @@ export class PaymentService {
     const now = new Date();
     const validFrom = new Date(coupon.validFrom);
     const validUntil = coupon.validUntil ? new Date(coupon.validUntil) : null;
-    // Some legacy SQL paths still surface maxUses/currentUses while the current
-    // shared schema exposes usageLimit/usedCount. Read both until the storage
-    // layer is fully normalized, then collapse back to one naming convention.
+    // TODO(payment-storage-normalization): remove the legacy maxUses/currentUses
+    // fallback once the storage layer consistently returns usageLimit/usedCount.
     const usageLimit = coupon.maxUses ?? coupon.usageLimit ?? null;
     const currentUses = coupon.currentUses ?? coupon.usedCount ?? 0;
 

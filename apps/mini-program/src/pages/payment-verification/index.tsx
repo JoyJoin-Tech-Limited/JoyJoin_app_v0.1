@@ -1,12 +1,14 @@
 import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { logError } from '../../lib/logger'
 import './index.scss'
 
 type VerificationState = 'polling' | 'paid' | 'pending' | 'failed'
 
+// Poll for up to 20 seconds total so the user gets a fast answer without
+// hammering the status endpoint after returning from the WeChat pay sheet.
 const MAX_POLL_ATTEMPTS = 10
 const POLL_INTERVAL_MS = 2000
 
@@ -21,6 +23,7 @@ export default function PaymentVerificationPage() {
   const [message, setMessage] = useState('正在确认支付结果...')
   const [attemptCount, setAttemptCount] = useState(0)
   const isPollingRef = useRef(false)
+  const isMountedRef = useRef(true)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearTimer = useCallback(() => {
@@ -29,6 +32,13 @@ export default function PaymentVerificationPage() {
       timeoutRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      clearTimer()
+    }
+  }, [clearTimer])
 
   const navigateAfterPaid = useCallback(() => {
     const context = wx.getStorageSync('pending_order_context') as { type?: string } | undefined
@@ -81,6 +91,9 @@ export default function PaymentVerificationPage() {
       setStatus('polling')
       setMessage('正在确认支付结果...')
       timeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) {
+          return
+        }
         isPollingRef.current = false
         void pollPaymentStatus(targetOrderId, attempt + 1)
       }, POLL_INTERVAL_MS)

@@ -7,7 +7,9 @@ import {
   payments,
   subscriptions,
 } from "@shared/schema";
+import * as schema from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { db } from "../db";
 
 type PaymentRecord = typeof payments.$inferSelect;
@@ -59,7 +61,7 @@ export const paymentFulfillmentRepo = {
   async finalizeConfirmedPayment(
     params: FinalizeConfirmedPaymentParams
   ): Promise<FinalizeConfirmedPaymentResult> {
-    return db.transaction(async (tx: any) => {
+    return db.transaction(async (tx: NeonDatabase<typeof schema>) => {
       const [payment] = await tx
         .select()
         .from(payments)
