@@ -33,6 +33,20 @@ function checkPaymentsEnabled(req: any, res: any, next: any) {
 }
 
 export function registerPaymentRoutes(app: Express): void {
+  const respondWithPaymentStatus = async (req: Request, res: any) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
+    try {
+      const { wechatOrderId } = req.params as { wechatOrderId: string };
+      const status = await paymentService.queryPaymentStatus(wechatOrderId);
+      res.json({ status });
+    } catch (error) {
+      reqLogger.error("Failed to query payment status", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to query payment status" });
+    }
+  };
+
   // Get current user's subscription status
   app.get("/api/subscription/status", isPhoneAuthenticated, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
@@ -80,7 +94,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       const paymentResult = await paymentService.createPayment({
         userId,
-        paymentType: "subscription",
+        paymentType: "event_bundle",
         relatedId: renewalData.subscriptionId,
         originalAmount: renewalData.amount,
         couponId,
@@ -210,23 +224,21 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        const normalizedPlanType = planId === "vip_quarterly" || type === "vip_quarterly"
-          ? "quarterly"
-          : "monthly";
+        const normalizedPlanType =
+          planId === "vip_quarterly" || type === "vip_quarterly"
+            ? "quarterly"
+            : planId === "vip_monthly" || type === "vip_monthly"
+              ? "monthly"
+              : null;
 
-        if (
-          type !== "vip_monthly" &&
-          type !== "vip_quarterly" &&
-          planId !== "vip_monthly" &&
-          planId !== "vip_quarterly"
-        ) {
+        if (!normalizedPlanType) {
           return res.status(400).json({ error: "Unsupported mini-program payment type" });
         }
 
         const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
         const paymentResult = await paymentService.createMiniProgramPayment({
           userId,
-          paymentType: "subscription",
+          paymentType: "event_bundle",
           relatedId: renewalData.subscriptionId,
           originalAmount: renewalData.amount,
           clientIp: getRequestClientIp(req),
@@ -285,33 +297,8 @@ export function registerPaymentRoutes(app: Express): void {
     }
   );
 
-  app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, async (req, res) => {
-    const reqLogger = logger.child({ request_id: req.requestId });
-    try {
-      const { wechatOrderId } = req.params;
-      const status = await paymentService.queryPaymentStatus(wechatOrderId);
-      res.json({ status });
-    } catch (error) {
-      reqLogger.error("Failed to query payment status", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      res.status(500).json({ message: "Failed to query payment status" });
-    }
-  });
-
-  app.get("/api/payments/status/:wechatOrderId", isPhoneAuthenticated, async (req, res) => {
-    const reqLogger = logger.child({ request_id: req.requestId });
-    try {
-      const { wechatOrderId } = req.params;
-      const status = await paymentService.queryPaymentStatus(wechatOrderId);
-      res.json({ status });
-    } catch (error) {
-      reqLogger.error("Failed to query mini-program payment status", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      res.status(500).json({ message: "Failed to query payment status" });
-    }
-  });
+  app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, respondWithPaymentStatus);
+  app.get("/api/payments/status/:wechatOrderId", isPhoneAuthenticated, respondWithPaymentStatus);
 
   app.get("/api/admin/payments", requireAdmin, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
