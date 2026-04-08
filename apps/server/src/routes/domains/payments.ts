@@ -1,7 +1,9 @@
 import type { Express, Request } from "express";
 import { requireAdmin } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
+import { logger } from "../../lib/logger";
 import { paymentService } from "../../paymentService";
+import { usersRepo } from "../../repositories/usersRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
 import { isPhoneAuthenticated } from "../../phoneAuth";
@@ -33,6 +35,7 @@ function checkPaymentsEnabled(req: any, res: any, next: any) {
 export function registerPaymentRoutes(app: Express): void {
   // Get current user's subscription status
   app.get("/api/subscription/status", isPhoneAuthenticated, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -42,13 +45,16 @@ export function registerPaymentRoutes(app: Express): void {
       const status = await subscriptionService.getUserSubscriptionStatus(userId);
       res.json(status);
     } catch (error) {
-      console.error("Error fetching subscription status:", error);
+      reqLogger.error("Failed to fetch subscription status", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to fetch subscription status" });
     }
   });
 
   // Create subscription renewal (returns payment details)
   app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -86,13 +92,16 @@ export function registerPaymentRoutes(app: Express): void {
         payment: paymentResult,
       });
     } catch (error) {
-      console.error("Error renewing subscription:", error);
+      reqLogger.error("Failed to renew subscription", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to renew subscription" });
     }
   });
 
   // Cancel subscription
   app.post("/api/subscription/cancel", isPhoneAuthenticated, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -107,7 +116,9 @@ export function registerPaymentRoutes(app: Express): void {
       await subscriptionService.cancelSubscription(subscription.id, req.body.reason);
       res.json({ message: "Subscription cancelled" });
     } catch (error) {
-      console.error("Error cancelling subscription:", error);
+      reqLogger.error("Failed to cancel subscription", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to cancel subscription" });
     }
   });
@@ -115,6 +126,7 @@ export function registerPaymentRoutes(app: Express): void {
   // ============ PAYMENT & WEBHOOKS ============
 
   app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -143,15 +155,103 @@ export function registerPaymentRoutes(app: Express): void {
 
       res.json(paymentResult);
     } catch (error) {
-      console.error("Error creating payment:", error);
+      reqLogger.error("Failed to create payment", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to create payment" });
     }
   });
 
   app.post(
+    "/api/payments/miniprogram/create",
+    paymentEndpointLimiter,
+    isPhoneAuthenticated,
+    checkPaymentsEnabled,
+    async (req, res) => {
+      const reqLogger = logger.child({ request_id: req.requestId });
+
+      try {
+        const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const { type, eventId, planId, openid } = req.body ?? {};
+        const user = await usersRepo.getUser(userId);
+        const sessionOpenId = user?.wechatOpenId?.trim();
+        const requestedOpenId =
+          typeof openid === "string" && openid.trim().length > 0 ? openid.trim() : sessionOpenId;
+
+        if (!sessionOpenId || !requestedOpenId || sessionOpenId !== requestedOpenId) {
+          return res.status(400).json({ error: "Mini Program openid is required" });
+        }
+
+        if (type === "event") {
+          if (typeof eventId !== "string" || eventId.trim().length === 0) {
+            return res.status(400).json({ error: "eventId is required for event payments" });
+          }
+
+          const pricing = await storage.getActivePricingSettings().catch(() => []);
+          const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
+          const amountInCents = Math.round((eventSinglePlan?.price ?? 88) * 100);
+          const paymentResult = await paymentService.createMiniProgramPayment({
+            userId,
+            paymentType: "event",
+            relatedId: eventId.trim(),
+            originalAmount: amountInCents,
+            clientIp: getRequestClientIp(req),
+            openid: requestedOpenId,
+          });
+
+          return res.json({
+            ...paymentResult,
+            outTradeNo: paymentResult.wechatOrderId,
+            type,
+          });
+        }
+
+        const normalizedPlanType = planId === "vip_quarterly" || type === "vip_quarterly"
+          ? "quarterly"
+          : "monthly";
+
+        if (
+          type !== "vip_monthly" &&
+          type !== "vip_quarterly" &&
+          planId !== "vip_monthly" &&
+          planId !== "vip_quarterly"
+        ) {
+          return res.status(400).json({ error: "Unsupported mini-program payment type" });
+        }
+
+        const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
+        const paymentResult = await paymentService.createMiniProgramPayment({
+          userId,
+          paymentType: "event_bundle",
+          relatedId: renewalData.subscriptionId,
+          originalAmount: renewalData.amount,
+          clientIp: getRequestClientIp(req),
+          openid: requestedOpenId,
+        });
+
+        res.json({
+          ...paymentResult,
+          outTradeNo: paymentResult.wechatOrderId,
+          type: normalizedPlanType === "quarterly" ? "vip_quarterly" : "vip_monthly",
+        });
+      } catch (error) {
+        reqLogger.error("Failed to create mini-program payment", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        res.status(500).json({ error: "Failed to create mini-program payment" });
+      }
+    }
+  );
+
+  app.post(
     "/api/webhooks/wechat-pay",
     webhookEndpointLimiter,
     async (req: any, res) => {
+      const reqLogger = logger.child({ request_id: req.requestId });
       let rawBody: string;
       let payload: any;
       try {
@@ -176,7 +276,9 @@ export function registerPaymentRoutes(app: Express): void {
         await paymentService.handleWebhook(payload, rawBody, headers);
         res.json({ code: "SUCCESS", message: "OK" });
       } catch (error: any) {
-        console.error("Error processing WeChat Pay webhook:", error);
+        reqLogger.error("Failed to process WeChat Pay webhook", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         const status = error?.status === 401 ? 401 : 500;
         res.status(status).json({ code: "FAIL", message: "Webhook processing failed" });
       }
@@ -184,27 +286,48 @@ export function registerPaymentRoutes(app: Express): void {
   );
 
   app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const { wechatOrderId } = req.params;
       const status = await paymentService.queryPaymentStatus(wechatOrderId);
       res.json({ status });
     } catch (error) {
-      console.error("Error querying payment status:", error);
+      reqLogger.error("Failed to query payment status", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to query payment status" });
+    }
+  });
+
+  app.get("/api/payments/status/:wechatOrderId", isPhoneAuthenticated, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
+    try {
+      const { wechatOrderId } = req.params;
+      const status = await paymentService.queryPaymentStatus(wechatOrderId);
+      res.json({ status });
+    } catch (error) {
+      reqLogger.error("Failed to query mini-program payment status", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to query payment status" });
     }
   });
 
   app.get("/api/admin/payments", requireAdmin, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const payments = await storage.getAllPayments();
       res.json(payments);
     } catch (error) {
-      console.error("Error fetching payments:", error);
+      reqLogger.error("Failed to fetch payments", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to fetch payments" });
     }
   });
 
   app.post("/api/admin/payments/:paymentId/refund", requireAdmin, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const { paymentId } = req.params;
       const { reason } = req.body;
@@ -221,7 +344,9 @@ export function registerPaymentRoutes(app: Express): void {
 
       res.json({ message: "Refund initiated" });
     } catch (error) {
-      console.error("Error creating refund:", error);
+      reqLogger.error("Failed to create refund", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ message: "Failed to create refund" });
     }
   });
