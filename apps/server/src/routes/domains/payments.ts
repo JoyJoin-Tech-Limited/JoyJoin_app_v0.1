@@ -193,11 +193,17 @@ export function registerPaymentRoutes(app: Express): void {
         const { type, eventId, planId, openid } = req.body ?? {};
         const user = await usersRepo.getUser(userId);
         const sessionOpenId = user?.wechatOpenId?.trim();
-        const requestedOpenId =
-          typeof openid === "string" && openid.trim().length > 0 ? openid.trim() : sessionOpenId;
+        if (!sessionOpenId) {
+          return res.status(400).json({ error: "User is not authenticated with WeChat" });
+        }
 
-        if (!sessionOpenId || !requestedOpenId || sessionOpenId !== requestedOpenId) {
-          return res.status(400).json({ error: "Mini Program openid is required" });
+        if (typeof openid !== "string" || openid.trim().length === 0) {
+          return res.status(400).json({ error: "Missing openid parameter" });
+        }
+
+        const requestedOpenId = openid.trim();
+        if (sessionOpenId !== requestedOpenId) {
+          return res.status(400).json({ error: "OpenID mismatch" });
         }
 
         if (type === "event") {

@@ -48,6 +48,8 @@ function formatPrice(value: number): string {
   return `¥${value.toFixed(0)}`
 }
 
+// Returning null means the user explicitly cancelled the WeChat sheet, so the
+// caller should exit quietly without showing an error toast.
 function getFriendlyPaymentError(errMsg?: string): string | null {
   if (!errMsg) return '支付失败，请稍后重试'
 

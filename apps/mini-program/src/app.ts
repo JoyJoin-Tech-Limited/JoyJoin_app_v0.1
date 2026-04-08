@@ -3,6 +3,9 @@ import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
 import { logInfo } from './lib/logger'
 import './app.scss'
 
+const PAYMENT_PAGE_ROUTE = 'pages/blind-box-payment/index'
+const VERIFICATION_PAGE_ROUTE = 'pages/payment-verification/index'
+
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     logInfo('JoyJoin Mini Program launched')
@@ -17,12 +20,12 @@ function App({ children }: PropsWithChildren<any>) {
     const pages = Taro.getCurrentPages()
     const currentRoute = pages[pages.length - 1]?.route ?? ''
     const isPaymentFlowRoute =
-      currentRoute === 'pages/blind-box-payment/index' ||
-      currentRoute === 'pages/payment-verification/index'
+      currentRoute === PAYMENT_PAGE_ROUTE ||
+      currentRoute === VERIFICATION_PAGE_ROUTE
 
     if (!isPaymentFlowRoute) {
       Taro.navigateTo({
-        url: '/pages/payment-verification/index',
+        url: `/${VERIFICATION_PAGE_ROUTE}`,
       })
     }
   })
