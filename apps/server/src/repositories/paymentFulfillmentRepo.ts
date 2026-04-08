@@ -35,7 +35,7 @@ const bundleNotification = {
   category: "activities",
   type: "subscription_activated",
   title: "悦聚月度礼包已激活",
-  message: "你的本月活动礼包已生效，尽情参加本月所有悦聚活动吧！",
+  message: "您的本月活动礼包已生效，尽情参加本月所有悦聚活动吧！",
 };
 
 const eventNotification = {
