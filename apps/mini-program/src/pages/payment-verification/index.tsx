@@ -72,6 +72,7 @@ export default function PaymentVerificationPage() {
       }
 
       if (attempt >= MAX_POLL_ATTEMPTS) {
+        clearPendingOrderStorage()
         setStatus('pending')
         setMessage('支付处理中，请稍后查看我的订单')
         return

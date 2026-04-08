@@ -58,7 +58,7 @@ export async function apiRequest<T>(options: {
   throw createApiError(message, response.statusCode, response.data)
 }
 
-export async function ensureMiniProgramSession(): Promise<{ user: Record<string, any>; openid: string }> {
+export async function authenticateMiniProgramUser(): Promise<{ user: Record<string, any>; openid: string }> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
     throw createApiError('微信登录失败，请稍后重试')

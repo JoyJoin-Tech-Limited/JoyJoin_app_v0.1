@@ -1,7 +1,7 @@
 import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useCallback, useMemo, useState } from 'react'
-import { apiRequest, ensureMiniProgramSession } from '../../lib/api'
+import { apiRequest, authenticateMiniProgramUser } from '../../lib/api'
 import { logError, logWarn } from '../../lib/logger'
 import './index.scss'
 
@@ -90,7 +90,7 @@ export default function BlindBoxPaymentPage() {
     setPageError('')
 
     try {
-      const session = await ensureMiniProgramSession()
+      const session = await authenticateMiniProgramUser()
       setOpenid(session.openid)
 
       const [pricing, coupons] = await Promise.all([
@@ -259,7 +259,7 @@ export default function BlindBoxPaymentPage() {
           {isBootstrapping ? '正在准备支付...' : '微信支付'}
         </Button>
         <Text className='payment-page__hint'>
-          {isCreatingIntent ? '正在拉起微信支付，请勿重复点击' : '支付后将自动校验订单结果'}
+          {isCreatingIntent ? '正在拉起微信支付，请勿重复点击' : '切回应用后会自动校验订单结果'}
         </Text>
       </View>
     </View>
