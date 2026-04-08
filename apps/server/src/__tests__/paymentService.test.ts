@@ -2,25 +2,6 @@ import { createCipheriv, generateKeyPairSync, randomBytes, sign } from "node:cry
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const payments: any[] = [];
-const mockPaymentFulfillmentRepo = {
-  finalizeConfirmedPayment: vi.fn(async ({ wechatOrderId, transactionId }: { wechatOrderId: string; transactionId: string }) => {
-    const payment = payments.find((entry) => entry.wechatOrderId === wechatOrderId);
-    if (!payment) {
-      return { payment: null, alreadyCompleted: false };
-    }
-
-    if (payment.status === "completed") {
-      return { payment, alreadyCompleted: true };
-    }
-
-    Object.assign(payment, {
-      status: "completed",
-      wechatTransactionId: transactionId,
-      paidAt: new Date(),
-    });
-    return { payment, alreadyCompleted: false };
-  }),
-};
 
 vi.mock("../repositories/usersRepo", () => ({
   usersRepo: {
@@ -60,10 +41,13 @@ vi.mock("../repositories/notificationsRepo", () => ({
 }));
 
 vi.mock("../repositories/paymentFulfillmentRepo", () => ({
-  paymentFulfillmentRepo: mockPaymentFulfillmentRepo,
+  paymentFulfillmentRepo: {
+    finalizeConfirmedPayment: vi.fn(),
+  },
 }));
 
 import { PaymentService } from "../paymentService";
+import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "../repositories/paymentsRepo";
 
 const originalFetch = global.fetch;
@@ -111,6 +95,23 @@ describe("PaymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     payments.splice(0, payments.length);
+    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockImplementation(async ({ wechatOrderId, transactionId }: { wechatOrderId: string; transactionId: string }) => {
+      const payment = payments.find((entry) => entry.wechatOrderId === wechatOrderId);
+      if (!payment) {
+        return { payment: null, alreadyCompleted: false };
+      }
+
+      if (payment.status === "completed") {
+        return { payment, alreadyCompleted: true };
+      }
+
+      Object.assign(payment, {
+        status: "completed",
+        wechatTransactionId: transactionId,
+        paidAt: new Date(),
+      });
+      return { payment, alreadyCompleted: false };
+    });
     process.env = {
       ...envSnapshot,
       APP_URL: "https://joyjoin.example.com",
@@ -228,7 +229,7 @@ describe("PaymentService", () => {
       status: "completed",
       wechatTransactionId: "wx_txn_123",
     });
-    expect(mockPaymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
+    expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
       wechatOrderId: "JJ_SUCCESS_001",
       transactionId: "wx_txn_123",
     });

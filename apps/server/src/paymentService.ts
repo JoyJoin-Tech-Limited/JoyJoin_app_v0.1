@@ -93,6 +93,7 @@ export class PaymentService {
    * Create a new payment order
    */
   async createPayment(params: CreatePaymentParams): Promise<PaymentResult> {
+    const { paymentType, clientIp } = params;
     const { payment, wechatOrderId, finalAmount } = await this.preparePaymentOrder(params);
 
     if (finalAmount === 0) {
