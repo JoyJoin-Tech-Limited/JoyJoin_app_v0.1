@@ -242,7 +242,7 @@ D. 礼貌倾听，但心里想着其他事
 
 ### Interactive Closing Questions (Q_PLAYFUL_SLIDER + Q_PLAYFUL_EMOJI)
 
-After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on all traits, or 16 standard questions), **two fixed interactive closing questions** are always presented in order.
+After the adaptive engine reaches its stopping criteria (confidence ≥ 0.7 on all traits, or `AssessmentConfig.hardMaxQuestions` standard questions), **two fixed interactive closing questions** are always presented in order.
 
 #### Q_PLAYFUL_SLIDER — Energy Dial (`slider` type)
 
@@ -371,14 +371,14 @@ function calculateConfidence(variance: number, sampleCount: number): number {
 The adaptive phase stops when **either** condition is met:
 
 1. **Confidence threshold met**: All 6 traits have confidence ≥ 0.7
-2. **Hard limit reached**: 16 standard questions answered
+2. **Hard limit reached**: `AssessmentConfig.hardMaxQuestions` standard questions answered
 
-After the adaptive phase stops, the two closing questions (`Q_PLAYFUL_SLIDER` then `Q_PLAYFUL_EMOJI`) are always shown before the final result is calculated. Total session length equals the active standard-question config plus these 2 closing questions — currently **12–18 questions** under `DEFAULT_ASSESSMENT_CONFIG` or **14–22 questions** under `V2_ASSESSMENT_CONFIG`.
+After the adaptive phase stops, the two closing questions (`Q_PLAYFUL_SLIDER` then `Q_PLAYFUL_EMOJI`) are always shown before the final result is calculated. Total session length equals the active standard-question config plus these 2 closing questions — for example, the current production configs yield **12–18 questions** under `DEFAULT_ASSESSMENT_CONFIG` or **14–22 questions** under `V2_ASSESSMENT_CONFIG`.
 
 **Typical Session Lengths:**
-- **Decisive users** (strong, consistent responses): 10–12 questions (8–10 adaptive + 2 closing)
-- **Average users**: 14–16 questions (12–14 adaptive + 2 closing)
-- **Indecisive/inconsistent users**: 18 questions (16 adaptive + 2 closing)
+- **Decisive users** (strong, consistent responses): near `AssessmentConfig.minQuestions + 2` total questions
+- **Average users**: between `AssessmentConfig.softMaxQuestions + 2` and `AssessmentConfig.hardMaxQuestions + 2` total questions, depending on confidence growth
+- **Indecisive/inconsistent users**: can approach the configured ceiling of `AssessmentConfig.hardMaxQuestions + 2` total questions
 
 ### Mid-Test Overlay (TransitionOverlay)
 

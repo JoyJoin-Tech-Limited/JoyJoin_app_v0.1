@@ -109,47 +109,47 @@ See §1.10 Connection Feedback Flow for full documentation.
 - Served by `GET /api/onboarding/profile-tagline`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`
 - Presentation-only; does not affect onboarding state or `nextStep`
 
-**18. AI Observability — Trace Logger** 📊 *(PR #380)*
+**20. AI Observability — Trace Logger** 📊 *(PR #380)*
 - Structured AI call trace logger: `apps/server/src/lib/aiTraceLogger.ts` (`logAITrace()`)
 - Emits single-line `[AITrace] {json}` logs to stdout for every AI call
 - `matchExplanationService` and `socialIcebreakerAIService` instrumented
 
-**19. AIResponseMeta Normalization** 🔧 *(PR #378)*
+**21. AIResponseMeta Normalization** 🔧 *(PR #378)*
 - `packages/shared/src/types/aiMeta.ts` — shared `AIResponseMeta` contract with `fromCache`, `generatedAt`, `provider`, `fallbackUsed`, `promptVersion`
 - Builder helpers: `buildLiveAIMeta()`, `buildCachedAIMeta()`, `buildFallbackAIMeta()`
 - Foundation for consistent observability across all AI surfaces; ongoing per-service migration
 
-**20. Interest Signal Boundary Enforcement** 🔒 *(PR #379)*
+**22. Interest Signal Boundary Enforcement** 🔒 *(PR #379)*
 - `user_interest_signals` removed from deterministic pair scoring
 - `calculateSignalAlignmentBonus()` and `loadInterestSignalLookup()` deleted from `poolMatchingService.ts`
 - Signals now feed AI enrichment only (match explanation connection points, icebreaker topics)
 - Invariant verified by `apps/server/src/__tests__/interestSignalBoundary.test.ts`
 
-**21. Interest Signal Boost Refinement** ✨ *(PR #372)*
+**23. Interest Signal Boost Refinement** ✨ *(PR #372)*
 - Onboarding interest data reused to pre-select the boost interest and derive enthusiasm level server-side (no re-asking)
 - UX simplified to 2 steps (was 3); surfaced after pool registration in `SuccessCelebration` screen
 
-**22. Onboarding Clarity & Reduced Artificial Waits** ⚡ *(PR #383)*
+**24. Onboarding Clarity & Reduced Artificial Waits** ⚡ *(PR #383)*
 - Profile review "analyzing" phase reduced from 2500 ms to 1200 ms default (500 ms for reduced-motion users)
 - Skippable after 600 ms — no artificial waiting when data is already ready
 
-**23. Limited Browse Mode Experiment** 🔬 *(PR #384)*
+**25. Limited Browse Mode Experiment** 🔬 *(PR #384)*
 - Scoped experiment: a secondary "先浏览 →" CTA on the Profile Review page lets users enter read-only event discovery before registering
 - Controlled by `ENABLE_LIMITED_BROWSE_MODE` constant in `FinalProfileReviewPage.tsx`; per-session opt-out via `?exp=no_limited_browse`
 - Not a permanent product pattern — do not generalize without verifying gating logic
 
-**24. Frontend Performance Improvements** 🚀 *(PRs #385, #386, #388)*
+**26. Frontend Performance Improvements** 🚀 *(PRs #385, #386, #388)*
 - Route-level lazy loading for all non-critical pages in `App.tsx`
 - Dead admin code removed from user-client bundle
 - Landing page hero images converted to WebP with `decoding="async"`
 - Deferred archetype asset loading; gated background prefetch for no-activity users (PR #363)
 - Vite chunk optimisation and empty-state SVG optimisation (PR #362)
 
-**25. Social Icebreaker v2 Phase Rollout** 🧊 *(PR #370)*
+**27. Social Icebreaker v2 Phase Rollout** 🧊 *(PR #370)*
 - Server-driven phase rollout configuration for Social Icebreaker v2
 - Beta phase scaffolding added for future phases beyond MVP (warmup → micro_challenge → lie_detective → recap)
 
-**26. Center-Tab Empty-State Page** 📭 *(PRs #359, #362, #363)*
+**28. Center-Tab Empty-State Page** 📭 *(PRs #359, #362, #363)*
 - `CenterTabEmptyStatePage` — dedicated transition page for no-activity users accessed via the centre nav tab
 - Hybrid layout with optimised SVG assets; background asset prefetch gated on activity state
 
