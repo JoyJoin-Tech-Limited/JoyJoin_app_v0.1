@@ -52,7 +52,13 @@ else
 fi
 
 echo "  Running assessment constraint migration..."
-node scripts/migrate-fix-assessment-constraint.js
+if node scripts/migrate-fix-assessment-constraint.js; then
+    echo "  ✅ Assessment constraint migration completed"
+else
+    EXIT_CODE=$?
+    echo "  ❌ Assessment constraint migration failed with exit code $EXIT_CODE"
+    exit "$EXIT_CODE"
+fi
 
 echo "  Running schema push..."
 npx drizzle-kit push --config=apps/server/drizzle.config.ts
@@ -61,12 +67,13 @@ echo "🏥 Step 3: Verify runtime health..."
 API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${PORT:-5000}"
 HEALTH_URL="http://$API_HOST:$API_PORT/api/health"
-for attempt in {1..10}; do
+MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
+for ((attempt=1; attempt<=MAX_HEALTH_CHECK_ATTEMPTS; attempt++)); do
     if curl -fsS "$HEALTH_URL" > /dev/null; then
         break
     fi
 
-    if [[ $attempt -eq 10 ]]; then
+    if [[ $attempt -eq $MAX_HEALTH_CHECK_ATTEMPTS ]]; then
         echo "❌ Deployment verification failed: API health check did not respond at $HEALTH_URL"
         echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
         exit 1
