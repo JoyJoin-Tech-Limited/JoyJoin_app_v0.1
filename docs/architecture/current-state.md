@@ -11,6 +11,7 @@ Use it together with:
 
 - `apps/user-client` — user-facing React app
 - `apps/admin-client` — separate admin React app
+- `apps/mini-program` — WeChat Mini Program beta client built with Taro/React
 - `apps/server` — Express API and operational backend
 - `packages/shared` — shared schema, contracts, taxonomies, and engines
 
@@ -91,7 +92,7 @@ Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
 - All session reads and writes go through `lib/socialIcebreakerStore.ts`; do not add direct `db` calls in the route file.
 
-### 4. Shared contracts and schema ownership
+### 4. Shared contracts and cross-platform ownership
 
 **Canonical schema**
 - `packages/shared/src/schema.ts`
@@ -105,6 +106,7 @@ Boundary:
 Boundary:
 - If more than one app/runtime must agree on a contract, define it in `packages/shared`.
 - If code is runtime-specific, keep it in that app and import only the shared definitions.
+- `apps/user-client` is the active web sandbox and future web release surface; `apps/mini-program` is the beta production client. Shared business rules should not fork between them.
 
 ### 5. Server domain ownership
 
@@ -141,6 +143,11 @@ Boundary:
 - Shared presentation component: `apps/user-client/src/components/`
 - Client hook or query adapter: `apps/user-client/src/hooks/`
 - Pure browser utility: `apps/user-client/src/lib/` or `apps/user-client/src/utils/`
+
+### Mini Program
+- Taro page entry: `apps/mini-program/src/pages/`
+- Mini Program runtime helper: `apps/mini-program/src/lib/`
+- Cross-platform contract or pure business rule: `packages/shared/src/`
 
 ### Server
 - Route registration composition: `apps/server/src/routes.ts`
