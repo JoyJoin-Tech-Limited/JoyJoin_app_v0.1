@@ -68,18 +68,19 @@ API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${PORT:-5000}"
 HEALTH_URL="http://$API_HOST:$API_PORT/api/health"
 MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
-for ((attempt=1; attempt<=MAX_HEALTH_CHECK_ATTEMPTS; attempt++)); do
+HEALTH_CHECK_RETRY_DELAY_SECONDS="${HEALTH_CHECK_RETRY_DELAY_SECONDS:-5}"
+for ((health_check_attempt=1; health_check_attempt<=MAX_HEALTH_CHECK_ATTEMPTS; health_check_attempt++)); do
     if curl -fsS "$HEALTH_URL" > /dev/null; then
         break
     fi
 
-    if [[ $attempt -eq $MAX_HEALTH_CHECK_ATTEMPTS ]]; then
+    if [[ $health_check_attempt -eq $MAX_HEALTH_CHECK_ATTEMPTS ]]; then
         echo "❌ Deployment verification failed: API health check did not respond at $HEALTH_URL"
         echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
         exit 1
     fi
 
-    sleep 5
+    sleep "$HEALTH_CHECK_RETRY_DELAY_SECONDS"
 done
 
 echo "✅ Deployment completed"
