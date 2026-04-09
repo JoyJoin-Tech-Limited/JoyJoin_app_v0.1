@@ -88,7 +88,7 @@ export const paymentFulfillmentRepo = {
 
       if (!updatedPayment) {
         const [latestPayment] = await tx
-          .select()
+          .select({ status: payments.status })
           .from(payments)
           .where(eq(payments.id, payment.id))
           .limit(1);
