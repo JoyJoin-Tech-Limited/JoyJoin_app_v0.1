@@ -1,9 +1,9 @@
+/* Self-hosted font declarations and semantic font tokens (AlibabaPuHuiTi + Quicksand TTF). */
+@import './assets/fonts/fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Self-hosted font declarations and semantic font tokens (AlibabaPuHuiTi + Quicksand TTF). */
-@import './assets/fonts/fonts.css';
 
 /* ─── Typography defaults ────────────────────────────────────
  * body uses --font-ui (system Chinese stack) so all text is
