@@ -214,7 +214,7 @@ logger.error('Payment webhook failed', { orderId, error: err.message });
 
 ## User Journey & Authentication Flow
 
-**Updated:** 2026-03-23 (server-driven `nextStep`, consolidated onboarding module)
+**Updated:** 2026-04-07 (auth-gate onboarding handoff, active blind-pool entry flow)
 
 ### Authentication States
 
@@ -241,8 +241,9 @@ interface UseAuthResult {
 │                         UNAUTHENTICATED                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │  /                   → LandingPage (redirects to /personality-test) │
-│  /personality-test   → PersonalityTestPageV4 (Anonymous)            │
-│  /personality-test/results → PersonalityTestResultPage (+ Login CTA)│
+│  /personality-test   → PersonalityTestPage (Anonymous)              │
+│  /personality-test/results → PersonalityTestResultPage              │
+│  /personality-test/auth-gate → WeChatAuthGatePage                   │
 │  /login              → LoginPage (fallback for non-WeChat)          │
 │  /invite/:code       → InviteLandingRouter (public)                 │
 │  /dev/icebreaker-demo → IcebreakerDemoPage (dev sandbox only)       │
@@ -260,7 +261,7 @@ interface UseAuthResult {
                                     │
                     ▼ (After Essential Data)
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    Authenticated - Optional Extended Data           │
+│                    Authenticated - Needs Extended Data              │
 ├─────────────────────────────────────────────────────────────────────┤
 │  /onboarding/extended → ExtendedDataPage (Interest Carousel only)   │
 │  *                   → Redirects to /onboarding/extended           │
@@ -300,6 +301,8 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `profile-review` | `/onboarding/review` | `hasSeenProfileReview` (users table) |
 | `guide` / `discover` | `/discover` | `hasSeenGuide` (users table) |
 
+Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`; once the user is authenticated, routing authority switches to server-returned `nextStep`.
+
 Active onboarding pages: `apps/user-client/src/features/onboarding/active/pages/`  
 Legacy surfaces: `apps/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
 
@@ -333,11 +336,11 @@ These are commented out in schema but kept for backward compatibility.
 
 | Route | Component | Description |
 |-------|-----------|-------------|
-| `/event-pool/:id/register` | EventPoolRegistrationPage | Register for blind box event |
+| `/event-pool-registration/:id` | EventPoolRegistrationPage | Legacy deep-link route — redirects to `/discover?joinPool=...` join flow |
 | `/pool-groups/:groupId` | PoolGroupDetailPage | View matched group details |
 | `/blind-box-events/:eventId` | BlindBoxEventDetailPage | Event details |
 | `/blindbox/payment` | BlindBoxPaymentPage | Payment flow |
-| `/blindbox/confirmation` | BlindBoxConfirmationPage | Payment confirmation |
+| `/blindbox/confirmation` | RedirectToDiscover | Quarantined legacy route — redirects to DiscoverPage |
 | `/events/:eventId/feedback` | EventFeedbackFlow | Post-event feedback |
 | `/events/:eventId/deep-feedback` | DeepFeedbackFlow | Anonymous deep feedback |
 | `/icebreaker/:sessionId` | IcebreakerSessionPage | Social Icebreaker — **PRIMARY in-event icebreaking flow (use this)** |
@@ -447,19 +450,20 @@ Provides:
 | `MatchingWaitingScreen` | Blind-pool waiting (fill states: waiting / can_form / full) | `components/MatchingWaitingScreen.tsx` |
 | `NoMatchScreen` | No match found | `components/matching/NoMatchScreen.tsx` |
 
-#### Join-Sheet Interstitial Screens *(used inside `JoinEventPoolSheet`, no direct `MatchingStateLayout`)*
+#### Join-Sheet / Pre-Entry Interstitial Screens
 
 | Component | Screen state | File |
 |-----------|-------------|------|
 | `JoinErrorScreen` | Join / registration error | `components/matching/JoinErrorScreen.tsx` |
 | `ExtendedDataEmptyScreen` | Profile data insufficient | `components/matching/ExtendedDataEmptyScreen.tsx` |
-| `TestIncompleteScreen` | Personality test not done | `components/matching/TestIncompleteScreen.tsx` |
+| `TestIncompleteScreen` | Personality test incomplete pre-entry gate on `DiscoverPage` | `components/matching/TestIncompleteScreen.tsx` |
 
 #### Post-Match Reveal Components
 
 | Component | Role | File |
 |-----------|------|------|
-| `SurpriseMatchReveal` | Cinematic reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
+| `MatchRevealSequenceV2` | Active cinematic reveal orchestrator | `components/matching/MatchRevealSequenceV2.tsx` |
+| `SurpriseMatchReveal` | Legacy rarity-first reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
 | `MatchPointsDisplay` | Match points renderer | `components/matching/MatchPointsDisplay.tsx` |
 
 ### Key Rules
@@ -468,6 +472,7 @@ Provides:
 2. **Recovery must be correct.** A user returning to the matching-status page after a forced refresh should land in the right state.
 3. **For full-screen matching-status screens, never duplicate `matching-bg.svg`.** Import the shared background only via `MatchingStateLayout`. Join-sheet interstitials inherit their presentation context from `JoinEventPoolSheet` and should not wrap themselves in `MatchingStateLayout`.
 4. **Asset locations:** `apps/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
+5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; `BlindBoxConfirmationPage` is quarantined and `/blindbox/confirmation` redirects to `/discover`.
 
 Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
 
@@ -679,7 +684,7 @@ const DEFAULT_ASSESSMENT_CONFIG = {
 | `packages/shared/src/personality/matcherV2.ts` | V2 weighted Manhattan distance matcher with asymmetric penalties and VETO filters |
 | `packages/shared/src/personality/prototypes.ts` | 12 archetype trait profiles |
 | `packages/shared/src/personality/types.ts` | Type definitions (TraitKey, ArchetypeMatch, etc.) |
-| `apps/user-client/src/pages/PersonalityTestPageV4.tsx` | Adaptive test UI |
+| `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx` | Adaptive test UI |
 | `apps/user-client/src/pages/PersonalityTestResultPage.tsx` | Results display |
 
 ### V2 Matcher Algorithm
@@ -788,6 +793,7 @@ interface XiaoyueChatBubbleProps {
 | Component | Purpose |
 |-----------|---------|
 | `BlindBoxEventCard.tsx` | Event pool discovery cards |
+| `PoolForecastStrip.tsx` | Deterministic pool-atmosphere teaser on discovery cards |
 | `PoolRegistrationCard.tsx` | Registration status display |
 | `ProfileSpotlight.tsx` | Tablemate profile drawer |
 | `JoyOrbit.tsx` | Full-screen group member orbital |
@@ -800,17 +806,20 @@ interface XiaoyueChatBubbleProps {
 
 ### Two-Stage Model
 
-```
-Stage 1: Pool Registration
-├── User discovers event pool on DiscoverPage
-├── Submits soft preferences (budget, cuisine, social goals)
-└── Status: "pending"
+> **Updated 2026-04-07** — active blind-pool discovery is pool-first, not payment-first. Discovery surfaces can describe pool momentum and threshold progress, but only the server matching pipeline decides when a group actually forms.
 
-Stage 2: AI Matching
-├── Scheduler scans pool periodically
-├── Forms optimal groups based on chemistry
-├── Assigns venue and time
-└── Status: "matched"
+```
+Stage 1: Pool Discovery + Join
+├── User discovers pool on DiscoverPage / BlindBoxEventCard
+├── Card can show threshold progress + PoolForecastStrip atmosphere cues
+├── Entry can pass through PreJoinVibeBriefSheet → JoinEventPoolSheet
+└── Success state means "joined the pool", not "already matched"
+
+Stage 2: Matching Execution + Reveal
+├── poolRealtimeMatchingService can scan on registration (realtime)
+├── scanPoolAndMatch also runs on scheduled scans
+├── MatchingStatusPage owns waiting / reveal / no-match states
+└── MatchRevealSequenceV2 is the active cinematic reveal when a group forms
 ```
 
 ### Matching Algorithm Formula

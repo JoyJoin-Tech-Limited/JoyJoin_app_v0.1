@@ -55,6 +55,10 @@ User completes personality quiz
 **Archetype assignment:** `packages/shared/src/personality/matcherV2.ts`  
 **Chemistry matrix:** `apps/server/src/archetypeChemistry.ts` / `packages/shared/src/personality/archetypeCompatibility.ts`
 
+> **Updated 2026-04-07 — execution timing boundary**
+> - Matching is **not** strictly post-deadline. The backend supports registration-triggered realtime scans and scheduled scans.
+> - Discovery-layer helpers such as `PoolForecastStrip` are deterministic client guidance only; they are not inputs to deterministic matching.
+
 ---
 
 ## 2. Layer 1 — Personality Assessment & Archetype Assignment (MatcherV2)
@@ -70,7 +74,7 @@ User completes personality quiz
 | `X` | 外向性 (Extraversion) | Sociability, energy, talkativeness |
 | `P` | 耐心 (Patience) | Tolerance, deliberateness, steady pace |
 
-All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment (8–18 questions: 8–16 adaptive + 2 interactive closing questions).
+All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment. Total question count is config-driven: the active standard-question range comes from `AssessmentConfig`, and 2 interactive closing questions are then appended before scoring final secondary signals.
 
 ### 2.2 The 12 Social Archetypes
 
@@ -189,6 +193,15 @@ If top-2 scores are within a close gap, `breakTie()` uses secondary differentiat
 
 **File:** `apps/server/src/poolMatchingService.ts`  
 **Function:** `calculatePairScore(user1, user2): Promise<number>`
+
+### 3.0 Execution Modes
+
+Group formation is owned by the server and can be triggered in two ways:
+
+1. **Realtime scan** — a registration event invokes `poolRealtimeMatchingService.ts`
+2. **Scheduled scan** — `scanPoolAndMatch(poolId, "scheduled", ...)` revisits pools later
+
+Both execution modes use the same deterministic pair-scoring and group-formation pipeline; the difference is only **when** the scan runs, not **how** pair scores are computed.
 
 ### 3.1 Active Weights (Feature-Flagged 6D / 7D)
 
@@ -703,6 +716,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | `packages/shared/src/personality/prototypes.ts` | Archetype prototype trait profiles |
 | `packages/shared/src/types/groupAnalysis.ts` | `GroupAnalysisResponse` shared contract |
 | `apps/server/src/poolMatchingService.ts` | Pair scoring + group formation (primary matching service) |
+| `apps/server/src/poolRealtimeMatchingService.ts` | Realtime + scheduled pool scan orchestration (`scanPoolAndMatch`) |
 | `apps/server/src/archetypeChemistry.ts` | Server-side chemistry helpers (imports from shared) |
 | `apps/server/src/archetypeChemistryCalibration.ts` | Bounded empirical chemistry calibration (±2 pts, ≥30 samples required) |
 | `apps/server/src/matchingSemantic.ts` | Feature-flagged 7th scoring dimension — 64-dim feature-hash vector + cosine similarity |

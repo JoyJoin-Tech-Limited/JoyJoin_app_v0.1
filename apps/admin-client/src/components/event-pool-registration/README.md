@@ -1,5 +1,7 @@
 # Event Pool Registration Bottom Sheet
 
+> **Deprecated duplicate (not canonical).** Admin-client does not own the active blind-pool registration flow. Use the user-client implementation and canonical docs in `DEVELOPER_QUICK_REFERENCE.md` and `docs/ui-matching-reveal-improvements.md`.
+
 ## Overview
 A playful, funky bottom sheet component with Duolingo-style animations and progressive disclosure for event pool registration. This replaces the full-page `EventPoolRegistrationPage.tsx` with a more engaging, mobile-friendly experience.
 

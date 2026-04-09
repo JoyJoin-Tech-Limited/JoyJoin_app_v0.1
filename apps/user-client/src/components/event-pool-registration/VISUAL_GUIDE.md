@@ -1,5 +1,7 @@
 # Event Pool Registration - Component Showcase
 
+> **Updated 2026-04-07 / supplementary only.** This guide is maintained only as a component-level visual companion for `JoinEventPoolSheet`. Flow ownership and canonical behavior still live in `DEVELOPER_QUICK_REFERENCE.md` plus the matching docs, so treat this file as illustrative rather than source-of-truth.
+
 ## 🎨 Visual Component Guide
 
 ### Step 1: Budget Selection
@@ -159,7 +161,7 @@
 **Visual Layout (Step 1)**:
 ```
 ┌─────────────────────────────────────┐
-│  [       确认报名        ]          │  ← Primary CTA
+│  [    确认加入活动池      ]          │  ← Primary CTA
 │                                     │
 └─────────────────────────────────────┘
 ```
@@ -167,18 +169,18 @@
 **Visual Layout (Step 2-3)**:
 ```
 ┌─────────────────────────────────────┐
-│  [       确认报名        ]          │  ← Primary CTA
+│  [    确认加入活动池      ]          │  ← Primary CTA
 │                                     │
-│  [← 返回修改]  [💾 稍后继续]         │  ← Secondary
+│  [← 返回调整]  [💾 下次再来]         │  ← Secondary
 └─────────────────────────────────────┘
 ```
 
 **Visual Layout (Step 3 only)**:
 ```
 ┌─────────────────────────────────────┐
-│  [       确认报名        ]          │  ← Primary CTA
+│  [    确认加入活动池      ]          │  ← Primary CTA
 │                                     │
-│  [← 返回修改]  [跳过可选项 →]        │  ← Secondary
+│  [← 返回调整]  [跳过可选项 →]        │  ← Secondary
 └─────────────────────────────────────┘
 ```
 
@@ -197,14 +199,14 @@
            ╚═══════╝
          ⟨   rings   ⟩  ← Pulsing waves
     
-    🎉 报名成功！
-    AI正在为您匹配最适合的小组
+    已成功加入活动池
+    条件满足后，系统将从活动池中为你匹配成桌
     
     ┌─────────────────────────────┐
-    │    查看我的活动               │
+    │    查看匹配状态               │
     └─────────────────────────────┘
     
-    5秒后自动跳转 ● ● ●
+    5秒后自动收起 / 交由上层处理 ● ● ●
 ```
 
 **Animations**:
@@ -313,38 +315,39 @@
 ```
 1. User sees event card on DiscoverPage
    ↓
-2. Clicks "立即参与" button
+2. Taps the discovery CTA ("来凑这顿饭" / "来凑这局酒")
    ↓
 3. Sheet opens with spring animation (300ms)
    ↓
-4. Step 1: Budget Selection
+4. Step 1: Budget / Atmosphere Selection
    - Xiaoyue speech bubble appears
-   - User selects budget
+   - User selects budget (or the atmosphere-framing variant maps to the same budget signal)
    - Confetti burst!
    - Auto-advance after 600ms
    - Mascot appears: "太棒了！继续加油 🎉"
    ↓
-5. Step 2: Social Goals
-   - User toggles goals or flexible mode
-   - Match preview updates
-   - User clicks "确认报名" (or Back to edit)
+5. Step 2: Social Goals / Primary Goal
+   - User sets social goals (or uses the primary-goal experiment variant)
+   - Registration framing stays at the pool layer
+   - User can continue or go back
    ↓
 6. Step 3: Smart Defaults & Preferences
    - Smart defaults pre-filled
    - User can customize or skip
    - Event-specific preferences (optional)
-   - User clicks "确认报名"
+   - Trust explainer appears before submit
+   - User clicks "确认加入活动池"
    ↓
-7. Loading: "AI匹配中..."
+7. Loading: "正在提交报名…"
    ↓
 8. Success Celebration
    - Confetti explosion!
-   - Checkmark animation
+   - Lock/rings animation
    - Pulsing rings
-   - "🎉 报名成功！"
+   - "已成功加入活动池"
    - 5-second countdown
    ↓
-9. Auto-redirect to /events
+9. Sheet closes / hands off to higher-level matching-status ownership
 ```
 
 ---

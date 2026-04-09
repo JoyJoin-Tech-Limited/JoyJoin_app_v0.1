@@ -42,12 +42,15 @@ GET /api/auth/user
 
 All active onboarding pages live under `apps/user-client/src/features/onboarding/active/pages/`.
 
+Pre-auth entry into the active flow is `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`. After auth, `nextStep` becomes the only authority for onward routing.
+
 ## Server-owned completion semantics
 
 - Completion flags (`hasCompletedPersonalityTest`, `hasCompletedInterestsCarousel`, `hasSeenProfileReview`, etc.) are set server-side via API calls
 - `profileEssentialComplete` is not a persisted `users` table flag — it is a server-computed completion signal returned by `/api/auth/user`
 - The client must not set these flags locally or compute its own onboarding position
 - After each step completes, re-fetch `/api/auth/user` and use the updated `nextStep`
+- `hasCompletedPersonalityTest` should only become true after the adaptive phase ends and both universal closing questions (`Q_PLAYFUL_SLIDER`, `Q_PLAYFUL_EMOJI`) have been answered
 
 ## Legacy quarantine
 

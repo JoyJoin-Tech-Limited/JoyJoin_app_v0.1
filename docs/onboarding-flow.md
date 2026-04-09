@@ -1,6 +1,6 @@
 # JoyJoin User Onboarding Flow
 
-## Overview (Updated 2026-04-01)
+## Overview (Updated 2026-04-07)
 
 JoyJoin uses a **value-first** onboarding approach:
 
@@ -46,7 +46,7 @@ Essential Data → Extended Data → Profile Review → Discover Page
 - Anonymous session ID generated: `crypto.randomUUID()`
 - Answers saved to localStorage: `joyjoin_v4_presignup_answers`
 - No backend submission until login
-- **Back button is hidden** (`showBack={false}`) — no mid-test navigation to the landing page
+- **Back button stays available** — it rewinds through the local answered-question history for read-only review, and only exits to the landing page when the user is at the start with no earlier answers to review
 - The question range is server-configured (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) and termination is determined by `shouldTerminate()` in `packages/shared/src/personality/adaptiveEngine.ts`. After the adaptive phase terminates, **`Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are always presented to every user** as universal closing questions (served by `isAssessmentComplete()` in `adaptiveEngine.ts`). The full assessment is complete — and the final result is generated — only after both questions have been answered.
 
 **Why This Works:**

@@ -1,5 +1,7 @@
 # Event Pool Registration Bottom Sheet
 
+> **Updated 2026-04-07 / still non-canonical.** This file is retained as a component-level companion, but the source of truth for active blind-pool behavior is `DEVELOPER_QUICK_REFERENCE.md` plus the matching docs. The current user flow is pool-first: discovery card → optional `PreJoinVibeBriefSheet` → `JoinEventPoolSheet`; success means "joined the pool", while waiting / reveal ownership lives outside this file.
+
 ## Overview
 A playful, funky bottom sheet component with Duolingo-style animations and progressive disclosure for event pool registration. This replaces the full-page `EventPoolRegistrationPage.tsx` with a more engaging, mobile-friendly experience.
 
@@ -26,8 +28,10 @@ apps/user-client/src/
 │   ├── FooterActions.tsx               # Navigation buttons
 │   ├── SuccessCelebration.tsx          # Final celebration
 │   ├── steps/
-│   │   ├── BudgetSelectionStep.tsx     # Step 1: Budget
-│   │   ├── SocialGoalsStep.tsx         # Step 2: Social goals
+│   │   ├── BudgetSelectionStep.tsx     # Step 1 default: budget
+│   │   ├── AtmosphereSelectionStep.tsx # Step 1 experiment: atmosphere framing
+│   │   ├── SocialGoalsStep.tsx         # Step 2 default: social goals
+│   │   ├── PrimaryGoalStep.tsx         # Step 2 experiment: primary-goal reframing
 │   │   ├── SmartDefaultsStep.tsx       # Step 3: Auto-filled prefs
 │   │   ├── DinnerPreferencesStep.tsx   # 饭局-specific
 │   │   └── BarPreferencesStep.tsx      # 酒局-specific
@@ -46,7 +50,7 @@ apps/user-client/src/
 ## Usage
 
 ### Basic Integration
-The sheet is already integrated into `BlindBoxEventCard`. Users can click "立即参与" to open it:
+The active user entry point is the discovery card CTA (`来凑这顿饭` / `来凑这局酒`), which can first route through `PreJoinVibeBriefSheet` before opening `JoinEventPoolSheet`:
 
 ```tsx
 // In BlindBoxEventCard.tsx
@@ -92,19 +96,21 @@ function MyComponent() {
 
 ## Flow Diagram
 
+> **Updated 2026-04-07** — Step 1 and Step 2 each have an experiment-backed alternate component, and the success state confirms pool entry rather than an immediate match or `/events` redirect.
+
 ```
-Step 1: Budget Selection
-  ├─ Display budget cards (2-4 options based on event type)
+Step 1: Budget / Atmosphere Selection
+  ├─ Display BudgetSelectionStep OR AtmosphereSelectionStep experiment
   ├─ User selects one budget
   ├─ Micro confetti burst on selection
   └─ Auto-advance to Step 2 (600ms delay)
       ├─ Mascot appears: "太棒了！继续加油 🎉"
       └─ Mascot auto-dismisses after 3s
 
-Step 2: Social Goals
-  ├─ Flexible mode toggle (随缘)
-  ├─ 5 social goal cards (multi-select)
-  ├─ Match preview card (shows estimated matches)
+Step 2: Social Goals / Primary Goal
+  ├─ Display SocialGoalsStep OR PrimaryGoalStep experiment
+  ├─ Goals can be prefilled from the user's profile intent
+  ├─ Registration-count framing stays at the pool layer
   └─ User clicks footer "Next" or auto-advances
 
 Step 3: Smart Defaults + Optional Preferences
@@ -115,16 +121,18 @@ Step 3: Smart Defaults + Optional Preferences
   ├─ Customization Panel (collapsible)
   │   ├─ District selector (by cluster)
   │   └─ Language badges
-  └─ Event-Type Specific Preferences
+  ├─ Event-Type Specific Preferences
       ├─ 饭局: Cuisines, Taste Intensity, Dietary Restrictions
       └─ 酒局: Bar Themes, Alcohol Comfort, Music Preference
+  └─ BlindPoolTrustExplainer appears before final submit
 
 Final: Success Celebration
   ├─ Confetti celebration (3-second burst)
-  ├─ Checkmark animation (elastic pop + rotation)
+  ├─ Lock/rings animation
   ├─ Pulsing rings (3 waves)
-  ├─ Countdown (5 seconds)
-  └─ Auto-redirect to /events
+  ├─ Copy: "已成功加入活动池"
+  ├─ CTA: "查看匹配状态"
+  └─ Countdown closes / hands off from the sheet; matching-status ownership is outside this component
 ```
 
 ## API Integration
@@ -178,7 +186,7 @@ POST /api/event-pools/:poolId/register
 1. Confetti: Multi-burst over 3 seconds (100 particles)
 2. Checkmark: Scale 0 → 1.3 → 1, rotate 360deg
 3. Pulsing rings: 3 waves expanding from center
-4. Text gradient wipe: "🎉 报名成功！"
+4. Text gradient wipe: "已成功加入活动池"
 
 ## State Management
 
@@ -242,11 +250,11 @@ BAR_OPTIONS.musicPreference (3 options)
 - [ ] Step 3: Customize districts/languages
 - [ ] Step 3: 饭局 preferences expand/collapse
 - [ ] Step 3: 酒局 preferences expand/collapse
-- [ ] Footer: "返回修改" goes to previous step
-- [ ] Footer: "稍后继续" saves draft
-- [ ] Footer: "确认报名" submits form
-- [ ] Success: Confetti plays, countdown works
-- [ ] Success: Auto-redirect to /events after 5s
+- [ ] Footer: "返回调整" goes to previous step
+- [ ] Footer: "下次再来" saves draft
+- [ ] Footer: "确认加入活动池" submits form
+- [ ] Success: Confirms pool entry rather than an immediate match
+- [ ] Success: CTA reads "查看匹配状态"
 - [ ] Draft: Reload page → draft restores
 - [ ] Accessibility: Keyboard navigation works
 - [ ] Accessibility: Screen reader announces states
