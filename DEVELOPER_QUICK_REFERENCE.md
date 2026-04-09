@@ -71,6 +71,7 @@ npm run dev
 ### Key Commands
 ```bash
 npm run build            # Build user-client, admin-client, and server workspaces
+npm run build:user       # Build only the user-client workspace
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
