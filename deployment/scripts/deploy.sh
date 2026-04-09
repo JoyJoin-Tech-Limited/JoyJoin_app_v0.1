@@ -22,7 +22,10 @@ if [[ -f "$ENV_FILE" ]]; then
     set +a
 fi
 
-: "${DATABASE_URL:?DATABASE_URL is required via environment or $ENV_FILE}"
+if [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "❌ DATABASE_URL is required via environment or $ENV_FILE"
+    exit 1
+fi
 
 echo "🚀 Deploying JoyJoin via self-managed Docker Compose ($ENVIRONMENT)..."
 echo "📦 Repo root: $REPO_ROOT"
@@ -59,7 +62,7 @@ API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${PORT:-5000}"
 sleep 10
 if ! curl -fsS "http://$API_HOST:$API_PORT/api/health" > /dev/null; then
-    echo "❌ Deployment completed but the API health check failed at http://$API_HOST:$API_PORT/api/health"
+    echo "❌ Deployment verification failed: API health check did not respond at http://$API_HOST:$API_PORT/api/health"
     echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
     exit 1
 fi

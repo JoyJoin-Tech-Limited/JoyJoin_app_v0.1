@@ -155,7 +155,8 @@ VITE_API_URL=https://api.yuejuapp.com
 ```bash
 cd ~/JoyJoin
 cp deployment/.env.production.example deployment/.env.production
-# 填入真实生产变量后：
+# 先把 deployment/.env.production 里的占位值全部替换成真实生产变量，
+# 尤其是 DATABASE_URL / SESSION_SECRET / WECHAT_SECRET 等，再执行：
 ./deployment/scripts/deploy.sh production
 ```
 
