@@ -55,8 +55,10 @@ echo "  Running schema push..."
 npx drizzle-kit push --config=apps/server/drizzle.config.ts
 
 echo "🏥 Step 3: Verify runtime health..."
+API_HOST="${API_HOST:-127.0.0.1}"
+API_PORT="${PORT:-5000}"
 sleep 10
-curl -fsS http://127.0.0.1:5000/api/health > /dev/null
+curl -fsS "http://$API_HOST:$API_PORT/api/health" > /dev/null
 
 echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
