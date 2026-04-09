@@ -44,7 +44,7 @@ Current platform symmetry is **yellow trending red**. `apps/user-client` already
   - Request/response DTOs for pricing, coupons, payments, and auth are **not** shared through a dedicated API contract module.
 - **Endpoint drift**
   - Shared and present on server: `/api/pricing`, `/api/user/coupons`, `/api/auth/wechat/login`, `/api/auth/wechat/login-with-test`, `/api/payments/miniprogram/create`, `/api/payments/status/:wechatOrderId`.
-  - Used by web but not found in active server code: `/api/coupons/validate`, `/api/event-packs/purchase`.
+  - Used by web but **not found during this audit** in active server route registrations: `/api/coupons/validate`, `/api/event-packs/purchase`.
   - Present on server but not used by either audited client payment flow as the primary path: `/api/payments/create`.
 
 ### State management symmetry
@@ -222,7 +222,7 @@ Adopt **Option A**. JoyJoin already has the right monorepo shape for shared cont
 Add the simplest cross-platform guardrails first:
 
 - `npm run typecheck`
-- `npm run build -w @joyjoin/user-client`
+- `npm run build:user`
 - `npm run build:weapp -w mini-program`
 
 Then add one lightweight CI rule: any PR touching payment/auth/contracts must prove both clients still compile.
