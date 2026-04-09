@@ -11,6 +11,7 @@ interface MicroChallengePhaseProps {
   challenge: MicroChallenge | null;
   completedBy: string[];
   userId: string;
+  phaseStartedAt: number;
   onComplete: () => Promise<void>;
   onAdvance: () => void;
   isAdvancing: boolean;
@@ -60,6 +61,7 @@ export function MicroChallengePhase({
   challenge,
   completedBy,
   userId,
+  phaseStartedAt,
   onComplete,
   onAdvance,
   isAdvancing,
@@ -70,16 +72,18 @@ export function MicroChallengePhase({
 
   useEffect(() => {
     if (!challenge) return;
-    setSecondsLeft(challenge.durationSeconds);
+    const calculateSecondsLeft = () =>
+      Math.max(0, Math.ceil((phaseStartedAt + challenge.durationSeconds * 1000 - Date.now()) / 1000));
+    setSecondsLeft(calculateSecondsLeft());
     setHasCompleted(false);
-  }, [challenge?.id]);
+  }, [challenge?.id, challenge?.durationSeconds, phaseStartedAt]);
 
   useEffect(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (secondsLeft <= 0) return;
+    if (!challenge || secondsLeft <= 0) return;
     intervalRef.current = setInterval(() => {
-      setSecondsLeft(prev => {
-        const next = Math.max(0, prev - 1);
+      setSecondsLeft(() => {
+        const next = Math.max(0, Math.ceil((phaseStartedAt + challenge.durationSeconds * 1000 - Date.now()) / 1000));
         if (next === 0 && intervalRef.current) {
           clearInterval(intervalRef.current);
         }
@@ -90,7 +94,7 @@ export function MicroChallengePhase({
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [challenge?.id]);
+  }, [challenge?.id, challenge?.durationSeconds, phaseStartedAt]);
 
   useEffect(() => {
     if (completedBy.includes(userId)) {
@@ -100,6 +104,8 @@ export function MicroChallengePhase({
 
   const completedCount = completedBy.length;
   const totalCount = participants.length;
+  const timerExpired = secondsLeft <= 0;
+  const everyoneCompleted = completedCount >= totalCount;
 
   if (!challenge) {
     return (
@@ -178,10 +184,10 @@ export function MicroChallengePhase({
         {isHost && (
           <button
             onClick={onAdvance}
-            disabled={isAdvancing}
+            disabled={isAdvancing || (!everyoneCompleted && !timerExpired)}
             className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
           >
-            {isAdvancing ? '切换中...' : '跳过这个挑战 →'}
+            {isAdvancing ? '切换中...' : everyoneCompleted || timerExpired ? '进入下一环节 →' : '等待大家完成或计时结束'}
           </button>
         )}
       </div>

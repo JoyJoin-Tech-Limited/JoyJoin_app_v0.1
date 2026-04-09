@@ -119,20 +119,21 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
         ▼
 [WARMUP PHASE]
   Host selects mood → POST .../topics (server generates shared warmupTopics list)
-  All clients see the same topic list; the host's UI drives topic rotation locally
-  (no per-topic server API — the host's client advances the local index)
+  Any player → POST .../warmup/ready once they are comfortable moving on
+  Host → POST .../warmup/next-topic once everyone is ready
   Any player → POST .../pulse-check { vibe: 1|2|3 }
         │
-        ▼ Host calls POST .../advance (phase advance, not per-topic navigation)
+  ▼ Host calls POST .../advance (phase advance, not per-topic navigation)
 [MICRO_CHALLENGE PHASE]
   Server auto-generates challenge on advance
   Each player → POST .../micro-challenge/complete
         │
-        ▼ Host calls POST .../advance (skipped if <3 players)
+        ▼ Host calls POST .../advance after everyone finishes or the timer expires (skipped if <3 players)
 [LIE_DETECTIVE PHASE]
   Each player → POST .../lie-detective/generate (AI creates 3 statements)
   All other players → POST .../lie-detective/vote
   isLie revealed server-side when all votes received
+  Host → POST .../lie-detective/next-player to move to the next player after reveal
         │
         ▼ Host calls POST .../advance
 [RECAP]
@@ -156,7 +157,9 @@ interface SocialSessionState {
   // Warmup phase
   warmupTopics?: SocialTopic[];
   currentTopicIndex?: number;
+  warmupReadyUserIds?: string[];
   selectedMood?: AtmosphereMood;
+  commonGroundCount?: number;
 
   // Micro-challenge phase
   currentChallenge?: MicroChallenge;
@@ -165,6 +168,8 @@ interface SocialSessionState {
   // Lie Detective phase
   lieDetectivePlayers?: LieDetectivePlayer[];
   currentLieDetectivePlayerIndex?: number;
+  lieDetectiveCompletedUserIds?: string[];
+  currentLieDetectiveReveal?: LieDetectiveReveal;
   votes?: LieDetectiveVote[];
 
   // Cross-phase
@@ -208,11 +213,14 @@ sessionJoinedUsers: Map<socialSessionId, Set<userId>>
 | `POST` | `/api/social-icebreaker/start` | any | Join or create session; first caller = host |
 | `GET` | `/api/social-icebreaker/:socialSessionId` | any | Poll state (every 3s); registers presence |
 | `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics |
+| `POST` | `/api/social-icebreaker/:socialSessionId/warmup/ready` | any | Mark whether the current player is ready to move on |
+| `POST` | `/api/social-icebreaker/:socialSessionId/warmup/next-topic` | host | Advance to the next shared warmup topic after mutual readiness |
 | `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase; auto-skips `lie_detective` if <3 players |
 | `POST` | `/api/social-icebreaker/:socialSessionId/pulse-check` | any | Submit vibe (1=cold, 2=warm, 3=fire) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/micro-challenge/complete` | any | Mark self as challenge done |
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/generate` | any | AI generates 3 statements (2 true, 1 lie) per user |
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/vote` | any | Vote on which statement is the lie; triggers reveal when all voted |
+| `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/next-player` | host | Advance to the next player after the current reveal resolves |
 | `GET` | `/api/social-icebreaker/:socialSessionId/recap` | any | Generates AI recap summary |
 
 ### Frontend Hook

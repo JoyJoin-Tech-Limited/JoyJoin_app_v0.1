@@ -20,6 +20,12 @@ interface UseSocialIcebreakerOptions {
   userId: string;
   displayName: string;
   eventType?: string;
+  participantProfile?: {
+    archetype?: string;
+    interests?: string[];
+    topicsHappy?: string[];
+    topicsAvoid?: string[];
+  };
 }
 
 export type IcebreakerErrorKind =
@@ -42,11 +48,14 @@ interface UseSocialIcebreakerReturn {
   /** True when the server returned SESSION_EXPIRED (410) for this session. */
   sessionExpired: boolean;
   startSession: () => Promise<void>;
-  fetchTopics: (mood: AtmosphereMood) => Promise<SocialTopic[]>;
+  fetchTopics: (mood: AtmosphereMood, options?: { avoidTopics?: string[] }) => Promise<SocialTopic[]>;
+  markWarmupReady: (ready?: boolean) => Promise<{ readyCount: number; allReady: boolean } | null>;
+  nextWarmupTopic: () => Promise<void>;
   advancePhase: () => Promise<void>;
   submitPulseCheck: (vibe: 1 | 2 | 3) => Promise<{ averageVibe: number; voteCount: number; allVoted: boolean } | null>;
   generateMyStatements: () => Promise<Array<{ index: number; text: string }>>;
   castVote: (targetUserId: string, statementIndex: number) => Promise<void>;
+  nextLieDetectivePlayer: () => Promise<void>;
   completeChallenge: () => Promise<void>;
   generateDiceChallenges: (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) => Promise<PersonalityDiceChallenge[]>;
   completeDiceChallenge: () => Promise<void>;
@@ -86,6 +95,7 @@ export function useSocialIcebreaker({
   userId,
   displayName,
   eventType,
+  participantProfile,
 }: UseSocialIcebreakerOptions): UseSocialIcebreakerReturn {
   const qc = useQueryClient();
   const storageKey = getSocialSessionStorageKey(sessionId);
@@ -223,13 +233,14 @@ export function useSocialIcebreaker({
   }, [sessionId, displayName, eventType, setAndCacheSocialSessionId]);
 
   const fetchTopics = useCallback(
-    async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
+    async (mood: AtmosphereMood, options?: { avoidTopics?: string[] }): Promise<SocialTopic[]> => {
       if (!socialSessionId) return [];
       try {
         const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/topics`, {
           mood,
           eventType,
           participantCount: state?.playerCount || 4,
+          avoidTopics: options?.avoidTopics,
         });
         const data = await res.json();
         qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
@@ -241,6 +252,32 @@ export function useSocialIcebreaker({
     },
     [socialSessionId, state?.playerCount, eventType, qc]
   );
+
+  const markWarmupReady = useCallback(
+    async (ready: boolean = true): Promise<{ readyCount: number; allReady: boolean } | null> => {
+      if (!socialSessionId) return null;
+      try {
+        const res = await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/warmup/ready`, { ready });
+        const data = await res.json();
+        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+        return { readyCount: data.readyCount, allReady: data.allReady };
+      } catch (e) {
+        setError(await classifyError(e));
+        return null;
+      }
+    },
+    [socialSessionId, qc]
+  );
+
+  const nextWarmupTopic = useCallback(async () => {
+    if (!socialSessionId) return;
+    try {
+      await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/warmup/next-topic`, {});
+      qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+    } catch (e) {
+      setError(await classifyError(e));
+    }
+  }, [socialSessionId, qc]);
 
   const advancePhase = useCallback(async () => {
     if (!socialSessionId || !state) return;
@@ -289,7 +326,11 @@ export function useSocialIcebreaker({
       const res = await apiRequest(
         'POST',
         `/api/social-icebreaker/${socialSessionId}/lie-detective/generate`,
-        { displayName }
+        {
+          displayName,
+          archetype: participantProfile?.archetype,
+          interests: participantProfile?.interests,
+        }
       );
       const data = await res.json();
       qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
@@ -298,7 +339,7 @@ export function useSocialIcebreaker({
       setError(await classifyError(e));
       return [];
     }
-  }, [socialSessionId, displayName, qc]);
+  }, [socialSessionId, displayName, participantProfile?.archetype, participantProfile?.interests, qc]);
 
   const castVote = useCallback(
     async (targetUserId: string, statementIndex: number) => {
@@ -315,6 +356,16 @@ export function useSocialIcebreaker({
     },
     [socialSessionId, qc]
   );
+
+  const nextLieDetectivePlayer = useCallback(async () => {
+    if (!socialSessionId) return;
+    try {
+      await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/lie-detective/next-player`, {});
+      qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+    } catch (e) {
+      setError(await classifyError(e));
+    }
+  }, [socialSessionId, qc]);
 
   const generateDiceChallenges = useCallback(
     async (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>): Promise<PersonalityDiceChallenge[]> => {
@@ -353,10 +404,13 @@ export function useSocialIcebreaker({
     sessionExpired,
     startSession,
     fetchTopics,
+    markWarmupReady,
+    nextWarmupTopic,
     advancePhase,
     submitPulseCheck,
     generateMyStatements,
     castVote,
+    nextLieDetectivePlayer,
     completeChallenge,
     generateDiceChallenges,
     completeDiceChallenge,
