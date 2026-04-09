@@ -13,11 +13,19 @@ export type SocialIcebreakerPhase =
 
 export type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
 
+export type SocialTopicDepthLevel = 1 | 2 | 3;
+export type SocialTopicPromptStyle = 'binary' | 'experiential' | 'reflective';
+export type SocialTopicSafety = 'gentle' | 'open' | 'reflective';
+
 export interface SocialTopic {
   id: string;
   question: string;
   mood: AtmosphereMood;
   emoji: string;
+  category?: string;
+  depthLevel?: SocialTopicDepthLevel;
+  promptStyle?: SocialTopicPromptStyle;
+  safety?: SocialTopicSafety;
 }
 
 export interface MicroChallenge {
@@ -63,6 +71,14 @@ export interface PulseCheckResult {
   vibe: 1 | 2 | 3; // 1=cold, 2=warm, 3=fire
 }
 
+export interface LieDetectiveReveal {
+  targetUserId: string;
+  lieIndex: number;
+  voteCount: number;
+  correctVoteCount: number;
+  revealedAt: number;
+}
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
@@ -84,12 +100,16 @@ export interface SocialSessionState {
   warmupTopics?: SocialTopic[];
   warmupTopicsMeta?: AIResponseMeta;
   currentTopicIndex?: number;
+  warmupReadyUserIds?: string[];
   selectedMood?: AtmosphereMood;
+  commonGroundCount?: number;
   currentChallenge?: MicroChallenge;
   currentChallengeMeta?: AIResponseMeta;
   challengeCompletedBy?: string[];
   lieDetectivePlayers?: LieDetectivePlayer[];
   currentLieDetectivePlayerIndex?: number;
+  lieDetectiveCompletedUserIds?: string[];
+  currentLieDetectiveReveal?: LieDetectiveReveal;
   votes?: LieDetectiveVote[];
   pulseChecks?: PulseCheckResult[];
   // PersonalityDice phase data

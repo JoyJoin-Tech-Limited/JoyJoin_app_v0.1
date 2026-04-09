@@ -42,6 +42,9 @@ export function cleanupPhaseStateForNextPhase(
   completedPhase: SocialIcebreakerPhase,
 ): void {
   switch (completedPhase) {
+    case 'warmup':
+      state.warmupReadyUserIds = undefined;
+      return;
     case 'micro_challenge':
       state.currentChallenge = undefined;
       return;
@@ -55,6 +58,8 @@ export function cleanupPhaseStateForNextPhase(
       }
       state.votes = undefined;
       state.currentLieDetectivePlayerIndex = undefined;
+      state.currentLieDetectiveReveal = undefined;
+      state.lieDetectiveCompletedUserIds = undefined;
       return;
     case 'personality_dice':
       state.personalityDiceChallenges = undefined;
