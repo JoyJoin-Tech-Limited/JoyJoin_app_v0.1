@@ -6059,6 +6059,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formatted: PricingPlan[] = settings.map((s) => ({
         id: s.id,
         planType: s.planType,
+        name: s.displayName,
+        nameEn: s.displayNameEn,
         displayName: s.displayName,
         displayNameEn: s.displayNameEn,
         description: s.description,

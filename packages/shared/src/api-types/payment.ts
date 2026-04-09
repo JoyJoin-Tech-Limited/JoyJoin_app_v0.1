@@ -3,6 +3,8 @@ export type PaymentPlanKey = 'vip_monthly' | 'vip_quarterly';
 export interface PricingPlan {
   id: string;
   planType: string;
+  name?: string;
+  nameEn?: string | null;
   displayName: string;
   displayNameEn?: string | null;
   description?: string | null;

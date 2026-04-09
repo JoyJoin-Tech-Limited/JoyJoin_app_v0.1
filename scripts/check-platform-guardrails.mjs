@@ -40,6 +40,8 @@ function readFile(file) {
 
 function findInlineApiTypeViolations(files) {
   const violations = [];
+  // Lightweight rollout: only block inline contracts that follow the repo's
+  // coordinated *Request/*Response naming convention for staged payment/auth work.
   const inlineApiTypePattern = /(?:interface|type)\s+\w+(?:Request|Response)\b/g;
 
   for (const file of files) {
