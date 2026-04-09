@@ -98,12 +98,12 @@ function hydrateDerivedState(state: SocialSessionState): SocialSessionState {
   return state;
 }
 
-function uniqueUserCount(userIds?: string[]): number {
+function getUniqueUserCount(userIds?: string[]): number {
   return new Set(userIds || []).size;
 }
 
 function hasAllRosterParticipantsResponded(userIds: string[] | undefined, playerCount: number): boolean {
-  return uniqueUserCount(userIds) >= playerCount;
+  return getUniqueUserCount(userIds) >= playerCount;
 }
 
 function getMicroChallengeDeadlineMs(state: SocialSessionState): number | null {
@@ -111,12 +111,8 @@ function getMicroChallengeDeadlineMs(state: SocialSessionState): number | null {
   return state.phaseStartedAt + state.currentChallenge.durationSeconds * 1000;
 }
 
-function countCompletedWarmupTopics(state: SocialSessionState): number {
-  return Math.max(0, state.commonGroundCount || 0);
-}
-
 function incrementCommonGround(state: SocialSessionState): void {
-  state.commonGroundCount = countCompletedWarmupTopics(state) + 1;
+  state.commonGroundCount = Math.max(0, state.commonGroundCount || 0) + 1;
 }
 
 function getCurrentLieDetectivePlayer(state: SocialSessionState): LieDetectivePlayer | null {

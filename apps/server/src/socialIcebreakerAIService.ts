@@ -28,15 +28,23 @@ const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v1';
 const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v1';
 
 function normalizeTopicDepthLevel(value: unknown): SocialTopicDepthLevel {
-  return value === 3 ? 3 : value === 2 ? 2 : 1;
+  if (value === 3) return 3;
+  if (value === 2) return 2;
+  return 1;
 }
 
 function normalizeTopicPromptStyle(value: unknown): SocialTopicPromptStyle {
-  return value === 'binary' || value === 'reflective' ? value : 'experiential';
+  if (value === 'binary' || value === 'reflective') {
+    return value;
+  }
+  return 'experiential';
 }
 
 function normalizeTopicSafety(value: unknown): SocialTopicSafety {
-  return value === 'open' || value === 'reflective' ? value : 'gentle';
+  if (value === 'open' || value === 'reflective') {
+    return value;
+  }
+  return 'gentle';
 }
 
 function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: AtmosphereMood, index: number): SocialTopic {
