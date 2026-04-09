@@ -60,6 +60,27 @@ export async function apiRequest<T>(options: {
   throw createApiError(message, response.statusCode, response.data)
 }
 
+export type OnboardingStep =
+  | 'onboarding'
+  | 'personality-test'
+  | 'essential-data'
+  | 'extended-data'
+  | 'profile-review'
+  | 'guide'
+  | 'discover'
+
+export interface UserState {
+  id: number
+  wechatOpenId: string
+  nextStep: OnboardingStep
+  [key: string]: unknown
+}
+
+/**
+ * Authenticate via WeChat Mini Program login (Taro.login → code2Session).
+ * Returns the authenticated user and their openid.
+ * No web OAuth redirect is involved — this is mini-program-only.
+ */
 export async function authenticateMiniProgramUser(): Promise<{ user: Record<string, any>; openid: string }> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
@@ -82,4 +103,12 @@ export async function authenticateMiniProgramUser(): Promise<{ user: Record<stri
     user: data.user,
     openid: data.user.wechatOpenId,
   }
+}
+
+/**
+ * Fetch the current authenticated user's state, including the server-calculated
+ * `nextStep` for driving onboarding/post-login navigation.
+ */
+export async function getUserState(): Promise<UserState> {
+  return apiRequest<UserState>({ path: '/api/auth/user' })
 }

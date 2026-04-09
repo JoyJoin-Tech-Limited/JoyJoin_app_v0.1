@@ -1,5 +1,10 @@
 /**
- * useWeChatLogin – shared hook for triggering WeChat OAuth login directly.
+ * useWeChatLogin – WeChat login hook for the `apps/user-client` H5/web app.
+ *
+ * ⚠️  NOTE: The **active mini-program** (Taro WeChat Mini Program) lives under
+ * `apps/mini-program` and uses its own `useWeChatLogin` hook that calls
+ * `Taro.login()` directly — no web OAuth redirect is involved there.
+ * This hook is for the H5/web client only.
  *
  * Code-acquisition strategy (see `getWeChatCode` below):
  *   1. wx.login() when the WeChat Mini Program global `wx` is available.
@@ -7,9 +12,6 @@
  *      browser environments. The page navigates away; the server callback handles session
  *      creation and redirects back to the frontend.
  *   3. Mock UUID fallback in local development (server accepts these in dev mode).
- *
- * @taroMigration To migrate to Taro, update only `getWeChatCode()` — the hook
- *   itself requires no changes.
  *
  * On success:
  *   - New users  → redirected to `/personality-test` (onboarding flow).
@@ -45,13 +47,8 @@ interface WxLoginResult {
  *      The returned Promise intentionally never resolves because the page navigates away;
  *      the server-side callback at `/api/auth/wechat/oauth/callback` takes over.
  *
- * @taroMigration Replace the entire body of this function with:
- *   ```ts
- *   import Taro from '@tarojs/taro';
- *   const result = await Taro.login();
- *   return result.code;
- *   ```
- *   No other changes are needed anywhere in this file.
+ * This is an H5/web-only function. The Taro mini-program auth is handled separately
+ * in `apps/mini-program/src/hooks/useWeChatLogin.ts` via `Taro.login()`.
  */
 async function getWeChatCode(): Promise<string> {
   // 1. Mini Program runtime: use wx.login()
@@ -76,10 +73,8 @@ async function getWeChatCode(): Promise<string> {
   // The server callback at /api/auth/wechat/oauth/callback handles session creation
   // and redirects back to the frontend — this Promise never resolves.
   //
-  // @taroMigration Replace this block with:
-  //   import Taro from '@tarojs/taro';
-  //   const result = await Taro.login();
-  //   return result.code;
+  // NOTE: The Taro mini-program uses Taro.login() directly in
+  // apps/mini-program/src/hooks/useWeChatLogin.ts — no web OAuth is involved there.
   console.log('[useWeChatLogin] Initiating WeChat OAuth2 web flow');
   window.location.href = '/api/auth/wechat/oauth/start';
   return new Promise<string>(() => {}); // page navigates away; never resolves
