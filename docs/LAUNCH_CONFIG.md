@@ -171,7 +171,7 @@ header.
 | `GET /api/readyz` | Readiness check — returns `200 { status: "ready" }` when DB connectivity and critical config are valid. Returns `503 { status: "not_ready", checks: { database, config } }` on failure. |
 | `GET /readyz` | Redirects to `/api/readyz`. |
 
-Use `/api/readyz` in deployment orchestrators (Fly.io, Kubernetes, Railway) to
+Use `/api/readyz` in deployment orchestrators (for example the current SSH + Docker Compose + Caddy deployment, Kubernetes, or Railway) to
 gate traffic. The `HEALTHCHECK` in `apps/server/Dockerfile` already points at
 `/api/health`.
 
