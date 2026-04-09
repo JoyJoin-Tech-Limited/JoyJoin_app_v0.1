@@ -10,6 +10,20 @@ export interface ApiError extends Error {
   data?: unknown
 }
 
+function getApiErrorMessage(statusCode: number, data: unknown): string {
+  if (typeof data === 'object' && data !== null) {
+    if ('error' in data && typeof (data as Record<string, unknown>).error === 'string') {
+      return String((data as Record<string, unknown>).error)
+    }
+
+    if ('message' in data && typeof (data as Record<string, unknown>).message === 'string') {
+      return String((data as Record<string, unknown>).message)
+    }
+  }
+
+  return `Request failed with status ${statusCode}`
+}
+
 function buildApiUrl(path: string): string {
   if (/^https?:\/\//.test(path)) {
     return path
@@ -49,15 +63,11 @@ export async function apiRequest<T>(options: {
     return response.data
   }
 
-  const message =
-    typeof response.data === 'object' &&
-    response.data !== null &&
-    'error' in response.data &&
-    typeof (response.data as Record<string, unknown>).error === 'string'
-      ? String((response.data as Record<string, unknown>).error)
-      : `Request failed with status ${response.statusCode}`
-
-  throw createApiError(message, response.statusCode, response.data)
+  throw createApiError(
+    getApiErrorMessage(response.statusCode, response.data),
+    response.statusCode,
+    response.data
+  )
 }
 
 export type OnboardingStep =
@@ -70,7 +80,7 @@ export type OnboardingStep =
   | 'discover'
 
 export interface UserState {
-  id: number
+  id: string
   wechatOpenId: string
   nextStep: OnboardingStep
   // Index signature to accommodate the full user record returned by /api/auth/user
