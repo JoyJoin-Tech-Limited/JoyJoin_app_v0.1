@@ -215,9 +215,9 @@ This keeps post-payment verification, routing, and entitlement refresh debuggabl
 
 1. Extract shared payment DTOs and plan identifiers so both clients stop hardcoding divergent values.
 2. Fix the web payment route drift:
-   - align `planType` for `/api/subscription/renew`
-   - either implement `/api/coupons/validate` on the active server surface or remove/replace the client call
-   - either implement `/api/event-packs/purchase` on the active server surface or remove/replace the client call
+   - standardize `/api/subscription/renew` on `vip_monthly` / `vip_quarterly` at the client-facing contract so both clients and `/api/pricing` use the same plan IDs
+   - assign a payments owner before beta freeze for `/api/coupons/validate`, then either implement the endpoint on the active server surface or remove/replace the client call in the same sprint
+   - assign a payments owner before beta freeze for `/api/event-packs/purchase`, then either implement the endpoint on the active server surface or remove/replace the client call in the same sprint
 3. Move currency/price formatting into a shared utility instead of keeping Mini Program formatting inline.
 4. Introduce a shared payment verification state model so web and Mini Program converge on one post-payment story.
 5. Keep `user-client` buildable as the sandbox by smoke-testing it for every Mini Program payment/auth change.
@@ -232,6 +232,6 @@ Add the simplest cross-platform guardrails first:
 
 - `npm run typecheck`
 - `npm run build:user`
-- `npm run build:weapp -w mini-program`
+- `npm run build:weapp --workspace=mini-program`
 
 Then add one lightweight CI rule: any PR touching payment/auth/contracts must prove both clients still compile.
