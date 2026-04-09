@@ -217,7 +217,7 @@ JoyJoin runs the admin experience as a **separate frontend app** plus the shared
 
 1. Start the API server with `npm run dev:server`.
 2. Start the admin portal with `npm run dev:admin`.
-3. If you also want admin links from the user app to stay local, set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` before starting `npm run dev:user`.
+3. If you also want admin links from the user app to stay local, set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` (or export it before running `npm run dev:user`).
 4. Create an admin account if you have not done so already:
 
 ```bash
