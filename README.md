@@ -119,14 +119,14 @@ The repo uses the following environment variables in active local and optional f
 | Variable | Description | Required For |
 |----------|-------------|--------------|
 | `NODE_ENV` | Runtime mode; use `development` locally | Both |
-| `PORT` | API server port; recommended local API port is `5000` (set via `PORT`); default is `5001` when unset | Both |
+| `PORT` | API server port; recommended local value is `5000`; defaults to `5001` when unset | Both |
 | `APP_URL` | Base app URL used by some auth/payment flows | Both |
 | `DATABASE_URL` | PostgreSQL connection string | Both |
 | `SESSION_SECRET` | Express session secret; use a long random value | Both |
 | `WECHAT_APPID` | WeChat Mini Program App ID | Both |
 | `WECHAT_SECRET` | WeChat Mini Program secret | Both |
 | `ADMIN_CREATE_SECRET_KEY` | Secret required by the admin/user bootstrap CLIs and local dev tools | Dev bootstrap tooling (admin + user seed/bypass) |
-| `VITE_API_URL` | Optional/advanced: custom API base URL for frontend builds. Leave unset for normal local development so the Vite `/api` proxy defaults to `http://localhost:5000`; only set this for cross-origin setups when API-side CORS is explicitly enabled. | Both (optional advanced config) |
+| `VITE_API_URL` | Optional: custom API base URL for frontend builds. See note below for usage guidance. | Both (optional advanced config) |
 | `COOKIE_DOMAIN` | Cookie domain override; leave blank for localhost | Both (optional) |
 | `VITE_ADMIN_PORTAL_URL` | Where the user app redirects admin links; set `http://localhost:5002/admin` locally in `apps/user-client/.env.local` or via shell export before starting Vite | User app only |
 | `ENABLE_DEV_AUTH_TOOLS` | Enables non-production auth/debug helper routes | Both (optional local debugging) |
@@ -152,8 +152,10 @@ The repo uses the following environment variables in active local and optional f
 
 Template-only / legacy variables still present in `.env.example`:
 
-- `JWT_SECRET`: retained in the template for deployment/ops compatibility and secret-rotation guidance, but not referenced by the current local runtime path documented in this README
+- `JWT_SECRET`: retained in the template for deployment/ops compatibility and secret-rotation guidance, but not referenced by the current server codebase
 - `CORS_ORIGINS`: retained in the template from older setup guidance, but not consumed by the current API server code for local CORS handling
+
+`VITE_API_URL` guidance: leave it unset for normal local development so the Vite `/api` proxy keeps requests same-origin and points to `http://localhost:5000`. Only set it if you intentionally need a custom or cross-origin API target and have added API-side CORS support.
 
 > This repo does **not** use an `ADMIN_API_KEY` for normal admin requests. Admin access is session-based after logging in at `/api/admin/login`. `ADMIN_CREATE_SECRET_KEY` is for CLI bootstrap and local dev tooling only.
 
