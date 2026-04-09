@@ -60,12 +60,20 @@ npx drizzle-kit push --config=apps/server/drizzle.config.ts
 echo "🏥 Step 3: Verify runtime health..."
 API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${PORT:-5000}"
-sleep 10
-if ! curl -fsS "http://$API_HOST:$API_PORT/api/health" > /dev/null; then
-    echo "❌ Deployment verification failed: API health check did not respond at http://$API_HOST:$API_PORT/api/health"
-    echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
-    exit 1
-fi
+HEALTH_URL="http://$API_HOST:$API_PORT/api/health"
+for attempt in {1..10}; do
+    if curl -fsS "$HEALTH_URL" > /dev/null; then
+        break
+    fi
+
+    if [[ $attempt -eq 10 ]]; then
+        echo "❌ Deployment verification failed: API health check did not respond at $HEALTH_URL"
+        echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
+        exit 1
+    fi
+
+    sleep 5
+done
 
 echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
