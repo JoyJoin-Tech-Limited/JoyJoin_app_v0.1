@@ -9,7 +9,7 @@ import {
   users,
 } from "@shared/schema";
 import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export interface UsersRepository {
   getUser(id: string): Promise<User | undefined>;
@@ -45,7 +45,8 @@ export const usersRepo: UsersRepository = {
   },
 
   async getAllUsers(): Promise<User[]> {
-    return db.select().from(users);
+    const result = await db.execute(sql`SELECT * FROM users`);
+    return result.rows as unknown as User[];
   },
 
   async getUserByPhone(phoneNumber: string): Promise<User[]> {

@@ -142,6 +142,7 @@
 
   .headline {
     background: linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-size: clamp(26PX, 8vw, 36PX); /* clamp(26px, 8vw, 36px) */
@@ -247,4 +248,3 @@
     }
   }
 }
-
