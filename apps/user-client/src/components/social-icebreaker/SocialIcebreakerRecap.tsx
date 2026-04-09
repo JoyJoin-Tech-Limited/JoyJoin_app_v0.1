@@ -8,6 +8,7 @@ interface SocialIcebreakerRecapProps {
   socialSessionId: string;
   participants?: Array<{ userId: string; displayName: string; archetype?: string }>;
   durationMinutes?: number;
+  commonGroundCount?: number;
   onLeave: () => void;
   eventId?: string;
 }
@@ -29,6 +30,7 @@ export function SocialIcebreakerRecap({
   socialSessionId,
   participants,
   durationMinutes,
+  commonGroundCount = 0,
   onLeave,
   eventId,
 }: SocialIcebreakerRecapProps) {
@@ -81,6 +83,7 @@ export function SocialIcebreakerRecap({
           <div className="text-5xl mb-3">✨</div>
           <h2 className="text-3xl font-black">今晚的精彩回顾</h2>
           <p className="text-violet-300 mt-1 text-sm">{effectiveDuration} 分钟的破冰时光</p>
+          <p className="text-violet-400 mt-1 text-xs">今晚一共发现了 {commonGroundCount} 个共同点</p>
         </motion.div>
 
         {isLoading ? (

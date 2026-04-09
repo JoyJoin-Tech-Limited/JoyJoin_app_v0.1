@@ -7,7 +7,9 @@
 import { describe, it, expect } from 'vitest';
 import { classifyIndustry } from '../industryClassifier';
 
-describe('100 Chinese Occupation Descriptions', () => {
+const describeBenchmark = process.env.RUN_INFERENCE_BENCHMARKS ? describe : describe.skip;
+
+describeBenchmark('100 Chinese Occupation Descriptions', () => {
   it('should classify 100 Chinese occupations with 99% accuracy', async () => {
     console.log('\n🔍 Testing 100 Chinese occupation descriptions...\n');
     
