@@ -14,9 +14,17 @@ function nextStepToRoute(step: OnboardingStep): string {
   switch (step) {
     case 'discover':
       return '/pages/discover/index'
+    // Onboarding pages (personality-test, essential-data, extended-data,
+    // profile-review, guide) are not yet built in the mini-program.
+    // Until they are added, all non-discover steps fall back to the
+    // discover landing so the user is never left stranded.
+    case 'onboarding':
+    case 'personality-test':
+    case 'essential-data':
+    case 'extended-data':
+    case 'profile-review':
+    case 'guide':
     default:
-      // Onboarding pages are not yet available in the mini-program.
-      // Route to discover until they are built.
       return '/pages/discover/index'
   }
 }
@@ -52,7 +60,7 @@ export function useWeChatLogin() {
       Taro.reLaunch({ url: route })
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : '登录失败，请稍后重试'
+        error instanceof Error ? error.message : '微信登录失败，请检查网络连接后重试'
 
       logError('[useWeChatLogin] Login failed', { message })
 

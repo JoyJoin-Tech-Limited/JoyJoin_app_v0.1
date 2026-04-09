@@ -73,6 +73,8 @@ export interface UserState {
   id: number
   wechatOpenId: string
   nextStep: OnboardingStep
+  // Index signature to accommodate the full user record returned by /api/auth/user
+  // without requiring every field to be explicitly typed here.
   [key: string]: unknown
 }
 
