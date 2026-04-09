@@ -54,7 +54,7 @@ const MANUAL_OVERRIDES = new Map<string, SeedMatch>([
   ['法官', { category: 'government_public', segment: 'civil_service', confidence: 1.0 }],
   ['检察官', { category: 'government_public', segment: 'civil_service', confidence: 1.0 }],
   ['军人', { category: 'government_public', segment: 'civil_service', confidence: 1.0 }],
-  ['会计', { category: 'finance', segment: 'commercial_banking', confidence: 1.0 }],
+  ['会计', { category: 'professional_services', segment: 'consulting', confidence: 1.0 }],
   ['会计员', { category: 'finance', segment: 'commercial_banking', confidence: 1.0 }],
   ['出纳', { category: 'finance', segment: 'commercial_banking', confidence: 1.0 }],
   ['注册会计师', { category: 'finance', segment: 'commercial_banking', confidence: 1.0 }],

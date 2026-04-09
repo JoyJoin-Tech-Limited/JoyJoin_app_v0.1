@@ -306,6 +306,31 @@ describe('social icebreaker routes', () => {
     });
   });
 
+  it('rejects warmup readiness updates from authenticated non-participants', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'warmup-owner');
+      const outsiderCookie = await login(baseUrl, 'warmup-outsider');
+      const sessionId = `session-warmup-outsider-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const readyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: outsiderCookie },
+        body: JSON.stringify({ ready: true }),
+      });
+      const readyBody = await readyResponse.json() as any;
+
+      expect(readyResponse.status).toBe(403);
+      expect(readyBody.error).toContain('Not a participant');
+    });
+  });
+
   it('accepts guessedStatementIndex=0 in lie-detective votes', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'host');
@@ -493,6 +518,99 @@ describe('social icebreaker routes', () => {
       expect(nextPlayerResponse.status).toBe(200);
       expect(nextPlayerBody.currentLieDetectivePlayerIndex).toBe(1);
       expect(nextPlayerBody.currentPlayer.userId).toBe('guest-reveal-1');
+    });
+  });
+
+  it('waits for the full roster to generate lie-detective statements before accepting votes', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'host-vote-gate');
+      const guest1Cookie = await login(baseUrl, 'guest-vote-gate-1');
+      const guest2Cookie = await login(baseUrl, 'guest-vote-gate-2');
+      const sessionId = `session-vote-gate-${Date.now()}`;
+
+      await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
+        body: JSON.stringify({ sessionId, displayName: 'Guest 1' }),
+      });
+      const guest2StartResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest2Cookie },
+        body: JSON.stringify({ sessionId, displayName: 'Guest 2' }),
+      });
+      const { socialSessionId } = await guest2StartResponse.json() as { socialSessionId: string };
+
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ mood: 'relaxed' }),
+      });
+      for (const cookie of [hostCookie, guest1Cookie, guest2Cookie]) {
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie },
+          body: JSON.stringify({ ready: true }),
+        });
+      }
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ currentPhase: 'warmup' }),
+      });
+      for (const cookie of [hostCookie, guest1Cookie, guest2Cookie]) {
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/micro-challenge/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie },
+        });
+      }
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ currentPhase: 'micro_challenge' }),
+      });
+
+      for (const [cookie, displayName] of [
+        [hostCookie, 'Host'],
+        [guest1Cookie, 'Guest 1'],
+      ] as const) {
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie },
+          body: JSON.stringify({ displayName }),
+        });
+      }
+
+      const blockedVoteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
+        body: JSON.stringify({ targetUserId: 'host-vote-gate', guessedStatementIndex: 0 }),
+      });
+      const blockedVoteBody = await blockedVoteResponse.json() as any;
+
+      expect(blockedVoteResponse.status).toBe(400);
+      expect(blockedVoteBody.error).toContain('generate statements');
+
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest2Cookie },
+        body: JSON.stringify({ displayName: 'Guest 2' }),
+      });
+
+      const acceptedVoteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
+        body: JSON.stringify({ targetUserId: 'host-vote-gate', guessedStatementIndex: 0 }),
+      });
+      const acceptedVoteBody = await acceptedVoteResponse.json() as any;
+
+      expect(acceptedVoteResponse.status).toBe(200);
+      expect(acceptedVoteBody.isRevealed).toBe(false);
+      expect(acceptedVoteBody.votes).toHaveLength(1);
     });
   });
 

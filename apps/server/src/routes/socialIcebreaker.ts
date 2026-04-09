@@ -376,6 +376,11 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
   if (state.currentPhase !== 'warmup') {
     return res.status(400).json({ error: 'Not in warmup phase' });
   }
@@ -686,9 +691,7 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
       state.currentLieDetectivePlayerIndex = 0;
     }
     state.lieDetectiveCompletedUserIds = state.lieDetectiveCompletedUserIds || [];
-    if (!state.currentLieDetectiveReveal) {
-      state.currentLieDetectiveReveal = undefined;
-    }
+    state.currentLieDetectiveReveal = undefined;
     state.votes = state.votes || [];
     await updateSession(socialSessionId, state);
 
@@ -731,6 +734,10 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
     return res.status(400).json({ error: 'Votes are only allowed for the active lie-detective player' });
   }
 
+  if ((state.lieDetectivePlayers || []).length < state.playerCount) {
+    return res.status(400).json({ error: 'All participants must generate statements before voting begins' });
+  }
+
   if (state.currentLieDetectiveReveal?.targetUserId === targetUserId) {
     return res.json({
       votes: (state.votes || []).filter((v: LieDetectiveVote) => v.targetUserId === targetUserId),
@@ -752,8 +759,7 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
   state.votes = votes;
   await updateSession(socialSessionId, state);
 
-  const targetPlayers = state.lieDetectivePlayers || [];
-  const otherPlayerCount = targetPlayers.filter((p: LieDetectivePlayer) => p.userId !== targetUserId).length;
+  const otherPlayerCount = Math.max(0, state.playerCount - 1);
   const votesForTarget = votes.filter((v: LieDetectiveVote) => v.targetUserId === targetUserId).length;
   const isRevealed = votesForTarget >= otherPlayerCount && otherPlayerCount > 0;
 
