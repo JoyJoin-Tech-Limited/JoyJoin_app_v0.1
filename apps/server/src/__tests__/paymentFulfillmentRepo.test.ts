@@ -120,7 +120,9 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
         wechatOrderId: basePayment.wechatOrderId,
         transactionId: "wx_txn_002",
       }),
-    ).rejects.toThrow("Subscription subscription-1 not found for user user-1");
+    ).rejects.toThrow(
+      "Subscription subscription-1 does not exist or does not belong to user user-1",
+    );
   });
 
   it("applies event registration side effects exactly once when payment completes", async () => {

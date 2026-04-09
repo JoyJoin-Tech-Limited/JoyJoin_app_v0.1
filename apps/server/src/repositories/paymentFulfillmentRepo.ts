@@ -145,7 +145,7 @@ export const paymentFulfillmentRepo = {
 
         if (activatedSubscriptions.length === 0) {
           throw new Error(
-            `Subscription ${updatedPayment.relatedId} not found for user ${updatedPayment.userId}`,
+            `Subscription ${updatedPayment.relatedId} does not exist or does not belong to user ${updatedPayment.userId}`,
           );
         }
       } else if (updatedPayment.paymentType === "event" && updatedPayment.relatedId) {
