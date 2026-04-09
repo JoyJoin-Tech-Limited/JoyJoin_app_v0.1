@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import {
-  DEFAULT_API_ERROR_PREFIX,
   authenticateMiniProgramUser,
   getUserState,
   type ApiError,
@@ -67,22 +66,18 @@ export function useWeChatLogin() {
 
       Taro.reLaunch({ url: route })
     } catch (error) {
-      const apiError = error as ApiError | undefined
+      const typedError = error as ApiError | undefined
       let message = error instanceof Error ? error.message : '微信登录失败，请检查网络连接后重试'
 
-      if (apiError?.statusCode === 401) {
+      if (typedError?.statusCode === 401) {
         message = '登录状态已失效，请重新使用微信登录'
-      } else if (apiError?.statusCode === 500) {
+      } else if (typedError?.statusCode === 500) {
         message = '服务器开小差了，请稍后重试'
-      } else if (
-        apiError?.statusCode &&
-        apiError.statusCode >= 400 &&
-        message === `${DEFAULT_API_ERROR_PREFIX} ${apiError.statusCode}`
-      ) {
+      } else if (typedError?.statusCode && typedError.statusCode >= 400 && typedError.isGenericMessage) {
         message = '微信登录失败，请检查网络连接后重试'
       }
 
-      logError('[useWeChatLogin] Login failed', { message, statusCode: apiError?.statusCode })
+      logError('[useWeChatLogin] Login failed', { message, statusCode: typedError?.statusCode })
 
       Taro.showToast({
         title: message,
