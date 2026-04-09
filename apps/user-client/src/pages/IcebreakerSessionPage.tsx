@@ -375,12 +375,19 @@ export default function IcebreakerSessionPage() {
                   <SocialIcebreakerOrchestrator
                     sessionId={sessionId || ''}
                     userId={user?.id || ''}
-                    displayName={user?.displayName || '参与者'}
-                    eventType={sessionEventType}
-                    eventId={urlEventId ?? sessionData?.eventId ?? undefined}
-                    participants={(sessionData?.participants || []).map(p => ({ userId: p.userId, displayName: p.displayName, archetype: p.archetype || undefined }))}
-                    onEnd={handleLeave}
-                  />
+                     displayName={user?.displayName || '参与者'}
+                     eventType={sessionEventType}
+                     eventId={urlEventId ?? sessionData?.eventId ?? undefined}
+                     participants={(sessionData?.participants || []).map(p => ({
+                       userId: p.userId,
+                       displayName: p.displayName,
+                       archetype: p.archetype || undefined,
+                       interests: p.interests,
+                       topicsHappy: p.topicsHappy,
+                       topicsAvoid: p.topicsAvoid,
+                     }))}
+                     onEnd={handleLeave}
+                   />
                 ) : topicsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">

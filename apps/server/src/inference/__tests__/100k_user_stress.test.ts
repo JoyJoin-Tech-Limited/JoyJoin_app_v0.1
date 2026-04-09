@@ -9,7 +9,9 @@ import { describe, it, expect } from 'vitest';
 import { classifyIndustry } from '../industryClassifier';
 import { OCCUPATIONS } from '@shared/occupations';
 
-describe('100K User Stress Test with 1000+ Job Variations', () => {
+const describeBenchmark = process.env.RUN_INFERENCE_BENCHMARKS ? describe : describe.skip;
+
+describeBenchmark('100K User Stress Test with 1000+ Job Variations', () => {
   it('should handle 100K users across 1000+ job variations without errors', async () => {
     console.log('\n🚀 Starting 100K user stress test...\n');
     

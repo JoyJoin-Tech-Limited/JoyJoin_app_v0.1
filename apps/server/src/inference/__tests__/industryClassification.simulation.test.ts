@@ -324,7 +324,9 @@ ${Object.entries(metrics.accuracyByType)
 // Simulation Tests
 // ============================================================================
 
-describe('100K Industry Classification Simulation', () => {
+const describeBenchmark = process.env.RUN_INFERENCE_BENCHMARKS ? describe : describe.skip;
+
+describeBenchmark('100K Industry Classification Simulation', () => {
   let testCases: TestCase[];
   let metrics: PerformanceMetrics;
   

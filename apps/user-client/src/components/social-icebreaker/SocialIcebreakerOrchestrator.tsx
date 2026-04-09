@@ -24,7 +24,14 @@ interface SocialIcebreakerOrchestratorProps {
   displayName: string;
   eventType?: string;
   eventId?: string;
-  participants: Array<{ userId: string; displayName: string; archetype?: string }>;
+  participants: Array<{
+    userId: string;
+    displayName: string;
+    archetype?: string;
+    interests?: string[];
+    topicsHappy?: string[];
+    topicsAvoid?: string[];
+  }>;
   onEnd: () => void;
 }
 
@@ -78,17 +85,26 @@ export function SocialIcebreakerOrchestrator({
     isStarting,
     sessionExpired,
     fetchTopics,
+    markWarmupReady,
+    nextWarmupTopic,
     advancePhase,
     submitPulseCheck,
     generateMyStatements,
     castVote,
+    nextLieDetectivePlayer,
     completeChallenge,
     generateDiceChallenges,
     completeDiceChallenge,
     isAdvancing,
     error,
     clearError,
-  } = useSocialIcebreaker({ sessionId, userId, displayName, eventType });
+  } = useSocialIcebreaker({
+    sessionId,
+    userId,
+    displayName,
+    eventType,
+    participantProfile: participants.find((participant) => participant.userId === userId),
+  });
 
   const { speak, isMuted, toggleMute } = useXiaoyueTTS();
 
@@ -199,9 +215,20 @@ export function SocialIcebreakerOrchestrator({
   };
 
   const handleFetchTopics = async (mood: AtmosphereMood): Promise<SocialTopic[]> => {
-    const topics = await fetchTopics(mood);
+    const avoidTopics = Array.from(new Set(
+      participants.flatMap((participant) => participant.topicsAvoid || []).filter(Boolean)
+    ));
+    const topics = await fetchTopics(mood, { avoidTopics });
     setWarmupTopics(topics);
     return topics;
+  };
+
+  const handleWarmupReady = async (ready: boolean = true) => {
+    await markWarmupReady(ready);
+  };
+
+  const handleNextWarmupTopic = async () => {
+    await nextWarmupTopic();
   };
 
   const handleMoodVoteComplete = async (mood: AtmosphereMood | null) => {
@@ -348,7 +375,13 @@ export function SocialIcebreakerOrchestrator({
                 isHost={isHost}
                 participants={participants}
                 topics={currentTopics}
+                currentTopicIndex={state.currentTopicIndex ?? 0}
+                readyUserIds={state.warmupReadyUserIds || []}
+                currentUserId={userId}
+                commonGroundCount={state.commonGroundCount ?? 0}
                 onFetchTopics={handleFetchTopics}
+                onReadyChange={handleWarmupReady}
+                onNextTopic={handleNextWarmupTopic}
                 onAdvance={handleAdvancePhase}
                 isAdvancing={isAdvancing}
               />
@@ -371,6 +404,7 @@ export function SocialIcebreakerOrchestrator({
                 challenge={state.currentChallenge || null}
                 completedBy={state.challengeCompletedBy || []}
                 userId={userId}
+                phaseStartedAt={state.phaseStartedAt}
                 onComplete={completeChallenge}
                 onAdvance={handleAdvancePhase}
                 isAdvancing={isAdvancing}
@@ -395,8 +429,10 @@ export function SocialIcebreakerOrchestrator({
                 players={state.lieDetectivePlayers || []}
                 votes={state.votes || []}
                 currentPlayerIndex={state.currentLieDetectivePlayerIndex || 0}
+                currentReveal={state.currentLieDetectiveReveal || null}
                 onGenerateStatements={generateMyStatements}
                 onCastVote={castVote}
+                onNextPlayer={nextLieDetectivePlayer}
                 onAdvance={handleAdvancePhase}
                 isAdvancing={isAdvancing}
               />
@@ -471,6 +507,7 @@ export function SocialIcebreakerOrchestrator({
                 socialSessionId={socialSessionId || ''}
                 participants={participants}
                 durationMinutes={Math.max(1, Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000))}
+                commonGroundCount={state.commonGroundCount ?? 0}
                 onLeave={onEnd}
                 eventId={eventId}
               />

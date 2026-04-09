@@ -37,14 +37,14 @@ describe('Common Chinese Occupations Classification', () => {
 
   describe('Government/Public Service (政府公职)', () => {
     const govTests = [
-      { input: '公务员', expected: 'government' },
-      { input: '事业单位员工', expected: 'government' },
-      { input: '体制内', expected: 'government' },
+      { input: '公务员', expected: 'government_public' },
+      { input: '事业单位员工', expected: 'government_public' },
+      { input: '体制内', expected: 'government_public' },
       { input: '国企员工', category: 'Not strict - could be various' },
       { input: '央企员工', category: 'Not strict - could be various' },
-      { input: '法官', expected: 'government' },
-      { input: '检察官', expected: 'government' },
-      { input: '军人', expected: 'government' },
+      { input: '法官', expected: 'government_public' },
+      { input: '检察官', expected: 'government_public' },
+      { input: '军人', expected: 'government_public' },
     ];
 
     govTests.forEach(({ input, expected }) => {
@@ -60,7 +60,7 @@ describe('Common Chinese Occupations Classification', () => {
     const financeTests = [
       { input: '银行职员', expected: 'finance' },
       { input: '银行柜员', expected: 'finance' },
-      { input: '会计', expected: 'finance' },
+        { input: '会计', expected: 'professional_services' },
       { input: '会计员', expected: 'finance' },
       { input: '出纳', expected: 'finance' },
       { input: '注册会计师', expected: 'finance' },

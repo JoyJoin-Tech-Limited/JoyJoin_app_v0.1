@@ -4,6 +4,9 @@ import type {
   LieDetectiveStatement,
   AtmosphereMood,
   PersonalityDiceChallenge,
+  SocialTopicDepthLevel,
+  SocialTopicPromptStyle,
+  SocialTopicSafety,
 } from '@shared/socialIcebreaker';
 import {
   buildFallbackAIMeta,
@@ -24,34 +27,67 @@ const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
 const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v1';
 const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v1';
 
+function normalizeTopicDepthLevel(value: unknown): SocialTopicDepthLevel {
+  if (value === 3) return 3;
+  if (value === 2) return 2;
+  return 1;
+}
+
+function normalizeTopicPromptStyle(value: unknown): SocialTopicPromptStyle {
+  if (value === 'binary' || value === 'reflective') {
+    return value;
+  }
+  return 'experiential';
+}
+
+function normalizeTopicSafety(value: unknown): SocialTopicSafety {
+  if (value === 'open' || value === 'reflective') {
+    return value;
+  }
+  return 'gentle';
+}
+
+function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: AtmosphereMood, index: number): SocialTopic {
+  return {
+    id: topic.id || `topic_${index + 1}`,
+    question: topic.question || '分享一件让你会心一笑的小事',
+    mood: topic.mood || fallbackMood,
+    emoji: topic.emoji || '✨',
+    category: topic.category || '轻松开场',
+    depthLevel: normalizeTopicDepthLevel(topic.depthLevel),
+    promptStyle: normalizeTopicPromptStyle(topic.promptStyle),
+    safety: normalizeTopicSafety(topic.safety),
+  };
+}
+
 // ============ CURATED FALLBACK CONTENT ============
 
 const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
-  { id: 'w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜' },
-  { id: 'w2', question: '如果能把今天的一件事重来，你会改变什么？', mood: 'life', emoji: '🔄' },
-  { id: 'w3', question: '你手机里现在最奇怪的一张照片是什么？', mood: 'funny', emoji: '📱' },
-  { id: 'w4', question: '最近让你觉得"世界真小"的一次巧合？', mood: 'life', emoji: '🌍' },
-  { id: 'w5', question: '如果你的性格是一道菜，你是什么菜？', mood: 'funny', emoji: '🍽️' },
-  { id: 'w6', question: '你最近一次真正放松是什么时候？在哪里？', mood: 'relaxed', emoji: '😌' },
-  { id: 'w7', question: '如果明天不用工作，你最想做什么？', mood: 'relaxed', emoji: '🌟' },
-  { id: 'w8', question: '你最想和谁（活着或已故）共进一顿晚餐？', mood: 'emotional', emoji: '💫' },
-  { id: 'w9', question: '最近让你感动到的一个小细节是什么？', mood: 'emotional', emoji: '🥹' },
-  { id: 'w10', question: '你觉得自己哪个优点是被低估的？', mood: 'life', emoji: '💡' },
-  { id: 'w11', question: '描述一下你的理想周末是什么样的？', mood: 'relaxed', emoji: '☀️' },
-  { id: 'w12', question: '如果你能突然精通一门技能，你想要什么技能？', mood: 'funny', emoji: '🎯' },
-  { id: 'w13', question: '最近让你哈哈大笑的是什么？', mood: 'funny', emoji: '😂' },
-  { id: 'w14', question: '你小时候最想成为什么职业？现在还想吗？', mood: 'life', emoji: '👶' },
-  { id: 'w15', question: '如果你能给5年前的自己一句话，你会说什么？', mood: 'emotional', emoji: '⏰' },
-  { id: 'w16', question: '最近尝试过什么新事物，结果怎么样？', mood: 'life', emoji: '🚀' },
-  { id: 'w17', question: '你的"精神充电"方式是什么？', mood: 'relaxed', emoji: '🔋' },
-  { id: 'w18', question: '有什么事情看起来很难但实际上很容易？', mood: 'funny', emoji: '🤔' },
-  { id: 'w19', question: '什么样的环境让你感到最舒适？', mood: 'relaxed', emoji: '🏡' },
-  { id: 'w20', question: '你最想去但还没去过的地方是哪里？为什么？', mood: 'emotional', emoji: '✈️' },
-  { id: 'w21', question: '今晚来这里，你最期待的是什么？', mood: 'relaxed', emoji: '🎉' },
-  { id: 'w22', question: '用三个词描述你今天的心情？', mood: 'life', emoji: '💭' },
-  { id: 'w23', question: '你有什么"奇怪"的生活习惯不好意思承认的？', mood: 'funny', emoji: '🙈' },
-  { id: 'w24', question: '最近有没有什么让你改变看法的经历？', mood: 'emotional', emoji: '🌱' },
-  { id: 'w25', question: '如果你的生活是一部电影，现在是哪个章节？', mood: 'life', emoji: '🎬' },
+  { id: 'w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜', category: '生活趣事', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w2', question: '如果能把今天的一件事重来，你会改变什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w3', question: '你手机里现在最奇怪的一张照片是什么？', mood: 'funny', emoji: '📱', category: '轻松破冰', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w4', question: '最近让你觉得"世界真小"的一次巧合？', mood: 'life', emoji: '🌍', category: '偶遇故事', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w5', question: '如果你的性格是一道菜，你是什么菜？', mood: 'funny', emoji: '🍽️', category: '自我比喻', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w6', question: '你最近一次真正放松是什么时候？在哪里？', mood: 'relaxed', emoji: '😌', category: '舒适感', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w7', question: '如果明天不用工作，你最想做什么？', mood: 'relaxed', emoji: '🌟', category: '理想日常', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w8', question: '你最想和谁（活着或已故）共进一顿晚餐？', mood: 'emotional', emoji: '💫', category: '重要关系', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w9', question: '最近让你感动到的一个小细节是什么？', mood: 'emotional', emoji: '🥹', category: '感动瞬间', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w10', question: '你觉得自己哪个优点是被低估的？', mood: 'life', emoji: '💡', category: '自我认知', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w11', question: '描述一下你的理想周末是什么样的？', mood: 'relaxed', emoji: '☀️', category: '理想节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w12', question: '如果你能突然精通一门技能，你想要什么技能？', mood: 'funny', emoji: '🎯', category: '愿望清单', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w13', question: '最近让你哈哈大笑的是什么？', mood: 'funny', emoji: '😂', category: '快乐来源', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w14', question: '你小时候最想成为什么职业？现在还想吗？', mood: 'life', emoji: '👶', category: '成长轨迹', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w15', question: '如果你能给5年前的自己一句话，你会说什么？', mood: 'emotional', emoji: '⏰', category: '自我回望', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w16', question: '最近尝试过什么新事物，结果怎么样？', mood: 'life', emoji: '🚀', category: '新鲜体验', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w17', question: '你的"精神充电"方式是什么？', mood: 'relaxed', emoji: '🔋', category: '恢复能量', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w18', question: '有什么事情看起来很难但实际上很容易？', mood: 'funny', emoji: '🤔', category: '反差观察', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w19', question: '什么样的环境让你感到最舒适？', mood: 'relaxed', emoji: '🏡', category: '舒适空间', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w20', question: '你最想去但还没去过的地方是哪里？为什么？', mood: 'emotional', emoji: '✈️', category: '向往之地', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w21', question: '今晚来这里，你最期待的是什么？', mood: 'relaxed', emoji: '🎉', category: '现场期待', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w22', question: '用三个词描述你今天的心情？', mood: 'life', emoji: '💭', category: '情绪快照', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w23', question: '你有什么"奇怪"的生活习惯不好意思承认的？', mood: 'funny', emoji: '🙈', category: '可爱怪癖', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w24', question: '最近有没有什么让你改变看法的经历？', mood: 'emotional', emoji: '🌱', category: '观点变化', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w25', question: '如果你的生活是一部电影，现在是哪个章节？', mood: 'life', emoji: '🎬', category: '人生叙事', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
 ];
 
 const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
@@ -160,13 +196,14 @@ export async function generateWarmupTopics(params: {
     const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成5个${moodMap[params.mood]}类型的破冰话题。
     
 要求：
+- 话题深度要形成曲线：至少2个 Level 1 轻松开场、2个 Level 2 体验分享、1个 Level 3 温和反思
 - 话题要轻松有趣，适合初次见面
 - 每个话题一句话，不超过30字
 - 不要过于严肃或私人
 ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join('、')}` : ''}
 
 请以JSON格式返回，格式如下：
-[{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji"}]
+[{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}]
 
 直接返回JSON数组，不要其他内容。`;
 
@@ -190,7 +227,10 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
       console.log(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, WARMUP_TOPICS_PROMPT_VERSION);
       logAITrace({ domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
-      return { data: parsed.slice(0, 5), meta };
+      return {
+        data: parsed.slice(0, 5).map((topic, index) => normalizeSocialTopic(topic, params.mood, index)),
+        meta,
+      };
     }
     const latencyMs = Date.now() - t0;
     console.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
@@ -214,9 +254,9 @@ function getFallbackTopics(mood: AtmosphereMood): SocialTopic[] {
     const others = FALLBACK_WARMUP_TOPICS.filter(t => t.mood !== mood)
       .sort(() => Math.random() - 0.5)
       .slice(0, 5 - shuffled.length);
-    return [...shuffled, ...others];
+    return [...shuffled, ...others].map((topic, index) => normalizeSocialTopic(topic, mood, index));
   }
-  return shuffled.slice(0, 5);
+  return shuffled.slice(0, 5).map((topic, index) => normalizeSocialTopic(topic, mood, index));
 }
 
 export async function generateMicroChallenges(params: {
@@ -418,6 +458,7 @@ export async function generateRecapSummary(params: {
   participants: Array<{ displayName: string; archetype?: string }>;
   topicsDiscussed: string[];
   challengesCompleted: number;
+  commonGroundCount: number;
   lieDetectiveHighlights?: string[];
   durationMinutes: number;
 }): Promise<AIServiceResult<{ headline: string; moments: string[]; closingLine: string }>> {
@@ -429,6 +470,7 @@ export async function generateRecapSummary(params: {
 参与者：${params.participants.map(p => p.displayName).join('、')}
 讨论话题数：${params.topicsDiscussed.length}
 完成挑战数：${params.challengesCompleted}
+ 发现共同点：${params.commonGroundCount}
 活动时长：${params.durationMinutes}分钟
 ${params.lieDetectiveHighlights?.length ? `谎言侦探亮点：${params.lieDetectiveHighlights.join('、')}` : ''}
 
@@ -481,6 +523,7 @@ function getDefaultRecap(params: {
   participants: Array<{ displayName: string }>;
   topicsDiscussed: string[];
   challengesCompleted: number;
+  commonGroundCount: number;
   durationMinutes: number;
 }): { headline: string; moments: string[]; closingLine: string } {
   const names = params.participants.map(p => p.displayName);
@@ -489,6 +532,7 @@ function getDefaultRecap(params: {
     moments: [
       `聊了${params.topicsDiscussed.length}个有趣话题`,
       `完成了${params.challengesCompleted}个微挑战`,
+      `发现了${params.commonGroundCount}个共同点`,
       `${names.length}个人的新奇缘分`,
     ],
     closingLine: `感谢${names.slice(0, 2).join('和')}${names.length > 2 ? '等' : ''}大家的参与！期待下次再见 🌟`,
