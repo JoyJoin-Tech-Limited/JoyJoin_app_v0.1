@@ -5,31 +5,35 @@ ENVIRONMENT=${1:-production}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DEPLOY_DIR="$REPO_ROOT/deployment"
-ENV_FILE="$DEPLOY_DIR/.env.$ENVIRONMENT"
+ENV_FILE="$DEPLOY_DIR/.env.production"
 
-if [[ "$ENVIRONMENT" != "production" && "$ENVIRONMENT" != "staging" ]]; then
+if [[ "$ENVIRONMENT" != "production" ]]; then
     echo "❌ Invalid environment: $ENVIRONMENT"
-    echo "Usage: ./deployment/scripts/deploy.sh [production|staging]"
+    echo "Usage: ./deployment/scripts/deploy.sh production"
+    echo "   The current Docker Compose + Caddy stack is production-only; staging needs its own compose/env/domain setup."
     exit 1
 fi
 
 cd "$REPO_ROOT"
 
-if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$ENV_FILE"
-    set +a
-fi
-
-if [[ -z "${DATABASE_URL:-}" ]]; then
-    echo "❌ DATABASE_URL is required via environment or $ENV_FILE"
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "❌ Missing required runtime env file: $ENV_FILE"
     exit 1
 fi
 
+if ! grep -Eq '^DATABASE_URL=' "$ENV_FILE"; then
+    echo "❌ $ENV_FILE must define DATABASE_URL so Docker Compose and migrations target the same database"
+    exit 1
+fi
+
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
 echo "🚀 Deploying JoyJoin via self-managed Docker Compose ($ENVIRONMENT)..."
 echo "📦 Repo root: $REPO_ROOT"
-echo "🗄️  Database target: external PostgreSQL from DATABASE_URL"
+echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
 
 echo "🐳 Step 1: Rebuild and restart containers..."
 cd "$DEPLOY_DIR"
@@ -64,8 +68,8 @@ echo "  Running schema push..."
 npx drizzle-kit push --config=apps/server/drizzle.config.ts
 
 echo "🏥 Step 3: Verify runtime health..."
-API_HOST="${API_HOST:-127.0.0.1}"
-API_PORT="${PORT:-5000}"
+API_HOST="127.0.0.1"
+API_PORT="5000"
 HEALTH_URL="http://$API_HOST:$API_PORT/api/health"
 MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
 HEALTH_CHECK_RETRY_DELAY_SECONDS="${HEALTH_CHECK_RETRY_DELAY_SECONDS:-5}"

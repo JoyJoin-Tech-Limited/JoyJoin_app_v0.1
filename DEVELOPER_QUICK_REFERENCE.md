@@ -81,7 +81,7 @@ npm run db:studio        # Open Drizzle Studio (database GUI)
 
 ### Production deployment topology
 
-- Active production deploys run from `.github/workflows/cicd.yml`: GitHub Actions SSHes to `SERVER_IP`, resets the repo on the remote host, then runs `docker compose -f deployment/docker-compose.caddy.yml up -d --build --remove-orphans` from `/deployment`.
+- Active production deploys run from `.github/workflows/cicd.yml`: GitHub Actions SSHes to `SERVER_IP`, resets the repo on the remote host, runs `cd ~/JoyJoin/deployment`, then runs `docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans`.
 - The public edge is the self-managed remote server plus `deployment/Caddyfile` (`yuejuapp.com`, `www.yuejuapp.com`, `admin.yuejuapp.com`, `api.yuejuapp.com`). This is the active production path; do not revive old Fly.io deployment assumptions in active docs or scripts.
 - The app runtime still requires `DATABASE_URL`, but the repository does **not** provision PostgreSQL on the remote host (`deployment/docker-compose.caddy.yml` has no DB service and no `5432` mapping). Current deployment expects an external PostgreSQL instance via `DATABASE_URL`.
 
