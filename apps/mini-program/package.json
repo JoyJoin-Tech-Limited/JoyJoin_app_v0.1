@@ -29,7 +29,9 @@
     "dev:rn": "npm run build:rn -- --watch",
     "dev:qq": "npm run build:qq -- --watch",
     "dev:jd": "npm run build:jd -- --watch",
-    "dev:harmony-hybrid": "npm run build:harmony-hybrid -- --watch"
+    "dev:harmony-hybrid": "npm run build:harmony-hybrid -- --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "npm run typecheck"
   },
   "browserslist": [
     "defaults and fully supports es6-module",
@@ -55,7 +57,8 @@
     "@tarojs/shared": "4.1.11",
     "@tarojs/taro": "4.1.11",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "@joyjoin/shared": "^1.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.4",

@@ -1,31 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
+import {
+  NEXT_STEP_VALUES,
+  type AuthUser,
+  type NextStepType,
+} from "@joyjoin/shared/api-types/auth";
 
 /**
  * Navigation step constants for server-driven onboarding flow (B1)
  * Used by both server and client to ensure consistency
  */
 export const NextStep = {
-  ONBOARDING: 'onboarding',
-  PERSONALITY_TEST: 'personality-test',
-  ESSENTIAL_DATA: 'essential-data',
-  EXTENDED_DATA: 'extended-data',
-  PROFILE_REVIEW: 'profile-review',
-  GUIDE: 'guide',
-  DISCOVER: 'discover',
+  ONBOARDING: NEXT_STEP_VALUES[0],
+  PERSONALITY_TEST: NEXT_STEP_VALUES[1],
+  ESSENTIAL_DATA: NEXT_STEP_VALUES[2],
+  EXTENDED_DATA: NEXT_STEP_VALUES[3],
+  PROFILE_REVIEW: NEXT_STEP_VALUES[4],
+  GUIDE: NEXT_STEP_VALUES[5],
+  DISCOVER: NEXT_STEP_VALUES[6],
 } as const;
 
-export type NextStepType = typeof NextStep[keyof typeof NextStep];
-
-// Extended user type with server-driven navigation helpers (B1)
-export interface AuthUser extends User {
-  nextStep?: NextStepType;
-  profileEssentialComplete?: boolean;
-  profileExtendedComplete?: boolean;
-  activeAssessmentSessionId?: string | null;
-  /** Whether the payment system is enabled (server-controlled kill switch). */
-  paymentsEnabled?: boolean;
-}
+export type { AuthUser, NextStepType };
 
 export interface UseAuthResult {
   user: AuthUser | undefined;

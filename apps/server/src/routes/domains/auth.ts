@@ -7,6 +7,7 @@ import { db } from "../../db";
 import { logger } from "../../lib/logger";
 import { eq } from "drizzle-orm";
 import { assessmentAnswers, assessmentSessions, users, type User } from "@shared/schema";
+import type { AuthUser, NextStepType } from "@shared/api-types/auth";
 
 export function registerAuthRoutes(app: Express): void {
   // Apply rate limiting to auth endpoints before registering auth routes
@@ -514,9 +515,7 @@ export function registerAuthRoutes(app: Express): void {
         // Ignore errors - session lookup is optional
       }
 
-      type OnboardingStep = 'onboarding' | 'personality-test' | 'essential-data' | 'extended-data' | 'profile-review' | 'guide' | 'discover';
-
-      let nextStep: OnboardingStep;
+      let nextStep: NextStepType;
       if (!user.hasCompletedPersonalityTest && !user.hasCompletedRegistration) {
         nextStep = 'onboarding';
       } else if (!user.hasCompletedPersonalityTest) {
@@ -533,7 +532,7 @@ export function registerAuthRoutes(app: Express): void {
         nextStep = 'discover';
       }
 
-      const stepOrder: OnboardingStep[] = [
+      const stepOrder: NextStepType[] = [
         'onboarding',
         'personality-test',
         'essential-data',
@@ -544,7 +543,7 @@ export function registerAuthRoutes(app: Express): void {
       ];
 
       const baseIndex = stepOrder.indexOf(nextStep);
-      const checkpointValue = user.onboardingCheckpoint as OnboardingStep | null;
+      const checkpointValue = user.onboardingCheckpoint as NextStepType | null;
       const checkpointIndex = checkpointValue ? stepOrder.indexOf(checkpointValue) : -1;
 
       if (
@@ -558,14 +557,16 @@ export function registerAuthRoutes(app: Express): void {
         nextStep = stepOrder[nextStepIndex];
       }
 
-      res.json({
+      const response: AuthUser = {
         ...user,
         nextStep,
         profileEssentialComplete,
         profileExtendedComplete,
         activeAssessmentSessionId,
         paymentsEnabled: (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true",
-      });
+      };
+
+      res.json(response);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

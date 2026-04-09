@@ -1,4 +1,8 @@
 import type { Express, Request } from "express";
+import type {
+  MiniProgramPaymentIntentRequest,
+  MiniProgramPaymentIntentResponse,
+} from "@shared/api-types/payment";
 import { requireAdmin } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
@@ -206,7 +210,7 @@ export function registerPaymentRoutes(app: Express): void {
           return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const { type, eventId, planId, openid } = req.body ?? {};
+        const { type, eventId, planId, openid } = (req.body ?? {}) as Partial<MiniProgramPaymentIntentRequest>;
         const user = await usersRepo.getUser(userId);
         const sessionOpenId = user?.wechatOpenId?.trim();
         if (!sessionOpenId) {
@@ -239,11 +243,12 @@ export function registerPaymentRoutes(app: Express): void {
             openid: requestedOpenId,
           });
 
-          return res.json({
+          const response: MiniProgramPaymentIntentResponse = {
             ...paymentResult,
             outTradeNo: paymentResult.wechatOrderId,
             type,
-          });
+          };
+          return res.json(response);
         }
 
         const normalizedPlanType =
@@ -267,11 +272,13 @@ export function registerPaymentRoutes(app: Express): void {
           openid: requestedOpenId,
         });
 
-        res.json({
+        const response: MiniProgramPaymentIntentResponse = {
           ...paymentResult,
           outTradeNo: paymentResult.wechatOrderId,
           type: normalizedPlanType === "quarterly" ? "vip_quarterly" : "vip_monthly",
-        });
+        };
+
+        res.json(response);
       } catch (error) {
         reqLogger.error("Failed to create mini-program payment", {
           error: error instanceof Error ? error.message : String(error),

@@ -25,7 +25,9 @@
     "./types/aiMeta": "./src/types/aiMeta.ts",
     "./ai/onboarding": "./src/ai/onboarding.ts",
     "./ui/button": "./src/ui/Button.tsx",
-    "./ui/buttonVariants": "./src/ui/buttonVariants.ts"
+    "./ui/buttonVariants": "./src/ui/buttonVariants.ts",
+    "./api-types/auth": "./src/api-types/auth.ts",
+    "./api-types/payment": "./src/api-types/payment.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.0",

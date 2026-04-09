@@ -1,0 +1,4 @@
+#!/bin/sh
+
+node scripts/impact-check.js --staged --summary-only || true
+exit 0

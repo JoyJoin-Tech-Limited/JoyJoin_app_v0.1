@@ -32,6 +32,7 @@ import {
 
 import { motion } from "framer-motion";
 import { SiWechat } from "react-icons/si";
+import type { PricingPlan } from "@joyjoin/shared/api-types/payment";
 
 import { getCurrencySymbol } from "@/lib/currency";
 import { apiRequest } from "@/lib/queryClient";
@@ -48,20 +49,6 @@ const DEFAULT_VIP_QUARTERLY_PRICE = 26800; // ¥268.00 VIP quarterly (约¥89/�
 // Original prices for savings calculation (in cents)
 const ORIGINAL_PACK3_PRICE = 26400; // ¥264 = ¥88 x 3
 const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
-
-interface PricingPlan {
-  id: string;
-  planType: string;
-  displayName: string;
-  displayNameEn?: string;
-  description?: string;
-  price: number; // in yuan
-  originalPrice?: number | null; // in yuan
-  durationDays?: number;
-  isActive: boolean;
-  isFeatured: boolean;
-}
-
 
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();

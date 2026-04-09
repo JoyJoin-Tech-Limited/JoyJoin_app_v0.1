@@ -1,4 +1,8 @@
 import Taro from '@tarojs/taro'
+import type {
+  MiniProgramAuthSession,
+  WechatMiniProgramLoginResponse,
+} from '@joyjoin/shared/api-types/auth'
 
 const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? '').replace(/\/$/, '')
 // Keep requests responsive on mobile networks while still allowing payment and
@@ -60,13 +64,13 @@ export async function apiRequest<T>(options: {
   throw createApiError(message, response.statusCode, response.data)
 }
 
-export async function authenticateMiniProgramUser(): Promise<{ user: Record<string, any>; openid: string }> {
+export async function authenticateMiniProgramUser(): Promise<MiniProgramAuthSession> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
     throw createApiError('微信登录失败，请稍后重试')
   }
 
-  const data = await apiRequest<{ success?: boolean; user?: Record<string, any>; error?: string }>({
+  const data = await apiRequest<WechatMiniProgramLoginResponse>({
     path: '/api/auth/wechat/login',
     method: 'POST',
     data: {

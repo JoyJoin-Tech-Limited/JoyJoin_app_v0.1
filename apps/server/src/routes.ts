@@ -15,6 +15,7 @@ import { registerPaymentRoutes } from "./routes/domains/payments";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
+import type { PricingPlan } from "@shared/api-types/payment";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
@@ -6055,15 +6056,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/pricing", async (req, res) => {
     try {
       const settings = await storage.getActivePricingSettings();
-      const formatted = settings.map(s => ({
+      const formatted: PricingPlan[] = settings.map((s) => ({
         id: s.id,
         planType: s.planType,
-        name: s.displayName,
-        nameEn: s.displayNameEn,
+        displayName: s.displayName,
+        displayNameEn: s.displayNameEn,
         description: s.description,
         price: s.priceInCents / 100,
         originalPrice: s.originalPriceInCents ? s.originalPriceInCents / 100 : null,
         durationDays: s.durationDays,
+        isActive: s.isActive,
         isFeatured: s.isFeatured,
       }));
       res.json(formatted);

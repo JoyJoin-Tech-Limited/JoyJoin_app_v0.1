@@ -32,6 +32,9 @@
     "set-admin": "npm run admin:create",
     "admin:create": "npm run admin:create -w @joyjoin/server",
     "user:create": "npm run user:create -w @joyjoin/server",
-    "user:bypass": "npm run user:bypass -w @joyjoin/server"
+    "user:bypass": "npm run user:bypass -w @joyjoin/server",
+    "impact-check": "node scripts/impact-check.js",
+    "impact-check:staged": "node scripts/impact-check.js --staged --summary-only",
+    "guardrails:platform": "node scripts/check-platform-guardrails.mjs"
   }
 }

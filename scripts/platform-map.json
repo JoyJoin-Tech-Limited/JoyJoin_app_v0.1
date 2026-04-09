@@ -1,0 +1,54 @@
+{
+  "entries": [
+    {
+      "name": "payment-flow",
+      "description": "Mini Program payment flow is the source of truth; web stays in sync for debugging and fallback coverage.",
+      "roots": [
+        {
+          "path": "apps/mini-program/src/pages/blind-box-payment",
+          "platform": "mini-program",
+          "role": "PRIMARY"
+        },
+        {
+          "path": "apps/user-client/src/pages/BlindBoxPaymentPage",
+          "platform": "user-client",
+          "role": "SECONDARY"
+        }
+      ],
+      "sharedDependencies": [
+        "packages/shared/src/api-types/payment.ts"
+      ]
+    },
+    {
+      "name": "auth-session",
+      "description": "Mini Program session bootstrap is the beta-launch source of truth; web auth state must be reviewed alongside contract changes.",
+      "roots": [
+        {
+          "path": "apps/mini-program/src/lib/api",
+          "platform": "mini-program",
+          "role": "PRIMARY"
+        },
+        {
+          "path": "apps/user-client/src/hooks/useAuth",
+          "platform": "user-client",
+          "role": "SECONDARY"
+        }
+      ],
+      "sharedDependencies": [
+        "packages/shared/src/api-types/auth.ts"
+      ]
+    },
+    {
+      "name": "shared-api-types",
+      "description": "Shared request/response contracts consumed by coordinated client features.",
+      "roots": [
+        {
+          "path": "packages/shared/src/api-types",
+          "platform": "shared",
+          "role": "SHARED"
+        }
+      ],
+      "sharedDependencies": []
+    }
+  ]
+}
