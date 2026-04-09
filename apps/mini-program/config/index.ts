@@ -25,12 +25,19 @@ export default defineConfig<'vite'>(async (merge, { command, mode }) => {
     },
     copy: {
       patterns: [
+        {
+          from: 'src/assets',
+          to: 'dist/assets',
+        },
       ],
       options: {
       }
     },
     framework: 'react',
-    compiler: 'vite',
+    compiler: {
+      type: 'vite',
+      vitePlugins: []
+    },
     alias: {
       '@': path.resolve(__dirname, '..', 'src'),
       '@tarojs/plugin-framework-react/dist/runtime': path.resolve(__dirname, '..', 'node_modules/@tarojs/plugin-framework-react/dist/runtime.js'),
@@ -42,6 +49,13 @@ export default defineConfig<'vite'>(async (merge, { command, mode }) => {
       ],
     },
     mini: {
+      imageUrlLoaderOption: {
+        limit: 100
+      },
+      compiler: {
+        type: 'vite',
+        vitePlugins: []
+      },
       postcss: {
         pxtransform: {
           enable: true,

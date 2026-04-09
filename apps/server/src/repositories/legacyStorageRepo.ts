@@ -454,7 +454,8 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    const result = await db.execute(sql`SELECT * FROM users`);
+    return result.rows as unknown as User[];
   }
 
   async getUserByPhone(phoneNumber: string): Promise<User[]> {

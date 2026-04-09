@@ -30,8 +30,8 @@
     "dep-check": "node scripts/check-workspace-dependency-ownership.mjs",
     "db:push": "drizzle-kit push --config=apps/server/drizzle.config.ts",
     "set-admin": "npm run admin:create",
-    "admin:create": "node --env-file=.env --import tsx/esm apps/server/src/cli/createAdminAccount.ts",
-    "user:create": "node --env-file=.env --import tsx/esm apps/server/src/cli/createUserAccount.ts",
-    "user:bypass": "node --env-file=.env --import tsx/esm apps/server/src/cli/bypassLogin.ts"
+    "admin:create": "npm run admin:create -w @joyjoin/server",
+    "user:create": "npm run user:create -w @joyjoin/server",
+    "user:bypass": "npm run user:bypass -w @joyjoin/server"
   }
 }

@@ -9,7 +9,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 ├── apps/
 │   ├── user-client/     # React 18 + Vite PWA (user-facing, port 5001)
 │   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.yuejuapp.com)
-│   └── server/          # Node.js + Express API server (default port 5001, configurable via PORT env)
+│   └── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
 ├── packages/
 │   └── shared/          # @joyjoin/shared — internal shared library
 ├── scripts/             # Repo-wide tooling scripts (guardrails, migration helpers)
@@ -42,6 +42,70 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 | API routes, services, DB queries | `apps/server/src/` |
 
 **Import rule:** apps must import shared code via `@joyjoin/shared` (package name) or the `@shared/*` path alias. Direct imports from `shared/` (top-level legacy directory) are banned and enforced by the guardrails script.
+
+## 5-Minute Quick Start (Minimum Requirements)
+
+If you only want to boot the project locally as fast as possible (API + admin portal), follow these steps.
+
+### Minimum requirements
+
+- Node.js 20+
+- npm 10+
+- A reachable PostgreSQL database (local or hosted)
+
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+### 2) Create `.env`
+
+```bash
+cp .env.example .env
+```
+
+Set at least these values in `.env`:
+
+- `PORT=5000`
+- `DATABASE_URL=postgresql://...`
+- `SESSION_SECRET=<random-long-secret>`
+- `ADMIN_CREATE_SECRET_KEY=<internal-cli-secret>`
+
+### 3) Push schema (safe mode)
+
+```bash
+npm run db:push
+```
+
+If prompted with destructive options (`truncate`, `remove table/columns`, `data loss`), choose **No**.
+
+### 4) Create your first admin account
+
+```bash
+npm run admin:create -- <username> <password> "$ADMIN_CREATE_SECRET_KEY" super_admin "Local Admin"
+```
+
+### 5) Start services in two terminals
+
+Terminal A:
+
+```bash
+npm run dev:server
+```
+
+Terminal B:
+
+```bash
+npm run dev:admin
+```
+
+Open the admin URL printed by Vite (`Local:`), for example:
+
+- `http://localhost:5002/admin/login`
+- or `http://localhost:5007/admin/login` (if 5002 is occupied)
+
+Log in with the admin credentials created in step 4.
 
 ## Environment Setup
 
@@ -167,16 +231,31 @@ Push the Drizzle schema to your database:
 npm run db:push
 ```
 
+If your database already contains production-like data, **do not accept destructive prompts** in `db:push`:
+
+- For prompts like `truncate table?` → choose **No, add the constraint without truncating**
+- For prompts like `THIS ACTION WILL CAUSE DATA LOSS` → choose **No, abort**
+
+For first-time local bootstrap on an existing database, prefer non-destructive setup first (create admin table / seed account), then plan schema cleanup separately.
+
 Create the first admin account. This step is **mandatory** if you want to access the admin portal:
 
 ```bash
-npm run admin:create <username> <password> <secretKey> [role] [displayName]
+npm run admin:create -- <username> <password> <secretKey> [role] [displayName]
 ```
+
+Parameter meaning:
+
+- `username`: admin login username
+- `password`: admin login password
+- `secretKey`: must equal `.env` value `ADMIN_CREATE_SECRET_KEY` (this is CLI authorization key, not login password)
+- `role` (optional): `super_admin` / `operator` / `viewer`
+- `displayName` (optional): name shown in admin UI
 
 Example:
 
 ```bash
-npm run admin:create admin StrongPass123 "$ADMIN_CREATE_SECRET_KEY" super_admin "Local Admin"
+npm run admin:create -- admin StrongPass123 "$ADMIN_CREATE_SECRET_KEY" super_admin "Local Admin"
 ```
 
 You can optionally create test user data with the interactive CLI:
@@ -201,6 +280,12 @@ npm run dev:user
 npm run dev:admin
 ```
 
+Notes:
+
+- Keep `dev:server` and `dev:admin` in separate terminals and keep both running.
+- If `5000` is occupied, `dev:server` will fail with `EADDRINUSE`; stop old process before restarting.
+- If `5002` is occupied, Vite will auto-pick the next port (`5003`, `5004`, ...). Always use the exact `Local:` URL shown in terminal.
+
 #### 5.1 Running as a regular user
 
 1. Start the API server with `npm run dev:server`.
@@ -221,12 +306,12 @@ JoyJoin runs the admin experience as a **separate frontend app** plus the shared
 4. Create an admin account if you have not done so already:
 
 ```bash
-npm run admin:create <username> <password> "$ADMIN_CREATE_SECRET_KEY"
+npm run admin:create -- <username> <password> "$ADMIN_CREATE_SECRET_KEY"
 ```
 
-5. Open `http://localhost:5002/admin/login`.
+5. Open the admin `Local:` URL printed in terminal (for example `http://localhost:5002/admin/login`, `http://localhost:5007/admin/login`, etc.).
 6. Log in with the username and password created by `npm run admin:create`.
-7. Expected result: you land on `http://localhost:5002/admin` and can open admin-only screens such as user management, subscriptions, venues, and event pools.
+7. Expected result: you land on the admin `Local:` URL `/admin` route and can open admin-only screens such as user management, subscriptions, venues, and event pools.
 
 ### 6. Verification steps
 
@@ -239,9 +324,9 @@ Verify the local setup for both roles:
   4. Confirm your profile loads without a 401/500 error.
 
 - **Admin**
-  1. Visit `http://localhost:5002/admin/login`.
+  1. Visit the admin `Local:` URL printed by `npm run dev:admin` (for example `http://localhost:5002/admin/login`).
   2. Log in with the seeded admin credentials.
-  3. Open `http://localhost:5002/admin/users`.
+  3. Open `/admin/users` on the same host/port.
   4. Confirm the user list loads successfully.
 
 ### 7. Troubleshooting common issues
@@ -260,6 +345,10 @@ Verify the local setup for both roles:
     - for normal local development, keep API requests relative (for example, `/api/...`) so the admin app can use the Vite `/api` proxy instead of requiring browser CORS
     - if you changed `VITE_API_URL`, point it back to the local proxied path or remove the override, then restart the admin Vite process
     - if you intentionally need cross-origin requests, add CORS support on the API server first; `CORS_ORIGINS`-style settings alone currently have no effect
+
+- **Admin dashboard shows “加载失败 / 无法加载数据”**
+  - Symptom: login succeeds, but `/api/admin/stats` returns 500.
+  - Fix: this usually means DB schema drift (missing columns in `users` table). Run non-destructive migration steps first and avoid destructive `db:push` options on existing data.
 
 - **User app redirects admin links to production**
   - Symptom: clicking an admin link from the user app sends you to `https://admin.yuejuapp.com`.
