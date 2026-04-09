@@ -1,10 +1,9 @@
 import { View, Text, Image, Button, Navigator } from '@tarojs/components'
 import './index.scss'
-
-const logoImage = '/assets/box_logo_archetypes.png'
-const matchCardImg = '/assets/match.png'
-const dinnerImg = '/assets/dinner.png'
-const continueImg = '/assets/continue.png'
+import logoImage from '../../assets/box_logo_archetypes.png'
+import matchCardImg from '../../assets/match.png'
+import dinnerImg from '../../assets/dinner.png'
+import continueImg from '../../assets/continue.png'
 
 export default function DiscoverPage() {
   const handlePrimaryCTA = () => {
