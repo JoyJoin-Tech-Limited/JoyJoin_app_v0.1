@@ -1254,6 +1254,7 @@ export const payments = pgTable("payments", {
   // WeChat Pay details
   wechatTransactionId: varchar("wechat_transaction_id"), // WeChat Pay transaction ID
   wechatOrderId: varchar("wechat_order_id"), // Our order ID sent to WeChat
+  wechatPrepayId: varchar("wechat_prepay_id"), // WeChat JSAPI/H5 prepay ID
   
   // Status
   status: varchar("status").notNull().default("pending"), // pending, completed, failed, refunded

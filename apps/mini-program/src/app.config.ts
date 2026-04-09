@@ -1,6 +1,8 @@
 export default defineAppConfig({
   pages: [
     'pages/discover/index',
+    'pages/blind-box-payment/index',
+    'pages/payment-verification/index',
     'pages/events/index',
     'pages/my-events/index',
     'pages/chats/index',

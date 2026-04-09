@@ -4,6 +4,7 @@ import { setupWechatAuth } from "../../wechatAuth";
 import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
 import { db } from "../../db";
+import { logger } from "../../lib/logger";
 import { eq } from "drizzle-orm";
 import { assessmentAnswers, assessmentSessions, users, type User } from "@shared/schema";
 
@@ -456,11 +457,11 @@ export function registerAuthRoutes(app: Express): void {
   // Auth routes
   app.get('/api/auth/user', async (req: Request, res) => {
     if (process.env.DEBUG_AUTH === "1") {
-      console.log("[AUTH/USER]", {
-        sid: req.sessionID,
-        cookie: req.headers.cookie,
-        userId: req.session?.userId,
-        adminAccountId: req.session?.adminAccountId,
+      logger.debug("Auth user lookup", {
+        request_id: req.requestId,
+        session_id: req.sessionID,
+        has_user_session: Boolean(req.session?.userId),
+        has_admin_session: Boolean(req.session?.adminAccountId),
       });
     }
 

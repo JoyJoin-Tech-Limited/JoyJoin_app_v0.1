@@ -40,8 +40,14 @@ vi.mock("../repositories/notificationsRepo", () => ({
   },
 }));
 
+vi.mock("../repositories/paymentFulfillmentRepo", () => ({
+  paymentFulfillmentRepo: {
+    finalizeConfirmedPayment: vi.fn(),
+  },
+}));
+
 import { PaymentService } from "../paymentService";
-import { notificationsRepo } from "../repositories/notificationsRepo";
+import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "../repositories/paymentsRepo";
 
 const originalFetch = global.fetch;
@@ -89,6 +95,23 @@ describe("PaymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     payments.splice(0, payments.length);
+    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockImplementation(async ({ wechatOrderId, transactionId }: { wechatOrderId: string; transactionId: string }) => {
+      const payment = payments.find((entry) => entry.wechatOrderId === wechatOrderId);
+      if (!payment) {
+        return { payment: null, alreadyCompleted: false };
+      }
+
+      if (payment.status === "completed") {
+        return { payment, alreadyCompleted: true };
+      }
+
+      Object.assign(payment, {
+        status: "completed",
+        wechatTransactionId: transactionId,
+        paidAt: new Date(),
+      });
+      return { payment, alreadyCompleted: false };
+    });
     process.env = {
       ...envSnapshot,
       APP_URL: "https://joyjoin.example.com",
@@ -147,6 +170,38 @@ describe("PaymentService", () => {
     });
   });
 
+  it("creates a real JSAPI order via the WeChat Pay API and signs requestPayment params", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(JSON.stringify({ prepay_id: "wx-prepay-001" })),
+    } as any);
+
+    const service = new PaymentService();
+    const result = await service.createMiniProgramPayment({
+      userId: "user-1",
+      paymentType: "event_bundle",
+      relatedId: "subscription-1",
+      originalAmount: 9800,
+      openid: "mock-openid-001",
+    });
+
+    expect(result.package).toBe("prepay_id=wx-prepay-001");
+    expect(result.signType).toBe("RSA");
+    expect(result.paySign).toBeTruthy();
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://api.mch.weixin.qq.com/v3/pay/transactions/jsapi",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+
+    const [, request] = vi.mocked(global.fetch).mock.calls[0];
+    expect(JSON.parse((request as RequestInit).body as string)).toMatchObject({
+      payer: { openid: "mock-openid-001" },
+      out_trade_no: result.wechatOrderId,
+    });
+  });
+
   it("verifies webhook signatures, decrypts transactions, and marks payments completed", async () => {
     payments.push({
       id: "payment-1",
@@ -174,12 +229,10 @@ describe("PaymentService", () => {
       status: "completed",
       wechatTransactionId: "wx_txn_123",
     });
-    expect(paymentsRepo.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_SUCCESS_001");
-    expect(paymentsRepo.updateSubscription).toHaveBeenCalledWith("subscription-1", {
-      status: "active",
-      paymentId: "payment-1",
+    expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
+      wechatOrderId: "JJ_SUCCESS_001",
+      transactionId: "wx_txn_123",
     });
-    expect(notificationsRepo.createNotification).toHaveBeenCalledTimes(1);
   });
 
   it("rejects webhooks with invalid signatures", async () => {
