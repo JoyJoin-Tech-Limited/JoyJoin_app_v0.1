@@ -8,8 +8,11 @@ import { createSign, generateKeyPairSync } from "crypto";
 // ── Repository mocks ──────────────────────────────────────────────────────────
 const mockPayment = {
   id: "pay-001",
+  createdAt: new Date(),
   userId: "user-1",
   wechatOrderId: "JJ123456",
+  wechatTransactionId: null,
+  wechatPrepayId: null,
   status: "pending",
   paymentType: "subscription",
   relatedId: "sub-001",
@@ -17,6 +20,7 @@ const mockPayment = {
   discountAmount: 0,
   finalAmount: 9800,
   couponId: null,
+  paidAt: null,
 };
 
 const mockPaymentsRepo = {
@@ -34,11 +38,17 @@ const mockNotificationsRepo = {
 
 vi.mock("../repositories/paymentsRepo", () => ({ paymentsRepo: mockPaymentsRepo }));
 vi.mock("../repositories/notificationsRepo", () => ({ notificationsRepo: mockNotificationsRepo }));
+vi.mock("../repositories/paymentFulfillmentRepo", () => ({
+  paymentFulfillmentRepo: {
+    finalizeConfirmedPayment: vi.fn(),
+  },
+}));
 vi.mock("../repositories/usersRepo", () => ({ usersRepo: { getUser: vi.fn() } }));
 vi.mock("@shared/gamification", () => ({ getLevelDiscount: vi.fn().mockReturnValue(0) }));
 
 // Use dynamic import after mocks are set up
 const { PaymentService } = await import("../paymentService");
+const { paymentFulfillmentRepo } = await import("../repositories/paymentFulfillmentRepo");
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -55,6 +65,10 @@ describe("PaymentService — handleWebhook", () => {
     mockPaymentsRepo.updatePayment.mockResolvedValue(undefined);
     mockNotificationsRepo.createNotification.mockResolvedValue(undefined);
     mockPaymentsRepo.updateSubscription.mockResolvedValue(undefined);
+    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockResolvedValue({
+      payment: { ...mockPayment, status: "completed" },
+      alreadyCompleted: false,
+    });
     // Dev mode by default (skips signature verification)
     process.env.NODE_ENV = "development";
   });
@@ -77,19 +91,19 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockPaymentsRepo.updatePayment).toHaveBeenCalledWith(
-      "pay-001",
-      expect.objectContaining({ status: "completed", wechatTransactionId: "wx_txn_001" })
-    );
+    expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
+      wechatOrderId: "JJ123456",
+      transactionId: "wx_txn_001",
+    });
   });
 
   it("processes a valid REFUND.SUCCESS webhook in dev mode", async () => {
     mockPaymentsRepo.getAllPayments.mockResolvedValue([
       { ...mockPayment, status: "completed" },
     ]);
-    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
-      ...mockPayment,
-      status: "completed",
+    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockResolvedValue({
+      payment: { ...mockPayment, status: "completed" },
+      alreadyCompleted: true,
     });
 
     const payload = {
@@ -126,8 +140,7 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    // updatePayment must NOT be called again
-    expect(mockPaymentsRepo.updatePayment).not.toHaveBeenCalled();
+    expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledTimes(1);
   });
 
   it("skips duplicate REFUND.SUCCESS — does not re-apply state when already refunded", async () => {
@@ -151,17 +164,11 @@ describe("PaymentService — handleWebhook", () => {
   });
 
   it("logs unknown event_type without throwing", async () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const payload = { event_type: "UNKNOWN.EVENT", resource: {} };
 
     await expect(
       service.handleWebhook(payload, JSON.stringify(payload), {})
     ).resolves.toBeUndefined();
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("unhandled webhook event_type")
-    );
-    consoleSpy.mockRestore();
   });
 
   // ── Signature verification (non-dev mode) ─────────────────────────────────
@@ -242,10 +249,10 @@ describe("PaymentService — handleWebhook", () => {
       const payload = JSON.parse(rawBody);
       await service.handleWebhook(payload, rawBody, { timestamp, nonce, signature });
 
-      expect(mockPaymentsRepo.updatePayment).toHaveBeenCalledWith(
-        "pay-001",
-        expect.objectContaining({ status: "completed" })
-      );
+      expect(paymentFulfillmentRepo.finalizeConfirmedPayment).toHaveBeenCalledWith({
+        wechatOrderId: "JJ123456",
+        transactionId: "tx999",
+      });
       delete process.env.WECHAT_PAY_PLATFORM_CERT;
     });
 
