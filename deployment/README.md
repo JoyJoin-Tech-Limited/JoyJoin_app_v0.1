@@ -109,7 +109,7 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 
 ## 域名与入口
 
-确保以下 DNS A 记录都指向远程服务器 IP：
+为当前自管服务器部署，确保以下 **A 记录** 都直接指向远程服务器公网 IP：
 
 ```text
 yuejuapp.com
@@ -122,7 +122,7 @@ api.yuejuapp.com
 
 - 自动 HTTPS
 - HTTP -> HTTPS 跳转
-- 主站 `/api/*` 反代到 `joyjoin-api:5000`
+- `yuejuapp.com / www.yuejuapp.com` 下的 `/api/*` 反代到 `joyjoin-api:5000`
 - 管理后台 `/api/*` 反代到 `joyjoin-api:5000`
 - `api.yuejuapp.com` 全量反代到 `joyjoin-api:5000`
 

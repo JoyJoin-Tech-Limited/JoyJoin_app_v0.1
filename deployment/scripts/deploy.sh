@@ -45,7 +45,7 @@ else
         echo "  ❌ Unexpected migration failure"
         exit "$EXIT_CODE"
     fi
-    echo "  ⚠️ Migration may already be applied, continuing"
+    echo "  ⚠️ Exit code 1 usually means the migration was already applied or the legacy column shape no longer matches; continuing"
 fi
 
 echo "  Running assessment constraint migration..."
@@ -58,7 +58,11 @@ echo "🏥 Step 3: Verify runtime health..."
 API_HOST="${API_HOST:-127.0.0.1}"
 API_PORT="${PORT:-5000}"
 sleep 10
-curl -fsS "http://$API_HOST:$API_PORT/api/health" > /dev/null
+if ! curl -fsS "http://$API_HOST:$API_PORT/api/health" > /dev/null; then
+    echo "❌ Deployment completed but the API health check failed at http://$API_HOST:$API_PORT/api/health"
+    echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
+    exit 1
+fi
 
 echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
