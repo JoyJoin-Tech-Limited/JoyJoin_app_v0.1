@@ -150,7 +150,10 @@ The repo uses the following environment variables in active local and optional f
 | `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM | Both (payments only) |
 | `WECHAT_PAY_NOTIFY_URL` | Public payment webhook URL; if unset, the server falls back to `APP_URL` | Both (payments only) |
 
-`JWT_SECRET` and `CORS_ORIGINS` still appear in `.env.example`, but they are not part of the active local runtime described here: `JWT_SECRET` is currently retained for template/ops compatibility, and `CORS_ORIGINS` is not consumed by the current API server code.
+Template-only / legacy variables still present in `.env.example`:
+
+- `JWT_SECRET`: retained in the template for deployment/ops compatibility and secret-rotation guidance, but not referenced by the current local runtime path documented in this README
+- `CORS_ORIGINS`: retained in the template from older setup guidance, but not consumed by the current API server code for local CORS handling
 
 > This repo does **not** use an `ADMIN_API_KEY` for normal admin requests. Admin access is session-based after logging in at `/api/admin/login`. `ADMIN_CREATE_SECRET_KEY` is for CLI bootstrap and local dev tooling only.
 
@@ -251,7 +254,10 @@ Verify the local setup for both roles:
 
 - **Admin app cannot reach the API or keeps failing auth**
   - Symptom: the admin portal at `:5002` shows network/CORS/session issues.
-  - Fix: for local development, keep API requests relative (for example, `/api/...`) so the admin app can use the Vite `/api` proxy instead of requiring browser CORS. If you changed `VITE_API_URL`, point it back to the local proxied path or remove the override, then restart the admin Vite process. If you intentionally need cross-origin requests, you must add CORS support on the API server before `CORS_ORIGINS`-style settings will have any effect.
+  - Fix:
+    - for normal local development, keep API requests relative (for example, `/api/...`) so the admin app can use the Vite `/api` proxy instead of requiring browser CORS
+    - if you changed `VITE_API_URL`, point it back to the local proxied path or remove the override, then restart the admin Vite process
+    - if you intentionally need cross-origin requests, add CORS support on the API server first; `CORS_ORIGINS`-style settings alone currently have no effect
 
 - **User app redirects admin links to production**
   - Symptom: clicking an admin link from the user app sends you to `https://admin.yuejuapp.com`.
