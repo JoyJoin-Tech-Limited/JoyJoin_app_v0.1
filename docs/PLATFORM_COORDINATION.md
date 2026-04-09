@@ -53,6 +53,7 @@ The biggest risk is payment. The Mini Program has a real `wx.requestPayment` flo
 - **Endpoint drift**
   - Shared and present on server: `/api/pricing`, `/api/user/coupons`, `/api/auth/wechat/login`, `/api/auth/wechat/login-with-test`, `/api/payments/miniprogram/create`, `/api/payments/status/:wechatOrderId`.
   - Used by web but **not found during this audit** in active server route registrations: `/api/coupons/validate`, `/api/event-packs/purchase`.
+  - Before beta freeze, assign an owner for each of those two paths and decide one of two outcomes: implement the server endpoint in the active API surface, or remove/replace the client call with the canonical route.
   - Present on server but not used by either audited client payment flow as the primary path: `/api/payments/create`.
 
 ### State management symmetry
@@ -215,8 +216,8 @@ This keeps post-payment verification, routing, and entitlement refresh debuggabl
 1. Extract shared payment DTOs and plan identifiers so both clients stop hardcoding divergent values.
 2. Fix the web payment route drift:
    - align `planType` for `/api/subscription/renew`
-   - resolve the missing `/api/coupons/validate` contract
-   - resolve the missing `/api/event-packs/purchase` contract
+   - either implement `/api/coupons/validate` on the active server surface or remove/replace the client call
+   - either implement `/api/event-packs/purchase` on the active server surface or remove/replace the client call
 3. Move currency/price formatting into a shared utility instead of keeping Mini Program formatting inline.
 4. Introduce a shared payment verification state model so web and Mini Program converge on one post-payment story.
 5. Keep `user-client` buildable as the sandbox by smoke-testing it for every Mini Program payment/auth change.
