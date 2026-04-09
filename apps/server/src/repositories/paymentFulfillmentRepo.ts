@@ -94,7 +94,15 @@ export const paymentFulfillmentRepo = {
           .limit(1);
 
         if (latestPayment?.status === "completed") {
-          return { payment: latestPayment, alreadyCompleted: true };
+          return {
+            payment: {
+              ...payment,
+              status: "completed",
+              wechatTransactionId: payment.wechatTransactionId ?? params.transactionId,
+              paidAt: payment.paidAt ?? new Date(),
+            },
+            alreadyCompleted: true,
+          };
         }
 
         throw new Error(`Failed to update payment ${payment.id}`);
