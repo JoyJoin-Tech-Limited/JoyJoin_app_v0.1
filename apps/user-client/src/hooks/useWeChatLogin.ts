@@ -67,7 +67,7 @@ export async function getWeChatCode(): Promise<string> {
 
   // No wx.login available and not in dev mode — fail clearly rather than
   // silently redirecting to a web OAuth flow that is no longer supported.
-  throw new Error('WeChat Mini Program runtime (wx.login) is required for login. Web OAuth is not supported.');
+  throw new Error('请在微信小程序中打开此应用以完成登录。（WeChat Mini Program runtime is required.）');
 }
 
 export function useWeChatLogin() {
