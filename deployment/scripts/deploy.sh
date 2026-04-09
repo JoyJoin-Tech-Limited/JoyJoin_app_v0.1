@@ -1,123 +1,97 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-ENVIRONMENT=${1:-staging}
+ENVIRONMENT=${1:-production}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+DEPLOY_DIR="$REPO_ROOT/deployment"
+ENV_FILE="$DEPLOY_DIR/.env.production"
 
-echo "🚀 Deploying JoyJoin to $ENVIRONMENT..."
-
-# Validate environment
-if [[ "$ENVIRONMENT" != "staging" && "$ENVIRONMENT" != "production" ]]; then
+if [[ "$ENVIRONMENT" != "production" ]]; then
     echo "❌ Invalid environment: $ENVIRONMENT"
-    echo "Usage: ./deploy.sh [staging|production]"
+    echo "Usage: ./deployment/scripts/deploy.sh production"
+    echo "   The current Docker Compose + Caddy stack is production-only; staging needs its own compose/env/domain setup."
     exit 1
 fi
 
-# Load environment variables
-if [ -f "deployment/.env.$ENVIRONMENT" ]; then
-    export $(cat deployment/.env.$ENVIRONMENT | grep -v '^#' | xargs)
+cd "$REPO_ROOT"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "❌ Missing required runtime env file: $ENV_FILE"
+    exit 1
 fi
 
-echo "📦 Step 1: Building artifacts..."
+if ! grep -Eq '^DATABASE_URL=' "$ENV_FILE"; then
+    echo "❌ $ENV_FILE must define DATABASE_URL so Docker Compose and migrations target the same database"
+    exit 1
+fi
 
-# Build user client
-echo "  Building user client..."
-cd apps/user-client
-npm run build
-cd ../..
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
 
-# Build admin client
-echo "  Building admin client..."
-cd apps/admin-client
-npm run build
-cd ../..
+echo "🚀 Deploying JoyJoin via self-managed Docker Compose ($ENVIRONMENT)..."
+echo "📦 Repo root: $REPO_ROOT"
+echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
 
-echo "🐳 Step 2: Building API Docker image..."
-docker build -t joyjoin-api:$ENVIRONMENT -f apps/server/Dockerfile .
+echo "🐳 Step 1: Rebuild and restart containers..."
+cd "$DEPLOY_DIR"
+docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
 
-echo "📤 Step 3: Deploying..."
+echo "🗄️  Step 2: Run idempotent migrations and schema push..."
+cd "$REPO_ROOT"
 
-
-#未知原因db push无法推新db
-cd ~/JoyJoin
-export DATABASE_URL="postgresql://neondb_owner:npg_NmTv6SY3fxXW@ep-square-math-ahiz6fm7-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
-echo "  🎯 Target: $(echo $DATABASE_URL | sed 's/:[^@]*@/:****@/')"
-
-# Run any pending migrations first (idempotent)
-echo "  🔄 Running column rename migration (idempotent)..."
+echo "  Running column rename migration..."
 if node scripts/migrate-rename-role-to-archetype.js; then
-  echo "  ✅ Migration completed successfully"
+    echo "  ✅ Column rename migration completed"
 else
-  EXIT_CODE=$?
-  echo "  ⚠️ Migration script returned exit code $EXIT_CODE"
-  # If exit code is 1, migration may already be applied (idempotent)
-  # For other errors, we should fail
-  if [ $EXIT_CODE -ne 1 ]; then
-    echo "  ❌ Unexpected migration error, failing deployment"
-    exit $EXIT_CODE
-  fi
-  echo "  ⚠️ Migration may already be applied, continuing..."
+    EXIT_CODE=$?
+    echo "  ⚠️ Column rename migration returned exit code $EXIT_CODE"
+    if [[ $EXIT_CODE -ne 1 ]]; then
+        echo "  ❌ Unexpected migration failure"
+        exit "$EXIT_CODE"
+    fi
+    echo "  ⚠️ Exit code 1 usually means the migration was already applied or the legacy column shape no longer matches; continuing"
 fi
 
-# Run assessment constraint fix migration
-echo "  🔄 Running assessment answer constraint fix migration (idempotent)..."
+echo "  Running assessment constraint migration..."
 if node scripts/migrate-fix-assessment-constraint.js; then
-  echo "  ✅ Assessment constraint migration completed successfully"
+    echo "  ✅ Assessment constraint migration completed"
 else
-  EXIT_CODE=$?
-  echo "  ❌ Assessment constraint migration failed with exit code $EXIT_CODE"
-  echo "  This is a critical error - the migration must succeed before deployment"
-  exit $EXIT_CODE
+    EXIT_CODE=$?
+    echo "  ❌ Assessment constraint migration failed with exit code $EXIT_CODE"
+    exit "$EXIT_CODE"
 fi
 
-# Then sync schema with push
-echo "  📤 Running schema push..."
+echo "  Running schema push..."
 npx drizzle-kit push --config=apps/server/drizzle.config.ts
 
+echo "🏥 Step 3: Verify runtime health..."
+API_HOST="127.0.0.1"
+API_PORT="5000"
+HEALTH_URL="http://$API_HOST:$API_PORT/api/health"
+MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
+HEALTH_CHECK_RETRY_DELAY_SECONDS="${HEALTH_CHECK_RETRY_DELAY_SECONDS:-5}"
+for ((health_check_attempt=1; health_check_attempt<=MAX_HEALTH_CHECK_ATTEMPTS; health_check_attempt++)); do
+    if curl -fsS "$HEALTH_URL" > /dev/null; then
+        break
+    fi
 
+    if [[ $health_check_attempt -eq $MAX_HEALTH_CHECK_ATTEMPTS ]]; then
+        echo "❌ Deployment verification failed: API health check did not respond at $HEALTH_URL"
+        echo "   The service may still be starting up, or the runtime/configuration may be unhealthy"
+        exit 1
+    fi
 
+    sleep "$HEALTH_CHECK_RETRY_DELAY_SECONDS"
+done
 
-# #不要跳过staging的database push
-# npm run db:push
-
-# if [ "$ENVIRONMENT" == "production" ]; then
-#     echo "  🔶 Production deployment - running migrations first..."
-#     # Run database migrations
-#     #npm run db:push
-# fi
-
-# Deploy based on your platform (uncomment and modify as needed)
-
-# === Vercel (Frontend) ===
-# echo "  Deploying user portal to Vercel..."
-# npx vercel deploy dist/user-client --prod --yes
-# echo "  Deploying admin portal to Vercel..."
-# npx vercel deploy dist/admin-client --prod --yes
-
-# === Fly.io (Backend) ===
-# echo "  Deploying API to Fly.io..."
-# flyctl deploy --config deployment/fly.$ENVIRONMENT.toml
-
-# === Railway ===
-# echo "  Deploying to Railway..."
-# railway up
-
-# === AWS ECS ===
-# echo "  Pushing to ECR..."
-# aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REGISTRY
-# docker tag joyjoin-api:$ENVIRONMENT $ECR_REGISTRY/joyjoin-api:$ENVIRONMENT
-# docker push $ECR_REGISTRY/joyjoin-api:$ENVIRONMENT
-# echo "  Updating ECS service..."
-# aws ecs update-service --cluster joyjoin-$ENVIRONMENT --service api --force-new-deployment
-
-echo "✅ Deployment to $ENVIRONMENT completed!"
-echo ""
-echo "📊 Deployment URLs:"
-if [ "$ENVIRONMENT" == "production" ]; then
-    echo "  User Portal:  https://app.joyjoin.com"
-    echo "  Admin Portal: https://admin.joyjoin.com"
-    echo "  API Server:   https://api.joyjoin.com"
+echo "✅ Deployment completed"
+if [[ "$ENVIRONMENT" == "production" ]]; then
+    echo "  User Portal:  https://yuejuapp.com"
+    echo "  Admin Portal: https://admin.yuejuapp.com"
+    echo "  API Server:   https://api.yuejuapp.com"
 else
-    echo "  User Portal:  https://staging-app.joyjoin.com"
-    echo "  Admin Portal: https://staging-admin.joyjoin.com"
-    echo "  API Server:   https://staging-api.joyjoin.com"
+    echo "  Staging uses the same self-managed flow, but requires staging-specific env and routing to be prepared first."
 fi

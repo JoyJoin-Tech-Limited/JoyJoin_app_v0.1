@@ -122,6 +122,17 @@ Boundary:
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 
+### 6. Runtime deployment topology
+
+**Active production path**
+- `.github/workflows/cicd.yml` deploys by SSHing into the remote server (`SERVER_IP` secret), resetting the checked-out repo, changing into `~/JoyJoin/deployment`, and then running `docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans`.
+- `deployment/Caddyfile` is the public edge and TLS terminator for `yuejuapp.com`, `www.yuejuapp.com`, `admin.yuejuapp.com`, and `api.yuejuapp.com`.
+- `deployment/docker-compose.caddy.yml` runs the active runtime containers: `joyjoin-api`, `joyjoin-user`, `joyjoin-admin`, and `joyjoin-caddy`.
+
+**Database boundary**
+- The active deployment expects `DATABASE_URL` to point at an external PostgreSQL instance.
+- The repository does not provision a PostgreSQL container or host-managed database service in `deployment/docker-compose.caddy.yml`; contributors should not assume the remote app server has a local database to attach to.
+
 ## Where new files go
 
 ### User client
