@@ -1,269 +1,189 @@
 # JoyJoin 部署指南
 
-## 架构概览
+## 当前生产部署状态
 
-```
-                    ┌─────────────────┐
-                    │   GitHub Repo   │
-                    └────────┬────────┘
-                             │ Push/PR
-                             ▼
-                    ┌─────────────────┐
-                    │ GitHub Actions  │
-                    │   CI/CD流水线    │
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ User Portal  │    │ Admin Portal │    │   API Server │
-│ (静态CDN)     │    │  (静态CDN)    │    │  (Docker)    │
-│              │    │              │    │              │
-│ app.joyjoin  │    │admin.joyjoin │    │ api.joyjoin  │
-│     .com     │    │    .com      │    │    .com      │
-└──────────────┘    └──────────────┘    └──────────────┘
-                             │
-                             ▼
-                    ┌──────────────┐
-                    │  PostgreSQL  │
-                    │   (Neon)     │
-                    └──────────────┘
-```
+当前仓库的**生效生产路径**不是 Fly.io / Railway / Vercel 组合，而是：
 
-## 快速开始
+1. GitHub Actions 触发生产流水线
+2. 通过 SSH 连接远程应用服务器（`SERVER_IP` / `SERVER_USER`）
+3. 在远程服务器的 `~/JoyJoin` 目录执行代码同步
+4. 在 `~/JoyJoin/deployment` 下运行 `docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans`
+5. 由 `Caddyfile` 统一处理 HTTPS、域名入口和反向代理
 
-### 1. 环境准备
+> 结论：当前运行时是**自管远程服务器 + Docker Compose + Caddy**。
 
-确保你有以下账号/工具:
-- GitHub 账号 (用于 CI/CD 和容器注册)
-- 静态托管平台: Vercel / Cloudflare Pages / Netlify (任选其一)
-- 容器运行平台: Fly.io / Railway / AWS ECS (任选其一)
-- PostgreSQL: Neon / Supabase / AWS RDS
+---
 
-### 2. 配置 GitHub Secrets
+## 生产架构概览
 
-在 GitHub 仓库 Settings > Secrets and variables > Actions 中添加:
+```text
+GitHub Actions
+  └─ SSH 到远程服务器
+       └─ docker compose -f deployment/docker-compose.caddy.yml up -d --build
+            ├─ joyjoin-caddy   (80/443, HTTPS 与反向代理)
+            ├─ joyjoin-user    (用户端静态站点)
+            ├─ joyjoin-admin   (管理后台静态站点)
+            └─ joyjoin-api     (Node.js API, 5000)
 
-```
-# 必需
-DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
-DEEPSEEK_API_KEY=sk-xxx
+公网域名
+  ├─ yuejuapp.com / www.yuejuapp.com  -> Caddy -> joyjoin-user
+  ├─ admin.yuejuapp.com               -> Caddy -> joyjoin-admin
+  └─ api.yuejuapp.com                 -> Caddy -> joyjoin-api
 
-# 根据部署平台选择
-VERCEL_TOKEN=xxx          # 如果用 Vercel
-CLOUDFLARE_TOKEN=xxx      # 如果用 Cloudflare Pages
-FLY_API_TOKEN=xxx         # 如果用 Fly.io
+数据库
+  └─ DATABASE_URL -> 外部 PostgreSQL
 ```
 
-### 3. 配置 GitHub Variables
+---
 
-在 Settings > Secrets and variables > Actions > Variables 中添加:
+## 仓库里哪些文件是当前权威来源
 
-```
-API_URL=https://api.joyjoin.com  # 生产环境 API 地址
-```
+- 生产部署流水线：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.github/workflows/cicd.yml`
+- 运行时编排：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/deployment/docker-compose.caddy.yml`
+- 网关与域名：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/deployment/Caddyfile`
+- 生产环境变量模板：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/deployment/.env.production.example`
 
-## 部署流程
+如果这些文件与其他旧文档冲突，以这里列出的文件为准。
 
-### 自动部署 (推荐)
+---
 
-1. **推送到 `develop` 分支** → 自动部署到 Staging
-2. **推送到 `main` 分支** → 自动部署到 Production
+## 服务器准备
 
-### 手动部署
+远程服务器需要具备：
 
-```bash
-# 1. 构建用户端
-cd apps/user-client
-npm run build
+- Docker Engine
+- Docker Compose Plugin
+- 一个已检出的仓库目录（当前流水线假设为 `~/JoyJoin`）
+- 80 / 443 端口对公网开放
+- 域名 A 记录指向该服务器 IP
 
-# 2. 构建管理端
-cd ../admin-client
-npm run build
+当前 Compose 文件会启动这些服务：
 
-# 3. 构建并推送 API 镜像
-docker build -t joyjoin-api -f apps/server/Dockerfile .
-docker push your-registry/joyjoin-api:latest
-```
+- `joyjoin-caddy`
+- `joyjoin-api`
+- `joyjoin-user`
+- `joyjoin-admin`
 
-## 平台部署指南
+当前 Compose 文件**不会**启动 PostgreSQL。
 
-### Option A: Vercel (前端) + Fly.io (后端)
+---
 
-#### 前端部署 (Vercel)
+## 数据库现状
 
-```bash
-# 安装 Vercel CLI
-npm i -g vercel
+### 当前状态
 
-# 部署用户端
-cd dist/user-client
-vercel --prod
+- 应用通过 `DATABASE_URL` 连接 PostgreSQL
+- `deployment/docker-compose.caddy.yml` 中没有 `postgres` 服务
+- 仓库中没有远程服务器本地 PostgreSQL 的编排、备份、迁移或端口暴露配置
 
-# 部署管理端
-cd ../admin-client
-vercel --prod
-```
+### 这意味着什么
 
-#### 后端部署 (Fly.io)
+当前部署默认依赖**外部 PostgreSQL**。  
+仅从仓库配置来看，**不能把“远程应用服务器自带本地数据库”当作现成可直接连接的能力**。
 
-```bash
-# 安装 Fly CLI
-curl -L https://fly.io/install.sh | sh
+如果团队后续要改成“同一台远程服务器自建 PostgreSQL”，那是一个新的基础设施决策，至少需要：
 
-# 初始化
-cd apps/server
-fly launch
+- 明确 PostgreSQL 的安装方式（宿主机或容器）
+- 增加持久化卷、备份、升级和恢复方案
+- 调整 `DATABASE_URL`
+- 评估与当前会话存储、Drizzle schema push、健康检查、磁盘容量的关系
 
-# 设置环境变量
-fly secrets set DATABASE_URL="postgresql://..." DEEPSEEK_API_KEY="sk-..."
+在这些工作完成前，当前权威状态仍然是：**外部 PostgreSQL 是唯一被仓库显式支持的数据库路径**。
 
-# 部署
-fly deploy
-```
+---
 
-### Option B: Cloudflare Pages (前端) + Railway (后端)
+## GitHub Actions 所需 Secrets
 
-#### 前端部署 (Cloudflare Pages)
+当前生产流水线依赖这些 GitHub Secrets：
 
-1. 登录 Cloudflare Dashboard
-2. Pages > Create a project
-3. 连接 GitHub 仓库
-4. 配置:
-   - Build command: `npm run build:user`
-   - Build output: `dist/user-client`
-5. 重复为管理端配置
-
-#### 后端部署 (Railway)
-
-1. 登录 railway.app
-2. New Project > Deploy from GitHub repo
-3. 选择 `apps/server` 目录
-4. 添加环境变量
-5. 部署
-
-## 域名配置
-
-### DNS 记录
-
-```
-Type    Name     Value
-A       app      CDN IP / CNAME to vercel
-A       admin    CDN IP / CNAME to vercel
-A       api      Container IP / CNAME to fly.io
+```env
+SERVER_IP=<remote-server-ip>
+SERVER_USER=<ssh-user>
+SSH_PRIVATE_KEY=<private-key>
+DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=require
 ```
 
-### SSL 证书
+`DATABASE_URL` 会被传到远程服务器上的部署脚本流程中，并与 API 容器使用同一数据库连接。
 
-- Vercel/Cloudflare 自动提供 SSL
-- Fly.io 自动提供 SSL
-- 自管服务器使用 Let's Encrypt + Certbot
+---
 
-## 数据库迁移
+## 域名与入口
 
-```bash
-# 推送 schema 变更
-npm run db:push
+确保以下 DNS A 记录都指向远程服务器 IP：
 
-# 或使用迁移文件
-drizzle-kit generate
-drizzle-kit migrate
+```text
+yuejuapp.com
+www.yuejuapp.com
+admin.yuejuapp.com
+api.yuejuapp.com
 ```
+
+`deployment/Caddyfile` 负责：
+
+- 自动 HTTPS
+- HTTP -> HTTPS 跳转
+- 主站 `/api/*` 反代到 `joyjoin-api:5000`
+- 管理后台 `/api/*` 反代到 `joyjoin-api:5000`
+- `api.yuejuapp.com` 全量反代到 `joyjoin-api:5000`
+
+---
 
 ## 环境变量
 
-### API Server (.env.production)
+生产环境从 `deployment/.env.production` 加载。推荐以
+`deployment/.env.production.example` 为模板。
+
+最关键的变量包括：
 
 ```env
 NODE_ENV=production
 PORT=5000
-DATABASE_URL=postgresql://...
-DEEPSEEK_API_KEY=sk-...
-JWT_SECRET=your-secure-jwt-secret
-CORS_ORIGINS=https://app.joyjoin.com,https://admin.joyjoin.com
+APP_URL=https://yuejuapp.com
+DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=require
+COOKIE_DOMAIN=.yuejuapp.com
+VITE_API_URL=https://api.yuejuapp.com
 ```
 
-### User Client (.env.production)
+不要把真实 secret 提交到仓库。
 
-```env
-VITE_API_URL=https://api.joyjoin.com
-```
+---
 
-### Admin Client (.env.production)
+## 手动部署（服务器内执行）
 
-```env
-VITE_API_URL=https://api.joyjoin.com
-```
-
-## 监控与日志
-
-### 推荐工具
-
-- **日志**: Fly.io logs / Railway logs / AWS CloudWatch
-- **APM**: Sentry (错误追踪)
-- **Uptime**: UptimeRobot / Checkly
-
-### 健康检查
-
-API 提供健康检查端点:
-```
-GET https://api.joyjoin.com/api/health
-```
-
-## 回滚
-
-### 前端回滚
+如果需要绕过 GitHub Actions，在**远程服务器内**手动执行：
 
 ```bash
-# Vercel
-vercel rollback
-
-# Cloudflare Pages
-# 在 Dashboard 中选择之前的部署
+cd ~/JoyJoin
+cp deployment/.env.production.example deployment/.env.production
+# 填入真实生产变量后：
+./deployment/scripts/deploy.sh production
 ```
 
-### 后端回滚
+该脚本现在对齐当前的自管服务器部署方式：使用现有 Docker Compose + Caddy，并要求通过环境变量提供 `DATABASE_URL`。
+
+---
+
+## 发布后检查
 
 ```bash
-# Fly.io
-fly releases
-fly releases rollback <version>
-
-# Railway
-# 在 Dashboard 中选择之前的部署
+curl -fsS http://127.0.0.1:5000/api/health
+docker logs joyjoin-api --tail 120
+docker logs joyjoin-caddy --tail 80
+docker ps
 ```
 
-## 常见问题
+外部访问验证：
 
-### Q: 跨域问题 (CORS)
-
-确保 API 服务器配置了正确的 CORS:
-```typescript
-app.use(cors({
-  origin: ['https://app.joyjoin.com', 'https://admin.joyjoin.com'],
-  credentials: true
-}));
+```text
+https://yuejuapp.com
+https://admin.yuejuapp.com
+https://api.yuejuapp.com/api/health
 ```
 
-### Q: 认证 Cookie 不工作
+---
 
-跨域使用 JWT 替代 session cookie, 或配置:
-```typescript
-app.use(session({
-  cookie: {
-    domain: '.joyjoin.com',  // 父域名
-    sameSite: 'none',
-    secure: true
-  }
-}));
-```
+## 运维边界
 
-### Q: 静态资源 404
-
-确保前端 build 时设置了正确的 base URL:
-```typescript
-// vite.config.ts
-export default defineConfig({
-  base: '/',  // 或你的 CDN 路径
-});
-```
+- 当前仓库维护的是**应用服务器部署**，不是数据库平台编排
+- 当前仓库没有定义本地 PostgreSQL 备份、故障切换、数据盘挂载或监控
+- 如果未来要把数据库迁回远程服务器，需要单独做基础设施设计，不应直接假设“服务器上已经有现成数据库可连”
