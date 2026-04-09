@@ -100,7 +100,7 @@ COOKIE_DOMAIN=
 Frontend Vite variables are different:
 
 - `VITE_ADMIN_PORTAL_URL` should be set in `apps/user-client/.env.local` (or exported in the shell before `npm run dev:user`)
-- `VITE_API_URL` is optional/advanced and should only be set in the relevant app env file or shell if you intentionally want a non-default API target
+- `VITE_API_URL` is optional/advanced and should only be set in `apps/admin-client/.env.local`, `apps/user-client/.env.local`, or the shell for the app you are starting if you intentionally want a non-default API target
 
 Example user-client override file:
 
