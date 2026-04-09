@@ -1,6 +1,6 @@
 import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { apiRequest, authenticateMiniProgramUser } from '../../lib/api'
 import { logError, logWarn } from '../../lib/logger'
 import './index.scss'
@@ -86,6 +86,7 @@ export default function BlindBoxPaymentPage() {
   const [pageError, setPageError] = useState('')
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
+  const hasSkippedFirstDidShowRef = useRef(false)
 
   const loadPageData = useCallback(async () => {
     setIsBootstrapping(true)
@@ -126,6 +127,11 @@ export default function BlindBoxPaymentPage() {
   })
 
   useDidShow(() => {
+    if (!hasSkippedFirstDidShowRef.current) {
+      hasSkippedFirstDidShowRef.current = true
+      return
+    }
+
     loadPageData()
   })
 

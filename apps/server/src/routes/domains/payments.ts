@@ -3,6 +3,7 @@ import { requireAdmin } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
 import { paymentService } from "../../paymentService";
+import { paymentsRepo } from "../../repositories/paymentsRepo";
 import { usersRepo } from "../../repositories/usersRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
@@ -36,7 +37,22 @@ export function registerPaymentRoutes(app: Express): void {
   const respondWithPaymentStatus = async (req: Request, res: any) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const { wechatOrderId } = req.params as { wechatOrderId: string };
+      const payment = await paymentsRepo.getPaymentByWechatOrderId(wechatOrderId);
+
+      if (!payment || payment.userId !== userId) {
+        reqLogger.warn("Rejected payment status query for non-owned payment", {
+          order_id: wechatOrderId,
+          user_id: userId,
+        });
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
       const status = await paymentService.queryPaymentStatus(wechatOrderId);
       res.json({ status });
     } catch (error) {

@@ -8,7 +8,7 @@ import {
   subscriptions,
 } from "@shared/schema";
 import * as schema from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { db } from "../db";
 
@@ -83,10 +83,20 @@ export const paymentFulfillmentRepo = {
           wechatTransactionId: params.transactionId,
           paidAt: new Date(),
         })
-        .where(eq(payments.id, payment.id))
+        .where(and(eq(payments.id, payment.id), ne(payments.status, "completed")))
         .returning();
 
       if (!updatedPayment) {
+        const [latestPayment] = await tx
+          .select()
+          .from(payments)
+          .where(eq(payments.id, payment.id))
+          .limit(1);
+
+        if (latestPayment?.status === "completed") {
+          return { payment: latestPayment, alreadyCompleted: true };
+        }
+
         throw new Error(`Failed to update payment ${payment.id}`);
       }
 
@@ -111,13 +121,25 @@ export const paymentFulfillmentRepo = {
           updatedPayment.paymentType === "event_bundle") &&
         updatedPayment.relatedId
       ) {
-        await tx
+        const activatedSubscriptions = await tx
           .update(subscriptions)
           .set({
             status: "active",
             paymentId: updatedPayment.id,
           })
-          .where(eq(subscriptions.id, updatedPayment.relatedId));
+          .where(
+            and(
+              eq(subscriptions.id, updatedPayment.relatedId),
+              eq(subscriptions.userId, updatedPayment.userId),
+            ),
+          )
+          .returning({ id: subscriptions.id });
+
+        if (activatedSubscriptions.length === 0) {
+          throw new Error(
+            `Subscription ${updatedPayment.relatedId} not found for user ${updatedPayment.userId}`,
+          );
+        }
       } else if (updatedPayment.paymentType === "event" && updatedPayment.relatedId) {
         const [pool] = await tx
           .select({ id: eventPools.id })
