@@ -27,7 +27,7 @@ const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; emoji: string; label: string }
   { mood: 'emotional', emoji: '💫', label: '情感' },
 ];
 
-const DEPTH_COPY: Record<NonNullable<SocialTopic['depthLevel']>, string> = {
+const TOPIC_DEPTH_LABELS: Record<NonNullable<SocialTopic['depthLevel']>, string> = {
   1: '轻松开场',
   2: '体验分享',
   3: '温和走心',
@@ -159,7 +159,7 @@ export function WarmupPhase({
                   </span>
                   {currentTopic.depthLevel && (
                     <span className="text-xs bg-white/80 dark:bg-white/10 text-muted-foreground px-3 py-1 rounded-full">
-                      {DEPTH_COPY[currentTopic.depthLevel]}
+                      {TOPIC_DEPTH_LABELS[currentTopic.depthLevel]}
                     </span>
                   )}
                   {currentTopic.safety && (
