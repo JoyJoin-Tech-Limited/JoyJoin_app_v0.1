@@ -75,14 +75,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-04-01)
+## 🆕 Recent Updates (Last updated: 2026-04-07)
 
 ### 2026 Milestones (Mar–Apr 2026)
 
 **14. Matching-State UI System** 🎨 *(PRs #387–#391, 2026-03-27 to 2026-04-01)*
 - Shared `MatchingStateLayout` abstraction provides a canonical dark background and slot-based composition (hero / copy / CTA / footer) for all matching-state screens
 - `MatchingWaitingScreen` — premium dark-mode blind-pool waiting UI with real fill-state transitions (`waiting` → `can_form` → `full`)
-- Full matching-state screen family: `NoMatchScreen`, `JoinErrorScreen`, `ExtendedDataEmptyScreen`, `TestIncompleteScreen`, `SurpriseMatchReveal`, `MatchPointsDisplay`
+- Full matching-state screen family: `NoMatchScreen`, `JoinErrorScreen`, `ExtendedDataEmptyScreen`, `MatchRevealSequenceV2`, `SurpriseMatchReveal` (legacy), `MatchPointsDisplay`; `TestIncompleteScreen` is now a Discover-page pre-entry gate rather than a join-sheet state
 - All screens wired to real trigger conditions and app state — no placeholder timers or mocked transitions
 - Canonical background centralised in `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories
 
@@ -91,55 +91,65 @@ See §1.10 Connection Feedback Flow for full documentation.
 - `PreJoinVibeBriefSheet` — pre-join vibe brief surfacing pool atmosphere and intent signals before a user commits
 - `WhyThisFitsCard` — personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) shown before joining
 
-**16. Post-Match Group Theme & Companion** 🎭 *(PR #377)*
+**16. Onboarding Flow Sync** 🧭 *(2026-04-07)*
+- Active value-first entry flow is `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate` before authenticated onboarding begins
+- After auth, onboarding remains server-driven via `nextStep` for `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
+- `profileExtendedComplete` is not the onboarding-step gate for extended data; `hasCompletedInterestsCarousel` remains the canonical completion signal
+
+**17. Personality Test Flow Sync** 🧠 *(2026-04-07)*
+- V4 question count is config-driven (`minQuestions`, `softMaxQuestions`, `hardMaxQuestions`) rather than a fixed 10-question or fixed 8–16-question flow
+- `Q_PLAYFUL_SLIDER` and `Q_PLAYFUL_EMOJI` are universal closing questions that must both be answered before the assessment is complete
+- The active test page keeps back navigation for local question-history review; when the user is already at the start with no earlier answers, the exit path returns to `/`
+
+**18. Post-Match Group Theme & Companion** 🎭 *(PR #377)*
 - Group theme tags and a companion summary line in squad reveal (`SquadUnboxingFlow.tsx`)
 
-**17. AI Onboarding — Profile Tagline** 🤖 *(PR #375)*
+**19. AI Onboarding — Profile Tagline** 🤖 *(PR #375)*
 - AI insight tagline (`insightLine`) displayed inside `ProfilePortraitCard` on the Profile Review page
 - Served by `GET /api/onboarding/profile-tagline`; contract: `ProfileTaglineResponse` in `packages/shared/src/ai/onboarding.ts`
 - Presentation-only; does not affect onboarding state or `nextStep`
 
-**18. AI Observability — Trace Logger** 📊 *(PR #380)*
+**20. AI Observability — Trace Logger** 📊 *(PR #380)*
 - Structured AI call trace logger: `apps/server/src/lib/aiTraceLogger.ts` (`logAITrace()`)
 - Emits single-line `[AITrace] {json}` logs to stdout for every AI call
 - `matchExplanationService` and `socialIcebreakerAIService` instrumented
 
-**19. AIResponseMeta Normalization** 🔧 *(PR #378)*
+**21. AIResponseMeta Normalization** 🔧 *(PR #378)*
 - `packages/shared/src/types/aiMeta.ts` — shared `AIResponseMeta` contract with `fromCache`, `generatedAt`, `provider`, `fallbackUsed`, `promptVersion`
 - Builder helpers: `buildLiveAIMeta()`, `buildCachedAIMeta()`, `buildFallbackAIMeta()`
 - Foundation for consistent observability across all AI surfaces; ongoing per-service migration
 
-**20. Interest Signal Boundary Enforcement** 🔒 *(PR #379)*
+**22. Interest Signal Boundary Enforcement** 🔒 *(PR #379)*
 - `user_interest_signals` removed from deterministic pair scoring
 - `calculateSignalAlignmentBonus()` and `loadInterestSignalLookup()` deleted from `poolMatchingService.ts`
 - Signals now feed AI enrichment only (match explanation connection points, icebreaker topics)
 - Invariant verified by `apps/server/src/__tests__/interestSignalBoundary.test.ts`
 
-**21. Interest Signal Boost Refinement** ✨ *(PR #372)*
+**23. Interest Signal Boost Refinement** ✨ *(PR #372)*
 - Onboarding interest data reused to pre-select the boost interest and derive enthusiasm level server-side (no re-asking)
 - UX simplified to 2 steps (was 3); surfaced after pool registration in `SuccessCelebration` screen
 
-**22. Onboarding Clarity & Reduced Artificial Waits** ⚡ *(PR #383)*
+**24. Onboarding Clarity & Reduced Artificial Waits** ⚡ *(PR #383)*
 - Profile review "analyzing" phase reduced from 2500 ms to 1200 ms default (500 ms for reduced-motion users)
 - Skippable after 600 ms — no artificial waiting when data is already ready
 
-**23. Limited Browse Mode Experiment** 🔬 *(PR #384)*
+**25. Limited Browse Mode Experiment** 🔬 *(PR #384)*
 - Scoped experiment: a secondary "先浏览 →" CTA on the Profile Review page lets users enter read-only event discovery before registering
 - Controlled by `ENABLE_LIMITED_BROWSE_MODE` constant in `FinalProfileReviewPage.tsx`; per-session opt-out via `?exp=no_limited_browse`
 - Not a permanent product pattern — do not generalize without verifying gating logic
 
-**24. Frontend Performance Improvements** 🚀 *(PRs #385, #386, #388)*
+**26. Frontend Performance Improvements** 🚀 *(PRs #385, #386, #388)*
 - Route-level lazy loading for all non-critical pages in `App.tsx`
 - Dead admin code removed from user-client bundle
 - Landing page hero images converted to WebP with `decoding="async"`
 - Deferred archetype asset loading; gated background prefetch for no-activity users (PR #363)
 - Vite chunk optimisation and empty-state SVG optimisation (PR #362)
 
-**25. Social Icebreaker v2 Phase Rollout** 🧊 *(PR #370)*
+**27. Social Icebreaker v2 Phase Rollout** 🧊 *(PR #370)*
 - Server-driven phase rollout configuration for Social Icebreaker v2
 - Beta phase scaffolding added for future phases beyond MVP (warmup → micro_challenge → lie_detective → recap)
 
-**26. Center-Tab Empty-State Page** 📭 *(PRs #359, #362, #363)*
+**28. Center-Tab Empty-State Page** 📭 *(PRs #359, #362, #363)*
 - `CenterTabEmptyStatePage` — dedicated transition page for no-activity users accessed via the centre nav tab
 - Hybrid layout with optimised SVG assets; background asset prefetch gated on activity state
 
@@ -530,16 +540,14 @@ WHERE id = user_id;
 
 **File Location:** `apps/user-client/src/pages/DiscoverPage.tsx`, `apps/user-client/src/pages/BlindBoxEventDetailPage.tsx`
 
+> **Updated 2026-04-07** — the active blind-box system is pool-first, not payment-first. Discovery cards expose pool momentum, time + area, and trust framing; the join flow confirms pool entry first, while waiting / reveal states are owned by `MatchingStatusPage`.
+
 #### Event Types
 
 **1. Blind Box Events (盲盒活动)** - Primary Focus
-- **Mystery Format:** Title + theme revealed, attendees hidden
-- **AI-Matched Groups:** 5-10 participants selected by algorithm
-- **Tiered Reveal System:**
-  - Before Payment: Event theme, venue, time
-  - After Payment: 2-part match score (你们/气氛 + 你/个体)
-  - 72h Before: Attendee preview cards with personality insights
-  - Event Day: Full attendee list + chat access
+- **Pool-First Discovery:** Title + theme + time + area + type are revealed; exact location and tablemates stay hidden until a group is formed
+- **AI-Matched Groups:** Pool registrations are matched into small groups once server-side conditions are met
+- **Discovery-Layer Guidance:** `BlindBoxEventCard` can show threshold progress and the deterministic `PoolForecastStrip`, but these are atmospheric cues only — they do not guarantee a formed table
 
 **2. Regular Events (普通活动)**
 - Traditional RSVP format
@@ -548,55 +556,59 @@ WHERE id = user_id;
 
 #### Blind Box Event Lifecycle
 
-**Phase 1: Discovery (Matching Phase)**
+**Phase 1: Discovery (Pool Layer)**
 ```
-Event Status: "matching"
+Surface: DiscoverPage / BlindBoxEventCard
 User Sees: 
-  - Event theme (e.g., "深夜食堂：街边美食探险")
-  - Venue type (e.g., "尖沙咀特色茶餐厅")
+  - Event theme + type
   - Date & time
-  - Price (¥98 members / ¥148 non-members)
-  - "AI正在为你匹配最合适的伙伴..."
+  - Area / district (not exact venue)
+  - Pool threshold progress ("活动池即可触发匹配")
+  - PoolForecastStrip atmosphere copy
+  - CTA uses pool-join language, not formed-table language
 ```
 
-**Phase 2: Registration Open**
+**Phase 2: Pre-Entry Gating**
 ```
-Event Status: "registration_open"
-User Action: Click "立即加入盲盒" → Payment Page
-```
-
-**Phase 3: Post-Payment Reveal**
-```
-After Payment:
-  1. Match Score Reveal (2-Part System):
-     - 🎭 Group Chemistry (你们/气氛): 89%
-       "根据性格互补性，预测整体氛围和谐度"
-     - 💫 Personal Fit (你/个体): 92%
-       "根据兴趣、背景、意图，预测你与他人的连接深度"
-  
-  2. StackedAttendeeCards Preview:
-     - Attendee count: "5人已加入"
-     - Stacked avatar placeholders
-     - "72小时后解锁参与者预览"
+User Action: Tap discovery CTA
+If personality test incomplete:
+  - DiscoverPage shows TestIncompleteScreen
+  - User is routed to /personality-test before join is available
 ```
 
-**Phase 4: 72-Hour Pre-Event Window**
+**Phase 3: Pre-Join Context + Join Sheet**
 ```
-Event Status: "confirmed"
-Unlocked Features:
-  1. AttendeePreviewCard for each participant:
-     - Emoji avatar + name
-     - Primary archetype badge
-     - Shared interests (top 3)
-     - Match chemistry with you (e.g., "与你有 88% 化学反应")
-  
-  2. Group Summary:
-     - Archetype distribution pie chart
-     - "Meet Your Table" personality breakdown
-     - Conversation topic suggestions
+Entry path:
+  DiscoverPage → PreJoinVibeBriefSheet → JoinEventPoolSheet
+
+JoinEventPoolSheet stages:
+  1. WhyThisFitsCard + budget / atmosphere step
+  2. SocialGoalsStep or PrimaryGoalStep experiment
+  3. Smart defaults + optional dinner/bar preferences + BlindPoolTrustExplainer
+
+Optional intercept:
+  - ExtendedDataEmptyScreen can appear inside JoinEventPoolSheet when
+    user.profileExtendedComplete === false
+  - User may skip or go to /profile/edit
 ```
 
-**Phase 5: Event Day**
+**Phase 4: Pool Joined / Waiting**
+```
+Success state:
+  - SuccessCelebration says "已成功加入活动池"
+  - Copy sets expectation that matching happens later when conditions are met
+  - Matching waiting / no-match / reveal ownership lives in MatchingStatusPage
+```
+
+**Phase 5: Match Formed**
+```
+Server ownership:
+  - poolRealtimeMatchingService can match on registration or later scheduled scans
+  - MatchingStatusPage renders MatchRevealSequenceV2 when a group forms
+  - MatchCelebrationOverlay / group-detail follow-up surfaces continue after reveal
+```
+
+**Phase 6: Event Day**
 ```
 Event Status: "in_progress" (day of event)
 Full Access:
@@ -608,7 +620,7 @@ Full Access:
     — multi-phase group experience (热身 → 挑战 → 侦探 → 回顾)
 ```
 
-**Phase 6: Post-Event**
+**Phase 7: Post-Event**
 ```
 Event Status: "completed"
 User Actions:
@@ -653,32 +665,33 @@ Visual:
   - "你的个人契合度" label
 ```
 
-#### AttendeePreviewCard Component
+#### AttendeePreviewCard Component *(not part of the active blind-pool entry flow)*
 
 **File:** `apps/user-client/src/components/AttendeePreviewCard.tsx`
 
 ```typescript
-Display:
-  - Avatar: Gradient circle + archetype emoji
-  - Name: "张小明"
-  - Archetype Badge: "🧭 探索者"
-  - Bio Snippet: First 50 chars
-  - Shared Interests: Top 3 overlapping tags
-  - Chemistry Bar: "与你有 88% 化学反应"
-  - Hover Effect: Expand to show full traits
+Status:
+  - Component file still exists in the repo
+  - It should not be documented as a 72-hour blind-pool unlock step
+  - Active blind-pool join / waiting / reveal ownership is the pool-first flow above
 ```
 
-#### Blind Pool Join Flow Enhancements *(PRs #376, #381, #382)*
+#### Blind Pool Join Flow Enhancements *(PRs #376, #381, #382, #511, #512)*
 
-The standard join sheet (`JoinEventPoolSheet.tsx`) now includes a three-stage pre-join experience before the user commits to pool registration:
+The active join path now combines a pre-join vibe brief with the join sheet, and the join sheet itself uses the current pool-entry semantics:
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | `BlindPoolTrustExplainer` | `apps/user-client/src/components/event-pool-registration/BlindPoolTrustExplainer.tsx` | Inline explainer card — explains how the blind pool works and what to expect |
 | `PreJoinVibeBriefSheet` | `apps/user-client/src/components/PreJoinVibeBriefSheet.tsx` | Bottom-sheet surfacing pool atmosphere signals and intent context before commit |
 | `WhyThisFitsCard` | `apps/user-client/src/components/event-pool-registration/WhyThisFitsCard.tsx` | Personalised "Why this fits you" card with AI-generated reasons (`PreJoinVibeBrief.reasons`) — shown after vibe brief, before join confirmation |
+| `PoolForecastStrip` | `apps/user-client/src/components/PoolForecastStrip.tsx` | Deterministic pool-level atmosphere teaser on the discovery card before the user taps in |
 
-These components render in sequence within `JoinEventPoolSheet` and do not change pool registration state — they only inform and reassure the user before they tap the final join CTA.
+Current behavior:
+- `TestIncompleteScreen` is a Discover-page pre-entry intercept, not a join-sheet step
+- `ExtendedDataEmptyScreen` is a soft in-sheet nudge, not a hard gate
+- Join success means **joined the pool**; it does not imply an immediate formed match
+- Active CTA copy uses pool-join language such as `确认加入活动池`
 
 #### Matching-State Screen Family *(PRs #387–#391)*
 
@@ -689,9 +702,10 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `MatchingWaitingScreen` | Pool is open and fill is in progress (`waiting` → `can_form` → `full` fill-state transitions) |
 | `NoMatchScreen` | Pool closed without a match for this user |
 | `JoinErrorScreen` | Join attempt failed (network or server error) |
-| `TestIncompleteScreen` | User has not completed personality test — blocks join |
+| `TestIncompleteScreen` | User has not completed personality test — shown as a Discover-page pre-entry gate before join is available |
 | `ExtendedDataEmptyScreen` | Optional extended-profile nudge shown when `user.profileExtendedComplete === false`; user can skip; primary CTA routes to `/profile/edit` |
-| `SurpriseMatchReveal` | Match formed — squad reveal animation |
+| `MatchRevealSequenceV2` | Match formed — active cinematic reveal orchestrator |
+| `SurpriseMatchReveal` | Legacy rarity-first reveal overlay preserved in the repo but superseded in the active flow |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |
 
 **Shared asset:** Canonical background SVG at `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories.
