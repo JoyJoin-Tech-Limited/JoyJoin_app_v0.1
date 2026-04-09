@@ -306,7 +306,7 @@ describe('social icebreaker routes', () => {
     });
   });
 
-  it('rejects warmup readiness updates from authenticated non-participants', async () => {
+  it('rejects warmup readiness updates from non-participants', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'warmup-owner');
       const outsiderCookie = await login(baseUrl, 'warmup-outsider');
@@ -391,6 +391,8 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({ displayName: 'Host' }),
       });
+      const statementBody = await statementResponse.json() as any;
+
       await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
@@ -401,7 +403,6 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: guest2Cookie },
         body: JSON.stringify({ displayName: 'Guest 2' }),
       });
-      const statementBody = await statementResponse.json() as any;
 
       expect(statementBody.meta).toMatchObject({
         provider: 'deepseek',
