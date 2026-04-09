@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { authenticateMiniProgramUser, getUserState, type OnboardingStep } from '../lib/api'
+import {
+  authenticateMiniProgramUser,
+  getUserState,
+  type ApiError,
+  type OnboardingStep,
+} from '../lib/api'
 import { logInfo, logError } from '../lib/logger'
 
 /**
@@ -42,9 +47,11 @@ function nextStepToRoute(step: OnboardingStep): string {
  */
 export function useWeChatLogin() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const loginLockRef = useRef(false)
 
   async function handleWeChatLogin() {
-    if (isLoggingIn) return
+    if (loginLockRef.current) return
+    loginLockRef.current = true
     setIsLoggingIn(true)
 
     try {
@@ -59,10 +66,22 @@ export function useWeChatLogin() {
 
       Taro.reLaunch({ url: route })
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '微信登录失败，请检查网络连接后重试'
+      const apiError = error as ApiError | undefined
+      let message = error instanceof Error ? error.message : '微信登录失败，请检查网络连接后重试'
 
-      logError('[useWeChatLogin] Login failed', { message })
+      if (apiError?.statusCode === 401) {
+        message = '登录状态已失效，请重新使用微信登录'
+      } else if (apiError?.statusCode === 500) {
+        message = '服务器开小差了，请稍后重试'
+      } else if (
+        apiError?.statusCode &&
+        apiError.statusCode >= 400 &&
+        message === `Request failed with status ${apiError.statusCode}`
+      ) {
+        message = '微信登录失败，请检查网络连接后重试'
+      }
+
+      logError('[useWeChatLogin] Login failed', { message, statusCode: apiError?.statusCode })
 
       Taro.showToast({
         title: message,
@@ -70,6 +89,7 @@ export function useWeChatLogin() {
         duration: 3000,
       })
     } finally {
+      loginLockRef.current = false
       setIsLoggingIn(false)
     }
   }
