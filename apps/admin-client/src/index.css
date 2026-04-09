@@ -2,8 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 品牌标题字体 - 使用站酷庆科黄油体 (ZCOOL QingKe HuangYou) */
-/* 圆润如黄油，温暖亲和，免费商用 (SIL OFL 1.1) */
+/* 品牌标题字体 - 当前使用阿里巴巴普惠体 3 (AlibabaPuHuiTi-3)，详见 fonts.css */
 
 /* LIGHT MODE */
 :root {
@@ -429,9 +428,9 @@
     animation: progressFill 0.6s ease-out forwards;
   }
 
-  /* 品牌字体 - 用于情感时刻的标题 */
+  /* 品牌字体兼容别名 — 映射到系统中文字体栈 (legacy compatibility alias) */
   .font-brand {
-    font-family: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+    font-family: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   }
 
   /* 隐藏滚动条 */
