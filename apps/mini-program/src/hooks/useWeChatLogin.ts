@@ -73,7 +73,13 @@ export function useWeChatLogin() {
         message = '登录状态已失效，请重新使用微信登录'
       } else if (typedError?.statusCode === 500) {
         message = '服务器开小差了，请稍后重试'
-      } else if (typedError?.statusCode && typedError.statusCode >= 400 && typedError.isGenericMessage) {
+      } else if (
+        typedError?.statusCode &&
+        typedError.statusCode >= 400 &&
+        typedError.statusCode !== 401 &&
+        typedError.statusCode !== 500 &&
+        typedError.isGenericMessage
+      ) {
         message = '微信登录失败，请检查网络连接后重试'
       }
 
