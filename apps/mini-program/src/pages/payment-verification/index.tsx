@@ -82,7 +82,6 @@ export default function PaymentVerificationPage() {
       }
 
       if (attempt >= MAX_POLL_ATTEMPTS) {
-        clearPendingOrderStorage()
         setStatus('pending')
         setMessage('支付处理中，请稍后查看我的订单')
         return
@@ -142,7 +141,12 @@ export default function PaymentVerificationPage() {
   })
 
   useDidShow(() => {
-    if (status === 'polling' || wx.getStorageSync('pending_order')) {
+    if (status === 'polling') {
+      bootstrap(orderId)
+      return
+    }
+
+    if (status === 'pending' && wx.getStorageSync('pending_order')) {
       bootstrap(orderId)
     }
   })
