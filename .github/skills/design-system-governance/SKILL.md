@@ -50,7 +50,7 @@ JoyJoin uses a three-role semantic typography system. Product UI surfaces should
 
 These variables are defined in `apps/user-client/src/assets/fonts/fonts.css` and mapped to Tailwind utilities in `apps/user-client/tailwind.config.ts`.
 
-The `.font-brand` CSS utility class in `index.css` is a backward-compatible alias for `font-cn-display`.
+The `.font-brand` CSS utility class in `index.css` is a backward-compatible alias mapped to the system Chinese font stack. New code should use `font-cn-display` (or the `--font-cn-display` CSS variable) for Chinese display surfaces.
 
 **Do not** scatter `style={{ fontFamily: '...' }}` inline overrides across normal product UI components. Use the semantic Tailwind classes instead. Current exceptions are limited to rendering contexts where utility classes are not practical or are serialized into generated assets (for example SVG/canvas/share-card renderers), plus older surfaces not yet migrated. When touching those areas, migrate to semantic classes if the runtime supports them; otherwise document the exception clearly.
 

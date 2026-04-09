@@ -96,7 +96,7 @@ JoyJoin uses a **three-role semantic typography system**. Every typographic deci
 | Role | Tailwind class | CSS variable | Font (when loaded) | Fallback |
 |------|---------------|--------------|-------------------|----------|
 | **UI** | `font-ui` | `var(--font-ui)` | System Chinese stack | PingFang SC → Microsoft YaHei → system-ui |
-| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | ZCOOL QingKe HuangYou → PingFang SC |
+| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | PingFang SC → Microsoft YaHei → system-ui |
 | **English brand** | `font-en-brand` | `var(--font-en-brand)` | Quicksand | Outfit → system-ui |
 
 The legacy `.font-brand` CSS class is an alias for `font-cn-display` and is kept for backward compatibility.
@@ -133,8 +133,7 @@ Use only for:
 
 ### Taro / WeChat Mini Program notes
 
-- Font loading via self-hosted `.woff2` requires the files to be present in `src/assets/fonts/`. The `@font-face` blocks in `fonts.css` are commented out until the files are uploaded.
-- Until then, ZCOOL QingKe HuangYou (loaded via Google Fonts in `index.html`) acts as the effective `font-cn-display` display font.
+- Font loading via self-hosted TTF files is already active in the web client (see `apps/user-client/src/assets/fonts/fonts.css`). AlibabaPuHuiTi-3 (`@font-face`) is the primary Chinese display font; it falls back to system Chinese (PingFang SC, Microsoft YaHei) if not available.
 - Outfit (loaded via Google Fonts) acts as the effective `font-en-brand` fallback.
 - WeChat Mini Program / WebView: avoid `backdrop-filter`, `hover:` states, and loading many font weights.
 - Self-hosted fonts in mini programs must be uploaded as CDN assets, not bundled inline.
