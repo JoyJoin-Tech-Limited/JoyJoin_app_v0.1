@@ -93,7 +93,13 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
     });
 
     expect(result.alreadyCompleted).toBe(true);
-    expect(result.payment?.status).toBe("completed");
+    expect(result.payment).toMatchObject({
+      id: basePayment.id,
+      userId: basePayment.userId,
+      wechatOrderId: basePayment.wechatOrderId,
+      status: "completed",
+      wechatTransactionId: "wx_txn_001",
+    });
     expect(tx.update).toHaveBeenCalledTimes(1);
     expect(insertMock).not.toHaveBeenCalled();
   });

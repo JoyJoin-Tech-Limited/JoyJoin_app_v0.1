@@ -146,7 +146,7 @@ export default function PaymentVerificationPage() {
       return
     }
 
-    if (status === 'pending' && wx.getStorageSync('pending_order')) {
+    if (status === 'pending' && orderId && wx.getStorageSync('pending_order')) {
       bootstrap(orderId)
     }
   })
