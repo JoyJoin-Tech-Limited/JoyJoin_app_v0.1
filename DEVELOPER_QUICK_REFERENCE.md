@@ -75,7 +75,7 @@ npm run build:user       # Build only the user-client workspace
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
-npm run build:weapp -w mini-program  # Build the WeChat Mini Program workspace
+npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
 npm run db:push          # Sync Drizzle schema to database
 npm run db:push --force  # Force sync (use when db:push fails)
 npm run db:studio        # Open Drizzle Studio (database GUI)
