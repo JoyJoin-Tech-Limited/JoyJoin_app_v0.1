@@ -526,6 +526,20 @@ export async function processTestAnswers(
 
 export function setupWechatAuth(app: Express) {
   /**
+   * LEGACY — Web OAuth2 flow (quarantined, no longer used by active clients).
+   *
+   * These two routes implement the WeChat Official Account (公众号) OAuth2 web
+   * authorization flow. They are retained here for historical reference and in
+   * case a future web-channel is needed, but active user-facing client code no
+   * longer calls `/api/auth/wechat/oauth/start` or depends on this callback.
+   *
+   * The current active login path is the WeChat Mini Program flow:
+   *   Client: wx.login() → code → POST /api/auth/wechat/login-with-test
+   *   Server: getWechatOpenId(code) → findOrCreateWechatUser → session
+   *
+   * DO NOT re-introduce calls to these routes from user-client or mini-program
+   * code. If this flow is ever needed again, create a new, clearly scoped route.
+   *
    * GET /api/auth/wechat/oauth/start
    *
    * Step 1 of the WeChat Official Account OAuth2 web login flow.
@@ -598,6 +612,8 @@ export function setupWechatAuth(app: Express) {
   });
 
   /**
+   * LEGACY — Web OAuth2 callback (see quarantine note above).
+   *
    * GET /api/auth/wechat/oauth/callback
    *
    * Step 2 of the WeChat Official Account OAuth2 web login flow.

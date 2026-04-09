@@ -27,6 +27,7 @@ import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { haptics } from "@/lib/haptics";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getWeChatCode } from "@/hooks/useWeChatLogin";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -151,21 +152,9 @@ export default function WeChatAuthGatePage() {
         // Non-fatal: missing sessionId means the server simply skips cache cleanup
       }
 
-      // In WeChat Mini Program use wx.login(); fall back to mock code in web/dev
-      let code: string;
-      const wxGlobal = (window as any).wx;
-      if (typeof wxGlobal !== 'undefined' && wxGlobal?.login) {
-        const loginResult = await new Promise<any>((resolve, reject) => {
-          wxGlobal.login({
-            success: resolve,
-            fail: (err: any) => reject(new Error(err.errMsg || 'wx.login failed')),
-          });
-        });
-        code = loginResult.code;
-      } else {
-        const uuid = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-        code = `wechat_test_${uuid}`;
-      }
+      // Obtain WeChat Mini Program login code via the shared utility.
+      // This uses wx.login() in the mini-program runtime, or a mock code in dev.
+      const code = await getWeChatCode();
 
       const response = await fetch('/api/auth/wechat/login-with-test', {
         method: 'POST',

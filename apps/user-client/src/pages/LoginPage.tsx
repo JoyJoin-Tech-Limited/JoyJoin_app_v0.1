@@ -25,9 +25,10 @@ import { SiWechat } from "react-icons/si";
 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { nextStepToRoute, resolveOnboardingRoute } from "@/hooks/useOnboardingRoute";
+import { resolveOnboardingRoute } from "@/hooks/useOnboardingRoute";
 import type { AuthUser } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 import { motion } from "framer-motion";
 import { PromotionBannerCarousel } from "@/components/PromotionBannerCarousel";
 import {
@@ -135,6 +136,7 @@ function detectDefaultAreaCode(): string {
 export default function LoginPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { handleWeChatLogin, isLoggingIn } = useWeChatLogin();
   const [areaCode, setAreaCode] = useState("+86");
   const [phoneNumber, setPhoneNumber] = useState("");
   // 暂时注释：短信验证码相关状态
@@ -316,41 +318,6 @@ export default function LoginPage() {
       code: "666666",
       ...(referralCode && { referralCode })
     });
-  };
-
-  const handleWeChatLogin = async () => {
-    try {
-      let code: string;
-      if (typeof wx !== 'undefined' && wx.login) {
-        const loginResult = await new Promise<any>((resolve, reject) => {
-          wx.login({ success: resolve, fail: (err: any) => reject(new Error(err.errMsg || 'wx.login failed')) });
-        });
-        code = loginResult.code;
-      } else {
-        code = `wechat_test_${crypto.randomUUID()}`;
-      }
-
-      const response = await apiRequest("POST", "/api/auth/wechat/login-with-test", {
-        code,
-        testAnswers: [],
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-        const updatedUser = await queryClient.fetchQuery<AuthUser | null>({ queryKey: ["/api/auth/user"] });
-        const nextPath = updatedUser?.nextStep
-          ? nextStepToRoute(updatedUser.nextStep)
-          : resolveOnboardingRoute(updatedUser);
-        setLocation(nextPath);
-      }
-    } catch (err) {
-      toast({
-        title: "登录失败",
-        description: err instanceof Error ? err.message : "登录失败，请检查网络连接后重试",
-        variant: "destructive",
-      });
-    }
   };
 
   // Stats display with fallback values
@@ -609,9 +576,14 @@ export default function LoginPage() {
                   size="lg"
                   className="w-full bg-[#07C160] hover:bg-[#06AD56] text-white border-0"
                   onClick={handleWeChatLogin}
+                  disabled={isLoggingIn}
                   data-testid="button-wechat-login"
                 >
-                  <SiWechat className="h-5 w-5 mr-2" />
+                  {isLoggingIn ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <SiWechat className="h-5 w-5 mr-2" />
+                  )}
                   微信一键登录
                 </Button>
 
