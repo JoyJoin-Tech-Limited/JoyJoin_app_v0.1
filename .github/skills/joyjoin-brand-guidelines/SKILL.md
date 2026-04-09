@@ -96,7 +96,7 @@ JoyJoin uses a **three-role semantic typography system**. Every typographic deci
 | Role | Tailwind class | CSS variable | Font (when loaded) | Fallback |
 |------|---------------|--------------|-------------------|----------|
 | **UI** | `font-ui` | `var(--font-ui)` | System Chinese stack | PingFang SC → Microsoft YaHei → system-ui |
-| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | PingFang SC → Microsoft YaHei → system-ui |
+| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | PingFang SC → Microsoft YaHei → system-ui → sans-serif |
 | **English brand** | `font-en-brand` | `var(--font-en-brand)` | Quicksand | Outfit → system-ui |
 
 The legacy `.font-brand` CSS class is an alias for `font-cn-display` and is kept for backward compatibility.
@@ -133,10 +133,11 @@ Use only for:
 
 ### Taro / WeChat Mini Program notes
 
-- Font loading via self-hosted TTF files is already active in the web client (see `apps/user-client/src/assets/fonts/fonts.css`). AlibabaPuHuiTi-3 (`@font-face`) is the primary Chinese display font; it falls back to system Chinese (PingFang SC, Microsoft YaHei) if not available.
-- Outfit (loaded via Google Fonts) acts as the effective `font-en-brand` fallback.
-- WeChat Mini Program / WebView: avoid `backdrop-filter`, `hover:` states, and loading many font weights.
-- Self-hosted fonts in mini programs must be uploaded as CDN assets, not bundled inline.
+- Web client only: `apps/user-client/src/assets/fonts/fonts.css` self-hosts AlibabaPuHuiTi-3 via `@font-face` as the primary Chinese display font, with PingFang SC, Microsoft YaHei, `system-ui`, and `sans-serif` fallbacks.
+- Web client only: Outfit, loaded via Google Fonts, acts as the effective `font-en-brand` fallback.
+- WeChat Mini Program: do not assume the same setup is present there. This workspace currently relies on system fonts and does not bundle AlibabaPuHuiTi assets or `@font-face` usage.
+- If custom fonts are ever introduced in the mini program, host them on a CDN rather than bundling them inline, and avoid loading many font weights.
+- WeChat Mini Program / WebView: avoid `backdrop-filter` and `hover:` states.
 
 ### Key design rules
 - Do **not** apply custom display fonts globally or at the container level — only on the specific element.
