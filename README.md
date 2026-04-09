@@ -77,13 +77,13 @@ npm install
 
 ### 3. Environment variables configuration
 
-Copy the template file and create your local environment file:
+Copy the template file and create your local environment file for the server and CLI tools:
 
 ```bash
 cp .env.example .env
 ```
 
-For the split local setup in this README, start from these values in `.env`:
+The repo-root `.env` is loaded by the API server and the bootstrap CLIs. For the split local setup in this README, start from these values in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.env`:
 
 ```bash
 NODE_ENV=development
@@ -91,14 +91,21 @@ PORT=5000
 APP_URL=http://localhost:5000
 DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=require
 SESSION_SECRET=<replace-with-a-strong-random-secret>
-JWT_SECRET=<replace-with-a-strong-random-secret>
 WECHAT_APPID=<replace-with-wechat-app-id>
 WECHAT_SECRET=<replace-with-wechat-secret>
 ADMIN_CREATE_SECRET_KEY=<replace-with-internal-cli-secret>
-VITE_API_URL=http://localhost:5000
-CORS_ORIGINS=http://localhost:5000,http://localhost:5001,http://localhost:5002
 COOKIE_DOMAIN=
-VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin
+```
+
+Frontend Vite variables are different:
+
+- `VITE_ADMIN_PORTAL_URL` should be set in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/.env.local` (or exported in the shell before `npm run dev:user`)
+- `VITE_API_URL` is optional/advanced and should only be set in the relevant app env file or shell if you intentionally want a non-default API target
+
+Example user-client override file:
+
+```bash
+echo 'VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin' >> apps/user-client/.env.local
 ```
 
 Generate secure secrets with:
@@ -112,18 +119,16 @@ The repo uses the following environment variables in active local and optional f
 | Variable | Description | Required For |
 |----------|-------------|--------------|
 | `NODE_ENV` | Runtime mode; use `development` locally | Both |
-| `PORT` | API server port; default local API port is `5000` | Both |
+| `PORT` | API server port; recommended local API port is `5000` (set via `PORT`); default is `5001` when unset | Both |
 | `APP_URL` | Base app URL used by some auth/payment flows | Both |
 | `DATABASE_URL` | PostgreSQL connection string | Both |
 | `SESSION_SECRET` | Express session secret; use a long random value | Both |
-| `JWT_SECRET` | JWT signing secret; use a long random value | Both |
 | `WECHAT_APPID` | WeChat Mini Program App ID | Both |
 | `WECHAT_SECRET` | WeChat Mini Program secret | Both |
-| `ADMIN_CREATE_SECRET_KEY` | Secret required by the admin/user bootstrap CLIs and local dev tools | **Admin Only** |
-| `VITE_API_URL` | API base URL used by the admin client and local Vite proxies | Both when running split frontend/backend locally |
-| `CORS_ORIGINS` | Comma-separated allowed browser origins; include `5001` and `5002` for local user/admin clients | Both when running split frontend/backend locally |
+| `ADMIN_CREATE_SECRET_KEY` | Secret required by the admin/user bootstrap CLIs and local dev tools | Dev bootstrap tooling (admin + user seed/bypass) |
+| `VITE_API_URL` | Optional/advanced: custom API base URL for frontend builds. Leave unset for normal local development so the Vite `/api` proxy defaults to `http://localhost:5000`; only set this for cross-origin setups when API-side CORS is explicitly enabled. | Both (optional advanced config) |
 | `COOKIE_DOMAIN` | Cookie domain override; leave blank for localhost | Both (optional) |
-| `VITE_ADMIN_PORTAL_URL` | Where the user app redirects admin links; set `http://localhost:5002/admin` locally | User app only |
+| `VITE_ADMIN_PORTAL_URL` | Where the user app redirects admin links; set `http://localhost:5002/admin` locally in `apps/user-client/.env.local` or via shell export before starting Vite | User app only |
 | `ENABLE_DEV_AUTH_TOOLS` | Enables non-production auth/debug helper routes | Both (optional local debugging) |
 | `DEBUG_AUTH` | Enables extra auth logging in non-production | Both (optional local debugging) |
 | `VITE_ENABLE_DEV_TOOLS` | Enables client-side dev tools in the user app when `import.meta.env.DEV` is true | User app only (optional) |
@@ -144,6 +149,8 @@ The repo uses the following environment variables in active local and optional f
 | `WECHAT_PAY_APIV3_KEY` | WeChat Pay API v3 key; must be exactly 32 bytes | Both (payments only) |
 | `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM | Both (payments only) |
 | `WECHAT_PAY_NOTIFY_URL` | Public payment webhook URL; if unset, the server falls back to `APP_URL` | Both (payments only) |
+
+`JWT_SECRET` and `CORS_ORIGINS` still appear in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.env.example`, but they are not part of the active local runtime described here: `JWT_SECRET` is currently retained for template/ops compatibility, and `CORS_ORIGINS` is not consumed by the current API server code.
 
 > This repo does **not** use an `ADMIN_API_KEY` for normal admin requests. Admin access is session-based after logging in at `/api/admin/login`. `ADMIN_CREATE_SECRET_KEY` is for CLI bootstrap and local dev tooling only.
 
@@ -205,7 +212,7 @@ JoyJoin runs the admin experience as a **separate frontend app** plus the shared
 
 1. Start the API server with `npm run dev:server`.
 2. Start the admin portal with `npm run dev:admin`.
-3. Make sure `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` is set in `.env` if you also want admin links from the user app to stay local.
+3. If you also want admin links from the user app to stay local, set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` before starting `npm run dev:user`.
 4. Create an admin account if you have not done so already:
 
 ```bash
@@ -244,11 +251,11 @@ Verify the local setup for both roles:
 
 - **Admin app cannot reach the API or keeps failing auth**
   - Symptom: the admin portal at `:5002` shows network/CORS/session issues.
-  - Fix: set `VITE_API_URL=http://localhost:5000`, include `http://localhost:5002` in `CORS_ORIGINS`, and restart both the server and admin Vite process.
+  - Fix: for local development, keep API requests relative (for example, `/api/...`) so the admin app can use the Vite `/api` proxy instead of requiring browser CORS. If you changed `VITE_API_URL`, point it back to the local proxied path or remove the override, then restart the admin Vite process. If you intentionally need cross-origin requests, you must add CORS support on the API server before `CORS_ORIGINS`-style settings will have any effect.
 
 - **User app redirects admin links to production**
   - Symptom: clicking an admin link from the user app sends you to `https://admin.yuejuapp.com`.
-  - Fix: set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `.env`, then restart the user app.
+  - Fix: set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` (or export it in the shell before `npm run dev:user`), then restart the user app.
 
 ## Validation commands
 
