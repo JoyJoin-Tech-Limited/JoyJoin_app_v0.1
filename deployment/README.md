@@ -38,10 +38,10 @@ GitHub Actions
 
 ## 仓库里哪些文件是当前权威来源
 
-- 生产部署流水线：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.github/workflows/cicd.yml`
-- 运行时编排：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/deployment/docker-compose.caddy.yml`
-- 网关与域名：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/deployment/Caddyfile`
-- 生产环境变量模板：`/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/deployment/.env.production.example`
+- 生产部署流水线：`.github/workflows/cicd.yml`
+- 运行时编排：`deployment/docker-compose.caddy.yml`
+- 网关与域名：`deployment/Caddyfile`
+- 生产环境变量模板：`deployment/.env.production.example`
 
 如果这些文件与其他旧文档冲突，以这里列出的文件为准。
 
