@@ -391,6 +391,16 @@ describe('social icebreaker routes', () => {
         headers: { 'Content-Type': 'application/json', cookie: hostCookie },
         body: JSON.stringify({ displayName: 'Host' }),
       });
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest1Cookie },
+        body: JSON.stringify({ displayName: 'Guest 1' }),
+      });
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guest2Cookie },
+        body: JSON.stringify({ displayName: 'Guest 2' }),
+      });
       const statementBody = await statementResponse.json() as any;
 
       expect(statementBody.meta).toMatchObject({
