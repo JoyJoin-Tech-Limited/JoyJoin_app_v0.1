@@ -55,7 +55,7 @@
   position: relative;
   width: 100%;
   flex-shrink: 0;
-  height: min(46vw, 210PX); /* min(46vw, 210px) */
+  height: 210PX;
 }
 
 .card {
@@ -141,11 +141,8 @@
   margin-top: 16PX; /* mt-4 */
 
   .headline {
-    background: linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: clamp(26PX, 8vw, 36PX); /* clamp(26px, 8vw, 36px) */
+    color: #7C3AED;
+    font-size: 30PX;
     font-weight: 800;
     line-height: 1.2;
     margin-bottom: 8PX; /* space-y-2 */
