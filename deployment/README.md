@@ -19,7 +19,7 @@
 ```text
 GitHub Actions
   └─ SSH 到远程服务器
-       └─ docker compose -f deployment/docker-compose.caddy.yml up -d --build
+       └─ cd ~/JoyJoin/deployment && docker compose -f docker-compose.caddy.yml up -d --build
             ├─ joyjoin-caddy   (80/443, HTTPS 与反向代理)
             ├─ joyjoin-user    (用户端静态站点)
             ├─ joyjoin-admin   (管理后台静态站点)
@@ -53,6 +53,7 @@ GitHub Actions
 
 - Docker Engine
 - Docker Compose Plugin
+- Node.js（建议 **20+**，并确保宿主机可用 `npm` / `npx`，因为部署过程中会在宿主机执行 `node ...` 与 `npx drizzle-kit push`）
 - 一个已检出的仓库目录（当前流水线假设为 `~/JoyJoin`）
 - 80 / 443 端口对公网开放
 - 域名 A 记录指向该服务器 IP
@@ -104,6 +105,7 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 ```
 
 `DATABASE_URL` 会被传到远程服务器上的部署脚本流程中，并与 API 容器使用同一数据库连接。
+当前运行中的 `joyjoin-api` 容器从 `deployment/.env.production` 读取运行时环境，因此该文件中的 `DATABASE_URL` 必须与 GitHub Actions Secret `DATABASE_URL` 保持一致，避免迁移任务与 API 运行时连接到不同数据库。
 
 ---
 
@@ -160,7 +162,7 @@ cp deployment/.env.production.example deployment/.env.production
 ./deployment/scripts/deploy.sh production
 ```
 
-该脚本现在对齐当前的自管服务器部署方式：使用现有 Docker Compose + Caddy，并要求通过环境变量提供 `DATABASE_URL`。
+该脚本现在对齐当前的自管服务器部署方式：使用现有 Docker Compose + Caddy，并直接读取 `deployment/.env.production`。当前脚本只支持 `production`，因为现有 Compose 文件、域名和 `env_file` 都绑定到生产拓扑。
 
 ---
 
