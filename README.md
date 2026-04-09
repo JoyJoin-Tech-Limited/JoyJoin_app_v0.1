@@ -83,7 +83,7 @@ Copy the template file and create your local environment file for the server and
 cp .env.example .env
 ```
 
-The repo-root `.env` is loaded by the API server and the bootstrap CLIs. For the split local setup in this README, start from these values in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.env`:
+The repo-root `.env` is loaded by the API server and the bootstrap CLIs. For the split local setup in this README, start from these values in `.env`:
 
 ```bash
 NODE_ENV=development
@@ -99,7 +99,7 @@ COOKIE_DOMAIN=
 
 Frontend Vite variables are different:
 
-- `VITE_ADMIN_PORTAL_URL` should be set in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/apps/user-client/.env.local` (or exported in the shell before `npm run dev:user`)
+- `VITE_ADMIN_PORTAL_URL` should be set in `apps/user-client/.env.local` (or exported in the shell before `npm run dev:user`)
 - `VITE_API_URL` is optional/advanced and should only be set in the relevant app env file or shell if you intentionally want a non-default API target
 
 Example user-client override file:
@@ -150,7 +150,7 @@ The repo uses the following environment variables in active local and optional f
 | `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM | Both (payments only) |
 | `WECHAT_PAY_NOTIFY_URL` | Public payment webhook URL; if unset, the server falls back to `APP_URL` | Both (payments only) |
 
-`JWT_SECRET` and `CORS_ORIGINS` still appear in `/home/runner/work/JoyJoin_app_v0.1/JoyJoin_app_v0.1/.env.example`, but they are not part of the active local runtime described here: `JWT_SECRET` is currently retained for template/ops compatibility, and `CORS_ORIGINS` is not consumed by the current API server code.
+`JWT_SECRET` and `CORS_ORIGINS` still appear in `.env.example`, but they are not part of the active local runtime described here: `JWT_SECRET` is currently retained for template/ops compatibility, and `CORS_ORIGINS` is not consumed by the current API server code.
 
 > This repo does **not** use an `ADMIN_API_KEY` for normal admin requests. Admin access is session-based after logging in at `/api/admin/login`. `ADMIN_CREATE_SECRET_KEY` is for CLI bootstrap and local dev tooling only.
 
