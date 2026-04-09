@@ -10,18 +10,22 @@ export interface ApiError extends Error {
   data?: unknown
 }
 
+export const DEFAULT_API_ERROR_PREFIX = 'Request failed with status'
+
 function getApiErrorMessage(statusCode: number, data: unknown): string {
   if (typeof data === 'object' && data !== null) {
-    if ('error' in data && typeof (data as Record<string, unknown>).error === 'string') {
-      return String((data as Record<string, unknown>).error)
+    const errorData = data as Record<string, unknown>
+
+    if ('error' in errorData && typeof errorData.error === 'string') {
+      return String(errorData.error)
     }
 
-    if ('message' in data && typeof (data as Record<string, unknown>).message === 'string') {
-      return String((data as Record<string, unknown>).message)
+    if ('message' in errorData && typeof errorData.message === 'string') {
+      return String(errorData.message)
     }
   }
 
-  return `Request failed with status ${statusCode}`
+  return `${DEFAULT_API_ERROR_PREFIX} ${statusCode}`
 }
 
 function buildApiUrl(path: string): string {

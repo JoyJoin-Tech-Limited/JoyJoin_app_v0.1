@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import Taro from '@tarojs/taro'
 import {
+  DEFAULT_API_ERROR_PREFIX,
   authenticateMiniProgramUser,
   getUserState,
   type ApiError,
@@ -76,7 +77,7 @@ export function useWeChatLogin() {
       } else if (
         apiError?.statusCode &&
         apiError.statusCode >= 400 &&
-        message === `Request failed with status ${apiError.statusCode}`
+        message === `${DEFAULT_API_ERROR_PREFIX} ${apiError.statusCode}`
       ) {
         message = '微信登录失败，请检查网络连接后重试'
       }
