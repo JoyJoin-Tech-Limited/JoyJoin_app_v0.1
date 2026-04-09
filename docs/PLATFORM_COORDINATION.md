@@ -2,15 +2,19 @@
 
 ## Executive Summary
 
-Current platform symmetry is **yellow trending red**. `apps/user-client` already shares many domain contracts with `packages/shared`, but `apps/mini-program` is still largely isolated and re-implements auth, API access, pricing, and payment orchestration inside page files. The largest risk is payment: the Mini Program has a real `wx.requestPayment` flow, while the web client still mixes direct endpoint calls, missing endpoint assumptions, and page-local state. If the team wants fast beta delivery without a costly web re-launch later, they should move non-UI payment/auth logic behind shared contracts immediately and keep platform-specific behavior in adapters only.
+Current platform symmetry is **yellow trending red**.
+
+`apps/user-client` already shares many domain contracts with `packages/shared`, but `apps/mini-program` is still largely isolated and re-implements auth, API access, pricing, and payment orchestration inside page files.
+
+The biggest risk is payment. The Mini Program has a real `wx.requestPayment` flow, while the web client still mixes direct endpoint calls, missing endpoint assumptions, and page-local state. To ship beta quickly without a costly web re-launch later, the team should move non-UI payment/auth logic behind shared contracts and keep platform-specific behavior in adapters only.
 
 ## Divergence Report Card
 
 | Area | Status | Findings | Evidence |
 | --- | --- | --- | --- |
-| API layer | 🔴 Red | The web client uses `fetch` plus React Query (`apps/user-client/src/lib/queryClient.ts`), but the Mini Program uses a separate Taro wrapper (`apps/mini-program/src/lib/api.ts`). There is no shared API contract package for request/response DTOs. `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` calls `/api/coupons/validate` and `/api/event-packs/purchase`, but no matching server route exists in `apps/server/src`. | `apps/user-client/src/lib/queryClient.ts`; `apps/mini-program/src/lib/api.ts`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes.ts`; `apps/server/src/routes/domains/payments.ts`; `apps/server/src/routes/domains/assessment.ts` |
+| API layer | 🔴 Red | Web uses `fetch` + React Query via `apps/user-client/src/lib/queryClient.ts`. Mini Program uses a separate Taro wrapper in `apps/mini-program/src/lib/api.ts`. There is no shared API contract package for request/response DTOs. The web payment page also calls `/api/coupons/validate` and `/api/event-packs/purchase`, which were not found during this audit in active server route registrations. | `apps/user-client/src/lib/queryClient.ts`; `apps/mini-program/src/lib/api.ts`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes.ts`; `apps/server/src/routes/domains/payments.ts`; `apps/server/src/routes/domains/assessment.ts` |
 | Auth logic | 🟡 Yellow | `user-client` uses server-driven auth state via `useAuth()` and `GET /api/auth/user`, while the Mini Program performs login inline with `authenticateMiniProgramUser()` and stores only `openid` locally. Both depend on WeChat login but use different entry endpoints and different state models. | `apps/user-client/src/hooks/useAuth.ts`; `apps/user-client/src/hooks/useWeChatLogin.ts`; `apps/mini-program/src/lib/api.ts`; `apps/server/src/wechatAuth.ts` |
-| Payment trigger logic | 🔴 Red | The Mini Program runs a full payment intent → `wx.requestPayment` → verification polling flow. The web client does not share that orchestration, does not poll, and mixes direct event creation with separate subscription/pack purchase endpoints. The page also sends `vip_monthly` / `vip_quarterly` to `/api/subscription/renew`, while the server route validates `monthly` / `quarterly`. | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts` |
+| Payment trigger logic | 🔴 Red | Mini Program runs the full payment intent → `wx.requestPayment` → verification polling flow. The web client does not share that orchestration and instead mixes direct event creation with separate subscription/pack purchase endpoints. The page also sends `vip_monthly` / `vip_quarterly` to `/api/subscription/renew`, while the server route validates `monthly` / `quarterly`. | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts` |
 | Core utilities | 🟡 Yellow | `user-client` imports many shared contracts from `packages/shared`, but `mini-program` imports none. Currency/price formatting is duplicated and inconsistent: web uses `apps/user-client/src/lib/currency.ts`, Mini Program hardcodes `¥` in page-local logic. | `apps/user-client/src/lib/currency.ts`; `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `packages/shared/package.json` |
 
 ## Phase 1 — Architecture Discovery and Divergence Audit
@@ -37,8 +41,12 @@ Current platform symmetry is **yellow trending red**. `apps/user-client` already
 ### API client analysis
 
 - **Not shared today**
-  - Web: `apiRequest(method, url, data)` wraps browser `fetch`, returns `Response`, and handles `401` by clearing the React Query cache and redirecting (`apps/user-client/src/lib/queryClient.ts`).
-  - Mini Program: `apiRequest({ path, method, data })` wraps `Taro.request`, returns parsed JSON, and uses cookies plus a base URL env var (`apps/mini-program/src/lib/api.ts`).
+  - Web: `apiRequest(method, url, data)` wraps browser `fetch` in `apps/user-client/src/lib/queryClient.ts`.
+    - Returns raw `Response`
+    - Handles `401` by clearing the React Query cache and redirecting
+  - Mini Program: `apiRequest({ path, method, data })` wraps `Taro.request` in `apps/mini-program/src/lib/api.ts`.
+    - Returns parsed JSON
+    - Uses cookies plus a base URL env var
 - **Shared API types**
   - Domain/database types are shared through `packages/shared/src/schema.ts`.
   - Request/response DTOs for pricing, coupons, payments, and auth are **not** shared through a dedicated API contract module.
