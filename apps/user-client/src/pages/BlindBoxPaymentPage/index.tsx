@@ -32,7 +32,7 @@ import {
 
 import { motion } from "framer-motion";
 import { SiWechat } from "react-icons/si";
-import type { PricingPlan } from "@joyjoin/shared/api-types/payment";
+import type { PricingPlan } from "@shared/api-types/payment";
 
 import { getCurrencySymbol } from "@/lib/currency";
 import { apiRequest } from "@/lib/queryClient";

@@ -4,13 +4,13 @@ export interface PricingPlan {
   id: string;
   planType: string;
   displayName: string;
-  displayNameEn?: string;
-  description?: string;
+  displayNameEn?: string | null;
+  description?: string | null;
   price: number;
   originalPrice?: number | null;
-  durationDays?: number;
+  durationDays?: number | null;
   isActive?: boolean;
-  isFeatured?: boolean;
+  isFeatured?: boolean | null;
 }
 
 export interface MiniProgramPaymentIntentRequest {

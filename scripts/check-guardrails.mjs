@@ -23,7 +23,7 @@ const bannedLegacyIdentifiers = [
 ];
 
 const activeLegacyGuardFiles = [
-  'apps/user-client/src/hooks/useAuth.ts',
+  'apps/user-client/src/hooks/useAuth/index.ts',
   'apps/user-client/src/hooks/useOnboardingProgress.ts',
   'apps/user-client/src/hooks/useOnboardingRoute.ts',
   'apps/user-client/src/pages/LoginPage.tsx',

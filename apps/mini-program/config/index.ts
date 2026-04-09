@@ -40,6 +40,7 @@ export default defineConfig<'vite'>(async (merge) => {
     },
     alias: {
       '@': path.resolve(__dirname, '..', 'src'),
+      '@shared': path.resolve(__dirname, '..', '..', 'packages/shared/src'),
       '@tarojs/plugin-framework-react/dist/runtime': path.resolve(__dirname, '..', 'node_modules/@tarojs/plugin-framework-react/dist/runtime.js'),
     },
     sass: {

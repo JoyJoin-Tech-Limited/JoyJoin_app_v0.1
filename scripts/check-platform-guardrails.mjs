@@ -1,14 +1,11 @@
 #!/usr/bin/env node
-import { ESLint } from 'eslint';
 import fs from 'node:fs';
 import path from 'node:path';
-import plugin from './eslint-plugin-platform-boundaries/index.js';
 import {
   getChangedFiles,
   getCoordinatedFiles,
   getImpactForFile,
   repoRoot,
-  toRepoRelative,
 } from './platform-coordination.mjs';
 
 function parseArgs(argv) {
@@ -37,6 +34,10 @@ function parseArgs(argv) {
   return options;
 }
 
+function readFile(file) {
+  return fs.readFileSync(path.join(repoRoot, file), 'utf8');
+}
+
 function findInlineApiTypeViolations(files) {
   const violations = [];
   const inlineApiTypePattern = /(?:interface|type)\s+\w+(?:Request|Response)\b/g;
@@ -48,16 +49,66 @@ function findInlineApiTypeViolations(files) {
     if (file.startsWith('packages/shared/src/api-types/')) {
       continue;
     }
-
-    const impacts = getImpactForFile(file);
-    if (impacts.length === 0) {
+    if (getImpactForFile(file).length === 0) {
       continue;
     }
 
-    const content = fs.readFileSync(path.join(repoRoot, file), 'utf8');
-    const matches = content.match(inlineApiTypePattern);
+    const matches = readFile(file).match(inlineApiTypePattern);
     if (matches) {
       violations.push(`${file}: inline API type declarations are forbidden (${matches.join(', ')})`);
+    }
+  }
+
+  return violations;
+}
+
+function findPlatformAgnosticViolations(files) {
+  const violations = [];
+  const directPlatformApiPatterns = [
+    /\bwx\s*\./,
+    /\bTaro\s*\./,
+    /\bwindow\s*\.\s*location\b/,
+  ];
+
+  for (const file of files) {
+    if (!file.endsWith('.ts') && !file.endsWith('.tsx')) {
+      continue;
+    }
+
+    const content = readFile(file);
+    if (!content.includes('@platform-agnostic')) {
+      continue;
+    }
+
+    if (directPlatformApiPatterns.some((pattern) => pattern.test(content))) {
+      violations.push(`${file}: @platform-agnostic files must not call wx.*, Taro.*, or window.location directly.`);
+    }
+  }
+
+  return violations;
+}
+
+function findSiblingUpdateViolations(changedFiles) {
+  const violations = [];
+  const changedSet = new Set(changedFiles);
+
+  for (const file of changedFiles) {
+    const [impact] = getImpactForFile(file);
+    if (!impact || impact.root.role !== 'PRIMARY') {
+      continue;
+    }
+
+    const hasCompanionChange = [
+      ...impact.siblings.map((sibling) => sibling.file),
+      ...impact.sharedDependencies,
+    ].some((candidate) => changedSet.has(candidate));
+
+    if (!hasCompanionChange) {
+      const targets = [
+        ...impact.siblings.map((sibling) => `${sibling.file} (${sibling.role})`),
+        ...impact.sharedDependencies,
+      ].join(', ');
+      violations.push(`${file}: PRIMARY change requires a paired review/update in ${targets}.`);
     }
   }
 
@@ -72,53 +123,18 @@ const filesToInspect = changedFiles.length > 0
   ? changedFiles.filter((file) => getImpactForFile(file).length > 0)
   : getCoordinatedFiles();
 
-const inlineViolations = findInlineApiTypeViolations(filesToInspect);
+const violations = [
+  ...findInlineApiTypeViolations(filesToInspect),
+  ...findPlatformAgnosticViolations(filesToInspect),
+  ...findSiblingUpdateViolations(filesToInspect),
+];
 
-const eslint = new ESLint({
-  cwd: repoRoot,
-  ignore: false,
-  useEslintrc: false,
-  overrideConfig: {
-    parserOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      ecmaFeatures: {
-        jsx: true,
-      },
-    },
-    plugins: ['platform-boundaries'],
-    rules: {
-      'platform-boundaries/no-direct-platform-api': 'error',
-      'platform-boundaries/require-sibling-update': ['error', { changedFiles }],
-    },
-  },
-  plugins: {
-    'platform-boundaries': plugin,
-  },
-});
-
-const absoluteFiles = filesToInspect.map((file) => path.join(repoRoot, file));
-const lintResults = absoluteFiles.length > 0 ? await eslint.lintFiles(absoluteFiles) : [];
-const formatter = await eslint.loadFormatter('stylish');
-const output = formatter.format(lintResults);
-const errorCount = lintResults.reduce((total, result) => total + result.errorCount, 0);
-
-if (inlineViolations.length > 0) {
-  console.error('Platform API type guardrail violations found:');
-  for (const violation of inlineViolations) {
+if (violations.length > 0) {
+  console.error('Platform coordination guardrails found violations:');
+  for (const violation of violations) {
     console.error(`- ${violation}`);
   }
-}
-
-if (output) {
-  console.error(output.trim());
-}
-
-if (inlineViolations.length > 0 || errorCount > 0) {
   process.exit(1);
 }
 
-const summaryTarget = changedFiles.length > 0
-  ? changedFiles.map((file) => toRepoRelative(file)).join(', ')
-  : 'all coordinated files';
-console.log(`Platform coordination guardrails passed for ${summaryTarget}.`);
+console.log(`Platform coordination guardrails passed for ${filesToInspect.length > 0 ? filesToInspect.join(', ') : 'all coordinated files'}.`);

@@ -3,7 +3,7 @@ import {
   NEXT_STEP_VALUES,
   type AuthUser,
   type NextStepType,
-} from "@joyjoin/shared/api-types/auth";
+} from "@shared/api-types/auth";
 
 /**
  * Navigation step constants for server-driven onboarding flow (B1)

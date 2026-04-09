@@ -1,0 +1,28 @@
+export type PaymentPlanKey = 'vip_monthly' | 'vip_quarterly';
+export interface PricingPlan {
+    id: string;
+    planType: string;
+    displayName: string;
+    displayNameEn?: string | null;
+    description?: string | null;
+    price: number;
+    originalPrice?: number | null;
+    durationDays?: number | null;
+    isActive?: boolean;
+    isFeatured?: boolean | null;
+}
+export interface MiniProgramPaymentIntentRequest {
+    type: 'event' | PaymentPlanKey;
+    eventId?: string;
+    planId?: PaymentPlanKey;
+    openid: string;
+}
+export interface MiniProgramPaymentIntentResponse {
+    outTradeNo: string;
+    timeStamp: string;
+    nonceStr: string;
+    package: string;
+    signType: 'RSA';
+    paySign: string;
+    type: 'event' | PaymentPlanKey;
+}

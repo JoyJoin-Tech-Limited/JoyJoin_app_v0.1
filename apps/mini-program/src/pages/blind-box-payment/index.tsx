@@ -4,7 +4,7 @@ import type {
   MiniProgramPaymentIntentResponse,
   PaymentPlanKey,
   PricingPlan,
-} from '@joyjoin/shared/api-types/payment'
+} from '@shared/api-types/payment'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { apiRequest, authenticateMiniProgramUser } from '../../lib/api'
 import { logError, logWarn } from '../../lib/logger'
@@ -85,7 +85,7 @@ export default function BlindBoxPaymentPage() {
       const [pricing, coupons] = await Promise.all([
         apiRequest<PricingPlan[]>({
           path: '/api/pricing',
-        }).catch(() => []),
+        }).catch((): PricingPlan[] => []),
         apiRequest<{ count?: number }>({
           path: '/api/user/coupons',
         }).catch(() => ({ count: 0 })),

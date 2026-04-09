@@ -12,6 +12,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strictNullChecks": true,
+    "skipLibCheck": true,
     "sourceMap": true,
     "rootDir": ".",
     "jsx": "react-jsx",
@@ -20,18 +21,16 @@
     "types": [
       "node"
     ],
-    "typeRoots": [
-      "node_modules/@types"
-    ],
     "paths": {
       // TS5090 leading './'
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": ["./src", "./types", "./config"],
   "references": [
     {
-      "path": "../../packages/shared"
+      "path": "../../packages/shared/tsconfig.api-types.json"
     }
   ],
   "compileOnSave": false

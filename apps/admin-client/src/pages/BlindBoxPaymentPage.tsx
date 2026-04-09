@@ -12,7 +12,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { PricingPlan } from "@joyjoin/shared/api-types/payment";
+import type { PricingPlan } from "@shared/api-types/payment";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
