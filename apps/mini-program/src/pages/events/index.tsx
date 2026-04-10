@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
@@ -20,13 +22,7 @@ export default function EventsPage() {
   })
 
   if (authLoading) {
-    return (
-      <View className='events-page'>
-        <View className='events-page__loading'>
-          <Text className='events-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
+    return <LoadingScreen />
   }
 
   // Simple split: events with a completed/past status vs upcoming
@@ -66,7 +62,7 @@ export default function EventsPage() {
           </View>
         ) : displayEvents.length > 0 ? (
           displayEvents.map((event) => (
-            <View
+            <Card
               key={String(event.id)}
               className='events-page__card'
               onClick={() => handleEventTap(event)}
@@ -75,16 +71,16 @@ export default function EventsPage() {
                 <Text className='events-page__card-title'>{event.title ?? '悦聚活动'}</Text>
               </View>
               <Text className='events-page__card-date'>{event.dateTime ?? '时间待定'}</Text>
-            </View>
+            </Card>
           ))
         ) : (
-          <View className='events-page__empty-state'>
+          <Card className='events-page__empty-state'>
             <Text className='events-page__empty-emoji'>✨</Text>
             <Text className='events-page__empty-text'>
               {activeTab === 'upcoming' ? '暂无进行中的活动' : '暂无已完成的活动'}
             </Text>
             <Text className='events-page__empty-hint'>去「发现」页面看看有什么好玩的</Text>
-          </View>
+          </Card>
         )}
         <View className='events-page__spacer' />
       </ScrollView>

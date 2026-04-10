@@ -2,6 +2,9 @@ import { PropsWithChildren, createElement } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
 import { logInfo } from './lib/logger'
 import AuthProvider from './providers/AuthProvider'
+import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
+import { AchievementProvider } from './providers/AchievementProvider'
+import AchievementPopup from './components/AchievementPopup'
 import './app.scss'
 
 const PAYMENT_PAGE_ROUTE = 'pages/blind-box-payment/index'
@@ -31,7 +34,20 @@ function App({ children }: PropsWithChildren<any>) {
     }
   })
 
-  return createElement(AuthProvider, null, children)
+  return createElement(
+    AuthProvider,
+    null,
+    createElement(
+      DynamicAccentProvider,
+      null,
+      createElement(
+        AchievementProvider,
+        null,
+        createElement(AchievementPopup),
+        children,
+      ),
+    ),
+  )
 }
 
 export default App

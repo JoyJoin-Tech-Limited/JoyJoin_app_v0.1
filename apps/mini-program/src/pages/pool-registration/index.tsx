@@ -1,21 +1,15 @@
-import { View, Text, Button, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { getEventPool, registerForPool, type EventPoolSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logInfo, logError } from '../../lib/logger'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
+import Button from '../../components/Button'
 import './index.scss'
-
-interface EventPool {
-  id: string
-  title?: string
-  description?: string
-  dateRange?: string
-  maxParticipants?: number
-  currentParticipants?: number
-  [key: string]: unknown
-}
 
 export default function PoolRegistrationPage() {
   const router = useRouter()
@@ -26,9 +20,9 @@ export default function PoolRegistrationPage() {
   const [registered, setRegistered] = useState(false)
   const [error, setError] = useState('')
 
-  const { data: pool, isLoading } = useQuery<EventPool>({
+  const { data: pool, isLoading } = useQuery<EventPoolSummary>({
     queryKey: ['mini-program', 'event-pool', poolId],
-    queryFn: () => apiRequest<EventPool>({ path: `/api/event-pools/${encodeURIComponent(poolId)}` }),
+    queryFn: () => getEventPool(apiRequest, poolId),
     enabled: !!poolId && !authLoading,
   })
 
@@ -39,11 +33,7 @@ export default function PoolRegistrationPage() {
     setError('')
     try {
       logInfo('[PoolRegistration] Registering', { poolId })
-      await apiRequest({
-        path: '/api/pool-registrations',
-        method: 'POST',
-        data: { poolId },
-      })
+      await registerForPool(apiRequest, poolId)
       setRegistered(true)
       Taro.showToast({ title: '报名成功！', icon: 'success', duration: 2000 })
     } catch (err) {
@@ -57,29 +47,24 @@ export default function PoolRegistrationPage() {
   }, [poolId, isRegistering])
 
   if (authLoading || isLoading) {
-    return (
-      <View className='pool-reg'>
-        <View className='pool-reg__loading'>
-          <Text className='pool-reg__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
+    return <LoadingScreen />
   }
 
   if (registered) {
     return (
       <View className='pool-reg'>
-        <View className='pool-reg__success'>
+        <Card className='pool-reg__success'>
           <Text className='pool-reg__success-emoji'>🎉</Text>
           <Text className='pool-reg__success-title'>报名成功！</Text>
           <Text className='pool-reg__success-text'>我们会在匹配完成后通知你</Text>
           <Button
+            variant='primary'
             className='pool-reg__back-btn'
             onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
           >
             查看我的活动
           </Button>
-        </View>
+        </Card>
       </View>
     )
   }
@@ -94,11 +79,11 @@ export default function PoolRegistrationPage() {
       </View>
 
       {pool ? (
-        <View className='pool-reg__card'>
-          {pool.dateRange ? (
+        <Card className='pool-reg__card'>
+          {pool.dateTime ? (
             <View className='pool-reg__info-row'>
               <Text className='pool-reg__info-label'>📅 时间</Text>
-              <Text className='pool-reg__info-value'>{pool.dateRange}</Text>
+              <Text className='pool-reg__info-value'>{pool.dateTime}</Text>
             </View>
           ) : null}
           {pool.maxParticipants ? (
@@ -109,13 +94,14 @@ export default function PoolRegistrationPage() {
               </Text>
             </View>
           ) : null}
-        </View>
+        </Card>
       ) : null}
 
       {error ? <Text className='pool-reg__error'>{error}</Text> : null}
 
       <View className='pool-reg__footer'>
         <Button
+          variant='primary'
           className='pool-reg__submit'
           onClick={handleRegister}
           disabled={isRegistering}

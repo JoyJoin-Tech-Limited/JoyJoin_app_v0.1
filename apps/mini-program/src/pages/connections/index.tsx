@@ -3,6 +3,8 @@ import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
 import './index.scss'
 
 interface Connection {
@@ -24,13 +26,7 @@ export default function ConnectionsPage() {
   })
 
   if (authLoading) {
-    return (
-      <View className='connections-page'>
-        <View className='connections-page__loading'>
-          <Text className='connections-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
+    return <LoadingScreen />
   }
 
   return (
@@ -47,7 +43,7 @@ export default function ConnectionsPage() {
           </View>
         ) : connections.length > 0 ? (
           connections.map((conn) => (
-            <View key={String(conn.id)} className='connections-page__card'>
+            <Card key={String(conn.id)} className='connections-page__card'>
               <View className='connections-page__card-avatar'>
                 <Text className='connections-page__card-avatar-text'>
                   {(conn.peerName ?? '?')[0]}
@@ -62,14 +58,14 @@ export default function ConnectionsPage() {
                   <Text className='connections-page__card-event'>来自：{conn.eventTitle}</Text>
                 ) : null}
               </View>
-            </View>
+            </Card>
           ))
         ) : (
-          <View className='connections-page__empty-state'>
+          <Card className='connections-page__empty-state'>
             <Text className='connections-page__empty-emoji'>✨</Text>
             <Text className='connections-page__empty-text'>还没有建立连接</Text>
             <Text className='connections-page__empty-hint'>参加活动后即可与活动伙伴建立连接</Text>
-          </View>
+          </Card>
         )}
         <View className='connections-page__spacer' />
       </ScrollView>
