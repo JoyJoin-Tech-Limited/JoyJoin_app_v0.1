@@ -14,7 +14,12 @@ class PersonalityResultAnalytics {
       metadata,
       timestamp: Date.now(),
     }).catch(() => {
-      // Analytics must not block UX.
+      if (import.meta.env.DEV) {
+        console.debug("[personalityResultAnalytics] failed to send analytics event", {
+          eventType,
+          metadata,
+        });
+      }
     });
   }
 }

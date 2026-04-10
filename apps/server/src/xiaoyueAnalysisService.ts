@@ -462,13 +462,31 @@ ${traitSummary}
 }
 
 function extractJsonPayload(content: string): string {
-  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced?.[1]) return fenced[1].trim();
+  const candidates = [
+    content.trim(),
+    content.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim(),
+  ].filter((candidate): candidate is string => !!candidate);
 
-  const start = content.indexOf('{');
-  const end = content.lastIndexOf('}');
-  if (start !== -1 && end > start) {
-    return content.slice(start, end + 1);
+  for (const candidate of candidates) {
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      // Try next candidate.
+    }
+  }
+
+  const firstBrace = content.indexOf('{');
+  if (firstBrace !== -1) {
+    for (let end = content.lastIndexOf('}'); end > firstBrace; end = content.lastIndexOf('}', end - 1)) {
+      const candidate = content.slice(firstBrace, end + 1).trim();
+      try {
+        JSON.parse(candidate);
+        return candidate;
+      } catch {
+        // Keep shrinking until a valid JSON object is found.
+      }
+    }
   }
 
   return content.trim();
