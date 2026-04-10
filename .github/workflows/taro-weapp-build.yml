@@ -1,4 +1,4 @@
-name: Build Taro WeChat Mini Program
+name: Build Taro WeChat Mini-Program
 
 on:
   push:
@@ -30,10 +30,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6.0.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: 20
           cache: npm
@@ -49,7 +49,7 @@ jobs:
         run: npm run build:weapp -w apps/mini-program
 
       - name: Upload mini-program artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: taro-weapp-dist
           path: apps/mini-program/dist
