@@ -18,14 +18,14 @@ do_not_use_when:
 
 strong_triggers:
   - .platform
+  - .platform marker
   - impact-check
   - "guardrails:platform"
   - platform-map.json
-  - PRIMARY
-  - SECONDARY
-  - SHARED
+  - PRIMARY vs SECONDARY
   - sibling platform
   - shared api contract
+  - shared api types
   - apps/mini-program/src/pages/blind-box-payment
   - apps/user-client/src/pages/BlindBoxPaymentPage
   - apps/mini-program/src/lib/api
