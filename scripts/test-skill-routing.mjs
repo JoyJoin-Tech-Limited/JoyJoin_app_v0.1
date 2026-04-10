@@ -510,6 +510,31 @@ test('brand + design system ambiguity → clarification recommended', () => {
   );
 });
 
+// ---- Platform coordination protocol ----
+console.log('\nPlatform coordination protocol scenarios:');
+
+test('check sibling platform after PRIMARY change → platform-coordination-protocol', () => {
+  const r = routeSkill({
+    ask: 'I changed apps/mini-program/src/pages/blind-box-payment/index.tsx — which sibling platform file should I review?',
+  });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
+test('run impact-check for coordinated change → platform-coordination-protocol', () => {
+  const r = routeSkill({ ask: 'Run impact-check for this staged payment-flow change before I push it' });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
+test('.platform marker meaning → platform-coordination-protocol', () => {
+  const r = routeSkill({ ask: 'What does the .platform PRIMARY marker mean for this file?' });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
+test('shared api contract consumer review → platform-coordination-protocol', () => {
+  const r = routeSkill({ ask: 'I updated packages/shared/src/api-types/auth.ts — which coordinated consumers must I review?' });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
 // ---- Skill authoring governance ----
 console.log('\nSkill authoring governance scenarios:');
 
