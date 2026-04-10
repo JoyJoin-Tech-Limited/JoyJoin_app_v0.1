@@ -278,7 +278,8 @@ BASE_URL=http://localhost:5001 node scripts/synthetic/happy-path-probe.mjs
 
 **GitHub Actions schedule** (`.github/workflows/synthetic-probe.yml`):
 - Runs every 5 minutes via cron.
-- Requires the `PRODUCTION_BASE_URL` repository secret.
+- Targets `https://api.yuejuapp.com` by default, matching the active production deployment entrypoint.
+- Supports overriding the target with the `PRODUCTION_BASE_URL` repository secret or the manual `workflow_dispatch` input.
 - Optionally posts results to a Prometheus Pushgateway (`PUSHGATEWAY_URL` secret).
 - Logs a workflow error and exposes the `JoyJoinSyntheticProbeFailed` Prometheus
   gauge (via Pushgateway) when any probe fails.
