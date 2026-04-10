@@ -86,7 +86,7 @@ export default function MatchingStatusPage() {
   })
 
   // ── WebSocket live updates ──────────────────────────────────────
-  const { lastMessage } = useWebSocket({
+  useWebSocket({
     eventTypes: ['POOL_MATCHED', 'EVENT_THEME_TITLE_REVEALED', 'MATCH_PROGRESS_UPDATE'],
     onMessage: (msg) => {
       logInfo('[MatchingStatus] WS message received', { type: msg.type })
