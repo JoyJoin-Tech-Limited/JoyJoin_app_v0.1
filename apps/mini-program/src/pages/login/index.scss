@@ -1,15 +1,24 @@
 @import '../../styles/variables';
 @import '../../styles/mixins';
 
-.page {
+.login-page {
   @include page-gradient-bg;
   @include safe-area-bottom;
-  @include flex-center;
+  display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: $container-padding;
 
-  &__placeholder {
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     text-align: center;
-    padding: $spacing-xl;
+    padding-bottom: $spacing-2xl;
   }
 
   &__title {
@@ -17,7 +26,7 @@
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     font-family: $font-brand;
-    color: $color-primary;
+    color: $color-primary-dark;
     margin-bottom: $spacing-sm;
   }
 
@@ -25,6 +34,40 @@
     display: block;
     font-size: $font-size-base;
     color: $color-text-secondary;
+    line-height: 1.6;
+    max-width: 560rpx;
+  }
+
+  &__actions {
+    width: 100%;
+    max-width: 600rpx;
+    padding-bottom: $spacing-xl;
+  }
+
+  &__wechat-btn {
+    width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: #07C160;
+    color: $color-text-white;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: $shadow-md;
+
+    &--loading {
+      opacity: 0.7;
+    }
+
+    &::after {
+      border: none;
+    }
+  }
+
+  &__wechat-btn-hover {
+    opacity: 0.85;
   }
 }
 

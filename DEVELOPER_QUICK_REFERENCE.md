@@ -71,9 +71,11 @@ npm run dev
 ### Key Commands
 ```bash
 npm run build            # Build user-client, admin-client, and server workspaces
+npm run build:user       # Build only the user-client workspace
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
+npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
 npm run db:push          # Sync Drizzle schema to database
 npm run db:push --force  # Force sync (use when db:push fails)
 npm run db:studio        # Open Drizzle Studio (database GUI)
@@ -109,6 +111,13 @@ joyjoin-monorepo/
 │   │   │   └── AdminApp.tsx  # Admin app entry
 │   │   └── index.html
 │   │
+│   ├── mini-program/         # WeChat Mini Program beta client (Taro + React)
+│   │   ├── src/
+│   │   │   ├── pages/        # Mini Program page entries
+│   │   │   ├── lib/          # Runtime-specific API/logging helpers
+│   │   │   └── app.ts        # Mini Program app lifecycle entry
+│   │   └── package.json
+│   │
 │   └── server/               # Express.js backend
 │       └── src/
 │           ├── routes.ts             # Composition root — mounts domain routers
@@ -135,7 +144,7 @@ joyjoin-monorepo/
 │           └── ...                                  # Other services
 │
 ├── packages/
-│   └── shared/               # Shared types, schemas, personality system
+│   └── shared/               # Shared contracts, schemas, personality system, UI primitives
 │       └── src/
 │           ├── schema.ts             # Drizzle ORM database schema
 │           ├── wsEvents.ts           # WebSocket event interfaces
