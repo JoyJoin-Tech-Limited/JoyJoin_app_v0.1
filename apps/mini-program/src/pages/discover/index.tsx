@@ -1,4 +1,4 @@
-import { View, Text, Image, Button, Navigator } from '@tarojs/components'
+import { View, Text, Image, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getPricing, getUserCoupons } from '@shared/api'
@@ -100,10 +100,7 @@ export default function DiscoverPage() {
           已有账号？登录
         </Button>
         <View className='legal-text'>
-          <Text>我已阅读并同意</Text>
-          <Navigator url='/pages/terms/index' className='link'>《用户协议》</Navigator>
-          <Text>和</Text>
-          <Navigator url='/pages/terms/index' className='link'>《隐私政策》</Navigator>
+          <Text>继续即表示同意用户协议与隐私政策</Text>
         </View>
       </View>
     </View>

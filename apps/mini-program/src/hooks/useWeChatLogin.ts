@@ -4,29 +4,9 @@ import {
   authenticateMiniProgramUser,
   getUserState,
   type ApiError,
-  type OnboardingStep,
 } from '../lib/api'
+import { nextStepToMiniProgramRoute } from '../lib/onboardingRoutes'
 import { logInfo, logError } from '../lib/logger'
-
-function nextStepToRoute(step: OnboardingStep): string {
-  switch (step) {
-    case 'onboarding':
-      return '/pages/onboarding/onboarding/index'
-    case 'personality-test':
-      return '/pages/onboarding/personality-test/index'
-    case 'essential-data':
-      return '/pages/onboarding/essential-data/index'
-    case 'extended-data':
-      return '/pages/onboarding/extended-data/index'
-    case 'profile-review':
-      return '/pages/onboarding/profile-review/index'
-    case 'discover':
-      return '/pages/discover/index'
-    case 'guide':
-    default:
-      return '/pages/discover/index'
-  }
-}
 
 /**
  * useWeChatLogin – Taro WeChat Mini Program login hook.
@@ -54,7 +34,7 @@ export function useWeChatLogin() {
       await authenticateMiniProgramUser()
 
       const userState = await getUserState()
-      const route = nextStepToRoute(userState.nextStep)
+      const route = nextStepToMiniProgramRoute(userState.nextStep)
 
       logInfo('[useWeChatLogin] Login successful', { nextStep: userState.nextStep, route })
 
