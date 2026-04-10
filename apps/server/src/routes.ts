@@ -11812,6 +11812,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.post('/api/xiaoyue/analysis', async (req: any, res) => {
     try {
       const { archetype, secondaryArchetype, topArchetypes, traitScores, confidence } = req.body;
+      const normalizedTopArchetypes = Array.isArray(topArchetypes)
+        ? topArchetypes.filter((item: any) =>
+            item &&
+            typeof item.archetype === 'string' &&
+            item.archetype.length > 0 &&
+            typeof item.score === 'number' &&
+            Number.isFinite(item.score)
+          )
+        : undefined;
       
       if (!archetype || !traitScores) {
         return res.status(400).json({ message: 'Missing archetype or traitScores' });
@@ -11821,7 +11830,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const result = await generateXiaoyueAnalysis({
         archetype,
         secondaryArchetype,
-        topArchetypes: Array.isArray(topArchetypes) ? topArchetypes : undefined,
+        topArchetypes: normalizedTopArchetypes,
         traitScores: {
           affinity: traitScores.A || traitScores.affinity || 0.5,
           openness: traitScores.O || traitScores.openness || 0.5,
@@ -11844,6 +11853,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   app.post('/api/xiaoyue/prefetch', async (req: any, res) => {
     try {
       const { archetype, secondaryArchetype, topArchetypes, traitScores, confidence } = req.body;
+      const normalizedTopArchetypes = Array.isArray(topArchetypes)
+        ? topArchetypes.filter((item: any) =>
+            item &&
+            typeof item.archetype === 'string' &&
+            item.archetype.length > 0 &&
+            typeof item.score === 'number' &&
+            Number.isFinite(item.score)
+          )
+        : undefined;
       
       if (!archetype || !traitScores || confidence < 0.7) {
         return res.json({ prefetched: false, reason: 'Not ready yet' });
@@ -11854,7 +11872,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         {
           archetype,
           secondaryArchetype,
-          topArchetypes: Array.isArray(topArchetypes) ? topArchetypes : undefined,
+          topArchetypes: normalizedTopArchetypes,
           traitScores: {
             affinity: traitScores.A || traitScores.affinity || 0.5,
             openness: traitScores.O || traitScores.openness || 0.5,

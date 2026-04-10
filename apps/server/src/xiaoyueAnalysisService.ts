@@ -579,6 +579,9 @@ export async function generateXiaoyueAnalysis(
 
     return { ...parsedResult, cached: false };
   } catch (error) {
+    if (error instanceof Error && error.message.includes('DEEPSEEK_API_KEY')) {
+      console.warn('[XiaoyueAnalysis] DeepSeek disabled, using fallback copy because API key is missing');
+    }
     console.error('[XiaoyueAnalysis] API error:', error);
     return { ...buildFallbackAnalysisPayload(input), cached: false };
   }
