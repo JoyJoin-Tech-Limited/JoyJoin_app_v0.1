@@ -90,6 +90,15 @@ export default {
         jiangdou: ["FLJiangdou", "Outfit", "sans-serif"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        // ─── JoyJoin semantic font roles ──────────────────────────────────
+        // font-ui          → system Chinese stack; default for all dense/functional UI
+        // font-cn-display  → system Chinese stack;
+        //                    for short high-impact Chinese display moments
+        // font-en-brand    → Outfit;
+        //                    for JoyJoin English wordmark / brand accent moments only
+        ui: ["var(--font-ui)"],
+        "cn-display": ["var(--font-cn-display)"],
+        "en-brand": ["var(--font-en-brand)"],
       },
       keyframes: {
         "accordion-down": {
