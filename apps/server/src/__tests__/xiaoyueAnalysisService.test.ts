@@ -90,7 +90,7 @@ describe('xiaoyueAnalysisService', () => {
         shareLine: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
         whyThisFits: '这次会落到开心柯基，主要是因为你的外向性和正能量更突出，放进真实社交场里会变成一种快热带动型的存在感。',
         blendLine: '虽然你身上也有一点太阳鸡的影子，但这次更稳定地落在开心柯基这边。',
-        expressionTags: ['一上桌就熟得快', '热场但不压人', '这个标签太长了'],
+        expressionTags: ['一上桌就熟得快', '热场但不压人', '这是一个超过八个字的标签'],
         shareVariants: {
           selfIntro: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
           friendCallout: '认识我的人应该会懂，我不是硬撑热闹，是会自然把场子带热。',
