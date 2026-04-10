@@ -1,5 +1,4 @@
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
