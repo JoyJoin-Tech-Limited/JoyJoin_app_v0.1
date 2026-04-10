@@ -206,8 +206,7 @@ export function submitEssentialData(
     method: 'PATCH',
     data: {
       ...rest,
-      ...(birthYear ? { birthdate: `${birthYear}-01-01` } : {}),
-      ...(birthdate ? { birthdate } : {}),
+      ...(birthdate ? { birthdate } : birthYear ? { birthdate: `${birthYear}-01-01` } : {}),
     },
   })
 }

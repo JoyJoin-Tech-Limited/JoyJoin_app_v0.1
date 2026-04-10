@@ -44,10 +44,13 @@ const interestsByCategory = getInterestsByCategory()
 
 function normalizeGenderValue(value: unknown): string {
   switch (value) {
+    case '男性':
     case 'male':
       return '男性'
+    case '女性':
     case 'female':
       return '女性'
+    case '不透露':
     case 'other':
       return '不透露'
     default:
