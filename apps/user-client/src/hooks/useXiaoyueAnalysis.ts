@@ -11,7 +11,13 @@ interface TraitScores {
 }
 
 interface XiaoyueAnalysisResult {
+  headline?: string;
   analysis: string;
+  socialRole?: string;
+  bestScene?: string;
+  microAction?: string;
+  shareLine?: string;
+  stateLabel?: string;
   cached: boolean;
 }
 
@@ -28,7 +34,7 @@ export function useXiaoyueAnalysis({
   confidence = 1,
   enabled = true,
 }: UseXiaoyueAnalysisOptions) {
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [result, setResult] = useState<XiaoyueAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef<string | null>(null);
@@ -36,11 +42,12 @@ export function useXiaoyueAnalysis({
   useEffect(() => {
     if (!enabled || !archetype || !traitScores) return;
     
-    const cacheKey = `${archetype}_${JSON.stringify(traitScores)}`;
+    const cacheKey = `${archetype}_${JSON.stringify(traitScores)}_${confidence}`;
     if (fetchedRef.current === cacheKey) return;
     
     setIsLoading(true);
     setError(null);
+    setResult(null);
     
     apiRequest("POST", "/api/xiaoyue/analysis", {
       archetype,
@@ -48,8 +55,8 @@ export function useXiaoyueAnalysis({
       confidence,
     })
       .then((res) => res.json() as Promise<XiaoyueAnalysisResult>)
-      .then((result) => {
-        setAnalysis(result.analysis);
+      .then((nextResult) => {
+        setResult(nextResult);
         fetchedRef.current = cacheKey;
       })
       .catch((err) => {
@@ -62,10 +69,17 @@ export function useXiaoyueAnalysis({
   }, [archetype, traitScores, confidence, enabled]);
 
   return {
-    analysis,
+    result,
+    headline: result?.headline ?? null,
+    analysis: result?.analysis ?? null,
+    socialRole: result?.socialRole ?? null,
+    bestScene: result?.bestScene ?? null,
+    microAction: result?.microAction ?? null,
+    shareLine: result?.shareLine ?? null,
+    stateLabel: result?.stateLabel ?? null,
     isLoading,
     error,
-    hasAnalysis: !!analysis,
+    hasAnalysis: !!result?.analysis,
   };
 }
 
