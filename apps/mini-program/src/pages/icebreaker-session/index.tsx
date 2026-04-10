@@ -300,7 +300,7 @@ export default function IcebreakerSessionPage() {
   }
 
   // ── Error ───────────────────────────────────────────────────────
-  if (eventSessionError || sessionError || (!session && !sessionLoading)) {
+  if (eventSessionError || sessionError || !session) {
     return (
       <View className='icebreaker icebreaker--error'>
         <View className='icebreaker__error'>
