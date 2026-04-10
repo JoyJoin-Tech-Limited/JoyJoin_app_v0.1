@@ -1,6 +1,8 @@
 import Taro from '@tarojs/taro'
 import type {
+  AuthUser,
   MiniProgramAuthSession,
+  NextStepType,
   WechatMiniProgramLoginResponse,
 } from '@shared/api-types/auth'
 
@@ -12,6 +14,31 @@ const REQUEST_TIMEOUT_MS = 15000
 export interface ApiError extends Error {
   statusCode?: number
   data?: unknown
+  isGenericMessage?: boolean
+}
+
+export const DEFAULT_API_ERROR_PREFIX = 'Request failed with status'
+
+function getApiErrorDetails(statusCode: number, data: unknown): {
+  message: string
+  isGenericMessage: boolean
+} {
+  if (typeof data === 'object' && data !== null) {
+    const errorData = data as Record<string, unknown>
+
+    if ('error' in errorData && typeof errorData.error === 'string') {
+      return { message: errorData.error, isGenericMessage: false }
+    }
+
+    if ('message' in errorData && typeof errorData.message === 'string') {
+      return { message: errorData.message, isGenericMessage: false }
+    }
+  }
+
+  return {
+    message: `${DEFAULT_API_ERROR_PREFIX} ${statusCode}`,
+    isGenericMessage: true,
+  }
 }
 
 function buildApiUrl(path: string): string {
@@ -26,10 +53,16 @@ function buildApiUrl(path: string): string {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-function createApiError(message: string, statusCode?: number, data?: unknown): ApiError {
+function createApiError(
+  message: string,
+  statusCode?: number,
+  data?: unknown,
+  isGenericMessage = false
+): ApiError {
   const error = new Error(message) as ApiError
   error.statusCode = statusCode
   error.data = data
+  error.isGenericMessage = isGenericMessage
   return error
 }
 
@@ -53,15 +86,14 @@ export async function apiRequest<T>(options: {
     return response.data
   }
 
-  const message =
-    typeof response.data === 'object' &&
-    response.data !== null &&
-    'error' in response.data &&
-    typeof (response.data as Record<string, unknown>).error === 'string'
-      ? String((response.data as Record<string, unknown>).error)
-      : `Request failed with status ${response.statusCode}`
+  const errorDetails = getApiErrorDetails(response.statusCode, response.data)
 
-  throw createApiError(message, response.statusCode, response.data)
+  throw createApiError(
+    errorDetails.message,
+    response.statusCode,
+    response.data,
+    errorDetails.isGenericMessage
+  )
 }
 
 export async function authenticateMiniProgramUser(): Promise<MiniProgramAuthSession> {
@@ -86,4 +118,19 @@ export async function authenticateMiniProgramUser(): Promise<MiniProgramAuthSess
     user: data.user,
     openid: data.user.wechatOpenId,
   }
+}
+
+export type OnboardingStep = NextStepType
+
+export type UserState = AuthUser & {
+  wechatOpenId: string
+  nextStep: OnboardingStep
+}
+
+/**
+ * Fetch the current authenticated user's state, including the server-calculated
+ * `nextStep` for driving onboarding/post-login navigation.
+ */
+export async function getUserState(): Promise<UserState> {
+  return apiRequest<UserState>({ path: '/api/auth/user' })
 }
