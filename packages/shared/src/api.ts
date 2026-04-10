@@ -230,3 +230,84 @@ export function completeProfileReview(
     data: { hasSeenProfileReview: true },
   })
 }
+
+// ---------------------------------------------------------------------------
+// Event pool discovery & registration API
+// ---------------------------------------------------------------------------
+
+export interface EventPoolSummary {
+  id: string
+  title?: string
+  eventType?: string
+  city?: string
+  district?: string
+  dateTime?: string
+  status?: string
+  description?: string
+  maxParticipants?: number
+  currentParticipants?: number
+  [key: string]: unknown
+}
+
+export interface PoolRegistrationSummary {
+  id: string
+  poolId: string
+  matchStatus?: 'pending' | 'matched' | 'completed'
+  assignedGroupId?: string | null
+  matchScore?: number | null
+  registeredAt?: string
+  poolTitle?: string
+  poolEventType?: string
+  poolCity?: string
+  poolDistrict?: string
+  poolDateTime?: string
+  poolStatus?: string
+  theme?: string
+  subtitle?: string
+  themeEmoji?: string
+  highlights?: string[]
+  vibe?: string
+  invitationRole?: 'inviter' | 'invitee' | null
+  relatedUserName?: string | null
+  [key: string]: unknown
+}
+
+export function getEventPools(api: ApiTransport): Promise<EventPoolSummary[]> {
+  return api<EventPoolSummary[]>({ path: '/api/event-pools' })
+}
+
+export function getEventPool(
+  api: ApiTransport,
+  poolId: string
+): Promise<EventPoolSummary> {
+  return api<EventPoolSummary>({
+    path: `/api/event-pools/${encodeURIComponent(poolId)}`,
+  })
+}
+
+export function getMyPoolRegistrations(
+  api: ApiTransport
+): Promise<PoolRegistrationSummary[]> {
+  return api<PoolRegistrationSummary[]>({ path: '/api/my-pool-registrations' })
+}
+
+export function registerForPool(
+  api: ApiTransport,
+  poolId: string
+): Promise<{ id: string }> {
+  return api<{ id: string }>({
+    path: '/api/pool-registrations',
+    method: 'POST',
+    data: { poolId },
+  })
+}
+
+export function cancelPoolRegistration(
+  api: ApiTransport,
+  registrationId: string
+): Promise<void> {
+  return api<void>({
+    path: `/api/pool-registrations/${encodeURIComponent(registrationId)}`,
+    method: 'DELETE',
+  })
+}

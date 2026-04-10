@@ -1,10 +1,10 @@
 import { View, Text, Button, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback } from 'react'
-import { useAuthGuard, nextStepToRoute } from '../../hooks/useAuthGuard'
-import { useInvalidateAuth } from '../../hooks/useAuth'
-import { apiRequest } from '../../lib/api'
-import { logInfo, logError } from '../../lib/logger'
+import { useAuthGuard, nextStepToRoute } from '../../../hooks/useAuthGuard'
+import { useInvalidateAuth } from '../../../hooks/useAuth'
+import { apiRequest } from '../../../lib/api'
+import { logInfo, logError } from '../../../lib/logger'
 import {
   startAssessment,
   submitAssessmentAnswer,
