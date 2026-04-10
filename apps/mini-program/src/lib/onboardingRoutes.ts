@@ -45,7 +45,7 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.login,
 ] as const
 
-export function nextStepToMiniProgramRoute(step: OnboardingStep | undefined): string {
+export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
   switch (step) {
     case 'onboarding':
       return MINI_PROGRAM_ROUTES.onboarding

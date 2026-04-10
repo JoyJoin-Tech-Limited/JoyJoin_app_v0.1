@@ -2,7 +2,6 @@ import { Button, View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
-import type { OnboardingStep } from '../../lib/api'
 import { apiRequest } from '../../lib/api'
 import { nextStepToMiniProgramRoute } from '../../lib/onboardingRoutes'
 import './index.scss'
@@ -27,11 +26,10 @@ export default function ProfilePage() {
   })
 
   const displayName = user?.nickname || '我的资料'
-  const onboardingStep = (user?.nextStep as OnboardingStep | undefined) ?? 'discover'
+  const onboardingStep = user?.nextStep ?? 'discover'
   // 'discover' and 'guide' are the terminal steps after onboarding is complete
   const isOnboarding = onboardingStep !== 'discover' && onboardingStep !== 'guide'
   const couponCount = coupons?.count ?? 0
-  const onboardingRoute = nextStepToMiniProgramRoute(onboardingStep)
 
   return (
     <View className='profile-page'>
@@ -49,7 +47,7 @@ export default function ProfilePage() {
           <Text className='profile-page__card-copy'>继续填写你的个人信息，让算法更好地为你匹配。</Text>
           <Button
             className='profile-page__cta'
-            onClick={() => Taro.navigateTo({ url: onboardingRoute })}
+            onClick={() => Taro.navigateTo({ url: nextStepToMiniProgramRoute(onboardingStep) })}
           >
             继续填写资料
           </Button>

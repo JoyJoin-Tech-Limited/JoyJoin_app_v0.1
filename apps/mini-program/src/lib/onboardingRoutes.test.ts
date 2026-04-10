@@ -16,4 +16,9 @@ describe('mini-program onboarding routes', () => {
     expect(nextStepToMiniProgramRoute('discover')).toBe(MINI_PROGRAM_ROUTES.discover)
     expect(nextStepToMiniProgramRoute(undefined)).toBe(MINI_PROGRAM_ROUTES.discover)
   })
+
+  it('defaults to discover for unknown step strings', () => {
+    expect(nextStepToMiniProgramRoute('')).toBe(MINI_PROGRAM_ROUTES.discover)
+    expect(nextStepToMiniProgramRoute('unknown-step')).toBe(MINI_PROGRAM_ROUTES.discover)
+  })
 })
