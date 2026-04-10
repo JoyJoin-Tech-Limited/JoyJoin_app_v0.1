@@ -1,4 +1,5 @@
 import { View, Text, Image, Button, Navigator } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import './index.scss'
 import logoImage from '../../assets/box_logo_archetypes.png'
 import matchCardImg from '../../assets/match.png'
@@ -13,7 +14,7 @@ export default function DiscoverPage() {
 
   const handleSecondaryCTA = () => {
     console.log('[Analytics] Landing: Secondary CTA clicked')
-    // Handle WeChat Login
+    Taro.navigateTo({ url: '/pages/login/index' })
   }
 
   return (
