@@ -40,3 +40,4 @@ export * from './types/industry';
 export * from './types/groupAnalysis';
 export * from './eventDetail';
 export * from './groupAnalysis';
+export * from './api';

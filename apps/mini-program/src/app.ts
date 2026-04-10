@@ -1,6 +1,8 @@
-import { PropsWithChildren } from 'react'
+import { PropsWithChildren, createElement } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { logInfo } from './lib/logger'
+import { queryClient } from './lib/queryClient'
 import './app.scss'
 
 const PAYMENT_PAGE_ROUTE = 'pages/blind-box-payment/index'
@@ -30,7 +32,7 @@ function App({ children }: PropsWithChildren<any>) {
     }
   })
 
-  return children
+  return createElement(QueryClientProvider, { client: queryClient }, children)
 }
 
 export default App
