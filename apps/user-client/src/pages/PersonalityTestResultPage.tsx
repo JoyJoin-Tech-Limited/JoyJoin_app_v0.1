@@ -8,7 +8,7 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Copy, Image } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -220,6 +220,125 @@ function getFallbackAnalysis(archetype: string): string {
     "隐身猫": "你是隐身猫型：坐在那里不怎么说话，但其实全场最清楚谁是真有趣、谁在表演。人群让你耗电，但一对一你完全是另一个人。这种深度，多数人一辈子才遇到一两次。",
   };
   return fallbacks[archetype] || `${archetype}，你的特质组合挺有意思。继续探索一下自己的社交风格吧。`;
+}
+
+interface XiaoyueResultSnapshot {
+  headline: string;
+  socialRole: string;
+  bestScene: string;
+  microAction: string;
+  shareLine: string;
+  stateLabel: string;
+}
+
+function getFallbackXiaoyueSnapshot(archetype: string): XiaoyueResultSnapshot {
+  const snapshots: Record<string, XiaoyueResultSnapshot> = {
+    "开心柯基": {
+      headline: "你不是硬撑热闹，你是自然带热的人",
+      socialRole: "你更像开场加速器，能让陌生局更快松下来。",
+      bestScene: "更适合6到8人的轻松热场局，有接梗空间会更舒服。",
+      microAction: "下次进新局先抛一个轻松问题，再接住第一个回应你的人。",
+      shareLine: "我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。",
+      stateLabel: "快热带动型",
+    },
+    "太阳鸡": {
+      headline: "你不抢镜，但全场会跟着你稳下来",
+      socialRole: "你更像节奏稳定器，能把场子从散乱拉回舒服的推进感。",
+      bestScene: "更适合有主题、能边聊边推进的饭局或桌游局。",
+      microAction: "下次参加活动，先认领一个能稳节奏的小动作。",
+      shareLine: "我是太阳鸡型，不吵，但会把场子慢慢稳住。",
+      stateLabel: "稳场推进型",
+    },
+    "夸夸豚": {
+      headline: "你不是场面话选手，你是真的会看见人",
+      socialRole: "你更像关系升温器，能把陌生感聊成舒服感。",
+      bestScene: "更适合2到6人的局，能给彼此一点真实交流空间。",
+      microAction: "下次遇到顺眼的人，先给一个具体的真诚反馈。",
+      shareLine: "我是夸夸豚型，看着温和，其实很会把关系聊热。",
+      stateLabel: "熟了更有火花型",
+    },
+    "机智狐": {
+      headline: "你不靠硬聊破冰，你靠灵感把场子聊活",
+      socialRole: "你更像话题点火器，能把普通聊天拐到更有意思的方向。",
+      bestScene: "更适合有探索感的新局、主题活动或能交换想法的场子。",
+      microAction: "下次开场先准备一个最近看到的有趣东西。",
+      shareLine: "我是机智狐型，属于会把普通聊天聊出新鲜感的那种。",
+      stateLabel: "灵感破冰型",
+    },
+    "淡定海豚": {
+      headline: "你不是掉线型，你是先看气场再发力",
+      socialRole: "你更像安静观察者，关键时刻往往说到点上。",
+      bestScene: "更适合3到6人的轻松聚会，或者先有共同话题的场景。",
+      microAction: "下次别逼自己立刻热起来，先记住一个想继续聊的人。",
+      shareLine: "我是淡定海豚型，习惯先看气场，再决定什么时候出手。",
+      stateLabel: "低耗观察型",
+    },
+    "织网蛛": {
+      headline: "你不是社交用力派，你是把关系慢慢织起来",
+      socialRole: "你更像连接器，擅长让对的人自然搭上线。",
+      bestScene: "更适合有轮流交流空间的小局，而不是只顾抢话的大场子。",
+      microAction: "下次进局先记下两个可能聊得来的人，再顺手搭一座桥。",
+      shareLine: "我是织网蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
+      stateLabel: "局内升温型",
+    },
+    "暖心熊": {
+      headline: "你不是慢，你只是只对对的人升温",
+      socialRole: "你更像深聊引线，能让对方很快觉得被接住。",
+      bestScene: "更适合2到4人的小局、饭后散步局或咖啡局。",
+      microAction: "下次先和一个顺眼的人聊深两轮，不用急着全场营业。",
+      shareLine: "我是暖心熊型，看着慢热，其实聊到点上就很能聊。",
+      stateLabel: "慢热深聊型",
+    },
+    "灵感章鱼": {
+      headline: "你不靠热闹存在，你靠脑洞让人记住",
+      socialRole: "你更像灵感点火器，总能把聊天拐到别人没想到的地方。",
+      bestScene: "更适合主题活动、创意局，或能交换观点的小范围聚会。",
+      microAction: "下次开场先抛一个你最近觉得有意思的问题。",
+      shareLine: "我是灵感章鱼型，属于会把聊天聊出新方向的那种。",
+      stateLabel: "灵感破冰型",
+    },
+    "沉思猫头鹰": {
+      headline: "你不是社交慢，你只是更擅长聊到点上",
+      socialRole: "你更像深聊引线，话不一定多，但往往最有记忆点。",
+      bestScene: "更适合2到4人的小局、一对一深聊，或有明确主题的场景。",
+      microAction: "下次只要提前准备一个你真想聊的问题就够了。",
+      shareLine: "我是沉思猫头鹰型，看着安静，其实聊到点上会很能聊。",
+      stateLabel: "慢热深聊型",
+    },
+    "定心大象": {
+      headline: "你不抢戏，但大家会因为你在而更安心",
+      socialRole: "你更像局里的稳定器，能让大家更快进入舒服节奏。",
+      bestScene: "更适合有一点主题、需要人稳住节奏的小局。",
+      microAction: "下次参加活动，先认领一个能帮大家进入状态的小动作。",
+      shareLine: "我是定心大象型，不吵，但会让场子先稳下来。",
+      stateLabel: "稳场推进型",
+    },
+    "稳如龟": {
+      headline: "你不是慢半拍，你是先判断再投入",
+      socialRole: "你更像安静观察者，一旦决定靠近就会很靠谱。",
+      bestScene: "更适合允许留白的3到6人局，而不是一上来就很吵的场子。",
+      microAction: "下次别要求自己立刻融入，先锁定一个值得继续聊的人。",
+      shareLine: "我是稳如龟型，习惯先判断气场，再决定什么时候发力。",
+      stateLabel: "低耗观察型",
+    },
+    "隐身猫": {
+      headline: "你不是掉线型，你是先观察再发力",
+      socialRole: "你更像安静观察者，关键时刻往往能说到点上。",
+      bestScene: "更适合一对一深聊，或节奏不吵、允许留白的小局。",
+      microAction: "下次先记住一个你真正想继续聊的人，再顺着靠近。",
+      shareLine: "我是隐身猫型，习惯先看气场，再决定什么时候出手。",
+      stateLabel: "低耗观察型",
+    },
+  };
+
+  return snapshots[archetype] || {
+    headline: "你不是硬撑社交，你是把关系慢慢聊热",
+    socialRole: "你更像局内升温器，能让相处慢慢变舒服。",
+    bestScene: "更适合能让人逐步进入状态的小局，而不是一上来就很吵的场子。",
+    microAction: "下次进新局先锁定一个你能自然接上的话题。",
+    shareLine: `我是${archetype}型，属于相处越往后越容易让人觉得舒服的那种。`,
+    stateLabel: "局内升温型",
+  };
 }
 
 interface UnifiedAssessmentResult {
@@ -560,6 +679,7 @@ export default function PersonalityTestResultPage() {
       X: finalResult.extraversionScore / 100,
       P: finalResult.positivityScore / 100,
     } : null,
+    confidence: finalResult ? (finalResult.isDecisive ? 0.9 : 0.66) : undefined,
     enabled: !!finalResult, // Enable immediately when result is available
   });
 
@@ -753,18 +873,28 @@ export default function PersonalityTestResultPage() {
   const tagline = primaryArchetypeConfig?.tagline || '';
   const epicDescription = primaryArchetypeConfig?.epicDescription || '';
   const styleQuote = primaryArchetypeConfig?.styleQuote || '';
+  const fallbackSnapshot = getFallbackXiaoyueSnapshot(finalResult.primaryArchetype);
+  const xiaoyueSnapshot = {
+    headline: xiaoyueAnalysis.headline || fallbackSnapshot.headline,
+    analysis: xiaoyueAnalysis.analysis || getFallbackAnalysis(finalResult.primaryArchetype),
+    socialRole: xiaoyueAnalysis.socialRole || fallbackSnapshot.socialRole,
+    bestScene: xiaoyueAnalysis.bestScene || fallbackSnapshot.bestScene,
+    microAction: xiaoyueAnalysis.microAction || fallbackSnapshot.microAction,
+    shareLine: xiaoyueAnalysis.shareLine || fallbackSnapshot.shareLine,
+    stateLabel: xiaoyueAnalysis.stateLabel || fallbackSnapshot.stateLabel,
+  };
 
   const handleShare = async () => {
     const shareData = {
-      title: `我的社交角色是${finalResult.primaryArchetype}！`,
-      text: `刚完成了JoyJoin性格测评，发现我是${finalResult.primaryArchetype}！快来测测你的社交特质吧~`,
+      title: `我的社交结果：${finalResult.primaryArchetype}`,
+      text: xiaoyueSnapshot.shareLine,
       url: window.location.origin + '/personality-test',
     };
     if (navigator.share) {
       try { await navigator.share(shareData); } catch (err) {}
     } else {
       navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-      toast({ title: '已复制到剪贴板！' });
+      toast({ title: '已复制文字版结果' });
     }
   };
 
@@ -891,6 +1021,37 @@ export default function PersonalityTestResultPage() {
           </motion.div>
         )}
 
+        <motion.div variants={itemVariants}>
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <MessageSquare className="w-4 h-4" />
+                一句像你的话
+              </div>
+              <p className="text-lg font-semibold leading-snug" data-testid="text-xiaoyue-headline">
+                {xiaoyueSnapshot.headline}
+              </p>
+              <div className="rounded-xl border bg-background/90 px-3 py-3">
+                <p className="text-sm leading-relaxed text-foreground/90" data-testid="text-xiaoyue-share-line">
+                  {xiaoyueSnapshot.shareLine}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  {xiaoyueSnapshot.stateLabel}
+                </Badge>
+                <Button variant="outline" size="sm" onClick={handleShare}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  复制文字版结果
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                这版更适合先发评论区或聊天框。想晒图的话，页底还有一张 Pokemon 风格海报。
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Debug: All 12 Archetype Scores - Only show in development mode */}
         {import.meta.env.DEV && allArchetypeScores.length > 0 && (
           <motion.div variants={itemVariants}>
@@ -960,12 +1121,49 @@ export default function PersonalityTestResultPage() {
         {/* 2. 小悦分析 */}
         <motion.div variants={itemVariants}>
           <XiaoyueChatBubble
-            content={xiaoyueAnalysis.analysis || getFallbackAnalysis(finalResult.primaryArchetype)}
+            content={xiaoyueSnapshot.analysis}
             pose={xiaoyueAnalysis.hasAnalysis ? "casual" : "thinking"}
             isLoading={xiaoyueAnalysis.isLoading}
             loadingText="小悦正在分析你的特质..."
             animate={!prefersReducedMotion}
           />
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              {
+                title: "当前社交状态",
+                icon: TrendingUp,
+                content: xiaoyueSnapshot.stateLabel,
+              },
+              {
+                title: "你在局里的作用",
+                icon: Star,
+                content: xiaoyueSnapshot.socialRole,
+              },
+              {
+                title: "更适合的局",
+                icon: Users,
+                content: xiaoyueSnapshot.bestScene,
+              },
+              {
+                title: "下一步更顺手",
+                icon: Zap,
+                content: xiaoyueSnapshot.microAction,
+              },
+            ].map(({ title, icon: Icon, content }) => (
+              <Card key={title} className="border-border/70">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Icon className="w-4 h-4 text-primary" />
+                    {title}
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/90">{content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </motion.div>
 
         {/* 3. 最佳搭档 - 移到小悦分析后面，只显示≥70%的搭档 */}
@@ -1068,7 +1266,7 @@ export default function PersonalityTestResultPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} className="py-6">
-          {/* Gamified Share Button - Card Collection Style */}
+          {/* Poster share remains visual-first so it complements the text-first share module above */}
           <div className="relative group">
             {/* Glowing background blur effect */}
             <div 
@@ -1095,16 +1293,19 @@ export default function PersonalityTestResultPage() {
                 setShareModalOpen(true);
               }} 
               data-testid="button-share"
-              aria-label={`领取你的${finalResult.primaryArchetype}性格卡片`}
+              aria-label={`下载你的${finalResult.primaryArchetype}原型海报`}
             >
               <div className="flex items-center justify-center gap-3 w-full">
-                <Sparkles className="w-6 h-6 animate-pulse" aria-hidden="true" />
-                <span>领取你的{finalResult.primaryArchetype}卡片</span>
+                <Image className="w-6 h-6 animate-pulse" aria-hidden="true" />
+                <span>下载你的{finalResult.primaryArchetype}海报</span>
                 <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs" aria-label="限定版">
-                  ✨ 限定
+                  🖼️ 海报
                 </Badge>
               </div>
             </Button>
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              上面的文字版适合直接发出去，这张海报更适合截图收藏或发朋友圈。
+            </p>
           </div>
         </motion.div>
 
