@@ -37,7 +37,6 @@ export default function InvitePage() {
   }
 
   const referralCode = stats?.referralCode || (user as any)?.referralCode || '—'
-  const successful = stats?.successfulInvites ?? 0
   const invitedCount = stats?.successfulInvites ?? 0
 
   const handleCopy = () => {
@@ -82,7 +81,7 @@ export default function InvitePage() {
         {REWARD_TIERS.map((tier) => (
           <Card
             key={tier.count}
-            className={`invite-page__tier ${successful >= tier.count ? 'invite-page__tier--unlocked' : ''}`}
+            className={`invite-page__tier ${invitedCount >= tier.count ? 'invite-page__tier--unlocked' : ''}`}
           >
             <Text className='invite-page__tier-emoji'>{tier.emoji}</Text>
             <View className='invite-page__tier-info'>
@@ -90,7 +89,7 @@ export default function InvitePage() {
               <Text className='invite-page__tier-reward'>{tier.reward}</Text>
             </View>
             <Text className='invite-page__tier-status'>
-              {successful >= tier.count ? '✅ 已达成' : `还差 ${tier.count - successful} 人`}
+              {invitedCount >= tier.count ? '✅ 已达成' : `还差 ${tier.count - invitedCount} 人`}
             </Text>
           </Card>
         ))}
