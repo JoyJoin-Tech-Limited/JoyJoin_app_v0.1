@@ -30,18 +30,26 @@ export default defineAppConfig({
       {
         pagePath: 'pages/discover/index',
         text: '发现',
+        iconPath: 'assets/tab-icons/discover.png',
+        selectedIconPath: 'assets/tab-icons/discover-active.png',
       },
       {
         pagePath: 'pages/events/index',
         text: '活动',
+        iconPath: 'assets/tab-icons/events.png',
+        selectedIconPath: 'assets/tab-icons/events-active.png',
       },
       {
         pagePath: 'pages/connections/index',
         text: '连接',
+        iconPath: 'assets/tab-icons/connections.png',
+        selectedIconPath: 'assets/tab-icons/connections-active.png',
       },
       {
         pagePath: 'pages/profile/index',
         text: '我的',
+        iconPath: 'assets/tab-icons/profile.png',
+        selectedIconPath: 'assets/tab-icons/profile-active.png',
       },
     ],
   },

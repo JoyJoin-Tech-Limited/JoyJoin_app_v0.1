@@ -28,7 +28,7 @@ export interface UseAuthResult {
   refetch: () => Promise<unknown>
 }
 
-const AUTH_QUERY_KEY = ['mini-program', 'auth-user']
+export const AUTH_QUERY_KEY = ['mini-program', 'auth-user'] as const
 
 /**
  * useAuth — React Query hook for persistent auth state in the mini-program.

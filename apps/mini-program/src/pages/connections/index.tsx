@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import './index.scss'
 
 interface Connection {
@@ -15,12 +15,12 @@ interface Connection {
 }
 
 export default function ConnectionsPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isLoading: authLoading } = useAuthGuard()
 
   const { data: connections = [], isLoading } = useQuery<Connection[]>({
     queryKey: ['mini-program', 'connections'],
     queryFn: () => apiRequest<Connection[]>({ path: '/api/my-connections' }),
-    enabled: isAuthenticated,
+    enabled: !authLoading,
   })
 
   if (authLoading) {
@@ -28,23 +28,6 @@ export default function ConnectionsPage() {
       <View className='connections-page'>
         <View className='connections-page__loading'>
           <Text className='connections-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <View className='connections-page'>
-        <View className='connections-page__empty-state'>
-          <Text className='connections-page__empty-emoji'>🤝</Text>
-          <Text className='connections-page__empty-text'>登录后查看你的连接</Text>
-          <View
-            className='connections-page__login-btn'
-            onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}
-          >
-            <Text className='connections-page__login-btn-text'>去登录</Text>
-          </View>
         </View>
       </View>
     )

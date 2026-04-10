@@ -2,6 +2,7 @@ import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError } from '../../lib/logger'
 import './index.scss'
 
@@ -18,6 +19,7 @@ function clearPendingOrderStorage() {
 }
 
 export default function PaymentVerificationPage() {
+  const { isLoading: authLoading } = useAuthGuard()
   const [orderId, setOrderId] = useState('')
   const [status, setStatus] = useState<VerificationState>('polling')
   const [message, setMessage] = useState('正在确认支付结果...')
@@ -150,6 +152,17 @@ export default function PaymentVerificationPage() {
       bootstrap(orderId)
     }
   })
+
+  if (authLoading) {
+    return (
+      <View className='verification-page'>
+        <View className='verification-page__card'>
+          <Text className='verification-page__title'>加载中</Text>
+          <Text className='verification-page__message'>正在校验登录状态…</Text>
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View className='verification-page'>
