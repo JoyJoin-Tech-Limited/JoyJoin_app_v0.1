@@ -1,0 +1,260 @@
+import { useState, useEffect, useCallback } from 'react'
+import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
+import Taro from '@tarojs/taro'
+import { submitEssentialData, submitInterests } from '@shared/api'
+import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
+import { apiRequest } from '../../lib/api'
+import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { logInfo, logError } from '../../lib/logger'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
+import Button from '../../components/Button'
+import './index.scss'
+
+// ─── Constants ────────────────────────────────────────────────────
+
+const GENDER_OPTIONS = [
+  { value: 'male', label: '男' },
+  { value: 'female', label: '女' },
+  { value: 'other', label: '其他' },
+] as const
+
+const CURRENT_YEAR = new Date().getFullYear()
+const BIRTH_YEAR_RANGE = Array.from(
+  { length: CURRENT_YEAR - 1950 + 1 },
+  (_, i) => String(1950 + i),
+)
+
+// ─── Interest helpers ─────────────────────────────────────────────
+
+const activeInterests = getActiveInterests()
+
+function getInterestsByCategory(): Record<MacroCategory, typeof activeInterests> {
+  const grouped: Partial<Record<MacroCategory, typeof activeInterests>> = {}
+  for (const interest of activeInterests) {
+    const cat = interest.macroCategory as MacroCategory
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat]!.push(interest)
+  }
+  return grouped as Record<MacroCategory, typeof activeInterests>
+}
+
+const interestsByCategory = getInterestsByCategory()
+
+// ─── Component ────────────────────────────────────────────────────
+
+export default function EditProfilePage() {
+  const { isLoading: authLoading } = useAuthGuard()
+  const { user } = useAuth()
+  const invalidateAuth = useInvalidateAuth()
+
+  const [displayName, setDisplayName] = useState('')
+  const [gender, setGender] = useState('')
+  const [birthYear, setBirthYear] = useState(0)
+  const [currentCity, setCurrentCity] = useState('')
+  const [hometownRegionCity, setHometownRegionCity] = useState('')
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Initialize form from user data
+  useEffect(() => {
+    if (!user) return
+    const u = user as Record<string, any>
+    setDisplayName(u.displayName || u.nickname || '')
+    setGender(u.gender || '')
+    setBirthYear(u.birthYear || 0)
+    setCurrentCity(u.currentCity || '')
+    setHometownRegionCity(u.hometownRegionCity || '')
+
+    // Interests may be an array of IDs or objects
+    const interests: string[] = Array.isArray(u.interests)
+      ? u.interests.map((i: any) => (typeof i === 'string' ? i : i.id || i.interestId || ''))
+      : []
+    setSelectedInterests(interests.filter(Boolean))
+  }, [user])
+
+  const toggleInterest = useCallback((interestId: string) => {
+    setSelectedInterests((prev) =>
+      prev.includes(interestId)
+        ? prev.filter((id) => id !== interestId)
+        : [...prev, interestId],
+    )
+  }, [])
+
+  const handleBirthYearChange = useCallback((e: any) => {
+    const idx = e.detail.value as number
+    const year = parseInt(BIRTH_YEAR_RANGE[idx], 10)
+    if (!isNaN(year)) setBirthYear(year)
+  }, [])
+
+  const handleSave = useCallback(async () => {
+    if (isSaving) return
+    setIsSaving(true)
+
+    try {
+      logInfo('[EditProfile] Saving profile changes')
+
+      // Submit essential data
+      await submitEssentialData(apiRequest, {
+        displayName: displayName || undefined,
+        gender: gender || undefined,
+        birthYear: birthYear || undefined,
+        currentCity: currentCity || undefined,
+        hometownRegionCity: hometownRegionCity || undefined,
+      })
+
+      // Submit interests if changed
+      if (selectedInterests.length > 0) {
+        await submitInterests(apiRequest, { interests: selectedInterests })
+      }
+
+      // Invalidate auth cache so profile page refreshes
+      invalidateAuth()
+
+      Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 })
+      setTimeout(() => {
+        Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })
+      }, 1000)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '保存失败'
+      logError('[EditProfile] Save failed', { message: msg })
+      Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
+    } finally {
+      setIsSaving(false)
+    }
+  }, [isSaving, displayName, gender, birthYear, currentCity, hometownRegionCity, selectedInterests, invalidateAuth])
+
+  if (authLoading) {
+    return <LoadingScreen />
+  }
+
+  const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1
+
+  return (
+    <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
+      {/* ── 基本信息 ── */}
+      <View className='edit-profile__section'>
+        <Text className='edit-profile__section-title'>基本信息</Text>
+        <Card className='edit-profile__card'>
+          {/* Display name */}
+          <View className='edit-profile__field'>
+            <Text className='edit-profile__label'>昵称</Text>
+            <Input
+              className='edit-profile__input'
+              value={displayName}
+              onInput={(e) => setDisplayName(e.detail.value)}
+              placeholder='输入你的昵称'
+              maxlength={20}
+            />
+          </View>
+
+          {/* Gender */}
+          <View className='edit-profile__field'>
+            <Text className='edit-profile__label'>性别</Text>
+            <View className='edit-profile__radio-group'>
+              {GENDER_OPTIONS.map((opt) => (
+                <Text
+                  key={opt.value}
+                  className={`edit-profile__radio ${gender === opt.value ? 'edit-profile__radio--active' : ''}`}
+                  onClick={() => setGender(opt.value)}
+                >
+                  {opt.label}
+                </Text>
+              ))}
+            </View>
+          </View>
+
+          {/* Birth year */}
+          <View className='edit-profile__field'>
+            <Text className='edit-profile__label'>出生年份</Text>
+            <Picker
+              mode='selector'
+              range={BIRTH_YEAR_RANGE}
+              value={birthYearIndex >= 0 ? birthYearIndex : 0}
+              onChange={handleBirthYearChange}
+            >
+              <Text className='edit-profile__picker-value'>
+                {birthYear ? `${birthYear} 年` : '选择年份'}
+              </Text>
+            </Picker>
+          </View>
+
+          {/* Current city */}
+          <View className='edit-profile__field'>
+            <Text className='edit-profile__label'>所在城市</Text>
+            <Input
+              className='edit-profile__input'
+              value={currentCity}
+              onInput={(e) => setCurrentCity(e.detail.value)}
+              placeholder='如：深圳'
+              maxlength={30}
+            />
+          </View>
+
+          {/* Hometown */}
+          <View className='edit-profile__field'>
+            <Text className='edit-profile__label'>家乡</Text>
+            <Input
+              className='edit-profile__input'
+              value={hometownRegionCity}
+              onInput={(e) => setHometownRegionCity(e.detail.value)}
+              placeholder='如：广州'
+              maxlength={30}
+            />
+          </View>
+        </Card>
+      </View>
+
+      {/* ── 兴趣爱好 ── */}
+      <View className='edit-profile__section'>
+        <Text className='edit-profile__section-title'>
+          兴趣爱好
+          <Text className='edit-profile__interest-count'>
+            {' '}({selectedInterests.length} 已选)
+          </Text>
+        </Text>
+
+        {(Object.entries(interestsByCategory) as [MacroCategory, typeof activeInterests][]).map(
+          ([category, interests]) => (
+            <View key={category} className='edit-profile__interest-group'>
+              <Text className='edit-profile__interest-category'>
+                {MACRO_CATEGORY_LABELS[category] || category}
+              </Text>
+              <View className='edit-profile__interest-tags'>
+                {interests.map((interest) => (
+                  <Text
+                    key={interest.id}
+                    className={`edit-profile__interest-tag ${
+                      selectedInterests.includes(interest.id)
+                        ? 'edit-profile__interest-tag--selected'
+                        : ''
+                    }`}
+                    onClick={() => toggleInterest(interest.id)}
+                  >
+                    {interest.emoji ? `${interest.emoji} ` : ''}{interest.label}
+                  </Text>
+                ))}
+              </View>
+            </View>
+          ),
+        )}
+      </View>
+
+      {/* ── Save button ── */}
+      <View className='edit-profile__footer'>
+        <Button
+          variant='primary'
+          className='edit-profile__save-btn'
+          onClick={handleSave}
+          disabled={isSaving}
+          loading={isSaving}
+        >
+          {isSaving ? '保存中…' : '保存修改'}
+        </Button>
+      </View>
+
+      <View className='edit-profile__spacer' />
+    </ScrollView>
+  )
+}

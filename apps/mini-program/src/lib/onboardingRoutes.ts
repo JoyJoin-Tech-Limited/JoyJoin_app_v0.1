@@ -25,6 +25,8 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   matchingStatus: 'pages/matching-status/index',
   squadUnboxing: 'pages/squad-unboxing/index',
   icebreakerSession: 'pages/icebreaker-session/index',
+  editProfile: 'pages/edit-profile/index',
+  invite: 'pages/invite/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -44,6 +46,8 @@ export const MINI_PROGRAM_ROUTES = {
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
   icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
+  editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
+  invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
 } as const
 
 export const MINI_PROGRAM_PAGES = [
@@ -71,6 +75,8 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.matchingStatus,
   MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
   MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
+  MINI_PROGRAM_PAGE_PATHS.editProfile,
+  MINI_PROGRAM_PAGE_PATHS.invite,
 ] as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
