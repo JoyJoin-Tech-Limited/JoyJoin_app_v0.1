@@ -46,6 +46,19 @@ interface UseXiaoyueAnalysisOptions {
   enabled?: boolean;
 }
 
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
+    return `{${entries.map(([key, item]) => `${key}:${stableSerialize(item)}`).join(',')}}`;
+  }
+
+  return String(value ?? 'null');
+}
+
 export function useXiaoyueAnalysis({
   archetype,
   secondaryArchetype = null,
@@ -62,7 +75,7 @@ export function useXiaoyueAnalysis({
   useEffect(() => {
     if (!enabled || !archetype || !traitScores) return;
     
-    const cacheKey = `${archetype}_${secondaryArchetype ?? 'none'}_${JSON.stringify(topArchetypes)}_${JSON.stringify(traitScores)}_${confidence}`;
+    const cacheKey = `${archetype}_${secondaryArchetype ?? 'none'}_${stableSerialize(topArchetypes)}_${stableSerialize(traitScores)}_${confidence}`;
     if (fetchedRef.current === cacheKey) return;
     
     setIsLoading(true);
