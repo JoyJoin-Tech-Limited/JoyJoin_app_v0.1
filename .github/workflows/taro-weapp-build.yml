@@ -30,10 +30,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v4.3.1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -46,10 +46,10 @@ jobs:
         run: npm run build -w @joyjoin/shared
 
       - name: Build Taro WeChat mini-program
-        run: npm run build:weapp -w apps/mini-program
+        run: npm run build:weapp -w mini-program
 
       - name: Upload mini-program artifact
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: taro-weapp-dist
           path: apps/mini-program/dist
