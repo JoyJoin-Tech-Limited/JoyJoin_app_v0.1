@@ -22,7 +22,7 @@ for (let y = currentYear - 18; y >= 1970; y--) {
 }
 
 export default function EssentialDataPage() {
-  const { user, isLoading } = useAuthGuard()
+  const { isLoading } = useAuthGuard()
   const invalidateAuth = useInvalidateAuth()
 
   const [displayName, setDisplayName] = useState('')
