@@ -99,3 +99,134 @@ export function getCurrentUser(api: ApiTransport): Promise<AuthUserSummary> {
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
 }
+
+// ---------------------------------------------------------------------------
+// Assessment (personality test) API
+// ---------------------------------------------------------------------------
+
+export interface AssessmentQuestion {
+  id: string
+  text: string
+  options: { id: string; text: string; traitScores?: Record<string, number> }[]
+  traitKey?: string
+  phaseLabel?: string
+}
+
+export interface AssessmentStartResponse {
+  sessionId: string
+  question: AssessmentQuestion
+  totalQuestions: number
+  currentQuestionIndex: number
+  phase?: string
+}
+
+export interface AssessmentAnswerResponse {
+  question?: AssessmentQuestion | null
+  totalQuestions: number
+  currentQuestionIndex: number
+  isComplete: boolean
+  phase?: string
+}
+
+export interface AssessmentResultResponse {
+  archetype?: string
+  archetypeLabel?: string
+  confidence?: number
+  traitScores?: Record<string, number>
+  summary?: string
+  [key: string]: unknown
+}
+
+export function startAssessment(
+  api: ApiTransport,
+  data?: { preSignupAnswers?: Record<string, string> }
+): Promise<AssessmentStartResponse> {
+  return api<AssessmentStartResponse>({
+    path: '/api/assessment/v4/start',
+    method: 'POST',
+    data: data ?? {},
+  })
+}
+
+export function submitAssessmentAnswer(
+  api: ApiTransport,
+  sessionId: string,
+  data: { questionId: string; optionId: string }
+): Promise<AssessmentAnswerResponse> {
+  return api<AssessmentAnswerResponse>({
+    path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/answer`,
+    method: 'POST',
+    data,
+  })
+}
+
+export function skipAssessmentQuestion(
+  api: ApiTransport,
+  sessionId: string,
+  data: { questionId: string }
+): Promise<AssessmentAnswerResponse> {
+  return api<AssessmentAnswerResponse>({
+    path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/skip`,
+    method: 'POST',
+    data,
+  })
+}
+
+export function getAssessmentResult(
+  api: ApiTransport,
+  sessionId: string
+): Promise<AssessmentResultResponse> {
+  return api<AssessmentResultResponse>({
+    path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/result`,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// User profile / onboarding submission API
+// ---------------------------------------------------------------------------
+
+export interface EssentialDataPayload {
+  displayName?: string
+  gender?: string
+  birthYear?: number
+  currentCity?: string
+  hometownRegionCity?: string
+  occupationId?: string
+  [key: string]: unknown
+}
+
+export function submitEssentialData(
+  api: ApiTransport,
+  data: EssentialDataPayload
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/user',
+    method: 'PATCH',
+    data,
+  })
+}
+
+export interface InterestsPayload {
+  interests: string[]
+}
+
+export function submitInterests(
+  api: ApiTransport,
+  data: InterestsPayload
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/user/interests',
+    method: 'POST',
+    data,
+  })
+}
+
+export function completeProfileReview(
+  api: ApiTransport
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/user',
+    method: 'PATCH',
+    data: { hasSeenProfileReview: true },
+  })
+}

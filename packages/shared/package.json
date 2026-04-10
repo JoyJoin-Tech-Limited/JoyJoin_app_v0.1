@@ -19,6 +19,7 @@
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
     "./interests": "./src/interests.ts",
     "./api": "./src/api.ts",
+    "./onboarding": "./src/onboarding.ts",
     "./matchingWeights": "./src/matchingWeights.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",

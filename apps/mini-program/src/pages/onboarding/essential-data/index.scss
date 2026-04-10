@@ -1,1 +1,117 @@
-@import '../_placeholder';
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.essential-data {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  padding: $container-padding;
+
+  &__loading {
+    @include flex-center;
+    min-height: 100vh;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__header {
+    padding-top: $spacing-xl;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__label {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__input {
+    height: $input-height;
+    padding: 0 $spacing-md;
+    background: $color-surface;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid $color-border;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+
+    &:focus {
+      border-color: $color-primary;
+    }
+  }
+
+  &__hint {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__picker {
+    height: $input-height;
+    display: flex;
+    align-items: center;
+    padding: 0 $spacing-md;
+    background: $color-surface;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid $color-border;
+  }
+
+  &__picker-value {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+  }
+
+  &__picker-placeholder {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+  }
+
+  &__error {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-error;
+    margin-top: $spacing-md;
+    text-align: center;
+  }
+
+  &__footer {
+    margin-top: $spacing-xl;
+    @include safe-area-bottom;
+  }
+
+  &__submit {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+}
