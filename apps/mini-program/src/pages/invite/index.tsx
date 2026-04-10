@@ -11,8 +11,7 @@ import './index.scss'
 
 interface ReferralStats {
   referralCode?: string
-  totalReferrals?: number
-  successfulReferrals?: number
+  successfulInvites?: number
   platformTotal?: number
   [key: string]: unknown
 }
@@ -38,7 +37,8 @@ export default function InvitePage() {
   }
 
   const referralCode = stats?.referralCode || (user as any)?.referralCode || '—'
-  const successful = stats?.successfulReferrals ?? 0
+  const successful = stats?.successfulInvites ?? 0
+  const invitedCount = stats?.successfulInvites ?? 0
 
   const handleCopy = () => {
     Taro.setClipboardData({
@@ -67,7 +67,7 @@ export default function InvitePage() {
       {/* Stats */}
       <View className='invite-page__stats'>
         <Card className='invite-page__stat'>
-          <Text className='invite-page__stat-value'>{stats?.totalReferrals ?? 0}</Text>
+          <Text className='invite-page__stat-value'>{invitedCount}</Text>
           <Text className='invite-page__stat-label'>已邀请</Text>
         </Card>
         <Card className='invite-page__stat'>

@@ -15,9 +15,9 @@ import './index.scss'
 // ─── Constants ────────────────────────────────────────────────────
 
 const GENDER_OPTIONS = [
-  { value: 'male', label: '男' },
-  { value: 'female', label: '女' },
-  { value: 'other', label: '其他' },
+  { value: '男性', label: '男' },
+  { value: '女性', label: '女' },
+  { value: '不透露', label: '其他' },
 ] as const
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -42,6 +42,19 @@ function getInterestsByCategory(): Record<MacroCategory, typeof activeInterests>
 
 const interestsByCategory = getInterestsByCategory()
 
+function normalizeGenderValue(value: unknown): string {
+  switch (value) {
+    case 'male':
+      return '男性'
+    case 'female':
+      return '女性'
+    case 'other':
+      return '不透露'
+    default:
+      return typeof value === 'string' ? value : ''
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────
 
 export default function EditProfilePage() {
@@ -62,7 +75,7 @@ export default function EditProfilePage() {
     if (!user) return
     const u = user as Record<string, any>
     setDisplayName(u.displayName || u.nickname || '')
-    setGender(u.gender || '')
+    setGender(normalizeGenderValue(u.gender))
     setBirthYear(u.birthYear || 0)
     setCurrentCity(u.currentCity || '')
     setHometownRegionCity(u.hometownRegionCity || '')

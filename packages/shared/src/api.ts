@@ -189,6 +189,7 @@ export interface EssentialDataPayload {
   displayName?: string
   gender?: string
   birthYear?: number
+  birthdate?: string
   currentCity?: string
   hometownRegionCity?: string
   occupationId?: string
@@ -199,10 +200,15 @@ export function submitEssentialData(
   api: ApiTransport,
   data: EssentialDataPayload
 ): Promise<{ success: boolean }> {
+  const { birthYear, birthdate, ...rest } = data
   return api<{ success: boolean }>({
-    path: '/api/user',
+    path: '/api/profile',
     method: 'PATCH',
-    data,
+    data: {
+      ...rest,
+      ...(birthdate ? { birthdate } : {}),
+      ...(birthYear ? { birthdate: `${birthYear}-01-01` } : {}),
+    },
   })
 }
 
@@ -225,9 +231,8 @@ export function completeProfileReview(
   api: ApiTransport
 ): Promise<{ success: boolean }> {
   return api<{ success: boolean }>({
-    path: '/api/user',
-    method: 'PATCH',
-    data: { hasSeenProfileReview: true },
+    path: '/api/profile-review/complete',
+    method: 'POST',
   })
 }
 
@@ -296,9 +301,8 @@ export function registerForPool(
   poolId: string
 ): Promise<{ id: string }> {
   return api<{ id: string }>({
-    path: '/api/pool-registrations',
+    path: `/api/event-pools/${encodeURIComponent(poolId)}/register`,
     method: 'POST',
-    data: { poolId },
   })
 }
 
