@@ -247,7 +247,7 @@ No V2 animation (reveal already happened)
 ## Assets Used
 
 ### JoyJoin Logo
-- `JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png` (center element)
+- `JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png` (center element — legacy asset filename, kept for reference)
 
 ### Archetype PNGs (all 12 transparent variants)
 - All assets located in `apps/user-client/src/assets/`

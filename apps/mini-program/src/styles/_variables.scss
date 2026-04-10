@@ -26,10 +26,11 @@ $color-warning:        #F0A030;
 $color-error:          #EF4444;
 
 // ─── Typography ───────────────────────────────────────────────────
-// $font-brand maps to the official Chinese display role: AlibabaPuHuiTi with system fallback.
-// WeChat Mini Program note: loadFontFace() is required to load custom fonts at runtime.
-// This stack provides the best graceful degradation within Mini Program constraints.
-$font-brand: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+// $font-brand is a legacy compatibility alias kept for mini-program
+// components that have not yet migrated to the semantic role system.
+// New code should use the system Chinese stack directly rather than
+// this variable. ZCOOL QingKe HuangYou is no longer the active brand font.
+$font-brand: 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
 $font-body:  -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
 
 $font-size-xs:    22rpx;
