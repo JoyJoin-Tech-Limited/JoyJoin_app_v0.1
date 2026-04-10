@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
+import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { apiRequest } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo } from '../../lib/logger'
@@ -79,7 +80,9 @@ export default function ProfilePage() {
           <Text className='profile-page__stat-label'>优惠券</Text>
         </View>
         <View className='profile-page__stat'>
-          <Text className='profile-page__stat-value'>{String(nextStep ?? 'discover')}</Text>
+          <Text className='profile-page__stat-value'>
+            {getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
+          </Text>
           <Text className='profile-page__stat-label'>当前状态</Text>
         </View>
       </View>

@@ -134,7 +134,7 @@ export default function PersonalityTestPage() {
   }
 
   // Testing phase
-  const progress = totalQuestions > 0 ? Math.round(((currentIndex) / totalQuestions) * 100) : 0
+  const progress = totalQuestions > 0 ? Math.round(((currentIndex + 1) / totalQuestions) * 100) : 0
 
   return (
     <ScrollView className='personality-test' scrollY enhanced showScrollbar={false}>
