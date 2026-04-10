@@ -1,0 +1,168 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.edit-profile {
+  min-height: 100vh;
+  background: $color-bg;
+
+  // ── Section ───────────────────────────────────────────────────
+  &__section {
+    padding: $spacing-lg $container-padding 0;
+  }
+
+  &__section-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__interest-count {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+    color: $color-text-secondary;
+  }
+
+  // ── Card container ────────────────────────────────────────────
+  &__card {
+    @include card;
+    padding: $spacing-lg;
+  }
+
+  // ── Form field ────────────────────────────────────────────────
+  &__field {
+    margin-bottom: $spacing-lg;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__label {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__input {
+    width: 100%;
+    height: $input-height;
+    padding: 0 $spacing-md;
+    border: 2rpx solid $color-border;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: $color-surface;
+    box-sizing: border-box;
+
+    &:focus {
+      border-color: $color-primary;
+    }
+  }
+
+  // ── Radio group ───────────────────────────────────────────────
+  &__radio-group {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__radio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xs $spacing-lg;
+    border-radius: 999rpx;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background: $color-bg;
+    border: 2rpx solid $color-border;
+    transition: all 0.2s ease;
+
+    &--active {
+      color: $color-text-white;
+      background: $brand-gradient;
+      border-color: transparent;
+      box-shadow: 0 4rpx 16rpx rgba(168, 107, 255, 0.3);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  // ── Picker ────────────────────────────────────────────────────
+  &__picker-value {
+    display: flex;
+    align-items: center;
+    height: $input-height;
+    padding: 0 $spacing-md;
+    border: 2rpx solid $color-border;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: $color-surface;
+  }
+
+  // ── Interest groups ───────────────────────────────────────────
+  &__interest-group {
+    margin-bottom: $spacing-lg;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__interest-category {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__interest-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__interest-tag {
+    display: inline-block;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 999rpx;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    transition: all 0.2s ease;
+
+    &--selected {
+      color: $color-primary;
+      background: $color-primary-light;
+      border-color: $color-primary;
+      font-weight: $font-weight-medium;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  // ── Footer ────────────────────────────────────────────────────
+  &__footer {
+    padding: $spacing-xl $container-padding;
+  }
+
+  &__save-btn {
+    width: 100%;
+  }
+
+  // ── Spacer (safe area) ────────────────────────────────────────
+  &__spacer {
+    height: 120rpx;
+  }
+}

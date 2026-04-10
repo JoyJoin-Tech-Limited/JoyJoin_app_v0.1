@@ -99,3 +99,218 @@ export function getCurrentUser(api: ApiTransport): Promise<AuthUserSummary> {
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
 }
+
+// ---------------------------------------------------------------------------
+// Assessment (personality test) API
+// ---------------------------------------------------------------------------
+
+export interface AssessmentQuestion {
+  id: string
+  text: string
+  options: { id: string; text: string; traitScores?: Record<string, number> }[]
+  traitKey?: string
+  phaseLabel?: string
+}
+
+export interface AssessmentStartResponse {
+  sessionId: string
+  question: AssessmentQuestion
+  totalQuestions: number
+  currentQuestionIndex: number
+  phase?: string
+}
+
+export interface AssessmentAnswerResponse {
+  question?: AssessmentQuestion | null
+  totalQuestions: number
+  currentQuestionIndex: number
+  isComplete: boolean
+  phase?: string
+}
+
+export interface AssessmentResultResponse {
+  archetype?: string
+  archetypeLabel?: string
+  confidence?: number
+  traitScores?: Record<string, number>
+  summary?: string
+  [key: string]: unknown
+}
+
+export function startAssessment(
+  api: ApiTransport,
+  data?: { preSignupAnswers?: Record<string, string> }
+): Promise<AssessmentStartResponse> {
+  return api<AssessmentStartResponse>({
+    path: '/api/assessment/v4/start',
+    method: 'POST',
+    data: data ?? {},
+  })
+}
+
+export function submitAssessmentAnswer(
+  api: ApiTransport,
+  sessionId: string,
+  data: { questionId: string; optionId: string }
+): Promise<AssessmentAnswerResponse> {
+  return api<AssessmentAnswerResponse>({
+    path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/answer`,
+    method: 'POST',
+    data,
+  })
+}
+
+export function skipAssessmentQuestion(
+  api: ApiTransport,
+  sessionId: string,
+  data: { questionId: string }
+): Promise<AssessmentAnswerResponse> {
+  return api<AssessmentAnswerResponse>({
+    path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/skip`,
+    method: 'POST',
+    data,
+  })
+}
+
+export function getAssessmentResult(
+  api: ApiTransport,
+  sessionId: string
+): Promise<AssessmentResultResponse> {
+  return api<AssessmentResultResponse>({
+    path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/result`,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// User profile / onboarding submission API
+// ---------------------------------------------------------------------------
+
+export interface EssentialDataPayload {
+  displayName?: string
+  gender?: string
+  birthYear?: number
+  birthdate?: string
+  currentCity?: string
+  hometownRegionCity?: string
+  occupationId?: string
+  [key: string]: unknown
+}
+
+export function submitEssentialData(
+  api: ApiTransport,
+  data: EssentialDataPayload
+): Promise<{ success: boolean }> {
+  const { birthYear, birthdate, ...rest } = data
+  return api<{ success: boolean }>({
+    path: '/api/profile',
+    method: 'PATCH',
+    data: {
+      ...rest,
+      ...(birthdate ? { birthdate } : birthYear ? { birthdate: `${birthYear}-01-01` } : {}),
+    },
+  })
+}
+
+export interface InterestsPayload {
+  interests: string[]
+}
+
+export function submitInterests(
+  api: ApiTransport,
+  data: InterestsPayload
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/user/interests',
+    method: 'POST',
+    data,
+  })
+}
+
+export function completeProfileReview(
+  api: ApiTransport
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/profile-review/complete',
+    method: 'POST',
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Event pool discovery & registration API
+// ---------------------------------------------------------------------------
+
+export interface EventPoolSummary {
+  id: string
+  title?: string
+  eventType?: string
+  city?: string
+  district?: string
+  dateTime?: string
+  status?: string
+  description?: string
+  maxParticipants?: number
+  currentParticipants?: number
+  [key: string]: unknown
+}
+
+export interface PoolRegistrationSummary {
+  id: string
+  poolId: string
+  matchStatus?: 'pending' | 'matched' | 'completed'
+  assignedGroupId?: string | null
+  matchScore?: number | null
+  registeredAt?: string
+  poolTitle?: string
+  poolEventType?: string
+  poolCity?: string
+  poolDistrict?: string
+  poolDateTime?: string
+  poolStatus?: string
+  theme?: string
+  subtitle?: string
+  themeEmoji?: string
+  highlights?: string[]
+  vibe?: string
+  invitationRole?: 'inviter' | 'invitee' | null
+  relatedUserName?: string | null
+  [key: string]: unknown
+}
+
+export function getEventPools(api: ApiTransport): Promise<EventPoolSummary[]> {
+  return api<EventPoolSummary[]>({ path: '/api/event-pools' })
+}
+
+export function getEventPool(
+  api: ApiTransport,
+  poolId: string
+): Promise<EventPoolSummary> {
+  return api<EventPoolSummary>({
+    path: `/api/event-pools/${encodeURIComponent(poolId)}`,
+  })
+}
+
+export function getMyPoolRegistrations(
+  api: ApiTransport
+): Promise<PoolRegistrationSummary[]> {
+  return api<PoolRegistrationSummary[]>({ path: '/api/my-pool-registrations' })
+}
+
+export function registerForPool(
+  api: ApiTransport,
+  poolId: string
+): Promise<{ id: string }> {
+  return api<{ id: string }>({
+    path: `/api/event-pools/${encodeURIComponent(poolId)}/register`,
+    method: 'POST',
+  })
+}
+
+export function cancelPoolRegistration(
+  api: ApiTransport,
+  registrationId: string
+): Promise<void> {
+  return api<void>({
+    path: `/api/pool-registrations/${encodeURIComponent(registrationId)}`,
+    method: 'DELETE',
+  })
+}

@@ -11,6 +11,8 @@ export interface ApiError extends Error {
   isGenericMessage?: boolean
 }
 
+export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+
 export const DEFAULT_API_ERROR_PREFIX = 'Request failed with status'
 
 function getApiErrorDetails(statusCode: number, data: unknown): {
@@ -62,7 +64,7 @@ function createApiError(
 
 export async function apiRequest<T>(options: {
   path: string
-  method?: 'GET' | 'POST'
+  method?: HttpMethod
   data?: unknown
 }): Promise<T> {
   const response = await Taro.request<T>({

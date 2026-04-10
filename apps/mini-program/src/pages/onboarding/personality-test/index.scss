@@ -1,1 +1,138 @@
-@import '../_placeholder';
+@import '../../../styles/variables';
+@import '../../../styles/mixins';
+
+.personality-test {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+
+  &__loading,
+  &__intro,
+  &__completing {
+    @include flex-center;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: $container-padding;
+    text-align: center;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-md;
+    line-height: 1.6;
+  }
+
+  &__hint {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__start-btn {
+    @include button-primary;
+    width: 100%;
+    max-width: 480rpx;
+    border: 0;
+  }
+
+  &__error {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-error;
+    margin-top: $spacing-md;
+    text-align: center;
+  }
+
+  // Progress bar
+  &__progress-bar {
+    height: 8rpx;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 4rpx;
+    margin: $spacing-md $container-padding;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: $brand-gradient;
+    border-radius: 4rpx;
+    transition: width 0.3s ease;
+  }
+
+  &__progress-label {
+    text-align: center;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__progress-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  // Question
+  &__question {
+    padding: 0 $container-padding $spacing-2xl;
+  }
+
+  &__question-text {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    line-height: 1.6;
+    margin-bottom: $spacing-xl;
+    text-align: center;
+  }
+
+  // Options
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__option {
+    @include card;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: $button-height;
+    padding: $spacing-md $spacing-lg;
+    border: 2rpx solid transparent;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    text-align: left;
+    line-height: 1.5;
+
+    &::after {
+      border: none;
+    }
+
+    &--active {
+      border-color: $color-primary;
+      background: $color-primary-light;
+    }
+  }
+
+  &__option-text {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.5;
+  }
+}

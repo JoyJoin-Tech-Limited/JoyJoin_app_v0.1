@@ -2,6 +2,7 @@ import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError } from '../../lib/logger'
 import './index.scss'
 
@@ -18,6 +19,7 @@ function clearPendingOrderStorage() {
 }
 
 export default function PaymentVerificationPage() {
+  const { isLoading: authLoading } = useAuthGuard()
   const [orderId, setOrderId] = useState('')
   const [status, setStatus] = useState<VerificationState>('polling')
   const [message, setMessage] = useState('正在确认支付结果...')
@@ -45,11 +47,11 @@ export default function PaymentVerificationPage() {
     clearPendingOrderStorage()
 
     if (context?.type === 'event') {
-      Taro.redirectTo({ url: '/pages/events/index' })
+      Taro.switchTab({ url: '/pages/events/index' })
       return
     }
 
-    Taro.redirectTo({ url: '/pages/profile/index' })
+    Taro.switchTab({ url: '/pages/profile/index' })
   }, [])
 
   const pollPaymentStatus = useCallback(async (targetOrderId: string, attempt = 1) => {
@@ -126,7 +128,7 @@ export default function PaymentVerificationPage() {
         title: '未找到待确认订单',
         icon: 'none',
       })
-      Taro.redirectTo({ url: '/pages/discover/index' })
+      Taro.switchTab({ url: '/pages/discover/index' })
       return
     }
 
@@ -151,6 +153,17 @@ export default function PaymentVerificationPage() {
     }
   })
 
+  if (authLoading) {
+    return (
+      <View className='verification-page'>
+        <View className='verification-page__card'>
+          <Text className='verification-page__title'>加载中</Text>
+          <Text className='verification-page__message'>正在校验登录状态…</Text>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View className='verification-page'>
       <View className='verification-page__card'>
@@ -172,7 +185,7 @@ export default function PaymentVerificationPage() {
 
         {status === 'pending' ? (
           <View className='verification-page__actions'>
-            <Button className='verification-page__button' onClick={() => Taro.redirectTo({ url: '/pages/profile/index' })}>
+            <Button className='verification-page__button' onClick={() => Taro.switchTab({ url: '/pages/profile/index' })}>
               去我的页查看
             </Button>
             <Button className='verification-page__button verification-page__button--secondary' onClick={() => bootstrap(orderId)}>
@@ -186,7 +199,7 @@ export default function PaymentVerificationPage() {
             <Button className='verification-page__button' onClick={() => Taro.navigateBack({ fail: () => Taro.navigateTo({ url: '/pages/blind-box-payment/index' }) })}>
               重新支付
             </Button>
-            <Button className='verification-page__button verification-page__button--secondary' onClick={() => Taro.redirectTo({ url: '/pages/profile/index' })}>
+            <Button className='verification-page__button verification-page__button--secondary' onClick={() => Taro.switchTab({ url: '/pages/profile/index' })}>
               返回我的页
             </Button>
           </View>

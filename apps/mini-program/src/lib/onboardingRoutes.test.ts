@@ -6,6 +6,13 @@ describe('mini-program onboarding routes', () => {
     expect(MINI_PROGRAM_PAGES[0]).toBe('pages/discover/index')
   })
 
+  it('retains non-tab mini-program sub-pages used by the PR branch', () => {
+    expect(MINI_PROGRAM_PAGES).toContain('pages/terms/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/event-detail/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/pool-registration/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/journey/index')
+  })
+
   it('maps each server nextStep to the canonical mini-program route', () => {
     expect(nextStepToMiniProgramRoute('onboarding')).toBe(MINI_PROGRAM_ROUTES.onboarding)
     expect(nextStepToMiniProgramRoute('personality-test')).toBe(MINI_PROGRAM_ROUTES.personalityTest)
