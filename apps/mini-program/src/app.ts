@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react'
+import { PropsWithChildren, createElement } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { logInfo } from './lib/logger'
@@ -32,7 +32,7 @@ function App({ children }: PropsWithChildren<any>) {
     }
   })
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return createElement(QueryClientProvider, { client: queryClient }, children)
 }
 
 export default App
