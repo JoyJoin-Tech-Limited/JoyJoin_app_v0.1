@@ -56,7 +56,7 @@
 4. If the process is crashed, restart it and investigate the error in logs.
 5. Check `GET /api/health` directly:
    ```bash
-   curl https://api.joyjoin.app/api/health
+   curl https://api.yuejuapp.com/api/health
    ```
 
 **Resolution:** Alert resolves automatically once metrics are received again.
@@ -181,8 +181,8 @@
 4. If `/api/metrics` fails: check that `metricsMiddleware` is mounted in `index.ts` and the route is registered in `routes.ts`.
 5. If `/api/auth/user` fails with non-401: check the auth middleware stack.
 
-**Maintenance:**  
-Update the `PRODUCTION_BASE_URL` secret whenever the production URL changes.  
+**Maintenance:**
+The workflow defaults to `https://api.yuejuapp.com`; update the `PRODUCTION_BASE_URL` secret whenever the probe should target a different production URL.
 Update `scripts/synthetic/happy-path-probe.mjs` if the probed endpoints change.
 
 **Resolution:** Alert resolves when the probe exits 0 and a fresh `joyjoin_synthetic_probe_success 1` sample is scraped.
