@@ -69,7 +69,7 @@ export function useAuthGuard() {
 
       // If user is done with onboarding but on an onboarding page, send to discover
       if (auth.nextStep === 'discover' || auth.nextStep === 'guide') {
-        Taro.reLaunch({ url: '/pages/discover/index' })
+        Taro.switchTab({ url: '/pages/discover/index' })
         return
       }
 

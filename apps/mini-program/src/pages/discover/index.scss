@@ -246,3 +246,143 @@
     }
   }
 }
+
+// ─── Loading state ───────────────────────────────────────────────
+.discover-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #FAFAFA;
+
+  &__text {
+    font-size: 28rpx;
+    color: #6B7280;
+  }
+}
+
+// ─── Authenticated discover ─────────────────────────────────────
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.discover-auth {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+
+  &__hero {
+    padding: $spacing-xl $container-padding $spacing-lg;
+  }
+
+  &__greeting {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__actions {
+    display: flex;
+    gap: $spacing-md;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__action-card {
+    flex: 1;
+    @include card;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-sm;
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  &__action-emoji {
+    font-size: $font-size-xl;
+  }
+
+  &__action-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__section {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__section-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__event-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__event-card {
+    @include card;
+    padding: $spacing-lg;
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &__event-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__event-date {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__empty-state {
+    @include card;
+    padding: $spacing-xl;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__empty-emoji {
+    font-size: 64rpx;
+  }
+
+  &__empty {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__empty-hint {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__spacer {
+    height: 160rpx;
+  }
+}

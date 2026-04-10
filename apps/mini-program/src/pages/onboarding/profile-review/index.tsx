@@ -26,7 +26,7 @@ export default function ProfileReviewPage() {
 
       await invalidateAuth()
       logInfo('[ProfileReview] Onboarding complete, navigating to discover')
-      Taro.reLaunch({ url: '/pages/discover/index' })
+      Taro.switchTab({ url: '/pages/discover/index' })
     } catch (err) {
       const message = err instanceof Error ? err.message : '操作失败，请重试'
       setError(message)

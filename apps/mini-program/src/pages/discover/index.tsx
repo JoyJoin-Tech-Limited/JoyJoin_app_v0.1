@@ -1,16 +1,84 @@
-import { View, Text, Image, Button, Navigator } from '@tarojs/components'
+import { View, Text, Image, Button, Navigator, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
-import { getPricing, getUserCoupons } from '@shared/api'
+import { getPricing, getUserCoupons, getJoinedEvents, getCurrentUser, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
+import { useAuth } from '../../hooks/useAuth'
 import './index.scss'
 import logoImage from '../../assets/box_logo_archetypes.png'
 import matchCardImg from '../../assets/match.png'
 import dinnerImg from '../../assets/dinner.png'
 import continueImg from '../../assets/continue.png'
 
-export default function DiscoverPage() {
-  // TODO: Taro adaptation needed for web-only drawers, coach marks, and browser-only interactions from the web discover page.
+function AuthenticatedDiscover() {
+  const { user } = useAuth()
+  const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
+
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => getJoinedEvents(apiRequest),
+  })
+
+  const handleEventTap = (event: JoinedEventSummary) => {
+    Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
+  }
+
+  return (
+    <ScrollView className='discover-auth' scrollY enhanced showScrollbar={false}>
+      <View className='discover-auth__hero'>
+        <Text className='discover-auth__greeting'>你好，{displayName} 👋</Text>
+        <Text className='discover-auth__subtitle'>探索你的下一场悦聚</Text>
+      </View>
+
+      {/* Quick actions */}
+      <View className='discover-auth__actions'>
+        <View className='discover-auth__action-card' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
+          <Text className='discover-auth__action-emoji'>🎁</Text>
+          <Text className='discover-auth__action-label'>开通权益</Text>
+        </View>
+        <View className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
+          <Text className='discover-auth__action-emoji'>📅</Text>
+          <Text className='discover-auth__action-label'>我的活动</Text>
+        </View>
+        <View className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
+          <Text className='discover-auth__action-emoji'>🤝</Text>
+          <Text className='discover-auth__action-label'>我的连接</Text>
+        </View>
+      </View>
+
+      {/* Recent events */}
+      <View className='discover-auth__section'>
+        <Text className='discover-auth__section-title'>近期活动</Text>
+        {eventsLoading ? (
+          <Text className='discover-auth__empty'>加载中…</Text>
+        ) : events.length > 0 ? (
+          <View className='discover-auth__event-list'>
+            {events.slice(0, 5).map((event) => (
+              <View
+                key={String(event.id)}
+                className='discover-auth__event-card'
+                onClick={() => handleEventTap(event)}
+              >
+                <Text className='discover-auth__event-title'>{event.title ?? '悦聚活动'}</Text>
+                <Text className='discover-auth__event-date'>{event.dateTime ?? '时间待定'}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View className='discover-auth__empty-state'>
+            <Text className='discover-auth__empty-emoji'>✨</Text>
+            <Text className='discover-auth__empty'>还没有参加过活动</Text>
+            <Text className='discover-auth__empty-hint'>开通权益后即可报名参加活动</Text>
+          </View>
+        )}
+      </View>
+
+      <View className='discover-auth__spacer' />
+    </ScrollView>
+  )
+}
+
+function UnauthenticatedLanding() {
   const { data: pricing = [] } = useQuery({
     queryKey: ['mini-program', 'pricing'],
     queryFn: () => getPricing(apiRequest),
@@ -21,14 +89,6 @@ export default function DiscoverPage() {
   })
 
   const featuredPlan = pricing.find((plan) => plan.planType === 'vip_quarterly') ?? pricing[0]
-
-  const handlePrimaryCTA = () => {
-    Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })
-  }
-
-  const handleSecondaryCTA = () => {
-    Taro.navigateTo({ url: '/pages/login/index' })
-  }
 
   return (
     <View className='landing-page'>
@@ -90,13 +150,13 @@ export default function DiscoverPage() {
       </View>
 
       <View className='bottom-zone'>
-        <Button className='primary-btn' onClick={handlePrimaryCTA} hoverClass='primary-btn-hover'>
+        <Button className='primary-btn' onClick={() => Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })} hoverClass='primary-btn-hover'>
           看看我会遇见谁
         </Button>
         <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
           查看会员权益
         </Button>
-        <Button className='secondary-btn' onClick={handleSecondaryCTA}>
+        <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}>
           已有账号？登录
         </Button>
         <View className='legal-text'>
@@ -108,4 +168,18 @@ export default function DiscoverPage() {
       </View>
     </View>
   )
+}
+
+export default function DiscoverPage() {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <View className='discover-loading'>
+        <Text className='discover-loading__text'>加载中…</Text>
+      </View>
+    )
+  }
+
+  return isAuthenticated ? <AuthenticatedDiscover /> : <UnauthenticatedLanding />
 }

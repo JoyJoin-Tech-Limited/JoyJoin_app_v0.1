@@ -1,7 +1,7 @@
 @import '../../styles/variables';
 @import '../../styles/mixins';
 
-.events-page {
+.connections-page {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -16,34 +16,12 @@
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
+    margin-bottom: $spacing-xs;
   }
 
-  &__tabs {
-    display: flex;
-    gap: $spacing-sm;
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-md;
-  }
-
-  &__tab {
-    padding: $spacing-sm $spacing-lg;
-    border-radius: 40rpx;
-    background: $color-surface;
-    border: 2rpx solid $color-border;
-
-    &--active {
-      background: $color-primary;
-      border-color: $color-primary;
-
-      .events-page__tab-text {
-        color: $color-text-white;
-      }
-    }
-  }
-
-  &__tab-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
     color: $color-text-secondary;
   }
 
@@ -64,27 +42,53 @@
 
   &__card {
     @include card;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
-
-    &:active {
-      transform: scale(0.98);
-    }
   }
 
-  &__card-header {
-    margin-bottom: $spacing-xs;
+  &__card-avatar {
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 44rpx;
+    background: $brand-gradient;
+    @include flex-center;
+    flex-shrink: 0;
   }
 
-  &__card-title {
+  &__card-avatar-text {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__card-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__card-name {
+    display: block;
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
+    @include text-truncate;
   }
 
-  &__card-date {
+  &__card-archetype {
+    display: block;
     font-size: $font-size-sm;
-    color: $color-text-secondary;
+    color: $color-primary;
+    margin-top: 4rpx;
+  }
+
+  &__card-event {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: 4rpx;
   }
 
   &__empty-state {
