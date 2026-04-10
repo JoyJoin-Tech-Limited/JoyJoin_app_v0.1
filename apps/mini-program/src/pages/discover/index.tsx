@@ -1,5 +1,8 @@
 import { View, Text, Image, Button, Navigator } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { useQuery } from '@tanstack/react-query'
+import { getPricing, getUserCoupons } from '@shared/api'
+import { apiRequest } from '../../lib/api'
 import './index.scss'
 import logoImage from '../../assets/box_logo_archetypes.png'
 import matchCardImg from '../../assets/match.png'
@@ -7,13 +10,23 @@ import dinnerImg from '../../assets/dinner.png'
 import continueImg from '../../assets/continue.png'
 
 export default function DiscoverPage() {
+  // TODO: Taro adaptation needed for web-only drawers, coach marks, and browser-only interactions from the web discover page.
+  const { data: pricing = [] } = useQuery({
+    queryKey: ['mini-program', 'pricing'],
+    queryFn: () => getPricing(apiRequest),
+  })
+  const { data: coupons = { count: 0, coupons: [] } } = useQuery({
+    queryKey: ['mini-program', 'coupons'],
+    queryFn: () => getUserCoupons(apiRequest),
+  })
+
+  const featuredPlan = pricing.find((plan) => plan.planType === 'vip_quarterly') ?? pricing[0]
+
   const handlePrimaryCTA = () => {
-    console.log('[Analytics] Landing: Primary CTA clicked')
-    // Taro.navigateTo({ url: '/pages/personality-test/index' })
+    Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })
   }
 
   const handleSecondaryCTA = () => {
-    console.log('[Analytics] Landing: Secondary CTA clicked')
     Taro.navigateTo({ url: '/pages/login/index' })
   }
 
@@ -65,11 +78,25 @@ export default function DiscoverPage() {
             ))}
           </View>
         </View>
+
+        <View className='payment-page__summary-card'>
+          <Text className='payment-page__summary-label'>当前功能入口</Text>
+          <Text className='payment-page__summary-value'>活动权益 / 登录 / Onboarding</Text>
+          <Text className='payment-page__summary-note'>
+            {featuredPlan
+              ? `推荐方案：${featuredPlan.displayName} · ¥${featuredPlan.price}`
+              : '正在同步支付与优惠信息'}
+          </Text>
+          <Text className='payment-page__summary-note'>可用优惠：{coupons.count ?? 0} 张</Text>
+        </View>
       </View>
 
       <View className='bottom-zone'>
         <Button className='primary-btn' onClick={handlePrimaryCTA} hoverClass='primary-btn-hover'>
           看看我会遇见谁
+        </Button>
+        <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
+          查看会员权益
         </Button>
         <Button className='secondary-btn' onClick={handleSecondaryCTA}>
           已有账号？登录
