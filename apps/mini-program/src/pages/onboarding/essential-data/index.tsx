@@ -7,7 +7,7 @@ export default function EssentialDataStubPage() {
       <View className='page__placeholder'>
         <Text className='page__title'>基本资料</Text>
         <Text className='page__subtitle'>P0 占位页：用于承接 essential-data nextStep。</Text>
-        <Button className='profile-page__cta' onClick={() => Taro.redirectTo({ url: '/pages/onboarding/extended-data/index' })}>
+        <Button className='page__cta' onClick={() => Taro.redirectTo({ url: '/pages/onboarding/extended-data/index' })}>
           下一步：兴趣偏好
         </Button>
       </View>

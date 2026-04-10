@@ -83,9 +83,7 @@ export default function DiscoverPage() {
           <Text className='payment-page__summary-label'>当前功能入口</Text>
           <Text className='payment-page__summary-value'>活动权益 / 登录 / Onboarding</Text>
           <Text className='payment-page__summary-note'>
-            {featuredPlan
-              ? `推荐方案：${featuredPlan.displayName} · ¥${featuredPlan.price}`
-              : '正在同步支付与优惠信息'}
+            {featuredPlan ? `推荐方案：${featuredPlan.displayName} · ¥${featuredPlan.price}` : '正在同步支付与优惠信息'}
           </Text>
           <Text className='payment-page__summary-note'>可用优惠：{coupons.count ?? 0} 张</Text>
         </View>

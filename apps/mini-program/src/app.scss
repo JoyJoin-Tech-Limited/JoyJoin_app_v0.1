@@ -10,3 +10,17 @@ page {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
+
+.page__cta {
+  min-height: 96rpx;
+  margin-top: 24rpx;
+  border-radius: 48rpx;
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 700;
+
+  &::after {
+    border: none;
+  }
+}
