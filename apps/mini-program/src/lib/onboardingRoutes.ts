@@ -21,6 +21,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   myEvents: 'pages/my-events/index',
   chats: 'pages/chats/index',
   journey: 'pages/journey/index',
+  eventCoordination: 'pages/event-coordination/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -36,6 +37,7 @@ export const MINI_PROGRAM_ROUTES = {
   connections: `/${MINI_PROGRAM_PAGE_PATHS.connections}`,
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   login: `/${MINI_PROGRAM_PAGE_PATHS.login}`,
+  eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
 } as const
 
 export const MINI_PROGRAM_PAGES = [
@@ -59,6 +61,7 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.myEvents,
   MINI_PROGRAM_PAGE_PATHS.chats,
   MINI_PROGRAM_PAGE_PATHS.journey,
+  MINI_PROGRAM_PAGE_PATHS.eventCoordination,
 ] as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
