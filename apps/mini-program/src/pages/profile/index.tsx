@@ -5,8 +5,16 @@ import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import './index.scss'
 
+/**
+ * ProfilePage — user profile hub.
+ *
+ * Displays the user's identity and profile completion state.
+ * Payment/membership access is surfaced as a secondary action below profile info.
+ *
+ * TODO: Taro adaptation needed for the web profile page's edit flows, charts,
+ * dialogs, and DOM-specific interaction polish.
+ */
 export default function ProfilePage() {
-  // TODO: Taro adaptation needed for the web profile page's charts, dialogs, and DOM-specific interaction polish.
   const { data: user } = useQuery({
     queryKey: ['mini-program', 'auth-user'],
     queryFn: () => getCurrentUser(apiRequest),
@@ -15,37 +23,46 @@ export default function ProfilePage() {
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
   })
-  const profileTitle = user?.nickname || '我的权益中心'
+
+  const displayName = user?.nickname || '我的资料'
+  const onboardingStep = user?.nextStep ?? 'discover'
+  // 'discover' and 'guide' are the terminal steps after onboarding is complete
+  const isOnboarding = onboardingStep !== 'discover' && onboardingStep !== 'guide'
+  const couponCount = coupons?.count ?? 0
 
   return (
     <View className='profile-page'>
       <View className='profile-page__hero'>
-        <Text className='profile-page__eyebrow'>我的福利柜</Text>
-        <Text className='profile-page__title'>{profileTitle}</Text>
+        <Text className='profile-page__eyebrow'>个人资料</Text>
+        <Text className='profile-page__title'>{displayName}</Text>
         <Text className='profile-page__subtitle'>
-          已接通用户态、优惠信息与支付入口，后续逐步承接 web 资料页能力。
+          {isOnboarding ? '资料填写尚未完成，完成后即可参与匹配活动。' : '资料已完善，可参与匹配活动。'}
         </Text>
       </View>
 
+      {isOnboarding && (
+        <View className='profile-page__card'>
+          <Text className='profile-page__card-title'>完善资料</Text>
+          <Text className='profile-page__card-copy'>继续填写你的个人信息，让算法更好地为你匹配。</Text>
+          <Button
+            className='profile-page__cta'
+            onClick={() => Taro.navigateTo({ url: '/pages/onboarding/profile-review/index' })}
+          >
+            继续填写资料
+          </Button>
+        </View>
+      )}
+
       <View className='profile-page__card'>
         <Text className='profile-page__card-title'>会员权益</Text>
-        <Text className='profile-page__card-copy'>月度 / 季度权益包，支付成功后自动进入订单确认流程。当前可用优惠 {coupons.count ?? 0} 张。</Text>
+        <Text className='profile-page__card-copy'>
+          月度 / 季度权益包，支付成功后自动进入订单确认流程。{couponCount > 0 ? `当前可用优惠 ${couponCount} 张。` : ''}
+        </Text>
         <Button
           className='profile-page__cta'
           onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}
         >
-          去开通权益
-        </Button>
-      </View>
-
-      <View className='profile-page__card'>
-        <Text className='profile-page__card-title'>资料进度</Text>
-        <Text className='profile-page__card-copy'>当前 nextStep：{String(user?.nextStep ?? 'discover')}</Text>
-        <Button
-          className='profile-page__cta'
-          onClick={() => Taro.navigateTo({ url: '/pages/onboarding/profile-review/index' })}
-        >
-          查看占位流程页
+          查看权益方案
         </Button>
       </View>
     </View>
