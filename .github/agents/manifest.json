@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "updated": "2026-04-11",
+  "agents": [
+    {
+      "name": "debug",
+      "file": "debug.agent.md",
+      "description": "Use when debugging a bug, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause.",
+      "tools": [
+        "edit/editFiles",
+        "search",
+        "execute/getTerminalOutput",
+        "execute/runInTerminal",
+        "read/terminalLastCommand",
+        "read/terminalSelection",
+        "search/usages",
+        "read/problems",
+        "execute/testFailure",
+        "web/fetch",
+        "web/githubRepo",
+        "execute/runTests"
+      ],
+      "argumentHint": "Describe the bug, failing command or test, expected behavior, and any error output or reproduction steps.",
+      "subagents": []
+    },
+    {
+      "name": "Expert React Frontend Engineer",
+      "file": "frontend engineer.md",
+      "description": "Use when working on JoyJoin browser-first frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review.",
+      "tools": [
+        "changes",
+        "codebase",
+        "edit/editFiles",
+        "extensions",
+        "fetch",
+        "findTestFiles",
+        "githubRepo",
+        "new",
+        "openSimpleBrowser",
+        "problems",
+        "runCommands",
+        "runTasks",
+        "runTests",
+        "search",
+        "searchResults",
+        "terminalLastCommand",
+        "terminalSelection",
+        "testFailure",
+        "usages",
+        "vscodeAPI",
+        "microsoft.docs.mcp"
+      ],
+      "argumentHint": "Describe the page, route, component, or interaction in apps/user-client, plus any platform-coordination concerns.",
+      "subagents": []
+    },
+    {
+      "name": "SE: Product Manager",
+      "file": "PM advisor.md",
+      "description": "Use when creating GitHub issues, aligning business value with user needs, prioritizing roadmap tradeoffs, or defining success metrics for product work.",
+      "tools": [
+        "codebase",
+        "githubRepo",
+        "create_issue",
+        "update_issue",
+        "list_issues",
+        "search_issues"
+      ],
+      "argumentHint": "Describe the feature, user, current workflow, pain point, and the decision or artifact you need.",
+      "subagents": []
+    },
+    {
+      "name": "Mini-Program Parity Auditor",
+      "file": "mini-program-parity-auditor.agent.md",
+      "description": "Use when comparing apps/user-client and apps/mini-program for missing parity, route coverage gaps, auth or payment drift, or when you need a migration backlog before cloning more screens into Taro.",
+      "tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "argumentHint": "Describe the route, feature area, or file set to compare between apps/user-client and apps/mini-program, and whether you want a quick gap scan or a detailed backlog.",
+      "subagents": []
+    },
+    {
+      "name": "Taro Mini-Program Frontend Engineer",
+      "file": "taro-mini-program-frontend-engineer.agent.md",
+      "description": "Use when implementing or refining frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, adapting layouts and interactions to WXSS and WeChat runtime constraints, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review.",
+      "tools": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "agent"
+      ],
+      "argumentHint": "Describe the apps/mini-program page, component, route, or interaction to build or update, plus any web-parity or platform-coordination concerns.",
+      "subagents": [
+        "Mini-Program Parity Auditor",
+        "Expert React Frontend Engineer"
+      ]
+    },
+    {
+      "name": "principal SWE",
+      "file": "principal SWE.md",
+      "description": "Use when you need principal-level software engineering guidance, architecture tradeoff analysis, implementation review, or pragmatic plans for complex technical changes.",
+      "tools": [
+        "changes",
+        "search/codebase",
+        "edit/editFiles",
+        "extensions",
+        "fetch",
+        "findTestFiles",
+        "githubRepo",
+        "new",
+        "openSimpleBrowser",
+        "problems",
+        "runCommands",
+        "runTasks",
+        "runTests",
+        "search",
+        "search/searchResults",
+        "runCommands/terminalLastCommand",
+        "runCommands/terminalSelection",
+        "testFailure",
+        "usages",
+        "vscodeAPI",
+        "github"
+      ],
+      "argumentHint": "Describe the decision, code area, architecture change, or implementation risk that needs senior guidance.",
+      "subagents": []
+    },
+    {
+      "name": "prompt engineer",
+      "file": "prompt engineer.md",
+      "description": "Use when analyzing or rewriting prompts, improving system prompts, adding better examples, or tightening prompt structure for more reliable model behavior.",
+      "tools": [],
+      "argumentHint": "Paste the prompt or instruction set you want improved, plus any goals, constraints, or desired output format.",
+      "subagents": []
+    },
+    {
+      "name": "Taro Migration Specialist",
+      "file": "taro-migration-specialist.agent.md",
+      "description": "Use when cloning apps/user-client into apps/mini-program with Taro, porting browser-first React or Vue code to a WeChat Mini Program, identifying unsupported DOM APIs and CSS, preserving near-100% parity without modifying source user-client files, or generating and validating apps/mini-program/src/app.config.ts.",
+      "tools": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "agent"
+      ],
+      "argumentHint": "Describe the web page, feature, or files to migrate, plus any constraints on navigation, networking, or styling.",
+      "subagents": [
+        "Mini-Program Parity Auditor",
+        "Expert React Frontend Engineer",
+        "Taro Mini-Program Frontend Engineer"
+      ]
+    }
+  ]
+}

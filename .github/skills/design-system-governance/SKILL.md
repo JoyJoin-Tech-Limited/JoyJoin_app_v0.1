@@ -124,6 +124,38 @@ When standardising an existing component to use the shared primitive:
 **Apply this skill by:** No — replace it with the `--btn-primary-gradient` or nearest brand token. If a genuine exception exists, add a `{/* Exception: … */}` comment with a rationale.
 **Result:** Undocumented token drift is eliminated; future reviewers understand any intentional deviation.
 
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies to both Web and Taro mini-program surfaces whenever a JoyJoin visual pattern, token, or interaction treatment is expected to feel like the same product.
+- This is the canonical home for shared frontend interaction baselines: token usage, state completeness, touch targets, and generic list-size or rendering heuristics.
+- Web is the primary implementation reference for token-rich UI today; Taro must preserve the same visual intent with platform-appropriate primitives and WXSS-safe execution.
+
+### UI/UX & Aesthetic Guidance
+
+- Treat `packages/shared/src/ui/buttonVariants.ts`, `apps/*/src/index.css`, and the JoyJoin brand skill as the canonical token sources before adding any new visual treatment.
+- Use semantic interactive elements on web and their Taro-native equivalents on mini-program surfaces; design intent is not complete until loading, error, empty, disabled, success, and pressed states are all specified.
+- Every primary interaction needs feedback within the component itself: visible pressed state, busy state during async work, and a readable recovery path on failure.
+- Legendary quality means no silent states and no ad-hoc styling drift: hierarchy, spacing rhythm, focus treatment, and motion all reinforce the token system.
+
+### Web-Specific Considerations
+
+- Hover and `:focus-visible` treatments must be intentional and token-driven; use pointer cursors only for actionable controls and keep non-interactive surfaces on the default cursor.
+- Validate responsive behavior at narrow mobile widths first, then tablet and desktop; layouts should not depend on hover to remain understandable.
+- Use the [shared frontend thresholds reference](references/frontend-excellence-thresholds.md) when deciding when token-rich tables, feeds, or card grids need virtualization or progressive disclosure.
+
+### Taro-Specific Considerations
+
+- Follow the [shared frontend thresholds reference](references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, and prefer native components such as `View`, `Text`, `Button`, `Input`, and `ScrollView` over DOM tags.
+- Use `hover-class` and pressed-state styling instead of CSS `:hover`, keep heavy visual assets or low-frequency routes in subpackages when they do not belong in the main launch bundle, and adopt `VirtualList` for long mini-program collections.
+
+### Accessibility & Performance Notes
+
+- Maintain WCAG 2.1 AA expectations for contrast, visible focus, target size, disabled semantics, and meaningful status messaging.
+- Protect Core Web Vitals on web by avoiding layout shift from token changes, keeping interaction styling cheap to paint, and minimizing animation work on critical surfaces.
+- On mini-program surfaces, keep scroll performance and input responsiveness high by favoring opacity and transform animations over layout-triggering properties.
+
 ## Troubleshooting
 
 - **Dark-mode token is missing — component looks broken in `.dark` class** — a new token was added to `:root` but not the `.dark` block. Open both `apps/user-client/src/index.css` and `apps/admin-client/src/index.css` and add the dark value.

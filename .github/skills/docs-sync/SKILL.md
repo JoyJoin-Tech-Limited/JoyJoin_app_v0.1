@@ -245,8 +245,6 @@ See `references/mapping.md` for the full source-to-doc mapping guide.
 **Apply this skill by:** First classifying the change — if only internal function names changed with no public interface change, no doc update is needed. If scoring weights, thresholds, or the public function signature changed, update `matching-domain` SKILL.md and `docs/MATCHING_ALGORITHM_REFERENCE.md` accordingly.
 **Result:** Minimal targeted update; no unnecessary churn.
 
----
-
 ## Troubleshooting
 
 - **Doc and code disagree on a route path** — trust the code (the route registered in `apps/server/src/routes.ts` or `routes/domains/`), update the doc to match. Never update the code to match an outdated doc.

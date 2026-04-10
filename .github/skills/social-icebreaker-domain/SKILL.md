@@ -133,6 +133,38 @@ Lie detective phase — secrecy rules:
 **Apply this skill by:** In the route handler for phase advancement, verify `req.session.userId === state.hostUserId` server-side and return 403 if not. Do not rely on client-side conditional rendering alone.
 **Result:** Host authority is enforced at the API layer regardless of client state.
 
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies directly to the Web live-session surface today and should be reused for any future Taro mini-program icebreaker session implementation.
+- The server owns authority and persistence, but the client still has to render phase changes, reconnection states, and action affordances at a legendary quality bar.
+
+### UI/UX & Aesthetic Guidance
+
+- Phase UIs should make state unmistakable: loading, reconnecting, waiting-for-host, disabled, error, and resolved states all need explicit visual treatment and copy.
+- Use JoyJoin design tokens and brand guidance so timers, prompts, vote cards, and recap surfaces feel premium rather than operational.
+- Web implementations should use semantic buttons, headings, lists, dialogs, and landmarks; future Taro implementations should preserve the same hierarchy with native components.
+- Every irreversible action requires immediate feedback: pressed state, optimistic locking or spinner, and a clear success or failure message.
+
+### Web-Specific Considerations
+
+- Maintain keyboard and `:focus-visible` support for host controls, voting options, and recovery actions; hover can enrich but must never be required to understand the state.
+- Keep responsive layouts stable for small mobile widths first, since live sessions are likely to be used on phones in-event.
+- Use the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) when deciding when recap feeds, rosters, or activity logs need virtualization.
+
+### Taro-Specific Considerations
+
+- If the session surface is ported to Taro, follow the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, prefer `View`, `Text`, `Button`, `ScrollView`, and `Input`, and use `hover-class` only where tactile clarity improves the action.
+- Keep large phase assets, recap media, or low-frequency routes aware of subpackage boundaries, and use `VirtualList` for long rosters or recap streams on mini-program.
+- Preserve the same authority model and secrecy boundaries without relying on DOM-only interaction patterns.
+
+### Accessibility & Performance Notes
+
+- Meet WCAG 2.1 AA expectations for focus order, status messaging, readable contrast, and non-colour-only phase communication.
+- Protect INP and scroll smoothness because this flow is interaction-dense; avoid main-thread-heavy timers, layout-triggering animations, and oversized rerenders on each poll or phase change.
+- For live-state announcements, ensure the UI remains understandable even when motion is reduced or connectivity is unstable.
+
 ## Troubleshooting
 
 - **Phase mismatch error — action rejected because phase is wrong** — the client submitted an action for a phase the server has already advanced past. Re-fetch current session state and re-render the correct phase UI before allowing the action.

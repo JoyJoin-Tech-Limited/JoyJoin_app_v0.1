@@ -103,6 +103,37 @@ Treat this classification as advisory only. If the heuristics and `docs/PLATFORM
 **Apply this skill by:** Comparing the auth/session assumptions against `apps/mini-program/src/lib/api.ts`, then checking whether the change also affects shared types or only web-side state wiring.
 **Result:** Auth/session drift is caught before one client silently diverges.
 
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies to both Web and Taro mini-program surfaces wherever a flow exists on both platforms or where a renderer-local change might hide shared product drift.
+- Use these notes when coordinating duplicated frontend behavior, not just data contracts.
+
+### UI/UX & Aesthetic Guidance
+
+- Parity review must include design tokens, hierarchy, copy, loading, error, empty, disabled, and success states, not just route presence or API shape.
+- Semantic structure matters on web and equivalent native structure matters on Taro; if one platform loses feedback or clarity, the flow is no longer truly aligned.
+- Interaction feedback must remain coherent across platforms: pressed states, retry affordances, field-level validation, and completion messaging should all be compared explicitly.
+
+### Web-Specific Considerations
+
+- Audit hover, `:focus-visible`, pointer cursor behavior, and responsive breakpoints whenever a coordinated flow changes on web.
+- Confirm that browser-only conveniences do not become hidden requirements for understanding the flow.
+- Use the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) when deciding when coordinated web flows need virtualization or progressive disclosure.
+
+### Taro-Specific Considerations
+
+- Validate the mini-program side against the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) for touch-target and long-list expectations, native component usage (`View`, `Text`, `Button`, `Input`, `ScrollView`), and `hover-class` feedback.
+- Watch subpackage boundaries when coordinated flows gain new assets or routes, and adopt `VirtualList` on long mini-program lists before performance diverges from the web implementation.
+- Treat unsupported DOM or CSS behavior as an explicit platform constraint rather than an invisible loss of UX quality.
+
+### Accessibility & Performance Notes
+
+- Coordinated flows should preserve WCAG 2.1 AA touchpoints on web and equivalent readable, target-size-safe behavior on mini-program surfaces.
+- Protect Core Web Vitals on the web sibling while keeping mini-program scroll and tap latency within an acceptable range; parity is broken if one platform becomes materially slower or less usable.
+- When a tradeoff is unavoidable, document the exact accessibility or performance impact in the parity note or PR rationale.
+
 ## Troubleshooting
 
 - **This looks platform-specific, but the playbook lists it as duplicated logic** — trust `docs/PLATFORM_COORDINATION.md` first and treat it as `BOTH_REQUIRED` until you confirm only renderer wiring changed.
