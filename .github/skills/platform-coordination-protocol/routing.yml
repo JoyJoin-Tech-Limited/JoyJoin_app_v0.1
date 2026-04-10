@@ -1,0 +1,60 @@
+skill: platform-coordination-protocol
+
+primary_ownership: >
+  PRIMARY/SECONDARY/SHARED coordination rules, sibling-platform review, shared
+  API contract boundaries, and impact-check / platform guardrail workflows.
+
+use_when:
+  - changing a file in a .platform-marked directory
+  - asking whether a sibling platform also needs review
+  - running or interpreting impact-check or guardrails:platform
+  - updating scripts/platform-map.json or coordinated platform boundaries
+  - changing shared api contract files consumed by coordinated client features
+
+do_not_use_when:
+  - task is only about generic monorepo dependency ownership or tsconfig changes
+  - task is purely about component styling with no cross-platform contract impact
+  - task is only about writing or auditing skill docs
+
+strong_triggers:
+  - .platform
+  - impact-check
+  - guardrails:platform
+  - platform-map.json
+  - PRIMARY
+  - SECONDARY
+  - SHARED
+  - sibling platform
+  - shared api contract
+  - apps/mini-program/src/pages/blind-box-payment
+  - apps/user-client/src/pages/BlindBoxPaymentPage
+  - apps/mini-program/src/lib/api
+  - apps/user-client/src/hooks/useAuth
+  - packages/shared/src/api-types
+  - platform-agnostic
+  - mirrored web journey
+
+owned_files:
+  - AGENTS.md
+  - scripts/platform-map.json
+  - scripts/impact-check.js
+  - scripts/platform-coordination.mjs
+  - scripts/check-platform-guardrails.mjs
+  - docs/COORDINATION_ROLLOUT.md
+
+owned_paths:
+  - apps/mini-program/src/pages/blind-box-payment
+  - apps/user-client/src/pages/BlindBoxPaymentPage
+  - apps/mini-program/src/lib/api
+  - apps/user-client/src/hooks/useAuth
+  - packages/shared/src/api-types
+
+owned_symbols: []
+
+related_skills:
+  - skill: monorepo-workspace-governance
+    when: coordination work also changes root scripts, workspace ownership, or package boundaries
+  - skill: auth-session-and-safety-boundaries
+    when: coordinated auth/session changes also modify auth policy, session validation, or dev-only auth surfaces
+  - skill: testing-and-regression-guardrails
+    when: coordinated behavior needs regression tests or structural checks to lock in the boundary
