@@ -661,6 +661,7 @@ export default function PersonalityTestResultPage() {
   // Prefer authenticated result when available, but gracefully fall back to anonymous result
   const finalResult = isAuthenticated ? (authResult ?? anonResult) : anonResult;
   const finalIsLoading = isAuthenticated ? (authLoading && !finalResult) : anonLoading;
+  const xiaoyueConfidence = finalResult ? (finalResult.isDecisive ? 0.9 : 0.66) : undefined;
 
 
   const { data: stats } = useQuery<Record<string, number>>({
@@ -679,7 +680,7 @@ export default function PersonalityTestResultPage() {
       X: finalResult.extraversionScore / 100,
       P: finalResult.positivityScore / 100,
     } : null,
-    confidence: finalResult ? (finalResult.isDecisive ? 0.9 : 0.66) : undefined,
+    confidence: xiaoyueConfidence,
     enabled: !!finalResult, // Enable immediately when result is available
   });
 
@@ -1046,7 +1047,7 @@ export default function PersonalityTestResultPage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                这版更适合先发评论区或聊天框。想晒图的话，页底还有一张 Pokemon 风格海报。
+                这版更适合先发评论区或聊天框。想晒图的话，页底还有一张 Pokémon 风格海报。
               </p>
             </CardContent>
           </Card>
