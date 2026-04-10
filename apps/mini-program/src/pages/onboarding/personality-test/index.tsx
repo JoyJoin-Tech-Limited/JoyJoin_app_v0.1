@@ -15,7 +15,7 @@ import './index.scss'
 type Phase = 'intro' | 'testing' | 'completing'
 
 export default function PersonalityTestPage() {
-  const { user, isLoading } = useAuthGuard()
+  const { isLoading } = useAuthGuard()
   const invalidateAuth = useInvalidateAuth()
 
   const [phase, setPhase] = useState<Phase>('intro')
