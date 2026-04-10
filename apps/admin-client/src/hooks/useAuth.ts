@@ -26,12 +26,12 @@ async function fetchAdminAuthUser(): Promise<AdminAuthUser | null> {
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       console.warn("[admin-auth] Timed out while loading current admin session");
-      return null;
+      throw new Error("Timed out while loading current admin session");
     }
 
     if (error instanceof TypeError) {
       console.warn("[admin-auth] Failed to load current admin session", error);
-      return null;
+      throw error;
     }
 
     throw error;
