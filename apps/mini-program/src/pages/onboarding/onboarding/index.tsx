@@ -1,8 +1,8 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
-import { useAuth } from '../../hooks/useAuth'
-import { nextStepToRoute } from '../../hooks/useAuthGuard'
+import { useAuth } from '../../../hooks/useAuth'
+import { nextStepToRoute } from '../../../hooks/useAuthGuard'
 import './index.scss'
 
 /**
