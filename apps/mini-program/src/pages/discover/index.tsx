@@ -1,7 +1,7 @@
 import { View, Text, Image, Button, Navigator, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
-import { getPricing, getUserCoupons, getJoinedEvents, getCurrentUser, type JoinedEventSummary } from '@shared/api'
+import { getPricing, getUserCoupons, getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
 import LoadingScreen from '../../components/LoadingScreen'
