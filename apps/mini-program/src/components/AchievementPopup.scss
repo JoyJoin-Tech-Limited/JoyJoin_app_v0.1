@@ -1,0 +1,132 @@
+@import '../styles/variables';
+
+.achievement-popup {
+  position: fixed;
+  top: 24rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 640rpx;
+  z-index: $z-toast;
+  border-radius: $card-radius;
+  padding: $spacing-md;
+  box-shadow: $shadow-lg;
+
+  &__content {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__emoji {
+    font-size: 48rpx;
+    flex-shrink: 0;
+    width: 80rpx;
+    height: 80rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__rarity {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    text-transform: uppercase;
+    letter-spacing: 2rpx;
+    margin-bottom: 4rpx;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__description {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    width: 48rpx;
+    height: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+
+    &-icon {
+      font-size: $font-size-lg;
+      color: $color-text-muted;
+    }
+
+    &:active {
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4rpx;
+    border-radius: 0 0 $card-radius $card-radius;
+    animation: achievement-shrink 3.5s linear forwards;
+  }
+
+  // ─── Rarity colour variants ────────────────────────────────
+  &--common {
+    background: #F3F4F6;
+    border: 2rpx solid #D1D5DB;
+
+    .achievement-popup__rarity { color: #6B7280; }
+    .achievement-popup__progress { background: #9CA3AF; }
+  }
+
+  &--rare {
+    background: #EFF6FF;
+    border: 2rpx solid #60A5FA;
+
+    .achievement-popup__rarity { color: #2563EB; }
+    .achievement-popup__progress { background: #60A5FA; }
+  }
+
+  &--epic {
+    background: #F5F3FF;
+    border: 2rpx solid #A78BFA;
+
+    .achievement-popup__rarity { color: #7C3AED; }
+    .achievement-popup__progress { background: #A78BFA; }
+  }
+
+  &--legendary {
+    background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+    border: 2rpx solid #F59E0B;
+    box-shadow: $shadow-lg, 0 0 24rpx rgba(245, 158, 11, 0.25);
+
+    .achievement-popup__rarity { color: #D97706; }
+    .achievement-popup__progress { background: #F59E0B; }
+  }
+}
+
+@keyframes achievement-shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}

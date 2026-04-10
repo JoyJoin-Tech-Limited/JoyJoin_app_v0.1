@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Button } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
@@ -7,6 +7,9 @@ import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import type { AuthUser } from '../../hooks/useAuth'
 import { logInfo } from '../../lib/logger'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
+import Button from '../../components/Button'
 import './index.scss'
 
 export default function ProfilePage() {
@@ -31,13 +34,7 @@ export default function ProfilePage() {
   }
 
   if (authLoading) {
-    return (
-      <View className='profile-page'>
-        <View className='profile-page__loading'>
-          <Text className='profile-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
+    return <LoadingScreen />
   }
 
   const displayName = user?.nickname || user?.displayName || authUser?.nickname || authUser?.displayName || '悦聚用户'
@@ -59,16 +56,16 @@ export default function ProfilePage() {
 
       {/* Quick stats */}
       <View className='profile-page__stats'>
-        <View className='profile-page__stat'>
+        <Card className='profile-page__stat'>
           <Text className='profile-page__stat-value'>{coupons.count ?? 0}</Text>
           <Text className='profile-page__stat-label'>优惠券</Text>
-        </View>
-        <View className='profile-page__stat'>
+        </Card>
+        <Card className='profile-page__stat'>
           <Text className='profile-page__stat-value'>
             {getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
           </Text>
           <Text className='profile-page__stat-label'>当前状态</Text>
-        </View>
+        </Card>
       </View>
 
       {/* Action cards */}
@@ -103,7 +100,7 @@ export default function ProfilePage() {
 
       {/* Logout */}
       <View className='profile-page__logout-section'>
-        <Button className='profile-page__logout-btn' onClick={handleLogout}>
+        <Button variant='secondary' className='profile-page__logout-btn' onClick={handleLogout}>
           退出登录
         </Button>
       </View>

@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getPricing, getUserCoupons, getJoinedEvents, getCurrentUser, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
 import './index.scss'
 import logoImage from '../../assets/box_logo_archetypes.png'
 import matchCardImg from '../../assets/match.png'
@@ -32,18 +34,18 @@ function AuthenticatedDiscover() {
 
       {/* Quick actions */}
       <View className='discover-auth__actions'>
-        <View className='discover-auth__action-card' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
+        <Card className='discover-auth__action-card' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
           <Text className='discover-auth__action-emoji'>🎁</Text>
           <Text className='discover-auth__action-label'>开通权益</Text>
-        </View>
-        <View className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
+        </Card>
+        <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
           <Text className='discover-auth__action-emoji'>📅</Text>
           <Text className='discover-auth__action-label'>我的活动</Text>
-        </View>
-        <View className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
+        </Card>
+        <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
           <Text className='discover-auth__action-emoji'>🤝</Text>
           <Text className='discover-auth__action-label'>我的连接</Text>
-        </View>
+        </Card>
       </View>
 
       {/* Recent events */}
@@ -54,22 +56,22 @@ function AuthenticatedDiscover() {
         ) : events.length > 0 ? (
           <View className='discover-auth__event-list'>
             {events.slice(0, 5).map((event) => (
-              <View
+              <Card
                 key={String(event.id)}
                 className='discover-auth__event-card'
                 onClick={() => handleEventTap(event)}
               >
                 <Text className='discover-auth__event-title'>{event.title ?? '悦聚活动'}</Text>
                 <Text className='discover-auth__event-date'>{event.dateTime ?? '时间待定'}</Text>
-              </View>
+              </Card>
             ))}
           </View>
         ) : (
-          <View className='discover-auth__empty-state'>
+          <Card className='discover-auth__empty-state'>
             <Text className='discover-auth__empty-emoji'>✨</Text>
             <Text className='discover-auth__empty'>还没有参加过活动</Text>
             <Text className='discover-auth__empty-hint'>开通权益后即可报名参加活动</Text>
-          </View>
+          </Card>
         )}
       </View>
 
@@ -175,11 +177,7 @@ export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
-    return (
-      <View className='discover-loading'>
-        <Text className='discover-loading__text'>加载中…</Text>
-      </View>
-    )
+    return <LoadingScreen />
   }
 
   return isAuthenticated ? <AuthenticatedDiscover /> : <UnauthenticatedLanding />
