@@ -15,12 +15,13 @@ export default function ProfilePage() {
     queryKey: ['mini-program', 'coupon-count'],
     queryFn: () => getUserCoupons(apiRequest),
   })
+  const profileTitle = user?.nickname || '我的权益中心'
 
   return (
     <View className='profile-page'>
       <View className='profile-page__hero'>
         <Text className='profile-page__eyebrow'>我的福利柜</Text>
-        <Text className='profile-page__title'>{typeof user?.nickname === 'string' ? `${user.nickname} 的权益中心` : '把支付入口放到 2 次点击内'}</Text>
+        <Text className='profile-page__title'>{profileTitle}</Text>
         <Text className='profile-page__subtitle'>
           已接通用户态、优惠信息与支付入口，后续逐步承接 web 资料页能力。
         </Text>

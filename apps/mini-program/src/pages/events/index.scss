@@ -28,3 +28,26 @@
   }
 }
 
+.events-page {
+  &__summary-card {
+    margin-top: 24rpx;
+    padding: 24rpx;
+    border-radius: 24rpx;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 12rpx 32rpx rgba(15, 23, 42, 0.08);
+  }
+
+  &__summary-label {
+    display: block;
+    font-size: 28rpx;
+    font-weight: 700;
+    color: $color-text-primary;
+    margin-bottom: 8rpx;
+  }
+
+  &__summary-note {
+    display: block;
+    font-size: 24rpx;
+    color: $color-text-secondary;
+  }
+}

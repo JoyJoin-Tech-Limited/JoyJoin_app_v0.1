@@ -22,16 +22,14 @@ export default function EventsPage() {
         {events.length > 0 ? (
           <View>
             {events.slice(0, 3).map((event) => (
-              <View key={String(event.id)} className='payment-page__summary-card'>
-                <Text className='payment-page__summary-label'>{String(event.title ?? '悦聚活动')}</Text>
-                <Text className='payment-page__summary-note'>
-                  {String(event.dateTime ?? '时间待定')}
-                </Text>
+              <View key={String(event.id)} className='events-page__summary-card'>
+                <Text className='events-page__summary-label'>{event.title ?? '悦聚活动'}</Text>
+                <Text className='events-page__summary-note'>{event.dateTime ?? '时间待定'}</Text>
               </View>
             ))}
           </View>
         ) : (
-          <Button className='profile-page__cta' onClick={() => Taro.redirectTo({ url: '/pages/discover/index' })}>
+          <Button className='page__cta' onClick={() => Taro.redirectTo({ url: '/pages/discover/index' })}>
             去发现页看看
           </Button>
         )}
