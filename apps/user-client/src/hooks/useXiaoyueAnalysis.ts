@@ -10,6 +10,18 @@ interface TraitScores {
   P?: number;
 }
 
+interface TopArchetypeCandidate {
+  archetype: string;
+  score: number;
+  confidence?: number;
+}
+
+interface XiaoyueShareVariants {
+  selfIntro: string;
+  friendCallout: string;
+  socialInvite: string;
+}
+
 interface XiaoyueAnalysisResult {
   headline?: string;
   analysis: string;
@@ -18,11 +30,17 @@ interface XiaoyueAnalysisResult {
   microAction?: string;
   shareLine?: string;
   stateLabel?: string;
+  whyThisFits?: string;
+  blendLine?: string;
+  expressionTags?: string[];
+  shareVariants?: XiaoyueShareVariants;
   cached: boolean;
 }
 
 interface UseXiaoyueAnalysisOptions {
   archetype: string | null;
+  secondaryArchetype?: string | null;
+  topArchetypes?: TopArchetypeCandidate[] | null;
   traitScores: TraitScores | null;
   confidence?: number;
   enabled?: boolean;
@@ -30,6 +48,8 @@ interface UseXiaoyueAnalysisOptions {
 
 export function useXiaoyueAnalysis({
   archetype,
+  secondaryArchetype = null,
+  topArchetypes = null,
   traitScores,
   confidence = 1,
   enabled = true,
@@ -42,7 +62,7 @@ export function useXiaoyueAnalysis({
   useEffect(() => {
     if (!enabled || !archetype || !traitScores) return;
     
-    const cacheKey = `${archetype}_${JSON.stringify(traitScores)}_${confidence}`;
+    const cacheKey = `${archetype}_${secondaryArchetype ?? 'none'}_${JSON.stringify(topArchetypes)}_${JSON.stringify(traitScores)}_${confidence}`;
     if (fetchedRef.current === cacheKey) return;
     
     setIsLoading(true);
@@ -51,6 +71,8 @@ export function useXiaoyueAnalysis({
     
     apiRequest("POST", "/api/xiaoyue/analysis", {
       archetype,
+      secondaryArchetype,
+      topArchetypes,
       traitScores,
       confidence,
     })
@@ -66,7 +88,7 @@ export function useXiaoyueAnalysis({
       .finally(() => {
         setIsLoading(false);
       });
-  }, [archetype, traitScores, confidence, enabled]);
+  }, [archetype, secondaryArchetype, topArchetypes, traitScores, confidence, enabled]);
 
   return {
     result,
@@ -77,6 +99,10 @@ export function useXiaoyueAnalysis({
     microAction: result?.microAction ?? null,
     shareLine: result?.shareLine ?? null,
     stateLabel: result?.stateLabel ?? null,
+    whyThisFits: result?.whyThisFits ?? null,
+    blendLine: result?.blendLine ?? null,
+    expressionTags: result?.expressionTags ?? null,
+    shareVariants: result?.shareVariants ?? null,
     isLoading,
     error,
     hasAnalysis: !!result?.analysis,
@@ -86,12 +112,18 @@ export function useXiaoyueAnalysis({
 export function prefetchXiaoyueAnalysis(
   archetype: string,
   traitScores: TraitScores,
-  confidence: number
+  confidence: number,
+  options?: {
+    secondaryArchetype?: string | null;
+    topArchetypes?: TopArchetypeCandidate[] | null;
+  }
 ): void {
   if (confidence < 0.7) return;
   
   apiRequest("POST", "/api/xiaoyue/prefetch", {
     archetype,
+    secondaryArchetype: options?.secondaryArchetype ?? null,
+    topArchetypes: options?.topArchetypes ?? null,
     traitScores,
     confidence,
   }).catch((err) => {

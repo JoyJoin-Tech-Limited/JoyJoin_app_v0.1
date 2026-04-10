@@ -11604,6 +11604,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           algorithmVersion: session.algorithmVersion || 'v1',
           primaryArchetype: primaryArchetype,
           secondaryArchetype: finalResult?.secondaryArchetype,
+          topArchetypes: session.topArchetypes || null,
           ...normalizedTraits,
           totalQuestions,
           chemistryList: chemistryList.map(c => ({
@@ -11630,6 +11631,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           algorithmVersion: 'v1',
           primaryArchetype: legacyResult.primaryArchetype,
           secondaryArchetype: legacyResult.secondaryArchetype,
+          topArchetypes: null,
           affinityScore: legacyResult.affinityScore,
           opennessScore: legacyResult.opennessScore,
           conscientiousnessScore: legacyResult.conscientiousnessScore,
@@ -11809,7 +11811,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ Xiaoyue AI Analysis Endpoint ============
   app.post('/api/xiaoyue/analysis', async (req: any, res) => {
     try {
-      const { archetype, traitScores, confidence } = req.body;
+      const { archetype, secondaryArchetype, topArchetypes, traitScores, confidence } = req.body;
       
       if (!archetype || !traitScores) {
         return res.status(400).json({ message: 'Missing archetype or traitScores' });
@@ -11818,6 +11820,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { generateXiaoyueAnalysis } = await import('./xiaoyueAnalysisService');
       const result = await generateXiaoyueAnalysis({
         archetype,
+        secondaryArchetype,
+        topArchetypes: Array.isArray(topArchetypes) ? topArchetypes : undefined,
         traitScores: {
           affinity: traitScores.A || traitScores.affinity || 0.5,
           openness: traitScores.O || traitScores.openness || 0.5,
@@ -11839,7 +11843,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // Prefetch xiaoyue analysis when test approaches completion
   app.post('/api/xiaoyue/prefetch', async (req: any, res) => {
     try {
-      const { archetype, traitScores, confidence } = req.body;
+      const { archetype, secondaryArchetype, topArchetypes, traitScores, confidence } = req.body;
       
       if (!archetype || !traitScores || confidence < 0.7) {
         return res.json({ prefetched: false, reason: 'Not ready yet' });
@@ -11847,14 +11851,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       const { prefetchAnalysisIfReady } = await import('./xiaoyueAnalysisService');
       prefetchAnalysisIfReady(
-        archetype,
         {
-          affinity: traitScores.A || traitScores.affinity || 0.5,
-          openness: traitScores.O || traitScores.openness || 0.5,
-          conscientiousness: traitScores.C || traitScores.conscientiousness || 0.5,
-          emotionalStability: traitScores.E || traitScores.emotionalStability || 0.5,
-          extraversion: traitScores.X || traitScores.extraversion || 0.5,
-          positivity: traitScores.P || traitScores.positivity || 0.5,
+          archetype,
+          secondaryArchetype,
+          topArchetypes: Array.isArray(topArchetypes) ? topArchetypes : undefined,
+          traitScores: {
+            affinity: traitScores.A || traitScores.affinity || 0.5,
+            openness: traitScores.O || traitScores.openness || 0.5,
+            conscientiousness: traitScores.C || traitScores.conscientiousness || 0.5,
+            emotionalStability: traitScores.E || traitScores.emotionalStability || 0.5,
+            extraversion: traitScores.X || traitScores.extraversion || 0.5,
+            positivity: traitScores.P || traitScores.positivity || 0.5,
+          },
         },
         confidence
       );

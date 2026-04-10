@@ -32,6 +32,14 @@ describe('xiaoyueAnalysisService', () => {
         bestScene: '更适合6到8人的轻松热场局。',
         microAction: '下次先抛一个轻松问题，再接住第一个回应你的人。',
         shareLine: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
+        whyThisFits: '这次会落到开心柯基，主要是因为你的外向性和正能量更突出，放进真实社交场里会变成一种快热带动型的存在感。',
+        blendLine: '虽然你身上也有一点太阳鸡的影子，但这次更稳定地落在开心柯基这边。',
+        expressionTags: ['一上桌就熟得快', '热场但不压人', '适合多人热场'],
+        shareVariants: {
+          selfIntro: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
+          friendCallout: '认识我的人应该会懂，我不是硬撑热闹，是会自然把场子带热。',
+          socialInvite: '如果一起组局，我更适合6到8人的轻松热场局，会比较容易进入状态。',
+        },
       }),
       baseInput
     );
@@ -39,12 +47,19 @@ describe('xiaoyueAnalysisService', () => {
     expect(parsed.headline).toContain('自然带热');
     expect(parsed.stateLabel).toBe('快热带动型');
     expect(parsed.microAction).toContain('轻松问题');
+    expect(parsed.expressionTags).toContain('热场但不压人');
+    expect(parsed.shareVariants.socialInvite).toContain('轻松热场局');
   });
 
   it('falls back to confidence-aware copy when model output is invalid', () => {
     const fallback = parseAnalysisResponse('not-json', {
       ...baseInput,
       archetype: '沉思猫头鹰',
+      secondaryArchetype: '灵感章鱼',
+      topArchetypes: [
+        { archetype: '沉思猫头鹰', score: 78, confidence: 0.68 },
+        { archetype: '灵感章鱼', score: 74, confidence: 0.63 },
+      ],
       confidence: 0.45,
       traitScores: {
         affinity: 0.6,
@@ -59,5 +74,8 @@ describe('xiaoyueAnalysisService', () => {
     expect(fallback.stateLabel).toBe('慢热深聊型');
     expect(fallback.analysis).toContain('交界');
     expect(fallback.shareLine).toContain('沉思猫头鹰');
+    expect(fallback.expressionTags.length).toBeGreaterThanOrEqual(3);
+    expect(fallback.blendLine).toContain('灵感章鱼');
+    expect(fallback.shareVariants.friendCallout).toContain('灵感章鱼');
   });
 });

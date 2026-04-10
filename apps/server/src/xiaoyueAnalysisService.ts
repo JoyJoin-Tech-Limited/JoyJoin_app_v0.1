@@ -21,6 +21,12 @@ function getDeepseekClient(): OpenAI {
 
 export interface ArchetypeAnalysisInput {
   archetype: string;
+  secondaryArchetype?: string | null;
+  topArchetypes?: Array<{
+    archetype: string;
+    score: number;
+    confidence?: number;
+  }>;
   traitScores: {
     affinity: number;
     openness: number;
@@ -33,6 +39,12 @@ export interface ArchetypeAnalysisInput {
   confidence?: number;
 }
 
+export interface XiaoyueShareVariants {
+  selfIntro: string;
+  friendCallout: string;
+  socialInvite: string;
+}
+
 export interface XiaoyueAnalysisResult {
   headline: string;
   analysis: string;
@@ -41,6 +53,10 @@ export interface XiaoyueAnalysisResult {
   microAction: string;
   shareLine: string;
   stateLabel: string;
+  whyThisFits: string;
+  blendLine: string;
+  expressionTags: string[];
+  shareVariants: XiaoyueShareVariants;
   cached: boolean;
 }
 
@@ -76,6 +92,15 @@ const ANALYSIS_MIN_LENGTH = 30;
 const ANALYSIS_MAX_LENGTH = 240;
 const SHORT_COPY_MIN_LENGTH = 8;
 const SHORT_COPY_MAX_LENGTH = 80;
+const EXTENDED_COPY_MAX_LENGTH = 140;
+const TAG_MIN_LENGTH = 2;
+const TAG_MAX_LENGTH = 16;
+
+const shareVariantsSchema = z.object({
+  selfIntro: z.string().min(SHORT_COPY_MIN_LENGTH).max(EXTENDED_COPY_MAX_LENGTH),
+  friendCallout: z.string().min(SHORT_COPY_MIN_LENGTH).max(EXTENDED_COPY_MAX_LENGTH),
+  socialInvite: z.string().min(SHORT_COPY_MIN_LENGTH).max(EXTENDED_COPY_MAX_LENGTH),
+});
 
 const analysisResponseSchema = z.object({
   headline: z.string().min(HEADLINE_MIN_LENGTH).max(HEADLINE_MAX_LENGTH),
@@ -84,6 +109,10 @@ const analysisResponseSchema = z.object({
   bestScene: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
   microAction: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
   shareLine: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
+  whyThisFits: z.string().min(ANALYSIS_MIN_LENGTH).max(EXTENDED_COPY_MAX_LENGTH),
+  blendLine: z.string().min(SHORT_COPY_MIN_LENGTH).max(EXTENDED_COPY_MAX_LENGTH),
+  expressionTags: z.array(z.string().min(TAG_MIN_LENGTH).max(TAG_MAX_LENGTH)).min(3).max(4),
+  shareVariants: shareVariantsSchema,
 });
 
 const analysisCache = new Map<string, { result: Omit<XiaoyueAnalysisResult, 'cached'>; timestamp: number }>();
@@ -211,25 +240,174 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
   };
 }
 
-function getCacheKey(input: ArchetypeAnalysisInput): string {
-  const confidenceBand = getConfidenceBand(input.confidence).band;
-  return `${input.archetype}_${confidenceBand}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}`;
-}
-
-function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
-  const { archetype, traitScores } = input;
-  const snapshot = deriveSocialSnapshot(input);
-
-  const traitSummary = Object.entries(traitScores)
-    .map(([key, value]) => `- ${traitLabels[key as keyof typeof traitLabels]}: ${normalizeTraitScore(value)}/100`)
-    .join('\n');
-
-  const rankedTraits = Object.entries(traitScores)
+function getRankedTraits(input: ArchetypeAnalysisInput): Array<{ name: string; score: number }> {
+  return Object.entries(input.traitScores)
     .map(([key, value]) => ({
       name: traitLabels[key as keyof typeof traitLabels],
       score: normalizeTraitScore(value),
     }))
     .sort((a, b) => b.score - a.score);
+}
+
+function getTopArchetypeCandidates(input: ArchetypeAnalysisInput): Array<{
+  archetype: string;
+  score: number;
+  confidence?: number;
+}> {
+  if (!Array.isArray(input.topArchetypes)) {
+    return input.secondaryArchetype
+      ? [
+          { archetype: input.archetype, score: 100, confidence: input.confidence },
+          { archetype: input.secondaryArchetype, score: 92 },
+        ]
+      : [{ archetype: input.archetype, score: 100, confidence: input.confidence }];
+  }
+
+  const normalized = input.topArchetypes
+    .filter((item): item is { archetype: string; score: number; confidence?: number } =>
+      !!item &&
+      typeof item.archetype === 'string' &&
+      item.archetype.length > 0 &&
+      typeof item.score === 'number' &&
+      Number.isFinite(item.score)
+    )
+    .sort((a, b) => b.score - a.score);
+
+  if (normalized.length === 0) {
+    return input.secondaryArchetype
+      ? [
+          { archetype: input.archetype, score: 100, confidence: input.confidence },
+          { archetype: input.secondaryArchetype, score: 92 },
+        ]
+      : [{ archetype: input.archetype, score: 100, confidence: input.confidence }];
+  }
+
+  if (!normalized.some((item) => item.archetype === input.archetype)) {
+    normalized.unshift({ archetype: input.archetype, score: normalized[0].score + 1, confidence: input.confidence });
+  }
+
+  return normalized;
+}
+
+function getBlendSecondaryArchetype(input: ArchetypeAnalysisInput): string | null {
+  if (input.secondaryArchetype) return input.secondaryArchetype;
+  return getTopArchetypeCandidates(input).find((item) => item.archetype !== input.archetype)?.archetype ?? null;
+}
+
+function getTopArchetypeGap(input: ArchetypeAnalysisInput): number | null {
+  const candidates = getTopArchetypeCandidates(input);
+  if (candidates.length < 2) return null;
+  return Math.round((candidates[0].score - candidates[1].score) * 10) / 10;
+}
+
+function isBlendMatch(input: ArchetypeAnalysisInput): boolean {
+  const scoreGap = getTopArchetypeGap(input);
+  if (scoreGap !== null) {
+    return scoreGap <= 8;
+  }
+
+  return !!getBlendSecondaryArchetype(input) && (input.confidence ?? 1) < HIGH_CONFIDENCE_THRESHOLD;
+}
+
+function trimSentence(text: string): string {
+  return text.replace(/[。！!？?]+$/g, '').trim();
+}
+
+function formatSentence(text: string): string {
+  const next = trimSentence(text);
+  return next ? `${next}。` : '';
+}
+
+function deriveSceneTag(bestScene: string): string {
+  if (/2到4人|一对一|深聊|咖啡|散步/.test(bestScene)) return '适合小局深聊';
+  if (/6到8人|热场/.test(bestScene)) return '适合多人热场';
+  if (/主题|探索感|交换想法/.test(bestScene)) return '主题局更出彩';
+  if (/留白|不吵/.test(bestScene)) return '低耗社交更舒服';
+  return '越相处越有戏';
+}
+
+function buildExpressionTags(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): string[] {
+  const tagsByState: Record<string, string[]> = {
+    '快热带动型': ['一上桌就熟得快', '热场但不压人'],
+    '稳场推进型': ['不抢戏但稳全场', '靠谱感很强'],
+    '熟了更有火花型': ['第一眼温和型', '熟了会越来越有戏'],
+    '灵感破冰型': ['聊天自带新鲜感', '靠点子破冰'],
+    '慢热深聊型': ['慢热但不冷场', '聊到点上停不下'],
+    '低耗观察型': ['先观察再发力', '低耗但会看人'],
+    '局内升温型': ['越相处越有戏', '关系会慢慢热起来'],
+  };
+
+  const tags = [...(tagsByState[snapshot.stateLabel] ?? ['社交有自己的节奏', '相处久了更舒服'])];
+  tags.push(deriveSceneTag(snapshot.bestScene));
+  tags.push(isBlendMatch(input) && getBlendSecondaryArchetype(input) ? '有点双原型感' : `${input.archetype}气质`);
+
+  return Array.from(new Set(tags)).slice(0, 4);
+}
+
+function buildBlendLine(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): string {
+  const secondaryArchetype = getBlendSecondaryArchetype(input);
+  if (!secondaryArchetype || secondaryArchetype === input.archetype) {
+    return formatSentence(`这次更清楚落在${input.archetype}这边，你给人的第一感受会是${snapshot.stateLabel}`);
+  }
+
+  if (isBlendMatch(input)) {
+    return formatSentence(`你底色更像${input.archetype}，但熟起来或遇到对频的话题时，会露出一点${secondaryArchetype}那一面`);
+  }
+
+  return formatSentence(`虽然你身上也有一点${secondaryArchetype}的影子，但这次更稳定地落在${input.archetype}这边`);
+}
+
+function buildWhyThisFits(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): string {
+  const rankedTraits = getRankedTraits(input);
+  const topTraits = rankedTraits.slice(0, 2).map((trait) => trait.name);
+  const secondaryArchetype = getBlendSecondaryArchetype(input);
+  const traitSummary = topTraits.length >= 2 ? `${topTraits[0]}和${topTraits[1]}` : topTraits[0] || '社交节奏';
+
+  const suffix =
+    secondaryArchetype && secondaryArchetype !== input.archetype
+      ? isBlendMatch(input)
+        ? `你身上也带一点${secondaryArchetype}的感觉，所以不是单一一种路数。`
+        : `虽然也有一点${secondaryArchetype}的影子，但没有盖过主底色。`
+      : '';
+
+  return `${formatSentence(`这次会落到${input.archetype}，主要是因为你的${traitSummary}更突出，放进真实社交场里会变成一种${snapshot.stateLabel}的存在感`)}${suffix}`.trim();
+}
+
+function buildShareVariants(input: ArchetypeAnalysisInput, snapshot: DerivedSocialSnapshot): XiaoyueShareVariants {
+  const secondaryArchetype = getBlendSecondaryArchetype(input);
+  const bestScene = trimSentence(snapshot.bestScene).replace(/^更适合/, '');
+
+  return {
+    selfIntro: snapshot.shareLineHint,
+    friendCallout:
+      secondaryArchetype && secondaryArchetype !== input.archetype && isBlendMatch(input)
+        ? formatSentence(`认识我的人应该会懂，我平时更像${input.archetype}，熟起来会露出一点${secondaryArchetype}那面`)
+        : formatSentence(`认识我的人应该会懂，${trimSentence(snapshot.headlineHint)}`),
+    socialInvite: formatSentence(`如果一起组局，我更适合${bestScene}，会比较容易进入状态`),
+  };
+}
+
+function getCacheKey(input: ArchetypeAnalysisInput): string {
+  const confidenceBand = getConfidenceBand(input.confidence).band;
+  const topArchetypesKey = getTopArchetypeCandidates(input)
+    .slice(0, 2)
+    .map((item) => `${item.archetype}:${Math.round(item.score)}`)
+    .join('|');
+  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}`;
+}
+
+function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
+  const { archetype, traitScores } = input;
+  const snapshot = deriveSocialSnapshot(input);
+  const rankedCandidates = getTopArchetypeCandidates(input).slice(0, 2);
+  const secondaryArchetype = getBlendSecondaryArchetype(input);
+  const topGap = getTopArchetypeGap(input);
+
+  const traitSummary = Object.entries(traitScores)
+    .map(([key, value]) => `- ${traitLabels[key as keyof typeof traitLabels]}: ${normalizeTraitScore(value)}/100`)
+    .join('\n');
+
+  const rankedTraits = getRankedTraits(input);
 
   const topTraits = rankedTraits.slice(0, 2).map((trait) => trait.name);
   const lowTraits = [...rankedTraits].reverse().slice(0, 2).map((trait) => trait.name);
@@ -247,6 +425,10 @@ ${traitSummary}
 适合场景提示：${snapshot.bestScene}
 微动作提示：${snapshot.microAction}
 分享短句参考：${snapshot.shareLineHint}
+次高原型：${secondaryArchetype ?? '无明显次高原型'}
+前二原型：${rankedCandidates.map((item) => `${item.archetype}(${Math.round(item.score)})`).join(' / ')}
+是否属于边界混合：${isBlendMatch(input) ? '是' : '否'}
+前二差值：${topGap ?? '未知'}
 
 置信度层级：${snapshot.confidenceBand}
 语气要求：${snapshot.confidenceInstruction}
@@ -258,7 +440,15 @@ ${traitSummary}
   "socialRole": "一句话说明你在局里的价值或角色",
   "bestScene": "一句话说明你更适合什么活动氛围/人数/破冰方式",
   "microAction": "一句立即可执行的社交动作建议",
-  "shareLine": "一句适合复制到评论区/聊天框的分享短句，别和 headline 重复"
+  "shareLine": "一句适合复制到评论区/聊天框的分享短句，别和 headline 重复",
+  "whyThisFits": "1-2句，解释为什么这次更偏这个原型，强调真实社交信号，不要提模型或分数",
+  "blendLine": "1句，解释主原型和次原型之间的张力或边界感；如果没有明显次高原型，也要写成一句稳定说明",
+  "expressionTags": ["3到4个适合小红书/朋友圈传播的短标签，每个2到8字，不要带#"],
+  "shareVariants": {
+    "selfIntro": "适合直接发评论区/聊天框的自我介绍型文案",
+    "friendCallout": "适合发给朋友或朋友圈配文的互动型文案",
+    "socialInvite": "适合带一点轻邀约感的社交转化型文案"
+  }
 }
 
 硬性要求：
@@ -266,7 +456,9 @@ ${traitSummary}
 2. 保持小悦的机智、利落、不油腻，不要鸡汤，不要感叹号，不要过度热情
 3. 用“场景 + 感受 + 动作”来写，少用抽象人格词
 4. headline 和 shareLine 必须与海报视觉形成互补：更像一句活人会发出去的话，不要写成海报标题
-5. analysis 结尾必须落到一个低成本的下一步，不要开放式问句`;
+ 5. analysis 结尾必须落到一个低成本的下一步，不要开放式问句
+ 6. expressionTags 要像人会拿去发内容平台的标签，不要写“人格分析”“MBTI感”这种空词
+ 7. shareVariants 三句不能互相重复，要明显对应“自我介绍 / 朋友互动 / 轻邀约”三种传播场景`;
 }
 
 function extractJsonPayload(content: string): string {
@@ -303,6 +495,10 @@ function buildFallbackAnalysisPayload(input: ArchetypeAnalysisInput): Omit<Xiaoy
     microAction: snapshot.microAction,
     shareLine: snapshot.shareLineHint,
     stateLabel: snapshot.stateLabel,
+    whyThisFits: buildWhyThisFits(input, snapshot),
+    blendLine: buildBlendLine(input, snapshot),
+    expressionTags: buildExpressionTags(input, snapshot),
+    shareVariants: buildShareVariants(input, snapshot),
   };
 }
 
@@ -371,8 +567,7 @@ export async function generateXiaoyueAnalysis(
 }
 
 export async function prefetchAnalysisIfReady(
-  archetype: string,
-  traitScores: ArchetypeAnalysisInput['traitScores'],
+  input: Omit<ArchetypeAnalysisInput, 'confidence'>,
   confidence: number
 ): Promise<void> {
   if (confidence < 0.7) {
@@ -380,14 +575,14 @@ export async function prefetchAnalysisIfReady(
     return;
   }
 
-  const cacheKey = getCacheKey({ archetype, traitScores, confidence });
+  const cacheKey = getCacheKey({ ...input, confidence });
   if (analysisCache.has(cacheKey)) {
     console.log('[XiaoyueAnalysis] Already cached, skipping prefetch');
     return;
   }
 
-  console.log('[XiaoyueAnalysis] Starting background prefetch for:', archetype);
-  generateXiaoyueAnalysis({ archetype, traitScores, confidence }).catch(err => {
+  console.log('[XiaoyueAnalysis] Starting background prefetch for:', input.archetype);
+  generateXiaoyueAnalysis({ ...input, confidence }).catch(err => {
     console.error('[XiaoyueAnalysis] Background prefetch failed:', err);
   });
 }
