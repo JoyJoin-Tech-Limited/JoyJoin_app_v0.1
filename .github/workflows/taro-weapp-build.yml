@@ -1,0 +1,53 @@
+name: Build Taro WeChat Mini Program
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/mini-program/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/taro-weapp-build.yml'
+  pull_request:
+    paths:
+      - 'apps/mini-program/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/taro-weapp-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build-weapp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared workspace
+        run: npm run build -w @joyjoin/shared
+
+      - name: Build Taro WeChat mini-program
+        run: npm run build:weapp -w mini-program
+
+      - name: Upload mini-program artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: taro-weapp-dist
+          path: apps/mini-program/dist
+          if-no-files-found: error
