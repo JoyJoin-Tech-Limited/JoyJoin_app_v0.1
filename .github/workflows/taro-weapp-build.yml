@@ -53,4 +53,5 @@ jobs:
         with:
           name: taro-weapp-dist
           path: apps/mini-program/dist
+          retention-days: 30
           if-no-files-found: error
