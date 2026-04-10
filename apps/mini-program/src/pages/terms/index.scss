@@ -1,0 +1,71 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.terms-page {
+  min-height: 100vh;
+  background-color: $color-bg;
+  padding: $container-padding;
+  padding-bottom: 80rpx;
+
+  &__banner {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__banner-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__banner-date {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__banner-intro {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__section {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__section-heading {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__section-text {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.8;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__footer {
+    padding: $spacing-lg 0;
+    text-align: center;
+  }
+
+  &__footer-text {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.6;
+  }
+}

@@ -15,6 +15,7 @@ export default defineAppConfig({
     'pages/journey/index',
     'pages/profile/index',
     'pages/login/index',
+    'pages/terms/index',
   ],
   window: {
     backgroundTextStyle: 'light',

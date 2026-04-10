@@ -1,1 +1,124 @@
-@import '../_placeholder';
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.profile-review {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  padding: $container-padding;
+
+  &__loading {
+    @include flex-center;
+    min-height: 100vh;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__header {
+    padding-top: $spacing-xl;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+
+    &--archetype {
+      background: $brand-gradient;
+      text-align: center;
+    }
+  }
+
+  &__card-label {
+    display: block;
+    font-size: $font-size-sm;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__archetype-name {
+    display: block;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-white;
+  }
+
+  &__card-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-sm 0;
+    border-bottom: 1rpx solid $color-divider;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__info-label {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__info-value {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__error {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-error;
+    text-align: center;
+    margin-top: $spacing-md;
+  }
+
+  &__footer {
+    margin-top: $spacing-xl;
+    text-align: center;
+    padding-bottom: 80rpx;
+  }
+
+  &__submit {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+
+  &__hint {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: $spacing-md;
+  }
+}
