@@ -58,13 +58,32 @@ interface DerivedSocialSnapshot {
   shareLineHint: string;
 }
 
+const HIGH_CONFIDENCE_THRESHOLD = 0.82;
+const MEDIUM_CONFIDENCE_THRESHOLD = 0.64;
+const HIGH_SOCIAL_THRESHOLD = 72;
+const HIGH_POSITIVITY_THRESHOLD = 70;
+const HIGH_STABILITY_THRESHOLD = 72;
+const HIGH_CONSCIENTIOUSNESS_THRESHOLD = 68;
+const WARM_SOCIAL_THRESHOLD = 66;
+const HIGH_OPENNESS_THRESHOLD = 74;
+const MID_EXTRAVERSION_THRESHOLD = 58;
+const LOW_EXTRAVERSION_THRESHOLD = 46;
+const MID_OPENNESS_THRESHOLD = 62;
+const MID_STABILITY_THRESHOLD = 62;
+const HEADLINE_MIN_LENGTH = 6;
+const HEADLINE_MAX_LENGTH = 40;
+const ANALYSIS_MIN_LENGTH = 30;
+const ANALYSIS_MAX_LENGTH = 240;
+const SHORT_COPY_MIN_LENGTH = 8;
+const SHORT_COPY_MAX_LENGTH = 80;
+
 const analysisResponseSchema = z.object({
-  headline: z.string().min(6).max(40),
-  analysis: z.string().min(30).max(240),
-  socialRole: z.string().min(8).max(60),
-  bestScene: z.string().min(8).max(80),
-  microAction: z.string().min(8).max(80),
-  shareLine: z.string().min(8).max(60),
+  headline: z.string().min(HEADLINE_MIN_LENGTH).max(HEADLINE_MAX_LENGTH),
+  analysis: z.string().min(ANALYSIS_MIN_LENGTH).max(ANALYSIS_MAX_LENGTH),
+  socialRole: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
+  bestScene: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
+  microAction: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
+  shareLine: z.string().min(SHORT_COPY_MIN_LENGTH).max(SHORT_COPY_MAX_LENGTH),
 });
 
 const analysisCache = new Map<string, { result: Omit<XiaoyueAnalysisResult, 'cached'>; timestamp: number }>();
@@ -88,14 +107,14 @@ function getConfidenceBand(confidence = 1): {
   band: ConfidenceBand;
   instruction: string;
 } {
-  if (confidence >= 0.82) {
+  if (confidence >= HIGH_CONFIDENCE_THRESHOLD) {
     return {
       band: 'high',
       instruction: '语气可以笃定，直接说“你就是/你通常会”，但仍然保持不评判。',
     };
   }
 
-  if (confidence >= 0.64) {
+  if (confidence >= MEDIUM_CONFIDENCE_THRESHOLD) {
     return {
       band: 'medium',
       instruction: '语气保持有把握，但用“你更像是/你多半会/常见表现是”这类表达，避免绝对化。',
@@ -116,12 +135,12 @@ export function deriveSocialSnapshot(input: ArchetypeAnalysisInput): DerivedSoci
   const confidence = getConfidenceBand(input.confidence);
 
   const stateLabel = (() => {
-    if (scores.extraversion >= 72 && scores.positivity >= 70) return '快热带动型';
-    if (scores.emotionalStability >= 72 && scores.conscientiousness >= 68) return '稳场推进型';
-    if (scores.affinity >= 72 && scores.positivity >= 66) return '熟了更有火花型';
-    if (scores.openness >= 74 && scores.extraversion >= 58) return '灵感破冰型';
-    if (scores.extraversion <= 46 && scores.openness >= 62) return '慢热深聊型';
-    if (scores.extraversion <= 46 && scores.emotionalStability >= 62) return '低耗观察型';
+    if (scores.extraversion >= HIGH_SOCIAL_THRESHOLD && scores.positivity >= HIGH_POSITIVITY_THRESHOLD) return '快热带动型';
+    if (scores.emotionalStability >= HIGH_STABILITY_THRESHOLD && scores.conscientiousness >= HIGH_CONSCIENTIOUSNESS_THRESHOLD) return '稳场推进型';
+    if (scores.affinity >= HIGH_SOCIAL_THRESHOLD && scores.positivity >= WARM_SOCIAL_THRESHOLD) return '熟了更有火花型';
+    if (scores.openness >= HIGH_OPENNESS_THRESHOLD && scores.extraversion >= MID_EXTRAVERSION_THRESHOLD) return '灵感破冰型';
+    if (scores.extraversion <= LOW_EXTRAVERSION_THRESHOLD && scores.openness >= MID_OPENNESS_THRESHOLD) return '慢热深聊型';
+    if (scores.extraversion <= LOW_EXTRAVERSION_THRESHOLD && scores.emotionalStability >= MID_STABILITY_THRESHOLD) return '低耗观察型';
     return '局内升温型';
   })();
 
@@ -215,7 +234,7 @@ function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
   const topTraits = rankedTraits.slice(0, 2).map((trait) => trait.name);
   const lowTraits = [...rankedTraits].reverse().slice(0, 2).map((trait) => trait.name);
 
-  return `你在为悦聚 personality result 生成“小悦分析”文案。已有 Pokemon 风格海报承载“原型视觉感”，这次输出必须走“文字版社交表达”，不能重复海报上的原型卡、编号、限定、收藏感文案。
+  return `你在为悦聚 personality result 生成“小悦分析”文案。已有 Pokémon 风格海报承载“原型视觉感”，这次输出必须走“文字版社交表达”，不能重复海报上的原型卡、编号、限定、收藏感文案。
 
 用户原型：${archetype}
 用户六维特质：
