@@ -1,6 +1,5 @@
 export default defineAppConfig({
   pages: [
-    'pages/index/index',
     'pages/onboarding/onboarding/index',
     'pages/onboarding/personality-test/index',
     'pages/onboarding/essential-data/index',
@@ -10,9 +9,7 @@ export default defineAppConfig({
     'pages/blind-box-payment/index',
     'pages/payment-verification/index',
     'pages/events/index',
-    'pages/my-events/index',
-    'pages/chats/index',
-    'pages/journey/index',
+    'pages/connections/index',
     'pages/profile/index',
     'pages/login/index',
   ],
