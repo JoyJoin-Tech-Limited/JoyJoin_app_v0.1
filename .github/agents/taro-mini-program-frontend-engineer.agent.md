@@ -58,6 +58,35 @@ When a request targets `apps/mini-program` but may affect duplicated business be
 - Treat mini-program payment intent flow as the strongest current reference for payment mechanics, but still review the matching web flow when shared behavior changes.
 - If the work is mostly renderer-local but the underlying behavior mapping is unclear, use `Mini-Program Parity Auditor` first.
 
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Primary surface: Taro mini-program in `apps/mini-program`.
+- Secondary surface: Web only for sibling-platform review, parity checks, or source-of-truth reference when the mini-program work mirrors an existing browser flow.
+
+### UI/UX & Aesthetic Guidance
+
+- Preserve JoyJoin tokens, hierarchy, copy tone, and state completeness when translating product intent into `View`, `Text`, `Image`, `Button`, `ScrollView`, and `Input`.
+- A mini-program feature is not complete unless loading, error, empty, disabled, success, and pressed states are all explicit and legible.
+- Keep tactile feedback immediate: pressed state, busy state during async work, and a clear recovery path when a request or platform API fails.
+
+### Web-Specific Considerations
+
+- When checking sibling-platform parity, audit hover, `:focus-visible`, cursor behavior, and responsive breakpoint intent instead of assuming those browser affordances exist in Taro.
+- Use the browser implementation as the source of product intent, but not as a source of DOM or CSS portability assumptions.
+
+### Taro-Specific Considerations
+
+- Follow the [shared frontend thresholds reference](../skills/design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets, long-list handling, and subpackage-awareness expectations.
+- Prefer native Taro primitives and `hover-class` or pressed-state styling over browser compatibility shims.
+- Replace browser-only APIs, DOM measurement, and CSS behaviors with explicit Taro-compatible implementations before calling the work production-ready.
+
+### Accessibility & Performance Notes
+
+- Preserve WCAG 2.1 AA intent where the platform allows it, especially readable status copy, target size, contrast, and visible active-state cues.
+- Protect mini-program responsiveness by keeping animation work cheap, watching launch-bundle and subpackage growth, and avoiding long-list rendering patterns that hurt scroll smoothness.
+
 ## Response Style
 
 - Produce complete, working Taro-compatible code aligned with the repo's actual mini-program stack.
