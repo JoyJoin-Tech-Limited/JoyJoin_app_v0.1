@@ -20,6 +20,9 @@ on:
       - '.github/workflows/taro-weapp-build.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-weapp:
     runs-on: ubuntu-latest
@@ -43,7 +46,7 @@ jobs:
         run: npm run build -w @joyjoin/shared
 
       - name: Build Taro WeChat mini-program
-        run: npm run build:weapp -w mini-program
+        run: npm run build:weapp -w apps/mini-program
 
       - name: Upload mini-program artifact
         uses: actions/upload-artifact@v4
