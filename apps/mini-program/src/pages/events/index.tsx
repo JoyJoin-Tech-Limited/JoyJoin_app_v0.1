@@ -4,19 +4,19 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
 
 export default function EventsPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isLoading: authLoading } = useAuthGuard()
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['mini-program', 'joined-events'],
     queryFn: () => getJoinedEvents(apiRequest),
-    enabled: isAuthenticated,
+    enabled: !authLoading,
   })
 
   if (authLoading) {
@@ -24,23 +24,6 @@ export default function EventsPage() {
       <View className='events-page'>
         <View className='events-page__loading'>
           <Text className='events-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <View className='events-page'>
-        <View className='events-page__empty-state'>
-          <Text className='events-page__empty-emoji'>📅</Text>
-          <Text className='events-page__empty-text'>登录后查看你的活动</Text>
-          <View
-            className='events-page__login-btn'
-            onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}
-          >
-            <Text className='events-page__login-btn-text'>去登录</Text>
-          </View>
         </View>
       </View>
     )

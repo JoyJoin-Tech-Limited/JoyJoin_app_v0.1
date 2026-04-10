@@ -1,7 +1,7 @@
 import { Button, View, Text } from '@tarojs/components'
-import Taro, { useDidShow, useLoad } from '@tarojs/taro'
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { apiRequest, authenticateMiniProgramUser } from '../../lib/api'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { apiRequest } from '../../lib/api'
 import {
   createMiniProgramPaymentIntent,
   getPricing,
@@ -9,6 +9,7 @@ import {
   type PaymentIntentResponse,
   type PricingPlan,
 } from '@shared/api'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/logger'
 import './index.scss'
 
@@ -67,6 +68,7 @@ function clearPendingOrderStorage() {
 }
 
 export default function BlindBoxPaymentPage() {
+  const { user, isLoading: authLoading } = useAuthGuard()
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('vip_monthly')
   const [plans, setPlans] = useState<Record<PlanKey, PricingPlan>>(DEFAULT_PLANS)
   const [couponCount, setCouponCount] = useState(0)
@@ -76,13 +78,16 @@ export default function BlindBoxPaymentPage() {
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
   const hasSkippedFirstDidShowRef = useRef(false)
 
-  const loadPageData = useCallback(async () => {
+  const loadPageData = useCallback(async (wechatOpenId?: string) => {
     setIsBootstrapping(true)
     setPageError('')
 
     try {
-      const session = await authenticateMiniProgramUser()
-      setOpenid(session.openid)
+      if (!wechatOpenId) {
+        throw new Error('请先登录后再开通会员权益')
+      }
+
+      setOpenid(wechatOpenId)
 
       const [pricing, coupons] = await Promise.all([
         getPricing(apiRequest).catch(() => []),
@@ -106,17 +111,25 @@ export default function BlindBoxPaymentPage() {
     }
   }, [])
 
-  useLoad(() => {
-    loadPageData()
-  })
+  useEffect(() => {
+    if (authLoading || !user?.wechatOpenId) {
+      return
+    }
+
+    void loadPageData(String(user.wechatOpenId))
+  }, [authLoading, user?.wechatOpenId, loadPageData])
 
   useDidShow(() => {
+    if (authLoading || !user?.wechatOpenId) {
+      return
+    }
+
     if (!hasSkippedFirstDidShowRef.current) {
       hasSkippedFirstDidShowRef.current = true
       return
     }
 
-    loadPageData()
+    void loadPageData(String(user.wechatOpenId))
   })
 
   const selectedPlanData = useMemo(() => plans[selectedPlan], [plans, selectedPlan])
@@ -184,7 +197,7 @@ export default function BlindBoxPaymentPage() {
       <View className='payment-page__header'>
         <Button
           className='payment-page__back-button'
-          onClick={() => Taro.navigateBack({ fail: () => Taro.redirectTo({ url: '/pages/profile/index' }) })}
+          onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })}
         >
           返回
         </Button>

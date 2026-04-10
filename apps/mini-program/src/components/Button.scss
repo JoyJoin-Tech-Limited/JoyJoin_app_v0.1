@@ -1,0 +1,23 @@
+@import '../styles/variables';
+@import '../styles/mixins';
+
+.joy-button {
+  min-height: $button-height;
+  border-radius: $button-radius;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+
+  &::after {
+    border: none;
+  }
+
+  &--primary {
+    @include button-primary;
+  }
+
+  &--secondary {
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    color: $color-text-primary;
+  }
+}

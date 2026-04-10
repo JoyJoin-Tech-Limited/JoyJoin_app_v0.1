@@ -3,16 +3,16 @@ import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import './index.scss'
 
 export default function JourneyPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isLoading: authLoading } = useAuthGuard()
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['mini-program', 'journey-events'],
     queryFn: () => getJoinedEvents(apiRequest),
-    enabled: isAuthenticated,
+    enabled: !authLoading,
   })
 
   if (authLoading) {
@@ -20,17 +20,6 @@ export default function JourneyPage() {
       <View className='journey-page'>
         <View className='journey-page__loading'>
           <Text className='journey-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <View className='journey-page'>
-        <View className='journey-page__empty-state'>
-          <Text className='journey-page__empty-emoji'>🗺️</Text>
-          <Text className='journey-page__empty-text'>登录后查看你的足迹</Text>
         </View>
       </View>
     )

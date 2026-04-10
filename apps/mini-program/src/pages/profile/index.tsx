@@ -4,23 +4,23 @@ import { useQuery } from '@tanstack/react-query'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { apiRequest } from '../../lib/api'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logInfo } from '../../lib/logger'
 import './index.scss'
 
 export default function ProfilePage() {
-  const { isAuthenticated, isLoading: authLoading, user: authUser } = useAuth()
+  const { isLoading: authLoading, user: authUser } = useAuthGuard()
 
   const { data: user } = useQuery({
     queryKey: ['mini-program', 'auth-user-profile'],
     queryFn: () => getCurrentUser(apiRequest),
-    enabled: isAuthenticated,
+    enabled: !authLoading,
   })
 
   const { data: coupons = { count: 0, coupons: [] } } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
-    enabled: isAuthenticated,
+    enabled: !authLoading,
   })
 
   const handleLogout = () => {
@@ -34,23 +34,6 @@ export default function ProfilePage() {
       <View className='profile-page'>
         <View className='profile-page__loading'>
           <Text className='profile-page__loading-text'>加载中…</Text>
-        </View>
-      </View>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <View className='profile-page'>
-        <View className='profile-page__empty-state'>
-          <Text className='profile-page__empty-emoji'>👤</Text>
-          <Text className='profile-page__empty-text'>登录后查看个人资料</Text>
-          <View
-            className='profile-page__login-btn'
-            onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}
-          >
-            <Text className='profile-page__login-btn-text'>去登录</Text>
-          </View>
         </View>
       </View>
     )
