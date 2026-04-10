@@ -46,6 +46,24 @@ Use `scripts/platform-map.json` as the machine-readable source of truth for thes
 5. If you changed business logic or contracts, update the sibling implementation or explicitly record why no sibling change is required
 6. Run `npm run guardrails:platform -- --changed <base> <head>` when validating a broader diff or CI-facing change
 
+## Smart scope classification
+
+Use these advisory scope labels before deciding whether a change stays local or needs coordination:
+
+- **`MINI_PROGRAM_ONLY`** — mini-program-specific behavior such as `wx.*` or `Taro.*` usage with no shared-contract or platform-agnostic signals
+- **`WEB_ONLY`** — web-specific behavior such as `window.*` or `document.*` usage with no shared-contract or platform-agnostic signals
+- **`BOTH_REQUIRED`** — shared contracts, platform-agnostic logic, or coordinated areas where both clients must be reviewed
+
+Decision order:
+
+1. Check the nearest `.platform` marker
+2. Check `scripts/platform-map.json`
+3. Check whether the file lives in `packages/shared/src/api-types/`
+4. Check for `@platform-agnostic`
+5. Check for obvious platform APIs (`wx.` / `Taro.` vs `window.location`, `window.*`, `document.*`)
+
+Treat this classification as advisory only. If heuristics disagree with `.platform`, `scripts/platform-map.json`, or `impact-check`, defer to the coordination metadata and escalate the change to **`BOTH_REQUIRED`** until proven otherwise.
+
 ## Platform boundaries
 
 - Keep shared request/response contracts in `packages/shared/src/api-types/`
@@ -84,6 +102,7 @@ Use `scripts/platform-map.json` as the machine-readable source of truth for thes
 ## Troubleshooting
 
 - **`impact-check` says a sibling platform needs review** — open the mapped path from `scripts/platform-map.json` and confirm whether the contract, copy, or behavior still matches. If no code change is needed, document the reason in the PR.
+- **This looks platform-specific, but `impact-check` still asks for sibling review** — trust the `.platform` marker and `scripts/platform-map.json` first. A platform-specific API call does not override coordinated ownership or shared-contract dependencies; treat the change as `BOTH_REQUIRED` until you confirm the sibling path truly does not need an update.
 - **`guardrails:platform` fails on inline request/response types** — move the coordinated contract into `packages/shared/src/api-types/` and update imports instead of suppressing the warning.
 - **A `.platform` marker exists but the mapping is unclear** — inspect `scripts/platform-map.json`; if the area is missing, add the mapping before relying on ad-hoc coordination.
 - **A supposedly platform-agnostic file needs `wx` or `window.location`** — split platform-specific behavior into `*.mp.ts(x)` or `*.web.ts(x)` files and keep the shared file platform-agnostic.
