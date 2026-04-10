@@ -24,6 +24,7 @@ import { archetypeAvatars, getArchetypeAvatar, hasExpressionAsset } from "@/lib/
 import { Share2, Download, Loader2, Check } from "lucide-react";
 import html2canvas from "html2canvas";
 import { haptics } from "@/lib/haptics";
+import { personalityResultAnalytics } from "@/lib/personalityResultAnalytics";
 
 interface ShareCardModalProps {
   open: boolean;
@@ -282,6 +283,12 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             title: `我是${archetype}！`,
             text: `我在悦聚完成了性格测试，发现自己是${archetype}！快来看看你是什么性格吧～`,
           });
+          personalityResultAnalytics.track("personality_native_share_used", {
+            archetype,
+            source: "share-card-modal-primary",
+            selectedExpression,
+            selectedVariant: selectedVariant.name,
+          });
 
           toast({
             title: "分享成功！",
@@ -315,7 +322,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         description: "可手动分享到社交媒体",
       });
     }
-  }, [generateImage, archetype, toast]);
+  }, [generateImage, archetype, selectedExpression, selectedVariant.name, toast]);
 
   // Handle download
   const handleDownload = useCallback(async () => {
@@ -342,6 +349,12 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               files: [file],
               title: `我是${archetype}！`,
               text: `我在悦聚完成了性格测试，发现自己是${archetype}！`
+            });
+            personalityResultAnalytics.track("personality_native_share_used", {
+              archetype,
+              source: "share-card-modal-download",
+              selectedExpression,
+              selectedVariant: selectedVariant.name,
             });
             
             downloadMethod = 'native_share';
@@ -412,7 +425,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         variant: "destructive"
       });
     }
-  }, [generateImage, archetype, selectedExpression, selectedVariant, toast]);
+  }, [generateImage, archetype, selectedExpression, selectedVariant.name, toast]);
 
   if (isError) {
     return (
@@ -450,18 +463,21 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[95vh] flex flex-col p-4 sm:p-6">
-        <VisuallyHidden>
-          <DialogTitle>分享你的专属氛围原型卡片</DialogTitle>
-          <DialogDescription>
-            选择卡片样式和表情，下载或分享你的个性化原型卡片到社交媒体
-          </DialogDescription>
-        </VisuallyHidden>
+          <VisuallyHidden>
+            <DialogTitle>下载你的专属原型海报</DialogTitle>
+            <DialogDescription>
+            选择海报样式和表情，生成适合截图分享的原型海报
+            </DialogDescription>
+          </VisuallyHidden>
         
         {/* Scrollable content area */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4 sm:space-y-6">
           {/* Title */}
           <div className="text-center">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">分享你的专属氛围原型卡片</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">下载你的专属原型海报</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              这一张更适合截图晒图；如果你想先发一句更像聊天的话，结果页上面已经准备好了文字版结果。
+            </p>
           </div>
 
           {/* Card flip container */}
