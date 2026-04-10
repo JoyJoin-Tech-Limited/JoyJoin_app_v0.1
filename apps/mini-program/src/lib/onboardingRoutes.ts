@@ -22,6 +22,9 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   chats: 'pages/chats/index',
   journey: 'pages/journey/index',
   eventCoordination: 'pages/event-coordination/index',
+  matchingStatus: 'pages/matching-status/index',
+  squadUnboxing: 'pages/squad-unboxing/index',
+  icebreakerSession: 'pages/icebreaker-session/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -38,6 +41,9 @@ export const MINI_PROGRAM_ROUTES = {
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   login: `/${MINI_PROGRAM_PAGE_PATHS.login}`,
   eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
+  matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
+  squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
+  icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
 } as const
 
 export const MINI_PROGRAM_PAGES = [
@@ -62,6 +68,9 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.chats,
   MINI_PROGRAM_PAGE_PATHS.journey,
   MINI_PROGRAM_PAGE_PATHS.eventCoordination,
+  MINI_PROGRAM_PAGE_PATHS.matchingStatus,
+  MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
+  MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
 ] as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
