@@ -19,7 +19,7 @@ do_not_use_when:
 strong_triggers:
   - .platform
   - impact-check
-  - guardrails:platform
+  - "guardrails:platform"
   - platform-map.json
   - PRIMARY
   - SECONDARY
@@ -43,11 +43,11 @@ owned_files:
   - docs/COORDINATION_ROLLOUT.md
 
 owned_paths:
-  - apps/mini-program/src/pages/blind-box-payment
-  - apps/user-client/src/pages/BlindBoxPaymentPage
-  - apps/mini-program/src/lib/api
-  - apps/user-client/src/hooks/useAuth
-  - packages/shared/src/api-types
+  - /apps/mini-program/src/pages/blind-box-payment
+  - /apps/user-client/src/pages/BlindBoxPaymentPage
+  - /apps/mini-program/src/lib/api
+  - /apps/user-client/src/hooks/useAuth
+  - /packages/shared/src/api-types
 
 owned_symbols: []
 
