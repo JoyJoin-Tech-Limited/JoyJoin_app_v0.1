@@ -2,7 +2,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
-function resolveApiUrl(url: string): string {
+export function resolveApiUrl(url: string): string {
   if (/^https?:\/\//.test(url)) {
     return url;
   }

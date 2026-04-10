@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLoginPage() {
   const { toast } = useToast();
@@ -17,16 +18,13 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const { data: user } = useQuery<any>({
-    queryKey: ['/api/auth/user'],
-    retry: false,
-  });
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (user && (user as any).isAdmin) {
+    if (isAuthenticated && user?.isAdmin) {
       setLocation("/admin");
     }
-  }, [user, setLocation]);
+  }, [isAuthenticated, user, setLocation]);
 
   const loginMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
