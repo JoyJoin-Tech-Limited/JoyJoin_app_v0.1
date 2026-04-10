@@ -1,70 +1,22 @@
 /**
- * Achievement definitions for gamification
+ * Re-export achievement definitions from the shared package.
+ *
+ * This facade preserves backward-compatible import paths (`@/data/achievements`)
+ * while the canonical definitions now live in `packages/shared/src/achievements.ts`.
+ *
+ * `getRarityStyles` is web-specific (returns Tailwind classes) and stays here.
  */
+export {
+  type AchievementRarity,
+  type Achievement,
+  ACHIEVEMENTS,
+  getRarityClassName,
+  getRarityHapticPattern,
+} from "@joyjoin/shared/achievements";
 
-export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
+import type { AchievementRarity } from "@joyjoin/shared/achievements";
 
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  rarity: AchievementRarity;
-  emoji: string;
-}
-
-export const ACHIEVEMENTS: Record<string, Achievement> = {
-  first_answer: {
-    id: "first_answer",
-    title: "初次回答",
-    description: "完成第一道题目",
-    rarity: "common",
-    emoji: "🎯",
-  },
-  quick_thinker: {
-    id: "quick_thinker",
-    title: "快速思考",
-    description: "在5秒内回答问题",
-    rarity: "rare",
-    emoji: "⚡",
-  },
-  halfway_hero: {
-    id: "halfway_hero",
-    title: "半程英雄",
-    description: "完成50%的进度",
-    rarity: "common",
-    emoji: "🏃",
-  },
-  explorer: {
-    id: "explorer",
-    title: "探索者",
-    description: "使用换题功能",
-    rarity: "common",
-    emoji: "🔍",
-  },
-  destined_match: {
-    id: "destined_match",
-    title: "命中注定",
-    description: "原型匹配度超过85%",
-    rarity: "epic",
-    emoji: "✨",
-  },
-  night_owl: {
-    id: "night_owl",
-    title: "夜猫子",
-    description: "在深夜完成测评",
-    rarity: "rare",
-    emoji: "🦉",
-  },
-  perfectionist: {
-    id: "perfectionist",
-    title: "完美主义",
-    description: "比最低要求多回答4道题",
-    rarity: "legendary",
-    emoji: "💎",
-  },
-};
-
-/** Get rarity color classes */
+/** Get Tailwind rarity color classes (web-only). */
 export function getRarityStyles(rarity: AchievementRarity): {
   bg: string;
   border: string;
@@ -105,19 +57,5 @@ export function getRarityStyles(rarity: AchievementRarity): {
         glow: "shadow-amber-500/40 shadow-lg",
         progressBg: "bg-amber-400 dark:bg-amber-500",
       };
-  }
-}
-
-/** Get haptic pattern based on rarity */
-export function getRarityHapticPattern(rarity: AchievementRarity): number[] {
-  switch (rarity) {
-    case "common":
-      return [50];
-    case "rare":
-      return [50, 30, 50];
-    case "epic":
-      return [50, 30, 50, 30, 80];
-    case "legendary":
-      return [80, 40, 80, 40, 160];
   }
 }
