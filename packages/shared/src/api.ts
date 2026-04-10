@@ -17,7 +17,7 @@ export interface PricingPlan {
   originalPrice?: number | null
 }
 
-export interface UserCoupon {
+interface UserCoupon {
   id?: string
   code?: string
   discountType?: string
