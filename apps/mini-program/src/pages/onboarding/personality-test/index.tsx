@@ -1,5 +1,6 @@
 import { Button, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import './index.scss'
 
 export default function PersonalityTestStubPage() {
   return (

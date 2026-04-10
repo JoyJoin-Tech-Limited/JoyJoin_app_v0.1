@@ -12,7 +12,7 @@ export default function ProfilePage() {
     queryFn: () => getCurrentUser(apiRequest),
   })
   const { data: coupons = { count: 0, coupons: [] } } = useQuery({
-    queryKey: ['mini-program', 'coupon-count'],
+    queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
   })
   const profileTitle = user?.nickname || '我的权益中心'
