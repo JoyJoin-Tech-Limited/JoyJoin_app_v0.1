@@ -3,7 +3,6 @@ import {
   getArchetypeHSL,
   DEFAULT_ACCENT,
   MIN_CONFIDENCE_THRESHOLD,
-  formatHSL,
   type ArchetypeHSL,
 } from '@shared/archetypeColors'
 
