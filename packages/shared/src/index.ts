@@ -41,3 +41,6 @@ export * from './types/groupAnalysis';
 export * from './eventDetail';
 export * from './groupAnalysis';
 export * from './api';
+export * from './onboarding';
+export * from './archetypeColors';
+export * from './achievements';

@@ -13,6 +13,20 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   connections: 'pages/connections/index',
   profile: 'pages/profile/index',
   login: 'pages/login/index',
+  index: 'pages/index/index',
+  terms: 'pages/terms/index',
+  eventDetail: 'pages/event-detail/index',
+  eventFeedback: 'pages/event-feedback/index',
+  poolRegistration: 'pages/pool-registration/index',
+  myEvents: 'pages/my-events/index',
+  chats: 'pages/chats/index',
+  journey: 'pages/journey/index',
+  eventCoordination: 'pages/event-coordination/index',
+  matchingStatus: 'pages/matching-status/index',
+  squadUnboxing: 'pages/squad-unboxing/index',
+  icebreakerSession: 'pages/icebreaker-session/index',
+  editProfile: 'pages/edit-profile/index',
+  invite: 'pages/invite/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -28,6 +42,12 @@ export const MINI_PROGRAM_ROUTES = {
   connections: `/${MINI_PROGRAM_PAGE_PATHS.connections}`,
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   login: `/${MINI_PROGRAM_PAGE_PATHS.login}`,
+  eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
+  matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
+  squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
+  icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
+  editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
+  invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
 } as const
 
 export const MINI_PROGRAM_PAGES = [
@@ -43,6 +63,20 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,
   MINI_PROGRAM_PAGE_PATHS.login,
+  MINI_PROGRAM_PAGE_PATHS.index,
+  MINI_PROGRAM_PAGE_PATHS.terms,
+  MINI_PROGRAM_PAGE_PATHS.eventDetail,
+  MINI_PROGRAM_PAGE_PATHS.eventFeedback,
+  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
+  MINI_PROGRAM_PAGE_PATHS.myEvents,
+  MINI_PROGRAM_PAGE_PATHS.chats,
+  MINI_PROGRAM_PAGE_PATHS.journey,
+  MINI_PROGRAM_PAGE_PATHS.eventCoordination,
+  MINI_PROGRAM_PAGE_PATHS.matchingStatus,
+  MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
+  MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
+  MINI_PROGRAM_PAGE_PATHS.editProfile,
+  MINI_PROGRAM_PAGE_PATHS.invite,
 ] as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {

@@ -1,0 +1,371 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.coordination-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $color-bg;
+
+  // ── Header ────────────────────────────────────────────────────
+  &__header {
+    padding: $spacing-md $container-padding $spacing-sm;
+    background: $color-surface;
+    border-bottom: 1rpx solid $color-divider;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+
+  &__meta {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-top: $spacing-xs;
+  }
+
+  // ── Participants ──────────────────────────────────────────────
+  &__participants {
+    background: $color-surface;
+    border-bottom: 1rpx solid $color-divider;
+    white-space: nowrap;
+    padding: $spacing-sm 0;
+  }
+
+  &__participants-inner {
+    display: inline-flex;
+    align-items: flex-start;
+    padding: 0 $container-padding;
+    gap: $spacing-md;
+  }
+
+  &__participant {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 120rpx;
+    flex-shrink: 0;
+  }
+
+  &__participant-avatar {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    overflow: hidden;
+
+    &--placeholder {
+      @include flex-center;
+      background: $brand-gradient;
+    }
+  }
+
+  &__participant-initial {
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__participant-name {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+    margin-top: $spacing-xs;
+    @include text-truncate;
+    max-width: 120rpx;
+    text-align: center;
+  }
+
+  &__participant-archetype {
+    display: block;
+    font-size: 20rpx;
+    color: $color-text-muted;
+    margin-top: 4rpx;
+    @include text-truncate;
+    max-width: 120rpx;
+    text-align: center;
+  }
+
+  // ── Chat Lock Banner ──────────────────────────────────────────
+  &__lock-banner {
+    flex: 1;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $container-padding;
+  }
+
+  &__lock-icon {
+    font-size: 96rpx;
+  }
+
+  &__lock-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  &__lock-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__lock-countdown {
+    font-size: $font-size-base;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  // ── Message Stream ────────────────────────────────────────────
+  &__messages {
+    flex: 1;
+    padding: $spacing-sm $container-padding;
+    overflow: hidden;
+  }
+
+  &__messages-loading {
+    @include flex-center;
+    padding: $spacing-xl 0;
+  }
+
+  &__messages-loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding-bottom: $spacing-md;
+  }
+
+  // ── Empty state ───────────────────────────────────────────────
+  &__empty {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-2xl 0;
+  }
+
+  &__empty-icon {
+    font-size: 80rpx;
+  }
+
+  &__empty-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__empty-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+    padding: 0 $spacing-lg;
+  }
+
+  // ── Date Separator ────────────────────────────────────────────
+  &__date-group {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__date-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm 0;
+  }
+
+  &__date-line {
+    flex: 1;
+    height: 1rpx;
+    background: $color-divider;
+  }
+
+  &__date-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  // ── Message Bubble ────────────────────────────────────────────
+  &__message {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-xs;
+
+    &--own {
+      flex-direction: row-reverse;
+
+      .coordination-page__message-body {
+        align-items: flex-end;
+      }
+
+      .coordination-page__message-bubble {
+        background: $color-primary;
+        border-radius: $card-radius-sm $card-radius-sm 8rpx $card-radius-sm;
+      }
+
+      .coordination-page__message-content {
+        color: $color-text-white;
+      }
+
+      .coordination-page__message-time {
+        text-align: right;
+      }
+    }
+
+    &--other {
+      .coordination-page__message-bubble {
+        background: $color-surface;
+        border-radius: $card-radius-sm $card-radius-sm $card-radius-sm 8rpx;
+        box-shadow: $shadow-sm;
+      }
+    }
+  }
+
+  &__message-avatar-wrap {
+    flex-shrink: 0;
+    margin-top: 4rpx;
+  }
+
+  &__message-avatar {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    overflow: hidden;
+
+    &--placeholder {
+      @include flex-center;
+      background: $brand-gradient;
+    }
+  }
+
+  &__message-avatar-initial {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__message-body {
+    display: flex;
+    flex-direction: column;
+    max-width: 70%;
+  }
+
+  &__message-sender {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    margin-bottom: 4rpx;
+    @include text-truncate;
+  }
+
+  &__message-bubble {
+    padding: $spacing-sm $spacing-md;
+  }
+
+  &__message-content {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+
+  &__message-time {
+    font-size: 20rpx;
+    color: $color-text-muted;
+    margin-top: 4rpx;
+  }
+
+  // ── Input Bar ─────────────────────────────────────────────────
+  &__input-bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $container-padding;
+    background: $color-surface;
+    border-top: 1rpx solid $color-divider;
+    // Safe area for phones with home indicator
+    padding-bottom: calc(#{$spacing-sm} + constant(safe-area-inset-bottom));
+    padding-bottom: calc(#{$spacing-sm} + env(safe-area-inset-bottom));
+  }
+
+  &__input {
+    flex: 1;
+    height: $input-height;
+    padding: 0 $spacing-md;
+    background: $color-bg;
+    border-radius: $button-radius;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+  }
+
+  &__send-btn {
+    @include flex-center;
+    height: $input-height;
+    padding: 0 $spacing-lg;
+    border-radius: $button-radius;
+    background: $brand-gradient;
+    flex-shrink: 0;
+    box-shadow: 0 4rpx 16rpx rgba(168, 107, 255, 0.3);
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__send-btn-text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+  }
+
+  // ── Error State ───────────────────────────────────────────────
+  &__error {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 100vh;
+    padding: $container-padding;
+  }
+
+  &__error-icon {
+    font-size: 80rpx;
+  }
+
+  &__error-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__error-btn {
+    @include button-primary;
+    padding: 0 $spacing-xl;
+  }
+
+  &__error-btn-text {
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+}

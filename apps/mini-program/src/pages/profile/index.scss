@@ -1,71 +1,180 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
 .profile-page {
   min-height: 100vh;
-  padding: 40rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
-  box-sizing: border-box;
-  background: linear-gradient(180deg, #fff7fb 0%, #f6f3ff 42%, #ffffff 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
 
+  &__loading {
+    @include flex-center;
+    min-height: 100vh;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  // Hero
   &__hero {
-    padding: 32rpx 0 8rpx;
     display: flex;
     flex-direction: column;
-    gap: 12rpx;
+    align-items: center;
+    padding: $spacing-2xl $container-padding $spacing-lg;
+    text-align: center;
   }
 
-  &__eyebrow {
-    font-size: 24rpx;
-    color: #8b5cf6;
-    font-weight: 600;
+  &__avatar {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 60rpx;
+    background: $brand-gradient;
+    @include flex-center;
+    margin-bottom: $spacing-md;
   }
 
-  &__title {
-    font-size: 52rpx;
-    font-weight: 800;
-    color: #111827;
-    line-height: 1.2;
+  &__avatar-text {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-white;
   }
 
-  &__subtitle {
-    font-size: 26rpx;
-    line-height: 1.6;
-    color: #6b7280;
+  &__name {
+    display: block;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
   }
 
-  &__card {
-    padding: 36rpx 32rpx;
-    border-radius: 32rpx;
-    background: #ffffff;
-    box-shadow: 0 24rpx 80rpx rgba(15, 23, 42, 0.08);
+  &__archetype {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  // Stats
+  &__stats {
     display: flex;
-    flex-direction: column;
-    gap: 16rpx;
+    gap: $spacing-md;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
   }
 
-  &__card-title {
-    font-size: 34rpx;
-    font-weight: 700;
-    color: #111827;
+  &__stat {
+    flex: 1;
+    @include card;
+    padding: $spacing-lg;
+    text-align: center;
   }
 
-  &__card-copy {
-    font-size: 26rpx;
-    color: #4b5563;
-    line-height: 1.6;
+  &__stat-value {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
   }
 
-  &__cta {
-    min-height: 96rpx;
-    margin-top: 8rpx;
-    border-radius: 48rpx;
-    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
-    color: #ffffff;
-    font-size: 30rpx;
-    font-weight: 700;
+  &__stat-label {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  // Action rows
+  &__section {
+    @include card;
+    margin: 0 $container-padding $spacing-lg;
+    overflow: hidden;
+  }
+
+  &__action-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    border-bottom: 1rpx solid $color-divider;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background: rgba(0, 0, 0, 0.02);
+    }
+  }
+
+  &__action-icon {
+    font-size: $font-size-xl;
+    width: 48rpx;
+    text-align: center;
+  }
+
+  &__action-text {
+    flex: 1;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__action-arrow {
+    font-size: $font-size-lg;
+    color: $color-text-muted;
+  }
+
+  // Logout
+  &__logout-section {
+    padding: 0 $container-padding;
+  }
+
+  &__logout-btn {
+    width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    color: $color-error;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
 
     &::after {
       border: none;
     }
+  }
+
+  // Empty / login state
+  &__empty-state {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    min-height: 100vh;
+    text-align: center;
+  }
+
+  &__empty-emoji {
+    font-size: 64rpx;
+  }
+
+  &__empty-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__login-btn {
+    @include button-primary;
+    padding: 0 $spacing-xl;
+    margin-top: $spacing-md;
+  }
+
+  &__login-btn-text {
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__spacer {
+    height: 160rpx;
   }
 }

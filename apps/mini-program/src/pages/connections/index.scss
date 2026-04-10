@@ -1,29 +1,131 @@
 @import '../../styles/variables';
 @import '../../styles/mixins';
 
-.page {
-  @include page-gradient-bg;
-  @include safe-area-bottom;
-  @include flex-center;
+.connections-page {
+  display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
 
-  &__placeholder {
-    text-align: center;
-    padding: $spacing-xl;
+  &__header {
+    padding: $spacing-xl $container-padding $spacing-md;
   }
 
   &__title {
     display: block;
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
-    font-family: $font-brand;
-    color: $color-primary;
-    margin-bottom: $spacing-sm;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
   }
 
   &__subtitle {
     display: block;
     font-size: $font-size-base;
     color: $color-text-secondary;
+  }
+
+  &__list {
+    flex: 1;
+    padding: 0 $container-padding;
+  }
+
+  &__loading {
+    @include flex-center;
+    padding: $spacing-2xl;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__card {
+    @include card;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-avatar {
+    width: 88rpx;
+    height: 88rpx;
+    border-radius: 44rpx;
+    background: $brand-gradient;
+    @include flex-center;
+    flex-shrink: 0;
+  }
+
+  &__card-avatar-text {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__card-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__card-name {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+
+  &__card-archetype {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-primary;
+    margin-top: 4rpx;
+  }
+
+  &__card-event {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: 4rpx;
+  }
+
+  &__empty-state {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-2xl;
+    text-align: center;
+  }
+
+  &__empty-emoji {
+    font-size: 64rpx;
+  }
+
+  &__empty-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__empty-hint {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__login-btn {
+    @include button-primary;
+    padding: 0 $spacing-xl;
+    margin-top: $spacing-md;
+  }
+
+  &__login-btn-text {
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__spacer {
+    height: 160rpx;
   }
 }

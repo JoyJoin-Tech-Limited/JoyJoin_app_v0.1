@@ -19,6 +19,7 @@
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
     "./interests": "./src/interests.ts",
     "./api": "./src/api.ts",
+    "./onboarding": "./src/onboarding.ts",
     "./matchingWeights": "./src/matchingWeights.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
@@ -26,7 +27,9 @@
     "./types/aiMeta": "./src/types/aiMeta.ts",
     "./ai/onboarding": "./src/ai/onboarding.ts",
     "./ui/button": "./src/ui/Button.tsx",
-    "./ui/buttonVariants": "./src/ui/buttonVariants.ts"
+    "./ui/buttonVariants": "./src/ui/buttonVariants.ts",
+    "./archetypeColors": "./src/archetypeColors.ts",
+    "./achievements": "./src/achievements.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.0",

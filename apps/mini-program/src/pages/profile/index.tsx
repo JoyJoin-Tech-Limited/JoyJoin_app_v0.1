@@ -1,71 +1,120 @@
-import { Button, View, Text } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
+import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { apiRequest } from '../../lib/api'
-import { nextStepToMiniProgramRoute } from '../../lib/onboardingRoutes'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
+import type { AuthUser } from '../../hooks/useAuth'
+import { logInfo } from '../../lib/logger'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
+import Button from '../../components/Button'
 import './index.scss'
 
-/**
- * ProfilePage — user profile hub.
- *
- * Displays the user's identity and profile completion state.
- * Payment/membership access is surfaced as a secondary action below profile info.
- *
- * TODO: Taro adaptation needed for the web profile page's edit flows, charts,
- * dialogs, and DOM-specific interaction polish.
- */
 export default function ProfilePage() {
-  const { data: user } = useQuery({
-    queryKey: ['mini-program', 'auth-user'],
-    queryFn: () => getCurrentUser(apiRequest),
+  const { isLoading: authLoading, user: authUser } = useAuthGuard()
+
+  const { data: user } = useQuery<AuthUser>({
+    queryKey: ['mini-program', 'auth-user-profile'],
+    queryFn: () => getCurrentUser(apiRequest) as Promise<AuthUser>,
+    enabled: !authLoading,
   })
+
   const { data: coupons = { count: 0, coupons: [] } } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
+    enabled: !authLoading,
   })
 
-  const displayName = user?.nickname || '我的资料'
-  const onboardingStep = user?.nextStep ?? 'discover'
-  // 'discover' and 'guide' are the terminal steps after onboarding is complete
-  const isOnboarding = onboardingStep !== 'discover' && onboardingStep !== 'guide'
-  const couponCount = coupons?.count ?? 0
+  const handleLogout = () => {
+    // Clear cookies and session by navigating to login
+    logInfo('[Profile] User initiated logout')
+    Taro.reLaunch({ url: '/pages/login/index' })
+  }
+
+  if (authLoading) {
+    return <LoadingScreen />
+  }
+
+  const displayName = user?.nickname || user?.displayName || authUser?.nickname || authUser?.displayName || '悦聚用户'
+  const archetype = user?.archetype || authUser?.archetype
+  const nextStep = user?.nextStep || authUser?.nextStep
 
   return (
-    <View className='profile-page'>
+    <ScrollView className='profile-page' scrollY enhanced showScrollbar={false}>
+      {/* Hero section */}
       <View className='profile-page__hero'>
-        <Text className='profile-page__eyebrow'>个人资料</Text>
-        <Text className='profile-page__title'>{displayName}</Text>
-        <Text className='profile-page__subtitle'>
-          {isOnboarding ? '资料填写尚未完成，完成后即可参与匹配活动。' : '资料已完善，可参与匹配活动。'}
-        </Text>
+        <View className='profile-page__avatar'>
+          <Text className='profile-page__avatar-text'>{displayName[0]}</Text>
+        </View>
+        <Text className='profile-page__name'>{displayName}</Text>
+        {archetype ? (
+          <Text className='profile-page__archetype'>{archetype}</Text>
+        ) : null}
       </View>
 
-      {isOnboarding && (
-        <View className='profile-page__card'>
-          <Text className='profile-page__card-title'>完善资料</Text>
-          <Text className='profile-page__card-copy'>继续填写你的个人信息，让算法更好地为你匹配。</Text>
-          <Button
-            className='profile-page__cta'
-            onClick={() => Taro.navigateTo({ url: nextStepToMiniProgramRoute(onboardingStep) })}
-          >
-            继续填写资料
-          </Button>
-        </View>
-      )}
+      {/* Quick stats */}
+      <View className='profile-page__stats'>
+        <Card className='profile-page__stat'>
+          <Text className='profile-page__stat-value'>{coupons.count ?? 0}</Text>
+          <Text className='profile-page__stat-label'>优惠券</Text>
+        </Card>
+        <Card className='profile-page__stat'>
+          <Text className='profile-page__stat-value'>
+            {getOnboardingStepLabel(nextStepToOnboardingStep(nextStep))}
+          </Text>
+          <Text className='profile-page__stat-label'>当前状态</Text>
+        </Card>
+      </View>
 
-      <View className='profile-page__card'>
-        <Text className='profile-page__card-title'>会员权益</Text>
-        <Text className='profile-page__card-copy'>
-          月度 / 季度权益包，支付成功后自动进入订单确认流程。{couponCount > 0 ? `当前可用优惠 ${couponCount} 张。` : ''}
-        </Text>
-        <Button
-          className='profile-page__cta'
+      {/* Action cards */}
+      <View className='profile-page__section'>
+        <View
+          className='profile-page__action-row'
+          onClick={() => Taro.navigateTo({ url: '/pages/edit-profile/index' })}
+        >
+          <Text className='profile-page__action-icon'>✏️</Text>
+          <Text className='profile-page__action-text'>编辑资料</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+
+        <View
+          className='profile-page__action-row'
           onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}
         >
-          查看权益方案
+          <Text className='profile-page__action-icon'>🎁</Text>
+          <Text className='profile-page__action-text'>会员权益</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+
+        <View
+          className='profile-page__action-row'
+          onClick={() => Taro.navigateTo({ url: '/pages/journey/index' })}
+        >
+          <Text className='profile-page__action-icon'>🗺️</Text>
+          <Text className='profile-page__action-text'>我的足迹</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+
+        <View
+          className='profile-page__action-row'
+          onClick={() => Taro.navigateTo({ url: '/pages/terms/index' })}
+        >
+          <Text className='profile-page__action-icon'>📄</Text>
+          <Text className='profile-page__action-text'>服务条款</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+      </View>
+
+      {/* Logout */}
+      <View className='profile-page__logout-section'>
+        <Button variant='secondary' className='profile-page__logout-btn' onClick={handleLogout}>
+          退出登录
         </Button>
       </View>
-    </View>
+
+      <View className='profile-page__spacer' />
+    </ScrollView>
   )
 }

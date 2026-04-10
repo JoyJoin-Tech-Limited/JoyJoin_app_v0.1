@@ -1,0 +1,558 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+// ─── Root ─────────────────────────────────────────────────────────
+.icebreaker {
+  @include page-gradient-bg;
+  padding: $container-padding;
+
+  // Error modifier — centre the error block vertically
+  &--error {
+    @include flex-center;
+    min-height: 100vh;
+  }
+
+  // ── Error State ───────────────────────────────────────────────
+  &__error {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 80vh;
+  }
+
+  &__error-icon {
+    font-size: 80rpx;
+  }
+
+  &__error-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__error-btn {
+    margin-top: $spacing-sm;
+  }
+
+  // ── Header ────────────────────────────────────────────────────
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__phase-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-md;
+    background: $color-primary-light;
+    border-radius: 100rpx;
+  }
+
+  &__phase-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__player-count {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__offline-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-warning, 0.15);
+    border-radius: 100rpx;
+  }
+
+  &__offline-text {
+    font-size: $font-size-xs;
+    color: $color-warning;
+    font-weight: $font-weight-medium;
+  }
+
+  // ── Host Controls ─────────────────────────────────────────────
+  &__host-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    margin-top: $spacing-xl;
+    padding-top: $spacing-lg;
+    border-top: 1rpx solid $color-divider;
+  }
+
+  &__host-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-md;
+    background: rgba(251, 191, 36, 0.15);
+    border-radius: 100rpx;
+  }
+
+  &__host-badge-text {
+    font-size: $font-size-sm;
+    color: #92400e;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__advance-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  // ── Spacer ────────────────────────────────────────────────────
+  &__spacer {
+    height: $spacing-2xl;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Waiting Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__waiting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-lg;
+    padding-top: $spacing-xl;
+  }
+
+  &__waiting-card {
+    @include card;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $spacing-lg;
+    width: 100%;
+    text-align: center;
+  }
+
+  &__waiting-emoji {
+    font-size: 80rpx;
+  }
+
+  &__waiting-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__waiting-count {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__waiting-host {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__start-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Warmup Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__warmup {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__warmup-card {
+    @include card;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $spacing-lg;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+    text-align: center;
+  }
+
+  &__warmup-emoji {
+    font-size: 72rpx;
+  }
+
+  &__warmup-question {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.6;
+  }
+
+  &__warmup-index {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__warmup-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__warmup-ready-count {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__warmup-ready-badge {
+    font-size: $font-size-xs;
+    color: $color-success;
+    font-weight: $font-weight-semibold;
+    background: rgba($color-success, 0.1);
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 100rpx;
+  }
+
+  // ── Participants ──────────────────────────────────────────────
+  &__participants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__participant {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    background: $color-surface;
+    border-radius: 100rpx;
+    border: 1rpx solid $color-border;
+
+    &--ready {
+      border-color: $color-success;
+      background: rgba($color-success, 0.05);
+    }
+  }
+
+  &__participant-name {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__participant-host {
+    font-size: $font-size-xs;
+  }
+
+  &__participant-check {
+    font-size: $font-size-xs;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Micro-challenge Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__challenge {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__challenge-card {
+    @include card;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $spacing-lg;
+    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 50%, #a5f3fc 100%);
+    text-align: center;
+  }
+
+  &__challenge-emoji {
+    font-size: 72rpx;
+  }
+
+  &__challenge-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.5;
+  }
+
+  &__challenge-desc {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__challenge-hint {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    font-style: italic;
+  }
+
+  &__challenge-meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-lg;
+    margin-top: $spacing-sm;
+  }
+
+  &__challenge-duration {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__challenge-completed {
+    font-size: $font-size-sm;
+    color: $color-success;
+  }
+
+  &__challenge-done-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-md;
+    background: rgba($color-success, 0.1);
+    border-radius: 100rpx;
+    margin-top: $spacing-sm;
+  }
+
+  &__challenge-done-text {
+    font-size: $font-size-sm;
+    color: $color-success;
+    font-weight: $font-weight-semibold;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Lie-Detective Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__detective {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__detective-card {
+    @include card;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-lg;
+    background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #2e1065 100%);
+    text-align: center;
+  }
+
+  &__detective-emoji {
+    font-size: 72rpx;
+  }
+
+  &__detective-player {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__detective-hint {
+    font-size: $font-size-sm;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  &__detective-waiting {
+    font-size: $font-size-base;
+    color: $color-text-white;
+  }
+
+  // ── Statement cards ───────────────────────────────────────────
+  &__detective-statements {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__statement {
+    @include card;
+    padding: $spacing-lg;
+    border: 2rpx solid $color-border;
+    transition: border-color 0.2s, background 0.2s;
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &--selected {
+      border-color: $color-primary;
+      background: $color-primary-light;
+    }
+
+    &--lie {
+      border-color: $color-error;
+      background: rgba($color-error, 0.06);
+    }
+
+    &--truth {
+      border-color: $color-success;
+      background: rgba($color-success, 0.06);
+    }
+  }
+
+  &__statement-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__statement-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44rpx;
+    height: 44rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+  }
+
+  &__statement-tag {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    padding: 4rpx $spacing-sm;
+    border-radius: 100rpx;
+
+    &--lie {
+      background: rgba($color-error, 0.12);
+      color: $color-error;
+    }
+
+    &--truth {
+      background: rgba($color-success, 0.12);
+      color: $color-success;
+    }
+  }
+
+  &__statement-text {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.6;
+  }
+
+  &__statement-votes {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: $spacing-xs;
+  }
+
+  // ── Detective status / result ─────────────────────────────────
+  &__detective-status {
+    @include flex-center;
+    padding: $spacing-md 0;
+  }
+
+  &__detective-voted {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__detective-correct {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-success;
+  }
+
+  &__detective-wrong {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+  }
+
+  &__detective-progress {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    text-align: center;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Recap Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__recap {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__recap-card {
+    @include card;
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-xl $spacing-lg;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #ddd6fe 100%);
+    text-align: center;
+  }
+
+  &__recap-emoji {
+    font-size: 80rpx;
+  }
+
+  &__recap-title {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    @include gradient-text;
+  }
+
+  &__recap-subtitle {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__recap-details {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__recap-section {
+    @include card;
+    padding: $spacing-lg;
+
+    & + & {
+      margin-top: 0; // gap handles spacing
+    }
+  }
+
+  &__recap-section-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__recap-item {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.8;
+  }
+
+  &__recap-stat {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  &__recap-leave-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+    margin-top: $spacing-md;
+  }
+}

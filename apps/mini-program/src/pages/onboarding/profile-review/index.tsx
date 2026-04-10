@@ -1,17 +1,113 @@
-import { Button, Text, View } from '@tarojs/components'
+import { View, Text, Button, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { useState, useCallback } from 'react'
+import { useAuthGuard } from '../../../hooks/useAuthGuard'
+import { useInvalidateAuth } from '../../../hooks/useAuth'
+import { apiRequest } from '../../../lib/api'
+import { logInfo, logError } from '../../../lib/logger'
+import { completeProfileReview } from '@shared/api'
 import './index.scss'
 
-export default function ProfileReviewStubPage() {
-  return (
-    <View className='page'>
-      <View className='page__placeholder'>
-        <Text className='page__title'>资料预览</Text>
-        <Text className='page__subtitle'>P0 占位页：用于承接 profile-review nextStep。</Text>
-        <Button className='page__cta' onClick={() => Taro.redirectTo({ url: '/pages/discover/index' })}>
-          完成并进入发现页
-        </Button>
+export default function ProfileReviewPage() {
+  const { user, isLoading } = useAuthGuard()
+  const invalidateAuth = useInvalidateAuth()
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleComplete = useCallback(async () => {
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+    setError('')
+    try {
+      logInfo('[ProfileReview] Completing profile review')
+      await completeProfileReview(apiRequest)
+
+      await invalidateAuth()
+      logInfo('[ProfileReview] Onboarding complete, navigating to discover')
+      Taro.switchTab({ url: '/pages/discover/index' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '操作失败，请重试'
+      setError(message)
+      logError('[ProfileReview] Complete failed', { message })
+      Taro.showToast({ title: message, icon: 'none', duration: 3000 })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [isSubmitting, invalidateAuth])
+
+  if (isLoading) {
+    return (
+      <View className='profile-review'>
+        <View className='profile-review__loading'>
+          <Text className='profile-review__loading-text'>加载中…</Text>
+        </View>
       </View>
-    </View>
+    )
+  }
+
+  const displayName = (user?.displayName as string) || (user?.nickname as string) || '悦聚用户'
+  const gender = (user?.gender as string) || ''
+  const birthYear = user?.birthYear ? `${user.birthYear}年` : ''
+  const currentCity = (user?.currentCity as string) || ''
+  const archetype = (user as any)?.archetype as string | undefined
+
+  return (
+    <ScrollView className='profile-review' scrollY enhanced showScrollbar={false}>
+      <View className='profile-review__header'>
+        <Text className='profile-review__title'>资料预览</Text>
+        <Text className='profile-review__subtitle'>确认你的信息，准备好开始探索</Text>
+      </View>
+
+      {/* Archetype card */}
+      {archetype ? (
+        <View className='profile-review__card profile-review__card--archetype'>
+          <Text className='profile-review__card-label'>你的氛围原型</Text>
+          <Text className='profile-review__archetype-name'>{archetype}</Text>
+        </View>
+      ) : null}
+
+      {/* Basic info card */}
+      <View className='profile-review__card'>
+        <Text className='profile-review__card-title'>基本信息</Text>
+        <View className='profile-review__info-row'>
+          <Text className='profile-review__info-label'>昵称</Text>
+          <Text className='profile-review__info-value'>{displayName}</Text>
+        </View>
+        {gender ? (
+          <View className='profile-review__info-row'>
+            <Text className='profile-review__info-label'>性别</Text>
+            <Text className='profile-review__info-value'>{gender}</Text>
+          </View>
+        ) : null}
+        {birthYear ? (
+          <View className='profile-review__info-row'>
+            <Text className='profile-review__info-label'>出生年份</Text>
+            <Text className='profile-review__info-value'>{birthYear}</Text>
+          </View>
+        ) : null}
+        {currentCity ? (
+          <View className='profile-review__info-row'>
+            <Text className='profile-review__info-label'>所在城市</Text>
+            <Text className='profile-review__info-value'>{currentCity}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {error ? <Text className='profile-review__error'>{error}</Text> : null}
+
+      <View className='profile-review__footer'>
+        <Button
+          className='profile-review__submit'
+          onClick={handleComplete}
+          disabled={isSubmitting}
+          loading={isSubmitting}
+        >
+          {isSubmitting ? '正在完成…' : '确认并进入悦聚'}
+        </Button>
+        <Text className='profile-review__hint'>你可以随时在「我的」页面修改资料</Text>
+      </View>
+    </ScrollView>
   )
 }

@@ -1,8 +1,10 @@
 import { PropsWithChildren, createElement } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
-import { QueryClientProvider } from '@tanstack/react-query'
 import { logInfo } from './lib/logger'
-import { queryClient } from './lib/queryClient'
+import AuthProvider from './providers/AuthProvider'
+import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
+import { AchievementProvider } from './providers/AchievementProvider'
+import AchievementPopup from './components/AchievementPopup'
 import './app.scss'
 
 const PAYMENT_PAGE_ROUTE = 'pages/blind-box-payment/index'
@@ -32,7 +34,20 @@ function App({ children }: PropsWithChildren<any>) {
     }
   })
 
-  return createElement(QueryClientProvider, { client: queryClient }, children)
+  return createElement(
+    AuthProvider,
+    null,
+    createElement(
+      DynamicAccentProvider,
+      null,
+      createElement(
+        AchievementProvider,
+        null,
+        createElement(AchievementPopup),
+        children,
+      ),
+    ),
+  )
 }
 
 export default App
