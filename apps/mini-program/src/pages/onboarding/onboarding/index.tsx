@@ -12,7 +12,7 @@ import './index.scss'
  * and immediately redirect to the correct onboarding step.
  */
 export default function OnboardingEntryPage() {
-  const { user, isLoading, isAuthenticated, nextStep } = useAuth()
+  const { isLoading, isAuthenticated, nextStep } = useAuth()
 
   useEffect(() => {
     if (isLoading) return
