@@ -16,6 +16,7 @@ export interface AuthUser extends UserState {
   paymentsEnabled?: boolean
   displayName?: string
   nickname?: string
+  archetype?: string
   gender?: string
   birthYear?: number
 }

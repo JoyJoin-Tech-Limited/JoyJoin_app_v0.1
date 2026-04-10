@@ -29,13 +29,17 @@ export function nextStepToRoute(step: NextStepType): string {
  * The set of mini-program page routes that make up the onboarding flow.
  * Used by useAuthGuard to detect whether a page is an onboarding page.
  */
-const ONBOARDING_ROUTES = new Set([
-  'pages/onboarding/onboarding/index',
-  'pages/onboarding/personality-test/index',
-  'pages/onboarding/essential-data/index',
-  'pages/onboarding/extended-data/index',
-  'pages/onboarding/profile-review/index',
-])
+const ONBOARDING_STEPS: NextStepType[] = [
+  'onboarding',
+  'personality-test',
+  'essential-data',
+  'extended-data',
+  'profile-review',
+]
+
+const ONBOARDING_ROUTES = new Set(
+  ONBOARDING_STEPS.map((step) => nextStepToRoute(step).replace(/^\//, ''))
+)
 
 /**
  * useAuthGuard — redirect to login if not authenticated.

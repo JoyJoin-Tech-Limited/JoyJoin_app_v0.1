@@ -44,11 +44,19 @@ export default function EssentialDataPage() {
     setIsSubmitting(true)
     setError('')
     try {
+      const selectedGender = genderIndex === null ? undefined : GENDER_OPTIONS[genderIndex]
+      const selectedBirthYear = birthYearIndex === null ? undefined : BIRTH_YEAR_RANGE[birthYearIndex]
+      const selectedCity = cityIndex === null ? undefined : CITY_OPTIONS[cityIndex]
+
+      if (!selectedGender || !selectedBirthYear || !selectedCity) {
+        throw new Error('请完整填写资料后再继续')
+      }
+
       const data = {
         displayName: displayName.trim(),
-        gender: GENDER_OPTIONS[genderIndex!],
-        birthYear: BIRTH_YEAR_RANGE[birthYearIndex!],
-        currentCity: CITY_OPTIONS[cityIndex!],
+        gender: selectedGender,
+        birthYear: selectedBirthYear,
+        currentCity: selectedCity,
       }
 
       logInfo('[EssentialData] Submitting', data)

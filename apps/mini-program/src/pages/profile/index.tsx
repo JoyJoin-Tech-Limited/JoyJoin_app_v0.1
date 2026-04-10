@@ -5,15 +5,16 @@ import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import type { AuthUser } from '../../hooks/useAuth'
 import { logInfo } from '../../lib/logger'
 import './index.scss'
 
 export default function ProfilePage() {
   const { isLoading: authLoading, user: authUser } = useAuthGuard()
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<AuthUser>({
     queryKey: ['mini-program', 'auth-user-profile'],
-    queryFn: () => getCurrentUser(apiRequest),
+    queryFn: () => getCurrentUser(apiRequest) as Promise<AuthUser>,
     enabled: !authLoading,
   })
 
@@ -39,9 +40,9 @@ export default function ProfilePage() {
     )
   }
 
-  const displayName = (user as any)?.nickname || (user as any)?.displayName || '悦聚用户'
-  const archetype = (user as any)?.archetype || (authUser as any)?.archetype
-  const nextStep = (user as any)?.nextStep || authUser?.nextStep
+  const displayName = user?.nickname || user?.displayName || authUser?.nickname || authUser?.displayName || '悦聚用户'
+  const archetype = user?.archetype || authUser?.archetype
+  const nextStep = user?.nextStep || authUser?.nextStep
 
   return (
     <ScrollView className='profile-page' scrollY enhanced showScrollbar={false}>

@@ -161,6 +161,7 @@ function UnauthenticatedLanding() {
         </Button>
         <View className='legal-text'>
           <Text>我已阅读并同意</Text>
+          {/* Temporary combined legal page until separate privacy content lands in mini-program. */}
           <Navigator url='/pages/terms/index' className='link'>《用户协议》</Navigator>
           <Text>和</Text>
           <Navigator url='/pages/terms/index' className='link'>《隐私政策》</Navigator>
