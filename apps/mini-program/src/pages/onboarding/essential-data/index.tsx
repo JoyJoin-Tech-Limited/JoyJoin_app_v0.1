@@ -14,8 +14,10 @@ const CITY_OPTIONS = [
   '深圳', '香港', '广州', '东莞', '佛山', '其他城市',
 ]
 
+// Dynamic birth year range: 18+ years old minimum
+const currentYear = new Date().getFullYear()
 const BIRTH_YEAR_RANGE: number[] = []
-for (let y = 2006; y >= 1970; y--) {
+for (let y = currentYear - 18; y >= 1970; y--) {
   BIRTH_YEAR_RANGE.push(y)
 }
 

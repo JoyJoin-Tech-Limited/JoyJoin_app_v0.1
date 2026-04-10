@@ -92,6 +92,7 @@ export function buildOnboardingProgress(user: {
   hasCompletedInterestsCarousel?: boolean
   hasSeenProfileReview?: boolean
 } | undefined): OnboardingProgress {
+  // totalSteps excludes the 'complete' pseudo-step which is only a terminal marker
   const totalSteps = ACTIVE_STEP_ORDER.length - 1
 
   if (!user) {
