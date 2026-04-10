@@ -8,7 +8,7 @@ import PersonalityRadarChart from "@/components/PersonalityRadarChart";
 import { XiaoyueChatBubble } from "@/components/XiaoyueChatBubble";
 import StyleSpectrum from "@/components/StyleSpectrum";
 import { ShareCardModal } from "@/components/ShareCardModal";
-import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Copy, Image } from "lucide-react";
+import { Sparkles, Users, TrendingUp, Heart, Eye, Crown, ChevronDown, Zap, Star, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Image } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   archetypeAvatars, 
@@ -17,11 +17,14 @@ import {
   getArchetypeInsights 
 } from '@/lib/archetypeAdapter';
 import { getCompatibilityDescription } from "@/lib/archetypeCompatibility";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useXiaoyueAnalysis } from "@/hooks/useXiaoyueAnalysis";
 import { useAnonymousPersonalityTestResults } from "@/hooks/useAnonymousPersonalityTestResults";
+import PersonalityShareToolkit from "@/components/personality/PersonalityShareToolkit";
+import { derivePersonalityShareToolkit } from "@/lib/personalityResultShareToolkit";
+import { personalityResultAnalytics } from "@/lib/personalityResultAnalytics";
 import { getStyleSpectrum, getAllArchetypeScores } from "@shared/personality/matcherV2";
 import { ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -33,6 +36,7 @@ import type { AuthUser } from "@/hooks/useAuth";
 import { getArchetypeColorHSL } from "@/components/slot-machine/archetypeData";
 import { SkipAnimationButton } from "@/components/SkipAnimationButton";
 import { useAuth } from "@/hooks/useAuth";
+import type { PersonalityTopArchetypeCandidate } from "@/lib/personalityResultShareToolkit";
 
 const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -345,6 +349,7 @@ interface UnifiedAssessmentResult {
   algorithmVersion: string;
   primaryArchetype: string;
   secondaryArchetype?: string;
+  topArchetypes?: PersonalityTopArchetypeCandidate[] | null;
   affinityScore: number;
   opennessScore: number;
   conscientiousnessScore: number;
@@ -634,6 +639,7 @@ export default function PersonalityTestResultPage() {
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>('slot');
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [skipToResults, setSkipToResults] = useState(false);
+  const resultsViewedTrackedRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
 
   const containerVariants = useMemo(
@@ -672,6 +678,8 @@ export default function PersonalityTestResultPage() {
   // This allows it to load in the background during animations
   const xiaoyueAnalysis = useXiaoyueAnalysis({
     archetype: finalResult?.primaryArchetype || null,
+    secondaryArchetype: finalResult?.secondaryArchetype || null,
+    topArchetypes: finalResult?.topArchetypes || null,
     traitScores: finalResult ? {
       A: finalResult.affinityScore / 100,
       O: finalResult.opennessScore / 100,
@@ -884,19 +892,59 @@ export default function PersonalityTestResultPage() {
     shareLine: xiaoyueAnalysis.shareLine || fallbackSnapshot.shareLine,
     stateLabel: xiaoyueAnalysis.stateLabel || fallbackSnapshot.stateLabel,
   };
+  const shareToolkit = derivePersonalityShareToolkit({
+    archetype: finalResult.primaryArchetype,
+    secondaryArchetype: finalResult.secondaryArchetype ?? null,
+    topArchetypes: finalResult.topArchetypes ?? null,
+    headline: xiaoyueSnapshot.headline,
+    shareLine: xiaoyueSnapshot.shareLine,
+    stateLabel: xiaoyueSnapshot.stateLabel,
+    bestScene: xiaoyueSnapshot.bestScene,
+    socialRole: xiaoyueSnapshot.socialRole,
+    blendLine: xiaoyueAnalysis.blendLine,
+    whyThisFits: xiaoyueAnalysis.whyThisFits,
+    expressionTags: xiaoyueAnalysis.expressionTags,
+    shareVariants: xiaoyueAnalysis.shareVariants,
+  });
 
-  const handleShare = async () => {
-    const shareData = {
-      title: `我的社交结果：${finalResult.primaryArchetype}`,
-      text: xiaoyueSnapshot.shareLine,
-      url: window.location.origin + '/personality-test',
-    };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch (err) {}
-    } else {
-      navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-      toast({ title: '已复制文字版结果' });
-    }
+  useEffect(() => {
+    if (animationPhase !== 'results' || resultsViewedTrackedRef.current) return;
+    resultsViewedTrackedRef.current = true;
+    personalityResultAnalytics.track('personality_result_viewed', {
+      archetype: finalResult.primaryArchetype,
+      secondaryArchetype: finalResult.secondaryArchetype ?? null,
+      stateLabel: xiaoyueSnapshot.stateLabel,
+      tagCount: shareToolkit.expressionTags.length,
+    });
+  }, [
+    animationPhase,
+    finalResult.primaryArchetype,
+    finalResult.secondaryArchetype,
+    shareToolkit.expressionTags.length,
+    xiaoyueSnapshot.stateLabel,
+  ]);
+
+  const handleCopyPrimaryShare = async () => {
+    await navigator.clipboard.writeText(`${xiaoyueSnapshot.shareLine} ${window.location.origin + '/personality-test'}`);
+    personalityResultAnalytics.track('personality_text_share_copied', {
+      archetype: finalResult.primaryArchetype,
+      stateLabel: xiaoyueSnapshot.stateLabel,
+      source: 'primary-share-line',
+    });
+    toast({ title: '已复制文字版结果' });
+  };
+
+  const handleCopyShareVariant = async (
+    variantKey: 'selfIntro' | 'friendCallout' | 'socialInvite',
+    text: string,
+  ) => {
+    await navigator.clipboard.writeText(text);
+    personalityResultAnalytics.track('personality_share_variant_copied', {
+      archetype: finalResult.primaryArchetype,
+      stateLabel: xiaoyueSnapshot.stateLabel,
+      variantKey,
+    });
+    toast({ title: '已复制分享文案' });
   };
 
   const handleContinue = () => {
@@ -1023,34 +1071,17 @@ export default function PersonalityTestResultPage() {
         )}
 
         <motion.div variants={itemVariants}>
-          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                <MessageSquare className="w-4 h-4" />
-                一句像你的话
-              </div>
-              <p className="text-lg font-semibold leading-snug" data-testid="text-xiaoyue-headline">
-                {xiaoyueSnapshot.headline}
-              </p>
-              <div className="rounded-xl border bg-background/90 px-3 py-3">
-                <p className="text-sm leading-relaxed text-foreground/90" data-testid="text-xiaoyue-share-line">
-                  {xiaoyueSnapshot.shareLine}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="bg-primary/10 text-primary">
-                  {xiaoyueSnapshot.stateLabel}
-                </Badge>
-                <Button variant="outline" size="sm" onClick={handleShare}>
-                  <Copy className="w-4 h-4 mr-2" />
-                  复制文字版结果
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                这版更适合先发评论区或聊天框。想晒图的话，页底还有一张 Pokémon 风格海报。
-              </p>
-            </CardContent>
-          </Card>
+          <PersonalityShareToolkit
+            headline={xiaoyueSnapshot.headline}
+            shareLine={xiaoyueSnapshot.shareLine}
+            stateLabel={xiaoyueSnapshot.stateLabel}
+            expressionTags={shareToolkit.expressionTags}
+            blendLine={shareToolkit.blendLine}
+            whyThisFits={shareToolkit.whyThisFits}
+            shareVariants={shareToolkit.shareVariants}
+            onCopyPrimary={handleCopyPrimaryShare}
+            onCopyVariant={handleCopyShareVariant}
+          />
         </motion.div>
 
         {/* Debug: All 12 Archetype Scores - Only show in development mode */}
@@ -1133,11 +1164,6 @@ export default function PersonalityTestResultPage() {
         <motion.div variants={itemVariants}>
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              {
-                title: "当前社交状态",
-                icon: TrendingUp,
-                content: xiaoyueSnapshot.stateLabel,
-              },
               {
                 title: "你在局里的作用",
                 icon: Star,
@@ -1291,6 +1317,10 @@ export default function PersonalityTestResultPage() {
                 } catch (e) {
                   // Silently fail if vibrate API throws an error
                 }
+                personalityResultAnalytics.track('personality_poster_opened', {
+                  archetype: finalResult.primaryArchetype,
+                  stateLabel: xiaoyueSnapshot.stateLabel,
+                });
                 setShareModalOpen(true);
               }} 
               data-testid="button-share"
