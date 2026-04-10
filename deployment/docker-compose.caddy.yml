@@ -52,12 +52,14 @@ services:
       - joyjoin-network
 
   # Admin Frontend
+  # NOTE: VITE_API_URL is intentionally omitted here so the admin client uses
+  # relative /api/... URLs at runtime. Caddy proxies /api/* on admin.yuejuapp.com
+  # to joyjoin-api:5000 (see Caddyfile), enabling same-origin requests and
+  # correct session/cookie behaviour for admin login.
   joyjoin-admin:
     build:
       context: ..
       dockerfile: apps/admin-client/Dockerfile
-      args:
-        VITE_API_URL: https://api.yuejuapp.com
     container_name: joyjoin-admin
     restart: unless-stopped
     ports:
