@@ -4,7 +4,7 @@ import './index.scss'
 
 export default function Index() {
   useLoad(() => {
-    Taro.reLaunch({ url: '/pages/discover/index' })
+    Taro.switchTab({ url: '/pages/discover/index' })
   })
 
   return (

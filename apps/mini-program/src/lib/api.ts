@@ -62,7 +62,7 @@ function createApiError(
 
 export async function apiRequest<T>(options: {
   path: string
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   data?: unknown
 }): Promise<T> {
   const response = await Taro.request<T>({
