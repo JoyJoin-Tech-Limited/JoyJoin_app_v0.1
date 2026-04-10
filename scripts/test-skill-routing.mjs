@@ -510,6 +510,37 @@ test('brand + design system ambiguity → clarification recommended', () => {
   );
 });
 
+// ---- Platform coordination protocol ----
+console.log('\nPlatform coordination protocol scenarios:');
+
+test('payment flow sibling review via real file path → platform-coordination-protocol', () => {
+  const r = routeSkill({
+    ask: 'I changed apps/mini-program/src/pages/blind-box-payment/index.tsx — which web payment file should I review for the same flow?',
+  });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
+test('platform coordination doc usage → platform-coordination-protocol', () => {
+  const r = routeSkill({
+    ask: 'How do I use docs/PLATFORM_COORDINATION.md to decide whether this payment change needs sibling platform review?',
+  });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
+test('auth hook consumer review → platform-coordination-protocol', () => {
+  const r = routeSkill({
+    ask: 'For platform coordination, I updated apps/user-client/src/hooks/useAuth.ts and need to compare it with apps/mini-program/src/lib/api.ts for sibling platform auth drift.',
+  });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
+test('shared schema change review → platform-coordination-protocol', () => {
+  const r = routeSkill({
+    ask: 'I touched packages/shared/src/schema.ts while working on duplicated payment flow logic — do I need to review both clients?',
+  });
+  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+});
+
 // ---- Skill authoring governance ----
 console.log('\nSkill authoring governance scenarios:');
 
