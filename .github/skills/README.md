@@ -23,6 +23,7 @@ Core structure, ownership, and placement rules. Start here if you are new to the
 | [`onboarding-state-architecture`](./onboarding-state-architecture/SKILL.md) | Server-driven `nextStep`, active onboarding module ownership, routing authority, legacy quarantine |
 | [`server-domain-architecture`](./server-domain-architecture/SKILL.md) | `routes.ts` as composition root, `routes/domains/*` ownership, `repositories/*` for new persistence, `storage.ts` as compatibility facade |
 | [`monorepo-workspace-governance`](./monorepo-workspace-governance/SKILL.md) | Root orchestration-only principle, workspace dependency ownership, tsconfig/script normalization, env/secret/legacy guardrails |
+| [`platform-coordination-protocol`](./platform-coordination-protocol/SKILL.md) | PRIMARY/SECONDARY/SHARED ownership, sibling-platform review, shared API contract boundaries, impact-check workflow |
 
 ---
 
@@ -109,6 +110,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | What controls the onboarding step a user sees? | `onboarding-state-architecture` |
 | Where does a new API route go? | `server-domain-architecture` |
 | How do I add a dependency to the monorepo? | `monorepo-workspace-governance` |
+| How do I know whether I need to update the sibling platform too? | `platform-coordination-protocol` |
 | How do I gate a route for admin-only access? | `auth-session-and-safety-boundaries` |
 | How do I make a multi-step operation atomic? | `reliability-and-state-integrity` |
 | How do I lock in an architectural boundary with a test? | `testing-and-regression-guardrails` |
@@ -143,7 +145,7 @@ All active skills under `.github/skills/` participate in the lightweight skill r
 2. Add `strong_triggers` with repo-specific terms (symbols, file paths, route patterns, canonical phrases)
 3. Fill `use_when` / `do_not_use_when` to sharpen routing boundaries
 4. List `related_skills` for natural handoff points
-5. Run `node scripts/validate-skill-routing.mjs` — all 17 skills should show ✅
+5. Run `node scripts/validate-skill-routing.mjs` — all skills should show ✅
 6. Add test cases to `scripts/test-skill-routing.mjs` for the new skill's key asks
 7. Run `node scripts/test-skill-routing.mjs` to confirm all tests pass
 
@@ -183,7 +185,7 @@ node scripts/validate-skill-routing.mjs
 # Route an ask interactively
 node scripts/skill-router.mjs "add a nextStep rule after profile review"
 
-# Run the full routing regression suite (75 test cases)
+# Run the full routing regression suite
 node scripts/test-skill-routing.mjs
 ```
 
