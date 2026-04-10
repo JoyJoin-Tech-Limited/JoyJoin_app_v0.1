@@ -186,8 +186,6 @@ End every review with this summary shape:
 - maintainability / architecture fit: Pass / Concern / Fail
 ```
 
----
-
 ## Troubleshooting
 
 Common review pitfalls to watch for:

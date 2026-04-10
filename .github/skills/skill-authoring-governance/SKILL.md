@@ -116,8 +116,6 @@ Produce: inline comments or a review summary noting which checklist items pass o
 | Generic advice instead of operational guidance | Replace with concrete steps, file paths, and patterns |
 | Code-review skill lacks Harness framework evaluation | Add per-pillar checklist and compliance verdict section |
 
----
-
 ## Troubleshooting
 
 **A skill reads well but is hard to trigger**

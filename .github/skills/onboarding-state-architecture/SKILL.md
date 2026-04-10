@@ -112,6 +112,38 @@ if (nextStep !== 'discover') {
 **Apply this skill by:** Adding a `nextStep` value (`'photo-upload'`) to the server computation in `routes/domains/auth.ts`, adding a `hasCompletedPhotoUpload` flag to the `users` table, adding the route/page under `features/onboarding/active/pages/`, and updating `flow.ts` with the new step → route mapping.
 **Result:** Step is fully server-driven; the client reads the new `nextStep` and routes accordingly.
 
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies to both Web and Taro mini-program onboarding flows wherever the client consumes `nextStep` and renders step-specific UI.
+- Web is the current primary implementation surface, but mini-program onboarding should follow the same server-owned routing authority and state semantics.
+
+### UI/UX & Aesthetic Guidance
+
+- Onboarding screens should use JoyJoin token and typography guidance consistently so progression feels like one coherent flow rather than a set of disconnected forms.
+- Every onboarding step must define loading, error, empty, validation, disabled, and success states explicitly; auth fetches and step submissions cannot leave the user guessing.
+- Use semantic form and page structure on web (`main`, `form`, `label`, `button`, `fieldset`) and the equivalent Taro-native composition on mini-program surfaces.
+- Interaction feedback should be immediate and specific: pressed CTA state, validation copy near the field, and a clear transition once the server confirms the new `nextStep`.
+
+### Web-Specific Considerations
+
+- Maintain deliberate hover and `:focus-visible` treatments for onboarding controls, especially primary CTAs, segmented choices, and multi-step progress affordances.
+- Optimize for narrow mobile layouts first, since onboarding is a one-thumb flow; avoid horizontal overflow and keep critical actions pinned within easy reach.
+- Use the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) when deciding when long interest, trait, or preference lists should virtualize or progressively reveal.
+
+### Taro-Specific Considerations
+
+- Follow the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, use `View`, `Text`, `Button`, `Input`, and `ScrollView`, and do not port DOM-only controls directly into mini-program onboarding.
+- Use `hover-class` only where pressed feedback adds clarity, keep onboarding route clusters and heavy assets subpackage-aware, and adopt `VirtualList` for long selectors or question banks.
+- Preserve the same `nextStep` authority model in Taro rather than introducing page-local progression logic.
+
+### Accessibility & Performance Notes
+
+- Meet WCAG 2.1 AA expectations for labels, error association, focus order, target size, and readable status messaging throughout the flow.
+- Protect LCP and INP on onboarding entry routes by keeping auth bootstrapping lightweight, avoiding layout shift between states, and deferring non-essential decoration.
+- On mini-program surfaces, prioritize smooth scroll and fast input echo over elaborate animation during step transitions.
+
 ## Troubleshooting
 
 - **`nextStep` is stale — client shows old step after completing a step** — the client is not re-fetching `/api/auth/user` after the step completion call. Invalidate the auth query and re-fetch before navigating.

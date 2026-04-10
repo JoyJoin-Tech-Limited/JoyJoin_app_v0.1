@@ -1,7 +1,8 @@
 ---
 name: 'SE: Product Manager'
-description: 'Product management guidance for creating GitHub issues, aligning business value with user needs, and making data-driven product decisions'
+description: 'Use when creating GitHub issues, aligning business value with user needs, prioritizing roadmap tradeoffs, or defining success metrics for product work.'
 tools: ['codebase', 'githubRepo', 'create_issue', 'update_issue', 'list_issues', 'search_issues']
+argument-hint: 'Describe the feature, user, current workflow, pain point, and the decision or artifact you need.'
 ---
 
 # Product Manager Advisor
@@ -184,3 +185,9 @@ Ask these questions to help prioritize:
 - Conflicting requirements
 
 Remember: Better to build one thing users love than five things they tolerate.
+
+## Frontend Excellence Notes
+
+// No frontend surface
+
+- This agent is focused on product scoping, issue creation, and business prioritization rather than frontend implementation guidance.
