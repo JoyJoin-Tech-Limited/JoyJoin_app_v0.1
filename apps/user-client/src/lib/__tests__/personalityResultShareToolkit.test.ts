@@ -48,4 +48,31 @@ describe('derivePersonalityShareToolkit', () => {
     expect(result.blendLine).toContain('灵感章鱼');
     expect(result.shareVariants.friendCallout).toContain('灵感章鱼');
   });
+
+  it('falls back when tags or share variants are present but effectively empty', () => {
+    const result = derivePersonalityShareToolkit({
+      archetype: '开心柯基',
+      secondaryArchetype: '太阳鸡',
+      topArchetypes: [
+        { archetype: '开心柯基', score: 82, confidence: 0.81 },
+        { archetype: '太阳鸡', score: 75, confidence: 0.73 },
+      ],
+      headline: '你不是硬撑热闹，你是自然带热的人',
+      shareLine: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
+      stateLabel: '快热带动型',
+      bestScene: '更适合6到8人的轻松热场局。',
+      socialRole: '你更像开场加速器，能让大家更快同频。',
+      expressionTags: ['  ', ''],
+      shareVariants: {
+        selfIntro: '   ',
+        friendCallout: '',
+        socialInvite: '如果一起组局，我更适合6到8人的轻松热场局，会比较容易进入状态。',
+      },
+    });
+
+    expect(result.expressionTags.length).toBeGreaterThanOrEqual(3);
+    expect(result.shareVariants.selfIntro).toContain('开心柯基');
+    expect(result.shareVariants.friendCallout).toContain('认识我的人应该会懂');
+    expect(result.shareVariants.socialInvite).toContain('轻松热场局');
+  });
 });

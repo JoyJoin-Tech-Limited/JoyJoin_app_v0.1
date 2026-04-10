@@ -122,15 +122,22 @@ function buildFallbackShareVariants(input: PersonalityShareToolkitInput): Person
 export function derivePersonalityShareToolkit(
   input: PersonalityShareToolkitInput,
 ): PersonalityShareToolkitData {
+  const expressionTags = input.expressionTags?.filter(
+    (tag): tag is string => typeof tag === 'string' && tag.trim().length > 0,
+  );
+  const fallbackShareVariants = buildFallbackShareVariants(input);
+
   return {
     blendLine: input.blendLine?.trim() || buildFallbackBlendLine(input),
     whyThisFits: input.whyThisFits?.trim() || buildFallbackWhyThisFits(input),
     expressionTags:
-      input.expressionTags?.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0) ??
-      buildFallbackExpressionTags(input),
+      expressionTags && expressionTags.length > 0
+        ? expressionTags
+        : buildFallbackExpressionTags(input),
     shareVariants: {
-      ...buildFallbackShareVariants(input),
-      ...input.shareVariants,
+      selfIntro: input.shareVariants?.selfIntro?.trim() || fallbackShareVariants.selfIntro,
+      friendCallout: input.shareVariants?.friendCallout?.trim() || fallbackShareVariants.friendCallout,
+      socialInvite: input.shareVariants?.socialInvite?.trim() || fallbackShareVariants.socialInvite,
     },
   };
 }

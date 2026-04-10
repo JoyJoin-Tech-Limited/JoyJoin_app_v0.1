@@ -78,4 +78,31 @@ describe('xiaoyueAnalysisService', () => {
     expect(fallback.blendLine).toContain('灵感章鱼');
     expect(fallback.shareVariants.friendCallout).toContain('灵感章鱼');
   });
+
+  it('falls back when structured output violates prompt length constraints', () => {
+    const fallback = parseAnalysisResponse(
+      JSON.stringify({
+        headline: '太短了',
+        analysis: '你进到陌生局里，通常会比自己想的更快把气氛带松。别人先记住的不是你有多吵，而是你让场子更好接近。你更适合有接话空间的小局。下次先抛一个轻松问题，再接住第一个回应你的人。',
+        socialRole: '你更像开场加速器，能让大家更快同频。',
+        bestScene: '更适合6到8人的轻松热场局。',
+        microAction: '下次先抛一个轻松问题，再接住第一个回应你的人。',
+        shareLine: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
+        whyThisFits: '这次会落到开心柯基，主要是因为你的外向性和正能量更突出，放进真实社交场里会变成一种快热带动型的存在感。',
+        blendLine: '虽然你身上也有一点太阳鸡的影子，但这次更稳定地落在开心柯基这边。',
+        expressionTags: ['一上桌就熟得快', '热场但不压人', '这个标签太长了'],
+        shareVariants: {
+          selfIntro: '我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。',
+          friendCallout: '认识我的人应该会懂，我不是硬撑热闹，是会自然把场子带热。',
+          socialInvite: '如果一起组局，我更适合6到8人的轻松热场局，会比较容易进入状态。',
+        },
+      }),
+      baseInput,
+    );
+
+    expect(fallback.headline).toBe('你不是硬撑热闹，你是自然带热的人');
+    expect(fallback.expressionTags.length).toBeGreaterThanOrEqual(3);
+    expect(fallback.expressionTags.length).toBeLessThanOrEqual(4);
+    expect(fallback.expressionTags.every((tag) => tag.length <= 8)).toBe(true);
+  });
 });

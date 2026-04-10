@@ -844,6 +844,48 @@ export default function PersonalityTestResultPage() {
     },
   });
 
+  useEffect(() => {
+    if (!finalResult?.primaryArchetype || animationPhase !== 'results' || resultsViewedTrackedRef.current) {
+      return;
+    }
+
+    const fallbackSnapshot = getFallbackXiaoyueSnapshot(finalResult.primaryArchetype);
+    const shareToolkit = derivePersonalityShareToolkit({
+      archetype: finalResult.primaryArchetype,
+      secondaryArchetype: finalResult.secondaryArchetype ?? null,
+      topArchetypes: finalResult.topArchetypes ?? null,
+      headline: xiaoyueAnalysis.headline || fallbackSnapshot.headline,
+      shareLine: xiaoyueAnalysis.shareLine || fallbackSnapshot.shareLine,
+      stateLabel: xiaoyueAnalysis.stateLabel || fallbackSnapshot.stateLabel,
+      bestScene: xiaoyueAnalysis.bestScene || fallbackSnapshot.bestScene,
+      socialRole: xiaoyueAnalysis.socialRole || fallbackSnapshot.socialRole,
+      blendLine: xiaoyueAnalysis.blendLine,
+      whyThisFits: xiaoyueAnalysis.whyThisFits,
+      expressionTags: xiaoyueAnalysis.expressionTags,
+      shareVariants: xiaoyueAnalysis.shareVariants,
+    });
+
+    resultsViewedTrackedRef.current = true;
+    personalityResultAnalytics.track('personality_result_viewed', {
+      archetype: finalResult.primaryArchetype,
+      secondaryArchetype: finalResult.secondaryArchetype ?? null,
+      stateLabel: xiaoyueAnalysis.stateLabel || fallbackSnapshot.stateLabel,
+      tagCount: shareToolkit.expressionTags.length,
+    });
+  }, [
+    animationPhase,
+    finalResult,
+    xiaoyueAnalysis.bestScene,
+    xiaoyueAnalysis.blendLine,
+    xiaoyueAnalysis.expressionTags,
+    xiaoyueAnalysis.headline,
+    xiaoyueAnalysis.shareLine,
+    xiaoyueAnalysis.shareVariants,
+    xiaoyueAnalysis.socialRole,
+    xiaoyueAnalysis.stateLabel,
+    xiaoyueAnalysis.whyThisFits,
+  ]);
+
   if (finalIsLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
@@ -906,23 +948,6 @@ export default function PersonalityTestResultPage() {
     expressionTags: xiaoyueAnalysis.expressionTags,
     shareVariants: xiaoyueAnalysis.shareVariants,
   });
-
-  useEffect(() => {
-    if (animationPhase !== 'results' || resultsViewedTrackedRef.current) return;
-    resultsViewedTrackedRef.current = true;
-    personalityResultAnalytics.track('personality_result_viewed', {
-      archetype: finalResult.primaryArchetype,
-      secondaryArchetype: finalResult.secondaryArchetype ?? null,
-      stateLabel: xiaoyueSnapshot.stateLabel,
-      tagCount: shareToolkit.expressionTags.length,
-    });
-  }, [
-    animationPhase,
-    finalResult.primaryArchetype,
-    finalResult.secondaryArchetype,
-    shareToolkit.expressionTags.length,
-    xiaoyueSnapshot.stateLabel,
-  ]);
 
   const handleCopyPrimaryShare = async () => {
     try {

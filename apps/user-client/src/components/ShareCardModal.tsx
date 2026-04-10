@@ -24,6 +24,7 @@ import { archetypeAvatars, getArchetypeAvatar, hasExpressionAsset } from "@/lib/
 import { Share2, Download, Loader2, Check } from "lucide-react";
 import html2canvas from "html2canvas";
 import { haptics } from "@/lib/haptics";
+import { personalityResultAnalytics } from "@/lib/personalityResultAnalytics";
 
 interface ShareCardModalProps {
   open: boolean;
@@ -282,6 +283,12 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
             title: `我是${archetype}！`,
             text: `我在悦聚完成了性格测试，发现自己是${archetype}！快来看看你是什么性格吧～`,
           });
+          personalityResultAnalytics.track("personality_native_share_used", {
+            archetype,
+            source: "share-card-modal-primary",
+            selectedExpression,
+            selectedVariant: selectedVariant.name,
+          });
 
           toast({
             title: "分享成功！",
@@ -315,7 +322,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         description: "可手动分享到社交媒体",
       });
     }
-  }, [generateImage, archetype, toast]);
+  }, [generateImage, archetype, selectedExpression, selectedVariant.name, toast]);
 
   // Handle download
   const handleDownload = useCallback(async () => {
@@ -342,6 +349,12 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
               files: [file],
               title: `我是${archetype}！`,
               text: `我在悦聚完成了性格测试，发现自己是${archetype}！`
+            });
+            personalityResultAnalytics.track("personality_native_share_used", {
+              archetype,
+              source: "share-card-modal-download",
+              selectedExpression,
+              selectedVariant: selectedVariant.name,
             });
             
             downloadMethod = 'native_share';
@@ -412,7 +425,7 @@ export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {
         variant: "destructive"
       });
     }
-  }, [generateImage, archetype, selectedExpression, selectedVariant, toast]);
+  }, [generateImage, archetype, selectedExpression, selectedVariant.name, toast]);
 
   if (isError) {
     return (
