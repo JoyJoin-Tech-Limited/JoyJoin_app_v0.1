@@ -925,26 +925,42 @@ export default function PersonalityTestResultPage() {
   ]);
 
   const handleCopyPrimaryShare = async () => {
-    await navigator.clipboard.writeText(`${xiaoyueSnapshot.shareLine} ${window.location.origin + '/personality-test'}`);
-    personalityResultAnalytics.track('personality_text_share_copied', {
-      archetype: finalResult.primaryArchetype,
-      stateLabel: xiaoyueSnapshot.stateLabel,
-      source: 'primary-share-line',
-    });
-    toast({ title: '已复制文字版结果' });
+    try {
+      await navigator.clipboard.writeText(`${xiaoyueSnapshot.shareLine} ${window.location.origin + '/personality-test'}`);
+      personalityResultAnalytics.track('personality_text_share_copied', {
+        archetype: finalResult.primaryArchetype,
+        stateLabel: xiaoyueSnapshot.stateLabel,
+        source: 'primary-share-line',
+      });
+      toast({ title: '已复制文字版结果' });
+    } catch (error) {
+      toast({
+        title: '复制失败',
+        description: '请长按文案后手动复制',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleCopyShareVariant = async (
     variantKey: 'selfIntro' | 'friendCallout' | 'socialInvite',
     text: string,
   ) => {
-    await navigator.clipboard.writeText(text);
-    personalityResultAnalytics.track('personality_share_variant_copied', {
-      archetype: finalResult.primaryArchetype,
-      stateLabel: xiaoyueSnapshot.stateLabel,
-      variantKey,
-    });
-    toast({ title: '已复制分享文案' });
+    try {
+      await navigator.clipboard.writeText(text);
+      personalityResultAnalytics.track('personality_share_variant_copied', {
+        archetype: finalResult.primaryArchetype,
+        stateLabel: xiaoyueSnapshot.stateLabel,
+        variantKey,
+      });
+      toast({ title: '已复制分享文案' });
+    } catch (error) {
+      toast({
+        title: '复制失败',
+        description: '请长按文案后手动复制',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleContinue = () => {
