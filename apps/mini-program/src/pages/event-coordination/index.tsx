@@ -174,10 +174,6 @@ export default function EventCoordinationPage() {
     ? true
     : messagesResponse?.chatUnlocked ?? true
 
-  const hoursUntilUnlock = Array.isArray(messagesResponse)
-    ? 0
-    : messagesResponse?.hoursUntilUnlock ?? 0
-
   // ── Derived state ───────────────────────────────────────────────
   const isChatLocked = !chatUnlocked && event?.dateTime
     ? new Date(event.dateTime).getTime() > Date.now()
