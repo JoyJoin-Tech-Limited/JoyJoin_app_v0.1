@@ -2,10 +2,22 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { XIAOYUE_PERSONA, GENDER_NEUTRAL } from './prompts';
 
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+let deepseekClient: OpenAI | null = null;
+
+function getDeepseekClient(): OpenAI {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY is not configured');
+  }
+
+  if (!deepseekClient) {
+    deepseekClient = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      baseURL: 'https://api.deepseek.com',
+    });
+  }
+
+  return deepseekClient;
+}
 
 export interface ArchetypeAnalysisInput {
   archetype: string;
@@ -313,7 +325,7 @@ export async function generateXiaoyueAnalysis(
   const userPrompt = buildAnalysisPrompt(input);
 
   try {
-    const response = await deepseekClient.chat.completions.create({
+    const response = await getDeepseekClient().chat.completions.create({
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
