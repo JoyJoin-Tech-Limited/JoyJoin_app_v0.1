@@ -1,26 +1,7 @@
+import { MINI_PROGRAM_PAGES } from './lib/onboardingRoutes'
+
 export default defineAppConfig({
-  pages: [
-    'pages/discover/index',
-    'pages/events/index',
-    'pages/connections/index',
-    'pages/profile/index',
-    'pages/index/index',
-    'pages/onboarding/onboarding/index',
-    'pages/onboarding/personality-test/index',
-    'pages/onboarding/essential-data/index',
-    'pages/onboarding/extended-data/index',
-    'pages/onboarding/profile-review/index',
-    'pages/blind-box-payment/index',
-    'pages/payment-verification/index',
-    'pages/my-events/index',
-    'pages/chats/index',
-    'pages/journey/index',
-    'pages/login/index',
-    'pages/terms/index',
-    'pages/event-detail/index',
-    'pages/event-feedback/index',
-    'pages/pool-registration/index',
-  ],
+  pages: [...MINI_PROGRAM_PAGES],
   tabBar: {
     color: '#9CA3AF',
     selectedColor: '#8B5CF6',
