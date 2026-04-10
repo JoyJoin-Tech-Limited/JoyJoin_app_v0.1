@@ -1,15 +1,16 @@
 skill: platform-coordination-protocol
 
 primary_ownership: >
-  PRIMARY/SECONDARY/SHARED coordination rules, sibling-platform review, shared
-  API contract boundaries, and impact-check / platform guardrail workflows.
+  Cross-platform coordination for duplicated mini-program/web auth, API, and
+  payment flows using the current platform coordination playbook and real repo
+  file boundaries.
 
 use_when:
-  - changing a file in a .platform-marked directory
+  - changing one of the duplicated auth/api/payment files called out in docs/PLATFORM_COORDINATION.md
   - asking whether a sibling platform also needs review
-  - running or interpreting impact-check or guardrails:platform
-  - updating scripts/platform-map.json or coordinated platform boundaries
-  - changing shared api contract files consumed by coordinated client features
+  - using docs/PLATFORM_COORDINATION.md to decide whether a change stays local
+  - changing apps/mini-program/src/lib/api.ts, apps/user-client/src/hooks/useAuth.ts, queryClient.ts, or the payment pages
+  - changing shared package files that coordinated client flows depend on
 
 do_not_use_when:
   - task is only about generic monorepo dependency ownership or tsconfig changes
@@ -17,37 +18,28 @@ do_not_use_when:
   - task is only about writing or auditing skill docs
 
 strong_triggers:
-  - .platform
-  - .platform marker
-  - impact-check
-  - "guardrails:platform"
-  - platform-map.json
-  - PRIMARY vs SECONDARY
+  - platform coordination
+  - docs/PLATFORM_COORDINATION.md
   - sibling platform
-  - shared api contract
-  - shared api types
-  - apps/mini-program/src/pages/blind-box-payment
-  - apps/user-client/src/pages/BlindBoxPaymentPage
-  - apps/mini-program/src/lib/api
-  - apps/user-client/src/hooks/useAuth
-  - packages/shared/src/api-types
-  - platform-agnostic
+  - BlindBoxPaymentPage.tsx
+  - blind-box-payment/index.tsx
+  - apps/mini-program/src/lib/api.ts
+  - apps/user-client/src/hooks/useAuth.ts
+  - apps/user-client/src/lib/queryClient.ts
+  - packages/shared/src/schema.ts
+  - duplicated payment flow
   - mirrored web journey
 
 owned_files:
-  - AGENTS.md
-  - scripts/platform-map.json
-  - scripts/impact-check.js
-  - scripts/platform-coordination.mjs
-  - scripts/check-platform-guardrails.mjs
-  - docs/COORDINATION_ROLLOUT.md
+  - docs/PLATFORM_COORDINATION.md
+  - apps/mini-program/src/lib/api.ts
+  - apps/mini-program/src/pages/blind-box-payment/index.tsx
+  - apps/user-client/src/hooks/useAuth.ts
+  - apps/user-client/src/lib/queryClient.ts
+  - apps/user-client/src/pages/BlindBoxPaymentPage.tsx
+  - packages/shared/src/schema.ts
 
-owned_paths:
-  - /apps/mini-program/src/pages/blind-box-payment
-  - /apps/user-client/src/pages/BlindBoxPaymentPage
-  - /apps/mini-program/src/lib/api
-  - /apps/user-client/src/hooks/useAuth
-  - /packages/shared/src/api-types
+owned_paths: []
 
 owned_symbols: []
 

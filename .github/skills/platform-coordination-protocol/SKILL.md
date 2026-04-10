@@ -1,117 +1,120 @@
 ---
 name: platform-coordination-protocol
 description: >
-  Mini-program and web coordination rules for PRIMARY, SECONDARY, and SHARED
-  ownership, sibling-platform review, shared API contracts, and platform
-  guardrails. Use when a task touches a .platform-marked area, needs
-  impact-check, changes platform-map.json coordination, or asks whether a
-  sibling platform or shared api contract must be updated. Trigger phrases:
-  "check sibling platform", "run impact-check", ".platform marker",
-  "PRIMARY vs SECONDARY", "shared api contract".
+  Mini-program and web coordination guidance for duplicated auth, API, and
+  payment flows. Use when a task touches docs/PLATFORM_COORDINATION.md,
+  apps/mini-program/src/lib/api.ts, apps/user-client/src/hooks/useAuth.ts, or
+  the payment pages and asks whether sibling platform review is needed.
+  Trigger phrases: "sibling platform", "platform coordination",
+  "BlindBoxPaymentPage", "useAuth.ts", "mini-program api.ts".
 ---
 
 # Platform Coordination Protocol
 
-**Core rule:** For any coordinated feature, the mini-program PRIMARY side owns business logic, the web SECONDARY side must be reviewed for parity, and SHARED contracts in `packages/shared/src/api-types/` must stay authoritative.
+**Core rule:** For current duplicated auth/API/payment flows, use `docs/PLATFORM_COORDINATION.md` as the source of truth, treat the mini-program flow as the strongest reference for current payment mechanics, and review the matching web or shared surface before merging.
 
 ## When to use this skill
 
-- Editing a file inside a directory that contains a `.platform` marker
+- Editing one of the duplicated cross-platform hotspots called out in `docs/PLATFORM_COORDINATION.md`
 - Changing payment or auth/session logic that spans mini-program and web
-- Updating `scripts/platform-map.json`, `scripts/impact-check.js`, or `scripts/check-platform-guardrails.mjs`
-- Asking whether a sibling platform or shared contract also needs review
-- Investigating `npm run impact-check` or `npm run guardrails:platform` output
+- Updating `apps/mini-program/src/lib/api.ts`, `apps/user-client/src/hooks/useAuth.ts`, `apps/user-client/src/lib/queryClient.ts`, or either payment page
+- Asking whether a sibling platform or shared package consumer also needs review
+- Checking whether a change should stay local or be escalated to both clients
 
-## Coordination roles
+## Current coordination posture
 
-- **PRIMARY** — source of truth for business logic in the coordinated area; review the mapped SECONDARY side and shared contracts before merging
-- **SECONDARY** — mirrored implementation; keep platform-specific rendering here, but push shared logic decisions back to PRIMARY
-- **SHARED** — request/response contracts and platform-agnostic coordination logic; review every mapped consumer when these files change
+- **Mini Program reference surface** — strongest current reference for payment mechanics and WeChat-specific auth/api behavior
+- **Web sibling surface** — matching user-facing flow that should be reviewed for parity when duplicated business intent changes
+- **Shared package surface** — `packages/shared/src/` modules that both clients may consume today, especially `packages/shared/src/schema.ts` and shared utilities/constants
 
 ## Current coordinated areas
 
-| Area | PRIMARY | SECONDARY | SHARED |
+| Area | Mini Program reference | Web sibling | Shared reference today |
 |------|---------|-----------|--------|
-| Payment flow | `apps/mini-program/src/pages/blind-box-payment/` | `apps/user-client/src/pages/BlindBoxPaymentPage/` | `packages/shared/src/api-types/payment.ts` |
-| Auth session | `apps/mini-program/src/lib/api/` | `apps/user-client/src/hooks/useAuth/` | `packages/shared/src/api-types/auth.ts` |
+| Payment flow | `apps/mini-program/src/pages/blind-box-payment/index.tsx` | `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` | `docs/PLATFORM_COORDINATION.md` |
+| Auth session bootstrap | `apps/mini-program/src/lib/api.ts` | `apps/user-client/src/hooks/useAuth.ts` | `docs/PLATFORM_COORDINATION.md` |
+| API request wrapper | `apps/mini-program/src/lib/api.ts` | `apps/user-client/src/lib/queryClient.ts` | `docs/PLATFORM_COORDINATION.md` |
 
-Use `scripts/platform-map.json` as the machine-readable source of truth for these mappings.
+Today there is **no** dedicated shared payment/auth DTO module. `docs/PLATFORM_COORDINATION.md` is the canonical coordination reference for these mappings.
 
 ## Coordination workflow
 
-1. Check the nearest `.platform` marker and confirm whether you are in a PRIMARY, SECONDARY, or SHARED area
-2. Read the matching entry in `scripts/platform-map.json`
-3. Review the sibling platform path and any listed shared dependencies before finalizing the change
-4. Run `npm run impact-check -- <file>` or `npm run impact-check:staged` to confirm cross-platform impact
-5. If you changed business logic or contracts, update the sibling implementation or explicitly record why no sibling change is required
-6. Run `npm run guardrails:platform -- --changed <base> <head>` when validating a broader diff or CI-facing change
+1. Read the relevant section of `docs/PLATFORM_COORDINATION.md` before deciding the change is platform-local
+2. Identify whether the touched file is one of the duplicated hotspots listed above
+3. Review the sibling platform file with the same business intent before finalizing the change
+4. If you touched `packages/shared/src/`, inspect both clients for consumers that could drift
+5. Validate with the smallest existing checks that cover the touched surfaces:
+   - `npm run typecheck -w @joyjoin/user-client`
+   - `npm run check:clients`
+   - `npm run build:weapp -w mini-program` when mini-program tooling is available
+6. Record in the PR why no sibling-platform change was needed if you keep the change local
 
 ## Smart scope classification
 
 Use these advisory scope labels before deciding whether a change stays local or needs coordination:
 
-- **`MINI_PROGRAM_ONLY`** — mini-program-specific behavior such as `wx.*` or `Taro.*` usage with no shared-contract or platform-agnostic signals
-- **`WEB_ONLY`** — web-specific behavior such as `window.*` or `document.*` usage with no shared-contract or platform-agnostic signals
-- **`BOTH_REQUIRED`** — shared contracts, platform-agnostic logic, or coordinated areas where both clients must be reviewed
+- **`MINI_PROGRAM_ONLY`** — mini-program-specific behavior such as `wx.*`, `Taro.*`, or mini-program page wiring with no duplicated business-rule drift
+- **`WEB_ONLY`** — browser-only behavior such as DOM/UI wiring with no duplicated auth/payment/API rule change
+- **`BOTH_REQUIRED`** — duplicated business logic, shared types/utilities, or coordinated auth/payment/api behavior where both clients must be reviewed
 
 Decision order:
 
-1. Check the nearest `.platform` marker
-2. Check `scripts/platform-map.json`
-3. Check whether the file lives in `packages/shared/src/api-types/`
-4. Check for `@platform-agnostic`
-5. Check for obvious platform APIs (`wx.` / `Taro.` vs `window.location`, `window.*`, `document.*`)
+1. Check whether the file appears in `docs/PLATFORM_COORDINATION.md`
+2. Check whether the file is one of the known duplicated surfaces in the table above
+3. Check whether the file lives in `packages/shared/src/`
+4. Check for obvious platform APIs (`wx.` / `Taro.` vs `window.*`, `document.*`)
+5. Check whether the change alters business rules, request shapes, pricing assumptions, or auth/session state rather than only renderer wiring
 
-Treat this classification as advisory only. If heuristics disagree with `.platform`, `scripts/platform-map.json`, or `impact-check`, defer to the coordination metadata and escalate the change to **`BOTH_REQUIRED`** until proven otherwise.
+Treat this classification as advisory only. If the heuristics and `docs/PLATFORM_COORDINATION.md` disagree, escalate the change to **`BOTH_REQUIRED`** until you have verified the sibling surface.
 
 ## Platform boundaries
 
-- Keep shared request/response contracts in `packages/shared/src/api-types/`
-- Do not duplicate coordinated `*Request` or `*Response` types inside platform-owned files
-- Never call `wx.*`, `Taro.*`, or `window.location` inside files marked `@platform-agnostic`
-- Treat mini-program payment intent flow as the source of truth; web must be reviewed whenever pricing assumptions or payment contracts move
+- Keep truly shared types and utilities in `packages/shared/src/` rather than creating silent duplicate copies in client pages/hooks
+- Review both `apps/mini-program/src/lib/api.ts` and `apps/user-client/src/hooks/useAuth.ts` when auth/session semantics move
+- Review both payment pages when pricing assumptions, payment status handling, or post-payment behavior changes
+- Treat mini-program payment intent flow as the strongest current reference; web must be reviewed whenever payment assumptions move
 
 ## Common mistakes to avoid
 
-- Changing a PRIMARY file and forgetting to inspect the mapped SECONDARY path
-- Editing `packages/shared/src/api-types/` without reviewing downstream consumers
-- Adding inline coordinated API types outside the shared api-types folder
-- Treating SECONDARY as an independent source of truth for business rules
-- Ignoring `impact-check` or `guardrails:platform` output because only one platform changed visibly
+- Changing `apps/mini-program/src/lib/api.ts` or `apps/user-client/src/hooks/useAuth.ts` without checking the sibling auth flow
+- Editing duplicated payment behavior in only one of the two payment pages
+- Assuming `packages/shared/src/` already contains dedicated payment/auth DTO modules when the playbook explicitly says it does not today
+- Treating web-only UI wiring as proof that payment or auth business rules are isolated
+- Skipping `docs/PLATFORM_COORDINATION.md` and relying on memory for cross-platform ownership
 
 ## Related files
 
-- `AGENTS.md` — repo-wide platform coordination instructions
-- `scripts/platform-map.json` — authoritative coordination map
-- `scripts/impact-check.js` — file/staged impact inspection
-- `scripts/check-platform-guardrails.mjs` — CI/local enforcement
-- `docs/COORDINATION_ROLLOUT.md` — adoption stages for the protocol
+- `docs/PLATFORM_COORDINATION.md` — canonical platform coordination playbook
+- `apps/mini-program/src/lib/api.ts` — current mini-program auth/API bootstrap surface
+- `apps/user-client/src/hooks/useAuth.ts` — current web auth/session bootstrap surface
+- `apps/user-client/src/lib/queryClient.ts` — current web API request wrapper
+- `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` — current web payment flow
+- `apps/mini-program/src/pages/blind-box-payment/index.tsx` — current mini-program payment flow
 
 ## Quick examples
 
 **User says:** "I changed `apps/mini-program/src/pages/blind-box-payment/index.tsx` — do I need to touch web too?"
-**Apply this skill by:** Checking the `.platform` marker, reading the `payment-flow` entry in `scripts/platform-map.json`, reviewing `apps/user-client/src/pages/BlindBoxPaymentPage/`, and running `npm run impact-check -- apps/mini-program/src/pages/blind-box-payment/index.tsx`.
-**Result:** The PRIMARY change is reviewed against the SECONDARY counterpart before merge.
+**Apply this skill by:** Reading `docs/PLATFORM_COORDINATION.md`, reviewing `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`, and deciding whether the change affects only mini-program runtime wiring or the shared payment behavior.
+**Result:** Duplicated payment logic is treated as `BOTH_REQUIRED` unless the change is clearly mini-program-only.
 
 ---
 
-**User says:** "I updated `packages/shared/src/api-types/auth.ts`."
-**Apply this skill by:** Treating the change as SHARED, reviewing the mapped auth-session consumers, and confirming both clients still match the new contract.
-**Result:** Shared contract changes do not drift from either platform implementation.
+**User says:** "I updated `apps/user-client/src/hooks/useAuth.ts`."
+**Apply this skill by:** Comparing the auth/session assumptions against `apps/mini-program/src/lib/api.ts`, then checking whether the change also affects shared types or only web-side state wiring.
+**Result:** Auth/session drift is caught before one client silently diverges.
 
 ## Troubleshooting
 
-- **`impact-check` says a sibling platform needs review** — open the mapped path from `scripts/platform-map.json` and confirm whether the contract, copy, or behavior still matches. If no code change is needed, document the reason in the PR.
-- **This looks platform-specific, but `impact-check` still asks for sibling review** — trust the `.platform` marker and `scripts/platform-map.json` first. A platform-specific API call does not override coordinated ownership or shared-contract dependencies; treat the change as `BOTH_REQUIRED` until you confirm the sibling path truly does not need an update.
-- **`guardrails:platform` fails on inline request/response types** — move the coordinated contract into `packages/shared/src/api-types/` and update imports instead of suppressing the warning.
-- **A `.platform` marker exists but the mapping is unclear** — inspect `scripts/platform-map.json`; if the area is missing, add the mapping before relying on ad-hoc coordination.
-- **A supposedly platform-agnostic file needs `wx` or `window.location`** — split platform-specific behavior into `*.mp.ts(x)` or `*.web.ts(x)` files and keep the shared file platform-agnostic.
+- **This looks platform-specific, but the playbook lists it as duplicated logic** — trust `docs/PLATFORM_COORDINATION.md` first and treat it as `BOTH_REQUIRED` until you confirm only renderer wiring changed.
+- **I changed `packages/shared/src/` and I am not sure who consumes it** — inspect both clients for imports and review the duplicated auth/payment hotspots listed in the playbook before merging.
+- **The web and mini-program files differ a lot already** — compare business intent, not syntax. If the same user-facing rule changed on one side, review the sibling side even if the implementations are structurally different.
+- **The mini-program build is unavailable in my environment** — run the web or shared checks that exist (`npm run typecheck -w @joyjoin/user-client` or `npm run check:clients`) and note the mini-program validation gap in the PR.
+- **I cannot tell whether this is business logic or renderer wiring** — default to `BOTH_REQUIRED` and explain in the PR why you kept or skipped the sibling change.
 
 ## Review checklist
 
-- [ ] The changed coordinated path's `.platform` role was checked before editing
-- [ ] The matching `scripts/platform-map.json` entry was reviewed
-- [ ] Sibling platform and shared contract consumers were reviewed where required
-- [ ] Coordinated request/response shapes still live in `packages/shared/src/api-types/`
-- [ ] `impact-check` or `impact-check:staged` was used for coordinated changes
-- [ ] `guardrails:platform` passes for the validated diff
+- [ ] `docs/PLATFORM_COORDINATION.md` was reviewed before treating the change as platform-local
+- [ ] The relevant sibling file was inspected for duplicated business intent
+- [ ] `packages/shared/src/` consumers were reviewed when shared types or utilities changed
+- [ ] The smallest existing validation for the touched client/shared surfaces was run
+- [ ] The PR explains why a sibling-platform change was or was not required
