@@ -8,26 +8,20 @@ import {
 } from '../lib/api'
 import { logInfo, logError } from '../lib/logger'
 
-/**
- * Maps the server-driven `nextStep` value to a mini-program page route.
- *
- * Onboarding pages (personality-test, essential-data, etc.) are not yet
- * built in the mini-program.  Until they exist, any step short of 'discover'
- * falls through to the discover landing so the user is never stranded.
- */
 function nextStepToRoute(step: OnboardingStep): string {
   switch (step) {
+    case 'onboarding':
+      return '/pages/onboarding/onboarding/index'
+    case 'personality-test':
+      return '/pages/onboarding/personality-test/index'
+    case 'essential-data':
+      return '/pages/onboarding/essential-data/index'
+    case 'extended-data':
+      return '/pages/onboarding/extended-data/index'
+    case 'profile-review':
+      return '/pages/onboarding/profile-review/index'
     case 'discover':
       return '/pages/discover/index'
-    // Onboarding pages (personality-test, essential-data, extended-data,
-    // profile-review, guide) are not yet built in the mini-program.
-    // Until they are added, all non-discover steps fall back to the
-    // discover landing so the user is never left stranded.
-    case 'onboarding':
-    case 'personality-test':
-    case 'essential-data':
-    case 'extended-data':
-    case 'profile-review':
     case 'guide':
     default:
       return '/pages/discover/index'

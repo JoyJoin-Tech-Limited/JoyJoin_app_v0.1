@@ -2,29 +2,17 @@ import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { apiRequest, authenticateMiniProgramUser } from '../../lib/api'
+import {
+  createMiniProgramPaymentIntent,
+  getPricing,
+  getUserCoupons,
+  type PaymentIntentResponse,
+  type PricingPlan,
+} from '@shared/api'
 import { logError, logWarn } from '../../lib/logger'
 import './index.scss'
 
 type PlanKey = 'vip_monthly' | 'vip_quarterly'
-
-interface PricingPlan {
-  id: string
-  planType: string
-  displayName: string
-  description?: string
-  price: number
-  originalPrice?: number | null
-}
-
-interface PaymentIntentResponse {
-  outTradeNo: string
-  timeStamp: string
-  nonceStr: string
-  package: string
-  signType: 'RSA'
-  paySign: string
-  type: string
-}
 
 const DEFAULT_PLANS: Record<PlanKey, PricingPlan> = {
   vip_monthly: {
@@ -97,12 +85,8 @@ export default function BlindBoxPaymentPage() {
       setOpenid(session.openid)
 
       const [pricing, coupons] = await Promise.all([
-        apiRequest<PricingPlan[]>({
-          path: '/api/pricing',
-        }).catch(() => []),
-        apiRequest<{ count?: number }>({
-          path: '/api/user/coupons',
-        }).catch(() => ({ count: 0 })),
+        getPricing(apiRequest).catch(() => []),
+        getUserCoupons(apiRequest).catch(() => ({ count: 0, coupons: [] })),
       ])
 
       const monthlyPlan = pricing.find((plan) => plan.planType === 'vip_monthly')
@@ -146,14 +130,10 @@ export default function BlindBoxPaymentPage() {
     setPageError('')
 
     try {
-      const paymentIntent = await apiRequest<PaymentIntentResponse>({
-        path: '/api/payments/miniprogram/create',
-        method: 'POST',
-        data: {
-          type: selectedPlan,
-          planId: selectedPlan,
-          openid,
-        },
+      const paymentIntent = await createMiniProgramPaymentIntent(apiRequest, {
+        type: selectedPlan,
+        planId: selectedPlan,
+        openid,
       })
 
       wx.setStorageSync('pending_order', paymentIntent.outTradeNo)
@@ -204,7 +184,7 @@ export default function BlindBoxPaymentPage() {
       <View className='payment-page__header'>
         <Button
           className='payment-page__back-button'
-          onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })}
+          onClick={() => Taro.navigateBack({ fail: () => Taro.redirectTo({ url: '/pages/profile/index' }) })}
         >
           返回
         </Button>
