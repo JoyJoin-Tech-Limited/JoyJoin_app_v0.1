@@ -7,7 +7,7 @@ ENV VITE_API_URL=$VITE_API_URL
 WORKDIR /app
 
 # Copy root package files for workspaces
-COPY package*.json ./
+COPY package*.json tsconfig.base.json ./
 COPY packages/shared/package.json ./packages/shared/
 
 # Copy app package file
