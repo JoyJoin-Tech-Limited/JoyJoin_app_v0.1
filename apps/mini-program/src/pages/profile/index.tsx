@@ -72,6 +72,15 @@ export default function ProfilePage() {
       <View className='profile-page__section'>
         <View
           className='profile-page__action-row'
+          onClick={() => Taro.navigateTo({ url: '/pages/edit-profile/index' })}
+        >
+          <Text className='profile-page__action-icon'>✏️</Text>
+          <Text className='profile-page__action-text'>编辑资料</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+
+        <View
+          className='profile-page__action-row'
           onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}
         >
           <Text className='profile-page__action-icon'>🎁</Text>
