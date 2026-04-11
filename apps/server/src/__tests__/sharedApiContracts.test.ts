@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getUserCoupons, type ApiTransport } from '../../../../packages/shared/src/api';
+import { getUserCoupons, type ApiTransport } from '@joyjoin/shared/api';
 
 describe('shared API coupon normalization', () => {
   it('preserves total count while deriving availableCount from coupon statuses', async () => {

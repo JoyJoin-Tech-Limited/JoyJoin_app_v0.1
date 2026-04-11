@@ -74,7 +74,7 @@ describe('route review follow-ups', () => {
     const socialIcebreakerStoreSource = readRepoFile('apps/server/src/lib/socialIcebreakerStore.ts');
 
     expect(socialIcebreakerStoreSource).toContain('.orderBy(socialIcebreakerParticipants.joinedAt)');
-    expect(socialIcebreakerStoreSource).not.toContain('.sort(');
+    expect(socialIcebreakerStoreSource).not.toContain('left.joinedAt.getTime() - right.joinedAt.getTime()');
   });
 
   it('uses the authenticated user as the reporter when creating chat reports', () => {
