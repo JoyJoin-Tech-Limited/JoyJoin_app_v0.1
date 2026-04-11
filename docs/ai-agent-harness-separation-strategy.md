@@ -4,6 +4,8 @@
 **Last updated:** 2026-04-02  
 **Scope:** AI product agent systems for Onboarding Discovery, Match Intelligence, and Event Momentum
 
+> **Read this first for current shipped AI behavior.** Pair it with `docs/AI_INTEGRATION_PLAN.md` only when planning future phases or reviewing rollout gates; the roadmap document is not authority for what is live today.
+
 > **Audit note (2026-03-30):** This document has been revised from a forward-looking reference memo
 > to a current-state + next-state architecture guide. Sections now distinguish between **✅ Active today**,
 > **⚡ Partially implemented / adjacent patterns already in repo**, and **🔲 Still proposed / future work**.

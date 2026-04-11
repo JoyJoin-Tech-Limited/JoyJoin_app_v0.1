@@ -1,0 +1,62 @@
+skill: frontend-performance-and-loading
+
+primary_ownership: >
+  Frontend loading and runtime performance strategy for route splitting,
+  Suspense, asset loading, list-size heuristics, and platform-appropriate
+  rendering decisions.
+
+use_when:
+  - adding or reviewing a page loading strategy on web or mini-program
+  - changing React.lazy, Suspense, LoadingScreen, or route-level bundle behavior
+  - optimizing asset loading, image decoding, or prefetch behavior
+  - reviewing long lists or grids for scroll jank risk
+  - investigating frontend load, transition, or interaction performance
+
+do_not_use_when:
+  - task is only about component placement or shared-vs-local ownership
+  - task is purely about tokens, colours, or brand styling
+  - task is only about measuring performance rather than implementing the loading strategy
+
+strong_triggers:
+  - React.lazy
+  - Suspense
+  - LoadingScreen
+  - docs/perf.md
+  - prefetchQuery
+  - loading="lazy"
+  - decoding="async"
+  - VirtualList
+  - bundle size
+  - route transition
+  - LCP
+  - TTI
+  - loading strategy
+
+owned_files:
+  - docs/perf.md
+  - .github/skills/design-system-governance/references/frontend-excellence-thresholds.md
+  - apps/user-client/src/App.tsx
+  - apps/user-client/src/pages/LandingPage.tsx
+  - apps/user-client/src/pages/DiscoverPage.tsx
+  - apps/user-client/src/pages/MatchingStatusPage.tsx
+  - apps/mini-program/src/pages/**
+  - scripts/test-performance-fixes.sh
+
+owned_paths: []
+
+owned_symbols:
+  - React.lazy
+  - Suspense
+  - LoadingScreen
+  - prefetchQuery
+  - VirtualList
+
+related_skills:
+  - skill: frontend-component-architecture
+    when: the task is primarily about where a component or wrapper should live
+  - skill: design-system-governance
+    when: the performance-sensitive change also alters tokens, variants, or accessibility states
+  - skill: platform-coordination-protocol
+    when: a performance-sensitive flow is duplicated across web and mini-program
+  - skill: performance-benchmark
+    when: the task is about measurement, baselines, or before-after comparison rather than implementation

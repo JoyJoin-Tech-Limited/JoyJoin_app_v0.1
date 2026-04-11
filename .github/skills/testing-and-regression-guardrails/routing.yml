@@ -47,6 +47,8 @@ owned_symbols:
   - socialIcebreakerRoutes.test.ts
 
 related_skills:
+  - skill: e2e-test-runner
+    when: the validation need is a smoke test, synthetic probe, or multi-step journey rather than unit or invariant coverage
   - skill: server-domain-architecture
     when: test covers route placement or domain ownership boundaries
   - skill: onboarding-state-architecture

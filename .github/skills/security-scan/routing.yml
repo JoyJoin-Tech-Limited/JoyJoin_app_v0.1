@@ -1,0 +1,53 @@
+skill: security-scan
+
+primary_ownership: >
+  Security scanning and posture review for auth/debug surfaces, secret handling,
+  dependency risk, CI guardrails, and production override exposure.
+
+use_when:
+  - running or summarizing a security scan
+  - checking dependency vulnerabilities or secret-handling posture
+  - auditing auth-debug surfaces or production override behavior
+  - reviewing whether CI security checks are sufficient
+  - identifying security gaps before launch or release review
+
+do_not_use_when:
+  - task is primarily about implementing auth or RBAC logic changes
+  - task is purely about generic code review with no security focus
+  - task is only about observability or metrics with no security concern
+
+strong_triggers:
+  - security scan
+  - dependency vulnerability
+  - vulnerability
+  - CodeQL
+  - npm audit
+  - secret leak
+  - production override
+  - ENABLE_DEV_AUTH_TOOLS
+  - ALLOW_PRODUCTION_AUTH_DEBUG
+  - auth policy
+
+owned_files:
+  - apps/server/src/auth/policy.ts
+  - apps/server/src/cli/bypassLogin.ts
+  - scripts/check-guardrails.mjs
+  - .github/workflows/cicd.yml
+  - docs/launch-risks.md
+  - docs/CLI_TOOLS.md
+
+owned_paths: []
+
+owned_symbols:
+  - DEV_AUTH_TOOLS_FLAG
+  - PROD_AUTH_DEBUG_OVERRIDE_FLAG
+  - assertProductionAuthDebugSurfaceAllowed
+
+related_skills:
+  - skill: auth-session-and-safety-boundaries
+    when: the security issue requires changing auth policy, route gating, or fail-closed behavior
+  - skill: admin-audit-and-rbac-governance
+    when: the security concern is specifically about admin authority, refunds, bans, or audit gaps
+  - skill: docs-sync
+    when: the security findings require updating launch-risk or operational documentation after the audit
+

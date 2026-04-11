@@ -1,6 +1,8 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { getReferralStats, type ReferralStatsResponse } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
@@ -8,13 +10,6 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import './index.scss'
-
-interface ReferralStats {
-  referralCode?: string
-  successfulInvites?: number
-  platformTotal?: number
-  [key: string]: unknown
-}
 
 const REWARD_TIERS = [
   { count: 1, reward: '7折优惠券 ×1', emoji: '🎫' },
@@ -26,9 +21,9 @@ export default function InvitePage() {
   const { isLoading: authLoading } = useAuthGuard()
   const { user } = useAuth()
 
-  const { data: stats, isLoading } = useQuery<ReferralStats>({
+  const { data: stats, isLoading } = useQuery<ReferralStatsResponse>({
     queryKey: ['mini-program', 'referral-stats'],
-    queryFn: () => apiRequest<ReferralStats>({ path: '/api/referrals/stats' }),
+    queryFn: () => getReferralStats(apiRequest),
     enabled: !authLoading,
   })
 
@@ -38,11 +33,43 @@ export default function InvitePage() {
 
   const referralCode = stats?.referralCode || (user as any)?.referralCode || '—'
   const invitedCount = stats?.successfulInvites ?? 0
+  const platformTotal = stats?.platformTotal ?? 0
+  const inviteLink = stats?.inviteLink ?? ''
+  const nextTier = REWARD_TIERS.find((tier) => invitedCount < tier.count)
 
-  const handleCopy = () => {
+  const inviteCopy = useMemo(() => {
+    const codeLine = `邀请码：${referralCode}`
+
+    if (inviteLink) {
+      return `和我一起加入 JoyJoin，看看这场有趣的盲盒社交活动吧。\n${inviteLink}\n${codeLine}`
+    }
+
+    return `和我一起加入 JoyJoin，注册时填写我的邀请码即可。\n${codeLine}`
+  }, [inviteLink, referralCode])
+
+  const handleCopyCode = () => {
     Taro.setClipboardData({
       data: referralCode,
       success: () => Taro.showToast({ title: '已复制', icon: 'success' }),
+    })
+  }
+
+  const handleCopyLink = () => {
+    if (!inviteLink) {
+      Taro.showToast({ title: '邀请链接暂不可用', icon: 'none' })
+      return
+    }
+
+    Taro.setClipboardData({
+      data: inviteLink,
+      success: () => Taro.showToast({ title: '已复制链接', icon: 'success' }),
+    })
+  }
+
+  const handleCopyInviteText = () => {
+    Taro.setClipboardData({
+      data: inviteCopy,
+      success: () => Taro.showToast({ title: '已复制文案', icon: 'success' }),
     })
   }
 
@@ -58,9 +85,14 @@ export default function InvitePage() {
       <Card className='invite-page__code-card'>
         <Text className='invite-page__code-label'>你的邀请码</Text>
         <Text className='invite-page__code-value'>{referralCode}</Text>
-        <Button variant='primary' className='invite-page__copy-btn' onClick={handleCopy}>
-          复制邀请码
-        </Button>
+        <View className='invite-page__code-actions'>
+          <Button variant='primary' className='invite-page__copy-btn' onClick={handleCopyCode}>
+            复制邀请码
+          </Button>
+          <Button variant='secondary' className='invite-page__copy-btn' onClick={handleCopyInviteText}>
+            复制邀请文案
+          </Button>
+        </View>
       </Card>
 
       {/* Stats */}
@@ -70,8 +102,29 @@ export default function InvitePage() {
           <Text className='invite-page__stat-label'>已邀请</Text>
         </Card>
         <Card className='invite-page__stat'>
-          <Text className='invite-page__stat-value'>{successful}</Text>
-          <Text className='invite-page__stat-label'>已注册</Text>
+          <Text className='invite-page__stat-value'>{platformTotal}</Text>
+          <Text className='invite-page__stat-label'>平台累计</Text>
+        </Card>
+      </View>
+
+      <View className='invite-page__section'>
+        <Text className='invite-page__section-title'>分享给朋友</Text>
+        <Card className='invite-page__link-card'>
+          <Text className='invite-page__link-label'>专属邀请链接</Text>
+          <Text className='invite-page__link-value'>{inviteLink || '当前先使用邀请码邀请好友加入'}</Text>
+          <View className='invite-page__link-actions'>
+            <Button variant='primary' className='invite-page__link-btn' onClick={handleCopyLink}>
+              复制邀请链接
+            </Button>
+            <Button variant='secondary' className='invite-page__link-btn' onClick={handleCopyInviteText}>
+              复制完整文案
+            </Button>
+          </View>
+          <Text className='invite-page__link-helper'>
+            {nextTier
+              ? `再邀请 ${nextTier.count - invitedCount} 人，就能解锁下一档奖励：${nextTier.reward}`
+              : '所有邀请奖励已解锁，继续邀请还能持续累积平台战绩。'}
+          </Text>
         </Card>
       </View>
 

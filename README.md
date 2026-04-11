@@ -396,8 +396,22 @@ The GitHub Actions pipeline (`.github/workflows/cicd.yml`) runs on push to `main
 3. **AI simulation test** — runs 100 AI simulation iterations
 4. **Deploy** — SSH deployment with Docker Compose + schema push
 
+## Documentation map
+
+Start with these files in order when you are new to the repo or touching an unfamiliar area:
+
+1. [`DEVELOPER_QUICK_REFERENCE.md`](./DEVELOPER_QUICK_REFERENCE.md) — canonical engineering guardrails, active-flow rules, and monorepo quick start
+2. [`PRODUCT_REQUIREMENTS.md`](./PRODUCT_REQUIREMENTS.md) — product canon, terminology, and active feature expectations
+3. [`docs/README.md`](./docs/README.md) — topic index for architecture, onboarding, AI, observability, platform coordination, and design docs
+4. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributor workflow, validation checklist, skills, agents, and review expectations
+
 ## Further documentation
 
 - [`DEVELOPER_QUICK_REFERENCE.md`](./DEVELOPER_QUICK_REFERENCE.md) — canonical developer guide
-- [`docs/`](./docs/) — architecture and feature documentation
+- [`PRODUCT_REQUIREMENTS.md`](./PRODUCT_REQUIREMENTS.md) — product canon and active terminology
+- [`docs/README.md`](./docs/README.md) — docs index by audience and topic
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributor workflow and validation checklist
+- [`.github/skills/README.md`](./.github/skills/README.md) — reusable engineering/domain skills
+- [`.github/agents/README.md`](./.github/agents/README.md) — focused custom agents for recurring workflows
+- [`apps/server/src/README.md`](./apps/server/src/README.md) — server domain ownership and file placement
 - [`packages/shared/src/README.md`](./packages/shared/src/README.md) — shared package boundary rules

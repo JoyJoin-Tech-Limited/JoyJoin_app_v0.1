@@ -148,6 +148,12 @@ Flag these patterns for closer inspection:
 - **Security regressions** — removed auth checks, weakened fail-closed behaviour, new unauthenticated endpoints
 - **Architecture drift** — patterns inconsistent with repo skills without documented justification
 
+## Quick examples
+
+- **Payment or webhook PR** — start with this skill, then load `reliability-and-state-integrity` and `auth-session-and-safety-boundaries`; verify idempotency, retry safety, and fail-closed auth around money movement.
+- **Frontend component PR** — start with this skill, then load `frontend-component-architecture` and `design-system-governance`; check whether the component belongs in the app or shared package and whether accessibility/token usage are preserved.
+- **Onboarding routing PR** — start with this skill, then load `onboarding-state-architecture`; confirm server-owned `nextStep` remains the authority and that tests cover fallback/loop regressions.
+
 ---
 
 ## Reviewer guidelines

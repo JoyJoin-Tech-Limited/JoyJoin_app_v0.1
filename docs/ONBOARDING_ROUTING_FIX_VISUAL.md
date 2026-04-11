@@ -1,5 +1,14 @@
 # Onboarding Routing Fix - Visual Summary
 
+> 📜 **HISTORICAL VISUAL SUMMARY — For Reference Only**
+>
+> This diagram explains the 2026-02-10 routing fix, but it predates later cleanup of the legacy `onboarding` step and deprecation of `guide` as a blocking onboarding destination.
+>
+> For the **current active onboarding authority**, use:
+> - `docs/onboarding-flow.md`
+> - `docs/architecture/current-state.md`
+> - `DEVELOPER_QUICK_REFERENCE.md`
+
 ## Before Fix (Broken State)
 
 ```

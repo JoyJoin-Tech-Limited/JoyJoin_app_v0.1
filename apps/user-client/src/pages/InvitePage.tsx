@@ -27,6 +27,7 @@ interface InviteStats {
   totalInvites: number;
   successfulInvites: number;
   platformTotal: number;
+  inviteLink?: string;
 }
 
 const TIER_REWARDS = [
@@ -46,9 +47,11 @@ export default function InvitePage() {
   });
 
   const referralCode = stats?.referralCode || "";
-  const inviteLink = typeof window !== "undefined" && referralCode
-    ? `${window.location.origin}/invite/${referralCode}` 
-    : "";
+  const inviteLink = stats?.inviteLink || (
+    typeof window !== "undefined" && referralCode
+      ? `${window.location.origin}/invite/${referralCode}`
+      : ""
+  );
 
   const successfulInvites = stats?.successfulInvites || 0;
   const platformTotal = stats?.platformTotal || 0;

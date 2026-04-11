@@ -44,4 +44,28 @@ describe('route review follow-ups', () => {
     expect(routesSource).toContain('fromCache: groupAnalysis.fromCache');
     expect(routesSource).toContain('provider: groupAnalysis.provider');
   });
+
+  it('persists blind-box attendance confirmations and keeps pool-group age payloads privacy-safe', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+
+    expect(routesSource).toContain("await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed')");
+    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all')");
+    expect(routesSource).not.toContain('members: groupMembers');
+  });
+
+  it('returns a stable coupon response object and preserves total-versus-available semantics', () => {
+    const assessmentRoutesSource = readRepoFile('apps/server/src/routes/domains/assessment.ts');
+    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+
+    expect(assessmentRoutesSource).toContain('res.json({ count: coupons.length, coupons });');
+    expect(sharedApiSource).toContain('availableCount');
+    expect(sharedApiSource).toContain('count: explicitCount ?? coupons.length');
+  });
+
+  it('uses the authenticated user as the reporter when creating chat reports', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+
+    expect(routesSource).toContain('reportedBy: userId');
+    expect(routesSource).toContain('return res.status(401).json({ message: "Authentication required" });');
+  });
 });

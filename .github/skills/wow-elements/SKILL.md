@@ -101,6 +101,12 @@ Before building a new animated component, check `packages/shared/src/ui/` for ex
 ### When to extract a hook or utility
 Only when the exact same animation pattern appears in 3+ unrelated places. A `useCompletionPulse()` hook is justified. A one-time animation inline is not worth abstracting.
 
+## Quick examples
+
+- **Onboarding completion** — add a one-time soft checkmark reveal and restrained CTA pulse after the submission succeeds, with reduced-motion fallback.
+- **Match reveal entrance** — stagger only the title, summary, and primary CTA after data is ready; do not animate the entire screen tree.
+- **Empty state polish** — pair a short hopeful line of copy with a subtle shimmer or fade-in illustration, keeping the state fully readable without motion.
+
 ## Common mistakes to avoid
 
 | Mistake | Impact | Fix |
