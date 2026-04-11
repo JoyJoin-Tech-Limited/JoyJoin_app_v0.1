@@ -296,6 +296,18 @@ function createFinding({ moduleKey, severity, filePath = null, line = null, mess
   };
 }
 
+function relativizePath(repoRoot, filePath) {
+  if (!filePath) {
+    return null;
+  }
+
+  if (path.isAbsolute(filePath)) {
+    return path.relative(repoRoot, filePath);
+  }
+
+  return filePath;
+}
+
 function normalizeDiscoveredPath(repoRoot, baseDir, filePath) {
   if (!filePath) {
     return null;
