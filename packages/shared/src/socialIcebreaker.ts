@@ -66,6 +66,14 @@ export interface PersonalityDiceChallenge {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
+export interface SocialSessionParticipantSummary {
+  userId: string;
+  displayName: string;
+  joinedAt?: string;
+  lastSeenAt?: string;
+  isActive?: boolean;
+}
+
 export interface PulseCheckResult {
   userId: string;
   vibe: 1 | 2 | 3; // 1=cold, 2=warm, 3=fire
@@ -89,6 +97,8 @@ export interface SocialSessionState {
   playerCount: number;
   /** Number of participants who have sent a heartbeat in the last 30 seconds. */
   activePlayerCount?: number;
+  /** Joined roster with presence metadata for client-side participant rendering. */
+  joinedParticipants?: SocialSessionParticipantSummary[];
   phaseStartedAt: number; // timestamp of current phase start
   sessionStartedAt: number; // timestamp of session creation
   /** ISO timestamp when the session expires; undefined for in-memory legacy sessions. */

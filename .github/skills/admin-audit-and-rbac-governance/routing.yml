@@ -1,0 +1,60 @@
+skill: admin-audit-and-rbac-governance
+
+primary_ownership: >
+  Admin RBAC role hierarchy, endpoint-to-permission mapping, and mandatory audit
+  logging for sensitive admin actions.
+
+use_when:
+  - implementing or reviewing an admin endpoint, admin portal mutation, or privileged workflow
+  - deciding whether an action should use requireAdmin, requireOperatorOrAbove, or requireSuperAdmin
+  - adding audit logging for refunds, bans, password resets, attendance overrides, or admin account changes
+  - debugging missing audit trails or unexpected admin 403 responses
+
+do_not_use_when:
+  - task is purely about generic route placement structure
+  - task is about auth or session policy outside the admin surface
+  - task is about generic logging or metrics with no admin RBAC or audit concern
+
+strong_triggers:
+  - /api/admin
+  - requireSuperAdmin
+  - requireOperatorOrAbove
+  - logAdminAudit
+  - audit log this admin action
+  - audit logging
+  - ADMIN_PASSWORD_RESET
+  - USER_BANNED
+  - USER_UNBANNED
+  - PAYMENT_REFUND_INITIATED
+  - attendance override
+  - admin portal
+  - refund payment
+  - admin accounts
+  - super_admin only
+  - why is this admin getting 403
+
+owned_files:
+  - apps/server/src/lib/adminAuditLogger.ts
+  - apps/server/src/routes/domains/admin.ts
+  - apps/admin-client/src/pages/admin/**
+  - docs/admin-rbac-matrix.md
+  - docs/runbooks/admin-incident-handling.md
+
+owned_paths:
+  - /api/admin/**
+
+owned_symbols:
+  - logAdminAudit
+  - ADMIN_AUDIT_ACTIONS
+  - requireSuperAdmin
+  - requireOperatorOrAbove
+
+related_skills:
+  - skill: auth-session-and-safety-boundaries
+    when: admin work changes session policy, middleware behavior, or fail-closed auth rules
+  - skill: platform-observability-and-ops
+    when: admin actions need broader logging, request correlation, or alerting beyond audit records
+  - skill: testing-and-regression-guardrails
+    when: locking in RBAC or audit-log expectations with regression coverage
+  - skill: server-domain-architecture
+    when: the admin change requires a new route, repository, or domain-layer placement decision

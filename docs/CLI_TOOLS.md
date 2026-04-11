@@ -1,16 +1,18 @@
 # JoyJoin Development Tools - CLI and Browser Console
 
+> **Status:** Local/developer tooling reference; last verified 2026-04-11 against `apps/server/src/auth/policy.ts`, `apps/server/src/cli/`, and `apps/user-client/src/App.tsx`.
+
 ## ⚠️ Security Warning
 
-**IMPORTANT**: These tools are currently enabled in both development and production environments for internal testing purposes. 
+The auth/debug tooling posture has changed since this document was first written:
 
-**TODO Before Production Launch:**
-- [ ] Disable browser console dev tools in production
-- [ ] Restrict CLI tools to development environment only  
-- [ ] Disable API endpoints in production
-- [ ] Remove or protect the ADMIN_CREATE_SECRET_KEY
+- Server auth/debug surfaces fail closed in production by default.
+- Non-production auth/debug tooling requires explicit opt-in via `ENABLE_DEV_AUTH_TOOLS=1`.
+- Production auth/debug overrides require `ALLOW_PRODUCTION_AUTH_DEBUG=1` and should only be used for short-lived, audited emergency sessions.
+- Browser console dev tools load only in local dev builds when both `import.meta.env.DEV` and `VITE_ENABLE_DEV_TOOLS=1` are true.
+- Privileged bootstrap CLIs still rely on `ADMIN_CREATE_SECRET_KEY` and should be treated as controlled operational tooling.
 
-All operations require secret key authentication. Never share the secret key publicly.
+Never share the secret key publicly, and rotate it after any emergency or high-risk use.
 
 ---
 
@@ -27,6 +29,8 @@ These tools enable developers to:
 - Bypass personality tests for testing
 - Set up test data without going through the full onboarding flow
 - Debug authentication and user flows
+
+The source of truth for auth-adjacent gating is `apps/server/src/auth/policy.ts`.
 
 ---
 
@@ -765,10 +769,10 @@ npm run user:create
    - No extra spaces
    - Exact value: `BYPASSSECRET12345678`
 
-4. For production deployment:
-   - Add environment variable to hosting platform
-   - Redeploy application
-   - Verify with `window.dev.checkSecretKey()`
+4. For controlled staging or emergency production use:
+  - Confirm whether the surface you need is actually allowed by `apps/server/src/auth/policy.ts`
+  - Set only the minimum required override flags for the session
+  - Rotate `ADMIN_CREATE_SECRET_KEY` after the session if exposure risk changed
 
 ---
 
@@ -882,42 +886,22 @@ This is actually fine! The tools automatically update existing users:
 
 ---
 
-### Production Environment (Temporary)
+### Production posture
 
-⚠️ **Current State:**
-These tools are currently enabled in production for internal testing.
+⚠️ **Current source-of-truth behavior:**
 
-✅ **Before Public Launch:**
-1. Disable browser console dev tools:
-   ```typescript
-   // In App.tsx, wrap dev tools loading:
-   if (process.env.NODE_ENV === 'development') {
-     // Load dev tools
-   }
-   ```
+1. Browser console tools are not registered in production builds because the client only loads them when `import.meta.env.DEV` and `VITE_ENABLE_DEV_TOOLS=1` are both true.
+2. Auth-adjacent debug surfaces are governed by `apps/server/src/auth/policy.ts`:
+  - Non-production: require `ENABLE_DEV_AUTH_TOOLS=1`
+  - Production: require `ALLOW_PRODUCTION_AUTH_DEBUG=1` and should be audited/temporary
+3. `createUserAccount` and `bypassLogin` explicitly enforce that production override policy.
+4. Bootstrap scripts such as `admin:create` still depend on `ADMIN_CREATE_SECRET_KEY`; they should remain tightly controlled and should not be treated as routine production workflows.
 
-2. Restrict API endpoints:
-   ```typescript
-   // In routes.ts, add environment check:
-   if (process.env.NODE_ENV !== 'development') {
-     return res.status(404).json({ message: 'Not found' });
-   }
-   ```
+✅ **Operational guidance:**
 
-3. Disable CLI tools in production:
-   ```typescript
-   // In CLI scripts, add environment check:
-   if (process.env.NODE_ENV === 'production') {
-     console.error('CLI tools disabled in production');
-     process.exit(1);
-   }
-   ```
-
-4. Remove or rotate the secret key:
-   ```bash
-   # In production .env, remove or change:
-   # ADMIN_CREATE_SECRET_KEY=<new-secure-key>
-   ```
+- Keep `ADMIN_CREATE_SECRET_KEY` unique per environment.
+- Rotate the key after emergency debugging or privileged account bootstrap sessions.
+- Treat any production override as an audited exception, not a normal path.
 
 ---
 

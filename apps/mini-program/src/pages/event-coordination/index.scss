@@ -6,6 +6,7 @@
   flex-direction: column;
   height: 100vh;
   background: $color-bg;
+  position: relative;
 
   // ── Header ────────────────────────────────────────────────────
   &__header {
@@ -26,6 +27,13 @@
     display: block;
     font-size: $font-size-sm;
     color: $color-text-secondary;
+    margin-top: $spacing-xs;
+  }
+
+  &__summary {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
     margin-top: $spacing-xs;
   }
 
@@ -50,6 +58,10 @@
     align-items: center;
     width: 120rpx;
     flex-shrink: 0;
+
+    &:active {
+      transform: scale(0.96);
+    }
   }
 
   &__participant-avatar {
@@ -122,6 +134,13 @@
     font-size: $font-size-base;
     color: $color-primary;
     font-weight: $font-weight-medium;
+  }
+
+  &__lock-hint {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    line-height: 1.7;
+    text-align: center;
   }
 
   // ── Message Stream ────────────────────────────────────────────
@@ -241,6 +260,10 @@
   &__message-avatar-wrap {
     flex-shrink: 0;
     margin-top: 4rpx;
+
+    &:active {
+      transform: scale(0.96);
+    }
   }
 
   &__message-avatar {
@@ -268,11 +291,26 @@
     max-width: 70%;
   }
 
+  &__message-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: 4rpx;
+  }
+
   &__message-sender {
     font-size: $font-size-xs;
     color: $color-text-secondary;
-    margin-bottom: 4rpx;
     @include text-truncate;
+  }
+
+  &__message-tag {
+    font-size: 20rpx;
+    color: $color-primary;
+    background: rgba($color-primary, 0.1);
+    border-radius: 999rpx;
+    padding: 4rpx $spacing-xs;
+    flex-shrink: 0;
   }
 
   &__message-bubble {
@@ -289,7 +327,27 @@
   &__message-time {
     font-size: 20rpx;
     color: $color-text-muted;
+  }
+
+  &__message-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
     margin-top: 4rpx;
+  }
+
+  &__message-action,
+  &__message-status {
+    font-size: 20rpx;
+  }
+
+  &__message-action {
+    color: $color-primary;
+  }
+
+  &__message-status {
+    color: $color-text-muted;
   }
 
   // ── Input Bar ─────────────────────────────────────────────────
@@ -338,6 +396,196 @@
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-text-white;
+  }
+
+  // ── Overlay Sheets ────────────────────────────────────────────
+  &__overlay {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: $spacing-xl $container-padding calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  }
+
+  &__sheet {
+    width: 100%;
+    max-height: 85vh;
+  }
+
+  &__sheet-card {
+    padding: $spacing-lg;
+    border-radius: $card-radius-lg;
+    max-height: 85vh;
+    overflow: hidden;
+  }
+
+  &__sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__sheet-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__sheet-close {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__sheet-section {
+    margin-bottom: $spacing-lg;
+  }
+
+  &__sheet-section-title {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__sheet-note {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.7;
+  }
+
+  &__sheet-actions {
+    display: flex;
+    gap: $spacing-sm;
+    margin-top: $spacing-lg;
+  }
+
+  &__sheet-btn {
+    flex: 1;
+  }
+
+  // ── Profile Sheet ─────────────────────────────────────────────
+  &__profile-hero {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__profile-avatar {
+    width: 112rpx;
+    height: 112rpx;
+    border-radius: 50%;
+    overflow: hidden;
+    background: $color-primary-light;
+    flex-shrink: 0;
+
+    &--placeholder {
+      @include flex-center;
+      background: $brand-gradient;
+    }
+  }
+
+  &__profile-avatar-initial {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-white;
+  }
+
+  &__profile-copy {
+    min-width: 0;
+  }
+
+  &__profile-name {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__profile-archetype {
+    display: inline-flex;
+    margin-top: $spacing-xs;
+    padding: 6rpx $spacing-sm;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.1);
+    color: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__chip-row,
+  &__tag-row,
+  &__report-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__chip,
+  &__tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10rpx $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-text-primary, 0.05);
+  }
+
+  &__chip-text,
+  &__tag-text {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  // ── Report Sheet ──────────────────────────────────────────────
+  &__report-preview {
+    display: block;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.7;
+  }
+
+  &__report-option {
+    min-width: calc(50% - #{$spacing-sm});
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    border: 1rpx solid transparent;
+
+    &--active {
+      border-color: rgba($color-primary, 0.3);
+      background: rgba($color-primary, 0.1);
+    }
+  }
+
+  &__report-option-emoji {
+    font-size: $font-size-base;
+  }
+
+  &__report-option-label {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__report-textarea {
+    width: 100%;
+    min-height: 180rpx;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.6;
+    box-sizing: border-box;
   }
 
   // ── Error State ───────────────────────────────────────────────

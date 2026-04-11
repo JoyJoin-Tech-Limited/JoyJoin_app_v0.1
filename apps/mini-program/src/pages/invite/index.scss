@@ -23,6 +23,7 @@
 
   &__code-label { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-bottom: $spacing-sm; }
   &__code-value { display: block; font-size: $font-size-2xl; font-weight: $font-weight-black; color: $color-primary; letter-spacing: 8rpx; margin-bottom: $spacing-lg; }
+  &__code-actions { display: flex; flex-direction: column; gap: $spacing-sm; }
   &__copy-btn { width: 100%; }
 
   &__stats {
@@ -48,6 +49,48 @@
   }
 
   &__section-title { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; color: $color-text-primary; margin-bottom: $spacing-md; }
+
+  &__link-card {
+    @include card;
+    padding: $spacing-lg;
+  }
+
+  &__link-label {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__link-value {
+    display: block;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+
+  &__link-actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  &__link-btn {
+    width: 100%;
+  }
+
+  &__link-helper {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-top: $spacing-md;
+  }
 
   &__tier {
     @include card;

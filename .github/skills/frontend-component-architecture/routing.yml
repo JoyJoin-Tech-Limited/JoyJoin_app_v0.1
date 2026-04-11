@@ -46,6 +46,8 @@ owned_symbols:
 related_skills:
   - skill: design-system-governance
     when: component uses CSS tokens, CVA variants, or has accessibility requirements
+  - skill: frontend-performance-and-loading
+    when: a component or page change also affects lazy loading, loading states, or long-list performance behavior
   - skill: testing-and-regression-guardrails
     when: changing shared component invariants that need regression coverage
   - skill: wow-elements

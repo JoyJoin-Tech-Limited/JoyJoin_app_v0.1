@@ -1,32 +1,40 @@
 # Mobile UI Design Specification - Implementation Summary
 
+> **Status:** Active reference for the web-mobile implementation in `apps/user-client`; last verified 2026-04-11.
+> **Scope:** This document covers the mobile-first React/Vite implementation that came from the original mobile design specification. The repo now also has an active `apps/mini-program` client built with Taro + React, so mini-program execution should be read alongside `docs/PLATFORM_COORDINATION.md` rather than treated as a future port.
+
 ## Overview
 
-This document summarizes the implementation of the Mobile UI Design Specification for the JoyJoin application. The implementation provides a mobile-first component library and reference pages following the design principles outlined in the specification.
+This document summarizes the implementation of the Mobile UI Design Specification for the JoyJoin application. It documents the mobile-first component library and reference pages in `apps/user-client`, and it explains how that work relates to the now-active Taro mini-program workspace.
 
 ## Implementation Approach
 
 ### Platform Strategy
 
-The specification was written for WeChat Mini Program (WXML/WXSS/rpx), but the JoyJoin app is built as a **React web application**. Our implementation:
+The original specification was written with WeChat Mini Program concepts (`rpx`, WXML/WXSS) in mind, but the active codebase now has two frontend targets:
 
-1. **React Web Components** (Primary)
+1. **React web mobile implementation** (documented here)
    - Mobile-optimized React components with TypeScript
    - Tailwind CSS for styling
-   - Progressive Web App (PWA) ready
+  - Progressive Web App (PWA) ready for `apps/user-client`
 
-2. **WeChat Mini Program Reference** (Future)
-   - Complete reference documentation provided
-   - WXML/WXSS/JS code examples
-   - Ready for future porting
+2. **Taro mini-program client** (active sibling platform)
+  - Lives in `apps/mini-program`
+  - Uses Taro + React rather than raw WXML/WXSS pages
+  - Shares design intent with the web client, but still requires explicit parity review and platform-specific adaptation
+
+3. **Legacy raw WeChat reference material** (supplemental)
+  - `docs/wechat-mini-program-reference.md` remains useful for original design translation concepts
+  - It is no longer the source of truth for the active mini-program implementation
 
 ### Technology Stack
 
-- **Framework**: React 18.3.1 + TypeScript
-- **Styling**: Tailwind CSS 3.4.17
-- **Build Tool**: Vite 5.4.20
-- **Router**: Wouter 3.3.5
+- **Web implementation framework**: React 18 + TypeScript
+- **Web styling**: Tailwind CSS
+- **Web build tool**: Vite
+- **Web router**: Wouter
 - **Icons**: Lucide React
+- **Sibling mini-program runtime**: Taro + React in `apps/mini-program`
 
 ## Implemented Components
 
@@ -233,19 +241,16 @@ interface MobileContainerProps {
 - Accessibility guidelines
 - Quality checklist
 
-### 2. WeChat Mini Program Reference
+### 2. Mini-program references and coordination
 
-**Location**: `docs/wechat-mini-program-reference.md`
+**Primary active coordination doc**: `docs/PLATFORM_COORDINATION.md`
 
-**Contents**:
-- Complete WXML/WXSS/JS implementation examples
-- Project structure guide
-- Component conversion examples
-- rpx unit conversion guide
-- WeChat API reference
-- Limitations and workarounds
-- Testing strategies
-- Deployment checklist
+**Supplemental design translation reference**: `docs/wechat-mini-program-reference.md`
+
+**Use these for**:
+- Current parity gaps and platform drift tracking
+- Mini-program architecture decisions and ownership boundaries
+- Legacy design-translation patterns from raw WeChat concepts into the current frontend system
 
 ## Testing
 
@@ -388,12 +393,14 @@ npm run dev
 **Target Browsers**:
 - iOS Safari 14+
 - Android Chrome 90+
-- WeChat WebView (future)
+- Mobile WebView scenarios used by the web client
 
 **Progressive Enhancement**:
 - Core functionality works without JS
 - Fallbacks for unsupported features
 - Safe area insets with fallback values
+
+The active mini-program target is handled separately through `apps/mini-program` and should not be treated as a browser-support extension of this web implementation.
 
 ## Future Enhancements
 
@@ -409,7 +416,8 @@ npm run dev
 - [ ] Pull-to-refresh
 
 ### Phase 3 (Future)
-- [ ] WeChat Mini Program port
+- [ ] Extract more shared mobile primitives/contracts across web and mini-program
+- [ ] Reduce web/mini-program parity drift in payment/auth flows
 - [ ] Native mobile apps (React Native)
 - [ ] Advanced animations
 - [ ] Offline support (PWA)
@@ -486,14 +494,15 @@ Before using in production:
    - May not account for browser chrome
 
 3. **Gradient Text**
-   - WeChat Mini Program doesn't support `background-clip: text`
-   - Workaround: Use gradient image or solid color
+  - Browser support is solid in the web implementation, but mini-program renderers may still require a non-`background-clip` fallback
+  - Workaround: Use gradient image or solid color where platform support is limited
 
 ## Resources
 
 ### Documentation
 
 - [Mobile Design System](./mobile-design-system.md)
+- [Platform Coordination](./PLATFORM_COORDINATION.md)
 - [WeChat Mini Program Reference](./wechat-mini-program-reference.md)
 - [Original Specification](../problem_statement.md)
 
@@ -510,7 +519,7 @@ Before using in production:
 
 ## Conclusion
 
-The mobile UI design specification has been successfully implemented for the JoyJoin React web application. The implementation includes:
+The mobile UI design specification has been successfully implemented for the JoyJoin web client, and it now sits beside an active Taro mini-program workspace rather than a hypothetical future port. The implementation includes:
 
 1. ✅ **Component Library**: 3 reusable mobile-optimized components
 2. ✅ **Reference Page**: Complete mobile landing page example
@@ -520,7 +529,7 @@ The mobile UI design specification has been successfully implemented for the Joy
 6. ✅ **Performance**: Optimized animations and CSS containment
 7. ✅ **Build**: Verified successful build and dev server
 
-The implementation is ready for integration into the main application and provides a solid foundation for future mobile-first development and potential WeChat Mini Program porting.
+The implementation is ready for continued integration into the main application and provides a solid foundation for ongoing mobile-first development, shared design alignment, and future parity work with the Taro mini-program client.
 
 ---
 

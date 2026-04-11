@@ -1,5 +1,8 @@
 # JoyJoin User Onboarding Flow
 
+> **Status:** Active onboarding reference — last verified 2026-04-11 against `apps/server/src/routes/domains/auth.ts`, `apps/user-client/src/hooks/useAuth.ts`, and `apps/user-client/src/features/onboarding/active/`.
+> **Authority:** Post-auth progression is server-owned via `nextStep` from `GET /api/auth/user`. Historical routing-fix docs in this directory are reference-only.
+
 ## Overview (Updated 2026-04-07)
 
 JoyJoin uses a **value-first** onboarding approach:
@@ -26,7 +29,7 @@ Landing → Personality Test (Anonymous) → Results → WeChat Login →
 Essential Data → Extended Data → Profile Review → Discover Page
 ```
 
-**Expected Impact:** +15% signup conversion (based on Soul, 16Personalities benchmarks)
+**Original planning target:** +15% signup conversion (based on Soul, 16Personalities benchmarks). Treat this as historical planning context, not a live KPI report.
 
 ---
 
@@ -238,18 +241,14 @@ The enrichment card is shown via the `ProfileEnrichmentCard` component on the Di
 
 ```typescript
 const { 
-  // Server-driven navigation (recommended)
-  nextStep,                    // Next route
-  profileEssentialComplete,    // Essential data complete
-  profileExtendedComplete,     // Extended data complete
-  activeAssessmentSessionId,   // Active assessment session
-  
-  // Legacy computed fields (still available)
-  needsRegistration,       
-  needsPersonalityTest,    
-  needsProfileSetup,       
+  nextStep,                  // Server-calculated next route
+  profileEssentialComplete,  // Essential-data completion signal
+  profileExtendedComplete,   // Profile-enrichment completeness signal
+  activeAssessmentSessionId, // Active assessment session
 } = useAuth();
 ```
+
+Use `nextStep` as the only routing authority. Do not add or depend on legacy `needs*` onboarding helpers.
 
 ---
 
@@ -281,22 +280,25 @@ These fields remain in the database schema for backward compatibility but are no
 
 ### State Management
 - `hasCompletedPersonalityTest`: Set after WeChat login with test results
-- `hasCompletedEssentialData`: Set after essential data submission
+- `profileEssentialComplete`: Server-computed completion signal returned by `/api/auth/user`; there is no canonical persisted `hasCompletedEssentialData` flag in the active flow
 - `hasCompletedInterestsCarousel`: Set after interests carousel (`/onboarding/extended`) is completed or skipped
+- `hasSeenProfileReview`: Set after `POST /api/profile-review/complete`; the client then re-fetches `/api/auth/user` and follows the updated `nextStep`
 
 ---
 
-## Performance Benchmarks
+## Conversion Targets
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| Landing → Start Test | 70% | TBD |
-| Complete Test | 85% | TBD |
-| Test → Login | 65% | TBD |
-| Login → Essential Data | 80% | TBD |
-| **Overall Conversion** | **38%** | **TBD** |
+The active docs do not maintain a measured conversion benchmark table for this flow. Treat the values below as planning targets only, not live observed conversion metrics.
 
-*Benchmarks based on Soul (60%), 16Personalities (55%), industry averages*
+| Metric | Planning target | Current measurement status |
+|--------|-----------------|----------------------------|
+| Landing → Start Test | 70% | Not formalized in active docs |
+| Complete Test | 85% | Not formalized in active docs |
+| Test → Login | 65% | Not formalized in active docs |
+| Login → Essential Data | 80% | Not formalized in active docs |
+| **Overall Conversion** | **38%** | **Not formalized in active docs** |
+
+*Targets were originally derived from Soul (60%), 16Personalities (55%), and internal planning assumptions.*
 
 ---
 

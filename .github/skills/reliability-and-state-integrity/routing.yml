@@ -53,6 +53,8 @@ owned_symbols:
 related_skills:
   - skill: server-domain-architecture
     when: determining where reliable/transactional logic should live in the domain structure
+  - skill: database-migration-safety
+    when: reliability concerns come from schema backfills, constraint cleanup, or staged migration rollout
   - skill: testing-and-regression-guardrails
     when: adding invariant tests for idempotency or transaction boundaries
   - skill: platform-observability-and-ops
