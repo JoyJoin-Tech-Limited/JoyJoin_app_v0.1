@@ -8,6 +8,7 @@ interface UnifiedAssessmentResult {
   algorithmVersion: string;
   primaryArchetype: string;
   secondaryArchetype?: string;
+  topArchetypes?: Array<{ archetype: string; score: number; confidence?: number }> | null;
   affinityScore: number;
   opennessScore: number;
   conscientiousnessScore: number;
@@ -27,6 +28,7 @@ function transformToUnifiedResult(result: AssessmentResult, completedAt: string)
     algorithmVersion: 'v2',
     primaryArchetype: result.primaryArchetype,
     secondaryArchetype: result.secondaryArchetype,
+    topArchetypes: result.topMatches || null,
     // Trait scores are already 0-100 from adaptive engine
     affinityScore: result.traitScores.A || 0,
     opennessScore: result.traitScores.O || 0,

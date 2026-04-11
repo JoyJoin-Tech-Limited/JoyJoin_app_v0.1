@@ -2,8 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 品牌标题字体 - 使用站酷庆科黄油体 (ZCOOL QingKe HuangYou) */
-/* 圆润如黄油，温暖亲和，免费商用 (SIL OFL 1.1) */
+/* 品牌标题字体：当前使用 Outfit 与系统中文回退；保留兼容类以避免旧界面漂移。 */
 
 /* LIGHT MODE */
 :root {
@@ -82,6 +81,18 @@
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
+  /* ── JoyJoin semantic font roles ──────────────────────────────────
+     Admin client intentionally uses system / Google-loaded fallbacks.
+     No self-hosted @font-face is loaded here; the admin dashboard
+     prioritises density and performance over custom display fonts.
+     font-ui          → system Chinese stack; default for all dense UI
+     font-cn-display  → system Chinese stack (no AlibabaPuHuiTi in admin);
+                        for branded headings / emotional moments
+     font-en-brand    → Outfit (loaded via Google Fonts); for English
+                        wordmark and brand accent surfaces             */
+  --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-cn-display: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-en-brand: 'Outfit', system-ui, sans-serif;
   --radius: .5rem; /* 8px */
   --shadow-2xs: 0px 1px 2px 0px hsl(220 10% 10% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(220 10% 10% / 0.08);
@@ -429,9 +440,14 @@
     animation: progressFill 0.6s ease-out forwards;
   }
 
-  /* 品牌字体 - 用于情感时刻的标题 */
+  /* 中文品牌展示字体兼容别名（admin-client local mapping） */
   .font-brand {
-    font-family: 'ZCOOL QingKe HuangYou', 'Noto Sans SC', sans-serif;
+    font-family: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  }
+
+  /* 英文品牌展示字体（admin-client local mapping） */
+  .font-en-brand {
+    font-family: 'Outfit', system-ui, sans-serif;
   }
 
   /* 隐藏滚动条 */

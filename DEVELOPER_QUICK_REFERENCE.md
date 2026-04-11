@@ -15,7 +15,7 @@
 - ✅ Base everything on the **current, active codebase** — routes, components, schemas, and API endpoints that exist and are actively used.
 - ✅ Check this file (`DEVELOPER_QUICK_REFERENCE.md`) and `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology* for the authoritative active-flow reference.
 - ❌ **Never** refer to, reintroduce, or base decisions on **legacy flows, deprecated components, old routes, or removed features** — even if they appear in older git history, archived docs, or comments marked "TODO: restore".
-- ❌ **Never** treat `QUICK_REFERENCE.md` (the older file) as authoritative — it is a supplementary reference only and some sections are outdated. `DEVELOPER_QUICK_REFERENCE.md` supersedes it.
+- ❌ **Never** treat `QUICK_REFERENCE.md` as authoritative — it is now a legacy redirect-only stub kept for path compatibility. Use this file, `PRODUCT_REQUIREMENTS.md`, and `docs/README.md` instead.
 - ❌ **Never** use deprecated terminology from §*Product Canon* — see `PRODUCT_REQUIREMENTS.md` for the current canonical terms.
 
 ### What counts as "legacy" (do not use)?
@@ -41,7 +41,9 @@
 - If you ever copied values from the removed tracked `.env` or the old hard-coded deployment database URL, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, and `ADMIN_CREATE_SECRET_KEY`.
 
 ### Guardrails: latent-state and multimodal AI work stays planning-only until gates pass
+- Read `docs/ai-agent-harness-separation-strategy.md` first for **current shipped AI behavior, architectural invariants, and separation boundaries**.
 - `docs/AI_INTEGRATION_PLAN.md` Phase 3 (`user_latent_state`, behavioral-history explanations, multimodal enrichment) is a **strategy / planning document**, not an instruction to add runtime code now.
+- Use `docs/AI_INTEGRATION_PLAN.md` for **phased roadmap, rollout gates, and exit criteria** only; it must not be used by itself to justify runtime features.
 - Do **not** add schema migrations, background jobs, scoring inputs, API routes, consent/upload flows, or user-facing UI for latent-state or multimodal features until the documented prerequisites, consent requirements, fairness review, observability, and explicit product/engineering gate approval are all satisfied.
 - Planning-only shared contracts are allowed only when they are clearly marked as non-runtime and remain disconnected from active imports/callers.
 - Existing deterministic authority still applies: `poolMatchingService.ts` remains the matching authority, and no latent-state or multimodal signal may partially influence matching or user-facing explanations before its rollout gate is formally cleared.
@@ -71,9 +73,11 @@ npm run dev
 ### Key Commands
 ```bash
 npm run build            # Build user-client, admin-client, and server workspaces
+npm run build:user       # Build only the user-client workspace
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
+npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
 npm run db:push          # Sync Drizzle schema to database
 npm run db:push --force  # Force sync (use when db:push fails)
 npm run db:studio        # Open Drizzle Studio (database GUI)
@@ -109,6 +113,13 @@ joyjoin-monorepo/
 │   │   │   └── AdminApp.tsx  # Admin app entry
 │   │   └── index.html
 │   │
+│   ├── mini-program/         # WeChat Mini Program beta client (Taro + React)
+│   │   ├── src/
+│   │   │   ├── pages/        # Mini Program page entries
+│   │   │   ├── lib/          # Runtime-specific API/logging helpers
+│   │   │   └── app.ts        # Mini Program app lifecycle entry
+│   │   └── package.json
+│   │
 │   └── server/               # Express.js backend
 │       └── src/
 │           ├── routes.ts             # Composition root — mounts domain routers
@@ -135,7 +146,7 @@ joyjoin-monorepo/
 │           └── ...                                  # Other services
 │
 ├── packages/
-│   └── shared/               # Shared types, schemas, personality system
+│   └── shared/               # Shared contracts, schemas, personality system, UI primitives
 │       └── src/
 │           ├── schema.ts             # Drizzle ORM database schema
 │           ├── wsEvents.ts           # WebSocket event interfaces
@@ -1183,11 +1194,17 @@ const mutation = useMutation({
 | Product Canon & Active Terminology | `PRODUCT_REQUIREMENTS.md` § Product Canon | **Authoritative — always use this** |
 | Active Flow Reference | `DEVELOPER_QUICK_REFERENCE.md` (this file) | **Primary dev reference** |
 | Product Requirements | `PRODUCT_REQUIREMENTS.md` | Full PRD |
+| Documentation Index | `docs/README.md` | Start here for active docs outside the repo root |
+| Contributing Guide | `CONTRIBUTING.md` | Contributor workflow, validation, and doc/skill entry points |
+| Current Architecture Map | `docs/architecture/current-state.md` | Active domain ownership |
 | Design Guidelines | `design_guidelines.md` | - |
 | API Routes | `apps/server/src/routes.ts` + `apps/server/src/routes/domains/` | Composition root + domain modules |
 | Database Schema | `packages/shared/src/schema.ts` | - |
 | Archetype Data | `packages/shared/src/personality/archetypeRegistry.ts` | - |
-| Supplementary (outdated sections) | `QUICK_REFERENCE.md` | ⚠️ Supplementary only — not authoritative |
+| Legacy Redirect Only | `QUICK_REFERENCE.md` | Redirect stub only — not authoritative |
+| Platform Coordination Playbook | `docs/PLATFORM_COORDINATION.md` | Canonical web/mini-program auth and payment coordination |
+| AI Current-State Guardrails | `docs/ai-agent-harness-separation-strategy.md` | Read first for shipped AI boundaries |
+| AI Roadmap & Gates | `docs/AI_INTEGRATION_PLAN.md` | Planning-only phased delivery document |
 | **Admin RBAC Matrix** | `docs/admin-rbac-matrix.md` | Admin endpoint → role requirements |
 | **Admin Incident Runbook** | `docs/runbooks/admin-incident-handling.md` | Ops tasks, triage, daily checklist |
 | **Observability Guide** | `docs/observability.md` | Structured logging, Prometheus, Grafana, alerting, synthetic monitoring |

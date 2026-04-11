@@ -1,0 +1,54 @@
+skill: platform-coordination-protocol
+
+primary_ownership: >
+  Cross-platform coordination for duplicated mini-program/web auth, API, and
+  payment flows using the current platform coordination playbook and real repo
+  file boundaries.
+
+use_when:
+  - changing one of the duplicated auth/api/payment files called out in docs/PLATFORM_COORDINATION.md
+  - asking whether a sibling platform also needs review
+  - using docs/PLATFORM_COORDINATION.md to decide whether a change stays local
+  - changing apps/mini-program/src/lib/api.ts, apps/user-client/src/hooks/useAuth.ts, queryClient.ts, or the payment pages
+  - changing shared package files that coordinated client flows depend on
+
+do_not_use_when:
+  - task is only about generic monorepo dependency ownership or tsconfig changes
+  - task is purely about component styling with no cross-platform contract impact
+  - task is only about writing or auditing skill docs
+
+strong_triggers:
+  - platform coordination
+  - docs/PLATFORM_COORDINATION.md
+  - sibling platform
+  - BlindBoxPaymentPage.tsx
+  - blind-box-payment/index.tsx
+  - apps/mini-program/src/lib/api.ts
+  - apps/user-client/src/hooks/useAuth.ts
+  - apps/user-client/src/lib/queryClient.ts
+  - packages/shared/src/schema.ts
+  - duplicated payment flow
+  - mirrored web journey
+
+owned_files:
+  - docs/PLATFORM_COORDINATION.md
+  - apps/mini-program/src/lib/api.ts
+  - apps/mini-program/src/pages/blind-box-payment/index.tsx
+  - apps/user-client/src/hooks/useAuth.ts
+  - apps/user-client/src/lib/queryClient.ts
+  - apps/user-client/src/pages/BlindBoxPaymentPage.tsx
+  - packages/shared/src/schema.ts
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: monorepo-workspace-governance
+    when: coordination work also changes root scripts, workspace ownership, or package boundaries
+  - skill: auth-session-and-safety-boundaries
+    when: coordinated auth/session changes also modify auth policy, session validation, or dev-only auth surfaces
+  - skill: frontend-performance-and-loading
+    when: coordinated web and mini-program surfaces need loading, asset, or list-performance review on both sides
+  - skill: testing-and-regression-guardrails
+    when: coordinated behavior needs regression tests or structural checks to lock in the boundary

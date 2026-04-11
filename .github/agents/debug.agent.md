@@ -1,6 +1,8 @@
 ---
-description: 'Debug your application to find and fix a bug'
+name: 'debug'
+description: 'Use when debugging a bug, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause.'
 tools: ['edit/editFiles', 'search', 'execute/getTerminalOutput', 'execute/runInTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'search/usages', 'read/problems', 'execute/testFailure', 'web/fetch', 'web/githubRepo', 'execute/runTests']
+argument-hint: 'Describe the bug, failing command or test, expected behavior, and any error output or reproduction steps.'
 ---
 
 # Debug Mode Instructions
@@ -77,3 +79,9 @@ You are in debug mode. Your primary objective is to systematically identify, ana
 - **Test Thoroughly**: Verify fixes work in various scenarios and environments
 
 Remember: Always reproduce and understand the bug before attempting to fix it. A well-understood problem is half solved.
+
+## Frontend Excellence Notes
+
+// No frontend surface
+
+- This agent is a general debugging workflow rather than a frontend implementation guide, so it does not get platform-specific UI standards here.

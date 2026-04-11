@@ -246,3 +246,356 @@
     }
   }
 }
+
+// ─── Loading state ───────────────────────────────────────────────
+.discover-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #FAFAFA;
+
+  &__text {
+    font-size: 28rpx;
+    color: #6B7280;
+  }
+}
+
+// ─── Authenticated discover ─────────────────────────────────────
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.discover-auth {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+
+  // ── Hero ──────────────────────────────────────────────────────
+  &__hero {
+    padding: $spacing-xl $container-padding $spacing-lg;
+  }
+
+  &__greeting {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  // ── Quick actions row ─────────────────────────────────────────
+  &__actions {
+    display: flex;
+    gap: $spacing-md;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__action-card {
+    flex: 1;
+    @include card;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-sm;
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  &__action-emoji {
+    font-size: $font-size-xl;
+  }
+
+  &__action-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  // ── Filter chips ──────────────────────────────────────────────
+  &__filter-section {
+    padding: 0 0 $spacing-sm 0;
+  }
+
+  &__chips-row {
+    width: 100%;
+    white-space: nowrap;
+    padding: 0 $container-padding;
+    box-sizing: border-box;
+
+    &--districts {
+      margin-top: $spacing-xs;
+    }
+  }
+
+  &__chips-inner {
+    display: inline-flex;
+    gap: $spacing-sm;
+    padding: $spacing-xs 0;
+  }
+
+  &__chip {
+    display: inline-block;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 999rpx;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background: $color-surface;
+    box-shadow: $shadow-sm;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+
+    &--sm {
+      padding: 6rpx $spacing-sm;
+      font-size: $font-size-xs;
+    }
+
+    &--active {
+      color: $color-text-white;
+      background: $brand-gradient;
+      box-shadow: 0 4rpx 16rpx rgba(168, 107, 255, 0.3);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  // ── Section header ────────────────────────────────────────────
+  &__section {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__section-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  // ── Pool list ─────────────────────────────────────────────────
+  &__pool-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  // ── Pool card ─────────────────────────────────────────────────
+  &__pool-card {
+    @include card;
+    padding: $spacing-lg;
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    // Skeleton variant
+    &--skeleton {
+      min-height: 200rpx;
+      pointer-events: none;
+    }
+  }
+
+  &__pool-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pool-title {
+    flex: 1;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+
+  &__pool-badges {
+    display: flex;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+  }
+
+  // ── Badges ────────────────────────────────────────────────────
+  &__badge {
+    display: inline-block;
+    padding: 4rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+
+    &--type {
+      background: $color-primary-light;
+      color: $color-primary;
+    }
+
+    &--registered {
+      background: rgba($color-success, 0.15);
+      color: $color-success;
+    }
+  }
+
+  // ── Pool meta (location / date) ───────────────────────────────
+  &__pool-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+    margin-bottom: $spacing-md;
+  }
+
+  &__pool-location,
+  &__pool-date {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
+  // ── Pool footer (progress + status) ───────────────────────────
+  &__pool-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+  }
+
+  &__progress {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__progress-track {
+    flex: 1;
+    height: 12rpx;
+    border-radius: 6rpx;
+    background: $color-divider;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    border-radius: 6rpx;
+    transition: width 0.3s ease;
+
+    &--open {
+      background: $color-primary;
+    }
+
+    &--filling {
+      background: $color-warning;
+    }
+
+    &--closed {
+      background: $color-text-muted;
+    }
+  }
+
+  &__progress-text {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  &__status {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    white-space: nowrap;
+    padding: 4rpx 16rpx;
+    border-radius: 999rpx;
+
+    &--open {
+      color: $color-primary;
+      background: $color-primary-light;
+    }
+
+    &--filling {
+      color: $color-warning;
+      background: rgba($color-warning, 0.12);
+    }
+
+    &--closed {
+      color: $color-text-muted;
+      background: $color-divider;
+    }
+  }
+
+  // ── Skeleton shimmer ──────────────────────────────────────────
+  &__skeleton-line {
+    border-radius: $card-radius-sm;
+    background: linear-gradient(
+      90deg,
+      $color-divider 25%,
+      rgba($color-divider, 0.5) 50%,
+      $color-divider 75%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+
+    &--title {
+      width: 60%;
+      height: 36rpx;
+      margin-bottom: $spacing-sm;
+    }
+
+    &--meta {
+      width: 80%;
+      height: 28rpx;
+      margin-bottom: $spacing-md;
+    }
+
+    &--bar {
+      width: 100%;
+      height: 12rpx;
+    }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  // ── Empty / error states ──────────────────────────────────────
+  &__empty-state {
+    @include card;
+    padding: $spacing-xl;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__empty-emoji {
+    font-size: 64rpx;
+  }
+
+  &__empty {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__empty-hint {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  // ── Bottom spacer ─────────────────────────────────────────────
+  &__spacer {
+    height: 160rpx;
+  }
+}

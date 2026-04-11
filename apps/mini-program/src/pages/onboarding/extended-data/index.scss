@@ -1,0 +1,122 @@
+@import '../../../styles/variables';
+@import '../../../styles/mixins';
+
+.extended-data {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+
+  &__loading {
+    @include flex-center;
+    min-height: 100vh;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__header {
+    padding: $spacing-xl $container-padding $spacing-md;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__counter {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__scroll {
+    flex: 1;
+    padding: 0 $container-padding;
+  }
+
+  &__category {
+    margin-bottom: $spacing-lg;
+  }
+
+  &__category-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 40rpx;
+    background: $color-surface;
+    border: 2rpx solid $color-border;
+    transition: all 0.2s;
+
+    &--selected {
+      background: $color-primary-light;
+      border-color: $color-primary;
+    }
+  }
+
+  &__tag-text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__spacer {
+    height: 200rpx;
+  }
+
+  &__error {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-error;
+    text-align: center;
+    padding: $spacing-sm $container-padding;
+  }
+
+  &__footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: $spacing-md $container-padding;
+    background: rgba(250, 250, 250, 0.95);
+    backdrop-filter: blur(10px);
+    @include safe-area-bottom;
+  }
+
+  &__submit {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+}

@@ -6,7 +6,7 @@
  *
  * Features:
  * - 3-card stacked hero illustration (匹配 → 悦聚 → 延续)
- * - Gradient headline with ZCOOL QingKe HuangYou font
+ * - Gradient headline using font-cn-display (AlibabaPuHuiTi-3)
  * - 3 pill-shaped feature badges
  * - Primary CTA: Duolingo 3D press shadow, h-16, "看看我会遇见谁" → /personality-test
  * - Secondary CTA: text link "已有账号？登录" → WeChat OAuth

@@ -101,6 +101,12 @@ Before building a new animated component, check `packages/shared/src/ui/` for ex
 ### When to extract a hook or utility
 Only when the exact same animation pattern appears in 3+ unrelated places. A `useCompletionPulse()` hook is justified. A one-time animation inline is not worth abstracting.
 
+## Quick examples
+
+- **Onboarding completion** — add a one-time soft checkmark reveal and restrained CTA pulse after the submission succeeds, with reduced-motion fallback.
+- **Match reveal entrance** — stagger only the title, summary, and primary CTA after data is ready; do not animate the entire screen tree.
+- **Empty state polish** — pair a short hopeful line of copy with a subtle shimmer or fade-in illustration, keeping the state fully readable without motion.
+
 ## Common mistakes to avoid
 
 | Mistake | Impact | Fix |
@@ -112,6 +118,37 @@ Only when the exact same animation pattern appears in 3+ unrelated places. A `us
 | **Off-brand motion** | Feels corporate or childish | Reference `.github/skills/joyjoin-brand-guidelines/SKILL.md` — soft easing, restrained scale, no harsh bounce |
 | **Layout-triggering animation** | Performance regression / CLS | Animate only `transform` and `opacity`; never `height`, `width`, or `margin` |
 | **Polishing low-priority screens** | Wasted effort | Focus polish budget on onboarding, completion, and high-frequency surfaces |
+
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies to both Web and Taro mini-program frontend surfaces whenever polish, delight, or emotional resonance is being implemented in product UI.
+- The same emotional intent should survive across platforms even when the available primitives and motion systems differ.
+
+### UI/UX & Aesthetic Guidance
+
+- Motion and polish must stay anchored to JoyJoin tokens, typography roles, and component variants; wow moments should emerge from the product system, not sit on top of it as decoration.
+- Legendary polish requires complete state design: loading, error, empty, disabled, success, and reveal states should all feel intentional and visibly communicative.
+- Use semantic web elements or native Taro components as the foundation, then layer motion or micro-interactions only after the baseline interaction is already clear.
+
+### Web-Specific Considerations
+
+- Hover, active, and `:focus-visible` states should work together; motion should complement cursor and keyboard feedback rather than duplicate or obscure it.
+- Verify polished surfaces at narrow mobile widths first and ensure scroll containers remain smooth during staggered reveals or CTA feedback.
+- Use the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) when deciding when a polished collection still needs virtualization instead of per-item motion.
+
+### Taro-Specific Considerations
+
+- Follow the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, prefer native components like `View`, `Text`, `Button`, and `ScrollView`, and replace CSS hover behavior with `hover-class` or pressed-state styling.
+- Keep animation-heavy routes and large media assets aware of mini-program subpackage budgets, and use `VirtualList` for long lists before adding per-item polish.
+- Favor lightweight transform and opacity effects over DOM-like choreography that depends on browser-only APIs or expensive layout work.
+
+### Accessibility & Performance Notes
+
+- Respect WCAG 2.1 AA touchpoints, especially visible focus, readable contrast, and reduced-motion behavior; polish must never be the only carrier of meaning.
+- Protect Core Web Vitals by keeping wow moments off the critical LCP path, avoiding layout shift, and keeping interaction feedback responsive for INP.
+- On mini-program surfaces, treat scroll smoothness and tap latency as hard constraints; if an effect harms them, the effect is not production-ready.
 
 ## Wow Element Review Checklist
 

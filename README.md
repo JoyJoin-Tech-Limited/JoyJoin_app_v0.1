@@ -9,6 +9,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 ├── apps/
 │   ├── user-client/     # React 18 + Vite PWA (user-facing, port 5001)
 │   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.yuejuapp.com)
+│   ├── mini-program/    # WeChat Mini Program client built with Taro 4 + React 18
 │   └── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
 ├── packages/
 │   └── shared/          # @joyjoin/shared — internal shared library
@@ -23,8 +24,9 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 
 | Workspace | Package name | Purpose |
 |-----------|-------------|---------|
-| `apps/user-client` | `@joyjoin/user-client` | User-facing React PWA |
+| `apps/user-client` | `@joyjoin/user-client` | User-facing React PWA (browser-first, H5) |
 | `apps/admin-client` | `@joyjoin/admin-client` | Internal admin portal |
+| `apps/mini-program` | `mini-program` | WeChat Mini Program beta client (Taro 4 + React 18) |
 | `apps/server` | `@joyjoin/server` | Express API, WebSocket, DB |
 | `packages/shared` | `@joyjoin/shared` | Types, schemas, constants, domain logic shared across apps |
 
@@ -36,9 +38,14 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 | WebSocket event contracts | `packages/shared/src/wsEvents.ts` |
 | Personality / archetype engine | `packages/shared/src/personality/` |
 | Shared constants and vocabularies | `packages/shared/src/constants.ts`, `districts.ts`, `occupations.ts`, etc. |
-| UI primitives used by both clients | `packages/shared/src/ui/` |
+| Shared onboarding flow logic | `packages/shared/src/onboarding.ts`, `packages/shared/src/api.ts` |
+| Archetype HSL color tokens | `packages/shared/src/archetypeColors.ts` |
+| Achievement definitions | `packages/shared/src/achievements.ts` |
+| Gamification (XP/level system) | `packages/shared/src/gamification.ts` |
+| UI primitives used by multiple clients | `packages/shared/src/ui/` |
 | User-client-only components/hooks | `apps/user-client/src/` |
 | Admin-client-only components/hooks | `apps/admin-client/src/` |
+| Mini-program-only pages/helpers | `apps/mini-program/src/` |
 | API routes, services, DB queries | `apps/server/src/` |
 
 **Import rule:** apps must import shared code via `@joyjoin/shared` (package name) or the `@shared/*` path alias. Direct imports from `shared/` (top-level legacy directory) are banned and enforced by the guardrails script.
@@ -396,8 +403,27 @@ The GitHub Actions pipeline (`.github/workflows/cicd.yml`) runs on push to `main
 3. **AI simulation test** — runs 100 AI simulation iterations
 4. **Deploy** — SSH deployment with Docker Compose + schema push
 
+To validate the WeChat Mini Program build locally:
+```bash
+npm run build:weapp -w mini-program
+```
+
+## Documentation map
+
+Start with these files in order when you are new to the repo or touching an unfamiliar area:
+
+1. [`DEVELOPER_QUICK_REFERENCE.md`](./DEVELOPER_QUICK_REFERENCE.md) — canonical engineering guardrails, active-flow rules, and monorepo quick start
+2. [`PRODUCT_REQUIREMENTS.md`](./PRODUCT_REQUIREMENTS.md) — product canon, terminology, and active feature expectations
+3. [`docs/README.md`](./docs/README.md) — topic index for architecture, onboarding, AI, observability, platform coordination, and design docs
+4. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributor workflow, validation checklist, skills, agents, and review expectations
+
 ## Further documentation
 
 - [`DEVELOPER_QUICK_REFERENCE.md`](./DEVELOPER_QUICK_REFERENCE.md) — canonical developer guide
-- [`docs/`](./docs/) — architecture and feature documentation
+- [`PRODUCT_REQUIREMENTS.md`](./PRODUCT_REQUIREMENTS.md) — product canon and active terminology
+- [`docs/README.md`](./docs/README.md) — docs index by audience and topic
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contributor workflow and validation checklist
+- [`.github/skills/README.md`](./.github/skills/README.md) — reusable engineering/domain skills
+- [`.github/agents/README.md`](./.github/agents/README.md) — focused custom agents for recurring workflows
+- [`apps/server/src/README.md`](./apps/server/src/README.md) — server domain ownership and file placement
 - [`packages/shared/src/README.md`](./packages/shared/src/README.md) — shared package boundary rules

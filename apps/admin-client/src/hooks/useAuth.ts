@@ -1,4 +1,44 @@
 import { useQuery } from "@tanstack/react-query";
+import { resolveApiUrl } from "@/lib/queryClient";
+
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+
+async function fetchAdminAuthUser(): Promise<AdminAuthUser | null> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), AUTH_BOOTSTRAP_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(resolveApiUrl("/api/auth/user"), {
+      credentials: "include",
+      signal: controller.signal,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const text = (await response.text()) || response.statusText;
+      throw new Error(`${response.status}: ${text}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      console.warn("[admin-auth] Timed out while loading current admin session");
+      throw new Error("Timed out while loading current admin session");
+    }
+
+    if (error instanceof TypeError) {
+      console.warn("[admin-auth] Failed to load current admin session", error);
+      throw error;
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 /**
  * Admin auth response – may be a full User row (legacy phone-based admin)
@@ -16,8 +56,9 @@ export interface AdminAuthUser {
 }
 
 export function useAuth() {
-  const { data: user, isLoading, isError } = useQuery<AdminAuthUser>({
+  const { data: user, isLoading, isError } = useQuery<AdminAuthUser | null>({
     queryKey: ["/api/auth/user"],
+    queryFn: fetchAdminAuthUser,
     retry: (failureCount, error: any) => {
       if (error?.status === 401 || error?.status === 403) return false;
       return failureCount < 2;
@@ -29,7 +70,7 @@ export function useAuth() {
   const actualIsLoading = isLoading && !isError;
 
   return {
-    user: isError ? undefined : user,
+    user: isError ? undefined : user ?? undefined,
     isLoading: actualIsLoading,
     isAuthenticated,
   };

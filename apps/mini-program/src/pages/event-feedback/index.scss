@@ -1,0 +1,142 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.event-feedback {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  padding: $container-padding;
+
+  &__loading {
+    @include flex-center;
+    min-height: 80vh;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__success {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 80vh;
+    text-align: center;
+  }
+
+  &__success-emoji {
+    font-size: 96rpx;
+  }
+
+  &__success-title {
+    display: block;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+  }
+
+  &__success-text {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__back-btn {
+    @include button-primary;
+    padding: 0 $spacing-xl;
+    margin-top: $spacing-md;
+    border: 0;
+  }
+
+  &__header {
+    padding-top: $spacing-xl;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__rating {
+    display: flex;
+    justify-content: space-around;
+    gap: $spacing-sm;
+  }
+
+  &__rating-item {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 40rpx;
+    @include flex-center;
+    border: 2rpx solid $color-border;
+    transition: all 0.2s;
+
+    &--selected {
+      border-color: $color-primary;
+      background: $color-primary-light;
+      transform: scale(1.15);
+    }
+  }
+
+  &__rating-emoji {
+    font-size: $font-size-xl;
+  }
+
+  &__textarea {
+    width: 100%;
+    min-height: 200rpx;
+    padding: $spacing-md;
+    border: 2rpx solid $color-border;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: $color-bg;
+    line-height: 1.6;
+  }
+
+  &__error {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-error;
+    text-align: center;
+    margin-top: $spacing-md;
+  }
+
+  &__footer {
+    margin-top: $spacing-xl;
+  }
+
+  &__submit {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+}
