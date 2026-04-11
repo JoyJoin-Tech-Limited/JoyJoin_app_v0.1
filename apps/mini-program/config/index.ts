@@ -5,7 +5,7 @@ import devConfig from './dev'
 import prodConfig from './prod'
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
-export default defineConfig<'vite'>(async (merge, { command, mode }) => {
+export default defineConfig<'vite'>(async (merge) => {
   const baseConfig: UserConfigExport<'vite'> = {
     projectName: 'mini-program',
     date: '2026-3-4',
@@ -22,6 +22,7 @@ export default defineConfig<'vite'>(async (merge, { command, mode }) => {
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
+      'process.env.TARO_APP_API_BASE_URL': JSON.stringify(process.env.TARO_APP_API_BASE_URL || 'http://localhost:5000')
     },
     copy: {
       patterns: [
@@ -50,7 +51,8 @@ export default defineConfig<'vite'>(async (merge, { command, mode }) => {
     },
     mini: {
       imageUrlLoaderOption: {
-        limit: 100
+        limit: 0, // 强制禁止将任何图片转为 Base64，全部使用真实路径
+        esModule: false // 确保 Taro 正确处理图片路径
       },
       compiler: {
         type: 'vite',

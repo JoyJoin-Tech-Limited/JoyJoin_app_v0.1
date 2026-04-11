@@ -1,4 +1,5 @@
 export default defineAppConfig({
+  lazyCodeLoading: 'requiredComponents',
   pages: [
     'pages/discover/index',
     'pages/blind-box-payment/index',
