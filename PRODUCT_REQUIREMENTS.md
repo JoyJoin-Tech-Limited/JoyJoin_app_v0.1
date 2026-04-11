@@ -14,7 +14,7 @@
 > **All code, copy, documentation, and implementation decisions MUST be based on the active, current flow described in this document.**
 >
 > - ❌ Never reference, reintroduce, or copy-paste from legacy flows, removed features, old routes, or deprecated components — even if they appear in git history, archived docs (`archived/`), or inline `TODO` comments.
-> - ❌ Never treat `QUICK_REFERENCE.md` as authoritative — use `DEVELOPER_QUICK_REFERENCE.md` and this document (`PRODUCT_REQUIREMENTS.md`) instead.
+> - ❌ Never treat `QUICK_REFERENCE.md` as authoritative — it is a legacy redirect-only stub. Use `DEVELOPER_QUICK_REFERENCE.md`, this document, and `docs/README.md` instead.
 > - ✅ When in doubt about whether a pattern/term/route is active, check the canonical nav table below and §*Product Canon* before implementing.
 >
 > This rule applies to human engineers **and** AI coding agents.
@@ -3794,7 +3794,7 @@ CREATE TABLE event_pool_groups (
 **Production Environment:**
 - Database: PostgreSQL (Neon serverless)
 - Session Store: PostgreSQL
-- File Storage: (TBD - planned: Replit Object Storage)
+- File Storage: Not yet implemented as an app-managed subsystem; current profile images come from external identity providers (`wechatAvatarUrl`, legacy `profileImageUrl` via Replit auth), and there is no user-initiated upload pipeline in the active runtime
 - Real-time: WebSocket over WSS
 
 **Environment Variables:**
@@ -3937,12 +3937,14 @@ joyjoin-monorepo/
    - Use the `set-admin` CLI script to grant admin access: `npm run set-admin`
 
 3. **Key Files to Read First:**
-   - `DEVELOPER_QUICK_REFERENCE.md` — active codebase reference and canonical rules
-   - `docs/architecture/current-state.md` — active architecture map by domain
-   - `apps/server/src/README.md` — server domain ownership and file placement guide
-   - `packages/shared/src/schema.ts` — canonical DB schema (Drizzle)
-   - `apps/server/src/routes.ts` — API route composition root
-   - `apps/user-client/src/App.tsx` — client routing entry point
+  - `docs/README.md` — active documentation index
+  - `DEVELOPER_QUICK_REFERENCE.md` — active codebase reference and canonical rules
+  - `CONTRIBUTING.md` — contributor workflow, validation, and repo guidance
+  - `docs/architecture/current-state.md` — active architecture map by domain
+  - `apps/server/src/README.md` — server domain ownership and file placement guide
+  - `packages/shared/src/schema.ts` — canonical DB schema (Drizzle)
+  - `apps/server/src/routes.ts` — API route composition root
+  - `apps/user-client/src/App.tsx` — client routing entry point
 
 4. **Common Tasks:**
    - Add new API route → `apps/server/src/routes/domains/<domain>.ts`, mount in `routes.ts`
@@ -3953,9 +3955,10 @@ joyjoin-monorepo/
    - Active onboarding page → `apps/user-client/src/features/onboarding/active/pages/`
 
 5. **Skills / Architecture guides:**
-   - `.github/skills/README.md` — domain skill index for AI coding agents
-   - `docs/observability.md` — monitoring, logging, metrics
-   - `docs/onboarding-flow.md` — complete onboarding flow reference
+  - `.github/skills/README.md` — domain skill index for AI coding agents
+  - `docs/observability.md` — monitoring, logging, metrics
+  - `docs/onboarding-flow.md` — complete onboarding flow reference
+  - `docs/PLATFORM_COORDINATION.md` — current web/mini-program payment and auth coordination playbook
 
 **For Product Managers:**
 
@@ -4028,12 +4031,17 @@ joyjoin-monorepo/
 
 **Documentation:**
 - This PRD (`PRODUCT_REQUIREMENTS.md`) — canonical product and active-flow reference
+- `docs/README.md` — active documentation index by topic and audience
 - `DEVELOPER_QUICK_REFERENCE.md` — codebase navigation, conventions, active-flow rules
+- `CONTRIBUTING.md` — contributor workflow and validation checklist
 - `docs/architecture/current-state.md` — active architecture map by domain
 - `apps/server/src/README.md` — server domain ownership and file placement
 - `docs/observability.md` — monitoring, structured logging, metrics, alerting
 - `docs/runbooks/observability.md` — incident runbooks
 - `docs/onboarding-flow.md` — complete onboarding flow reference
+- `docs/PLATFORM_COORDINATION.md` — canonical cross-platform auth/payment coordination reference
+- `docs/ai-agent-harness-separation-strategy.md` — current shipped AI boundaries and architecture invariants
+- `docs/AI_INTEGRATION_PLAN.md` — planning-only AI roadmap, gates, and sequencing
 - `.github/skills/README.md` — domain skill index for AI coding agents
 
 **Developer Resources:**
@@ -4043,10 +4051,10 @@ joyjoin-monorepo/
 - Guardrails: `npm run guardrails` (monorepo health checks — run before pushing)
 - Logs: structured JSON to stdout; request ID correlation available in all server logs
 
-**Contact:**
-- Technical lead: [TBD]
-- Product owner: [TBD]
-- Design lead: [TBD]
+**Ownership routing:**
+- Engineering / architecture questions: start with `CONTRIBUTING.md`, `docs/README.md`, and the owning workspace README
+- Product canon / scope questions: use this PRD plus the current planning owner for the affected initiative
+- Design-system / mobile UX questions: start with `design_guidelines.md`, `docs/mobile-design-system.md`, and the relevant frontend/design-system guidance
 
 ---
 

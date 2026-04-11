@@ -49,6 +49,8 @@ owned_symbols:
 related_skills:
   - skill: server-domain-architecture
     when: schema change requires a matching repository or storage layer update
+  - skill: database-migration-safety
+    when: the schema change needs a live-data migration, backfill, rename, or staged rollout plan
   - skill: reliability-and-state-integrity
     when: model change involves transactional writes or idempotency constraints
   - skill: testing-and-regression-guardrails

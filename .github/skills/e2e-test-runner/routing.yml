@@ -1,0 +1,48 @@
+skill: e2e-test-runner
+
+primary_ownership: >
+  Flow-level validation for end-to-end journeys, smoke tests, and synthetic probes
+  across active JoyJoin user flows.
+
+use_when:
+  - running or designing an end-to-end test or smoke test
+  - validating a post-deploy journey or production probe
+  - checking a multi-step user flow that crosses API and client layers
+  - reviewing whether an existing flow script still matches the active product flow
+  - defining the smallest realistic journey that proves a risky change still works
+
+do_not_use_when:
+  - task is only about unit, invariant, or structural tests
+  - task is about frontend loading optimization rather than journey validation
+  - task is about CI config unrelated to probes or flow execution
+
+strong_triggers:
+  - end-to-end
+  - E2E
+  - smoke test
+  - happy-path probe
+  - synthetic probe
+  - test-e2e-flow.ts
+  - workflow_dispatch
+  - signup flow
+  - post-deploy verification
+
+owned_files:
+  - scripts/test-e2e-flow.ts
+  - scripts/synthetic/happy-path-probe.mjs
+  - .github/workflows/synthetic-probe.yml
+  - docs/onboarding-flow.md
+  - docs/runbooks/alerting.md
+
+owned_paths: []
+
+owned_symbols:
+  - happy-path-probe
+
+related_skills:
+  - skill: testing-and-regression-guardrails
+    when: the task is about unit, invariant, or structural regression coverage rather than flow-level validation
+  - skill: platform-coordination-protocol
+    when: the end-to-end journey spans duplicated web and mini-program flows
+  - skill: frontend-performance-and-loading
+    when: the flow question is about loading or transition performance rather than functional correctness

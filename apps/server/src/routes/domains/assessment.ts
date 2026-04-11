@@ -447,7 +447,7 @@ export function registerAssessmentRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       const coupons = await storage.getUserCoupons(userId);
-      res.json(coupons);
+      res.json({ count: coupons.length, coupons });
     } catch (error) {
       console.error("Error fetching user coupons:", error);
       res.status(500).json({ message: "Failed to fetch coupons" });

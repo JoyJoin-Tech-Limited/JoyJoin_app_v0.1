@@ -16,10 +16,18 @@ These agents are the orchestration layer that sits above the repo's reusable ski
 
 | Agent | Primary use | File |
 |-------|-------------|------|
+| `AI Engineer` | Runtime AI integration, fallback behavior, provider routing, and AI trace safety | [`ai-engineer.agent.md`](./ai-engineer.agent.md) |
+| `Admin Operations Advisor` | Admin incident triage, RBAC/audit troubleshooting, runbook-guided remediation | [`admin-operations-advisor.agent.md`](./admin-operations-advisor.agent.md) |
+| `Auto-Eval` | Dirty-worktree quality gate evaluation, manual reruns, and blocked-tool diagnosis | [`auto-eval.agent.md`](./auto-eval.agent.md) |
+| `Backend Engineer` | Server-side implementation in `apps/server` | [`backend-engineer.agent.md`](./backend-engineer.agent.md) |
+| `Database Schema & Migration Auditor` | Schema evolution, migration planning, rollout safety | [`database-schema-migration-auditor.agent.md`](./database-schema-migration-auditor.agent.md) |
 | `debug` | Root-cause debugging, failing tests, runtime errors | [`debug.agent.md`](./debug.agent.md) |
 | `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend engineer.md`](./frontend%20engineer.md) |
+| `Launch Readiness Agent` | Go/no-go readiness, launch blockers, risk consolidation, and preflight review | [`launch-readiness.agent.md`](./launch-readiness.agent.md) |
 | `SE: Product Manager` | Product scoping, GitHub issue authoring, success metrics | [`PM advisor.md`](./PM%20advisor.md) |
 | `Mini-Program Parity Auditor` | Web versus mini-program parity audits and migration backlog creation | [`mini-program-parity-auditor.agent.md`](./mini-program-parity-auditor.agent.md) |
+| `Product Manager` | PRD drafting, user-story shaping, scope clarification, and measurable product framing | [`product-manager.agent.md`](./product-manager.agent.md) |
+| `QA Agent` | Smoke validation, regression checklist design, and verification-gap reporting | [`qa-agent.agent.md`](./qa-agent.agent.md) |
 | `Taro Mini-Program Frontend Engineer` | Direct Taro UI implementation and refinement in `apps/mini-program` | [`taro-mini-program-frontend-engineer.agent.md`](./taro-mini-program-frontend-engineer.agent.md) |
 | `principal SWE` | Architecture review, tradeoff analysis, senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
 | `prompt engineer` | Prompt review, rewriting, examples, structure tightening | [`prompt engineer.md`](./prompt%20engineer.md) |

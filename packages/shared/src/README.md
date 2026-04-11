@@ -21,6 +21,15 @@ This package holds contracts and logic that are intentionally shared across mult
 - `packages/shared/src/personality/` — archetypes, adaptive engine, compatibility references
 - `packages/shared/src/socialIcebreaker.ts` — Social Icebreaker contracts and phase config
 - `packages/shared/src/ai/` and `packages/shared/src/types/aiMeta.ts` — AI-facing shared contracts
+- `packages/shared/src/gamification.ts` — XP/level system (shared by web and mini-program)
+- `packages/shared/src/achievements.ts` — Achievement definitions, rarity types, and haptic patterns (shared by web and mini-program)
+
+### Shared UI tokens
+- `packages/shared/src/archetypeColors.ts` — Archetype HSL color token definitions; both web (`@joyjoin/shared/archetypeColors`) and mini-program (`@shared/archetypeColors`) import from this single source
+
+### Shared cross-platform flow helpers
+- `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`, and related step-mapping utilities
+- `packages/shared/src/api.ts` — typed API helpers for assessment, essential data, interests, and profile review (shared across web and mini-program)
 
 ### Truly shared UI primitives
 - `packages/shared/src/ui/`
@@ -41,6 +50,10 @@ Only put UI here when it is reusable across multiple apps without carrying user-
 - **New cross-app type or response contract:** add under `packages/shared/src/types/`
 - **New shared constant/taxonomy:** place in the existing closest domain file rather than inventing a near-duplicate
 - **New personality or matching reference data used by multiple apps:** place under `packages/shared/src/personality/`
+- **New UI color token or theme definition:** place in `packages/shared/src/archetypeColors.ts` or a new token file under `packages/shared/src/`
+- **New achievement definition:** add to `packages/shared/src/achievements.ts`
+- **New onboarding step-mapping or flow helper shared across platforms:** place in `packages/shared/src/onboarding.ts`
+- **New typed API helper used by both web and mini-program:** place in `packages/shared/src/api.ts`
 - **New shared UI primitive:** place under `packages/shared/src/ui/`
 
 ## Export boundary

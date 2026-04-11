@@ -257,12 +257,14 @@ Monitor these for 2 weeks post-launch:
 
 | Metric | Before | Target | Current | Status |
 |--------|--------|--------|---------|--------|
-| Landing → Test | 40% | 70% | TBD | 🟡 |
-| Test completion | 80% | 85% | TBD | 🟡 |
-| Results → Login | N/A | 65% | TBD | 🟡 |
-| Overall conversion | 32% | 38% | TBD | 🟡 |
+| Landing → Test | 40% | 70% | Not backfilled | 🟡 |
+| Test completion | 80% | 85% | Not backfilled | 🟡 |
+| Results → Login | N/A | 65% | Not backfilled | 🟡 |
+| Overall conversion | 32% | 38% | Not backfilled | 🟡 |
 
 **Action threshold:** If overall conversion drops below 30%, trigger rollback plan.
+
+The original migration record was not backfilled with measured post-launch values; the `Current` column is preserved only as historical planning context.
 
 ---
 

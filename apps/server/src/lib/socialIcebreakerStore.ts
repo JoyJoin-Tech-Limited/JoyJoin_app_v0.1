@@ -19,7 +19,10 @@ import {
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
 } from '@shared/schema';
-import type { SocialSessionState } from '@shared/socialIcebreaker';
+import type {
+  SocialSessionParticipantSummary,
+  SocialSessionState,
+} from '@shared/socialIcebreaker';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -247,6 +250,36 @@ export async function getParticipant(
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+export async function listParticipants(
+  socialSessionId: string,
+  thresholdMs: number = PRESENCE_THRESHOLD_MS,
+): Promise<SocialSessionParticipantSummary[]> {
+  const rows = await db
+    .select({
+      userId: socialIcebreakerParticipants.userId,
+      displayName: socialIcebreakerParticipants.displayName,
+      joinedAt: socialIcebreakerParticipants.joinedAt,
+      lastSeenAt: socialIcebreakerParticipants.lastSeenAt,
+    })
+    .from(socialIcebreakerParticipants)
+    .where(eq(socialIcebreakerParticipants.socialSessionId, socialSessionId));
+
+  const cutoff = Date.now() - thresholdMs;
+
+  return rows
+    .sort(
+      (left: (typeof rows)[number], right: (typeof rows)[number]) =>
+        left.joinedAt.getTime() - right.joinedAt.getTime(),
+    )
+    .map((participant: (typeof rows)[number]) => ({
+      userId: participant.userId,
+      displayName: participant.displayName,
+      joinedAt: participant.joinedAt.toISOString(),
+      lastSeenAt: participant.lastSeenAt.toISOString(),
+      isActive: participant.lastSeenAt.getTime() >= cutoff,
+    }));
 }
 
 // ---------------------------------------------------------------------------

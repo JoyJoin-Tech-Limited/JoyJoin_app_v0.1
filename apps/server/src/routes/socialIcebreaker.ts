@@ -31,6 +31,7 @@ import {
   updateSession,
   upsertParticipant,
   getParticipant,
+  listParticipants,
   heartbeat as dbHeartbeat,
   getRosterCount,
   getActiveParticipantCount,
@@ -83,6 +84,14 @@ sweepInterval.unref?.();
  */
 function sanitizeStateForClient(state: SocialSessionState): SocialSessionState {
   return { ...state };
+}
+
+async function buildClientState(state: SocialSessionState): Promise<SocialSessionState> {
+  const joinedParticipants = await listParticipants(state.socialSessionId);
+  return sanitizeStateForClient({
+    ...state,
+    joinedParticipants,
+  });
 }
 
 function hydrateDerivedState(state: SocialSessionState): SocialSessionState {
@@ -191,7 +200,7 @@ router.post('/start', async (req: any, res) => {
       hostUserId: state.hostUserId,
       hostDisplayName: state.hostDisplayName,
       currentPhase: state.currentPhase,
-      state: sanitizeStateForClient(state),
+      state: await buildClientState(state),
     });
   }
 
@@ -250,7 +259,7 @@ router.post('/start', async (req: any, res) => {
       hostUserId: concurrent.state.hostUserId,
       hostDisplayName: concurrent.state.hostDisplayName,
       currentPhase: concurrent.state.currentPhase,
-      state: sanitizeStateForClient(concurrent.state),
+      state: await buildClientState(concurrent.state),
     });
   }
 
@@ -259,7 +268,7 @@ router.post('/start', async (req: any, res) => {
     hostUserId: newState.hostUserId,
     hostDisplayName: newState.hostDisplayName,
     currentPhase: newState.currentPhase,
-    state: sanitizeStateForClient(newState),
+    state: await buildClientState(newState),
   });
 });
 
@@ -284,7 +293,7 @@ router.get('/:socialSessionId', async (req: any, res) => {
     state.activePlayerCount = activeCount;
   }
 
-  return res.json(sanitizeStateForClient(state));
+  return res.json(await buildClientState(state));
 });
 
 // ---------------------------------------------------------------------------
@@ -449,7 +458,7 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
     currentTopicIndex: state.currentTopicIndex,
     currentTopic: state.warmupTopics?.[state.currentTopicIndex] ?? null,
     commonGroundCount: state.commonGroundCount ?? 0,
-    state: sanitizeStateForClient(state),
+    state: await buildClientState(state),
   });
 });
 
@@ -565,7 +574,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     content,
     xiaoYueComment: comment,
     meta,
-    state: sanitizeStateForClient(state),
+    state: await buildClientState(state),
   });
 });
 
@@ -840,7 +849,7 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
   return res.json({
     currentLieDetectivePlayerIndex: state.currentLieDetectivePlayerIndex,
     currentPlayer: getCurrentLieDetectivePlayer(state),
-    state: sanitizeStateForClient(state),
+    state: await buildClientState(state),
   });
 });
 
@@ -1017,7 +1026,7 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
       durationMinutes,
     });
 
-    return res.json({ summary: summaryResult.data, meta: summaryResult.meta, medals, state: sanitizeStateForClient(state) });
+    return res.json({ summary: summaryResult.data, meta: summaryResult.meta, medals, state: await buildClientState(state) });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to generate recap' });
   }

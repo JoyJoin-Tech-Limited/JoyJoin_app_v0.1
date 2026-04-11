@@ -14,6 +14,10 @@ This file and `docs/ai-agent-harness-separation-strategy.md` serve **distinct bu
 | **`AI_INTEGRATION_PLAN.md`** (this file) | Phased delivery roadmap — what ships, in what order, gated by what metrics. Phase A–E sequencing, budget guidance, observability requirements, success gates. |
 | **`ai-agent-harness-separation-strategy.md`** | Current-state architecture guardrails and invariants reference — what is built, how roles are separated, what AI must never do, how the three product agent systems are structured. |
 
+**Read order:** Start with `docs/ai-agent-harness-separation-strategy.md` for current shipped behavior and architectural invariants, then use this plan for roadmap sequencing, budget guidance, and rollout gates.
+
+**Do not** use this roadmap by itself as evidence that a future AI capability is already approved for runtime.
+
 **For future execution PRs:** Use both docs together. The strategy paper defines the architectural rules; this plan defines the delivery sequence and exit criteria. Any PR that adds or modifies AI behaviour should verify it satisfies both.
 
 **Adjacency principle (from strategy paper):** The repo already has de facto Level-1 orchestration services (`matchExplanationService.ts`, `socialIcebreakerAIService.ts`). Future AI work should normally **extend these services first** rather than creating new parallel orchestrators, unless a clearly justified new abstraction is needed. Greenfield orchestration layers without a concrete need are explicitly discouraged.

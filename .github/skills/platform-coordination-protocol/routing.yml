@@ -48,5 +48,7 @@ related_skills:
     when: coordination work also changes root scripts, workspace ownership, or package boundaries
   - skill: auth-session-and-safety-boundaries
     when: coordinated auth/session changes also modify auth policy, session validation, or dev-only auth surfaces
+  - skill: frontend-performance-and-loading
+    when: coordinated web and mini-program surfaces need loading, asset, or list-performance review on both sides
   - skill: testing-and-regression-guardrails
     when: coordinated behavior needs regression tests or structural checks to lock in the boundary

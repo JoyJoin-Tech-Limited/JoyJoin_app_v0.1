@@ -1,0 +1,46 @@
+skill: draft-prd
+
+primary_ownership: >
+  Drafting product requirements, feature briefs, scope boundaries, user stories,
+  and measurable success metrics using the active JoyJoin product canon.
+
+use_when:
+  - drafting a new PRD, proposal, or feature brief
+  - defining user stories, scope boundaries, or non-goals
+  - writing success metrics for a planned feature
+  - turning a vague product idea into a reviewable artifact
+  - updating a proposal doc before implementation starts
+
+do_not_use_when:
+  - task is about syncing docs after code changes already landed
+  - task is primarily about implementation details, route placement, or schema work
+  - task is only about reviewing existing code behavior
+
+strong_triggers:
+  - draft a PRD
+  - PRD
+  - product requirement
+  - user story
+  - success metric
+  - scope this feature
+  - feature brief
+  - docs/proposals
+  - non-goals
+
+owned_files:
+  - PRODUCT_REQUIREMENTS.md
+  - DEVELOPER_QUICK_REFERENCE.md
+  - docs/README.md
+  - docs/proposals/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: docs-sync
+    when: the work is updating canonical docs after implementation rather than drafting new product requirements
+  - skill: platform-coordination-protocol
+    when: the proposed feature changes duplicated auth, payment, or API flows across platforms
+  - skill: llm-runtime-safety-and-integration
+    when: the proposal includes new live AI behavior that must respect current runtime boundaries
