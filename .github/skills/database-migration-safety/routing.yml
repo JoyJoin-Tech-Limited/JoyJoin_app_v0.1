@@ -1,0 +1,51 @@
+skill: database-migration-safety
+
+primary_ownership: >
+  Safe schema evolution, idempotent migration scripts, pre and post verification,
+  and rollout planning for database changes.
+
+use_when:
+  - planning or writing a migration script or migration SQL
+  - renaming columns or tightening constraints on existing data
+  - backfilling data before a schema contract change
+  - deciding whether db:push is enough or an explicit migration is required
+  - verifying migration safety, rollback steps, or production rollout order
+
+do_not_use_when:
+  - task is only about choosing schema column types, indexes, or relations with no migration plan
+  - task is purely about route or repository changes
+  - task is purely about local seed data or fixtures
+
+strong_triggers:
+  - migration script
+  - plan a migration
+  - rename a column safely
+  - backfill data
+  - fix a constraint
+  - UNIQUE constraint
+  - "db:push vs migration"
+  - schema evolution
+  - DATABASE_URL
+  - apps/server/migrations
+
+owned_files:
+  - packages/shared/src/schema.ts
+  - apps/server/migrations/**
+  - scripts/migrate-fix-assessment-constraint.js
+  - scripts/migrate-rename-role-to-archetype.js
+
+owned_paths: []
+
+owned_symbols:
+  - DATABASE_URL
+  - runMigration
+
+related_skills:
+  - skill: backend-models-standards
+    when: deciding the target schema shape, data types, indexes, and constraints
+  - skill: reliability-and-state-integrity
+    when: rollout safety depends on atomic backfills, retries, or side-effect ordering
+  - skill: testing-and-regression-guardrails
+    when: adding migration regression coverage or invariant checks
+  - skill: server-domain-architecture
+    when: schema evolution requires coordinated repository or route updates

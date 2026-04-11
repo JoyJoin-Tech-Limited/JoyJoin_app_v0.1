@@ -1,14 +1,18 @@
 # Mobile-First Design System
 
+> **Status:** Active web-mobile design-system reference — last verified 2026-04-11.
+> **Scope:** This document primarily describes the mobile-first browser implementation in `apps/user-client`. The repo also has an active Taro + React mini-program client in `apps/mini-program`; use `docs/PLATFORM_COORDINATION.md` for current cross-platform ownership and drift tracking.
+
 ## Overview
 
-This document describes the mobile-first design system implementation for JoyJoin, based on the Mobile UI Design Specification. The system is optimized for mobile web (PWA) with considerations for future WeChat Mini Program development.
+This document describes the mobile-first design system implementation for JoyJoin, based on the Mobile UI Design Specification. The system is optimized for the browser-first mobile experience in `apps/user-client` and should be read alongside the active mini-program coordination docs rather than as a pre-mini-program planning artifact.
 
 ## Platform Support
 
-- ✅ **Mobile Web (PWA)**: Primary implementation (React + Tailwind CSS)
+- ✅ **Mobile Web (PWA)**: Primary design-system implementation (`apps/user-client`, React + Tailwind CSS)
+- 🟢 **Taro Mini Program**: Active sibling client (`apps/mini-program`) that shares design intent but requires explicit parity review
+- 📚 **Raw WeChat Reference**: Supplemental conversion guidance only in `docs/wechat-mini-program-reference.md`
 - 📱 **Native Mobile**: Future consideration (React Native)
-- 🟢 **WeChat Mini Program**: Reference implementation provided
 
 ## Design Principles
 
@@ -305,14 +309,20 @@ from-[#FAFAFA] via-[#FFF5F7] to-[#FFE4E1]
 - Ensure adequate spacing
 - Avoid overlapping targets
 
-## WeChat Mini Program Reference
+## Mini-program references and boundaries
 
-For future WeChat Mini Program implementation, see reference documentation with WXML/WXSS/JS examples.
+Use these references in order:
+
+1. `docs/PLATFORM_COORDINATION.md` — current platform ownership, parity risks, and coordination rules
+2. `apps/mini-program/README.md` — active workspace entry point for the Taro client
+3. `docs/wechat-mini-program-reference.md` — supplemental raw WXML/WXSS translation guide retained for legacy design-reference purposes
+
+The table below is a raw platform-concept translation reference, not the architecture of the current Taro implementation.
 
 ### Key Differences
 
-| Web (Current) | WeChat Mini Program |
-|---------------|---------------------|
+| Web design-system concept | Raw WeChat reference concept |
+|---------------------------|------------------------------|
 | React JSX | WXML |
 | CSS/Tailwind | WXSS |
 | px/rem units | rpx units |
@@ -329,7 +339,7 @@ For future WeChat Mini Program implementation, see reference documentation with 
 </button>
 ```
 
-**WeChat (Future)**:
+**Raw WeChat Reference**:
 ```xml
 <button bind:tap="handleClick" class="btn">
   Click me
@@ -359,7 +369,7 @@ Before releasing:
 **Target Browsers**:
 - iOS Safari 14+
 - Android Chrome 90+
-- WeChat WebView (future)
+- Mobile WebView scenarios used by the web client
 
 **Progressive Enhancement**:
 - Core functionality works without JS
@@ -368,10 +378,10 @@ Before releasing:
 
 ## Future Enhancements
 
-1. **WeChat Mini Program Port**
-   - Convert React components to WXML
-   - Adapt CSS to WXSS with rpx
-   - Implement WeChat-specific APIs
+1. **Shared web/mini-program primitives**
+  - Extract more shared contracts and mobile primitives where duplicated behavior is stable
+  - Reduce design-system drift between `apps/user-client` and `apps/mini-program`
+  - Keep renderer-specific implementation details in platform-owned workspaces
 
 2. **Native Mobile Apps**
    - React Native implementation
@@ -388,5 +398,7 @@ Before releasing:
 
 - `/apps/user-client/src/components/mobile/` - Mobile component library
 - `/apps/user-client/src/pages/MobileLandingPage.tsx` - Reference implementation
+- `/apps/mini-program/` - Active Taro mini-program client
 - `/apps/user-client/src/index.css` - Mobile CSS utilities
-- `/docs/wechat-mini-program-reference.md` - WeChat implementation guide
+- `/docs/PLATFORM_COORDINATION.md` - Active web/mini-program coordination playbook
+- `/docs/wechat-mini-program-reference.md` - Supplemental raw WeChat reference guide

@@ -11,6 +11,12 @@
 - These skills complement the canonical source-of-truth docs in this file, `DEVELOPER_QUICK_REFERENCE.md`, and active architecture docs; they do not replace them.
 - When creating or updating files under `.github/skills/`, follow the skill authoring standard in `.github/skills/skill-authoring-governance/SKILL.md`. Ensure correct frontmatter, trigger phrases, progressive disclosure, examples, troubleshooting, and a review checklist are present where appropriate.
 
+### Agents
+
+- Focused workflow agents live under `.github/agents/`.
+- Start with `.github/agents/README.md` to choose the right agent for debugging, frontend delivery, platform parity, prompt work, or product scoping.
+- Skills define the rules and boundaries; agents help execute a workflow within those boundaries.
+
 ## Pull Request Review Standard
 
 When reviewing pull requests, evaluate not only local correctness but also:

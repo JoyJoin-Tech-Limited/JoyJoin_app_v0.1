@@ -1,20 +1,22 @@
 # Platform Coordination Playbook
 
+> **Status:** Active coordination playbook — verified against the current payment/auth surfaces in `apps/user-client`, `apps/admin-client`, `apps/mini-program`, and `apps/server/src/routes/domains/payments.ts`.
+
 ## Executive Summary
 
-Current platform symmetry is **yellow trending red**.
+Current platform symmetry is **yellow trending red**, with payment already in the red.
 
 `apps/user-client` already shares many domain contracts with `packages/shared`, but `apps/mini-program` is still largely isolated and re-implements auth, API access, pricing, and payment orchestration inside page files.
 
-The biggest risk is payment. The Mini Program has a real `wx.requestPayment` flow, while the web client still mixes direct endpoint calls, missing endpoint assumptions, and page-local state. To ship beta quickly without a costly web re-launch later, the team should move non-UI payment/auth logic behind shared contracts and keep platform-specific behavior in adapters only.
+The biggest risk is payment. The Mini Program has a real `wx.requestPayment` flow, while the browser surfaces still mix direct endpoint calls, missing endpoint assumptions, and page-local state. Both the user and admin blind-box payment pages currently drift from the active server contract. To ship beta quickly without a costly re-launch later, the team should move non-UI payment/auth logic behind shared contracts and keep platform-specific behavior in adapters only.
 
 ## Divergence Report Card
 
 | Area | Status | Findings | Evidence |
 | --- | --- | --- | --- |
-| API layer | 🔴 Red | Separate transports. No shared API DTO package. Web payment calls unresolved routes (`/api/coupons/validate`, `/api/event-packs/purchase`) that were not found during this audit in active server registrations. Treat that gap as a beta blocker until the calls are either implemented or removed. | `apps/user-client/src/lib/queryClient.ts`; `apps/mini-program/src/lib/api.ts`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes.ts`; `apps/server/src/routes/domains/payments.ts`; `apps/server/src/routes/domains/assessment.ts` |
+| API layer | 🔴 Red | Separate transports. No shared API DTO package. The user/admin blind-box payment pages call unresolved routes (`/api/coupons/validate`, `/api/event-packs/purchase`) that were not found during this audit in active server registrations. Treat that gap as a beta blocker until the calls are either implemented or removed. | `apps/user-client/src/lib/queryClient.ts`; `apps/mini-program/src/lib/api.ts`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/admin-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes.ts`; `apps/server/src/routes/domains/payments.ts`; `apps/server/src/routes/domains/assessment.ts` |
 | Auth logic | 🟡 Yellow | `user-client` uses server-driven auth state via `useAuth()` and `GET /api/auth/user`, while the Mini Program performs login inline with `authenticateMiniProgramUser()` and stores only `openid` locally. Both depend on WeChat login but use different entry endpoints and different state models. | `apps/user-client/src/hooks/useAuth.ts`; `apps/user-client/src/hooks/useWeChatLogin.ts`; `apps/mini-program/src/lib/api.ts`; `apps/server/src/wechatAuth.ts` |
-| Payment trigger logic | 🔴 Red | Mini Program runs the full payment intent → `wx.requestPayment` → verification polling flow. The web client does not share that orchestration and instead mixes direct event creation with separate subscription/pack purchase endpoints. The page also sends `vip_monthly` / `vip_quarterly` to `/api/subscription/renew`, while the server route validates `monthly` / `quarterly`. Standardizing those identifiers is a release blocker for payment symmetry. | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts` |
+| Payment trigger logic | 🔴 Red | Mini Program runs the full payment intent → `wx.requestPayment` → verification polling flow. The user/admin browser surfaces do not share that orchestration and instead mix direct event creation with separate subscription and pack-purchase endpoints. Both pages send `vip_monthly` / `vip_quarterly` to `/api/subscription/renew`, while the server route validates `monthly` / `quarterly`. Standardizing those identifiers is a release blocker for payment symmetry. | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/admin-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts` |
 | Core utilities | 🟡 Yellow | `user-client` imports many shared contracts from `packages/shared`, but `mini-program` imports none. Currency/price formatting is duplicated and inconsistent: web uses `apps/user-client/src/lib/currency.ts`, Mini Program hardcodes `¥` in page-local logic. | `apps/user-client/src/lib/currency.ts`; `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `packages/shared/package.json` |
 
 ## Phase 1 — Architecture Discovery and Divergence Audit
@@ -52,7 +54,8 @@ The biggest risk is payment. The Mini Program has a real `wx.requestPayment` flo
   - Request/response DTOs for pricing, coupons, payments, and auth are **not** shared through a dedicated API contract module.
 - **Endpoint drift**
   - Shared and present on server: `/api/pricing`, `/api/user/coupons`, `/api/auth/wechat/login`, `/api/auth/wechat/login-with-test`, `/api/payments/miniprogram/create`, `/api/payments/status/:wechatOrderId`.
-  - Used by web but **not found during this audit** in active server route registrations: `/api/coupons/validate`, `/api/event-packs/purchase`.
+  - Used by the user/admin blind-box payment pages but **not found during this audit** in active server route registrations: `/api/coupons/validate`, `/api/event-packs/purchase`.
+  - Used by the user/admin blind-box payment pages with a mismatched request contract: `/api/subscription/renew` currently receives `vip_monthly` / `vip_quarterly`, while the active server route validates `monthly` / `quarterly`.
   - Before beta freeze, assign an owner for each of those two paths and decide one of two outcomes: implement the server endpoint in the active API surface, or remove/replace the client call with the canonical route.
   - Present on server but not used by either audited client payment flow as the primary path: `/api/payments/create`.
 
@@ -80,7 +83,7 @@ There is no shared Zustand/Redux store. The closest shared state source of truth
 ### Divergence hotspot: payment trigger logic
 
 - **Mini Program:** `handlePay()` creates an intent with `/api/payments/miniprogram/create`, stores pending order context, invokes `wx.requestPayment`, then navigates into a polling verification page.
-- **Web:** `handlePayment()` branches into direct calls to `/api/subscription/renew`, `/api/event-packs/purchase`, or `/api/blind-box-events`, with no shared payment intent abstraction.
+- **User/admin browser surfaces:** `handlePayment()` branches into direct calls to `/api/subscription/renew`, `/api/event-packs/purchase`, or `/api/blind-box-events`, with no shared payment intent abstraction.
 - **Existing server service boundary:** payment creation/query logic already lives behind `paymentService` on the server (`apps/server/src/routes/domains/payments.ts`), so the client side is the right place for an adapter pattern.
 - **Recommended client boundary:** a shared payment orchestration package with a `PaymentAdapter` interface:
   - `MiniProgramPaymentAdapter` → wraps `wx.requestPayment`
@@ -214,13 +217,13 @@ This keeps post-payment verification, routing, and entitlement refresh debuggabl
 ### Immediate next-sprint tasks before beta freeze
 
 1. Extract shared payment DTOs and plan identifiers so both clients stop hardcoding divergent values.
-2. Fix the web payment route drift:
-   - standardize `/api/subscription/renew` on `vip_monthly` / `vip_quarterly` at the client-facing contract so both clients and `/api/pricing` use the same plan IDs
-   - assign a payments owner before beta freeze for `/api/coupons/validate`, then either implement the endpoint on the active server surface or remove/replace the client call in the same sprint
-   - assign a payments owner before beta freeze for `/api/event-packs/purchase`, then either implement the endpoint on the active server surface or remove/replace the client call in the same sprint
+2. Fix the browser payment route drift:
+  - standardize `/api/subscription/renew` on one client-facing plan ID contract across `apps/user-client`, `apps/admin-client`, `/api/pricing`, and `/api/payments/miniprogram/create`
+  - assign a payments owner before beta freeze for `/api/coupons/validate`, then either implement the endpoint on the active server surface or remove/replace the client call in the same sprint
+  - assign a payments owner before beta freeze for `/api/event-packs/purchase`, then either implement the endpoint on the active server surface or remove/replace the client call in the same sprint
 3. Move currency/price formatting into a shared utility instead of keeping Mini Program formatting inline.
 4. Introduce a shared payment verification state model so web and Mini Program converge on one post-payment story.
-5. Keep `user-client` buildable as the sandbox by smoke-testing it for every Mini Program payment/auth change.
+5. Keep `user-client` buildable as the sandbox and spot-check the admin payment page whenever the shared payment contract changes.
 
 ### Long-term north star
 

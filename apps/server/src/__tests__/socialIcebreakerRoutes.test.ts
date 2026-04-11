@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 // routing layer and need a working store but not a real database connection.
 vi.mock('../lib/socialIcebreakerStore', () => {
   const sessions = new Map<string, any>();
-  const participants = new Map<string, Map<string, { userId: string; displayName: string; lastSeenAt: number }>>();
+  const participants = new Map<string, Map<string, { userId: string; displayName: string; joinedAt: number; lastSeenAt: number }>>();
   const lieTruthsStore = new Map<string, Map<string, any[]>>();
 
   return {
@@ -33,7 +33,13 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     },
     upsertParticipant: async (socialSessionId: string, userId: string, displayName: string) => {
       if (!participants.has(socialSessionId)) participants.set(socialSessionId, new Map());
-      participants.get(socialSessionId)!.set(userId, { userId, displayName, lastSeenAt: Date.now() });
+      const existing = participants.get(socialSessionId)!.get(userId);
+      participants.get(socialSessionId)!.set(userId, {
+        userId,
+        displayName,
+        joinedAt: existing?.joinedAt ?? Date.now(),
+        lastSeenAt: Date.now(),
+      });
     },
     heartbeat: async (socialSessionId: string, userId: string) => {
       const ps = participants.get(socialSessionId);
@@ -50,6 +56,20 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     },
     getParticipant: async (socialSessionId: string, userId: string) =>
       participants.get(socialSessionId)?.get(userId) ?? null,
+    listParticipants: async (socialSessionId: string) => {
+      const ps = participants.get(socialSessionId);
+      if (!ps) return [];
+      const cutoff = Date.now() - 30_000;
+      return [...ps.values()]
+        .sort((left, right) => left.joinedAt - right.joinedAt)
+        .map((participant) => ({
+          userId: participant.userId,
+          displayName: participant.displayName,
+          joinedAt: new Date(participant.joinedAt).toISOString(),
+          lastSeenAt: new Date(participant.lastSeenAt).toISOString(),
+          isActive: participant.lastSeenAt > cutoff,
+        }));
+    },
     setLieTruths: async (socialSessionId: string, userId: string, truths: any[]) => {
       if (!lieTruthsStore.has(socialSessionId)) lieTruthsStore.set(socialSessionId, new Map());
       lieTruthsStore.get(socialSessionId)!.set(userId, truths);
@@ -201,6 +221,48 @@ async function login(baseUrl: string, userId: string) {
 }
 
 describe('social icebreaker routes', () => {
+  it('returns the joined participant roster in social session state responses', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'roster-host');
+      const guestCookie = await login(baseUrl, 'roster-guest');
+      const sessionId = `session-roster-${Date.now()}`;
+
+      const hostStartResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const hostStartBody = await hostStartResponse.json() as any;
+
+      expect(hostStartBody.state.joinedParticipants).toEqual([
+        expect.objectContaining({ userId: 'roster-host', displayName: 'Host', isActive: true }),
+      ]);
+
+      const guestStartResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Guest' }),
+      });
+      const guestStartBody = await guestStartResponse.json() as any;
+
+      expect(guestStartBody.state.joinedParticipants).toEqual([
+        expect.objectContaining({ userId: 'roster-host', displayName: 'Host', isActive: true }),
+        expect.objectContaining({ userId: 'roster-guest', displayName: 'Guest', isActive: true }),
+      ]);
+
+      const rosterResponse = await fetch(`${baseUrl}/api/social-icebreaker/${guestStartBody.socialSessionId}`, {
+        headers: { cookie: hostCookie },
+      });
+      const rosterBody = await rosterResponse.json() as any;
+
+      expect(rosterBody.playerCount).toBe(2);
+      expect(rosterBody.joinedParticipants).toEqual([
+        expect.objectContaining({ userId: 'roster-host', displayName: 'Host', isActive: true }),
+        expect.objectContaining({ userId: 'roster-guest', displayName: 'Guest', isActive: true }),
+      ]);
+    });
+  });
+
   it('returns normalized AI metadata for warmup topics', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'topics-host');

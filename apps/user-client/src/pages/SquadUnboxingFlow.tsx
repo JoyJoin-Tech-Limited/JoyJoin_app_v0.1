@@ -18,7 +18,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { calculateAge as calculateAgeFromBirthdate } from "@shared/utils";
 import {
   calculateAge,
   getUserAllInterests,
@@ -47,17 +46,16 @@ interface PoolGroupMember {
   displayName: string;
   archetype?: string | null;
   topInterests?: string[] | null;
-  /** API returns users.birthdate — a date string, not a numeric age */
-  age?: string | null;
+  ageLabel?: string | null;
   industryNicheLabel?: string | null;
   industryCategoryLabel?: string | null;
-  ageVisible?: string | null;
-  industryVisible?: string | null;
+  ageVisible?: boolean | null;
+  industryVisible?: boolean | null;
   gender?: string | null;
   educationLevel?: string | null;
   hometownRegionCity?: string | null;
   hometownAffinityOptin?: boolean | null;
-  educationVisible?: string | null;
+  educationVisible?: boolean | null;
   relationshipStatus?: string | null;
   intent?: string[] | null;
 }
@@ -147,9 +145,8 @@ export default function SquadUnboxingFlow() {
     },
   });
 
-  // Map API members → SquadMember[] for CardDeckReveal
-  // The API returns age as users.birthdate (a string) and industry as industryNicheLabel/industryCategoryLabel.
-  // Normalise both fields here so spark predictions work correctly.
+  // Map API members → SquadMember[] for CardDeckReveal.
+  // Age is privacy-sanitized on the server, so we do not reconstruct exact ages in the client.
   // When groupAnalysis is available, merge AI pair data (matchReason, compatibilityScore,
   // connectionPoints) using myPairs (viewer-scoped) or the full pairExplanations list.
   const squadMembers = useMemo<SquadMember[]>(() => {
@@ -172,8 +169,6 @@ export default function SquadUnboxingFlow() {
         userId: m.userId,
         displayName: m.displayName,
         archetype: m.archetype ?? undefined,
-        // Compute numeric age from birthdate string; undefined if absent
-        age: m.age ? calculateAgeFromBirthdate(m.age) : undefined,
         gender: m.gender ?? undefined,
         educationLevel: m.educationLevel ?? undefined,
         topInterests: m.topInterests ?? undefined,

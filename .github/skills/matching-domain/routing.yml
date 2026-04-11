@@ -10,7 +10,7 @@ use_when:
   - debugging why groups or pairs are not forming
   - adding or changing a match explanation feature
   - working on chemistry score, interest score, or group overall score
-  - working on pool registration or pool matching execution
+  - working on scoring behavior during pool matching execution
 
 do_not_use_when:
   - task is purely about onboarding completion (use onboarding-state-architecture)
@@ -37,7 +37,6 @@ strong_triggers:
   - debug low match scores
   - add match explanation
   - MatchingStateLayout
-  - pool registration
 
 owned_files:
   - apps/server/src/poolMatchingService.ts
@@ -60,6 +59,10 @@ owned_symbols:
   - POOL_MATCHED
 
 related_skills:
+  - skill: event-pool-and-matching-operations
+    when: the task is about pool lifecycle, registration semantics, stats, or group-outcome operations rather than scoring math
+  - skill: llm-runtime-safety-and-integration
+    when: the task changes AI explanation, cache metadata, prompt versioning, or fallback behavior around matching outputs
   - skill: reliability-and-state-integrity
     when: matching execution involves idempotency guards, transaction boundaries, or re-entry
   - skill: testing-and-regression-guardrails

@@ -15,6 +15,7 @@ import { registerPaymentRoutes } from "./routes/domains/payments";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
+import { formatAge } from "@shared/utils";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
@@ -4895,7 +4896,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         referralCode: existingCode.code,
         successfulInvites,
-        platformTotal
+        platformTotal,
+        inviteLink: `${req.protocol}://${req.get('host')}/invite/${existingCode.code}`,
       });
     } catch (error: any) {
       console.error("Error fetching referral stats:", error);
@@ -7993,7 +7995,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           displayName: users.displayName,
           archetype: users.archetype,
           topInterests: users.interestsRankedTop3,
-          age: users.birthdate,
+          birthdate: users.birthdate,
           // ✅ UPDATED: Use 3-tier industry classification
           industryNicheLabel: users.industryNicheLabel,
           industryCategoryLabel: users.industryCategoryLabel,
@@ -8011,6 +8013,25 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         .from(eventPoolRegistrations)
         .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
         .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+
+      const memberSummaries = members.map((member: (typeof members)[number]) => ({
+        userId: member.userId,
+        displayName: member.displayName,
+        archetype: member.archetype,
+        topInterests: member.topInterests,
+        ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all'),
+        industryNicheLabel: member.industryNicheLabel,
+        industryCategoryLabel: member.industryCategoryLabel,
+        ageVisible: member.ageVisible !== 'hide_all',
+        industryVisible: member.industryVisible !== 'hide_all',
+        gender: member.gender,
+        educationLevel: member.educationLevel,
+        hometownRegionCity: member.hometownRegionCity,
+        hometownAffinityOptin: member.hometownAffinityOptin,
+        educationVisible: member.educationVisible !== 'hide_all',
+        relationshipStatus: member.relationshipStatus,
+        intent: member.intent,
+      }));
 
       res.json({
         group: {
@@ -8036,7 +8057,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           district: pool.district,
           dateTime: pool.dateTime,
         },
-        members,
+        members: memberSummaries,
       });
     } catch (error) {
       console.error("Error fetching pool group details:", error);
@@ -8231,7 +8252,17 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
 
-      res.json({ success: true, blindBoxEventId });
+      if (!blindBoxEventId) {
+        return res.status(409).json({ message: "Blind box event is not ready for attendance confirmation" });
+      }
+
+      await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed');
+
+      const user = await storage.getUser(userId);
+      const displayName = getUserDisplayName(user);
+      broadcastAttendanceStatusUpdated(blindBoxEventId, userId, displayName, 'confirmed');
+
+      res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
     } catch (error) {
       console.error("Error confirming pool group attendance:", error);
       res.status(500).json({ message: "Failed to confirm attendance" });
@@ -8897,8 +8928,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
       const session = req.session as any;
       const userId = session.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       
-      const validatedData = insertChatReportSchema.parse(req.body);
+      const validatedData = insertChatReportSchema.parse({
+        ...req.body,
+        reportedBy: userId,
+      });
       
       const report = await storage.createChatReport(validatedData);
       

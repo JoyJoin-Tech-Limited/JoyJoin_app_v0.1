@@ -61,6 +61,8 @@ owned_symbols:
   - isLie
 
 related_skills:
+  - skill: llm-runtime-safety-and-integration
+    when: the task changes provider routing, prompt metadata, fallback behavior, or AI trace logging for icebreaker generation
   - skill: reliability-and-state-integrity
     when: session state transitions require transaction guards or re-entry protection
   - skill: testing-and-regression-guardrails

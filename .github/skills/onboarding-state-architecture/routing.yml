@@ -67,3 +67,5 @@ related_skills:
     when: adding regression tests for onboarding step invariants
   - skill: auth-session-and-safety-boundaries
     when: onboarding gating involves auth session validation or dev-only bypass
+  - skill: llm-runtime-safety-and-integration
+    when: onboarding helper AI such as profile tagline generation changes without changing server-owned nextStep authority

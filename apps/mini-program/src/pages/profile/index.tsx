@@ -81,6 +81,24 @@ export default function ProfilePage() {
 
         <View
           className='profile-page__action-row'
+          onClick={() => Taro.navigateTo({ url: '/pages/rewards/index' })}
+        >
+          <Text className='profile-page__action-icon'>🏆</Text>
+          <Text className='profile-page__action-text'>奖励福利</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+
+        <View
+          className='profile-page__action-row'
+          onClick={() => Taro.navigateTo({ url: '/pages/invite/index' })}
+        >
+          <Text className='profile-page__action-icon'>🤝</Text>
+          <Text className='profile-page__action-text'>邀请好友</Text>
+          <Text className='profile-page__action-arrow'>›</Text>
+        </View>
+
+        <View
+          className='profile-page__action-row'
           onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}
         >
           <Text className='profile-page__action-icon'>🎁</Text>

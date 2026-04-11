@@ -156,6 +156,24 @@ test('POOL_MATCHED symbol → matching-domain', () => {
   assertEqual(r.primary_skill, 'matching-domain');
 });
 
+// ---- Event pools ----
+console.log('\nEvent pool scenarios:');
+
+test('create an event pool → event-pool-and-matching-operations', () => {
+  const r = routeSkill({ ask: 'Create an event pool for this event and define the pool constraints' });
+  assertEqual(r.primary_skill, 'event-pool-and-matching-operations');
+});
+
+test('estimatedGroups semantics → event-pool-and-matching-operations', () => {
+  const r = routeSkill({ ask: 'Why does estimatedGroups stay lower than expected for this pool stats response?' });
+  assertEqual(r.primary_skill, 'event-pool-and-matching-operations');
+});
+
+test('group outcome submission → event-pool-and-matching-operations', () => {
+  const r = routeSkill({ ask: 'Validate this group outcome submission so connectionRadar only targets members of the same pool group' });
+  assertEqual(r.primary_skill, 'event-pool-and-matching-operations');
+});
+
 // ---- Social Icebreaker ----
 console.log('\nSocial Icebreaker scenarios:');
 
@@ -257,12 +275,22 @@ test('add logging to route → platform-observability-and-ops', () => {
 
 test('audit log admin action → platform-observability-and-ops', () => {
   const r = routeSkill({ ask: 'Audit log this admin action using logAdminAudit' });
-  assertEqual(r.primary_skill, 'platform-observability-and-ops');
+  assertEqual(r.primary_skill, 'admin-audit-and-rbac-governance');
 });
 
 test('/api/metrics path → platform-observability-and-ops', () => {
   const r = routeSkill({ ask: 'Is the /api/metrics endpoint exposed correctly?' });
   assertEqual(r.primary_skill, 'platform-observability-and-ops');
+});
+
+test('AI trace runtime logging → llm-runtime-safety-and-integration', () => {
+  const r = routeSkill({ ask: 'Add promptVersion and fallbackUsed to this AITrace log for socialModelRouter output' });
+  assertEqual(r.primary_skill, 'llm-runtime-safety-and-integration');
+});
+
+test('shadow mode inference → llm-runtime-safety-and-integration', () => {
+  const r = routeSkill({ ask: 'Review this shadow mode runtimeLLMFallback path before we wire the model call live' });
+  assertEqual(r.primary_skill, 'llm-runtime-safety-and-integration');
 });
 
 // ---- Frontend component ----
@@ -292,6 +320,19 @@ test('add a button variant → design-system-governance', () => {
 test('buttonVariants symbol → design-system-governance', () => {
   const r = routeSkill({ ask: 'Edit buttonVariants to add a new outline-dark variant' });
   assertEqual(r.primary_skill, 'design-system-governance');
+});
+
+// ---- Frontend performance ----
+console.log('\nFrontend performance scenarios:');
+
+test('lazy-load non-critical page → frontend-performance-and-loading', () => {
+  const r = routeSkill({ ask: 'Should this non-critical page use React.lazy and Suspense in App.tsx?' });
+  assertEqual(r.primary_skill, 'frontend-performance-and-loading');
+});
+
+test('mini-program long list loading strategy → frontend-performance-and-loading', () => {
+  const r = routeSkill({ ask: 'This mini-program list is getting long, should we switch to VirtualList and adjust the loading strategy?' });
+  assertEqual(r.primary_skill, 'frontend-performance-and-loading');
 });
 
 // ---- Multi-skill (secondary skills) ----
@@ -437,6 +478,37 @@ test('ENABLE_DEV_AUTH_TOOLS env var → auth-session-and-safety-boundaries', () 
   assertEqual(r.primary_skill, 'auth-session-and-safety-boundaries');
 });
 
+// ---- Admin audit and RBAC ----
+console.log('\nAdmin audit and RBAC scenarios:');
+
+test('super_admin only route → admin-audit-and-rbac-governance', () => {
+  const r = routeSkill({ ask: 'This admin account reset route should be super_admin only' });
+  assertEqual(r.primary_skill, 'admin-audit-and-rbac-governance');
+});
+
+test('attendance override → admin-audit-and-rbac-governance', () => {
+  const r = routeSkill({ ask: 'Add audit logging for attendance override in the admin portal' });
+  assertEqual(r.primary_skill, 'admin-audit-and-rbac-governance');
+});
+
+test('admin 403 debugging → admin-audit-and-rbac-governance', () => {
+  const r = routeSkill({ ask: 'Why is this admin getting 403 on the accounts page even though they can view users?' });
+  assertEqual(r.primary_skill, 'admin-audit-and-rbac-governance');
+});
+
+// ---- Security scan ----
+console.log('\nSecurity scan scenarios:');
+
+test('auth debug security scan → security-scan', () => {
+  const r = routeSkill({ ask: 'Run a security scan on ENABLE_DEV_AUTH_TOOLS and ALLOW_PRODUCTION_AUTH_DEBUG before launch' });
+  assertEqual(r.primary_skill, 'security-scan');
+});
+
+test('dependency vulnerability audit → security-scan', () => {
+  const r = routeSkill({ ask: 'Check this repo for dependency vulnerabilities and tell me whether CI already runs a security scan' });
+  assertEqual(r.primary_skill, 'security-scan');
+});
+
 // ---- Backend models ----
 console.log('\nBackend model standards scenarios:');
 
@@ -458,6 +530,37 @@ test('add an index to a table → backend-models-standards', () => {
 test('add a foreign key → backend-models-standards', () => {
   const r = routeSkill({ ask: 'Add a foreign key from event_attendance to users with onDelete cascade' });
   assertEqual(r.primary_skill, 'backend-models-standards');
+});
+
+// ---- Database migration safety ----
+console.log('\nDatabase migration safety scenarios:');
+
+test('plan a migration → database-migration-safety', () => {
+  const r = routeSkill({ ask: 'Plan a migration to rename primary_role to primary_archetype safely' });
+  assertEqual(r.primary_skill, 'database-migration-safety');
+});
+
+test('backfill before constraint → database-migration-safety', () => {
+  const r = routeSkill({ ask: 'Backfill existing rows before adding a UNIQUE constraint to this table' });
+  assertEqual(r.primary_skill, 'database-migration-safety');
+});
+
+test('db:push vs migration → database-migration-safety', () => {
+  const r = routeSkill({ ask: 'Is db:push enough here or do I need a migration script for this live schema change?' });
+  assertEqual(r.primary_skill, 'database-migration-safety');
+});
+
+// ---- Product planning ----
+console.log('\nProduct planning scenarios:');
+
+test('draft a PRD → draft-prd', () => {
+  const r = routeSkill({ ask: 'Draft a PRD for expanding invitation rewards with user stories and success metrics' });
+  assertEqual(r.primary_skill, 'draft-prd');
+});
+
+test('scope a feature brief → draft-prd', () => {
+  const r = routeSkill({ ask: 'Scope this feature brief and define non-goals before engineering starts' });
+  assertEqual(r.primary_skill, 'draft-prd');
 });
 
 // ---- Monorepo workspace governance ----
@@ -593,6 +696,32 @@ test('DEVELOPER_QUICK_REFERENCE.md → docs-sync', () => {
     files: ['DEVELOPER_QUICK_REFERENCE.md'],
   });
   assertEqual(r.primary_skill, 'docs-sync');
+});
+
+// ---- E2E testing ----
+console.log('\nE2E scenarios:');
+
+test('signup smoke test → e2e-test-runner', () => {
+  const r = routeSkill({ ask: 'Run an end-to-end smoke test for the signup flow after this deploy' });
+  assertEqual(r.primary_skill, 'e2e-test-runner');
+});
+
+test('synthetic probe review → e2e-test-runner', () => {
+  const r = routeSkill({ ask: 'Review our happy-path probe and workflow_dispatch smoke test coverage' });
+  assertEqual(r.primary_skill, 'e2e-test-runner');
+});
+
+// ---- Performance benchmarking ----
+console.log('\nPerformance benchmark scenarios:');
+
+test('before and after performance comparison → performance-benchmark', () => {
+  const r = routeSkill({ ask: 'Benchmark this route before and after the change and compare LCP and route transition time' });
+  assertEqual(r.primary_skill, 'performance-benchmark');
+});
+
+test('performance baseline request → performance-benchmark', () => {
+  const r = routeSkill({ ask: 'I need a repeatable performance baseline for this bundle regression' });
+  assertEqual(r.primary_skill, 'performance-benchmark');
 });
 
 // ---- Wow elements ----

@@ -60,6 +60,46 @@ function getVibeLabel(vibe?: string): string {
   }
 }
 
+function getCountdownState(dateTime?: string): { isExpired: boolean; label: string } {
+  if (!dateTime) {
+    return { isExpired: false, label: '时间待定' }
+  }
+
+  const targetTime = new Date(dateTime).getTime()
+  if (Number.isNaN(targetTime)) {
+    return { isExpired: false, label: '时间待定' }
+  }
+
+  const diff = targetTime - Date.now()
+  if (diff <= 0) {
+    return { isExpired: true, label: '活动时间已到，当前这桌未能成局' }
+  }
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24)
+    return { isExpired: false, label: `距离开始还有 ${days} 天` }
+  }
+
+  if (hours > 0) {
+    return { isExpired: false, label: `距离开始还有 ${hours} 小时 ${minutes} 分钟` }
+  }
+
+  return { isExpired: false, label: `距离开始还有 ${Math.max(minutes, 1)} 分钟` }
+}
+
+interface SimilarPoolSummary {
+  id: string
+  title?: string
+  eventType?: string
+  city?: string
+  district?: string | null
+  dateTime?: string
+  registrationCount?: number
+}
+
 // ─── Component ────────────────────────────────────────────────────
 
 export default function MatchingStatusPage() {
@@ -165,6 +205,108 @@ export default function MatchingStatusPage() {
   }
 
   const matchStatus = registration.matchStatus ?? 'pending'
+  const countdown = getCountdownState(registration.poolDateTime)
+  const isCancelled = registration.poolStatus === 'cancelled'
+  const isNoMatchState = matchStatus === 'pending' && countdown.isExpired
+
+  const { data: similarPools = [] } = useQuery<SimilarPoolSummary[]>({
+    queryKey: ['mini-program', 'similar-pools', registration.poolCity, registration.poolEventType],
+    queryFn: () =>
+      apiRequest<SimilarPoolSummary[]>({
+        path: `/api/event-pools?city=${encodeURIComponent(registration.poolCity ?? '')}&eventType=${encodeURIComponent(registration.poolEventType ?? '')}`,
+      }),
+    enabled: isNoMatchState && Boolean(registration.poolCity) && Boolean(registration.poolEventType),
+    select: (pools) => pools.filter((pool) => pool.id !== registration.poolId).slice(0, 3),
+  })
+
+  const handleBrowsePools = useCallback(() => {
+    Taro.switchTab({ url: '/pages/discover/index' })
+  }, [])
+
+  const handleRejoinPool = useCallback((poolId: string) => {
+    Taro.navigateTo({ url: `/pages/pool-registration/index?id=${poolId}` })
+  }, [])
+
+  if (isCancelled) {
+    return (
+      <View className='matching-status'>
+        <Card className='matching-status__special-card'>
+          <Text className='matching-status__special-icon'>😔</Text>
+          <Text className='matching-status__special-title'>这场活动已取消</Text>
+          <Text className='matching-status__special-text'>
+            很抱歉，这场活动未能按计划进行。你可以回到发现页，重新挑一场更适合你的局。
+          </Text>
+          <View className='matching-status__actions'>
+            <Button className='matching-status__cta-btn' onClick={handleBrowsePools}>
+              去看看别的活动
+            </Button>
+            <Button
+              variant='secondary'
+              className='matching-status__secondary-btn'
+              onClick={() => Taro.switchTab({ url: '/pages/events/index' })}
+            >
+              返回我的活动
+            </Button>
+          </View>
+        </Card>
+      </View>
+    )
+  }
+
+  if (isNoMatchState) {
+    return (
+      <ScrollView className='matching-status' scrollY enhanced showScrollbar={false}>
+        <Card className='matching-status__special-card'>
+          <Text className='matching-status__special-icon'>🫶</Text>
+          <Text className='matching-status__special-title'>这次还没等到合适的一桌</Text>
+          <Text className='matching-status__special-text'>
+            {countdown.label}。与其勉强凑桌，我们更想把你留给更对味的人。
+          </Text>
+          <View className='matching-status__actions'>
+            <Button className='matching-status__cta-btn' onClick={handleBrowsePools}>
+              看看别的活动
+            </Button>
+            <Button
+              variant='secondary'
+              className='matching-status__secondary-btn'
+              onClick={() => void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })}
+            >
+              刷新状态
+            </Button>
+          </View>
+        </Card>
+
+        {similarPools.length > 0 ? (
+          <View className='matching-status__similar-section'>
+            <Text className='matching-status__similar-title'>附近还有这些局</Text>
+            {similarPools.map((pool) => (
+              <Card key={pool.id} className='matching-status__similar-card'>
+                <Text className='matching-status__similar-name'>{pool.title ?? '推荐活动'}</Text>
+                <Text className='matching-status__similar-meta'>
+                  {pool.eventType ?? registration.poolEventType}
+                  {pool.city ? ` · ${pool.city}` : ''}
+                  {pool.district ? ` ${pool.district}` : ''}
+                </Text>
+                <Text className='matching-status__similar-meta'>
+                  {formatDateTime(pool.dateTime)}
+                  {typeof pool.registrationCount === 'number' ? ` · 已有 ${pool.registrationCount} 人入座` : ''}
+                </Text>
+                <Button
+                  variant='secondary'
+                  className='matching-status__similar-btn'
+                  onClick={() => handleRejoinPool(pool.id)}
+                >
+                  重新报名这场
+                </Button>
+              </Card>
+            ))}
+          </View>
+        ) : null}
+
+        <View className='matching-status__spacer' />
+      </ScrollView>
+    )
+  }
 
   return (
     <ScrollView className='matching-status' scrollY enhanced showScrollbar={false}>
@@ -184,7 +326,7 @@ export default function MatchingStatusPage() {
           </View>
         ) : null}
         {matchStatus === 'pending' ? (
-          <Text className='matching-status__status-hint'>等待更多人加入…</Text>
+          <Text className='matching-status__status-hint'>{countdown.label}，等待更多人加入…</Text>
         ) : null}
       </View>
 
@@ -278,6 +420,20 @@ export default function MatchingStatusPage() {
           >
             查看小队
           </Button>
+        ) : null}
+
+        {matchStatus === 'matched' && !registration.assignedGroupId ? (
+          <Card className='matching-status__loading-card'>
+            <Text className='matching-status__loading-title'>正在整理你的小队信息</Text>
+            <Text className='matching-status__loading-text'>匹配已经完成，成员卡片和后续破冰入口很快就会出现。</Text>
+            <Button
+              variant='secondary'
+              className='matching-status__secondary-btn'
+              onClick={() => void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })}
+            >
+              立即刷新
+            </Button>
+          </Card>
         ) : null}
 
         {matchStatus === 'pending' ? (

@@ -20,6 +20,7 @@ Core structure, ownership, and placement rules. Start here if you are new to the
 |-------|---------------|
 | [`frontend-component-architecture`](./frontend-component-architecture/SKILL.md) | Shared UI primitives in `packages/shared/src/ui/`, thin app wrappers, semantic correctness, composition patterns |
 | [`design-system-governance`](./design-system-governance/SKILL.md) | CSS tokens, CVA variants, accessibility expectations, documented visual exceptions, migration discipline |
+| [`frontend-performance-and-loading`](./frontend-performance-and-loading/SKILL.md) | Route splitting, Suspense, asset loading, long-list heuristics, and platform-appropriate loading strategy |
 | [`onboarding-state-architecture`](./onboarding-state-architecture/SKILL.md) | Server-driven `nextStep`, active onboarding module ownership, routing authority, legacy quarantine |
 | [`server-domain-architecture`](./server-domain-architecture/SKILL.md) | `routes.ts` as composition root, `routes/domains/*` ownership, `repositories/*` for new persistence, `storage.ts` as compatibility facade |
 | [`monorepo-workspace-governance`](./monorepo-workspace-governance/SKILL.md) | Root orchestration-only principle, workspace dependency ownership, tsconfig/script normalization, env/secret/legacy guardrails |
@@ -44,9 +45,13 @@ Patterns for making the system reliable, secure, and observable.
 | Skill | What it covers |
 |-------|---------------|
 | [`auth-session-and-safety-boundaries`](./auth-session-and-safety-boundaries/SKILL.md) | Policy-based auth gating, typed session contracts, dev/debug isolation, fail-closed defaults, webhook validation |
+| [`llm-runtime-safety-and-integration`](./llm-runtime-safety-and-integration/SKILL.md) | Safe runtime AI integration, provider routing, prompt metadata, fallback behavior, trace logging, deterministic-boundary protection |
+| [`admin-audit-and-rbac-governance`](./admin-audit-and-rbac-governance/SKILL.md) | Admin role hierarchy, endpoint permission mapping, audit-log obligations, and safe handling of sensitive admin writes |
 | [`reliability-and-state-integrity`](./reliability-and-state-integrity/SKILL.md) | Transactions, idempotency, execution guards, recovery/re-entry semantics, expiry handling, critical writes vs side effects |
+| [`database-migration-safety`](./database-migration-safety/SKILL.md) | Safe schema evolution, idempotent migration scripts, pre/post verification, rollout sequencing, and rollback thinking |
 | [`testing-and-regression-guardrails`](./testing-and-regression-guardrails/SKILL.md) | Regression tests, invariant tests, structural tests, CI guardrail scripts, test placement by workspace |
 | [`platform-observability-and-ops`](./platform-observability-and-ops/SKILL.md) | Structured logging, request IDs, Prometheus metrics, health/readiness, alerts, synthetic monitoring, audit logging |
+| [`security-scan`](./security-scan/SKILL.md) | Security scan and posture review for auth/debug surfaces, secret handling, dependency risk, CI guardrails, and production overrides |
 
 ---
 
@@ -56,8 +61,19 @@ Deep expertise for the two core product engines.
 
 | Skill | What it covers |
 |-------|---------------|
+| [`event-pool-and-matching-operations`](./event-pool-and-matching-operations/SKILL.md) | Event-pool lifecycle, pool stats semantics, match-run operations, and post-match group outcome handling |
 | [`matching-domain`](./matching-domain/SKILL.md) | Deterministic pair scoring, 6-dimension weights, signal boundary invariant, execution safety, AI explanation separation |
 | [`social-icebreaker-domain`](./social-icebreaker-domain/SKILL.md) | Session lifecycle, host/player authority, persistence/rejoin, roster vs presence, action integrity, secrecy boundaries, AI content |
+
+---
+
+## Product Planning
+
+Planning artifacts and scoping help before implementation begins.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`draft-prd`](./draft-prd/SKILL.md) | Product requirements drafts, user stories, scope boundaries, measurable success metrics, and proposal framing |
 
 ---
 
@@ -78,6 +94,17 @@ Keep docs aligned with the active codebase. Use after significant code changes o
 | Skill | What it covers |
 |-------|---------------|
 | [`docs-sync`](./docs-sync/SKILL.md) | Scan code changes, map them to documentation targets, draft minimal updates, and enforce active-flow-only guardrails. Use when docs need syncing after a PR merges or an architecture decision is made. |
+
+---
+
+## Delivery Validation
+
+Skills for flow-level verification and concrete performance measurement.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`e2e-test-runner`](./e2e-test-runner/SKILL.md) | End-to-end journeys, smoke tests, synthetic probes, and flow-level verification gaps |
+| [`performance-benchmark`](./performance-benchmark/SKILL.md) | Before/after measurement for route metrics, bundle behavior, script throughput, and repeatable performance baselines |
 
 ---
 
@@ -107,16 +134,25 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I write or audit a skill? | `skill-authoring-governance` |
 | Where does this component go? | `frontend-component-architecture` |
 | How do I add a new button variant? | `design-system-governance` |
+| How do I keep a new screen fast to load? | `frontend-performance-and-loading` |
 | What controls the onboarding step a user sees? | `onboarding-state-architecture` |
 | Where does a new API route go? | `server-domain-architecture` |
 | How do I add a dependency to the monorepo? | `monorepo-workspace-governance` |
 | How do I know whether I need to update the sibling platform too? | `platform-coordination-protocol` |
 | How do I gate a route for admin-only access? | `auth-session-and-safety-boundaries` |
+| How do I add an LLM call safely at runtime? | `llm-runtime-safety-and-integration` |
+| How do I wire RBAC and audit logging for an admin refund, ban, or override? | `admin-audit-and-rbac-governance` |
 | How do I make a multi-step operation atomic? | `reliability-and-state-integrity` |
+| How do I plan a safe migration or column rename? | `database-migration-safety` |
 | How do I lock in an architectural boundary with a test? | `testing-and-regression-guardrails` |
 | How do I add structured logging to a new route? | `platform-observability-and-ops` |
+| How do I audit this change for security risk or missing scan coverage? | `security-scan` |
+| How do I create an event pool or interpret `estimatedGroups` correctly? | `event-pool-and-matching-operations` |
 | Can I add `user_interest_signals` to the matching score? | `matching-domain` (no — see signal boundary) |
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
+| How do I draft a PRD or feature brief? | `draft-prd` |
+| How do I run a smoke test or end-to-end journey check? | `e2e-test-runner` |
+| How do I benchmark before and after a performance change? | `performance-benchmark` |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
 | How do I keep docs in sync after a code change? | `docs-sync` |
