@@ -36,6 +36,10 @@ function AdminRouter() {
     setLocation("/login");
   };
 
+  if (location === "/login" || location === "/admin/login") {
+    return <AdminLoginPage />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -45,10 +49,6 @@ function AdminRouter() {
         </div>
       </div>
     );
-  }
-
-  if (location === "/login" || location === "/admin/login") {
-    return <AdminLoginPage />;
   }
 
   if (!isAuthenticated) {

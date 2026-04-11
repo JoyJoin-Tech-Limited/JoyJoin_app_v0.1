@@ -1,0 +1,47 @@
+skill: performance-benchmark
+
+primary_ownership: >
+  Measuring and comparing performance baselines before and after changes,
+  including route metrics, bundle behavior, and script throughput.
+
+use_when:
+  - benchmarking a change before and after implementation
+  - measuring route transitions, load metrics, or bundle behavior
+  - comparing script throughput or algorithm runtime
+  - validating whether a performance claim is real
+  - defining a repeatable performance verification method
+
+do_not_use_when:
+  - task is primarily about implementing the performance fix itself
+  - task is only about token or component design with no measurement question
+  - task is purely about functional testing rather than performance comparison
+
+strong_triggers:
+  - benchmark this
+  - before and after
+  - performance baseline
+  - Lighthouse
+  - Web Vitals
+  - measure LCP
+  - measure performance
+  - route transition time
+  - bundle regression
+
+owned_files:
+  - docs/perf.md
+  - scripts/test-performance-fixes.sh
+  - scripts/analyze-matching-issues.ts
+  - scripts/simulate-1000-users.ts
+  - scripts/comprehensive_simulation.ts
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: frontend-performance-and-loading
+    when: the benchmark points to a frontend loading or rendering fix
+  - skill: testing-and-regression-guardrails
+    when: the performance check should become a regression guardrail or structural test
+  - skill: matching-domain
+    when: the performance question is about matching or simulation behavior rather than frontend loading

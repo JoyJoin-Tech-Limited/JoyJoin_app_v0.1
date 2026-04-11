@@ -97,7 +97,7 @@ export default {
         mono: ["var(--font-mono)"],
         // ─── JoyJoin semantic font roles ──────────────────────────────────
         // font-ui          → system Chinese stack; default for all dense/functional UI
-        // font-cn-display  → AlibabaPuHuiTi-3 (falls back to ZCOOL QingKe HuangYou);
+        // font-cn-display  → AlibabaPuHuiTi-3 (falls back to system Chinese stack);
         //                    for short high-impact Chinese display moments
         // font-en-brand    → Quicksand (falls back to Outfit);
         //                    for JoyJoin English wordmark / brand accent moments only

@@ -8,6 +8,33 @@ const REQUEST_TIMEOUT_MS = 15000
 export interface ApiError extends Error {
   statusCode?: number
   data?: unknown
+  isGenericMessage?: boolean
+}
+
+export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+
+export const DEFAULT_API_ERROR_PREFIX = 'Request failed with status'
+
+function getApiErrorDetails(statusCode: number, data: unknown): {
+  message: string
+  isGenericMessage: boolean
+} {
+  if (typeof data === 'object' && data !== null) {
+    const errorData = data as Record<string, unknown>
+
+    if ('error' in errorData && typeof errorData.error === 'string') {
+      return { message: errorData.error, isGenericMessage: false }
+    }
+
+    if ('message' in errorData && typeof errorData.message === 'string') {
+      return { message: errorData.message, isGenericMessage: false }
+    }
+  }
+
+  return {
+    message: `${DEFAULT_API_ERROR_PREFIX} ${statusCode}`,
+    isGenericMessage: true,
+  }
 }
 
 function buildApiUrl(path: string): string {
@@ -22,16 +49,22 @@ function buildApiUrl(path: string): string {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-function createApiError(message: string, statusCode?: number, data?: unknown): ApiError {
+function createApiError(
+  message: string,
+  statusCode?: number,
+  data?: unknown,
+  isGenericMessage = false
+): ApiError {
   const error = new Error(message) as ApiError
   error.statusCode = statusCode
   error.data = data
+  error.isGenericMessage = isGenericMessage
   return error
 }
 
 export async function apiRequest<T>(options: {
   path: string
-  method?: 'GET' | 'POST'
+  method?: HttpMethod
   data?: unknown
 }): Promise<T> {
   const response = await Taro.request<T>({
@@ -49,17 +82,39 @@ export async function apiRequest<T>(options: {
     return response.data
   }
 
-  const message =
-    typeof response.data === 'object' &&
-    response.data !== null &&
-    'error' in response.data &&
-    typeof (response.data as Record<string, unknown>).error === 'string'
-      ? String((response.data as Record<string, unknown>).error)
-      : `Request failed with status ${response.statusCode}`
+  const errorDetails = getApiErrorDetails(response.statusCode, response.data)
 
-  throw createApiError(message, response.statusCode, response.data)
+  throw createApiError(
+    errorDetails.message,
+    response.statusCode,
+    response.data,
+    errorDetails.isGenericMessage
+  )
 }
 
+export type OnboardingStep =
+  | 'onboarding'
+  | 'personality-test'
+  | 'essential-data'
+  | 'extended-data'
+  | 'profile-review'
+  | 'guide'
+  | 'discover'
+
+export interface UserState {
+  id: string
+  wechatOpenId: string
+  nextStep: OnboardingStep
+  // Index signature to accommodate the full user record returned by /api/auth/user
+  // without requiring every field to be explicitly typed here.
+  [key: string]: unknown
+}
+
+/**
+ * Authenticate via WeChat Mini Program login (Taro.login → code2Session).
+ * Returns the authenticated user and their openid.
+ * No web OAuth redirect is involved — this is mini-program-only.
+ */
 export async function authenticateMiniProgramUser(): Promise<{ user: Record<string, any>; openid: string }> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
@@ -82,4 +137,12 @@ export async function authenticateMiniProgramUser(): Promise<{ user: Record<stri
     user: data.user,
     openid: data.user.wechatOpenId,
   }
+}
+
+/**
+ * Fetch the current authenticated user's state, including the server-calculated
+ * `nextStep` for driving onboarding/post-login navigation.
+ */
+export async function getUserState(): Promise<UserState> {
+  return apiRequest<UserState>({ path: '/api/auth/user' })
 }

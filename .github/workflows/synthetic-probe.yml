@@ -3,13 +3,15 @@
 # Exercises the /api/health, /api/metrics, and /api/auth/user endpoints on the
 # production server to verify basic availability and observability infrastructure.
 #
-# Required repository secret:
-#   PRODUCTION_BASE_URL — e.g. https://api.joyjoin.app
+# Optional repository secrets:
+#   PRODUCTION_BASE_URL — override the default production probe target
 #   PUSHGATEWAY_URL     — (optional) Prometheus Pushgateway URL
 #
-# If PRODUCTION_BASE_URL is not set, the probe runs against http://localhost:5001
-# (useful for testing the workflow itself with act or manual dispatches against
-# a deployed environment).
+# By default, the scheduled probe targets the active production API base URL
+# declared by the deployment config: https://api.yuejuapp.com
+#
+# For ad-hoc testing, use workflow_dispatch and provide the `base_url` input
+# explicitly (including localhost targets).
 
 name: Synthetic Monitoring Probe
 
@@ -42,7 +44,7 @@ jobs:
 
       - name: Run synthetic probe
         env:
-          BASE_URL: ${{ inputs.base_url || secrets.PRODUCTION_BASE_URL || 'http://localhost:5001' }}
+          BASE_URL: ${{ inputs.base_url || secrets.PRODUCTION_BASE_URL || 'https://api.yuejuapp.com' }}
           PROBE_TIMEOUT_MS: "5000"
           PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
         run: node scripts/synthetic/happy-path-probe.mjs

@@ -111,6 +111,33 @@ Do not fork behaviour casually. Keep local wrappers behaviourally aligned with t
 **Apply this skill by:** Using the `asChild` prop with a Radix Slot so the `Button` renders as the router `Link` element without forking behaviour.
 **Result:** Navigation uses semantic `<a>` markup while inheriting all shared button styles and states.
 
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies directly to Web component implementation in `apps/user-client`, `apps/admin-client`, and `packages/shared`.
+- Applies indirectly to Taro mini-program work when behavior, state contracts, and design intent should be shared but renderer-specific code must stay separate.
+- For shared interaction baselines such as state completeness, touch targets, and list-size heuristics, use [`design-system-governance`](../design-system-governance/SKILL.md); this skill focuses on component placement, semantics, and renderer boundaries.
+
+### UI/UX & Aesthetic Guidance
+
+- Keep business behavior and state contracts shareable where that improves parity, but keep renderer-specific markup and interaction wiring local to each renderer.
+- Web components must use semantic elements such as `button`, `a`, `label`, `fieldset`, `main`, and `nav`; when future Taro parity is expected, keep DOM-specific markup from leaking into shared logic.
+
+### Web-Specific Considerations
+
+- Prefer shared primitives, thin app wrappers, and composition patterns such as `asChild` that preserve semantics without forking behavior.
+
+### Taro-Specific Considerations
+
+- If a component pattern needs a mini-program equivalent, implement a renderer-specific wrapper that uses `View`, `Text`, `Button`, `Input`, and `ScrollView` instead of assuming DOM portability.
+- Prefer renderer-specific wrappers and list strategies over assuming DOM scrolling or DOM event patterns will carry over unchanged.
+
+### Accessibility & Performance Notes
+
+- Do not let composition patterns erase native semantics, keyboard affordances, or renderer-specific performance characteristics.
+- On cross-platform component families, prefer sharing state logic and tokens while letting each renderer optimize for its own input and scroll model.
+
 ## Troubleshooting
 
 - **`packages/shared` is importing from `apps/user-client`** — this is a hard violation. Move the dependency into shared or accept the duplication in the app workspace. Shared must never depend on an app.

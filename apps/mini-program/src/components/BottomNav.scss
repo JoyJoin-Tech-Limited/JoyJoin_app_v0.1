@@ -1,0 +1,35 @@
+@import '../styles/variables';
+@import '../styles/mixins';
+
+.bottom-nav {
+  position: fixed;
+  right: $container-padding;
+  bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  left: $container-padding;
+  z-index: $z-tab-bar;
+  display: flex;
+  justify-content: space-around;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 999rpx;
+  box-shadow: $shadow-md;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120rpx;
+    min-height: 72rpx;
+    border-radius: 999rpx;
+
+    &--active {
+      background: $color-primary-light;
+    }
+  }
+
+  &__label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+}

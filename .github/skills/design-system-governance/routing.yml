@@ -55,6 +55,8 @@ owned_symbols:
 related_skills:
   - skill: frontend-component-architecture
     when: token change affects shared UI primitive placement or composition
+  - skill: frontend-performance-and-loading
+    when: token, motion, or list-state decisions may affect loading performance or rendering cost on real screens
   - skill: joyjoin-brand-guidelines
     when: introducing a new colour that must align with brand identity
   - skill: wow-elements

@@ -88,8 +88,8 @@
  *   Do NOT use a custom display font here.
  *
  * font-cn-display  → font-family: var(--font-cn-display)
- *   AlibabaPuHuiTi-3 (self-hosted when available), falls back to
- *   ZCOOL QingKe HuangYou (loaded via Google Fonts), then system Chinese.
+ *   AlibabaPuHuiTi-3 (self-hosted), falls back to system Chinese stack
+ *   and then generic system-ui / sans-serif.
  *   Use for: short high-impact Chinese display moments — hero headlines,
  *   branded tab labels, celebratory text, premium empty-state headlines,
  *   high-emotion primary CTAs.
@@ -111,11 +111,10 @@
   --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
 
   /* ── Role 2: Chinese display (short high-impact emotional moments) ──── */
-  /* AlibabaPuHuiTi-3 is already wired through the self-hosted @font-face
-     above. ZCOOL QingKe HuangYou remains the next fallback — it is loaded
-     via Google Fonts in index.html and preserves display warmth if the
-     self-hosted font fails to load for any reason. */
-  --font-cn-display: 'AlibabaPuHuiTi', 'ZCOOL QingKe HuangYou', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* AlibabaPuHuiTi-3 is wired through the self-hosted @font-face above.
+     Falls back to system Chinese (PingFang SC, Microsoft YaHei), then
+     system-ui / sans-serif if the self-hosted font fails to load. */
+  --font-cn-display: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
 
   /* ── Role 3: English brand accent (JoyJoin identity moments only) ───── */
   /* Quicksand is already wired through the self-hosted @font-face above.

@@ -11,6 +11,12 @@ const participationAnalyticsLimiter = createRateLimiter({
   keyPrefix: "participation-analytics",
 });
 
+const personalityResultAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 80,
+  keyPrefix: "personality-result-analytics",
+});
+
 const PARTICIPATION_EVENT_TYPES = [
   "atmosphere_framing_shown",
   "atmosphere_framing_selected",
@@ -29,6 +35,20 @@ type ParticipationEventType = (typeof PARTICIPATION_EVENT_TYPES)[number];
 
 const ALLOWED_PARTICIPATION_EVENT_TYPES = new Set<ParticipationEventType>(
   PARTICIPATION_EVENT_TYPES,
+);
+
+const PERSONALITY_RESULT_EVENT_TYPES = [
+  "personality_result_viewed",
+  "personality_text_share_copied",
+  "personality_share_variant_copied",
+  "personality_poster_opened",
+  "personality_native_share_used",
+] as const;
+
+type PersonalityResultEventType = (typeof PERSONALITY_RESULT_EVENT_TYPES)[number];
+
+const ALLOWED_PERSONALITY_RESULT_EVENT_TYPES = new Set<PersonalityResultEventType>(
+  PERSONALITY_RESULT_EVENT_TYPES,
 );
 
 const MAX_METADATA_BYTES = 4_096;
@@ -127,6 +147,47 @@ export function registerAnalyticsRoutes(app: Express): void {
         error: String(error),
       });
       // Silent fail — analytics must never break the user flow
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/personality_result
+   *
+   * Lightweight personality result instrumentation for copy/share/presenter
+   * interactions. This currently logs structured events fail-open so product can
+   * validate the new result-page strategy without risking the user flow.
+   */
+  app.post("/api/analytics/personality_result", personalityResultAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_PERSONALITY_RESULT_EVENT_TYPES.has(eventType as PersonalityResultEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      logger.info("personality_result analytics", {
+        request_id: req.requestId,
+        user_id: req.session.userId ?? null,
+        session_id: req.sessionID ?? null,
+        event_type: eventType,
+        metadata: sanitizeMetadata(metadata),
+        timestamp: parseTimestamp(timestamp).toISOString(),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("personality_result analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
       return res.status(200).json({ success: false, error: "analytics write failed" });
     }
   });

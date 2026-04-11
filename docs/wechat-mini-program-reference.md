@@ -1,8 +1,12 @@
 # WeChat Mini Program Implementation Reference
 
+> **Status:** Supplemental raw-reference guide only — retained for WXML/WXSS design translation patterns.
+> **Current active mini-program implementation:** `apps/mini-program` uses Taro + React, so this file is not the source of truth for the shipped mini-program client.
+> **Read first for active work:** `docs/PLATFORM_COORDINATION.md` and `apps/mini-program/README.md`.
+
 ## Overview
 
-This document provides a reference implementation for converting the JoyJoin mobile web app to a WeChat Mini Program (微信小程序). It follows the Mobile UI Design Specification provided.
+This document provides a raw-reference implementation for converting mobile-web design concepts into WeChat Mini Program primitives. It predates the current Taro + React client and should be used only as supplemental translation guidance.
 
 ## Prerequisites
 

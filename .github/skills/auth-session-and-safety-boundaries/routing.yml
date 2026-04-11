@@ -58,6 +58,8 @@ owned_symbols:
 related_skills:
   - skill: server-domain-architecture
     when: auth change requires adding or restructuring an Express route handler
+  - skill: admin-audit-and-rbac-governance
+    when: the task is specifically about admin RBAC mapping, admin-account actions, or audit obligations on admin writes
   - skill: reliability-and-state-integrity
     when: auth flow must be idempotent or fail-closed with transaction guards
   - skill: platform-observability-and-ops

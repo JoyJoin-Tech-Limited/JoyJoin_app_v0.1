@@ -8,7 +8,7 @@ use_when:
   - adding structured logging to a new server route or service
   - instrumenting a Prometheus metric or counter
   - adding or reviewing a health or readiness endpoint
-  - writing an audit log for an admin or sensitive action
+  - adding generic audit or operational telemetry to a sensitive route or service
   - adding alerting rules or SLO monitoring
   - reviewing observability readiness of new backend code
 
@@ -24,19 +24,16 @@ strong_triggers:
   - logger.child
   - request_id
   - req.requestId
-  - logAdminAudit
   - logAITrace
   - Prometheus
   - metrics
   - /api/health
   - /api/readyz
   - /api/metrics
-  - audit log
   - structured logging
   - add logging to this route
   - instrument a metric
   - health vs readiness check
-  - audit log an admin action
   - requestId middleware
 
 owned_files:
@@ -62,6 +59,10 @@ owned_symbols:
 related_skills:
   - skill: server-domain-architecture
     when: new route needs both structural placement and observability instrumentation
+  - skill: admin-audit-and-rbac-governance
+    when: the change needs the current admin RBAC matrix or action-specific audit vocabulary in addition to logging
+  - skill: llm-runtime-safety-and-integration
+    when: AI trace fields, prompt metadata, or fallback telemetry need runtime-safety rules beyond generic observability
   - skill: testing-and-regression-guardrails
     when: adding synthetic monitoring or health-check tests
   - skill: reliability-and-state-integrity

@@ -1,0 +1,64 @@
+skill: llm-runtime-safety-and-integration
+
+primary_ownership: >
+  Safe runtime integration for LLM-backed features including provider routing,
+  prompt versioning, fallback behavior, cache metadata, and AI trace logging.
+
+use_when:
+  - adding or changing a live LLM-backed server feature
+  - wiring promptVersion, fromCache, generatedAt, or fallbackUsed metadata
+  - integrating shadow-mode inference or runtime fallback logic
+  - reviewing whether an AI feature respects deterministic authority boundaries
+  - adding AI trace logging or provider routing rules
+
+do_not_use_when:
+  - task is purely about deterministic scoring math with no AI explanation or model call
+  - task is only about generic logging with no AI runtime concern
+  - task is purely about future roadmap ideation without runtime integration details
+
+strong_triggers:
+  - AITrace
+  - logAITrace
+  - promptVersion
+  - fallbackUsed
+  - fromCache
+  - generatedAt
+  - socialModelRouter
+  - creativeModelRouter
+  - runtimeLLMFallback
+  - llmFallbackInference
+  - shadow mode
+  - add an LLM call
+  - provider routing
+
+owned_files:
+  - docs/ai-agent-harness-separation-strategy.md
+  - docs/AI_INTEGRATION_PLAN.md
+  - apps/server/src/ai/socialModelRouter.ts
+  - apps/server/src/ai/creativeModelRouter.ts
+  - apps/server/src/lib/aiTraceLogger.ts
+  - apps/server/src/matchExplanationService.ts
+  - apps/server/src/socialIcebreakerAIService.ts
+  - apps/server/src/profileTaglineService.ts
+  - apps/server/src/inference/runtimeLLMFallback.ts
+  - apps/server/src/inference/llmFallbackInference.ts
+
+owned_paths: []
+
+owned_symbols:
+  - logAITrace
+  - callSocialAI
+  - getClientForFunction
+  - promptVersion
+  - fallbackUsed
+  - fromCache
+
+related_skills:
+  - skill: platform-observability-and-ops
+    when: the AI change needs broader logging, metrics, or operational telemetry beyond AI trace fields
+  - skill: matching-domain
+    when: the task changes deterministic matching authority rather than AI explanation or enrichment behavior
+  - skill: social-icebreaker-domain
+    when: the AI change is tied to live icebreaker session rules or host/player authority
+  - skill: onboarding-state-architecture
+    when: onboarding routing or completion authority is changing alongside AI helper text

@@ -15,6 +15,7 @@ import { registerPaymentRoutes } from "./routes/domains/payments";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
+import { formatAge } from "@shared/utils";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
@@ -4895,7 +4896,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         referralCode: existingCode.code,
         successfulInvites,
-        platformTotal
+        platformTotal,
+        inviteLink: `${req.protocol}://${req.get('host')}/invite/${existingCode.code}`,
       });
     } catch (error: any) {
       console.error("Error fetching referral stats:", error);
@@ -7993,7 +7995,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           displayName: users.displayName,
           archetype: users.archetype,
           topInterests: users.interestsRankedTop3,
-          age: users.birthdate,
+          birthdate: users.birthdate,
           // ✅ UPDATED: Use 3-tier industry classification
           industryNicheLabel: users.industryNicheLabel,
           industryCategoryLabel: users.industryCategoryLabel,
@@ -8011,6 +8013,31 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         .from(eventPoolRegistrations)
         .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
         .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+
+      const memberSummaries = members.map((member: (typeof members)[number]) => {
+        const ageVisibility = member.ageVisible ?? 'hide_all';
+        const industryVisibility = member.industryVisible ?? 'hide_all';
+        const educationVisibility = member.educationVisible ?? 'hide_all';
+
+        return {
+          userId: member.userId,
+          displayName: member.displayName,
+          archetype: member.archetype,
+          topInterests: member.topInterests,
+          ageLabel: formatAge(member.birthdate, ageVisibility),
+          industryNicheLabel: member.industryNicheLabel,
+          industryCategoryLabel: member.industryCategoryLabel,
+          ageVisible: ageVisibility !== 'hide_all',
+          industryVisible: industryVisibility !== 'hide_all',
+          gender: member.gender,
+          educationLevel: member.educationLevel,
+          hometownRegionCity: member.hometownRegionCity,
+          hometownAffinityOptin: member.hometownAffinityOptin,
+          educationVisible: educationVisibility !== 'hide_all',
+          relationshipStatus: member.relationshipStatus,
+          intent: member.intent,
+        };
+      });
 
       res.json({
         group: {
@@ -8036,7 +8063,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           district: pool.district,
           dateTime: pool.dateTime,
         },
-        members,
+        members: memberSummaries,
       });
     } catch (error) {
       console.error("Error fetching pool group details:", error);
@@ -8231,7 +8258,17 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         }
       }
 
-      res.json({ success: true, blindBoxEventId });
+      if (!blindBoxEventId) {
+        return res.status(409).json({ message: "Blind box event is not ready for attendance confirmation" });
+      }
+
+      await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed');
+
+      const user = await storage.getUser(userId);
+      const displayName = getUserDisplayName(user);
+      broadcastAttendanceStatusUpdated(blindBoxEventId, userId, displayName, 'confirmed');
+
+      res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
     } catch (error) {
       console.error("Error confirming pool group attendance:", error);
       res.status(500).json({ message: "Failed to confirm attendance" });
@@ -8897,8 +8934,15 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
       const session = req.session as any;
       const userId = session.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       
-      const validatedData = insertChatReportSchema.parse(req.body);
+      const validatedData = insertChatReportSchema.parse({
+        ...req.body,
+        reportedBy: userId,
+      });
       
       const report = await storage.createChatReport(validatedData);
       
@@ -11604,6 +11648,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           algorithmVersion: session.algorithmVersion || 'v1',
           primaryArchetype: primaryArchetype,
           secondaryArchetype: finalResult?.secondaryArchetype,
+          topArchetypes: session.topArchetypes || null,
           ...normalizedTraits,
           totalQuestions,
           chemistryList: chemistryList.map(c => ({
@@ -11630,6 +11675,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           algorithmVersion: 'v1',
           primaryArchetype: legacyResult.primaryArchetype,
           secondaryArchetype: legacyResult.secondaryArchetype,
+          topArchetypes: null,
           affinityScore: legacyResult.affinityScore,
           opennessScore: legacyResult.opennessScore,
           conscientiousnessScore: legacyResult.conscientiousnessScore,
@@ -11809,7 +11855,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ Xiaoyue AI Analysis Endpoint ============
   app.post('/api/xiaoyue/analysis', async (req: any, res) => {
     try {
-      const { archetype, traitScores, confidence } = req.body;
+      const { archetype, secondaryArchetype, topArchetypes, traitScores, confidence } = req.body;
+      const normalizedTopArchetypes = Array.isArray(topArchetypes)
+        ? topArchetypes.filter((item: any) =>
+            item &&
+            typeof item.archetype === 'string' &&
+            item.archetype.length > 0 &&
+            typeof item.score === 'number' &&
+            Number.isFinite(item.score)
+          )
+        : undefined;
       
       if (!archetype || !traitScores) {
         return res.status(400).json({ message: 'Missing archetype or traitScores' });
@@ -11818,6 +11873,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       const { generateXiaoyueAnalysis } = await import('./xiaoyueAnalysisService');
       const result = await generateXiaoyueAnalysis({
         archetype,
+        secondaryArchetype,
+        topArchetypes: normalizedTopArchetypes,
         traitScores: {
           affinity: traitScores.A || traitScores.affinity || 0.5,
           openness: traitScores.O || traitScores.openness || 0.5,
@@ -11839,7 +11896,16 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // Prefetch xiaoyue analysis when test approaches completion
   app.post('/api/xiaoyue/prefetch', async (req: any, res) => {
     try {
-      const { archetype, traitScores, confidence } = req.body;
+      const { archetype, secondaryArchetype, topArchetypes, traitScores, confidence } = req.body;
+      const normalizedTopArchetypes = Array.isArray(topArchetypes)
+        ? topArchetypes.filter((item: any) =>
+            item &&
+            typeof item.archetype === 'string' &&
+            item.archetype.length > 0 &&
+            typeof item.score === 'number' &&
+            Number.isFinite(item.score)
+          )
+        : undefined;
       
       if (!archetype || !traitScores || confidence < 0.7) {
         return res.json({ prefetched: false, reason: 'Not ready yet' });
@@ -11847,14 +11913,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       const { prefetchAnalysisIfReady } = await import('./xiaoyueAnalysisService');
       prefetchAnalysisIfReady(
-        archetype,
         {
-          affinity: traitScores.A || traitScores.affinity || 0.5,
-          openness: traitScores.O || traitScores.openness || 0.5,
-          conscientiousness: traitScores.C || traitScores.conscientiousness || 0.5,
-          emotionalStability: traitScores.E || traitScores.emotionalStability || 0.5,
-          extraversion: traitScores.X || traitScores.extraversion || 0.5,
-          positivity: traitScores.P || traitScores.positivity || 0.5,
+          archetype,
+          secondaryArchetype,
+          topArchetypes: normalizedTopArchetypes,
+          traitScores: {
+            affinity: traitScores.A ?? traitScores.affinity ?? 0.5,
+            openness: traitScores.O ?? traitScores.openness ?? 0.5,
+            conscientiousness: traitScores.C ?? traitScores.conscientiousness ?? 0.5,
+            emotionalStability: traitScores.E ?? traitScores.emotionalStability ?? 0.5,
+            extraversion: traitScores.X ?? traitScores.extraversion ?? 0.5,
+            positivity: traitScores.P ?? traitScores.positivity ?? 0.5,
+          },
         },
         confidence
       );

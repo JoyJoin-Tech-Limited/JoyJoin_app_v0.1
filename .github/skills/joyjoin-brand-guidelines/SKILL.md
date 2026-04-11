@@ -96,7 +96,7 @@ JoyJoin uses a **three-role semantic typography system**. Every typographic deci
 | Role | Tailwind class | CSS variable | Font (when loaded) | Fallback |
 |------|---------------|--------------|-------------------|----------|
 | **UI** | `font-ui` | `var(--font-ui)` | System Chinese stack | PingFang SC → Microsoft YaHei → system-ui |
-| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | ZCOOL QingKe HuangYou → PingFang SC |
+| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | PingFang SC → Microsoft YaHei → system-ui → sans-serif |
 | **English brand** | `font-en-brand` | `var(--font-en-brand)` | Quicksand | Outfit → system-ui |
 
 The legacy `.font-brand` CSS class is an alias for `font-cn-display` and is kept for backward compatibility.
@@ -133,11 +133,11 @@ Use only for:
 
 ### Taro / WeChat Mini Program notes
 
-- Font loading via self-hosted `.woff2` requires the files to be present in `src/assets/fonts/`. The `@font-face` blocks in `fonts.css` are commented out until the files are uploaded.
-- Until then, ZCOOL QingKe HuangYou (loaded via Google Fonts in `index.html`) acts as the effective `font-cn-display` display font.
-- Outfit (loaded via Google Fonts) acts as the effective `font-en-brand` fallback.
-- WeChat Mini Program / WebView: avoid `backdrop-filter`, `hover:` states, and loading many font weights.
-- Self-hosted fonts in mini programs must be uploaded as CDN assets, not bundled inline.
+- Web client only: `apps/user-client/src/assets/fonts/fonts.css` self-hosts AlibabaPuHuiTi-3 via `@font-face` as the primary Chinese display font, with PingFang SC, Microsoft YaHei, `system-ui`, and `sans-serif` fallbacks.
+- Web client only: Outfit, loaded via Google Fonts, acts as the effective `font-en-brand` fallback.
+- WeChat Mini Program: do not assume the same setup is present there. This workspace currently relies on system fonts and does not bundle AlibabaPuHuiTi assets or `@font-face` usage.
+- If custom fonts are ever introduced in the mini program, host them on a CDN rather than bundling them inline, and avoid loading many font weights.
+- WeChat Mini Program / WebView: avoid `backdrop-filter` and `hover:` states.
 
 ### Key design rules
 - Do **not** apply custom display fonts globally or at the container level — only on the specific element.
@@ -217,6 +217,36 @@ Every JoyJoin design output should feel:
 **User says:** "Can I add a mascot to this empty-state screen?"
 **Apply this skill by:** Choosing the mascot whose personality fits the moment (e.g. Koala for a calm/empty state). Keep the illustration soft-lined, cute but tasteful, and ensure it does not clutter the layout.
 **Result:** Empty state feels emotionally welcoming without being noisy or childish.
+
+## Frontend Excellence Notes
+
+### Platform Applicability
+
+- Applies to both Web and Taro mini-program implementations whenever JoyJoin screens, components, or motion need to feel unmistakably on-brand.
+- Brand intent should remain consistent across platforms even when the renderer, font availability, or interaction model differs.
+- For shared interaction baselines use [`design-system-governance`](../design-system-governance/SKILL.md); this skill owns emotional tone, typography, colour language, and overall brand feel.
+
+### UI/UX & Aesthetic Guidance
+
+- Reference JoyJoin's semantic typography roles, core brand colours, and token-backed spacing or radius decisions before introducing any new visual treatment.
+- Use semantic web elements for navigational and interactive structure, and map the same hierarchy to native Taro components for mini-program surfaces.
+- Emotional quality is part of the implementation bar: loading, error, empty, confirmation, and celebratory states should feel warm, polished, and explicit rather than visually neutral placeholders.
+- Interaction feedback should feel premium and immediate: pressed states, confirmation toasts, subtle reveal timing, and clear success or recovery messaging.
+
+### Web-Specific Considerations
+
+- Hover and focus-visible states should reinforce the brand without becoming decorative noise; cursor styles should match affordance exactly.
+- Responsive behavior must preserve the same warmth and breathing room on small mobile widths before scaling up to larger screens.
+
+### Taro-Specific Considerations
+
+- Keep the same hierarchy, copy tone, and emotional feel with native Taro components even when typography or renderer capabilities differ.
+- If a brand treatment depends on a browser-only effect, choose the closest native-feeling alternative instead of silently dropping the cue.
+
+### Accessibility & Performance Notes
+
+- Brand polish must still satisfy WCAG 2.1 AA contrast, focus visibility, readable copy sizing, and non-colour-only state indication.
+- Ensure reduced-motion fallbacks preserve meaning, and defer to [`wow-elements`](../wow-elements/SKILL.md) for motion-specific implementation guidance.
 
 ## Troubleshooting
 

@@ -55,6 +55,12 @@ related_skills:
     when: route handler involves multi-step writes or idempotency requirements
   - skill: auth-session-and-safety-boundaries
     when: route requires auth gating, role checks, or webhook signature validation
+  - skill: admin-audit-and-rbac-governance
+    when: admin routes need current RBAC mapping or sensitive-action audit coverage
+  - skill: event-pool-and-matching-operations
+    when: the route owns event-pool lifecycle, stats semantics, or group-outcome handling
+  - skill: database-migration-safety
+    when: a route or repository change depends on coordinated schema evolution
   - skill: platform-observability-and-ops
     when: adding structured logging, request IDs, or metrics to a new route
   - skill: testing-and-regression-guardrails

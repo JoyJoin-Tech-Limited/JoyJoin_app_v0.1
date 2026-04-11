@@ -11,6 +11,7 @@ Use it together with:
 
 - `apps/user-client` — user-facing React app
 - `apps/admin-client` — separate admin React app
+- `apps/mini-program` — WeChat Mini Program beta client built with Taro 4 + React 18
 - `apps/server` — Express API and operational backend
 - `packages/shared` — shared schema, contracts, taxonomies, and engines
 
@@ -91,7 +92,7 @@ Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
 - All session reads and writes go through `lib/socialIcebreakerStore.ts`; do not add direct `db` calls in the route file.
 
-### 4. Shared contracts and schema ownership
+### 4. Shared contracts and cross-platform ownership
 
 **Canonical schema**
 - `packages/shared/src/schema.ts`
@@ -102,9 +103,17 @@ Boundary:
 **Domain guide**
 - `packages/shared/src/README.md`
 
+**Shared cross-platform modules**
+- `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`
+- `packages/shared/src/api.ts` — typed API helpers (assessment, interests, profile review) used by both web and mini-program
+- `packages/shared/src/archetypeColors.ts` — archetype HSL color tokens; single source consumed by both clients
+- `packages/shared/src/achievements.ts` — achievement definitions and rarity types used by the gamification system on both platforms
+- `packages/shared/src/gamification.ts` — XP/level system shared constants
+
 Boundary:
 - If more than one app/runtime must agree on a contract, define it in `packages/shared`.
 - If code is runtime-specific, keep it in that app and import only the shared definitions.
+- `apps/user-client` is the active web sandbox and future web release surface; `apps/mini-program` is the beta production client. Shared business rules should not fork between them.
 
 ### 5. Server domain ownership
 
@@ -141,6 +150,16 @@ Boundary:
 - Shared presentation component: `apps/user-client/src/components/`
 - Client hook or query adapter: `apps/user-client/src/hooks/`
 - Pure browser utility: `apps/user-client/src/lib/` or `apps/user-client/src/utils/`
+
+### Mini Program
+- Taro page entry: `apps/mini-program/src/pages/` — register new pages in `apps/mini-program/src/lib/onboardingRoutes.ts`
+- Mini Program runtime helper: `apps/mini-program/src/lib/`
+- Mini Program hook: `apps/mini-program/src/hooks/`
+- Mini Program provider: `apps/mini-program/src/providers/`
+- App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (tabBar and page list)
+- Cross-platform contract or pure business rule: `packages/shared/src/`
+
+**Navigation rule:** Tab pages must use `Taro.switchTab()`. Sub-pages use `Taro.navigateTo()` or `Taro.redirectTo()`.
 
 ### Server
 - Route registration composition: `apps/server/src/routes.ts`

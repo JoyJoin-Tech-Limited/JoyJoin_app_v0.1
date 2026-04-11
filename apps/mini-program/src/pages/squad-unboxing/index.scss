@@ -1,0 +1,378 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.squad-unboxing {
+  @include page-gradient-bg;
+  padding: $container-padding;
+
+  // ── Error State ───────────────────────────────────────────────
+  &__error {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 80vh;
+  }
+
+  &__error-icon {
+    font-size: 80rpx;
+  }
+
+  &__error-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__error-btn {
+    margin-top: $spacing-sm;
+  }
+
+  // ── Header ────────────────────────────────────────────────────
+  &__header {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-xl 0 $spacing-lg;
+  }
+
+  &__header-emoji {
+    font-size: 96rpx;
+  }
+
+  &__header-title {
+    display: block;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__header-tagline {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+    line-height: 1.6;
+    padding: 0 $spacing-md;
+  }
+
+  &__header-group-num {
+    display: inline-block;
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    background: $color-primary-light;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 100rpx;
+    margin-top: $spacing-xs;
+  }
+
+  // ── Match Score ───────────────────────────────────────────────
+  &__score {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__score-label {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__score-value {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    @include gradient-text;
+  }
+
+  &__info-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-lg;
+    background: linear-gradient(135deg, #fff7ed 0%, #fff1f2 100%);
+  }
+
+  &__info-copy {
+    margin-bottom: $spacing-md;
+  }
+
+  &__info-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__info-description {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.7;
+  }
+
+  &__info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding-top: $spacing-sm;
+
+    & + & {
+      margin-top: $spacing-xs;
+    }
+  }
+
+  &__info-label {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    flex-shrink: 0;
+  }
+
+  &__info-value {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  // ── Theme Card ────────────────────────────────────────────────
+  &__theme-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-lg;
+    background: linear-gradient(135deg, #FFF5F7 0%, #F5F0FF 100%);
+  }
+
+  &__theme-vibe {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+  }
+
+  &__theme-vibe-label {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__theme-vibe-value {
+    font-size: $font-size-base;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__theme-highlights {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__theme-highlights-title {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__theme-highlight-row {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
+
+  &__theme-highlight-dot {
+    font-size: $font-size-base;
+    color: $color-primary;
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+
+  &__theme-highlight-text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.6;
+  }
+
+  // ── Members Section ───────────────────────────────────────────
+  &__members-section {
+    margin-bottom: $spacing-lg;
+  }
+
+  &__members-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__members-empty {
+    @include flex-center;
+    padding: $spacing-xl 0;
+  }
+
+  &__members-empty-text {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+  }
+
+  &__members-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  // ── Member Card ───────────────────────────────────────────────
+  &__member-card {
+    @include card;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-md $spacing-lg;
+
+    &--current {
+      border: 2rpx solid $color-primary;
+      background: linear-gradient(135deg, #FAFAFE 0%, #F5F0FF 100%);
+    }
+  }
+
+  &__member-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__member-avatar {
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    overflow: hidden;
+
+    &--placeholder {
+      @include flex-center;
+      background: $brand-gradient;
+    }
+  }
+
+  &__member-avatar-initial {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__member-badge {
+    position: absolute;
+    bottom: -4rpx;
+    right: -4rpx;
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    @include flex-center;
+    border: 2rpx solid $color-surface;
+  }
+
+  &__member-badge-text {
+    font-size: 18rpx;
+    color: $color-text-white;
+    font-weight: $font-weight-bold;
+  }
+
+  &__member-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__member-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-xs;
+    margin-bottom: 4rpx;
+  }
+
+  &__member-name {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+
+  &__member-age {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    flex-shrink: 0;
+  }
+
+  &__member-archetype {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__member-interests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    align-items: center;
+  }
+
+  &__member-interest-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4rpx $spacing-sm;
+    background: $color-primary-light;
+    border-radius: 100rpx;
+  }
+
+  &__member-interest-text {
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+  }
+
+  &__member-interest-more {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  // ── Actions ───────────────────────────────────────────────────
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    margin-top: $spacing-md;
+  }
+
+  &__confirm-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  &__chat-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  &__back-btn {
+    width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-surface;
+    color: $color-text-secondary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    border: 1rpx solid $color-border;
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  // ── Spacer ────────────────────────────────────────────────────
+  &__spacer {
+    height: $spacing-2xl;
+  }
+}

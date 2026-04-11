@@ -1,0 +1,344 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.matching-status {
+  @include page-gradient-bg;
+  padding: $container-padding;
+
+  // ── Error State ───────────────────────────────────────────────
+  &__error {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 80vh;
+  }
+
+  &__error-icon {
+    font-size: 80rpx;
+  }
+
+  &__error-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__error-btn {
+    margin-top: $spacing-sm;
+  }
+
+  // ── Status Header ─────────────────────────────────────────────
+  &__header {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-xl 0 $spacing-lg;
+  }
+
+  &__status-emoji {
+    font-size: 96rpx;
+  }
+
+  &__status-title {
+    display: block;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__status-hint {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  // ── Animated dots ─────────────────────────────────────────────
+  &__dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs 0;
+  }
+
+  &__dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    animation: matching-dot-pulse 1.4s ease-in-out infinite both;
+
+    &--1 {
+      animation-delay: 0s;
+    }
+
+    &--2 {
+      animation-delay: 0.2s;
+    }
+
+    &--3 {
+      animation-delay: 0.4s;
+    }
+  }
+
+  @keyframes matching-dot-pulse {
+    0%,
+    80%,
+    100% {
+      opacity: 0.3;
+      transform: scale(0.8);
+    }
+
+    40% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  // ── Pool Info Card ────────────────────────────────────────────
+  &__card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-sm 0;
+    border-bottom: 1rpx solid $color-divider;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__info-label {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    flex-shrink: 0;
+  }
+
+  &__info-value {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    text-align: right;
+
+    &--score {
+      @include gradient-text;
+      font-weight: $font-weight-bold;
+      font-size: $font-size-md;
+    }
+  }
+
+  // ── Theme Card ────────────────────────────────────────────────
+  &__theme-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    background: linear-gradient(135deg, #FFF5F7 0%, #F5F0FF 100%);
+  }
+
+  &__theme-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__theme-emoji {
+    font-size: $font-size-2xl;
+  }
+
+  &__theme-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__theme-tagline {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+    line-height: 1.6;
+  }
+
+  &__theme-vibe {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__theme-vibe-label {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__theme-vibe-value {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__theme-highlights {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  &__theme-highlight {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
+
+  &__theme-highlight-dot {
+    font-size: $font-size-base;
+    color: $color-primary;
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+
+  &__theme-highlight-text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.6;
+  }
+
+  &__special-card,
+  &__loading-card,
+  &__similar-card {
+    @include card;
+  }
+
+  &__special-card {
+    padding: $spacing-xl;
+    text-align: center;
+    margin-top: $spacing-xl;
+  }
+
+  &__special-icon {
+    display: block;
+    font-size: 88rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__special-title,
+  &__loading-title,
+  &__similar-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__special-text,
+  &__loading-text {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.7;
+    margin-top: $spacing-sm;
+  }
+
+  &__secondary-btn {
+    width: 100%;
+  }
+
+  &__similar-section {
+    margin-top: $spacing-lg;
+  }
+
+  &__similar-title {
+    margin-bottom: $spacing-md;
+  }
+
+  &__similar-card {
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__similar-name {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__similar-meta {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-top: 6rpx;
+  }
+
+  &__similar-btn {
+    width: 100%;
+    margin-top: $spacing-md;
+  }
+
+  &__loading-card {
+    padding: $spacing-lg;
+    text-align: center;
+  }
+
+  // ── Actions ───────────────────────────────────────────────────
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    margin-top: $spacing-lg;
+  }
+
+  &__cta-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  &__cancel-btn {
+    width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-surface;
+    color: $color-error;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    border: 1rpx solid $color-border;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &__back-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  // ── Spacer ────────────────────────────────────────────────────
+  &__spacer {
+    height: $spacing-2xl;
+  }
+}

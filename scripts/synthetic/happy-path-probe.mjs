@@ -32,13 +32,24 @@
 
 // @ts-check
 
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5001';
+const DEFAULT_BASE_URL = 'http://localhost:5001';
+const BASE_URL = normalizeBaseUrl(process.env.BASE_URL, DEFAULT_BASE_URL);
 const PROBE_TIMEOUT_MS = parseInt(process.env.PROBE_TIMEOUT_MS ?? '5000', 10);
 const PUSHGATEWAY_URL = process.env.PUSHGATEWAY_URL ?? '';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * @param {string | undefined} rawBaseUrl
+ * @param {string} fallback
+ */
+function normalizeBaseUrl(rawBaseUrl, fallback) {
+  const trimmed = rawBaseUrl?.trim();
+  if (!trimmed) return fallback;
+  return trimmed.replace(/\/+$/, '');
+}
 
 /**
  * @param {string} url

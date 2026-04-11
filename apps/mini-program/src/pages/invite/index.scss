@@ -1,0 +1,116 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.invite-page {
+  min-height: 100vh;
+  @include page-gradient-bg;
+
+  &__hero {
+    text-align: center;
+    padding: $spacing-2xl $container-padding $spacing-xl;
+  }
+
+  &__hero-emoji { display: block; font-size: 96rpx; margin-bottom: $spacing-md; }
+  &__hero-title { display: block; font-size: $font-size-2xl; font-weight: $font-weight-black; color: $color-text-primary; margin-bottom: $spacing-xs; }
+  &__hero-subtitle { display: block; font-size: $font-size-base; color: $color-text-secondary; }
+
+  &__code-card {
+    @include card;
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-xl;
+    text-align: center;
+  }
+
+  &__code-label { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-bottom: $spacing-sm; }
+  &__code-value { display: block; font-size: $font-size-2xl; font-weight: $font-weight-black; color: $color-primary; letter-spacing: 8rpx; margin-bottom: $spacing-lg; }
+  &__code-actions { display: flex; flex-direction: column; gap: $spacing-sm; }
+  &__copy-btn { width: 100%; }
+
+  &__stats {
+    display: flex;
+    gap: $spacing-md;
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__stat {
+    flex: 1;
+    @include card;
+    padding: $spacing-lg;
+    text-align: center;
+  }
+
+  &__stat-value { display: block; font-size: $font-size-xl; font-weight: $font-weight-black; color: $color-text-primary; }
+  &__stat-label { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-top: $spacing-xs; }
+
+  &__section {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__section-title { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; color: $color-text-primary; margin-bottom: $spacing-md; }
+
+  &__link-card {
+    @include card;
+    padding: $spacing-lg;
+  }
+
+  &__link-label {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__link-value {
+    display: block;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+
+  &__link-actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  &__link-btn {
+    width: 100%;
+  }
+
+  &__link-helper {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-top: $spacing-md;
+  }
+
+  &__tier {
+    @include card;
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+
+    &--unlocked {
+      border: 2rpx solid $color-success;
+      background: rgba($color-success, 0.05);
+    }
+  }
+
+  &__tier-emoji { font-size: $font-size-xl; flex-shrink: 0; }
+  &__tier-info { flex: 1; }
+  &__tier-target { display: block; font-size: $font-size-base; font-weight: $font-weight-semibold; color: $color-text-primary; }
+  &__tier-reward { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-top: 4rpx; }
+  &__tier-status { font-size: $font-size-sm; color: $color-text-muted; flex-shrink: 0; }
+
+  &__spacer { height: 120rpx; }
+}

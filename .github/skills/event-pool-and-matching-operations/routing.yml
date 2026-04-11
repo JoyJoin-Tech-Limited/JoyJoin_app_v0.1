@@ -1,0 +1,53 @@
+skill: event-pool-and-matching-operations
+
+primary_ownership: >
+  Event-pool lifecycle, pool stats semantics, match-run operations, and post-match
+  group outcome handling around event pools.
+
+use_when:
+  - creating or updating an event pool route, admin flow, or pool lifecycle rule
+  - changing pool registration rules, pool stats, or pool admin operations
+  - interpreting estimated groups versus already formed groups
+  - adding or debugging event group outcome submission and validation
+  - working on the operational surface that runs matching for a pool
+
+do_not_use_when:
+  - task is purely about pair-score weights, chemistry math, or explanation scoring
+  - task is purely about transaction mechanics with no pool-lifecycle question
+  - task is purely about UI layout for a pool-related screen
+
+strong_triggers:
+  - eventPools.ts
+  - eventGroupOutcomes
+  - /api/event-pools
+  - estimatedGroups
+  - group outcome
+  - create an event pool
+  - run matching on this pool
+  - event pool constraints
+  - how do groups form
+  - pool stats
+  - pool registration
+
+owned_files:
+  - apps/server/src/routes/domains/eventPools.ts
+  - apps/server/src/routes/domains/eventGroupOutcomes.ts
+  - docs/admin-rbac-matrix.md
+
+owned_paths:
+  - /api/event-pools/**
+
+owned_symbols:
+  - buildEventPoolStatsResponse
+  - registerEventPoolRoutes
+  - registerEventGroupOutcomeRoutes
+
+related_skills:
+  - skill: matching-domain
+    when: the task changes scoring weights, chemistry, thresholds, or explanation logic
+  - skill: reliability-and-state-integrity
+    when: pool operations need execution guards, atomic writes, or duplicate-run protection
+  - skill: auth-session-and-safety-boundaries
+    when: admin or member-only pool operations need explicit auth and role gates
+  - skill: platform-observability-and-ops
+    when: adding logging or metrics to privileged pool operations
