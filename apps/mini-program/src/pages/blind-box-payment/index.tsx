@@ -91,7 +91,7 @@ export default function BlindBoxPaymentPage() {
 
       const [pricing, coupons] = await Promise.all([
         getPricing(apiRequest).catch(() => []),
-        getUserCoupons(apiRequest).catch(() => ({ count: 0, coupons: [] })),
+        getUserCoupons(apiRequest).catch(() => ({ count: 0, availableCount: 0, coupons: [] })),
       ])
 
       const monthlyPlan = pricing.find((plan) => plan.planType === 'vip_monthly')

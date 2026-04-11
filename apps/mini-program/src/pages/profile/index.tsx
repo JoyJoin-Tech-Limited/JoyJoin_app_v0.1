@@ -21,7 +21,7 @@ export default function ProfilePage() {
     enabled: !authLoading,
   })
 
-  const { data: coupons = { count: 0, coupons: [] } } = useQuery({
+  const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
     enabled: !authLoading,
