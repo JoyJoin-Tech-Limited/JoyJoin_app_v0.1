@@ -49,17 +49,32 @@ describe('route review follow-ups', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
     expect(routesSource).toContain("await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed')");
-    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all')");
+    expect(routesSource).toContain("const ageVisibility = member.ageVisible ?? 'hide_all';");
+    expect(routesSource).toContain("const industryVisibility = member.industryVisible ?? 'hide_all';");
+    expect(routesSource).toContain("const educationVisibility = member.educationVisible ?? 'hide_all';");
+    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, ageVisibility)");
+    expect(routesSource).toContain("ageVisible: ageVisibility !== 'hide_all'");
+    expect(routesSource).toContain("industryVisible: industryVisibility !== 'hide_all'");
+    expect(routesSource).toContain("educationVisible: educationVisibility !== 'hide_all'");
     expect(routesSource).not.toContain('members: groupMembers');
   });
 
   it('returns a stable coupon response object and preserves total-versus-available semantics', () => {
     const assessmentRoutesSource = readRepoFile('apps/server/src/routes/domains/assessment.ts');
     const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+    const miniProgramPaymentSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
 
     expect(assessmentRoutesSource).toContain('res.json({ count: coupons.length, coupons });');
     expect(sharedApiSource).toContain('availableCount');
     expect(sharedApiSource).toContain('count: explicitCount ?? coupons.length');
+    expect(miniProgramPaymentSource).toContain('{ count: 0, availableCount: 0, coupons: [] }');
+  });
+
+  it('orders social-icebreaker participants in the database query instead of sorting in memory', () => {
+    const socialIcebreakerStoreSource = readRepoFile('apps/server/src/lib/socialIcebreakerStore.ts');
+
+    expect(socialIcebreakerStoreSource).toContain('.orderBy(socialIcebreakerParticipants.joinedAt)');
+    expect(socialIcebreakerStoreSource).not.toContain('.sort(');
   });
 
   it('uses the authenticated user as the reporter when creating chat reports', () => {
