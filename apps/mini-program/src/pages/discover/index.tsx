@@ -1,9 +1,5 @@
 import { View, Text, Image, Button, Navigator } from '@tarojs/components'
 import './index.scss'
-import logoImage from '../../assets/box_logo_archetypes.png'
-import matchCardImg from '../../assets/match.png'
-import dinnerImg from '../../assets/dinner.png'
-import continueImg from '../../assets/continue.png'
 
 export default function DiscoverPage() {
   const handlePrimaryCTA = () => {
@@ -21,13 +17,13 @@ export default function DiscoverPage() {
       <View className='content-zone'>
         <View className='logo-container'>
           <View className='logo-bg'></View>
-          <Image src={logoImage} className='logo-img' mode='aspectFit' />
+          <Image src='/assets/box_logo_archetypes.png' className='logo-img' mode='aspectFit' />
         </View>
 
         <View className='hero-cards'>
           <View className='card card-left'>
             <View className='card-img-wrap'>
-              <Image src={matchCardImg} className='card-img' mode='aspectFill' />
+              <Image src='/assets/match.png' className='card-img' mode='aspectFill' />
             </View>
             <View className='card-text'>
               <Text>匹配</Text>
@@ -36,7 +32,7 @@ export default function DiscoverPage() {
 
           <View className='card card-center'>
             <View className='card-img-wrap'>
-              <Image src={dinnerImg} className='card-img' mode='aspectFill' />
+              <Image src='/assets/dinner.png' className='card-img' mode='aspectFill' />
             </View>
             <View className='card-text'>
               <Text>悦聚</Text>
@@ -45,7 +41,7 @@ export default function DiscoverPage() {
 
           <View className='card card-right'>
             <View className='card-img-wrap'>
-              <Image src={continueImg} className='card-img' mode='aspectFill' />
+              <Image src='/assets/continue.png' className='card-img' mode='aspectFill' />
             </View>
             <View className='card-text'>
               <Text>延续</Text>

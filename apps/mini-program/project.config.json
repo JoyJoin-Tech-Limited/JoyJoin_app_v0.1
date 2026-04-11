@@ -1,20 +1,20 @@
 {
   "miniprogramRoot": "dist/",
-  "projectname": "JoyJoin",
-  "description": "JoyJoin悦聚小程序",
-  "appid": "wx5a038ee6dee12032",
+  "compileType": "miniprogram",
+  "simulatorPluginLibVersion": {},
+  "appid": "wx4b66c0ea83299140",
+  "libVersion": "3.15.1",
   "setting": {
-    "urlCheck": true,
     "es6": false,
-    "enhance": false,
-    "compileHotReLoad": false,
     "postcss": false,
-    "minified": false,
     "compileWorklet": false,
+    "minified": true,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,
+    "enhance": false,
     "packNpmManually": false,
     "packNpmRelationList": [],
+    "minifyJS": true,
     "minifyWXSS": true,
     "minifyWXML": true,
     "localPlugins": false,
@@ -29,12 +29,9 @@
       "outputPath": ""
     }
   },
-  "compileType": "miniprogram",
-  "simulatorPluginLibVersion": {},
   "packOptions": {
     "ignore": [],
     "include": []
   },
-  "editorSetting": {},
-  "libVersion": "3.15.1"
+  "editorSetting": {}
 }
