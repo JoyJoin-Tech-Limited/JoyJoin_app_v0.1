@@ -23,10 +23,6 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
-import logoImage from '../../assets/box_logo_archetypes.png'
-import matchCardImg from '../../assets/match.png'
-import dinnerImg from '../../assets/dinner.png'
-import continueImg from '../../assets/continue.png'
 
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
@@ -371,7 +367,7 @@ function UnauthenticatedLanding() {
     queryKey: ['mini-program', 'pricing'],
     queryFn: () => getPricing(apiRequest),
   })
-  const { data: coupons = { count: 0, coupons: [] } } = useQuery({
+  const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
   })
@@ -383,13 +379,13 @@ function UnauthenticatedLanding() {
       <View className='content-zone'>
         <View className='logo-container'>
           <View className='logo-bg'></View>
-          <Image src={logoImage} className='logo-img' mode='aspectFit' />
+          <Image src='/assets/box_logo_archetypes.png' className='logo-img' mode='aspectFit' />
         </View>
 
         <View className='hero-cards'>
           <View className='card card-left'>
             <View className='card-img-wrap'>
-              <Image src={matchCardImg} className='card-img' mode='aspectFill' />
+              <Image src='/assets/match.png' className='card-img' mode='aspectFill' />
             </View>
             <View className='card-text'>
               <Text>匹配</Text>
@@ -398,7 +394,7 @@ function UnauthenticatedLanding() {
 
           <View className='card card-center'>
             <View className='card-img-wrap'>
-              <Image src={dinnerImg} className='card-img' mode='aspectFill' />
+              <Image src='/assets/dinner.png' className='card-img' mode='aspectFill' />
             </View>
             <View className='card-text'>
               <Text>悦聚</Text>
@@ -407,7 +403,7 @@ function UnauthenticatedLanding() {
 
           <View className='card card-right'>
             <View className='card-img-wrap'>
-              <Image src={continueImg} className='card-img' mode='aspectFill' />
+              <Image src='/assets/continue.png' className='card-img' mode='aspectFill' />
             </View>
             <View className='card-text'>
               <Text>延续</Text>
