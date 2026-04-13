@@ -97,25 +97,26 @@ export default function BlindBoxPaymentPage() {
   // Fetch user's available coupons
   const { data: availableCoupons, isLoading: loadingCoupons } = useQuery<{
     count: number;
+    availableCount: number;
     coupons: any[];
   }>({
     queryKey: ["/api/user/coupons"],
     queryFn: async () => {
       try {
         const response = await fetch("/api/user/coupons", { credentials: "include" });
-        if (!response.ok) return { count: 0, coupons: [] };
+        if (!response.ok) return { count: 0, availableCount: 0, coupons: [] };
   
         const json = await response.json();
         return {
           count: typeof json?.count === "number" ? json.count : 0,
+          availableCount: typeof json?.availableCount === "number" ? json.availableCount : 0,
           coupons: Array.isArray(json?.coupons) ? json.coupons : [],
         };
       } catch {
-        return { count: 0, coupons: [] };
+        return { count: 0, availableCount: 0, coupons: [] };
       }
     },
-    initialData: { count: 0, coupons: [] }, // 让第一次渲染也稳定
-    enabled: supportsCoupons,
+    initialData: { count: 0, availableCount: 0, coupons: [] }, // 让第一次渲染也稳定
   });
 
   

@@ -8053,24 +8053,30 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
         .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
 
-      const memberSummaries = members.map((member: (typeof members)[number]) => ({
-        userId: member.userId,
-        displayName: member.displayName,
-        archetype: member.archetype,
-        topInterests: member.topInterests,
-        ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all'),
-        industryNicheLabel: member.industryNicheLabel,
-        industryCategoryLabel: member.industryCategoryLabel,
-        ageVisible: member.ageVisible !== 'hide_all',
-        industryVisible: member.industryVisible !== 'hide_all',
-        gender: member.gender,
-        educationLevel: member.educationLevel,
-        hometownRegionCity: member.hometownRegionCity,
-        hometownAffinityOptin: member.hometownAffinityOptin,
-        educationVisible: member.educationVisible !== 'hide_all',
-        relationshipStatus: member.relationshipStatus,
-        intent: member.intent,
-      }));
+      const memberSummaries = members.map((member: (typeof members)[number]) => {
+        const ageVisibility = member.ageVisible ?? 'hide_all';
+        const industryVisibility = member.industryVisible ?? 'hide_all';
+        const educationVisibility = member.educationVisible ?? 'hide_all';
+
+        return {
+          userId: member.userId,
+          displayName: member.displayName,
+          archetype: member.archetype,
+          topInterests: member.topInterests,
+          ageLabel: formatAge(member.birthdate, ageVisibility),
+          industryNicheLabel: member.industryNicheLabel,
+          industryCategoryLabel: member.industryCategoryLabel,
+          ageVisible: ageVisibility !== 'hide_all',
+          industryVisible: industryVisibility !== 'hide_all',
+          gender: member.gender,
+          educationLevel: member.educationLevel,
+          hometownRegionCity: member.hometownRegionCity,
+          hometownAffinityOptin: member.hometownAffinityOptin,
+          educationVisible: educationVisibility !== 'hide_all',
+          relationshipStatus: member.relationshipStatus,
+          intent: member.intent,
+        };
+      });
 
       res.json({
         group: {

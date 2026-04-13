@@ -33,6 +33,7 @@ export default defineConfig<'vite'>(async (merge) => {
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
+      'process.env.TARO_APP_API_BASE_URL': JSON.stringify(process.env.TARO_APP_API_BASE_URL || 'http://localhost:5000')
     },
     copy: {
       patterns: [
@@ -68,7 +69,8 @@ export default defineConfig<'vite'>(async (merge) => {
     },
     mini: {
       imageUrlLoaderOption: {
-        limit: 100
+        limit: 0, // 强制禁止将任何图片转为 Base64，全部使用真实路径
+        esModule: false // 确保 Taro 正确处理图片路径
       },
       compiler: {
         type: 'vite',
