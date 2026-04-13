@@ -490,7 +490,7 @@ export default function IcebreakerSessionPage() {
   })
 
   useEffect(() => {
-    if (!resolvedSessionId || authLoading || !currentUserId) {
+    if (!resolvedSessionId || authLoading || !currentUserId || sessionLoading || sessionError) {
       return
     }
 
@@ -509,7 +509,7 @@ export default function IcebreakerSessionPage() {
       data: {
         sessionId: resolvedSessionId,
         displayName: currentUserDisplayName,
-        eventType: sessionDetails?.eventType,
+        eventType: sessionDetails?.eventType ?? '活动',
       },
     })
       .then((response) => {
@@ -552,6 +552,8 @@ export default function IcebreakerSessionPage() {
     resolvedSessionId,
     authLoading,
     currentUserId,
+    sessionLoading,
+    sessionError,
     socialSessionId,
     currentUserDisplayName,
     sessionDetails?.eventType,

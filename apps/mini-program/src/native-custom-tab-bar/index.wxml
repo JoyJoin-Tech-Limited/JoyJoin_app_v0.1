@@ -1,0 +1,84 @@
+<cover-view class="joy-custom-tab-bar">
+  <cover-view class="joy-custom-tab-bar__surface">
+    <cover-view class="joy-custom-tab-bar__border"></cover-view>
+
+    <!-- Protruding center button -->
+    <cover-view class="joy-custom-tab-bar__center" bindtap="handleCenterTap">
+      <cover-view class="joy-custom-tab-bar__center-outer-ring">
+        <cover-view class="joy-custom-tab-bar__center-button">
+          <cover-image
+            class="joy-custom-tab-bar__center-logo"
+            src="../assets/box_logo_archetypes.png"
+          />
+          <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
+        </cover-view>
+      </cover-view>
+      <cover-view class="joy-custom-tab-bar__center-label">{{center.label}}</cover-view>
+    </cover-view>
+
+    <!-- Tab row: left 2 + gap + right 2 -->
+    <cover-view class="joy-custom-tab-bar__row">
+      <!-- Left side tabs -->
+      <cover-view class="joy-custom-tab-bar__side">
+        <cover-view
+          wx:for="{{leftTabs}}"
+          wx:key="key"
+          class="joy-custom-tab-bar__item"
+          data-index="{{item.index}}"
+          data-url="{{item.url}}"
+          bindtap="handleTabTap"
+        >
+          <cover-image
+            class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
+            src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+          />
+          <cover-view
+            wx:if="{{item.badgeCount > 0}}"
+            class="joy-custom-tab-bar__item-badge"
+          >
+            <cover-view class="joy-custom-tab-bar__item-badge-text">
+              {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
+            </cover-view>
+          </cover-view>
+          <cover-view
+            class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
+          >
+            {{item.text}}
+          </cover-view>
+        </cover-view>
+      </cover-view>
+
+      <cover-view class="joy-custom-tab-bar__center-gap"></cover-view>
+
+      <!-- Right side tabs -->
+      <cover-view class="joy-custom-tab-bar__side">
+        <cover-view
+          wx:for="{{rightTabs}}"
+          wx:key="key"
+          class="joy-custom-tab-bar__item"
+          data-index="{{item.index}}"
+          data-url="{{item.url}}"
+          bindtap="handleTabTap"
+        >
+          <cover-image
+            class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
+            src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+          />
+          <cover-view
+            wx:if="{{item.badgeCount > 0}}"
+            class="joy-custom-tab-bar__item-badge"
+          >
+            <cover-view class="joy-custom-tab-bar__item-badge-text">
+              {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
+            </cover-view>
+          </cover-view>
+          <cover-view
+            class="joy-custom-tab-bar__item-label {{selected === item.index ? 'joy-custom-tab-bar__item-label--active' : ''}}"
+          >
+            {{item.text}}
+          </cover-view>
+        </cover-view>
+      </cover-view>
+    </cover-view>
+  </cover-view>
+</cover-view>

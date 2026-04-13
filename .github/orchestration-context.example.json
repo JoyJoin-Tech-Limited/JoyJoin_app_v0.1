@@ -1,0 +1,37 @@
+{
+  "event": "pull-request",
+  "triggerSource": "github_workflow",
+  "commitSha": "0123456789abcdef0123456789abcdef01234567",
+  "branch": "feature/native-agent-orchestration",
+  "prNumber": 123,
+  "changedFiles": [
+    ".github/orchestration.yaml",
+    "scripts/orchestration-supervisor.mjs",
+    ".github/agents/supervisor.agent.md"
+  ],
+  "diffSummary": "Introduced the orchestration manifest, runtime supervisor, and supervisor custom agent.",
+  "testOutputs": [
+    {
+      "name": "orchestration:validate",
+      "status": "passed",
+      "artifactPath": ".git/.orchestration/events.jsonl"
+    }
+  ],
+  "reviewComments": [],
+  "artifactPaths": [
+    ".git/.orchestration/context.json",
+    ".git/.orchestration/events.jsonl"
+  ],
+  "upstreamAgent": "Auto-Eval",
+  "upstreamResult": {
+    "status": "pass",
+    "fingerprint": "abc123def456",
+    "reason": "Dirty-worktree quality gate passed."
+  },
+  "retryCount": 0,
+  "recommendedNextAgents": [
+    "Supervisor",
+    "QA Agent"
+  ],
+  "lastUpdatedAt": "2026-04-11T00:00:00.000Z"
+}

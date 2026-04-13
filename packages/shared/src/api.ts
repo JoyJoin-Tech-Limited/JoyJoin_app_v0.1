@@ -33,7 +33,6 @@ export interface BrowserPaymentResponse {
   paymentRedirectUrl?: string | null
   paymentStatus?: 'pending' | 'completed'
 }
-
 export type SubscriptionPlanType = 'monthly' | 'quarterly'
 export type VipSubscriptionPlanKey = 'vip_monthly' | 'vip_quarterly'
 export type SubscriptionPlanIdentifier = SubscriptionPlanType | VipSubscriptionPlanKey
@@ -72,7 +71,21 @@ export function normalizeSubscriptionPlanType(
   return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
 }
 
-function pricingPlanMatches(plan: Pick<PricingPlan, 'planType'>, targetPlanType: string): boolean {
+export function toVipSubscriptionPlanKey(
+  planType: string | null | undefined
+): VipSubscriptionPlanKey | null {
+  const normalized = normalizeSubscriptionPlanType(planType)
+  if (!normalized) {
+    return null
+  }
+
+  return normalized === 'quarterly' ? 'vip_quarterly' : 'vip_monthly'
+}
+
+function pricingPlanMatches(
+  plan: Pick<PricingPlan, 'planType'>,
+  targetPlanType: string
+): boolean {
   const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
   const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
 
@@ -366,6 +379,14 @@ export interface JoinedEventSummary {
   [key: string]: unknown
 }
 
+export interface BlindBoxEventSummary {
+  id: string
+  title?: string
+  status?: string
+  dateTime?: string
+  [key: string]: unknown
+}
+
 export function getPricing(api: ApiTransport): Promise<PricingPlan[]> {
   return api<RawPricingPlan[]>({ path: '/api/pricing' }).then((plans) =>
     Array.isArray(plans)
@@ -435,6 +456,38 @@ export function getCurrentUser(api: ApiTransport): Promise<AuthUserSummary> {
 
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
+}
+
+export function getMyBlindBoxEvents(api: ApiTransport): Promise<BlindBoxEventSummary[]> {
+  return api<BlindBoxEventSummary[]>({ path: '/api/my-events' })
+}
+
+// ---------------------------------------------------------------------------
+// Notification counts API
+// ---------------------------------------------------------------------------
+
+export interface NotificationCountsResponse {
+  discover: number
+  activities: number
+  chat: number
+  total: number
+}
+
+export function getNotificationCounts(
+  api: ApiTransport
+): Promise<NotificationCountsResponse> {
+  return api<NotificationCountsResponse>({ path: '/api/notifications/counts' })
+}
+
+export function markNotificationsAsRead(
+  api: ApiTransport,
+  category: 'discover' | 'activities' | 'chat'
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/notifications/mark-read',
+    method: 'POST',
+    data: { category },
+  })
 }
 
 // ---------------------------------------------------------------------------

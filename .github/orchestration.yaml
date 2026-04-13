@@ -1,0 +1,770 @@
+{
+  "version": 1,
+  "updated": "2026-04-11",
+  "portfolio_scope": {
+    "orchestrated_agents": [
+      "Supervisor",
+      "Auto-Eval",
+      "Product Manager",
+      "Backend Engineer",
+      "AI Engineer",
+      "QA Agent",
+      "Launch Readiness Agent"
+    ],
+    "audited_agents": [
+      "Admin Operations Advisor",
+      "Database Schema & Migration Auditor",
+      "Mini-Program Parity Auditor",
+      "Taro Mini-Program Frontend Engineer",
+      "Taro Migration Specialist",
+      "Expert React Frontend Engineer",
+      "debug",
+      "principal SWE",
+      "SE: Product Manager",
+      "prompt engineer"
+    ]
+  },
+  "copilot_hooks": {
+    "auto_eval": {
+      "guarded_tool_hints": [
+        "apply_patch",
+        "create_file",
+        "edit",
+        "execute",
+        "run_in_terminal",
+        "send_to_terminal",
+        "create_and_run_task",
+        "create_new_workspace",
+        "run_vscode_command",
+        "install_extension"
+      ],
+      "manual_recovery_agents": [
+        "Auto-Eval",
+        "Supervisor"
+      ]
+    },
+    "orchestration": {
+      "runtime_events": [
+        "SessionStart",
+        "PostToolUse"
+      ],
+      "session_start_message": "Supervisor orchestration runtime loaded."
+    }
+  },
+  "git_hooks": {
+    "pre-commit": {
+      "blocking": true,
+      "steps": [
+        {
+          "id": "validate-orchestration-contract",
+          "type": "shell",
+          "command": "node",
+          "args": [
+            "scripts/orchestration-supervisor.mjs",
+            "validate"
+          ]
+        },
+        {
+          "id": "run-auto-eval",
+          "type": "shell",
+          "command": "node",
+          "args": [
+            "scripts/auto-eval.mjs",
+            "--mode",
+            "manual-report"
+          ]
+        }
+      ]
+    },
+    "post-commit": {
+      "blocking": false,
+      "steps": [
+        {
+          "id": "record-post-commit",
+          "type": "log",
+          "message": "Post-commit orchestration checkpoint recorded."
+        }
+      ]
+    }
+  },
+  "github_workflows": {
+    "pull-request": {
+      "summary_title": "Pull request orchestration",
+      "steps": [
+        {
+          "id": "qa-review",
+          "type": "advisory-agent",
+          "agent": "QA Agent",
+          "skills": [
+            "e2e-test-runner",
+            "testing-and-regression-guardrails"
+          ],
+          "summary": "Run change-focused QA planning first so smoke coverage and regression gaps are explicit before launch review."
+        },
+        {
+          "id": "launch-readiness-review",
+          "type": "advisory-agent",
+          "agent": "Launch Readiness Agent",
+          "skills": [
+            "security-scan",
+            "platform-observability-and-ops",
+            "code-review"
+          ],
+          "summary": "Use launch readiness as the second pass to consolidate blockers, environment assumptions, and operational gaps."
+        },
+        {
+          "id": "product-scope-review",
+          "type": "advisory-agent",
+          "agent": "Product Manager",
+          "skills": [
+            "draft-prd"
+          ],
+          "summary": "Only request product review when the diff materially changes user-visible scope, positioning, or documented behavior.",
+          "when": {
+            "any_path_matches": [
+              "PRODUCT_REQUIREMENTS.md",
+              "docs/proposals/**",
+              "apps/user-client/**",
+              "apps/mini-program/**"
+            ]
+          }
+        }
+      ]
+    },
+    "daily-security": {
+      "summary_title": "Daily security orchestration",
+      "steps": [
+        {
+          "id": "security-scan-review",
+          "type": "advisory-agent",
+          "agent": "Launch Readiness Agent",
+          "skills": [
+            "security-scan",
+            "platform-observability-and-ops",
+            "code-review"
+          ],
+          "summary": "Use the launch-readiness lane with security-scan guidance for a daily posture review of auth, observability, and release blockers."
+        }
+      ]
+    }
+  },
+  "handoff_graph": [
+    {
+      "from": "Auto-Eval",
+      "to": "Supervisor",
+      "label": "Route remediation through Supervisor",
+      "prompt": "Use the current dirty-worktree findings, changed files, and fingerprint scope to route the next implementation or investigation step."
+    },
+    {
+      "from": "Auto-Eval",
+      "to": "Launch Readiness Agent",
+      "label": "Review broader launch risk",
+      "prompt": "Assess whether the current change scope has wider release-readiness blockers beyond the dirty-worktree gate."
+    },
+    {
+      "from": "Product Manager",
+      "to": "Backend Engineer",
+      "label": "Hand off server implementation",
+      "prompt": "Implement the approved server-side scope while preserving the product boundary and explicit success criteria."
+    },
+    {
+      "from": "Product Manager",
+      "to": "AI Engineer",
+      "label": "Hand off AI implementation",
+      "prompt": "Implement the approved AI-backed workflow with explicit runtime safety, fallback, and observability boundaries."
+    },
+    {
+      "from": "Backend Engineer",
+      "to": "QA Agent",
+      "label": "Request QA verification",
+      "prompt": "Turn the implemented backend scope into a concrete verification checklist or execution summary."
+    },
+    {
+      "from": "Backend Engineer",
+      "to": "Auto-Eval",
+      "label": "Run local quality gate",
+      "prompt": "Evaluate the current dirty worktree after the backend change and report the exact fingerprint verdict."
+    },
+    {
+      "from": "AI Engineer",
+      "to": "QA Agent",
+      "label": "Verify AI-backed change",
+      "prompt": "Focus verification on fallback behavior, runtime traces, and deterministic authority boundaries around the AI path."
+    },
+    {
+      "from": "AI Engineer",
+      "to": "Launch Readiness Agent",
+      "label": "Assess AI launch risk",
+      "prompt": "Review whether the AI-backed change is operationally ready for rollout, including observability and fallback behavior."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Launch Readiness Agent",
+      "label": "Escalate release blockers",
+      "prompt": "Summarize the verification status, residual risks, and blockers that matter for launch readiness."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Auto-Eval",
+      "label": "Re-run the dirty-worktree gate",
+      "prompt": "Evaluate the current fingerprint after QA follow-ups and report whether the local quality gate now passes."
+    },
+    {
+      "from": "Launch Readiness Agent",
+      "to": "Auto-Eval",
+      "label": "Run final local sign-off",
+      "prompt": "Use Auto-Eval for the final dirty-worktree sign-off after broader launch blockers are resolved."
+    },
+    {
+      "from": "Launch Readiness Agent",
+      "to": "Supervisor",
+      "label": "Route blocker remediation",
+      "prompt": "Use Supervisor to route the next remediation step based on the current blockers, affected surfaces, and required specialists."
+    }
+  ],
+  "agent_bindings": {
+    "Supervisor": {
+      "file": ".github/agents/supervisor.agent.md",
+      "portfolio_role": "orchestrator",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "execute",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "The supervisor only needs to inspect state, invoke subagents, and run deterministic orchestration commands.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add direct edit capability only if Supervisor is expected to patch files itself rather than delegate.",
+            "reason": "Keeping edits delegated preserves the orchestrator role and avoids bloating the top-level agent."
+          }
+        ]
+      }
+    },
+    "Auto-Eval": {
+      "file": ".github/agents/auto-eval.agent.md",
+      "portfolio_role": "quality-gate",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Auto-Eval only needs deterministic read, search, and execute capability because the evaluator itself is the source of truth.",
+        "recommended_extensions": []
+      }
+    },
+    "Product Manager": {
+      "file": ".github/agents/product-manager.agent.md",
+      "portfolio_role": "product-scope",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "The modern product manager agent is scoped to drafting and refining artifacts inside the repo, which the current tool set supports.",
+        "recommended_extensions": [
+          {
+            "type": "optional-integration",
+            "label": "Add GitHub issue write integration only if this agent absorbs issue-authoring duties from the legacy product advisor.",
+            "reason": "Issue creation is currently the responsibility of the separate legacy product advisor agent."
+          }
+        ]
+      }
+    },
+    "Backend Engineer": {
+      "file": ".github/agents/backend-engineer.agent.md",
+      "portfolio_role": "implementation",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Backend implementation needs read, edit, search, and execute capability; the current normalized tool set matches those responsibilities.",
+        "recommended_extensions": []
+      }
+    },
+    "AI Engineer": {
+      "file": ".github/agents/ai-engineer.agent.md",
+      "portfolio_role": "implementation",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "AI runtime work is server-side and can be handled with the normalized read, edit, search, and execute surface.",
+        "recommended_extensions": []
+      }
+    },
+    "QA Agent": {
+      "file": ".github/agents/qa-agent.agent.md",
+      "portfolio_role": "verification",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "partial",
+        "summary": "The current tools are enough for checklist generation and command-driven verification, but they are thin for richer end-to-end journey execution.",
+        "recommended_extensions": [
+          {
+            "type": "mcp",
+            "label": "Add a browser or Playwright-style end-to-end integration for user-journey verification.",
+            "reason": "QA responsibilities include smoke-testing user journeys that are difficult to validate from shell commands alone."
+          },
+          {
+            "type": "integration",
+            "label": "Expose stable test-environment metadata or seeded-data helpers.",
+            "reason": "Verification quality improves when the QA agent can rely on deterministic environment setup instead of guessing prerequisites."
+          }
+        ]
+      }
+    },
+    "Launch Readiness Agent": {
+      "file": ".github/agents/launch-readiness.agent.md",
+      "portfolio_role": "release-review",
+      "orchestration_status": "orchestrated-core",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "partial",
+        "summary": "Local config review is covered, but launch readiness often needs CI status, deployment visibility, and observability inputs that are not currently first-class.",
+        "recommended_extensions": [
+          {
+            "type": "mcp",
+            "label": "Add GitHub status-check and workflow-read integration.",
+            "reason": "Go or no-go decisions depend on CI and review state, not just local files."
+          },
+          {
+            "type": "integration",
+            "label": "Add observability or deployment-surface read access for health, metrics, and alert context.",
+            "reason": "Operational readiness cannot be verified from repository files alone."
+          }
+        ]
+      }
+    },
+    "Admin Operations Advisor": {
+      "file": ".github/agents/admin-operations-advisor.agent.md",
+      "portfolio_role": "operations-triage",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "partial",
+        "summary": "The current tools support runbook-based triage, but incident response is weaker without direct access to logs, metrics, and audit surfaces.",
+        "recommended_extensions": [
+          {
+            "type": "mcp",
+            "label": "Add observability access for logs, metrics, and traces.",
+            "reason": "Admin incidents often require real operational evidence rather than repo-only reasoning."
+          },
+          {
+            "type": "integration",
+            "label": "Add a read-only audit-log or admin-ops API integration.",
+            "reason": "RBAC and audit troubleshooting improves when the agent can inspect real audit records without editing state."
+          }
+        ]
+      }
+    },
+    "Database Schema & Migration Auditor": {
+      "file": ".github/agents/database-schema-migration-auditor.agent.md",
+      "portfolio_role": "migration-review",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Schema planning and migration authoring are well served by the current normalized tool set.",
+        "recommended_extensions": [
+          {
+            "type": "optional-integration",
+            "label": "Add read-only database schema introspection if live drift analysis becomes a regular task.",
+            "reason": "Current responsibilities can be handled from code, but live-schema visibility would strengthen safety reviews."
+          }
+        ]
+      }
+    },
+    "Mini-Program Parity Auditor": {
+      "file": ".github/agents/mini-program-parity-auditor.agent.md",
+      "portfolio_role": "parity-audit",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Read-only parity mapping and build verification are supported by the current tools.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add screenshot or image-diff tooling for visual parity audits.",
+            "reason": "The current tool set is stronger on code and route parity than on direct visual comparison."
+          }
+        ]
+      }
+    },
+    "Taro Mini-Program Frontend Engineer": {
+      "file": ".github/agents/taro-mini-program-frontend-engineer.agent.md",
+      "portfolio_role": "implementation",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Mini-program implementation work is covered by the current tools and subagent delegation model.",
+        "recommended_extensions": [
+          {
+            "type": "optional-integration",
+            "label": "Add visual-diff or screenshot capture for stronger UI polish validation.",
+            "reason": "Build success alone does not prove that a Taro UI change preserved the intended visual hierarchy."
+          }
+        ]
+      }
+    },
+    "Taro Migration Specialist": {
+      "file": ".github/agents/taro-migration-specialist.agent.md",
+      "portfolio_role": "migration-implementation",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Migration work already has the right combination of edit, execute, and subagent delegation capability.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add screenshot capture for source-versus-target comparison during migration.",
+            "reason": "Exact parity claims are stronger when the agent can compare the two renderers visually as well as structurally."
+          }
+        ]
+      }
+    },
+    "Expert React Frontend Engineer": {
+      "file": ".github/agents/frontend engineer.md",
+      "portfolio_role": "implementation",
+      "orchestration_status": "legacy-tooling",
+      "current_tools": [
+        "changes",
+        "codebase",
+        "edit/editFiles",
+        "extensions",
+        "fetch",
+        "findTestFiles",
+        "githubRepo",
+        "new",
+        "openSimpleBrowser",
+        "problems",
+        "runCommands",
+        "runTasks",
+        "runTests",
+        "search",
+        "searchResults",
+        "terminalLastCommand",
+        "terminalSelection",
+        "testFailure",
+        "usages",
+        "vscodeAPI",
+        "microsoft.docs.mcp"
+      ],
+      "tooling_assessment": {
+        "status": "legacy",
+        "summary": "The agent is powerful, but its tool aliases are legacy-shaped and not aligned with the normalized read/search/edit/execute taxonomy used by the newer agents.",
+        "recommended_extensions": [
+          {
+            "type": "tool-normalization",
+            "label": "Normalize the tool surface to the current supported tool taxonomy while preserving browser and test capability.",
+            "reason": "Consistent tool naming improves routing reliability and reduces configuration drift across the portfolio."
+          },
+          {
+            "type": "optional-tool",
+            "label": "Add explicit subagent support if cross-platform coordination should be initiated directly from this agent.",
+            "reason": "Today the agent relies on handoffs rather than delegated subagent execution."
+          }
+        ]
+      }
+    },
+    "debug": {
+      "file": ".github/agents/debug.agent.md",
+      "portfolio_role": "debugging",
+      "orchestration_status": "legacy-tooling",
+      "current_tools": [
+        "edit/editFiles",
+        "search",
+        "execute/getTerminalOutput",
+        "execute/runInTerminal",
+        "read/terminalLastCommand",
+        "read/terminalSelection",
+        "search/usages",
+        "read/problems",
+        "execute/testFailure",
+        "web/fetch",
+        "web/githubRepo",
+        "execute/runTests"
+      ],
+      "tooling_assessment": {
+        "status": "legacy",
+        "summary": "The debug agent has broad capability, but its legacy tool namespace is inconsistent with the rest of the current portfolio and lacks explicit domain handoff support.",
+        "recommended_extensions": [
+          {
+            "type": "tool-normalization",
+            "label": "Normalize the tool aliases to the current supported tool taxonomy.",
+            "reason": "This keeps debugging workflows discoverable and compatible with the same orchestration rules as newer agents."
+          },
+          {
+            "type": "optional-tool",
+            "label": "Add explicit agent delegation or handoff options to route resolved root causes into domain specialists.",
+            "reason": "Debugging often ends with a clear owning domain that could be handed to a specialist implementation agent."
+          }
+        ]
+      }
+    },
+    "principal SWE": {
+      "file": ".github/agents/principal SWE.md",
+      "portfolio_role": "architecture-advice",
+      "orchestration_status": "legacy-tooling",
+      "current_tools": [
+        "changes",
+        "search/codebase",
+        "edit/editFiles",
+        "extensions",
+        "fetch",
+        "findTestFiles",
+        "githubRepo",
+        "new",
+        "openSimpleBrowser",
+        "problems",
+        "runCommands",
+        "runTasks",
+        "runTests",
+        "search",
+        "search/searchResults",
+        "runCommands/terminalLastCommand",
+        "runCommands/terminalSelection",
+        "testFailure",
+        "usages",
+        "vscodeAPI",
+        "github"
+      ],
+      "tooling_assessment": {
+        "status": "legacy",
+        "summary": "The principal engineer agent has broad research capability, but it depends on a legacy tool vocabulary and on GitHub integrations that are not normalized across the repo.",
+        "recommended_extensions": [
+          {
+            "type": "tool-normalization",
+            "label": "Normalize core file, terminal, and problem tools to the modern taxonomy.",
+            "reason": "That keeps the advisor consistent with the same orchestration and validation hooks used elsewhere."
+          },
+          {
+            "type": "mcp",
+            "label": "Back GitHub architecture-review and issue-creation flows with explicit GitHub API integrations.",
+            "reason": "The current description assumes GitHub-backed workflows that should be made explicit rather than implicit."
+          }
+        ]
+      }
+    },
+    "SE: Product Manager": {
+      "file": ".github/agents/PM advisor.md",
+      "portfolio_role": "issue-authoring",
+      "orchestration_status": "legacy-tooling",
+      "current_tools": [
+        "codebase",
+        "githubRepo",
+        "create_issue",
+        "update_issue",
+        "list_issues",
+        "search_issues"
+      ],
+      "tooling_assessment": {
+        "status": "needs-extension",
+        "summary": "This agent's responsibilities depend on GitHub issue write access that is not part of the normalized core tool surface.",
+        "recommended_extensions": [
+          {
+            "type": "mcp",
+            "label": "Back the issue-management workflow with a supported GitHub issue create and update integration.",
+            "reason": "Without explicit issue-write capability, the agent cannot fulfill its stated primary responsibility."
+          },
+          {
+            "type": "tool-normalization",
+            "label": "Normalize repo-inspection tools if this agent should participate in the same orchestration layer as the modern Product Manager agent.",
+            "reason": "The current tool shape is separate from the newer normalized product-scoping agent."
+          }
+        ]
+      }
+    },
+    "prompt engineer": {
+      "file": ".github/agents/prompt engineer.md",
+      "portfolio_role": "prompt-design",
+      "orchestration_status": "audited-support",
+      "current_tools": [],
+      "tooling_assessment": {
+        "status": "partial",
+        "summary": "No-tool prompt rewriting is fine when the prompt is pasted into chat, but repo-resident prompt maintenance is weaker without file access.",
+        "recommended_extensions": [
+          {
+            "type": "fs-permission",
+            "label": "Add read and edit capability if this agent should maintain repo-resident prompts, agents, or skills directly.",
+            "reason": "Prompt work inside the repo needs file visibility rather than relying on pasted content alone."
+          },
+          {
+            "type": "optional-tool",
+            "label": "Add search capability for multi-file prompt systems.",
+            "reason": "Prompt improvements often need surrounding instruction and example context, not just a single pasted block."
+          }
+        ]
+      }
+    }
+  },
+  "skill_bindings": {
+    "Supervisor": [
+      "monorepo-workspace-governance",
+      "docs-sync"
+    ],
+    "Auto-Eval": [
+      "code-review",
+      "monorepo-workspace-governance"
+    ],
+    "Product Manager": [
+      "draft-prd"
+    ],
+    "Backend Engineer": [
+      "server-domain-architecture",
+      "auth-session-and-safety-boundaries",
+      "reliability-and-state-integrity"
+    ],
+    "AI Engineer": [
+      "llm-runtime-safety-and-integration",
+      "platform-observability-and-ops"
+    ],
+    "QA Agent": [
+      "e2e-test-runner",
+      "testing-and-regression-guardrails"
+    ],
+    "Launch Readiness Agent": [
+      "security-scan",
+      "platform-observability-and-ops",
+      "code-review"
+    ],
+    "Admin Operations Advisor": [
+      "admin-audit-and-rbac-governance",
+      "auth-session-and-safety-boundaries",
+      "platform-observability-and-ops"
+    ],
+    "Database Schema & Migration Auditor": [
+      "database-migration-safety",
+      "backend-models-standards",
+      "reliability-and-state-integrity"
+    ],
+    "Mini-Program Parity Auditor": [
+      "platform-coordination-protocol",
+      "frontend-component-architecture"
+    ],
+    "Taro Mini-Program Frontend Engineer": [
+      "frontend-component-architecture",
+      "design-system-governance",
+      "joyjoin-brand-guidelines",
+      "platform-coordination-protocol"
+    ],
+    "Taro Migration Specialist": [
+      "platform-coordination-protocol",
+      "frontend-component-architecture",
+      "design-system-governance"
+    ],
+    "Expert React Frontend Engineer": [
+      "frontend-component-architecture",
+      "design-system-governance",
+      "frontend-performance-and-loading",
+      "joyjoin-brand-guidelines",
+      "platform-coordination-protocol"
+    ],
+    "debug": [
+      "testing-and-regression-guardrails"
+    ],
+    "principal SWE": [
+      "code-review",
+      "reliability-and-state-integrity",
+      "monorepo-workspace-governance"
+    ],
+    "SE: Product Manager": [
+      "draft-prd"
+    ],
+    "prompt engineer": []
+  },
+  "retry_policy": {
+    "default": {
+      "attempts": 1,
+      "backoff_ms": 0
+    }
+  },
+  "preconditions": {
+    "manifest_must_parse_as_json_compatible_yaml": true,
+    "workspace_hooks_remain_primary_enforcement_surface": true,
+    "runtime_state_must_stay_under_git_directory": true,
+    "launch_readiness_is_not_a_default_pre_commit_gate": true
+  },
+  "context_contract": {
+    "example_file": ".github/orchestration-context.example.json",
+    "runtime_file": ".git/.orchestration/context.json",
+    "required_fields": [
+      "event",
+      "triggerSource",
+      "commitSha",
+      "branch",
+      "prNumber",
+      "changedFiles",
+      "diffSummary",
+      "testOutputs",
+      "reviewComments",
+      "artifactPaths",
+      "upstreamAgent",
+      "upstreamResult",
+      "retryCount",
+      "recommendedNextAgents",
+      "lastUpdatedAt"
+    ]
+  },
+  "logging": {
+    "runtime_dir": ".git/.orchestration",
+    "event_log_file": ".git/.orchestration/events.jsonl"
+  }
+}
