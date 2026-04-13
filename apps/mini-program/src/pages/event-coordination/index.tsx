@@ -28,12 +28,6 @@ interface Participant {
   nickname?: string
   archetype?: string
   avatarUrl?: string
-  birthdate?: string
-  gender?: string
-  educationLevel?: string
-  interestsRankedTop3?: string[]
-  interestsTop?: string[]
-  topInterests?: string[]
   [key: string]: unknown
 }
 
@@ -137,55 +131,6 @@ function formatUnlockCountdown(hoursUntilUnlock?: number): string {
   return `${minutes}分钟后开放`
 }
 
-function getAgeLabel(birthdate?: string): string | null {
-  if (!birthdate) {
-    return null
-  }
-
-  const birth = new Date(birthdate)
-  if (Number.isNaN(birth.getTime())) {
-    return null
-  }
-
-  const now = new Date()
-  let age = now.getFullYear() - birth.getFullYear()
-  const hasBirthdayPassed =
-    now.getMonth() > birth.getMonth() ||
-    (now.getMonth() === birth.getMonth() && now.getDate() >= birth.getDate())
-
-  if (!hasBirthdayPassed) {
-    age -= 1
-  }
-
-  return age > 0 ? `${age}岁` : null
-}
-
-function getParticipantInterests(participant?: Participant): string[] {
-  if (!participant) {
-    return []
-  }
-
-  const candidates = [participant.interestsRankedTop3, participant.interestsTop, participant.topInterests]
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate.filter((value): value is string => typeof value === 'string' && value.trim() !== '')
-    }
-  }
-
-  return []
-}
-
-function getParticipantMeta(participant?: Participant): string[] {
-  if (!participant) {
-    return []
-  }
-
-  return [participant.gender, getAgeLabel(participant.birthdate), participant.educationLevel].filter(
-    (value): value is string => Boolean(value),
-  )
-}
-
 function getMessageBody(message: ChatMessage): string {
   return message.message ?? message.content ?? ''
 }
@@ -232,15 +177,19 @@ export default function EventCoordinationPage() {
 
   // ── Fetch event details ─────────────────────────────────────────
   const {
-    data: event,
-    isLoading: eventLoading,
-    error: eventError,
-  } = useQuery<EventDetail>({
-    queryKey: ['mini-program', 'event', eventId],
-    queryFn: () =>
-      apiRequest<EventDetail>({ path: `/api/events/${encodeURIComponent(eventId)}` }),
+    data: joinedEvents = [],
+    isLoading: joinedEventsLoading,
+    error: joinedEventsError,
+  } = useQuery<EventDetail[]>({
+    queryKey: ['mini-program', 'joined-events'],
+    queryFn: () => apiRequest<EventDetail[]>({ path: '/api/events/joined' }),
     enabled: !!eventId && !authLoading,
   })
+
+  const event = useMemo(
+    () => joinedEvents.find((item) => item.id === eventId) ?? null,
+    [joinedEvents, eventId],
+  )
 
   const { data: participantsResponse = [] } = useQuery<Participant[]>({
     queryKey: ['mini-program', 'event-participants', eventId],
@@ -401,12 +350,12 @@ export default function EventCoordinationPage() {
   }, [messages.length])
 
   // ── Loading state ───────────────────────────────────────────────
-  if (authLoading || eventLoading) {
+  if (authLoading || joinedEventsLoading) {
     return <LoadingScreen message='加载活动聊天…' />
   }
 
   // ── Error state ─────────────────────────────────────────────────
-  if (eventError || !event) {
+  if (joinedEventsError || !event) {
     return (
       <View className='coordination-page'>
         <View className='coordination-page__error'>
@@ -687,31 +636,8 @@ export default function EventCoordinationPage() {
                 </View>
               </View>
 
-              {getParticipantMeta(selectedParticipant).length > 0 ? (
-                <View className='coordination-page__chip-row'>
-                  {getParticipantMeta(selectedParticipant).map((item) => (
-                    <View key={item} className='coordination-page__chip'>
-                      <Text className='coordination-page__chip-text'>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-
-              {getParticipantInterests(selectedParticipant).length > 0 ? (
-                <View className='coordination-page__sheet-section'>
-                  <Text className='coordination-page__sheet-section-title'>Ta 的兴趣</Text>
-                  <View className='coordination-page__tag-row'>
-                    {getParticipantInterests(selectedParticipant).slice(0, 6).map((interest) => (
-                      <View key={interest} className='coordination-page__tag'>
-                        <Text className='coordination-page__tag-text'>{interest}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-
               <Text className='coordination-page__sheet-note'>
-                先在群聊里打个招呼，等活动开始前 24 小时后就能更自然地聊起来。
+                这里只展示群聊所需的公开信息。先在群聊里打个招呼，等活动开始前 24 小时后就能更自然地聊起来。
               </Text>
             </Card>
           </View>

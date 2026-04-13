@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import path from 'node:path';
 import { evaluateWorkspace, readPassCache, RUBRIC_VERSION } from './auto-eval-core.mjs';
 
-const GUARDED_TOOL_HINTS = [
+const DEFAULT_GUARDED_TOOL_HINTS = [
   'apply_patch',
   'create_file',
   'edit',
@@ -15,6 +16,35 @@ const GUARDED_TOOL_HINTS = [
   'install_extension',
 ];
 const AUTO_EVAL_COMMAND_HINTS = ['auto-eval.mjs', 'auto-eval-hook.mjs'];
+const DEFAULT_MANUAL_RECOVERY_AGENTS = ['Auto-Eval', 'Supervisor'];
+
+function loadOrchestrationAutoEvalPolicy() {
+  try {
+    const manifestPath = path.join(process.cwd(), '.github', 'orchestration.yaml');
+    if (!fs.existsSync(manifestPath)) {
+      return null;
+    }
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    return {
+      guardedToolHints: manifest.copilot_hooks?.auto_eval?.guarded_tool_hints ?? [],
+      manualRecoveryAgents: manifest.copilot_hooks?.auto_eval?.manual_recovery_agents ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getGuardedToolHints() {
+  const policy = loadOrchestrationAutoEvalPolicy();
+  return [...new Set([...DEFAULT_GUARDED_TOOL_HINTS, ...(policy?.guardedToolHints ?? [])])];
+}
+
+function getManualRecoveryAgents() {
+  const policy = loadOrchestrationAutoEvalPolicy();
+  const agents = policy?.manualRecoveryAgents ?? [];
+  return agents.length > 0 ? agents : DEFAULT_MANUAL_RECOVERY_AGENTS;
+}
 
 function readStdin() {
   try {
@@ -84,7 +114,7 @@ function isGuardedTool(toolName) {
   }
 
   const normalized = toolName.toLowerCase();
-  return GUARDED_TOOL_HINTS.some((hint) => normalized.includes(hint));
+  return getGuardedToolHints().some((hint) => normalized.includes(hint));
 }
 
 function isAutoEvalSelfCheck(payload) {
@@ -154,6 +184,7 @@ const payload = parsePayload();
 if (mode === 'session-start') {
   try {
     const result = evaluateWorkspace({ mode: 'session-start' });
+    const recoveryAgents = getManualRecoveryAgents().join(', ');
 
     if (result.cleanWorktree) {
       output({ continue: true });
@@ -169,7 +200,7 @@ if (mode === 'session-start') {
     if (result.status === 'fail') {
       output({
         continue: true,
-        systemMessage: `Auto-Eval found blocking issues for dirty worktree ${result.fingerprintShort}. Edit and execute tools will stay blocked until this fingerprint passes. Top finding: ${summarizeTopFinding(result)}`,
+        systemMessage: `Auto-Eval found blocking issues for dirty worktree ${result.fingerprintShort}. Edit and execute tools will stay blocked until this fingerprint passes. Top finding: ${summarizeTopFinding(result)}. Recommended manual path: ${recoveryAgents}.`,
       });
     }
 
@@ -199,6 +230,7 @@ if (mode === 'pre-tool-use') {
 
   try {
     const result = evaluateWorkspace({ mode: 'pre-tool-use' });
+    const recoveryAgents = getManualRecoveryAgents().join(', ');
 
     if (result.cleanWorktree) {
       output(allowResponse('Clean worktree; no auto-eval gate applies.'));
@@ -222,7 +254,7 @@ if (mode === 'pre-tool-use') {
       output(
         denyResponse(
           'Auto-Eval requires a passing result for the current dirty-worktree fingerprint before edit or execute tools may run.',
-          `Auto-Eval blocked this tool because the current dirty worktree has not passed evaluation. Fingerprint ${result.fingerprintShort}. Top finding: ${summarizeTopFinding(result)}. Re-run Auto-Eval to refresh the report after fixing the issue.`,
+          `Auto-Eval blocked this tool because the current dirty worktree has not passed evaluation. Fingerprint ${result.fingerprintShort}. Top finding: ${summarizeTopFinding(result)}. Re-run Auto-Eval to refresh the report after fixing the issue. Recommended manual path: ${recoveryAgents}.`,
         ),
         2,
       );

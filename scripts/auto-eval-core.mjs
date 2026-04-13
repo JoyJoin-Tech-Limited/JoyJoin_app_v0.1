@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readJsonCompatibleYaml, validateOrchestrationManifest } from './orchestration-lib.mjs';
 
 export const RUBRIC_VERSION = '2026-04-11.v1';
 export const QUALITY_PASS_THRESHOLD = 95;
@@ -490,6 +491,40 @@ function runSyntaxPreflight(repoRoot, changedFiles, timeoutProfile) {
             filePath: file.path,
             line: 1,
             message: `JSON parse failed: ${error instanceof Error ? error.message : String(error)}`,
+          }),
+        );
+      }
+      continue;
+    }
+
+    if (file.path === '.github/orchestration.yaml') {
+      try {
+        const manifest = readJsonCompatibleYaml(file.content ?? '', file.path);
+        const validation = validateOrchestrationManifest(manifest);
+
+        if (!validation.valid) {
+          for (const message of validation.errors.slice(0, 10)) {
+            findings.push(
+              createFinding({
+                moduleKey,
+                severity: 'blocker',
+                filePath: file.path,
+                line: 1,
+                message,
+              }),
+            );
+          }
+        } else {
+          evidence.push(`orchestration-manifest-check:${file.path}`);
+        }
+      } catch (error) {
+        findings.push(
+          createFinding({
+            moduleKey,
+            severity: 'blocker',
+            filePath: file.path,
+            line: 1,
+            message: error instanceof Error ? error.message : String(error),
           }),
         );
       }

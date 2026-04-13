@@ -17,6 +17,13 @@
 - Start with `.github/agents/README.md` to choose the right agent for debugging, frontend delivery, platform parity, prompt work, or product scoping.
 - Skills define the rules and boundaries; agents help execute a workflow within those boundaries.
 
+### Orchestration
+
+- The native agent orchestration contract lives in `.github/orchestration.yaml`.
+- Use `.github/ORCHESTRATION.md` for the human-readable graph, support-agent coverage, and tooling sufficiency audit.
+- `Auto-Eval` remains the deterministic dirty-worktree gate. `Supervisor` is the manual routing surface across the core v1 agent graph.
+- Repo-managed local hooks live under `.githooks/`; contributors who want the local commit-time gate should set `git config core.hooksPath .githooks`.
+
 ## Pull Request Review Standard
 
 When reviewing pull requests, evaluate not only local correctness but also:
