@@ -248,7 +248,7 @@ export default function EditProfilePage() {
                     }`}
                     onClick={() => toggleInterest(interest.id)}
                   >
-                    {interest.emoji ? `${interest.emoji} ` : ''}{interest.label}
+                    {interest.label}
                   </Text>
                 ))}
               </View>

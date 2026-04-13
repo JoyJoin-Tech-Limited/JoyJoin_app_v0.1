@@ -583,7 +583,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 // ---------------------------------------------------------------------------
 router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
   const { socialSessionId } = req.params;
-  const userId: string = req.session?.userId;
+  const userId = req.session?.userId;
   const { vibe } = req.body as { vibe: number };
 
   if (!userId) {
@@ -595,6 +595,15 @@ router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
+  if ((state.completedPhases?.length ?? 0) === 0 || state.currentPhase === 'recap') {
+    return res.status(400).json({ error: 'Pulse check is not available right now' });
+  }
 
   const pulseChecks = state.pulseChecks || [];
   const existingIdx = pulseChecks.findIndex((p: PulseCheckResult) => p.userId === userId);

@@ -50,7 +50,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, matchHistory, connections, type ChatMessage, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION, getInterestById } from "@shared/interests";
 import { db } from "./db";
@@ -96,6 +96,42 @@ function firstNonEmptyString(...values: Array<string | null | undefined>): strin
   }
 
   return undefined;
+}
+
+type EventChatParticipantSummary = {
+  id: string;
+  displayName: string;
+  firstName: string | null;
+  nickname: string;
+  archetype: string | null;
+  avatarUrl: string | null;
+};
+
+function getEventChatDisplayName(user: Pick<User, 'displayName' | 'firstName' | 'lastName'>): string {
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  return firstNonEmptyString(user.displayName, fullName) ?? '参与者';
+}
+
+function toEventChatParticipantSummary(
+  user: Pick<User, 'id' | 'displayName' | 'firstName' | 'lastName' | 'archetype' | 'profileImageUrl' | 'wechatAvatarUrl'>,
+): EventChatParticipantSummary {
+  const displayName = getEventChatDisplayName(user);
+
+  return {
+    id: user.id,
+    displayName,
+    firstName: user.firstName ?? null,
+    nickname: displayName,
+    archetype: user.archetype ?? null,
+    avatarUrl: firstNonEmptyString(user.profileImageUrl, user.wechatAvatarUrl) ?? null,
+  };
+}
+
+function toEventChatMessageSummary(message: ChatMessage & { user: User }) {
+  return {
+    ...message,
+    user: toEventChatParticipantSummary(message.user),
+  };
 }
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
@@ -1225,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { eventId } = req.params;
       const participants = await storage.getEventParticipants(eventId);
-      res.json(participants);
+      res.json(participants.map(toEventChatParticipantSummary));
     } catch (error) {
       console.error("Error fetching event participants:", error);
       res.status(500).json({ message: "Failed to fetch event participants" });
@@ -1270,7 +1306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         chatUnlocked: true,
         hoursUntilUnlock: 0,
-        messages,
+        messages: messages.map(toEventChatMessageSummary),
       });
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -1311,8 +1347,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = insertChatMessageSchema.safeParse({
-        ...req.body,
         eventId,
+        message: req.body?.message ?? req.body?.content,
       });
       
       if (!result.success) {
@@ -6060,12 +6096,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formatted = settings.map(s => ({
         id: s.id,
         planType: s.planType,
+        displayName: s.displayName,
         name: s.displayName,
+        displayNameEn: s.displayNameEn,
         nameEn: s.displayNameEn,
         description: s.description,
         price: s.priceInCents / 100,
         originalPrice: s.originalPriceInCents ? s.originalPriceInCents / 100 : null,
         durationDays: s.durationDays,
+        isActive: s.isActive,
         isFeatured: s.isFeatured,
       }));
       res.json(formatted);

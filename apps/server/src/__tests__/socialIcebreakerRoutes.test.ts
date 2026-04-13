@@ -393,6 +393,55 @@ describe('social icebreaker routes', () => {
     });
   });
 
+  it('rejects pulse checks from non-participants', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'pulse-owner');
+      const outsiderCookie = await login(baseUrl, 'pulse-outsider');
+      const sessionId = `session-pulse-outsider-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const pulseResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/pulse-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: outsiderCookie },
+        body: JSON.stringify({ vibe: 2 }),
+      });
+      const pulseBody = await pulseResponse.json() as any;
+
+      expect(pulseResponse.status).toBe(403);
+      expect(pulseBody.error).toContain('Not a participant');
+    });
+  });
+
+  it('rejects pulse checks before the first phase transition completes', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'pulse-early-host');
+      const sessionId = `session-pulse-early-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const pulseResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/pulse-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ vibe: 2 }),
+      });
+      const pulseBody = await pulseResponse.json() as any;
+
+      expect(pulseResponse.status).toBe(400);
+      expect(pulseBody.error).toContain('Pulse check is not available');
+    });
+  });
+
   it('accepts guessedStatementIndex=0 in lie-detective votes', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'host');

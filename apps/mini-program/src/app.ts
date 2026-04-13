@@ -16,7 +16,7 @@ function App({ children }: PropsWithChildren<any>) {
   })
 
   useDidShow(() => {
-    const pendingOrder = wx.getStorageSync('pending_order')
+    const pendingOrder = Taro.getStorageSync<string>('pending_order')
     if (!pendingOrder || typeof pendingOrder !== 'string') {
       return
     }
