@@ -1,4 +1,5 @@
 import type { Express, Request } from "express";
+import { normalizeSubscriptionPlanType } from "@joyjoin/shared/api";
 import { requireAdmin } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
@@ -92,12 +93,13 @@ export function registerPaymentRoutes(app: Express): void {
       }
 
       const { planType, couponCode } = req.body;
+      const normalizedPlanType = normalizeSubscriptionPlanType(planType);
 
-      if (!planType || !["monthly", "quarterly"].includes(planType)) {
+      if (!normalizedPlanType) {
         return res.status(400).json({ message: "Invalid plan type" });
       }
 
-      const renewalData = await subscriptionService.renewSubscription(userId, planType);
+      const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
 
       let couponId: string | undefined;
       if (couponCode) {
@@ -117,9 +119,14 @@ export function registerPaymentRoutes(app: Express): void {
         clientIp: getRequestClientIp(req),
       });
 
+      const paymentRedirectUrl = paymentResult.h5Url ?? null;
+      const paymentStatus = paymentRedirectUrl ? "pending" : "completed";
+
       res.json({
         subscription: renewalData,
         payment: paymentResult,
+        paymentRedirectUrl,
+        paymentStatus,
       });
     } catch (error) {
       reqLogger.error("Failed to renew subscription", {

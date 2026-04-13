@@ -6060,12 +6060,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formatted = settings.map(s => ({
         id: s.id,
         planType: s.planType,
+        displayName: s.displayName,
+        displayNameEn: s.displayNameEn,
         name: s.displayName,
         nameEn: s.displayNameEn,
         description: s.description,
         price: s.priceInCents / 100,
         originalPrice: s.originalPriceInCents ? s.originalPriceInCents / 100 : null,
         durationDays: s.durationDays,
+        isActive: s.isActive,
         isFeatured: s.isFeatured,
       }));
       res.json(formatted);

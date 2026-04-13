@@ -32,6 +32,12 @@ import {
 
 import { motion } from "framer-motion";
 import { SiWechat } from "react-icons/si";
+import {
+  findPricingPlan,
+  getBrowserPaymentLaunchUrl,
+  normalizeSubscriptionPlanType,
+  type PricingPlan,
+} from "@joyjoin/shared/api";
 
 import { getCurrencySymbol } from "@/lib/currency";
 import { apiRequest } from "@/lib/queryClient";
@@ -48,19 +54,6 @@ const DEFAULT_VIP_QUARTERLY_PRICE = 26800; // ¥268.00 VIP quarterly (约¥89/�
 // Original prices for savings calculation (in cents)
 const ORIGINAL_PACK3_PRICE = 26400; // ¥264 = ¥88 x 3
 const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
-
-interface PricingPlan {
-  id: string;
-  planType: string;
-  displayName: string;
-  displayNameEn?: string;
-  description?: string;
-  price: number; // in yuan
-  originalPrice?: number | null; // in yuan
-  durationDays?: number;
-  isActive: boolean;
-  isFeatured: boolean;
-}
 
 
 export default function BlindBoxPaymentPage() {
@@ -93,11 +86,11 @@ export default function BlindBoxPaymentPage() {
   });
 
   // Get prices from API data or use defaults
-  const singlePricing = pricingData?.find((p) => p.planType === "event_single");
-  const pack3Pricing = pricingData?.find((p) => p.planType === "pack_3");
-  const pack6Pricing = pricingData?.find((p) => p.planType === "pack_6");
-  const vipMonthlyPricing = pricingData?.find((p) => p.planType === "vip_monthly");
-  const vipQuarterlyPricing = pricingData?.find((p) => p.planType === "vip_quarterly");
+  const singlePricing = findPricingPlan(pricingData, "event_single");
+  const pack3Pricing = findPricingPlan(pricingData, "pack_3");
+  const pack6Pricing = findPricingPlan(pricingData, "pack_6");
+  const vipMonthlyPricing = findPricingPlan(pricingData, "vip_monthly");
+  const vipQuarterlyPricing = findPricingPlan(pricingData, "vip_quarterly");
 
   const SINGLE_PRICE = singlePricing ? singlePricing.price * 100 : DEFAULT_SINGLE_PRICE;
   const PACK3_PRICE = pack3Pricing ? pack3Pricing.price * 100 : DEFAULT_PACK3_PRICE;
@@ -315,7 +308,10 @@ export default function BlindBoxPaymentPage() {
     try {
       if (isVIP) {
         setIsProcessing(true);
-        const planType = selectedPlan as "vip_monthly" | "vip_quarterly";
+        const planType = normalizeSubscriptionPlanType(selectedPlan);
+        if (!planType) {
+          throw new Error("无效的订阅方案");
+        }
 
         const response = await fetch("/api/subscription/renew", {
           method: "POST",
@@ -327,9 +323,21 @@ export default function BlindBoxPaymentPage() {
           }),
         });
 
+        const result = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
+          const error = result;
           throw new Error(error?.message || "订阅失败");
+        }
+
+        const launchUrl = getBrowserPaymentLaunchUrl(result);
+        if (launchUrl) {
+          window.location.assign(launchUrl);
+          return;
+        }
+
+        if (result?.paymentStatus === "pending") {
+          throw new Error("未收到支付跳转链接，请稍后重试");
         }
 
         toast({
@@ -402,6 +410,13 @@ export default function BlindBoxPaymentPage() {
       await createEventMutation.mutateAsync(eventData);
     } catch (error) {
       console.error("Payment error:", error);
+      if (isVIP || isPack) {
+        toast({
+          title: isVIP ? "发起支付失败" : "购买失败",
+          description: error instanceof Error ? error.message : "请稍后重试",
+          variant: "destructive",
+        });
+      }
       setIsProcessing(false);
     }
   };
