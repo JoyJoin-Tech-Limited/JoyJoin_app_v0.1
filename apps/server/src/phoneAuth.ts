@@ -1,5 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
+import { sanitizeAuthUser } from "./auth/sanitizeAuthUser";
 import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 
 // 简化的验证码存储（生产环境应使用Redis）
@@ -222,10 +223,11 @@ export function setupPhoneAuth(app: Express) {
         try {
           const user = await storage.getUserById(userId);
           console.log("🔐 [LOGIN] Sending response for user:", user?.id, "isAdmin:", user?.isAdmin);
+          const safeUser = user ? sanitizeAuthUser(user as Record<string, unknown>) : {};
           res.json({ 
             message: "Login successful",
             userId,
-            ...user
+            ...safeUser
           });
         } catch (err) {
           console.error("🔐 [LOGIN] Get user error:", err);

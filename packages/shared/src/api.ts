@@ -330,7 +330,7 @@ function normalizePricingPlan(rawPlan: RawPricingPlan): PricingPlan | null {
 export interface CreateMiniProgramPaymentIntentRequest {
   type: string
   planId: string
-  openid: string
+  openid?: string
   couponCode?: string
 }
 

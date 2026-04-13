@@ -132,7 +132,7 @@
     {
       "name": "Supervisor",
       "file": "supervisor.agent.md",
-      "description": "Use when coordinating multi-agent work across kickoff research and planning, Auto-Eval, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, multi-agent workflow, coordinate these agents, supervisor.",
+      "description": "Use when coordinating multi-agent work across kickoff research and planning, Auto-Eval, frontend and parity support, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist, reopen discovery, or redirect brand-governed frontend work from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, multi-agent workflow, coordinate these agents, supervisor.",
       "tools": [
         "read",
         "search",
@@ -148,7 +148,11 @@
         "Backend Engineer",
         "AI Engineer",
         "QA Agent",
-        "Launch Readiness Agent"
+        "Launch Readiness Agent",
+        "Mini-Program Parity Auditor",
+        "Expert React Frontend Engineer",
+        "Taro Mini-Program Frontend Engineer",
+        "Taro Migration Specialist"
       ],
       "portfolioRole": "orchestrator",
       "orchestrationPhase": "core-v1",

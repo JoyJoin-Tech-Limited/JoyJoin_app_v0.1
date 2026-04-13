@@ -5,7 +5,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { collectChangedFiles } from "../../../../scripts/orchestration-lib.mjs";
+type CollectChangedFiles = (repoRoot: string) => string[];
+
+const orchestrationLibPath = new URL("../../../../scripts/orchestration-lib.mjs", import.meta.url).href;
+const { collectChangedFiles } = await import(orchestrationLibPath) as {
+  collectChangedFiles: CollectChangedFiles;
+};
 
 const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_FILE_DIR, '../../../..');
@@ -172,6 +177,61 @@ describe('orchestration kickoff lane', () => {
 
     expect(result.continue).toBe(true);
     expect(result.systemMessage).toBeUndefined();
+  });
+});
+
+describe('orchestration supervisor routing boundaries', () => {
+  it('keeps frontend delivery in audited support while making Supervisor rerouting explicit', () => {
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
+      agents: Array<{ name: string; subagents?: string[] }>;
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
+      portfolio_scope: {
+        orchestrated_agents: string[];
+        audited_agents: string[];
+      };
+      handoff_graph: Array<{ from: string; to: string }>;
+    };
+
+    const supervisor = manifest.agents.find((agent) => agent.name === 'Supervisor');
+
+    expect(orchestration.portfolio_scope.orchestrated_agents).toEqual([
+      'Supervisor',
+      'Auto-Eval',
+      'Product Manager',
+      'Backend Engineer',
+      'AI Engineer',
+      'QA Agent',
+      'Launch Readiness Agent',
+    ]);
+    expect(orchestration.portfolio_scope.audited_agents).toEqual(
+      expect.arrayContaining([
+        'Mini-Program Parity Auditor',
+        'Expert React Frontend Engineer',
+        'Taro Mini-Program Frontend Engineer',
+        'Taro Migration Specialist',
+      ]),
+    );
+    expect(supervisor?.subagents).toEqual(
+      expect.arrayContaining([
+        'Researcher',
+        'Planner',
+        'Mini-Program Parity Auditor',
+        'Expert React Frontend Engineer',
+        'Taro Mini-Program Frontend Engineer',
+        'Taro Migration Specialist',
+      ]),
+    );
+    expect(orchestration.handoff_graph).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: 'Supervisor', to: 'Researcher' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Planner' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Mini-Program Parity Auditor' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Expert React Frontend Engineer' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Taro Mini-Program Frontend Engineer' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Taro Migration Specialist' }),
+      ]),
+    );
   });
 });
 

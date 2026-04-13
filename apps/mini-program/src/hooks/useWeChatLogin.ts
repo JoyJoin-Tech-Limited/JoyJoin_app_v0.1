@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import Taro from '@tarojs/taro'
 import {
   authenticateMiniProgramUser,
   getUserState,
   type ApiError,
 } from '../lib/api'
+import { seedMiniProgramAuthSession } from '../lib/authSession'
 import { nextStepToMiniProgramRoute } from '../lib/onboardingRoutes'
 import { logInfo, logError } from '../lib/logger'
 
@@ -15,13 +17,15 @@ import { logInfo, logError } from '../lib/logger'
  *   1. Taro.login() → obtains a temporary code from the WeChat runtime.
  *   2. POST /api/auth/wechat/login → server calls code2Session, creates session.
  *   3. GET /api/auth/user → retrieve server-driven `nextStep`.
- *   4. Navigate to the route corresponding to `nextStep`.
+ *   4. Seed the auth cache so protected routes do not keep stale guest state.
+ *   5. Navigate to the route corresponding to `nextStep`.
  *
  * Returns { handleWeChatLogin, isLoggingIn }.
  */
 export function useWeChatLogin() {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const loginLockRef = useRef(false)
+  const queryClient = useQueryClient()
 
   async function handleWeChatLogin() {
     if (loginLockRef.current) return
@@ -34,6 +38,7 @@ export function useWeChatLogin() {
       await authenticateMiniProgramUser()
 
       const userState = await getUserState()
+      seedMiniProgramAuthSession(userState, queryClient)
       const route = nextStepToMiniProgramRoute(userState.nextStep)
 
       logInfo('[useWeChatLogin] Login successful', { nextStep: userState.nextStep, route })

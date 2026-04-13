@@ -1,5 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiRequest, type UserState, type OnboardingStep } from '../lib/api'
+import { apiRequest, type OnboardingStep, type UserState } from '../lib/api'
+import {
+  AUTH_QUERY_KEY,
+  bootstrapMiniProgramAuthSession,
+  isUnauthorizedApiError,
+} from '../lib/authSession'
+import { deriveMiniProgramAuthState } from './authState'
 
 export type NextStepType = OnboardingStep
 
@@ -29,7 +35,17 @@ export interface UseAuthResult {
   refetch: () => Promise<unknown>
 }
 
-export const AUTH_QUERY_KEY = ['mini-program', 'auth-user'] as const
+async function getAuthUser(): Promise<AuthUser | null> {
+  try {
+    return await apiRequest<AuthUser>({ path: '/api/auth/user' })
+  } catch (error) {
+    if (isUnauthorizedApiError(error)) {
+      return null
+    }
+
+    throw error
+  }
+}
 
 /**
  * useAuth — React Query hook for persistent auth state in the mini-program.
@@ -37,27 +53,29 @@ export const AUTH_QUERY_KEY = ['mini-program', 'auth-user'] as const
  * Mirrors the web client's useAuth() contract:
  *   - Fetches GET /api/auth/user
  *   - Returns user, isLoading, isAuthenticated, nextStep
- *   - Does NOT retry on 401/403 (treats as unauthenticated)
+ *   - Treats 401/403 as an unauthenticated state instead of a sticky error
+ *   - Fails closed while an auth refresh is in flight so protected pages do not
+ *     trust stale cached auth state on foreground resume
  */
 export function useAuth(): UseAuthResult {
-  const { data: user, isLoading, isError, refetch } = useQuery<AuthUser>({
+  const { data: user, isLoading, isFetching, refetch } = useQuery<AuthUser | null>({
     queryKey: AUTH_QUERY_KEY,
-    queryFn: () => apiRequest<AuthUser>({ path: '/api/auth/user' }),
-    retry: (failureCount, error: any) => {
-      if (error?.statusCode === 401 || error?.statusCode === 403) return false
+    queryFn: getAuthUser,
+    retry: (failureCount, error) => {
+      if (isUnauthorizedApiError(error)) return false
       return failureCount < 2
     },
     staleTime: Infinity,
   })
 
-  const isAuthenticated = !!user && !isError
-  const actualIsLoading = isLoading && !isError
+  const authState = deriveMiniProgramAuthState({
+    user,
+    isLoading,
+    isFetching,
+  })
 
   return {
-    user: isError ? undefined : user,
-    isLoading: actualIsLoading,
-    isAuthenticated,
-    nextStep: user?.nextStep,
+    ...authState,
     refetch,
   }
 }
@@ -68,5 +86,5 @@ export function useAuth(): UseAuthResult {
  */
 export function useInvalidateAuth() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+  return () => bootstrapMiniProgramAuthSession(queryClient)
 }

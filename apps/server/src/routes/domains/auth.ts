@@ -5,6 +5,7 @@ import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
 import { db } from "../../db";
 import { logger } from "../../lib/logger";
+import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import { eq } from "drizzle-orm";
 import { assessmentAnswers, assessmentSessions, users, type User } from "@shared/schema";
 
@@ -375,7 +376,11 @@ export function registerAuthRoutes(app: Express): void {
         req.session.save((err: any) => err ? reject(err) : resolve(null));
       });
 
-      res.json({ message: 'Onboarding completed', user, assessmentSessionId });
+      res.json({
+        message: 'Onboarding completed',
+        user: user ? sanitizeAuthUser(user) : user,
+        assessmentSessionId,
+      });
     } catch (error: any) {
       console.error('[Unified Onboarding] Error:', error);
       res.status(500).json({ message: 'Failed to complete onboarding' });
@@ -420,7 +425,7 @@ export function registerAuthRoutes(app: Express): void {
       const updatedUser = await storage.updateUser(userId, updateData);
       console.log("[COMPLETE-ONBOARDING] Updated user:", userId, { displayName, gender, currentCity });
 
-      res.json({ message: "Onboarding completed", user: updatedUser });
+      res.json({ message: "Onboarding completed", user: sanitizeAuthUser(updatedUser) });
     } catch (error) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
@@ -447,7 +452,7 @@ export function registerAuthRoutes(app: Express): void {
         req.session.save(() => {});
       }
 
-      res.json({ message: "Personality test completed", user: updatedUser });
+      res.json({ message: "Personality test completed", user: sanitizeAuthUser(updatedUser) });
     } catch (error) {
       console.error("Error completing personality test:", error);
       res.status(500).json({ message: "Failed to complete personality test" });
@@ -559,7 +564,7 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       res.json({
-        ...user,
+        ...sanitizeAuthUser(user),
         nextStep,
         profileEssentialComplete,
         profileExtendedComplete,
