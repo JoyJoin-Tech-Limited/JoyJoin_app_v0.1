@@ -149,8 +149,7 @@ export default function BlindBoxPaymentPage() {
   const appliedDiscount = supportsCoupons && effectivePlan === "single" ? discount : 0;
   const finalPrice = basePrice - appliedDiscount;
   
-  // Check if plan is a pack or VIP
-  const isPack = effectivePlan === "pack3" || effectivePlan === "pack6";
+  // Check if plan is a VIP
   const isVIP = effectivePlan === "vip_monthly" || effectivePlan === "vip_quarterly";
 
   const createEventMutation = useMutation({
