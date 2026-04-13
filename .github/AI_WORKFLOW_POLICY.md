@@ -58,6 +58,12 @@ Use the **operational lane** when any of the following are true:
 - The request is primarily about validation, QA coverage, release blockers, or launch risk.
 - The work needs incident-style triage, blocker routing, or remediation sequencing.
 
+Use `Supervisor` inside the operational lane when the next move is rerouting rather than execution itself:
+
+- The task needs to go back to `Researcher` or `Planner` because new ambiguity or scope drift appeared midstream.
+- The next best specialist is an audited frontend support agent such as `Expert React Frontend Engineer`, `Taro Mini-Program Frontend Engineer`, `Taro Migration Specialist`, or `Mini-Program Parity Auditor`.
+- The work is branding-sensitive UI delivery that should stay attached to existing frontend agents plus `design-system-governance` and `joyjoin-brand-guidelines`, not a new branding-only lane.
+
 ## Mandatory escalation rules
 
 The following are non-optional workflow boundaries.

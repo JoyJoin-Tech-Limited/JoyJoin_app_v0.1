@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { handleMiniProgramUnauthorized } from './authSession'
 
 const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? 'http://localhost:5000').replace(/\/$/, '')
 // Keep requests responsive on mobile networks while still allowing payment and
@@ -66,6 +67,7 @@ export async function apiRequest<T>(options: {
   path: string
   method?: HttpMethod
   data?: unknown
+  handleUnauthorized?: boolean
 }): Promise<T> {
   const response = await Taro.request<T>({
     url: buildApiUrl(options.path),
@@ -80,6 +82,10 @@ export async function apiRequest<T>(options: {
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
     return response.data
+  }
+
+  if (options.handleUnauthorized !== false && response.statusCode === 401) {
+    handleMiniProgramUnauthorized({ statusCode: response.statusCode })
   }
 
   const errorDetails = getApiErrorDetails(response.statusCode, response.data)
@@ -103,7 +109,6 @@ export type OnboardingStep =
 
 export interface UserState {
   id: string
-  wechatOpenId: string
   nextStep: OnboardingStep
   // Index signature to accommodate the full user record returned by /api/auth/user
   // without requiring every field to be explicitly typed here.
@@ -112,16 +117,16 @@ export interface UserState {
 
 /**
  * Authenticate via WeChat Mini Program login (Taro.login → code2Session).
- * Returns the authenticated user and their openid.
+ * Establishes the authenticated session cookie for the follow-up auth bootstrap.
  * No web OAuth redirect is involved — this is mini-program-only.
  */
-export async function authenticateMiniProgramUser(): Promise<{ user: Record<string, any>; openid: string }> {
+export async function authenticateMiniProgramUser(): Promise<void> {
   const loginResult = await Taro.login()
   if (!loginResult.code) {
     throw createApiError('微信登录失败，请稍后重试')
   }
 
-  const data = await apiRequest<{ success?: boolean; user?: Record<string, any>; error?: string }>({
+  const data = await apiRequest<{ success?: boolean; error?: string }>({
     path: '/api/auth/wechat/login',
     method: 'POST',
     data: {
@@ -129,13 +134,8 @@ export async function authenticateMiniProgramUser(): Promise<{ user: Record<stri
     },
   })
 
-  if (!data.success || !data.user?.wechatOpenId) {
+  if (!data.success) {
     throw createApiError(data.error || '无法建立微信登录会话')
-  }
-
-  return {
-    user: data.user,
-    openid: data.user.wechatOpenId,
   }
 }
 

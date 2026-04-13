@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { findBestMatchingArchetypesV2, type UserSecondaryData } from "@shared/personality/matcherV2";
 import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap";
 import { canUseMockWechatAuth, isDebugAuthLoggingEnabled } from "./auth/policy";
+import { sanitizeAuthUser } from "./auth/sanitizeAuthUser";
 import { storage } from "./storage";
 
 /**
@@ -21,6 +22,25 @@ const MIN_VALID_ANSWERS = 3;
 const IMPORTABLE_TRAITS = ["A", "C", "E", "O", "X", "P"] as const;
 
 const MAX_ERROR_BODY_LOG_LENGTH = 1000;
+
+async function regenerateAuthenticatedWechatSession(req: Request, userId: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate((err) => {
+      if (err) {
+        return reject(err);
+      }
+
+      req.session.userId = userId;
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return reject(saveErr);
+        }
+
+        resolve();
+      });
+    });
+  });
+}
 
 function hasImportableTraitDelta(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
@@ -630,14 +650,7 @@ export function setupWechatAuth(app: Express) {
       const { user, isNewUser } = await findOrCreateWechatUser(openid);
 
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
-      req.session.userId = fullUser.id;
-
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
+      await regenerateAuthenticatedWechatSession(req, fullUser.id);
 
       console.log(`[WeChat OAuth] Callback login success; userId=${fullUser.id} isNewUser=${isNewUser}`);
 
@@ -721,37 +734,29 @@ export function setupWechatAuth(app: Express) {
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
 
       if (isDebugAuthLoggingEnabled()) {
-        console.log("[WeChat Auth] before session save", {
+        console.log("[WeChat Auth] before session regeneration", {
           userId: fullUser.id,
           sid: req.sessionID,
         });
       }
 
-      req.session.userId = fullUser.id;
-      req.session.save(async (err) => {
-        if (isDebugAuthLoggingEnabled()) {
-          console.log("[WeChat Auth] after session save", {
-            err: err ? String(err) : null,
-            sid: req.sessionID,
-            setCookie: res.getHeader("set-cookie") || null,
-          });
-        }
+      await regenerateAuthenticatedWechatSession(req, fullUser.id);
 
-        if (err) {
-          console.error("[WeChat Auth] Session save error:", err);
-          return res.status(500).json({ error: "Failed to create session" });
-        }
-
-        console.log(
-          "[WeChat Auth] Session saved successfully! sessionID:",
-          req.sessionID
-        );
-
-        res.json({
-          success: true,
-          isNewUser,
-          user: fullUser,
+      if (isDebugAuthLoggingEnabled()) {
+        console.log("[WeChat Auth] after session regeneration", {
+          sid: req.sessionID,
         });
+      }
+
+      console.log(
+        "[WeChat Auth] Session regenerated successfully! sessionID:",
+        req.sessionID
+      );
+
+      res.json({
+        success: true,
+        isNewUser,
+        user: sanitizeAuthUser(fullUser),
       });
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };
@@ -808,18 +813,12 @@ export function setupWechatAuth(app: Express) {
 
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
 
-      req.session.userId = fullUser.id;
-      req.session.save((err) => {
-        if (err) {
-          console.error("[WeChat Auth] Session save error:", err);
-          return res.status(500).json({ error: "Failed to create session" });
-        }
+      await regenerateAuthenticatedWechatSession(req, fullUser.id);
 
-        res.json({
-          success: true,
-          isNewUser,
-          user: fullUser,
-        });
+      res.json({
+        success: true,
+        isNewUser,
+        user: sanitizeAuthUser(fullUser),
       });
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };

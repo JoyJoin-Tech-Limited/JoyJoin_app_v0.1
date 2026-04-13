@@ -700,14 +700,12 @@ export function registerPaymentRoutes(app: Express): void {
           return res.status(400).json({ error: "User is not authenticated with WeChat" });
         }
 
-        if (typeof openid !== "string" || openid.trim().length === 0) {
-          return res.status(400).json({ error: "Missing openid parameter" });
-        }
-
-        const requestedOpenId = openid.trim();
-        if (sessionOpenId !== requestedOpenId) {
+        const requestedOpenId = getNonEmptyString(openid);
+        if (requestedOpenId && sessionOpenId !== requestedOpenId) {
           return res.status(400).json({ error: "OpenID mismatch" });
         }
+
+        const paymentOpenId = requestedOpenId ?? sessionOpenId;
 
         try {
           paymentService.assertMiniProgramAppIdConsistency();
@@ -736,7 +734,7 @@ export function registerPaymentRoutes(app: Express): void {
             relatedId: eventId.trim(),
             originalAmount: amountInCents,
             clientIp: getRequestClientIp(req),
-            openid: requestedOpenId,
+            openid: paymentOpenId,
           });
 
           return res.json({
@@ -775,7 +773,7 @@ export function registerPaymentRoutes(app: Express): void {
             originalAmount: eventPackCheckout.originalAmount,
             couponId,
             clientIp: getRequestClientIp(req),
-            openid: requestedOpenId,
+            openid: paymentOpenId,
           });
 
           return res.json({
@@ -817,7 +815,7 @@ export function registerPaymentRoutes(app: Express): void {
           originalAmount: renewalData.amount,
           couponId,
           clientIp: getRequestClientIp(req),
-          openid: requestedOpenId,
+          openid: paymentOpenId,
         });
 
         res.json({

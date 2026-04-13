@@ -37,6 +37,8 @@ That split is deliberate:
 - keep the broader portfolio visible so future expansion stays explicit
 - capture tooling gaps now instead of rediscovering them later
 
+Supervisor also has explicit rerouting exits that do not promote more agents into the core graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, and it can route into selected audited frontend lanes for parity audit, web UI work, mini-program UI work, or parity-first migration.
+
 ## Runtime surfaces
 
 - Copilot hooks: `.github/hooks/auto-eval.json` and `.github/hooks/orchestration.json`
@@ -82,6 +84,17 @@ This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bo
 - `QA Agent` -> `Launch Readiness Agent` and `Auto-Eval` for release escalation and final local gate recheck.
 - `Launch Readiness Agent` -> `Auto-Eval` or `Supervisor` depending on whether the next step is local sign-off or blocker routing.
 
+## Supervisor rerouting lanes
+
+- `Supervisor` -> `Researcher` when the current blocker exposes missing repo context or unresolved ambiguity.
+- `Supervisor` -> `Planner` when the findings exist but the plan, sequencing, or approval boundary must be refreshed.
+- `Supervisor` -> `Mini-Program Parity Auditor` for compare-only parity review or migration backlog work.
+- `Supervisor` -> `Expert React Frontend Engineer` for web UI implementation in `apps/user-client`, including branding-sensitive UI work that should stay attached to frontend skills rather than a standalone branding agent.
+- `Supervisor` -> `Taro Mini-Program Frontend Engineer` for direct Taro UI implementation or refinement in `apps/mini-program`.
+- `Supervisor` -> `Taro Migration Specialist` for parity-first migration from `apps/user-client` into `apps/mini-program`.
+
+These are explicit support-lane exits, not a promotion of those agents into the default v1 graph.
+
 ## Why the broader portfolio is still linked
 
 The current planning should cover other existing agents and skills when that linkage is relevant and helpful. In practice that means:
@@ -113,6 +126,8 @@ Useful audited support bindings:
 - `Taro Migration Specialist` -> `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
 - `Expert React Frontend Engineer` -> `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
 
+Branding remains a skill boundary on the frontend agents through `design-system-governance` and `joyjoin-brand-guidelines`; there is no standalone branding agent in the current orchestration portfolio.
+
 ## Tooling sufficiency audit
 
 `Sufficient` means the current tool surface supports the agent's stated responsibilities.
@@ -127,7 +142,7 @@ Useful audited support bindings:
 |-------|--------|-------|-----------------------------------|
 | `Researcher` | `sufficient` | Read, search, and web access are enough for repo-grounded kickoff research. | Add targeted MCP integrations only if external knowledge sources become deterministic dependencies. |
 | `Planner` | `sufficient` | Read, search, and agent delegation are enough for approval-first planning. | Add deterministic plan persistence only if approved plans need stronger replay guarantees. |
-| `Supervisor` | `sufficient` | Read, search, execute, and subagent delegation are enough for routing. | Add direct edit only if the supervisor is intentionally allowed to patch files itself. |
+| `Supervisor` | `sufficient` | Read, search, execute, and subagent delegation are enough for routing across the core graph, kickoff re-entry, and audited support lanes. | Add direct edit only if the supervisor is intentionally allowed to patch files itself. |
 | `Auto-Eval` | `sufficient` | Deterministic evaluation only needs read, search, and execute. | None required. |
 | `Product Manager` | `sufficient` | Repo artifact drafting is covered by read, search, and edit. | Add GitHub issue write integration only if issue authoring moves here. |
 | `Backend Engineer` | `sufficient` | Normalized implementation surface matches the agent's job. | None required. |

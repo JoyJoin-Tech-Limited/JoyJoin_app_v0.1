@@ -1,254 +1,271 @@
 ---
 name: "SelfIteration"
-description: "Docs-only specification for a proposal-driven meta-agent that continuously improves JoyJoin's skill portfolio, prompt assets, and long-term memory using telemetry, feedback, and per-skill performance metrics."
-status: "Proposed"
-type: "Meta-agent specification"
-execution: "Docs-only; not registered in .github/agents/manifest.json"
-approval: "Human approval required before merge or memory publication"
+description: "Docs-only operating procedure for a proposal-only SelfIteration-lite workflow that reviews JoyJoin's agents, skills, prompts, and repo memory using existing orchestration, validation, and human approval boundaries."
+status: "Active docs-only workflow"
+type: "Operating procedure and future meta-agent specification"
+execution: "Manual workflow over existing repo agents and validators; not registered in .github/agents/manifest.json"
+approval: "Human approval required before any durable change or memory publication"
 triggers:
   - "Periodic portfolio review"
-  - "Failure detection"
-  - "Recurring negative user feedback"
-  - "Sustained error-rate or latency regression"
+  - "Recurring orchestration drift"
+  - "Repeated routing or prompt misses"
+  - "Repeated negative feedback on agent behavior"
+  - "Tooling sufficiency gaps that block promotion"
 outputs:
-  - "Draft pull request proposal"
-  - "Staged memory update payload"
-  - "Iteration summary report"
+  - "Iteration brief"
+  - "Draft change proposal"
+  - "Validation checklist"
+  - "Memory candidate"
 constraints:
   - "Proposal-only changes"
-  - "Cannot modify its own core logic"
-  - "Cannot auto-merge or self-approve"
+  - "No autonomous scheduling or merge authority"
+  - "Cannot modify its own approval boundaries"
+  - "Cannot publish repo memory directly without review"
 ---
 
-# SelfIteration Meta-Agent Specification
+# SelfIteration-lite Operating Procedure
 
-> **Status:** Proposed documentation spec for a future meta-agent. This file defines the operating contract only. It is not a runnable agent, is not registered in `.github/agents/manifest.json`, and must not be treated as an autonomous merge authority.
+> **Current mode:** `SelfIteration` is not an executable custom agent. In JoyJoin today, it is a docs-only operating procedure for a human-invoked, proposal-only improvement loop over the existing agent, skill, prompt, and memory substrate.
 
-## Mission
+This file defines what `SelfIteration` means now, not a hypothetical autonomous future. If the repo eventually promotes `SelfIteration` into an executable helper, that promotion must satisfy the governance bar in `.github/ORCHESTRATION_GOVERNANCE.md` and remain outside merge or memory-publication authority.
 
-SelfIteration is a meta-agent responsible for continuously improving the system's auxiliary skills, prompt assets, and long-term memory.
+## What It Is Now
 
-Its mission is to analyze execution logs, user feedback, and per-skill performance metrics to identify gaps in the current skill portfolio; propose new skills where coverage is missing; refine existing skills where outcomes are weak; and stage long-term memory updates that capture durable operational patterns.
+`SelfIteration-lite` is a structured review workflow for improving:
 
-SelfIteration is an improvement engine, not a self-governing runtime. It may prepare proposals, draft documentation changes, and generate memory-update payloads, but every durable change remains subject to explicit human approval.
+- agent discovery and handoff surfaces under `.github/agents/`
+- orchestration contract and docs under `.github/orchestration.yaml` and `.github/ORCHESTRATION.md`
+- skill quality and routing metadata under `.github/skills/`
+- prompt or instruction quality where repeated failures show the current wording is weak
+- repo memory candidates when a pattern has been validated and is general enough to keep
 
-## Operating Boundaries
+It is not a standing runtime actor. It does not watch the repo, schedule itself, open PRs on its own, publish memory on its own, or rewrite its own governance boundaries.
 
-| Area | Allowed | Forbidden |
+## Why This Exists
+
+The repo already has the primitives needed for controlled self-improvement:
+
+- `Researcher` for grounded evidence gathering
+- `Planner` for approval-first scoping
+- `Supervisor` for explicit routing when multiple specialists are involved
+- `Auto-Eval` for dirty-worktree and validation context
+- deterministic validators such as `npm run orchestration:validate`, `npm run orchestration:check`, and `npm run skill-routing:check`
+
+What was missing was a clear operating procedure for when to use those pieces together to improve the agent-and-skill system itself. `SelfIteration-lite` fills that gap without introducing a new autonomous control-plane actor.
+
+## Quick Trigger Checklist
+
+Run `SelfIteration-lite` if any of these are true:
+
+- the same failure pattern has happened more than once
+- routing, docs, frontmatter, or validation drift is becoming a recurring issue
+- contributors keep needing the same boundary or governance reminder
+- a support agent or new skill proposal needs evidence before promotion
+
+Skip `SelfIteration-lite` if the issue is only:
+
+- a one-off typo, wording fix, or formatting cleanup
+- an isolated miss with no repeat pattern yet
+- a speculative idea that is not backed by evidence
+
+## When To Run It
+
+Run `SelfIteration-lite` when one or more of these are true:
+
+- the same agent or skill failure mode repeats across sessions
+- routing picks the wrong skill or fails to load the right one often enough to be a pattern
+- orchestration docs, frontmatter, contract files, and validation surfaces drift out of sync
+- contributors keep needing repo-memory reminders for the same decision boundary
+- a support agent looks valuable enough for promotion, but the repo needs a structured evidence review first
+- a proposed new agent or skill feels plausible, but the team has not yet proved it deserves to exist
+
+Do not run it for one-off formatting issues, isolated typos, or speculative ideas that do not have evidence behind them.
+
+## What It Must Never Do
+
+`SelfIteration-lite` must not:
+
+- modify `.github/orchestration.yaml`, agent docs, or skill docs without a normal reviewed change
+- publish repo memory directly as if a proposal were already validated
+- recommend creating a new agent when a documentation, routing, or validation fix is the smaller correct intervention
+- treat one bad run as proof of a portfolio gap
+- propose changes to its own approval rules, merge behavior, or privileged execution boundaries
+
+## Current Execution Model
+
+Use the existing portfolio instead of inventing a new runtime.
+
+### Recommended lane
+
+1. `Researcher`
+2. `Planner`
+3. Optional specialist or `Supervisor`
+4. Human review
+5. Deterministic validation
+
+### Typical specialist choices
+
+| Need | Best next lane |
+| --- | --- |
+| Agent docs, frontmatter, discovery wording | direct repo edit or agent-customization workflow |
+| Skill content or routing drift | `skill-authoring-governance` plus `docs-sync` |
+| Contract, validation, or hook drift | direct repo edit plus orchestration validation |
+| Broader workflow rerouting | `Supervisor` |
+| Dirty-worktree quality report | `Auto-Eval` |
+| Prompt quality issue isolated to wording | `prompt engineer` only after the evidence is specific |
+
+## Runbook
+
+### Step 1: Capture the trigger
+
+Write down the exact trigger in one sentence.
+
+Good examples:
+
+- "The same skill-routing false positive happened across three related asks."
+- "A support agent looks promotable, but the tooling sufficiency audit still says partial."
+- "The orchestration contract and human docs are drifting repeatedly."
+
+Bad examples:
+
+- "Make the agents smarter."
+- "We should have more automation."
+
+### Step 2: Gather evidence before proposing anything
+
+Collect only the smallest set of evidence needed to prove the issue is real.
+
+Preferred evidence sources:
+
+- relevant agent docs under `.github/agents/`
+- relevant skills under `.github/skills/`
+- `.github/orchestration.yaml`
+- `.github/ORCHESTRATION.md` and `.github/ORCHESTRATION_GOVERNANCE.md`
+- validator scripts and outputs
+- repo memory entries when they show repeated prior decisions
+- explicit user or reviewer feedback tied to a repeated pattern
+
+If the evidence is weak or contradictory, stop and record the issue as observational only.
+
+### Step 3: Classify the problem correctly
+
+Use the smallest truthful category:
+
+| Category | Meaning | Typical fix |
 | --- | --- | --- |
-| Skill portfolio | Propose new skills, refine existing `SKILL.md` files, tighten trigger phrases, improve examples, and remove stale references | Publishing unreviewed skill changes directly to protected branches |
-| Agent portfolio | Propose updates to auxiliary agent markdown files and composition guidance | Rewriting or replacing its own core orchestration contract |
-| Memory | Stage new long-term memory entries and revise low-value or incorrect patterns with provenance | Writing opaque, unverifiable memories without evidence or approval |
-| Runtime behavior | Recommend prompt and workflow adjustments backed by telemetry | Changing privileged execution policies, approval gates, or merge rules |
+| Documentation drift | The repo rule exists but the docs or discovery surface are stale | Update docs or frontmatter |
+| Routing weakness | The right skill exists but the routing metadata is weak | Update `routing.yml` or routing tests |
+| Validation gap | The rule exists but nothing fails when it drifts | Add or tighten deterministic validation |
+| Tooling sufficiency gap | The workflow is real but the tool surface is still incomplete | Record the gap; do not over-promote the agent |
+| Real portfolio gap | Repeated evidence shows the repo lacks a stable boundary or workflow primitive | Consider a new skill or new support agent |
 
-## Trigger Conditions
+Default toward documentation, routing, or validation fixes before creating a new agent or skill.
 
-| Trigger | Primary signal | Typical threshold | Expected action |
-| --- | --- | --- | --- |
-| Periodic review | Scheduled telemetry sweep | Daily or weekly cadence | Audit the portfolio even if no severe failure has fired |
-| Failure detection | Repeated execution failures | Burst of similar failures across runs or agents | Open an iteration cycle immediately |
-| User dissatisfaction | Negative thumbs or direct comments | Clustered feedback on the same failure mode | Prioritize user-visible friction before theoretical gaps |
-| Metric regression | Increased error rate or latency | Material drift on a skill compared with its baseline | Investigate whether prompt, routing, or memory changes are warranted |
+### Step 4: Produce the smallest proposal
 
-## Core Workflow
+Every `SelfIteration-lite` cycle should produce one of these:
 
-```mermaid
-flowchart LR
-    A[Triggered Periodically<br/>or on Failure Detection] --> B[Collect Telemetry]
-    B --> C[Identify Pattern]
-    C --> D[Generate Hypothesis]
-    D --> E[Validate Improvement]
-    E --> F[Commit Update]
+- a docs-only correction
+- a routing metadata improvement
+- a deterministic validator or regression test
+- a small agent or skill wording improvement
+- a "do nothing yet" finding with explicit reasons
+
+If the proposal touches multiple categories, split it into separate reviewable chunks.
+
+### Step 5: Validate before recommending memory
+
+Run only the validators that match the surface changed.
+
+Common checks:
+
+```bash
+npm run orchestration:validate
+npm run orchestration:check
+npm run skill-routing:check
+node scripts/auto-eval.mjs --mode manual-report
 ```
 
-`Commit Update` means staging a proposal artifact only: open a draft pull request, attach a staged memory-update payload, and emit a summary report for human review. It never means direct merge or unsupervised publication.
+Memory should only be proposed when:
 
-## Typed Contracts
+- the pattern is durable rather than incident-specific
+- the proposed wording is backed by successful validation or repeated accepted reviews
+- the memory will reduce future mistakes rather than duplicate the docs verbatim
 
-### Input Contract
+### Step 6: End with a reviewer packet
 
-```ts
-type FeedbackVerdict = "up" | "down" | "comment";
-type RunOutcome = "success" | "partial_failure" | "failure";
+Every cycle should finish with a concise packet containing:
 
-interface AgentRunTranscript {
-  runId: string;
-  agentName: string;
-  startedAt: string;
-  finishedAt: string;
-  outcome: RunOutcome;
-  transcriptPath?: string;
-  failureClass?: string;
-  touchedSkills: string[];
-  summary: string;
-}
+1. Trigger
+2. Evidence reviewed
+3. Classification
+4. Proposed change
+5. Validation run or reason validation was deferred
+6. Memory candidate or explicit "no memory candidate"
 
-interface UserFeedbackSignal {
-  feedbackId: string;
-  runId?: string;
-  verdict: FeedbackVerdict;
-  comment?: string;
-  createdAt: string;
-  affectedSkills: string[];
-}
+If any of those are missing, the cycle is incomplete.
 
-interface SkillPerformanceMetric {
-  skillName: string;
-  windowStart: string;
-  windowEnd: string;
-  invocationCount: number;
-  errorRate: number;
-  p50LatencyMs: number;
-  p95LatencyMs: number;
-}
+## Output Template
 
-interface SelfIterationInput {
-  transcripts: AgentRunTranscript[];
-  feedback: UserFeedbackSignal[];
-  metrics: SkillPerformanceMetric[];
-  capabilityTaxonomyVersion: string;
-}
+Use this structure for the final deliverable of a `SelfIteration-lite` pass:
+
+```md
+## SelfIteration-lite Summary
+
+### Trigger
+[one sentence]
+
+### Evidence
+- [file, validation result, or feedback source]
+
+### Classification
+[documentation drift | routing weakness | validation gap | tooling sufficiency gap | real portfolio gap]
+
+### Proposal
+- [smallest concrete change]
+
+### Validation
+- [command run or reason not yet run]
+
+### Memory Candidate
+- [candidate text]
+or
+- none
+
+### Reviewer Decision Needed
+- [approve / revise / defer]
 ```
 
-### Internal Working Contracts
+## Promotion Gate For A Future Executable Agent
 
-```ts
-type ProposedChangeTarget = "skill" | "agent" | "memory";
-type ValidationVerdict = "pass" | "hold" | "reject";
+`SelfIteration` should remain docs-only until the repo can prove all of the following:
 
-interface PatternFinding {
-  findingId: string;
-  targetArea: ProposedChangeTarget;
-  symptom: string;
-  evidenceRunIds: string[];
-  affectedSkills: string[];
-  confidence: number;
-}
+- repeated accepted value from manual `SelfIteration-lite` cycles
+- low false-positive rate in identifying real portfolio gaps
+- strong provenance for evidence, proposals, and memory candidates
+- explicit hard-stop rules around self-core modification and approval boundaries
+- sufficient tooling for telemetry collection, draft packaging, validation, and auditability
+- a clear answer to where the helper sits: audited support lane, not core graph by default
 
-interface ImprovementHypothesis {
-  hypothesisId: string;
-  findingId: string;
-  proposedAction: string;
-  expectedBenefit: string;
-  touchedFiles: string[];
-  confidence: number;
-}
+The first promotion target, if evidence eventually justifies one, is a proposal-only executable helper. It is not a fully autonomous meta-agent.
 
-interface ValidationResult {
-  hypothesisId: string;
-  verdict: ValidationVerdict;
-  measuredImpact: string;
-  regressionRisk: string;
-  reviewerRequired: boolean;
-}
-```
+## Relationship To The Future Spec
 
-### Output Contract
+The older abstract `SelfIteration` concept is still useful as a long-term design envelope:
 
-```ts
-type DraftPullRequestStatus = "draft" | "ready_for_review";
-type MemoryUpdateMode = "staged" | "approved";
+- telemetry-backed portfolio improvement
+- proposal-only outputs
+- no self-approval or self-merge
+- evidence-backed memory staging only
 
-interface DraftPullRequestProposal {
-  title: string;
-  branchName: string;
-  status: DraftPullRequestStatus;
-  changedFiles: string[];
-  rationale: string;
-}
+But the repo should treat those ideas as design constraints, not as proof that a runnable agent is warranted now.
 
-interface MemoryUpdateProposal {
-  entryId: string;
-  mode: MemoryUpdateMode;
-  namespace: "long_term_agent_memory";
-  content: string;
-  evidenceRunIds: string[];
-  confidence: number;
-  reviewRequired: true;
-}
+## Review Checklist
 
-interface IterationSummaryReport {
-  period: string;
-  findings: PatternFinding[];
-  acceptedHypotheses: ImprovementHypothesis[];
-  rejectedHypotheses: ImprovementHypothesis[];
-  validation: ValidationResult[];
-  nextReviewAt: string;
-}
-
-interface SelfIterationOutput {
-  draftPullRequest: DraftPullRequestProposal;
-  memoryUpdate: MemoryUpdateProposal;
-  summary: IterationSummaryReport;
-}
-```
-
-## Required Skill Portfolio
-
-| Skill | Responsibility | Minimum input | Minimum output | Notes |
-| --- | --- | --- | --- | --- |
-| `Skill: LogAnalyzer` | Extract recurring patterns from execution traces, cluster failure modes, and normalize evidence from transcripts | Recent run transcripts, failure classes, tool outcomes | `PatternFinding[]` with evidence links and confidence | Must prefer recurrent signals over one-off noise |
-| `Skill: GapDetector` | Compare observed failures against the current capability taxonomy and identify missing or weak coverage | Pattern findings, skill inventory, taxonomy version | Gap statement with candidate skill additions or scope adjustments | Should distinguish true gaps from poor invocation routing |
-| `Skill: PromptOptimizer` | Refine prompts, trigger phrases, examples, and task framing based on outcome quality | Gap statement, baseline prompt or skill text, validation criteria | Candidate wording changes plus expected improvement hypothesis | Must preserve safety rules and repo-specific guardrails |
-| `Skill: MemoryUpdater` | Stage durable operational lessons in long-term memory with provenance and confidence | Validated finding, approved wording, evidence set | `MemoryUpdateProposal` payload | Must never publish unverifiable or duplicate memory entries |
-
-## Skill-to-Workflow Mapping
-
-| Workflow stage | Lead skill | Supporting capability | Success condition |
-| --- | --- | --- | --- |
-| Collect Telemetry | `LogAnalyzer` | Transcript ingestion and metric normalization | Evidence is complete enough to support a defensible finding |
-| Identify Pattern | `LogAnalyzer` + `GapDetector` | Failure clustering and taxonomy comparison | The agent can state what is missing or underperforming and why |
-| Generate Hypothesis | `GapDetector` + `PromptOptimizer` | Portfolio design and prompt revision | A concrete, bounded improvement proposal exists |
-| Validate Improvement | `PromptOptimizer` | Replay, dry-run, or benchmark harness | The proposal shows acceptable quality gain with controlled risk |
-| Commit Update | `MemoryUpdater` | Draft PR generation and proposal packaging | Draft PR, staged memory payload, and summary report are ready for review |
-
-## Safety Constraints
-
-| Constraint | Requirement |
-| --- | --- |
-| Proposal-only changes | All changes must be staged as proposals requiring human approval before merging or publishing |
-| Core-logic protection | SelfIteration cannot modify its own core logic, approval rules, or privileged execution boundaries |
-| Auxiliary-surface limit | Allowed write targets are limited to auxiliary skills, auxiliary agent markdown, and staged long-term memory payloads |
-| Evidence requirement | Every proposal must cite telemetry, feedback, or metrics that justify the change |
-| Validation gate | No prompt, skill, or memory proposal may advance without a recorded validation result |
-| Traceability | Every staged memory item and draft PR must include provenance back to the triggering evidence |
-
-## Error Handling
-
-| Failure mode | Detection signal | Required handling | Fallback | Escalation |
-| --- | --- | --- | --- | --- |
-| Missing telemetry | Transcripts or metrics are incomplete for the review window | Mark the iteration as incomplete and block any durable proposal | Emit a summary report that requests missing inputs | Human operator supplies the missing telemetry or narrows scope |
-| Contradictory feedback signals | Positive and negative feedback cluster around the same skill without clear separation | Split the cohort by scenario, platform, or task type before proposing changes | Hold portfolio changes and publish an ambiguity note | Human reviewer decides whether to collect more segmented feedback |
-| Low-confidence pattern detection | Pattern confidence falls below the minimum threshold | Refuse to create a new skill or major prompt change from weak evidence | Record the signal as observational only | Re-review after the next telemetry window |
-| Validation failure | Proposed improvement regresses quality, safety, or latency | Reject the hypothesis and preserve the current asset | Emit lessons learned in the summary report only | Human reviewer decides whether to attempt a narrower hypothesis |
-| Vector-store write failure | Memory publication pipeline rejects or times out on the staged payload | Preserve the memory proposal as an attached artifact and do not mark it approved | Keep the PR draft open with the staged payload embedded | Human operator retries publication after fixing the memory system |
-| Attempted self-core modification | A proposal touches SelfIteration's own core contract or approval path | Hard-stop the iteration and flag a policy violation | Discard the change set before drafting artifacts | Human reviewer must explicitly redesign the governance model outside the agent |
-| Missing human approval | Draft PR or memory payload remains unapproved | Keep artifacts in draft or staged state indefinitely | Report pending approval in the next summary cycle | Human approver accepts, revises, or rejects the proposal |
-
-## Composition Hints
-
-| Hint | Guidance |
-| --- | --- |
-| Start narrow | Prefer fixing invocation routing, prompt wording, or examples before creating a brand-new skill |
-| Separate gap types | Distinguish missing capability from poor discoverability, poor prompt quality, and missing memory reinforcement |
-| Stage memory after validation | A memory entry should encode a validated pattern, not a speculative hypothesis |
-| Prefer auxiliary surfaces | Direct improvements first toward `SKILL.md` content, agent descriptions, and long-term memory; leave core runtime logic to human-led architecture work |
-| Keep proposals reviewable | Each iteration should be small enough that a human reviewer can understand the evidence, the change, and the expected benefit quickly |
-
-Recommended composition order:
-
-1. Use `LogAnalyzer` to normalize telemetry and produce evidence-backed findings.
-2. Run `GapDetector` to decide whether the issue is missing coverage, weak routing, or stale capability framing.
-3. Apply `PromptOptimizer` only to the smallest artifact that could plausibly fix the observed failure.
-4. Invoke `MemoryUpdater` only after validation passes and the lesson is general enough to be durable.
-5. Package the result as a draft pull request, a staged memory payload, and an iteration summary for human approval.
-
-## Review Output Expectations
-
-Every iteration should produce three artifacts:
-
-1. A draft pull request that adds or refines skill or agent markdown files.
-2. A staged long-term memory payload such as: `When encountering X, prefer skill Y over Z.`
-3. A concise summary report describing the detected pattern, the proposed improvement, the validation result, and the required reviewer decision.
-
-If no proposal survives validation, SelfIteration should still emit the summary report and explicitly state why no PR or memory update was staged.
+- [ ] The trigger describes a repeated pattern, not a one-off annoyance
+- [ ] The evidence is specific and repo-grounded
+- [ ] The issue is classified before any solution is proposed
+- [ ] The proposal is smaller than the problem statement suggests whenever possible
+- [ ] Deterministic validation matches the surfaces touched
+- [ ] Any memory candidate is validated, durable, and non-duplicative
+- [ ] The cycle ends with a reviewer decision rather than an implicit rollout

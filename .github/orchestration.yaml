@@ -207,6 +207,42 @@
       "prompt": "Use this approved execution plan, current findings, and changed-file scope to route the next specialist."
     },
     {
+      "from": "Supervisor",
+      "to": "Researcher",
+      "label": "Re-open discovery",
+      "prompt": "Rebuild the missing repo context, constraints, and ambiguities before execution continues."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Planner",
+      "label": "Re-plan execution",
+      "prompt": "Use the updated findings and current blocker to refresh the approval-first execution plan."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Mini-Program Parity Auditor",
+      "label": "Audit parity scope",
+      "prompt": "Compare the current web and mini-program surfaces, identify parity drift, and return the smallest actionable backlog before implementation continues."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Expert React Frontend Engineer",
+      "label": "Route web frontend implementation",
+      "prompt": "Implement the web UI scope in apps/user-client while keeping branding and design-system decisions attached to the existing frontend skill bindings."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Taro Mini-Program Frontend Engineer",
+      "label": "Route mini-program implementation",
+      "prompt": "Implement the mini-program UI scope in apps/mini-program and review sibling-platform implications when duplicated business behavior is involved."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Taro Migration Specialist",
+      "label": "Route parity-first migration",
+      "prompt": "Port the approved web source of truth into apps/mini-program while preserving parity and making platform limitations explicit."
+    },
+    {
       "from": "Auto-Eval",
       "to": "Supervisor",
       "label": "Route remediation through Supervisor",
@@ -334,7 +370,7 @@
       ],
       "tooling_assessment": {
         "status": "sufficient",
-        "summary": "The supervisor only needs to inspect state, invoke subagents, and run deterministic orchestration commands.",
+        "summary": "The supervisor only needs to inspect state, invoke subagents, and run deterministic orchestration commands across the core graph and explicit support rerouting lanes.",
         "recommended_extensions": [
           {
             "type": "optional-tool",

@@ -110,23 +110,16 @@ export default function BlindBoxPaymentPage() {
   const [finalAmount, setFinalAmount] = useState<number | null>(null)
   const [couponMessage, setCouponMessage] = useState('')
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
-  const [openid, setOpenid] = useState('')
   const [pageError, setPageError] = useState('')
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
   const hasSkippedFirstDidShowRef = useRef(false)
 
-  const loadPageData = useCallback(async (wechatOpenId?: string) => {
+  const loadPageData = useCallback(async () => {
     setIsBootstrapping(true)
     setPageError('')
 
     try {
-      if (!wechatOpenId) {
-        throw new Error('请先登录后再开通会员权益')
-      }
-
-      setOpenid(wechatOpenId)
-
       const [pricing, coupons] = await Promise.all([
         getPricing(apiRequest).catch(() => []),
         getUserCoupons(apiRequest).catch(() => ({ count: 0, availableCount: 0, coupons: [] })),
@@ -157,15 +150,15 @@ export default function BlindBoxPaymentPage() {
   }, [])
 
   useEffect(() => {
-    if (authLoading || !user?.wechatOpenId) {
+    if (authLoading || !user?.id) {
       return
     }
 
-    void loadPageData(String(user.wechatOpenId))
-  }, [authLoading, user?.wechatOpenId, loadPageData])
+    void loadPageData()
+  }, [authLoading, loadPageData, user?.id])
 
   useDidShow(() => {
-    if (authLoading || !user?.wechatOpenId) {
+    if (authLoading || !user?.id) {
       return
     }
 
@@ -174,7 +167,7 @@ export default function BlindBoxPaymentPage() {
       return
     }
 
-    void loadPageData(String(user.wechatOpenId))
+    void loadPageData()
   })
 
   const selectedPlanData = useMemo(() => plans[selectedPlan], [plans, selectedPlan])
@@ -240,7 +233,7 @@ export default function BlindBoxPaymentPage() {
   }, [selectedCouponCode, selectedPlan, validateSelectedCoupon])
 
   const handlePay = useCallback(async () => {
-    if (isCreatingIntent || !openid) {
+    if (isCreatingIntent || !user?.id) {
       return
     }
 
@@ -251,7 +244,6 @@ export default function BlindBoxPaymentPage() {
       const paymentIntent = await createMiniProgramPaymentIntent(apiRequest, {
         type: selectedPlan,
         planId: selectedPlan,
-        openid,
         couponCode: isCouponValid ? selectedCouponCode : undefined,
       })
 
@@ -296,7 +288,7 @@ export default function BlindBoxPaymentPage() {
     } finally {
       setIsCreatingIntent(false)
     }
-  }, [isCouponValid, isCreatingIntent, openid, selectedCouponCode, selectedPlan])
+  }, [isCouponValid, isCreatingIntent, selectedCouponCode, selectedPlan, user?.id])
 
   return (
     <View className='payment-page'>
@@ -414,7 +406,7 @@ export default function BlindBoxPaymentPage() {
         <Button
           className='payment-page__pay-button'
           onClick={handlePay}
-          disabled={isBootstrapping || isCreatingIntent || !openid}
+          disabled={isBootstrapping || isCreatingIntent || !user?.id}
           loading={isCreatingIntent}
         >
           {isBootstrapping ? '正在准备支付...' : '微信支付'}

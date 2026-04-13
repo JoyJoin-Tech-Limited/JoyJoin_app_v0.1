@@ -1,13 +1,20 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
+import { useRef } from 'react'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { apiRequest } from '../../lib/api'
+import {
+  clearMiniProgramAuthSession,
+  getApiErrorStatusCode,
+  isUnauthorizedApiError,
+} from '../../lib/authSession'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import type { AuthUser } from '../../hooks/useAuth'
-import { logInfo } from '../../lib/logger'
+import { logError, logInfo } from '../../lib/logger'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -16,6 +23,7 @@ import './index.scss'
 
 export default function ProfilePage() {
   const { isLoading: authLoading, user: authUser } = useAuthGuard()
+  const logoutLockRef = useRef(false)
 
   useCustomTabBarSync({
     selectedIndex: MINI_PROGRAM_TAB_INDEX.profile,
@@ -25,19 +33,52 @@ export default function ProfilePage() {
   const { data: user } = useQuery<AuthUser>({
     queryKey: ['mini-program', 'auth-user-profile'],
     queryFn: () => getCurrentUser(apiRequest) as Promise<AuthUser>,
-    enabled: !authLoading,
+    enabled: !authLoading && !!authUser,
   })
 
   const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
     queryKey: ['mini-program', 'coupons'],
     queryFn: () => getUserCoupons(apiRequest),
-    enabled: !authLoading,
+    enabled: !authLoading && !!authUser,
   })
 
-  const handleLogout = () => {
-    // Clear cookies and session by navigating to login
+  const handleLogout = async () => {
+    if (logoutLockRef.current) {
+      return
+    }
+
+    logoutLockRef.current = true
     logInfo('[Profile] User initiated logout')
-    Taro.reLaunch({ url: '/pages/login/index' })
+
+    try {
+      await apiRequest<{ message: string }>({
+        path: '/api/auth/logout',
+        method: 'POST',
+        handleUnauthorized: false,
+      })
+
+      clearMiniProgramAuthSession({ mode: 'hard' })
+      Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+    } catch (error) {
+      if (isUnauthorizedApiError(error)) {
+        clearMiniProgramAuthSession({ mode: 'hard' })
+        Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+        return
+      }
+
+      logError('[Profile] Logout failed', {
+        statusCode: getApiErrorStatusCode(error),
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+
+      Taro.showToast({
+        title: '退出登录失败，请稍后重试',
+        icon: 'none',
+        duration: 3000,
+      })
+    } finally {
+      logoutLockRef.current = false
+    }
   }
 
   if (authLoading) {

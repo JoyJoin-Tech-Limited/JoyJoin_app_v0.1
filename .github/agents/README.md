@@ -8,7 +8,7 @@ Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whethe
 
 ## How to use these agents
 
-**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
+**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If execution needs midstream rerouting, use `Supervisor`, which can send work back to kickoff or into the audited frontend support lanes without expanding the v1 core graph. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
 
 **Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the invocation name, and the `description` is the routing surface.
 
@@ -31,7 +31,7 @@ These are the v1 agents wired into the native handoff graph documented in [`../O
 
 | Agent | Portfolio role | Primary use | File |
 |-------|----------------|-------------|------|
-| `Supervisor` | Orchestrator | Routes the next specialist across the core handoff graph | [`supervisor.agent.md`](./supervisor.agent.md) |
+| `Supervisor` | Orchestrator | Routes the next specialist across the core handoff graph and selected kickoff or frontend support rerouting lanes | [`supervisor.agent.md`](./supervisor.agent.md) |
 | `Auto-Eval` | Quality gate | Dirty-worktree evaluation, manual reruns, and local quality sign-off | [`auto-eval.agent.md`](./auto-eval.agent.md) |
 | `Product Manager` | Product scope | PRD drafting, user-story shaping, scope clarification, and measurable product framing | [`product-manager.agent.md`](./product-manager.agent.md) |
 | `Backend Engineer` | Implementation | Server-side implementation in `apps/server` | [`backend-engineer.agent.md`](./backend-engineer.agent.md) |
@@ -41,7 +41,7 @@ These are the v1 agents wired into the native handoff graph documented in [`../O
 
 ## Audited support agents
 
-These agents are still part of the active portfolio, but they are not in the v1 native handoff graph by default. They are catalogued in the orchestration contract with skill links and tooling sufficiency notes so future expansion stays deliberate.
+These agents are still part of the active portfolio, but they are not in the v1 native handoff graph by default. They are catalogued in the orchestration contract with skill links and tooling sufficiency notes so future expansion stays deliberate. Some of them are explicit `Supervisor` support-lane exits for frontend and parity work, but they still remain outside the small core graph.
 
 | Agent | Current scope | File |
 |-------|---------------|------|
