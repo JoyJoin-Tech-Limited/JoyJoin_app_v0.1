@@ -1,0 +1,55 @@
+name: Agent Orchestration
+
+on:
+  pull_request:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Override orchestration target'
+        required: false
+        default: 'auto'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  orchestrate:
+    name: Orchestration Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate orchestration contract
+        run: npm run orchestration:validate
+
+      - name: Run manifest-driven orchestration summary
+        env:
+          ORCHESTRATION_TARGET: ${{ inputs.target || 'auto' }}
+        run: |
+          set -eu
+          target="$ORCHESTRATION_TARGET"
+
+          if [ "$target" = "auto" ]; then
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              target="pull-request"
+            else
+              target="daily-security"
+            fi
+          fi
+
+          node scripts/orchestration-supervisor.mjs workflow "$target"

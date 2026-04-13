@@ -1,0 +1,293 @@
+import { ScrollView, Text, View } from '@tarojs/components'
+import Taro, { useRouter } from '@tarojs/taro'
+import { useQuery } from '@tanstack/react-query'
+import {
+  getPoolGroupDetails,
+  type PoolGroupDetailsResponse,
+  type PoolGroupMemberSummary,
+} from '@shared/api'
+import { apiRequest } from '../../lib/api'
+import { useAuthGuard } from '../../hooks/useAuthGuard'
+import LoadingScreen from '../../components/LoadingScreen'
+import Card from '../../components/Card'
+import Button from '../../components/Button'
+import './index.scss'
+
+function getMemberName(member: PoolGroupMemberSummary) {
+  return member.displayName || '匿名'
+}
+
+function getInitial(name: string) {
+  return name.charAt(0).toUpperCase()
+}
+
+function formatDateTime(dateTime?: string | null) {
+  if (!dateTime) {
+    return '时间待定'
+  }
+
+  const parsedDate = new Date(dateTime)
+  if (Number.isNaN(parsedDate.getTime())) {
+    return '时间待定'
+  }
+
+  return parsedDate.toLocaleDateString('zh-CN', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function getCountdown(dateTime?: string | null) {
+  if (!dateTime) {
+    return '时间待定'
+  }
+
+  const diff = new Date(dateTime).getTime() - Date.now()
+  if (Number.isNaN(diff)) {
+    return '时间待定'
+  }
+
+  if (diff <= 0) {
+    return '活动进行中'
+  }
+
+  const totalMinutes = Math.floor(diff / (1000 * 60))
+  if (totalMinutes >= 60) {
+    const totalHours = Math.ceil(diff / (1000 * 60 * 60))
+    return `距离开始约 ${totalHours} 小时`
+  }
+
+  return `距离开始约 ${Math.max(totalMinutes, 1)} 分钟`
+}
+
+export default function PoolGroupDetailPage() {
+  const router = useRouter()
+  const groupId = router.params.groupId ?? ''
+  const { user: currentUser, isLoading: authLoading } = useAuthGuard()
+
+  const {
+    data: poolGroup,
+    isLoading,
+    error,
+  } = useQuery<PoolGroupDetailsResponse>({
+    queryKey: ['mini-program', 'pool-group-detail', groupId],
+    queryFn: () => getPoolGroupDetails(apiRequest, groupId),
+    enabled: !!groupId && !authLoading,
+  })
+
+  if (authLoading || isLoading) {
+    return <LoadingScreen message='加载小队详情…' />
+  }
+
+  if (error || !poolGroup) {
+    return (
+      <View className='pool-group-detail__error'>
+        <Text className='pool-group-detail__error-text'>加载小队详情失败</Text>
+        <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
+          返回活动
+        </Button>
+      </View>
+    )
+  }
+
+  const { group, pool, members } = poolGroup
+  const currentUserId = currentUser?.id
+  const locationText = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
+
+  const handleCopyLocation = () => {
+    if (!locationText) {
+      return
+    }
+
+    Taro.setClipboardData({
+      data: locationText,
+      success: () => {
+        Taro.showToast({ title: '地点已复制', icon: 'success', duration: 1800 })
+      },
+    })
+  }
+
+  const handleOpenMap = () => {
+    if (!group.venueName) {
+      return
+    }
+
+    const address = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
+    Taro.setClipboardData({
+      data: address,
+      success: () => {
+        Taro.showToast({ title: '地址已复制，请打开地图搜索', icon: 'none', duration: 2500 })
+      },
+    })
+  }
+
+  return (
+    <ScrollView className='pool-group-detail' scrollY enhanced showScrollbar={false}>
+      <View className='pool-group-detail__header'>
+        {group.groupNumber ? (
+          <View className='pool-group-detail__group-badge'>
+            <Text className='pool-group-detail__group-badge-text'>✨ #{group.groupNumber}组</Text>
+          </View>
+        ) : null}
+        <Text className='pool-group-detail__title'>{pool.title || '你的小队详情已解锁'}</Text>
+        <Text className='pool-group-detail__subtitle'>
+          {group.matchExplanation || pool.description || '见面信息已经为你准备好，出发前再确认一次时间和地点。'}
+        </Text>
+        <Text className='pool-group-detail__countdown'>
+          {getCountdown(group.finalDateTime ?? pool.dateTime)}
+        </Text>
+        {group.matchScore != null ? (
+          <View className='pool-group-detail__match-score'>
+            <Text className='pool-group-detail__match-score-text'>匹配度 {group.matchScore}分</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <Card className='pool-group-detail__card'>
+        <Text className='pool-group-detail__card-title'>活动信息</Text>
+        <View className='pool-group-detail__info-row'>
+          <Text className='pool-group-detail__info-label'>📅 时间</Text>
+          <Text className='pool-group-detail__info-value'>
+            {formatDateTime(group.finalDateTime ?? pool.dateTime)}
+          </Text>
+        </View>
+        <View className='pool-group-detail__info-row'>
+          <Text className='pool-group-detail__info-label'>📍 地点</Text>
+          <Text className='pool-group-detail__info-value'>
+            {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布'}
+          </Text>
+        </View>
+        <View className='pool-group-detail__info-row'>
+          <Text className='pool-group-detail__info-label'>🎯 类型</Text>
+          <Text className='pool-group-detail__info-value'>{pool.eventType || '悦聚活动'}</Text>
+        </View>
+        <View className='pool-group-detail__info-row'>
+          <Text className='pool-group-detail__info-label'>👥 人数</Text>
+          <Text className='pool-group-detail__info-value'>{group.memberCount || members.length}人小组</Text>
+        </View>
+      </Card>
+
+      {pool.description ? (
+        <Card className='pool-group-detail__card'>
+          <Text className='pool-group-detail__card-title'>活动介绍</Text>
+          <Text className='pool-group-detail__description'>{pool.description}</Text>
+        </Card>
+      ) : null}
+
+      {group.venueName ? (
+        <Card className='pool-group-detail__card'>
+          <Text className='pool-group-detail__card-title'>地点信息</Text>
+          <View className='pool-group-detail__info-row'>
+            <Text className='pool-group-detail__info-label'>🏠 地址</Text>
+            <Text className='pool-group-detail__info-value'>
+              {group.venueName}
+              {group.venueAddress ? `\n${group.venueAddress}` : ''}
+            </Text>
+          </View>
+          {pool.city ? (
+            <View className='pool-group-detail__info-row'>
+              <Text className='pool-group-detail__info-label'>🌆 地区</Text>
+              <Text className='pool-group-detail__info-value'>
+                {pool.city}{pool.district ? ` · ${pool.district}` : ''}
+              </Text>
+            </View>
+          ) : null}
+          <View className='pool-group-detail__map-actions'>
+            <Button onClick={handleOpenMap}>🗺️ 到这去</Button>
+            <Button variant='secondary' onClick={handleCopyLocation}>复制地址</Button>
+          </View>
+        </Card>
+      ) : null}
+
+      <Card className='pool-group-detail__card'>
+        <Text className='pool-group-detail__members-title'>小队成员 ({group.memberCount || members.length})</Text>
+        <View className='pool-group-detail__members-list'>
+          {members.map((member) => {
+            const name = getMemberName(member)
+            const isCurrentUser = member.userId === currentUserId
+            const visibleTags = (member.topInterests ?? []).slice(0, 3)
+
+            return (
+              <View
+                key={member.userId}
+                className={
+                  'pool-group-detail__member-card' +
+                  (isCurrentUser ? ' pool-group-detail__member-card--current' : '')
+                }
+              >
+                <View className='pool-group-detail__member-avatar'>
+                  <Text>{getInitial(name)}</Text>
+                </View>
+
+                <View className='pool-group-detail__member-content'>
+                  <View className='pool-group-detail__member-name-row'>
+                    <Text className='pool-group-detail__member-name'>{name}</Text>
+                    {member.ageLabel ? (
+                      <Text className='pool-group-detail__member-meta'>{member.ageLabel}</Text>
+                    ) : null}
+                    {isCurrentUser ? (
+                      <View className='pool-group-detail__member-you-badge'>
+                        <Text className='pool-group-detail__member-you-text'>我</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {member.archetype ? (
+                    <Text className='pool-group-detail__member-archetype'>{member.archetype}</Text>
+                  ) : null}
+
+                  {member.industryNicheLabel ? (
+                    <Text className='pool-group-detail__member-meta'>{member.industryNicheLabel}</Text>
+                  ) : null}
+
+                  {visibleTags.length > 0 ? (
+                    <View className='pool-group-detail__member-tags'>
+                      {visibleTags.map((interest) => (
+                        <Text key={interest} className='pool-group-detail__member-tag'>
+                          {interest}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            )
+          })}
+        </View>
+      </Card>
+
+      <Card className='pool-group-detail__card'>
+        <Text className='pool-group-detail__card-title'>规则与到场指南</Text>
+        <View className='pool-group-detail__rules'>
+          <View className='pool-group-detail__rule-item'>
+            <Text className='pool-group-detail__rule-icon'>⏰</Text>
+            <Text className='pool-group-detail__rule'>请提前 10 分钟到场</Text>
+          </View>
+          <View className='pool-group-detail__rule-item'>
+            <Text className='pool-group-detail__rule-icon'>🚫</Text>
+            <Text className='pool-group-detail__rule'>开局前 24 小时内不可退</Text>
+          </View>
+          <View className='pool-group-detail__rule-item'>
+            <Text className='pool-group-detail__rule-icon'>⚠️</Text>
+            <Text className='pool-group-detail__rule'>迟到/缺席将影响信用分</Text>
+          </View>
+          <View className='pool-group-detail__rule-item'>
+            <Text className='pool-group-detail__rule-icon'>💬</Text>
+            <Text className='pool-group-detail__rule'>活动开始后可从活动页进入聊天或破冰入口</Text>
+          </View>
+        </View>
+      </Card>
+
+      <View className='pool-group-detail__actions'>
+        <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
+          返回活动
+        </Button>
+      </View>
+
+      <View className='pool-group-detail__spacer' />
+    </ScrollView>
+  )
+}

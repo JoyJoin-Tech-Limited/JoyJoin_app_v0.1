@@ -8,13 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { useNotificationCounts } from "@/hooks/useNotificationCounts";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
+import {
+  getCenterButtonLabel,
+  shouldShowCenterButtonBadge,
+} from "@shared/centerTabRouting";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
-import { getHongKongDateForComparison } from "@/lib/hongKongTime";
 import {
   CENTER_TAB_EMPTY_STATE_ROUTE,
   DISCOVER_ROUTE,
-  MS_PER_HOUR,
-  VENUE_UNLOCK_HOURS,
   getCenterButtonDestination,
 } from "@/lib/centerTabRouting";
 import { motion, AnimatePresence } from "framer-motion";
@@ -149,49 +150,12 @@ export default function BottomNav() {
 
   // P2-1: Dynamic center button label
   const centerButtonLabel = useMemo(() => {
-    if (!poolRegistrations || !events) return '去参与';
-    const now = getHongKongDateForComparison(new Date());
-    
-    // 今日有活动
-    const todayEvent = events.find(e => e.status === "matched" && 
-      getHongKongDateForComparison(e.dateTime).toISOString().split('T')[0] === now.toISOString().split('T')[0]);
-    if (todayEvent) {
-      const hasStarted = now >= getHongKongDateForComparison(todayEvent.dateTime);
-      if (hasStarted) return '🎲 破冰进行中！';
-      return '今日出发！🎉';
-    }
-    
-    // 24h 内场地揭晓 - must have assignedGroupId to match destination logic
-    const upcomingPool = poolRegistrations.find(r => {
-      if (r.matchStatus !== "matched" || !r.assignedGroupId) return false;
-      const hoursUntil = (getHongKongDateForComparison(r.poolDateTime).getTime() - now.getTime()) / MS_PER_HOUR;
-      return hoursUntil < VENUE_UNLOCK_HOURS && hoursUntil > 0;
-    });
-    if (upcomingPool) return '查看场地 📍';
-    
-    // 匹配中
-    const pending = poolRegistrations.find(r => r.matchStatus === "pending");
-    if (pending) return '匹配中…';
-    
-    // 已匹配未到时间 - must have assignedGroupId to match destination logic
-    const matched = poolRegistrations.find(r => r.matchStatus === "matched" && r.assignedGroupId);
-    if (matched) return '查看桌友 👥';
-    
-    // No-activity users now land on the dedicated empty state, whose primary
-    // CTA sends them on to discover available activities.
-    return '去发现';
+    return getCenterButtonLabel(poolRegistrations, events);
   }, [poolRegistrations, events]);
 
   // Show notification badge when there's pending or matched activity
   useEffect(() => {
-    if (!poolRegistrations || !events) return;
-
-    const hasPendingMatch = poolRegistrations.some(r => r.matchStatus === "pending");
-    const hasMatchedActivity = 
-      poolRegistrations.some(r => r.matchStatus === "matched") ||
-      events.some(e => e.status === "matched");
-
-    setShowCenterBadge(hasPendingMatch || hasMatchedActivity);
+    setShowCenterBadge(shouldShowCenterButtonBadge(poolRegistrations, events));
   }, [poolRegistrations, events]);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {

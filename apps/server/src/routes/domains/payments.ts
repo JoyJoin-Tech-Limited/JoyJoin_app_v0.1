@@ -1,5 +1,5 @@
 import type { Express, Request } from "express";
-import { normalizeSubscriptionPlanType } from "@joyjoin/shared/api";
+import { normalizeSubscriptionPlanType } from "@shared/api";
 import { requireAdmin } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";

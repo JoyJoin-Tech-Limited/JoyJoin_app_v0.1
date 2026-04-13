@@ -97,10 +97,47 @@ describe('route review follow-ups', () => {
     expect(socialIcebreakerStoreSource).not.toContain('left.joinedAt.getTime() - right.joinedAt.getTime()');
   });
 
+  // Guards against regression: event chat routes must return a redacted participant/message
+  // shape and continue accepting the canonical message field while tolerating older callers.
+  it('sanitizes event chat payloads and normalizes message writes', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+
+    expect(routesSource).toContain('participants.map(toEventChatParticipantSummary)');
+    expect(routesSource).toContain('messages: messages.map(toEventChatMessageSummary)');
+    expect(routesSource).toContain('message: req.body?.message ?? req.body?.content');
+  });
+
   it('uses the authenticated user as the reporter when creating chat reports', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
     expect(routesSource).toContain('reportedBy: userId');
     expect(routesSource).toContain('return res.status(401).json({ message: "Authentication required" });');
+  });
+
+  it('normalizes pricing payloads and subscription plan aliases across payment surfaces', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const paymentsSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
+    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+
+    expect(routesSource).toContain('displayName: s.displayName');
+    expect(routesSource).toContain('displayNameEn: s.displayNameEn');
+    expect(paymentsSource).toContain('const normalizedPlanType = normalizeSubscriptionPlanType(planType);');
+    expect(sharedApiSource).toContain('export function normalizeSubscriptionPlanType');
+    expect(sharedApiSource).toContain('export function findPricingPlan');
+  });
+
+  it('removes dead coupon-validation and event-pack purchase dependencies from blind-box payment pages', () => {
+    const userPaymentSource = readRepoFile('apps/user-client/src/pages/BlindBoxPaymentPage.tsx');
+    const adminPaymentSource = readRepoFile('apps/admin-client/src/pages/BlindBoxPaymentPage.tsx');
+
+    expect(userPaymentSource).toContain('const supportsCoupons = false;');
+    expect(userPaymentSource).toContain('const supportsEventPacks = false;');
+    expect(userPaymentSource).not.toContain('/api/coupons/validate');
+    expect(userPaymentSource).not.toContain('/api/event-packs/purchase');
+
+    expect(adminPaymentSource).toContain('const supportsCoupons = false;');
+    expect(adminPaymentSource).toContain('const supportsEventPacks = false;');
+    expect(adminPaymentSource).not.toContain('/api/coupons/validate');
+    expect(adminPaymentSource).not.toContain('/api/event-packs/purchase');
   });
 });

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type PropsWithChildren } from 'react'
+import Taro from '@tarojs/taro'
 import { ACHIEVEMENTS, type Achievement } from '@shared/achievements'
 
 const STORAGE_KEY = 'joyjoin_achievements'
@@ -29,13 +30,13 @@ export function useAchievements(): AchievementContextValue {
 /**
  * AchievementProvider — manages achievement unlock state and popup queue.
  *
- * Persists unlocked achievement IDs via `wx.setStorageSync` (the
+ * Persists unlocked achievement IDs via `Taro.setStorageSync` (the
  * mini-program equivalent of `localStorage`).
  */
 export function AchievementProvider({ children }: PropsWithChildren) {
   const [unlockedIds, setUnlockedIds] = useState<string[]>(() => {
     try {
-      const stored = wx.getStorageSync(STORAGE_KEY)
+      const stored = Taro.getStorageSync<string[]>(STORAGE_KEY)
       return Array.isArray(stored) ? stored : []
     } catch {
       return []
@@ -48,7 +49,7 @@ export function AchievementProvider({ children }: PropsWithChildren) {
   // Persist to storage whenever the set of unlocked IDs changes.
   useEffect(() => {
     try {
-      wx.setStorageSync(STORAGE_KEY, unlockedIds)
+      Taro.setStorageSync(STORAGE_KEY, unlockedIds)
     } catch {
       // Ignore storage errors on older runtimes.
     }
@@ -62,9 +63,8 @@ export function AchievementProvider({ children }: PropsWithChildren) {
       setCurrentAchievement(next)
       setQueue(rest)
 
-      // Mini-program vibrate API (equivalent of navigator.vibrate)
       try {
-        wx.vibrateShort({ type: 'medium' })
+        Taro.vibrateShort({ type: 'medium' })
       } catch {
         // Ignore if vibrate is unsupported.
       }

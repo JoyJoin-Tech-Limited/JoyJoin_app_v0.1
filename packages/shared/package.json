@@ -20,6 +20,8 @@
     "./interests": "./src/interests.ts",
     "./api": "./src/api.ts",
     "./onboarding": "./src/onboarding.ts",
+    "./hongKongTime": "./src/hongKongTime.ts",
+    "./centerTabRouting": "./src/centerTabRouting.ts",
     "./matchingWeights": "./src/matchingWeights.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",

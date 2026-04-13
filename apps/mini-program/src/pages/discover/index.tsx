@@ -1,8 +1,9 @@
 import { View, Text, Image, Button, Navigator, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  findPricingPlan,
   getPricing,
   getUserCoupons,
   getEventPools,
@@ -16,8 +17,11 @@ import {
 } from '@shared/districts'
 import { apiRequest } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
+import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
+import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -368,7 +372,7 @@ function UnauthenticatedLanding() {
     queryFn: () => getUserCoupons(apiRequest),
   })
 
-  const featuredPlan = pricing.find((plan) => plan.planType === 'vip_quarterly') ?? pricing[0]
+  const featuredPlan = findPricingPlan(pricing, 'vip_quarterly') ?? pricing[0]
 
   return (
     <View className='landing-page'>
@@ -453,6 +457,22 @@ function UnauthenticatedLanding() {
 
 export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
+  const markAsRead = useMarkNotificationsAsRead()
+  const hasMarkedRef = useRef(false)
+
+  useCustomTabBarSync({
+    selectedIndex: MINI_PROGRAM_TAB_INDEX.discover,
+    enabled: isAuthenticated,
+  })
+
+  useEffect(() => {
+    if (!isAuthenticated || hasMarkedRef.current) return
+    const timer = setTimeout(() => {
+      markAsRead.mutate('discover')
+      hasMarkedRef.current = true
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [isAuthenticated, markAsRead])
 
   if (isLoading) {
     return <LoadingScreen />

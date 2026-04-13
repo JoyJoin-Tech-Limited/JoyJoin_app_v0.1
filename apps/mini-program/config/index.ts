@@ -1,4 +1,5 @@
 import path from 'path'
+import path from 'path'
 import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 
 import devConfig from './dev'
@@ -31,6 +32,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/assets',
           to: 'dist/assets',
+        },
+        // Taro Vite runner does not auto-compile custom-tab-bar.
+        // We ship it as a pre-built native WeChat component instead.
+        {
+          from: 'src/native-custom-tab-bar/',
+          to: 'dist/custom-tab-bar/',
         },
       ],
       options: {

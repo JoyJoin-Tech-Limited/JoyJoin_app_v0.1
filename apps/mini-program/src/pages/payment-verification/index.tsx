@@ -14,8 +14,8 @@ const MAX_POLL_ATTEMPTS = 10
 const POLL_INTERVAL_MS = 2000
 
 function clearPendingOrderStorage() {
-  wx.removeStorageSync('pending_order')
-  wx.removeStorageSync('pending_order_context')
+  Taro.removeStorageSync('pending_order')
+  Taro.removeStorageSync('pending_order_context')
 }
 
 export default function PaymentVerificationPage() {
@@ -43,7 +43,7 @@ export default function PaymentVerificationPage() {
   }, [clearTimer])
 
   const navigateAfterPaid = useCallback(() => {
-    const context = wx.getStorageSync('pending_order_context') as { type?: string } | undefined
+    const context = Taro.getStorageSync<{ type?: string }>('pending_order_context') as { type?: string } | undefined
     clearPendingOrderStorage()
 
     if (context?.type === 'event') {
@@ -121,7 +121,7 @@ export default function PaymentVerificationPage() {
 
     const storedOrderId = typeof incomingOrderId === 'string' && incomingOrderId.length > 0
       ? incomingOrderId
-      : wx.getStorageSync('pending_order')
+      : Taro.getStorageSync<string>('pending_order')
 
     if (!storedOrderId || typeof storedOrderId !== 'string') {
       void Taro.showToast({
@@ -148,7 +148,7 @@ export default function PaymentVerificationPage() {
       return
     }
 
-    if (status === 'pending' && orderId && wx.getStorageSync('pending_order')) {
+    if (status === 'pending' && orderId && Taro.getStorageSync<string>('pending_order')) {
       bootstrap(orderId)
     }
   })

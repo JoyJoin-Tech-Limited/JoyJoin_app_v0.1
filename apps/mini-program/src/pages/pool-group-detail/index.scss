@@ -1,0 +1,297 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+
+.pool-group-detail {
+  min-height: 100vh;
+  padding: $spacing-lg $container-padding calc(200rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at top, rgba(139, 92, 246, 0.18), transparent 38%),
+    linear-gradient(180deg, #fafafa 0%, #fff4f8 54%, #fff9f3 100%);
+
+  &__header {
+    text-align: center;
+    margin-bottom: $spacing-lg;
+  }
+
+  &__group-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $spacing-md;
+    padding: 12rpx 28rpx;
+    border-radius: 9999rpx;
+    background: linear-gradient(135deg, #{$brand-gradient-from}, #{$brand-gradient-to});
+  }
+
+  &__group-badge-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+  }
+
+  &__emoji {
+    display: block;
+    font-size: 56rpx;
+    line-height: 1;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-xl;
+    line-height: 1.35;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__subtitle {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  &__countdown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: $spacing-md;
+    padding: 12rpx 24rpx;
+    border-radius: 9999rpx;
+    background: rgba(139, 92, 246, 0.12);
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__match-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: $spacing-sm;
+    margin-left: $spacing-sm;
+    padding: 12rpx 28rpx;
+    border-radius: 9999rpx;
+    background: rgba(255, 107, 157, 0.12);
+  }
+
+  &__match-score-text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-secondary;
+  }
+
+  &__card {
+    margin-bottom: $spacing-md;
+    padding: $spacing-lg;
+  }
+
+  &__card-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__description {
+    font-size: $font-size-sm;
+    line-height: 1.8;
+    color: $color-text-secondary;
+  }
+
+  &__info-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+
+    & + & {
+      margin-top: $spacing-md;
+      padding-top: $spacing-md;
+      border-top: 1px solid $color-divider;
+    }
+  }
+
+  &__info-label {
+    flex-shrink: 0;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  &__info-value {
+    flex: 1;
+    text-align: right;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+  }
+
+  &__map-actions {
+    display: flex;
+    gap: $spacing-md;
+    margin-top: $spacing-lg;
+
+    > * {
+      flex: 1;
+    }
+  }
+
+  &__rules {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__rule-item {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__rule-icon {
+    flex-shrink: 0;
+    font-size: $font-size-base;
+    line-height: 1.7;
+  }
+
+  &__rule {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    flex: 1;
+  }
+
+  &__members-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__members-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__member-card {
+    display: flex;
+    gap: $spacing-md;
+    align-items: flex-start;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: $shadow-sm;
+
+    &--current {
+      border: 2rpx solid rgba(139, 92, 246, 0.18);
+      background: rgba(255, 255, 255, 0.98);
+    }
+  }
+
+  &__member-avatar {
+    width: 84rpx;
+    height: 84rpx;
+    border-radius: 9999rpx;
+    background: rgba(139, 92, 246, 0.12);
+    color: $color-primary-dark;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__member-content {
+    flex: 1;
+  }
+
+  &__member-name-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  &__member-name {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__member-meta {
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  &__member-you-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rpx 14rpx;
+    border-radius: 9999rpx;
+    background: $color-primary-light;
+  }
+
+  &__member-you-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__member-archetype {
+    display: block;
+    margin-top: 6rpx;
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+
+  &__member-tags {
+    display: flex;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+    margin-top: $spacing-sm;
+  }
+
+  &__member-tag {
+    padding: 10rpx 18rpx;
+    border-radius: 9999rpx;
+    background: $color-primary-light;
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    margin-top: $spacing-lg;
+  }
+
+  &__spacer {
+    height: 40rpx;
+  }
+
+  &__error {
+    min-height: 100vh;
+    padding: $spacing-2xl $container-padding;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  &__error-text {
+    margin-bottom: $spacing-lg;
+    color: $color-text-secondary;
+    font-size: $font-size-base;
+  }
+}
