@@ -4,8 +4,10 @@ import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 import devConfig from './dev'
 import prodConfig from './prod'
 
+type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<'vite'>
+
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
-export default defineConfig<'vite'>(async (merge) => {
+export default defineConfig<'vite'>(async (merge: MergeConfig) => {
   const baseConfig: UserConfigExport<'vite'> = {
     projectName: 'mini-program',
     date: '2026-3-4',
@@ -43,12 +45,6 @@ export default defineConfig<'vite'>(async (merge) => {
       '@': path.resolve(__dirname, '..', 'src'),
       '@shared': path.resolve(__dirname, '..', '..', '..', 'packages', 'shared', 'src'),
       '@tarojs/plugin-framework-react/dist/runtime': path.resolve(__dirname, '..', 'node_modules/@tarojs/plugin-framework-react/dist/runtime.js'),
-    },
-    sass: {
-      resource: [
-        path.resolve(__dirname, '..', 'src/styles/_variables.scss'),
-        path.resolve(__dirname, '..', 'src/styles/_mixins.scss'),
-      ],
     },
     mini: {
       imageUrlLoaderOption: {

@@ -1250,6 +1250,9 @@ export const payments = pgTable("payments", {
   
   // Coupon
   couponId: varchar("coupon_id"), // null if no coupon used
+
+  // Event payment fulfillment context
+  eventRegistrationPayload: jsonb("event_registration_payload"),
   
   // WeChat Pay details
   wechatTransactionId: varchar("wechat_transaction_id"), // WeChat Pay transaction ID

@@ -14,9 +14,115 @@ export interface PricingPlan {
   id: string
   planType: string
   displayName: string
+  displayNameEn?: string
   description?: string
   price: number
   originalPrice?: number | null
+  durationDays?: number
+  isActive?: boolean
+  isFeatured?: boolean
+}
+
+export interface BrowserPaymentIntent {
+  h5Url?: string | null
+  h5_url?: string | null
+}
+
+export interface BrowserPaymentResponse {
+  payment?: BrowserPaymentIntent | null
+  paymentRedirectUrl?: string | null
+  paymentStatus?: 'pending' | 'completed'
+}
+
+export type SubscriptionPlanType = 'monthly' | 'quarterly'
+export type VipSubscriptionPlanKey = 'vip_monthly' | 'vip_quarterly'
+export type SubscriptionPlanIdentifier = SubscriptionPlanType | VipSubscriptionPlanKey
+
+const SUBSCRIPTION_PLAN_IDENTIFIER_MAP: Record<SubscriptionPlanIdentifier, SubscriptionPlanType> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  vip_monthly: 'monthly',
+  vip_quarterly: 'quarterly',
+}
+
+interface RawPricingPlan {
+  id?: string | number
+  planType?: string
+  displayName?: string
+  name?: string
+  displayNameEn?: string
+  nameEn?: string
+  description?: string
+  price?: number | string
+  originalPrice?: number | string | null
+  durationDays?: number | string
+  isActive?: boolean
+  isFeatured?: boolean
+  [key: string]: unknown
+}
+
+export function normalizeSubscriptionPlanType(
+  planType: string | null | undefined
+): SubscriptionPlanType | null {
+  if (typeof planType !== 'string') {
+    return null
+  }
+
+  const normalized = planType.trim() as SubscriptionPlanIdentifier
+  return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
+}
+
+function pricingPlanMatches(plan: Pick<PricingPlan, 'planType'>, targetPlanType: string): boolean {
+  const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
+  const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
+
+  if (normalizedPlanType && normalizedTargetPlanType) {
+    return normalizedPlanType === normalizedTargetPlanType
+  }
+
+  return plan.planType === targetPlanType
+}
+
+export function findPricingPlan(
+  pricingPlans: PricingPlan[] | null | undefined,
+  targetPlanType: string
+): PricingPlan | undefined {
+  return pricingPlans?.find((plan) => pricingPlanMatches(plan, targetPlanType))
+}
+
+export function getBrowserPaymentLaunchUrl(
+  payload: BrowserPaymentIntent | BrowserPaymentResponse | null | undefined
+): string | null {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'paymentRedirectUrl' in payload &&
+    typeof payload.paymentRedirectUrl === 'string'
+  ) {
+    const directUrl = payload.paymentRedirectUrl.trim()
+    if (directUrl !== '') {
+      return directUrl
+    }
+  }
+
+  const nestedPayment =
+    payload && typeof payload === 'object' && 'payment' in payload
+      ? payload.payment
+      : payload
+
+  const payment = nestedPayment as BrowserPaymentIntent | null | undefined
+
+  if (!payment || typeof payment !== 'object') {
+    return null
+  }
+
+  const rawUrl = payment.h5Url ?? payment.h5_url
+  if (typeof rawUrl !== 'string') {
+    return null
+  }
+
+  const trimmedUrl = rawUrl.trim()
+  return trimmedUrl !== '' ? trimmedUrl : null
 }
 
 export type UserCouponStatus = 'available' | 'used' | 'expired'
@@ -150,6 +256,38 @@ function normalizeUserCouponsResponse(rawResponse: RawUserCouponsResponse): User
   }
 }
 
+function normalizePricingPlan(rawPlan: RawPricingPlan): PricingPlan | null {
+  const price = parseNumber(rawPlan.price)
+  if (price === undefined) {
+    return null
+  }
+
+  const displayName =
+    typeof rawPlan.displayName === 'string' && rawPlan.displayName.trim() !== ''
+      ? rawPlan.displayName
+      : typeof rawPlan.name === 'string' && rawPlan.name.trim() !== ''
+        ? rawPlan.name
+        : String(rawPlan.planType ?? '')
+
+  return {
+    id: String(rawPlan.id ?? rawPlan.planType ?? ''),
+    planType: String(rawPlan.planType ?? ''),
+    displayName,
+    displayNameEn:
+      typeof rawPlan.displayNameEn === 'string' && rawPlan.displayNameEn.trim() !== ''
+        ? rawPlan.displayNameEn
+        : typeof rawPlan.nameEn === 'string' && rawPlan.nameEn.trim() !== ''
+          ? rawPlan.nameEn
+          : undefined,
+    description: typeof rawPlan.description === 'string' ? rawPlan.description : undefined,
+    price,
+    originalPrice: parseNumber(rawPlan.originalPrice) ?? null,
+    durationDays: parseNumber(rawPlan.durationDays),
+    isActive: typeof rawPlan.isActive === 'boolean' ? rawPlan.isActive : undefined,
+    isFeatured: typeof rawPlan.isFeatured === 'boolean' ? rawPlan.isFeatured : undefined,
+  }
+}
+
 export interface CreateMiniProgramPaymentIntentRequest {
   type: string
   planId: string
@@ -229,7 +367,11 @@ export interface JoinedEventSummary {
 }
 
 export function getPricing(api: ApiTransport): Promise<PricingPlan[]> {
-  return api<PricingPlan[]>({ path: '/api/pricing' })
+  return api<RawPricingPlan[]>({ path: '/api/pricing' }).then((plans) =>
+    Array.isArray(plans)
+      ? plans.map(normalizePricingPlan).filter((plan): plan is PricingPlan => plan !== null)
+      : []
+  )
 }
 
 export function getUserCoupons(api: ApiTransport): Promise<UserCouponsResponse> {

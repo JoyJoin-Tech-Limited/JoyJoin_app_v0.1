@@ -20,6 +20,7 @@ const mockPayment = {
   discountAmount: 0,
   finalAmount: 9800,
   couponId: null,
+  eventRegistrationPayload: null,
   paidAt: null,
 };
 

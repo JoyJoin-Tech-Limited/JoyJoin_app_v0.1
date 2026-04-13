@@ -70,6 +70,26 @@ describe('route review follow-ups', () => {
     expect(miniProgramPaymentSource).toContain('{ count: 0, availableCount: 0, coupons: [] }');
   });
 
+  it('normalizes browser renewal aliases and returns explicit redirect metadata for H5 payments', () => {
+    const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
+    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+
+    expect(paymentsRoutesSource).toContain('normalizeSubscriptionPlanType(planType)');
+    expect(paymentsRoutesSource).toContain('const paymentRedirectUrl = paymentResult.h5Url ?? null;');
+    expect(paymentsRoutesSource).toContain('const paymentStatus = paymentRedirectUrl ? "pending" : "completed";');
+    expect(sharedApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
+    expect(sharedApiSource).toContain("'paymentRedirectUrl' in payload");
+  });
+
+  it('publishes modern pricing display fields while keeping legacy aliases available', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+
+    expect(routesSource).toContain('displayName: s.displayName');
+    expect(routesSource).toContain('displayNameEn: s.displayNameEn');
+    expect(routesSource).toContain('name: s.displayName');
+    expect(routesSource).toContain('nameEn: s.displayNameEn');
+  });
+
   it('orders social-icebreaker participants in the database query instead of sorting in memory', () => {
     const socialIcebreakerStoreSource = readRepoFile('apps/server/src/lib/socialIcebreakerStore.ts');
 

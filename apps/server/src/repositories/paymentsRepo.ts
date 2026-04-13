@@ -34,6 +34,8 @@ export interface PaymentsRepository {
   getCouponUsageStats(couponId: string): Promise<any>;
   recordCouponUsage(data: { couponId: string; userId: string; paymentId: string; discountApplied: number }): Promise<void>;
   getUserCoupons(userId: string): Promise<any[]>;
+  getAvailableUserCouponByCode(userId: string, code: string): Promise<any | undefined>;
+  countUserCouponAssignments(couponId: string): Promise<number>;
   createUserCoupon(data: { userId: string; couponId: string; source: string; sourceId?: string }): Promise<any>;
   deleteUserCoupon(userCouponId: string): Promise<void>;
   markUserCouponUsed(userCouponId: string): Promise<any>;
@@ -242,6 +244,30 @@ export const paymentsRepo: PaymentsRepository = {
     return result.rows;
   },
 
+  async getAvailableUserCouponByCode(userId: string, code: string): Promise<any | undefined> {
+    const result = await db.execute(sql`
+      SELECT uc.*, c.code, c.discount_type, c.discount_value, c.valid_from, c.valid_until, c.is_active
+      FROM user_coupons uc
+      INNER JOIN coupons c ON uc.coupon_id = c.id
+      WHERE uc.user_id = ${userId}
+        AND uc.is_used = false
+        AND c.code = ${code}
+        AND c.is_active = true
+      ORDER BY uc.created_at ASC
+      LIMIT 1
+    `);
+    return result.rows[0];
+  },
+
+  async countUserCouponAssignments(couponId: string): Promise<number> {
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS assignment_count
+      FROM user_coupons
+      WHERE coupon_id = ${couponId}
+    `);
+    return Number(result.rows[0]?.assignment_count ?? 0);
+  },
+
   async createUserCoupon(data: { userId: string; couponId: string; source: string; sourceId?: string }): Promise<any> {
     const result = await db.execute(sql`
       INSERT INTO user_coupons (user_id, coupon_id, source, source_id)
@@ -267,8 +293,32 @@ export const paymentsRepo: PaymentsRepository = {
 
   async createPayment(data: any): Promise<any> {
     const result = await db.execute(sql`
-      INSERT INTO payments (user_id, payment_type, related_id, original_amount, discount_amount, final_amount, coupon_id, wechat_order_id, wechat_prepay_id, status)
-      VALUES (${data.userId}, ${data.paymentType}, ${data.relatedId || null}, ${data.originalAmount}, ${data.discountAmount || 0}, ${data.finalAmount}, ${data.couponId || null}, ${data.wechatOrderId}, ${data.wechatPrepayId || null}, ${data.status || 'pending'})
+      INSERT INTO payments (
+        user_id,
+        payment_type,
+        related_id,
+        original_amount,
+        discount_amount,
+        final_amount,
+        coupon_id,
+        event_registration_payload,
+        wechat_order_id,
+        wechat_prepay_id,
+        status
+      )
+      VALUES (
+        ${data.userId},
+        ${data.paymentType},
+        ${data.relatedId || null},
+        ${data.originalAmount},
+        ${data.discountAmount || 0},
+        ${data.finalAmount},
+        ${data.couponId || null},
+        ${data.eventRegistrationPayload ? JSON.stringify(data.eventRegistrationPayload) : null},
+        ${data.wechatOrderId},
+        ${data.wechatPrepayId || null},
+        ${data.status || 'pending'}
+      )
       RETURNING *
     `);
     return result.rows[0];

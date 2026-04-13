@@ -1,3 +1,6 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
 .landing-page {
   height: 100vh;
   overflow: hidden;
@@ -262,9 +265,6 @@
 }
 
 // ─── Authenticated discover ─────────────────────────────────────
-@import '../../styles/variables';
-@import '../../styles/mixins';
-
 .discover-auth {
   min-height: 100vh;
   background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
