@@ -48,6 +48,12 @@
 - Planning-only shared contracts are allowed only when they are clearly marked as non-runtime and remain disconnected from active imports/callers.
 - Existing deterministic authority still applies: `poolMatchingService.ts` remains the matching authority, and no latent-state or multimodal signal may partially influence matching or user-facing explanations before its rollout gate is formally cleared.
 
+### Guardrails: repo AI workflow and orchestration changes
+- Read `.github/AI_WORKFLOW_POLICY.md` before deciding whether work should stay in direct delivery, go through `Researcher` -> `Planner`, or escalate into the operational review lane.
+- Read `.github/ORCHESTRATION_GOVERNANCE.md` before changing `.github/agents/`, `.github/skills/`, `.github/orchestration.yaml`, hook behavior, or orchestration runtime scripts.
+- Keep repo workflow governance separate from runtime product AI authority. For shipped AI behavior and rollout gates, continue to use `docs/ai-agent-harness-separation-strategy.md` and `docs/AI_INTEGRATION_PLAN.md`.
+- Do not add a new agent or skill by default. Prefer existing skills and audited support agents unless repeated workflow evidence justifies expansion.
+
 ---
 
 ## Quick Start

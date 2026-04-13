@@ -284,7 +284,7 @@ instead of the filesystem to avoid disk pressure.
 
 - Confirm `metricsMiddleware` is imported and `app.use(metricsMiddleware)` appears
   before route registration in `apps/server/src/index.ts`.
-- Confirm `app.get('/api/metrics', ...)` is registered in `routes.ts`.
+- Confirm `app.get('/api/metrics', ...)` is registered in `apps/server/src/routes/domains/analytics.ts` and mounted via the composition root in `apps/server/src/routes.ts`.
 - The endpoint emits data only after at least one request has been instrumented.
 
 ### Synthetic probe fails in GitHub Actions but server is healthy

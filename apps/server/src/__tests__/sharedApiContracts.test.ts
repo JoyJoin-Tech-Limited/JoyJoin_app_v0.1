@@ -6,6 +6,7 @@ import {
   getNotificationCounts,
   getPricing,
   getUserCoupons,
+  isEventPackPlanType,
   markNotificationsAsRead,
   normalizeSubscriptionPlanType,
   type ApiTransport,
@@ -106,6 +107,9 @@ describe('shared API coupon normalization', () => {
     expect(normalizeSubscriptionPlanType('vip_quarterly')).toBe('quarterly');
     expect(normalizeSubscriptionPlanType('monthly')).toBe('monthly');
     expect(normalizeSubscriptionPlanType('invalid')).toBeNull();
+    expect(isEventPackPlanType('pack_3')).toBe(true);
+    expect(isEventPackPlanType('pack_6')).toBe(true);
+    expect(isEventPackPlanType('vip_monthly')).toBe(false);
 
     expect(getBrowserPaymentLaunchUrl({ paymentRedirectUrl: ' https://pay.example.com/h5 ' })).toBe(
       'https://pay.example.com/h5'

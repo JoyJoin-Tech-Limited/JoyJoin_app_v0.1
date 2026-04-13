@@ -118,6 +118,21 @@ function normalizePrompt(promptText) {
   return promptText.trim().replace(/\s+/g, ' ');
 }
 
+function extractPromptTokens(promptText) {
+  return normalizePrompt(promptText)
+    .toLowerCase()
+    .match(/[a-z0-9-]+/g) ?? [];
+}
+
+function hasConfiguredToken(tokens, configuredTerms) {
+  if (!Array.isArray(configuredTerms) || configuredTerms.length === 0) {
+    return false;
+  }
+
+  const tokenSet = new Set(tokens);
+  return configuredTerms.some((term) => tokenSet.has(String(term).toLowerCase()));
+}
+
 function shouldRecommendKickoff(promptText, kickoffState, kickoffConfig) {
   if (!promptText || kickoffState?.recommendationIssued) {
     return false;
@@ -127,24 +142,36 @@ function shouldRecommendKickoff(promptText, kickoffState, kickoffConfig) {
     return false;
   }
 
-  const normalized = normalizePrompt(promptText).toLowerCase();
-  const words = normalized.split(' ').filter(Boolean);
+  const tokens = extractPromptTokens(promptText);
   const minWords = kickoffConfig.broad_prompt_signals?.min_words ?? 6;
   const verbs = kickoffConfig.broad_prompt_signals?.verbs ?? [];
   const scopeTerms = kickoffConfig.broad_prompt_signals?.scope_terms ?? [];
-  const hasVerb = verbs.some((term) => normalized.includes(term));
-  const hasScopeTerm = scopeTerms.some((term) => normalized.includes(term));
-  const hasMultiStepConnector = /\b(and|with|before|after|across|into|plus|then)\b/.test(normalized);
+  const hasVerb = hasConfiguredToken(tokens, verbs);
+  const hasScopeTerm = hasConfiguredToken(tokens, scopeTerms);
+  const hasMultiStepConnector = hasConfiguredToken(tokens, ['and', 'with', 'before', 'after', 'across', 'into', 'plus', 'then']);
 
-  if (words.length >= 12) {
-    return true;
-  }
-
-  if (words.length < minWords) {
+  if (tokens.length < minWords) {
     return false;
   }
 
   return (hasVerb && hasScopeTerm) || (hasVerb && hasMultiStepConnector) || (hasScopeTerm && hasMultiStepConnector);
+}
+
+function sameStringList(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function shouldClearKickoffRecommendation(promptText, kickoffState, recommendedNextAgents, kickoffConfig) {
+  if (!promptText) {
+    return false;
+  }
+
+  const kickoffAgents = kickoffConfig.entry_agents ?? ['Researcher', 'Planner'];
+  return Boolean(kickoffState?.recommendationIssued || sameStringList(recommendedNextAgents, kickoffAgents));
 }
 
 function buildKickoffSystemMessage(manifest, promptText) {
@@ -413,23 +440,36 @@ function runCopilotHook(repoRoot, eventName) {
     const promptText = extractPromptText(payload);
     const kickoffState = context.kickoff ?? createDefaultKickoffState(kickoffConfig);
     const recommendKickoff = shouldRecommendKickoff(promptText, kickoffState, kickoffConfig);
+    const clearKickoffRecommendation = !recommendKickoff
+      ? shouldClearKickoffRecommendation(promptText, kickoffState, context.recommendedNextAgents, kickoffConfig)
+      : false;
+    const kickoffAgents = kickoffConfig.entry_agents ?? ['Researcher', 'Planner'];
+    const hasKickoffRecommendations = sameStringList(context.recommendedNextAgents, kickoffAgents);
 
     context = {
       ...context,
       recommendedNextAgents: recommendKickoff
-        ? kickoffConfig.entry_agents ?? ['Researcher', 'Planner']
-        : context.recommendedNextAgents,
+        ? kickoffAgents
+        : clearKickoffRecommendation && hasKickoffRecommendations
+          ? []
+          : context.recommendedNextAgents,
       upstreamResult: {
         ...context.upstreamResult,
         prompt: promptText || null,
       },
       kickoff: {
         ...kickoffState,
-        status: recommendKickoff ? 'recommended' : kickoffState.status,
-        recommendationIssued: kickoffState.recommendationIssued || recommendKickoff,
+        status: recommendKickoff ? 'recommended' : clearKickoffRecommendation ? 'idle' : kickoffState.status,
+        recommendationIssued: recommendKickoff ? true : clearKickoffRecommendation ? false : kickoffState.recommendationIssued,
         evaluationCount: Number(kickoffState.evaluationCount ?? 0) + 1,
         lastPrompt: promptText || null,
-        lastReason: promptText ? (recommendKickoff ? 'broad-request' : 'narrow-or-already-routed') : 'missing-prompt',
+        lastReason: promptText
+          ? recommendKickoff
+            ? 'broad-request'
+            : clearKickoffRecommendation
+              ? 'narrow-cleared-recommendation'
+              : 'narrow-or-already-routed'
+          : 'missing-prompt',
       },
     };
 
@@ -440,6 +480,7 @@ function runCopilotHook(repoRoot, eventName) {
       event: eventName,
       promptSummary: promptText ? normalizePrompt(promptText).slice(0, 200) : null,
       kickoffRecommended: recommendKickoff,
+      kickoffCleared: clearKickoffRecommendation,
     });
 
     if (recommendKickoff) {

@@ -4,6 +4,12 @@ This document explains the native custom-agent orchestration layer for JoyJoin.
 
 The machine-readable source of truth is `.github/orchestration.yaml`. This guide is the human-readable companion for contributors.
 
+## Related docs
+
+- [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) defines when to use direct delivery, the `Researcher` -> `Planner` kickoff lane, and the operational review lane.
+- [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) defines how to change agents, skills, hooks, runtime scripts, and validation surfaces safely.
+- [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) remains the source of truth for runtime product AI architecture and invariants.
+
 ## Scope
 
 Broad sessions now have a kickoff lane before the core handoff graph:

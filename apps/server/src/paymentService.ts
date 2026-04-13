@@ -1,5 +1,6 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
 import { logger } from "./lib/logger";
+import { getDirectMiniProgramAppIdConsistencyIssue } from "./lib/configValidation";
 import { eventCreditsRepo } from "./repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "./repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "./repositories/paymentsRepo";
@@ -91,6 +92,13 @@ interface PreparedPaymentOrder {
 }
 
 export class PaymentService {
+  assertMiniProgramAppIdConsistency(): void {
+    const issue = getDirectMiniProgramAppIdConsistencyIssue(process.env);
+    if (issue) {
+      throw new Error(issue);
+    }
+  }
+
   /**
    * Create a new payment order
    */
@@ -140,6 +148,8 @@ export class PaymentService {
   async createMiniProgramPayment(
     params: CreateMiniProgramPaymentParams
   ): Promise<MiniProgramPaymentResult> {
+    this.assertMiniProgramAppIdConsistency();
+
     const { openid } = params;
     const { payment, wechatOrderId, finalAmount } = await this.preparePaymentOrder(params);
 

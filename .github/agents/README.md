@@ -4,6 +4,8 @@
 
 These agents are the orchestration layer that sits above the repo's reusable skills. Each agent should have a narrow role, a minimal tool set, and a keyword-rich description so both humans and parent agents can discover it reliably.
 
+Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whether a task belongs in direct delivery, the kickoff lane, or the operational lane. Read [`../ORCHESTRATION_GOVERNANCE.md`](../ORCHESTRATION_GOVERNANCE.md) before changing the portfolio, handoffs, or agent-governance surfaces.
+
 ## How to use these agents
 
 **Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If the task is migration, debugging, prompt work, or product scoping, use the specialist.

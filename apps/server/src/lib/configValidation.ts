@@ -19,6 +19,9 @@ interface ConfigIssueBuckets {
   warnings: string[];
 }
 
+export const DIRECT_MINI_PROGRAM_APP_ID_MISMATCH_MESSAGE =
+  "WECHAT_PAY_APP_ID must match WECHAT_APPID for the direct mini-program JSAPI flow";
+
 const CONFIG_SPECS: ConfigSpec[] = [
   // ── Always required ──────────────────────────────────────────────────────
   {
@@ -64,6 +67,25 @@ const CONFIG_SPECS: ConfigSpec[] = [
 
 function isPaymentsEnabled(env: NodeJS.ProcessEnv): boolean {
   return (env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true";
+}
+
+export function getDirectMiniProgramAppIdConsistencyIssue(
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  if (!isPaymentsEnabled(env)) {
+    return null;
+  }
+
+  const miniProgramAppId = env.WECHAT_APPID?.trim();
+  const wechatPayAppId = env.WECHAT_PAY_APP_ID?.trim();
+
+  if (!miniProgramAppId || !wechatPayAppId) {
+    return null;
+  }
+
+  return miniProgramAppId === wechatPayAppId
+    ? null
+    : DIRECT_MINI_PROGRAM_APP_ID_MISMATCH_MESSAGE;
 }
 
 function collectBaseConfigIssues(
@@ -147,6 +169,15 @@ function collectPaymentConfigIssues(
       errors.push(`[FATAL] ${msg}`);
     } else {
       warnings.push(`[WARN]  ${msg}`);
+    }
+  }
+
+  const directMiniProgramAppIdIssue = getDirectMiniProgramAppIdConsistencyIssue(env);
+  if (directMiniProgramAppIdIssue) {
+    if (isProduction) {
+      errors.push(`[FATAL] ${directMiniProgramAppIdIssue}`);
+    } else {
+      warnings.push(`[WARN]  ${directMiniProgramAppIdIssue}`);
     }
   }
 
