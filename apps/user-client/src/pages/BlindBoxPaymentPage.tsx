@@ -33,9 +33,11 @@ import {
 import { motion } from "framer-motion";
 import { SiWechat } from "react-icons/si";
 import {
+  appendBrowserPaymentReturnUrl,
   findPricingPlan,
   getBrowserPaymentLaunchUrl,
   normalizeSubscriptionPlanType,
+  type BrowserPaymentResponse,
   type PricingPlan,
 } from "@shared/api";
 
@@ -57,19 +59,35 @@ type CouponValidationResponse = {
   } | null;
 };
 
-type BrowserPaymentCreateResponse = {
-  paymentRedirectUrl?: string | null;
-  paymentStatus?: "pending" | "completed";
-  payment?: {
-    wechatOrderId?: string;
-    h5Url?: string | null;
-    h5_url?: string | null;
-  } | null;
+type BrowserPendingOrderContext = {
+  type: "event" | "event_bundle";
 };
 
 async function requestJson<T>(method: string, url: string, data?: unknown): Promise<T> {
   const response = await apiRequest(method, url, data);
   return response.json() as Promise<T>;
+}
+
+const BROWSER_PENDING_ORDER_KEY = "joyjoin.browser.pending_order";
+const BROWSER_PENDING_ORDER_CONTEXT_KEY = "joyjoin.browser.pending_order_context";
+
+function persistPendingBrowserPayment(orderId: string, context: BrowserPendingOrderContext): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(BROWSER_PENDING_ORDER_KEY, orderId);
+  window.localStorage.setItem(BROWSER_PENDING_ORDER_CONTEXT_KEY, JSON.stringify(context));
+}
+
+function buildBrowserPaymentConfirmationUrl(orderId: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const url = new URL("/blindbox/confirmation", window.location.origin);
+  url.searchParams.set("outTradeNo", orderId);
+  return url.toString();
 }
 
 // Default fallback prices (used while loading or if API fails)
@@ -102,6 +120,27 @@ export default function BlindBoxPaymentPage() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const launchBrowserPaymentFlow = (
+    result: BrowserPaymentResponse,
+    context: BrowserPendingOrderContext,
+  ): boolean => {
+    const launchUrl = getBrowserPaymentLaunchUrl(result);
+    if (!launchUrl) {
+      return false;
+    }
+
+    const orderId = result.payment?.wechatOrderId;
+    if (!orderId) {
+      throw new Error("支付订单创建成功但缺少订单号，请稍后重试");
+    }
+
+    persistPendingBrowserPayment(orderId, context);
+    const confirmationUrl = buildBrowserPaymentConfirmationUrl(orderId);
+    const resolvedLaunchUrl = appendBrowserPaymentReturnUrl(launchUrl, confirmationUrl) ?? launchUrl;
+    window.location.assign(resolvedLaunchUrl);
+    return true;
+  };
 
   // Fetch dynamic pricing from API
   const { data: pricingData, isLoading: loadingPricing } = useQuery<PricingPlan[]>({
@@ -397,16 +436,14 @@ export default function BlindBoxPaymentPage() {
           }),
         });
 
-        const result = await response.json().catch(() => ({}));
+        const result = await response.json().catch(() => ({} as BrowserPaymentResponse & { message?: string })) as BrowserPaymentResponse & { message?: string };
 
         if (!response.ok) {
           const error = result;
           throw new Error(error?.message || "订阅失败");
         }
 
-        const launchUrl = getBrowserPaymentLaunchUrl(result);
-        if (launchUrl) {
-          window.location.assign(launchUrl);
+        if (launchBrowserPaymentFlow(result, { type: "event_bundle" })) {
           return;
         }
 
@@ -441,7 +478,7 @@ export default function BlindBoxPaymentPage() {
 
       setIsProcessing(true);
       const eventData = JSON.parse(eventDataStr);
-      const result = await requestJson<BrowserPaymentCreateResponse>(
+      const result = await requestJson<BrowserPaymentResponse>(
         "POST",
         "/api/payments/create",
         {
@@ -451,9 +488,7 @@ export default function BlindBoxPaymentPage() {
         },
       );
 
-      const launchUrl = getBrowserPaymentLaunchUrl(result);
-      if (launchUrl) {
-        window.location.assign(launchUrl);
+      if (launchBrowserPaymentFlow(result, { type: "event" })) {
         return;
       }
 

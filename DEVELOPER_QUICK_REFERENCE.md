@@ -75,9 +75,14 @@ npm run dev
 npm run build            # Build user-client, admin-client, and server workspaces
 npm run build:user       # Build only the user-client workspace
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
+npm run check:clients    # Typecheck shared + user/admin + mini-program workspaces
+npm run check:server     # Typecheck only the server workspace
+npm run check:full       # Run guardrails, lint, tests, and the full build
 npm run lint             # Alias of the repo TypeScript checks
 npm run test             # Run workspace tests (server tests + no-op placeholders elsewhere)
 npm run build:weapp --workspace=mini-program  # Build the WeChat Mini Program workspace
+npm run orchestration:validate      # Validate .github/orchestration.yaml and related runtime files
+npm run orchestration:tooling-report # Print the agent tooling sufficiency audit
 npm run db:push          # Sync Drizzle schema to database
 npm run db:push --force  # Force sync (use when db:push fails)
 npm run db:studio        # Open Drizzle Studio (database GUI)
@@ -95,6 +100,8 @@ npm run db:studio        # Open Drizzle Studio (database GUI)
 
 ```
 joyjoin-monorepo/
+├── .github/                  # CI workflows, orchestration contract, agents, and skills
+├── .githooks/                # Optional repo-managed local pre/post-commit hooks
 ├── apps/
 │   ├── user-client/          # User-facing React app (mobile-first)
 │   │   ├── src/
@@ -116,8 +123,13 @@ joyjoin-monorepo/
 │   ├── mini-program/         # WeChat Mini Program beta client (Taro + React)
 │   │   ├── src/
 │   │   │   ├── pages/        # Mini Program page entries
-│   │   │   ├── lib/          # Runtime-specific API/logging helpers
-│   │   │   └── app.ts        # Mini Program app lifecycle entry
+│   │   │   ├── components/   # Reusable Taro UI components
+│   │   │   ├── hooks/        # Cross-page Taro/query hooks
+│   │   │   ├── providers/    # App-level providers
+│   │   │   ├── lib/          # Runtime helpers, shared-route adapters, tab-bar config
+│   │   │   ├── native-custom-tab-bar/ # Native WeChat custom tab-bar files
+│   │   │   ├── app.ts        # Mini Program app lifecycle entry
+│   │   │   └── app.config.ts # Page registration + custom tab-bar config
 │   │   └── package.json
 │   │
 │   └── server/               # Express.js backend
@@ -148,11 +160,14 @@ joyjoin-monorepo/
 ├── packages/
 │   └── shared/               # Shared contracts, schemas, personality system, UI primitives
 │       └── src/
+│           ├── api.ts                # Shared API contracts/helpers for web + mini-program
+│           ├── centerTabRouting.ts   # Shared center CTA routing + badge rules
 │           ├── schema.ts             # Drizzle ORM database schema
 │           ├── wsEvents.ts           # WebSocket event interfaces
 │           ├── constants.ts          # Shared constants
 │           ├── districts.ts          # Location data (南山区, 福田区)
 │           ├── gamification.ts       # XP/Level system
+│           ├── hongKongTime.ts       # Shared Hong Kong time helpers
 │           └── personality/          # Personality assessment system
 │               ├── matcherV2.ts          # MatcherV2 algorithm
 │               ├── questionsV4.ts        # V4 adaptive questions (130+)
@@ -195,10 +210,13 @@ Active domain modules in `routes/domains/`:
 | `assessment.ts` | Personality assessment endpoints |
 | `admin.ts` | Admin management API |
 | `analytics.ts` | Analytics and KPI endpoints |
-| `payments.ts` | WeChat Pay v3 signed integration + webhook verification |
-| `icebreaker.ts` | Social Icebreaker session endpoints |
+| `payments.ts` | WeChat Pay v3, browser H5 payment creation, coupon validation, and webhook verification |
+| `eventPools.ts` | Event pool discovery and registration endpoints |
+| `icebreaker.ts` | Legacy/basic icebreaker endpoints |
+| `icebreakerSessions.ts` | Icebreaker session discovery and access endpoints |
 | `eventGroupOutcomes.ts` | Protected `POST /api/event-pools/:poolId/group-outcome` outcome submission endpoint |
 | `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
+| `matchingShadowErrors.ts` | Shadow-matching error inspection endpoints |
 | `helpers.ts` | Shared route helpers |
 
 ---

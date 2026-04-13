@@ -152,7 +152,7 @@ in-memory sliding window. Limits are intentionally conservative for internal bet
 | Limiter | Endpoints | Window | Max requests |
 |---|---|---|---|
 | `authEndpointLimiter` | `/api/auth/wechat/*`, `/api/auth/phone/*` | 1 min | 20 |
-| `paymentEndpointLimiter` | `POST /api/payments/create`, `POST /api/subscription/renew` | 1 min | 10 |
+| `paymentEndpointLimiter` | `POST /api/subscription/renew`, `POST /api/coupons/validate`, `POST /api/payments/create`, `POST /api/payments/miniprogram/create` | 1 min | 10 |
 | `webhookEndpointLimiter` | `POST /api/webhooks/wechat-pay` | 1 min | 120 |
 | `aiEndpointLimiter` | AI-heavy routes | 1 min | 10 |
 | `kpiEndpointLimiter` | KPI / analytics routes | 1 min | 30 |

@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-04-13
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -67,7 +67,7 @@
 ## §1 — Social Icebreaker System (Primary In-Event Flow — Required Reading)
 
 ### Overview
-The Social Icebreaker is a **multi-phase, real-time group experience** that runs in-memory on the server (no DB required). It is the **primary and default in-event icebreaking experience** for all JoyJoin matched groups. It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
+The Social Icebreaker is a **multi-phase, real-time group experience** backed by a PostgreSQL session store. It is the **primary and default in-event icebreaking experience** for all JoyJoin matched groups. It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
 
 ### Shared Types
 **File:** `shared/socialIcebreaker.ts` (also `packages/shared/src/socialIcebreaker.ts`)
@@ -115,6 +115,7 @@ POST /api/social-icebreaker/start
         │
         ▼
 GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
+  returns SocialSessionState + joinedParticipants roster summary
         │
         ▼
 [WARMUP PHASE]
@@ -149,10 +150,15 @@ interface SocialSessionState {
   currentPhase: SocialIcebreakerPhase;
   hostUserId: string;
   hostDisplayName: string;
-  playerCount: number;             // auto-synced from sessionJoinedUsers
+  playerCount: number;             // joined roster count
+  activePlayerCount?: number;      // heartbeats seen within the active presence window
+  joinedParticipants?: SocialSessionParticipantSummary[]; // roster + presence summary for clients
   phaseStartedAt: number;          // ms timestamp
   sessionStartedAt: number;
+  expiresAt?: string;              // ISO timestamp for TTL-backed expiry
   completedPhases: SocialIcebreakerPhase[];
+  eventType?: string;
+  enabledPhases?: SocialIcebreakerPhase[];
 
   // Warmup phase
   warmupTopics?: SocialTopic[];
@@ -185,24 +191,24 @@ interface SocialSessionState {
 }
 ```
 
-### In-Memory Store (Server)
+### Persistent Session Store (Server)
 
 ```typescript
-// File: apps/server/src/routes/socialIcebreaker.ts
-socialSessions: Map<string, SocialSessionState>
-  // TTL: 6 hours, max 1000 sessions, 5-min sweep
+// File: apps/server/src/lib/socialIcebreakerStore.ts
+SESSION_TTL_MS = 6 * 60 * 60 * 1000;     // 6 hours
+PRESENCE_THRESHOLD_MS = 30_000;          // 30 seconds
 
-sessionIndex: Map<icebreakerSessionId, socialSessionId>
-  // reverse-lookup index: maps icebreakerSessionId → socialSessionId for
-  // fast retrieval and cleanup; deduplication is effectively ensured by the
-  // deterministic key socialSessionId = `social_${icebreakerSessionId}`
+socialIcebreakerSessions
+  // persisted session state + expiresAt
 
-lieStatements: Map<socialSessionId, Map<userId, LieDetectiveStatement[]>>
-  // server-side truth: isLie never exposed to clients via poll
+socialIcebreakerParticipants
+  // joined roster with joinedAt / lastSeenAt heartbeats
 
-sessionJoinedUsers: Map<socialSessionId, Set<userId>>
-  // presence tracking; drives playerCount
+socialIcebreakerLieTruths
+  // server-only truth data; never returned to clients
 ```
+
+Sessions expire after 6 hours and expired rows are swept periodically. Missing vs expired sessions are differentiated in the API so clients can handle `410 SESSION_EXPIRED` separately from a true `404`.
 
 ### Backend API Endpoints
 
@@ -210,8 +216,8 @@ sessionJoinedUsers: Map<socialSessionId, Set<userId>>
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/social-icebreaker/start` | any | Join or create session; first caller = host |
-| `GET` | `/api/social-icebreaker/:socialSessionId` | any | Poll state (every 3s); registers presence |
+| `POST` | `/api/social-icebreaker/start` | any | Join or create session; first caller = host; participant roster is persisted |
+| `GET` | `/api/social-icebreaker/:socialSessionId` | any | Poll state (every 3s); registers presence and returns `joinedParticipants` roster summary |
 | `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/ready` | any | Mark whether the current player is ready to move on |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/next-topic` | host | Advance to the next shared warmup topic after mutual readiness |
@@ -223,9 +229,16 @@ sessionJoinedUsers: Map<socialSessionId, Set<userId>>
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/next-player` | host | Advance to the next player after the current reveal resolves |
 | `GET` | `/api/social-icebreaker/:socialSessionId/recap` | any | Generates AI recap summary |
 
-### Frontend Hook
+### Frontend Surfaces
 
-**File:** `apps/user-client/src/hooks/useSocialIcebreaker.ts`
+**Files:**
+- `apps/user-client/src/hooks/useSocialIcebreaker.ts`
+- `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
+- `apps/mini-program/src/pages/icebreaker-session/index.tsx`
+
+The mini-program surface consumes the same `SocialSessionState` contract and prefers `joinedParticipants` when the server provides it.
+
+**Hook:** `apps/user-client/src/hooks/useSocialIcebreaker.ts`
 
 ```typescript
 const {
@@ -385,7 +398,7 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 |------|---------|
 | `shared/socialIcebreaker.ts` | Core types: phases, state, configs (`PHASE_CONFIG`, `PHASE_ORDER`, `MVP_PHASES`) |
 | `packages/shared/src/socialIcebreaker.ts` | Package alias of above |
-| `apps/server/src/routes/socialIcebreaker.ts` | All Social Icebreaker API routes + in-memory session store |
+| `apps/server/src/routes/socialIcebreaker.ts` | All Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store |
 | `apps/server/src/socialIcebreakerAIService.ts` | AI generation functions (DeepSeek) with curated fallbacks |
 | `apps/user-client/src/hooks/useSocialIcebreaker.ts` | React hook: session management, polling, all actions |
 | `shared/icebreakerGames.ts` | 13 curated game definitions for IcebreakerToolkit |
@@ -403,11 +416,11 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 
 **Session not found / duplicate sessions:**
 - Session IDs are deterministic: `socialSessionId = social_${icebreakerSessionId}`, so the same icebreaker always maps to the same session key
-- `sessionIndex` is a reverse-lookup map (icebreakerSessionId → socialSessionId) used for retrieval and cleanup, not for deduplication
-- Sessions expire after 6h; max 1000 active sessions
+- Session persistence lives in `socialIcebreakerSessions`, keyed by `socialSessionId`; expired rows are swept by TTL, not by route-local maps
+- Sessions expire after 6h and return structured expiry state instead of a generic missing-session response
 
 **Lie Detective `isLie` leaking to client:**
-- The poll endpoint `GET /api/social-icebreaker/:socialSessionId` returns `SocialSessionState` via `sanitizeStateForClient` (currently a no-op pass-through)
+- The poll endpoint `GET /api/social-icebreaker/:socialSessionId` builds client state through `buildClientState()` and then returns `SocialSessionState` via `sanitizeStateForClient`
 - `isLie` is never stored on `SocialSessionState` (statements are sanitized on insert into `lieDetectivePlayers`), so it cannot be serialized to the client
 
 **Phase not advancing:**
@@ -420,5 +433,5 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 - All generators have curated fallbacks; the experience degrades gracefully
 
 **playerCount wrong:**
-- `sessionJoinedUsers` Set is updated on every `GET` poll
-- Count reflects users who have polled within the session lifetime
+- `playerCount` reflects the persisted joined roster in `socialIcebreakerParticipants`
+- `activePlayerCount` and `joinedParticipants[*].isActive` are derived from `lastSeenAt` heartbeats within the active presence window

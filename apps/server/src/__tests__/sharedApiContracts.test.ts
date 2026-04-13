@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  appendBrowserPaymentReturnUrl,
   getBrowserPaymentLaunchUrl,
   getMyBlindBoxEvents,
   getNotificationCounts,
@@ -116,6 +117,17 @@ describe('shared API coupon normalization', () => {
       'https://pay.example.com/legacy'
     );
     expect(getBrowserPaymentLaunchUrl(null)).toBeNull();
+    expect(
+      appendBrowserPaymentReturnUrl(
+        'https://pay.example.com/h5?prepay_id=abc',
+        'https://joyjoin.example.com/blindbox/confirmation?outTradeNo=JJ001'
+      )
+    ).toBe(
+      'https://pay.example.com/h5?prepay_id=abc&redirect_url=https%3A%2F%2Fjoyjoin.example.com%2Fblindbox%2Fconfirmation%3FoutTradeNo%3DJJ001'
+    );
+    expect(appendBrowserPaymentReturnUrl('https://pay.example.com/h5', '   ')).toBe(
+      'https://pay.example.com/h5'
+    );
   });
 
   it('uses the shared blind-box and notification endpoints expected by mini-program hooks', async () => {

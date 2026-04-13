@@ -29,7 +29,9 @@ This package holds contracts and logic that are intentionally shared across mult
 
 ### Shared cross-platform flow helpers
 - `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`, and related step-mapping utilities
-- `packages/shared/src/api.ts` — typed API helpers for assessment, essential data, interests, and profile review (shared across web and mini-program)
+- `packages/shared/src/api.ts` — typed API helpers and DTOs for onboarding/profile, pricing, coupons, payments, notifications, blind-box events, and pool-group details (shared across web and mini-program)
+- `packages/shared/src/centerTabRouting.ts` — shared center CTA label/destination/badge rules used by the web bottom nav and the mini-program custom tab bar
+- `packages/shared/src/hongKongTime.ts` — shared Hong Kong time comparison and formatting helpers used by both clients
 
 ### Truly shared UI primitives
 - `packages/shared/src/ui/`

@@ -24,6 +24,7 @@ export interface PricingPlan {
 }
 
 export interface BrowserPaymentIntent {
+  wechatOrderId?: string
   h5Url?: string | null
   h5_url?: string | null
 }
@@ -36,7 +37,10 @@ export interface BrowserPaymentResponse {
 
 export type SubscriptionPlanType = 'monthly' | 'quarterly'
 export type VipSubscriptionPlanKey = 'vip_monthly' | 'vip_quarterly'
+export type EventPackPlanKey = 'pack_3' | 'pack_6'
 export type SubscriptionPlanIdentifier = SubscriptionPlanType | VipSubscriptionPlanKey
+
+const EVENT_PACK_PLAN_TYPE_SET = new Set<EventPackPlanKey>(['pack_3', 'pack_6'])
 
 const SUBSCRIPTION_PLAN_IDENTIFIER_MAP: Record<SubscriptionPlanIdentifier, SubscriptionPlanType> = {
   monthly: 'monthly',
@@ -144,6 +148,16 @@ export function normalizeSubscriptionPlanType(
   return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
 }
 
+export function isEventPackPlanType(
+  planType: string | null | undefined
+): planType is EventPackPlanKey {
+  if (typeof planType !== 'string') {
+    return false
+  }
+
+  return EVENT_PACK_PLAN_TYPE_SET.has(planType.trim() as EventPackPlanKey)
+}
+
 function pricingPlanMatches(plan: Pick<PricingPlan, 'planType'>, targetPlanType: string): boolean {
   const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
   const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
@@ -194,6 +208,32 @@ export function getBrowserPaymentLaunchUrl(
 
   const trimmedUrl = rawUrl.trim()
   return trimmedUrl !== '' ? trimmedUrl : null
+}
+
+export function appendBrowserPaymentReturnUrl(
+  launchUrl: string | null | undefined,
+  returnUrl: string | null | undefined
+): string | null {
+  if (typeof launchUrl !== 'string') {
+    return null
+  }
+
+  const trimmedLaunchUrl = launchUrl.trim()
+  if (trimmedLaunchUrl === '') {
+    return null
+  }
+
+  if (typeof returnUrl !== 'string' || returnUrl.trim() === '') {
+    return trimmedLaunchUrl
+  }
+
+  const encodedReturnUrl = encodeURIComponent(returnUrl.trim())
+  if (/[?&]redirect_url=/.test(trimmedLaunchUrl)) {
+    return trimmedLaunchUrl.replace(/([?&])redirect_url=[^&]*/, `$1redirect_url=${encodedReturnUrl}`)
+  }
+
+  const separator = trimmedLaunchUrl.includes('?') ? '&' : '?'
+  return `${trimmedLaunchUrl}${separator}redirect_url=${encodedReturnUrl}`
 }
 
 function isCouponExpired(validUntil?: string | null): boolean {
@@ -291,6 +331,7 @@ export interface CreateMiniProgramPaymentIntentRequest {
   type: string
   planId: string
   openid: string
+  couponCode?: string
 }
 
 export interface PaymentIntentResponse {
