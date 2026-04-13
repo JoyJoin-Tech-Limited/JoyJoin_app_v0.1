@@ -5,15 +5,22 @@ import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import type { AuthUser } from '../../hooks/useAuth'
 import { logInfo } from '../../lib/logger'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
+import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
 
 export default function ProfilePage() {
   const { isLoading: authLoading, user: authUser } = useAuthGuard()
+
+  useCustomTabBarSync({
+    selectedIndex: MINI_PROGRAM_TAB_INDEX.profile,
+    enabled: !authLoading,
+  })
 
   const { data: user } = useQuery<AuthUser>({
     queryKey: ['mini-program', 'auth-user-profile'],

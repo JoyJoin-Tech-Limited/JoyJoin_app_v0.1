@@ -14,9 +14,110 @@ export interface PricingPlan {
   id: string
   planType: string
   displayName: string
+  displayNameEn?: string
   description?: string
   price: number
   originalPrice?: number | null
+  durationDays?: number
+  isActive?: boolean
+  isFeatured?: boolean
+}
+
+export type SubscriptionPlanType = 'monthly' | 'quarterly'
+export type VipSubscriptionPlanKey = 'vip_monthly' | 'vip_quarterly'
+export type SubscriptionPlanIdentifier = SubscriptionPlanType | VipSubscriptionPlanKey
+
+const SUBSCRIPTION_PLAN_IDENTIFIER_MAP: Record<SubscriptionPlanIdentifier, SubscriptionPlanType> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  vip_monthly: 'monthly',
+  vip_quarterly: 'quarterly',
+}
+
+interface RawPricingPlan {
+  id?: string | number
+  planType?: string
+  displayName?: string
+  name?: string
+  displayNameEn?: string
+  nameEn?: string
+  description?: string
+  price?: number | string
+  originalPrice?: number | string | null
+  durationDays?: number | string
+  isActive?: boolean
+  isFeatured?: boolean
+  [key: string]: unknown
+}
+
+export function normalizeSubscriptionPlanType(
+  planType: string | null | undefined
+): SubscriptionPlanType | null {
+  if (typeof planType !== 'string') {
+    return null
+  }
+
+  const normalized = planType.trim() as SubscriptionPlanIdentifier
+  return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
+}
+
+export function toVipSubscriptionPlanKey(
+  planType: string | null | undefined
+): VipSubscriptionPlanKey | null {
+  const normalized = normalizeSubscriptionPlanType(planType)
+  if (!normalized) {
+    return null
+  }
+
+  return normalized === 'quarterly' ? 'vip_quarterly' : 'vip_monthly'
+}
+
+function pricingPlanMatches(
+  plan: Pick<PricingPlan, 'planType'>,
+  targetPlanType: string
+): boolean {
+  const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
+  const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
+
+  if (normalizedPlanType && normalizedTargetPlanType) {
+    return normalizedPlanType === normalizedTargetPlanType
+  }
+
+  return plan.planType === targetPlanType
+}
+
+export function findPricingPlan(
+  pricingPlans: PricingPlan[] | null | undefined,
+  targetPlanType: string
+): PricingPlan | undefined {
+  return pricingPlans?.find((plan) => pricingPlanMatches(plan, targetPlanType))
+}
+
+function normalizePricingPlan(rawPlan: RawPricingPlan): PricingPlan {
+  const displayName =
+    typeof rawPlan.displayName === 'string' && rawPlan.displayName.trim() !== ''
+      ? rawPlan.displayName
+      : typeof rawPlan.name === 'string' && rawPlan.name.trim() !== ''
+        ? rawPlan.name
+        : String(rawPlan.planType ?? '')
+
+  return {
+    id: String(rawPlan.id ?? rawPlan.planType ?? ''),
+    planType: String(rawPlan.planType ?? ''),
+    displayName,
+    displayNameEn:
+      typeof rawPlan.displayNameEn === 'string' && rawPlan.displayNameEn.trim() !== ''
+        ? rawPlan.displayNameEn
+        : typeof rawPlan.nameEn === 'string' && rawPlan.nameEn.trim() !== ''
+          ? rawPlan.nameEn
+          : undefined,
+    description: typeof rawPlan.description === 'string' ? rawPlan.description : undefined,
+    price: parseNumber(rawPlan.price) ?? 0,
+    originalPrice: parseNumber(rawPlan.originalPrice) ?? null,
+    durationDays: parseNumber(rawPlan.durationDays),
+    isActive: typeof rawPlan.isActive === 'boolean' ? rawPlan.isActive : undefined,
+    isFeatured: typeof rawPlan.isFeatured === 'boolean' ? rawPlan.isFeatured : undefined,
+  }
 }
 
 export type UserCouponStatus = 'available' | 'used' | 'expired'
@@ -228,8 +329,18 @@ export interface JoinedEventSummary {
   [key: string]: unknown
 }
 
+export interface BlindBoxEventSummary {
+  id: string
+  title?: string
+  status?: string
+  dateTime?: string
+  [key: string]: unknown
+}
+
 export function getPricing(api: ApiTransport): Promise<PricingPlan[]> {
-  return api<PricingPlan[]>({ path: '/api/pricing' })
+  return api<RawPricingPlan[]>({ path: '/api/pricing' }).then((plans) =>
+    Array.isArray(plans) ? plans.map(normalizePricingPlan) : []
+  )
 }
 
 export function getUserCoupons(api: ApiTransport): Promise<UserCouponsResponse> {
@@ -293,6 +404,38 @@ export function getCurrentUser(api: ApiTransport): Promise<AuthUserSummary> {
 
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
+}
+
+export function getMyBlindBoxEvents(api: ApiTransport): Promise<BlindBoxEventSummary[]> {
+  return api<BlindBoxEventSummary[]>({ path: '/api/my-events' })
+}
+
+// ---------------------------------------------------------------------------
+// Notification counts API
+// ---------------------------------------------------------------------------
+
+export interface NotificationCountsResponse {
+  discover: number
+  activities: number
+  chat: number
+  total: number
+}
+
+export function getNotificationCounts(
+  api: ApiTransport
+): Promise<NotificationCountsResponse> {
+  return api<NotificationCountsResponse>({ path: '/api/notifications/counts' })
+}
+
+export function markNotificationsAsRead(
+  api: ApiTransport,
+  category: 'discover' | 'activities' | 'chat'
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/notifications/mark-read',
+    method: 'POST',
+    data: { category },
+  })
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,177 @@
+@import '../styles/variables';
+
+.joy-custom-tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(#{$tab-bar-height} + env(safe-area-inset-bottom));
+  pointer-events: auto;
+  z-index: $z-custom-tab-bar;
+
+  &__surface {
+    position: absolute;
+    left: $spacing-md;
+    right: $spacing-md;
+    bottom: env(safe-area-inset-bottom);
+    height: $tab-bar-height;
+    border-radius: 36rpx;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 16rpx 48rpx rgba(45, 49, 66, 0.12);
+  }
+
+  &__border {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2rpx;
+    background: rgba(139, 92, 246, 0.08);
+    border-top-left-radius: 36rpx;
+    border-top-right-radius: 36rpx;
+  }
+
+  &__row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: stretch;
+    height: 100%;
+    padding: 0 $spacing-md;
+  }
+
+  &__side {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__center-gap {
+    width: 200rpx;
+    flex-shrink: 0;
+  }
+
+  &__item {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    height: 100%;
+  }
+
+  &__item-icon {
+    width: 42rpx;
+    height: 42rpx;
+    opacity: 0.5;
+
+    &--active {
+      opacity: 1;
+    }
+  }
+
+  &__item-label {
+    font-size: 20rpx;
+    line-height: 1.2;
+    color: $color-text-muted;
+
+    &--active {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  // ── Side tab notification badge ─────────────────────────────
+  &__item-badge {
+    position: absolute;
+    top: 16rpx;
+    right: 50%;
+    transform: translateX(32rpx);
+    min-width: 32rpx;
+    height: 32rpx;
+    border-radius: 9999rpx;
+    background: $color-secondary;
+    border: 4rpx solid $color-surface;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8rpx;
+    box-sizing: border-box;
+  }
+
+  &__item-badge-text {
+    font-size: 18rpx;
+    line-height: 1;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    text-align: center;
+  }
+
+  // ── Protruding center button ────────────────────────────────
+  &__center {
+    position: absolute;
+    left: 50%;
+    top: -$center-tab-button-lift;
+    z-index: 2;
+    display: flex;
+    width: 200rpx;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+
+  &__center-outer-ring {
+    position: relative;
+    display: flex;
+    height: calc(#{$center-tab-button-size} + 16rpx);
+    width: calc(#{$center-tab-button-size} + 16rpx);
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999rpx;
+    background: linear-gradient(135deg, rgba(255, 107, 157, 0.15) 0%, rgba(168, 107, 255, 0.15) 100%);
+  }
+
+  &__center-button {
+    position: relative;
+    display: flex;
+    height: $center-tab-button-size;
+    width: $center-tab-button-size;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999rpx;
+    background: linear-gradient(135deg, #{$brand-gradient-from} 0%, #{$brand-gradient-to} 100%);
+    box-shadow:
+      0 8rpx 24rpx rgba(139, 92, 246, 0.35),
+      0 24rpx 56rpx rgba(255, 107, 157, 0.18);
+    border: 6rpx solid rgba(255, 255, 255, 0.9);
+  }
+
+  &__center-logo {
+    width: 88rpx;
+    height: 88rpx;
+  }
+
+  &__center-badge {
+    position: absolute;
+    top: 4rpx;
+    right: 4rpx;
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: 9999rpx;
+    background: $color-secondary;
+    border: 4rpx solid $color-surface;
+  }
+
+  &__center-label {
+    margin-top: 8rpx;
+    max-width: 192rpx;
+    font-size: 20rpx;
+    line-height: 1.2;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+  }
+}

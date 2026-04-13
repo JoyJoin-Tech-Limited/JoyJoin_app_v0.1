@@ -67,6 +67,8 @@ $card-radius:      32rpx;
 $card-radius-sm:   24rpx;
 $input-height:     88rpx;
 $tab-bar-height:   120rpx;
+$center-tab-button-size: 140rpx;
+$center-tab-button-lift: 64rpx;
 
 // ─── Shadows ──────────────────────────────────────────────────────
 $shadow-sm:   0 2rpx 12rpx rgba(0, 0, 0, 0.07);
@@ -90,5 +92,6 @@ $archetype-qiqu-huanxiong: hsl(15, 80%, 58%);
 
 // ─── Z-index ──────────────────────────────────────────────────────
 $z-tab-bar: 100;
+$z-custom-tab-bar: 120;
 $z-modal:   200;
 $z-toast:   300;
