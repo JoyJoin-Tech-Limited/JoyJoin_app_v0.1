@@ -42,6 +42,12 @@ vi.mock("../repositories/notificationsRepo", () => ({ notificationsRepo: mockNot
 vi.mock("../repositories/paymentFulfillmentRepo", () => ({
   paymentFulfillmentRepo: {
     finalizeConfirmedPayment: vi.fn(),
+    finalizeRefundedPayment: vi.fn(),
+  },
+}));
+vi.mock("../repositories/eventCreditsRepo", () => ({
+  eventCreditsRepo: {
+    getRefundBlockerCountForPayment: vi.fn().mockResolvedValue(0),
   },
 }));
 vi.mock("../repositories/usersRepo", () => ({ usersRepo: { getUser: vi.fn() } }));
@@ -69,6 +75,10 @@ describe("PaymentService — handleWebhook", () => {
     vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockResolvedValue({
       payment: { ...mockPayment, status: "completed" },
       alreadyCompleted: false,
+    });
+    vi.mocked(paymentFulfillmentRepo.finalizeRefundedPayment).mockResolvedValue({
+      payment: { ...mockPayment, status: "refunded" },
+      alreadyRefunded: false,
     });
     // Dev mode by default (skips signature verification)
     process.env.NODE_ENV = "development";
@@ -99,12 +109,9 @@ describe("PaymentService — handleWebhook", () => {
   });
 
   it("processes a valid REFUND.SUCCESS webhook in dev mode", async () => {
-    mockPaymentsRepo.getAllPayments.mockResolvedValue([
-      { ...mockPayment, status: "completed" },
-    ]);
-    vi.mocked(paymentFulfillmentRepo.finalizeConfirmedPayment).mockResolvedValue({
-      payment: { ...mockPayment, status: "completed" },
-      alreadyCompleted: true,
+    mockPaymentsRepo.getPaymentByWechatOrderId.mockResolvedValue({
+      ...mockPayment,
+      status: "completed",
     });
 
     const payload = {
@@ -115,10 +122,9 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockPaymentsRepo.updatePayment).toHaveBeenCalledWith(
-      "pay-001",
-      expect.objectContaining({ status: "refunded" })
-    );
+    expect(paymentFulfillmentRepo.finalizeRefundedPayment).toHaveBeenCalledWith({
+      wechatOrderId: "JJ123456",
+    });
   });
 
   // ── Idempotency ────────────────────────────────────────────────────────────
@@ -161,7 +167,7 @@ describe("PaymentService — handleWebhook", () => {
     };
 
     await service.handleWebhook(payload, JSON.stringify(payload), {});
-    expect(mockPaymentsRepo.updatePayment).not.toHaveBeenCalled();
+    expect(paymentFulfillmentRepo.finalizeRefundedPayment).not.toHaveBeenCalled();
   });
 
   it("logs unknown event_type without throwing", async () => {

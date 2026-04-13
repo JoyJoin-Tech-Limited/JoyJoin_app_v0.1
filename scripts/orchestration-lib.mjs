@@ -511,15 +511,6 @@ export function collectChangedFiles(repoRoot) {
     }
   }
 
-  const lastCommitResult = runCommand('git', ['diff', '--name-only', 'HEAD~1', 'HEAD'], {
-    cwd: repoRoot,
-    timeoutMs: 5_000,
-  });
-
-  if (lastCommitResult.status === 0) {
-    return uniqueStrings(parseLineOutput(lastCommitResult.stdout));
-  }
-
   return [];
 }
 

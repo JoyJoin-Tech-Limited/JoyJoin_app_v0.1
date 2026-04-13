@@ -54,10 +54,12 @@
    ```
 3. If the process is running but Prometheus cannot scrape, check network connectivity between the Prometheus container and the server host.
 4. If the process is crashed, restart it and investigate the error in logs.
-5. Check `GET /api/health` directly:
+5. Check liveness and readiness directly:
    ```bash
    curl https://api.yuejuapp.com/api/health
+   curl https://api.yuejuapp.com/api/readyz
    ```
+6. If `/api/health` passes but `/api/readyz` fails, treat the incident as a dependency/config outage rather than a full process outage.
 
 **Resolution:** Alert resolves automatically once metrics are received again.
 
@@ -118,7 +120,7 @@
 1. In the **Request Latency Percentiles** panel, identify which endpoint(s) are slow.
 2. Common causes:
    - Slow database queries (check Neon query logs)
-   - AI service timeouts (check `[AITrace]` log lines in Loki: `{service="joyjoin-server"} | json | level = "info" | message = "[AITrace]"`)
+   - AI service timeouts (check raw `[AITrace]` lines in Loki with `{service="joyjoin-server"} |= "[AITrace]"`; the suffix after the prefix is a JSON payload)
    - Event matching algorithm running on large pools (check `poolMatchingService` logs)
 3. If AI calls are slow, verify the provider is healthy; fallback paths should activate automatically.
 
@@ -178,7 +180,7 @@
 1. Check the [GitHub Actions synthetic-probe workflow](https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/actions/workflows/synthetic-probe.yml) for the most recent run logs.
 2. The probe output is structured JSON — look for `"ok":false` entries and the `"error"` field.
 3. If `/api/health` fails: follow [JoyJoinServiceDown](#joyjoinservicedown).
-4. If `/api/metrics` fails: check that `metricsMiddleware` is mounted in `index.ts` and the route is registered in `routes.ts`.
+4. If `/api/metrics` fails: check that `metricsMiddleware` is mounted in `index.ts` and the route is registered in `apps/server/src/routes/domains/analytics.ts` (mounted from `routes.ts`).
 5. If `/api/auth/user` fails with non-401: check the auth middleware stack.
 
 **Maintenance:**

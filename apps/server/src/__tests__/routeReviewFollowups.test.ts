@@ -90,13 +90,28 @@ describe('route review follow-ups', () => {
 
     expect(miniProgramPaymentPageSource).toContain('createMiniProgramPaymentIntent');
     expect(miniProgramPaymentPageSource).toContain('Taro.requestPayment');
+    expect(miniProgramPaymentPageSource).toContain("pack_3");
+    expect(miniProgramPaymentPageSource).toContain('couponCode');
     expect(miniProgramPaymentPageSource).not.toContain('getBrowserPaymentLaunchUrl');
     expect(miniProgramPaymentPageSource).not.toContain('paymentRedirectUrl');
 
     expect(paymentsRoutesSource).toContain('app.post("/api/coupons/validate"');
     expect(paymentsRoutesSource).toContain('getAvailableUserCouponByCode');
     expect(paymentsRoutesSource).toContain('countUserCouponAssignments');
+    expect(paymentsRoutesSource).toContain('paymentService.assertMiniProgramAppIdConsistency()');
     expect(paymentsRoutesSource).toContain('eventRegistrationPayload = eventCheckout.eventRegistrationPayload');
+    expect(paymentsRoutesSource).toContain('paymentType === "event_pack"');
+    expect(paymentsRoutesSource).toContain('paymentType: "event_pack"');
+  });
+
+  it('keeps browser confirmation query failures recoverable until payment settles', () => {
+    const userConfirmationPageSource = readRepoFile('apps/user-client/src/pages/BlindBoxConfirmationPage.tsx');
+    const adminConfirmationPageSource = readRepoFile('apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx');
+
+    expect(userConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
+    expect(userConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
+    expect(adminConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
+    expect(adminConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
   });
 
   it('publishes pricing display aliases and explicit browser payment redirect metadata', () => {

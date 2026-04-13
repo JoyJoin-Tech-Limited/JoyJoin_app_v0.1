@@ -43,10 +43,18 @@ vi.mock("../repositories/notificationsRepo", () => ({
 vi.mock("../repositories/paymentFulfillmentRepo", () => ({
   paymentFulfillmentRepo: {
     finalizeConfirmedPayment: vi.fn(),
+    finalizeRefundedPayment: vi.fn(),
+  },
+}));
+
+vi.mock("../repositories/eventCreditsRepo", () => ({
+  eventCreditsRepo: {
+    getRefundBlockerCountForPayment: vi.fn().mockResolvedValue(0),
   },
 }));
 
 import { PaymentService } from "../paymentService";
+import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "../repositories/paymentsRepo";
 
@@ -111,6 +119,30 @@ describe("PaymentService", () => {
         paidAt: new Date(),
       });
       return { payment, alreadyCompleted: false };
+    });
+    vi.mocked(paymentFulfillmentRepo.finalizeRefundedPayment).mockImplementation(async ({ wechatOrderId }: { wechatOrderId: string }) => {
+      const payment = payments.find((entry) => entry.wechatOrderId === wechatOrderId);
+      if (!payment) {
+        return { payment: null, alreadyRefunded: false };
+      }
+
+      if (payment.status === "refunded") {
+        return { payment, alreadyRefunded: true };
+      }
+
+      Object.assign(payment, {
+        status: "refunded",
+      });
+
+      if ((payment.paymentType === "subscription" || payment.paymentType === "event_bundle") && payment.relatedId) {
+        await paymentsRepo.updateSubscription(payment.relatedId, {
+          status: "cancelled",
+          isActive: false,
+          updatedAt: new Date(),
+        });
+      }
+
+      return { payment, alreadyRefunded: false };
     });
     process.env = {
       ...envSnapshot,
@@ -200,6 +232,30 @@ describe("PaymentService", () => {
       payer: { openid: "mock-openid-001" },
       out_trade_no: result.wechatOrderId,
     });
+  });
+
+  it("fails closed before creating a JSAPI order when the pay app id drifts from the mini-program auth app id", async () => {
+    process.env.PAYMENTS_ENABLED = "true";
+    process.env.WECHAT_APPID = "wx-auth-app-id";
+    process.env.WECHAT_PAY_APP_ID = "wx-pay-app-id";
+    global.fetch = vi.fn();
+
+    const service = new PaymentService();
+
+    await expect(
+      service.createMiniProgramPayment({
+        userId: "user-1",
+        paymentType: "event_bundle",
+        relatedId: "subscription-1",
+        originalAmount: 9800,
+        openid: "mock-openid-001",
+      })
+    ).rejects.toThrow(
+      "WECHAT_PAY_APP_ID must match WECHAT_APPID for the direct mini-program JSAPI flow"
+    );
+
+    expect(paymentsRepo.createPayment).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it("persists event registration payloads when creating event payments", async () => {
@@ -318,8 +374,35 @@ describe("PaymentService", () => {
 
     expect(payments[0].status).toBe("refunded");
     expect(paymentsRepo.getPaymentByWechatOrderId).toHaveBeenCalledWith("JJ_REFUND_001");
-    expect(paymentsRepo.updateSubscription).toHaveBeenCalledWith("subscription-2", {
-      status: "cancelled",
+    expect(paymentFulfillmentRepo.finalizeRefundedPayment).toHaveBeenCalledWith({
+      wechatOrderId: "JJ_REFUND_001",
     });
+    expect(paymentsRepo.updateSubscription).toHaveBeenCalledWith(
+      "subscription-2",
+      expect.objectContaining({ status: "cancelled", isActive: false }),
+    );
+  });
+
+  it("blocks event-pack refunds after credits have been used", async () => {
+    payments.push({
+      id: "payment-pack-1",
+      userId: "user-9",
+      paymentType: "event_pack",
+      relatedId: "pack_3",
+      finalAmount: 21100,
+      discountAmount: 0,
+      wechatOrderId: "JJ_PACK_REFUND_001",
+      status: "completed",
+    });
+
+    global.fetch = vi.fn();
+    vi.mocked(eventCreditsRepo.getRefundBlockerCountForPayment).mockResolvedValue(1);
+
+    const service = new PaymentService();
+    await expect(service.createRefund("payment-pack-1", "User requested refund")).rejects.toThrow(
+      "Cannot refund an event pack after any of its credits have been used",
+    );
+
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

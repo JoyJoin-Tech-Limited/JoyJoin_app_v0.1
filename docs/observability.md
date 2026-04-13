@@ -29,6 +29,7 @@
 │  apps/server/src/middleware/requestId.ts → Correlation IDs      │
 │  apps/server/src/middleware/metrics.ts  → Prometheus counters   │
 │  GET /api/health                        → Health check          │
+│  GET /api/readyz                        → Readiness check       │
 │  GET /api/metrics                       → Prometheus scrape      │
 └────────────────────┬─────────────────────────────┬──────────────┘
                      │ stdout/stderr JSON           │ HTTP scrape
@@ -53,6 +54,8 @@
 scripts/synthetic/happy-path-probe.mjs
   └── GitHub Actions schedule (*/5 * * * *)
          └── Probe /api/health, /api/metrics, /api/auth/user
+
+`/api/readyz` is the DB/config readiness endpoint for deployment gating; the synthetic probe intentionally checks liveness plus auth reachability rather than full dependency readiness.
 ```
 
 **Key files:**
@@ -62,6 +65,7 @@ scripts/synthetic/happy-path-probe.mjs
 | `apps/server/src/lib/logger.ts` | Reusable structured JSON logger |
 | `apps/server/src/middleware/requestId.ts` | Request correlation ID middleware |
 | `apps/server/src/middleware/metrics.ts` | Prometheus-style metrics middleware |
+| `apps/server/src/healthRoutes.ts` | Liveness and readiness endpoints (`/api/health`, `/api/readyz`, aliases) |
 | `infra/docker-compose.observability.yml` | Spin up the full observability stack locally |
 | `infra/prometheus/prometheus.yml` | Prometheus scrape config |
 | `infra/alerting/rules.yml` | Prometheus alerting rules |

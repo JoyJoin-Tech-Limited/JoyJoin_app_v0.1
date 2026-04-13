@@ -10,7 +10,15 @@ vi.mock("../db", () => ({
   db: mockDb,
 }));
 
+vi.mock("../repositories/eventCreditsRepo", () => ({
+  eventCreditsRepo: {
+    grantCreditsForPayment: vi.fn(),
+    reverseCreditsForPayment: vi.fn(),
+  },
+}));
+
 import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
+import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
 
 const basePayment = {
   id: "payment-1",
@@ -67,6 +75,9 @@ function createTxHarness(options: {
           };
         }),
       })),
+    })),
+    delete: vi.fn(() => ({
+      where: vi.fn(async () => []),
     })),
     insert: insertMock,
   };
@@ -189,5 +200,40 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
         values?.eventIntent?.[0] === "交朋友",
       ),
     ).toBe(true);
+  });
+
+  it("grants event-pack credits when an event-pack payment completes", async () => {
+    const eventPackPayment = {
+      ...basePayment,
+      paymentType: "event_pack",
+      relatedId: "pack_3",
+    };
+    const completedEventPackPayment = {
+      ...eventPackPayment,
+      status: "completed",
+      paidAt: new Date(),
+      wechatTransactionId: "wx_txn_004",
+    };
+    const { tx, insertMock } = createTxHarness({
+      selectResults: [[eventPackPayment]],
+      updateResults: [[completedEventPackPayment]],
+      insertResults: [[]],
+    });
+
+    mockDb.transaction.mockImplementation(async (callback: any) => callback(tx));
+
+    const result = await paymentFulfillmentRepo.finalizeConfirmedPayment({
+      wechatOrderId: eventPackPayment.wechatOrderId,
+      transactionId: "wx_txn_004",
+    });
+
+    expect(result.alreadyCompleted).toBe(false);
+    expect(result.payment?.status).toBe("completed");
+    expect(eventCreditsRepo.grantCreditsForPayment).toHaveBeenCalledWith(tx, {
+      paymentId: eventPackPayment.id,
+      userId: eventPackPayment.userId,
+      planType: "pack_3",
+    });
+    expect(insertMock).toHaveBeenCalledTimes(1);
   });
 });

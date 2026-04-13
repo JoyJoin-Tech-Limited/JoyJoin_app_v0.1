@@ -709,6 +709,19 @@ export function registerPaymentRoutes(app: Express): void {
           return res.status(400).json({ error: "OpenID mismatch" });
         }
 
+        try {
+          paymentService.assertMiniProgramAppIdConsistency();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Invalid WeChat mini-program payment configuration";
+          reqLogger.error("Rejected mini-program payment due to invalid app configuration", {
+            error: message,
+          });
+          return res.status(503).json({
+            error: message,
+            code: "PAYMENT_CONFIG_ERROR",
+          });
+        }
+
         if (type === "event") {
           if (typeof eventId !== "string" || eventId.trim().length === 0) {
             return res.status(400).json({ error: "eventId is required for event payments" });

@@ -119,6 +119,24 @@ export default function BlindBoxConfirmationPage() {
     isPollingRef.current = true;
     setAttemptCount(attempt);
 
+    const scheduleRetry = (nextMessage: string) => {
+      if (attempt >= MAX_POLL_ATTEMPTS) {
+        setStatus("pending");
+        setMessage("暂时无法确认支付结果，你可以稍后回来继续确认订单状态。");
+        return;
+      }
+
+      setStatus("polling");
+      setMessage(nextMessage);
+      timeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        isPollingRef.current = false;
+        void pollPaymentStatus(targetOrderId, nextContext, attempt + 1);
+      }, POLL_INTERVAL_MS);
+    };
+
     try {
       const response = await requestJson<{ status?: string }>(
         `/api/payments/status/${encodeURIComponent(targetOrderId)}`,
@@ -144,26 +162,10 @@ export default function BlindBoxConfirmationPage() {
         return;
       }
 
-      if (attempt >= MAX_POLL_ATTEMPTS) {
-        setStatus("pending");
-        setMessage("支付处理中，你可以稍后回来继续确认订单状态。");
-        return;
-      }
-
-      setStatus("polling");
-      setMessage("正在确认支付结果...");
-      timeoutRef.current = setTimeout(() => {
-        if (!isMountedRef.current) {
-          return;
-        }
-        isPollingRef.current = false;
-        void pollPaymentStatus(targetOrderId, nextContext, attempt + 1);
-      }, POLL_INTERVAL_MS);
+      scheduleRetry("正在确认支付结果...");
       return;
-    } catch (error) {
-      const nextMessage = error instanceof Error ? error.message : "查询支付状态失败";
-      setStatus("failed");
-      setMessage(nextMessage);
+    } catch {
+      scheduleRetry("支付状态同步稍慢，正在重新确认...");
       return;
     } finally {
       isPollingRef.current = false;

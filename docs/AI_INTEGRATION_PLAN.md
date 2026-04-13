@@ -135,7 +135,8 @@ JoyJoin runs a **dual-provider LLM layer** that is live in production today. Bot
 - No single shared client module — each service manages its own `OpenAI` DeepSeek client
 - **`socialModelRouter.ts`**: lazy-initialized singleton using a `'dummy-key-for-fallback'` so the router can be safely imported in MiniMax-only environments; real DeepSeek calls still require `DEEPSEEK_API_KEY`
 - **Some services** (e.g. certain analytics/explanation helpers): create module-load-time singletons with a dummy key, mirroring the MiniMax pattern so that import is cheap but real calls still check `DEEPSEEK_API_KEY` before use
-- **Other services** (e.g. `apps/server/src/matchExplanationService.ts`, `apps/server/src/inference/llmFallbackInference.ts`): instantiate `new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY })` at module load with no dummy key / no lazy init — these require `DEEPSEEK_API_KEY` to be set in any environment where the module is executed
+- **Other services** (e.g. `apps/server/src/inference/llmFallbackInference.ts`): instantiate `new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY })` at module load with no dummy key / no lazy init — these require `DEEPSEEK_API_KEY` to be set in any environment where the module is executed
+- **`apps/server/src/matchExplanationService.ts`** now routes pair-explanation and ice-breaker generation through `socialModelRouter.ts`; it only calls `getDeepseekSelection()` for explicit post-failure fallback after the router-selected provider attempt.
 - New DeepSeek usage should generally prefer the lazy/dummy-key patterns (as in `socialModelRouter.ts`) to avoid hard failures on import in MiniMax-only deployments
 
 #### Three Routing Layers
@@ -1175,7 +1176,7 @@ Foundation    Onboarding v1  Matching v1    Matching v1.5         Event
 | Admin trace viewer MVP | Minimal UI: searchable log of recent AI calls with latency, token usage, model, feature tag; accessible at `/admin/ai-trace` |
 | Prompt registry (v1) | Flat file or DB table: `{ promptId, version, template, feature, createdAt, notes }` — enables rollback without code deploy |
 | Fallback coverage audit | Verify every AI-calling code path has an explicit deterministic fallback; document gaps |
-| **Observability metadata normalization** | **Migrate all AI-backed service responses to emit `AIResponseMeta` fields from `packages/shared/src/types/aiMeta.ts`.** Priority order: (1) `socialIcebreakerAIService.ts` — add `fallbackUsed` + `promptVersion`; (2) `matchExplanationService.ts` — add `provider` to complement existing `fromCache`/`generatedAt`; (3) creative services (`tagGenerationService.ts`, `themeLLMService.ts`). This is a **migration task**, not yet complete — the shared type is the foundation; wiring each service is follow-up execution work within Phase A. |
+| **Observability metadata normalization** | **Continue migrating remaining AI-backed service responses to emit `AIResponseMeta` fields from `packages/shared/src/types/aiMeta.ts`.** Core runtime migration is already shipped for `socialIcebreakerAIService.ts` and `matchExplanationService.ts` (including `provider`, `fallbackUsed`, `promptVersion`, and structured trace logging on the main runtime paths). Remaining follow-up targets are creative services (`tagGenerationService.ts`, `themeLLMService.ts`) and any legacy AI responses still lacking normalized metadata. |
 
 **Exit criteria:** All Phase B AI calls will emit structured logs readable in the trace viewer. Feature flags verified working (AI off → deterministic fallback in effect). At least `matchExplanationService.ts` and `socialIcebreakerAIService.ts` responses include full `AIResponseMeta` fields.
 
