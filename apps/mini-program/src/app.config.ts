@@ -1,38 +1,16 @@
 import { MINI_PROGRAM_PAGES } from './lib/onboardingRoutes'
+import { MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS } from './lib/tabBarConfig'
 
 export default defineAppConfig({
   pages: [...MINI_PROGRAM_PAGES],
+  usingComponents: {},
   tabBar: {
+    custom: true,
     color: '#9CA3AF',
     selectedColor: '#8B5CF6',
     backgroundColor: '#ffffff',
     borderStyle: 'white',
-    list: [
-      {
-        pagePath: 'pages/discover/index',
-        text: '发现',
-        iconPath: 'assets/tab-icons/discover.png',
-        selectedIconPath: 'assets/tab-icons/discover-active.png',
-      },
-      {
-        pagePath: 'pages/events/index',
-        text: '活动',
-        iconPath: 'assets/tab-icons/events.png',
-        selectedIconPath: 'assets/tab-icons/events-active.png',
-      },
-      {
-        pagePath: 'pages/connections/index',
-        text: '连接',
-        iconPath: 'assets/tab-icons/connections.png',
-        selectedIconPath: 'assets/tab-icons/connections-active.png',
-      },
-      {
-        pagePath: 'pages/profile/index',
-        text: '我的',
-        iconPath: 'assets/tab-icons/profile.png',
-        selectedIconPath: 'assets/tab-icons/profile-active.png',
-      },
-    ],
+    list: MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS,
   },
   window: {
     backgroundTextStyle: 'light',

@@ -1,6 +1,8 @@
 {
   "version": 1,
   "updated": "2026-04-11",
+  "orchestrationContract": "../orchestration.yaml",
+  "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
     {
       "name": "AI Engineer",
@@ -12,8 +14,19 @@
         "edit",
         "execute"
       ],
-      "argumentHint": "Describe the AI-backed feature, server files involved, provider or routing requirements, fallback expectations, and the validation you need.",
-      "subagents": []
+      "argumentHint": "Describe the AI-backed feature, server files involved, provider or routing requirements, fallback expectations, validation needs, and any upstream product or orchestration context.",
+      "subagents": [],
+      "portfolioRole": "implementation",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [
+        "QA Agent",
+        "Launch Readiness Agent"
+      ],
+      "skills": [
+        "llm-runtime-safety-and-integration",
+        "platform-observability-and-ops"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Admin Operations Advisor",
@@ -25,7 +38,16 @@
         "execute"
       ],
       "argumentHint": "Describe the incident, admin workflow, endpoint or page involved, current symptom, and any logs, alerts, or runbook context you already have.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "operations-triage",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "admin-audit-and-rbac-governance",
+        "auth-session-and-safety-boundaries",
+        "platform-observability-and-ops"
+      ],
+      "toolingStatus": "partial"
     },
     {
       "name": "Auto-Eval",
@@ -36,8 +58,47 @@
         "search",
         "execute"
       ],
-      "argumentHint": "Describe whether you want a full evaluation report or a diagnosis of the current auto-eval gate, and mention any specific failure context if you already have one.",
-      "subagents": []
+      "argumentHint": "Describe whether you want a full evaluation report or a diagnosis of the current auto-eval gate, and include any upstream finding, changed-file scope, or fingerprint context if you already have it.",
+      "subagents": [],
+      "portfolioRole": "quality-gate",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [
+        "Supervisor",
+        "Launch Readiness Agent"
+      ],
+      "skills": [
+        "code-review",
+        "monorepo-workspace-governance"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Supervisor",
+      "file": "supervisor.agent.md",
+      "description": "Use when coordinating multi-agent work across Auto-Eval, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, multi-agent workflow, coordinate these agents, supervisor.",
+      "tools": [
+        "read",
+        "search",
+        "execute",
+        "agent"
+      ],
+      "argumentHint": "Describe the workflow goal, current blocker or finding, changed files, and any upstream agent result or auto-eval fingerprint that should guide routing.",
+      "subagents": [
+        "Auto-Eval",
+        "Product Manager",
+        "Backend Engineer",
+        "AI Engineer",
+        "QA Agent",
+        "Launch Readiness Agent"
+      ],
+      "portfolioRole": "orchestrator",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [],
+      "skills": [
+        "monorepo-workspace-governance",
+        "docs-sync"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Backend Engineer",
@@ -49,8 +110,20 @@
         "edit",
         "execute"
       ],
-      "argumentHint": "Describe the backend workflow, route or domain files involved, auth or RBAC requirements, persistence needs, validation rules, and test expectations.",
-      "subagents": []
+      "argumentHint": "Describe the backend workflow, route or domain files involved, auth or RBAC requirements, persistence needs, validation rules, test expectations, and any upstream product or orchestration context.",
+      "subagents": [],
+      "portfolioRole": "implementation",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [
+        "QA Agent",
+        "Auto-Eval"
+      ],
+      "skills": [
+        "server-domain-architecture",
+        "auth-session-and-safety-boundaries",
+        "reliability-and-state-integrity"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Database Schema & Migration Auditor",
@@ -63,7 +136,16 @@
         "execute"
       ],
       "argumentHint": "Describe the schema change, affected tables or columns, whether data already exists, and what safety or rollout constraints matter for the migration.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "migration-review",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "database-migration-safety",
+        "backend-models-standards",
+        "reliability-and-state-integrity"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "debug",
@@ -84,7 +166,14 @@
         "execute/runTests"
       ],
       "argumentHint": "Describe the bug, failing command or test, expected behavior, and any error output or reproduction steps.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "debugging",
+      "orchestrationPhase": "legacy-tooling",
+      "handoffs": [],
+      "skills": [
+        "testing-and-regression-guardrails"
+      ],
+      "toolingStatus": "legacy"
     },
     {
       "name": "Expert React Frontend Engineer",
@@ -114,7 +203,18 @@
         "microsoft.docs.mcp"
       ],
       "argumentHint": "Describe the page, route, component, or interaction in apps/user-client, plus any platform-coordination concerns.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "implementation",
+      "orchestrationPhase": "legacy-tooling",
+      "handoffs": [],
+      "skills": [
+        "frontend-component-architecture",
+        "design-system-governance",
+        "frontend-performance-and-loading",
+        "joyjoin-brand-guidelines",
+        "platform-coordination-protocol"
+      ],
+      "toolingStatus": "legacy"
     },
     {
       "name": "Launch Readiness Agent",
@@ -125,8 +225,20 @@
         "search",
         "execute"
       ],
-      "argumentHint": "Describe the launch scope, target environment, affected workflows, current concerns, and whether you need a blocker review, risk summary, or go-no-go checklist.",
-      "subagents": []
+      "argumentHint": "Describe the launch scope, target environment, affected workflows, current concerns, whether you need a blocker review, risk summary, or go-no-go checklist, and any upstream QA or implementation context.",
+      "subagents": [],
+      "portfolioRole": "release-review",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [
+        "Auto-Eval",
+        "Supervisor"
+      ],
+      "skills": [
+        "security-scan",
+        "platform-observability-and-ops",
+        "code-review"
+      ],
+      "toolingStatus": "partial"
     },
     {
       "name": "SE: Product Manager",
@@ -141,7 +253,14 @@
         "search_issues"
       ],
       "argumentHint": "Describe the feature, user, current workflow, pain point, and the decision or artifact you need.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "issue-authoring",
+      "orchestrationPhase": "legacy-tooling",
+      "handoffs": [],
+      "skills": [
+        "draft-prd"
+      ],
+      "toolingStatus": "needs-extension"
     },
     {
       "name": "Product Manager",
@@ -152,8 +271,18 @@
         "search",
         "edit"
       ],
-      "argumentHint": "Describe the feature idea, target user, current workflow, problem to solve, constraints, and the artifact you need drafted or refined.",
-      "subagents": []
+      "argumentHint": "Describe the feature idea, target user, current workflow, problem to solve, constraints, the artifact you need drafted or refined, and any upstream agent context that should shape scope.",
+      "subagents": [],
+      "portfolioRole": "product-scope",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [
+        "Backend Engineer",
+        "AI Engineer"
+      ],
+      "skills": [
+        "draft-prd"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "QA Agent",
@@ -164,8 +293,19 @@
         "search",
         "execute"
       ],
-      "argumentHint": "Describe the feature or change, affected flows, current risks, environments available, and whether you need a checklist, test plan, or execution summary.",
-      "subagents": []
+      "argumentHint": "Describe the feature or change, affected flows, current risks, environments available, whether you need a checklist, test plan, or execution summary, and any upstream implementation context.",
+      "subagents": [],
+      "portfolioRole": "verification",
+      "orchestrationPhase": "core-v1",
+      "handoffs": [
+        "Launch Readiness Agent",
+        "Auto-Eval"
+      ],
+      "skills": [
+        "e2e-test-runner",
+        "testing-and-regression-guardrails"
+      ],
+      "toolingStatus": "partial"
     },
     {
       "name": "Mini-Program Parity Auditor",
@@ -177,7 +317,15 @@
         "execute"
       ],
       "argumentHint": "Describe the route, feature area, or file set to compare between apps/user-client and apps/mini-program, and whether you want a quick gap scan or a detailed backlog.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "parity-audit",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "platform-coordination-protocol",
+        "frontend-component-architecture"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Taro Mini-Program Frontend Engineer",
@@ -194,7 +342,17 @@
       "subagents": [
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer"
-      ]
+      ],
+      "portfolioRole": "implementation",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "frontend-component-architecture",
+        "design-system-governance",
+        "joyjoin-brand-guidelines",
+        "platform-coordination-protocol"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "principal SWE",
@@ -224,7 +382,16 @@
         "github"
       ],
       "argumentHint": "Describe the decision, code area, architecture change, or implementation risk that needs senior guidance.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "architecture-advice",
+      "orchestrationPhase": "legacy-tooling",
+      "handoffs": [],
+      "skills": [
+        "code-review",
+        "reliability-and-state-integrity",
+        "monorepo-workspace-governance"
+      ],
+      "toolingStatus": "legacy"
     },
     {
       "name": "prompt engineer",
@@ -232,7 +399,12 @@
       "description": "Use when analyzing or rewriting prompts, improving system prompts, adding better examples, or tightening prompt structure for more reliable model behavior.",
       "tools": [],
       "argumentHint": "Paste the prompt or instruction set you want improved, plus any goals, constraints, or desired output format.",
-      "subagents": []
+      "subagents": [],
+      "portfolioRole": "prompt-design",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [],
+      "toolingStatus": "partial"
     },
     {
       "name": "Taro Migration Specialist",
@@ -250,7 +422,16 @@
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer",
         "Taro Mini-Program Frontend Engineer"
-      ]
+      ],
+      "portfolioRole": "migration-implementation",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "platform-coordination-protocol",
+        "frontend-component-architecture",
+        "design-system-governance"
+      ],
+      "toolingStatus": "sufficient"
     }
   ]
 }

@@ -4,16 +4,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import {
   createMiniProgramPaymentIntent,
+  findPricingPlan,
   getPricing,
   getUserCoupons,
   type PaymentIntentResponse,
   type PricingPlan,
+  type VipSubscriptionPlanKey,
 } from '@shared/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/logger'
 import './index.scss'
 
-type PlanKey = 'vip_monthly' | 'vip_quarterly'
+type PlanKey = VipSubscriptionPlanKey
 
 const DEFAULT_PLANS: Record<PlanKey, PricingPlan> = {
   vip_monthly: {
@@ -63,8 +65,8 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
 }
 
 function clearPendingOrderStorage() {
-  wx.removeStorageSync('pending_order')
-  wx.removeStorageSync('pending_order_context')
+  Taro.removeStorageSync('pending_order')
+  Taro.removeStorageSync('pending_order_context')
 }
 
 export default function BlindBoxPaymentPage() {
@@ -94,8 +96,8 @@ export default function BlindBoxPaymentPage() {
         getUserCoupons(apiRequest).catch(() => ({ count: 0, coupons: [] })),
       ])
 
-      const monthlyPlan = pricing.find((plan) => plan.planType === 'vip_monthly')
-      const quarterlyPlan = pricing.find((plan) => plan.planType === 'vip_quarterly')
+      const monthlyPlan = findPricingPlan(pricing, 'vip_monthly')
+      const quarterlyPlan = findPricingPlan(pricing, 'vip_quarterly')
 
       setPlans({
         vip_monthly: monthlyPlan ?? DEFAULT_PLANS.vip_monthly,
@@ -149,20 +151,20 @@ export default function BlindBoxPaymentPage() {
         openid,
       })
 
-      wx.setStorageSync('pending_order', paymentIntent.outTradeNo)
-      wx.setStorageSync('pending_order_context', {
+      Taro.setStorageSync('pending_order', paymentIntent.outTradeNo)
+      Taro.setStorageSync('pending_order_context', {
         type: paymentIntent.type,
       })
 
       await new Promise<void>((resolve, reject) => {
-        wx.requestPayment({
+        Taro.requestPayment({
           timeStamp: paymentIntent.timeStamp,
           nonceStr: paymentIntent.nonceStr,
           package: paymentIntent.package,
           signType: paymentIntent.signType,
           paySign: paymentIntent.paySign,
           success: () => resolve(),
-          fail: (error) => reject(error),
+          fail: (error: { errMsg?: string }) => reject(error),
         })
       })
 
