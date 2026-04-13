@@ -1,252 +1,289 @@
-//my path:/Users/felixg/projects/JoyJoin3/client/src/pages/BlindBoxConfirmationPage.tsx
-
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
+import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, MapPin, Users, DollarSign, Calendar, Clock, ArrowRight, Settings } from "lucide-react";
-import { motion } from "framer-motion";
-import { getCurrencySymbol } from "@/lib/currency";
+import { apiRequest } from "@/lib/queryClient";
+
+type VerificationState = "polling" | "paid" | "pending" | "failed";
+
+type BrowserPendingOrderContext = {
+  type?: "event" | "event_bundle";
+};
+
+const MAX_POLL_ATTEMPTS = 10;
+const POLL_INTERVAL_MS = 2000;
+const BROWSER_PENDING_ORDER_KEY = "joyjoin.browser.pending_order";
+const BROWSER_PENDING_ORDER_CONTEXT_KEY = "joyjoin.browser.pending_order_context";
+
+async function requestJson<T>(url: string): Promise<T> {
+  const response = await apiRequest("GET", url);
+  return response.json() as Promise<T>;
+}
+
+function clearPendingOrderStorage(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(BROWSER_PENDING_ORDER_KEY);
+  window.localStorage.removeItem(BROWSER_PENDING_ORDER_CONTEXT_KEY);
+}
+
+function readPendingOrderContext(): BrowserPendingOrderContext | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(BROWSER_PENDING_ORDER_CONTEXT_KEY);
+    return raw ? JSON.parse(raw) as BrowserPendingOrderContext : null;
+  } catch {
+    return null;
+  }
+}
+
+function readPendingOrderId(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem(BROWSER_PENDING_ORDER_KEY) ?? "";
+}
+
+function readIncomingOrderId(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("outTradeNo") ?? "";
+}
 
 export default function BlindBoxConfirmationPage() {
   const [, setLocation] = useLocation();
-  const city = (localStorage.getItem("blindbox_city") || "深圳") as "香港" | "深圳";
-  const currencySymbol = getCurrencySymbol(city);
+  const queryClient = useQueryClient();
+  const [orderId, setOrderId] = useState("");
+  const [context, setContext] = useState<BrowserPendingOrderContext | null>(null);
+  const [status, setStatus] = useState<VerificationState>("polling");
+  const [message, setMessage] = useState("正在确认支付结果...");
+  const [attemptCount, setAttemptCount] = useState(0);
+  const isPollingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 从localStorage读取用户偏好
-  const userPreferences = JSON.parse(localStorage.getItem("blindbox_preferences") || "{}");
+  const destinationPath = context?.type === "event" ? "/events" : "/discover";
+  const destinationLabel = context?.type === "event" ? "活动页" : "探索页";
 
-  // 模拟数据（实际应从状态管理或路由参数获取）
-  const confirmationData = {
-    date: "周三",
-    time: "19:00",
-    eventType: "饭局",
-    area: city === "香港" ? "香港·中西区" : "深圳·南山区",
-    budget: ["100-200", "200-300"],
-    preferences: {
-      acceptNearby: true,
-      flexibleTime: true,
-      typeSubstitute: false,
-      noStrictRestrictions: true,
-    },
-    inviteFriends: false,
-    serviceFee: `${currencySymbol}88`,
-    userPreferences: {
-      languages: userPreferences.languages || [],
-      tasteIntensity: userPreferences.tasteIntensity || [],
-      cuisines: userPreferences.cuisines || [],
-    },
-  };
+  const clearTimer = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
-  const handleViewProgress = () => {
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      clearTimer();
+    };
+  }, [clearTimer]);
+
+  const navigateAfterPaid = useCallback((nextContext: BrowserPendingOrderContext | null) => {
+    clearPendingOrderStorage();
+    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+
+    if (nextContext?.type === "event") {
+      window.localStorage.removeItem("blindbox_event_data");
+      queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/joined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
+      setLocation("/events");
+      return;
+    }
+
     setLocation("/discover");
-  };
+  }, [queryClient, setLocation]);
+
+  const pollPaymentStatus = useCallback(async (
+    targetOrderId: string,
+    nextContext: BrowserPendingOrderContext | null,
+    attempt = 1,
+  ) => {
+    if (!targetOrderId || isPollingRef.current) {
+      return;
+    }
+
+    isPollingRef.current = true;
+    setAttemptCount(attempt);
+
+    try {
+      const response = await requestJson<{ status?: string }>(
+        `/api/payments/status/${encodeURIComponent(targetOrderId)}`,
+      );
+
+      if (response.status === "completed") {
+        setStatus("paid");
+        setMessage(
+          nextContext?.type === "event"
+            ? "支付已确认，正在把你加入活动匹配队列..."
+            : "支付已确认，正在为你发放会员权益...",
+        );
+        timeoutRef.current = setTimeout(() => {
+          navigateAfterPaid(nextContext);
+        }, 1200);
+        return;
+      }
+
+      if (response.status === "failed" || response.status === "closed") {
+        clearPendingOrderStorage();
+        setStatus("failed");
+        setMessage("支付未完成，请返回支付页重新发起支付。");
+        return;
+      }
+
+      if (attempt >= MAX_POLL_ATTEMPTS) {
+        setStatus("pending");
+        setMessage("支付处理中，你可以稍后回来继续确认订单状态。");
+        return;
+      }
+
+      setStatus("polling");
+      setMessage("正在确认支付结果...");
+      timeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        isPollingRef.current = false;
+        void pollPaymentStatus(targetOrderId, nextContext, attempt + 1);
+      }, POLL_INTERVAL_MS);
+      return;
+    } catch (error) {
+      const nextMessage = error instanceof Error ? error.message : "查询支付状态失败";
+      setStatus("failed");
+      setMessage(nextMessage);
+      return;
+    } finally {
+      isPollingRef.current = false;
+    }
+  }, [navigateAfterPaid]);
+
+  const bootstrap = useCallback((incomingOrderId?: string) => {
+    clearTimer();
+
+    const nextContext = readPendingOrderContext();
+    const targetOrderId = (incomingOrderId || readIncomingOrderId() || readPendingOrderId()).trim();
+    setContext(nextContext);
+
+    if (!targetOrderId) {
+      clearPendingOrderStorage();
+      setStatus("failed");
+      setMessage("未找到待确认订单，请返回支付页重新发起支付。");
+      return;
+    }
+
+    setOrderId(targetOrderId);
+    setStatus("polling");
+    setMessage("正在确认支付结果...");
+    void pollPaymentStatus(targetOrderId, nextContext, 1);
+  }, [clearTimer, pollPaymentStatus]);
+
+  useEffect(() => {
+    bootstrap();
+  }, [bootstrap]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-green-950/20 dark:via-blue-950/20 dark:to-purple-950/20">
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        {/* 成功状态卡 */}
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_35%),linear-gradient(180deg,_rgba(240,253,250,1)_0%,_rgba(239,246,255,1)_45%,_rgba(250,245,255,1)_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.2),_transparent_35%),linear-gradient(180deg,_rgba(6,10,18,1)_0%,_rgba(10,16,28,1)_45%,_rgba(18,12,30,1)_100%)]">
+      <div className="mx-auto flex min-h-screen max-w-2xl items-center px-4 py-8">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="p-6 bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0" data-testid="card-success-status">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              >
-                <div className="bg-white/20 rounded-full p-4">
-                  <CheckCircle2 className="h-16 w-16" />
-                </div>
-              </motion.div>
-              <div>
-                <h1 className="text-2xl font-bold mb-2">报名成功！</h1>
-                <p className="text-white/90 text-sm">
-                  你的信息已提交，AI正在为你寻找最佳匹配
-                </p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* 已确认信息 - 只读展示 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          className="w-full space-y-6"
         >
-          <Card className="p-6" data-testid="card-confirmed-info">
-            <h2 className="text-lg font-bold mb-4">已确认信息</h2>
-            
-            <div className="space-y-4">
-              {/* 活动摘要 */}
-              <div className="pb-4 border-b">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <span className="font-medium">{confirmationData.date} {confirmationData.time}</span>
-                  </div>
-                  <Badge variant="secondary">{confirmationData.eventType}</Badge>
+          <Card className="overflow-hidden border-0 shadow-2xl">
+            <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500 px-6 py-6 text-white">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-white/80">JoyJoin Payment</p>
+                  <h1 className="mt-1 text-2xl font-bold">订单确认中</h1>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{confirmationData.area}</span>
+                <Badge className="border-0 bg-white/15 text-white">
+                  {context?.type === "event" ? "活动票" : "会员权益"}
+                </Badge>
+              </div>
+              <p className="mt-3 text-sm text-white/85">{message}</p>
+            </div>
+
+            <div className="space-y-6 px-6 py-6">
+              <div className="flex items-center gap-4 rounded-2xl border bg-background/80 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
+                  {status === "paid" ? (
+                    <CheckCircle2 className="h-6 w-6" />
+                  ) : status === "failed" ? (
+                    <AlertCircle className="h-6 w-6" />
+                  ) : status === "pending" ? (
+                    <RefreshCw className="h-6 w-6" />
+                  ) : (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  )}
                 </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">订单号</p>
+                  <p className="truncate text-sm text-muted-foreground" data-testid="text-order-id">
+                    {orderId || "待获取"}
+                  </p>
+                </div>
+
+                <Badge variant="outline">
+                  {status === "polling" && "查询中"}
+                  {status === "paid" && "已支付"}
+                  {status === "pending" && "处理中"}
+                  {status === "failed" && "未完成"}
+                </Badge>
               </div>
 
-              {/* 我的偏好 */}
-              {(confirmationData.userPreferences.languages.length > 0 || 
-                confirmationData.userPreferences.tasteIntensity.length > 0 || 
-                confirmationData.userPreferences.cuisines.length > 0) && (
-                <div className="pb-4 border-b">
-                  <h3 className="text-sm font-semibold mb-2">我的偏好</h3>
-                  <div className="space-y-2 text-sm">
-                    {confirmationData.userPreferences.languages.length > 0 && (
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-muted-foreground">语言：</span>
-                        <span className="font-medium text-right">{confirmationData.userPreferences.languages.join(' · ')}</span>
-                      </div>
-                    )}
-                    {confirmationData.userPreferences.tasteIntensity.length > 0 && (
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-muted-foreground">口味强度：</span>
-                        <span className="font-medium text-right">{confirmationData.userPreferences.tasteIntensity.join(' · ')}</span>
-                      </div>
-                    )}
-                    {confirmationData.userPreferences.cuisines.length > 0 && (
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-muted-foreground">菜系：</span>
-                        <span className="font-medium text-right">{confirmationData.userPreferences.cuisines.join(' · ')}</span>
-                      </div>
-                    )}
-                  </div>
+              {status === "polling" ? (
+                <div className="rounded-2xl bg-muted/50 p-4 text-sm text-muted-foreground">
+                  已查询 {attemptCount} / {MAX_POLL_ATTEMPTS} 次。支付完成后页面会自动跳转到你的{destinationLabel}。
                 </div>
-              )}
+              ) : null}
 
-              {/* 预算范围 */}
-              <div className="pb-4 border-b">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">预算范围</h3>
+              {status === "paid" ? (
+                <div className="space-y-3">
+                  <Button className="w-full" onClick={() => navigateAfterPaid(context)} data-testid="button-confirmation-continue">
+                    进入{destinationLabel}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="flex gap-2">
-                  {confirmationData.budget.map((range) => (
-                    <Badge key={range} variant="outline" className="text-xs">
-                      {currencySymbol}{range}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+              ) : null}
 
-              {/* 提升成功率 */}
-              <div className="pb-4 border-b">
-                <div className="flex items-center gap-2 mb-2">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">提升成功率</h3>
+              {status === "pending" ? (
+                <div className="space-y-3">
+                  <Button className="w-full" onClick={() => bootstrap(orderId)} data-testid="button-confirmation-retry">
+                    继续查询订单状态
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => setLocation(destinationPath)}>
+                    先去{destinationLabel}
+                  </Button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">相邻商圈</span>
-                  <Badge variant={confirmationData.preferences.acceptNearby ? "default" : "outline"} className="text-xs">
-                    {confirmationData.preferences.acceptNearby ? "已开启" : "未开启"}
-                  </Badge>
-                </div>
-              </div>
+              ) : null}
 
-              {/* 费用信息 */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">已支付服务费</span>
-                  <span className="text-lg font-bold text-primary">{confirmationData.serviceFee}</span>
+              {status === "failed" ? (
+                <div className="space-y-3">
+                  <Button className="w-full" onClick={() => setLocation("/blindbox/payment")} data-testid="button-confirmation-repay">
+                    返回支付页
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => setLocation(destinationPath)}>
+                    返回{destinationLabel}
+                  </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  活动现场费用AA · 成局前可退款
-                </p>
-              </div>
+              ) : null}
             </div>
           </Card>
         </motion.div>
-
-        {/* 进度与下一步 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card className="p-6" data-testid="card-next-steps">
-            <h2 className="text-lg font-bold mb-4">下一步是什么？</h2>
-            
-            <div className="space-y-4">
-              {/* 匹配进度 */}
-              <div className="flex items-start gap-3">
-                <div className="bg-primary/10 rounded-full p-2 mt-0.5">
-                  <Users className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm mb-1">AI正在匹配中</h3>
-                  <p className="text-xs text-muted-foreground">
-                    系统将根据你的偏好智能匹配4-6位同伴，满4人即可成局
-                  </p>
-                </div>
-              </div>
-
-              {/* 通知提醒 */}
-              <div className="flex items-start gap-3">
-                <div className="bg-blue-500/10 rounded-full p-2 mt-0.5">
-                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm mb-1">等待成局通知</h3>
-                  <p className="text-xs text-muted-foreground">
-                    成局后将通过微信通知，请保持手机畅通
-                  </p>
-                </div>
-              </div>
-
-              {/* 活动详情 */}
-              <div className="flex items-start gap-3">
-                <div className="bg-purple-500/10 rounded-full p-2 mt-0.5">
-                  <MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm mb-1">活动前48小时</h3>
-                  <p className="text-xs text-muted-foreground">
-                    系统将推送活动详情（地点、成员信息、连接群）
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* 操作按钮 */}
-        <div className="space-y-3">
-          <Button
-            size="lg"
-            className="w-full"
-            onClick={handleViewProgress}
-            data-testid="button-view-progress"
-          >
-            查看匹配进度
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setLocation("/discover")}
-            data-testid="button-back-discover"
-          >
-            返回探索页
-          </Button>
-        </div>
-
-        {/* 底部提示 */}
-        <div className="text-center text-xs text-muted-foreground space-y-1">
-          <p>💡 你可以在「我的」页面查看所有报名活动</p>
-          <p>📱 建议开启微信通知，第一时间接收匹配消息</p>
-        </div>
       </div>
     </div>
   );

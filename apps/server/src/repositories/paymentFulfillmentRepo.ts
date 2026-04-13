@@ -9,9 +9,10 @@ import {
   userCoupons,
 } from "@shared/schema";
 import * as schema from "@shared/schema";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { db } from "../db";
+import { eventCreditsRepo } from "./eventCreditsRepo";
 
 type PaymentRecord = typeof payments.$inferSelect;
 
@@ -23,6 +24,15 @@ export interface FinalizeConfirmedPaymentParams {
 export interface FinalizeConfirmedPaymentResult {
   payment: PaymentRecord | null;
   alreadyCompleted: boolean;
+}
+
+export interface FinalizeRefundedPaymentParams {
+  wechatOrderId: string;
+}
+
+export interface FinalizeRefundedPaymentResult {
+  payment: PaymentRecord | null;
+  alreadyRefunded: boolean;
 }
 
 const subscriptionNotification = {
@@ -39,6 +49,13 @@ const bundleNotification = {
   message: "您的本月活动礼包已生效，尽情参加本月所有悦聚活动吧！",
 };
 
+const eventPackNotification = {
+  category: "activities",
+  type: "event_pack_credited",
+  title: "活动次数包已到账",
+  message: "活动次数包已生效，可直接报名活动盲盒。",
+};
+
 const eventNotification = {
   category: "activities",
   type: "event_confirmed",
@@ -47,6 +64,10 @@ const eventNotification = {
 };
 
 function getNotificationForPayment(payment: PaymentRecord) {
+  if (payment.paymentType === "event_pack") {
+    return eventPackNotification;
+  }
+
   if (payment.paymentType === "event_bundle") {
     return bundleNotification;
   }
@@ -174,7 +195,17 @@ export const paymentFulfillmentRepo = {
         }
       }
 
-      if (
+      if (updatedPayment.paymentType === "event_pack") {
+        if (!updatedPayment.relatedId) {
+          throw new Error(`Event pack payment ${updatedPayment.id} is missing a plan type`);
+        }
+
+        await eventCreditsRepo.grantCreditsForPayment(tx, {
+          paymentId: updatedPayment.id,
+          userId: updatedPayment.userId,
+          planType: updatedPayment.relatedId,
+        });
+      } else if (
         (updatedPayment.paymentType === "subscription" ||
           updatedPayment.paymentType === "event_bundle") &&
         updatedPayment.relatedId
@@ -253,6 +284,113 @@ export const paymentFulfillmentRepo = {
       });
 
       return { payment: updatedPayment, alreadyCompleted: false };
+    });
+  },
+
+  async finalizeRefundedPayment(
+    params: FinalizeRefundedPaymentParams,
+  ): Promise<FinalizeRefundedPaymentResult> {
+    return db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+      const [payment] = await tx
+        .select()
+        .from(payments)
+        .where(eq(payments.wechatOrderId, params.wechatOrderId))
+        .limit(1);
+
+      if (!payment) {
+        return { payment: null, alreadyRefunded: false };
+      }
+
+      if (payment.status === "refunded") {
+        return { payment, alreadyRefunded: true };
+      }
+
+      if (payment.paymentType === "event_pack") {
+        await eventCreditsRepo.reverseCreditsForPayment(tx, {
+          paymentId: payment.id,
+          userId: payment.userId,
+        });
+      }
+
+      if (payment.couponId) {
+        const couponUsageRows = await tx
+          .select({ id: couponUsage.id })
+          .from(couponUsage)
+          .where(eq(couponUsage.paymentId, payment.id));
+
+        if (couponUsageRows.length > 0) {
+          await tx.delete(couponUsage).where(eq(couponUsage.paymentId, payment.id));
+
+          await tx
+            .update(coupons)
+            .set({
+              usedCount: sql`greatest(${coupons.usedCount} - ${couponUsageRows.length}, 0)`,
+            })
+            .where(eq(coupons.id, payment.couponId));
+
+          const [userCouponToRestore] = await tx
+            .select({ id: userCoupons.id })
+            .from(userCoupons)
+            .where(
+              and(
+                eq(userCoupons.userId, payment.userId),
+                eq(userCoupons.couponId, payment.couponId),
+                eq(userCoupons.isUsed, true),
+              ),
+            )
+            .orderBy(desc(userCoupons.usedAt), desc(userCoupons.createdAt))
+            .limit(1);
+
+          if (userCouponToRestore) {
+            await tx
+              .update(userCoupons)
+              .set({
+                isUsed: false,
+                usedAt: null,
+              })
+              .where(eq(userCoupons.id, userCouponToRestore.id));
+          }
+        }
+      }
+
+      const [updatedPayment] = await tx
+        .update(payments)
+        .set({
+          status: "refunded",
+        })
+        .where(and(eq(payments.id, payment.id), ne(payments.status, "refunded")))
+        .returning();
+
+      if (!updatedPayment) {
+        const [latestPayment] = await tx
+          .select()
+          .from(payments)
+          .where(eq(payments.id, payment.id))
+          .limit(1);
+
+        if (latestPayment?.status === "refunded") {
+          return { payment: latestPayment, alreadyRefunded: true };
+        }
+
+        throw new Error(`Failed to update refunded payment ${payment.id}`);
+      }
+
+      if (
+        (updatedPayment.paymentType === "subscription" ||
+          updatedPayment.paymentType === "event_bundle") &&
+        updatedPayment.relatedId
+      ) {
+        await tx
+          .update(subscriptions)
+          .set({
+            status: "cancelled",
+            isActive: false,
+            updatedAt: new Date(),
+          })
+          .where(eq(subscriptions.id, updatedPayment.relatedId));
+      }
+
+      return { payment: updatedPayment, alreadyRefunded: false };
     });
   },
 };

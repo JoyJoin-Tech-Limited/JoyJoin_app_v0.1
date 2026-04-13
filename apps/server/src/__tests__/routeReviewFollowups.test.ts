@@ -66,19 +66,32 @@ describe('route review follow-ups', () => {
     const userPaymentPageSource = readRepoFile('apps/user-client/src/pages/BlindBoxPaymentPage.tsx');
     const adminPaymentPageSource = readRepoFile('apps/admin-client/src/pages/BlindBoxPaymentPage.tsx');
     const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
+    const userAppSource = readRepoFile('apps/user-client/src/App.tsx');
+    const miniProgramPaymentPageSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
 
     expect(userPaymentPageSource).toContain('/api/coupons/validate');
     expect(userPaymentPageSource).toContain('/api/payments/create');
     expect(userPaymentPageSource).not.toContain('/api/blind-box-events');
     expect(userPaymentPageSource).not.toContain('/api/event-packs/purchase');
+    expect(userPaymentPageSource).toContain('appendBrowserPaymentReturnUrl');
+    expect(userPaymentPageSource).toContain('joyjoin.browser.pending_order');
     expect(adminPaymentPageSource).toContain('/api/coupons/validate');
     expect(adminPaymentPageSource).toContain('/api/payments/create');
     expect(adminPaymentPageSource).not.toContain('/api/blind-box-events');
     expect(adminPaymentPageSource).not.toContain('/api/event-packs/purchase');
+    expect(adminPaymentPageSource).toContain('appendBrowserPaymentReturnUrl');
+    expect(adminPaymentPageSource).toContain('joyjoin.browser.pending_order');
     expect(userPaymentPageSource).toContain('supportsCoupons = true');
     expect(userPaymentPageSource).toContain('supportsEventPacks = false');
     expect(adminPaymentPageSource).toContain('supportsCoupons = true');
     expect(adminPaymentPageSource).toContain('supportsEventPacks = false');
+    expect(userAppSource).toContain('<Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />');
+    expect(userAppSource).not.toContain('<Route path="/blindbox/confirmation" component={RedirectToDiscover} />');
+
+    expect(miniProgramPaymentPageSource).toContain('createMiniProgramPaymentIntent');
+    expect(miniProgramPaymentPageSource).toContain('Taro.requestPayment');
+    expect(miniProgramPaymentPageSource).not.toContain('getBrowserPaymentLaunchUrl');
+    expect(miniProgramPaymentPageSource).not.toContain('paymentRedirectUrl');
 
     expect(paymentsRoutesSource).toContain('app.post("/api/coupons/validate"');
     expect(paymentsRoutesSource).toContain('getAvailableUserCouponByCode');
@@ -98,6 +111,7 @@ describe('route review follow-ups', () => {
     expect(paymentsRoutesSource).toContain('const paymentStatus = paymentRedirectUrl ? "pending" : "completed";');
     expect(sharedApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
     expect(sharedApiSource).toContain('paymentRedirectUrl?: string | null');
+    expect(sharedApiSource).toContain('appendBrowserPaymentReturnUrl');
   });
 
   it('normalizes event chat payloads and keeps legacy message field compatibility', () => {

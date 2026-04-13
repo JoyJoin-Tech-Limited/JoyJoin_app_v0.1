@@ -12,6 +12,7 @@ import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
 import { registerOnboardingRoutes } from "./routes/domains/onboarding";
 import { registerPaymentRoutes } from "./routes/domains/payments";
+import { eventCreditsRepo } from "./repositories/eventCreditsRepo";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
@@ -7596,13 +7597,17 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         });
       }
 
-      // Check if user has active subscription
       const subscription = await storage.getUserSubscription(userId);
-      if (!subscription) {
+      const availableEventCredits = subscription ? 0 : await eventCreditsRepo.getAvailableCreditCount(userId);
+      const entitlementMode = subscription ? "subscription" : availableEventCredits > 0 ? "event_pack" : null;
+
+      if (!entitlementMode) {
         return res.status(403).json({ 
-          message: "Subscription required",
+          message: "Subscription or event pack required",
           requiresSubscription: true,
-          code: "NO_ACTIVE_SUBSCRIPTION"
+          requiresEventPack: true,
+          availableEventCredits,
+          code: "NO_ACTIVE_ENTITLEMENT"
         });
       }
 
@@ -7636,34 +7641,43 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const validatedData = insertEventPoolRegistrationSchema.parse({
         poolId,
         userId,
-        budgetRange: req.body.budgetRange || [],
-        preferredLanguages: req.body.preferredLanguages || [],
-        eventIntent: req.body.eventIntent || [],
-        cuisinePreferences: req.body.cuisinePreferences || [],
-        dietaryRestrictions: req.body.dietaryRestrictions || [],
-        tasteIntensity: req.body.tasteIntensity || 'medium',
+        budgetRange: Array.isArray(req.body.budgetRange) ? req.body.budgetRange : [],
+        preferredLanguages: Array.isArray(req.body.preferredLanguages) ? req.body.preferredLanguages : [],
+        eventIntent: Array.isArray(req.body.eventIntent) ? req.body.eventIntent : [],
+        cuisinePreferences: Array.isArray(req.body.cuisinePreferences) ? req.body.cuisinePreferences : [],
+        dietaryRestrictions: Array.isArray(req.body.dietaryRestrictions) ? req.body.dietaryRestrictions : [],
+        tasteIntensity: Array.isArray(req.body.tasteIntensity) ? req.body.tasteIntensity : [],
         matchStatus: 'pending',
       });
 
-      // Create registration
-      const [registration] = await db
-        .insert(eventPoolRegistrations)
-        .values(validatedData)
-        .returning();
+      const registration = await db.transaction(async (tx: DbTransaction) => {
+        const [createdRegistration] = await tx
+          .insert(eventPoolRegistrations)
+          .values(validatedData)
+          .returning();
 
-      // Record invitation use if invitation was provided
-      if (invitationCode && inviterId) {
-        await db.insert(invitationUses).values({
-          invitationId: invitationCode,
-          inviteeId: userId,
-          poolRegistrationId: registration.id,
-        });
+        if (entitlementMode === "event_pack") {
+          await eventCreditsRepo.consumeCreditForPoolRegistration(tx, {
+            userId,
+            poolId,
+            registrationId: createdRegistration.id,
+          });
+        }
 
-        // Increment acceptance count on invitation
-        await db.update(invitations)
-          .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
-          .where(eq(invitations.code, invitationCode));
-      }
+        if (invitationCode && inviterId) {
+          await tx.insert(invitationUses).values({
+            invitationId: invitationCode,
+            inviteeId: userId,
+            poolRegistrationId: createdRegistration.id,
+          });
+
+          await tx.update(invitations)
+            .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
+            .where(eq(invitations.code, invitationCode));
+        }
+
+        return createdRegistration;
+      });
 
       // Trigger realtime matching scan after registration (fire and forget with error handling)
       // Import at top: import { scanPoolAndMatch } from "./poolRealtimeMatchingService";
@@ -7686,12 +7700,24 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         console.error("[profileEnrichment] Failed to enrich profile:", err);
       });
 
-      res.json(registration);
+      res.json({
+        ...registration,
+        entitlementMode,
+      });
     } catch (error: any) {
       console.error("Error registering for event pool:", error);
 
       if (error?.code === "23505" || error?.cause?.code === "23505") {
         return res.status(400).json({ message: "You have already registered for this event pool" });
+      }
+
+      if (error instanceof Error && error.message === "No available event-pack credits remain") {
+        return res.status(403).json({
+          message: "No available event-pack credits remain",
+          requiresSubscription: true,
+          requiresEventPack: true,
+          code: "NO_AVAILABLE_EVENT_PACK_CREDITS",
+        });
       }
 
       res.status(500).json({ 

@@ -1316,6 +1316,35 @@ export const userCoupons = pgTable("user_coupons", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const eventCreditGrants = pgTable("event_credit_grants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  paymentId: varchar("payment_id").notNull().references(() => payments.id),
+  planType: varchar("plan_type").notNull(),
+  grantedCredits: integer("granted_credits").notNull(),
+  remainingCredits: integer("remaining_credits").notNull(),
+  expiresAt: timestamp("expires_at"),
+  refundedAt: timestamp("refunded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_event_credit_grants_payment_id").on(table.paymentId),
+  index("idx_event_credit_grants_user_expiry").on(table.userId, table.expiresAt),
+]);
+
+export const eventCreditRedemptions = pgTable("event_credit_redemptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  grantId: varchar("grant_id").notNull().references(() => eventCreditGrants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  registrationId: varchar("registration_id").notNull().references(() => eventPoolRegistrations.id),
+  creditsUsed: integer("credits_used").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_event_credit_redemptions_registration_id").on(table.registrationId),
+  index("idx_event_credit_redemptions_user_pool").on(table.userId, table.poolId),
+]);
+
 // Venue Bookings table - Track venue capacity per time slot
 export const venueBookings = pgTable("venue_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1969,6 +1998,10 @@ export const updatePricingSettingSchema = createInsertSchema(pricingSettings).om
 export type PricingSetting = typeof pricingSettings.$inferSelect;
 export type InsertPricingSetting = z.infer<typeof insertPricingSettingSchema>;
 export type UpdatePricingSetting = z.infer<typeof updatePricingSettingSchema>;
+export type EventCreditGrant = typeof eventCreditGrants.$inferSelect;
+export type InsertEventCreditGrant = typeof eventCreditGrants.$inferInsert;
+export type EventCreditRedemption = typeof eventCreditRedemptions.$inferSelect;
+export type InsertEventCreditRedemption = typeof eventCreditRedemptions.$inferInsert;
 
 // ============ 一键再约系统 - VIP Reunion System ============
 

@@ -1,5 +1,5 @@
 import type { Express, Request } from "express";
-import { normalizeSubscriptionPlanType } from "@shared/api";
+import { isEventPackPlanType, normalizeSubscriptionPlanType } from "@shared/api";
 import { eventPoolRegistrations } from "@shared/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { requireAdmin } from "../../adminAuth";
@@ -38,7 +38,17 @@ function checkPaymentsEnabled(req: any, res: any, next: any) {
   next();
 }
 
-type SupportedPaymentType = "subscription" | "event" | "event_bundle";
+type SupportedPaymentType = "subscription" | "event" | "event_bundle" | "event_pack";
+
+const EVENT_PACK_PRICE_FALLBACKS = {
+  pack_3: 21100,
+  pack_6: 37000,
+} as const;
+
+const SUBSCRIPTION_PRICE_FALLBACKS = {
+  monthly: 9800,
+  quarterly: 29400,
+} as const;
 
 type NormalizedEventRegistrationPayload = {
   poolId: string;
@@ -155,6 +165,45 @@ async function getEventSinglePaymentAmount(): Promise<number> {
   const pricing = await storage.getActivePricingSettings().catch(() => []);
   const eventSinglePlan = pricing.find((item: any) => item.planType === "event_single");
   return eventSinglePlan?.priceInCents ?? 8800;
+}
+
+async function getActivePricingPlan(planType: string): Promise<any | null> {
+  const pricing = await storage.getActivePricingSettings().catch(() => []);
+  return pricing.find((item: any) => item.planType === planType) ?? null;
+}
+
+async function resolveSubscriptionCheckout(
+  planType: string,
+): Promise<{ ok: true; originalAmount: number } | { ok: false; message: string }> {
+  const normalizedPlanType = normalizeSubscriptionPlanType(planType);
+  if (!normalizedPlanType) {
+    return { ok: false, message: "Invalid plan type" };
+  }
+
+  const pricingPlan = await getActivePricingPlan(normalizedPlanType);
+  return {
+    ok: true,
+    originalAmount: pricingPlan?.priceInCents ?? SUBSCRIPTION_PRICE_FALLBACKS[normalizedPlanType],
+  };
+}
+
+async function resolveEventPackCheckout(
+  planTypeInput: unknown,
+): Promise<
+  | { ok: true; originalAmount: number; relatedId: "pack_3" | "pack_6" }
+  | { ok: false; message: string }
+> {
+  const planType = getNonEmptyString(planTypeInput);
+  if (!planType || !isEventPackPlanType(planType)) {
+    return { ok: false, message: "Unsupported event pack type" };
+  }
+
+  const pricingPlan = await getActivePricingPlan(planType);
+  return {
+    ok: true,
+    relatedId: planType,
+    originalAmount: pricingPlan?.priceInCents ?? EVENT_PACK_PRICE_FALLBACKS[planType],
+  };
 }
 
 async function resolveCouponValidation(
@@ -414,17 +463,22 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid plan type" });
       }
 
-      const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
+      const renewalQuote = await resolveSubscriptionCheckout(normalizedPlanType);
+      if (!renewalQuote.ok) {
+        return res.status(400).json({ message: renewalQuote.message });
+      }
 
       let couponId: string | undefined;
       if (couponCode) {
-        const couponValidation = await resolveCouponValidation(userId, String(couponCode), renewalData.amount);
+        const couponValidation = await resolveCouponValidation(userId, String(couponCode), renewalQuote.originalAmount);
         if (!couponValidation.valid) {
           return res.status(400).json({ message: couponValidation.message });
         }
 
         couponId = couponValidation.couponId;
       }
+
+      const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
 
       const paymentResult = await paymentService.createPayment({
         userId,
@@ -486,23 +540,45 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (req.body?.paymentType !== "event") {
-        return res.json({ valid: false, message: "当前仅支持活动票优惠码" });
-      }
+      let originalAmount: number | null = null;
 
-      const eventCheckout = await resolveEventCheckout(userId, req.body?.eventRegistrationPayload ?? req.body);
-      if (!eventCheckout.ok) {
-        return res.json({
-          valid: false,
-          message: eventCheckout.message,
-          code: eventCheckout.code,
-        });
+      if (req.body?.paymentType === "event") {
+        const eventCheckout = await resolveEventCheckout(userId, req.body?.eventRegistrationPayload ?? req.body);
+        if (!eventCheckout.ok) {
+          return res.json({
+            valid: false,
+            message: eventCheckout.message,
+            code: eventCheckout.code,
+          });
+        }
+
+        originalAmount = eventCheckout.originalAmount;
+      } else if (req.body?.paymentType === "event_pack") {
+        const eventPackCheckout = await resolveEventPackCheckout(
+          req.body?.planId ?? req.body?.relatedId ?? req.body?.type,
+        );
+        if (!eventPackCheckout.ok) {
+          return res.json({ valid: false, message: eventPackCheckout.message });
+        }
+
+        originalAmount = eventPackCheckout.originalAmount;
+      } else if (req.body?.paymentType === "event_bundle" || req.body?.paymentType === "subscription") {
+        const subscriptionCheckout = await resolveSubscriptionCheckout(
+          String(req.body?.planType ?? req.body?.planId ?? req.body?.type ?? ""),
+        );
+        if (!subscriptionCheckout.ok) {
+          return res.json({ valid: false, message: subscriptionCheckout.message });
+        }
+
+        originalAmount = subscriptionCheckout.originalAmount;
+      } else {
+        return res.json({ valid: false, message: "当前支付类型暂不支持优惠码" });
       }
 
       const couponValidation = await resolveCouponValidation(
         userId,
         String(req.body?.code ?? ""),
-        eventCheckout.originalAmount,
+        originalAmount,
       );
 
       return res.json(couponValidation);
@@ -524,7 +600,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       const { paymentType, relatedId, originalAmount, couponCode } = req.body ?? {};
 
-      if (!["subscription", "event", "event_bundle"].includes(String(paymentType))) {
+      if (!["subscription", "event", "event_bundle", "event_pack"].includes(String(paymentType))) {
         return res.status(400).json({ message: "Unsupported payment type" });
       }
 
@@ -545,6 +621,14 @@ export function registerPaymentRoutes(app: Express): void {
         resolvedRelatedId = eventCheckout.relatedId;
         resolvedOriginalAmount = eventCheckout.originalAmount;
         eventRegistrationPayload = eventCheckout.eventRegistrationPayload;
+      } else if (normalizedPaymentType === "event_pack") {
+        const eventPackCheckout = await resolveEventPackCheckout(req.body?.planId ?? relatedId ?? req.body?.type);
+        if (!eventPackCheckout.ok) {
+          return res.status(400).json({ message: eventPackCheckout.message });
+        }
+
+        resolvedRelatedId = eventPackCheckout.relatedId;
+        resolvedOriginalAmount = eventPackCheckout.originalAmount;
       }
 
       if (!resolvedRelatedId) {
@@ -609,7 +693,7 @@ export function registerPaymentRoutes(app: Express): void {
           return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const { type, eventId, planId, openid } = req.body ?? {};
+        const { type, eventId, planId, openid, couponCode } = req.body ?? {};
         const user = await usersRepo.getUser(userId);
         const sessionOpenId = user?.wechatOpenId?.trim();
         if (!sessionOpenId) {
@@ -649,15 +733,67 @@ export function registerPaymentRoutes(app: Express): void {
           });
         }
 
-        const normalizedPlanType =
-          planId === "vip_quarterly" || type === "vip_quarterly"
-            ? "quarterly"
-            : planId === "vip_monthly" || type === "vip_monthly"
-              ? "monthly"
-              : null;
+        const selectedPlanType = getNonEmptyString(planId) ?? getNonEmptyString(type);
 
+        if (selectedPlanType && isEventPackPlanType(selectedPlanType)) {
+          const eventPackCheckout = await resolveEventPackCheckout(selectedPlanType);
+          if (!eventPackCheckout.ok) {
+            return res.status(400).json({ error: eventPackCheckout.message });
+          }
+
+          let couponId: string | undefined;
+          if (couponCode) {
+            const couponValidation = await resolveCouponValidation(
+              userId,
+              String(couponCode),
+              eventPackCheckout.originalAmount,
+            );
+            if (!couponValidation.valid) {
+              return res.status(400).json({ error: couponValidation.message });
+            }
+
+            couponId = couponValidation.couponId;
+          }
+
+          const paymentResult = await paymentService.createMiniProgramPayment({
+            userId,
+            paymentType: "event_pack",
+            relatedId: eventPackCheckout.relatedId,
+            originalAmount: eventPackCheckout.originalAmount,
+            couponId,
+            clientIp: getRequestClientIp(req),
+            openid: requestedOpenId,
+          });
+
+          return res.json({
+            ...paymentResult,
+            outTradeNo: paymentResult.wechatOrderId,
+            type: eventPackCheckout.relatedId,
+          });
+        }
+
+        const normalizedPlanType = normalizeSubscriptionPlanType(selectedPlanType);
         if (!normalizedPlanType) {
           return res.status(400).json({ error: "Unsupported mini-program payment type" });
+        }
+
+        const renewalQuote = await resolveSubscriptionCheckout(normalizedPlanType);
+        if (!renewalQuote.ok) {
+          return res.status(400).json({ error: renewalQuote.message });
+        }
+
+        let couponId: string | undefined;
+        if (couponCode) {
+          const couponValidation = await resolveCouponValidation(
+            userId,
+            String(couponCode),
+            renewalQuote.originalAmount,
+          );
+          if (!couponValidation.valid) {
+            return res.status(400).json({ error: couponValidation.message });
+          }
+
+          couponId = couponValidation.couponId;
         }
 
         const renewalData = await subscriptionService.renewSubscription(userId, normalizedPlanType);
@@ -666,6 +802,7 @@ export function registerPaymentRoutes(app: Express): void {
           paymentType: "event_bundle",
           relatedId: renewalData.subscriptionId,
           originalAmount: renewalData.amount,
+          couponId,
           clientIp: getRequestClientIp(req),
           openid: requestedOpenId,
         });

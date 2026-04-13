@@ -1,5 +1,6 @@
 import { createDecipheriv, createSign, createVerify, randomBytes } from "node:crypto";
 import { logger } from "./lib/logger";
+import { eventCreditsRepo } from "./repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "./repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "./repositories/paymentsRepo";
 import { usersRepo } from "./repositories/usersRepo";
@@ -54,7 +55,7 @@ interface WechatPayConfig {
 
 export interface CreatePaymentParams {
   userId: string;
-  paymentType: "subscription" | "event" | "event_bundle";
+  paymentType: "subscription" | "event" | "event_bundle" | "event_pack";
   relatedId: string; // subscription ID or event ID
   originalAmount: number; // in cents (¥98 = 9800)
   couponId?: string;
@@ -320,17 +321,10 @@ export class PaymentService {
       });
       return;
     }
-    
-    await paymentsRepo.updatePayment(payment.id, {
-      status: "refunded",
-    });
 
-    // Deactivate subscription if it was a subscription or bundle payment
-    if ((payment.paymentType === "subscription" || payment.paymentType === "event_bundle") && payment.relatedId) {
-      await paymentsRepo.updateSubscription(payment.relatedId, {
-        status: "cancelled",
-      });
-    }
+    await paymentFulfillmentRepo.finalizeRefundedPayment({
+      wechatOrderId,
+    });
   }
 
   /**
@@ -467,6 +461,13 @@ export class PaymentService {
 
     if (payment.status !== "completed") {
       throw new Error("Can only refund completed payments");
+    }
+
+    if (payment.paymentType === "event_pack") {
+      const blockerCount = await eventCreditsRepo.getRefundBlockerCountForPayment(payment.id);
+      if (blockerCount > 0) {
+        throw new Error("Cannot refund an event pack after any of its credits have been used");
+      }
     }
 
     await this.wechatRequest({
@@ -666,6 +667,7 @@ export class PaymentService {
   }
 
   private getPaymentDescription(paymentType: CreatePaymentParams["paymentType"]): string {
+    if (paymentType === "event_pack") return "JoyJoin活动次数包";
     if (paymentType === "event_bundle") return "JoyJoin月度活动礼包";
     if (paymentType === "subscription") return "JoyJoin活动礼包";
     return "JoyJoin活动报名";
