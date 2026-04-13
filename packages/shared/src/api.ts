@@ -33,6 +33,7 @@ export interface BrowserPaymentResponse {
   paymentRedirectUrl?: string | null
   paymentStatus?: 'pending' | 'completed'
 }
+
 export type SubscriptionPlanType = 'monthly' | 'quarterly'
 export type VipSubscriptionPlanKey = 'vip_monthly' | 'vip_quarterly'
 export type SubscriptionPlanIdentifier = SubscriptionPlanType | VipSubscriptionPlanKey
@@ -58,84 +59,6 @@ interface RawPricingPlan {
   isActive?: boolean
   isFeatured?: boolean
   [key: string]: unknown
-}
-
-export function normalizeSubscriptionPlanType(
-  planType: string | null | undefined
-): SubscriptionPlanType | null {
-  if (typeof planType !== 'string') {
-    return null
-  }
-
-  const normalized = planType.trim() as SubscriptionPlanIdentifier
-  return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
-}
-
-export function toVipSubscriptionPlanKey(
-  planType: string | null | undefined
-): VipSubscriptionPlanKey | null {
-  const normalized = normalizeSubscriptionPlanType(planType)
-  if (!normalized) {
-    return null
-  }
-
-  return normalized === 'quarterly' ? 'vip_quarterly' : 'vip_monthly'
-}
-
-function pricingPlanMatches(
-  plan: Pick<PricingPlan, 'planType'>,
-  targetPlanType: string
-): boolean {
-  const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
-  const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
-
-  if (normalizedPlanType && normalizedTargetPlanType) {
-    return normalizedPlanType === normalizedTargetPlanType
-  }
-
-  return plan.planType === targetPlanType
-}
-
-export function findPricingPlan(
-  pricingPlans: PricingPlan[] | null | undefined,
-  targetPlanType: string
-): PricingPlan | undefined {
-  return pricingPlans?.find((plan) => pricingPlanMatches(plan, targetPlanType))
-}
-
-export function getBrowserPaymentLaunchUrl(
-  payload: BrowserPaymentIntent | BrowserPaymentResponse | null | undefined
-): string | null {
-  if (
-    payload &&
-    typeof payload === 'object' &&
-    'paymentRedirectUrl' in payload &&
-    typeof payload.paymentRedirectUrl === 'string'
-  ) {
-    const directUrl = payload.paymentRedirectUrl.trim()
-    if (directUrl !== '') {
-      return directUrl
-    }
-  }
-
-  const nestedPayment =
-    payload && typeof payload === 'object' && 'payment' in payload
-      ? payload.payment
-      : payload
-
-  const payment = nestedPayment as BrowserPaymentIntent | null | undefined
-
-  if (!payment || typeof payment !== 'object') {
-    return null
-  }
-
-  const rawUrl = payment.h5Url ?? payment.h5_url
-  if (typeof rawUrl !== 'string') {
-    return null
-  }
-
-  const trimmedUrl = rawUrl.trim()
-  return trimmedUrl !== '' ? trimmedUrl : null
 }
 
 export type UserCouponStatus = 'available' | 'used' | 'expired'
@@ -208,6 +131,69 @@ function parseNumber(value: unknown): number | undefined {
   }
 
   return undefined
+}
+
+export function normalizeSubscriptionPlanType(
+  planType: string | null | undefined
+): SubscriptionPlanType | null {
+  if (typeof planType !== 'string') {
+    return null
+  }
+
+  const normalized = planType.trim() as SubscriptionPlanIdentifier
+  return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
+}
+
+function pricingPlanMatches(plan: Pick<PricingPlan, 'planType'>, targetPlanType: string): boolean {
+  const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
+  const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
+
+  if (normalizedPlanType && normalizedTargetPlanType) {
+    return normalizedPlanType === normalizedTargetPlanType
+  }
+
+  return plan.planType === targetPlanType
+}
+
+export function findPricingPlan(
+  pricingPlans: PricingPlan[] | null | undefined,
+  targetPlanType: string
+): PricingPlan | undefined {
+  return pricingPlans?.find((plan) => pricingPlanMatches(plan, targetPlanType))
+}
+
+export function getBrowserPaymentLaunchUrl(
+  payload: BrowserPaymentIntent | BrowserPaymentResponse | null | undefined
+): string | null {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'paymentRedirectUrl' in payload &&
+    typeof payload.paymentRedirectUrl === 'string'
+  ) {
+    const directUrl = payload.paymentRedirectUrl.trim()
+    if (directUrl !== '') {
+      return directUrl
+    }
+  }
+
+  const nestedPayment =
+    payload && typeof payload === 'object' && 'payment' in payload
+      ? payload.payment
+      : payload
+
+  const payment = nestedPayment as BrowserPaymentIntent | null | undefined
+  if (!payment || typeof payment !== 'object') {
+    return null
+  }
+
+  const rawUrl = payment.h5Url ?? payment.h5_url
+  if (typeof rawUrl !== 'string') {
+    return null
+  }
+
+  const trimmedUrl = rawUrl.trim()
+  return trimmedUrl !== '' ? trimmedUrl : null
 }
 
 function isCouponExpired(validUntil?: string | null): boolean {
@@ -381,10 +367,16 @@ export interface JoinedEventSummary {
 
 export interface BlindBoxEventSummary {
   id: string
-  title?: string
   status?: string
   dateTime?: string
   [key: string]: unknown
+}
+
+export interface NotificationCountsResponse {
+  discover: number
+  activities: number
+  chat: number
+  total: number
 }
 
 export function getPricing(api: ApiTransport): Promise<PricingPlan[]> {
@@ -462,20 +454,7 @@ export function getMyBlindBoxEvents(api: ApiTransport): Promise<BlindBoxEventSum
   return api<BlindBoxEventSummary[]>({ path: '/api/my-events' })
 }
 
-// ---------------------------------------------------------------------------
-// Notification counts API
-// ---------------------------------------------------------------------------
-
-export interface NotificationCountsResponse {
-  discover: number
-  activities: number
-  chat: number
-  total: number
-}
-
-export function getNotificationCounts(
-  api: ApiTransport
-): Promise<NotificationCountsResponse> {
+export function getNotificationCounts(api: ApiTransport): Promise<NotificationCountsResponse> {
   return api<NotificationCountsResponse>({ path: '/api/notifications/counts' })
 }
 

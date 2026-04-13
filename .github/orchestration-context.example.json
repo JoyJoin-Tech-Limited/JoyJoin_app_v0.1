@@ -1,37 +1,45 @@
 {
-  "event": "pull-request",
-  "triggerSource": "github_workflow",
+  "event": "user-prompt-submit",
+  "triggerSource": "copilot_hook",
   "commitSha": "0123456789abcdef0123456789abcdef01234567",
   "branch": "feature/native-agent-orchestration",
-  "prNumber": 123,
+  "prNumber": null,
   "changedFiles": [
     ".github/orchestration.yaml",
     "scripts/orchestration-supervisor.mjs",
-    ".github/agents/supervisor.agent.md"
+    ".github/agents/researcher.agent.md",
+    ".github/agents/planner.agent.md"
   ],
-  "diffSummary": "Introduced the orchestration manifest, runtime supervisor, and supervisor custom agent.",
-  "testOutputs": [
-    {
-      "name": "orchestration:validate",
-      "status": "passed",
-      "artifactPath": ".git/.orchestration/events.jsonl"
-    }
-  ],
+  "diffSummary": "Kickoff lane changes for Researcher and Planner.",
+  "testOutputs": [],
   "reviewComments": [],
   "artifactPaths": [
     ".git/.orchestration/context.json",
     ".git/.orchestration/events.jsonl"
   ],
-  "upstreamAgent": "Auto-Eval",
+  "upstreamAgent": null,
   "upstreamResult": {
-    "status": "pass",
-    "fingerprint": "abc123def456",
-    "reason": "Dirty-worktree quality gate passed."
+    "toolName": null,
+    "toolCommand": null,
+    "manifestVersion": "2026-04-13",
+    "prompt": "Add a new API endpoint for user profile retrieval with caching."
   },
   "retryCount": 0,
   "recommendedNextAgents": [
-    "Supervisor",
-    "QA Agent"
+    "Researcher",
+    "Planner"
   ],
-  "lastUpdatedAt": "2026-04-11T00:00:00.000Z"
+  "kickoff": {
+    "status": "recommended",
+    "approvalMode": "plan-first",
+    "recommendedAgents": [
+      "Researcher",
+      "Planner"
+    ],
+    "recommendationIssued": true,
+    "evaluationCount": 1,
+    "lastPrompt": "Add a new API endpoint for user profile retrieval with caching.",
+    "lastReason": "broad-request"
+  },
+  "lastUpdatedAt": "2026-04-13T00:00:00.000Z"
 }

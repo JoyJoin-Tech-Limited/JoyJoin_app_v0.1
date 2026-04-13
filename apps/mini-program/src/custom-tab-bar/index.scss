@@ -1,4 +1,4 @@
-@import '../styles/variables';
+@use '../styles/variables' as *;
 
 .joy-custom-tab-bar {
   position: fixed;

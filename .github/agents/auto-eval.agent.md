@@ -6,12 +6,12 @@ argument-hint: "Describe whether you want a full evaluation report or a diagnosi
 agents: []
 user-invocable: true
 handoffs:
-	- label: "Route remediation through Supervisor"
-		agent: "Supervisor"
-		prompt: "Use the current dirty-worktree findings, changed files, and fingerprint scope to route the next implementation or investigation step."
-	- label: "Review broader launch risk"
-		agent: "Launch Readiness Agent"
-		prompt: "Assess whether the current change scope has broader release-readiness blockers beyond the dirty-worktree gate."
+  - label: "Route remediation through Supervisor"
+    agent: "Supervisor"
+    prompt: "Use the current dirty-worktree findings, changed files, and fingerprint scope to route the next implementation or investigation step."
+  - label: "Review broader launch risk"
+    agent: "Launch Readiness Agent"
+    prompt: "Assess whether the current change scope has broader release-readiness blockers beyond the dirty-worktree gate."
 ---
 
 You are the Auto-Eval agent for JoyJoin.

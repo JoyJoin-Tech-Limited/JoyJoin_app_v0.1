@@ -4,7 +4,6 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/LoadingScreen'
 import Button from '../../components/Button'
 import BottomNav from '../../components/BottomNav'
-import continueImage from '../../assets/continue.png'
 import './index.scss'
 
 const BODY = '去看看为你准备的活动\n也许下一次连接就从这里开始'
@@ -20,7 +19,7 @@ export default function CenterTabEmptyPage() {
     <View className='center-tab-empty'>
       <View className='center-tab-empty__content'>
         <View className='center-tab-empty__art'>
-          <Image className='center-tab-empty__art-image' src={continueImage} mode='aspectFit' />
+          <Image className='center-tab-empty__art-image' src='/assets/continue.png' mode='aspectFit' />
         </View>
 
         <Text className='center-tab-empty__title'>你还没参加任何活动</Text>

@@ -5,12 +5,12 @@ tools: [read, search, edit, execute]
 argument-hint: "Describe the backend workflow, route or domain files involved, auth or RBAC requirements, persistence needs, validation rules, test expectations, and any upstream product or orchestration context."
 agents: []
 handoffs:
-	- label: "Request QA verification"
-		agent: "QA Agent"
-		prompt: "Turn the implemented backend scope into a concrete verification checklist or execution summary."
-	- label: "Run local quality gate"
-		agent: "Auto-Eval"
-		prompt: "Evaluate the current dirty worktree after the backend change and report the exact fingerprint verdict."
+  - label: "Request QA verification"
+    agent: "QA Agent"
+    prompt: "Turn the implemented backend scope into a concrete verification checklist or execution summary."
+  - label: "Run local quality gate"
+    agent: "Auto-Eval"
+    prompt: "Evaluate the current dirty worktree after the backend change and report the exact fingerprint verdict."
 ---
 
 You are a Backend Engineer for the JoyJoin server workspace.

@@ -69,6 +69,93 @@ function summarizeOrchestratedAgents(manifest) {
   return (manifest.portfolio_scope?.orchestrated_agents ?? []).join(', ');
 }
 
+function getKickoffConfig(manifest) {
+  return manifest.copilot_hooks?.orchestration?.kickoff_lane ?? {
+    entry_agents: ['Researcher', 'Planner'],
+    approval_mode: 'plan-first',
+    recommend_on_first_broad_prompt: true,
+    broad_prompt_signals: {
+      min_words: 6,
+      verbs: ['add', 'build', 'create', 'fix', 'implement', 'integrate', 'migrate', 'plan', 'refactor', 'review', 'update'],
+      scope_terms: ['agent', 'api', 'docs', 'hook', 'migration', 'orchestration', 'route', 'test', 'workflow'],
+    },
+  };
+}
+
+function createDefaultKickoffState(kickoffConfig) {
+  return {
+    status: 'idle',
+    approvalMode: kickoffConfig.approval_mode ?? 'plan-first',
+    recommendedAgents: kickoffConfig.entry_agents ?? ['Researcher', 'Planner'],
+    recommendationIssued: false,
+    evaluationCount: 0,
+    lastPrompt: null,
+    lastReason: null,
+  };
+}
+
+function extractPromptText(payload) {
+  const candidates = [
+    payload.prompt,
+    payload.userPrompt,
+    payload.message,
+    payload.text,
+    payload.request?.prompt,
+    payload.request?.text,
+    payload.input?.prompt,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim() !== '') {
+      return candidate.trim();
+    }
+  }
+
+  return '';
+}
+
+function normalizePrompt(promptText) {
+  return promptText.trim().replace(/\s+/g, ' ');
+}
+
+function shouldRecommendKickoff(promptText, kickoffState, kickoffConfig) {
+  if (!promptText || kickoffState?.recommendationIssued) {
+    return false;
+  }
+
+  if (kickoffConfig.recommend_on_first_broad_prompt === false) {
+    return false;
+  }
+
+  const normalized = normalizePrompt(promptText).toLowerCase();
+  const words = normalized.split(' ').filter(Boolean);
+  const minWords = kickoffConfig.broad_prompt_signals?.min_words ?? 6;
+  const verbs = kickoffConfig.broad_prompt_signals?.verbs ?? [];
+  const scopeTerms = kickoffConfig.broad_prompt_signals?.scope_terms ?? [];
+  const hasVerb = verbs.some((term) => normalized.includes(term));
+  const hasScopeTerm = scopeTerms.some((term) => normalized.includes(term));
+  const hasMultiStepConnector = /\b(and|with|before|after|across|into|plus|then)\b/.test(normalized);
+
+  if (words.length >= 12) {
+    return true;
+  }
+
+  if (words.length < minWords) {
+    return false;
+  }
+
+  return (hasVerb && hasScopeTerm) || (hasVerb && hasMultiStepConnector) || (hasScopeTerm && hasMultiStepConnector);
+}
+
+function buildKickoffSystemMessage(manifest, promptText) {
+  const kickoffConfig = getKickoffConfig(manifest);
+  const kickoffAgents = (kickoffConfig.entry_agents ?? ['Researcher', 'Planner']).join(' -> ');
+  const approvalMode = kickoffConfig.approval_mode === 'plan-first' ? 'approval-first' : kickoffConfig.approval_mode;
+  const promptSummary = normalizePrompt(promptText);
+
+  return `This looks like a broad request. Start with ${kickoffAgents} so the work is grounded before implementation. ${kickoffConfig.entry_agents?.[0] ?? 'Researcher'} should gather verified repo context, then ${kickoffConfig.entry_agents?.[1] ?? 'Planner'} should return an ${approvalMode} execution plan. Prompt summary: ${promptSummary}`;
+}
+
 function buildHookContext(repoRoot, eventName, payload, manifest) {
   const existingContext = loadRuntimeContext(repoRoot);
   const changedFiles = collectChangedFiles(repoRoot);
@@ -101,7 +188,11 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
       manifestVersion: manifest.updated,
     },
     retryCount: 0,
-    recommendedNextAgents: manifest.copilot_hooks?.auto_eval?.manual_recovery_agents ?? ['Auto-Eval', 'Supervisor'],
+    recommendedNextAgents:
+      existingContext.recommendedNextAgents ??
+      manifest.copilot_hooks?.auto_eval?.manual_recovery_agents ??
+      ['Auto-Eval', 'Supervisor'],
+    kickoff: existingContext.kickoff ?? null,
     lastUpdatedAt: now,
   };
 }
@@ -286,6 +377,7 @@ function runCopilotHook(repoRoot, eventName) {
   const payload = parseStdinJson();
   const manifest = loadOrchestrationManifest(repoRoot);
   const validation = validateOrchestrationManifest(manifest);
+  const kickoffConfig = getKickoffConfig(manifest);
 
   if (!validation.valid) {
     outputJson({
@@ -294,7 +386,72 @@ function runCopilotHook(repoRoot, eventName) {
     });
   }
 
-  const context = buildHookContext(repoRoot, eventName, payload, manifest);
+  let context = buildHookContext(repoRoot, eventName, payload, manifest);
+
+  if (eventName === 'session-start') {
+    context = {
+      ...context,
+      kickoff: createDefaultKickoffState(kickoffConfig),
+      recommendedNextAgents: kickoffConfig.entry_agents ?? ['Researcher', 'Planner'],
+    };
+
+    writeRuntimeContext(repoRoot, context);
+    appendOrchestrationLog(repoRoot, {
+      recordedAt: new Date().toISOString(),
+      triggerSource: 'copilot_hook',
+      event: eventName,
+      kickoffStatus: context.kickoff?.status ?? null,
+    });
+
+    outputJson({
+      continue: true,
+      systemMessage: `${manifest.copilot_hooks?.orchestration?.session_start_message ?? 'Orchestration runtime ready.'} Kickoff lane: ${(kickoffConfig.entry_agents ?? ['Researcher', 'Planner']).join(' -> ')}. Core graph: ${summarizeOrchestratedAgents(manifest)}.`,
+    });
+  }
+
+  if (eventName === 'user-prompt-submit') {
+    const promptText = extractPromptText(payload);
+    const kickoffState = context.kickoff ?? createDefaultKickoffState(kickoffConfig);
+    const recommendKickoff = shouldRecommendKickoff(promptText, kickoffState, kickoffConfig);
+
+    context = {
+      ...context,
+      recommendedNextAgents: recommendKickoff
+        ? kickoffConfig.entry_agents ?? ['Researcher', 'Planner']
+        : context.recommendedNextAgents,
+      upstreamResult: {
+        ...context.upstreamResult,
+        prompt: promptText || null,
+      },
+      kickoff: {
+        ...kickoffState,
+        status: recommendKickoff ? 'recommended' : kickoffState.status,
+        recommendationIssued: kickoffState.recommendationIssued || recommendKickoff,
+        evaluationCount: Number(kickoffState.evaluationCount ?? 0) + 1,
+        lastPrompt: promptText || null,
+        lastReason: promptText ? (recommendKickoff ? 'broad-request' : 'narrow-or-already-routed') : 'missing-prompt',
+      },
+    };
+
+    writeRuntimeContext(repoRoot, context);
+    appendOrchestrationLog(repoRoot, {
+      recordedAt: new Date().toISOString(),
+      triggerSource: 'copilot_hook',
+      event: eventName,
+      promptSummary: promptText ? normalizePrompt(promptText).slice(0, 200) : null,
+      kickoffRecommended: recommendKickoff,
+    });
+
+    if (recommendKickoff) {
+      outputJson({
+        continue: true,
+        systemMessage: buildKickoffSystemMessage(manifest, promptText),
+      });
+    }
+
+    outputJson({ continue: true });
+  }
+
   writeRuntimeContext(repoRoot, context);
   appendOrchestrationLog(repoRoot, {
     recordedAt: new Date().toISOString(),
@@ -304,13 +461,6 @@ function runCopilotHook(repoRoot, eventName) {
       toolName: payload.toolName ?? payload.tool?.name ?? null,
     },
   });
-
-  if (eventName === 'session-start') {
-    outputJson({
-      continue: true,
-      systemMessage: `${manifest.copilot_hooks?.orchestration?.session_start_message ?? 'Orchestration runtime ready.'} Core graph: ${summarizeOrchestratedAgents(manifest)}.`,
-    });
-  }
 
   outputJson({ continue: true });
 }

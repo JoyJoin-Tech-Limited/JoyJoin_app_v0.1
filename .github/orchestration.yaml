@@ -1,7 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-04-11",
+  "updated": "2026-04-13",
   "portfolio_scope": {
+    "kickoff_agents": [
+      "Researcher",
+      "Planner"
+    ],
     "orchestrated_agents": [
       "Supervisor",
       "Auto-Eval",
@@ -46,9 +50,50 @@
     "orchestration": {
       "runtime_events": [
         "SessionStart",
+        "UserPromptSubmit",
         "PostToolUse"
       ],
-      "session_start_message": "Supervisor orchestration runtime loaded."
+      "session_start_message": "Researcher -> Planner kickoff lane ready.",
+      "kickoff_lane": {
+        "entry_agents": [
+          "Researcher",
+          "Planner"
+        ],
+        "approval_mode": "plan-first",
+        "recommend_on_first_broad_prompt": true,
+        "broad_prompt_signals": {
+          "min_words": 6,
+          "verbs": [
+            "add",
+            "build",
+            "create",
+            "debug",
+            "design",
+            "fix",
+            "implement",
+            "integrate",
+            "investigate",
+            "migrate",
+            "orchestrate",
+            "plan",
+            "refactor",
+            "review",
+            "update"
+          ],
+          "scope_terms": [
+            "agent",
+            "api",
+            "architecture",
+            "docs",
+            "hook",
+            "migration",
+            "orchestration",
+            "route",
+            "test",
+            "workflow"
+          ]
+        }
+      }
     }
   },
   "git_hooks": {
@@ -150,6 +195,18 @@
   },
   "handoff_graph": [
     {
+      "from": "Researcher",
+      "to": "Planner",
+      "label": "Turn research into a plan",
+      "prompt": "Use this research brief to create an approval-first execution plan with the right JoyJoin agents, dependencies, and validation steps."
+    },
+    {
+      "from": "Planner",
+      "to": "Supervisor",
+      "label": "Route approved execution",
+      "prompt": "Use this approved execution plan, current findings, and changed-file scope to route the next specialist."
+    },
+    {
       "from": "Auto-Eval",
       "to": "Supervisor",
       "label": "Route remediation through Supervisor",
@@ -223,6 +280,48 @@
     }
   ],
   "agent_bindings": {
+    "Researcher": {
+      "file": ".github/agents/researcher.agent.md",
+      "portfolio_role": "kickoff-research",
+      "orchestration_status": "kickoff-lane",
+      "current_tools": [
+        "read",
+        "search",
+        "web"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Kickoff research only needs repo inspection and optional external lookup before planning begins.",
+        "recommended_extensions": [
+          {
+            "type": "optional-integration",
+            "label": "Add deterministic MCP knowledge sources only if external research becomes a mandatory dependency.",
+            "reason": "The current kickoff lane works with repo context plus optional web lookups; stronger integrations should only be added when the source of truth is stable."
+          }
+        ]
+      }
+    },
+    "Planner": {
+      "file": ".github/agents/planner.agent.md",
+      "portfolio_role": "kickoff-planning",
+      "orchestration_status": "kickoff-lane",
+      "current_tools": [
+        "read",
+        "search",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Approval-first planning needs portfolio visibility plus deliberate agent delegation, not direct implementation tools.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add deterministic plan persistence only if approved plans need replay or resume semantics across sessions.",
+            "reason": "Current kickoff planning is lightweight and can stay conversational until replay becomes a clear operational need."
+          }
+        ]
+      }
+    },
     "Supervisor": {
       "file": ".github/agents/supervisor.agent.md",
       "portfolio_role": "orchestrator",
@@ -656,6 +755,8 @@
     }
   },
   "skill_bindings": {
+    "Researcher": [],
+    "Planner": [],
     "Supervisor": [
       "monorepo-workspace-governance",
       "docs-sync"
@@ -760,6 +861,7 @@
       "upstreamResult",
       "retryCount",
       "recommendedNextAgents",
+      "kickoff",
       "lastUpdatedAt"
     ]
   },

@@ -1,5 +1,4 @@
 import path from 'path'
-import path from 'path'
 import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 
 import devConfig from './dev'

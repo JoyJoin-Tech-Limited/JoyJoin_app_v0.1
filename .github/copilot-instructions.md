@@ -21,7 +21,9 @@
 
 - The native agent orchestration contract lives in `.github/orchestration.yaml`.
 - Use `.github/ORCHESTRATION.md` for the human-readable graph, support-agent coverage, and tooling sufficiency audit.
+- For broad, ambiguous, or multi-step work, start with `Researcher` to gather verified context, then `Planner` to return an approval-first execution plan before implementation begins.
 - `Auto-Eval` remains the deterministic dirty-worktree gate. `Supervisor` is the manual routing surface across the core v1 agent graph.
+- Use `Supervisor` after approval or when work needs to be rerouted across specialists midstream.
 - Repo-managed local hooks live under `.githooks/`; contributors who want the local commit-time gate should set `git config core.hooksPath .githooks`.
 
 ## Pull Request Review Standard

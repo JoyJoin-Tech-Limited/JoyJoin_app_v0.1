@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +19,37 @@ import {
   type PricingPlan,
 } from "@shared/api";
 import { getCurrencySymbol } from "@/lib/currency";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SiWechat } from "react-icons/si";
+
+type CouponValidationResponse = {
+  valid: boolean;
+  message?: string;
+  discountAmount?: number;
+  finalAmount?: number;
+  coupon?: {
+    id: string;
+    code: string;
+    discountType?: string | null;
+    discountValue?: number | null;
+  } | null;
+};
+
+type BrowserPaymentCreateResponse = {
+  paymentRedirectUrl?: string | null;
+  paymentStatus?: "pending" | "completed";
+  payment?: {
+    wechatOrderId?: string;
+    h5Url?: string | null;
+    h5_url?: string | null;
+  } | null;
+};
+
+async function requestJson<T>(method: string, url: string, data?: unknown): Promise<T> {
+  const response = await apiRequest(method, url, data);
+  return response.json() as Promise<T>;
+}
 
 // Default fallback prices (used while loading or if API fails)
 const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (原价)
@@ -37,7 +64,7 @@ const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
 
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
-  const supportsCoupons = false;
+  const supportsCoupons = true;
   const supportsEventPacks = false;
   const [promoOpen, setPromoOpen] = useState(false);
   const [couponTab, setCouponTab] = useState("input");
@@ -119,10 +146,16 @@ export default function BlindBoxPaymentPage() {
     },
     initialData: { count: 0, availableCount: 0, coupons: [] }, // 让第一次渲染也稳定
   });
+  const selectableCoupons = (Array.isArray(availableCoupons?.coupons) ? availableCoupons.coupons : []).filter(
+    (coupon: any) => coupon?.status === "available",
+  );
+  const availableCouponCount = typeof availableCoupons?.availableCount === "number"
+    ? availableCoupons.availableCount
+    : selectableCoupons.length;
 
   
   // Check for first-time user welcome coupon (50% off)
-  const welcomeCoupon = availableCoupons.coupons?.find(
+  const welcomeCoupon = selectableCoupons.find(
     (c: any) => c.code?.startsWith('WELCOME50') && c.discountType === 'percentage' && c.discountValue === 50
   );
   const hasWelcomeCoupon = !!welcomeCoupon;
@@ -132,7 +165,7 @@ export default function BlindBoxPaymentPage() {
   const effectivePlan = !supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")
     ? "single"
     : selectedPlan;
-  const effectiveCoupon = supportsCoupons ? appliedCoupon : null;
+  const effectiveCoupon = supportsCoupons && effectivePlan === "single" ? appliedCoupon : null;
   
   // Get base price based on selected plan
   const getBasePrice = () => {
@@ -153,35 +186,81 @@ export default function BlindBoxPaymentPage() {
   // Check if plan is a VIP
   const isVIP = effectivePlan === "vip_monthly" || effectivePlan === "vip_quarterly";
 
-  const createEventMutation = useMutation({
-    mutationFn: async (eventData: any) => {
-      return await apiRequest("POST", "/api/blind-box-events", eventData);
-    },
-    onSuccess: () => {
-      // 立即刷新Event Tab数据
-      queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
-      // 刷新聊天页面数据（群聊列表）
-      queryClient.invalidateQueries({ queryKey: ["/api/events/joined"] });
-      // 清除临时数据
-      localStorage.removeItem("blindbox_event_data");
-      // 跳转到活动页面
-      setLocation("/events");
-    },
-    onError: (error) => {
-      toast({
-        title: "创建活动失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const finalizeEventPaymentSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/my-events'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/events/joined'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/my-pool-registrations'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    localStorage.removeItem("blindbox_event_data");
+    setLocation("/events");
+  };
+
+  const applyValidatedCoupon = (validation: CouponValidationResponse) => {
+    if (!validation.valid || !validation.coupon) {
+      return;
+    }
+
+    setAppliedCoupon(validation.coupon);
+    setDiscount(validation.discountAmount ?? 0);
+    setCouponCode(validation.coupon.code);
+    toast({
+      title: "优惠码已应用",
+      description: `节省 ${currencySymbol}${((validation.discountAmount ?? 0) / 100).toFixed(2)}`,
+    });
+    setPromoOpen(false);
+  };
 
   const handleValidateCoupon = async () => {
-    toast({
-      title: "优惠券暂未开放",
-      description: "当前支付页仅支持单次体验和活动礼包购买",
-      variant: "destructive",
-    });
+    if (!couponCode.trim()) {
+      toast({
+        title: "请输入优惠码",
+        description: "输入您的优惠码以获得折扣",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const eventDataStr = localStorage.getItem("blindbox_event_data");
+    if (!eventDataStr) {
+      toast({
+        title: "缺少活动信息",
+        description: "请先重新选择活动，再应用优惠码",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setValidatingCoupon(true);
+    try {
+      const validation = await requestJson<CouponValidationResponse>(
+        "POST",
+        "/api/coupons/validate",
+        {
+          code: couponCode.trim(),
+          paymentType: "event",
+          eventRegistrationPayload: JSON.parse(eventDataStr),
+        },
+      );
+
+      if (!validation.valid) {
+        toast({
+          title: "优惠码无效",
+          description: validation.message || "此优惠码不可用或已过期",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      applyValidatedCoupon(validation);
+    } catch (error: any) {
+      toast({
+        title: "验证失败",
+        description: error.message || "无法验证优惠码，请稍后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingCoupon(false);
+    }
   };
 
   const handleRemoveCoupon = () => {
@@ -195,27 +274,48 @@ export default function BlindBoxPaymentPage() {
   };
 
   const handleApplyCouponFromList = async (coupon: any) => {
-    setAppliedCoupon({
-      id: coupon.id,
-      code: coupon.code,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-    });
-    
-    // Calculate discount (只适用于单次票)
-    let discount = 0;
-    if (coupon.discountType === "fixed_amount") {
-      discount = Math.min(coupon.discountValue, SINGLE_PRICE);
-    } else if (coupon.discountType === "percentage") {
-      discount = Math.floor(SINGLE_PRICE * (coupon.discountValue / 100));
+    const eventDataStr = localStorage.getItem("blindbox_event_data");
+    if (!eventDataStr) {
+      toast({
+        title: "缺少活动信息",
+        description: "请先重新选择活动，再应用优惠码",
+        variant: "destructive",
+      });
+      return;
     }
-    setDiscount(discount);
-    
-    toast({
-      title: "优惠券已应用",
-      description: `节省 ${currencySymbol}${(discount / 100).toFixed(2)}`,
-    });
-    setPromoOpen(false);
+
+    setCouponCode(String(coupon?.code ?? ""));
+    setValidatingCoupon(true);
+    try {
+      const validation = await requestJson<CouponValidationResponse>(
+        "POST",
+        "/api/coupons/validate",
+        {
+          code: coupon.code,
+          paymentType: "event",
+          eventRegistrationPayload: JSON.parse(eventDataStr),
+        },
+      );
+
+      if (!validation.valid) {
+        toast({
+          title: "优惠码无效",
+          description: validation.message || "此优惠码不可用或已过期",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      applyValidatedCoupon(validation);
+    } catch (error: any) {
+      toast({
+        title: "验证失败",
+        description: error.message || "无法验证优惠码，请稍后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingCoupon(false);
+    }
   };
 
   const handlePayment = async () => {
@@ -290,22 +390,40 @@ export default function BlindBoxPaymentPage() {
         return;
       }
       
+      setIsProcessing(true);
       const eventData = JSON.parse(eventDataStr);
-      
-      if (effectiveCoupon) {
-        eventData.couponId = effectiveCoupon.id;
+      const result = await requestJson<BrowserPaymentCreateResponse>(
+        "POST",
+        "/api/payments/create",
+        {
+          paymentType: "event",
+          couponCode: effectiveCoupon?.code,
+          eventRegistrationPayload: eventData,
+        },
+      );
+
+      const launchUrl = getBrowserPaymentLaunchUrl(result);
+      if (launchUrl) {
+        window.location.assign(launchUrl);
+        return;
       }
-      
-      await createEventMutation.mutateAsync(eventData);
+
+      if (result?.paymentStatus === "pending") {
+        throw new Error("未收到支付跳转链接，请稍后重试");
+      }
+
+      toast({
+        title: "报名成功！",
+        description: "你已进入匹配队列，稍后可在活动页查看进度",
+      });
+      finalizeEventPaymentSuccess();
     } catch (error: any) {
       console.error("Payment error:", error);
-      if (isVIP) {
-        toast({
-          title: "发起支付失败",
-          description: error instanceof Error ? error.message : "请稍后重试",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: isVIP ? "发起支付失败" : "报名失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive",
+      });
       setIsProcessing(false);
     }
   };
@@ -726,18 +844,18 @@ export default function BlindBoxPaymentPage() {
                   <div className="flex items-center gap-2">
                     <Ticket className="h-4 w-4 text-purple-600" />
                     <span className="font-medium">
-                      优惠码 {availableCoupons.count > 0 && `· ${availableCoupons.count}张优惠券`}
+                      优惠码 {availableCouponCount > 0 && `· ${availableCouponCount}张优惠券`}
                     </span>
                   </div>
                   <ChevronDown className={`h-5 w-5 transition-transform ${promoOpen ? 'rotate-180' : ''}`} />
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <Tabs defaultValue={availableCoupons.count > 0 ? "my-coupons" : "input"} value={couponTab} onValueChange={setCouponTab} className="p-3 pt-0">
+                <Tabs defaultValue={availableCouponCount > 0 ? "my-coupons" : "input"} value={couponTab} onValueChange={setCouponTab} className="p-3 pt-0">
                   <TabsList className="grid w-full grid-cols-2 mb-3">
                     <TabsTrigger value="input">手动输入</TabsTrigger>
-                    <TabsTrigger value="my-coupons" disabled={availableCoupons.count === 0}>
-                      我的优惠券 {availableCoupons.count > 0 && `(${availableCoupons.count})`}
+                    <TabsTrigger value="my-coupons" disabled={availableCouponCount === 0}>
+                      我的优惠券 {availableCouponCount > 0 && `(${availableCouponCount})`}
                     </TabsTrigger>
                   </TabsList>
 
@@ -777,13 +895,13 @@ export default function BlindBoxPaymentPage() {
                   <TabsContent value="my-coupons" className="space-y-2">
                     {loadingCoupons ? (
                       <div className="py-4 text-center text-muted-foreground">加载中...</div>
-                    ) : availableCoupons.count === 0 ? (
+                    ) : availableCouponCount === 0 ? (
                       <div className="py-4 text-center text-muted-foreground text-sm">
                         暂无可用优惠券
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {availableCoupons.coupons.map((coupon: any) => (
+                        {selectableCoupons.map((coupon: any) => (
                           <motion.div
                             key={coupon.id}
                             whileHover={{ scale: 1.01 }}
@@ -889,10 +1007,10 @@ export default function BlindBoxPaymentPage() {
                 size="lg"
                 className="w-full text-lg font-bold shadow-lg bg-[#07C160]"
                 onClick={handlePayment}
-                disabled={createEventMutation.isPending || isProcessing}
+                disabled={isProcessing}
                 data-testid="button-pay"
               >
-                {(createEventMutation.isPending || isProcessing) ? (
+                {isProcessing ? (
                   <>
                     <Loader className="h-5 w-5 mr-2 animate-spin" />
                     处理中...

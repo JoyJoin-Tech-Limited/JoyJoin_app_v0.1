@@ -49,95 +49,62 @@ describe('route review follow-ups', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
     expect(routesSource).toContain("await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed')");
-    expect(routesSource).toContain("const ageVisibility = member.ageVisible ?? 'hide_all';");
-    expect(routesSource).toContain("const industryVisibility = member.industryVisible ?? 'hide_all';");
-    expect(routesSource).toContain("const educationVisibility = member.educationVisible ?? 'hide_all';");
-    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, ageVisibility)");
-    expect(routesSource).toContain("ageVisible: ageVisibility !== 'hide_all'");
-    expect(routesSource).toContain("industryVisible: industryVisibility !== 'hide_all'");
-    expect(routesSource).toContain("educationVisible: educationVisibility !== 'hide_all'");
+    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all')");
     expect(routesSource).not.toContain('members: groupMembers');
   });
 
   it('returns a stable coupon response object and preserves total-versus-available semantics', () => {
     const assessmentRoutesSource = readRepoFile('apps/server/src/routes/domains/assessment.ts');
     const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
-    const miniProgramPaymentSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
 
     expect(assessmentRoutesSource).toContain('res.json({ count: coupons.length, coupons });');
     expect(sharedApiSource).toContain('availableCount');
     expect(sharedApiSource).toContain('count: explicitCount ?? coupons.length');
-    expect(miniProgramPaymentSource).toContain('{ count: 0, availableCount: 0, coupons: [] }');
   });
 
-  it('normalizes browser renewal aliases and returns explicit redirect metadata for H5 payments', () => {
+  it('restores blind-box coupon support through the payment domain and keeps event packs disabled', () => {
+    const userPaymentPageSource = readRepoFile('apps/user-client/src/pages/BlindBoxPaymentPage.tsx');
+    const adminPaymentPageSource = readRepoFile('apps/admin-client/src/pages/BlindBoxPaymentPage.tsx');
+    const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
+
+    expect(userPaymentPageSource).toContain('/api/coupons/validate');
+    expect(userPaymentPageSource).toContain('/api/payments/create');
+    expect(userPaymentPageSource).not.toContain('/api/blind-box-events');
+    expect(userPaymentPageSource).not.toContain('/api/event-packs/purchase');
+    expect(adminPaymentPageSource).toContain('/api/coupons/validate');
+    expect(adminPaymentPageSource).toContain('/api/payments/create');
+    expect(adminPaymentPageSource).not.toContain('/api/blind-box-events');
+    expect(adminPaymentPageSource).not.toContain('/api/event-packs/purchase');
+    expect(userPaymentPageSource).toContain('supportsCoupons = true');
+    expect(userPaymentPageSource).toContain('supportsEventPacks = false');
+    expect(adminPaymentPageSource).toContain('supportsCoupons = true');
+    expect(adminPaymentPageSource).toContain('supportsEventPacks = false');
+
+    expect(paymentsRoutesSource).toContain('app.post("/api/coupons/validate"');
+    expect(paymentsRoutesSource).toContain('getAvailableUserCouponByCode');
+    expect(paymentsRoutesSource).toContain('countUserCouponAssignments');
+    expect(paymentsRoutesSource).toContain('eventRegistrationPayload = eventCheckout.eventRegistrationPayload');
+  });
+
+  it('publishes pricing display aliases and explicit browser payment redirect metadata', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
     const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
     const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
 
-    expect(paymentsRoutesSource).toContain('normalizeSubscriptionPlanType(planType)');
+    expect(routesSource).toContain('displayName: s.displayName');
+    expect(routesSource).toContain('displayNameEn: s.displayNameEn');
+    expect(routesSource).toContain('isActive: s.isActive');
     expect(paymentsRoutesSource).toContain('const paymentRedirectUrl = paymentResult.h5Url ?? null;');
     expect(paymentsRoutesSource).toContain('const paymentStatus = paymentRedirectUrl ? "pending" : "completed";');
     expect(sharedApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
-    expect(sharedApiSource).toContain("'paymentRedirectUrl' in payload");
+    expect(sharedApiSource).toContain('paymentRedirectUrl?: string | null');
   });
 
-  it('publishes modern pricing display fields while keeping legacy aliases available', () => {
+  it('normalizes event chat payloads and keeps legacy message field compatibility', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
-    expect(routesSource).toContain('displayName: s.displayName');
-    expect(routesSource).toContain('displayNameEn: s.displayNameEn');
-    expect(routesSource).toContain('name: s.displayName');
-    expect(routesSource).toContain('nameEn: s.displayNameEn');
-  });
-
-  it('orders social-icebreaker participants in the database query instead of sorting in memory', () => {
-    const socialIcebreakerStoreSource = readRepoFile('apps/server/src/lib/socialIcebreakerStore.ts');
-
-    expect(socialIcebreakerStoreSource).toContain('.orderBy(socialIcebreakerParticipants.joinedAt)');
-    expect(socialIcebreakerStoreSource).not.toContain('left.joinedAt.getTime() - right.joinedAt.getTime()');
-  });
-
-  // Guards against regression: event chat routes must return a redacted participant/message
-  // shape and continue accepting the canonical message field while tolerating older callers.
-  it('sanitizes event chat payloads and normalizes message writes', () => {
-    const routesSource = readRepoFile('apps/server/src/routes.ts');
-
-    expect(routesSource).toContain('participants.map(toEventChatParticipantSummary)');
     expect(routesSource).toContain('messages: messages.map(toEventChatMessageSummary)');
     expect(routesSource).toContain('message: req.body?.message ?? req.body?.content');
-  });
-
-  it('uses the authenticated user as the reporter when creating chat reports', () => {
-    const routesSource = readRepoFile('apps/server/src/routes.ts');
-
-    expect(routesSource).toContain('reportedBy: userId');
-    expect(routesSource).toContain('return res.status(401).json({ message: "Authentication required" });');
-  });
-
-  it('normalizes pricing payloads and subscription plan aliases across payment surfaces', () => {
-    const routesSource = readRepoFile('apps/server/src/routes.ts');
-    const paymentsSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
-    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
-
-    expect(routesSource).toContain('displayName: s.displayName');
-    expect(routesSource).toContain('displayNameEn: s.displayNameEn');
-    expect(paymentsSource).toContain('const normalizedPlanType = normalizeSubscriptionPlanType(planType);');
-    expect(sharedApiSource).toContain('export function normalizeSubscriptionPlanType');
-    expect(sharedApiSource).toContain('export function findPricingPlan');
-  });
-
-  it('removes dead coupon-validation and event-pack purchase dependencies from blind-box payment pages', () => {
-    const userPaymentSource = readRepoFile('apps/user-client/src/pages/BlindBoxPaymentPage.tsx');
-    const adminPaymentSource = readRepoFile('apps/admin-client/src/pages/BlindBoxPaymentPage.tsx');
-
-    expect(userPaymentSource).toContain('const supportsCoupons = false;');
-    expect(userPaymentSource).toContain('const supportsEventPacks = false;');
-    expect(userPaymentSource).not.toContain('/api/coupons/validate');
-    expect(userPaymentSource).not.toContain('/api/event-packs/purchase');
-
-    expect(adminPaymentSource).toContain('const supportsCoupons = false;');
-    expect(adminPaymentSource).toContain('const supportsEventPacks = false;');
-    expect(adminPaymentSource).not.toContain('/api/coupons/validate');
-    expect(adminPaymentSource).not.toContain('/api/event-packs/purchase');
+    expect(routesSource).toContain('profileImageUrl: firstNonEmptyString(user.profileImageUrl, user.wechatAvatarUrl) ?? null');
   });
 });

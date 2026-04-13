@@ -14,6 +14,10 @@ const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 const STEP_TYPES = new Set(['shell', 'advisory-agent', 'log']);
 const TOOLING_STATUSES = new Set(['sufficient', 'partial', 'legacy', 'needs-extension']);
 
+function runtimeWritesDisabled() {
+  return process.env.ORCHESTRATION_DISABLE_RUNTIME_WRITES === '1';
+}
+
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -168,6 +172,36 @@ function validateStep(step, location, agentBindings, errors) {
   }
 }
 
+function validateKickoffLane(kickoffLane, location, agentNames, errors) {
+  if (!isPlainObject(kickoffLane)) {
+    errors.push(`${location} must be an object.`);
+    return;
+  }
+
+  validateStringArray(kickoffLane.entry_agents, `${location}.entry_agents`, errors);
+  requireString(kickoffLane, 'approval_mode', location, errors);
+
+  if (typeof kickoffLane.recommend_on_first_broad_prompt !== 'boolean') {
+    errors.push(`${location}.recommend_on_first_broad_prompt must be a boolean.`);
+  }
+
+  if (!isPlainObject(kickoffLane.broad_prompt_signals)) {
+    errors.push(`${location}.broad_prompt_signals must be an object.`);
+  } else {
+    if (!Number.isInteger(kickoffLane.broad_prompt_signals.min_words) || kickoffLane.broad_prompt_signals.min_words < 1) {
+      errors.push(`${location}.broad_prompt_signals.min_words must be an integer >= 1.`);
+    }
+    validateStringArray(kickoffLane.broad_prompt_signals.verbs, `${location}.broad_prompt_signals.verbs`, errors);
+    validateStringArray(kickoffLane.broad_prompt_signals.scope_terms, `${location}.broad_prompt_signals.scope_terms`, errors);
+  }
+
+  for (const agentName of kickoffLane.entry_agents ?? []) {
+    if (!agentNames.has(agentName)) {
+      errors.push(`${location}.entry_agents references unknown agent ${agentName}.`);
+    }
+  }
+}
+
 export function validateOrchestrationManifest(manifest) {
   const errors = [];
   const warnings = [];
@@ -236,10 +270,11 @@ export function validateOrchestrationManifest(manifest) {
 
   const portfolioScope = manifest.portfolio_scope;
   if (isPlainObject(portfolioScope)) {
+    validateStringArray(portfolioScope.kickoff_agents, 'portfolio_scope.kickoff_agents', errors);
     validateStringArray(portfolioScope.orchestrated_agents, 'portfolio_scope.orchestrated_agents', errors);
     validateStringArray(portfolioScope.audited_agents, 'portfolio_scope.audited_agents', errors);
 
-    for (const groupName of ['orchestrated_agents', 'audited_agents']) {
+    for (const groupName of ['kickoff_agents', 'orchestrated_agents', 'audited_agents']) {
       const group = Array.isArray(portfolioScope[groupName]) ? portfolioScope[groupName] : [];
       for (const agentName of group) {
         if (!agentNames.has(agentName)) {
@@ -301,6 +336,7 @@ export function validateOrchestrationManifest(manifest) {
     } else {
       validateStringArray(copilotHooks.orchestration.runtime_events, 'copilot_hooks.orchestration.runtime_events', errors);
       requireString(copilotHooks.orchestration, 'session_start_message', 'copilot_hooks.orchestration', errors);
+      validateKickoffLane(copilotHooks.orchestration.kickoff_lane, 'copilot_hooks.orchestration.kickoff_lane', agentNames, errors);
     }
   }
 
@@ -386,6 +422,10 @@ export function ensureRuntimeDirectory(repoRoot) {
 }
 
 export function loadRuntimeContext(repoRoot) {
+  if (runtimeWritesDisabled()) {
+    return {};
+  }
+
   const contextPath = path.join(repoRoot, RUNTIME_CONTEXT_RELATIVE_PATH);
 
   if (!fs.existsSync(contextPath)) {
@@ -400,12 +440,20 @@ export function loadRuntimeContext(repoRoot) {
 }
 
 export function writeRuntimeContext(repoRoot, context) {
+  if (runtimeWritesDisabled()) {
+    return;
+  }
+
   ensureRuntimeDirectory(repoRoot);
   const contextPath = path.join(repoRoot, RUNTIME_CONTEXT_RELATIVE_PATH);
   fs.writeFileSync(contextPath, `${JSON.stringify(context, null, 2)}\n`, 'utf8');
 }
 
 export function appendOrchestrationLog(repoRoot, entry) {
+  if (runtimeWritesDisabled()) {
+    return;
+  }
+
   ensureRuntimeDirectory(repoRoot);
   const logPath = path.join(repoRoot, RUNTIME_EVENT_LOG_RELATIVE_PATH);
   fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`, 'utf8');

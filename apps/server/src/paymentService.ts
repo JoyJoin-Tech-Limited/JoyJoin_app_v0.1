@@ -58,6 +58,7 @@ export interface CreatePaymentParams {
   relatedId: string; // subscription ID or event ID
   originalAmount: number; // in cents (¥98 = 9800)
   couponId?: string;
+  eventRegistrationPayload?: unknown;
   applyLevelDiscount?: boolean; // Whether to apply user's level discount
   clientIp?: string;
 }
@@ -533,6 +534,7 @@ export class PaymentService {
       relatedId,
       originalAmount,
       couponId,
+      eventRegistrationPayload,
       applyLevelDiscount = true,
     } = params;
 
@@ -556,6 +558,7 @@ export class PaymentService {
       discountAmount: totalDiscountAmount,
       finalAmount,
       couponId,
+      eventRegistrationPayload,
       wechatOrderId,
       status: "pending",
     });
@@ -596,19 +599,27 @@ export class PaymentService {
     }
 
     const coupon = await paymentsRepo.getCoupon(couponId);
-    if (!coupon || !coupon.isActive) {
+    const isActive = Boolean(coupon?.isActive ?? coupon?.is_active);
+    if (!coupon || !isActive) {
       return { levelDiscountAmount, couponDiscountAmount };
     }
 
     const now = new Date();
-    const validFrom = new Date(coupon.validFrom);
-    const validUntil = coupon.validUntil ? new Date(coupon.validUntil) : null;
+    const validFromValue = coupon.validFrom ?? coupon.valid_from;
+    const validUntilValue = coupon.validUntil ?? coupon.valid_until;
+    const validFrom = new Date(validFromValue);
+    const validUntil = validUntilValue ? new Date(validUntilValue) : null;
     // TODO(payment-storage-normalization): remove the legacy maxUses/currentUses
     // fallback once the storage layer consistently returns usageLimit/usedCount.
-    const usageLimit = coupon.maxUses ?? coupon.usageLimit ?? null;
-    const currentUses = coupon.currentUses ?? coupon.usedCount ?? 0;
+    const usageLimit = coupon.maxUses ?? coupon.usageLimit ?? coupon.usage_limit ?? null;
+    const currentUses = coupon.currentUses ?? coupon.usedCount ?? coupon.used_count ?? 0;
+    const minPurchase = coupon.minPurchase ?? coupon.min_purchase ?? 0;
 
     if (now < validFrom || (validUntil && now > validUntil)) {
+      return { levelDiscountAmount, couponDiscountAmount };
+    }
+
+    if (Number(minPurchase) > 0 && originalAmount < Number(minPurchase)) {
       return { levelDiscountAmount, couponDiscountAmount };
     }
 
@@ -616,10 +627,13 @@ export class PaymentService {
       return { levelDiscountAmount, couponDiscountAmount };
     }
 
-    if (coupon.discountType === "fixed_amount") {
-      couponDiscountAmount = coupon.discountValue;
-    } else if (coupon.discountType === "percentage") {
-      couponDiscountAmount = Math.floor(amountAfterLevelDiscount * (coupon.discountValue / 100));
+    const discountType = coupon.discountType ?? coupon.discount_type;
+    const discountValue = Number(coupon.discountValue ?? coupon.discount_value ?? 0);
+
+    if (discountType === "fixed_amount") {
+      couponDiscountAmount = discountValue;
+    } else if (discountType === "percentage") {
+      couponDiscountAmount = Math.floor(amountAfterLevelDiscount * (discountValue / 100));
     }
 
     return { levelDiscountAmount, couponDiscountAmount };

@@ -5,12 +5,12 @@ tools: [read, search, edit, execute]
 argument-hint: "Describe the AI-backed feature, server files involved, provider or routing requirements, fallback expectations, validation needs, and any upstream product or orchestration context."
 agents: []
 handoffs:
-	- label: "Verify AI-backed change"
-		agent: "QA Agent"
-		prompt: "Focus verification on fallback behavior, runtime traces, and deterministic authority boundaries around the AI path."
-	- label: "Assess AI launch risk"
-		agent: "Launch Readiness Agent"
-		prompt: "Review whether the AI-backed change is operationally ready for rollout, including observability and fallback behavior."
+  - label: "Verify AI-backed change"
+    agent: "QA Agent"
+    prompt: "Focus verification on fallback behavior, runtime traces, and deterministic authority boundaries around the AI path."
+  - label: "Assess AI launch risk"
+    agent: "Launch Readiness Agent"
+    prompt: "Review whether the AI-backed change is operationally ready for rollout, including observability and fallback behavior."
 ---
 
 You are an AI Engineer for JoyJoin's server-side AI runtime.

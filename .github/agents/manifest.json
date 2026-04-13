@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-11",
+  "updated": "2026-04-13",
   "orchestrationContract": "../orchestration.yaml",
   "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
@@ -73,17 +73,76 @@
       "toolingStatus": "sufficient"
     },
     {
+      "name": "Researcher",
+      "file": "researcher.agent.md",
+      "description": "Use when starting a broad request, gathering repo context before planning, searching the codebase and docs, comparing internal patterns with external references, or preparing a structured research brief for execution planning. Trigger phrases: research this first, gather context, inspect the codebase, find relevant files, look up docs, research before coding.",
+      "tools": [
+        "read",
+        "search",
+        "web"
+      ],
+      "argumentHint": "Describe the user request, any relevant files or workspaces, and whether external documentation is needed in addition to repo research.",
+      "subagents": [],
+      "portfolioRole": "kickoff-research",
+      "orchestrationPhase": "kickoff",
+      "handoffs": [
+        "Planner"
+      ],
+      "skills": [],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Planner",
+      "file": "planner.agent.md",
+      "description": "Use when converting a research brief or broad request into an approval-first execution plan, sequencing existing JoyJoin agents, deciding which specialist should run next, or structuring a multi-step workflow before coding starts. Trigger phrases: plan this work, create an execution plan, decide which agent to use, sequence the agents, plan before implementation.",
+      "tools": [
+        "read",
+        "search",
+        "agent"
+      ],
+      "argumentHint": "Describe the user goal, include the current findings or research brief, and say whether you want a plan only or an approved handoff to the first specialist.",
+      "subagents": [
+        "Researcher",
+        "Supervisor",
+        "Auto-Eval",
+        "Product Manager",
+        "Backend Engineer",
+        "AI Engineer",
+        "QA Agent",
+        "Launch Readiness Agent",
+        "Admin Operations Advisor",
+        "Database Schema & Migration Auditor",
+        "Mini-Program Parity Auditor",
+        "Taro Mini-Program Frontend Engineer",
+        "Taro Migration Specialist",
+        "Expert React Frontend Engineer",
+        "debug",
+        "principal SWE",
+        "SE: Product Manager",
+        "prompt engineer"
+      ],
+      "portfolioRole": "kickoff-planning",
+      "orchestrationPhase": "kickoff",
+      "handoffs": [
+        "Supervisor"
+      ],
+      "skills": [],
+      "toolingStatus": "sufficient"
+    },
+    {
       "name": "Supervisor",
       "file": "supervisor.agent.md",
-      "description": "Use when coordinating multi-agent work across Auto-Eval, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, multi-agent workflow, coordinate these agents, supervisor.",
+      "description": "Use when coordinating multi-agent work across kickoff research and planning, Auto-Eval, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, multi-agent workflow, coordinate these agents, supervisor.",
       "tools": [
         "read",
         "search",
         "execute",
         "agent"
       ],
-      "argumentHint": "Describe the workflow goal, current blocker or finding, changed files, and any upstream agent result or auto-eval fingerprint that should guide routing.",
+      "argumentHint": "Describe the workflow goal, current blocker or finding, changed files, and any upstream research brief, execution plan, or auto-eval fingerprint that should guide routing.",
       "subagents": [
+        "Researcher",
+        "Planner",
         "Auto-Eval",
         "Product Manager",
         "Backend Engineer",

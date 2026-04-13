@@ -32,8 +32,11 @@ function createTxHarness(options: {
   const updateResults = [...(options.updateResults ?? [])];
   const insertResults = [...(options.insertResults ?? [])];
 
-  const insertMock = vi.fn(() => ({
-    values: vi.fn(() => {
+  const insertValuesCalls: any[] = [];
+
+  const insertMock = vi.fn((table) => ({
+    values: vi.fn((values) => {
+      insertValuesCalls.push({ table, values });
       const directInsertResult = insertResults.shift() ?? [];
       return {
         onConflictDoNothing: vi.fn(() => ({
@@ -68,7 +71,7 @@ function createTxHarness(options: {
     insert: insertMock,
   };
 
-  return { tx, insertMock };
+  return { tx, insertMock, insertValuesCalls };
 }
 
 describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
@@ -132,6 +135,14 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
       relatedId: "pool-1",
       couponId: "coupon-1",
       discountAmount: 300,
+      eventRegistrationPayload: {
+        budgetRange: ["150-200"],
+        preferredLanguages: ["普通话"],
+        tasteIntensity: ["清淡"],
+        cuisinePreferences: ["粤菜"],
+        eventIntent: ["交朋友"],
+        dietaryRestrictions: ["不吃辣"],
+      },
     };
     const completedEventPayment = {
       ...eventPayment,
@@ -139,13 +150,15 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
       paidAt: new Date(),
       wechatTransactionId: "wx_txn_003",
     };
-    const { tx, insertMock } = createTxHarness({
+    const { tx, insertMock, insertValuesCalls } = createTxHarness({
       selectResults: [
         [eventPayment],
+        [{ id: "user-coupon-1" }],
         [{ id: "pool-1" }],
       ],
       updateResults: [
         [completedEventPayment],
+        [],
         [],
         [],
       ],
@@ -167,6 +180,14 @@ describe("paymentFulfillmentRepo.finalizeConfirmedPayment", () => {
     expect(result.alreadyCompleted).toBe(false);
     expect(result.payment?.status).toBe("completed");
     expect(insertMock).toHaveBeenCalledTimes(3);
-    expect(tx.update).toHaveBeenCalledTimes(3);
+    expect(tx.update).toHaveBeenCalledTimes(4);
+    expect(
+      insertValuesCalls.some(({ values }) =>
+        values?.poolId === "pool-1" &&
+        values?.budgetRange?.[0] === "150-200" &&
+        values?.preferredLanguages?.[0] === "普通话" &&
+        values?.eventIntent?.[0] === "交朋友",
+      ),
+    ).toBe(true);
   });
 });
