@@ -13,7 +13,6 @@
     "prepare": "husky",
     "new": "taro new",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "typecheck:config": "tsc -p tsconfig.config.json --noEmit",
     "build:weapp": "taro build --type weapp",
     "build:swan": "taro build --type swan",
     "build:alipay": "taro build --type alipay",

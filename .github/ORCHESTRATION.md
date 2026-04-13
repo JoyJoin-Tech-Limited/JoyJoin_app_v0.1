@@ -6,6 +6,13 @@ The machine-readable source of truth is `.github/orchestration.yaml`. This guide
 
 ## Scope
 
+Broad sessions now have a kickoff lane before the core handoff graph:
+
+- `Researcher`
+- `Planner`
+
+Those kickoff agents gather verified repo context and turn it into an approval-first plan. They do not replace `Supervisor`, which remains the manual routing surface once execution is approved or when work needs midstream rerouting.
+
 The v1 native handoff graph is intentionally narrow:
 
 - `Supervisor`
@@ -48,6 +55,16 @@ npm run orchestration:validate
 npm run orchestration:tooling-report
 node scripts/orchestration-supervisor.mjs workflow pull-request
 ```
+
+## Session kickoff flow
+
+- `SessionStart` initializes the orchestration runtime and writes default kickoff state under `.git/.orchestration/context.json`.
+- `UserPromptSubmit` inspects the first broad prompt and recommends `Researcher` -> `Planner` when the request is multi-step, ambiguous, or cross-cutting.
+- `Researcher` returns a structured research brief.
+- `Planner` turns that brief into an approval-first execution plan.
+- After approval, `Supervisor` or the named specialist carries execution forward.
+
+This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and state, while agent delegation remains explicit.
 
 ## Core handoff graph
 
@@ -102,6 +119,8 @@ Useful audited support bindings:
 
 | Agent | Status | Notes | Recommended extension when needed |
 |-------|--------|-------|-----------------------------------|
+| `Researcher` | `sufficient` | Read, search, and web access are enough for repo-grounded kickoff research. | Add targeted MCP integrations only if external knowledge sources become deterministic dependencies. |
+| `Planner` | `sufficient` | Read, search, and agent delegation are enough for approval-first planning. | Add deterministic plan persistence only if approved plans need stronger replay guarantees. |
 | `Supervisor` | `sufficient` | Read, search, execute, and subagent delegation are enough for routing. | Add direct edit only if the supervisor is intentionally allowed to patch files itself. |
 | `Auto-Eval` | `sufficient` | Deterministic evaluation only needs read, search, and execute. | None required. |
 | `Product Manager` | `sufficient` | Repo artifact drafting is covered by read, search, and edit. | Add GitHub issue write integration only if issue authoring moves here. |
@@ -123,6 +142,7 @@ Useful audited support bindings:
 ## Validation expectations
 
 - `npm run orchestration:validate` should pass after orchestration changes.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
 - `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.

@@ -202,6 +202,37 @@ describe("PaymentService", () => {
     });
   });
 
+  it("persists event registration payloads when creating event payments", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(JSON.stringify({ h5_url: "https://wx.tenpay.com/pay/mock-event" })),
+    } as any);
+
+    const eventRegistrationPayload = {
+      poolId: "pool-1",
+      budgetRange: ["150-200"],
+      preferredLanguages: ["普通话"],
+      eventIntent: ["交朋友"],
+    };
+
+    const service = new PaymentService();
+    await service.createPayment({
+      userId: "user-1",
+      paymentType: "event",
+      relatedId: "pool-1",
+      originalAmount: 8800,
+      eventRegistrationPayload,
+    });
+
+    expect(paymentsRepo.createPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentType: "event",
+        relatedId: "pool-1",
+        eventRegistrationPayload,
+      }),
+    );
+  });
+
   it("verifies webhook signatures, decrypts transactions, and marks payments completed", async () => {
     payments.push({
       id: "payment-1",

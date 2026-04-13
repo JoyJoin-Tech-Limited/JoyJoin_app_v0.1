@@ -32,7 +32,7 @@ const activeLegacyGuardFiles = [
 
 const requiredRootScripts = {
   check: 'npm run typecheck',
-  'check:clients': 'npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client && npm run typecheck:config -w mini-program',
+  'check:clients': 'npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w mini-program',
   'check:server': 'npm run typecheck -w @joyjoin/server',
   'check:full': 'npm run guardrails && npm run lint && npm run test && npm run build',
   'set-admin': 'npm run admin:create',

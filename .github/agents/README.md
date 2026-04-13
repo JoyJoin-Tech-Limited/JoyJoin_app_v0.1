@@ -6,9 +6,20 @@ These agents are the orchestration layer that sits above the repo's reusable ski
 
 ## How to use these agents
 
-**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad engineering work, use a generalist agent. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
+**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
 
 **Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the invocation name, and the `description` is the routing surface.
+
+---
+
+## Session kickoff agents
+
+These agents sit ahead of the core handoff graph. Use them at the start of broad requests to gather context and turn it into an approval-first plan before handing work to the core implementation agents.
+
+| Agent | Portfolio role | Primary use | File |
+|-------|----------------|-------------|------|
+| `Researcher` | Kickoff research | Gathers relevant files, verified repo context, external references, and open ambiguities before planning | [`researcher.agent.md`](./researcher.agent.md) |
+| `Planner` | Kickoff planning | Converts the research brief into an approval-first execution plan using the active JoyJoin agent portfolio | [`planner.agent.md`](./planner.agent.md) |
 
 ---
 

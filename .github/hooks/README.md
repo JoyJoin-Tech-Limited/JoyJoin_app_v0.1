@@ -7,13 +7,14 @@ This workspace uses hooks for deterministic auto-eval enforcement and for lightw
 - `SessionStart` runs `node scripts/auto-eval-hook.mjs session-start`
 - `PreToolUse` runs `node scripts/auto-eval-hook.mjs pre-tool-use`
 - `SessionStart` also runs `node scripts/orchestration-supervisor.mjs copilot-hook session-start`
+- `UserPromptSubmit` runs `node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit`
 - `PostToolUse` runs `node scripts/orchestration-supervisor.mjs copilot-hook post-tool-use`
 
 ## What they do
 
 - `SessionStart` checks whether the git worktree is dirty. If it is, it runs the fast auto-eval path and reports the result in a system message.
 - `PreToolUse` only guards edit and execute style tools. It denies those tools when the current dirty-worktree fingerprint has not passed auto-eval.
-- The orchestration hook keeps a runtime context file under `.git/.orchestration/context.json` and appends non-blocking event logs under `.git/.orchestration/events.jsonl`.
+- The orchestration hook keeps a runtime context file under `.git/.orchestration/context.json`, appends non-blocking event logs under `.git/.orchestration/events.jsonl`, and recommends the `Researcher` -> `Planner` kickoff path for broad prompts.
 - Read and search style tools remain allowed so investigation is still possible.
 - Auto-Eval self-check commands are exempt, so contributors can always rerun the evaluator manually.
 
@@ -25,6 +26,7 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 - `scripts/auto-eval-hook.mjs` translates evaluator results into the hook input and output contract.
 - `scripts/orchestration-supervisor.mjs` is the runtime entrypoint for Copilot hooks, local git hooks, and the GitHub orchestration workflow.
 - `.github/orchestration.yaml` is the machine-readable contract for orchestrated agents, support agents, skill bindings, and tooling sufficiency notes.
+- `.github/agents/researcher.agent.md` and `.github/agents/planner.agent.md` define the approval-first kickoff lane that the orchestration hook recommends.
 
 ## Pass cache
 
@@ -53,4 +55,4 @@ node scripts/auto-eval.mjs --mode manual-report
 
 You can also invoke the `Auto-Eval` custom agent from the workspace agent picker.
 
-For broader multi-agent routing, use the `Supervisor` custom agent and see `.github/ORCHESTRATION.md` for the current graph, support-agent audit, and tooling recommendations.
+For broader multi-agent routing, start with `Researcher` and `Planner` for broad tasks, then use the `Supervisor` custom agent for explicit downstream routing. See `.github/ORCHESTRATION.md` for the current kickoff flow, graph, support-agent audit, and tooling recommendations.

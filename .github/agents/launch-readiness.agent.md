@@ -5,12 +5,12 @@ tools: [read, search, execute]
 argument-hint: "Describe the launch scope, target environment, affected workflows, current concerns, whether you need a blocker review, risk summary, or go-no-go checklist, and any upstream QA or implementation context."
 agents: []
 handoffs:
-	- label: "Run final local sign-off"
-		agent: "Auto-Eval"
-		prompt: "Use Auto-Eval for the final dirty-worktree sign-off after broader launch blockers are resolved."
-	- label: "Route blocker remediation"
-		agent: "Supervisor"
-		prompt: "Use Supervisor to route the next remediation step based on the current blockers, affected surfaces, and required specialists."
+  - label: "Run final local sign-off"
+    agent: "Auto-Eval"
+    prompt: "Use Auto-Eval for the final dirty-worktree sign-off after broader launch blockers are resolved."
+  - label: "Route blocker remediation"
+    agent: "Supervisor"
+    prompt: "Use Supervisor to route the next remediation step based on the current blockers, affected surfaces, and required specialists."
 ---
 
 You are a Launch Readiness Agent for JoyJoin.

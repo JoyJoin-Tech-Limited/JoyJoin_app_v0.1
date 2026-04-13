@@ -7,6 +7,13 @@
         "timeout": 90
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit",
+        "timeout": 90
+      }
+    ],
     "PostToolUse": [
       {
         "type": "command",

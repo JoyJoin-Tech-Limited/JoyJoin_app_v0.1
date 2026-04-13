@@ -5,12 +5,12 @@ tools: [read, search, execute]
 argument-hint: "Describe the feature or change, affected flows, current risks, environments available, whether you need a checklist, test plan, or execution summary, and any upstream implementation context."
 agents: []
 handoffs:
-	- label: "Escalate release blockers"
-		agent: "Launch Readiness Agent"
-		prompt: "Summarize the verification status, residual risks, and blockers that matter for launch readiness."
-	- label: "Re-run the dirty-worktree gate"
-		agent: "Auto-Eval"
-		prompt: "Evaluate the current fingerprint after QA follow-ups and report whether the local quality gate now passes."
+  - label: "Escalate release blockers"
+    agent: "Launch Readiness Agent"
+    prompt: "Summarize the verification status, residual risks, and blockers that matter for launch readiness."
+  - label: "Re-run the dirty-worktree gate"
+    agent: "Auto-Eval"
+    prompt: "Evaluate the current fingerprint after QA follow-ups and report whether the local quality gate now passes."
 ---
 
 You are a QA Agent for JoyJoin.

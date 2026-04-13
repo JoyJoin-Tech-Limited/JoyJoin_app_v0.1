@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   getBrowserPaymentLaunchUrl,
+  getMyBlindBoxEvents,
+  getNotificationCounts,
   getPricing,
   getUserCoupons,
+  markNotificationsAsRead,
   normalizeSubscriptionPlanType,
   type ApiTransport,
-} from '@joyjoin/shared/api';
+} from '@shared/api';
 
 describe('shared API coupon normalization', () => {
   it('preserves total count while deriving availableCount from coupon statuses', async () => {
@@ -40,7 +43,7 @@ describe('shared API coupon normalization', () => {
     ]);
   });
 
-  it('normalizes mixed pricing payloads and drops malformed rows', async () => {
+  it('normalizes mixed pricing payloads and filters malformed rows', async () => {
     const apiMock = vi.fn().mockResolvedValue([
       {
         id: 'monthly-plan',
@@ -97,7 +100,7 @@ describe('shared API coupon normalization', () => {
     ]);
   });
 
-  it('normalizes VIP aliases and extracts browser launch URLs from either payload shape', () => {
+  it('normalizes VIP aliases and extracts browser payment redirect URLs', () => {
     expect(normalizeSubscriptionPlanType('vip_monthly')).toBe('monthly');
     expect(normalizeSubscriptionPlanType('vip_quarterly')).toBe('quarterly');
     expect(normalizeSubscriptionPlanType('monthly')).toBe('monthly');
@@ -113,5 +116,22 @@ describe('shared API coupon normalization', () => {
       'https://pay.example.com/legacy'
     );
     expect(getBrowserPaymentLaunchUrl(null)).toBeNull();
+  });
+
+  it('uses the shared blind-box and notification endpoints expected by mini-program hooks', async () => {
+    const apiMock = vi.fn().mockResolvedValue({ success: true });
+    const api = apiMock as unknown as ApiTransport;
+
+    await getMyBlindBoxEvents(api);
+    await getNotificationCounts(api);
+    await markNotificationsAsRead(api, 'discover');
+
+    expect(apiMock).toHaveBeenNthCalledWith(1, { path: '/api/my-events' });
+    expect(apiMock).toHaveBeenNthCalledWith(2, { path: '/api/notifications/counts' });
+    expect(apiMock).toHaveBeenNthCalledWith(3, {
+      path: '/api/notifications/mark-read',
+      method: 'POST',
+      data: { category: 'discover' },
+    });
   });
 });

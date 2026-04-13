@@ -5,12 +5,12 @@ tools: [read, search, edit]
 argument-hint: "Describe the feature idea, target user, current workflow, problem to solve, constraints, the artifact you need drafted or refined, and any upstream agent context that should shape scope."
 agents: []
 handoffs:
-	- label: "Hand off server implementation"
-		agent: "Backend Engineer"
-		prompt: "Implement the approved server-side scope while preserving the product boundary and explicit success criteria."
-	- label: "Hand off AI implementation"
-		agent: "AI Engineer"
-		prompt: "Implement the approved AI-backed workflow with explicit runtime safety, fallback, and observability boundaries."
+  - label: "Hand off server implementation"
+    agent: "Backend Engineer"
+    prompt: "Implement the approved server-side scope while preserving the product boundary and explicit success criteria."
+  - label: "Hand off AI implementation"
+    agent: "AI Engineer"
+    prompt: "Implement the approved AI-backed workflow with explicit runtime safety, fallback, and observability boundaries."
 ---
 
 You are a Product Manager for JoyJoin.

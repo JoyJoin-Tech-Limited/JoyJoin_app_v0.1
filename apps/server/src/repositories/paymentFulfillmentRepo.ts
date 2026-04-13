@@ -6,6 +6,7 @@ import {
   notifications,
   payments,
   subscriptions,
+  userCoupons,
 } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { and, eq, ne, sql } from "drizzle-orm";
@@ -55,6 +56,33 @@ function getNotificationForPayment(payment: PaymentRecord) {
   }
 
   return eventNotification;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function normalizeEventRegistrationPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const source = payload as Record<string, unknown>;
+  return {
+    budgetRange: toStringArray(source.budgetRange),
+    preferredLanguages: toStringArray(source.preferredLanguages),
+    tasteIntensity: toStringArray(source.tasteIntensity),
+    cuisinePreferences: toStringArray(source.cuisinePreferences),
+    eventIntent: toStringArray(source.eventIntent),
+    dietaryRestrictions: toStringArray(source.dietaryRestrictions),
+  };
 }
 
 export const paymentFulfillmentRepo = {
@@ -122,6 +150,28 @@ export const paymentFulfillmentRepo = {
             usedCount: sql`${coupons.usedCount} + 1`,
           })
           .where(eq(coupons.id, updatedPayment.couponId));
+
+        const [availableUserCoupon] = await tx
+          .select({ id: userCoupons.id })
+          .from(userCoupons)
+          .where(
+            and(
+              eq(userCoupons.userId, updatedPayment.userId),
+              eq(userCoupons.couponId, updatedPayment.couponId),
+              eq(userCoupons.isUsed, false),
+            ),
+          )
+          .limit(1);
+
+        if (availableUserCoupon) {
+          await tx
+            .update(userCoupons)
+            .set({
+              isUsed: true,
+              usedAt: new Date(),
+            })
+            .where(eq(userCoupons.id, availableUserCoupon.id));
+        }
       }
 
       if (
@@ -149,6 +199,9 @@ export const paymentFulfillmentRepo = {
           );
         }
       } else if (updatedPayment.paymentType === "event" && updatedPayment.relatedId) {
+        const eventRegistrationPayload = normalizeEventRegistrationPayload(
+          updatedPayment.eventRegistrationPayload,
+        );
         const [pool] = await tx
           .select({ id: eventPools.id })
           .from(eventPools)
@@ -164,6 +217,12 @@ export const paymentFulfillmentRepo = {
           .values({
             poolId: updatedPayment.relatedId,
             userId: updatedPayment.userId,
+            budgetRange: eventRegistrationPayload?.budgetRange ?? [],
+            preferredLanguages: eventRegistrationPayload?.preferredLanguages ?? [],
+            tasteIntensity: eventRegistrationPayload?.tasteIntensity ?? [],
+            cuisinePreferences: eventRegistrationPayload?.cuisinePreferences ?? [],
+            eventIntent: eventRegistrationPayload?.eventIntent ?? [],
+            dietaryRestrictions: eventRegistrationPayload?.dietaryRestrictions ?? [],
             matchStatus: "pending",
           })
           .onConflictDoNothing({
