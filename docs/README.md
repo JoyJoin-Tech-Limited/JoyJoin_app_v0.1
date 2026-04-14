@@ -63,6 +63,7 @@ Use these as the main entry points before branching into topic-specific document
 
 - [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md) — current-state AI architecture and invariants
 - [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) — phased roadmap and execution gates
+- [`AI_EXECUTION_ROADMAP.md`](./AI_EXECUTION_ROADMAP.md) — 30-60-90 roadmap for repo AI workflow governance, validation, and tooling maturity
 
 ### Platform coordination and launch readiness
 
@@ -79,6 +80,9 @@ Use these as the main entry points before branching into topic-specific document
 
 ## Contributor resources outside this directory
 
+- [`../.github/AI_WORKFLOW_POLICY.md`](../.github/AI_WORKFLOW_POLICY.md)
+- [`../.github/ORCHESTRATION_GOVERNANCE.md`](../.github/ORCHESTRATION_GOVERNANCE.md)
+- [`../.github/ORCHESTRATION.md`](../.github/ORCHESTRATION.md)
 - [`../.github/skills/README.md`](../.github/skills/README.md)
 - [`../.github/agents/README.md`](../.github/agents/README.md)
 - [`../apps/server/src/README.md`](../apps/server/src/README.md)

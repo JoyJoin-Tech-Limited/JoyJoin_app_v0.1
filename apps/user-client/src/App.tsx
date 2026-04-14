@@ -235,8 +235,7 @@ function AuthenticatedRouter() {
           <Route path="/my-journey" component={MyJourneyPage} />
           <Route path="/squad-unboxing/:groupId" component={SquadUnboxingFlow} />
           <Route path="/blindbox/payment" component={BlindBoxPaymentPage} />
-          {/* @deprecated BlindBoxConfirmationPage — quarantined; canonical success lives in SuccessCelebration */}
-          <Route path="/blindbox/confirmation" component={RedirectToDiscover} />
+          <Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />
           <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
           <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
           <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />

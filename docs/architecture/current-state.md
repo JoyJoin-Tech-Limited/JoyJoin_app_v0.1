@@ -66,13 +66,18 @@ Primary files:
 - `apps/user-client/src/pages/MatchingStatusPage.tsx`
 - `apps/user-client/src/components/matching/`
 - `apps/user-client/src/components/event-pool-registration/`
+- `apps/mini-program/src/pages/matching-status/index.tsx`
+- `apps/mini-program/src/pages/squad-unboxing/index.tsx`
+- `apps/mini-program/src/pages/pool-group-detail/index.tsx`
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
 - **Updated 2026-04-07:** Active blind-pool discovery is pool-first: `BlindBoxEventCard` + `PreJoinVibeBriefSheet` + `JoinEventPoolSheet` are the client entry surfaces, while `MatchingStatusPage` owns the waiting / reveal path after a pending registration exists.
 - `PoolForecastStrip` is deterministic client-side atmosphere guidance only; it does not participate in pair scoring or group formation.
 - Matching is not deadline-only: `poolRealtimeMatchingService.ts` supports registration-triggered realtime scans and scheduled scans via `scanPoolAndMatch`.
-- `BlindBoxConfirmationPage` is quarantined and must not be revived as the success path.
+- Post-match clients consume `PoolGroupMemberSummary` from `packages/shared/src/api.ts`; use `ageLabel` and the visibility flags instead of reconstructing exact age or other hidden profile fields client-side.
+- Browser blind-box checkout returns through `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx` and `apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx`; both pages poll `/api/payments/status/:wechatOrderId`, keep transient verification failures recoverable, and then hand off to `/events` or `/discover` after confirmation.
+- Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there rather than reusing the browser H5 confirmation path.
 
 ### 3. Social Icebreaker
 
@@ -87,10 +92,12 @@ Boundary:
 **Client hook/surfaces**
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts`
 - `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
+- `apps/mini-program/src/pages/icebreaker-session/index.tsx`
 
 Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
 - All session reads and writes go through `lib/socialIcebreakerStore.ts`; do not add direct `db` calls in the route file.
+- `GET /api/social-icebreaker/:socialSessionId` returns `joinedParticipants` in `SocialSessionState`; client participant rendering should prefer that roster over event-attendee fallbacks when it is present.
 
 ### 4. Shared contracts and cross-platform ownership
 
@@ -105,7 +112,9 @@ Boundary:
 
 **Shared cross-platform modules**
 - `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`
-- `packages/shared/src/api.ts` — typed API helpers (assessment, interests, profile review) used by both web and mini-program
+- `packages/shared/src/api.ts` — typed API helpers and DTOs for onboarding/profile, pricing, coupons, payments, notifications, blind-box events, and pool-group details used by both web and mini-program
+- `packages/shared/src/centerTabRouting.ts` — shared center CTA label, destination, and badge rules used by the web bottom nav and the mini-program custom tab bar
+- `packages/shared/src/hongKongTime.ts` — shared Hong Kong date comparison and formatting helpers used by both clients
 - `packages/shared/src/archetypeColors.ts` — archetype HSL color tokens; single source consumed by both clients
 - `packages/shared/src/achievements.ts` — achievement definitions and rarity types used by the gamification system on both platforms
 - `packages/shared/src/gamification.ts` — XP/level system shared constants
@@ -156,8 +165,10 @@ Boundary:
 - Mini Program runtime helper: `apps/mini-program/src/lib/`
 - Mini Program hook: `apps/mini-program/src/hooks/`
 - Mini Program provider: `apps/mini-program/src/providers/`
-- App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (tabBar and page list)
-- Cross-platform contract or pure business rule: `packages/shared/src/`
+- Native WeChat custom tab bar implementation: `apps/mini-program/src/native-custom-tab-bar/`
+- Tab selection / center CTA sync: `apps/mini-program/src/lib/tabBarConfig.ts`, `apps/mini-program/src/lib/centerTabRouting.ts`, `apps/mini-program/src/hooks/useCustomTabBarSync.ts`
+- App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (page list plus `tabBar.custom` ownership)
+- Cross-platform contract or pure business rule: `packages/shared/src/` (`api.ts`, `centerTabRouting.ts`, `hongKongTime.ts`)
 
 **Navigation rule:** Tab pages must use `Taro.switchTab()`. Sub-pages use `Taro.navigateTo()` or `Taro.redirectTo()`.
 

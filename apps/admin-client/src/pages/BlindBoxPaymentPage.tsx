@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +12,62 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  appendBrowserPaymentReturnUrl,
+  findPricingPlan,
+  getBrowserPaymentLaunchUrl,
+  normalizeSubscriptionPlanType,
+  type BrowserPaymentResponse,
+  type PricingPlan,
+} from "@shared/api";
 import { getCurrencySymbol } from "@/lib/currency";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SiWechat } from "react-icons/si";
+
+type CouponValidationResponse = {
+  valid: boolean;
+  message?: string;
+  discountAmount?: number;
+  finalAmount?: number;
+  coupon?: {
+    id: string;
+    code: string;
+    discountType?: string | null;
+    discountValue?: number | null;
+  } | null;
+};
+
+type BrowserPendingOrderContext = {
+  type: "event" | "event_bundle";
+};
+
+async function requestJson<T>(method: string, url: string, data?: unknown): Promise<T> {
+  const response = await apiRequest(method, url, data);
+  return response.json() as Promise<T>;
+}
+
+const BROWSER_PENDING_ORDER_KEY = "joyjoin.browser.pending_order";
+const BROWSER_PENDING_ORDER_CONTEXT_KEY = "joyjoin.browser.pending_order_context";
+
+function persistPendingBrowserPayment(orderId: string, context: BrowserPendingOrderContext): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(BROWSER_PENDING_ORDER_KEY, orderId);
+  window.localStorage.setItem(BROWSER_PENDING_ORDER_CONTEXT_KEY, JSON.stringify(context));
+}
+
+function buildBrowserPaymentConfirmationUrl(orderId: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const url = new URL("/blindbox/confirmation", window.location.origin);
+  url.searchParams.set("outTradeNo", orderId);
+  return url.toString();
+}
 
 // Default fallback prices (used while loading or if API fails)
 const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (原价)
@@ -29,21 +80,10 @@ const DEFAULT_VIP_QUARTERLY_PRICE = 26800; // ¥268.00 VIP quarterly (约¥89/�
 const ORIGINAL_PACK3_PRICE = 26400; // ¥264 = ¥88 x 3
 const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
 
-interface PricingPlan {
-  id: string;
-  planType: string;
-  displayName: string;
-  displayNameEn?: string;
-  description?: string;
-  price: number; // in yuan
-  originalPrice?: number | null; // in yuan
-  durationDays?: number;
-  isActive: boolean;
-  isFeatured: boolean;
-}
-
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
+  const supportsCoupons = true;
+  const supportsEventPacks = false;
   const [promoOpen, setPromoOpen] = useState(false);
   const [couponTab, setCouponTab] = useState("input");
   const [couponCode, setCouponCode] = useState("");
@@ -54,6 +94,27 @@ export default function BlindBoxPaymentPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const launchBrowserPaymentFlow = (
+    result: BrowserPaymentResponse,
+    context: BrowserPendingOrderContext,
+  ): boolean => {
+    const launchUrl = getBrowserPaymentLaunchUrl(result);
+    if (!launchUrl) {
+      return false;
+    }
+
+    const orderId = result.payment?.wechatOrderId;
+    if (!orderId) {
+      throw new Error("支付订单创建成功但缺少订单号，请稍后重试");
+    }
+
+    persistPendingBrowserPayment(orderId, context);
+    const confirmationUrl = buildBrowserPaymentConfirmationUrl(orderId);
+    const resolvedLaunchUrl = appendBrowserPaymentReturnUrl(launchUrl, confirmationUrl) ?? launchUrl;
+    window.location.assign(resolvedLaunchUrl);
+    return true;
+  };
   
   // Fetch dynamic pricing from API
   const { data: pricingData, isLoading: loadingPricing } = useQuery<PricingPlan[]>({
@@ -67,11 +128,11 @@ export default function BlindBoxPaymentPage() {
   });
   
   // Get prices from API data or use defaults
-  const singlePricing = pricingData?.find(p => p.planType === "event_single");
-  const pack3Pricing = pricingData?.find(p => p.planType === "pack_3");
-  const pack6Pricing = pricingData?.find(p => p.planType === "pack_6");
-  const vipMonthlyPricing = pricingData?.find(p => p.planType === "vip_monthly");
-  const vipQuarterlyPricing = pricingData?.find(p => p.planType === "vip_quarterly");
+  const singlePricing = findPricingPlan(pricingData, "event_single");
+  const pack3Pricing = findPricingPlan(pricingData, "pack_3");
+  const pack6Pricing = findPricingPlan(pricingData, "pack_6");
+  const vipMonthlyPricing = findPricingPlan(pricingData, "vip_monthly");
+  const vipQuarterlyPricing = findPricingPlan(pricingData, "vip_quarterly");
   
   const SINGLE_PRICE = singlePricing ? singlePricing.price * 100 : DEFAULT_SINGLE_PRICE;
   const PACK3_PRICE = pack3Pricing ? pack3Pricing.price * 100 : DEFAULT_PACK3_PRICE;
@@ -124,20 +185,30 @@ export default function BlindBoxPaymentPage() {
     },
     initialData: { count: 0, availableCount: 0, coupons: [] }, // 让第一次渲染也稳定
   });
+  const selectableCoupons = (Array.isArray(availableCoupons?.coupons) ? availableCoupons.coupons : []).filter(
+    (coupon: any) => coupon?.status === "available",
+  );
+  const availableCouponCount = typeof availableCoupons?.availableCount === "number"
+    ? availableCoupons.availableCount
+    : selectableCoupons.length;
 
   
   // Check for first-time user welcome coupon (50% off)
-  const welcomeCoupon = availableCoupons.coupons?.find(
+  const welcomeCoupon = selectableCoupons.find(
     (c: any) => c.code?.startsWith('WELCOME50') && c.discountType === 'percentage' && c.discountValue === 50
   );
   const hasWelcomeCoupon = !!welcomeCoupon;
   
   const city = (localStorage.getItem("blindbox_city") || "深圳") as "香港" | "深圳";
   const currencySymbol = getCurrencySymbol(city);
+  const effectivePlan = !supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")
+    ? "single"
+    : selectedPlan;
+  const effectiveCoupon = supportsCoupons && effectivePlan === "single" ? appliedCoupon : null;
   
   // Get base price based on selected plan
   const getBasePrice = () => {
-    switch (selectedPlan) {
+    switch (effectivePlan) {
       case "single": return SINGLE_PRICE;
       case "pack3": return PACK3_PRICE;
       case "pack6": return PACK6_PRICE;
@@ -148,34 +219,35 @@ export default function BlindBoxPaymentPage() {
   };
   
   const basePrice = getBasePrice();
-  const finalPrice = basePrice - (selectedPlan === "single" ? discount : 0); // 只有单次票支持优惠码
+  const appliedDiscount = supportsCoupons && effectivePlan === "single" ? discount : 0;
+  const finalPrice = basePrice - appliedDiscount;
   
-  // Check if plan is a pack or VIP
-  const isPack = selectedPlan === "pack3" || selectedPlan === "pack6";
-  const isVIP = selectedPlan === "vip_monthly" || selectedPlan === "vip_quarterly";
+  // Check if plan is a VIP
+  const isVIP = effectivePlan === "vip_monthly" || effectivePlan === "vip_quarterly";
 
-  const createEventMutation = useMutation({
-    mutationFn: async (eventData: any) => {
-      return await apiRequest("POST", "/api/blind-box-events", eventData);
-    },
-    onSuccess: () => {
-      // 立即刷新Event Tab数据
-      queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
-      // 刷新聊天页面数据（群聊列表）
-      queryClient.invalidateQueries({ queryKey: ["/api/events/joined"] });
-      // 清除临时数据
-      localStorage.removeItem("blindbox_event_data");
-      // 跳转到活动页面
-      setLocation("/events");
-    },
-    onError: (error) => {
-      toast({
-        title: "创建活动失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const finalizeEventPaymentSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/my-events'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/events/joined'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/my-pool-registrations'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    localStorage.removeItem("blindbox_event_data");
+    setLocation("/events");
+  };
+
+  const applyValidatedCoupon = (validation: CouponValidationResponse) => {
+    if (!validation.valid || !validation.coupon) {
+      return;
+    }
+
+    setAppliedCoupon(validation.coupon);
+    setDiscount(validation.discountAmount ?? 0);
+    setCouponCode(validation.coupon.code);
+    toast({
+      title: "优惠码已应用",
+      description: `节省 ${currencySymbol}${((validation.discountAmount ?? 0) / 100).toFixed(2)}`,
+    });
+    setPromoOpen(false);
+  };
 
   const handleValidateCoupon = async () => {
     if (!couponCode.trim()) {
@@ -187,29 +259,38 @@ export default function BlindBoxPaymentPage() {
       return;
     }
 
+    const eventDataStr = localStorage.getItem("blindbox_event_data");
+    if (!eventDataStr) {
+      toast({
+        title: "缺少活动信息",
+        description: "请先重新选择活动，再应用优惠码",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setValidatingCoupon(true);
     try {
-      const result = await apiRequest("POST", "/api/coupons/validate", {
-        code: couponCode.trim(),
-        amount: SINGLE_PRICE,
-        paymentType: "event",
-      }) as any;
+      const validation = await requestJson<CouponValidationResponse>(
+        "POST",
+        "/api/coupons/validate",
+        {
+          code: couponCode.trim(),
+          paymentType: "event",
+          eventRegistrationPayload: JSON.parse(eventDataStr),
+        },
+      );
 
-      if (result.valid) {
-        setAppliedCoupon(result.coupon);
-        setDiscount(result.discountAmount);
-        toast({
-          title: "优惠码已应用",
-          description: `节省 ${currencySymbol}${(result.discountAmount / 100).toFixed(2)}`,
-        });
-        setPromoOpen(false);
-      } else {
+      if (!validation.valid) {
         toast({
           title: "优惠码无效",
-          description: result.message || "此优惠码不可用或已过期",
+          description: validation.message || "此优惠码不可用或已过期",
           variant: "destructive",
         });
+        return;
       }
+
+      applyValidatedCoupon(validation);
     } catch (error: any) {
       toast({
         title: "验证失败",
@@ -232,92 +313,100 @@ export default function BlindBoxPaymentPage() {
   };
 
   const handleApplyCouponFromList = async (coupon: any) => {
-    setAppliedCoupon({
-      id: coupon.id,
-      code: coupon.code,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-    });
-    
-    // Calculate discount (只适用于单次票)
-    let discount = 0;
-    if (coupon.discountType === "fixed_amount") {
-      discount = Math.min(coupon.discountValue, SINGLE_PRICE);
-    } else if (coupon.discountType === "percentage") {
-      discount = Math.floor(SINGLE_PRICE * (coupon.discountValue / 100));
+    const eventDataStr = localStorage.getItem("blindbox_event_data");
+    if (!eventDataStr) {
+      toast({
+        title: "缺少活动信息",
+        description: "请先重新选择活动，再应用优惠码",
+        variant: "destructive",
+      });
+      return;
     }
-    setDiscount(discount);
-    
-    toast({
-      title: "优惠券已应用",
-      description: `节省 ${currencySymbol}${(discount / 100).toFixed(2)}`,
-    });
-    setPromoOpen(false);
+
+    setCouponCode(String(coupon?.code ?? ""));
+    setValidatingCoupon(true);
+    try {
+      const validation = await requestJson<CouponValidationResponse>(
+        "POST",
+        "/api/coupons/validate",
+        {
+          code: coupon.code,
+          paymentType: "event",
+          eventRegistrationPayload: JSON.parse(eventDataStr),
+        },
+      );
+
+      if (!validation.valid) {
+        toast({
+          title: "优惠码无效",
+          description: validation.message || "此优惠码不可用或已过期",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      applyValidatedCoupon(validation);
+    } catch (error: any) {
+      toast({
+        title: "验证失败",
+        description: error.message || "无法验证优惠码，请稍后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setValidatingCoupon(false);
+    }
   };
 
   const handlePayment = async () => {
     try {
+      if (!supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")) {
+        toast({
+          title: "次数包暂未开放",
+          description: "当前支付页仅支持单次体验和活动礼包购买",
+          variant: "destructive",
+        });
+        setSelectedPlan("single");
+        return;
+      }
+
       // VIP订阅流程
       if (isVIP) {
         setIsProcessing(true);
-        // Send the new plan type identifiers
-        const planType = selectedPlan as "vip_monthly" | "vip_quarterly";
+        const planType = normalizeSubscriptionPlanType(effectivePlan);
+
+        if (!planType) {
+          throw new Error("无效的会员礼包类型");
+        }
         const response = await fetch("/api/subscription/renew", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ 
             planType,
-            couponCode: appliedCoupon?.code 
+            couponCode: effectiveCoupon?.code 
           }),
         });
         
+        const result = await response.json().catch(() => ({} as BrowserPaymentResponse & { message?: string })) as BrowserPaymentResponse & { message?: string };
+
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "订阅失败");
+          const error = result;
+          throw new Error(error?.message || "订阅失败");
+        }
+
+        if (launchBrowserPaymentFlow(result, { type: "event_bundle" })) {
+          return;
+        }
+
+        if (result?.paymentStatus === "pending") {
+          throw new Error("未收到支付跳转链接，请稍后重试");
         }
         
         toast({
           title: "礼包购买成功！",
-          description: selectedPlan === "vip_quarterly" 
+          description: effectivePlan === "vip_quarterly" 
             ? "季度活动礼包已激活，享3个月无限活动 + 专属权益" 
             : "月度活动礼包已激活，尽情参加本月所有悦聚活动吧！",
-        });
-        
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        setLocation("/discover");
-        setIsProcessing(false);
-        return;
-      }
-      
-      // 次数包购买流程
-      if (isPack) {
-        setIsProcessing(true);
-        const packCount = selectedPlan === "pack3" ? 3 : 6;
-        const packPrice = selectedPlan === "pack3" ? PACK3_PRICE : PACK6_PRICE;
-        const validityDays = selectedPlan === "pack3" ? 90 : 180; // 3次包90天, 6次包180天(半年)
-        const response = await fetch("/api/event-packs/purchase", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ 
-            packType: selectedPlan,
-            eventCount: packCount,
-            priceInCents: packPrice,
-            validityDays,
-          }),
-        });
-        
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "购买失败");
-        }
-        
-        toast({
-          title: "次数包购买成功！",
-          description: selectedPlan === "pack3" 
-            ? `${packCount}次活动券已充入账户，90天内有效`
-            : `${packCount}次活动券已充入账户，半年内有效`,
         });
         
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -338,15 +427,38 @@ export default function BlindBoxPaymentPage() {
         return;
       }
       
+      setIsProcessing(true);
       const eventData = JSON.parse(eventDataStr);
-      
-      if (appliedCoupon) {
-        eventData.couponId = appliedCoupon.id;
+      const result = await requestJson<BrowserPaymentResponse>(
+        "POST",
+        "/api/payments/create",
+        {
+          paymentType: "event",
+          couponCode: effectiveCoupon?.code,
+          eventRegistrationPayload: eventData,
+        },
+      );
+
+      if (launchBrowserPaymentFlow(result, { type: "event" })) {
+        return;
       }
-      
-      await createEventMutation.mutateAsync(eventData);
-    } catch (error) {
+
+      if (result?.paymentStatus === "pending") {
+        throw new Error("未收到支付跳转链接，请稍后重试");
+      }
+
+      toast({
+        title: "报名成功！",
+        description: "你已进入匹配队列，稍后可在活动页查看进度",
+      });
+      finalizeEventPaymentSuccess();
+    } catch (error: any) {
       console.error("Payment error:", error);
+      toast({
+        title: isVIP ? "发起支付失败" : "报名失败",
+        description: error instanceof Error ? error.message : "请稍后重试",
+        variant: "destructive",
+      });
       setIsProcessing(false);
     }
   };
@@ -432,7 +544,7 @@ export default function BlindBoxPaymentPage() {
           className="bg-background rounded-t-[32px] shadow-2xl p-6 space-y-6"
         >
           {/* 新用户首单特惠横幅 */}
-          {hasWelcomeCoupon && !appliedCoupon && (
+          {supportsCoupons && hasWelcomeCoupon && !appliedCoupon && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -478,8 +590,8 @@ export default function BlindBoxPaymentPage() {
             {/* 次数包选项 */}
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Package className="h-3 w-3" />
-                次数包 · 90天有效
+                <Ticket className="h-3 w-3" />
+                {supportsEventPacks ? "次数包 · 90天有效" : "单次体验"}
               </p>
               <div className="grid gap-3">
                 {/* 单次票 */}
@@ -515,6 +627,8 @@ export default function BlindBoxPaymentPage() {
                   </Card>
                 </motion.div>
 
+                {supportsEventPacks && (
+                  <>
                 {/* 3次包 - 推荐 8折 */}
                 <motion.div whileTap={{ scale: 0.98 }}>
                   <Card 
@@ -620,6 +734,8 @@ export default function BlindBoxPaymentPage() {
                     </div>
                   </Card>
                 </motion.div>
+                  </>
+                )}
               </div>
             </div>
             
@@ -730,7 +846,7 @@ export default function BlindBoxPaymentPage() {
           </div>
 
           {/* Applied Coupon Badge */}
-          {appliedCoupon && (
+          {supportsCoupons && appliedCoupon && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -756,25 +872,25 @@ export default function BlindBoxPaymentPage() {
           )}
 
           {/* Promo Code & Available Coupons - 仅单次票支持 */}
-          {!appliedCoupon && selectedPlan === "single" && (
+          {supportsCoupons && !appliedCoupon && selectedPlan === "single" && (
             <Collapsible open={promoOpen} onOpenChange={setPromoOpen}>
               <CollapsibleTrigger className="w-full" data-testid="button-promo-toggle">
                 <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-2">
                     <Ticket className="h-4 w-4 text-purple-600" />
                     <span className="font-medium">
-                      优惠码 {availableCoupons.count > 0 && `· ${availableCoupons.count}张优惠券`}
+                      优惠码 {availableCouponCount > 0 && `· ${availableCouponCount}张优惠券`}
                     </span>
                   </div>
                   <ChevronDown className={`h-5 w-5 transition-transform ${promoOpen ? 'rotate-180' : ''}`} />
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <Tabs defaultValue={availableCoupons.count > 0 ? "my-coupons" : "input"} value={couponTab} onValueChange={setCouponTab} className="p-3 pt-0">
+                <Tabs defaultValue={availableCouponCount > 0 ? "my-coupons" : "input"} value={couponTab} onValueChange={setCouponTab} className="p-3 pt-0">
                   <TabsList className="grid w-full grid-cols-2 mb-3">
                     <TabsTrigger value="input">手动输入</TabsTrigger>
-                    <TabsTrigger value="my-coupons" disabled={availableCoupons.count === 0}>
-                      我的优惠券 {availableCoupons.count > 0 && `(${availableCoupons.count})`}
+                    <TabsTrigger value="my-coupons" disabled={availableCouponCount === 0}>
+                      我的优惠券 {availableCouponCount > 0 && `(${availableCouponCount})`}
                     </TabsTrigger>
                   </TabsList>
 
@@ -814,13 +930,13 @@ export default function BlindBoxPaymentPage() {
                   <TabsContent value="my-coupons" className="space-y-2">
                     {loadingCoupons ? (
                       <div className="py-4 text-center text-muted-foreground">加载中...</div>
-                    ) : availableCoupons.count === 0 ? (
+                    ) : availableCouponCount === 0 ? (
                       <div className="py-4 text-center text-muted-foreground text-sm">
                         暂无可用优惠券
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {availableCoupons.coupons.map((coupon: any) => (
+                        {selectableCoupons.map((coupon: any) => (
                           <motion.div
                             key={coupon.id}
                             whileHover={{ scale: 1.01 }}
@@ -894,14 +1010,14 @@ export default function BlindBoxPaymentPage() {
                   {currencySymbol}{(basePrice / 100).toFixed(0)}
                 </span>
               </div>
-              {discount > 0 && selectedPlan === "single" && (
+              {appliedDiscount > 0 && effectivePlan === "single" && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="flex items-center justify-between text-sm text-green-600 dark:text-green-400"
                 >
                   <span className="font-medium">优惠</span>
-                  <span className="font-bold">-{currencySymbol}{(discount / 100).toFixed(2)}</span>
+                  <span className="font-bold">-{currencySymbol}{(appliedDiscount / 100).toFixed(2)}</span>
                 </motion.div>
               )}
               <div className="pt-2 border-t flex items-center justify-between">
@@ -926,10 +1042,10 @@ export default function BlindBoxPaymentPage() {
                 size="lg"
                 className="w-full text-lg font-bold shadow-lg bg-[#07C160]"
                 onClick={handlePayment}
-                disabled={createEventMutation.isPending || isProcessing}
+                disabled={isProcessing}
                 data-testid="button-pay"
               >
-                {(createEventMutation.isPending || isProcessing) ? (
+                {isProcessing ? (
                   <>
                     <Loader className="h-5 w-5 mr-2 animate-spin" />
                     处理中...
@@ -937,11 +1053,11 @@ export default function BlindBoxPaymentPage() {
                 ) : (
                   <>
                     <SiWechat className="h-5 w-5 mr-2" />
-                    {selectedPlan === "single" && "微信支付"}
-                    {selectedPlan === "pack3" && "微信支付 · 购买3次包"}
-                    {selectedPlan === "pack6" && "微信支付 · 购买6次包"}
-                    {selectedPlan === "vip_monthly" && "微信支付 · 购买月度活动礼包"}
-                    {selectedPlan === "vip_quarterly" && "微信支付 · 购买季度活动礼包"}
+                    {effectivePlan === "single" && "微信支付"}
+                    {effectivePlan === "pack3" && "微信支付 · 购买3次包"}
+                    {effectivePlan === "pack6" && "微信支付 · 购买6次包"}
+                    {effectivePlan === "vip_monthly" && "微信支付 · 购买月度活动礼包"}
+                    {effectivePlan === "vip_quarterly" && "微信支付 · 购买季度活动礼包"}
                   </>
                 )}
               </Button>
@@ -949,10 +1065,10 @@ export default function BlindBoxPaymentPage() {
 
             {/* 说明文字 */}
             <div className="text-xs text-center text-muted-foreground space-y-1">
-              {selectedPlan === "pack3" && <p><Package className="inline h-3 w-3 mr-1" />3次包90天内有效，可用于任意活动</p>}
-              {selectedPlan === "pack6" && <p><Package className="inline h-3 w-3 mr-1" />6次包半年内有效，可用于任意活动</p>}
+              {effectivePlan === "pack3" && <p><Package className="inline h-3 w-3 mr-1" />3次包90天内有效，可用于任意活动</p>}
+              {effectivePlan === "pack6" && <p><Package className="inline h-3 w-3 mr-1" />6次包半年内有效，可用于任意活动</p>}
               {isVIP && <p><Crown className="inline h-3 w-3 mr-1" />VIP期间无限参与所有活动 + 每月携友特权</p>}
-              {selectedPlan === "single" && <p><Sparkles className="inline h-3 w-3 mr-1" />支付后立即进入匹配队列</p>}
+              {effectivePlan === "single" && <p><Sparkles className="inline h-3 w-3 mr-1" />支付后立即进入匹配队列</p>}
               <p className="flex items-center justify-center gap-2">
                 <Shield className="h-3 w-3" />
                 <SiWechat className="h-3 w-3 text-[#07C160]" />

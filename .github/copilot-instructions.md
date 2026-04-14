@@ -17,6 +17,17 @@
 - Start with `.github/agents/README.md` to choose the right agent for debugging, frontend delivery, platform parity, prompt work, or product scoping.
 - Skills define the rules and boundaries; agents help execute a workflow within those boundaries.
 
+### Orchestration
+
+- The native agent orchestration contract lives in `.github/orchestration.yaml`.
+- Use `.github/ORCHESTRATION.md` for the human-readable graph, support-agent coverage, and tooling sufficiency audit.
+- Use `.github/AI_WORKFLOW_POLICY.md` to decide when work should stay in direct delivery, when it should start with `Researcher` -> `Planner`, and when it should escalate into QA or launch review.
+- Use `.github/ORCHESTRATION_GOVERNANCE.md` when changing agents, skills, hooks, orchestration scripts, or their contributor-facing documentation so the contract and discovery surfaces stay in sync.
+- For broad, ambiguous, or multi-step work, start with `Researcher` to gather verified context, then `Planner` to return an approval-first execution plan before implementation begins.
+- `Auto-Eval` remains the deterministic dirty-worktree gate. `Supervisor` is the manual routing surface across the core v1 agent graph.
+- Use `Supervisor` after approval or when work needs to be rerouted across specialists midstream.
+- Repo-managed local hooks live under `.githooks/`; contributors who want the local commit-time gate should set `git config core.hooksPath .githooks`.
+
 ## Pull Request Review Standard
 
 When reviewing pull requests, evaluate not only local correctness but also:
