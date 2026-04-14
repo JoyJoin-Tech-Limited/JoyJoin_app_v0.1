@@ -45,6 +45,7 @@ Thumbs.db
 .agent state
 .agentstate
 .agent.json
+.joyjoin/
 .replit
 .replit.nix
 .replit.json

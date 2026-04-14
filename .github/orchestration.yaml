@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-13",
+  "updated": "2026-04-14",
   "portfolio_scope": {
     "kickoff_agents": [
       "Researcher",
@@ -54,6 +54,24 @@
         "PostToolUse"
       ],
       "session_start_message": "Researcher -> Planner kickoff lane ready.",
+      "memory_context": {
+        "artifact_path": "repo-memory/generated/promoted-index.json",
+        "workflow_relevant_path_prefixes": [
+          ".github/",
+          "scripts/",
+          "repo-memory/"
+        ],
+        "prompt_query": {
+          "min_characters": 12,
+          "min_tokens": 2,
+          "min_long_tokens": 2,
+          "long_token_length": 4
+        },
+        "max_hits": 3,
+        "min_changed_file_score": 6,
+        "min_prompt_score": 10,
+        "fail_open_when_index_missing": true
+      },
       "kickoff_lane": {
         "entry_agents": [
           "Researcher",
@@ -810,6 +828,7 @@
     "manifest_must_parse_as_json_compatible_yaml": true,
     "workspace_hooks_remain_primary_enforcement_surface": true,
     "runtime_state_must_stay_under_git_directory": true,
+    "repo_memory_retrieval_remains_advisory": true,
     "launch_readiness_is_not_a_default_pre_commit_gate": true
   },
   "context_contract": {
@@ -831,6 +850,7 @@
       "retryCount",
       "recommendedNextAgents",
       "kickoff",
+      "memoryContext",
       "lastUpdatedAt"
     ]
   },

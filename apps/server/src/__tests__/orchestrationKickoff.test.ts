@@ -34,9 +34,44 @@ interface RuntimeEventEntry {
   kickoffRecommended?: boolean;
   kickoffCleared?: boolean;
   promptSummary?: string | null;
+  memory?: {
+    generatedIndexAvailable?: boolean;
+    changedFileHitCount?: number;
+    promptHitCount?: number;
+    promptQueryMeaningful?: boolean;
+  };
+}
+
+interface RuntimeMemoryHit {
+  id: string;
+  title: string;
+  path: string;
+  score: number | null;
+  reasons: string[];
+}
+
+interface RuntimeMemoryContext {
+  status?: string;
+  generatedIndex?: {
+    path?: string;
+    available?: boolean;
+    noteCount?: number | null;
+    error?: string | null;
+  };
+  changedFiles?: {
+    consideredPaths?: string[];
+    hits?: RuntimeMemoryHit[];
+  };
+  prompt?: {
+    query?: string | null;
+    meaningful?: boolean;
+    hits?: RuntimeMemoryHit[];
+  };
+  summary?: string | null;
 }
 
 interface RuntimeContext {
+  artifactPaths?: string[];
   recommendedNextAgents?: string[];
   kickoff?: {
     status?: string;
@@ -47,9 +82,10 @@ interface RuntimeContext {
     lastPrompt?: string | null;
     lastReason?: string | null;
   };
+  memoryContext?: RuntimeMemoryContext;
 }
 
-function backupRuntimeFile(filePath: string): RuntimeFileBackup {
+function backupFile(filePath: string): RuntimeFileBackup {
   if (!existsSync(filePath)) {
     return {
       existed: false,
@@ -63,7 +99,7 @@ function backupRuntimeFile(filePath: string): RuntimeFileBackup {
   };
 }
 
-function restoreRuntimeFile(filePath: string, backup: RuntimeFileBackup) {
+function restoreFile(filePath: string, backup: RuntimeFileBackup) {
   if (backup.existed) {
     writeFileSync(filePath, backup.contents ?? '', 'utf8');
     return;
@@ -123,6 +159,25 @@ function runCopilotHook(eventName: string, payload: Record<string, unknown> = {}
   return JSON.parse(result.stdout) as HookResult;
 }
 
+function runNodeScript(args: string[], options: {
+  input?: string;
+  env?: NodeJS.ProcessEnv;
+  expectStatus?: number;
+} = {}) {
+  const result = spawnSync('node', args, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    input: options.input,
+    env: {
+      ...process.env,
+      ...options.env,
+    },
+  });
+
+  expect(result.status).toBe(options.expectStatus ?? 0);
+  return result;
+}
+
 function runKickoffHook(prompt: string) {
   return runCopilotHook('user-prompt-submit', { prompt });
 }
@@ -137,6 +192,24 @@ function readRuntimeEventLog(): RuntimeEventEntry[] {
     .split(/\r?\n/)
     .filter(Boolean)
     .map((line) => JSON.parse(line) as RuntimeEventEntry);
+}
+
+const REPO_MEMORY_INDEX_PATH = path.join(REPO_ROOT, 'repo-memory/generated/promoted-index.json');
+const TEST_MEMORY_DRAFT_RELATIVE_PATH = '.joyjoin/__tests__/memory-stage-promote-flow.md';
+const TEST_MEMORY_CANDIDATE_RELATIVE_PATH = 'repo-memory/candidates/__tests__/memory-stage-promote-flow.md';
+const TEST_MEMORY_PROMOTED_RELATIVE_PATH = 'repo-memory/promoted/__tests__/memory-stage-promote-flow.md';
+const TEST_MEMORY_DRAFT_PATH = path.join(REPO_ROOT, TEST_MEMORY_DRAFT_RELATIVE_PATH);
+const TEST_MEMORY_CANDIDATE_PATH = path.join(REPO_ROOT, TEST_MEMORY_CANDIDATE_RELATIVE_PATH);
+const TEST_MEMORY_PROMOTED_PATH = path.join(REPO_ROOT, TEST_MEMORY_PROMOTED_RELATIVE_PATH);
+const TEST_MEMORY_NOTE_ID = 'test.orchestration.memory-stage-promote-flow';
+
+function clearTestMemoryFlowFiles() {
+  rmSync(TEST_MEMORY_DRAFT_PATH, { force: true });
+  rmSync(TEST_MEMORY_CANDIDATE_PATH, { force: true });
+  rmSync(TEST_MEMORY_PROMOTED_PATH, { force: true });
+  rmSync(path.join(REPO_ROOT, '.joyjoin/__tests__'), { recursive: true, force: true });
+  rmSync(path.join(REPO_ROOT, 'repo-memory/candidates/__tests__'), { recursive: true, force: true });
+  rmSync(path.join(REPO_ROOT, 'repo-memory/promoted/__tests__'), { recursive: true, force: true });
 }
 
 describe('orchestration kickoff lane', () => {
@@ -429,8 +502,8 @@ describe('orchestration changed-file detection', () => {
 
 describe.sequential('orchestration runtime context persistence', () => {
   const runtimeBackups = {
-    context: backupRuntimeFile(ORCHESTRATION_CONTEXT_PATH),
-    eventLog: backupRuntimeFile(ORCHESTRATION_EVENT_LOG_PATH),
+    context: backupFile(ORCHESTRATION_CONTEXT_PATH),
+    eventLog: backupFile(ORCHESTRATION_EVENT_LOG_PATH),
     runtimeDirExisted: existsSync(ORCHESTRATION_RUNTIME_DIR),
   };
 
@@ -443,8 +516,8 @@ describe.sequential('orchestration runtime context persistence', () => {
   });
 
   afterAll(() => {
-    restoreRuntimeFile(ORCHESTRATION_CONTEXT_PATH, runtimeBackups.context);
-    restoreRuntimeFile(ORCHESTRATION_EVENT_LOG_PATH, runtimeBackups.eventLog);
+    restoreFile(ORCHESTRATION_CONTEXT_PATH, runtimeBackups.context);
+    restoreFile(ORCHESTRATION_EVENT_LOG_PATH, runtimeBackups.eventLog);
 
     if (!runtimeBackups.runtimeDirExisted) {
       removeRuntimeDirIfEmpty();
@@ -460,6 +533,13 @@ describe.sequential('orchestration runtime context persistence', () => {
     expect(existsSync(ORCHESTRATION_EVENT_LOG_PATH)).toBe(true);
 
     const runtimeContext = readRuntimeContext();
+    expect(runtimeContext.artifactPaths).toEqual(
+      expect.arrayContaining([
+        '.git/.orchestration/context.json',
+        '.git/.orchestration/events.jsonl',
+        'repo-memory/generated/promoted-index.json',
+      ]),
+    );
     expect(runtimeContext.recommendedNextAgents).toEqual(['Researcher', 'Planner']);
     expect(runtimeContext.kickoff).toMatchObject({
       status: 'idle',
@@ -470,13 +550,66 @@ describe.sequential('orchestration runtime context persistence', () => {
       lastPrompt: null,
       lastReason: null,
     });
+    expect(runtimeContext.memoryContext).toMatchObject({
+      status: 'advisory',
+      generatedIndex: {
+        path: 'repo-memory/generated/promoted-index.json',
+        available: true,
+        noteCount: expect.any(Number),
+        error: null,
+      },
+      prompt: {
+        query: null,
+        meaningful: false,
+      },
+    });
+    expect(Array.isArray(runtimeContext.memoryContext?.changedFiles?.consideredPaths)).toBe(true);
+    expect(Array.isArray(runtimeContext.memoryContext?.changedFiles?.hits)).toBe(true);
 
     const runtimeEvents = readRuntimeEventLog();
     expect(runtimeEvents).toHaveLength(1);
     expect(runtimeEvents[0]).toMatchObject({
       event: 'session-start',
       kickoffStatus: 'idle',
+      memory: {
+        generatedIndexAvailable: true,
+        promptHitCount: 0,
+        promptQueryMeaningful: false,
+      },
     });
+  });
+
+  it('surfaces prompt-based repo memory hits in the hook message and runtime context', () => {
+    runCopilotHook('session-start', {}, true);
+
+    const prompt = 'Please explain separate durable memory from operational state for the orchestration runtime context.';
+    const result = runCopilotHook('user-prompt-submit', { prompt }, true);
+
+    expect(result.continue).toBe(true);
+    expect(result.systemMessage).toContain('Relevant repo memory');
+    expect(result.systemMessage).toContain('Separate Durable Memory From Operational State');
+    expect(result.systemMessage).not.toContain('Start with Researcher');
+
+    const runtimeContext = readRuntimeContext();
+    expect(runtimeContext.memoryContext).toMatchObject({
+      status: 'advisory',
+      prompt: {
+        query: prompt,
+        meaningful: true,
+      },
+    });
+    expect(
+      runtimeContext.memoryContext?.prompt?.hits?.some(
+        (hit) => hit.id === 'repo.orchestration.separate-durable-memory-from-operational-state',
+      ),
+    ).toBe(true);
+
+    const runtimeEvents = readRuntimeEventLog();
+    expect(runtimeEvents).toHaveLength(2);
+    expect(runtimeEvents[1].event).toBe('user-prompt-submit');
+    expect(runtimeEvents[1].memory?.generatedIndexAvailable).toBe(true);
+    expect(runtimeEvents[1].memory?.promptQueryMeaningful).toBe(true);
+    expect((runtimeEvents[1].memory?.promptHitCount ?? 0)).toBeGreaterThan(0);
   });
 
   it('persists broad kickoff advice and clears it after a narrow follow-up', () => {
@@ -524,12 +657,94 @@ describe.sequential('orchestration runtime context persistence', () => {
       kickoffRecommended: true,
       kickoffCleared: false,
       promptSummary: 'Add a new API endpoint for user profile retrieval with caching.',
+      memory: {
+        generatedIndexAvailable: true,
+      },
     });
     expect(runtimeEvents[2]).toMatchObject({
       event: 'user-prompt-submit',
       kickoffRecommended: false,
       kickoffCleared: true,
       promptSummary: 'fix typo',
+      memory: {
+        generatedIndexAvailable: true,
+      },
     });
+  });
+});
+
+describe.sequential('repo memory candidate publication flow', () => {
+  const indexBackup = backupFile(REPO_MEMORY_INDEX_PATH);
+
+  beforeAll(() => {
+    clearTestMemoryFlowFiles();
+  });
+
+  afterEach(() => {
+    clearTestMemoryFlowFiles();
+    restoreFile(REPO_MEMORY_INDEX_PATH, indexBackup);
+  });
+
+  afterAll(() => {
+    clearTestMemoryFlowFiles();
+    restoreFile(REPO_MEMORY_INDEX_PATH, indexBackup);
+  });
+
+  it('stages a reviewed draft and promotes the candidate through the real repo-memory layout', () => {
+    writeRepoFile(
+      REPO_ROOT,
+      TEST_MEMORY_DRAFT_RELATIVE_PATH,
+      [
+        '---',
+        `id: ${TEST_MEMORY_NOTE_ID}`,
+        'title: Memory Stage Promote Flow Test',
+        'status: candidate',
+        'owner: workflow-platform',
+        'lastValidatedAt: 2026-04-14',
+        'tags:',
+        '  - orchestration',
+        '  - tests',
+        'triggerTerms:',
+        '  - candidate promote flow test',
+        '  - stage candidate promote memory',
+        'relatedPaths:',
+        '  - .github/ORCHESTRATION.md',
+        '  - scripts/orchestration-supervisor.mjs',
+        'sources:',
+        '  - .github/ORCHESTRATION.md',
+        '  - scripts/orchestration-supervisor.mjs',
+        'confidence: medium',
+        '---',
+        '',
+        '- Test-only candidate note used to verify deterministic candidate staging and promotion.',
+        '',
+      ].join('\n'),
+    );
+
+    const directPromoteResult = runNodeScript(
+      ['scripts/memory-promote.mjs', TEST_MEMORY_DRAFT_RELATIVE_PATH],
+      { expectStatus: 1 },
+    );
+    expect(directPromoteResult.stderr).toContain('candidate note under repo-memory/candidates');
+
+    runNodeScript([
+      'scripts/memory-stage-candidate.mjs',
+      TEST_MEMORY_DRAFT_RELATIVE_PATH,
+      TEST_MEMORY_CANDIDATE_RELATIVE_PATH,
+    ]);
+
+    expect(existsSync(TEST_MEMORY_CANDIDATE_PATH)).toBe(true);
+    expect(readFileSync(TEST_MEMORY_CANDIDATE_PATH, 'utf8')).toContain('status: candidate');
+
+    runNodeScript(['scripts/memory-promote.mjs', TEST_MEMORY_CANDIDATE_RELATIVE_PATH]);
+
+    expect(existsSync(TEST_MEMORY_CANDIDATE_PATH)).toBe(false);
+    expect(existsSync(TEST_MEMORY_PROMOTED_PATH)).toBe(true);
+    expect(readFileSync(TEST_MEMORY_PROMOTED_PATH, 'utf8')).toContain('status: active');
+
+    const rebuiltIndex = JSON.parse(readFileSync(REPO_MEMORY_INDEX_PATH, 'utf8')) as {
+      notes: Array<{ id: string }>;
+    };
+    expect(rebuiltIndex.notes.some((note) => note.id === TEST_MEMORY_NOTE_ID)).toBe(true);
   });
 });

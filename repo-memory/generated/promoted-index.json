@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "promotedRoot": "repo-memory/promoted",
+    "includedStatuses": [
+      "active"
+    ]
+  },
+  "noteCount": 2,
+  "notes": [
+    {
+      "id": "repo.orchestration.runtime-state-truthfulness",
+      "title": "Runtime State Truthfulness",
+      "status": "active",
+      "owner": "workflow-platform",
+      "lastValidatedAt": "2026-04-14",
+      "tags": [
+        "orchestration",
+        "runtime-state",
+        "governance"
+      ],
+      "triggerTerms": [
+        "runtime state truthfulness",
+        "advisory runtime state",
+        "stale scope handling"
+      ],
+      "relatedPaths": [
+        ".github/ORCHESTRATION.md",
+        ".github/ORCHESTRATION_GOVERNANCE.md",
+        "scripts/orchestration-lib.mjs"
+      ],
+      "sources": [
+        ".github/ORCHESTRATION.md",
+        ".github/ORCHESTRATION_GOVERNANCE.md"
+      ],
+      "confidence": "high",
+      "path": "repo-memory/promoted/orchestration/runtime-state-truthfulness.md",
+      "statements": [
+        "Runtime state under `.git/.orchestration/` is advisory and session-scoped; it must not overstate certainty.",
+        "When changed-file scope, kickoff context, or cached prompt state becomes stale, the safe fallback is to clear or recompute it instead of treating it as current truth."
+      ]
+    },
+    {
+      "id": "repo.orchestration.separate-durable-memory-from-operational-state",
+      "title": "Separate Durable Memory From Operational State",
+      "status": "active",
+      "owner": "workflow-platform",
+      "lastValidatedAt": "2026-04-14",
+      "tags": [
+        "orchestration",
+        "memory",
+        "operational-state"
+      ],
+      "triggerTerms": [
+        "durable memory vs operational state",
+        "memory plane separation",
+        "do not store durable memory in dot git"
+      ],
+      "relatedPaths": [
+        "docs/proposals/profile-c-memory-layer-rfc.md",
+        ".github/ORCHESTRATION_GOVERNANCE.md",
+        "scripts/orchestration-lib.mjs"
+      ],
+      "sources": [
+        "docs/proposals/profile-c-memory-layer-rfc.md",
+        ".github/ORCHESTRATION_GOVERNANCE.md"
+      ],
+      "confidence": "high",
+      "path": "repo-memory/promoted/orchestration/separate-durable-memory-from-operational-state.md",
+      "statements": [
+        "Durable repo memory belongs in reviewable files outside `.git`, so notes stay diffable, attributable, and easy to retire when they go stale.",
+        "`.git/.orchestration/*` and `.git/.auto-eval/pass-state.json` remain operational surfaces only; they are not publication targets for reusable repo knowledge."
+      ]
+    }
+  ]
+}

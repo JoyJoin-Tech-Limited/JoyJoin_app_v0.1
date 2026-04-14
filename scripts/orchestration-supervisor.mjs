@@ -2,6 +2,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES,
+  DEFAULT_WORKFLOW_RELEVANT_PATH_PREFIXES,
+  GENERATED_INDEX_RELATIVE_PATH,
+  createMemoryHitSummary,
+  filterWorkflowRelevantPaths,
+  isMeaningfulMemoryQuery,
+  queryPromotedMemory,
+  queryPromotedMemoryByPaths,
+  readGeneratedPromotedIndexSafe,
+  summarizeMemoryMatches,
+} from './memory-lib.mjs';
+import {
   CONTEXT_EXAMPLE_RELATIVE_PATH,
   MANIFEST_RELATIVE_PATH,
   RUNTIME_CONTEXT_RELATIVE_PATH,
@@ -82,6 +94,50 @@ function getKickoffConfig(manifest) {
   };
 }
 
+function getMemoryConfig(manifest) {
+  const configuredMemoryContext = manifest.copilot_hooks?.orchestration?.memory_context ?? {};
+  const configuredPromptQuery = configuredMemoryContext.prompt_query ?? {};
+
+  return {
+    artifactPath:
+      typeof configuredMemoryContext.artifact_path === 'string' && configuredMemoryContext.artifact_path.trim() !== ''
+        ? configuredMemoryContext.artifact_path.trim()
+        : GENERATED_INDEX_RELATIVE_PATH,
+    workflowRelevantPathPrefixes:
+      Array.isArray(configuredMemoryContext.workflow_relevant_path_prefixes) &&
+      configuredMemoryContext.workflow_relevant_path_prefixes.length > 0
+        ? configuredMemoryContext.workflow_relevant_path_prefixes
+        : DEFAULT_WORKFLOW_RELEVANT_PATH_PREFIXES,
+    promptQueryRules: {
+      ...DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES,
+      ...(Number.isInteger(configuredPromptQuery.min_characters) && configuredPromptQuery.min_characters > 0
+        ? { minCharacters: configuredPromptQuery.min_characters }
+        : {}),
+      ...(Number.isInteger(configuredPromptQuery.min_tokens) && configuredPromptQuery.min_tokens > 0
+        ? { minTokens: configuredPromptQuery.min_tokens }
+        : {}),
+      ...(Number.isInteger(configuredPromptQuery.min_long_tokens) && configuredPromptQuery.min_long_tokens > 0
+        ? { minLongTokens: configuredPromptQuery.min_long_tokens }
+        : {}),
+      ...(Number.isInteger(configuredPromptQuery.long_token_length) && configuredPromptQuery.long_token_length > 0
+        ? { longTokenLength: configuredPromptQuery.long_token_length }
+        : {}),
+    },
+    maxHits:
+      Number.isInteger(configuredMemoryContext.max_hits) && configuredMemoryContext.max_hits > 0
+        ? configuredMemoryContext.max_hits
+        : 3,
+    minChangedFileScore:
+      Number.isInteger(configuredMemoryContext.min_changed_file_score) && configuredMemoryContext.min_changed_file_score > 0
+        ? configuredMemoryContext.min_changed_file_score
+        : 6,
+    minPromptScore:
+      Number.isInteger(configuredMemoryContext.min_prompt_score) && configuredMemoryContext.min_prompt_score > 0
+        ? configuredMemoryContext.min_prompt_score
+        : 10,
+  };
+}
+
 function createDefaultKickoffState(kickoffConfig) {
   return {
     status: 'idle',
@@ -91,6 +147,14 @@ function createDefaultKickoffState(kickoffConfig) {
     evaluationCount: 0,
     lastPrompt: null,
     lastReason: null,
+  };
+}
+
+function createDefaultPromptMemoryState() {
+  return {
+    query: null,
+    meaningful: false,
+    hits: [],
   };
 }
 
@@ -183,10 +247,135 @@ function buildKickoffSystemMessage(manifest, promptText) {
   return `This looks like a broad request. Start with ${kickoffAgents} so the work is grounded before implementation. ${kickoffConfig.entry_agents?.[0] ?? 'Researcher'} should gather verified repo context, then ${kickoffConfig.entry_agents?.[1] ?? 'Planner'} should return an ${approvalMode} execution plan. Prompt summary: ${promptSummary}`;
 }
 
+function collectUniqueMemoryHits(...hitGroups) {
+  const hits = [];
+  const seenIds = new Set();
+
+  for (const hitGroup of hitGroups) {
+    if (!Array.isArray(hitGroup)) {
+      continue;
+    }
+
+    for (const hit of hitGroup) {
+      if (!hit?.id || seenIds.has(hit.id)) {
+        continue;
+      }
+
+      seenIds.add(hit.id);
+      hits.push(hit);
+    }
+  }
+
+  return hits;
+}
+
+function buildMemoryContext({
+  changedFiles,
+  memoryConfig,
+  previousMemoryContext,
+  promptText,
+  resetPrompt = false,
+}) {
+  const indexState = readGeneratedPromotedIndexSafe(memoryConfig.artifactPath);
+  const consideredPaths = filterWorkflowRelevantPaths(
+    changedFiles,
+    memoryConfig.workflowRelevantPathPrefixes,
+  );
+  const changedFileHits = indexState.available
+    ? queryPromotedMemoryByPaths(consideredPaths, {
+        indexDocument: indexState.document,
+        limit: memoryConfig.maxHits,
+        minScore: memoryConfig.minChangedFileScore,
+      }).matches.map(createMemoryHitSummary)
+    : [];
+
+  let promptState = resetPrompt
+    ? createDefaultPromptMemoryState()
+    : previousMemoryContext?.prompt ?? createDefaultPromptMemoryState();
+
+  if (typeof promptText === 'string') {
+    const meaningful = isMeaningfulMemoryQuery(promptText, memoryConfig.promptQueryRules);
+    const promptHits = meaningful && indexState.available
+      ? queryPromotedMemory(promptText, {
+          indexDocument: indexState.document,
+          limit: memoryConfig.maxHits,
+          minScore: memoryConfig.minPromptScore,
+        }).matches.map(createMemoryHitSummary)
+      : [];
+
+    promptState = {
+      query: promptText || null,
+      meaningful,
+      hits: promptHits,
+    };
+  }
+
+  return {
+    status: 'advisory',
+    generatedIndex: {
+      path: memoryConfig.artifactPath,
+      available: indexState.available,
+      noteCount: indexState.available ? indexState.document.noteCount : null,
+      error: indexState.available ? null : indexState.error,
+    },
+    changedFiles: {
+      consideredPaths,
+      hits: changedFileHits,
+    },
+    prompt: promptState,
+    summary: summarizeMemoryMatches(
+      collectUniqueMemoryHits(promptState.hits, changedFileHits),
+      { maxMatches: 2 },
+    ),
+  };
+}
+
+function buildChangedFileMemorySummary(memoryContext) {
+  return summarizeMemoryMatches(memoryContext?.changedFiles?.hits ?? [], { maxMatches: 2 });
+}
+
+function buildPromptMemorySummary(memoryContext) {
+  const promptHits = memoryContext?.prompt?.hits ?? [];
+  if (!Array.isArray(promptHits) || promptHits.length === 0) {
+    return null;
+  }
+
+  return summarizeMemoryMatches(
+    collectUniqueMemoryHits(promptHits, memoryContext?.changedFiles?.hits ?? []),
+    { maxMatches: 2 },
+  );
+}
+
+function appendMemorySummary(systemMessage, memorySummary) {
+  if (!memorySummary) {
+    return systemMessage;
+  }
+
+  return systemMessage ? `${systemMessage} ${memorySummary}` : memorySummary;
+}
+
+function buildMemoryLogMetadata(memoryContext) {
+  return {
+    generatedIndexAvailable: Boolean(memoryContext?.generatedIndex?.available),
+    changedFileHitCount: Array.isArray(memoryContext?.changedFiles?.hits) ? memoryContext.changedFiles.hits.length : 0,
+    promptHitCount: Array.isArray(memoryContext?.prompt?.hits) ? memoryContext.prompt.hits.length : 0,
+    promptQueryMeaningful: Boolean(memoryContext?.prompt?.meaningful),
+  };
+}
+
 function buildHookContext(repoRoot, eventName, payload, manifest) {
   const existingContext = loadRuntimeContext(repoRoot);
   const changedFiles = collectChangedFiles(repoRoot);
   const now = new Date().toISOString();
+  const memoryConfig = getMemoryConfig(manifest);
+  const previousMemoryContext = existingContext.memoryContext && typeof existingContext.memoryContext === 'object'
+    ? existingContext.memoryContext
+    : null;
+  const memoryContext = buildMemoryContext({
+    changedFiles,
+    memoryConfig,
+    previousMemoryContext,
+  });
 
   return {
     ...existingContext,
@@ -205,6 +394,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
     artifactPaths: [
       RUNTIME_CONTEXT_RELATIVE_PATH,
       RUNTIME_EVENT_LOG_RELATIVE_PATH,
+      ...(memoryContext.generatedIndex.available ? [memoryContext.generatedIndex.path] : []),
       ...(existingContext.artifactPaths ?? []),
     ].filter((value, index, array) => array.indexOf(value) === index),
     upstreamAgent: payload.agentName ?? existingContext.upstreamAgent ?? null,
@@ -220,6 +410,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
       manifest.copilot_hooks?.auto_eval?.manual_recovery_agents ??
       ['Auto-Eval', 'Supervisor'],
     kickoff: existingContext.kickoff ?? null,
+    memoryContext,
     lastUpdatedAt: now,
   };
 }
@@ -405,6 +596,7 @@ function runCopilotHook(repoRoot, eventName) {
   const manifest = loadOrchestrationManifest(repoRoot);
   const validation = validateOrchestrationManifest(manifest);
   const kickoffConfig = getKickoffConfig(manifest);
+  const memoryConfig = getMemoryConfig(manifest);
 
   if (!validation.valid) {
     outputJson({
@@ -420,6 +612,12 @@ function runCopilotHook(repoRoot, eventName) {
       ...context,
       kickoff: createDefaultKickoffState(kickoffConfig),
       recommendedNextAgents: kickoffConfig.entry_agents ?? ['Researcher', 'Planner'],
+      memoryContext: buildMemoryContext({
+        changedFiles: context.changedFiles ?? [],
+        memoryConfig,
+        previousMemoryContext: context.memoryContext,
+        resetPrompt: true,
+      }),
     };
 
     writeRuntimeContext(repoRoot, context);
@@ -428,11 +626,15 @@ function runCopilotHook(repoRoot, eventName) {
       triggerSource: 'copilot_hook',
       event: eventName,
       kickoffStatus: context.kickoff?.status ?? null,
+      memory: buildMemoryLogMetadata(context.memoryContext),
     });
 
     outputJson({
       continue: true,
-      systemMessage: `${manifest.copilot_hooks?.orchestration?.session_start_message ?? 'Orchestration runtime ready.'} Kickoff lane: ${(kickoffConfig.entry_agents ?? ['Researcher', 'Planner']).join(' -> ')}. Core graph: ${summarizeOrchestratedAgents(manifest)}.`,
+      systemMessage: appendMemorySummary(
+        `${manifest.copilot_hooks?.orchestration?.session_start_message ?? 'Orchestration runtime ready.'} Kickoff lane: ${(kickoffConfig.entry_agents ?? ['Researcher', 'Planner']).join(' -> ')}. Core graph: ${summarizeOrchestratedAgents(manifest)}.`,
+        buildChangedFileMemorySummary(context.memoryContext),
+      ),
     });
   }
 
@@ -445,6 +647,12 @@ function runCopilotHook(repoRoot, eventName) {
       : false;
     const kickoffAgents = kickoffConfig.entry_agents ?? ['Researcher', 'Planner'];
     const hasKickoffRecommendations = sameStringList(context.recommendedNextAgents, kickoffAgents);
+    const memoryContext = buildMemoryContext({
+      changedFiles: context.changedFiles ?? [],
+      memoryConfig,
+      previousMemoryContext: context.memoryContext,
+      promptText,
+    });
 
     context = {
       ...context,
@@ -471,6 +679,7 @@ function runCopilotHook(repoRoot, eventName) {
               : 'narrow-or-already-routed'
           : 'missing-prompt',
       },
+      memoryContext,
     };
 
     writeRuntimeContext(repoRoot, context);
@@ -481,12 +690,25 @@ function runCopilotHook(repoRoot, eventName) {
       promptSummary: promptText ? normalizePrompt(promptText).slice(0, 200) : null,
       kickoffRecommended: recommendKickoff,
       kickoffCleared: clearKickoffRecommendation,
+      memory: buildMemoryLogMetadata(context.memoryContext),
     });
+
+    const promptMemorySummary = buildPromptMemorySummary(context.memoryContext);
 
     if (recommendKickoff) {
       outputJson({
         continue: true,
-        systemMessage: buildKickoffSystemMessage(manifest, promptText),
+        systemMessage: appendMemorySummary(
+          buildKickoffSystemMessage(manifest, promptText),
+          promptMemorySummary,
+        ),
+      });
+    }
+
+    if (promptMemorySummary) {
+      outputJson({
+        continue: true,
+        systemMessage: promptMemorySummary,
       });
     }
 
@@ -501,6 +723,7 @@ function runCopilotHook(repoRoot, eventName) {
     payloadSummary: {
       toolName: payload.toolName ?? payload.tool?.name ?? null,
     },
+    memory: buildMemoryLogMetadata(context.memoryContext),
   });
 
   outputJson({ continue: true });

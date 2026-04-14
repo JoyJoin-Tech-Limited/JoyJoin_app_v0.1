@@ -1,7 +1,7 @@
 # JoyJoin AI Workflow Policy
 
 **Status:** Active contributor policy  
-**Last updated:** 2026-04-13  
+**Last updated:** 2026-04-14  
 **Scope:** Repo-level AI-assisted delivery workflow, agent usage, and approval boundaries
 
 ## Document relationships
@@ -26,6 +26,7 @@ This policy does **not** approve new runtime AI product behavior by itself. Prod
 3. **No hidden autonomous execution.** Native orchestration is a guidance-and-handoff layer. `Researcher`, `Planner`, `Supervisor`, and the support agents are explicit workflow tools, not a silent background executor.
 4. **Keep repo workflow separate from runtime AI product authority.** Agent orchestration under `.github/` governs contributor workflow. Runtime AI behavior in `apps/server` remains bounded by deterministic product authority, fallback requirements, and typed contracts.
 5. **Prefer truth over implied certainty.** If scope, ownership, or runtime state is unclear, record that uncertainty and escalate. Do not let stale context, guessed file scope, or ambiguous routing masquerade as verified state.
+6. **Treat repo memory as advisory retrieval, not authority.** Runtime `memoryContext` can surface useful prior decisions, but durable publication still requires review through `repo-memory/candidates/` before promotion into `repo-memory/promoted/`.
 
 ## Delivery lanes
 
@@ -100,6 +101,7 @@ The following are non-optional workflow boundaries.
 3. Update contributor-facing docs when workflow behavior, governance expectations, or canonical references change.
 4. Validate the change at the right level for the risk: contract checks, targeted tests, QA review, launch review, or a combination.
 5. Leave explicit findings when validation is partial; do not imply end-to-end confidence you did not establish.
+6. Keep `.git/.orchestration/` operational-only. If the work produces a durable memory candidate, stage it into `repo-memory/candidates/` instead of treating runtime state as a publication surface.
 
 ## Runtime AI boundaries that still apply
 

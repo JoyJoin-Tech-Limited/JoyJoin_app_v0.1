@@ -202,6 +202,47 @@ function validateKickoffLane(kickoffLane, location, agentNames, errors) {
   }
 }
 
+function validateMemoryContextContract(memoryContext, location, errors) {
+  if (!isPlainObject(memoryContext)) {
+    errors.push(`${location} must be an object.`);
+    return;
+  }
+
+  requireString(memoryContext, 'artifact_path', location, errors);
+  validateStringArray(memoryContext.workflow_relevant_path_prefixes, `${location}.workflow_relevant_path_prefixes`, errors);
+
+  if (!isPlainObject(memoryContext.prompt_query)) {
+    errors.push(`${location}.prompt_query must be an object.`);
+  } else {
+    const integerFields = [
+      'min_characters',
+      'min_tokens',
+      'min_long_tokens',
+      'long_token_length',
+    ];
+
+    for (const fieldName of integerFields) {
+      if (!Number.isInteger(memoryContext.prompt_query[fieldName]) || memoryContext.prompt_query[fieldName] < 1) {
+        errors.push(`${location}.prompt_query.${fieldName} must be an integer >= 1.`);
+      }
+    }
+  }
+
+  if (!Number.isInteger(memoryContext.max_hits) || memoryContext.max_hits < 1) {
+    errors.push(`${location}.max_hits must be an integer >= 1.`);
+  }
+
+  for (const fieldName of ['min_changed_file_score', 'min_prompt_score']) {
+    if (!Number.isInteger(memoryContext[fieldName]) || memoryContext[fieldName] < 1) {
+      errors.push(`${location}.${fieldName} must be an integer >= 1.`);
+    }
+  }
+
+  if (typeof memoryContext.fail_open_when_index_missing !== 'boolean') {
+    errors.push(`${location}.fail_open_when_index_missing must be a boolean.`);
+  }
+}
+
 export function validateOrchestrationManifest(manifest) {
   const errors = [];
   const warnings = [];
@@ -337,6 +378,7 @@ export function validateOrchestrationManifest(manifest) {
       validateStringArray(copilotHooks.orchestration.runtime_events, 'copilot_hooks.orchestration.runtime_events', errors);
       requireString(copilotHooks.orchestration, 'session_start_message', 'copilot_hooks.orchestration', errors);
       validateKickoffLane(copilotHooks.orchestration.kickoff_lane, 'copilot_hooks.orchestration.kickoff_lane', agentNames, errors);
+      validateMemoryContextContract(copilotHooks.orchestration.memory_context, 'copilot_hooks.orchestration.memory_context', errors);
     }
   }
 

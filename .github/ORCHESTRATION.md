@@ -48,6 +48,9 @@ Those rerouting exits are now also declared as native Supervisor handoffs in the
 - GitHub workflow: `.github/workflows/orchestrate.yml`
 - Runtime context: `.git/.orchestration/context.json`
 - Runtime event log: `.git/.orchestration/events.jsonl`
+- Promoted repo-memory index: `repo-memory/generated/promoted-index.json`
+
+The runtime context now carries a top-level advisory `memoryContext`. It records changed-file and prompt-based repo-memory hits when the generated promoted index is readable, but it does not turn `.git/.orchestration/` into durable memory storage.
 
 ## Local setup
 
@@ -61,6 +64,8 @@ chmod +x .githooks/pre-commit .githooks/post-commit
 Useful commands:
 
 ```bash
+npm run memory:validate
+npm run memory:build-index
 npm run orchestration:validate
 npm run orchestration:tooling-report
 node scripts/orchestration-supervisor.mjs workflow pull-request
@@ -68,13 +73,14 @@ node scripts/orchestration-supervisor.mjs workflow pull-request
 
 ## Session kickoff flow
 
-- `SessionStart` initializes the orchestration runtime and writes default kickoff state under `.git/.orchestration/context.json`.
+- `SessionStart` initializes the orchestration runtime, writes default kickoff state under `.git/.orchestration/context.json`, and builds advisory repo-memory context only from changed files under `.github/`, `scripts/`, and `repo-memory/`.
 - `UserPromptSubmit` inspects the first broad prompt and recommends `Researcher` -> `Planner` when the request is multi-step, ambiguous, or cross-cutting.
+- `UserPromptSubmit` also queries the promoted repo-memory index for meaningful prompts only, then surfaces a concise relevant-memory summary when useful hits exist.
 - `Researcher` returns a structured research brief.
 - `Planner` turns that brief into an approval-first execution plan.
 - After approval, `Supervisor` or the named specialist carries execution forward.
 
-This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and state, while agent delegation remains explicit.
+This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and advisory retrieval state, while agent delegation remains explicit.
 
 ## Core handoff graph
 
@@ -164,8 +170,10 @@ Branding remains a skill boundary on the frontend agents through `design-system-
 
 ## Validation expectations
 
+- `npm run memory:validate` and `npm run memory:build-index` should pass when repo-memory retrieval or publication behavior changes.
 - `npm run orchestration:validate` should pass after orchestration changes.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Please explain separate durable memory from operational state for the orchestration runtime context."}'` should surface relevant repo memory without forcing a kickoff recommendation.
 - `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.
