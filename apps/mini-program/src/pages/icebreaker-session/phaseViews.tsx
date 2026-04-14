@@ -2,7 +2,6 @@ import { View, Text } from '@tarojs/components'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
-  PHASE_CONFIG,
   type AtmosphereMood,
   type LieDetectivePlayer,
   type LieDetectiveReveal,
