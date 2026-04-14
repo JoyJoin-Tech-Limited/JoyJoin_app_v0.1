@@ -38,10 +38,79 @@
   background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
 }
 
+// ─── Safe area helpers ───────────────────────────────────────────
+@mixin safe-area-top($property: padding-top, $offset: 0rpx) {
+  #{$property}: $offset;
+  #{$property}: calc(#{$offset} + constant(safe-area-inset-top));
+  #{$property}: calc(#{$offset} + env(safe-area-inset-top));
+}
+
+@mixin safe-area-inline($offset: 0rpx, $left-property: padding-left, $right-property: padding-right) {
+  #{$left-property}: $offset;
+  #{$left-property}: calc(#{$offset} + constant(safe-area-inset-left));
+  #{$left-property}: calc(#{$offset} + env(safe-area-inset-left));
+  #{$right-property}: $offset;
+  #{$right-property}: calc(#{$offset} + constant(safe-area-inset-right));
+  #{$right-property}: calc(#{$offset} + env(safe-area-inset-right));
+}
+
+@mixin safe-area-bottom-padding($property: padding-bottom, $offset: 0rpx) {
+  #{$property}: $offset;
+  #{$property}: calc(#{$offset} + constant(safe-area-inset-bottom));
+  #{$property}: calc(#{$offset} + env(safe-area-inset-bottom));
+}
+
+// ─── Page padding / footer reserve helpers ──────────────────────
+@mixin page-shell-padding(
+  $padding-top: $spacing-lg,
+  $padding-inline: $container-padding,
+  $padding-bottom: $spacing-lg,
+  $include-top-safe-area: false
+) {
+  box-sizing: border-box;
+  padding: $padding-top $padding-inline $padding-bottom;
+  @include safe-area-inline($padding-inline);
+  @include safe-area-bottom-padding(padding-bottom, $padding-bottom);
+
+  @if $include-top-safe-area {
+    @include safe-area-top(padding-top, $padding-top);
+  }
+}
+
+@mixin fixed-footer-padding(
+  $padding-top: $spacing-md,
+  $padding-inline: $container-padding,
+  $padding-bottom: $spacing-md
+) {
+  box-sizing: border-box;
+  padding: $padding-top $padding-inline $padding-bottom;
+  @include safe-area-inline($padding-inline);
+  @include safe-area-bottom-padding(padding-bottom, $padding-bottom);
+}
+
+@mixin fixed-footer-reserve(
+  $footer-height,
+  $extra-gap: 0rpx,
+  $property: padding-bottom
+) {
+  @include safe-area-bottom-padding($property, $footer-height + $extra-gap);
+}
+
 // ─── Safe area bottom ─────────────────────────────────────────────
 @mixin safe-area-bottom {
-  padding-bottom: calc(#{$tab-bar-height} + constant(safe-area-inset-bottom));
-  padding-bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom));
+  @include safe-area-bottom-padding(padding-bottom, $tab-bar-height);
+}
+
+// ─── Overlay padding ──────────────────────────────────────────────
+@mixin overlay-padding(
+  $padding-top: $spacing-lg,
+  $padding-inline: $container-padding,
+  $padding-bottom: $spacing-lg
+) {
+  padding: $padding-top $padding-inline $padding-bottom;
+  @include safe-area-top(padding-top, $padding-top);
+  @include safe-area-inline($padding-inline);
+  @include safe-area-bottom-padding(padding-bottom, $padding-bottom);
 }
 
 // ─── Flex center ──────────────────────────────────────────────────

@@ -2,7 +2,11 @@
 @use '../styles/mixins' as *;
 
 .page-layout {
-  min-height: 100vh;
+  @include page-gradient-bg;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
   padding: $container-padding;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  @include safe-area-inline($container-padding);
 }

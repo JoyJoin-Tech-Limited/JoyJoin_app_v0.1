@@ -63,6 +63,7 @@ describe('callSocialAI', () => {
 
   afterEach(() => {
     delete process.env.DEEPSEEK_API_KEY;
+    delete process.env.SOCIAL_AI_PROVIDER;
   });
 
   // ── 1. MiniMax enabled ────────────────────────────────────────────────────
@@ -111,7 +112,40 @@ describe('callSocialAI', () => {
 
       expect(result.content).toBe('DeepSeek fallback');
       expect(result.provider).toBe('deepseek');
+      expect(result.fallbackUsed).toBe(true);
       expect(mockMinimaxCreate).toHaveBeenCalledOnce();
+      expect(mockDeepseekCreate).toHaveBeenCalledOnce();
+    });
+
+    it('uses explicit socialFunction routing for minimax-preferred functions', async () => {
+      mockMinimaxCreate.mockResolvedValue(minimaxResponse('Warm narrative'));
+
+      const result = await callSocialAI({
+        ...baseParams,
+        socialFunction: 'generateConversationTopics',
+      });
+
+      expect(result.content).toBe('Warm narrative');
+      expect(result.provider).toBe('minimax');
+      expect(result.model).toBe('minimax-m2.7');
+      expect(result.fallbackUsed).toBe(false);
+      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
+      expect(mockDeepseekCreate).not.toHaveBeenCalled();
+    });
+
+    it('uses explicit socialFunction routing for deepseek-preferred functions', async () => {
+      mockDeepseekCreate.mockResolvedValue(deepseekResponse('Structured output'));
+
+      const result = await callSocialAI({
+        ...baseParams,
+        socialFunction: 'generateMicroChallenges',
+      });
+
+      expect(result.content).toBe('Structured output');
+      expect(result.provider).toBe('deepseek');
+      expect(result.model).toBe('deepseek-chat');
+      expect(result.fallbackUsed).toBe(false);
+      expect(mockMinimaxCreate).not.toHaveBeenCalled();
       expect(mockDeepseekCreate).toHaveBeenCalledOnce();
     });
 

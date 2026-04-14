@@ -1,10 +1,15 @@
 import path from 'path'
 import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 
+import { loadRepoRootEnvFile, resolveMiniProgramApiBaseUrl } from './apiBaseUrl'
 import devConfig from './dev'
 import prodConfig from './prod'
 
 type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<'vite'>
+
+loadRepoRootEnvFile()
+
+const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
@@ -24,7 +29,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
-      'process.env.TARO_APP_API_BASE_URL': JSON.stringify(process.env.TARO_APP_API_BASE_URL || 'http://localhost:5000')
+      'process.env.TARO_APP_API_BASE_URL': JSON.stringify(MINI_PROGRAM_API_BASE_URL)
     },
     copy: {
       patterns: [

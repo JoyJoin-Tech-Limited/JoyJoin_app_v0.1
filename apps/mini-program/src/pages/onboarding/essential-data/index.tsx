@@ -1,9 +1,12 @@
 import { View, Text, Input, Button, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback } from 'react'
-import { useAuthGuard, nextStepToRoute } from '../../../hooks/useAuthGuard'
+import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
-import { apiRequest } from '../../../lib/api'
+import { apiRequest, getUserState } from '../../../lib/api'
+import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
+import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
+import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
 import { submitEssentialData } from '@shared/api'
 import './index.scss'
@@ -24,6 +27,8 @@ for (let y = currentYear - 18; y >= 1970; y--) {
 export default function EssentialDataPage() {
   const { isLoading } = useAuthGuard()
   const invalidateAuth = useInvalidateAuth()
+  const analytics = useOnboardingAnalytics('essential-data', { enabled: !isLoading })
+  const { saveCheckpoint } = useOnboardingCheckpoint()
 
   const [displayName, setDisplayName] = useState('')
   const [genderIndex, setGenderIndex] = useState<number | null>(null)
@@ -39,7 +44,12 @@ export default function EssentialDataPage() {
     cityIndex !== null
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit || isSubmitting) return
+    if (!canSubmit || isSubmitting) {
+      if (!canSubmit) {
+        analytics.validationFailed('form', 'incomplete-required-fields')
+      }
+      return
+    }
 
     setIsSubmitting(true)
     setError('')
@@ -49,6 +59,7 @@ export default function EssentialDataPage() {
       const selectedCity = cityIndex === null ? undefined : CITY_OPTIONS[cityIndex]
 
       if (!selectedGender || !selectedBirthYear || !selectedCity) {
+        analytics.validationFailed('form', 'missing-required-fields')
         throw new Error('请完整填写资料后再继续')
       }
 
@@ -62,20 +73,34 @@ export default function EssentialDataPage() {
       logInfo('[EssentialData] Submitting', data)
       await submitEssentialData(apiRequest, data)
 
-      // Invalidate auth cache and navigate to next step
+      await saveCheckpoint('essential-data')
       await invalidateAuth()
-      const userState = await apiRequest<{ nextStep?: string }>({ path: '/api/auth/user' })
-      const nextStep = userState.nextStep ?? 'extended-data'
-      Taro.redirectTo({ url: nextStepToRoute(nextStep as any) })
+      const userState = await getUserState()
+      analytics.stepCompleted({
+        fieldsCompleted: 4,
+        nextStep: userState.nextStep ?? 'extended-data',
+      })
+      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
     } catch (err) {
       const message = err instanceof Error ? err.message : '提交失败，请重试'
       setError(message)
+      analytics.errorOccurred('submit_failed', message)
       logError('[EssentialData] Submit failed', { message })
       Taro.showToast({ title: message, icon: 'none', duration: 3000 })
     } finally {
       setIsSubmitting(false)
     }
-  }, [canSubmit, isSubmitting, displayName, genderIndex, birthYearIndex, cityIndex, invalidateAuth])
+  }, [
+    analytics,
+    birthYearIndex,
+    canSubmit,
+    cityIndex,
+    displayName,
+    genderIndex,
+    invalidateAuth,
+    isSubmitting,
+    saveCheckpoint,
+  ])
 
   if (isLoading) {
     return (
@@ -103,6 +128,12 @@ export default function EssentialDataPage() {
             placeholder='大家在活动中怎么称呼你'
             value={displayName}
             onInput={(e) => setDisplayName(e.detail.value)}
+            onBlur={(e) => {
+              const nextValue = e.detail.value.trim()
+              if (nextValue !== '' && nextValue.length < 2) {
+                analytics.validationFailed('displayName', 'too-short')
+              }
+            }}
             maxlength={20}
           />
           <Text className='essential-data__hint'>2-20个字符</Text>

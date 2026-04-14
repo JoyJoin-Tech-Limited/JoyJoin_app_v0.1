@@ -1,9 +1,9 @@
 ---
 name: "SelfIteration"
-description: "Docs-only operating procedure for a proposal-only SelfIteration-lite workflow that reviews JoyJoin's agents, skills, prompts, and repo memory using existing orchestration, validation, and human approval boundaries."
-status: "Active docs-only workflow"
-type: "Operating procedure and future meta-agent specification"
-execution: "Manual workflow over existing repo agents and validators; not registered in .github/agents/manifest.json"
+description: "Proposal-only audited-support custom agent and operating procedure for reviewing JoyJoin's agents, skills, prompts, orchestration, and repo memory using existing validation and human approval boundaries."
+status: "Active audited-support agent"
+type: "Audited support-lane custom agent and operating procedure"
+execution: "Executable custom agent registered in .github/agents/manifest.json and .github/orchestration.yaml; still proposal-only and human-reviewed"
 approval: "Human approval required before any durable change or memory publication"
 triggers:
   - "Periodic portfolio review"
@@ -23,15 +23,15 @@ constraints:
   - "Cannot publish repo memory directly without review"
 ---
 
-# SelfIteration-lite Operating Procedure
+# SelfIteration Operating Procedure
 
-> **Current mode:** `SelfIteration` is not an executable custom agent. In JoyJoin today, it is a docs-only operating procedure for a human-invoked, proposal-only improvement loop over the existing agent, skill, prompt, and memory substrate.
+> **Current mode:** `SelfIteration` is an executable custom agent in JoyJoin's audited support lane. It remains a human-invoked, proposal-only improvement loop over the existing agent, skill, prompt, orchestration, and memory substrate.
 
-This file defines what `SelfIteration` means now, not a hypothetical autonomous future. If the repo eventually promotes `SelfIteration` into an executable helper, that promotion must satisfy the governance bar in `.github/ORCHESTRATION_GOVERNANCE.md` and remain outside merge or memory-publication authority.
+This file defines the shipped `SelfIteration` contract and operating procedure. The repo now registers the helper in `.github/agents/manifest.json` and `.github/orchestration.yaml`, but it still sits outside merge authority and durable memory-publication authority.
 
 ## What It Is Now
 
-`SelfIteration-lite` is a structured review workflow for improving:
+`SelfIteration` is a structured review workflow for improving:
 
 - agent discovery and handoff surfaces under `.github/agents/`
 - orchestration contract and docs under `.github/orchestration.yaml` and `.github/ORCHESTRATION.md`
@@ -39,7 +39,7 @@ This file defines what `SelfIteration` means now, not a hypothetical autonomous 
 - prompt or instruction quality where repeated failures show the current wording is weak
 - repo memory candidates when a pattern has been validated and is general enough to keep
 
-It is not a standing runtime actor. It does not watch the repo, schedule itself, open PRs on its own, publish memory on its own, or rewrite its own governance boundaries.
+It is a user-invocable audited support agent. It still does not watch the repo, schedule itself, open PRs on its own, publish memory on its own, or rewrite its own governance boundaries.
 
 ## Why This Exists
 
@@ -51,18 +51,18 @@ The repo already has the primitives needed for controlled self-improvement:
 - `Auto-Eval` for dirty-worktree and validation context
 - deterministic validators such as `npm run orchestration:validate`, `npm run orchestration:check`, and `npm run skill-routing:check`
 
-What was missing was a clear operating procedure for when to use those pieces together to improve the agent-and-skill system itself. `SelfIteration-lite` fills that gap without introducing a new autonomous control-plane actor.
+What was missing was a clear operating procedure for when to use those pieces together to improve the agent-and-skill system itself. `SelfIteration` now fills that gap as a proposal-only audited support helper, without introducing a new autonomous control-plane actor.
 
 ## Quick Trigger Checklist
 
-Run `SelfIteration-lite` if any of these are true:
+Run `SelfIteration` if any of these are true:
 
 - the same failure pattern has happened more than once
 - routing, docs, frontmatter, or validation drift is becoming a recurring issue
 - contributors keep needing the same boundary or governance reminder
 - a support agent or new skill proposal needs evidence before promotion
 
-Skip `SelfIteration-lite` if the issue is only:
+Skip `SelfIteration` if the issue is only:
 
 - a one-off typo, wording fix, or formatting cleanup
 - an isolated miss with no repeat pattern yet
@@ -70,7 +70,7 @@ Skip `SelfIteration-lite` if the issue is only:
 
 ## When To Run It
 
-Run `SelfIteration-lite` when one or more of these are true:
+Run `SelfIteration` when one or more of these are true:
 
 - the same agent or skill failure mode repeats across sessions
 - routing picks the wrong skill or fails to load the right one often enough to be a pattern
@@ -83,7 +83,7 @@ Do not run it for one-off formatting issues, isolated typos, or speculative idea
 
 ## What It Must Never Do
 
-`SelfIteration-lite` must not:
+`SelfIteration` must not:
 
 - modify `.github/orchestration.yaml`, agent docs, or skill docs without a normal reviewed change
 - publish repo memory directly as if a proposal were already validated
@@ -93,13 +93,12 @@ Do not run it for one-off formatting issues, isolated typos, or speculative idea
 
 ## Current Execution Model
 
-Use the existing portfolio instead of inventing a new runtime.
+Use the executable audited support lane directly, then stop at review.
 
 ### Recommended lane
 
-1. `Researcher`
-2. `Planner`
-3. Optional specialist or `Supervisor`
+1. `SelfIteration`
+2. Optional direct repo edit inside the same reviewed change
 4. Human review
 5. Deterministic validation
 
@@ -163,9 +162,9 @@ Default toward documentation, routing, or validation fixes before creating a new
 
 ### Step 4: Produce the smallest proposal
 
-Every `SelfIteration-lite` cycle should produce one of these:
+Every `SelfIteration` cycle should produce one of these:
 
-- a docs-only correction
+- a documentation correction
 - a routing metadata improvement
 - a deterministic validator or regression test
 - a small agent or skill wording improvement
@@ -194,7 +193,7 @@ Memory should only be proposed when:
 - the proposed wording is backed by successful validation or repeated accepted reviews
 - the memory will reduce future mistakes rather than duplicate the docs verbatim
 
-Even then, `SelfIteration-lite` still does not publish the note itself. The follow-up path is: reviewed draft -> `npm run memory:stage-candidate` -> human review -> `npm run memory:promote`.
+Even then, `SelfIteration` still does not publish the note itself. The follow-up path is: reviewed draft -> `npm run memory:stage-candidate` -> human review -> `npm run memory:promote`.
 
 ### Step 6: End with a reviewer packet
 
@@ -211,10 +210,10 @@ If any of those are missing, the cycle is incomplete.
 
 ## Output Template
 
-Use this structure for the final deliverable of a `SelfIteration-lite` pass:
+Use this structure for the final deliverable of a `SelfIteration` pass:
 
 ```md
-## SelfIteration-lite Summary
+## SelfIteration Summary
 
 ### Trigger
 [one sentence]
@@ -240,18 +239,17 @@ or
 - [approve / revise / defer]
 ```
 
-## Promotion Gate For A Future Executable Agent
+## Why It Remains Audited Support
 
-`SelfIteration` should remain docs-only until the repo can prove all of the following:
+`SelfIteration` is executable now, but it remains outside the core handoff graph.
 
-- repeated accepted value from manual `SelfIteration-lite` cycles
-- low false-positive rate in identifying real portfolio gaps
-- strong provenance for evidence, proposals, and memory candidates
-- explicit hard-stop rules around self-core modification and approval boundaries
-- sufficient tooling for telemetry collection, draft packaging, validation, and auditability
-- a clear answer to where the helper sits: audited support lane, not core graph by default
+- It is proposal-only and user-invocable, not a background scheduler.
+- It has no merge authority.
+- It has no durable memory publication authority.
+- It cannot change its own approval boundaries autonomously.
+- Any reviewed memory draft still follows the normal path: reviewed draft -> `npm run memory:stage-candidate` -> human review -> `npm run memory:promote`.
 
-The first promotion target, if evidence eventually justifies one, is a proposal-only executable helper. It is not a fully autonomous meta-agent.
+The repo should only consider deeper promotion after repeated value, low false positives, strong provenance, and a justified need to expand the authority surface.
 
 ## Relationship To The Future Spec
 
@@ -262,7 +260,7 @@ The older abstract `SelfIteration` concept is still useful as a long-term design
 - no self-approval or self-merge
 - evidence-backed memory staging only
 
-But the repo should treat those ideas as design constraints, not as proof that a runnable agent is warranted now.
+But the repo should treat those ideas as design constraints that still apply to the current audited-support agent, not as approval for broader autonomy.
 
 ## Review Checklist
 

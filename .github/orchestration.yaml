@@ -25,7 +25,8 @@
       "debug",
       "principal SWE",
       "SE: Product Manager",
-      "prompt engineer"
+      "prompt engineer",
+      "SelfIteration"
     ]
   },
   "copilot_hooks": {
@@ -70,6 +71,8 @@
         "max_hits": 3,
         "min_changed_file_score": 6,
         "min_prompt_score": 10,
+        "max_validation_age_days": 90,
+        "surface_source_path_conflicts": true,
         "fail_open_when_index_missing": true
       },
       "kickoff_lane": {
@@ -739,6 +742,28 @@
           }
         ]
       }
+    },
+    "SelfIteration": {
+      "file": ".github/agents/self-iteration.agent.md",
+      "portfolio_role": "meta-governance",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Proposal-only portfolio review, reviewer-packet drafting, and deterministic validation are covered by the normalized read, search, edit, and execute surface.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add stronger reviewer-packet provenance only if support-lane evidence collection needs structured export artifacts.",
+            "reason": "The current helper can already inspect repo state, draft proposals, and run validators without expanding its authority boundaries."
+          }
+        ]
+      }
     }
   },
   "skill_bindings": {
@@ -816,7 +841,11 @@
     "SE: Product Manager": [
       "draft-prd"
     ],
-    "prompt engineer": []
+    "prompt engineer": [],
+    "SelfIteration": [
+      "docs-sync",
+      "testing-and-regression-guardrails"
+    ]
   },
   "retry_policy": {
     "default": {

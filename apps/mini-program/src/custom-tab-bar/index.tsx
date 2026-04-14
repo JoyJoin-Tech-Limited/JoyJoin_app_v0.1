@@ -88,7 +88,7 @@ export default class CustomTabBar extends Component<unknown, State> {
     switch (tabKey) {
       case 'discover':
         return badges.discover
-      case 'journey':
+      case 'events':
         return badges.activities
       case 'connections':
         return badges.chat

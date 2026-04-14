@@ -238,6 +238,14 @@ function validateMemoryContextContract(memoryContext, location, errors) {
     }
   }
 
+  if (!Number.isInteger(memoryContext.max_validation_age_days) || memoryContext.max_validation_age_days < 1) {
+    errors.push(`${location}.max_validation_age_days must be an integer >= 1.`);
+  }
+
+  if (typeof memoryContext.surface_source_path_conflicts !== 'boolean') {
+    errors.push(`${location}.surface_source_path_conflicts must be a boolean.`);
+  }
+
   if (typeof memoryContext.fail_open_when_index_missing !== 'boolean') {
     errors.push(`${location}.fail_open_when_index_missing must be a boolean.`);
   }

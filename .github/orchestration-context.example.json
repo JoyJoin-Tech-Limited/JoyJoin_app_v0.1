@@ -61,10 +61,40 @@
           "title": "Runtime State Truthfulness",
           "path": "repo-memory/promoted/orchestration/runtime-state-truthfulness.md",
           "score": 21,
+          "lastValidatedAt": "2026-04-14",
+          "relatedPaths": [
+            ".github/ORCHESTRATION.md",
+            ".github/ORCHESTRATION_GOVERNANCE.md",
+            "scripts/orchestration-lib.mjs"
+          ],
+          "sources": [
+            ".github/ORCHESTRATION.md",
+            ".github/ORCHESTRATION_GOVERNANCE.md"
+          ],
           "reasons": [
             "related paths matched: .github/ORCHESTRATION.md",
             "path tokens matched: orchestration, runtime"
-          ]
+          ],
+          "lifecycle": {
+            "evaluatedAt": "2026-04-13",
+            "lastValidatedAt": "2026-04-14",
+            "status": "fresh",
+            "caution": false,
+            "stale": false,
+            "validationAgeDays": 0,
+            "maxValidationAgeDays": 90,
+            "conflict": false,
+            "conflictingPaths": [],
+            "matchedAuthorityPaths": [],
+            "authoritativePaths": [
+              ".github/ORCHESTRATION.md",
+              ".github/ORCHESTRATION_GOVERNANCE.md",
+              "scripts/orchestration-lib.mjs",
+              "repo-memory/promoted/orchestration/runtime-state-truthfulness.md"
+            ],
+            "sourcePathConflictsEnabled": true,
+            "warnings": []
+          }
         }
       ]
     },
@@ -72,6 +102,17 @@
       "query": "Add a new API endpoint for user profile retrieval with caching.",
       "meaningful": true,
       "hits": []
+    },
+    "lifecycle": {
+      "evaluatedAt": "2026-04-13",
+      "maxValidationAgeDays": 90,
+      "sourcePathConflictsEnabled": true,
+      "status": "clear",
+      "totalHits": 1,
+      "cautionHitCount": 0,
+      "staleHitCount": 0,
+      "conflictHitCount": 0,
+      "warningHitIds": []
     },
     "summary": "Relevant repo memory: Runtime State Truthfulness."
   },

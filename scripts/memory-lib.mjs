@@ -17,6 +17,10 @@ export const DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES = {
 };
 export const DEFAULT_MEMORY_QUERY_LIMIT = 5;
 export const DEFAULT_MEMORY_QUERY_MIN_SCORE = 1;
+export const DEFAULT_MEMORY_LIFECYCLE_RULES = {
+  maxValidationAgeDays: 90,
+  surfaceSourcePathConflicts: true,
+};
 
 const REQUIRED_METADATA_FIELDS = [
   'id',
@@ -354,6 +358,47 @@ function isIsoDateOnly(value) {
   return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+function normalizeIsoDateOnly(value) {
+  const normalizedValue = String(value ?? '').trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const dateOnly = normalizedValue.slice(0, 10);
+  return isIsoDateOnly(dateOnly) ? dateOnly : null;
+}
+
+function calculateAgeInDays(fromDate, toDate) {
+  const fromTimestamp = Date.parse(`${fromDate}T00:00:00Z`);
+  const toTimestamp = Date.parse(`${toDate}T00:00:00Z`);
+
+  if (Number.isNaN(fromTimestamp) || Number.isNaN(toTimestamp)) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((toTimestamp - fromTimestamp) / 86_400_000));
+}
+
+function collectMemoryHitAuthoritativePaths(match) {
+  return uniqueStrings(
+    [
+      ...(Array.isArray(match?.sources) ? match.sources : []),
+      ...(Array.isArray(match?.relatedPaths) ? match.relatedPaths : []),
+      match?.path,
+    ]
+      .filter((value) => typeof value === 'string' && value.trim() !== '')
+      .map((value) => normalizeRepoRelativePath(value)),
+  );
+}
+
+function pathsConflictForLifecycle(changedPath, authoritativePath) {
+  return (
+    changedPath === authoritativePath ||
+    isRepoPathWithin(changedPath, authoritativePath) ||
+    isRepoPathWithin(authoritativePath, changedPath)
+  );
+}
+
 function validateRepoPathArray(relativePath, fieldName, values, errors) {
   for (const value of values) {
     const normalizedPath = normalizeRepoRelativePath(value);
@@ -623,14 +668,144 @@ export function isMeaningfulMemoryQuery(
   return longTokens.length >= (rules.minLongTokens ?? DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES.minLongTokens);
 }
 
-export function createMemoryHitSummary(match) {
+export function assessMemoryHitLifecycle(match, options = {}) {
+  const evaluatedAt = normalizeIsoDateOnly(options.evaluatedAt ?? new Date().toISOString());
+  const maxValidationAgeDays =
+    Number.isInteger(options.maxValidationAgeDays) && options.maxValidationAgeDays > 0
+      ? options.maxValidationAgeDays
+      : DEFAULT_MEMORY_LIFECYCLE_RULES.maxValidationAgeDays;
+  const sourcePathConflictsEnabled = options.surfaceSourcePathConflicts !== false;
+  const changedPaths = uniqueStrings(
+    (options.changedPaths ?? [])
+      .filter((value) => typeof value === 'string' && value.trim() !== '')
+      .map((value) => normalizeRepoRelativePath(value)),
+  );
+  const authoritativePaths = collectMemoryHitAuthoritativePaths(match);
+  const conflictingPaths = [];
+  const matchedAuthorityPaths = [];
+
+  if (sourcePathConflictsEnabled) {
+    for (const changedPath of changedPaths) {
+      for (const authoritativePath of authoritativePaths) {
+        if (!pathsConflictForLifecycle(changedPath, authoritativePath)) {
+          continue;
+        }
+
+        conflictingPaths.push(changedPath);
+        matchedAuthorityPaths.push(authoritativePath);
+        break;
+      }
+    }
+  }
+
+  const lastValidatedAt = normalizeIsoDateOnly(match?.lastValidatedAt);
+  const validationAgeDays = lastValidatedAt && evaluatedAt
+    ? calculateAgeInDays(lastValidatedAt, evaluatedAt)
+    : null;
+  const stale = typeof validationAgeDays === 'number' && validationAgeDays > maxValidationAgeDays;
+  const conflict = conflictingPaths.length > 0;
+  const warnings = [];
+
+  if (stale) {
+    warnings.push(`validation age ${validationAgeDays}d exceeds ${maxValidationAgeDays}d threshold`);
+  }
+
+  if (conflict) {
+    warnings.push(`changed workflow-relevant paths overlap note authority: ${conflictingPaths.join(', ')}`);
+  }
+
+  return {
+    evaluatedAt,
+    lastValidatedAt,
+    status: stale && conflict ? 'stale-conflicted' : stale ? 'stale' : conflict ? 'conflicted' : 'fresh',
+    caution: stale || conflict,
+    stale,
+    validationAgeDays,
+    maxValidationAgeDays,
+    conflict,
+    conflictingPaths,
+    matchedAuthorityPaths,
+    authoritativePaths,
+    sourcePathConflictsEnabled,
+    warnings,
+  };
+}
+
+export function createMemoryHitSummary(match, options = {}) {
+  const lifecycle = assessMemoryHitLifecycle(match, options);
+
   return {
     id: match.id,
     title: match.title,
     path: match.path,
     score: typeof match.score === 'number' ? match.score : null,
     reasons: Array.isArray(match.reasons) ? match.reasons.slice(0, 2) : [],
+    lastValidatedAt: lifecycle.lastValidatedAt,
+    relatedPaths: Array.isArray(match.relatedPaths)
+      ? uniqueStrings(match.relatedPaths.map((value) => normalizeRepoRelativePath(value)))
+      : [],
+    sources: Array.isArray(match.sources)
+      ? uniqueStrings(match.sources.map((value) => normalizeRepoRelativePath(value)))
+      : [],
+    lifecycle,
   };
+}
+
+export function summarizeMemoryHitLifecycles(matches, options = {}) {
+  const normalizedMatches = Array.isArray(matches) ? matches : [];
+  const evaluatedAt = normalizeIsoDateOnly(options.evaluatedAt ?? new Date().toISOString());
+  const maxValidationAgeDays =
+    Number.isInteger(options.maxValidationAgeDays) && options.maxValidationAgeDays > 0
+      ? options.maxValidationAgeDays
+      : DEFAULT_MEMORY_LIFECYCLE_RULES.maxValidationAgeDays;
+  const sourcePathConflictsEnabled = options.surfaceSourcePathConflicts !== false;
+  const warningHitIds = [];
+  let staleHitCount = 0;
+  let conflictHitCount = 0;
+
+  for (const match of normalizedMatches) {
+    const lifecycle = match?.lifecycle ?? assessMemoryHitLifecycle(match, options);
+
+    if (lifecycle.stale) {
+      staleHitCount += 1;
+    }
+
+    if (lifecycle.conflict) {
+      conflictHitCount += 1;
+    }
+
+    if (lifecycle.caution && typeof match?.id === 'string') {
+      warningHitIds.push(match.id);
+    }
+  }
+
+  return {
+    evaluatedAt,
+    maxValidationAgeDays,
+    sourcePathConflictsEnabled,
+    status: normalizedMatches.length === 0 ? 'none' : warningHitIds.length > 0 ? 'caution' : 'clear',
+    totalHits: normalizedMatches.length,
+    cautionHitCount: warningHitIds.length,
+    staleHitCount,
+    conflictHitCount,
+    warningHitIds,
+  };
+}
+
+function describeMemoryHitForSummary(match) {
+  if (!match?.lifecycle?.caution) {
+    return match.title;
+  }
+
+  const labels = [];
+  if (match.lifecycle.stale) {
+    labels.push('stale');
+  }
+  if (match.lifecycle.conflict) {
+    labels.push('changed-path conflict');
+  }
+
+  return `${match.title} (${labels.join(', ') || 'review'})`;
 }
 
 export function summarizeMemoryMatches(matches, options = {}) {
@@ -639,10 +814,24 @@ export function summarizeMemoryMatches(matches, options = {}) {
   }
 
   const maxMatches = options.maxMatches ?? 2;
-  const titles = matches.slice(0, maxMatches).map((match) => match.title);
+  const cautionCount = matches.filter((match) => match?.lifecycle?.caution).length;
+  const titles = matches.slice(0, maxMatches).map((match) => describeMemoryHitForSummary(match));
   const remainingCount = Math.max(matches.length - maxMatches, 0);
-  const suffix = remainingCount > 0 ? `; +${remainingCount} more` : '';
-  return `${options.prefix ?? 'Relevant repo memory'}: ${titles.join('; ')}${suffix}.`;
+  const suffixes = [];
+
+  if (remainingCount > 0) {
+    suffixes.push(`+${remainingCount} more`);
+  }
+
+  if (cautionCount > 0) {
+    suffixes.push('review stale or conflicted hits before treating them as current guidance');
+  }
+
+  const suffix = suffixes.length > 0 ? `; ${suffixes.join('; ')}` : '';
+  const prefix = cautionCount > 0
+    ? `${options.prefix ?? 'Relevant repo memory'} with caution`
+    : options.prefix ?? 'Relevant repo memory';
+  return `${prefix}: ${titles.join('; ')}${suffix}.`;
 }
 
 export function queryPromotedMemory(rawQuery, options = {}) {

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-13",
+  "updated": "2026-04-14",
   "orchestrationContract": "../orchestration.yaml",
   "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
@@ -432,6 +432,27 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "SelfIteration",
+      "file": "self-iteration.agent.md",
+      "description": "Use when repeated agent, skill, orchestration, hook, prompt, or repo-memory workflow problems need a proposal-only reviewer packet, validated draft, or audited support-lane recommendation instead of an immediate promotion into the core graph. Trigger phrases: self iteration, review the agent portfolio, fix orchestration drift, repeated routing misses, prepare a memory candidate draft.",
+      "tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "argumentHint": "Describe the repeated workflow issue, affected agent, skill, orchestration, hook, prompt, or repo-memory surfaces, the evidence already gathered, and whether you need a reviewer packet, draft change set, or validation summary.",
+      "subagents": [],
+      "portfolioRole": "meta-governance",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "docs-sync",
+        "testing-and-regression-guardrails"
+      ],
       "toolingStatus": "sufficient"
     },
     {

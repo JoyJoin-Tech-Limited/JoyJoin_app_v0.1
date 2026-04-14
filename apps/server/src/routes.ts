@@ -23,6 +23,7 @@ import { setupWechatAuth } from "./wechatAuth";
 import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
 import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
+import { buildEventPoolRegistrationInsert } from "./lib/eventPoolRegistration";
 import { venueMatchingService } from "./venueMatchingService";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "./userMatchingService";
 import { broadcastEventStatusChanged, broadcastAdminAction, broadcastAttendanceStatusUpdated } from "./eventBroadcast";
@@ -1319,48 +1320,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
-      
-      // Try to get event from events table first (for demo/regular events)
-      const [event] = await db.select().from(events).where(eq(events.id, eventId));
-      
-      // If not found in events table, try blindBoxEvents table
-      let eventDateTime = event?.dateTime;
-      if (!event) {
-        const blindBoxEvent = await storage.getBlindBoxEventById(eventId, userId);
-        if (!blindBoxEvent) {
-          return res.status(404).json({ message: "Event not found" });
-        }
-        eventDateTime = blindBoxEvent.dateTime;
-      }
 
-      // Check if group chat is open (24 hours before event OR event has passed)
-      const now = new Date();
-      const eventTime = new Date(eventDateTime);
-      const hoursUntilEvent = (eventTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-      // Chat unlocks 24 hours before event, and remains accessible after event completes
-      const chatUnlocked = hoursUntilEvent <= 24;
-
-      if (!chatUnlocked) {
-        return res.status(403).json({ 
-          message: "群聊将在活动开始前24小时开放",
-          hoursUntilUnlock: Math.max(0, hoursUntilEvent - 24),
+        logger.warn('Blocked event chat write because the feature is under compliance freeze', {
+          route: '/api/events/:eventId/messages',
+          eventId,
+          userId,
         });
-      }
 
-      const result = insertChatMessageSchema.safeParse({
-        eventId,
-        message: req.body?.message ?? req.body?.content,
-      });
-      
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      const message = await storage.createChatMessage(userId, result.data);
-      res.json(message);
+        return res.status(503).json({
+          message: '活动群聊暂不可用',
+          featureUnavailable: true,
+        });
     } catch (error) {
-      console.error("Error creating message:", error);
-      res.status(500).json({ message: "Failed to create message" });
+        console.error("Error blocking message creation:", error);
+        res.status(500).json({ message: "Failed to apply event chat freeze" });
     }
   });
 
@@ -7551,7 +7524,11 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
     try {
       const poolId = req.params.id;
       const userId = (req.user as User).id;
-      const invitationCode = req.body.invitationCode;
+      const { invitationCode, values: validatedData } = buildEventPoolRegistrationInsert({
+        poolId,
+        userId,
+        payload: req.body,
+      });
 
       // Check if pool exists and is active
       const pool = await db.query.eventPools.findFirst({
@@ -7637,19 +7614,6 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         inviterId = invitation.inviterId;
       }
 
-      // Validate preferences
-      const validatedData = insertEventPoolRegistrationSchema.parse({
-        poolId,
-        userId,
-        budgetRange: Array.isArray(req.body.budgetRange) ? req.body.budgetRange : [],
-        preferredLanguages: Array.isArray(req.body.preferredLanguages) ? req.body.preferredLanguages : [],
-        eventIntent: Array.isArray(req.body.eventIntent) ? req.body.eventIntent : [],
-        cuisinePreferences: Array.isArray(req.body.cuisinePreferences) ? req.body.cuisinePreferences : [],
-        dietaryRestrictions: Array.isArray(req.body.dietaryRestrictions) ? req.body.dietaryRestrictions : [],
-        tasteIntensity: Array.isArray(req.body.tasteIntensity) ? req.body.tasteIntensity : [],
-        matchStatus: 'pending',
-      });
-
       const registration = await db.transaction(async (tx: DbTransaction) => {
         const [createdRegistration] = await tx
           .insert(eventPoolRegistrations)
@@ -7705,7 +7669,13 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         entitlementMode,
       });
     } catch (error: any) {
-      console.error("Error registering for event pool:", error);
+      logger.error("Failed to register for event pool", {
+        route: "/api/event-pools/:id/register",
+        poolId: req.params.id,
+        userId: (req.user as User | undefined)?.id,
+        code: typeof error?.code === "string" ? error.code : undefined,
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       if (error?.code === "23505" || error?.cause?.code === "23505") {
         return res.status(400).json({ message: "You have already registered for this event pool" });

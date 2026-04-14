@@ -7,7 +7,7 @@ import {
   type ApiError,
 } from '../lib/api'
 import { seedMiniProgramAuthSession } from '../lib/authSession'
-import { nextStepToMiniProgramRoute } from '../lib/onboardingRoutes'
+import { navigateToMiniProgramNextStep } from '../lib/onboardingNavigation'
 import { logInfo, logError } from '../lib/logger'
 
 /**
@@ -18,7 +18,7 @@ import { logInfo, logError } from '../lib/logger'
  *   2. POST /api/auth/wechat/login → server calls code2Session, creates session.
  *   3. GET /api/auth/user → retrieve server-driven `nextStep`.
  *   4. Seed the auth cache so protected routes do not keep stale guest state.
- *   5. Navigate to the route corresponding to `nextStep`.
+ *   5. Navigate via the shared onboarding helper so tab vs page routing stays correct.
  *
  * Returns { handleWeChatLogin, isLoggingIn }.
  */
@@ -39,11 +39,10 @@ export function useWeChatLogin() {
 
       const userState = await getUserState()
       seedMiniProgramAuthSession(userState, queryClient)
-      const route = nextStepToMiniProgramRoute(userState.nextStep)
 
-      logInfo('[useWeChatLogin] Login successful', { nextStep: userState.nextStep, route })
+      logInfo('[useWeChatLogin] Login successful', { nextStep: userState.nextStep })
 
-      Taro.reLaunch({ url: route })
+      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })
     } catch (error) {
       const typedError = error as ApiError | undefined
       let message = error instanceof Error ? error.message : '微信登录失败，请检查网络连接后重试'

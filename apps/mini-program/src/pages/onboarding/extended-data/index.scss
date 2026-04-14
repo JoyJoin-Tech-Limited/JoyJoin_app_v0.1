@@ -4,8 +4,7 @@
 .extended-data {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  @include page-gradient-bg;
 
   &__loading {
     @include flex-center;
@@ -45,7 +44,10 @@
 
   &__scroll {
     flex: 1;
+    box-sizing: border-box;
     padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+    @include fixed-footer-reserve($button-height + ($spacing-md * 2), $spacing-lg);
   }
 
   &__category {
@@ -87,10 +89,6 @@
     color: $color-text-primary;
   }
 
-  &__spacer {
-    height: 200rpx;
-  }
-
   &__error {
     display: block;
     font-size: $font-size-sm;
@@ -104,10 +102,9 @@
     bottom: 0;
     left: 0;
     right: 0;
-    padding: $spacing-md $container-padding;
     background: rgba(250, 250, 250, 0.95);
-    backdrop-filter: blur(10px);
-    @include safe-area-bottom;
+    backdrop-filter: blur(20rpx);
+    @include fixed-footer-padding($spacing-md, $container-padding, $spacing-md);
   }
 
   &__submit {

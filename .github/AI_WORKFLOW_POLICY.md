@@ -57,6 +57,7 @@ Use the **operational lane** when any of the following are true:
 
 - Auto-Eval is blocking guarded tools or a dirty worktree needs deterministic review.
 - The request is primarily about validation, QA coverage, release blockers, or launch risk.
+- The request is about repeated agent, skill, orchestration, hook, prompt, or repo-memory governance drift and the right outcome is a proposal-only reviewer packet; use `SelfIteration` in the audited support lane.
 - The work needs incident-style triage, blocker routing, or remediation sequencing.
 
 Use `Supervisor` inside the operational lane when the next move is rerouting rather than execution itself:

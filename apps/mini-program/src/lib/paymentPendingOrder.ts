@@ -146,12 +146,10 @@ export function resolvePendingOrder(input: {
   }
 
   const normalizedCurrentUserId = normalizeNonEmptyString(input.currentUserId)
-  if (
-    normalizedCurrentUserId &&
-    normalizedContext.userId &&
-    normalizedContext.userId !== normalizedCurrentUserId
-  ) {
-    return { status: 'clear', reason: 'wrong-user' }
+  if (normalizedCurrentUserId) {
+    if (!normalizedContext.userId || normalizedContext.userId !== normalizedCurrentUserId) {
+      return { status: 'clear', reason: 'wrong-user' }
+    }
   }
 
   return {

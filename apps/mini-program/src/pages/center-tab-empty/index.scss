@@ -3,15 +3,22 @@
 
 .center-tab-empty {
   min-height: 100vh;
-  padding: $spacing-2xl $container-padding calc(220rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  @include page-shell-padding(
+    $spacing-2xl,
+    $container-padding,
+    $button-height-sm + ($spacing-sm * 2),
+  );
+  @include fixed-footer-reserve($spacing-xl + $button-height-sm + ($spacing-sm * 2), $spacing-md);
   background:
     radial-gradient(circle at top, rgba(168, 107, 255, 0.16), transparent 42%),
     linear-gradient(180deg, #fffdfd 0%, #fff4f8 52%, #fff8f1 100%);
-  box-sizing: border-box;
 
   &__content {
     display: flex;
-    min-height: calc(100vh - 320rpx);
+    flex: 1;
+    min-height: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;

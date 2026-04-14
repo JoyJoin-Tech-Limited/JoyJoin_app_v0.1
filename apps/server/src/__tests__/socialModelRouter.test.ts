@@ -77,6 +77,10 @@ describe('socialModelRouter', () => {
         'generateLieDetectiveStatements',
         'generateMicroChallenges',
         'generatePersonalityDiceChallenges',
+        'generateProfileTagline',
+        'generateConversationTopics',
+        'generateWelcomeMessage',
+        'generateClosingMessage',
       ] as const;
 
       for (const fn of fns) {
@@ -95,6 +99,10 @@ describe('socialModelRouter', () => {
         'generateWarmupTopics',
         'generateMicroChallenges',
         'generatePersonalityDiceChallenges',
+        'generateProfileTagline',
+        'generateConversationTopics',
+        'generateWelcomeMessage',
+        'generateClosingMessage',
       ] as const;
 
       for (const fn of fns) {
@@ -123,6 +131,10 @@ describe('socialModelRouter', () => {
         'generateXiaoYueComment',
         'generateRecapSummary',
         'generateLieDetectiveStatements',
+        'generateProfileTagline',
+        'generateConversationTopics',
+        'generateWelcomeMessage',
+        'generateClosingMessage',
       ] as const;
 
       for (const fn of minimaxFns) {

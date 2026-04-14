@@ -41,6 +41,12 @@ describe('profileTaglineService', () => {
     });
 
     expect(callSocialAIMock).toHaveBeenCalledTimes(1);
+    expect(callSocialAIMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callerTag: 'profileTagline',
+        socialFunction: 'generateProfileTagline',
+      })
+    );
     expect(result.insightLine).toBe('你常常能把轻松的话题自然带向更有意思的交流。');
     expect(result.meta.provider).toBe('deepseek');
     expect(result.meta.fromCache).toBe(false);

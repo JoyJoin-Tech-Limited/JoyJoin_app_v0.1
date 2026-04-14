@@ -1,4 +1,4 @@
-export type MiniProgramTabKey = 'discover' | 'journey' | 'connections' | 'profile'
+export type MiniProgramTabKey = 'discover' | 'events' | 'connections' | 'profile'
 
 export interface MiniProgramTabItem {
   key: MiniProgramTabKey
@@ -23,7 +23,7 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
     componentSelectedIconPath: '../assets/tab-icons/发现 icon.png',
   },
   {
-    key: 'journey',
+    key: 'events',
     pagePath: 'pages/events/index',
     url: '/pages/events/index',
     text: '足迹',
@@ -56,7 +56,7 @@ export const MINI_PROGRAM_TAB_ITEMS: MiniProgramTabItem[] = [
 
 export const MINI_PROGRAM_TAB_INDEX: Record<MiniProgramTabKey, number> = {
   discover: 0,
-  journey: 1,
+  events: 1,
   connections: 2,
   profile: 3,
 }

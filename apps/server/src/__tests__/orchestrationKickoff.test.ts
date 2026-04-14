@@ -6,10 +6,42 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 type CollectChangedFiles = (repoRoot: string) => string[];
+interface MeaningfulMemoryQueryRules {
+  minCharacters: number;
+  minTokens: number;
+  minLongTokens: number;
+  longTokenLength: number;
+}
+
+type BuildMemoryContext = (args: {
+  changedFiles: string[];
+  memoryConfig: {
+    artifactPath: string;
+    workflowRelevantPathPrefixes: string[];
+    promptQueryRules: MeaningfulMemoryQueryRules;
+    maxHits: number;
+    minChangedFileScore: number;
+    minPromptScore: number;
+    maxValidationAgeDays: number;
+    surfaceSourcePathConflicts: boolean;
+  };
+  previousMemoryContext?: RuntimeMemoryContext | null;
+  promptText?: string;
+  resetPrompt?: boolean;
+  evaluatedAt?: string;
+}) => RuntimeMemoryContext;
 
 const orchestrationLibPath = new URL("../../../../scripts/orchestration-lib.mjs", import.meta.url).href;
 const { collectChangedFiles } = await import(orchestrationLibPath) as {
   collectChangedFiles: CollectChangedFiles;
+};
+const orchestrationSupervisorPath = new URL("../../../../scripts/orchestration-supervisor.mjs", import.meta.url).href;
+const { buildMemoryContext } = await import(orchestrationSupervisorPath) as {
+  buildMemoryContext: BuildMemoryContext;
+};
+const memoryLibPath = new URL("../../../../scripts/memory-lib.mjs", import.meta.url).href;
+const { DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES } = await import(memoryLibPath) as {
+  DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES: MeaningfulMemoryQueryRules;
 };
 
 const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -39,7 +71,38 @@ interface RuntimeEventEntry {
     changedFileHitCount?: number;
     promptHitCount?: number;
     promptQueryMeaningful?: boolean;
+    warningHitCount?: number;
+    staleHitCount?: number;
+    conflictHitCount?: number;
   };
+}
+
+interface RuntimeMemoryLifecycle {
+  evaluatedAt?: string | null;
+  lastValidatedAt?: string | null;
+  status?: string;
+  caution?: boolean;
+  stale?: boolean;
+  validationAgeDays?: number | null;
+  maxValidationAgeDays?: number | null;
+  conflict?: boolean;
+  conflictingPaths?: string[];
+  matchedAuthorityPaths?: string[];
+  authoritativePaths?: string[];
+  sourcePathConflictsEnabled?: boolean;
+  warnings?: string[];
+}
+
+interface RuntimeMemoryLifecycleSummary {
+  evaluatedAt?: string | null;
+  maxValidationAgeDays?: number;
+  sourcePathConflictsEnabled?: boolean;
+  status?: string;
+  totalHits?: number;
+  cautionHitCount?: number;
+  staleHitCount?: number;
+  conflictHitCount?: number;
+  warningHitIds?: string[];
 }
 
 interface RuntimeMemoryHit {
@@ -48,6 +111,10 @@ interface RuntimeMemoryHit {
   path: string;
   score: number | null;
   reasons: string[];
+  lastValidatedAt?: string | null;
+  relatedPaths?: string[];
+  sources?: string[];
+  lifecycle?: RuntimeMemoryLifecycle;
 }
 
 interface RuntimeMemoryContext {
@@ -67,6 +134,7 @@ interface RuntimeMemoryContext {
     meaningful?: boolean;
     hits?: RuntimeMemoryHit[];
   };
+  lifecycle?: RuntimeMemoryLifecycleSummary;
   summary?: string | null;
 }
 
@@ -202,6 +270,9 @@ const TEST_MEMORY_DRAFT_PATH = path.join(REPO_ROOT, TEST_MEMORY_DRAFT_RELATIVE_P
 const TEST_MEMORY_CANDIDATE_PATH = path.join(REPO_ROOT, TEST_MEMORY_CANDIDATE_RELATIVE_PATH);
 const TEST_MEMORY_PROMOTED_PATH = path.join(REPO_ROOT, TEST_MEMORY_PROMOTED_RELATIVE_PATH);
 const TEST_MEMORY_NOTE_ID = 'test.orchestration.memory-stage-promote-flow';
+const TEST_MEMORY_LIFECYCLE_INDEX_RELATIVE_PATH = 'repo-memory/generated/__tests__/orchestration-lifecycle-index.json';
+const TEST_MEMORY_LIFECYCLE_INDEX_PATH = path.join(REPO_ROOT, TEST_MEMORY_LIFECYCLE_INDEX_RELATIVE_PATH);
+const TEST_MEMORY_LIFECYCLE_NOTE_ID = 'test.orchestration.lifecycle.stale-conflict';
 
 function clearTestMemoryFlowFiles() {
   rmSync(TEST_MEMORY_DRAFT_PATH, { force: true });
@@ -210,6 +281,11 @@ function clearTestMemoryFlowFiles() {
   rmSync(path.join(REPO_ROOT, '.joyjoin/__tests__'), { recursive: true, force: true });
   rmSync(path.join(REPO_ROOT, 'repo-memory/candidates/__tests__'), { recursive: true, force: true });
   rmSync(path.join(REPO_ROOT, 'repo-memory/promoted/__tests__'), { recursive: true, force: true });
+}
+
+function clearTestMemoryLifecycleFiles() {
+  rmSync(TEST_MEMORY_LIFECYCLE_INDEX_PATH, { force: true });
+  rmSync(path.join(REPO_ROOT, 'repo-memory/generated/__tests__'), { recursive: true, force: true });
 }
 
 describe('orchestration kickoff lane', () => {
@@ -465,6 +541,69 @@ describe('orchestration supervisor routing boundaries', () => {
       },
     });
   });
+
+  it('registers SelfIteration as a proposal-only audited support agent', () => {
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
+      agents: Array<{
+        name: string;
+        file?: string;
+        tools?: string[];
+        orchestrationPhase?: string;
+        toolingStatus?: string;
+        portfolioRole?: string;
+        skills?: string[];
+      }>;
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
+      portfolio_scope: {
+        orchestrated_agents: string[];
+        audited_agents: string[];
+      };
+      agent_bindings: Record<
+        string,
+        {
+          file: string;
+          portfolio_role: string;
+          orchestration_status: string;
+          current_tools: string[];
+          tooling_assessment: {
+            status: string;
+          };
+        }
+      >;
+      skill_bindings: Record<string, string[]>;
+    };
+
+    const selfIteration = manifest.agents.find((agent) => agent.name === 'SelfIteration');
+    const selfIterationSource = readRepoFile('.github/agents/self-iteration.agent.md');
+    const selfIterationDoc = readRepoFile('docs/agents/SelfIteration.md');
+
+    expect(selfIteration).toMatchObject({
+      file: 'self-iteration.agent.md',
+      tools: ['read', 'search', 'edit', 'execute'],
+      orchestrationPhase: 'support-audited',
+      toolingStatus: 'sufficient',
+      portfolioRole: 'meta-governance',
+      skills: ['docs-sync', 'testing-and-regression-guardrails'],
+    });
+    expect(orchestration.portfolio_scope.orchestrated_agents).not.toContain('SelfIteration');
+    expect(orchestration.portfolio_scope.audited_agents).toContain('SelfIteration');
+    expect(orchestration.agent_bindings.SelfIteration).toMatchObject({
+      file: '.github/agents/self-iteration.agent.md',
+      portfolio_role: 'meta-governance',
+      orchestration_status: 'audited-support',
+      current_tools: ['read', 'search', 'edit', 'execute'],
+      tooling_assessment: {
+        status: 'sufficient',
+      },
+    });
+    expect(orchestration.skill_bindings.SelfIteration).toEqual(['docs-sync', 'testing-and-regression-guardrails']);
+    expect(selfIterationSource).toContain('proposal-only');
+    expect(selfIterationSource).toContain('DO NOT publish durable memory');
+    expect(selfIterationSource).toContain('DO NOT change your own approval boundaries');
+    expect(selfIterationDoc).toContain('audited support lane');
+    expect(selfIterationDoc).toContain('proposal-only');
+  });
 });
 
 describe('orchestration changed-file detection', () => {
@@ -497,6 +636,102 @@ describe('orchestration changed-file detection', () => {
 
       rmSync(tempRepoRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe.sequential('repo memory lifecycle advisories', () => {
+  beforeAll(() => {
+    clearTestMemoryLifecycleFiles();
+  });
+
+  afterEach(() => {
+    clearTestMemoryLifecycleFiles();
+  });
+
+  afterAll(() => {
+    clearTestMemoryLifecycleFiles();
+  });
+
+  it('adds stale and conflict lifecycle signals to runtime memoryContext hits and summaries', () => {
+    writeRepoFile(
+      REPO_ROOT,
+      TEST_MEMORY_LIFECYCLE_INDEX_RELATIVE_PATH,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        generatedFrom: {
+          promotedRoot: 'repo-memory/promoted',
+          includedStatuses: ['active'],
+        },
+        noteCount: 1,
+        notes: [
+          {
+            id: TEST_MEMORY_LIFECYCLE_NOTE_ID,
+            title: 'Stale Conflict Memory Note',
+            status: 'active',
+            owner: 'workflow-platform',
+            lastValidatedAt: '2025-12-01',
+            tags: ['orchestration', 'memory'],
+            triggerTerms: ['stale conflict memory note'],
+            relatedPaths: ['scripts/orchestration-supervisor.mjs'],
+            sources: ['scripts/orchestration-supervisor.mjs'],
+            confidence: 'high',
+            path: 'repo-memory/promoted/__tests__/stale-conflict-memory-note.md',
+            statements: ['Lifecycle warnings should stay advisory and explicit.'],
+          },
+        ],
+      }, null, 2)}\n`,
+    );
+
+    const memoryContext = buildMemoryContext({
+      changedFiles: ['scripts/orchestration-supervisor.mjs', 'README.md'],
+      memoryConfig: {
+        artifactPath: TEST_MEMORY_LIFECYCLE_INDEX_RELATIVE_PATH,
+        workflowRelevantPathPrefixes: ['.github/', 'scripts/', 'repo-memory/'],
+        promptQueryRules: DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES,
+        maxHits: 3,
+        minChangedFileScore: 1,
+        minPromptScore: 1,
+        maxValidationAgeDays: 90,
+        surfaceSourcePathConflicts: true,
+      },
+      previousMemoryContext: null,
+      promptText: 'Please review the stale conflict memory note for the orchestration supervisor runtime context.',
+      evaluatedAt: '2026-04-14',
+    });
+
+    expect(memoryContext.changedFiles?.consideredPaths).toEqual(['scripts/orchestration-supervisor.mjs']);
+    expect(memoryContext.lifecycle).toMatchObject({
+      evaluatedAt: '2026-04-14',
+      maxValidationAgeDays: 90,
+      sourcePathConflictsEnabled: true,
+      status: 'caution',
+      totalHits: 1,
+      cautionHitCount: 1,
+      staleHitCount: 1,
+      conflictHitCount: 1,
+      warningHitIds: [TEST_MEMORY_LIFECYCLE_NOTE_ID],
+    });
+    expect(memoryContext.changedFiles?.hits?.[0]).toMatchObject({
+      id: TEST_MEMORY_LIFECYCLE_NOTE_ID,
+      lastValidatedAt: '2025-12-01',
+      relatedPaths: ['scripts/orchestration-supervisor.mjs'],
+      sources: ['scripts/orchestration-supervisor.mjs'],
+      lifecycle: {
+        status: 'stale-conflicted',
+        caution: true,
+        stale: true,
+        validationAgeDays: 134,
+        maxValidationAgeDays: 90,
+        conflict: true,
+        conflictingPaths: ['scripts/orchestration-supervisor.mjs'],
+        matchedAuthorityPaths: ['scripts/orchestration-supervisor.mjs'],
+      },
+    });
+    expect(memoryContext.prompt?.hits?.[0]?.lifecycle?.status).toBe('stale-conflicted');
+    expect(memoryContext.changedFiles?.hits?.[0]?.lifecycle?.warnings?.some((warning) => warning.includes('validation age'))).toBe(true);
+    expect(memoryContext.summary).toContain('with caution');
+    expect(memoryContext.summary).toContain('stale');
+    expect(memoryContext.summary).toContain('changed-path conflict');
   });
 });
 

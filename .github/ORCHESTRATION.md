@@ -50,7 +50,7 @@ Those rerouting exits are now also declared as native Supervisor handoffs in the
 - Runtime event log: `.git/.orchestration/events.jsonl`
 - Promoted repo-memory index: `repo-memory/generated/promoted-index.json`
 
-The runtime context now carries a top-level advisory `memoryContext`. It records changed-file and prompt-based repo-memory hits when the generated promoted index is readable, but it does not turn `.git/.orchestration/` into durable memory storage.
+The runtime context now carries a top-level advisory `memoryContext`. It records changed-file and prompt-based repo-memory hits when the generated promoted index is readable, and each hit now carries deterministic lifecycle signals. If a note is stale against the validation-age threshold or currently conflicted by workflow-relevant changed paths, the hook still surfaces it but adds explicit caution text instead of presenting it as clean guidance. This still does not turn `.git/.orchestration/` into durable memory storage.
 
 ## Local setup
 
@@ -133,6 +133,7 @@ Useful audited support bindings:
 - `Taro Mini-Program Frontend Engineer` -> `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
 - `Taro Migration Specialist` -> `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
 - `Expert React Frontend Engineer` -> `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
+- `SelfIteration` -> `docs-sync`, `testing-and-regression-guardrails`
 
 Branding remains a skill boundary on the frontend agents through `design-system-governance` and `joyjoin-brand-guidelines`; there is no standalone branding agent in the current orchestration portfolio.
 
@@ -167,6 +168,7 @@ Branding remains a skill boundary on the frontend agents through `design-system-
 | `principal SWE` | `sufficient` | Principal-level architecture guidance is covered by normalized repo inspection and command execution. | Add GitHub review or issue integrations only if this advisor should own those workflows directly. |
 | `SE: Product Manager` | `sufficient` | Issue-ready product scoping is covered by normalized repo inspection and editing without requiring direct tracker mutation. | Add issue-tracker write integration only if this agent should create or update backlog records directly. |
 | `prompt engineer` | `sufficient` | Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability. | Add execute capability only if prompt workflows need scripted validation or linting. |
+| `SelfIteration` | `sufficient` | Proposal-only portfolio review, reviewer-packet drafting, and deterministic validation are covered by read, search, edit, and execute without expanding authority. | Add stronger reviewer-packet provenance only if support-lane evidence export becomes a real operational need. |
 
 ## Validation expectations
 

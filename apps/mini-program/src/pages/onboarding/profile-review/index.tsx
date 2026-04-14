@@ -3,7 +3,9 @@ import Taro from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
-import { apiRequest } from '../../../lib/api'
+import { apiRequest, getUserState } from '../../../lib/api'
+import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
+import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
 import { completeProfileReview } from '@shared/api'
 import './index.scss'
@@ -11,6 +13,7 @@ import './index.scss'
 export default function ProfileReviewPage() {
   const { user, isLoading } = useAuthGuard()
   const invalidateAuth = useInvalidateAuth()
+  const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -25,17 +28,25 @@ export default function ProfileReviewPage() {
       await completeProfileReview(apiRequest)
 
       await invalidateAuth()
-      logInfo('[ProfileReview] Onboarding complete, navigating to discover')
-      Taro.switchTab({ url: '/pages/discover/index' })
+      const userState = await getUserState()
+      analytics.stepCompleted({
+        nextStep: userState.nextStep ?? 'discover',
+        hasArchetype: Boolean((user as { archetype?: unknown } | undefined)?.archetype),
+      })
+      logInfo('[ProfileReview] Onboarding complete, routing from refreshed nextStep', {
+        nextStep: userState.nextStep,
+      })
+      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
     } catch (err) {
       const message = err instanceof Error ? err.message : '操作失败，请重试'
       setError(message)
+      analytics.errorOccurred('complete_failed', message)
       logError('[ProfileReview] Complete failed', { message })
       Taro.showToast({ title: message, icon: 'none', duration: 3000 })
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, invalidateAuth])
+  }, [analytics, invalidateAuth, isSubmitting, user])
 
   if (isLoading) {
     return (

@@ -70,12 +70,28 @@ type CouponValidationResponse = {
   finalAmount?: number
 }
 
+const PENDING_ORDER_RESUME_MESSAGE = '支付结果待确认，请继续查询订单'
+
 function isEventPackPlan(planKey: PlanKey): planKey is EventPackPlanKey {
   return planKey === 'pack_3' || planKey === 'pack_6'
 }
 
 function formatPrice(value: number): string {
   return `¥${value.toFixed(0)}`
+}
+
+function requestMiniProgramPayment(paymentIntent: PaymentIntentResponse): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    Taro.requestPayment({
+      timeStamp: paymentIntent.timeStamp,
+      nonceStr: paymentIntent.nonceStr,
+      package: paymentIntent.package,
+      signType: paymentIntent.signType,
+      paySign: paymentIntent.paySign,
+      success: () => resolve(),
+      fail: (error: { errMsg?: string }) => reject(error),
+    })
+  })
 }
 
 // Returning null means the user explicitly cancelled the WeChat sheet, so the
@@ -148,11 +164,37 @@ export default function BlindBoxPaymentPage() {
 
   const navigateToVerification = useCallback(async (orderId: string) => {
     const verificationUrl = buildPaymentVerificationUrl(orderId)
-    await Taro.navigateTo({
-      url: verificationUrl,
-      fail: () => Taro.redirectTo({ url: verificationUrl }),
-    })
+
+    try {
+      await Taro.navigateTo({ url: verificationUrl })
+      return true
+    } catch (navigateError) {
+      try {
+        await Taro.redirectTo({ url: verificationUrl })
+        return true
+      } catch (redirectError) {
+        logWarn('Failed to route mini-program payment into verification', {
+          orderId,
+          navigateError: navigateError instanceof Error ? navigateError.message : 'Unknown error',
+          redirectError: redirectError instanceof Error ? redirectError.message : 'Unknown error',
+        })
+        return false
+      }
+    }
   }, [])
+
+  const showResumeOnlyState = useCallback(async (orderId: string, reason: string) => {
+    refreshPendingOrderState()
+    setPageError(PENDING_ORDER_RESUME_MESSAGE)
+    logWarn('Mini-program payment left in resume-only state', {
+      orderId,
+      reason,
+    })
+    await Taro.showToast({
+      title: PENDING_ORDER_RESUME_MESSAGE,
+      icon: 'none',
+    })
+  }, [refreshPendingOrderState])
 
   const loadPageData = useCallback(async () => {
     setIsBootstrapping(true)
@@ -290,7 +332,14 @@ export default function BlindBoxPaymentPage() {
       return
     }
 
-    await navigateToVerification(pendingOrderToResume.orderId)
+    const didNavigate = await navigateToVerification(pendingOrderToResume.orderId)
+
+    if (!didNavigate) {
+      await Taro.showToast({
+        title: '无法打开确认页，请稍后重试',
+        icon: 'none',
+      })
+    }
   }, [navigateToVerification, pendingOrderToResume])
 
   const handlePay = useCallback(async () => {
@@ -300,6 +349,8 @@ export default function BlindBoxPaymentPage() {
 
     setIsCreatingIntent(true)
     setPageError('')
+
+    let persistedOrderId: string | null = null
 
     try {
       const paymentIntent = await createMiniProgramPaymentIntent(apiRequest, {
@@ -313,34 +364,43 @@ export default function BlindBoxPaymentPage() {
         type: paymentIntent.type,
         userId: user.id,
       })
+      persistedOrderId = paymentIntent.outTradeNo
 
-      await new Promise<void>((resolve, reject) => {
-        Taro.requestPayment({
-          timeStamp: paymentIntent.timeStamp,
-          nonceStr: paymentIntent.nonceStr,
-          package: paymentIntent.package,
-          signType: paymentIntent.signType,
-          paySign: paymentIntent.paySign,
-          success: () => resolve(),
-          fail: (error: { errMsg?: string }) => reject(error),
-        })
-      })
+      await requestMiniProgramPayment(paymentIntent)
 
-      await navigateToVerification(paymentIntent.outTradeNo)
+      const didNavigate = await navigateToVerification(paymentIntent.outTradeNo)
+      if (!didNavigate) {
+        await showResumeOnlyState(paymentIntent.outTradeNo, 'verification-navigation-failed')
+      }
     } catch (error: any) {
       const errMsg = typeof error?.errMsg === 'string' ? error.errMsg : undefined
       const friendlyMessage = getFriendlyPaymentError(errMsg || error?.message)
 
-      if (!friendlyMessage) {
-        clearPendingOrderStorage()
-        setPendingOrderToResume(null)
+      if (persistedOrderId) {
+        if (!friendlyMessage) {
+          clearPendingOrderStorage()
+          setPendingOrderToResume(null)
+          return
+        }
+
+        logWarn('Mini-program requestPayment failed after order persistence; routing to verification', {
+          orderId: persistedOrderId,
+          message: friendlyMessage,
+        })
+
+        const didNavigate = await navigateToVerification(persistedOrderId)
+        if (!didNavigate) {
+          await showResumeOnlyState(persistedOrderId, friendlyMessage)
+        }
         return
       }
 
-      clearPendingOrderStorage()
-      setPendingOrderToResume(null)
+      if (!friendlyMessage) {
+        return
+      }
+
       setPageError(friendlyMessage)
-      logWarn('Mini-program payment intent or payment modal failed', {
+      logWarn('Mini-program payment intent creation failed', {
         message: friendlyMessage,
       })
       await Taro.showToast({
@@ -356,6 +416,7 @@ export default function BlindBoxPaymentPage() {
     navigateToVerification,
     paymentsDisabled,
     pendingOrderToResume,
+    showResumeOnlyState,
     selectedCouponCode,
     selectedPlan,
     user?.id,
