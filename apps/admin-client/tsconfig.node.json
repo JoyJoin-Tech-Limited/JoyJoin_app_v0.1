@@ -3,7 +3,10 @@
   "compilerOptions": {
     "composite": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": false
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "outDir": "../../node_modules/.cache/tsc/admin-client-node",
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/admin-client-node/tsconfig.tsbuildinfo"
   },
   "include": [
     "vite.config.ts"
