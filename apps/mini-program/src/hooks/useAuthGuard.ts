@@ -1,28 +1,14 @@
 import { useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import { useAuth, type NextStepType } from './useAuth'
+import { navigateToMiniProgramNextStep } from '../lib/onboardingNavigation'
+import { MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from '../lib/onboardingRoutes'
 
 /**
  * Map a server-driven nextStep to the corresponding mini-program page route.
  */
 export function nextStepToRoute(step: NextStepType): string {
-  switch (step) {
-    case 'onboarding':
-      return '/pages/onboarding/onboarding/index'
-    case 'personality-test':
-      return '/pages/onboarding/personality-test/index'
-    case 'essential-data':
-      return '/pages/onboarding/essential-data/index'
-    case 'extended-data':
-      return '/pages/onboarding/extended-data/index'
-    case 'profile-review':
-      return '/pages/onboarding/profile-review/index'
-    case 'discover':
-      return '/pages/discover/index'
-    case 'guide':
-    default:
-      return '/pages/discover/index'
-  }
+  return nextStepToMiniProgramRoute(step)
 }
 
 /**
@@ -58,7 +44,7 @@ export function useAuthGuard() {
     if (auth.isLoading) return
 
     if (!auth.isAuthenticated) {
-      Taro.reLaunch({ url: '/pages/login/index' })
+      Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
       return
     }
 
@@ -73,12 +59,12 @@ export function useAuthGuard() {
 
       // If user is done with onboarding but on an onboarding page, send to discover
       if (auth.nextStep === 'discover' || auth.nextStep === 'guide') {
-        Taro.switchTab({ url: '/pages/discover/index' })
+        Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
         return
       }
 
       if (currentRoute !== expectedRouteBare) {
-        Taro.redirectTo({ url: expectedRoute })
+        void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'replace' })
       }
     }
   }, [auth.isLoading, auth.isAuthenticated, auth.nextStep])

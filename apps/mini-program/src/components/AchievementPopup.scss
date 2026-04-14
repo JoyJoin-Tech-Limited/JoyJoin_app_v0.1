@@ -1,12 +1,14 @@
 @use '../styles/variables' as *;
+@use '../styles/mixins' as *;
 
 .achievement-popup {
   position: fixed;
-  top: 24rpx;
+  @include safe-area-top(top, 24rpx);
   left: 50%;
   transform: translateX(-50%);
   width: 90vw;
   max-width: 640rpx;
+  box-sizing: border-box;
   z-index: $z-toast;
   border-radius: $card-radius;
   padding: $spacing-md;

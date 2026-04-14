@@ -16,6 +16,9 @@ import OpenAI from 'openai';
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
 import { getTagGenerationProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
+import { logAITrace } from './lib/aiTraceLogger';
+
+const TAG_GENERATION_PROMPT_VERSION = 'social-tags-v1';
 
 // Validate API key at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
@@ -94,11 +97,23 @@ function validateTag(tag: GeneratedTag): boolean {
  * Generate social tags using the hybrid AI provider (MiniMax or DeepSeek).
  */
 export async function generateSocialTags(input: TagGenerationInput): Promise<TagGenerationResult> {
+  const startedAt = Date.now();
   const { client, model, provider } = getTagAIClient();
 
   // Check if the effective AI provider is available
   if (!isProviderAvailable(provider)) {
     console.warn('[TagGeneration] No AI provider configured, using fallback tags');
+    logAITrace({
+      domain: 'creative_identity',
+      feature: 'generateSocialTags',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: TAG_GENERATION_PROMPT_VERSION,
+      errorCode: 'provider_unavailable',
+    });
     return { tags: generateFallbackTags(input), isFallback: true };
   }
 
@@ -106,6 +121,17 @@ export async function generateSocialTags(input: TagGenerationInput): Promise<Tag
   const archetypeData = archetypeRegistry[input.archetype];
   if (!archetypeData) {
     console.warn(`[TagGeneration] Unknown archetype: ${input.archetype}, using fallback`);
+    logAITrace({
+      domain: 'creative_identity',
+      feature: 'generateSocialTags',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: TAG_GENERATION_PROMPT_VERSION,
+      errorCode: 'unknown_archetype',
+    });
     return { tags: generateFallbackTags(input), isFallback: true };
   }
 
@@ -175,6 +201,18 @@ ${JSON.stringify(userProfile, null, 2)}
 
     if (!content) {
       console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (empty response), using fallback`);
+      logAITrace({
+        domain: 'creative_identity',
+        feature: 'generateSocialTags',
+        provider,
+        model,
+        latencyMs: durationMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: TAG_GENERATION_PROMPT_VERSION,
+        errorCode: 'empty_response',
+      });
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -184,6 +222,18 @@ ${JSON.stringify(userProfile, null, 2)}
       parsed = JSON.parse(content);
     } catch (parseError) {
       console.error(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (parse error):`, parseError);
+      logAITrace({
+        domain: 'creative_identity',
+        feature: 'generateSocialTags',
+        provider,
+        model,
+        latencyMs: durationMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: TAG_GENERATION_PROMPT_VERSION,
+        errorCode: 'parse_error',
+      });
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -194,6 +244,18 @@ ${JSON.stringify(userProfile, null, 2)}
     
     if (validTags.length === 0) {
       console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (all tags failed validation), using fallback`);
+      logAITrace({
+        domain: 'creative_identity',
+        feature: 'generateSocialTags',
+        provider,
+        model,
+        latencyMs: durationMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: TAG_GENERATION_PROMPT_VERSION,
+        errorCode: 'validation_failed',
+      });
       return { tags: generateFallbackTags(input), isFallback: true };
     }
 
@@ -205,15 +267,50 @@ ${JSON.stringify(userProfile, null, 2)}
       const uniqueFallbackTags = fallbackTags.filter(t => !existingTags.has(t.fullTag));
       const combinedTags = [...validTags, ...uniqueFallbackTags.slice(0, 2 - validTags.length)];
       console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=partial (supplemented with fallback)`);
+      logAITrace({
+        domain: 'creative_identity',
+        feature: 'generateSocialTags',
+        provider,
+        model,
+        latencyMs: durationMs,
+        success: true,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: TAG_GENERATION_PROMPT_VERSION,
+        errorCode: 'partial_valid_output',
+      });
       return { tags: combinedTags, isFallback: true };
     }
 
     console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
+    logAITrace({
+      domain: 'creative_identity',
+      feature: 'generateSocialTags',
+      provider,
+      model,
+      latencyMs: durationMs,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      promptVersion: TAG_GENERATION_PROMPT_VERSION,
+    });
 
     return { tags: validTags.slice(0, 3), isFallback: false };
   } catch (error) {
     const durationMs = Date.now() - startTime;
     console.error(`[TagGeneration] provider=${provider} error after ${durationMs}ms:`, error);
+    logAITrace({
+      domain: 'creative_identity',
+      feature: 'generateSocialTags',
+      provider,
+      model,
+      latencyMs: durationMs,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: TAG_GENERATION_PROMPT_VERSION,
+      errorCode: 'llm_error',
+    });
     return { tags: generateFallbackTags(input), isFallback: true };
   }
 }

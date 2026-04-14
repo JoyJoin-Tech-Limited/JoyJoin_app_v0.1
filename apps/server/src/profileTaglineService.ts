@@ -167,6 +167,7 @@ export async function generateProfileTagline(
       temperature: 0.7,
       max_tokens: 80,
       callerTag: 'profileTagline',
+      socialFunction: 'generateProfileTagline',
     });
 
     const raw = result.content.trim();

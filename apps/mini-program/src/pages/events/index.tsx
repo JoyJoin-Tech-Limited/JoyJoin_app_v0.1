@@ -19,7 +19,7 @@ export default function EventsPage() {
   const { isLoading: authLoading } = useAuthGuard()
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
-    selectedIndex: MINI_PROGRAM_TAB_INDEX.journey,
+    selectedIndex: MINI_PROGRAM_TAB_INDEX.events,
     enabled: !authLoading,
   })
 
@@ -74,7 +74,7 @@ export default function EventsPage() {
   return (
     <View className='events-page'>
       <View className='events-page__header'>
-        <Text className='events-page__title'>我的活动</Text>
+        <Text className='events-page__title'>我的足迹</Text>
       </View>
 
       {/* Tabs */}

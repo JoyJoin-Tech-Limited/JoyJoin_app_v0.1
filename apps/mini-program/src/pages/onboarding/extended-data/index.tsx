@@ -1,9 +1,12 @@
 import { View, Text, Button, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback } from 'react'
-import { useAuthGuard, nextStepToRoute } from '../../../hooks/useAuthGuard'
+import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
-import { apiRequest } from '../../../lib/api'
+import { apiRequest, getUserState } from '../../../lib/api'
+import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
+import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
+import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
 import { submitInterests } from '@shared/api'
 import { INTEREST_TAXONOMY, type InterestDefinition } from '@shared/interests'
@@ -33,6 +36,8 @@ const grouped = activeInterests.reduce<Record<string, InterestDefinition[]>>((ac
 export default function ExtendedDataPage() {
   const { isLoading } = useAuthGuard()
   const invalidateAuth = useInvalidateAuth()
+  const analytics = useOnboardingAnalytics('extended-data', { enabled: !isLoading })
+  const { saveCheckpoint } = useOnboardingCheckpoint()
 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -45,15 +50,22 @@ export default function ExtendedDataPage() {
         next.delete(id)
       } else if (next.size < MAX_INTERESTS) {
         next.add(id)
+      } else {
+        analytics.validationFailed('interests', 'max-selection-reached')
       }
       return next
     })
-  }, [])
+  }, [analytics])
 
   const canSubmit = selected.size >= MIN_INTERESTS
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit || isSubmitting) return
+    if (!canSubmit || isSubmitting) {
+      if (!canSubmit) {
+        analytics.validationFailed('interests', 'min-selection-not-reached')
+      }
+      return
+    }
 
     setIsSubmitting(true)
     setError('')
@@ -61,19 +73,24 @@ export default function ExtendedDataPage() {
       logInfo('[ExtendedData] Submitting interests', { count: selected.size })
       await submitInterests(apiRequest, { interests: Array.from(selected) })
 
+      await saveCheckpoint('extended-data')
       await invalidateAuth()
-      const userState = await apiRequest<{ nextStep?: string }>({ path: '/api/auth/user' })
-      const nextStep = userState.nextStep ?? 'profile-review'
-      Taro.redirectTo({ url: nextStepToRoute(nextStep as any) })
+      const userState = await getUserState()
+      analytics.stepCompleted({
+        selectedInterestCount: selected.size,
+        nextStep: userState.nextStep ?? 'profile-review',
+      })
+      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
     } catch (err) {
       const message = err instanceof Error ? err.message : '提交失败，请重试'
       setError(message)
+      analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
       Taro.showToast({ title: message, icon: 'none', duration: 3000 })
     } finally {
       setIsSubmitting(false)
     }
-  }, [canSubmit, isSubmitting, selected, invalidateAuth])
+  }, [analytics, canSubmit, invalidateAuth, isSubmitting, saveCheckpoint, selected])
 
   if (isLoading) {
     return (
@@ -119,7 +136,6 @@ export default function ExtendedDataPage() {
             </View>
           </View>
         ))}
-        <View className='extended-data__spacer' />
       </ScrollView>
 
       {error ? <Text className='extended-data__error'>{error}</Text> : null}

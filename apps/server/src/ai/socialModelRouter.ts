@@ -19,6 +19,8 @@
 import OpenAI from 'openai';
 import { getMinimaxModel, getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
 
+const DEEPSEEK_MODEL = 'deepseek-chat';
+
 // DeepSeek client — lazy-initialized so the module can load safely even when
 // DEEPSEEK_API_KEY is not set (e.g. MiniMax-only envs).  The dummy key
 // follows the same pattern used by other services in this codebase.
@@ -34,7 +36,7 @@ function getDeepseekClient(): OpenAI {
   return _deepseekClient;
 }
 
-// Social functions that are routed to MiniMax in hybrid mode
+// Social functions routed through the explicit registry.
 type SocialFunction =
   | 'generateWarmupTopics'
   | 'generateXiaoYueComment'
@@ -42,25 +44,36 @@ type SocialFunction =
   | 'generateLieDetectiveStatements'
   | 'generateMicroChallenges'
   | 'generatePersonalityDiceChallenges'
+  | 'generateProfileTagline'
+  | 'generateConversationTopics'
+  | 'generateWelcomeMessage'
+  | 'generateClosingMessage'
   | 'generatePairExplanation'       // matchExplanationService — MiniMax preferred (warm narrative copy)
   | 'generateIceBreakers'           // matchExplanationService — MiniMax preferred (warm narrative copy)
   | 'analyzeComplexSemantics';      // hybridSemantic — DeepSeek default (structured JSON inference)
 
-const MINIMAX_DESIGNATED_FUNCTIONS = new Set<SocialFunction>([
-  'generateWarmupTopics',
-  'generateXiaoYueComment',
-  'generateRecapSummary',
-  'generateLieDetectiveStatements',
-  'generatePairExplanation',
-  'generateIceBreakers',
-]);
+type SocialFunctionRoutingPolicy = {
+  preferredProvider: 'minimax' | 'deepseek';
+  forceProvider?: 'deepseek';
+};
 
-// Functions that must always use DeepSeek regardless of SOCIAL_AI_PROVIDER mode.
-// These use provider-specific API features (e.g. response_format: json_object)
-// that are not guaranteed to be supported by MiniMax.
-const DEEPSEEK_FORCED_FUNCTIONS = new Set<SocialFunction>([
-  'analyzeComplexSemantics',
-]);
+const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolicy> = {
+  generateWarmupTopics: { preferredProvider: 'minimax' },
+  generateXiaoYueComment: { preferredProvider: 'minimax' },
+  generateRecapSummary: { preferredProvider: 'minimax' },
+  generateLieDetectiveStatements: { preferredProvider: 'minimax' },
+  generateMicroChallenges: { preferredProvider: 'deepseek' },
+  generatePersonalityDiceChallenges: { preferredProvider: 'deepseek' },
+  generateProfileTagline: { preferredProvider: 'minimax' },
+  generateConversationTopics: { preferredProvider: 'minimax' },
+  generateWelcomeMessage: { preferredProvider: 'minimax' },
+  generateClosingMessage: { preferredProvider: 'minimax' },
+  generatePairExplanation: { preferredProvider: 'minimax' },
+  generateIceBreakers: { preferredProvider: 'minimax' },
+  analyzeComplexSemantics: { preferredProvider: 'deepseek', forceProvider: 'deepseek' },
+};
+
+export type RoutedSocialFunction = Exclude<SocialFunction, 'analyzeComplexSemantics'>;
 
 type ProviderMode = 'hybrid' | 'deepseek' | 'minimax';
 
@@ -84,19 +97,21 @@ export interface ClientSelection {
  * Respects SOCIAL_AI_PROVIDER env var (hybrid | minimax | deepseek) with automatic
  * fallback to DeepSeek when MiniMax is not configured.
  *
- * Functions in DEEPSEEK_FORCED_FUNCTIONS always receive a DeepSeek selection
- * regardless of the configured mode — they rely on DeepSeek-specific API
- * features (e.g. response_format: json_object).
+ * Functions with `forceProvider: 'deepseek'` always receive a DeepSeek
+ * selection regardless of the configured mode — they rely on
+ * DeepSeek-specific API features (e.g. response_format: json_object).
  */
 export function getClientForFunction(fn: SocialFunction): ClientSelection {
+  const policy = SOCIAL_FUNCTION_ROUTING[fn];
+
   // Forced-DeepSeek functions bypass all provider mode logic
-  if (DEEPSEEK_FORCED_FUNCTIONS.has(fn)) {
+  if (policy.forceProvider === 'deepseek') {
     if (!process.env.DEEPSEEK_API_KEY) {
       throw new Error(
         `[socialAI] ${fn} requires DeepSeek (response_format: json_object) but DEEPSEEK_API_KEY is not set`
       );
     }
-    return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+    return getDeepseekSelection();
   }
 
   const mode = resolveMode();
@@ -105,27 +120,27 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
   const mmClient = getMinimaxClient();
 
   if (mode === 'deepseek') {
-    return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+    return getDeepseekSelection();
   }
 
   if (mode === 'minimax') {
     if (!mmClient) {
       console.warn('[socialAI] SOCIAL_AI_PROVIDER=minimax but MINIMAX_API_KEY is not set, falling back to deepseek');
-      return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+      return getDeepseekSelection();
     }
     return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
   }
 
   // hybrid mode (default)
-  if (MINIMAX_DESIGNATED_FUNCTIONS.has(fn)) {
+  if (policy.preferredProvider === 'minimax') {
     if (!mmClient) {
       console.warn(`[socialAI] ${fn}: MINIMAX_API_KEY is not set, falling back to deepseek`);
-      return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+      return getDeepseekSelection();
     }
     return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
   }
 
-  return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+  return getDeepseekSelection();
 }
 
 /**
@@ -134,7 +149,7 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
  * primary provider (MiniMax) has already failed.
  */
 export function getDeepseekSelection(): ClientSelection {
-  return { client: getDeepseekClient(), model: 'deepseek-chat', provider: 'deepseek' };
+  return { client: getDeepseekClient(), model: DEEPSEEK_MODEL, provider: 'deepseek' };
 }
 
 export interface SocialAICallParams {
@@ -143,12 +158,16 @@ export interface SocialAICallParams {
   max_tokens?: number;
   /** Tag shown in logs (e.g. 'conversationTopics', 'welcomeMessage') */
   callerTag: string;
+  /** Explicit routed social function key for function-level provider selection. */
+  socialFunction?: RoutedSocialFunction;
 }
 
 export interface SocialAICallResult {
   content: string;
   provider: 'minimax' | 'deepseek';
+  model: string;
   latencyMs: number;
+  fallbackUsed: boolean;
 }
 
 /**
@@ -158,26 +177,49 @@ export interface SocialAICallResult {
 export async function callSocialAI(
   params: SocialAICallParams
 ): Promise<SocialAICallResult> {
-  const { messages, temperature = 0.8, max_tokens = 600, callerTag } = params;
+  const { messages, temperature = 0.8, max_tokens = 600, callerTag, socialFunction } = params;
+  const overallStartedAt = Date.now();
+  const routedSelection = socialFunction ? getClientForFunction(socialFunction) : null;
+  const routedMode = socialFunction ? resolveMode() : null;
+  const preCallFallbackUsed = Boolean(
+    socialFunction &&
+      routedMode !== 'deepseek' &&
+      SOCIAL_FUNCTION_ROUTING[socialFunction].preferredProvider === 'minimax' &&
+      routedSelection?.provider === 'deepseek'
+  );
+  let attemptedMinimax = false;
 
-  if (isMinimaxEnabled()) {
-    const minimax = getMinimaxClient()!;
+  if (routedSelection?.provider === 'minimax' || (!routedSelection && isMinimaxEnabled())) {
+    attemptedMinimax = true;
+    const minimaxSelection = routedSelection?.provider === 'minimax'
+      ? routedSelection
+      : {
+          client: getMinimaxClient()!,
+          model: MINIMAX_DEFAULT_MODEL,
+          provider: 'minimax' as const,
+        };
     const start = Date.now();
     try {
-      const response = await minimax.chat.completions.create({
-        model: MINIMAX_DEFAULT_MODEL,
+      const response = await minimaxSelection.client.chat.completions.create({
+        model: minimaxSelection.model,
         messages,
         temperature,
         max_tokens,
       });
-      const latencyMs = Date.now() - start;
+      const providerLatencyMs = Date.now() - start;
       const content = response.choices[0]?.message?.content ?? '';
-      console.log(`[socialAI] ${callerTag} provider=minimax latency=${latencyMs}ms`);
-      return { content, provider: 'minimax', latencyMs };
+      console.log(`[socialAI] ${callerTag} provider=minimax latency=${providerLatencyMs}ms`);
+      return {
+        content,
+        provider: 'minimax',
+        model: minimaxSelection.model,
+        latencyMs: Date.now() - overallStartedAt,
+        fallbackUsed: false,
+      };
     } catch (err) {
-      const latencyMs = Date.now() - start;
+      const providerLatencyMs = Date.now() - start;
       console.warn(
-        `[socialAI] ${callerTag} minimax failed after ${latencyMs}ms, falling back to deepseek:`,
+        `[socialAI] ${callerTag} minimax failed after ${providerLatencyMs}ms, falling back to deepseek:`,
         err
       );
     }
@@ -189,15 +231,24 @@ export async function callSocialAI(
       `[socialAI] ${callerTag}: MiniMax unavailable and DEEPSEEK_API_KEY is not set — cannot complete request`
     );
   }
+  const deepseekSelection = routedSelection?.provider === 'deepseek'
+    ? routedSelection
+    : getDeepseekSelection();
   const start = Date.now();
-  const response = await getDeepseekClient().chat.completions.create({
-    model: 'deepseek-chat',
+  const response = await deepseekSelection.client.chat.completions.create({
+    model: deepseekSelection.model,
     messages,
     temperature,
     max_tokens,
   });
-  const latencyMs = Date.now() - start;
+  const providerLatencyMs = Date.now() - start;
   const content = response.choices[0]?.message?.content ?? '';
-  console.log(`[socialAI] ${callerTag} provider=deepseek latency=${latencyMs}ms`);
-  return { content, provider: 'deepseek', latencyMs };
+  console.log(`[socialAI] ${callerTag} provider=deepseek latency=${providerLatencyMs}ms`);
+  return {
+    content,
+    provider: 'deepseek',
+    model: deepseekSelection.model,
+    latencyMs: Date.now() - overallStartedAt,
+    fallbackUsed: attemptedMinimax || preCallFallbackUsed,
+  };
 }

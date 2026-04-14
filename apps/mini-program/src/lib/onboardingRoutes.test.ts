@@ -2,15 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { MINI_PROGRAM_PAGES, MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from './onboardingRoutes'
 
 describe('mini-program onboarding routes', () => {
-  it('keeps discover as the cold-start entry page', () => {
-    expect(MINI_PROGRAM_PAGES[0]).toBe('pages/discover/index')
+  // Guards against regression: cold-start should land on the standalone
+  // landing entry before the discover tab shell.
+  it('keeps index as the cold-start landing entry page', () => {
+    expect(MINI_PROGRAM_PAGES[0]).toBe('pages/index/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/discover/index')
   })
 
-  it('retains non-tab mini-program sub-pages used by the PR branch', () => {
+  it('retains the canonical events tab page and both legacy events aliases', () => {
+    expect(MINI_PROGRAM_PAGES).toContain('pages/events/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/terms/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/event-detail/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/pool-registration/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/my-events/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/journey/index')
+  })
+
+  it('does not keep the removed chats redirect alias registered', () => {
+    expect(MINI_PROGRAM_PAGES).not.toContain('pages/chats/index')
   })
 
   it('maps each server nextStep to the canonical mini-program route', () => {

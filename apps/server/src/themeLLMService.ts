@@ -14,7 +14,10 @@ import type {
 } from '@shared/types/eventTheme';
 import { getEnergyLabel, getEnergyEmoji } from './themeScoringService';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
-import { getThemeLLMProvider, isProviderAvailable } from './ai/creativeModelRouter';
+import { getThemeLLMProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
+import { logAITrace } from './lib/aiTraceLogger';
+
+const THEME_LLM_PROMPT_VERSION = 'event-theme-llm-v1';
 
 // Validate API keys at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
@@ -31,7 +34,7 @@ const deepseekClient = new OpenAI({
 /**
  * Returns the active AI client and model for theme generation based on provider routing.
  */
-function getThemeAIClient(): { client: OpenAI; model: string; provider: string } {
+function getThemeAIClient(): { client: OpenAI; model: string; provider: AIProvider } {
   const provider = getThemeLLMProvider();
 
   if (provider === 'minimax') {
@@ -304,11 +307,23 @@ export async function generateThemeWithLLM(
   attempt: number;
   validationErrors: string[];
 }> {
+  const requestStartedAt = Date.now();
   const { client, model, provider } = getThemeAIClient();
 
   // Check if any AI key is available for the resolved provider
-  if (!isProviderAvailable(getThemeLLMProvider())) {
+  if (!isProviderAvailable(provider)) {
     console.warn('[ThemeLLM] No AI provider configured, using fallback');
+    logAITrace({
+      domain: 'theme_generation',
+      feature: 'generateThemeLLM',
+      provider: null,
+      latencyMs: Date.now() - requestStartedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: THEME_LLM_PROMPT_VERSION,
+      errorCode: 'provider_unavailable',
+    });
     return {
       theme: generateFallbackTheme(input),
       usedFallback: true,
@@ -339,6 +354,26 @@ export async function generateThemeWithLLM(
       const content = response.choices[0]?.message?.content;
       if (!content) {
         console.warn(`[ThemeLLM] provider=${provider} attempt=${attempt} - No content in response (${durationMs}ms)`);
+        if (attempt === maxAttempts) {
+          logAITrace({
+            domain: 'theme_generation',
+            feature: 'generateThemeLLM',
+            provider,
+            model,
+            latencyMs: Date.now() - requestStartedAt,
+            success: false,
+            fallbackUsed: true,
+            fromCache: false,
+            promptVersion: THEME_LLM_PROMPT_VERSION,
+            errorCode: 'empty_response',
+          });
+          return {
+            theme: generateFallbackTheme(input),
+            usedFallback: true,
+            attempt,
+            validationErrors: ['Empty response from LLM'],
+          };
+        }
         continue;
       }
       
@@ -349,6 +384,17 @@ export async function generateThemeWithLLM(
       
       if (validation.valid) {
         console.log(`[ThemeLLM] provider=${provider} attempt=${attempt} latency=${durationMs}ms success=true`);
+        logAITrace({
+          domain: 'theme_generation',
+          feature: 'generateThemeLLM',
+          provider,
+          model,
+          latencyMs: Date.now() - requestStartedAt,
+          success: true,
+          fallbackUsed: false,
+          fromCache: false,
+          promptVersion: THEME_LLM_PROMPT_VERSION,
+        });
         
         // Build full EventTheme with reasoning
         const fullTheme: EventTheme = {
@@ -371,6 +417,18 @@ export async function generateThemeWithLLM(
         
         if (attempt === maxAttempts) {
           // Last attempt failed, use fallback
+          logAITrace({
+            domain: 'theme_generation',
+            feature: 'generateThemeLLM',
+            provider,
+            model,
+            latencyMs: Date.now() - requestStartedAt,
+            success: false,
+            fallbackUsed: true,
+            fromCache: false,
+            promptVersion: THEME_LLM_PROMPT_VERSION,
+            errorCode: 'validation_failed',
+          });
           return {
             theme: generateFallbackTheme(input),
             usedFallback: true,
@@ -386,6 +444,18 @@ export async function generateThemeWithLLM(
       console.error(`[ThemeLLM] provider=${provider} attempt=${attempt} - Error:`, error);
       
       if (attempt === maxAttempts) {
+        logAITrace({
+          domain: 'theme_generation',
+          feature: 'generateThemeLLM',
+          provider,
+          model,
+          latencyMs: Date.now() - requestStartedAt,
+          success: false,
+          fallbackUsed: true,
+          fromCache: false,
+          promptVersion: THEME_LLM_PROMPT_VERSION,
+          errorCode: 'llm_error',
+        });
         return {
           theme: generateFallbackTheme(input),
           usedFallback: true,
@@ -397,6 +467,18 @@ export async function generateThemeWithLLM(
   }
   
   // Should not reach here, but return fallback just in case
+  logAITrace({
+    domain: 'theme_generation',
+    feature: 'generateThemeLLM',
+    provider,
+    model,
+    latencyMs: Date.now() - requestStartedAt,
+    success: false,
+    fallbackUsed: true,
+    fromCache: false,
+    promptVersion: THEME_LLM_PROMPT_VERSION,
+    errorCode: 'max_attempts_reached',
+  });
   return {
     theme: generateFallbackTheme(input),
     usedFallback: true,

@@ -55,6 +55,7 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `principal SWE` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
 | `SE: Product Manager` | Issue-ready product scoping and business-value framing for backlog work | [`PM advisor.md`](./PM%20advisor.md) |
 | `prompt engineer` | Prompt review, repo-resident prompt maintenance, examples, and structure tightening | [`prompt engineer.md`](./prompt%20engineer.md) |
+| `SelfIteration` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts | [`self-iteration.agent.md`](./self-iteration.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

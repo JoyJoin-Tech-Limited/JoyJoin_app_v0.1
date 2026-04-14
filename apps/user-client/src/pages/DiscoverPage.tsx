@@ -15,7 +15,7 @@ import LimitedBrowseBanner from "@/components/LimitedBrowseBanner";
 import EventCardSkeleton from "@/components/EventCardSkeleton";
 import SparkSectionHeader from "@/components/SparkSectionHeader";
 import { AlertCircle, RefreshCw, Sparkles, X } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
@@ -314,11 +314,11 @@ export default function DiscoverPage() {
     } catch {}
   };
 
-  const handleOpenDrawer = (pool: EventPool) => {
+  const openDrawerForPool = useCallback((pool: EventPool) => {
     setSelectedPoolId(pool.id);
     setSelectedPoolData(pool);
     setShowDrawer(true);
-  };
+  }, []);
 
   const handleRegister = () => {
     if (selectedPoolData?.id) {
@@ -344,6 +344,15 @@ export default function DiscoverPage() {
     () => new Map(eventPools.map(pool => [pool.id, pool])),
     [eventPools]
   );
+
+  const handleOpenDrawer = useCallback((poolId: string) => {
+    const pool = poolMap.get(poolId);
+    if (!pool) {
+      return;
+    }
+
+    openDrawerForPool(pool);
+  }, [openDrawerForPool, poolMap]);
 
   useEffect(() => {
     const joinPoolId = getJoinPoolIdFromUrl(location);
@@ -395,12 +404,18 @@ export default function DiscoverPage() {
     saveCoachMarkState(newState);
   };
   
-  const handleDismissEventTooltip = () => {
+  const handleDismissEventTooltip = useCallback(() => {
     setShowEventTooltip(false);
-    const newState = { ...coachMarkState, eventTooltip: true };
-    setCoachMarkState(newState);
-    saveCoachMarkState(newState);
-  };
+    setCoachMarkState((previousState) => {
+      if (previousState.eventTooltip) {
+        return previousState;
+      }
+
+      const nextState = { ...previousState, eventTooltip: true };
+      saveCoachMarkState(nextState);
+      return nextState;
+    });
+  }, []);
   
   const handleDismissXiaoyueTooltip = () => {
     const newState = { ...coachMarkState, xiaoyueTooltip: true };
@@ -413,7 +428,7 @@ export default function DiscoverPage() {
     setCoachMarkState(newState);
     saveCoachMarkState(newState);
   };
-  
+
   // Get archetype info for welcome banner
   const archetypeInfo = user?.primaryArchetype ? archetypeConfig[user.primaryArchetype] : null;
 
@@ -518,8 +533,6 @@ export default function DiscoverPage() {
                 </div>
               ) : filteredBlindBoxEvents.length > 0 ? (
                 filteredBlindBoxEvents.map((event, index) => {
-                  // O(1) lookup using poolMap
-                  const pool = poolMap.get(event.id);
                   const isFirstCard = index === 0;
                   
                   return (
@@ -546,7 +559,7 @@ export default function DiscoverPage() {
                             <div className="flex items-start gap-2 bg-primary text-primary-foreground px-3 py-2.5 rounded-xl shadow-lg text-xs font-medium">
                               <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
                               <span className="flex-1 leading-relaxed">
-                                报名后 AI 匹配桌友，全程匿名直到见面 — 点卡片翻面了解更多 🎲
+                                报名后 AI 匹配桌友，全程匿名直到见面 — 点卡片查看玩法详情 🎲
                               </span>
                               <button
                                 className="shrink-0 opacity-80 hover:opacity-100 ml-1"
@@ -567,31 +580,14 @@ export default function DiscoverPage() {
                         )}
                       </AnimatePresence>
 
-                      <div 
-                        onClick={(e) => {
-                          if (isFirstCard && showEventTooltip) {
-                            e.stopPropagation();
-                            handleDismissEventTooltip();
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (isFirstCard && showEventTooltip && (e.key === 'Enter' || e.key === ' ')) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDismissEventTooltip();
-                          }
-                        }}
-                        role={isFirstCard && showEventTooltip ? "button" : undefined}
-                        tabIndex={isFirstCard && showEventTooltip ? 0 : undefined}
-                        aria-label={isFirstCard && showEventTooltip ? "关闭提示" : undefined}
-                      >
-                        {/* Wave 3: isFeatured={true} for first card — premium glow + upgraded CTA */}
-                        <BlindBoxEventCard 
-                          {...event}
-                          isFeatured={isFirstCard}
-                          onDetailsClick={pool ? () => handleOpenDrawer(pool) : undefined}
-                        />
-                      </div>
+                      {/* Wave 3: isFeatured={true} for first card — premium glow + upgraded CTA */}
+                      <BlindBoxEventCard 
+                        {...event}
+                        isFeatured={isFirstCard}
+                        dismissCoachMarkOnSurfaceTap={isFirstCard && showEventTooltip}
+                        onDismissCoachMark={handleDismissEventTooltip}
+                        onDetailsClick={handleOpenDrawer}
+                      />
                     </motion.div>
                   );
                 })

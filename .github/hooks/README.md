@@ -17,6 +17,7 @@ This workspace uses hooks for deterministic auto-eval enforcement and for lightw
 - The orchestration hook keeps a runtime context file under `.git/.orchestration/context.json`, including an advisory top-level `memoryContext`, appends non-blocking event logs under `.git/.orchestration/events.jsonl`, and recommends the `Researcher` -> `Planner` kickoff path for broad prompts.
 - `SessionStart` builds advisory repo-memory context only from changed files under `.github/`, `scripts/`, and `repo-memory/`.
 - `UserPromptSubmit` queries the promoted repo-memory index only when the prompt is meaningful enough to avoid trivial-noise matches, then surfaces a concise relevant-memory summary when useful hits exist.
+- Repo-memory hits now carry deterministic lifecycle warnings. If a note is stale against the configured validation-age threshold or conflicts with the current workflow-relevant changed paths, the hook still surfaces it but marks it with explicit caution text.
 - Read and search style tools remain allowed so investigation is still possible.
 - Auto-Eval self-check commands are exempt, so contributors can always rerun the evaluator manually.
 

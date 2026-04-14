@@ -17,22 +17,43 @@ import { isMiniMaxAvailable } from './minimaxClient';
 
 export type AIProvider = 'minimax' | 'deepseek';
 
-const GLOBAL_OVERRIDE = (process.env.CREATIVE_AI_PROVIDER || '').toLowerCase() as AIProvider | '';
+export type CreativeFunction =
+  | 'generateSocialTags'
+  | 'generateThemeLLM'
+  | 'generateEventThemeTitle';
+
+const CREATIVE_FUNCTION_ENV_OVERRIDES: Record<CreativeFunction, string> = {
+  generateSocialTags: 'CREATIVE_AI_TAGS_PROVIDER',
+  generateThemeLLM: 'CREATIVE_AI_THEME_PROVIDER',
+  generateEventThemeTitle: 'CREATIVE_AI_TITLE_PROVIDER',
+};
+
+function parseProviderOverride(rawValue: string | undefined): AIProvider | null {
+  const normalizedValue = (rawValue || '').toLowerCase();
+  if (normalizedValue === 'minimax' || normalizedValue === 'deepseek') {
+    return normalizedValue;
+  }
+
+  return null;
+}
 
 /**
  * Resolve the provider for a given function, applying env overrides.
  * Falls back to MiniMax when available, otherwise DeepSeek.
  */
-function resolveProvider(functionOverrideEnvVar: string): AIProvider {
+function resolveProvider(fn: CreativeFunction): AIProvider {
+  const functionOverrideEnvVar = CREATIVE_FUNCTION_ENV_OVERRIDES[fn];
+
   // Function-level override takes highest priority
-  const fnOverride = (process.env[functionOverrideEnvVar] || '').toLowerCase();
-  if (fnOverride === 'minimax' || fnOverride === 'deepseek') {
+  const fnOverride = parseProviderOverride(process.env[functionOverrideEnvVar]);
+  if (fnOverride) {
     return fnOverride;
   }
 
   // Global creative AI provider override
-  if (GLOBAL_OVERRIDE === 'minimax' || GLOBAL_OVERRIDE === 'deepseek') {
-    return GLOBAL_OVERRIDE;
+  const globalOverride = parseProviderOverride(process.env.CREATIVE_AI_PROVIDER);
+  if (globalOverride) {
+    return globalOverride;
   }
 
   // Default: use MiniMax if configured
@@ -49,17 +70,21 @@ export function isProviderAvailable(provider: AIProvider): boolean {
   return Boolean(process.env.DEEPSEEK_API_KEY);
 }
 
+export function getProviderForCreativeFunction(fn: CreativeFunction): AIProvider {
+  return resolveProvider(fn);
+}
+
 /** Provider for social tag generation (`tagGenerationService.ts`) */
 export function getTagGenerationProvider(): AIProvider {
-  return resolveProvider('CREATIVE_AI_TAGS_PROVIDER');
+  return getProviderForCreativeFunction('generateSocialTags');
 }
 
 /** Provider for event theme LLM generation (`themeLLMService.ts`) */
 export function getThemeLLMProvider(): AIProvider {
-  return resolveProvider('CREATIVE_AI_THEME_PROVIDER');
+  return getProviderForCreativeFunction('generateThemeLLM');
 }
 
 /** Provider for event theme title generation (`eventThemeTitleGenerator.ts`) */
 export function getEventThemeTitleProvider(): AIProvider {
-  return resolveProvider('CREATIVE_AI_TITLE_PROVIDER');
+  return getProviderForCreativeFunction('generateEventThemeTitle');
 }

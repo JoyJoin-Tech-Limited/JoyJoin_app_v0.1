@@ -26,7 +26,7 @@ Component({
         badgeCategory: 'discover',
       },
       {
-        key: 'journey',
+        key: 'events',
         index: 1,
         url: '/pages/events/index',
         text: '足迹',

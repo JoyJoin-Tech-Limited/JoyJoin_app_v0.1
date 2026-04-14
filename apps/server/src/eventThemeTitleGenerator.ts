@@ -21,6 +21,7 @@ import { eq, inArray } from 'drizzle-orm';
 import type { MatchGroup } from './poolMatchingService';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
 import { getEventThemeTitleProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
+import { logAITrace } from './lib/aiTraceLogger';
 
 // Validate API keys at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
@@ -58,6 +59,7 @@ const AI_TIMEOUT_MS = parseInt(
 );
 const ENABLE_EVENT_THEME_TITLE_GENERATION = process.env.ENABLE_EVENT_THEME_TITLE_GENERATION !== 'false';
 const AI_USAGE_TRACKING_ENABLED = process.env.AI_USAGE_TRACKING_ENABLED !== 'false';
+const EVENT_THEME_TITLE_PROMPT_VERSION = 'event-theme-title-v1';
 
 // Blocked keywords for content safety (normalized to lowercase)
 const BLOCKED_KEYWORDS = [
@@ -141,17 +143,28 @@ export async function generateAndAssignEventThemeTitle(
 
     // Try AI generation first
     let result: EventThemeTitleResult | null = null;
-    
-    const { provider: effectiveProvider } = getEventThemeTitleAIClient();
+    let fallbackErrorCode: string = 'template_fallback';
+    const aiSelection = getEventThemeTitleAIClient();
 
-    if (isProviderAvailable(effectiveProvider)) {
+    if (isProviderAvailable(aiSelection.provider)) {
       try {
-        result = await generateEventThemeTitleWithAI(context);
+        result = await generateEventThemeTitleWithAI(context, aiSelection);
         
         if (result && validateEventThemeTitleResult(result)) {
           const duration = Date.now() - startTime;
-          console.log(`[EventThemeTitleGen] provider=${effectiveProvider} latency=${duration}ms success=true`);
+          console.log(`[EventThemeTitleGen] provider=${aiSelection.provider} latency=${duration}ms success=true`);
           console.log(`[EventThemeTitleGen] ✅ ${result.themeEmoji} ${result.eventThemeTitle}`);
+          logAITrace({
+            domain: 'theme_generation',
+            feature: 'generateEventThemeTitle',
+            provider: aiSelection.provider,
+            model: aiSelection.model,
+            latencyMs: duration,
+            success: true,
+            fallbackUsed: false,
+            fromCache: false,
+            promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
+          });
           
           // Save to database (FIXED: aligning with actual schema field names)
           await db.update(eventPoolGroups)
@@ -174,10 +187,18 @@ export async function generateAndAssignEventThemeTitle(
           return result;
         } else {
           console.warn('[AI] Validation failed, using fallback');
+          fallbackErrorCode = 'validation_failed';
+          trackAIUsage({
+            groupId,
+            success: false,
+            latencyMs: Date.now() - startTime,
+            errorMessage: 'validation_failed',
+          });
         }
       } catch (error) {
         const duration = Date.now() - startTime;
         console.error(`[AI] Event theme title generation failed after ${duration}ms:`, error);
+        fallbackErrorCode = 'llm_error';
         
         trackAIUsage({
           groupId,
@@ -186,10 +207,24 @@ export async function generateAndAssignEventThemeTitle(
           errorMessage: error instanceof Error ? error.message : 'Unknown error'
         });
       }
+    } else {
+      fallbackErrorCode = 'provider_unavailable';
     }
 
     // Fallback to template-based generation
     result = generateFallbackEventThemeTitle(context);
+    logAITrace({
+      domain: 'theme_generation',
+      feature: 'generateEventThemeTitle',
+      provider: fallbackErrorCode === 'provider_unavailable' ? null : aiSelection.provider,
+      model: fallbackErrorCode === 'provider_unavailable' ? undefined : aiSelection.model,
+      latencyMs: Date.now() - startTime,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
+      errorCode: fallbackErrorCode,
+    });
     console.log(`[EventThemeTitleGen] 🔄 Fallback used: ${result.themeEmoji} ${result.eventThemeTitle}`);
 
     // Save to database (FIXED: aligning with actual schema field names)
@@ -215,11 +250,14 @@ export async function generateAndAssignEventThemeTitle(
 /**
  * Generate event theme title using the hybrid AI provider (with timeout protection).
  */
-async function generateEventThemeTitleWithAI(context: EventThemeTitleContext): Promise<EventThemeTitleResult | null> {
+async function generateEventThemeTitleWithAI(
+  context: EventThemeTitleContext,
+  selection: { client: OpenAI; model: string; provider: AIProvider },
+): Promise<EventThemeTitleResult | null> {
   const prompt = buildEventThemeTitlePrompt(context);
 
   // Resolve provider and client via shared helper
-  const { client, model } = getEventThemeTitleAIClient();
+  const { client, model } = selection;
 
   // Timeout protection
   const controller = new AbortController();

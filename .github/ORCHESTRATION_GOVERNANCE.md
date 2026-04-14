@@ -82,6 +82,16 @@ An agent may move into the core handoff graph only when all of the following are
 
 If those conditions are not met, keep the agent in the audited support portfolio.
 
+## SelfIteration boundary
+
+`SelfIteration` is an audited support agent, not part of the core handoff graph.
+
+- It is proposal-only and user-invocable, not a background scheduler.
+- It has no merge authority.
+- It has no durable memory publication authority.
+- It cannot change its own approval boundaries autonomously.
+- Any reviewed memory draft still follows the normal path: `npm run memory:stage-candidate` -> human review -> `npm run memory:promote`.
+
 ## Creation policy for new skills
 
 Create a new skill only when all of the following are true:
@@ -100,6 +110,7 @@ The orchestration runtime under `.git/.orchestration/` is advisory state, not pr
 - If current scope cannot be derived truthfully, record it as unknown rather than backfilling with misleading context.
 - Recommendation state should clear when follow-up prompts narrow the task enough that the earlier broad recommendation is no longer true.
 - `memoryContext` inside `.git/.orchestration/context.json` is advisory retrieval state only; durable memory publication still lives under `repo-memory/`.
+- When repo-memory hits are stale against the configured validation-age threshold or conflict with current workflow-relevant changed paths, `memoryContext` should surface that as advisory caution rather than clean guidance.
 - Dirty-worktree and changed-file summaries must describe the actual current state, not a convenient historical approximation.
 - Stateful behavior should be covered by tests, not only by dry-run validations with runtime writes disabled.
 

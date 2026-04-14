@@ -1,11 +1,8 @@
-import { View, Text, Image, Button, Navigator, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  findPricingPlan,
-  getPricing,
-  getUserCoupons,
   getEventPools,
   getMyPoolRegistrations,
   type EventPoolSummary,
@@ -23,6 +20,7 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
+import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -369,103 +367,6 @@ function AuthenticatedDiscover() {
   )
 }
 
-function UnauthenticatedLanding() {
-  const { data: pricing = [] } = useQuery({
-    queryKey: ['mini-program', 'pricing'],
-    queryFn: () => getPricing(apiRequest),
-  })
-  const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
-    queryKey: ['mini-program', 'coupons'],
-    queryFn: () => getUserCoupons(apiRequest),
-  })
-
-  const handleOpenPayment = useCallback(() => {
-    void openMiniProgramPaymentPage({})
-  }, [])
-
-  const featuredPlan = findPricingPlan(pricing, 'vip_quarterly') ?? pricing[0]
-
-  return (
-    <View className='landing-page'>
-      <View className='content-zone'>
-        <View className='logo-container'>
-          <View className='logo-bg'></View>
-          <Image src='/assets/box_logo_archetypes.png' className='logo-img' mode='aspectFit' />
-        </View>
-
-        <View className='hero-cards'>
-          <View className='card card-left'>
-            <View className='card-img-wrap'>
-              <Image src='/assets/match.png' className='card-img' mode='aspectFill' />
-            </View>
-            <View className='card-text'>
-              <Text>匹配</Text>
-            </View>
-          </View>
-
-          <View className='card card-center'>
-            <View className='card-img-wrap'>
-              <Image src='/assets/dinner.png' className='card-img' mode='aspectFill' />
-            </View>
-            <View className='card-text'>
-              <Text>悦聚</Text>
-            </View>
-          </View>
-
-          <View className='card card-right'>
-            <View className='card-img-wrap'>
-              <Image src='/assets/continue.png' className='card-img' mode='aspectFill' />
-            </View>
-            <View className='card-text'>
-              <Text>延续</Text>
-            </View>
-          </View>
-        </View>
-
-        <View className='text-content'>
-          <Text className='headline'>让对的相遇不再错过</Text>
-          <Text className='subtitle'>通过氛围测试，找到你的氛围原型，遇见志同道合的ta</Text>
-          <View className='badges'>
-            {['🧠 氛围测试', '🎯 算法匹配', '👥 4-6人局'].map((label) => (
-              <View key={label} className='badge'>
-                <Text>{label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View className='payment-page__summary-card'>
-          <Text className='payment-page__summary-label'>当前功能入口</Text>
-          <Text className='payment-page__summary-value'>活动权益 / 登录 / Onboarding</Text>
-          <Text className='payment-page__summary-note'>
-            {featuredPlan ? `推荐方案：${featuredPlan.displayName} · ¥${featuredPlan.price}` : '正在同步支付与优惠信息'}
-          </Text>
-          <Text className='payment-page__summary-note'>可用优惠：{coupons.count ?? 0} 张</Text>
-        </View>
-      </View>
-
-      <View className='bottom-zone'>
-        <Button className='primary-btn' onClick={() => Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })} hoverClass='primary-btn-hover'>
-          看看我会遇见谁
-        </Button>
-        <Button className='secondary-btn' onClick={handleOpenPayment}>
-          查看会员权益
-        </Button>
-        <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}>
-          已有账号？登录
-        </Button>
-        <View className='legal-text'>
-          <Text>我已阅读并同意</Text>
-          {/* Temporary combined legal page until separate privacy content lands in mini-program. */}
-          <Navigator url='/pages/terms/index' className='link'>《用户协议》</Navigator>
-          <Text>和</Text>
-          <Navigator url='/pages/terms/index' className='link'>《隐私政策》</Navigator>
-        </View>
-      </View>
-    </View>
-  )
-}
-
 export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const markAsRead = useMarkNotificationsAsRead()
@@ -489,5 +390,5 @@ export default function DiscoverPage() {
     return <LoadingScreen />
   }
 
-  return isAuthenticated ? <AuthenticatedDiscover /> : <UnauthenticatedLanding />
+  return isAuthenticated ? <AuthenticatedDiscover /> : <MiniProgramLandingPage />
 }

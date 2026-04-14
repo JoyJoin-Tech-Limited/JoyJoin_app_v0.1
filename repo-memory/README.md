@@ -15,6 +15,7 @@ This directory holds JoyJoin's repo-owned memory substrate. It is intentionally 
 - Promoted notes must point back to authoritative files already present in the repo.
 - The build script fails closed on invalid notes instead of guessing how to repair metadata.
 - The orchestration runtime reads `generated/promoted-index.json` only as advisory retrieval input; durable memory still lives under `repo-memory/` rather than `.git/.orchestration/`.
+- Advisory retrieval can mark promoted hits as stale when `lastValidatedAt` exceeds the orchestration freshness threshold, or conflicted when current workflow-relevant changed paths intersect a note's sources, related paths, or note path. Those warnings are fail-open guidance only; they do not publish, block, or rewrite durable memory by themselves.
 - Local journals, runtime scratch state, and future session-only artifacts belong under `.joyjoin/`, which is gitignored and not authoritative.
 
 ## Commands

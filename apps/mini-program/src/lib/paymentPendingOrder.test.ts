@@ -140,6 +140,22 @@ describe('mini-program pending-order recovery', () => {
     })
   })
 
+  // Guards against regression: authenticated resume must fail closed when the
+  // stored pending order was never bound to a specific user.
+  it('clears a user-unbound pending order for an authenticated resume', () => {
+    expect(
+      resolvePendingOrder({
+        orderId: 'order-123',
+        context: createPendingOrderContext({ userId: null }),
+        currentUserId: 'user-123',
+        now: NOW,
+      }),
+    ).toEqual({
+      status: 'clear',
+      reason: 'wrong-user',
+    })
+  })
+
   it('treats legacy context without createdAt as invalid and clearable', () => {
     expect(
       resolvePendingOrder({

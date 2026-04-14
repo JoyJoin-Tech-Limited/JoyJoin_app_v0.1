@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { callSocialAI } from './ai/socialModelRouter';
+import { logAITrace } from './lib/aiTraceLogger';
 
 // DeepSeek client retained for non-social functions (e.g. recommendGameForParticipants)
 const deepseekClient = new OpenAI({
@@ -50,11 +51,27 @@ const CLOSING_PROMPT = `你是"小悦"，JoyJoin平台的破冰助手。破冰�
 ## 输出要求
 直接输出结束语文本，不要有任何格式标记或额外解释。`;
 
+const WELCOME_MESSAGE_PROMPT_VERSION = 'icebreaker-welcome-message-v1';
+const CLOSING_MESSAGE_PROMPT_VERSION = 'icebreaker-closing-message-v1';
+
 export async function generateWelcomeMessage(
   participants: ParticipantInfo[],
   eventTitle?: string
 ): Promise<string> {
+  const startedAt = Date.now();
+
   if (participants.length === 0) {
+    logAITrace({
+      domain: 'icebreaker',
+      feature: 'generateWelcomeMessage',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: WELCOME_MESSAGE_PROMPT_VERSION,
+      errorCode: 'no_participants',
+    });
     return '欢迎来到破冰时刻！准备好认识新朋友了吗？';
   }
 
@@ -72,7 +89,7 @@ ${eventTitle ? `活动：${eventTitle}` : ''}
 请生成一段欢迎语。`;
 
   try {
-    const { content } = await callSocialAI({
+    const result = await callSocialAI({
       messages: [
         { role: 'system', content: WELCOME_PROMPT },
         { role: 'user', content: userPrompt },
@@ -80,10 +97,51 @@ ${eventTitle ? `活动：${eventTitle}` : ''}
       temperature: 0.8,
       max_tokens: 150,
       callerTag: 'welcomeMessage',
+      socialFunction: 'generateWelcomeMessage',
     });
-    return content.trim() || getDefaultWelcome(participants);
+
+    const message = result.content.trim();
+    if (!message) {
+      logAITrace({
+        domain: 'icebreaker',
+        feature: 'generateWelcomeMessage',
+        provider: result.provider,
+        model: result.model,
+        latencyMs: result.latencyMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: WELCOME_MESSAGE_PROMPT_VERSION,
+        errorCode: 'empty_response',
+      });
+      return getDefaultWelcome(participants);
+    }
+
+    logAITrace({
+      domain: 'icebreaker',
+      feature: 'generateWelcomeMessage',
+      provider: result.provider,
+      model: result.model,
+      latencyMs: result.latencyMs,
+      success: true,
+      fallbackUsed: result.fallbackUsed,
+      fromCache: false,
+      promptVersion: WELCOME_MESSAGE_PROMPT_VERSION,
+    });
+    return message;
   } catch (error) {
     console.error('AI welcome message error:', error);
+    logAITrace({
+      domain: 'icebreaker',
+      feature: 'generateWelcomeMessage',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: WELCOME_MESSAGE_PROMPT_VERSION,
+      errorCode: 'llm_error',
+    });
     return getDefaultWelcome(participants);
   }
 }
@@ -94,7 +152,20 @@ export async function generateClosingMessage(
   topicsDiscussed?: string[],
   gamesPlayed?: string[]
 ): Promise<string> {
+  const startedAt = Date.now();
+
   if (participants.length === 0) {
+    logAITrace({
+      domain: 'icebreaker',
+      feature: 'generateClosingMessage',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: CLOSING_MESSAGE_PROMPT_VERSION,
+      errorCode: 'no_participants',
+    });
     return '感谢大家的参与，期待下次相遇！';
   }
 
@@ -107,7 +178,7 @@ ${gamesPlayed?.length ? `玩过的游戏：${gamesPlayed.slice(0, 3).join('、')
 请生成一段结束语。`;
 
   try {
-    const { content } = await callSocialAI({
+    const result = await callSocialAI({
       messages: [
         { role: 'system', content: CLOSING_PROMPT },
         { role: 'user', content: userPrompt },
@@ -115,10 +186,51 @@ ${gamesPlayed?.length ? `玩过的游戏：${gamesPlayed.slice(0, 3).join('、')
       temperature: 0.8,
       max_tokens: 150,
       callerTag: 'closingMessage',
+      socialFunction: 'generateClosingMessage',
     });
-    return content.trim() || getDefaultClosing(durationMinutes);
+
+    const message = result.content.trim();
+    if (!message) {
+      logAITrace({
+        domain: 'icebreaker',
+        feature: 'generateClosingMessage',
+        provider: result.provider,
+        model: result.model,
+        latencyMs: result.latencyMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: CLOSING_MESSAGE_PROMPT_VERSION,
+        errorCode: 'empty_response',
+      });
+      return getDefaultClosing(durationMinutes);
+    }
+
+    logAITrace({
+      domain: 'icebreaker',
+      feature: 'generateClosingMessage',
+      provider: result.provider,
+      model: result.model,
+      latencyMs: result.latencyMs,
+      success: true,
+      fallbackUsed: result.fallbackUsed,
+      fromCache: false,
+      promptVersion: CLOSING_MESSAGE_PROMPT_VERSION,
+    });
+    return message;
   } catch (error) {
     console.error('AI closing message error:', error);
+    logAITrace({
+      domain: 'icebreaker',
+      feature: 'generateClosingMessage',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: CLOSING_MESSAGE_PROMPT_VERSION,
+      errorCode: 'llm_error',
+    });
     return getDefaultClosing(durationMinutes);
   }
 }

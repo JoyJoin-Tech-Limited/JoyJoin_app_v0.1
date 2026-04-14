@@ -2,123 +2,19 @@
 @use '../../styles/mixins' as *;
 
 .journey-page {
-  display: flex;
-  flex-direction: column;
+  @include page-gradient-bg;
+  @include safe-area-bottom;
+  @include flex-center;
   min-height: 100vh;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
-
-  &__header {
-    padding: $spacing-xl $container-padding $spacing-md;
-  }
-
-  &__title {
-    display: block;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__subtitle {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-
-  &__timeline {
-    flex: 1;
-    padding: 0 $container-padding;
-  }
+  flex-direction: column;
 
   &__loading {
-    @include flex-center;
-    padding: $spacing-2xl;
+    padding: $spacing-xl;
+    text-align: center;
   }
 
   &__loading-text {
     font-size: $font-size-base;
     color: $color-text-secondary;
   }
-
-  &__node {
-    display: flex;
-    gap: $spacing-md;
-    margin-bottom: 0;
-  }
-
-  &__node-line {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 40rpx;
-    flex-shrink: 0;
-  }
-
-  &__node-dot {
-    width: 24rpx;
-    height: 24rpx;
-    border-radius: 12rpx;
-    background: $brand-gradient;
-    flex-shrink: 0;
-    margin-top: $spacing-lg;
-  }
-
-  &__node-connector {
-    width: 4rpx;
-    flex: 1;
-    background: $color-border;
-    min-height: 40rpx;
-  }
-
-  &__node-card {
-    @include card;
-    flex: 1;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-
-    &:active {
-      transform: scale(0.98);
-    }
-  }
-
-  &__node-title {
-    display: block;
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__node-date {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-  }
-
-  &__empty-state {
-    @include flex-center;
-    flex-direction: column;
-    gap: $spacing-sm;
-    padding: $spacing-2xl;
-    text-align: center;
-  }
-
-  &__empty-emoji {
-    font-size: 64rpx;
-  }
-
-  &__empty-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-
-  &__empty-hint {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-  }
-
-  &__spacer {
-    height: 80rpx;
-  }
 }
-

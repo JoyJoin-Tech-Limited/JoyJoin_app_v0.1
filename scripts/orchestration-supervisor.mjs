@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
+  DEFAULT_MEMORY_LIFECYCLE_RULES,
   DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES,
   DEFAULT_WORKFLOW_RELEVANT_PATH_PREFIXES,
   GENERATED_INDEX_RELATIVE_PATH,
@@ -11,6 +13,7 @@ import {
   queryPromotedMemory,
   queryPromotedMemoryByPaths,
   readGeneratedPromotedIndexSafe,
+  summarizeMemoryHitLifecycles,
   summarizeMemoryMatches,
 } from './memory-lib.mjs';
 import {
@@ -135,6 +138,15 @@ function getMemoryConfig(manifest) {
       Number.isInteger(configuredMemoryContext.min_prompt_score) && configuredMemoryContext.min_prompt_score > 0
         ? configuredMemoryContext.min_prompt_score
         : 10,
+    maxValidationAgeDays:
+      Number.isInteger(configuredMemoryContext.max_validation_age_days) &&
+      configuredMemoryContext.max_validation_age_days > 0
+        ? configuredMemoryContext.max_validation_age_days
+        : DEFAULT_MEMORY_LIFECYCLE_RULES.maxValidationAgeDays,
+    surfaceSourcePathConflicts:
+      typeof configuredMemoryContext.surface_source_path_conflicts === 'boolean'
+        ? configuredMemoryContext.surface_source_path_conflicts
+        : DEFAULT_MEMORY_LIFECYCLE_RULES.surfaceSourcePathConflicts,
   };
 }
 
@@ -269,29 +281,47 @@ function collectUniqueMemoryHits(...hitGroups) {
   return hits;
 }
 
-function buildMemoryContext({
+function refreshMemoryHits(hits, lifecycleOptions) {
+  if (!Array.isArray(hits)) {
+    return [];
+  }
+
+  return hits.map((hit) => createMemoryHitSummary(hit, lifecycleOptions));
+}
+
+export function buildMemoryContext({
   changedFiles,
   memoryConfig,
   previousMemoryContext,
   promptText,
   resetPrompt = false,
+  evaluatedAt = new Date().toISOString(),
 }) {
   const indexState = readGeneratedPromotedIndexSafe(memoryConfig.artifactPath);
   const consideredPaths = filterWorkflowRelevantPaths(
     changedFiles,
     memoryConfig.workflowRelevantPathPrefixes,
   );
+  const lifecycleOptions = {
+    changedPaths: consideredPaths,
+    evaluatedAt,
+    maxValidationAgeDays: memoryConfig.maxValidationAgeDays,
+    surfaceSourcePathConflicts: memoryConfig.surfaceSourcePathConflicts,
+  };
   const changedFileHits = indexState.available
     ? queryPromotedMemoryByPaths(consideredPaths, {
         indexDocument: indexState.document,
         limit: memoryConfig.maxHits,
         minScore: memoryConfig.minChangedFileScore,
-      }).matches.map(createMemoryHitSummary)
+      }).matches.map((match) => createMemoryHitSummary(match, lifecycleOptions))
     : [];
 
   let promptState = resetPrompt
     ? createDefaultPromptMemoryState()
-    : previousMemoryContext?.prompt ?? createDefaultPromptMemoryState();
+    : {
+        ...(previousMemoryContext?.prompt ?? createDefaultPromptMemoryState()),
+        hits: refreshMemoryHits(previousMemoryContext?.prompt?.hits, lifecycleOptions),
+      };
 
   if (typeof promptText === 'string') {
     const meaningful = isMeaningfulMemoryQuery(promptText, memoryConfig.promptQueryRules);
@@ -300,7 +330,7 @@ function buildMemoryContext({
           indexDocument: indexState.document,
           limit: memoryConfig.maxHits,
           minScore: memoryConfig.minPromptScore,
-        }).matches.map(createMemoryHitSummary)
+        }).matches.map((match) => createMemoryHitSummary(match, lifecycleOptions))
       : [];
 
     promptState = {
@@ -309,6 +339,8 @@ function buildMemoryContext({
       hits: promptHits,
     };
   }
+
+  const combinedHits = collectUniqueMemoryHits(promptState.hits, changedFileHits);
 
   return {
     status: 'advisory',
@@ -323,10 +355,8 @@ function buildMemoryContext({
       hits: changedFileHits,
     },
     prompt: promptState,
-    summary: summarizeMemoryMatches(
-      collectUniqueMemoryHits(promptState.hits, changedFileHits),
-      { maxMatches: 2 },
-    ),
+    lifecycle: summarizeMemoryHitLifecycles(combinedHits, lifecycleOptions),
+    summary: summarizeMemoryMatches(combinedHits, { maxMatches: 2 }),
   };
 }
 
@@ -360,6 +390,15 @@ function buildMemoryLogMetadata(memoryContext) {
     changedFileHitCount: Array.isArray(memoryContext?.changedFiles?.hits) ? memoryContext.changedFiles.hits.length : 0,
     promptHitCount: Array.isArray(memoryContext?.prompt?.hits) ? memoryContext.prompt.hits.length : 0,
     promptQueryMeaningful: Boolean(memoryContext?.prompt?.meaningful),
+    warningHitCount: Number.isInteger(memoryContext?.lifecycle?.cautionHitCount)
+      ? memoryContext.lifecycle.cautionHitCount
+      : 0,
+    staleHitCount: Number.isInteger(memoryContext?.lifecycle?.staleHitCount)
+      ? memoryContext.lifecycle.staleHitCount
+      : 0,
+    conflictHitCount: Number.isInteger(memoryContext?.lifecycle?.conflictHitCount)
+      ? memoryContext.lifecycle.conflictHitCount
+      : 0,
   };
 }
 
@@ -375,6 +414,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
     changedFiles,
     memoryConfig,
     previousMemoryContext,
+    evaluatedAt: now,
   });
 
   return {
@@ -617,6 +657,7 @@ function runCopilotHook(repoRoot, eventName) {
         memoryConfig,
         previousMemoryContext: context.memoryContext,
         resetPrompt: true,
+        evaluatedAt: context.lastUpdatedAt,
       }),
     };
 
@@ -652,6 +693,7 @@ function runCopilotHook(repoRoot, eventName) {
       memoryConfig,
       previousMemoryContext: context.memoryContext,
       promptText,
+      evaluatedAt: context.lastUpdatedAt,
     });
 
     context = {
@@ -825,37 +867,43 @@ function runToolingReport(repoRoot, asJson) {
   }
 }
 
-const repoRoot = resolveRepoRoot(process.cwd());
-const command = process.argv[2] ?? 'validate';
+function isMainModule() {
+  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
+}
 
-try {
-  if (command === 'validate') {
-    runValidate(repoRoot);
-    process.exit(0);
+if (isMainModule()) {
+  const repoRoot = resolveRepoRoot(process.cwd());
+  const command = process.argv[2] ?? 'validate';
+
+  try {
+    if (command === 'validate') {
+      runValidate(repoRoot);
+      process.exit(0);
+    }
+
+    if (command === 'copilot-hook') {
+      runCopilotHook(repoRoot, process.argv[3] ?? 'session-start');
+    }
+
+    if (command === 'git-hook') {
+      runGitHook(repoRoot, process.argv[3] ?? 'pre-commit');
+      process.exit(0);
+    }
+
+    if (command === 'workflow') {
+      runWorkflow(repoRoot, process.argv[3] ?? 'pull-request');
+      process.exit(0);
+    }
+
+    if (command === 'tooling-report') {
+      runToolingReport(repoRoot, process.argv.includes('--json'));
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown orchestration supervisor command ${command}.`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`Orchestration supervisor error: ${message}\n`);
+    process.exit(1);
   }
-
-  if (command === 'copilot-hook') {
-    runCopilotHook(repoRoot, process.argv[3] ?? 'session-start');
-  }
-
-  if (command === 'git-hook') {
-    runGitHook(repoRoot, process.argv[3] ?? 'pre-commit');
-    process.exit(0);
-  }
-
-  if (command === 'workflow') {
-    runWorkflow(repoRoot, process.argv[3] ?? 'pull-request');
-    process.exit(0);
-  }
-
-  if (command === 'tooling-report') {
-    runToolingReport(repoRoot, process.argv.includes('--json'));
-    process.exit(0);
-  }
-
-  throw new Error(`Unknown orchestration supervisor command ${command}.`);
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`Orchestration supervisor error: ${message}\n`);
-  process.exit(1);
 }

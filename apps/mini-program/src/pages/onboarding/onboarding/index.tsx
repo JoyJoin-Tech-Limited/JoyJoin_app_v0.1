@@ -2,7 +2,8 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
-import { nextStepToRoute } from '../../../hooks/useAuthGuard'
+import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
 import './index.scss'
 
 /**
@@ -18,14 +19,13 @@ export default function OnboardingEntryPage() {
     if (isLoading) return
 
     if (!isAuthenticated) {
-      Taro.reLaunch({ url: '/pages/login/index' })
+      Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
       return
     }
 
     // Redirect to the actual step the server says the user should be at
     const step = nextStep ?? 'personality-test'
-    const route = nextStepToRoute(step)
-    Taro.redirectTo({ url: route })
+    void navigateToMiniProgramNextStep(step, { mode: 'replace' })
   }, [isLoading, isAuthenticated, nextStep])
 
   return (

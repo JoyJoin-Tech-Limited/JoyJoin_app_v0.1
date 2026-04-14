@@ -7,15 +7,21 @@ import {
 } from './authSessionRules'
 
 describe('mini-program auth session route rules', () => {
-  // Guards against regression: public entry routes must not force-login on 401.
-  it('keeps discover, login, and legal entry routes public', () => {
+  // Guards against regression: discover and pre-auth onboarding routes must stay public on 401.
+  it('keeps discover, login, legal, and guest onboarding routes public', () => {
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.discover)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.login)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.index)).toBe(true)
+    expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(true)
+    expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTestResults)).toBe(true)
+    expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTestAuthGate)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.terms)).toBe(true)
 
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.discover)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.login)).toBe(false)
+    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(false)
+    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTestResults)).toBe(false)
+    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTestAuthGate)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.terms)).toBe(false)
   })
 
@@ -23,7 +29,6 @@ describe('mini-program auth session route rules', () => {
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.profile)).toBe(true)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.events)).toBe(true)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.blindBoxPayment)).toBe(true)
-    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(true)
     expect(shouldRedirectToLoginOnUnauthorized('pages/unknown/index')).toBe(true)
   })
 

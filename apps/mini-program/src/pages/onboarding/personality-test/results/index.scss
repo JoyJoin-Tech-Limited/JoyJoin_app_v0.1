@@ -1,0 +1,197 @@
+@use '../../../../styles/variables' as *;
+@use '../../../../styles/mixins' as *;
+
+.personality-results {
+  @include page-gradient-bg;
+  min-height: 100vh;
+  @include page-shell-padding($spacing-lg, $container-padding, $spacing-2xl, true);
+
+  &__loading,
+  &__empty {
+    @include flex-center;
+    min-height: 100vh;
+    flex-direction: column;
+    text-align: center;
+    gap: $spacing-md;
+  }
+
+  &__loading-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+  }
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+    padding: $spacing-lg;
+    border-radius: $card-radius;
+    border: 2rpx solid rgba($color-primary, 0.1);
+    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
+    box-shadow: $shadow-md;
+  }
+
+  &__eyebrow {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: rgba($color-primary-dark, 0.82);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
+  }
+
+  &__title {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    line-height: 1.4;
+  }
+
+  &__archetype {
+    font-size: 64rpx;
+    font-weight: $font-weight-black;
+    color: $color-primary-dark;
+    line-height: 1.2;
+  }
+
+  &__subtitle {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.7;
+  }
+
+  &__hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__hero-tag {
+    padding: 14rpx 20rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.76);
+    border: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__hero-tag-text {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  &__card {
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    border: 2rpx solid rgba($color-primary, 0.08);
+    background: rgba($color-surface, 0.94);
+  }
+
+  &__card-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__card-copy {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.7;
+  }
+
+  &__section-label {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: $spacing-md;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__match-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__match-chip {
+    min-width: 180rpx;
+    padding: 18rpx 22rpx;
+    border-radius: 28rpx;
+    background: rgba($color-primary, 0.08);
+  }
+
+  &__match-name {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-bottom: 6rpx;
+  }
+
+  &__match-score {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+  }
+
+  &__traits {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__trait-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+  }
+
+  &__trait-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__trait-label,
+  &__trait-value {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__trait-value {
+    color: $color-primary-dark;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__trait-track {
+    width: 100%;
+    height: 16rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    overflow: hidden;
+  }
+
+  &__trait-fill {
+    height: 100%;
+    border-radius: 999rpx;
+    background: $brand-gradient;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-lg;
+  }
+
+  &__action-note {
+    display: block;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    line-height: 1.6;
+  }
+}

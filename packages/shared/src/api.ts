@@ -771,6 +771,85 @@ export interface ConfirmPoolGroupAttendanceResponse {
   blindBoxEventId: string | null
 }
 
+export interface EventPoolRegistrationPayload {
+  invitationCode?: string
+  budgetRange?: string[]
+  preferredLanguages?: string[]
+  eventIntent?: string[]
+  cuisinePreferences?: string[]
+  dietaryRestrictions?: string[]
+  tasteIntensity?: string[]
+  barThemes?: string[]
+  alcoholComfort?: string[] | string
+  barBudgetRange?: string[]
+}
+
+export interface NormalizedEventPoolRegistrationPayload
+  extends Omit<EventPoolRegistrationPayload, 'alcoholComfort'> {
+  alcoholComfort?: string[]
+}
+
+const EVENT_POOL_REGISTRATION_ARRAY_FIELDS = [
+  'budgetRange',
+  'preferredLanguages',
+  'eventIntent',
+  'cuisinePreferences',
+  'dietaryRestrictions',
+  'tasteIntensity',
+  'barThemes',
+  'barBudgetRange',
+] as const
+
+function normalizeStringArrayInput(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+}
+
+function normalizeSingleOrArrayStringInput(value: unknown): string[] | undefined {
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim()
+    return trimmedValue === '' ? [] : [trimmedValue]
+  }
+
+  return normalizeStringArrayInput(value)
+}
+
+export function normalizeEventPoolRegistrationPayload(
+  payload: EventPoolRegistrationPayload | null | undefined
+): NormalizedEventPoolRegistrationPayload {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {}
+  }
+
+  const normalized: NormalizedEventPoolRegistrationPayload = {}
+  const invitationCode =
+    typeof payload.invitationCode === 'string' ? payload.invitationCode.trim() : ''
+
+  if (invitationCode !== '') {
+    normalized.invitationCode = invitationCode
+  }
+
+  for (const field of EVENT_POOL_REGISTRATION_ARRAY_FIELDS) {
+    const normalizedValue = normalizeStringArrayInput(payload[field])
+    if (normalizedValue !== undefined) {
+      normalized[field] = normalizedValue
+    }
+  }
+
+  const normalizedAlcoholComfort = normalizeSingleOrArrayStringInput(payload.alcoholComfort)
+  if (normalizedAlcoholComfort !== undefined) {
+    normalized.alcoholComfort = normalizedAlcoholComfort
+  }
+
+  return normalized
+}
+
 export function getEventPools(api: ApiTransport): Promise<EventPoolSummary[]> {
   return api<EventPoolSummary[]>({ path: '/api/event-pools' })
 }
@@ -801,12 +880,19 @@ export function getPoolGroupDetails(
 
 export function registerForPool(
   api: ApiTransport,
-  poolId: string
+  poolId: string,
+  payload?: EventPoolRegistrationPayload
 ): Promise<{ id: string }> {
-  return api<{ id: string }>({
+  const request: ApiTransportRequest = {
     path: `/api/event-pools/${encodeURIComponent(poolId)}/register`,
     method: 'POST',
-  })
+  }
+
+  if (payload !== undefined) {
+    request.data = normalizeEventPoolRegistrationPayload(payload)
+  }
+
+  return api<{ id: string }>(request)
 }
 
 export function cancelPoolRegistration(

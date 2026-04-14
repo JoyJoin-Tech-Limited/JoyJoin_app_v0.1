@@ -2,7 +2,8 @@ import Taro from '@tarojs/taro'
 import type { AuthUserResponse } from '@shared/api'
 import { handleMiniProgramUnauthorized } from './authSession'
 
-const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? 'http://localhost:5000').replace(/\/$/, '')
+const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
+const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL).replace(/\/$/, '')
 // Keep requests responsive on mobile networks while still allowing payment and
 // auth calls enough time to complete under normal latency.
 const REQUEST_TIMEOUT_MS = 15000
@@ -11,9 +12,19 @@ export interface ApiError extends Error {
   statusCode?: number
   data?: unknown
   isGenericMessage?: boolean
+  isTransportError?: boolean
+  requestUrl?: string
+  debugMessage?: string
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+
+export interface ImportedMiniProgramAssessmentAnswer {
+  questionId: string
+  selectedOption: string
+  traitScores?: Record<string, number>
+  answeredAt?: string
+}
 
 export const DEFAULT_API_ERROR_PREFIX = 'Request failed with status'
 
@@ -45,7 +56,7 @@ function buildApiUrl(path: string): string {
   }
 
   if (!API_BASE_URL) {
-    throw new Error('TARO_APP_API_BASE_URL is not configured')
+    throw createApiError('TARO_APP_API_BASE_URL is not configured')
   }
 
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
@@ -55,13 +66,71 @@ function createApiError(
   message: string,
   statusCode?: number,
   data?: unknown,
-  isGenericMessage = false
+  isGenericMessage = false,
+  metadata?: Partial<ApiError>,
 ): ApiError {
   const error = new Error(message) as ApiError
   error.statusCode = statusCode
   error.data = data
   error.isGenericMessage = isGenericMessage
+  Object.assign(error, metadata)
   return error
+}
+
+function getApiRequestTarget(requestUrl: string): string {
+  try {
+    return new URL(requestUrl).origin
+  } catch {
+    return requestUrl
+  }
+}
+
+function getTransportErrorDebugMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const errMsg = (error as { errMsg?: unknown }).errMsg
+    if (typeof errMsg === 'string' && errMsg.trim() !== '') {
+      return errMsg
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return 'Unknown transport error'
+}
+
+function getTransportErrorMessage(requestUrl: string, error: unknown): string {
+  const requestTarget = getApiRequestTarget(requestUrl)
+  const normalizedDebugMessage = getTransportErrorDebugMessage(error).toLowerCase()
+
+  if (normalizedDebugMessage.includes('timeout')) {
+    return `请求超时，请确认当前 API 地址 ${requestTarget} 可访问，并且服务已启动后重试`
+  }
+
+  if (normalizedDebugMessage.includes('domain list')) {
+    return `当前 API 地址 ${requestTarget} 不在小程序合法域名白名单中，请检查开发设置或域名配置后重试`
+  }
+
+  if (normalizedDebugMessage.includes('ssl') || normalizedDebugMessage.includes('certificate')) {
+    return `无法建立安全连接，请确认当前 API 地址 ${requestTarget} 的证书配置后重试`
+  }
+
+  return `无法连接到服务，请确认当前 API 地址 ${requestTarget} 可访问，并且服务已经启动`
+}
+
+function createTransportApiError(requestUrl: string, error: unknown): ApiError {
+  return createApiError(
+    getTransportErrorMessage(requestUrl, error),
+    undefined,
+    error,
+    false,
+    {
+      isTransportError: true,
+      requestUrl,
+      debugMessage: getTransportErrorDebugMessage(error),
+    },
+  )
 }
 
 export async function apiRequest<T>(options: {
@@ -70,16 +139,23 @@ export async function apiRequest<T>(options: {
   data?: unknown
   handleUnauthorized?: boolean
 }): Promise<T> {
-  const response = await Taro.request<T>({
-    url: buildApiUrl(options.path),
-    method: options.method ?? 'GET',
-    data: options.data,
-    enableCookie: true,
-    timeout: REQUEST_TIMEOUT_MS,
-    header: {
-      'content-type': 'application/json',
-    },
-  })
+  const requestUrl = buildApiUrl(options.path)
+
+  let response
+  try {
+    response = await Taro.request<T>({
+      url: requestUrl,
+      method: options.method ?? 'GET',
+      data: options.data,
+      enableCookie: true,
+      timeout: REQUEST_TIMEOUT_MS,
+      header: {
+        'content-type': 'application/json',
+      },
+    })
+  } catch (error) {
+    throw createTransportApiError(requestUrl, error)
+  }
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
     return response.data
@@ -108,22 +184,21 @@ export type UserState = AuthUserResponse
  * No web OAuth redirect is involved — this is mini-program-only.
  */
 export async function authenticateMiniProgramUser(): Promise<void> {
-  const loginResult = await Taro.login()
-  if (!loginResult.code) {
-    throw createApiError('微信登录失败，请稍后重试')
-  }
+  await postMiniProgramWeChatLogin('/api/auth/wechat/login', {}, '无法建立微信登录会话')
+}
 
-  const data = await apiRequest<{ success?: boolean; error?: string }>({
-    path: '/api/auth/wechat/login',
-    method: 'POST',
-    data: {
-      code: loginResult.code,
+export async function authenticateMiniProgramUserWithTest(input: {
+  testAnswers?: ImportedMiniProgramAssessmentAnswer[]
+  anonymousSessionId?: string | null
+}): Promise<void> {
+  await postMiniProgramWeChatLogin(
+    '/api/auth/wechat/login-with-test',
+    {
+      testAnswers: input.testAnswers ?? [],
+      anonymousSessionId: input.anonymousSessionId ?? undefined,
     },
-  })
-
-  if (!data.success) {
-    throw createApiError(data.error || '无法建立微信登录会话')
-  }
+    '无法导入测试结果并建立微信登录会话',
+  )
 }
 
 /**
@@ -132,4 +207,33 @@ export async function authenticateMiniProgramUser(): Promise<void> {
  */
 export async function getUserState(): Promise<AuthUserResponse> {
   return apiRequest<AuthUserResponse>({ path: '/api/auth/user' })
+}
+
+async function getMiniProgramLoginCode(): Promise<string> {
+  const loginResult = await Taro.login()
+  if (!loginResult.code) {
+    throw createApiError('微信登录失败，请稍后重试')
+  }
+
+  return loginResult.code
+}
+
+async function postMiniProgramWeChatLogin(
+  path: string,
+  payload: Record<string, unknown>,
+  fallbackErrorMessage: string,
+): Promise<void> {
+  const code = await getMiniProgramLoginCode()
+  const data = await apiRequest<{ success?: boolean; error?: string }>({
+    path,
+    method: 'POST',
+    data: {
+      code,
+      ...payload,
+    },
+  })
+
+  if (!data.success) {
+    throw createApiError(data.error || fallbackErrorMessage)
+  }
 }

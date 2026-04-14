@@ -38,11 +38,11 @@ import {
   setLieTruths,
   getLieTruths,
   getAllSessionLieTruths,
-  sweepExpiredSessions,
 } from '../lib/socialIcebreakerStore';
 import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
 import { logger } from '../lib/logger';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
+import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
 
 const router = Router();
 
@@ -63,13 +63,9 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 // ============ TTL / CLEANUP ============
-// Sweep expired sessions from the DB every 5 minutes.
-const sweepInterval = setInterval(() => {
-  sweepExpiredSessions().catch((err) =>
-    console.error('[SocialIcebreaker] sweep error:', err),
-  );
-}, 5 * 60 * 1000);
-sweepInterval.unref?.();
+// Sweep expired sessions from the DB every 5 minutes. Fail open if the store
+// is unavailable so the route module does not take down the server process.
+startSocialIcebreakerSweep();
 
 // ---------------------------------------------------------------------------
 // Helpers

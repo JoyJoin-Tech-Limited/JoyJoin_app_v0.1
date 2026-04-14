@@ -1,5 +1,8 @@
 import { callSocialAI } from './ai/socialModelRouter';
 import { DISCUSSION_STYLE_LABELS } from '@shared/constants';
+import { logAITrace } from './lib/aiTraceLogger';
+
+const CONVERSATION_TOPICS_PROMPT_VERSION = 'conversation-topics-v1';
 
 export interface ParticipantProfile {
   displayName: string;
@@ -65,7 +68,20 @@ export async function generateConversationTopics(
   participants: ParticipantProfile[],
   eventType?: string
 ): Promise<ConversationTopicsResponse> {
+  const startedAt = Date.now();
+
   if (participants.length < 2) {
+    logAITrace({
+      domain: 'match_explanation',
+      feature: 'generateConversationTopics',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+      errorCode: 'insufficient_participants',
+    });
     return getDefaultTopics(participants);
   }
 
@@ -119,7 +135,7 @@ ${eventType ? `活动类型：${eventType}` : ''}
 请生成3-5个适合这群人的话题建议。`;
 
   try {
-    const { content } = await callSocialAI({
+    const result = await callSocialAI({
       messages: [
         { role: 'system', content: CONVERSATION_TOPICS_PROMPT },
         { role: 'user', content: userPrompt },
@@ -127,25 +143,81 @@ ${eventType ? `活动类型：${eventType}` : ''}
       temperature: 0.8,
       max_tokens: 600,
       callerTag: 'conversationTopics',
+      socialFunction: 'generateConversationTopics',
     });
 
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = result.content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error('Invalid response format');
+      logAITrace({
+        domain: 'match_explanation',
+        feature: 'generateConversationTopics',
+        provider: result.provider,
+        model: result.model,
+        latencyMs: result.latencyMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+        errorCode: 'parse_error',
+      });
+      return getDefaultTopics(participants);
     }
 
-    const result = JSON.parse(jsonMatch[0]) as {
+    let parsed: {
       topics: TopicSuggestion[];
       commonInterests: string[];
     };
+    try {
+      parsed = JSON.parse(jsonMatch[0]) as {
+        topics: TopicSuggestion[];
+        commonInterests: string[];
+      };
+    } catch {
+      logAITrace({
+        domain: 'match_explanation',
+        feature: 'generateConversationTopics',
+        provider: result.provider,
+        model: result.model,
+        latencyMs: result.latencyMs,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+        errorCode: 'parse_error',
+      });
+      return getDefaultTopics(participants);
+    }
+
+    logAITrace({
+      domain: 'match_explanation',
+      feature: 'generateConversationTopics',
+      provider: result.provider,
+      model: result.model,
+      latencyMs: result.latencyMs,
+      success: true,
+      fallbackUsed: result.fallbackUsed,
+      fromCache: false,
+      promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+    });
 
     return {
-      topics: result.topics || [],
-      commonInterests: result.commonInterests || commonInterests,
+      topics: parsed.topics || [],
+      commonInterests: parsed.commonInterests || commonInterests,
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
     console.error('Conversation topics generation error:', error);
+    logAITrace({
+      domain: 'match_explanation',
+      feature: 'generateConversationTopics',
+      provider: null,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: CONVERSATION_TOPICS_PROMPT_VERSION,
+      errorCode: 'llm_error',
+    });
     return getDefaultTopics(participants);
   }
 }

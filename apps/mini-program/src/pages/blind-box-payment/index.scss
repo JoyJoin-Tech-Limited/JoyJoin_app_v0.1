@@ -1,7 +1,9 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
 .payment-page {
   min-height: 100vh;
-  padding: 40rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
-  box-sizing: border-box;
+  @include page-shell-padding(40rpx, 32rpx, 48rpx);
   background: linear-gradient(180deg, #fff4f7 0%, #f7f1ff 42%, #ffffff 100%);
   display: flex;
   flex-direction: column;

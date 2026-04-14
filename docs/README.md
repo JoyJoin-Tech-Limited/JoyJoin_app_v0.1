@@ -63,6 +63,7 @@ Use these as the main entry points before branching into topic-specific document
 ### AI systems
 
 - [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md) — current-state AI architecture and invariants
+- [`AI_MODEL_ROUTING_STRATEGY.md`](./AI_MODEL_ROUTING_STRATEGY.md) — current-state provider allocation, function-level routing tables, and AI trace expectations
 - [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) — phased roadmap and execution gates
 - [`AI_EXECUTION_ROADMAP.md`](./AI_EXECUTION_ROADMAP.md) — 30-60-90 roadmap for repo AI workflow governance, validation, and tooling maturity
 - [`proposals/profile-c-memory-layer-rfc.md`](./proposals/profile-c-memory-layer-rfc.md) — proposal for adding a durable memory plane to JoyJoin's AI workflow system without reusing `.git` operational state

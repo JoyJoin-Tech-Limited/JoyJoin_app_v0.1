@@ -3,8 +3,7 @@
 
 .pool-group-detail {
   min-height: 100vh;
-  padding: $spacing-lg $container-padding calc(200rpx + env(safe-area-inset-bottom));
-  box-sizing: border-box;
+  @include page-shell-padding($spacing-lg, $container-padding, $spacing-xl);
   background:
     radial-gradient(circle at top, rgba(139, 92, 246, 0.18), transparent 38%),
     linear-gradient(180deg, #fafafa 0%, #fff4f8 54%, #fff9f3 100%);
@@ -275,13 +274,12 @@
   }
 
   &__spacer {
-    height: 40rpx;
+    height: 0;
   }
 
   &__error {
     min-height: 100vh;
-    padding: $spacing-2xl $container-padding;
-    box-sizing: border-box;
+    @include page-shell-padding($spacing-2xl, $container-padding, $spacing-2xl);
     display: flex;
     flex-direction: column;
     align-items: center;

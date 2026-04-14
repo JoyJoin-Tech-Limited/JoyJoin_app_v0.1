@@ -1,14 +1,21 @@
 import { Button, View, Text } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { logError, logWarn } from '../../lib/logger'
+import { AUTH_QUERY_KEY } from '../../lib/authSession'
+import { logWarn } from '../../lib/logger'
 import {
   type MiniProgramPendingOrderClearReason,
   resolvePendingOrder,
 } from '../../lib/paymentPendingOrder'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import {
+  getPaymentStatusDecision,
+  getPaymentStatusErrorDecision,
+  type MiniProgramPaymentVerificationState,
+} from '../../lib/paymentVerificationStatus'
 import {
   clearPendingOrderStorage,
   getPendingOrderStorageSnapshot,
@@ -16,8 +23,6 @@ import {
   readStoredPendingOrder,
 } from '../../lib/paymentPendingOrderStorage'
 import './index.scss'
-
-type VerificationState = 'polling' | 'paid' | 'pending' | 'failed'
 
 // Poll for up to 20 seconds total so the user gets a fast answer without
 // hammering the status endpoint after returning from the WeChat pay sheet.
@@ -41,8 +46,9 @@ function getPendingOrderRecoveryMessage(reason: MiniProgramPendingOrderClearReas
 
 export default function PaymentVerificationPage() {
   const { user, isLoading: authLoading } = useAuthGuard()
+  const queryClient = useQueryClient()
   const [orderId, setOrderId] = useState('')
-  const [status, setStatus] = useState<VerificationState>('polling')
+  const [status, setStatus] = useState<MiniProgramPaymentVerificationState>('polling')
   const [message, setMessage] = useState('正在确认支付结果...')
   const [attemptCount, setAttemptCount] = useState(0)
   const isPollingRef = useRef(false)
@@ -64,8 +70,22 @@ export default function PaymentVerificationPage() {
     }
   }, [clearTimer])
 
-  const navigateAfterPaid = useCallback(() => {
+  const invalidatePaidCaches = useCallback(async () => {
+    await Promise.allSettled([
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user-profile'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-blind-box-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration'] }),
+    ])
+  }, [queryClient])
+
+  const navigateAfterPaid = useCallback(async () => {
+    clearTimer()
     const pendingOrder = readStoredPendingOrder({ currentUserId: user?.id })
+    await invalidatePaidCaches()
     clearPendingOrderStorage()
 
     if (pendingOrder.status === 'ready' && pendingOrder.context.type === 'event') {
@@ -74,7 +94,7 @@ export default function PaymentVerificationPage() {
     }
 
     Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile })
-  }, [user?.id])
+  }, [clearTimer, invalidatePaidCaches, user?.id])
 
   const pollPaymentStatus = useCallback(async (targetOrderId: string, attempt = 1) => {
     if (!targetOrderId || isPollingRef.current) {
@@ -89,30 +109,30 @@ export default function PaymentVerificationPage() {
         path: `/api/payments/status/${encodeURIComponent(targetOrderId)}`,
       })
 
-      if (response.status === 'completed') {
-        setStatus('paid')
-        setMessage('支付已确认，正在为你发放权益...')
+      const decision = getPaymentStatusDecision({
+        remoteStatus: response.status,
+        attempt,
+        maxAttempts: MAX_POLL_ATTEMPTS,
+      })
+
+      if (decision.clearPendingOrder) {
+        clearPendingOrderStorage()
+      }
+
+      setStatus(decision.status)
+      setMessage(decision.message)
+
+      if (decision.status === 'paid') {
         timeoutRef.current = setTimeout(() => {
-          navigateAfterPaid()
+          void navigateAfterPaid()
         }, 1200)
         return
       }
 
-      if (response.status === 'failed' || response.status === 'closed') {
-        clearPendingOrderStorage()
-        setStatus('failed')
-        setMessage('支付未完成，请重新发起支付')
+      if (!decision.shouldRetry) {
         return
       }
 
-      if (attempt >= MAX_POLL_ATTEMPTS) {
-        setStatus('pending')
-        setMessage('支付处理中，请稍后查看我的订单')
-        return
-      }
-
-      setStatus('polling')
-      setMessage('正在确认支付结果...')
       timeoutRef.current = setTimeout(() => {
         if (!isMountedRef.current) {
           return
@@ -123,11 +143,30 @@ export default function PaymentVerificationPage() {
       return
     } catch (error) {
       const nextMessage = error instanceof Error ? error.message : '查询支付状态失败'
-      setStatus('failed')
-      setMessage(nextMessage)
-      logError('Mini-program payment verification failed', {
+      const decision = getPaymentStatusErrorDecision({
+        attempt,
+        maxAttempts: MAX_POLL_ATTEMPTS,
+      })
+
+      setStatus(decision.status)
+      setMessage(decision.message)
+      logWarn('Mini-program payment verification status query failed', {
+        orderId: targetOrderId,
+        attempt,
         message: nextMessage,
       })
+
+      if (!decision.shouldRetry) {
+        return
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) {
+          return
+        }
+        isPollingRef.current = false
+        void pollPaymentStatus(targetOrderId, attempt + 1)
+      }, POLL_INTERVAL_MS)
       return
     } finally {
       isPollingRef.current = false
@@ -242,7 +281,7 @@ export default function PaymentVerificationPage() {
         ) : null}
 
         {status === 'paid' ? (
-          <Button className='verification-page__button' onClick={navigateAfterPaid}>
+          <Button className='verification-page__button' onClick={() => void navigateAfterPaid()}>
             进入我的权益
           </Button>
         ) : null}

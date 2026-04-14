@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,9 @@ interface BlindBoxEventCardProps {
   registrationCount?: number;
   sampleArchetypes?: string[];
   registrationDeadline?: string;
-  onDetailsClick?: () => void;
+  onDetailsClick?: (poolId: string) => void;
+  dismissCoachMarkOnSurfaceTap?: boolean;
+  onDismissCoachMark?: () => void;
   /**
    * Pool matching threshold — used by the Pool Forecast strip to
    * contextualise how many more people are needed before matching begins.
@@ -88,7 +90,7 @@ function CountdownBadge({ deadline }: { deadline: string }) {
   );
 }
 
-export default function BlindBoxEventCard({
+const BlindBoxEventCard = memo(function BlindBoxEventCard({
   id,
   date,
   time,
@@ -104,6 +106,8 @@ export default function BlindBoxEventCard({
   sampleArchetypes = [],
   registrationDeadline,
   onDetailsClick,
+  dismissCoachMarkOnSurfaceTap = false,
+  onDismissCoachMark,
   minGroupSize = 4,
   isFeatured = false,
 }: BlindBoxEventCardProps) {
@@ -142,28 +146,43 @@ export default function BlindBoxEventCard({
   // [Event Pool layer] — CTA uses pool-join language, never "take a seat at this table"
   const ctaLabel = eventType === "酒局" ? "来凑这局酒" : "来凑这顿饭";
 
+  const openDetails = ({ withHaptic = false }: { withHaptic?: boolean } = {}) => {
+    if (withHaptic) {
+      triggerHaptic();
+    }
+
+    if (onDetailsClick) {
+      onDetailsClick(poolId ?? id);
+      return;
+    }
+
+    setInfoSheetOpen(true);
+  };
+
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!poolId) {
-      console.warn("[BlindBoxEventCard] join clicked but no poolId — button should be disabled");
       return;
     }
     setVibeBriefOpen(true);
   };
 
   const handleProceedToJoin = () => {
-    console.log("[BlindBoxEventCard] opening JoinEventPoolSheet with poolId:", poolId);
     setJoinSheetOpen(true);
   };
 
   const handleDetailsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    triggerHaptic();
-    if (onDetailsClick) {
-      onDetailsClick();
+    openDetails({ withHaptic: true });
+  };
+
+  const handleCardSurfaceClick = () => {
+    if (dismissCoachMarkOnSurfaceTap) {
+      onDismissCoachMark?.();
       return;
     }
-    setInfoSheetOpen(true);
+
+    openDetails();
   };
 
   // Wave 3: event-aware glow gradients for the featured (first) card
@@ -196,7 +215,8 @@ export default function BlindBoxEventCard({
           />
         )}
         <Card
-          className="relative z-10 h-full overflow-hidden border shadow-sm"
+          className="relative z-10 h-full overflow-hidden border shadow-sm cursor-pointer"
+          onClick={handleCardSurfaceClick}
           data-testid={`card-blindbox-${id}`}
         >
           <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg pointer-events-none ${
@@ -415,4 +435,6 @@ export default function BlindBoxEventCard({
       )}
     </>
   );
-}
+});
+
+export default BlindBoxEventCard;

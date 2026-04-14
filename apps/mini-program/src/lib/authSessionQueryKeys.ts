@@ -10,7 +10,6 @@ export const MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES = [
   ['mini-program', 'my-pool-registrations'],
   ['mini-program', 'my-blind-box-events'],
   ['mini-program', 'joined-events'],
-  ['mini-program', 'journey-events'],
   ['mini-program', 'connections'],
   ['mini-program', 'referral-stats'],
   ['mini-program', 'pool-registration'],

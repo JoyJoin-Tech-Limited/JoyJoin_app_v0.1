@@ -1,5 +1,5 @@
-@use '../../styles/variables' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/variables" as *;
+@use "../../styles/mixins" as *;
 
 .terms-page {
   min-height: 100vh;
@@ -11,6 +11,17 @@
     @include card;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
+  }
+
+  &__banner-tag {
+    display: inline-flex;
+    margin-bottom: $spacing-sm;
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    background: rgba(139, 92, 246, 0.10);
   }
 
   &__banner-title {
@@ -39,6 +50,10 @@
     @include card;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
+
+    &--focus {
+      box-shadow: 0 0 0 2rpx rgba(139, 92, 246, 0.18), 0 8rpx 24rpx rgba(139, 92, 246, 0.08);
+    }
   }
 
   &__section-heading {

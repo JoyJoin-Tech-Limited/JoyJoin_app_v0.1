@@ -8,7 +8,9 @@ import {
   getUserCoupons,
   isEventPackPlanType,
   markNotificationsAsRead,
+  normalizeEventPoolRegistrationPayload,
   normalizeSubscriptionPlanType,
+  registerForPool,
   type ApiTransport,
 } from '@shared/api';
 
@@ -148,6 +150,43 @@ describe('shared API coupon normalization', () => {
       path: '/api/notifications/mark-read',
       method: 'POST',
       data: { category: 'discover' },
+    });
+  });
+
+  it('keeps pool registration helper backward-compatible while accepting richer payloads', async () => {
+    const apiMock = vi.fn().mockResolvedValue({ id: 'registration-1' });
+    const api = apiMock as unknown as ApiTransport;
+
+    await registerForPool(api, 'pool-1');
+    await registerForPool(api, 'pool-2', {
+      invitationCode: ' INVITE-123 ',
+      barThemes: [' 清吧 ', ''],
+      alcoholComfort: ' 微醺就好 ',
+      barBudgetRange: ['80-150'],
+    });
+
+    expect(apiMock).toHaveBeenNthCalledWith(1, {
+      path: '/api/event-pools/pool-1/register',
+      method: 'POST',
+    });
+    expect(apiMock).toHaveBeenNthCalledWith(2, {
+      path: '/api/event-pools/pool-2/register',
+      method: 'POST',
+      data: {
+        invitationCode: 'INVITE-123',
+        barThemes: ['清吧'],
+        alcoholComfort: ['微醺就好'],
+        barBudgetRange: ['80-150'],
+      },
+    });
+    expect(
+      normalizeEventPoolRegistrationPayload({
+        alcoholComfort: [' 无酒精饮品 '],
+        preferredLanguages: [' 粤语 ', ''],
+      })
+    ).toEqual({
+      alcoholComfort: ['无酒精饮品'],
+      preferredLanguages: ['粤语'],
     });
   });
 });
