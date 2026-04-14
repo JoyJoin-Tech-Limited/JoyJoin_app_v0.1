@@ -7,7 +7,7 @@ function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
     id: 'user-123',
     nextStep: 'discover',
     ...overrides,
-  }
+  } as AuthUser
 }
 
 describe('deriveMiniProgramAuthState', () => {

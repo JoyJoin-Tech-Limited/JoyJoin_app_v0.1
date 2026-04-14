@@ -183,7 +183,14 @@ describe('orchestration kickoff lane', () => {
 describe('orchestration supervisor routing boundaries', () => {
   it('keeps frontend delivery in audited support while making Supervisor rerouting explicit', () => {
     const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
-      agents: Array<{ name: string; subagents?: string[] }>;
+      agents: Array<{
+        name: string;
+        subagents?: string[];
+        handoffs?: string[];
+        tools?: string[];
+        orchestrationPhase?: string;
+        toolingStatus?: string;
+      }>;
     };
     const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
       portfolio_scope: {
@@ -191,9 +198,22 @@ describe('orchestration supervisor routing boundaries', () => {
         audited_agents: string[];
       };
       handoff_graph: Array<{ from: string; to: string }>;
+      agent_bindings: Record<
+        string,
+        {
+          orchestration_status: string;
+          current_tools: string[];
+          tooling_assessment: {
+            status: string;
+          };
+        }
+      >;
     };
 
     const supervisor = manifest.agents.find((agent) => agent.name === 'Supervisor');
+    const expertFrontendEngineer = manifest.agents.find((agent) => agent.name === 'Expert React Frontend Engineer');
+    const supervisorSource = readRepoFile('.github/agents/supervisor.agent.md');
+    const expertFrontendEngineerSource = readRepoFile('.github/agents/frontend engineer.md');
 
     expect(orchestration.portfolio_scope.orchestrated_agents).toEqual([
       'Supervisor',
@@ -222,6 +242,29 @@ describe('orchestration supervisor routing boundaries', () => {
         'Taro Migration Specialist',
       ]),
     );
+    expect(supervisor?.handoffs).toEqual([
+      'Researcher',
+      'Planner',
+      'Mini-Program Parity Auditor',
+      'Expert React Frontend Engineer',
+      'Taro Mini-Program Frontend Engineer',
+      'Taro Migration Specialist',
+    ]);
+    expect(supervisorSource).toContain('handoffs:');
+    expect(supervisorSource).toContain('agent: "Researcher"');
+    expect(supervisorSource).toContain('agent: "Planner"');
+    expect(supervisorSource).toContain('agent: "Expert React Frontend Engineer"');
+    expect(expertFrontendEngineer?.tools).toEqual(['read', 'search', 'edit', 'execute']);
+    expect(expertFrontendEngineer?.orchestrationPhase).toBe('support-audited');
+    expect(expertFrontendEngineer?.toolingStatus).toBe('sufficient');
+    expect(expertFrontendEngineerSource).toContain('tools: [read, search, edit, execute]');
+    expect(orchestration.agent_bindings['Expert React Frontend Engineer']).toMatchObject({
+      orchestration_status: 'audited-support',
+      current_tools: ['read', 'search', 'edit', 'execute'],
+      tooling_assessment: {
+        status: 'sufficient',
+      },
+    });
     expect(orchestration.handoff_graph).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ from: 'Supervisor', to: 'Researcher' }),
@@ -232,6 +275,122 @@ describe('orchestration supervisor routing boundaries', () => {
         expect.objectContaining({ from: 'Supervisor', to: 'Taro Migration Specialist' }),
       ]),
     );
+  });
+
+  it('normalizes debug and principal support agents to the current tool taxonomy', () => {
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
+      agents: Array<{
+        name: string;
+        tools?: string[];
+        orchestrationPhase?: string;
+        toolingStatus?: string;
+      }>;
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
+      agent_bindings: Record<
+        string,
+        {
+          orchestration_status: string;
+          current_tools: string[];
+          tooling_assessment: {
+            status: string;
+          };
+        }
+      >;
+    };
+
+    const debugAgent = manifest.agents.find((agent) => agent.name === 'debug');
+    const principalAgent = manifest.agents.find((agent) => agent.name === 'principal SWE');
+    const debugSource = readRepoFile('.github/agents/debug.agent.md');
+    const principalSource = readRepoFile('.github/agents/principal SWE.md');
+
+    expect(debugAgent).toMatchObject({
+      tools: ['read', 'search', 'edit', 'execute'],
+      orchestrationPhase: 'support-audited',
+      toolingStatus: 'sufficient',
+    });
+    expect(principalAgent).toMatchObject({
+      tools: ['read', 'search', 'execute'],
+      orchestrationPhase: 'support-audited',
+      toolingStatus: 'sufficient',
+    });
+    expect(debugSource).toContain('tools: [read, search, edit, execute]');
+    expect(principalSource).toContain('tools: [read, search, execute]');
+    expect(principalSource).not.toContain('create_issue');
+    expect(orchestration.agent_bindings.debug).toMatchObject({
+      orchestration_status: 'audited-support',
+      current_tools: ['read', 'search', 'edit', 'execute'],
+      tooling_assessment: {
+        status: 'sufficient',
+      },
+    });
+    expect(orchestration.agent_bindings['principal SWE']).toMatchObject({
+      orchestration_status: 'audited-support',
+      current_tools: ['read', 'search', 'execute'],
+      tooling_assessment: {
+        status: 'sufficient',
+      },
+    });
+  });
+
+  it('re-scopes backlog and prompt support agents to truthful normalized tool surfaces', () => {
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
+      agents: Array<{
+        name: string;
+        tools?: string[];
+        orchestrationPhase?: string;
+        toolingStatus?: string;
+        portfolioRole?: string;
+      }>;
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
+      agent_bindings: Record<
+        string,
+        {
+          portfolio_role: string;
+          orchestration_status: string;
+          current_tools: string[];
+          tooling_assessment: {
+            status: string;
+          };
+        }
+      >;
+    };
+
+    const productAdvisor = manifest.agents.find((agent) => agent.name === 'SE: Product Manager');
+    const promptEngineer = manifest.agents.find((agent) => agent.name === 'prompt engineer');
+    const productAdvisorSource = readRepoFile('.github/agents/PM advisor.md');
+    const promptEngineerSource = readRepoFile('.github/agents/prompt engineer.md');
+
+    expect(productAdvisor).toMatchObject({
+      tools: ['read', 'search', 'edit'],
+      orchestrationPhase: 'support-audited',
+      toolingStatus: 'sufficient',
+      portfolioRole: 'issue-scoping',
+    });
+    expect(promptEngineer).toMatchObject({
+      tools: ['read', 'search', 'edit'],
+      orchestrationPhase: 'support-audited',
+      toolingStatus: 'sufficient',
+    });
+    expect(productAdvisorSource).toContain("tools: [read, search, edit]");
+    expect(productAdvisorSource).not.toContain('create_issue');
+    expect(promptEngineerSource).toContain('tools: [read, search, edit]');
+    expect(orchestration.agent_bindings['SE: Product Manager']).toMatchObject({
+      portfolio_role: 'issue-scoping',
+      orchestration_status: 'audited-support',
+      current_tools: ['read', 'search', 'edit'],
+      tooling_assessment: {
+        status: 'sufficient',
+      },
+    });
+    expect(orchestration.agent_bindings['prompt engineer']).toMatchObject({
+      orchestration_status: 'audited-support',
+      current_tools: ['read', 'search', 'edit'],
+      tooling_assessment: {
+        status: 'sufficient',
+      },
+    });
   });
 });
 

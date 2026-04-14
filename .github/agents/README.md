@@ -8,7 +8,7 @@ Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whethe
 
 ## How to use these agents
 
-**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If execution needs midstream rerouting, use `Supervisor`, which can send work back to kickoff or into the audited frontend support lanes without expanding the v1 core graph. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
+**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If execution needs midstream rerouting, use `Supervisor`, which now exposes native handoffs back to kickoff and into the audited frontend support lanes without expanding the v1 core graph. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
 
 **Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the invocation name, and the `description` is the routing surface.
 
@@ -53,8 +53,8 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend engineer.md`](./frontend%20engineer.md) |
 | `debug` | Root-cause debugging, failing tests, and runtime errors | [`debug.agent.md`](./debug.agent.md) |
 | `principal SWE` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
-| `SE: Product Manager` | GitHub issue-centric product scoping and business-value framing | [`PM advisor.md`](./PM%20advisor.md) |
-| `prompt engineer` | Prompt review, rewriting, examples, and structure tightening | [`prompt engineer.md`](./prompt%20engineer.md) |
+| `SE: Product Manager` | Issue-ready product scoping and business-value framing for backlog work | [`PM advisor.md`](./PM%20advisor.md) |
+| `prompt engineer` | Prompt review, repo-resident prompt maintenance, examples, and structure tightening | [`prompt engineer.md`](./prompt%20engineer.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

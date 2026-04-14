@@ -74,6 +74,20 @@
     color: #6b7280;
   }
 
+  &__resume-button {
+    margin-top: 12rpx;
+    min-height: 88rpx;
+    border-radius: 44rpx;
+    background: #eef2ff;
+    color: #4f46e5;
+    font-size: 28rpx;
+    font-weight: 700;
+
+    &::after {
+      border: none;
+    }
+  }
+
   &__plans {
     display: flex;
     flex-direction: column;

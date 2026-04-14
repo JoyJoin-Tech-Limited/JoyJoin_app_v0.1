@@ -15,6 +15,7 @@ import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import type { AuthUser } from '../../hooks/useAuth'
 import { logError, logInfo } from '../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -41,6 +42,13 @@ export default function ProfilePage() {
     queryFn: () => getUserCoupons(apiRequest),
     enabled: !authLoading && !!authUser,
   })
+
+  const handleOpenPayment = () => {
+    void openMiniProgramPaymentPage({
+      paymentsEnabled: user?.paymentsEnabled ?? authUser?.paymentsEnabled,
+      currentUserId: user?.id ?? authUser?.id,
+    })
+  }
 
   const handleLogout = async () => {
     if (logoutLockRef.current) {
@@ -147,7 +155,7 @@ export default function ProfilePage() {
 
         <View
           className='profile-page__action-row'
-          onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}
+          onClick={handleOpenPayment}
         >
           <Text className='profile-page__action-icon'>🎁</Text>
           <Text className='profile-page__action-text'>会员权益</Text>
@@ -156,7 +164,7 @@ export default function ProfilePage() {
 
         <View
           className='profile-page__action-row'
-          onClick={() => Taro.navigateTo({ url: '/pages/journey/index' })}
+          onClick={() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })}
         >
           <Text className='profile-page__action-icon'>🗺️</Text>
           <Text className='profile-page__action-text'>我的足迹</Text>

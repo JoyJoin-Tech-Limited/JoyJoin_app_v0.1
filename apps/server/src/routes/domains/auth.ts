@@ -7,6 +7,7 @@ import { db } from "../../db";
 import { logger } from "../../lib/logger";
 import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import { eq } from "drizzle-orm";
+import type { AuthUserResponse } from "@shared/api";
 import { assessmentAnswers, assessmentSessions, users, type User } from "@shared/schema";
 
 export function registerAuthRoutes(app: Express): void {
@@ -464,7 +465,6 @@ export function registerAuthRoutes(app: Express): void {
     if (process.env.DEBUG_AUTH === "1") {
       logger.debug("Auth user lookup", {
         request_id: req.requestId,
-        session_id: req.sessionID,
         has_user_session: Boolean(req.session?.userId),
         has_admin_session: Boolean(req.session?.adminAccountId),
       });
@@ -563,14 +563,16 @@ export function registerAuthRoutes(app: Express): void {
         nextStep = stepOrder[nextStepIndex];
       }
 
-      res.json({
+      const authUserResponse: AuthUserResponse = {
         ...sanitizeAuthUser(user),
         nextStep,
         profileEssentialComplete,
         profileExtendedComplete,
         activeAssessmentSessionId,
         paymentsEnabled: (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true",
-      });
+      };
+
+      res.json(authUserResponse);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

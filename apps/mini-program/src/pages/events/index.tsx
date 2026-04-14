@@ -10,6 +10,7 @@ import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
+import { partitionJoinedEventsByDateTime } from './eventPartition'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
@@ -30,6 +31,7 @@ export default function EventsPage() {
   }, [markAsRead])
 
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
+  const [hasManualTabSelection, setHasManualTabSelection] = useState(false)
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['mini-program', 'joined-events'],
@@ -41,9 +43,29 @@ export default function EventsPage() {
     return <LoadingScreen />
   }
 
-  // Simple split: events with a completed/past status vs upcoming
-  // (Server doesn't provide explicit status in the current contract, so we show all)
-  const displayEvents = events
+  const partitionedEvents = partitionJoinedEventsByDateTime(events)
+  let resolvedActiveTab = activeTab
+
+  if (!hasManualTabSelection) {
+    if (activeTab === 'upcoming' && partitionedEvents.upcoming.length === 0 && partitionedEvents.completed.length > 0) {
+      resolvedActiveTab = 'completed'
+    } else if (
+      activeTab === 'completed'
+      && partitionedEvents.completed.length === 0
+      && partitionedEvents.upcoming.length > 0
+    ) {
+      resolvedActiveTab = 'upcoming'
+    }
+  }
+
+  const displayEvents = resolvedActiveTab === 'upcoming'
+    ? partitionedEvents.upcoming
+    : partitionedEvents.completed
+
+  const handleTabChange = (tab: TabKey) => {
+    setHasManualTabSelection(true)
+    setActiveTab(tab)
+  }
 
   const handleEventTap = (event: JoinedEventSummary) => {
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
@@ -58,14 +80,14 @@ export default function EventsPage() {
       {/* Tabs */}
       <View className='events-page__tabs'>
         <View
-          className={`events-page__tab ${activeTab === 'upcoming' ? 'events-page__tab--active' : ''}`}
-          onClick={() => setActiveTab('upcoming')}
+          className={`events-page__tab ${resolvedActiveTab === 'upcoming' ? 'events-page__tab--active' : ''}`}
+          onClick={() => handleTabChange('upcoming')}
         >
-          <Text className='events-page__tab-text'>进行中</Text>
+          <Text className='events-page__tab-text'>待参加</Text>
         </View>
         <View
-          className={`events-page__tab ${activeTab === 'completed' ? 'events-page__tab--active' : ''}`}
-          onClick={() => setActiveTab('completed')}
+          className={`events-page__tab ${resolvedActiveTab === 'completed' ? 'events-page__tab--active' : ''}`}
+          onClick={() => handleTabChange('completed')}
         >
           <Text className='events-page__tab-text'>已完成</Text>
         </View>
@@ -93,7 +115,7 @@ export default function EventsPage() {
           <Card className='events-page__empty-state'>
             <Text className='events-page__empty-emoji'>✨</Text>
             <Text className='events-page__empty-text'>
-              {activeTab === 'upcoming' ? '暂无进行中的活动' : '暂无已完成的活动'}
+              {resolvedActiveTab === 'upcoming' ? '暂无待参加的活动' : '暂无已完成的活动'}
             </Text>
             <Text className='events-page__empty-hint'>去「发现」页面看看有什么好玩的</Text>
           </Card>

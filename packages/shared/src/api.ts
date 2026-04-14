@@ -1,4 +1,6 @@
 import type { LevelConfig, RedeemableItem } from './gamification'
+import type { OnboardingNextStep } from './onboarding'
+import type { User } from './schema'
 
 export type ApiMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
@@ -327,6 +329,41 @@ function normalizePricingPlan(rawPlan: RawPricingPlan): PricingPlan | null {
   }
 }
 
+export const SENSITIVE_AUTH_USER_FIELD_NAMES = [
+  'password',
+  'passwordHash',
+  'wechatOpenId',
+  'wechatSessionKey',
+  'sessionKey',
+  'session_key',
+  'accessToken',
+  'access_token',
+  'refreshToken',
+  'refresh_token',
+  'secretKey',
+  'secret_key',
+  'credential',
+  'credentials',
+] as const
+
+export type SensitiveAuthUserField = (typeof SENSITIVE_AUTH_USER_FIELD_NAMES)[number]
+
+export type SanitizedAuthUser = Omit<User, SensitiveAuthUserField>
+
+export interface AuthUserResponse extends SanitizedAuthUser {
+  nextStep: OnboardingNextStep
+  profileEssentialComplete: boolean
+  profileExtendedComplete: boolean
+  activeAssessmentSessionId: string | null
+  paymentsEnabled: boolean
+  birthYear?: number | string | null
+  age?: number | string | null
+  nickname?: string | null
+  topInterests?: string[] | null
+  primaryInterests?: string[] | null
+  interests?: unknown[] | null
+}
+
 export interface CreateMiniProgramPaymentIntentRequest {
   type: string
   planId: string
@@ -391,13 +428,7 @@ export interface RedeemGamificationItemResponse {
   message?: string
 }
 
-export interface AuthUserSummary {
-  id: string
-  nickname?: string
-  nextStep?: string
-  paymentsEnabled?: boolean
-  [key: string]: unknown
-}
+export type AuthUserSummary = AuthUserResponse
 
 export interface JoinedEventSummary {
   id: string
@@ -483,8 +514,8 @@ export function getPaymentStatus(
   })
 }
 
-export function getCurrentUser(api: ApiTransport): Promise<AuthUserSummary> {
-  return api<AuthUserSummary>({ path: '/api/auth/user' })
+export function getCurrentUser(api: ApiTransport): Promise<AuthUserResponse> {
+  return api<AuthUserResponse>({ path: '/api/auth/user' })
 }
 
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {

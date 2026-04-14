@@ -1,7 +1,7 @@
 ---
 name: 'debug'
 description: 'Use when debugging a bug, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause.'
-tools: ['edit/editFiles', 'search', 'execute/getTerminalOutput', 'execute/runInTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'search/usages', 'read/problems', 'execute/testFailure', 'web/fetch', 'web/githubRepo', 'execute/runTests']
+tools: [read, search, edit, execute]
 argument-hint: 'Describe the bug, failing command or test, expected behavior, and any error output or reproduction steps.'
 ---
 

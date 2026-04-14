@@ -22,6 +22,7 @@ import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
+import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -154,6 +155,12 @@ function AuthenticatedDiscover() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
+  const handleOpenPayment = useCallback(() => {
+    void openMiniProgramPaymentPage({
+      paymentsEnabled: user?.paymentsEnabled,
+      currentUserId: user?.id,
+    })
+  }, [user?.id, user?.paymentsEnabled])
 
   // ── Filter state ──
   const [selectedCluster, setSelectedCluster] = useState<string>(ALL_CLUSTER_ID)
@@ -250,7 +257,7 @@ function AuthenticatedDiscover() {
 
       {/* Quick actions */}
       <View className='discover-auth__actions'>
-        <Card className='discover-auth__action-card' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
+        <Card className='discover-auth__action-card' onClick={handleOpenPayment}>
           <Text className='discover-auth__action-emoji'>🎁</Text>
           <Text className='discover-auth__action-label'>开通权益</Text>
         </Card>
@@ -372,6 +379,10 @@ function UnauthenticatedLanding() {
     queryFn: () => getUserCoupons(apiRequest),
   })
 
+  const handleOpenPayment = useCallback(() => {
+    void openMiniProgramPaymentPage({})
+  }, [])
+
   const featuredPlan = findPricingPlan(pricing, 'vip_quarterly') ?? pricing[0]
 
   return (
@@ -437,7 +448,7 @@ function UnauthenticatedLanding() {
         <Button className='primary-btn' onClick={() => Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })} hoverClass='primary-btn-hover'>
           看看我会遇见谁
         </Button>
-        <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
+        <Button className='secondary-btn' onClick={handleOpenPayment}>
           查看会员权益
         </Button>
         <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}>
