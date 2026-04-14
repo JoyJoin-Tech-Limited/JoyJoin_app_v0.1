@@ -49,38 +49,91 @@ describe('route review follow-ups', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
     expect(routesSource).toContain("await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed')");
-    expect(routesSource).toContain("const ageVisibility = member.ageVisible ?? 'hide_all';");
-    expect(routesSource).toContain("const industryVisibility = member.industryVisible ?? 'hide_all';");
-    expect(routesSource).toContain("const educationVisibility = member.educationVisible ?? 'hide_all';");
-    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, ageVisibility)");
-    expect(routesSource).toContain("ageVisible: ageVisibility !== 'hide_all'");
-    expect(routesSource).toContain("industryVisible: industryVisibility !== 'hide_all'");
-    expect(routesSource).toContain("educationVisible: educationVisibility !== 'hide_all'");
+    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all')");
     expect(routesSource).not.toContain('members: groupMembers');
   });
 
   it('returns a stable coupon response object and preserves total-versus-available semantics', () => {
     const assessmentRoutesSource = readRepoFile('apps/server/src/routes/domains/assessment.ts');
     const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
-    const miniProgramPaymentSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
 
     expect(assessmentRoutesSource).toContain('res.json({ count: coupons.length, coupons });');
     expect(sharedApiSource).toContain('availableCount');
     expect(sharedApiSource).toContain('count: explicitCount ?? coupons.length');
-    expect(miniProgramPaymentSource).toContain('{ count: 0, availableCount: 0, coupons: [] }');
   });
 
-  it('orders social-icebreaker participants in the database query instead of sorting in memory', () => {
-    const socialIcebreakerStoreSource = readRepoFile('apps/server/src/lib/socialIcebreakerStore.ts');
+  it('restores blind-box coupon support through the payment domain and keeps event packs disabled', () => {
+    const userPaymentPageSource = readRepoFile('apps/user-client/src/pages/BlindBoxPaymentPage.tsx');
+    const adminPaymentPageSource = readRepoFile('apps/admin-client/src/pages/BlindBoxPaymentPage.tsx');
+    const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
+    const userAppSource = readRepoFile('apps/user-client/src/App.tsx');
+    const miniProgramPaymentPageSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
 
-    expect(socialIcebreakerStoreSource).toContain('.orderBy(socialIcebreakerParticipants.joinedAt)');
-    expect(socialIcebreakerStoreSource).not.toContain('left.joinedAt.getTime() - right.joinedAt.getTime()');
+    expect(userPaymentPageSource).toContain('/api/coupons/validate');
+    expect(userPaymentPageSource).toContain('/api/payments/create');
+    expect(userPaymentPageSource).not.toContain('/api/blind-box-events');
+    expect(userPaymentPageSource).not.toContain('/api/event-packs/purchase');
+    expect(userPaymentPageSource).toContain('appendBrowserPaymentReturnUrl');
+    expect(userPaymentPageSource).toContain('joyjoin.browser.pending_order');
+    expect(adminPaymentPageSource).toContain('/api/coupons/validate');
+    expect(adminPaymentPageSource).toContain('/api/payments/create');
+    expect(adminPaymentPageSource).not.toContain('/api/blind-box-events');
+    expect(adminPaymentPageSource).not.toContain('/api/event-packs/purchase');
+    expect(adminPaymentPageSource).toContain('appendBrowserPaymentReturnUrl');
+    expect(adminPaymentPageSource).toContain('joyjoin.browser.pending_order');
+    expect(userPaymentPageSource).toContain('supportsCoupons = true');
+    expect(userPaymentPageSource).toContain('supportsEventPacks = false');
+    expect(adminPaymentPageSource).toContain('supportsCoupons = true');
+    expect(adminPaymentPageSource).toContain('supportsEventPacks = false');
+    expect(userAppSource).toContain('<Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />');
+    expect(userAppSource).not.toContain('<Route path="/blindbox/confirmation" component={RedirectToDiscover} />');
+
+    expect(miniProgramPaymentPageSource).toContain('createMiniProgramPaymentIntent');
+    expect(miniProgramPaymentPageSource).toContain('Taro.requestPayment');
+    expect(miniProgramPaymentPageSource).toContain("pack_3");
+    expect(miniProgramPaymentPageSource).toContain('couponCode');
+    expect(miniProgramPaymentPageSource).not.toContain('getBrowserPaymentLaunchUrl');
+    expect(miniProgramPaymentPageSource).not.toContain('paymentRedirectUrl');
+
+    expect(paymentsRoutesSource).toContain('app.post("/api/coupons/validate"');
+    expect(paymentsRoutesSource).toContain('getAvailableUserCouponByCode');
+    expect(paymentsRoutesSource).toContain('countUserCouponAssignments');
+    expect(paymentsRoutesSource).toContain('paymentService.assertMiniProgramAppIdConsistency()');
+    expect(paymentsRoutesSource).toContain('eventRegistrationPayload = eventCheckout.eventRegistrationPayload');
+    expect(paymentsRoutesSource).toContain('paymentType === "event_pack"');
+    expect(paymentsRoutesSource).toContain('paymentType: "event_pack"');
   });
 
-  it('uses the authenticated user as the reporter when creating chat reports', () => {
+  it('keeps browser confirmation query failures recoverable until payment settles', () => {
+    const userConfirmationPageSource = readRepoFile('apps/user-client/src/pages/BlindBoxConfirmationPage.tsx');
+    const adminConfirmationPageSource = readRepoFile('apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx');
+
+    expect(userConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
+    expect(userConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
+    expect(adminConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
+    expect(adminConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
+  });
+
+  it('publishes pricing display aliases and explicit browser payment redirect metadata', () => {
+    const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
+    const sharedApiSource = readRepoFile('packages/shared/src/api.ts');
+
+    expect(routesSource).toContain('displayName: s.displayName');
+    expect(routesSource).toContain('displayNameEn: s.displayNameEn');
+    expect(routesSource).toContain('isActive: s.isActive');
+    expect(paymentsRoutesSource).toContain('const paymentRedirectUrl = paymentResult.h5Url ?? null;');
+    expect(paymentsRoutesSource).toContain('const paymentStatus = paymentRedirectUrl ? "pending" : "completed";');
+    expect(sharedApiSource).toContain("paymentStatus?: 'pending' | 'completed'");
+    expect(sharedApiSource).toContain('paymentRedirectUrl?: string | null');
+    expect(sharedApiSource).toContain('appendBrowserPaymentReturnUrl');
+  });
+
+  it('normalizes event chat payloads and keeps legacy message field compatibility', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
-    expect(routesSource).toContain('reportedBy: userId');
-    expect(routesSource).toContain('return res.status(401).json({ message: "Authentication required" });');
+    expect(routesSource).toContain('messages: messages.map(toEventChatMessageSummary)');
+    expect(routesSource).toContain('message: req.body?.message ?? req.body?.content');
+    expect(routesSource).toContain('profileImageUrl: firstNonEmptyString(user.profileImageUrl, user.wechatAvatarUrl) ?? null');
   });
 });

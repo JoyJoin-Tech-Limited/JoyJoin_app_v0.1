@@ -1,5 +1,5 @@
-@import '../../styles/variables';
-@import '../../styles/mixins';
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
 
 .coordination-page {
   display: flex;
@@ -413,7 +413,7 @@
 
   &__sheet-card {
     padding: $spacing-lg;
-    border-radius: $card-radius; 
+    border-radius: $card-radius;
     max-height: 85vh;
     overflow: hidden;
   }

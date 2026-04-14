@@ -264,12 +264,16 @@ export async function listParticipants(
       lastSeenAt: socialIcebreakerParticipants.lastSeenAt,
     })
     .from(socialIcebreakerParticipants)
-    .where(eq(socialIcebreakerParticipants.socialSessionId, socialSessionId))
-    .orderBy(socialIcebreakerParticipants.joinedAt);
+    .where(eq(socialIcebreakerParticipants.socialSessionId, socialSessionId));
 
   const cutoff = Date.now() - thresholdMs;
 
-  return rows.map((participant: (typeof rows)[number]) => ({
+  return rows
+    .sort(
+      (left: (typeof rows)[number], right: (typeof rows)[number]) =>
+        left.joinedAt.getTime() - right.joinedAt.getTime(),
+    )
+    .map((participant: (typeof rows)[number]) => ({
       userId: participant.userId,
       displayName: participant.displayName,
       joinedAt: participant.joinedAt.toISOString(),

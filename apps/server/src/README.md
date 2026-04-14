@@ -45,15 +45,19 @@ Boundary:
 
 ### Social Icebreaker and event-time AI
 
-Owns the active in-event Social Icebreaker flow and supporting AI generation.
+Owns the active in-event Social Icebreaker flow, session/check-in surfaces, and supporting AI generation.
 
 Primary files:
 - `apps/server/src/routes/socialIcebreaker.ts`
+- `apps/server/src/lib/socialIcebreakerStore.ts`
+- `apps/server/src/routes/domains/icebreakerSessions.ts`
+- `apps/server/src/repositories/icebreakerRepo.ts`
 - `apps/server/src/socialIcebreakerAIService.ts`
 - `apps/server/src/socialIcebreakerPhaseConfig.ts`
-- `apps/server/src/repositories/icebreakerRepo.ts`
 
 Boundary:
+- `apps/server/src/routes/socialIcebreaker.ts` persists live social-session state through `apps/server/src/lib/socialIcebreakerStore.ts`.
+- `apps/server/src/routes/domains/icebreakerSessions.ts` and `apps/server/src/repositories/icebreakerRepo.ts` own event-session, check-in, and attendance-adjacent flows.
 - New in-event icebreaker work should integrate here, not into legacy toolkit-style flows.
 
 ### Payments, subscriptions, and commerce

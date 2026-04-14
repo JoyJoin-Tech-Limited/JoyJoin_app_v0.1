@@ -1,9 +1,13 @@
 import { View, Text, ScrollView } from '@tarojs/components'
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
+import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
 
 interface Connection {
@@ -17,6 +21,16 @@ interface Connection {
 
 export default function ConnectionsPage() {
   const { isLoading: authLoading } = useAuthGuard()
+  const markAsRead = useMarkNotificationsAsRead()
+
+  useCustomTabBarSync({
+    selectedIndex: MINI_PROGRAM_TAB_INDEX.connections,
+    enabled: !authLoading,
+  })
+
+  useEffect(() => {
+    markAsRead.mutate('chat')
+  }, [markAsRead])
 
   const { data: connections = [], isLoading } = useQuery<Connection[]>({
     queryKey: ['mini-program', 'connections'],

@@ -12,6 +12,7 @@ import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
 import { registerOnboardingRoutes } from "./routes/domains/onboarding";
 import { registerPaymentRoutes } from "./routes/domains/payments";
+import { eventCreditsRepo } from "./repositories/eventCreditsRepo";
 import { storage } from "./storage";
 import { matchIndustryFromText } from "./inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
@@ -50,7 +51,7 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type ChatMessage, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION, getInterestById } from "@shared/interests";
 import { db } from "./db";
@@ -96,6 +97,42 @@ function firstNonEmptyString(...values: Array<string | null | undefined>): strin
   }
 
   return undefined;
+}
+
+type EventChatParticipantSummary = {
+  id: string;
+  displayName: string;
+  firstName: string | null;
+  nickname: string;
+  archetype: string | null;
+  profileImageUrl: string | null;
+};
+
+function getEventChatDisplayName(user: Pick<User, 'displayName' | 'firstName' | 'lastName'>): string {
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+  return firstNonEmptyString(user.displayName, fullName) ?? '参与者';
+}
+
+function toEventChatParticipantSummary(
+  user: Pick<User, 'id' | 'displayName' | 'firstName' | 'lastName' | 'archetype' | 'profileImageUrl' | 'wechatAvatarUrl'>,
+): EventChatParticipantSummary {
+  const displayName = getEventChatDisplayName(user);
+
+  return {
+    id: user.id,
+    displayName,
+    firstName: user.firstName ?? null,
+    nickname: displayName,
+    archetype: user.archetype ?? null,
+    profileImageUrl: firstNonEmptyString(user.profileImageUrl, user.wechatAvatarUrl) ?? null,
+  };
+}
+
+function toEventChatMessageSummary(message: ChatMessage & { user: User }) {
+  return {
+    ...message,
+    user: toEventChatParticipantSummary(message.user),
+  };
 }
 
 function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record<string, unknown> {
@@ -1270,7 +1307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         chatUnlocked: true,
         hoursUntilUnlock: 0,
-        messages,
+        messages: messages.map(toEventChatMessageSummary),
       });
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -1311,8 +1348,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = insertChatMessageSchema.safeParse({
-        ...req.body,
         eventId,
+        message: req.body?.message ?? req.body?.content,
       });
       
       if (!result.success) {
@@ -6060,12 +6097,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formatted = settings.map(s => ({
         id: s.id,
         planType: s.planType,
+        displayName: s.displayName,
+        displayNameEn: s.displayNameEn,
         name: s.displayName,
         nameEn: s.displayNameEn,
         description: s.description,
         price: s.priceInCents / 100,
         originalPrice: s.originalPriceInCents ? s.originalPriceInCents / 100 : null,
         durationDays: s.durationDays,
+        isActive: s.isActive,
         isFeatured: s.isFeatured,
       }));
       res.json(formatted);
@@ -7557,13 +7597,17 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         });
       }
 
-      // Check if user has active subscription
       const subscription = await storage.getUserSubscription(userId);
-      if (!subscription) {
+      const availableEventCredits = subscription ? 0 : await eventCreditsRepo.getAvailableCreditCount(userId);
+      const entitlementMode = subscription ? "subscription" : availableEventCredits > 0 ? "event_pack" : null;
+
+      if (!entitlementMode) {
         return res.status(403).json({ 
-          message: "Subscription required",
+          message: "Subscription or event pack required",
           requiresSubscription: true,
-          code: "NO_ACTIVE_SUBSCRIPTION"
+          requiresEventPack: true,
+          availableEventCredits,
+          code: "NO_ACTIVE_ENTITLEMENT"
         });
       }
 
@@ -7597,34 +7641,43 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
       const validatedData = insertEventPoolRegistrationSchema.parse({
         poolId,
         userId,
-        budgetRange: req.body.budgetRange || [],
-        preferredLanguages: req.body.preferredLanguages || [],
-        eventIntent: req.body.eventIntent || [],
-        cuisinePreferences: req.body.cuisinePreferences || [],
-        dietaryRestrictions: req.body.dietaryRestrictions || [],
-        tasteIntensity: req.body.tasteIntensity || 'medium',
+        budgetRange: Array.isArray(req.body.budgetRange) ? req.body.budgetRange : [],
+        preferredLanguages: Array.isArray(req.body.preferredLanguages) ? req.body.preferredLanguages : [],
+        eventIntent: Array.isArray(req.body.eventIntent) ? req.body.eventIntent : [],
+        cuisinePreferences: Array.isArray(req.body.cuisinePreferences) ? req.body.cuisinePreferences : [],
+        dietaryRestrictions: Array.isArray(req.body.dietaryRestrictions) ? req.body.dietaryRestrictions : [],
+        tasteIntensity: Array.isArray(req.body.tasteIntensity) ? req.body.tasteIntensity : [],
         matchStatus: 'pending',
       });
 
-      // Create registration
-      const [registration] = await db
-        .insert(eventPoolRegistrations)
-        .values(validatedData)
-        .returning();
+      const registration = await db.transaction(async (tx: DbTransaction) => {
+        const [createdRegistration] = await tx
+          .insert(eventPoolRegistrations)
+          .values(validatedData)
+          .returning();
 
-      // Record invitation use if invitation was provided
-      if (invitationCode && inviterId) {
-        await db.insert(invitationUses).values({
-          invitationId: invitationCode,
-          inviteeId: userId,
-          poolRegistrationId: registration.id,
-        });
+        if (entitlementMode === "event_pack") {
+          await eventCreditsRepo.consumeCreditForPoolRegistration(tx, {
+            userId,
+            poolId,
+            registrationId: createdRegistration.id,
+          });
+        }
 
-        // Increment acceptance count on invitation
-        await db.update(invitations)
-          .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
-          .where(eq(invitations.code, invitationCode));
-      }
+        if (invitationCode && inviterId) {
+          await tx.insert(invitationUses).values({
+            invitationId: invitationCode,
+            inviteeId: userId,
+            poolRegistrationId: createdRegistration.id,
+          });
+
+          await tx.update(invitations)
+            .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
+            .where(eq(invitations.code, invitationCode));
+        }
+
+        return createdRegistration;
+      });
 
       // Trigger realtime matching scan after registration (fire and forget with error handling)
       // Import at top: import { scanPoolAndMatch } from "./poolRealtimeMatchingService";
@@ -7647,12 +7700,24 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
         console.error("[profileEnrichment] Failed to enrich profile:", err);
       });
 
-      res.json(registration);
+      res.json({
+        ...registration,
+        entitlementMode,
+      });
     } catch (error: any) {
       console.error("Error registering for event pool:", error);
 
       if (error?.code === "23505" || error?.cause?.code === "23505") {
         return res.status(400).json({ message: "You have already registered for this event pool" });
+      }
+
+      if (error instanceof Error && error.message === "No available event-pack credits remain") {
+        return res.status(403).json({
+          message: "No available event-pack credits remain",
+          requiresSubscription: true,
+          requiresEventPack: true,
+          code: "NO_AVAILABLE_EVENT_PACK_CREDITS",
+        });
       }
 
       res.status(500).json({ 
@@ -8014,30 +8079,24 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
         .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
 
-      const memberSummaries = members.map((member: (typeof members)[number]) => {
-        const ageVisibility = member.ageVisible ?? 'hide_all';
-        const industryVisibility = member.industryVisible ?? 'hide_all';
-        const educationVisibility = member.educationVisible ?? 'hide_all';
-
-        return {
-          userId: member.userId,
-          displayName: member.displayName,
-          archetype: member.archetype,
-          topInterests: member.topInterests,
-          ageLabel: formatAge(member.birthdate, ageVisibility),
-          industryNicheLabel: member.industryNicheLabel,
-          industryCategoryLabel: member.industryCategoryLabel,
-          ageVisible: ageVisibility !== 'hide_all',
-          industryVisible: industryVisibility !== 'hide_all',
-          gender: member.gender,
-          educationLevel: member.educationLevel,
-          hometownRegionCity: member.hometownRegionCity,
-          hometownAffinityOptin: member.hometownAffinityOptin,
-          educationVisible: educationVisibility !== 'hide_all',
-          relationshipStatus: member.relationshipStatus,
-          intent: member.intent,
-        };
-      });
+      const memberSummaries = members.map((member: (typeof members)[number]) => ({
+        userId: member.userId,
+        displayName: member.displayName,
+        archetype: member.archetype,
+        topInterests: member.topInterests,
+        ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all'),
+        industryNicheLabel: member.industryNicheLabel,
+        industryCategoryLabel: member.industryCategoryLabel,
+        ageVisible: member.ageVisible !== 'hide_all',
+        industryVisible: member.industryVisible !== 'hide_all',
+        gender: member.gender,
+        educationLevel: member.educationLevel,
+        hometownRegionCity: member.hometownRegionCity,
+        hometownAffinityOptin: member.hometownAffinityOptin,
+        educationVisible: member.educationVisible !== 'hide_all',
+        relationshipStatus: member.relationshipStatus,
+        intent: member.intent,
+      }));
 
       res.json({
         group: {
@@ -8934,15 +8993,8 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     try {
       const session = req.session as any;
       const userId = session.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
       
-      const validatedData = insertChatReportSchema.parse({
-        ...req.body,
-        reportedBy: userId,
-      });
+      const validatedData = insertChatReportSchema.parse(req.body);
       
       const report = await storage.createChatReport(validatedData);
       

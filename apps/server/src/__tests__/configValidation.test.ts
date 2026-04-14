@@ -100,6 +100,20 @@ describe("validateConfig", () => {
     expect(() => validateConfig()).toThrow("process.exit(1)");
   });
 
+  it("calls process.exit(1) in production when mini-program auth and payment app ids differ", () => {
+    process.env.NODE_ENV = "production";
+    process.env.PAYMENTS_ENABLED = "true";
+    process.env.WECHAT_APPID = "wx-auth-app";
+    process.env.WECHAT_PAY_APP_ID = "wx-pay-app";
+    process.env.WECHAT_PAY_MCH_ID = "mch_123";
+    process.env.WECHAT_PAY_SERIAL_NO = "serial_123";
+    process.env.WECHAT_PAY_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----fake";
+    process.env.WECHAT_PAY_APIV3_KEY = "a".repeat(32);
+    process.env.WECHAT_PAY_PLATFORM_CERT = "-----BEGIN CERTIFICATE-----fake";
+
+    expect(() => validateConfig()).toThrow("process.exit(1)");
+  });
+
   it("does NOT call process.exit in development when required vars are missing", () => {
     process.env.NODE_ENV = "development";
     delete process.env.DATABASE_URL;

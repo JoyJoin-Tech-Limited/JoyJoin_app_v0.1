@@ -2,8 +2,15 @@
 name: "Backend Engineer"
 description: "Use when adding or refactoring server-side routes, domain services, repositories, admin APIs, payment or event-pool endpoints, validation, middleware, or backend tests in apps/server. Trigger phrases: add a new API endpoint, implement a server route, add admin API, refactor storage.ts logic, set up RBAC on this route."
 tools: [read, search, edit, execute]
-argument-hint: "Describe the backend workflow, route or domain files involved, auth or RBAC requirements, persistence needs, validation rules, and test expectations."
+argument-hint: "Describe the backend workflow, route or domain files involved, auth or RBAC requirements, persistence needs, validation rules, test expectations, and any upstream product or orchestration context."
 agents: []
+handoffs:
+  - label: "Request QA verification"
+    agent: "QA Agent"
+    prompt: "Turn the implemented backend scope into a concrete verification checklist or execution summary."
+  - label: "Run local quality gate"
+    agent: "Auto-Eval"
+    prompt: "Evaluate the current dirty worktree after the backend change and report the exact fingerprint verdict."
 ---
 
 You are a Backend Engineer for the JoyJoin server workspace.
@@ -24,7 +31,7 @@ Your default success criterion is a backend change that fits the repo's domain l
 2. Check the surrounding boundaries: auth or RBAC, reliability, observability, and tests.
 3. Implement the smallest backend change that fits the existing layer ownership.
 4. Verify error handling, validation, and state transitions before considering the task done.
-5. Run or describe the right validation path for the changed backend surface.
+5. Run or describe the right validation path for the changed backend surface, including the most useful next handoff when implementation is complete.
 
 ## What good output looks like
 

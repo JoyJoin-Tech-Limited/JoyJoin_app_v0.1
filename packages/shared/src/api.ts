@@ -14,9 +14,55 @@ export interface PricingPlan {
   id: string
   planType: string
   displayName: string
+  displayNameEn?: string
   description?: string
   price: number
   originalPrice?: number | null
+  durationDays?: number
+  isActive?: boolean
+  isFeatured?: boolean
+}
+
+export interface BrowserPaymentIntent {
+  wechatOrderId?: string
+  h5Url?: string | null
+  h5_url?: string | null
+}
+
+export interface BrowserPaymentResponse {
+  payment?: BrowserPaymentIntent | null
+  paymentRedirectUrl?: string | null
+  paymentStatus?: 'pending' | 'completed'
+}
+
+export type SubscriptionPlanType = 'monthly' | 'quarterly'
+export type VipSubscriptionPlanKey = 'vip_monthly' | 'vip_quarterly'
+export type EventPackPlanKey = 'pack_3' | 'pack_6'
+export type SubscriptionPlanIdentifier = SubscriptionPlanType | VipSubscriptionPlanKey
+
+const EVENT_PACK_PLAN_TYPE_SET = new Set<EventPackPlanKey>(['pack_3', 'pack_6'])
+
+const SUBSCRIPTION_PLAN_IDENTIFIER_MAP: Record<SubscriptionPlanIdentifier, SubscriptionPlanType> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  vip_monthly: 'monthly',
+  vip_quarterly: 'quarterly',
+}
+
+interface RawPricingPlan {
+  id?: string | number
+  planType?: string
+  displayName?: string
+  name?: string
+  displayNameEn?: string
+  nameEn?: string
+  description?: string
+  price?: number | string
+  originalPrice?: number | string | null
+  durationDays?: number | string
+  isActive?: boolean
+  isFeatured?: boolean
+  [key: string]: unknown
 }
 
 export type UserCouponStatus = 'available' | 'used' | 'expired'
@@ -91,6 +137,105 @@ function parseNumber(value: unknown): number | undefined {
   return undefined
 }
 
+export function normalizeSubscriptionPlanType(
+  planType: string | null | undefined
+): SubscriptionPlanType | null {
+  if (typeof planType !== 'string') {
+    return null
+  }
+
+  const normalized = planType.trim() as SubscriptionPlanIdentifier
+  return SUBSCRIPTION_PLAN_IDENTIFIER_MAP[normalized] ?? null
+}
+
+export function isEventPackPlanType(
+  planType: string | null | undefined
+): planType is EventPackPlanKey {
+  if (typeof planType !== 'string') {
+    return false
+  }
+
+  return EVENT_PACK_PLAN_TYPE_SET.has(planType.trim() as EventPackPlanKey)
+}
+
+function pricingPlanMatches(plan: Pick<PricingPlan, 'planType'>, targetPlanType: string): boolean {
+  const normalizedPlanType = normalizeSubscriptionPlanType(plan.planType)
+  const normalizedTargetPlanType = normalizeSubscriptionPlanType(targetPlanType)
+
+  if (normalizedPlanType && normalizedTargetPlanType) {
+    return normalizedPlanType === normalizedTargetPlanType
+  }
+
+  return plan.planType === targetPlanType
+}
+
+export function findPricingPlan(
+  pricingPlans: PricingPlan[] | null | undefined,
+  targetPlanType: string
+): PricingPlan | undefined {
+  return pricingPlans?.find((plan) => pricingPlanMatches(plan, targetPlanType))
+}
+
+export function getBrowserPaymentLaunchUrl(
+  payload: BrowserPaymentIntent | BrowserPaymentResponse | null | undefined
+): string | null {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'paymentRedirectUrl' in payload &&
+    typeof payload.paymentRedirectUrl === 'string'
+  ) {
+    const directUrl = payload.paymentRedirectUrl.trim()
+    if (directUrl !== '') {
+      return directUrl
+    }
+  }
+
+  const nestedPayment =
+    payload && typeof payload === 'object' && 'payment' in payload
+      ? payload.payment
+      : payload
+
+  const payment = nestedPayment as BrowserPaymentIntent | null | undefined
+  if (!payment || typeof payment !== 'object') {
+    return null
+  }
+
+  const rawUrl = payment.h5Url ?? payment.h5_url
+  if (typeof rawUrl !== 'string') {
+    return null
+  }
+
+  const trimmedUrl = rawUrl.trim()
+  return trimmedUrl !== '' ? trimmedUrl : null
+}
+
+export function appendBrowserPaymentReturnUrl(
+  launchUrl: string | null | undefined,
+  returnUrl: string | null | undefined
+): string | null {
+  if (typeof launchUrl !== 'string') {
+    return null
+  }
+
+  const trimmedLaunchUrl = launchUrl.trim()
+  if (trimmedLaunchUrl === '') {
+    return null
+  }
+
+  if (typeof returnUrl !== 'string' || returnUrl.trim() === '') {
+    return trimmedLaunchUrl
+  }
+
+  const encodedReturnUrl = encodeURIComponent(returnUrl.trim())
+  if (/[?&]redirect_url=/.test(trimmedLaunchUrl)) {
+    return trimmedLaunchUrl.replace(/([?&])redirect_url=[^&]*/, `$1redirect_url=${encodedReturnUrl}`)
+  }
+
+  const separator = trimmedLaunchUrl.includes('?') ? '&' : '?'
+  return `${trimmedLaunchUrl}${separator}redirect_url=${encodedReturnUrl}`
+}
+
 function isCouponExpired(validUntil?: string | null): boolean {
   if (!validUntil) {
     return false
@@ -150,10 +295,43 @@ function normalizeUserCouponsResponse(rawResponse: RawUserCouponsResponse): User
   }
 }
 
+function normalizePricingPlan(rawPlan: RawPricingPlan): PricingPlan | null {
+  const price = parseNumber(rawPlan.price)
+  if (price === undefined) {
+    return null
+  }
+
+  const displayName =
+    typeof rawPlan.displayName === 'string' && rawPlan.displayName.trim() !== ''
+      ? rawPlan.displayName
+      : typeof rawPlan.name === 'string' && rawPlan.name.trim() !== ''
+        ? rawPlan.name
+        : String(rawPlan.planType ?? '')
+
+  return {
+    id: String(rawPlan.id ?? rawPlan.planType ?? ''),
+    planType: String(rawPlan.planType ?? ''),
+    displayName,
+    displayNameEn:
+      typeof rawPlan.displayNameEn === 'string' && rawPlan.displayNameEn.trim() !== ''
+        ? rawPlan.displayNameEn
+        : typeof rawPlan.nameEn === 'string' && rawPlan.nameEn.trim() !== ''
+          ? rawPlan.nameEn
+          : undefined,
+    description: typeof rawPlan.description === 'string' ? rawPlan.description : undefined,
+    price,
+    originalPrice: parseNumber(rawPlan.originalPrice) ?? null,
+    durationDays: parseNumber(rawPlan.durationDays),
+    isActive: typeof rawPlan.isActive === 'boolean' ? rawPlan.isActive : undefined,
+    isFeatured: typeof rawPlan.isFeatured === 'boolean' ? rawPlan.isFeatured : undefined,
+  }
+}
+
 export interface CreateMiniProgramPaymentIntentRequest {
   type: string
   planId: string
   openid: string
+  couponCode?: string
 }
 
 export interface PaymentIntentResponse {
@@ -228,8 +406,26 @@ export interface JoinedEventSummary {
   [key: string]: unknown
 }
 
+export interface BlindBoxEventSummary {
+  id: string
+  status?: string
+  dateTime?: string
+  [key: string]: unknown
+}
+
+export interface NotificationCountsResponse {
+  discover: number
+  activities: number
+  chat: number
+  total: number
+}
+
 export function getPricing(api: ApiTransport): Promise<PricingPlan[]> {
-  return api<PricingPlan[]>({ path: '/api/pricing' })
+  return api<RawPricingPlan[]>({ path: '/api/pricing' }).then((plans) =>
+    Array.isArray(plans)
+      ? plans.map(normalizePricingPlan).filter((plan): plan is PricingPlan => plan !== null)
+      : []
+  )
 }
 
 export function getUserCoupons(api: ApiTransport): Promise<UserCouponsResponse> {
@@ -293,6 +489,25 @@ export function getCurrentUser(api: ApiTransport): Promise<AuthUserSummary> {
 
 export function getJoinedEvents(api: ApiTransport): Promise<JoinedEventSummary[]> {
   return api<JoinedEventSummary[]>({ path: '/api/events/joined' })
+}
+
+export function getMyBlindBoxEvents(api: ApiTransport): Promise<BlindBoxEventSummary[]> {
+  return api<BlindBoxEventSummary[]>({ path: '/api/my-events' })
+}
+
+export function getNotificationCounts(api: ApiTransport): Promise<NotificationCountsResponse> {
+  return api<NotificationCountsResponse>({ path: '/api/notifications/counts' })
+}
+
+export function markNotificationsAsRead(
+  api: ApiTransport,
+  category: 'discover' | 'activities' | 'chat'
+): Promise<{ success: boolean }> {
+  return api<{ success: boolean }>({
+    path: '/api/notifications/mark-read',
+    method: 'POST',
+    data: { category },
+  })
 }
 
 // ---------------------------------------------------------------------------

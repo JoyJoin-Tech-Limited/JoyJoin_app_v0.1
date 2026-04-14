@@ -71,12 +71,16 @@ payments are disabled.
 
 | Variable | Description |
 |---|---|
-| `WECHAT_PAY_APP_ID` | WeChat Pay App ID |
+| `WECHAT_PAY_APP_ID` | WeChat Pay App ID. In the current direct mini-program JSAPI setup, this must match `WECHAT_APPID`. |
 | `WECHAT_PAY_MCH_ID` | WeChat Pay Merchant ID |
 | `WECHAT_PAY_SERIAL_NO` | WeChat Pay certificate serial number |
 | `WECHAT_PAY_PRIVATE_KEY` | WeChat Pay API v3 private key (PEM) |
 | `WECHAT_PAY_APIV3_KEY` | WeChat Pay API v3 key (exactly 32 bytes). Used for AES-256-GCM webhook decryption. |
 | `WECHAT_PAY_PLATFORM_CERT` | WeChat Pay platform certificate/public key PEM. Required for spec-compliant RSA-SHA256 webhook signature verification outside development. |
+
+When `PAYMENTS_ENABLED=true`, startup validation fails in production if `WECHAT_PAY_APP_ID`
+and `WECHAT_APPID` differ. JoyJoin's current mini-program JSAPI flow assumes a direct-merchant
+setup where the login appid and payment appid are the same mini-program subject.
 
 ### Webhook Signature Verification
 
@@ -152,7 +156,7 @@ in-memory sliding window. Limits are intentionally conservative for internal bet
 | Limiter | Endpoints | Window | Max requests |
 |---|---|---|---|
 | `authEndpointLimiter` | `/api/auth/wechat/*`, `/api/auth/phone/*` | 1 min | 20 |
-| `paymentEndpointLimiter` | `POST /api/payments/create`, `POST /api/subscription/renew` | 1 min | 10 |
+| `paymentEndpointLimiter` | `POST /api/subscription/renew`, `POST /api/coupons/validate`, `POST /api/payments/create`, `POST /api/payments/miniprogram/create` | 1 min | 10 |
 | `webhookEndpointLimiter` | `POST /api/webhooks/wechat-pay` | 1 min | 120 |
 | `aiEndpointLimiter` | AI-heavy routes | 1 min | 10 |
 | `kpiEndpointLimiter` | KPI / analytics routes | 1 min | 30 |

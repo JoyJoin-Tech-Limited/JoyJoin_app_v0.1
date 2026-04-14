@@ -66,13 +66,8 @@ export async function apiRequest<T>(options: {
   path: string
   method?: HttpMethod
   data?: unknown
-  signal?: AbortSignal
 }): Promise<T> {
-  if (options.signal?.aborted) {
-    throw new Error('Request aborted')
-  }
-
-  const requestTask = Taro.request<T>({
+  const response = await Taro.request<T>({
     url: buildApiUrl(options.path),
     method: options.method ?? 'GET',
     data: options.data,
@@ -83,34 +78,18 @@ export async function apiRequest<T>(options: {
     },
   })
 
-  let abortHandler: (() => void) | null = null
-  if (options.signal) {
-    abortHandler = () => {
-      requestTask.abort()
-    }
-    options.signal.addEventListener('abort', abortHandler)
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return response.data
   }
 
-  try {
-    const response = await requestTask
+  const errorDetails = getApiErrorDetails(response.statusCode, response.data)
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return response.data
-    }
-
-    const errorDetails = getApiErrorDetails(response.statusCode, response.data)
-
-    throw createApiError(
-      errorDetails.message,
-      response.statusCode,
-      response.data,
-      errorDetails.isGenericMessage
-    )
-  } finally {
-    if (options.signal && abortHandler) {
-      options.signal.removeEventListener('abort', abortHandler)
-    }
-  }
+  throw createApiError(
+    errorDetails.message,
+    response.statusCode,
+    response.data,
+    errorDetails.isGenericMessage
+  )
 }
 
 export type OnboardingStep =

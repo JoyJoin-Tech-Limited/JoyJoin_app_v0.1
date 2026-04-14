@@ -1,0 +1,45 @@
+{
+  "event": "user-prompt-submit",
+  "triggerSource": "copilot_hook",
+  "commitSha": "0123456789abcdef0123456789abcdef01234567",
+  "branch": "feature/native-agent-orchestration",
+  "prNumber": null,
+  "changedFiles": [
+    ".github/orchestration.yaml",
+    "scripts/orchestration-supervisor.mjs",
+    ".github/agents/researcher.agent.md",
+    ".github/agents/planner.agent.md"
+  ],
+  "diffSummary": "Kickoff lane changes for Researcher and Planner.",
+  "testOutputs": [],
+  "reviewComments": [],
+  "artifactPaths": [
+    ".git/.orchestration/context.json",
+    ".git/.orchestration/events.jsonl"
+  ],
+  "upstreamAgent": null,
+  "upstreamResult": {
+    "toolName": null,
+    "toolCommand": null,
+    "manifestVersion": "2026-04-13",
+    "prompt": "Add a new API endpoint for user profile retrieval with caching."
+  },
+  "retryCount": 0,
+  "recommendedNextAgents": [
+    "Researcher",
+    "Planner"
+  ],
+  "kickoff": {
+    "status": "recommended",
+    "approvalMode": "plan-first",
+    "recommendedAgents": [
+      "Researcher",
+      "Planner"
+    ],
+    "recommendationIssued": true,
+    "evaluationCount": 1,
+    "lastPrompt": "Add a new API endpoint for user profile retrieval with caching.",
+    "lastReason": "broad-request"
+  },
+  "lastUpdatedAt": "2026-04-13T00:00:00.000Z"
+}

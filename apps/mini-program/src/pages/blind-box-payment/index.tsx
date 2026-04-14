@@ -4,16 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import {
   createMiniProgramPaymentIntent,
+  type EventPackPlanKey,
+  findPricingPlan,
   getPricing,
   getUserCoupons,
   type PaymentIntentResponse,
   type PricingPlan,
+  type UserCouponSummary,
+  type VipSubscriptionPlanKey,
 } from '@shared/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/logger'
 import './index.scss'
 
-type PlanKey = 'vip_monthly' | 'vip_quarterly'
+type PlanKey = VipSubscriptionPlanKey | EventPackPlanKey
 
 const DEFAULT_PLANS: Record<PlanKey, PricingPlan> = {
   vip_monthly: {
@@ -31,6 +35,33 @@ const DEFAULT_PLANS: Record<PlanKey, PricingPlan> = {
     price: 268,
     originalPrice: 384,
   },
+  pack_3: {
+    id: 'pack_3',
+    planType: 'pack_3',
+    displayName: '3次活动包',
+    description: '90天内可使用3次活动名额',
+    price: 211,
+    originalPrice: 264,
+  },
+  pack_6: {
+    id: 'pack_6',
+    planType: 'pack_6',
+    displayName: '6次活动包',
+    description: '90天内可使用6次活动名额',
+    price: 370,
+    originalPrice: 528,
+  },
+}
+
+type CouponValidationResponse = {
+  valid: boolean
+  message?: string
+  discountAmount?: number
+  finalAmount?: number
+}
+
+function isEventPackPlan(planKey: PlanKey): planKey is EventPackPlanKey {
+  return planKey === 'pack_3' || planKey === 'pack_6'
 }
 
 function formatPrice(value: number): string {
@@ -63,8 +94,8 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
 }
 
 function clearPendingOrderStorage() {
-  wx.removeStorageSync('pending_order')
-  wx.removeStorageSync('pending_order_context')
+  Taro.removeStorageSync('pending_order')
+  Taro.removeStorageSync('pending_order_context')
 }
 
 export default function BlindBoxPaymentPage() {
@@ -72,6 +103,13 @@ export default function BlindBoxPaymentPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('vip_monthly')
   const [plans, setPlans] = useState<Record<PlanKey, PricingPlan>>(DEFAULT_PLANS)
   const [couponCount, setCouponCount] = useState(0)
+  const [availableCoupons, setAvailableCoupons] = useState<UserCouponSummary[]>([])
+  const [selectedCouponCode, setSelectedCouponCode] = useState('')
+  const [isCouponValid, setIsCouponValid] = useState(false)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [finalAmount, setFinalAmount] = useState<number | null>(null)
+  const [couponMessage, setCouponMessage] = useState('')
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
   const [openid, setOpenid] = useState('')
   const [pageError, setPageError] = useState('')
   const [isBootstrapping, setIsBootstrapping] = useState(true)
@@ -94,14 +132,21 @@ export default function BlindBoxPaymentPage() {
         getUserCoupons(apiRequest).catch(() => ({ count: 0, availableCount: 0, coupons: [] })),
       ])
 
-      const monthlyPlan = pricing.find((plan) => plan.planType === 'vip_monthly')
-      const quarterlyPlan = pricing.find((plan) => plan.planType === 'vip_quarterly')
+      const monthlyPlan = findPricingPlan(pricing, 'vip_monthly')
+      const quarterlyPlan = findPricingPlan(pricing, 'vip_quarterly')
 
       setPlans({
         vip_monthly: monthlyPlan ?? DEFAULT_PLANS.vip_monthly,
         vip_quarterly: quarterlyPlan ?? DEFAULT_PLANS.vip_quarterly,
+        pack_3: findPricingPlan(pricing, 'pack_3') ?? DEFAULT_PLANS.pack_3,
+        pack_6: findPricingPlan(pricing, 'pack_6') ?? DEFAULT_PLANS.pack_6,
       })
       setCouponCount(typeof coupons.count === 'number' ? coupons.count : 0)
+      setAvailableCoupons(
+        Array.isArray(coupons.coupons)
+          ? coupons.coupons.filter((coupon) => coupon.status === 'available')
+          : []
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载支付信息失败'
       setPageError(message)
@@ -133,6 +178,66 @@ export default function BlindBoxPaymentPage() {
   })
 
   const selectedPlanData = useMemo(() => plans[selectedPlan], [plans, selectedPlan])
+  const payableAmount = finalAmount ?? selectedPlanData.price
+
+  const validateSelectedCoupon = useCallback(async (planKey: PlanKey, couponCode: string) => {
+    const normalizedCouponCode = couponCode.trim()
+    if (!normalizedCouponCode) {
+      setIsCouponValid(false)
+      setDiscountAmount(0)
+      setFinalAmount(null)
+      setCouponMessage('')
+      return
+    }
+
+    setIsValidatingCoupon(true)
+    try {
+      const response = await apiRequest<CouponValidationResponse>({
+        path: '/api/coupons/validate',
+        method: 'POST',
+        data: {
+          paymentType: isEventPackPlan(planKey) ? 'event_pack' : 'event_bundle',
+          code: normalizedCouponCode,
+          planId: planKey,
+          planType: planKey,
+          type: planKey,
+        },
+      })
+
+      if (!response.valid) {
+        setIsCouponValid(false)
+        setDiscountAmount(0)
+        setFinalAmount(null)
+        setCouponMessage(response.message || '当前套餐暂不可使用这张优惠券')
+        return
+      }
+
+      setIsCouponValid(true)
+      setDiscountAmount((response.discountAmount ?? 0) / 100)
+      setFinalAmount(typeof response.finalAmount === 'number' ? response.finalAmount / 100 : null)
+      setCouponMessage(response.message || '优惠券已应用')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '优惠券校验失败'
+      setIsCouponValid(false)
+      setDiscountAmount(0)
+      setFinalAmount(null)
+      setCouponMessage(message)
+    } finally {
+      setIsValidatingCoupon(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedCouponCode) {
+      setIsCouponValid(false)
+      setDiscountAmount(0)
+      setFinalAmount(null)
+      setCouponMessage('')
+      return
+    }
+
+    void validateSelectedCoupon(selectedPlan, selectedCouponCode)
+  }, [selectedCouponCode, selectedPlan, validateSelectedCoupon])
 
   const handlePay = useCallback(async () => {
     if (isCreatingIntent || !openid) {
@@ -147,22 +252,23 @@ export default function BlindBoxPaymentPage() {
         type: selectedPlan,
         planId: selectedPlan,
         openid,
+        couponCode: isCouponValid ? selectedCouponCode : undefined,
       })
 
-      wx.setStorageSync('pending_order', paymentIntent.outTradeNo)
-      wx.setStorageSync('pending_order_context', {
+      Taro.setStorageSync('pending_order', paymentIntent.outTradeNo)
+      Taro.setStorageSync('pending_order_context', {
         type: paymentIntent.type,
       })
 
       await new Promise<void>((resolve, reject) => {
-        wx.requestPayment({
+        Taro.requestPayment({
           timeStamp: paymentIntent.timeStamp,
           nonceStr: paymentIntent.nonceStr,
           package: paymentIntent.package,
           signType: paymentIntent.signType,
           paySign: paymentIntent.paySign,
           success: () => resolve(),
-          fail: (error) => reject(error),
+          fail: (error: { errMsg?: string }) => reject(error),
         })
       })
 
@@ -190,7 +296,7 @@ export default function BlindBoxPaymentPage() {
     } finally {
       setIsCreatingIntent(false)
     }
-  }, [isCreatingIntent, openid, selectedPlan])
+  }, [isCouponValid, isCreatingIntent, openid, selectedCouponCode, selectedPlan])
 
   return (
     <View className='payment-page'>
@@ -209,7 +315,7 @@ export default function BlindBoxPaymentPage() {
       <View className='payment-page__summary-card'>
         <Text className='payment-page__summary-label'>可用优惠</Text>
         <Text className='payment-page__summary-value'>{couponCount} 张</Text>
-        <Text className='payment-page__summary-note'>价格会在页面重新显示时自动刷新</Text>
+        <Text className='payment-page__summary-note'>支持会员权益与活动次数包</Text>
       </View>
 
       <View className='payment-page__plans'>
@@ -240,6 +346,48 @@ export default function BlindBoxPaymentPage() {
         })}
       </View>
 
+      {availableCoupons.length > 0 ? (
+        <View className='payment-page__summary-card'>
+          <Text className='payment-page__summary-label'>优惠券</Text>
+          <View className='payment-page__plans'>
+            <Button
+              className={`payment-page__plan ${selectedCouponCode === '' ? 'payment-page__plan--selected' : ''}`}
+              onClick={() => setSelectedCouponCode('')}
+            >
+              <View className='payment-page__plan-content'>
+                <View>
+                  <Text className='payment-page__plan-title'>不使用优惠券</Text>
+                  <Text className='payment-page__plan-desc'>按当前套餐原价支付</Text>
+                </View>
+              </View>
+            </Button>
+            {availableCoupons.map((coupon) => (
+              <Button
+                key={coupon.id}
+                className={`payment-page__plan ${selectedCouponCode === (coupon.code || '') ? 'payment-page__plan--selected' : ''}`}
+                onClick={() => setSelectedCouponCode(coupon.code || '')}
+              >
+                <View className='payment-page__plan-content'>
+                  <View>
+                    <Text className='payment-page__plan-title'>{coupon.code || '优惠券'}</Text>
+                    <Text className='payment-page__plan-desc'>
+                      {coupon.discountType === 'percentage'
+                        ? `${coupon.discountValue || 0}% 折扣`
+                        : `立减 ¥${((coupon.discountValue || 0) / 100).toFixed(0)}`}
+                    </Text>
+                  </View>
+                </View>
+              </Button>
+            ))}
+          </View>
+          {selectedCouponCode ? (
+            <Text className='payment-page__summary-note'>
+              {isValidatingCoupon ? '正在校验优惠券...' : couponMessage || '已选择优惠券'}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       {pageError ? <Text className='payment-page__error'>{pageError}</Text> : null}
 
       <View className='payment-page__footer'>
@@ -247,9 +395,21 @@ export default function BlindBoxPaymentPage() {
           <Text className='payment-page__amount-label'>当前选择</Text>
           <Text className='payment-page__amount-value'>{selectedPlanData.displayName}</Text>
         </View>
+        {selectedPlanData.originalPrice ? (
+          <View className='payment-page__amount-row'>
+            <Text className='payment-page__amount-label'>原价</Text>
+            <Text className='payment-page__amount-value'>{formatPrice(selectedPlanData.originalPrice)}</Text>
+          </View>
+        ) : null}
+        {selectedCouponCode && discountAmount > 0 ? (
+          <View className='payment-page__amount-row'>
+            <Text className='payment-page__amount-label'>优惠减免</Text>
+            <Text className='payment-page__amount-value'>- {formatPrice(discountAmount)}</Text>
+          </View>
+        ) : null}
         <View className='payment-page__amount-row payment-page__amount-row--total'>
           <Text className='payment-page__amount-label'>应付金额</Text>
-          <Text className='payment-page__amount-total'>{formatPrice(selectedPlanData.price)}</Text>
+          <Text className='payment-page__amount-total'>{formatPrice(payableAmount)}</Text>
         </View>
         <Button
           className='payment-page__pay-button'
@@ -260,7 +420,11 @@ export default function BlindBoxPaymentPage() {
           {isBootstrapping ? '正在准备支付...' : '微信支付'}
         </Button>
         <Text className='payment-page__hint'>
-          {isCreatingIntent ? '正在拉起微信支付，请勿重复点击' : '切回应用后会自动校验订单结果'}
+          {isCreatingIntent
+            ? '正在拉起微信支付，请勿重复点击'
+            : isEventPackPlan(selectedPlan)
+              ? '购买成功后可直接用次数包报名活动'
+              : '切回应用后会自动校验订单结果'}
         </Text>
       </View>
     </View>

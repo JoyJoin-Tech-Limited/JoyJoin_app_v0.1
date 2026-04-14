@@ -1,18 +1,34 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
+import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
 
 export default function EventsPage() {
   const { isLoading: authLoading } = useAuthGuard()
+  const markAsRead = useMarkNotificationsAsRead()
+  useCustomTabBarSync({
+    selectedIndex: MINI_PROGRAM_TAB_INDEX.journey,
+    enabled: !authLoading,
+  })
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      markAsRead.mutate('activities')
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [markAsRead])
+
   const [activeTab, setActiveTab] = useState<TabKey>('upcoming')
 
   const { data: events = [], isLoading } = useQuery({

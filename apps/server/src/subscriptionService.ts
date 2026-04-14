@@ -8,6 +8,22 @@ import { storage } from "./storage";
 
 export class SubscriptionService {
   private checkInterval: NodeJS.Timeout | null = null;
+
+  private async resolveRenewalAmount(planType: "monthly" | "quarterly"): Promise<number> {
+    const pricing = await storage.getActivePricingSettings().catch(() => []);
+    const configuredPlan = pricing.find((plan: any) => plan.planType === planType);
+
+    if (configuredPlan?.priceInCents) {
+      return configuredPlan.priceInCents;
+    }
+
+    const fallbackAmounts = {
+      monthly: 9800,
+      quarterly: 29400,
+    };
+
+    return fallbackAmounts[planType];
+  }
   
   /**
    * Start the subscription expiry checker
@@ -165,14 +181,8 @@ export class SubscriptionService {
   async renewSubscription(userId: string, planType: "monthly" | "quarterly"): Promise<any> {
     // Get the user's current subscription
     const currentSubscription = await storage.getUserSubscription(userId);
-    
-    // Calculate amount based on plan type
-    const amounts = {
-      monthly: 9800,   // ¥98 in cents
-      quarterly: 29400, // ¥294 in cents (3 months)
-    };
-    
-    const originalAmount = amounts[planType];
+
+    const originalAmount = await this.resolveRenewalAmount(planType);
     
     // Create a new subscription record (pending until payment completes)
     const startDate = currentSubscription && new Date(currentSubscription.endDate) > new Date()

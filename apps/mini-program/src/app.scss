@@ -1,6 +1,5 @@
-@import './styles/variables';
-@import './styles/reset';
-@import './styles/mixins';
+@use './styles/variables' as *;
+@use './styles/reset';
 
 page {
   font-family: $font-body;

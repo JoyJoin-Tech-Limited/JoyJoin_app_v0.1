@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  getCenterButtonLabel,
+  shouldShowCenterButtonBadge,
+} from "@shared/centerTabRouting";
+import {
   CENTER_TAB_EMPTY_STATE_ROUTE,
   DISCOVER_ROUTE,
   getCenterButtonDestination,
@@ -144,5 +148,44 @@ describe("getCenterButtonDestination", () => {
         referenceTime,
       ),
     ).toBe("/pool-matching/registration-1");
+  });
+
+  it("keeps the shared center-button label aligned with venue-unlocked groups", () => {
+    expect(
+      getCenterButtonLabel(
+        [
+          {
+            id: "registration-1",
+            matchStatus: "matched",
+            assignedGroupId: "group-1",
+            poolDateTime: "2026-03-27T20:00:00.000Z",
+          },
+        ],
+        [],
+        referenceTime,
+      ),
+    ).toBe("查看场地 📍");
+  });
+
+  it("preserves the discover label while activity data is still loading", () => {
+    expect(getCenterButtonLabel(undefined, undefined)).toBe("去参与");
+  });
+
+  it("shows the shared center-button badge for pending or matched activity", () => {
+    expect(
+      shouldShowCenterButtonBadge(
+        [
+          {
+            id: "registration-1",
+            matchStatus: "pending",
+            assignedGroupId: null,
+            poolDateTime: "2026-03-28T12:00:00.000Z",
+          },
+        ],
+        [],
+      ),
+    ).toBe(true);
+
+    expect(shouldShowCenterButtonBadge([], [])).toBe(false);
   });
 });
