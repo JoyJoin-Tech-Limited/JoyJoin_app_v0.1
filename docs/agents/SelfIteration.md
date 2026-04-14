@@ -171,6 +171,8 @@ Every `SelfIteration-lite` cycle should produce one of these:
 - a small agent or skill wording improvement
 - a "do nothing yet" finding with explicit reasons
 
+If the output includes a durable memory candidate, the deliverable is still only a reviewed markdown draft until someone stages it into `repo-memory/candidates/` and promotes it through the normal review path.
+
 If the proposal touches multiple categories, split it into separate reviewable chunks.
 
 ### Step 5: Validate before recommending memory
@@ -191,6 +193,8 @@ Memory should only be proposed when:
 - the pattern is durable rather than incident-specific
 - the proposed wording is backed by successful validation or repeated accepted reviews
 - the memory will reduce future mistakes rather than duplicate the docs verbatim
+
+Even then, `SelfIteration-lite` still does not publish the note itself. The follow-up path is: reviewed draft -> `npm run memory:stage-candidate` -> human review -> `npm run memory:promote`.
 
 ### Step 6: End with a reviewer packet
 
@@ -228,7 +232,7 @@ Use this structure for the final deliverable of a `SelfIteration-lite` pass:
 - [command run or reason not yet run]
 
 ### Memory Candidate
-- [candidate text]
+- [reviewed markdown draft suitable for `repo-memory/candidates/`]
 or
 - none
 

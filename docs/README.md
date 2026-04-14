@@ -38,6 +38,7 @@ Use these as the main entry points before branching into topic-specific document
 - [`observability.md`](./observability.md)
 - [`runbooks/observability.md`](./runbooks/observability.md)
 - [`runbooks/alerting.md`](./runbooks/alerting.md)
+- [`runbooks/mini-program-events-tab-smoke.md`](./runbooks/mini-program-events-tab-smoke.md)
 
 ## By topic
 
@@ -64,6 +65,7 @@ Use these as the main entry points before branching into topic-specific document
 - [`ai-agent-harness-separation-strategy.md`](./ai-agent-harness-separation-strategy.md) — current-state AI architecture and invariants
 - [`AI_INTEGRATION_PLAN.md`](./AI_INTEGRATION_PLAN.md) — phased roadmap and execution gates
 - [`AI_EXECUTION_ROADMAP.md`](./AI_EXECUTION_ROADMAP.md) — 30-60-90 roadmap for repo AI workflow governance, validation, and tooling maturity
+- [`proposals/profile-c-memory-layer-rfc.md`](./proposals/profile-c-memory-layer-rfc.md) — proposal for adding a durable memory plane to JoyJoin's AI workflow system without reusing `.git` operational state
 
 ### Platform coordination and launch readiness
 

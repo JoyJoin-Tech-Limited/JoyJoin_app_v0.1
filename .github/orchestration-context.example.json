@@ -15,7 +15,8 @@
   "reviewComments": [],
   "artifactPaths": [
     ".git/.orchestration/context.json",
-    ".git/.orchestration/events.jsonl"
+    ".git/.orchestration/events.jsonl",
+    "repo-memory/generated/promoted-index.json"
   ],
   "upstreamAgent": null,
   "upstreamResult": {
@@ -40,6 +41,39 @@
     "evaluationCount": 1,
     "lastPrompt": "Add a new API endpoint for user profile retrieval with caching.",
     "lastReason": "broad-request"
+  },
+  "memoryContext": {
+    "status": "advisory",
+    "generatedIndex": {
+      "path": "repo-memory/generated/promoted-index.json",
+      "available": true,
+      "noteCount": 2,
+      "error": null
+    },
+    "changedFiles": {
+      "consideredPaths": [
+        ".github/orchestration.yaml",
+        "scripts/orchestration-supervisor.mjs"
+      ],
+      "hits": [
+        {
+          "id": "repo.orchestration.runtime-state-truthfulness",
+          "title": "Runtime State Truthfulness",
+          "path": "repo-memory/promoted/orchestration/runtime-state-truthfulness.md",
+          "score": 21,
+          "reasons": [
+            "related paths matched: .github/ORCHESTRATION.md",
+            "path tokens matched: orchestration, runtime"
+          ]
+        }
+      ]
+    },
+    "prompt": {
+      "query": "Add a new API endpoint for user profile retrieval with caching.",
+      "meaningful": true,
+      "hits": []
+    },
+    "summary": "Relevant repo memory: Runtime State Truthfulness."
   },
   "lastUpdatedAt": "2026-04-13T00:00:00.000Z"
 }

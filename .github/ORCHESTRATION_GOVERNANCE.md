@@ -1,7 +1,7 @@
 # JoyJoin Orchestration Governance
 
 **Status:** Active governance reference  
-**Last updated:** 2026-04-13  
+**Last updated:** 2026-04-14  
 **Scope:** How JoyJoin changes agents, skills, hooks, orchestration contracts, and workflow-validation surfaces
 
 ## Purpose
@@ -15,8 +15,9 @@ Use it when modifying any of the following:
 - `.github/orchestration.yaml`
 - `.github/ORCHESTRATION.md`
 - `.github/hooks/README.md`
+- `repo-memory/`
 - `.github/copilot-instructions.md`
-- orchestration and auto-eval runtime scripts under `scripts/`
+- orchestration, auto-eval, and repo-memory runtime scripts under `scripts/`
 - validation or regression tests that lock in orchestration behavior
 
 This is a governance document, not a runtime-product AI architecture document. For shipped product AI behavior and invariants, use [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md). For contributor workflow policy, use [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md).
@@ -41,8 +42,9 @@ This is a governance document, not a runtime-product AI architecture document. F
 | Contributor workflow policy | `.github/AI_WORKFLOW_POLICY.md` | Lane selection, escalation rules, and approval boundaries. |
 | Governance rules | `.github/ORCHESTRATION_GOVERNANCE.md` | This document. |
 | Hook behavior docs | `.github/hooks/README.md` | Explains what runs and how hooks behave. |
+| Durable repo memory | `repo-memory/README.md`, `repo-memory/candidates/README.md`, `repo-memory/promoted/`, `repo-memory/generated/` | Reviewable memory plane outside `.git`; publication remains explicit and fail-closed. |
 | Shared contributor instructions | `.github/copilot-instructions.md` | Entry-point guidance for contributors and Copilot. |
-| Runtime implementation | `scripts/orchestration-supervisor.mjs`, `scripts/orchestration-lib.mjs`, `scripts/auto-eval*.mjs` | Deterministic behavior must match the documented contract. |
+| Runtime implementation | `scripts/orchestration-supervisor.mjs`, `scripts/orchestration-lib.mjs`, `scripts/memory-*.mjs`, `scripts/auto-eval*.mjs` | Deterministic behavior must match the documented contract. |
 | Regression coverage | orchestration-related tests in `apps/server/src/__tests__/` and `scripts/` validators | Lock in behavior that contributors depend on. |
 
 ## Change types and required sync
@@ -53,6 +55,7 @@ This is a governance document, not a runtime-product AI architecture document. F
 | Add or materially change a skill | Skill `SKILL.md`, routing metadata, `.github/skills/README.md`, and routing validation coverage | `node scripts/validate-skill-routing.mjs` and `node scripts/test-skill-routing.mjs` |
 | Change the handoff graph, kickoff behavior, or tooling sufficiency status | `.github/orchestration.yaml`, `.github/ORCHESTRATION.md`, and any impacted agent docs or contributor guidance | `npm run orchestration:validate` and targeted hook/runtime checks |
 | Change orchestration or auto-eval hook behavior | Runtime scripts, `.github/hooks/README.md`, `.github/ORCHESTRATION.md`, and contributor-facing guidance when behavior changes are visible to users | `npm run orchestration:validate` and targeted hook/runtime checks |
+| Change repo-memory retrieval or publication flow | `.github/orchestration.yaml`, `.github/ORCHESTRATION.md`, `repo-memory/README.md`, `repo-memory/candidates/README.md`, and the relevant runtime scripts/tests | `npm run memory:validate`, `npm run memory:build-index`, `npm run orchestration:validate`, and targeted hook/runtime checks |
 | Change contributor workflow policy | `.github/AI_WORKFLOW_POLICY.md`, affected entrypoint docs, and any governance references that would otherwise drift | Review for policy consistency |
 | Change governance rules | This file plus any linked discovery docs whose expectations change as a result | Review for contract and policy consistency |
 
@@ -96,6 +99,7 @@ The orchestration runtime under `.git/.orchestration/` is advisory state, not pr
 
 - If current scope cannot be derived truthfully, record it as unknown rather than backfilling with misleading context.
 - Recommendation state should clear when follow-up prompts narrow the task enough that the earlier broad recommendation is no longer true.
+- `memoryContext` inside `.git/.orchestration/context.json` is advisory retrieval state only; durable memory publication still lives under `repo-memory/`.
 - Dirty-worktree and changed-file summaries must describe the actual current state, not a convenient historical approximation.
 - Stateful behavior should be covered by tests, not only by dry-run validations with runtime writes disabled.
 
@@ -104,6 +108,8 @@ The orchestration runtime under `.git/.orchestration/` is advisory state, not pr
 Minimum commands for orchestration-governance work:
 
 ```bash
+npm run memory:validate
+npm run memory:build-index
 npm run orchestration:validate
 env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'
 node scripts/orchestration-supervisor.mjs workflow pull-request
