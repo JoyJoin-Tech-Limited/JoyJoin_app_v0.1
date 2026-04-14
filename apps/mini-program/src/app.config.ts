@@ -2,17 +2,6 @@ import { MINI_PROGRAM_PAGES } from './lib/onboardingRoutes'
 
 export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
-  pages: [
-    'pages/discover/index',
-    'pages/blind-box-payment/index',
-    'pages/payment-verification/index',
-    'pages/events/index',
-    'pages/my-events/index',
-    'pages/chats/index',
-    'pages/journey/index',
-    'pages/profile/index',
-    'pages/login/index',
-  ],
   pages: [...MINI_PROGRAM_PAGES],
   tabBar: {
     color: '#9CA3AF',

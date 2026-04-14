@@ -1,10 +1,8 @@
 import { View, Text, Image, Button, Navigator, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useState, useMemo, useCallback } from 'react'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  getPricing,
-  getUserCoupons,
   getEventPools,
   getMyPoolRegistrations,
   type EventPoolSummary,
@@ -359,17 +357,6 @@ function AuthenticatedDiscover() {
 }
 
 function UnauthenticatedLanding() {
-  const { data: pricing = [] } = useQuery({
-    queryKey: ['mini-program', 'pricing'],
-    queryFn: () => getPricing(apiRequest),
-  })
-  const { data: coupons = { count: 0, availableCount: 0, coupons: [] } } = useQuery({
-    queryKey: ['mini-program', 'coupons'],
-    queryFn: () => getUserCoupons(apiRequest),
-  })
-
-  const featuredPlan = pricing.find((plan) => plan.planType === 'vip_quarterly') ?? pricing[0]
-
   return (
     <View className='landing-page'>
       <View className='content-zone'>
@@ -418,23 +405,11 @@ function UnauthenticatedLanding() {
             ))}
           </View>
         </View>
-
-        <View className='payment-page__summary-card'>
-          <Text className='payment-page__summary-label'>当前功能入口</Text>
-          <Text className='payment-page__summary-value'>活动权益 / 登录 / Onboarding</Text>
-          <Text className='payment-page__summary-note'>
-            {featuredPlan ? `推荐方案：${featuredPlan.displayName} · ¥${featuredPlan.price}` : '正在同步支付与优惠信息'}
-          </Text>
-          <Text className='payment-page__summary-note'>可用优惠：{coupons.count ?? 0} 张</Text>
-        </View>
       </View>
 
       <View className='bottom-zone'>
         <Button className='primary-btn' onClick={() => Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })} hoverClass='primary-btn-hover'>
           看看我会遇见谁
-        </Button>
-        <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/blind-box-payment/index' })}>
-          查看会员权益
         </Button>
         <Button className='secondary-btn' onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}>
           已有账号？登录
@@ -453,6 +428,29 @@ function UnauthenticatedLanding() {
 
 export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
+
+  // Dynamically hide or show the tab bar based on authentication status
+  const updateTabBar = useCallback(() => {
+    if (isLoading) return
+    
+    try {
+      if (!isAuthenticated) {
+        Taro.hideTabBar({ animation: true }).catch(() => {})
+      } else {
+        Taro.showTabBar({ animation: true }).catch(() => {})
+      }
+    } catch (e) {
+      console.warn('Failed to toggle tab bar:', e)
+    }
+  }, [isAuthenticated, isLoading])
+
+  useDidShow(() => {
+    updateTabBar()
+  })
+
+  useEffect(() => {
+    updateTabBar()
+  }, [updateTabBar])
 
   if (isLoading) {
     return <LoadingScreen />

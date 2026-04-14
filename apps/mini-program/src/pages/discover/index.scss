@@ -1,6 +1,6 @@
 .landing-page {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -14,8 +14,6 @@
 
 .content-zone {
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -139,11 +137,11 @@
 .text-content {
   width: 100%;
   text-align: center;
-  margin-top: 16PX; /* mt-4 */
+  margin-top: 56PX; /* Moved down by 10 units (16px original + 40px = 56px) */
 
   .headline {
     color: #7C3AED;
-    font-size: 30PX;
+    font-size: clamp(26PX, 8vw, 36PX);
     font-weight: 800;
     line-height: 1.2;
     margin-bottom: 8PX; /* space-y-2 */
@@ -151,7 +149,7 @@
   }
 
   .subtitle {
-    font-size: 14PX; /* text-[14px] */
+    font-size: 14PX; /* user-client text-[14px] */
     color: #7B6A96;
     text-align: center;
     line-height: 1.5; /* leading-relaxed */
@@ -164,20 +162,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6PX; /* slightly tighter gap */
+    gap: 8PX; /* gap-2 in tailwind is 8px */
     flex-wrap: wrap;
+    margin-top: 8PX;
 
     .badge {
       background-color: rgba(255, 255, 255, 0.6);
       border-radius: 999PX; /* rounded-full */
-      padding: 2PX 10PX; /* slightly less padding */
+      padding: 4PX 12PX; /* px-3 py-1 */
       box-shadow: 0 1PX 2PX 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
       display: flex;
       align-items: center;
       justify-content: center;
 
       text {
-        font-size: 11PX; /* scaled down font-size */
+        font-size: 12PX; /* user-client text-[12px] */
         font-weight: 600; /* font-semibold */
         color: #5A4A7A;
         line-height: 1.4;
@@ -190,7 +189,7 @@
   flex: none;
   width: 100%;
   max-width: 384PX; /* max-w-sm */
-  margin: 0 auto;
+  margin: 40PX auto 0; /* mt-10 (10 units = 40px) */
   padding: 12PX 20PX calc(20PX + env(safe-area-inset-bottom)); /* pt-3 pb-5 px-5 */
 
   .primary-btn {

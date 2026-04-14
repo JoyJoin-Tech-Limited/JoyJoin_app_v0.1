@@ -4,7 +4,7 @@
     "composite": true,
     "allowSyntheticDefaultImports": true,
     "noEmit": false,
-    "allowImportingTsExtensions": false
+    "emitDeclarationOnly": true
   },
   "include": [
     "vite.config.ts"
