@@ -14,6 +14,20 @@ function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function getCookieDiagnostics(cookieHeader: string | string[] | undefined) {
+  const normalizedHeader = Array.isArray(cookieHeader) ? cookieHeader.join(";") : cookieHeader ?? "";
+  const cookieEntries = normalizedHeader
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return {
+    hasCookieHeader: cookieEntries.length > 0,
+    cookieCount: cookieEntries.length,
+    hasConnectSidCookie: cookieEntries.some((entry) => entry.startsWith("connect.sid=")),
+  };
+}
+
 
 export function validateVerificationCode(phoneNumber: string, code: string) {
   if (!phoneNumber || !code) {
@@ -56,7 +70,7 @@ export function setupPhoneAuth(app: Express) {
 
   // B) 强制写 session 并保存（验证 session cookie 能否发出）
   app.get("/api/debug/session-set", (req, res) => {
-    console.log("🔧 [DEBUG] /api/debug/session-set called, sessionID:", req.sessionID);
+    console.log("🔧 [DEBUG] /api/debug/session-set called");
     req.session.userId = "debug-user";
     req.session.isAdmin = true;
     req.session.save((err) => {
@@ -64,19 +78,29 @@ export function setupPhoneAuth(app: Express) {
         console.error("🔧 [DEBUG] Session save error:", err);
         return res.status(500).json({ ok: false, err: String(err) });
       }
-      console.log("🔧 [DEBUG] Session saved, sid:", req.sessionID);
-      res.json({ ok: true, sid: req.sessionID });
+
+      const hasSetCookie = Boolean(res.getHeader("set-cookie"));
+      console.log("🔧 [DEBUG] Session saved", { hasSetCookie });
+      res.json({
+        ok: true,
+        sessionSaved: true,
+        hasSessionUserId: Boolean(req.session.userId),
+        sessionIsAdmin: Boolean(req.session.isAdmin),
+        hasSetCookie,
+      });
     });
   });
 
   // C) 回显 cookie（验证浏览器是否带回 cookie）
   app.get("/api/debug/echo-cookie", (req, res) => {
     console.log("🔧 [DEBUG] /api/debug/echo-cookie called");
+    const cookieDiagnostics = getCookieDiagnostics(req.headers.cookie);
+
     res.json({
-      cookieHeader: req.headers.cookie || null,
-      sessionID: req.sessionID || null,
-      sessionUserId: req.session?.userId || null,
-      sessionIsAdmin: req.session?.isAdmin || null,
+      ...cookieDiagnostics,
+      hasSessionUserId: Boolean(req.session?.userId),
+      sessionIsAdmin: req.session?.isAdmin ?? null,
+      hasDebugSessionFlag: typeof req.session?.debugTest === "number",
       // 🔧 关键诊断字段 - 检查 HTTPS/proxy 识别
       reqSecure: req.secure,
       xForwardedProto: req.headers['x-forwarded-proto'] || null,
@@ -103,8 +127,16 @@ export function setupPhoneAuth(app: Express) {
         console.error("🔧 [DEBUG] Session save error:", err);
         return res.status(500).json({ ok: false, error: String(err) });
       }
-      console.log("🔧 [DEBUG] Session saved successfully, sessionID:", req.sessionID);
-      res.json({ ok: true, sessionID: req.sessionID, message: "Check Response Headers for Set-Cookie" });
+
+      const hasSetCookie = Boolean(res.getHeader("set-cookie"));
+      console.log("🔧 [DEBUG] Session saved successfully", { hasSetCookie });
+      res.json({
+        ok: true,
+        hasSetCookie,
+        debugCookieQueued: true,
+        hasDebugSessionFlag: typeof req.session.debugTest === "number",
+        message: "Check response headers for Set-Cookie",
+      });
     });
   });
 
@@ -191,7 +223,10 @@ export function setupPhoneAuth(app: Express) {
 
       // 设置session - Phase 4.1 DEBUG_AUTH logging
       if (debugAuthLoggingEnabled) {
-        console.log("[LOGIN] before", { sid: req.sessionID, cookie: req.headers.cookie });
+        console.log("[LOGIN] before", {
+          userId,
+          hasIncomingCookie: Boolean(req.headers.cookie),
+        });
       }
       
       // 直接写入 session（不用 regenerate，更简单可靠）
@@ -199,7 +234,7 @@ export function setupPhoneAuth(app: Express) {
       req.session.verifiedPhoneNumber = phoneNumber;
       
       if (debugAuthLoggingEnabled) {
-        console.log("[LOGIN] session written", { userId, sessionData: req.session });
+        console.log("[LOGIN] session written", { userId });
       }
       
       // 使用 Promise 包装 save，确保完成后再响应
@@ -207,8 +242,7 @@ export function setupPhoneAuth(app: Express) {
         if (debugAuthLoggingEnabled) {
           console.log("[LOGIN] after-save", {
             err: err ? String(err) : null,
-            sid: req.sessionID,
-            setCookie: res.getHeader("set-cookie") || null,
+            hasSetCookie: Boolean(res.getHeader("set-cookie")),
           });
         }
         
@@ -217,7 +251,7 @@ export function setupPhoneAuth(app: Express) {
           return res.status(500).json({ message: "Login failed" });
         }
         
-        console.log("🔐 [LOGIN] Session saved successfully! sessionID:", req.sessionID);
+        console.log("🔐 [LOGIN] Session saved successfully for user:", userId);
         
         // 获取完整的用户数据并返回
         try {

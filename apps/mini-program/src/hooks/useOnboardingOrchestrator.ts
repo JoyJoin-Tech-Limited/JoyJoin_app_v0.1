@@ -35,7 +35,13 @@ export function useOnboardingOrchestrator() {
       }
     }
 
-    const progress = buildOnboardingProgress(auth.user)
+    const progress = buildOnboardingProgress({
+      nextStep: auth.user.nextStep ?? undefined,
+      hasCompletedPersonalityTest: auth.user.hasCompletedPersonalityTest ?? undefined,
+      profileEssentialComplete: auth.user.profileEssentialComplete ?? undefined,
+      hasCompletedInterestsCarousel: auth.user.hasCompletedInterestsCarousel ?? undefined,
+      hasSeenProfileReview: auth.user.hasSeenProfileReview ?? undefined,
+    })
     return {
       ...progress,
       currentStep: nextStepToOnboardingStep(auth.user.nextStep),

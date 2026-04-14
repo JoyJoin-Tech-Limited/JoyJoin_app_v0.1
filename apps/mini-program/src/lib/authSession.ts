@@ -26,8 +26,8 @@ function clearMiniProgramUserScopedQueries(client: QueryClient): void {
   }
 }
 
-function writeAuthSession(
-  user: (UserState & Record<string, unknown>) | null,
+function writeAuthSession<TUser extends UserState>(
+  user: TUser | null,
   client?: QueryClient,
   mode: SessionResetMode = 'soft',
 ): void {
@@ -46,8 +46,8 @@ export function bootstrapMiniProgramAuthSession(client?: QueryClient) {
   return getClient(client).invalidateQueries({ queryKey: AUTH_QUERY_KEY })
 }
 
-export function seedMiniProgramAuthSession(
-  user: UserState & Record<string, unknown>,
+export function seedMiniProgramAuthSession<TUser extends UserState>(
+  user: TUser,
   client?: QueryClient,
 ): void {
   writeAuthSession(user, client, 'hard')

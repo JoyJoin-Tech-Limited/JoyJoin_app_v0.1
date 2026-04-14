@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import type { AuthUserResponse } from '@shared/api'
 import { handleMiniProgramUnauthorized } from './authSession'
 
 const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? 'http://localhost:5000').replace(/\/$/, '')
@@ -98,22 +99,8 @@ export async function apiRequest<T>(options: {
   )
 }
 
-export type OnboardingStep =
-  | 'onboarding'
-  | 'personality-test'
-  | 'essential-data'
-  | 'extended-data'
-  | 'profile-review'
-  | 'guide'
-  | 'discover'
-
-export interface UserState {
-  id: string
-  nextStep: OnboardingStep
-  // Index signature to accommodate the full user record returned by /api/auth/user
-  // without requiring every field to be explicitly typed here.
-  [key: string]: unknown
-}
+export type OnboardingStep = AuthUserResponse['nextStep']
+export type UserState = AuthUserResponse
 
 /**
  * Authenticate via WeChat Mini Program login (Taro.login → code2Session).
@@ -143,6 +130,6 @@ export async function authenticateMiniProgramUser(): Promise<void> {
  * Fetch the current authenticated user's state, including the server-calculated
  * `nextStep` for driving onboarding/post-login navigation.
  */
-export async function getUserState(): Promise<UserState> {
-  return apiRequest<UserState>({ path: '/api/auth/user' })
+export async function getUserState(): Promise<AuthUserResponse> {
+  return apiRequest<AuthUserResponse>({ path: '/api/auth/user' })
 }

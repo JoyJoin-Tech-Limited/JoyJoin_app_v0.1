@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiRequest, type OnboardingStep, type UserState } from '../lib/api'
+import type { AuthUserResponse } from '@shared/api'
+import { apiRequest, type OnboardingStep } from '../lib/api'
 import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
@@ -9,23 +10,7 @@ import { deriveMiniProgramAuthState } from './authState'
 
 export type NextStepType = OnboardingStep
 
-/**
- * Auth user state returned by GET /api/auth/user, extended with helper fields.
- */
-export interface AuthUser extends UserState {
-  profileEssentialComplete?: boolean
-  profileExtendedComplete?: boolean
-  hasCompletedPersonalityTest?: boolean
-  hasCompletedInterestsCarousel?: boolean
-  hasSeenProfileReview?: boolean
-  activeAssessmentSessionId?: string | null
-  paymentsEnabled?: boolean
-  displayName?: string
-  nickname?: string
-  archetype?: string
-  gender?: string
-  birthYear?: number
-}
+export type AuthUser = AuthUserResponse
 
 export interface UseAuthResult {
   user: AuthUser | undefined

@@ -1,8 +1,7 @@
 import type { OnboardingStep } from '../lib/api'
 
 interface MiniProgramAuthUser {
-  nextStep?: OnboardingStep
-  [key: string]: unknown
+  nextStep?: OnboardingStep | null
 }
 
 export interface MiniProgramAuthStateInput<TUser extends MiniProgramAuthUser = MiniProgramAuthUser> {
@@ -38,6 +37,6 @@ export function deriveMiniProgramAuthState<TUser extends MiniProgramAuthUser>(
     user,
     isLoading: false,
     isAuthenticated: !!user,
-    nextStep: user?.nextStep,
+    nextStep: user?.nextStep ?? undefined,
   }
 }

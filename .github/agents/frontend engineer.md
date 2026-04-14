@@ -1,7 +1,7 @@
 ---
 description: "Use when working on JoyJoin browser-first frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review."
 name: "Expert React Frontend Engineer"
-tools: ["changes", "codebase", "edit/editFiles", "extensions", "fetch", "findTestFiles", "githubRepo", "new", "openSimpleBrowser", "problems", "runCommands", "runTasks", "runTests", "search", "searchResults", "terminalLastCommand", "terminalSelection", "testFailure", "usages", "vscodeAPI", "microsoft.docs.mcp"]
+tools: [read, search, edit, execute]
 argument-hint: "Describe the page, route, component, or interaction in apps/user-client, plus any platform-coordination concerns."
 ---
 

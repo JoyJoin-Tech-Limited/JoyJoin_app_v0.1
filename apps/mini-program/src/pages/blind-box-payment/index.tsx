@@ -15,6 +15,16 @@ import {
 } from '@shared/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/logger'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import {
+  buildPaymentVerificationUrl,
+  type ReadyMiniProgramPendingOrder,
+} from '../../lib/paymentPendingOrder'
+import {
+  clearPendingOrderStorage,
+  persistPendingOrder,
+  readStoredPendingOrder,
+} from '../../lib/paymentPendingOrderStorage'
 import './index.scss'
 
 type PlanKey = VipSubscriptionPlanKey | EventPackPlanKey
@@ -93,11 +103,6 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
   return '支付失败，请稍后重试'
 }
 
-function clearPendingOrderStorage() {
-  Taro.removeStorageSync('pending_order')
-  Taro.removeStorageSync('pending_order_context')
-}
-
 export default function BlindBoxPaymentPage() {
   const { user, isLoading: authLoading } = useAuthGuard()
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('vip_monthly')
@@ -113,7 +118,41 @@ export default function BlindBoxPaymentPage() {
   const [pageError, setPageError] = useState('')
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
+  const [pendingOrderToResume, setPendingOrderToResume] = useState<ReadyMiniProgramPendingOrder | null>(null)
   const hasSkippedFirstDidShowRef = useRef(false)
+  const paymentsDisabled = user?.paymentsEnabled === false
+
+  const refreshPendingOrderState = useCallback(() => {
+    const pendingOrder = readStoredPendingOrder({ currentUserId: user?.id })
+
+    if (pendingOrder.status === 'clear') {
+      clearPendingOrderStorage()
+      setPendingOrderToResume(null)
+      logWarn('Cleared invalid mini-program pending order on payment page', {
+        reason: pendingOrder.reason,
+        userId: user?.id ?? null,
+      })
+      return
+    }
+
+    if (pendingOrder.status === 'ready') {
+      setPendingOrderToResume({
+        orderId: pendingOrder.orderId,
+        context: pendingOrder.context,
+      })
+      return
+    }
+
+    setPendingOrderToResume(null)
+  }, [user?.id])
+
+  const navigateToVerification = useCallback(async (orderId: string) => {
+    const verificationUrl = buildPaymentVerificationUrl(orderId)
+    await Taro.navigateTo({
+      url: verificationUrl,
+      fail: () => Taro.redirectTo({ url: verificationUrl }),
+    })
+  }, [])
 
   const loadPageData = useCallback(async () => {
     setIsBootstrapping(true)
@@ -154,16 +193,30 @@ export default function BlindBoxPaymentPage() {
       return
     }
 
+    refreshPendingOrderState()
+
+    if (paymentsDisabled) {
+      setIsBootstrapping(false)
+      return
+    }
+
     void loadPageData()
-  }, [authLoading, loadPageData, user?.id])
+  }, [authLoading, loadPageData, paymentsDisabled, refreshPendingOrderState, user?.id])
 
   useDidShow(() => {
     if (authLoading || !user?.id) {
       return
     }
 
+    refreshPendingOrderState()
+
     if (!hasSkippedFirstDidShowRef.current) {
       hasSkippedFirstDidShowRef.current = true
+      return
+    }
+
+    if (paymentsDisabled) {
+      setIsBootstrapping(false)
       return
     }
 
@@ -232,8 +285,16 @@ export default function BlindBoxPaymentPage() {
     void validateSelectedCoupon(selectedPlan, selectedCouponCode)
   }, [selectedCouponCode, selectedPlan, validateSelectedCoupon])
 
+  const handleResumePendingOrder = useCallback(async () => {
+    if (!pendingOrderToResume) {
+      return
+    }
+
+    await navigateToVerification(pendingOrderToResume.orderId)
+  }, [navigateToVerification, pendingOrderToResume])
+
   const handlePay = useCallback(async () => {
-    if (isCreatingIntent || !user?.id) {
+    if (isCreatingIntent || !user?.id || pendingOrderToResume || paymentsDisabled) {
       return
     }
 
@@ -247,9 +308,10 @@ export default function BlindBoxPaymentPage() {
         couponCode: isCouponValid ? selectedCouponCode : undefined,
       })
 
-      Taro.setStorageSync('pending_order', paymentIntent.outTradeNo)
-      Taro.setStorageSync('pending_order_context', {
+      persistPendingOrder({
+        orderId: paymentIntent.outTradeNo,
         type: paymentIntent.type,
+        userId: user.id,
       })
 
       await new Promise<void>((resolve, reject) => {
@@ -264,19 +326,19 @@ export default function BlindBoxPaymentPage() {
         })
       })
 
-      await Taro.navigateTo({
-        url: `/pages/payment-verification/index?outTradeNo=${encodeURIComponent(paymentIntent.outTradeNo)}`,
-      })
+      await navigateToVerification(paymentIntent.outTradeNo)
     } catch (error: any) {
       const errMsg = typeof error?.errMsg === 'string' ? error.errMsg : undefined
       const friendlyMessage = getFriendlyPaymentError(errMsg || error?.message)
 
       if (!friendlyMessage) {
         clearPendingOrderStorage()
+        setPendingOrderToResume(null)
         return
       }
 
       clearPendingOrderStorage()
+      setPendingOrderToResume(null)
       setPageError(friendlyMessage)
       logWarn('Mini-program payment intent or payment modal failed', {
         message: friendlyMessage,
@@ -288,14 +350,53 @@ export default function BlindBoxPaymentPage() {
     } finally {
       setIsCreatingIntent(false)
     }
-  }, [isCouponValid, isCreatingIntent, selectedCouponCode, selectedPlan, user?.id])
+  }, [
+    isCouponValid,
+    isCreatingIntent,
+    navigateToVerification,
+    paymentsDisabled,
+    pendingOrderToResume,
+    selectedCouponCode,
+    selectedPlan,
+    user?.id,
+  ])
+
+  if (paymentsDisabled) {
+    return (
+      <View className='payment-page'>
+        <View className='payment-page__header'>
+          <Button
+            className='payment-page__back-button'
+            onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile }) })}
+          >
+            返回
+          </Button>
+          <Text className='payment-page__eyebrow'>福利柜</Text>
+          <Text className='payment-page__title'>开通会员权益</Text>
+          <Text className='payment-page__subtitle'>支付功能升级中，当前暂不支持发起新的订单。</Text>
+        </View>
+
+        <View className='payment-page__summary-card'>
+          <Text className='payment-page__summary-label'>支付状态</Text>
+          <Text className='payment-page__summary-value'>支付功能维护中</Text>
+          <Text className='payment-page__summary-note'>我们正在升级支付系统，请稍后再试。</Text>
+          <Text className='payment-page__summary-note'>若你刚完成支付，可继续查看已有订单结果。</Text>
+          {pendingOrderToResume ? (
+            <Button className='payment-page__resume-button' onClick={handleResumePendingOrder}>
+              继续查看已有订单
+            </Button>
+          ) : null}
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View className='payment-page'>
       <View className='payment-page__header'>
         <Button
           className='payment-page__back-button'
-          onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })}
+          onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile }) })}
         >
           返回
         </Button>
@@ -303,6 +404,17 @@ export default function BlindBoxPaymentPage() {
         <Text className='payment-page__title'>开通会员权益</Text>
         <Text className='payment-page__subtitle'>支付成功后将进入结果确认页，避免误判成功。</Text>
       </View>
+
+      {pendingOrderToResume ? (
+        <View className='payment-page__summary-card'>
+          <Text className='payment-page__summary-label'>待确认订单</Text>
+          <Text className='payment-page__summary-value'>继续查看支付结果</Text>
+          <Text className='payment-page__summary-note'>你有一笔订单仍在等待确认，先完成结果确认再发起新的支付。</Text>
+          <Button className='payment-page__resume-button' onClick={handleResumePendingOrder}>
+            继续查询订单
+          </Button>
+        </View>
+      ) : null}
 
       <View className='payment-page__summary-card'>
         <Text className='payment-page__summary-label'>可用优惠</Text>
@@ -406,17 +518,19 @@ export default function BlindBoxPaymentPage() {
         <Button
           className='payment-page__pay-button'
           onClick={handlePay}
-          disabled={isBootstrapping || isCreatingIntent || !user?.id}
+          disabled={isBootstrapping || isCreatingIntent || !user?.id || !!pendingOrderToResume}
           loading={isCreatingIntent}
         >
-          {isBootstrapping ? '正在准备支付...' : '微信支付'}
+          {isBootstrapping ? '正在准备支付...' : pendingOrderToResume ? '请先确认当前订单' : '微信支付'}
         </Button>
         <Text className='payment-page__hint'>
           {isCreatingIntent
             ? '正在拉起微信支付，请勿重复点击'
-            : isEventPackPlan(selectedPlan)
-              ? '购买成功后可直接用次数包报名活动'
-              : '切回应用后会自动校验订单结果'}
+            : pendingOrderToResume
+              ? '你有一笔待确认订单，先继续查看支付结果'
+              : isEventPackPlan(selectedPlan)
+                ? '购买成功后可直接用次数包报名活动'
+                : '切回应用后会自动校验订单结果'}
         </Text>
       </View>
     </View>

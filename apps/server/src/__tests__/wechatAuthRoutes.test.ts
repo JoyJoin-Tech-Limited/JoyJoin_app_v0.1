@@ -105,6 +105,23 @@ function cookieHeader(response: Response) {
   return raw ? raw.split(";")[0] : "";
 }
 
+function stringifyConsoleCalls(spy: { mock: { calls: unknown[][] } }) {
+  return spy.mock.calls
+    .flat()
+    .map((value) => {
+      if (typeof value === "string") {
+        return value;
+      }
+
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    })
+    .join("\n");
+}
+
 function expectNoSensitiveAuthFields(payload: Record<string, unknown>) {
   expect(payload).not.toHaveProperty("password");
   expect(payload).not.toHaveProperty("wechatSessionKey");
@@ -152,40 +169,51 @@ describe("wechat auth route hardening", () => {
   });
 
   it("regenerates the session and strips sensitive fields on /api/auth/wechat/login", async () => {
-    await withServer(async (baseUrl) => {
-      const anonymousResponse = await fetch(`${baseUrl}/__test__/anonymous-session`, {
-        method: "POST",
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      await withServer(async (baseUrl) => {
+        const anonymousResponse = await fetch(`${baseUrl}/__test__/anonymous-session`, {
+          method: "POST",
+        });
+        const anonymousBody = await anonymousResponse.json() as { sessionId: string };
+        const anonymousCookie = cookieHeader(anonymousResponse);
+
+        const loginResponse = await fetch(`${baseUrl}/api/auth/wechat/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            cookie: anonymousCookie,
+          },
+          body: JSON.stringify({ code: "wechat_test_route_hardening" }),
+        });
+        const loginBody = await loginResponse.json() as any;
+
+        expect(loginResponse.status).toBe(200);
+        expect(loginBody).toMatchObject({ success: true, isNewUser: true });
+        expectNoSensitiveAuthFields(loginBody.user);
+
+        const authenticatedCookie = cookieHeader(loginResponse);
+        expect(authenticatedCookie).toContain("connect.sid=");
+        expect(authenticatedCookie).not.toBe(anonymousCookie);
+
+        const sessionStateResponse = await fetch(`${baseUrl}/__test__/session-state`, {
+          headers: { cookie: authenticatedCookie },
+        });
+        const sessionState = await sessionStateResponse.json() as any;
+
+        expect(sessionState.userId).toBe(mockUser.id);
+        expect(sessionState.anonymousMarker).toBeNull();
+        expect(sessionState.sessionId).not.toBe(anonymousBody.sessionId);
+
+        const consoleOutput = stringifyConsoleCalls(logSpy);
+        expect(consoleOutput).not.toContain(anonymousBody.sessionId);
+        expect(consoleOutput).not.toContain(sessionState.sessionId);
+        expect(consoleOutput).not.toContain("connect.sid=");
       });
-      const anonymousBody = await anonymousResponse.json() as { sessionId: string };
-      const anonymousCookie = cookieHeader(anonymousResponse);
-
-      const loginResponse = await fetch(`${baseUrl}/api/auth/wechat/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          cookie: anonymousCookie,
-        },
-        body: JSON.stringify({ code: "wechat_test_route_hardening" }),
-      });
-      const loginBody = await loginResponse.json() as any;
-
-      expect(loginResponse.status).toBe(200);
-      expect(loginBody).toMatchObject({ success: true, isNewUser: true });
-      expectNoSensitiveAuthFields(loginBody.user);
-
-      const authenticatedCookie = cookieHeader(loginResponse);
-      expect(authenticatedCookie).toContain("connect.sid=");
-      expect(authenticatedCookie).not.toBe(anonymousCookie);
-
-      const sessionStateResponse = await fetch(`${baseUrl}/__test__/session-state`, {
-        headers: { cookie: authenticatedCookie },
-      });
-      const sessionState = await sessionStateResponse.json() as any;
-
-      expect(sessionState.userId).toBe(mockUser.id);
-      expect(sessionState.anonymousMarker).toBeNull();
-      expect(sessionState.sessionId).not.toBe(anonymousBody.sessionId);
-    });
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it("strips sensitive fields on /api/auth/wechat/login-with-test", async () => {

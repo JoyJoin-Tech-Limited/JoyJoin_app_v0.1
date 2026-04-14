@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
+import type { AuthUserResponse } from "@shared/api";
 
 /**
  * Navigation step constants for server-driven onboarding flow (B1)
@@ -17,15 +17,7 @@ export const NextStep = {
 
 export type NextStepType = typeof NextStep[keyof typeof NextStep];
 
-// Extended user type with server-driven navigation helpers (B1)
-export interface AuthUser extends User {
-  nextStep?: NextStepType;
-  profileEssentialComplete?: boolean;
-  profileExtendedComplete?: boolean;
-  activeAssessmentSessionId?: string | null;
-  /** Whether the payment system is enabled (server-controlled kill switch). */
-  paymentsEnabled?: boolean;
-}
+export type AuthUser = AuthUserResponse;
 
 export interface UseAuthResult {
   user: AuthUser | undefined;

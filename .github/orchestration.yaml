@@ -618,39 +618,17 @@
     "Expert React Frontend Engineer": {
       "file": ".github/agents/frontend engineer.md",
       "portfolio_role": "implementation",
-      "orchestration_status": "legacy-tooling",
+      "orchestration_status": "audited-support",
       "current_tools": [
-        "changes",
-        "codebase",
-        "edit/editFiles",
-        "extensions",
-        "fetch",
-        "findTestFiles",
-        "githubRepo",
-        "new",
-        "openSimpleBrowser",
-        "problems",
-        "runCommands",
-        "runTasks",
-        "runTests",
+        "read",
         "search",
-        "searchResults",
-        "terminalLastCommand",
-        "terminalSelection",
-        "testFailure",
-        "usages",
-        "vscodeAPI",
-        "microsoft.docs.mcp"
+        "edit",
+        "execute"
       ],
       "tooling_assessment": {
-        "status": "legacy",
-        "summary": "The agent is powerful, but its tool aliases are legacy-shaped and not aligned with the normalized read/search/edit/execute taxonomy used by the newer agents.",
+        "status": "sufficient",
+        "summary": "Browser-first frontend implementation is covered by the normalized read, search, edit, and execute tool surface.",
         "recommended_extensions": [
-          {
-            "type": "tool-normalization",
-            "label": "Normalize the tool surface to the current supported tool taxonomy while preserving browser and test capability.",
-            "reason": "Consistent tool naming improves routing reliability and reduces configuration drift across the portfolio."
-          },
           {
             "type": "optional-tool",
             "label": "Add explicit subagent support if cross-platform coordination should be initiated directly from this agent.",
@@ -662,30 +640,17 @@
     "debug": {
       "file": ".github/agents/debug.agent.md",
       "portfolio_role": "debugging",
-      "orchestration_status": "legacy-tooling",
+      "orchestration_status": "audited-support",
       "current_tools": [
-        "edit/editFiles",
+        "read",
         "search",
-        "execute/getTerminalOutput",
-        "execute/runInTerminal",
-        "read/terminalLastCommand",
-        "read/terminalSelection",
-        "search/usages",
-        "read/problems",
-        "execute/testFailure",
-        "web/fetch",
-        "web/githubRepo",
-        "execute/runTests"
+        "edit",
+        "execute"
       ],
       "tooling_assessment": {
-        "status": "legacy",
-        "summary": "The debug agent has broad capability, but its legacy tool namespace is inconsistent with the rest of the current portfolio and lacks explicit domain handoff support.",
+        "status": "sufficient",
+        "summary": "Bug investigation and root-cause remediation are covered by the normalized read, search, edit, and execute tool surface.",
         "recommended_extensions": [
-          {
-            "type": "tool-normalization",
-            "label": "Normalize the tool aliases to the current supported tool taxonomy.",
-            "reason": "This keeps debugging workflows discoverable and compatible with the same orchestration rules as newer agents."
-          },
           {
             "type": "optional-tool",
             "label": "Add explicit agent delegation or handoff options to route resolved root causes into domain specialists.",
@@ -697,72 +662,41 @@
     "principal SWE": {
       "file": ".github/agents/principal SWE.md",
       "portfolio_role": "architecture-advice",
-      "orchestration_status": "legacy-tooling",
+      "orchestration_status": "audited-support",
       "current_tools": [
-        "changes",
-        "search/codebase",
-        "edit/editFiles",
-        "extensions",
-        "fetch",
-        "findTestFiles",
-        "githubRepo",
-        "new",
-        "openSimpleBrowser",
-        "problems",
-        "runCommands",
-        "runTasks",
-        "runTests",
+        "read",
         "search",
-        "search/searchResults",
-        "runCommands/terminalLastCommand",
-        "runCommands/terminalSelection",
-        "testFailure",
-        "usages",
-        "vscodeAPI",
-        "github"
+        "execute"
       ],
       "tooling_assessment": {
-        "status": "legacy",
-        "summary": "The principal engineer agent has broad research capability, but it depends on a legacy tool vocabulary and on GitHub integrations that are not normalized across the repo.",
+        "status": "sufficient",
+        "summary": "Principal-level architecture guidance is covered by normalized repo inspection and command execution without requiring legacy tool aliases.",
         "recommended_extensions": [
           {
-            "type": "tool-normalization",
-            "label": "Normalize core file, terminal, and problem tools to the modern taxonomy.",
-            "reason": "That keeps the advisor consistent with the same orchestration and validation hooks used elsewhere."
-          },
-          {
-            "type": "mcp",
-            "label": "Back GitHub architecture-review and issue-creation flows with explicit GitHub API integrations.",
-            "reason": "The current description assumes GitHub-backed workflows that should be made explicit rather than implicit."
+            "type": "optional-integration",
+            "label": "Add explicit GitHub review or issue integrations only if this advisory agent should own those workflows directly.",
+            "reason": "Architecture guidance can stay repo-grounded today, while GitHub-native follow-up remains a separate workflow concern."
           }
         ]
       }
     },
     "SE: Product Manager": {
       "file": ".github/agents/PM advisor.md",
-      "portfolio_role": "issue-authoring",
-      "orchestration_status": "legacy-tooling",
+      "portfolio_role": "issue-scoping",
+      "orchestration_status": "audited-support",
       "current_tools": [
-        "codebase",
-        "githubRepo",
-        "create_issue",
-        "update_issue",
-        "list_issues",
-        "search_issues"
+        "read",
+        "search",
+        "edit"
       ],
       "tooling_assessment": {
-        "status": "needs-extension",
-        "summary": "This agent's responsibilities depend on GitHub issue write access that is not part of the normalized core tool surface.",
+        "status": "sufficient",
+        "summary": "Issue-ready product scoping is covered by normalized repo inspection and editing without requiring direct tracker write access.",
         "recommended_extensions": [
           {
-            "type": "mcp",
-            "label": "Back the issue-management workflow with a supported GitHub issue create and update integration.",
-            "reason": "Without explicit issue-write capability, the agent cannot fulfill its stated primary responsibility."
-          },
-          {
-            "type": "tool-normalization",
-            "label": "Normalize repo-inspection tools if this agent should participate in the same orchestration layer as the modern Product Manager agent.",
-            "reason": "The current tool shape is separate from the newer normalized product-scoping agent."
+            "type": "optional-integration",
+            "label": "Add explicit issue-tracker write integration only if this agent should create or update backlog records directly.",
+            "reason": "The current scoped responsibility is to draft issue-ready artifacts, not to own external tracker mutation."
           }
         ]
       }
@@ -771,20 +705,19 @@
       "file": ".github/agents/prompt engineer.md",
       "portfolio_role": "prompt-design",
       "orchestration_status": "audited-support",
-      "current_tools": [],
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "tooling_assessment": {
-        "status": "partial",
-        "summary": "No-tool prompt rewriting is fine when the prompt is pasted into chat, but repo-resident prompt maintenance is weaker without file access.",
+        "status": "sufficient",
+        "summary": "Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability.",
         "recommended_extensions": [
           {
-            "type": "fs-permission",
-            "label": "Add read and edit capability if this agent should maintain repo-resident prompts, agents, or skills directly.",
-            "reason": "Prompt work inside the repo needs file visibility rather than relying on pasted content alone."
-          },
-          {
             "type": "optional-tool",
-            "label": "Add search capability for multi-file prompt systems.",
-            "reason": "Prompt improvements often need surrounding instruction and example context, not just a single pasted block."
+            "label": "Add execute capability only if prompt maintenance should run validation commands or scripted prompt linting.",
+            "reason": "The current role can stay edit-focused until prompt workflows require deterministic command execution."
           }
         ]
       }

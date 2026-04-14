@@ -156,7 +156,14 @@
       ],
       "portfolioRole": "orchestrator",
       "orchestrationPhase": "core-v1",
-      "handoffs": [],
+      "handoffs": [
+        "Researcher",
+        "Planner",
+        "Mini-Program Parity Auditor",
+        "Expert React Frontend Engineer",
+        "Taro Mini-Program Frontend Engineer",
+        "Taro Migration Specialist"
+      ],
       "skills": [
         "monorepo-workspace-governance",
         "docs-sync"
@@ -215,60 +222,35 @@
       "file": "debug.agent.md",
       "description": "Use when debugging a bug, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause.",
       "tools": [
-        "edit/editFiles",
+        "read",
         "search",
-        "execute/getTerminalOutput",
-        "execute/runInTerminal",
-        "read/terminalLastCommand",
-        "read/terminalSelection",
-        "search/usages",
-        "read/problems",
-        "execute/testFailure",
-        "web/fetch",
-        "web/githubRepo",
-        "execute/runTests"
+        "edit",
+        "execute"
       ],
       "argumentHint": "Describe the bug, failing command or test, expected behavior, and any error output or reproduction steps.",
       "subagents": [],
       "portfolioRole": "debugging",
-      "orchestrationPhase": "legacy-tooling",
+      "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
         "testing-and-regression-guardrails"
       ],
-      "toolingStatus": "legacy"
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Expert React Frontend Engineer",
       "file": "frontend engineer.md",
       "description": "Use when working on JoyJoin browser-first frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review.",
       "tools": [
-        "changes",
-        "codebase",
-        "edit/editFiles",
-        "extensions",
-        "fetch",
-        "findTestFiles",
-        "githubRepo",
-        "new",
-        "openSimpleBrowser",
-        "problems",
-        "runCommands",
-        "runTasks",
-        "runTests",
+        "read",
         "search",
-        "searchResults",
-        "terminalLastCommand",
-        "terminalSelection",
-        "testFailure",
-        "usages",
-        "vscodeAPI",
-        "microsoft.docs.mcp"
+        "edit",
+        "execute"
       ],
       "argumentHint": "Describe the page, route, component, or interaction in apps/user-client, plus any platform-coordination concerns.",
       "subagents": [],
       "portfolioRole": "implementation",
-      "orchestrationPhase": "legacy-tooling",
+      "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
         "frontend-component-architecture",
@@ -277,7 +259,7 @@
         "joyjoin-brand-guidelines",
         "platform-coordination-protocol"
       ],
-      "toolingStatus": "legacy"
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Launch Readiness Agent",
@@ -306,24 +288,21 @@
     {
       "name": "SE: Product Manager",
       "file": "PM advisor.md",
-      "description": "Use when creating GitHub issues, aligning business value with user needs, prioritizing roadmap tradeoffs, or defining success metrics for product work.",
+      "description": "Use when drafting issue-ready product scope, aligning business value with user needs, prioritizing roadmap tradeoffs, or defining success metrics for work that should be tracked as a backlog item.",
       "tools": [
-        "codebase",
-        "githubRepo",
-        "create_issue",
-        "update_issue",
-        "list_issues",
-        "search_issues"
+        "read",
+        "search",
+        "edit"
       ],
       "argumentHint": "Describe the feature, user, current workflow, pain point, and the decision or artifact you need.",
       "subagents": [],
-      "portfolioRole": "issue-authoring",
-      "orchestrationPhase": "legacy-tooling",
+      "portfolioRole": "issue-scoping",
+      "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
         "draft-prd"
       ],
-      "toolingStatus": "needs-extension"
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Product Manager",
@@ -422,52 +401,38 @@
       "file": "principal SWE.md",
       "description": "Use when you need principal-level software engineering guidance, architecture tradeoff analysis, implementation review, or pragmatic plans for complex technical changes.",
       "tools": [
-        "changes",
-        "search/codebase",
-        "edit/editFiles",
-        "extensions",
-        "fetch",
-        "findTestFiles",
-        "githubRepo",
-        "new",
-        "openSimpleBrowser",
-        "problems",
-        "runCommands",
-        "runTasks",
-        "runTests",
+        "read",
         "search",
-        "search/searchResults",
-        "runCommands/terminalLastCommand",
-        "runCommands/terminalSelection",
-        "testFailure",
-        "usages",
-        "vscodeAPI",
-        "github"
+        "execute"
       ],
       "argumentHint": "Describe the decision, code area, architecture change, or implementation risk that needs senior guidance.",
       "subagents": [],
       "portfolioRole": "architecture-advice",
-      "orchestrationPhase": "legacy-tooling",
+      "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
         "code-review",
         "reliability-and-state-integrity",
         "monorepo-workspace-governance"
       ],
-      "toolingStatus": "legacy"
+      "toolingStatus": "sufficient"
     },
     {
       "name": "prompt engineer",
       "file": "prompt engineer.md",
-      "description": "Use when analyzing or rewriting prompts, improving system prompts, adding better examples, or tightening prompt structure for more reliable model behavior.",
-      "tools": [],
+      "description": "Use when analyzing or rewriting prompts, improving system prompts, maintaining repo-resident prompt files, adding better examples, or tightening prompt structure for more reliable model behavior.",
+      "tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "argumentHint": "Paste the prompt or instruction set you want improved, plus any goals, constraints, or desired output format.",
       "subagents": [],
       "portfolioRole": "prompt-design",
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [],
-      "toolingStatus": "partial"
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Taro Migration Specialist",

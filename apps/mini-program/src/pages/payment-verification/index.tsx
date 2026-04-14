@@ -3,7 +3,18 @@ import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { logError } from '../../lib/logger'
+import { logError, logWarn } from '../../lib/logger'
+import {
+  type MiniProgramPendingOrderClearReason,
+  resolvePendingOrder,
+} from '../../lib/paymentPendingOrder'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import {
+  clearPendingOrderStorage,
+  getPendingOrderStorageSnapshot,
+  markPendingOrderManuallyLeft,
+  readStoredPendingOrder,
+} from '../../lib/paymentPendingOrderStorage'
 import './index.scss'
 
 type VerificationState = 'polling' | 'paid' | 'pending' | 'failed'
@@ -13,13 +24,23 @@ type VerificationState = 'polling' | 'paid' | 'pending' | 'failed'
 const MAX_POLL_ATTEMPTS = 10
 const POLL_INTERVAL_MS = 2000
 
-function clearPendingOrderStorage() {
-  Taro.removeStorageSync('pending_order')
-  Taro.removeStorageSync('pending_order_context')
+function getPendingOrderRecoveryMessage(reason: MiniProgramPendingOrderClearReason | 'missing'): string {
+  switch (reason) {
+    case 'expired':
+      return '待确认订单已过期，请重新发起支付'
+    case 'wrong-user':
+      return '当前账号无法继续这笔待确认订单'
+    case 'missing-order':
+    case 'missing-context':
+    case 'invalid-context':
+    case 'missing':
+    default:
+      return '未找到有效的待确认订单'
+  }
 }
 
 export default function PaymentVerificationPage() {
-  const { isLoading: authLoading } = useAuthGuard()
+  const { user, isLoading: authLoading } = useAuthGuard()
   const [orderId, setOrderId] = useState('')
   const [status, setStatus] = useState<VerificationState>('polling')
   const [message, setMessage] = useState('正在确认支付结果...')
@@ -27,6 +48,7 @@ export default function PaymentVerificationPage() {
   const isPollingRef = useRef(false)
   const isMountedRef = useRef(true)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const incomingOrderIdRef = useRef('')
 
   const clearTimer = useCallback(() => {
     if (timeoutRef.current) {
@@ -43,16 +65,16 @@ export default function PaymentVerificationPage() {
   }, [clearTimer])
 
   const navigateAfterPaid = useCallback(() => {
-    const context = Taro.getStorageSync<{ type?: string }>('pending_order_context') as { type?: string } | undefined
+    const pendingOrder = readStoredPendingOrder({ currentUserId: user?.id })
     clearPendingOrderStorage()
 
-    if (context?.type === 'event') {
-      Taro.switchTab({ url: '/pages/events/index' })
+    if (pendingOrder.status === 'ready' && pendingOrder.context.type === 'event') {
+      Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })
       return
     }
 
-    Taro.switchTab({ url: '/pages/profile/index' })
-  }, [])
+    Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile })
+  }, [user?.id])
 
   const pollPaymentStatus = useCallback(async (targetOrderId: string, attempt = 1) => {
     if (!targetOrderId || isPollingRef.current) {
@@ -112,46 +134,88 @@ export default function PaymentVerificationPage() {
     }
   }, [navigateAfterPaid])
 
-  const bootstrap = useCallback((incomingOrderId?: string) => {
+  const bootstrap = useCallback((incomingOrderId?: string, currentUserId?: string) => {
     if (isPollingRef.current) {
       return
     }
 
     clearTimer()
 
-    const storedOrderId = typeof incomingOrderId === 'string' && incomingOrderId.length > 0
-      ? incomingOrderId
-      : Taro.getStorageSync<string>('pending_order')
+    const snapshot = getPendingOrderStorageSnapshot()
+    const resolvedPendingOrder = resolvePendingOrder({
+      orderId:
+        typeof incomingOrderId === 'string' && incomingOrderId.length > 0
+          ? incomingOrderId
+          : snapshot.orderId,
+      context: snapshot.context,
+      currentUserId,
+    })
 
-    if (!storedOrderId || typeof storedOrderId !== 'string') {
+    if (resolvedPendingOrder.status !== 'ready') {
+      if (resolvedPendingOrder.status === 'clear') {
+        clearPendingOrderStorage()
+        logWarn('Cleared invalid mini-program pending order on verification page', {
+          reason: resolvedPendingOrder.reason,
+          userId: currentUserId ?? null,
+        })
+      }
+
+      const nextMessage = getPendingOrderRecoveryMessage(
+        resolvedPendingOrder.status === 'clear' ? resolvedPendingOrder.reason : 'missing',
+      )
+
+      setOrderId('')
+      setStatus('failed')
+      setMessage(nextMessage)
       void Taro.showToast({
-        title: '未找到待确认订单',
+        title: nextMessage,
         icon: 'none',
       })
-      Taro.switchTab({ url: '/pages/discover/index' })
+      Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile })
       return
     }
 
-    setOrderId(storedOrderId)
+    setOrderId(resolvedPendingOrder.orderId)
     setStatus('polling')
     setMessage('正在确认支付结果...')
-    void pollPaymentStatus(storedOrderId, 1)
+    void pollPaymentStatus(resolvedPendingOrder.orderId, 1)
   }, [clearTimer, pollPaymentStatus])
 
   useLoad((params) => {
-    bootstrap(params?.outTradeNo)
+    incomingOrderIdRef.current = typeof params?.outTradeNo === 'string' ? params.outTradeNo : ''
   })
 
-  useDidShow(() => {
-    if (status === 'polling') {
-      bootstrap(orderId)
+  useEffect(() => {
+    if (authLoading || !user?.id) {
       return
     }
 
-    if (status === 'pending' && orderId && Taro.getStorageSync<string>('pending_order')) {
-      bootstrap(orderId)
+    bootstrap(incomingOrderIdRef.current, user.id)
+  }, [authLoading, bootstrap, user?.id])
+
+  useDidShow(() => {
+    if (authLoading || !user?.id) {
+      return
+    }
+
+    if (status === 'polling') {
+      bootstrap(orderId || incomingOrderIdRef.current, user.id)
+      return
+    }
+
+    if (status === 'pending') {
+      const pendingOrder = readStoredPendingOrder({ currentUserId: user.id })
+      if (pendingOrder.status === 'ready' && pendingOrder.orderId === orderId) {
+        bootstrap(orderId, user.id)
+      }
     }
   })
+
+  const handleLeavePendingOrder = useCallback(() => {
+    clearTimer()
+    markPendingOrderManuallyLeft()
+    Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile })
+  }, [clearTimer])
 
   if (authLoading) {
     return (
@@ -185,10 +249,13 @@ export default function PaymentVerificationPage() {
 
         {status === 'pending' ? (
           <View className='verification-page__actions'>
-            <Button className='verification-page__button' onClick={() => Taro.switchTab({ url: '/pages/profile/index' })}>
-              去我的页查看
+            <Button className='verification-page__button' onClick={handleLeavePendingOrder}>
+              先回我的页
             </Button>
-            <Button className='verification-page__button verification-page__button--secondary' onClick={() => bootstrap(orderId)}>
+            <Button
+              className='verification-page__button verification-page__button--secondary'
+              onClick={() => bootstrap(orderId, user?.id)}
+            >
               继续查询
             </Button>
           </View>
@@ -196,10 +263,16 @@ export default function PaymentVerificationPage() {
 
         {status === 'failed' ? (
           <View className='verification-page__actions'>
-            <Button className='verification-page__button' onClick={() => Taro.navigateBack({ fail: () => Taro.navigateTo({ url: '/pages/blind-box-payment/index' }) })}>
+            <Button
+              className='verification-page__button'
+              onClick={() => Taro.navigateBack({ fail: () => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.blindBoxPayment }) })}
+            >
               重新支付
             </Button>
-            <Button className='verification-page__button verification-page__button--secondary' onClick={() => Taro.switchTab({ url: '/pages/profile/index' })}>
+            <Button
+              className='verification-page__button verification-page__button--secondary'
+              onClick={() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile })}
+            >
               返回我的页
             </Button>
           </View>

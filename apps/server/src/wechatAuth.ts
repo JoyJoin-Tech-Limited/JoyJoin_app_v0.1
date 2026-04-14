@@ -717,15 +717,10 @@ export function setupWechatAuth(app: Express) {
         if (safeAnonSessionId && typeof safeAnonSessionId === "string") {
           try {
             await storage.clearPreSignupData(safeAnonSessionId);
-            console.log(
-              `[WeChat Auth] Claimed presignup cache session ${safeAnonSessionId} for user ${user.id}`
-            );
+            console.log(`[WeChat Auth] Claimed presignup cache for user ${user.id}`);
           } catch (cacheErr) {
             // Non-fatal — log but don't fail the auth request
-            console.warn(
-              `[WeChat Auth] Failed to clear presignup cache ${safeAnonSessionId}:`,
-              cacheErr
-            );
+            console.warn(`[WeChat Auth] Failed to clear presignup cache for user ${user.id}:`, cacheErr);
           }
         }
       }
@@ -736,7 +731,6 @@ export function setupWechatAuth(app: Express) {
       if (isDebugAuthLoggingEnabled()) {
         console.log("[WeChat Auth] before session regeneration", {
           userId: fullUser.id,
-          sid: req.sessionID,
         });
       }
 
@@ -744,14 +738,11 @@ export function setupWechatAuth(app: Express) {
 
       if (isDebugAuthLoggingEnabled()) {
         console.log("[WeChat Auth] after session regeneration", {
-          sid: req.sessionID,
+          userId: fullUser.id,
         });
       }
 
-      console.log(
-        "[WeChat Auth] Session regenerated successfully! sessionID:",
-        req.sessionID
-      );
+      console.log("[WeChat Auth] Session regenerated successfully", { userId: fullUser.id });
 
       res.json({
         success: true,

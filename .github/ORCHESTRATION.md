@@ -39,6 +39,8 @@ That split is deliberate:
 
 Supervisor also has explicit rerouting exits that do not promote more agents into the core graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, and it can route into selected audited frontend lanes for parity audit, web UI work, mini-program UI work, or parity-first migration.
 
+Those rerouting exits are now also declared as native Supervisor handoffs in the agent frontmatter so the routing buttons and the orchestration contract stay aligned.
+
 ## Runtime surfaces
 
 - Copilot hooks: `.github/hooks/auto-eval.json` and `.github/hooks/orchestration.json`
@@ -154,11 +156,11 @@ Branding remains a skill boundary on the frontend agents through `design-system-
 | `Mini-Program Parity Auditor` | `sufficient` | Read-only parity audits and build checks are supported. | Optional screenshot or image-diff tooling for visual parity. |
 | `Taro Mini-Program Frontend Engineer` | `sufficient` | Taro implementation and delegated parity review are covered. | Optional visual-diff tooling for UI polish validation. |
 | `Taro Migration Specialist` | `sufficient` | Migration work already has the right combination of edit, execute, and subagents. | Optional screenshot capture for source-versus-target visual comparison. |
-| `Expert React Frontend Engineer` | `legacy` | Broad capability exists, but the tool namespace is legacy-shaped. | Normalize the tool surface and consider explicit subagent support if desired. |
-| `debug` | `legacy` | Broad debugging power exists, but the tool namespace is legacy-shaped and not tightly linked to domain handoffs. | Normalize the tool surface and optionally add agent delegation or handoffs. |
-| `principal SWE` | `legacy` | Strong advisory capability exists, but it depends on legacy aliases and implicit GitHub tooling. | Normalize tools and back GitHub workflows with explicit integrations. |
-| `SE: Product Manager` | `needs-extension` | Its issue-authoring responsibility depends on GitHub issue write tools that are not part of the normalized core surface. | Add supported GitHub issue create and update integration. |
-| `prompt engineer` | `partial` | Zero-tool prompt work is fine for pasted prompts, but weak for repo-resident prompt systems. | Add read, search, and edit if this agent should maintain repo prompts or skills directly. |
+| `Expert React Frontend Engineer` | `sufficient` | Browser-first frontend implementation is covered by the normalized tool surface. | Add explicit subagent support only if cross-platform coordination should originate directly from this agent. |
+| `debug` | `sufficient` | Bug investigation and root-cause remediation are covered by the normalized tool surface. | Add explicit agent delegation or handoffs only if resolved root causes should route directly into owning specialists. |
+| `principal SWE` | `sufficient` | Principal-level architecture guidance is covered by normalized repo inspection and command execution. | Add GitHub review or issue integrations only if this advisor should own those workflows directly. |
+| `SE: Product Manager` | `sufficient` | Issue-ready product scoping is covered by normalized repo inspection and editing without requiring direct tracker mutation. | Add issue-tracker write integration only if this agent should create or update backlog records directly. |
+| `prompt engineer` | `sufficient` | Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability. | Add execute capability only if prompt workflows need scripted validation or linting. |
 
 ## Validation expectations
 
@@ -175,5 +177,5 @@ The first likely follow-up remains an `End-to-End Test Coordinator` helper agent
 After that, the most likely portfolio upgrades are not more handoffs first. They are better tooling:
 
 - observability access for operations and launch agents
-- GitHub issue and status integrations for legacy advisory agents
+- explicit tracker or review integrations only when an advisory workflow truly needs direct external-system mutation
 - visual-diff or browser automation for frontend and QA-focused agents

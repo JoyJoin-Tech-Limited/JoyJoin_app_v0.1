@@ -68,7 +68,15 @@ describe("phone auth debug route registration", () => {
       const response = await fetch(`${baseUrl}/api/debug/echo-cookie`);
       const body = await response.json();
       expect(response.status).toBe(200);
-      expect(body).toMatchObject({ sessionUserId: null, sessionIsAdmin: null });
+      expect(body).toMatchObject({
+        hasCookieHeader: false,
+        hasConnectSidCookie: false,
+        hasSessionUserId: false,
+        sessionIsAdmin: null,
+      });
+      expect(body).not.toHaveProperty("cookieHeader");
+      expect(body).not.toHaveProperty("sessionID");
+      expect(body).not.toHaveProperty("sessionUserId");
     });
   });
 });
