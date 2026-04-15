@@ -28,16 +28,18 @@
           data-url="{{item.url}}"
           bindtap="handleTabTap"
         >
-          <cover-image
-            class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
-            src="{{selected === item.index ? item.selectedIcon : item.icon}}"
-          />
-          <cover-view
-            wx:if="{{item.badgeCount > 0}}"
-            class="joy-custom-tab-bar__item-badge"
-          >
-            <cover-view class="joy-custom-tab-bar__item-badge-text">
-              {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
+          <cover-view class="joy-custom-tab-bar__item-icon-wrap">
+            <cover-image
+              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
+              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+            />
+            <cover-view
+              wx:if="{{item.badgeCount > 0}}"
+              class="joy-custom-tab-bar__item-badge"
+            >
+              <cover-view class="joy-custom-tab-bar__item-badge-text">
+                {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
+              </cover-view>
             </cover-view>
           </cover-view>
           <cover-view
@@ -60,16 +62,18 @@
           data-url="{{item.url}}"
           bindtap="handleTabTap"
         >
-          <cover-image
-            class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
-            src="{{selected === item.index ? item.selectedIcon : item.icon}}"
-          />
-          <cover-view
-            wx:if="{{item.badgeCount > 0}}"
-            class="joy-custom-tab-bar__item-badge"
-          >
-            <cover-view class="joy-custom-tab-bar__item-badge-text">
-              {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
+          <cover-view class="joy-custom-tab-bar__item-icon-wrap">
+            <cover-image
+              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
+              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+            />
+            <cover-view
+              wx:if="{{item.badgeCount > 0}}"
+              class="joy-custom-tab-bar__item-badge"
+            >
+              <cover-view class="joy-custom-tab-bar__item-badge-text">
+                {{item.badgeCount > 99 ? '99+' : item.badgeCount}}
+              </cover-view>
             </cover-view>
           </cover-view>
           <cover-view

@@ -97,6 +97,16 @@ Keep docs aligned with the active codebase. Use after significant code changes o
 
 ---
 
+## Workflow Orchestration
+
+Skills for structured agent delivery loops, turn-end summaries, and bounded workflow-state reporting.
+
+| Skill | What it covers |
+|-------|---------------|
+| [`orchestration-turn-reporting`](./orchestration-turn-reporting/SKILL.md) | Per-agent turn-summary JSON, supervisor consolidation, last-5-turn feedback loops, and operational persistence under `.git/.orchestration/` |
+
+---
+
 ## Delivery Validation
 
 Skills for flow-level verification and concrete performance measurement.
@@ -153,6 +163,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I draft a PRD or feature brief? | `draft-prd` |
 | How do I run a smoke test or end-to-end journey check? | `e2e-test-runner` |
 | How do I benchmark before and after a performance change? | `performance-benchmark` |
+| How do I add turn-end summaries or a supervisor consolidation loop? | `orchestration-turn-reporting` |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
 | How do I keep docs in sync after a code change? | `docs-sync` |

@@ -2,8 +2,7 @@ import Taro from '@tarojs/taro'
 import type { AuthUserResponse } from '@shared/api'
 import { handleMiniProgramUnauthorized } from './authSession'
 
-const DEFAULT_MINI_PROGRAM_API_BASE_URL = 'http://localhost:5001'
-const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_API_BASE_URL).replace(/\/$/, '')
+const API_BASE_URL = (process.env.TARO_APP_API_BASE_URL ?? 'http://localhost:5000').replace(/\/$/, '')
 // Keep requests responsive on mobile networks while still allowing payment and
 // auth calls enough time to complete under normal latency.
 const REQUEST_TIMEOUT_MS = 15000
@@ -12,9 +11,6 @@ export interface ApiError extends Error {
   statusCode?: number
   data?: unknown
   isGenericMessage?: boolean
-  isTransportError?: boolean
-  requestUrl?: string
-  debugMessage?: string
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
@@ -56,7 +52,7 @@ function buildApiUrl(path: string): string {
   }
 
   if (!API_BASE_URL) {
-    throw createApiError('TARO_APP_API_BASE_URL is not configured')
+    throw new Error('TARO_APP_API_BASE_URL is not configured')
   }
 
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
@@ -66,71 +62,13 @@ function createApiError(
   message: string,
   statusCode?: number,
   data?: unknown,
-  isGenericMessage = false,
-  metadata?: Partial<ApiError>,
+  isGenericMessage = false
 ): ApiError {
   const error = new Error(message) as ApiError
   error.statusCode = statusCode
   error.data = data
   error.isGenericMessage = isGenericMessage
-  Object.assign(error, metadata)
   return error
-}
-
-function getApiRequestTarget(requestUrl: string): string {
-  try {
-    return new URL(requestUrl).origin
-  } catch {
-    return requestUrl
-  }
-}
-
-function getTransportErrorDebugMessage(error: unknown): string {
-  if (error && typeof error === 'object') {
-    const errMsg = (error as { errMsg?: unknown }).errMsg
-    if (typeof errMsg === 'string' && errMsg.trim() !== '') {
-      return errMsg
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-
-  return 'Unknown transport error'
-}
-
-function getTransportErrorMessage(requestUrl: string, error: unknown): string {
-  const requestTarget = getApiRequestTarget(requestUrl)
-  const normalizedDebugMessage = getTransportErrorDebugMessage(error).toLowerCase()
-
-  if (normalizedDebugMessage.includes('timeout')) {
-    return `请求超时，请确认当前 API 地址 ${requestTarget} 可访问，并且服务已启动后重试`
-  }
-
-  if (normalizedDebugMessage.includes('domain list')) {
-    return `当前 API 地址 ${requestTarget} 不在小程序合法域名白名单中，请检查开发设置或域名配置后重试`
-  }
-
-  if (normalizedDebugMessage.includes('ssl') || normalizedDebugMessage.includes('certificate')) {
-    return `无法建立安全连接，请确认当前 API 地址 ${requestTarget} 的证书配置后重试`
-  }
-
-  return `无法连接到服务，请确认当前 API 地址 ${requestTarget} 可访问，并且服务已经启动`
-}
-
-function createTransportApiError(requestUrl: string, error: unknown): ApiError {
-  return createApiError(
-    getTransportErrorMessage(requestUrl, error),
-    undefined,
-    error,
-    false,
-    {
-      isTransportError: true,
-      requestUrl,
-      debugMessage: getTransportErrorDebugMessage(error),
-    },
-  )
 }
 
 export async function apiRequest<T>(options: {
@@ -139,23 +77,16 @@ export async function apiRequest<T>(options: {
   data?: unknown
   handleUnauthorized?: boolean
 }): Promise<T> {
-  const requestUrl = buildApiUrl(options.path)
-
-  let response
-  try {
-    response = await Taro.request<T>({
-      url: requestUrl,
-      method: options.method ?? 'GET',
-      data: options.data,
-      enableCookie: true,
-      timeout: REQUEST_TIMEOUT_MS,
-      header: {
-        'content-type': 'application/json',
-      },
-    })
-  } catch (error) {
-    throw createTransportApiError(requestUrl, error)
-  }
+  const response = await Taro.request<T>({
+    url: buildApiUrl(options.path),
+    method: options.method ?? 'GET',
+    data: options.data,
+    enableCookie: true,
+    timeout: REQUEST_TIMEOUT_MS,
+    header: {
+      'content-type': 'application/json',
+    },
+  })
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
     return response.data

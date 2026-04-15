@@ -59,9 +59,19 @@ export const MINI_PROGRAM_ROUTES = {
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
 } as const
 
-export const MINI_PROGRAM_PAGES = [
-  MINI_PROGRAM_PAGE_PATHS.index,
-  MINI_PROGRAM_PAGE_PATHS.discover,
+export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'pages/onboarding' as const
+
+export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
+  'onboarding/index',
+  'personality-test/index',
+  'personality-test/results/index',
+  'personality-test/auth-gate/index',
+  'essential-data/index',
+  'extended-data/index',
+  'profile-review/index',
+] as const
+
+export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.onboarding,
   MINI_PROGRAM_PAGE_PATHS.personalityTest,
   MINI_PROGRAM_PAGE_PATHS.personalityTestResults,
@@ -69,6 +79,11 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.essentialData,
   MINI_PROGRAM_PAGE_PATHS.extendedData,
   MINI_PROGRAM_PAGE_PATHS.profileReview,
+] as const
+
+export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
+  MINI_PROGRAM_PAGE_PATHS.index,
+  MINI_PROGRAM_PAGE_PATHS.discover,
   MINI_PROGRAM_PAGE_PATHS.blindBoxPayment,
   MINI_PROGRAM_PAGE_PATHS.paymentVerification,
   MINI_PROGRAM_PAGE_PATHS.events,
@@ -91,6 +106,29 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.rewards,
   MINI_PROGRAM_PAGE_PATHS.invite,
 ] as const
+
+export const MINI_PROGRAM_PAGES = [
+  ...MINI_PROGRAM_MAIN_PACKAGE_PAGES,
+  ...MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS,
+] as const
+
+export const MINI_PROGRAM_SUBPACKAGES = [
+  {
+    root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
+  },
+] as const
+
+export const MINI_PROGRAM_PRELOAD_RULES = {
+  [MINI_PROGRAM_PAGE_PATHS.index]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.login]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+  },
+} as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
   switch (step) {

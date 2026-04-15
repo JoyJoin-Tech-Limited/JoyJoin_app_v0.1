@@ -60,12 +60,60 @@ interface RuntimeFileBackup {
   contents: string | null;
 }
 
+interface RuntimeNextSteps {
+  bugFix?: string[];
+  enhancement?: string[];
+  validation?: string[];
+}
+
+interface RuntimeRecentAgentSummary {
+  summaryId?: string;
+  agentName?: string;
+  parentAgent?: string | null;
+  recordedAt?: string;
+  focusWindowTurns?: number;
+  done?: string[];
+  learned?: string[];
+  nextTurnImprovements?: string[];
+  confidenceScore?: number;
+  appliedFeedbackFrom?: string[];
+}
+
+interface RuntimeRecentSupervisorReport {
+  summaryId?: string;
+  turnId?: string;
+  turnSequence?: number;
+  recordedAt?: string;
+  focusWindowTurns?: number;
+  done?: string[];
+  keyBullets?: string[];
+  crossAgentInsights?: string[];
+  nextSteps?: RuntimeNextSteps;
+  feedbackByAgent?: Record<string, string[]>;
+  sourceSummaryIds?: string[];
+  confidenceScore?: number;
+  unresolvedAssumptions?: string[];
+}
+
+interface RuntimeTurnSummaryState {
+  focusWindowTurns?: number;
+  lastTurnSequence?: number;
+  recentAgentSummaries?: Record<string, RuntimeRecentAgentSummary[]>;
+  recentSupervisorReports?: RuntimeRecentSupervisorReport[];
+}
+
 interface RuntimeEventEntry {
   event?: string;
   kickoffStatus?: string | null;
   kickoffRecommended?: boolean;
   kickoffCleared?: boolean;
   promptSummary?: string | null;
+  sessionId?: string;
+  summaryId?: string;
+  agentName?: string;
+  turnId?: string | null;
+  turnSequence?: number | null;
+  summary?: Record<string, unknown>;
   memory?: {
     generatedIndexAvailable?: boolean;
     changedFileHitCount?: number;
@@ -140,6 +188,7 @@ interface RuntimeMemoryContext {
 
 interface RuntimeContext {
   artifactPaths?: string[];
+  sessionId?: string;
   recommendedNextAgents?: string[];
   kickoff?: {
     status?: string;
@@ -150,7 +199,19 @@ interface RuntimeContext {
     lastPrompt?: string | null;
     lastReason?: string | null;
   };
+  turnSummaryState?: RuntimeTurnSummaryState;
   memoryContext?: RuntimeMemoryContext;
+}
+
+interface RecordSummaryResult {
+  ok: boolean;
+  persisted: boolean;
+  sessionId: string;
+  summaryId: string;
+  type: string;
+  turnId?: string | null;
+  turnSequence?: number | null;
+  focusWindowTurns: number;
 }
 
 function backupFile(filePath: string): RuntimeFileBackup {
@@ -225,6 +286,22 @@ function runCopilotHook(eventName: string, payload: Record<string, unknown> = {}
   expect(result.status).toBe(0);
 
   return JSON.parse(result.stdout) as HookResult;
+}
+
+function runRecordSummary(payload: Record<string, unknown>, runtimeWritesEnabled = false): RecordSummaryResult {
+  const result = spawnSync('node', ['scripts/orchestration-supervisor.mjs', 'record-summary'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    input: JSON.stringify(payload),
+    env: {
+      ...process.env,
+      ORCHESTRATION_DISABLE_RUNTIME_WRITES: runtimeWritesEnabled ? '0' : '1',
+    },
+  });
+
+  expect(result.status).toBe(0);
+
+  return JSON.parse(result.stdout) as RecordSummaryResult;
 }
 
 function runNodeScript(args: string[], options: {
@@ -775,7 +852,14 @@ describe.sequential('orchestration runtime context persistence', () => {
         'repo-memory/generated/promoted-index.json',
       ]),
     );
+    expect(runtimeContext.sessionId).toEqual(expect.any(String));
     expect(runtimeContext.recommendedNextAgents).toEqual(['Researcher', 'Planner']);
+    expect(runtimeContext.turnSummaryState).toMatchObject({
+      focusWindowTurns: 5,
+      lastTurnSequence: 0,
+      recentAgentSummaries: {},
+      recentSupervisorReports: [],
+    });
     expect(runtimeContext.kickoff).toMatchObject({
       status: 'idle',
       approvalMode: 'plan-first',
@@ -810,6 +894,130 @@ describe.sequential('orchestration runtime context persistence', () => {
         generatedIndexAvailable: true,
         promptHitCount: 0,
         promptQueryMeaningful: false,
+      },
+    });
+  });
+
+  it('records agent summaries and supervisor reports with bounded recent state', () => {
+    runCopilotHook('session-start', {}, true);
+
+    const agentSummary = runRecordSummary(
+      {
+        type: 'agent_turn_summary',
+        agentName: 'Researcher',
+        parentAgent: 'Supervisor',
+        done: ['Gathered repo orchestration context'],
+        filesChanged: ['scripts/orchestration-supervisor.mjs'],
+        decisions: ['Use an explicit summary recorder instead of hook inference'],
+        blockers: [],
+        learned: ['PostToolUse is not a truthful turn boundary source'],
+        nextTurnImprovements: ['Re-verify machine-readable orchestration files'],
+        appliedFeedbackFrom: [],
+        nextSteps: {
+          bugFix: [],
+          enhancement: ['Persist supervisor consolidation summaries'],
+          validation: ['Add regression coverage for recorder state'],
+        },
+        confidence: {
+          score: 0.82,
+          reason: 'Runtime helper behavior was verified before implementation',
+        },
+        unresolvedAssumptions: [],
+      },
+      true,
+    );
+
+    expect(agentSummary.ok).toBe(true);
+    expect(agentSummary.persisted).toBe(true);
+
+    let runtimeContext = readRuntimeContext();
+    expect(runtimeContext.sessionId).toBe(agentSummary.sessionId);
+    expect(runtimeContext.turnSummaryState).toMatchObject({
+      focusWindowTurns: 5,
+      lastTurnSequence: 0,
+    });
+    expect(runtimeContext.turnSummaryState?.recentAgentSummaries?.Researcher).toHaveLength(1);
+    expect(runtimeContext.turnSummaryState?.recentAgentSummaries?.Researcher?.[0]).toMatchObject({
+      summaryId: agentSummary.summaryId,
+      agentName: 'Researcher',
+      parentAgent: 'Supervisor',
+      done: ['Gathered repo orchestration context'],
+      learned: ['PostToolUse is not a truthful turn boundary source'],
+      nextTurnImprovements: ['Re-verify machine-readable orchestration files'],
+      confidenceScore: 0.82,
+    });
+
+    for (let turnNumber = 1; turnNumber <= 6; turnNumber += 1) {
+      const supervisorReport = runRecordSummary(
+        {
+          type: 'supervisor_turn_report',
+          agentName: 'Supervisor',
+          done: [
+            'Consolidated turn ' + String(turnNumber),
+          ],
+          filesChanged: [
+            'scripts/orchestration-supervisor.mjs',
+            'apps/server/src/__tests__/orchestrationKickoff.test.ts',
+          ],
+          decisions: ['Keep recent turn history bounded to five turns'],
+          blockers: [],
+          keyBullets: ['Turn ' + String(turnNumber) + ' consolidation complete'],
+          crossAgentInsights: ['Research context carried into turn ' + String(turnNumber)],
+          sourceSummaryIds: [agentSummary.summaryId],
+          feedbackByAgent: {
+            Researcher: ['Feedback ' + String(turnNumber)],
+          },
+          nextSteps: {
+            bugFix: [],
+            enhancement: ['Enhancement ' + String(turnNumber)],
+            validation: ['Validation ' + String(turnNumber)],
+          },
+          confidence: {
+            score: 0.75,
+            reason: 'Recorded through the runtime summary command',
+          },
+          unresolvedAssumptions: [],
+        },
+        true,
+      );
+
+      expect(supervisorReport.type).toBe('supervisor_turn_report');
+      expect(supervisorReport.turnSequence).toBe(turnNumber);
+      expect(supervisorReport.turnId).toContain(':turn:');
+    }
+
+    runtimeContext = readRuntimeContext();
+    expect(runtimeContext.turnSummaryState).toMatchObject({
+      focusWindowTurns: 5,
+      lastTurnSequence: 6,
+    });
+    expect(runtimeContext.turnSummaryState?.recentSupervisorReports).toHaveLength(5);
+    expect(runtimeContext.turnSummaryState?.recentSupervisorReports?.map((report) => report.turnSequence)).toEqual([2, 3, 4, 5, 6]);
+    expect(runtimeContext.turnSummaryState?.recentSupervisorReports?.[0]).toMatchObject({
+      turnSequence: 2,
+      sourceSummaryIds: [agentSummary.summaryId],
+      feedbackByAgent: {
+        Researcher: ['Feedback 2'],
+      },
+    });
+    expect(runtimeContext.turnSummaryState?.recentSupervisorReports?.[4]).toMatchObject({
+      turnSequence: 6,
+      sourceSummaryIds: [agentSummary.summaryId],
+    });
+
+    const runtimeEvents = readRuntimeEventLog();
+    expect(runtimeEvents.filter((entry) => entry.event === 'agent-turn-summary')).toHaveLength(1);
+    expect(runtimeEvents.filter((entry) => entry.event === 'supervisor-turn-report')).toHaveLength(6);
+    expect(runtimeEvents[runtimeEvents.length - 1]).toMatchObject({
+      event: 'supervisor-turn-report',
+      agentName: 'Supervisor',
+      turnSequence: 6,
+    });
+    expect(runtimeEvents[runtimeEvents.length - 1]?.summary).toMatchObject({
+      type: 'supervisor_turn_report',
+      sourceSummaryIds: [agentSummary.summaryId],
+      feedbackByAgent: {
+        Researcher: ['Feedback 6'],
       },
     });
   });

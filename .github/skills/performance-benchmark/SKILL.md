@@ -44,6 +44,9 @@ Use this skill when you are:
    Once measurement shows the problem, move to `frontend-performance-and-loading` or the owning
    domain skill for the actual fix.
 
+6. Package-loading proposals must measure benefit and added complexity separately.
+   For mini-program package work, compare main-package reduction, target-page first-open latency, preload behavior, and any duplicated bootstrap cost before choosing ordinary versus independent subpackages.
+
 ## Current repo anchors
 
 - `docs/perf.md` defines the current web performance goals and validation ideas.
@@ -55,6 +58,7 @@ Use this skill when you are:
 - **Web route regression**: record route transition timing or Lighthouse data before and after the change.
 - **Bundle claim**: compare build output or route-loading behavior instead of asserting the page is "lighter".
 - **Script throughput**: use the same script, same input size, and the same env assumptions for both runs.
+- **Mini-program subpackage proposal**: compare main-package size and target-page first-open time before and after an ordinary subpackage plus preload split; only then test an independent subpackage if bootstrap still dominates.
 
 ## Troubleshooting
 
@@ -70,6 +74,9 @@ Split them. First prove the regression or improvement, then choose the fix path.
 **The metric is too broad**
 Pick the metric that matches the user-visible problem instead of using a generic perf label.
 
+**The proposal says independent subpackages should be faster**
+That is not a benchmark. Add concrete package-size and first-open measurements, then include the extra bootstrap or duplication cost in the comparison.
+
 ## Review checklist
 
 - [ ] There is a clear before-and-after or baseline comparison
@@ -77,6 +84,7 @@ Pick the metric that matches the user-visible problem instead of using a generic
 - [ ] The benchmark is repeatable by another engineer
 - [ ] Environment assumptions and sample conditions are stated
 - [ ] Results are numeric or otherwise concrete, not only subjective
+- [ ] Mini-program package-loading comparisons include both performance gain and bootstrap/duplication cost
 - [ ] Implementation decisions are separated from measurement findings
 
 ## Related files

@@ -23,6 +23,7 @@
         "Launch Readiness Agent"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "llm-runtime-safety-and-integration",
         "platform-observability-and-ops"
       ],
@@ -67,6 +68,7 @@
         "Launch Readiness Agent"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "code-review",
         "monorepo-workspace-governance"
       ],
@@ -88,7 +90,9 @@
       "handoffs": [
         "Planner"
       ],
-      "skills": [],
+      "skills": [
+        "orchestration-turn-reporting"
+      ],
       "toolingStatus": "sufficient"
     },
     {
@@ -126,7 +130,9 @@
       "handoffs": [
         "Supervisor"
       ],
-      "skills": [],
+      "skills": [
+        "orchestration-turn-reporting"
+      ],
       "toolingStatus": "sufficient"
     },
     {
@@ -165,6 +171,7 @@
         "Taro Migration Specialist"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "monorepo-workspace-governance",
         "docs-sync"
       ],
@@ -189,6 +196,7 @@
         "Auto-Eval"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "server-domain-architecture",
         "auth-session-and-safety-boundaries",
         "reliability-and-state-integrity"
@@ -253,6 +261,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "orchestration-turn-reporting",
         "frontend-component-architecture",
         "design-system-governance",
         "frontend-performance-and-loading",
@@ -279,6 +288,7 @@
         "Supervisor"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "security-scan",
         "platform-observability-and-ops",
         "code-review"
@@ -322,6 +332,7 @@
         "AI Engineer"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "draft-prd"
       ],
       "toolingStatus": "sufficient"
@@ -344,6 +355,7 @@
         "Auto-Eval"
       ],
       "skills": [
+        "orchestration-turn-reporting",
         "e2e-test-runner",
         "testing-and-regression-guardrails"
       ],
@@ -364,6 +376,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "orchestration-turn-reporting",
         "platform-coordination-protocol",
         "frontend-component-architecture"
       ],
@@ -389,6 +402,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "orchestration-turn-reporting",
         "frontend-component-architecture",
         "design-system-governance",
         "joyjoin-brand-guidelines",
@@ -476,6 +490,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "orchestration-turn-reporting",
         "platform-coordination-protocol",
         "frontend-component-architecture",
         "design-system-governance"

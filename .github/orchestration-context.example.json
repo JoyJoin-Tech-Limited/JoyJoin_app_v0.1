@@ -116,5 +116,68 @@
     },
     "summary": "Relevant repo memory: Runtime State Truthfulness."
   },
-  "lastUpdatedAt": "2026-04-13T00:00:00.000Z"
+  "lastUpdatedAt": "2026-04-13T00:00:00.000Z",
+  "sessionId": "982bdfa9-b0e0-4cd4-8419-340d04b62b2e",
+  "turnSummaryState": {
+    "focusWindowTurns": 5,
+    "lastTurnSequence": 1,
+    "recentAgentSummaries": {
+      "Researcher": [
+        {
+          "summaryId": "agent-summary-researcher-1",
+          "agentName": "Researcher",
+          "recordedAt": "2026-04-13T00:00:00.000Z",
+          "focusWindowTurns": 5,
+          "done": [
+            "Collected orchestration runtime files",
+            "Confirmed PostToolUse is not the authoritative turn boundary"
+          ],
+          "learned": [
+            "Turn summaries need explicit agent output plus recorder acknowledgement"
+          ],
+          "nextTurnImprovements": [
+            "Narrow the initial file list before escalating to planning"
+          ],
+          "confidenceScore": 0.88,
+          "appliedFeedbackFrom": []
+        }
+      ]
+    },
+    "recentSupervisorReports": [
+      {
+        "summaryId": "supervisor-report-1",
+        "turnId": "982bdfa9-b0e0-4cd4-8419-340d04b62b2e:turn:1",
+        "turnSequence": 1,
+        "recordedAt": "2026-04-13T00:00:00.000Z",
+        "focusWindowTurns": 5,
+        "keyBullets": [
+          "Kickoff lane selected before implementation",
+          "Operational state stayed under .git/.orchestration"
+        ],
+        "crossAgentInsights": [
+          "Hooks capture evidence, but explicit turn reports are needed for truthful summaries"
+        ],
+        "nextSteps": {
+          "bugFix": [],
+          "enhancement": [
+            "Add a record-summary runtime path"
+          ],
+          "validation": [
+            "Add regression coverage for the last-five-turn ring buffer"
+          ]
+        },
+        "feedbackByAgent": {
+          "Researcher": [
+            "Keep the next brief tighter on affected files and constraints"
+          ],
+          "Supervisor": [
+            "Prefer child JSON summaries over prose paraphrase when consolidating"
+          ]
+        },
+        "sourceSummaryIds": [
+          "agent-summary-researcher-1"
+        ]
+      }
+    ]
+  }
 }

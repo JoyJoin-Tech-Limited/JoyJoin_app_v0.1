@@ -62,12 +62,6 @@ export default function PersonalityTestAuthGatePage() {
       ? sessionSnapshot.result.primaryArchetype
       : '你的氛围原型'
   const isBusy = isImportingLogin || isGenericLoggingIn
-  const heroSubtitle = hasAnonymousSessionId
-    ? '这一步会把当前设备里的答题结果一起保存下来；如果刚才的进度还留在这台设备里，我们也会顺手帮你接上。登录成功后，系统会自动带你去该去的下一步。'
-    : '这一步会把当前设备里的答题结果一起保存下来。登录成功后，系统会自动带你去该去的下一步。'
-  const importSummary = hasAnonymousSessionId
-    ? '把这台设备里的测试结果和刚才的进度一起接上'
-    : '把这台设备里的测试结果一起保存下来'
   const analytics = useOnboardingAnalytics('personality-test-auth-gate', {
     enabled: !auth.isLoading && !auth.isAuthenticated,
     startMetadata: {
@@ -161,18 +155,16 @@ export default function PersonalityTestAuthGatePage() {
     return (
       <View className='personality-auth-gate'>
         <View className='personality-auth-gate__empty'>
-          <Text className='personality-auth-gate__title'>这份结果现在接不上</Text>
+          <Text className='personality-auth-gate__title'>这份结果暂时没法继续导入</Text>
           <Text className='personality-auth-gate__subtitle'>
-            当前设备里没有找到这次测试记录。你可以直接微信登录，让系统按已有进度继续；如果想带上刚才的结果，重新完成一次测试会更稳妥。
+            当前设备里没有找到可导入的匿名答题记录。你可以直接微信登录，让系统按服务端进度继续；如果想带上这次测试结果，重新完成测试会更稳妥。
           </Text>
-          <View className='personality-auth-gate__empty-actions'>
-            <Button onClick={handleRestartTest} disabled={isBusy}>
-              返回重新测试
-            </Button>
-            <Button variant='secondary' onClick={() => void handleGenericLogin()} disabled={isBusy}>
-              {isGenericLoggingIn ? '登录中…' : '直接微信登录并继续'}
-            </Button>
-          </View>
+          <Button onClick={handleRestartTest} disabled={isBusy}>
+            返回重新测试
+          </Button>
+          <Button variant='secondary' onClick={() => void handleGenericLogin()} disabled={isBusy}>
+            {isGenericLoggingIn ? '登录中…' : '直接微信登录并继续'}
+          </Button>
         </View>
       </View>
     )
@@ -181,35 +173,30 @@ export default function PersonalityTestAuthGatePage() {
   return (
     <ScrollView className='personality-auth-gate' scrollY enhanced showScrollbar={false}>
       <View className='personality-auth-gate__hero'>
-        <Text className='personality-auth-gate__eyebrow'>带着这份结果继续</Text>
-        <Text className='personality-auth-gate__title'>登录后，把 {primaryArchetype} 一起带走</Text>
-        <Text className='personality-auth-gate__subtitle'>{heroSubtitle}</Text>
+        <Text className='personality-auth-gate__eyebrow'>保存匿名结果</Text>
+        <Text className='personality-auth-gate__title'>登录后，继续带着 {primaryArchetype} 往前走</Text>
+        <Text className='personality-auth-gate__subtitle'>
+          这一步会把当前设备上的匿名答题记录带进登录；如果还能找到匿名 session，也会一并关联。登录成功后再由系统决定真正的下一步。
+        </Text>
       </View>
 
       <Card className='personality-auth-gate__card'>
         <Text className='personality-auth-gate__card-title'>登录后会发生什么</Text>
         <View className='personality-auth-gate__bullet-list'>
-          <Text className='personality-auth-gate__bullet'>1. 完成微信登录，确认你的账号</Text>
-          <Text className='personality-auth-gate__bullet'>2. {importSummary}</Text>
-          <Text className='personality-auth-gate__bullet'>3. 按当前进度继续完善资料或进入下一步</Text>
+          <Text className='personality-auth-gate__bullet'>1. 用微信 code 建立正式登录会话</Text>
+          <Text className='personality-auth-gate__bullet'>2. 导入当前设备上的匿名测试答案；如果还能找到匿名 session，也会一并关联</Text>
+          <Text className='personality-auth-gate__bullet'>3. 读取系统进度，继续前往基础资料或正确的下一步</Text>
         </View>
       </Card>
 
-      <Card className='personality-auth-gate__summary-card'>
-        <View className='personality-auth-gate__summary-item'>
-          <Text className='personality-auth-gate__summary-label'>当前原型</Text>
-          <Text className='personality-auth-gate__summary-value'>{primaryArchetype}</Text>
-        </View>
-        <View className='personality-auth-gate__summary-divider' />
-        <View className='personality-auth-gate__summary-item'>
-          <Text className='personality-auth-gate__summary-label'>待保存答案</Text>
-          <Text className='personality-auth-gate__summary-value'>{answers.length} 条</Text>
-        </View>
+      <Card className='personality-auth-gate__card personality-auth-gate__card--compact'>
+        <Text className='personality-auth-gate__meta'>待导入答案</Text>
+        <Text className='personality-auth-gate__meta-value'>{answers.length} 条</Text>
       </Card>
 
       <View className='personality-auth-gate__actions'>
         <Button onClick={handleLogin} disabled={isBusy}>
-          {isImportingLogin ? '登录中…' : '微信登录，保存结果并继续'}
+          {isImportingLogin ? '登录中…' : '微信登录并继续'}
         </Button>
         <Button
           variant='secondary'
@@ -218,9 +205,6 @@ export default function PersonalityTestAuthGatePage() {
         >
           返回看看结果
         </Button>
-        <Text className='personality-auth-gate__action-note'>
-          只会带上当前设备里的测试结果，不会改动系统决定的下一步。
-        </Text>
       </View>
     </ScrollView>
   )

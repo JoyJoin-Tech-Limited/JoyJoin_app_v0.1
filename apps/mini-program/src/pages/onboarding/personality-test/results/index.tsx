@@ -74,7 +74,6 @@ export default function PersonalityTestResultsPage() {
   const summary = ARCHETYPE_SUMMARIES[primaryArchetype] ?? '你已经有了一个很清晰的社交氛围倾向，接下来登录就能继续完善资料。'
   const traitEntries = getTraitEntries(result)
   const topMatches = getTopMatches(result, snapshot?.topArchetypes)
-  const heroHighlights = ['先看结果再决定', '登录后会继续当前进度']
   const analytics = useOnboardingAnalytics('personality-test-results', {
     enabled: !auth.isLoading && !auth.isAuthenticated,
     startMetadata: {
@@ -128,7 +127,7 @@ export default function PersonalityTestResultsPage() {
         <View className='personality-results__empty'>
           <Text className='personality-results__title'>结果还没准备好</Text>
           <Text className='personality-results__subtitle'>
-            当前设备里没有找到可继续的测试结果，重新做一次会更稳妥。
+            当前设备里没有找到可继续的匿名测试结果，重新做一次会更稳妥。
           </Text>
           <Button onClick={handleRestart}>
             重新开始测试
@@ -141,38 +140,27 @@ export default function PersonalityTestResultsPage() {
   return (
     <ScrollView className='personality-results' scrollY enhanced showScrollbar={false}>
       <View className='personality-results__hero'>
-        <Text className='personality-results__eyebrow'>你的第一版结果已准备好</Text>
+        <Text className='personality-results__eyebrow'>匿名结果已解锁</Text>
         <Text className='personality-results__title'>你的氛围原型更接近</Text>
         <Text className='personality-results__archetype'>{primaryArchetype || '神秘原型'}</Text>
         <Text className='personality-results__subtitle'>{summary}</Text>
-
-        <View className='personality-results__hero-tags'>
-          {heroHighlights.map((item) => (
-            <View key={item} className='personality-results__hero-tag'>
-              <Text className='personality-results__hero-tag-text'>{item}</Text>
-            </View>
-          ))}
-        </View>
       </View>
 
       <Card className='personality-results__card'>
-        <Text className='personality-results__card-title'>先看看你的社交底色</Text>
+        <Text className='personality-results__card-title'>这一版结果先告诉你什么</Text>
         <Text className='personality-results__card-copy'>
-          登录后，这份结果会跟着你一起继续。系统会按你的真实进度，把你带去完善资料或进入该去的下一步。
+          登录后，系统会按你的真实进度把你继续送往基础资料或正确的下一步。
         </Text>
 
         {topMatches.length > 0 ? (
-          <>
-            <Text className='personality-results__section-label'>相近原型</Text>
-            <View className='personality-results__match-list'>
-              {topMatches.slice(0, 3).map((match) => (
-                <View key={match.archetype} className='personality-results__match-chip'>
-                  <Text className='personality-results__match-name'>{match.archetype}</Text>
-                  <Text className='personality-results__match-score'>{Math.round(match.score)}%</Text>
-                </View>
-              ))}
-            </View>
-          </>
+          <View className='personality-results__match-list'>
+            {topMatches.slice(0, 3).map((match) => (
+              <View key={match.archetype} className='personality-results__match-chip'>
+                <Text className='personality-results__match-name'>{match.archetype}</Text>
+                <Text className='personality-results__match-score'>{Math.round(match.score)}%</Text>
+              </View>
+            ))}
+          </View>
         ) : null}
       </Card>
 
@@ -195,14 +183,11 @@ export default function PersonalityTestResultsPage() {
 
       <View className='personality-results__actions'>
         <Button onClick={() => void handleContinue()}>
-          微信登录，保存结果并继续
+          微信登录，继续下一步
         </Button>
         <Button variant='secondary' onClick={handleRestart}>
           重新测试一次
         </Button>
-        <Text className='personality-results__action-note'>
-          这份结果会先保留在当前设备里，准备好再继续也可以。
-        </Text>
       </View>
     </ScrollView>
   )

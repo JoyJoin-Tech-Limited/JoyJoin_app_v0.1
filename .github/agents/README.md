@@ -12,6 +12,12 @@ Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whethe
 
 **Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the invocation name, and the `description` is the routing surface.
 
+All active agents now follow the shared turn-reporting protocol:
+- emit a compact end-of-turn JSON summary
+- use the last 5 relevant summaries and supervisor feedback to refine the next turn
+- keep persistent summary state under `.git/.orchestration/`, not `repo-memory/`
+- let `Supervisor` consolidate child summaries into one turn-end report for the workflow
+
 ---
 
 ## Session kickoff agents
