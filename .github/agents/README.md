@@ -8,9 +8,9 @@ Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whethe
 
 ## How to use these agents
 
-**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`, then hand off to a specialist. If execution needs midstream rerouting, use `Supervisor`, which now exposes native handoffs back to kickoff and into the audited frontend support lanes without expanding the v1 core graph. If the task is migration, debugging, prompt work, or product scoping, use the specialist.
+**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`. Do not use `Supervisor` as a default third kickoff hop; use it after approval or when execution needs midstream rerouting. If the task is migration, debugging, prompt work, or workflow governance, use the specialist.
 
-**Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the invocation name, and the `description` is the routing surface.
+**Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the canonical invocation name, and the `description` is the routing surface.
 
 All active agents now follow the shared turn-reporting protocol:
 - emit a compact end-of-turn JSON summary
@@ -37,9 +37,9 @@ These are the v1 agents wired into the native handoff graph documented in [`../O
 
 | Agent | Portfolio role | Primary use | File |
 |-------|----------------|-------------|------|
-| `Supervisor` | Orchestrator | Routes the next specialist across the core handoff graph and selected kickoff or frontend support rerouting lanes | [`supervisor.agent.md`](./supervisor.agent.md) |
+| `Supervisor` | Orchestrator | Routes the next specialist across the core handoff graph and selected kickoff, debug, or frontend support rerouting lanes after approval or from concrete blocker findings | [`supervisor.agent.md`](./supervisor.agent.md) |
 | `Auto-Eval` | Quality gate | Dirty-worktree evaluation, manual reruns, and local quality sign-off | [`auto-eval.agent.md`](./auto-eval.agent.md) |
-| `Product Manager` | Product scope | PRD drafting, user-story shaping, scope clarification, and measurable product framing | [`product-manager.agent.md`](./product-manager.agent.md) |
+| `Product Manager` | Product scope | PRDs, feature briefs, issue-ready backlog artifacts, acceptance criteria, and measurable product framing | [`product-manager.agent.md`](./product-manager.agent.md) |
 | `Backend Engineer` | Implementation | Server-side implementation in `apps/server` | [`backend-engineer.agent.md`](./backend-engineer.agent.md) |
 | `AI Engineer` | Implementation | Runtime AI integration, fallback behavior, provider routing, and AI trace safety | [`ai-engineer.agent.md`](./ai-engineer.agent.md) |
 | `QA Agent` | Verification | Smoke validation, regression checklist design, and verification-gap reporting | [`qa-agent.agent.md`](./qa-agent.agent.md) |
@@ -47,7 +47,7 @@ These are the v1 agents wired into the native handoff graph documented in [`../O
 
 ## Audited support agents
 
-These agents are still part of the active portfolio, but they are not in the v1 native handoff graph by default. They are catalogued in the orchestration contract with skill links and tooling sufficiency notes so future expansion stays deliberate. Some of them are explicit `Supervisor` support-lane exits for frontend and parity work, but they still remain outside the small core graph.
+These agents are still part of the active portfolio, but they are not in the v1 native handoff graph by default. They are catalogued in the orchestration contract with skill links and tooling sufficiency notes so future expansion stays deliberate. Some of them are explicit `Supervisor` support-lane exits for debugging, frontend, and parity work, but they still remain outside the small core graph.
 
 | Agent | Current scope | File |
 |-------|---------------|------|
@@ -57,11 +57,10 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Taro Mini-Program Frontend Engineer` | Direct Taro UI implementation and refinement in `apps/mini-program` | [`taro-mini-program-frontend-engineer.agent.md`](./taro-mini-program-frontend-engineer.agent.md) |
 | `Taro Migration Specialist` | Broad web-to-mini-program migration and parity restoration | [`taro-migration-specialist.agent.md`](./taro-migration-specialist.agent.md) |
 | `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend engineer.md`](./frontend%20engineer.md) |
-| `debug` | Root-cause debugging, failing tests, and runtime errors | [`debug.agent.md`](./debug.agent.md) |
-| `principal SWE` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
-| `SE: Product Manager` | Issue-ready product scoping and business-value framing for backlog work | [`PM advisor.md`](./PM%20advisor.md) |
-| `prompt engineer` | Prompt review, repo-resident prompt maintenance, examples, and structure tightening | [`prompt engineer.md`](./prompt%20engineer.md) |
-| `SelfIteration` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts | [`self-iteration.agent.md`](./self-iteration.agent.md) |
+| `debug` | Bug and issue investigation, regressions, failing tests, and root-cause debugging | [`debug.agent.md`](./debug.agent.md) |
+| `Principal Software Engineer` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
+| `Prompt Engineer` | Prompt review, repo-resident prompt maintenance, safety-aware structure tightening, and example cleanup | [`prompt engineer.md`](./prompt%20engineer.md) |
+| `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts | [`self-iteration.agent.md`](./self-iteration.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

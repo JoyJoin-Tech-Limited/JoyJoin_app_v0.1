@@ -37,7 +37,7 @@ That split is deliberate:
 - keep the broader portfolio visible so future expansion stays explicit
 - capture tooling gaps now instead of rediscovering them later
 
-Supervisor also has explicit rerouting exits that do not promote more agents into the core graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, and it can route into selected audited frontend lanes for parity audit, web UI work, mini-program UI work, or parity-first migration.
+Supervisor also has explicit rerouting exits that do not promote more agents into the core graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, and it can route into selected audited support lanes for bug investigation, parity audit, web UI work, mini-program UI work, or parity-first migration.
 
 Those rerouting exits are now also declared as native Supervisor handoffs in the agent frontmatter so the routing buttons and the orchestration contract stay aligned.
 
@@ -82,13 +82,14 @@ node scripts/orchestration-supervisor.mjs workflow pull-request
 - `SessionStart` initializes the orchestration runtime, writes default kickoff state under `.git/.orchestration/context.json`, and builds advisory repo-memory context only from changed files under `.github/`, `scripts/`, and `repo-memory/`.
 - `UserPromptSubmit` inspects the first broad prompt and recommends `Researcher` -> `Planner` when the request is multi-step, ambiguous, or cross-cutting.
 - `UserPromptSubmit` also queries the promoted repo-memory index for meaningful prompts only, then surfaces a concise relevant-memory summary when useful hits exist.
-- Custom agents emit explicit end-of-turn JSON summaries. Those summaries are persisted through `node scripts/orchestration-supervisor.mjs record-summary`, not inferred from hook telemetry.
-- `Supervisor` consolidates child summaries into one turn-end report with cross-agent insights, per-agent feedback, and categorized task recommendations.
+- Custom agents emit explicit end-of-turn JSON summaries. Those summaries are persisted through `node scripts/orchestration-supervisor.mjs record-summary` via stdin, `--json`, or `--file`, not inferred from hook telemetry.
+- `Supervisor` consolidates child summaries into one canonical `supervisor_turn_report` JSON object with cross-agent insights, per-agent feedback, and categorized task recommendations.
+- `Supervisor` returns a separate visible note using `What has been done`, optional `Key insight`, and mandatory `Recommended next action`, written in plain language for non-technical readers.
 - `Researcher` returns a structured research brief.
 - `Planner` turns that brief into an approval-first execution plan.
 - After approval, `Supervisor` or the named specialist carries execution forward.
 
-This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and advisory retrieval state, while explicit agent reporting and recorder acknowledgements remain the authoritative source for turn-end summaries.
+This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and advisory retrieval state, while explicit agent reporting and recorder acknowledgements remain the authoritative source for turn-end summaries. The Supervisor's visible note is presentation only; the recorder payload remains the authoritative stored summary.
 
 ## Core handoff graph
 
@@ -104,6 +105,7 @@ This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bo
 
 - `Supervisor` -> `Researcher` when the current blocker exposes missing repo context or unresolved ambiguity.
 - `Supervisor` -> `Planner` when the findings exist but the plan, sequencing, or approval boundary must be refreshed.
+- `Supervisor` -> `debug` for isolated bug investigation, failure reproduction, root-cause analysis, or the narrowest safe fix before another specialist takes over.
 - `Supervisor` -> `Mini-Program Parity Auditor` for compare-only parity review or migration backlog work.
 - `Supervisor` -> `Expert React Frontend Engineer` for web UI implementation in `apps/user-client`, including branding-sensitive UI work that should stay attached to frontend skills rather than a standalone branding agent.
 - `Supervisor` -> `Taro Mini-Program Frontend Engineer` for direct Taro UI implementation or refinement in `apps/mini-program`.
@@ -141,12 +143,13 @@ Useful audited support bindings:
 - `Admin Operations Advisor` -> `admin-audit-and-rbac-governance`, `auth-session-and-safety-boundaries`, `platform-observability-and-ops`
 - `Database Schema & Migration Auditor` -> `database-migration-safety`, `backend-models-standards`, `reliability-and-state-integrity`
 - `Mini-Program Parity Auditor` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`
-- `Taro Mini-Program Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
+- `Taro Mini-Program Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
 - `Taro Migration Specialist` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
-- `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
+- `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
+- `debug` -> `testing-and-regression-guardrails`
 - `SelfIteration` -> `docs-sync`, `testing-and-regression-guardrails`
 
-Branding remains a skill boundary on the frontend agents through `design-system-governance` and `joyjoin-brand-guidelines`; there is no standalone branding agent in the current orchestration portfolio.
+Branding and crafted interaction polish remain skill boundaries on the frontend agents through `design-system-governance`, `joyjoin-brand-guidelines`, and `wow-elements`; there is no standalone branding agent in the current orchestration portfolio.
 
 ## Tooling sufficiency audit
 
@@ -175,7 +178,7 @@ Branding remains a skill boundary on the frontend agents through `design-system-
 | `Taro Mini-Program Frontend Engineer` | `sufficient` | Taro implementation and delegated parity review are covered. | Optional visual-diff tooling for UI polish validation. |
 | `Taro Migration Specialist` | `sufficient` | Migration work already has the right combination of edit, execute, and subagents. | Optional screenshot capture for source-versus-target visual comparison. |
 | `Expert React Frontend Engineer` | `sufficient` | Browser-first frontend implementation is covered by the normalized tool surface. | Add explicit subagent support only if cross-platform coordination should originate directly from this agent. |
-| `debug` | `sufficient` | Bug investigation and root-cause remediation are covered by the normalized tool surface. | Add explicit agent delegation or handoffs only if resolved root causes should route directly into owning specialists. |
+| `debug` | `sufficient` | Bug investigation and root-cause remediation are covered by the normalized tool surface. | Supervisor can now route bug investigation into `debug`; add explicit debug-to-domain handoffs only if resolved root causes should route directly into owning specialists. |
 | `principal SWE` | `sufficient` | Principal-level architecture guidance is covered by normalized repo inspection and command execution. | Add GitHub review or issue integrations only if this advisor should own those workflows directly. |
 | `SE: Product Manager` | `sufficient` | Issue-ready product scoping is covered by normalized repo inspection and editing without requiring direct tracker mutation. | Add issue-tracker write integration only if this agent should create or update backlog records directly. |
 | `prompt engineer` | `sufficient` | Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability. | Add execute capability only if prompt workflows need scripted validation or linting. |
@@ -187,7 +190,7 @@ Branding remains a skill boundary on the frontend agents through `design-system-
 - `npm run orchestration:validate` should pass after orchestration changes.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Please explain separate durable memory from operational state for the orchestration runtime context."}'` should surface relevant repo memory without forcing a kickoff recommendation.
-- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary <<< '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
 - `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.

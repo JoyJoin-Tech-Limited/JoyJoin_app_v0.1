@@ -19,7 +19,16 @@ export default function CenterTabEmptyPage() {
     <View className='center-tab-empty'>
       <View className='center-tab-empty__content'>
         <View className='center-tab-empty__art'>
-          <Image className='center-tab-empty__art-image' src='/assets/continue.png' mode='aspectFit' />
+          <Image
+            className='center-tab-empty__art-bg'
+            src='/assets/empty-state/center-empty-bg.png'
+            mode='aspectFill'
+          />
+          <Image
+            className='center-tab-empty__art-illustration'
+            src='/assets/empty-state/center-empty-illustration.png'
+            mode='aspectFit'
+          />
         </View>
 
         <Text className='center-tab-empty__title'>你还没参加任何活动</Text>

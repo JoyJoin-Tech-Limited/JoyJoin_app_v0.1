@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Button } from '@tarojs/components'
+import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
@@ -21,6 +21,7 @@ export default function EventDetailPage() {
   const router = useRouter()
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
+  const supportQrSrc = '/assets/qr/customer-service-support.png'
 
   const { data: event, isLoading, error } = useQuery<EventDetail>({
     queryKey: ['mini-program', 'event-detail', eventId],
@@ -49,6 +50,13 @@ export default function EventDetailPage() {
         </View>
       </View>
     )
+  }
+
+  const handlePreviewSupportQr = () => {
+    void Taro.previewImage({
+      current: supportQrSrc,
+      urls: [supportQrSrc],
+    })
   }
 
   return (
@@ -89,6 +97,15 @@ export default function EventDetailPage() {
           <Text className='event-detail__description'>{event.description}</Text>
         </View>
       ) : null}
+
+      <View className='event-detail__card event-detail__support-card' onClick={handlePreviewSupportQr}>
+        <View className='event-detail__support-copy'>
+          <Text className='event-detail__support-title'>加入我们的智能客服</Text>
+          <Text className='event-detail__support-subtitle'>使用微信扫描二维码联系客服</Text>
+          <Text className='event-detail__support-helper'>长按保存二维码</Text>
+        </View>
+        <Image className='event-detail__support-qr' src={supportQrSrc} mode='aspectFit' />
+      </View>
 
       <View className='event-detail__actions'>
         <Button

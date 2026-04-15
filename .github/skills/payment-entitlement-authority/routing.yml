@@ -1,0 +1,79 @@
+skill: payment-entitlement-authority
+
+primary_ownership: >
+  Current authority map for payment creation, verification, fulfillment,
+  entitlement gating, refunds, event-pack credits, and shared payment contract
+  boundaries across server, shared, and platform-local clients.
+
+use_when:
+  - adding or reviewing payment creation, status, or webhook handling
+  - changing refund flows, event-pack credits, or entitlement gating
+  - updating shared payment verification helpers or shared payment DTOs
+  - deciding whether a payment change belongs on the server, in packages/shared, or in platform-local adapters
+  - auditing mini-program versus web payment coordination
+
+do_not_use_when:
+  - task is only about generic route placement without payment-specific authority questions
+  - task is only about schema migration mechanics without payment behavior changes
+  - task is only about pricing copy or presentation with no payment authority impact
+
+strong_triggers:
+  - PaymentService
+  - paymentFulfillmentRepo
+  - eventCreditsRepo
+  - /api/payments/create
+  - /api/payments/miniprogram/create
+  - /api/payments/status
+  - /api/subscription/renew
+  - /api/webhooks/wechat-pay
+  - PAYMENTS_ENABLED
+  - REFUND.SUCCESS
+  - PAYMENT_REFUND_INITIATED
+  - NO_ACTIVE_ENTITLEMENT
+  - getPaymentVerificationStatusDecision
+  - getPaymentVerificationErrorDecision
+  - pending_order
+  - event_credit_grants
+
+owned_files:
+  - apps/server/src/routes/domains/payments.ts
+  - apps/server/src/paymentService.ts
+  - apps/server/src/repositories/paymentFulfillmentRepo.ts
+  - apps/server/src/repositories/eventCreditsRepo.ts
+  - apps/server/src/routes.ts
+  - packages/shared/src/api.ts
+  - packages/shared/src/schema.ts
+  - docs/PLATFORM_COORDINATION.md
+  - docs/LAUNCH_CONFIG.md
+  - apps/server/src/__tests__/paymentWebhook.test.ts
+  - apps/server/src/__tests__/paymentFulfillmentRepo.test.ts
+  - apps/server/src/__tests__/miniProgramPaymentRoutes.test.ts
+  - apps/server/src/__tests__/sharedApiContracts.test.ts
+
+owned_paths:
+  - /api/payments/create
+  - /api/payments/miniprogram/create
+  - /api/payments/status/:wechatOrderId
+  - /api/subscription/renew
+  - /api/webhooks/wechat-pay
+  - /api/admin/payments/:paymentId/refund
+
+owned_symbols:
+  - PaymentService
+  - paymentFulfillmentRepo
+  - eventCreditsRepo
+  - getPaymentVerificationStatusDecision
+  - getPaymentVerificationErrorDecision
+  - PAYMENTS_ENABLED
+  - NO_ACTIVE_ENTITLEMENT
+  - PAYMENT_REFUND_INITIATED
+
+related_skills:
+  - skill: reliability-and-state-integrity
+    when: the payment change needs transaction, idempotency, or retry design beyond current ownership boundaries
+  - skill: platform-coordination-protocol
+    when: the shared payment contract changes affect both web and mini-program adapters
+  - skill: admin-audit-and-rbac-governance
+    when: refund or admin payment mutation permissions or audit logging change
+  - skill: server-domain-architecture
+    when: you are adding a new payment route or repository and need placement guidance in addition to payment authority rules

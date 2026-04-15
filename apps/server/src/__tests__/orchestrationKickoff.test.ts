@@ -288,20 +288,45 @@ function runCopilotHook(eventName: string, payload: Record<string, unknown> = {}
   return JSON.parse(result.stdout) as HookResult;
 }
 
-function runRecordSummary(payload: Record<string, unknown>, runtimeWritesEnabled = false): RecordSummaryResult {
-  const result = spawnSync('node', ['scripts/orchestration-supervisor.mjs', 'record-summary'], {
+function runRecordSummaryCommand(
+  commandArgs: string[],
+  options: {
+    input?: string;
+    runtimeWritesEnabled?: boolean;
+  } = {},
+): RecordSummaryResult {
+  const result = spawnSync('node', ['scripts/orchestration-supervisor.mjs', 'record-summary', ...commandArgs], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
-    input: JSON.stringify(payload),
+    input: options.input,
     env: {
       ...process.env,
-      ORCHESTRATION_DISABLE_RUNTIME_WRITES: runtimeWritesEnabled ? '0' : '1',
+      ORCHESTRATION_DISABLE_RUNTIME_WRITES: options.runtimeWritesEnabled ? '0' : '1',
     },
   });
 
   expect(result.status).toBe(0);
 
   return JSON.parse(result.stdout) as RecordSummaryResult;
+}
+
+function runRecordSummary(payload: Record<string, unknown>, runtimeWritesEnabled = false): RecordSummaryResult {
+  return runRecordSummaryCommand([], {
+    input: JSON.stringify(payload),
+    runtimeWritesEnabled,
+  });
+}
+
+function runRecordSummaryWithJsonArg(payload: Record<string, unknown>, runtimeWritesEnabled = false): RecordSummaryResult {
+  return runRecordSummaryCommand(['--json', JSON.stringify(payload)], {
+    runtimeWritesEnabled,
+  });
+}
+
+function runRecordSummaryWithFileArg(filePath: string, runtimeWritesEnabled = false): RecordSummaryResult {
+  return runRecordSummaryCommand(['--file', filePath], {
+    runtimeWritesEnabled,
+  });
 }
 
 function runNodeScript(args: string[], options: {
@@ -894,6 +919,93 @@ describe.sequential('orchestration runtime context persistence', () => {
         generatedIndexAvailable: true,
         promptHitCount: 0,
         promptQueryMeaningful: false,
+      },
+    });
+  });
+
+  it('accepts --json and --file payload sources for record-summary', () => {
+    runCopilotHook('session-start', {}, true);
+
+    const agentSummary = runRecordSummaryWithJsonArg(
+      {
+        type: 'agent_turn_summary',
+        agentName: 'Researcher',
+        parentAgent: 'Supervisor',
+        done: ['Recorded an agent summary through --json'],
+        filesChanged: ['scripts/orchestration-supervisor.mjs'],
+        decisions: ['Prefer direct recorder flags over shell heredoc input for summary payloads'],
+        blockers: [],
+        learned: ['The record-summary command now supports a direct JSON argument'],
+        nextTurnImprovements: ['Keep a focused regression test on the non-stdin recorder path'],
+        appliedFeedbackFrom: [],
+        nextSteps: {
+          bugFix: [],
+          enhancement: [],
+          validation: ['Exercise the file-based recorder path in the same test'],
+        },
+        confidence: {
+          score: 0.88,
+          reason: 'The recorder accepted a JSON argument without reading stdin',
+        },
+        unresolvedAssumptions: [],
+      },
+      true,
+    );
+
+    expect(agentSummary.ok).toBe(true);
+    expect(agentSummary.type).toBe('agent_turn_summary');
+
+    const tempSummaryDir = mkdtempSync(path.join(tmpdir(), 'joyjoin-turn-summary-'));
+
+    try {
+      const summaryFilePath = path.join(tempSummaryDir, 'supervisor-summary.json');
+      writeFileSync(
+        summaryFilePath,
+        JSON.stringify({
+          turnSummary: {
+            type: 'supervisor_turn_report',
+            agentName: 'Supervisor',
+            done: ['Recorded a supervisor report from a JSON file'],
+            filesChanged: ['scripts/orchestration-supervisor.mjs'],
+            decisions: ['Prefer direct recorder flags over shell heredocs'],
+            blockers: [],
+            keyBullets: ['Recorder accepted a --file payload'],
+            crossAgentInsights: ['Direct CLI payload sources are less brittle than shell redirection'],
+            sourceSummaryIds: [agentSummary.summaryId],
+            feedbackByAgent: {
+              Researcher: ['No additional research was required for the CLI fix'],
+            },
+            nextSteps: {
+              bugFix: [],
+              enhancement: [],
+              validation: ['Keep non-stdin record-summary coverage in place'],
+            },
+            confidence: {
+              score: 0.9,
+              reason: 'The recorder accepted a file-based payload without stdin',
+            },
+            unresolvedAssumptions: [],
+          },
+        }),
+        'utf8',
+      );
+
+      const supervisorReport = runRecordSummaryWithFileArg(summaryFilePath, true);
+
+      expect(supervisorReport.ok).toBe(true);
+      expect(supervisorReport.type).toBe('supervisor_turn_report');
+      expect(supervisorReport.turnSequence).toBe(1);
+    } finally {
+      rmSync(tempSummaryDir, { recursive: true, force: true });
+    }
+
+    const runtimeContext = readRuntimeContext();
+    expect(runtimeContext.turnSummaryState?.recentAgentSummaries?.Researcher).toHaveLength(1);
+    expect(runtimeContext.turnSummaryState?.recentSupervisorReports).toHaveLength(1);
+    expect(runtimeContext.turnSummaryState?.recentSupervisorReports?.[0]).toMatchObject({
+      sourceSummaryIds: [agentSummary.summaryId],
+      feedbackByAgent: {
+        Researcher: ['No additional research was required for the CLI fix'],
       },
     });
   });

@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(120rpx + env(safe-area-inset-bottom));
+  height: calc(128rpx + env(safe-area-inset-bottom));
   pointer-events: auto;
   z-index: 120;
 }
@@ -15,12 +15,12 @@
   left: 24rpx;
   right: 24rpx;
   bottom: env(safe-area-inset-bottom);
-  height: 120rpx;
+  height: 128rpx;
   box-sizing: border-box;
   border: 2rpx solid rgba(139, 92, 246, 0.06);
-  border-radius: 40rpx;
+  border-radius: 42rpx;
   background: rgba(255, 255, 255, 0.985);
-  box-shadow: 0 14rpx 40rpx rgba(45, 49, 66, 0.1);
+  box-shadow: 0 10rpx 28rpx rgba(45, 49, 66, 0.08);
 }
 
 .joy-custom-tab-bar__border {
@@ -43,7 +43,7 @@
   align-items: stretch;
   height: 100%;
   box-sizing: border-box;
-  padding: 8rpx 24rpx 6rpx;
+  padding: 12rpx 24rpx 8rpx;
 }
 
 .joy-custom-tab-bar__side {
@@ -54,8 +54,22 @@
 }
 
 .joy-custom-tab-bar__center-gap {
-  width: 200rpx;
+  width: 192rpx;
   flex-shrink: 0;
+}
+
+.joy-custom-tab-bar__center-seat {
+  position: absolute;
+  left: 50%;
+  top: 20rpx;
+  z-index: 0;
+  width: 184rpx;
+  height: 88rpx;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  border-radius: 42rpx;
+  background: rgba(247, 243, 255, 0.88);
+  border: 2rpx solid rgba(139, 92, 246, 0.08);
 }
 
 /* ── Tab item ──────────────────────────────────────────────── */
@@ -133,15 +147,15 @@
   text-align: center;
 }
 
-/* ── Protruding center button ──────────────────────────────── */
+/* ── Semi-raised center CTA ────────────────────────────────── */
 
 .joy-custom-tab-bar__center {
   position: absolute;
   left: 50%;
-  top: -64rpx;
+  top: -42rpx;
   z-index: 2;
   display: flex;
-  width: 200rpx;
+  width: 192rpx;
   flex-direction: column;
   align-items: center;
   transform: translateX(-50%);
@@ -150,51 +164,54 @@
 .joy-custom-tab-bar__center-outer-ring {
   position: relative;
   display: flex;
-  height: 156rpx;
-  width: 156rpx;
+  height: 136rpx;
+  width: 136rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
-  background: linear-gradient(135deg, rgba(255, 107, 157, 0.15) 0%, rgba(168, 107, 255, 0.15) 100%);
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2rpx solid rgba(139, 92, 246, 0.08);
 }
 
 .joy-custom-tab-bar__center-button {
   position: relative;
   display: flex;
-  height: 140rpx;
-  width: 140rpx;
+  height: 122rpx;
+  width: 122rpx;
   align-items: center;
   justify-content: center;
   border-radius: 9999rpx;
-  background: linear-gradient(135deg, #FF6B9D 0%, #A86BFF 100%);
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #A16BFF 0%, #8B5CF6 100%);
   box-shadow:
-    0 8rpx 24rpx rgba(139, 92, 246, 0.35),
-    0 24rpx 56rpx rgba(255, 107, 157, 0.18);
-  border: 6rpx solid rgba(255, 255, 255, 0.9);
+    0 8rpx 18rpx rgba(45, 49, 66, 0.1),
+    0 2rpx 8rpx rgba(139, 92, 246, 0.08);
+  border: 4rpx solid rgba(255, 255, 255, 0.96);
 }
 
 .joy-custom-tab-bar__center-logo {
-  width: 88rpx;
-  height: 88rpx;
+  width: 74rpx;
+  height: 74rpx;
 }
 
 .joy-custom-tab-bar__center-badge {
   position: absolute;
-  top: 4rpx;
-  right: 4rpx;
-  width: 24rpx;
-  height: 24rpx;
+  top: 10rpx;
+  right: 10rpx;
+  width: 20rpx;
+  height: 20rpx;
   border-radius: 9999rpx;
   background: #FF6B9D;
-  border: 4rpx solid #FFFFFF;
+  border: 3rpx solid rgba(255, 255, 255, 0.98);
 }
 
 .joy-custom-tab-bar__center-label {
   margin-top: 8rpx;
-  max-width: 192rpx;
-  font-size: 20rpx;
-  line-height: 1.2;
+  max-width: 188rpx;
+  font-size: 22rpx;
+  line-height: 24rpx;
   font-weight: 600;
-  color: #2D3142;
+  color: #374151;
   text-align: center;
 }

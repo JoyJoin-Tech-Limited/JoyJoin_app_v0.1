@@ -124,7 +124,7 @@ Minimum commands for orchestration-governance work:
 npm run memory:validate
 npm run memory:build-index
 npm run orchestration:validate
-env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary <<< '{"type":"agent_turn_summary","agentName":"Supervisor","done":["example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["example"],"nextTurnImprovements":["tighten scope"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'
+env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["example"],"nextTurnImprovements":["tighten scope"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'
 env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'
 node scripts/orchestration-supervisor.mjs workflow pull-request
 node scripts/auto-eval.mjs --mode manual-report

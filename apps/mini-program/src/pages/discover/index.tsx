@@ -18,6 +18,7 @@ import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import MiniProgramLandingPage from '../index/LandingPage'
@@ -268,6 +269,8 @@ function AuthenticatedDiscover() {
           <Text className='discover-auth__action-label'>我的连接</Text>
         </Card>
       </View>
+
+      <AiMatchPromoCarousel className='discover-auth__promo' />
 
       {/* ── City / District filter chips ── */}
       <View className='discover-auth__filter-section'>

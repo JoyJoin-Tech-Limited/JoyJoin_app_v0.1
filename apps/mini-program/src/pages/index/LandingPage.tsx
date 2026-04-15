@@ -4,8 +4,21 @@ import { useState } from "react"
 import Button from "../../components/Button"
 import "./index.scss"
 
+type LandingHeroKey = "match" | "dinner" | "continue"
+
+const heroFallbackSources: Record<LandingHeroKey, string> = {
+  match: "/assets/match.png",
+  dinner: "/assets/dinner.png",
+  continue: "/assets/continue.png",
+}
+
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
+  const [heroSources, setHeroSources] = useState<Record<LandingHeroKey, string>>({
+    match: "/assets/match.webp",
+    dinner: "/assets/dinner.webp",
+    continue: "/assets/continue.webp",
+  })
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
 
@@ -15,6 +28,19 @@ export default function MiniProgramLandingPage() {
     }
 
     void Taro.navigateTo({ url })
+  }
+
+  const handleHeroError = (key: LandingHeroKey) => {
+    setHeroSources((current) => {
+      if (current[key] === heroFallbackSources[key]) {
+        return current
+      }
+
+      return {
+        ...current,
+        [key]: heroFallbackSources[key],
+      }
+    })
   }
 
   return (
@@ -31,7 +57,12 @@ export default function MiniProgramLandingPage() {
 
           <View className="card card-left">
             <View className="card-img-wrap">
-              <Image src="/assets/match.png" className="card-img" mode="aspectFill" />
+              <Image
+                src={heroSources.match}
+                className="card-img"
+                mode="aspectFill"
+                onError={() => handleHeroError("match")}
+              />
             </View>
             <View className="card-text">
               <Text>匹配</Text>
@@ -40,7 +71,12 @@ export default function MiniProgramLandingPage() {
 
           <View className="card card-center">
             <View className="card-img-wrap">
-              <Image src="/assets/dinner.png" className="card-img" mode="aspectFill" />
+              <Image
+                src={heroSources.dinner}
+                className="card-img"
+                mode="aspectFill"
+                onError={() => handleHeroError("dinner")}
+              />
             </View>
             <View className="card-text">
               <Text>悦聚</Text>
@@ -49,7 +85,12 @@ export default function MiniProgramLandingPage() {
 
           <View className="card card-right">
             <View className="card-img-wrap">
-              <Image src="/assets/continue.png" className="card-img" mode="aspectFill" />
+              <Image
+                src={heroSources.continue}
+                className="card-img"
+                mode="aspectFill"
+                onError={() => handleHeroError("continue")}
+              />
             </View>
             <View className="card-text">
               <Text>延续</Text>

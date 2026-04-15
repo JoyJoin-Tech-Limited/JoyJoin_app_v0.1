@@ -1,10 +1,12 @@
 ---
 name: draft-prd
 description: >-
-  Draft product requirements, feature briefs, user stories, scope boundaries,
-  and success metrics using the active JoyJoin product canon. Use when shaping
-  a new feature or proposal before implementation. Trigger phrases: "draft a PRD",
-  "user stories", "success metrics", "scope this feature", "product requirement".
+  Draft product requirements, feature briefs, issue-ready backlog artifacts,
+  user stories, acceptance criteria, scope boundaries, and success metrics using
+  the active JoyJoin product canon. Use when shaping a new feature or proposal
+  before implementation. Trigger phrases: "draft a PRD", "feature brief",
+  "acceptance criteria", "write a backlog item", "scope this feature",
+  "product requirement".
 ---
 
 # Draft PRD
@@ -20,9 +22,9 @@ syncing implementation docs after code changes.
 Use this skill when you are:
 
 - drafting a PRD, proposal, or feature brief
-- defining user stories, scope boundaries, or non-goals
+- turning a scoped idea into an issue-ready backlog artifact
+- defining user stories, scope boundaries, non-goals, or acceptance criteria
 - writing success metrics or rollout questions for a planned feature
-- turning a vague idea into a reviewable product artifact
 - updating a proposal doc before engineering implementation starts
 
 ## Core rules
@@ -38,11 +40,15 @@ Use this skill when you are:
    The artifact should explain the user problem, target user, constraints, and
    success measures before drifting into implementation detail.
 
-4. Keep engineering assumptions testable.
+4. Keep backlog-ready details explicit.
+   If the artifact will become tracked work, include acceptance criteria and the
+   dependencies or assumptions needed to make the issue actionable.
+
+5. Keep engineering assumptions testable.
    If a draft mentions routes, schema, AI, or cross-platform behavior, note them as
    hypotheses or impact areas unless they are already confirmed by the active codebase.
 
-5. Write success metrics that can actually be measured.
+6. Write success metrics that can actually be measured.
    Avoid vague wins like "better engagement" without defining the observable signal.
 
 ## Recommended structure
@@ -53,13 +59,14 @@ Use a compact planning shape:
 2. Target users and scenario
 3. Goals and non-goals
 4. User stories or primary flows
-5. Constraints, risks, and open questions
-6. Success metrics
+5. Acceptance criteria when the work should become tracked backlog
+6. Constraints, risks, dependencies, and open questions
+7. Success metrics
 
 ## Quick examples
 
 - **New feature idea**: turn a brief ask into a proposal with scope, non-goals, risks, and a measurable success section.
-- **Refine a rough concept**: convert brainstorming notes into user stories and rollout assumptions.
+- **Issue-ready backlog item**: convert a scoped request into a concise backlog artifact with acceptance criteria and explicit dependencies.
 - **Before engineering kickoff**: tighten the problem statement so implementation does not start from ambiguous goals.
 
 ## Troubleshooting
@@ -69,6 +76,9 @@ Split the document into current state, proposed change, and open questions.
 
 **The PRD is really an implementation plan**
 Move file paths, technical sequencing, and migration mechanics to engineering docs or follow-up notes.
+
+**Acceptance criteria are vague or not testable**
+Rewrite them as specific observable outcomes rather than broad intentions.
 
 **Success metrics are too vague**
 Rewrite them as observable product signals with a defined unit, threshold, or comparison window.
@@ -82,8 +92,9 @@ Re-check `PRODUCT_REQUIREMENTS.md` and rewrite using the active canon.
 - [ ] Current state and proposed state are clearly separated
 - [ ] Goals and non-goals are explicit
 - [ ] User stories or flows are specific enough to guide follow-up design and engineering
+- [ ] Acceptance criteria are included when the artifact should become tracked backlog
 - [ ] Success metrics are measurable rather than aspirational
-- [ ] Open questions and risks are visible instead of buried
+- [ ] Open questions, dependencies, and risks are visible instead of buried
 
 ## Related files
 

@@ -1,4 +1,4 @@
-import { View, Text, Button, ScrollView } from '@tarojs/components'
+import { View, Text, Button, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
@@ -8,6 +8,7 @@ import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
 import { completeProfileReview } from '@shared/api'
+import { getArchetypeVisual } from '../personality-test/visuals'
 import './index.scss'
 
 export default function ProfileReviewPage() {
@@ -63,6 +64,7 @@ export default function ProfileReviewPage() {
   const birthYear = user?.birthYear ? `${user.birthYear}年` : ''
   const currentCity = (user?.currentCity as string) || ''
   const archetype = (user as any)?.archetype as string | undefined
+  const visual = archetype ? getArchetypeVisual(archetype) : null
 
   return (
     <ScrollView className='profile-review' scrollY enhanced showScrollbar={false}>
@@ -75,6 +77,7 @@ export default function ProfileReviewPage() {
       {archetype ? (
         <View className='profile-review__card profile-review__card--archetype'>
           <Text className='profile-review__card-label'>你的氛围原型</Text>
+          {visual?.asset ? <Image className='profile-review__archetype-portrait' src={visual.asset} mode='aspectFit' /> : null}
           <Text className='profile-review__archetype-name'>{archetype}</Text>
         </View>
       ) : null}

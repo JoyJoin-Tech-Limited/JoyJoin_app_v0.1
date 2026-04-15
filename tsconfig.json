@@ -5,6 +5,9 @@
       "path": "./packages/shared"
     },
     {
+      "path": "./apps/mini-program"
+    },
+    {
       "path": "./apps/user-client"
     },
     {

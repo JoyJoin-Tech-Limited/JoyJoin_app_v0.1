@@ -33,6 +33,7 @@ export interface AnonymousAssessmentSessionSnapshot {
   completedAt?: string
   result?: AnonymousAssessmentResult | null
   topArchetypes?: AnonymousAssessmentTopMatch[] | null
+  resultSequenceCompletedAt?: string
 }
 
 export interface AnonymousAssessmentImportGateState {
@@ -115,6 +116,18 @@ export function getAnonymousAssessmentImportGateState(input: {
     hasImportableAnswers,
     canContinue: hasImportableAnswers,
   }
+}
+
+export function isAnonymousAssessmentSessionCompleted(
+  snapshot: AnonymousAssessmentSessionSnapshot | null | undefined,
+): boolean {
+  return Boolean(
+    snapshot?.sessionId && (
+      snapshot.phase === 'completed' ||
+      snapshot.completedAt ||
+      hasAnonymousAssessmentResult(snapshot)
+    ),
+  )
 }
 
 export function hasAnonymousAssessmentResult(

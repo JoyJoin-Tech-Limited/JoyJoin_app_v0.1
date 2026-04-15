@@ -4,7 +4,7 @@ import {
   resolveCenterTabDestination,
   type CenterTabEvent,
   type CenterTabPoolRegistration,
-} from '@shared/centerTabRouting'
+} from '@joyjoin/shared/centerTabRouting'
 
 export { MS_PER_HOUR, VENUE_UNLOCK_HOURS }
 

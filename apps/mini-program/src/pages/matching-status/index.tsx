@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -98,6 +98,20 @@ interface SimilarPoolSummary {
   district?: string | null
   dateTime?: string
   registrationCount?: number
+}
+
+const MATCHING_BG_SRC = '/assets/matching/matching-bg.png'
+const MATCHING_WAITING_HERO_SRC = '/assets/matching/matching-waiting-hero.png'
+const MATCHING_NO_MATCH_HERO_SRC = '/assets/matching/matching-no-match-hero.png'
+
+function MatchingHero({ heroSrc, className = '' }: { heroSrc: string; className?: string }) {
+  return (
+    <View className={`matching-status__hero${className ? ` ${className}` : ''}`}>
+      <Image className='matching-status__hero-bg' src={MATCHING_BG_SRC} mode='aspectFill' lazyLoad />
+      <View className='matching-status__hero-glow' />
+      <Image className='matching-status__hero-image' src={heroSrc} mode='aspectFit' lazyLoad />
+    </View>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────
@@ -256,8 +270,9 @@ export default function MatchingStatusPage() {
   if (isNoMatchState) {
     return (
       <ScrollView className='matching-status' scrollY enhanced showScrollbar={false}>
-        <Card className='matching-status__special-card'>
-          <Text className='matching-status__special-icon'>🫶</Text>
+        <MatchingHero heroSrc={MATCHING_NO_MATCH_HERO_SRC} className='matching-status__hero--no-match' />
+
+        <Card className='matching-status__special-card matching-status__special-card--stacked'>
           <Text className='matching-status__special-title'>这次还没等到合适的一桌</Text>
           <Text className='matching-status__special-text'>
             {countdown.label}。与其勉强凑桌，我们更想把你留给更对味的人。
@@ -310,8 +325,12 @@ export default function MatchingStatusPage() {
 
   return (
     <ScrollView className='matching-status' scrollY enhanced showScrollbar={false}>
+      {matchStatus === 'pending' ? (
+        <MatchingHero heroSrc={MATCHING_WAITING_HERO_SRC} className='matching-status__hero--waiting' />
+      ) : null}
+
       {/* ── Status Header ──────────────────────────────────────── */}
-      <View className='matching-status__header'>
+      <View className={`matching-status__header${matchStatus === 'pending' ? ' matching-status__header--with-hero' : ''}`}>
         <Text className='matching-status__status-emoji'>
           {matchStatus === 'matched' ? '🎉' : matchStatus === 'completed' ? '✅' : '⏳'}
         </Text>

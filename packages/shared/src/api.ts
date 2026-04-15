@@ -385,6 +385,87 @@ export interface PaymentStatusResponse {
   status?: string
 }
 
+export type PaymentVerificationState = 'polling' | 'paid' | 'pending' | 'failed'
+
+export interface PaymentVerificationDecision {
+  status: PaymentVerificationState
+  shouldRetry: boolean
+  clearPendingOrder: boolean
+}
+
+export interface PaymentVerificationStatusDecisionInput {
+  remoteStatus?: string | null
+  attempt: number
+  maxAttempts: number
+}
+
+export interface PaymentVerificationErrorDecisionInput {
+  attempt: number
+  maxAttempts: number
+}
+
+function hasExhaustedPaymentVerificationAttempts(input: {
+  attempt: number
+  maxAttempts: number
+}): boolean {
+  return input.attempt >= input.maxAttempts
+}
+
+export function getPaymentVerificationStatusDecision(
+  input: PaymentVerificationStatusDecisionInput
+): PaymentVerificationDecision {
+  const normalizedRemoteStatus =
+    typeof input.remoteStatus === 'string' ? input.remoteStatus.trim().toLowerCase() : undefined
+
+  if (normalizedRemoteStatus === 'completed') {
+    return {
+      status: 'paid',
+      shouldRetry: false,
+      clearPendingOrder: false,
+    }
+  }
+
+  if (normalizedRemoteStatus === 'failed' || normalizedRemoteStatus === 'closed') {
+    return {
+      status: 'failed',
+      shouldRetry: false,
+      clearPendingOrder: true,
+    }
+  }
+
+  if (hasExhaustedPaymentVerificationAttempts(input)) {
+    return {
+      status: 'pending',
+      shouldRetry: false,
+      clearPendingOrder: false,
+    }
+  }
+
+  return {
+    status: 'polling',
+    shouldRetry: true,
+    clearPendingOrder: false,
+  }
+}
+
+export function getPaymentVerificationErrorDecision(
+  input: PaymentVerificationErrorDecisionInput
+): PaymentVerificationDecision {
+  if (hasExhaustedPaymentVerificationAttempts(input)) {
+    return {
+      status: 'pending',
+      shouldRetry: false,
+      clearPendingOrder: false,
+    }
+  }
+
+  return {
+    status: 'polling',
+    shouldRetry: true,
+    clearPendingOrder: false,
+  }
+}
+
 export interface ReferralStatsResponse {
   referralCode: string
   successfulInvites: number

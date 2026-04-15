@@ -64,8 +64,8 @@ Use the **operational lane** when any of the following are true:
 Use `Supervisor` inside the operational lane when the next move is rerouting rather than execution itself:
 
 - The task needs to go back to `Researcher` or `Planner` because new ambiguity or scope drift appeared midstream.
-- The next best specialist is an audited frontend support agent such as `Expert React Frontend Engineer`, `Taro Mini-Program Frontend Engineer`, `Taro Migration Specialist`, or `Mini-Program Parity Auditor`.
-- The work is branding-sensitive UI delivery that should stay attached to existing frontend agents plus `design-system-governance` and `joyjoin-brand-guidelines`, not a new branding-only lane.
+- The next best specialist is an audited support agent such as `debug`, `Expert React Frontend Engineer`, `Taro Mini-Program Frontend Engineer`, `Taro Migration Specialist`, or `Mini-Program Parity Auditor`.
+- The work is branding-sensitive or crafted-polish UI delivery that should stay attached to existing frontend agents plus `design-system-governance`, `joyjoin-brand-guidelines`, and `wow-elements`, not a new branding-only or motion-only lane.
 
 ## Mandatory escalation rules
 

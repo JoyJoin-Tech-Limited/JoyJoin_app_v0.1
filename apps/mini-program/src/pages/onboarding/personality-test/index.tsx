@@ -1,4 +1,4 @@
-import { View, Text, Button, ScrollView, Slider } from '@tarojs/components'
+import { View, Text, Button, ScrollView, Slider, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
@@ -8,16 +8,17 @@ import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
 import {
   clearAnonymousAssessmentStorage,
   hasAnonymousAssessmentResult,
+  isAnonymousAssessmentSessionCompleted,
   readAnonymousAssessmentSession,
   saveAnonymousAssessmentSession,
   upsertAnonymousAssessmentAnswer,
-  type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
 } from '../../../lib/anonymousOnboarding'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
+import { getXiaoyueAsset } from './visuals'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -74,13 +75,6 @@ interface AssessmentAnswerResponse {
   nextQuestion?: AssessmentQuestion | null
   progress?: AssessmentProgress
   currentMatches?: AssessmentMatch[]
-}
-
-interface AssessmentResultEnvelope {
-  sessionId: string
-  completedAt?: string
-  result: AnonymousAssessmentResult
-  topArchetypes?: AnonymousAssessmentTopMatch[]
 }
 
 function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestionType {
@@ -146,7 +140,7 @@ export default function PersonalityTestPage() {
     }
 
     const snapshot = readAnonymousAssessmentSession()
-    return Boolean(snapshot?.sessionId && !hasAnonymousAssessmentResult(snapshot))
+    return Boolean(snapshot?.sessionId && !isAnonymousAssessmentSessionCompleted(snapshot))
   }, [isAuthenticated, phase])
   const analytics = useOnboardingAnalytics('personality-test', {
     enabled:
@@ -165,18 +159,18 @@ export default function PersonalityTestPage() {
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
 
-  const completeAnonymousAssessment = useCallback(async (targetSessionId: string) => {
-    const resultResponse = await apiRequest<AssessmentResultEnvelope>({
-      path: `/api/assessment/v4/${encodeURIComponent(targetSessionId)}/result`,
-    })
-
+  const completeAnonymousAssessment = useCallback(async (
+    targetSessionId: string,
+    nextTopArchetypes?: AnonymousAssessmentTopMatch[] | null,
+  ) => {
     saveAnonymousAssessmentSession({
       sessionId: targetSessionId,
       phase: 'completed',
       timestamp: Date.now(),
-      completedAt: resultResponse.completedAt,
-      result: resultResponse.result,
-      topArchetypes: resultResponse.topArchetypes ?? currentMatches,
+      completedAt: new Date().toISOString(),
+      result: null,
+      topArchetypes: nextTopArchetypes ?? currentMatches,
+      resultSequenceCompletedAt: undefined,
     })
 
     Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
@@ -194,7 +188,7 @@ export default function PersonalityTestPage() {
 
     if (!auth.isAuthenticated && phase === 'intro') {
       const snapshot = readAnonymousAssessmentSession()
-      if (hasAnonymousAssessmentResult(snapshot)) {
+      if (isAnonymousAssessmentSessionCompleted(snapshot) || hasAnonymousAssessmentResult(snapshot)) {
         Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
       }
     }
@@ -205,7 +199,7 @@ export default function PersonalityTestPage() {
     setIsSubmitting(true)
     try {
       const snapshot = !isAuthenticated ? readAnonymousAssessmentSession() : null
-      const shouldResumeAnonymous = Boolean(snapshot?.sessionId && !hasAnonymousAssessmentResult(snapshot))
+      const shouldResumeAnonymous = Boolean(snapshot?.sessionId && !isAnonymousAssessmentSessionCompleted(snapshot))
 
       if (!isAuthenticated && !shouldResumeAnonymous) {
         clearAnonymousAssessmentStorage()
@@ -263,7 +257,7 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        await completeAnonymousAssessment(result.sessionId)
+        await completeAnonymousAssessment(result.sessionId, result.currentMatches ?? currentMatches)
         return
       }
 
@@ -336,7 +330,7 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        await completeAnonymousAssessment(sessionId)
+        await completeAnonymousAssessment(sessionId, result.currentMatches ?? currentMatches)
         return
       }
 
@@ -379,6 +373,7 @@ export default function PersonalityTestPage() {
     return (
       <View className='personality-test'>
         <View className='personality-test__intro'>
+          <Image className='personality-test__mascot' src={getXiaoyueAsset('excited')} mode='aspectFit' />
           <Text className='personality-test__title'>氛围测试</Text>
           <Text className='personality-test__subtitle'>
             通过一系列有趣的问题，发现你独特的社交氛围原型
