@@ -129,11 +129,12 @@ describe('route review follow-ups', () => {
     expect(sharedApiSource).toContain('appendBrowserPaymentReturnUrl');
   });
 
-  it('normalizes event chat payloads and keeps legacy message field compatibility', () => {
+  it('normalizes event chat read payloads and keeps writes behind the compliance freeze', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
 
     expect(routesSource).toContain('messages: messages.map(toEventChatMessageSummary)');
-    expect(routesSource).toContain('message: req.body?.message ?? req.body?.content');
     expect(routesSource).toContain('profileImageUrl: firstNonEmptyString(user.profileImageUrl, user.wechatAvatarUrl) ?? null');
+    expect(routesSource).toContain("logger.warn('Blocked event chat write because the feature is under compliance freeze'");
+    expect(routesSource).toContain('featureUnavailable: true');
   });
 });
