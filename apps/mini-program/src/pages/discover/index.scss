@@ -47,6 +47,11 @@
     margin-bottom: $spacing-lg;
   }
 
+  &__promo {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
   &__action-card {
     flex: 1;
     @include card;

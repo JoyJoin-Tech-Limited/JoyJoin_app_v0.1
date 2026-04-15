@@ -1,5 +1,6 @@
 import { View, Text, Button } from '@tarojs/components'
 import { useWeChatLogin } from '../../hooks/useWeChatLogin'
+import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import './index.scss'
 
 /**
@@ -16,6 +17,7 @@ export default function LoginPage() {
       <View className='login-page__content'>
         <Text className='login-page__title'>欢迎回来</Text>
         <Text className='login-page__subtitle'>用微信一键登录，继续你的缘分之旅</Text>
+        <AiMatchPromoCarousel compact className='login-page__promo' />
       </View>
 
       <View className='login-page__actions'>

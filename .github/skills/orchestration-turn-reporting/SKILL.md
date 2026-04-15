@@ -27,8 +27,40 @@ Keep this operational. These summaries are workflow state, not durable repo memo
 - Use the last 5 turns by default unless the caller explicitly widens the window.
 - Agent summaries must include what was delivered, what was learned, and 1-2 self-suggested improvements for the next turn.
 - Supervisor reports must consolidate child summaries without rewriting their facts.
+- Keep Supervisor's user-facing note aligned with the persisted facts, but do not print the canonical JSON in the note.
 - Persist summaries only under `.git/.orchestration/`; never publish them to `repo-memory/`.
 - If persistence is skipped or fails, say so explicitly instead of implying the summary was recorded.
+
+## Supervisor presentation
+
+The Supervisor has two separate surfaces:
+
+- The canonical `supervisor_turn_report` JSON object is for persistence and runtime state.
+- The visible note shown to the user is a presentation layer.
+
+When the Supervisor speaks to the user, the visible note should use this structure:
+
+What has been done:
+- [Concrete action or output delivered this turn]
+- [Concrete action or output delivered this turn]
+
+Key insight: [One concise sentence stating a critical observation or implication]
+
+Recommended next action:
+- [Immediate next action or required input]
+
+Presentation rules:
+
+- `What has been done` is mandatory.
+- `Recommended next action` is mandatory.
+- Use bullets only under `What has been done` and `Recommended next action`.
+- Keep each bullet under 15 words.
+- Use plain, everyday language for a non-technical reader.
+- Focus on outcomes and next actions, not internal implementation details.
+- Avoid jargon like schema, payload, validation, routing, or file paths unless necessary.
+- Include `Key insight` only for a non-obvious finding, surfaced constraint, or strategic implication.
+- Keep `Key insight` to one sentence.
+- If the work is fully complete, say so plainly in `Recommended next action`.
 
 ## Shared schema
 
@@ -95,9 +127,10 @@ Supervisor-only additions:
 
 1. Gather child summary JSON objects.
 2. Persist any child summaries that were not already recorded.
-3. Produce one consolidated supervisor report with key bullets, cross-agent insights, and categorized next steps.
+3. Build one canonical `supervisor_turn_report` JSON object with key bullets, cross-agent insights, and categorized next steps.
 4. Persist the supervisor report.
-5. Use the last 5 reports and relevant child summaries to refine the next routing decision.
+5. Return the visible supervisor note in the required presentation format.
+6. Use the last 5 reports and relevant child summaries to refine the next routing decision.
 
 ## Quick examples
 

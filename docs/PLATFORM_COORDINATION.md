@@ -10,6 +10,17 @@ Current platform symmetry is **yellow**, and the previous payment-contract block
 
 The biggest remaining risk is payment orchestration, not broken contracts. The Mini Program still owns a native `Taro.requestPayment` flow plus pending-order verification, while the browser surfaces follow H5 redirect metadata returned by `/api/subscription/renew` and `/api/payments/create`. The user and admin blind-box payment pages are now aligned with the active server contract for coupon validation and plan normalization, but the headless payment state machine is still duplicated across runtimes.
 
+## Approved execution baseline
+
+- The current approved migration track continues to use the existing `packages/shared` workspace as the only shared runtime surface.
+- Shared modules should remain limited to pure logic, contracts, static configuration, and headless helpers.
+- Platform-specific adapters and renderers stay in app workspaces, using the center-tab routing split as the reference pattern:
+  - `packages/shared/src/centerTabRouting.ts` owns shared decision logic.
+  - `apps/user-client/src/lib/centerTabRouting.ts` owns web route mapping.
+  - `apps/mini-program/src/lib/centerTabRouting.ts` owns mini-program route mapping.
+- Do not introduce a new shared business-logic workspace during the current execution track. Reassess only after the existing `packages/shared` extraction path is stable.
+- The root `package.json` remains orchestration-only throughout this migration.
+
 ## Divergence Report Card
 
 | Area | Status | Findings | Evidence |
@@ -90,9 +101,9 @@ There is no shared Zustand/Redux store. The closest shared state source of truth
 
 ## Phase 2 — Proposed Coordination Strategy
 
-### Option A — Single Source of Truth (recommended)
+### Option A — Future evolution (not the current execution baseline)
 
-Create a new workspace package, for example `packages/core`, and move all non-UI client business logic there.
+If the current `packages/shared`-first extraction path stabilizes and duplicated orchestration still remains high, create a new workspace package, for example `packages/core`, and move non-UI client business logic there.
 
 #### What belongs in `packages/core`
 
@@ -223,7 +234,7 @@ This keeps post-payment verification, routing, and entitlement refresh debuggabl
 
 ### Long-term north star
 
-Adopt **Option A**. JoyJoin already has the right monorepo shape for shared contracts (`packages/shared`), and the current pain comes from runtime-specific logic sitting too high in the client pages. A dedicated shared business-logic package is the cleanest way to ship beta fast without paying for a second implementation later.
+The currently approved execution path is to keep consolidating pure logic and contracts inside `packages/shared` while leaving platform adapters in each app workspace. A dedicated `packages/core` package remains an optional future evolution only if the existing `packages/shared`-first path proves insufficient after the initial extraction phases.
 
 ### Testing automation
 

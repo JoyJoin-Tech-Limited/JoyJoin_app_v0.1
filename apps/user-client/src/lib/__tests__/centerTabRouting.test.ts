@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getCenterButtonLabel,
   shouldShowCenterButtonBadge,
-} from "@shared/centerTabRouting";
+} from "@joyjoin/shared/centerTabRouting";
 import {
   CENTER_TAB_EMPTY_STATE_ROUTE,
   DISCOVER_ROUTE,

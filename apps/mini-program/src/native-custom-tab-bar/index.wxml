@@ -2,7 +2,9 @@
   <cover-view class="joy-custom-tab-bar__surface">
     <cover-view class="joy-custom-tab-bar__border"></cover-view>
 
-    <!-- Protruding center button -->
+      <cover-view class="joy-custom-tab-bar__center-seat"></cover-view>
+
+      <!-- Semi-raised center CTA -->
     <cover-view class="joy-custom-tab-bar__center" bindtap="handleCenterTap">
       <cover-view class="joy-custom-tab-bar__center-outer-ring">
         <cover-view class="joy-custom-tab-bar__center-button">

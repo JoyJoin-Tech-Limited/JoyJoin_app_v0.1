@@ -241,6 +241,12 @@
     },
     {
       "from": "Supervisor",
+      "to": "debug",
+      "label": "Route bug investigation",
+      "prompt": "Investigate the bug or failing behavior, reproduce the issue, isolate the root cause, and implement or recommend the narrowest safe fix before another specialist takes over."
+    },
+    {
+      "from": "Supervisor",
       "to": "Mini-Program Parity Auditor",
       "label": "Audit parity scope",
       "prompt": "Compare the current web and mini-program surfaces, identify parity drift, and return the smallest actionable backlog before implementation continues."
@@ -674,8 +680,8 @@
         "recommended_extensions": [
           {
             "type": "optional-tool",
-            "label": "Add explicit agent delegation or handoff options to route resolved root causes into domain specialists.",
-            "reason": "Debugging often ends with a clear owning domain that could be handed to a specialist implementation agent."
+            "label": "Add explicit debug-to-domain handoff options only if resolved root causes should route directly into owning specialists.",
+            "reason": "Supervisor can now route bug investigation into debug, but debugging often ends with a clear owning domain that could be handed to a specialist implementation agent."
           }
         ]
       }
@@ -829,6 +835,7 @@
       "frontend-component-architecture",
       "design-system-governance",
       "joyjoin-brand-guidelines",
+      "wow-elements",
       "platform-coordination-protocol"
     ],
     "Taro Migration Specialist": [
@@ -843,6 +850,7 @@
       "design-system-governance",
       "frontend-performance-and-loading",
       "joyjoin-brand-guidelines",
+      "wow-elements",
       "platform-coordination-protocol"
     ],
     "debug": [

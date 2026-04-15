@@ -3,12 +3,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import {
+  getPaymentVerificationErrorDecision,
+  getPaymentVerificationStatusDecision,
+  type PaymentVerificationState,
+} from "@shared/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-
-type VerificationState = "polling" | "paid" | "pending" | "failed";
 
 type BrowserPendingOrderContext = {
   type?: "event" | "event_bundle";
@@ -62,12 +65,42 @@ function readIncomingOrderId(): string {
   return new URLSearchParams(window.location.search).get("outTradeNo") ?? "";
 }
 
+function getBrowserPaymentStatusMessage(
+  status: PaymentVerificationState,
+  context: BrowserPendingOrderContext | null,
+): string {
+  switch (status) {
+    case "paid":
+      return context?.type === "event"
+        ? "支付已确认，正在把你加入活动匹配队列..."
+        : "支付已确认，正在为你发放会员权益...";
+    case "failed":
+      return "支付未完成，请返回支付页重新发起支付。";
+    case "pending":
+      return "暂时无法确认支付结果，你可以稍后回来继续确认订单状态。";
+    case "polling":
+    default:
+      return "正在确认支付结果...";
+  }
+}
+
+function getBrowserPaymentErrorMessage(status: PaymentVerificationState): string {
+  switch (status) {
+    case "pending":
+      return "暂时无法确认支付结果，你可以稍后回来继续确认订单状态。";
+    case "polling":
+      return "支付状态同步稍慢，正在重新确认...";
+    default:
+      return getBrowserPaymentStatusMessage(status, null);
+  }
+}
+
 export default function BlindBoxConfirmationPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [orderId, setOrderId] = useState("");
   const [context, setContext] = useState<BrowserPendingOrderContext | null>(null);
-  const [status, setStatus] = useState<VerificationState>("polling");
+  const [status, setStatus] = useState<PaymentVerificationState>("polling");
   const [message, setMessage] = useState("正在确认支付结果...");
   const [attemptCount, setAttemptCount] = useState(0);
   const isPollingRef = useRef(false);
@@ -119,15 +152,7 @@ export default function BlindBoxConfirmationPage() {
     isPollingRef.current = true;
     setAttemptCount(attempt);
 
-    const scheduleRetry = (nextMessage: string) => {
-      if (attempt >= MAX_POLL_ATTEMPTS) {
-        setStatus("pending");
-        setMessage("暂时无法确认支付结果，你可以稍后回来继续确认订单状态。");
-        return;
-      }
-
-      setStatus("polling");
-      setMessage(nextMessage);
+    const scheduleRetry = () => {
       timeoutRef.current = setTimeout(() => {
         if (!isMountedRef.current) {
           return;
@@ -142,30 +167,46 @@ export default function BlindBoxConfirmationPage() {
         `/api/payments/status/${encodeURIComponent(targetOrderId)}`,
       );
 
-      if (response.status === "completed") {
-        setStatus("paid");
-        setMessage(
-          nextContext?.type === "event"
-            ? "支付已确认，正在把你加入活动匹配队列..."
-            : "支付已确认，正在为你发放会员权益...",
-        );
+      const decision = getPaymentVerificationStatusDecision({
+        remoteStatus: response.status,
+        attempt,
+        maxAttempts: MAX_POLL_ATTEMPTS,
+      });
+
+      if (decision.clearPendingOrder) {
+        clearPendingOrderStorage();
+      }
+
+      setStatus(decision.status);
+      setMessage(getBrowserPaymentStatusMessage(decision.status, nextContext));
+
+      if (decision.status === "paid") {
         timeoutRef.current = setTimeout(() => {
           navigateAfterPaid(nextContext);
         }, 1200);
         return;
       }
 
-      if (response.status === "failed" || response.status === "closed") {
-        clearPendingOrderStorage();
-        setStatus("failed");
-        setMessage("支付未完成，请返回支付页重新发起支付。");
+      if (!decision.shouldRetry) {
         return;
       }
 
-      scheduleRetry("正在确认支付结果...");
+      scheduleRetry();
       return;
     } catch {
-      scheduleRetry("支付状态同步稍慢，正在重新确认...");
+      const decision = getPaymentVerificationErrorDecision({
+        attempt,
+        maxAttempts: MAX_POLL_ATTEMPTS,
+      });
+
+      setStatus(decision.status);
+      setMessage(getBrowserPaymentErrorMessage(decision.status));
+
+      if (!decision.shouldRetry) {
+        return;
+      }
+
+      scheduleRetry();
       return;
     } finally {
       isPollingRef.current = false;

@@ -1,14 +1,15 @@
 skill: draft-prd
 
 primary_ownership: >
-  Drafting product requirements, feature briefs, scope boundaries, user stories,
-  and measurable success metrics using the active JoyJoin product canon.
+  Drafting product requirements, feature briefs, issue-ready backlog artifacts,
+  user stories, acceptance criteria, scope boundaries, and measurable success metrics
+  using the active JoyJoin product canon.
 
 use_when:
   - drafting a new PRD, proposal, or feature brief
-  - defining user stories, scope boundaries, or non-goals
+  - turning a scoped idea into an issue-ready backlog artifact
+  - defining user stories, scope boundaries, non-goals, or acceptance criteria
   - writing success metrics for a planned feature
-  - turning a vague product idea into a reviewable artifact
   - updating a proposal doc before implementation starts
 
 do_not_use_when:
@@ -24,6 +25,9 @@ strong_triggers:
   - success metric
   - scope this feature
   - feature brief
+  - issue-ready
+  - backlog item
+  - acceptance criteria
   - docs/proposals
   - non-goals
 

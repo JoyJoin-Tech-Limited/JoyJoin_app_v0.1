@@ -138,7 +138,7 @@
     {
       "name": "Supervisor",
       "file": "supervisor.agent.md",
-      "description": "Use when coordinating multi-agent work across kickoff research and planning, Auto-Eval, frontend and parity support, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist, reopen discovery, or redirect brand-governed frontend work from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, multi-agent workflow, coordinate these agents, supervisor.",
+      "description": "Use when coordinating multi-agent work across kickoff research and planning, Auto-Eval, debug, frontend and parity support, product, backend, AI, QA, and launch-readiness flows, or when you need one orchestration surface to route the next specialist, reopen discovery, or redirect debugging and brand-governed frontend work from current findings, changed files, and release context. Trigger phrases: orchestrate this, route the next agent, reroute this bug, multi-agent workflow, coordinate these agents, supervisor.",
       "tools": [
         "read",
         "search",
@@ -155,6 +155,7 @@
         "AI Engineer",
         "QA Agent",
         "Launch Readiness Agent",
+        "debug",
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer",
         "Taro Mini-Program Frontend Engineer",
@@ -165,6 +166,7 @@
       "handoffs": [
         "Researcher",
         "Planner",
+        "debug",
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer",
         "Taro Mini-Program Frontend Engineer",
@@ -228,7 +230,7 @@
     {
       "name": "debug",
       "file": "debug.agent.md",
-      "description": "Use when debugging a bug, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause.",
+      "description": "Use when debugging a bug or issue, fixing broken behavior, triaging a regression, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause.",
       "tools": [
         "read",
         "search",
@@ -248,7 +250,7 @@
     {
       "name": "Expert React Frontend Engineer",
       "file": "frontend engineer.md",
-      "description": "Use when working on JoyJoin browser-first frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review.",
+      "description": "Use when working on JoyJoin browser-first frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, polishing motion, loading states, empty states, onboarding moments, or visual hierarchy, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review. Trigger phrases: web UI polish, polish the interaction, improve micro-interactions, make this feel premium, add delight here, loading state delight, empty state polish, motion design.",
       "tools": [
         "read",
         "search",
@@ -266,6 +268,7 @@
         "design-system-governance",
         "frontend-performance-and-loading",
         "joyjoin-brand-guidelines",
+        "wow-elements",
         "platform-coordination-protocol"
       ],
       "toolingStatus": "sufficient"
@@ -385,7 +388,7 @@
     {
       "name": "Taro Mini-Program Frontend Engineer",
       "file": "taro-mini-program-frontend-engineer.agent.md",
-      "description": "Use when implementing or refining frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, adapting layouts and interactions to WXSS and WeChat runtime constraints, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review.",
+      "description": "Use when implementing or refining frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, adapting layouts and interactions to WXSS and WeChat runtime constraints, polishing onboarding, loading, empty, or completion states in the mini-program, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review. Trigger phrases: mini-program UI polish, polish this Taro interaction, improve mini-program micro-interactions, make this screen feel premium, add delight to onboarding, refine loading state, improve mini-program empty state, WXSS interaction polish, WeChat UI refinement.",
       "tools": [
         "read",
         "search",
@@ -406,6 +409,7 @@
         "frontend-component-architecture",
         "design-system-governance",
         "joyjoin-brand-guidelines",
+        "wow-elements",
         "platform-coordination-protocol"
       ],
       "toolingStatus": "sufficient"

@@ -5,7 +5,7 @@ import {
   type CenterTabDestination,
   type CenterTabEvent,
   type CenterTabPoolRegistration,
-} from '@shared/centerTabRouting'
+} from '@joyjoin/shared/centerTabRouting'
 import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
 
 export const MINI_PROGRAM_CENTER_TAB_EMPTY_ROUTE = '/pages/center-tab-empty/index'

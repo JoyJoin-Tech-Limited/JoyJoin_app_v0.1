@@ -55,6 +55,97 @@ function parseStdinJson() {
   }
 }
 
+function parseJsonText(raw, sourceLabel) {
+  const trimmed = typeof raw === 'string' ? raw.trim() : '';
+  if (!trimmed) {
+    throw new Error(`Turn summary payload from ${sourceLabel} is empty.`);
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Turn summary payload from ${sourceLabel} must be valid JSON. ${message}`);
+  }
+}
+
+function getCliOptionValue(args, optionName) {
+  const optionPrefix = `${optionName}=`;
+  let value = null;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+
+    if (argument === optionName) {
+      if (value !== null) {
+        throw new Error(`${optionName} may only be provided once.`);
+      }
+
+      const nextArgument = args[index + 1];
+      if (typeof nextArgument !== 'string' || nextArgument.trim() === '') {
+        throw new Error(`${optionName} requires a value.`);
+      }
+
+      value = nextArgument;
+      index += 1;
+      continue;
+    }
+
+    if (typeof argument === 'string' && argument.startsWith(optionPrefix)) {
+      if (value !== null) {
+        throw new Error(`${optionName} may only be provided once.`);
+      }
+
+      const inlineValue = argument.slice(optionPrefix.length);
+      if (inlineValue.trim() === '') {
+        throw new Error(`${optionName} requires a value.`);
+      }
+
+      value = inlineValue;
+    }
+  }
+
+  return value;
+}
+
+function unwrapTurnSummaryPayload(payload) {
+  return payload.turnSummary && typeof payload.turnSummary === 'object' ? payload.turnSummary : payload;
+}
+
+function parseRecordSummaryPayload(args) {
+  const jsonArgument = getCliOptionValue(args, '--json');
+  const fileArgument = getCliOptionValue(args, '--file');
+
+  if (jsonArgument && fileArgument) {
+    throw new Error('record-summary accepts only one payload source at a time. Use stdin, --json, or --file.');
+  }
+
+  if (jsonArgument) {
+    return unwrapTurnSummaryPayload(parseJsonText(jsonArgument, '--json'));
+  }
+
+  if (fileArgument) {
+    const filePath = path.resolve(fileArgument);
+    let raw = '';
+
+    try {
+      raw = fs.readFileSync(filePath, 'utf8');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Unable to read turn summary file ${fileArgument}. ${message}`);
+    }
+
+    return unwrapTurnSummaryPayload(parseJsonText(raw, `file ${fileArgument}`));
+  }
+
+  const raw = readStdin();
+  if (raw.trim() === '') {
+    throw new Error('Turn summary payload is required. Provide JSON via stdin, --json, or --file.');
+  }
+
+  return unwrapTurnSummaryPayload(parseJsonText(raw, 'stdin'));
+}
+
 function outputText(text) {
   process.stdout.write(`${text}\n`);
 }
@@ -675,10 +766,8 @@ export function recordTurnSummary(repoRoot, payload) {
   };
 }
 
-function runRecordSummary(repoRoot) {
-  const payload = parseStdinJson();
-  const summaryPayload = payload.turnSummary && typeof payload.turnSummary === 'object' ? payload.turnSummary : payload;
-  outputJson(recordTurnSummary(repoRoot, summaryPayload));
+function runRecordSummary(repoRoot, args = []) {
+  outputJson(recordTurnSummary(repoRoot, parseRecordSummaryPayload(args)));
 }
 
 function buildHookContext(repoRoot, eventName, payload, manifest) {
@@ -1171,7 +1260,7 @@ if (isMainModule()) {
     }
 
     if (command === 'record-summary') {
-      runRecordSummary(repoRoot);
+      runRecordSummary(repoRoot, process.argv.slice(3));
     }
 
     if (command === 'git-hook') {

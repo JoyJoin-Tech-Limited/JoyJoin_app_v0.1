@@ -41,8 +41,34 @@
     margin-bottom: $spacing-md;
 
     &--archetype {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       background: $brand-gradient;
       text-align: center;
+
+      &::before {
+        content: '';
+        position: absolute;
+        inset: 22rpx;
+        border-radius: 26rpx;
+        border: 2rpx solid rgba($color-surface, 0.18);
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 108rpx;
+        left: 50%;
+        width: 320rpx;
+        height: 320rpx;
+        border-radius: 999rpx;
+        background: rgba($color-surface, 0.16);
+        transform: translateX(-50%);
+        filter: blur(16rpx);
+      }
     }
   }
 
@@ -51,6 +77,18 @@
     font-size: $font-size-sm;
     color: rgba(255, 255, 255, 0.8);
     margin-bottom: $spacing-xs;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__archetype-portrait {
+    display: block;
+    width: 236rpx;
+    height: 236rpx;
+    margin: $spacing-md auto $spacing-sm;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 18rpx 36rpx rgba($color-text-primary, 0.2));
   }
 
   &__archetype-name {
@@ -58,6 +96,8 @@
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-white;
+    position: relative;
+    z-index: 1;
   }
 
   &__card-title {

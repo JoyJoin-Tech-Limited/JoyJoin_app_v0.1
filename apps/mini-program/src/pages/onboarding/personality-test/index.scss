@@ -14,6 +14,50 @@
     text-align: center;
   }
 
+  &__intro {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      border-radius: 999rpx;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    &::before {
+      width: 360rpx;
+      height: 360rpx;
+      top: 140rpx;
+      background: rgba($color-primary, 0.1);
+      filter: blur(14rpx);
+    }
+
+    &::after {
+      width: 420rpx;
+      height: 420rpx;
+      bottom: 120rpx;
+      background: rgba($color-secondary, 0.08);
+      filter: blur(18rpx);
+    }
+
+    > * {
+      position: relative;
+      z-index: 1;
+    }
+  }
+
+  &__mascot {
+    display: block;
+    width: 320rpx;
+    height: 320rpx;
+    margin-bottom: $spacing-lg;
+    filter: drop-shadow(0 24rpx 40rpx rgba($color-primary, 0.18));
+  }
+
   &__loading-text {
     font-size: $font-size-base;
     color: $color-text-secondary;

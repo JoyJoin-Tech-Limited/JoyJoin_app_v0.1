@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getCenterButtonLabel,
   shouldShowCenterButtonBadge,
-} from "@shared/centerTabRouting";
+} from "@joyjoin/shared/centerTabRouting";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 import {
   CENTER_TAB_EMPTY_STATE_ROUTE,
