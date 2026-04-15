@@ -29,6 +29,7 @@ import ArchetypeOrbit from "@/components/ArchetypeOrbit";
 import MatchRevealSequenceV2 from "@/components/matching/MatchRevealSequenceV2";
 import MatchingWaitingScreen from "@/components/MatchingWaitingScreen";
 import NoMatchScreen from "@/components/matching/NoMatchScreen";
+import type { PoolGroupDetailsResponse, PoolRegistrationSummary } from "@shared/api";
 import type { PoolMatchedData, EventThemeTitleRevealedData } from "@shared/wsEvents";
 import { formatDateInHongKong } from "@/lib/hongKongTime";
 import { getDiscoverJoinRoute } from "@/lib/poolRegistrationRouting";
@@ -40,56 +41,11 @@ import type { AttendeeData, UserContext } from "@/lib/attendeeAnalytics";
 const DEFAULT_MIN_GROUP_SIZE = 4;
 const DEFAULT_MAX_GROUP_SIZE = 6;
 
-interface PoolRegistration {
-  id: string;
-  poolId: string;
-  matchStatus: "pending" | "matched" | "completed";
-  assignedGroupId: string | null;
-  poolTitle: string;
-  poolEventType: string;
-  poolCity: string;
-  poolDistrict: string;
-  poolDateTime: string;
-  poolStatus: string;
-  theme?: string;
-  subtitle?: string;
-  themeEmoji?: string;
-  highlights?: string[];
-  vibe?: string;
-  venueName?: string;
-  venueAddress?: string;
-  venuePhone?: string;
-}
-
 interface GroupMember {
   userId: string;
   displayName: string;
   archetype?: string;
   chemistryScore?: number;
-}
-
-interface PoolGroupResponse {
-  group: {
-    id: string;
-    groupNumber: number;
-    memberCount: number;
-    matchScore: number | null;
-    matchExplanation: string | null;
-    venueName: string | null;
-    venueAddress: string | null;
-    finalDateTime: string | null;
-    status: string;
-  };
-  pool: {
-    id: string;
-    title: string;
-    description: string | null;
-    eventType: string;
-    city: string;
-    district: string | null;
-    dateTime: string;
-  };
-  members: AttendeeData[];
 }
 
 interface PoolStats {
@@ -126,7 +82,7 @@ export default function MatchingStatusPage() {
   
   // Reveal animation states
   const [showRevealAnimation, setShowRevealAnimation] = useState(false);
-  const [groupMembersData, setGroupMembersData] = useState<PoolGroupResponse | null>(null);
+  const [groupMembersData, setGroupMembersData] = useState<PoolGroupDetailsResponse | null>(null);
   const [isLoadingGroupData, setIsLoadingGroupData] = useState(false);
   const [groupDataError, setGroupDataError] = useState<string | null>(null);
   const [revealAnimationComplete, setRevealAnimationComplete] = useState(false);  // Progress update micro-interaction state
@@ -140,7 +96,7 @@ export default function MatchingStatusPage() {
   const microInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch registration from shared cache
-  const { data: poolRegistrations, isLoading: isRegistrationLoading, isError: isRegistrationError, refetch: refetchRegistrations } = useQuery<Array<PoolRegistration>>({
+  const { data: poolRegistrations, isLoading: isRegistrationLoading, isError: isRegistrationError, refetch: refetchRegistrations } = useQuery<Array<PoolRegistrationSummary>>({
     queryKey: ["/api/my-pool-registrations"],
     staleTime: 0,
   });
@@ -231,7 +187,7 @@ export default function MatchingStatusPage() {
   useEffect(() => {
     const unsubscribePoolMatched = subscribe('POOL_MATCHED', async (message) => {
       const poolData = message.data as PoolMatchedData;
-      let fetchedGroupData: PoolGroupResponse | null = null;
+      let fetchedGroupData: PoolGroupDetailsResponse | null = null;
       
       // Guard: only react to matches for the currently viewed registration's pool
       if (!registration || poolData.poolId !== registration.poolId) {
@@ -588,11 +544,9 @@ export default function MatchingStatusPage() {
           <MatchRevealSequenceV2
             members={groupMembersData.members.map((m) => ({
               userId: m.userId,
-              displayName: m.displayName,
-              archetype: m.archetype,
-              topInterests: m.topInterests,
-              primaryInterests: m.primaryInterests,
-              socialTag: m.socialTag,
+              displayName: m.displayName ?? "神秘嘉宾",
+              archetype: m.archetype ?? undefined,
+              topInterests: m.topInterests ?? undefined,
             }))}
             currentUser={currentUserContext}
             onComplete={handleRevealContinue}
@@ -1086,11 +1040,9 @@ export default function MatchingStatusPage() {
         <MatchRevealSequenceV2
           members={groupMembersData.members.map((m) => ({
             userId: m.userId,
-            displayName: m.displayName,
-            archetype: m.archetype,
-            topInterests: m.topInterests,
-            primaryInterests: m.primaryInterests,
-            socialTag: m.socialTag,
+            displayName: m.displayName ?? "神秘嘉宾",
+            archetype: m.archetype ?? undefined,
+            topInterests: m.topInterests ?? undefined,
           }))}
           currentUser={currentUserContext}
           onComplete={handleRevealContinue}

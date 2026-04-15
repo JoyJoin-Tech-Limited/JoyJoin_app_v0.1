@@ -2,116 +2,454 @@
 @use '../../../styles/mixins' as *;
 
 .essential-data {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
-  padding: $container-padding;
+  @include page-gradient-bg;
 
-  &__loading {
-    @include flex-center;
-    min-height: 100vh;
+  &__scroll {
+    flex: 1;
   }
 
-  &__loading-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
+  &__shell {
+    box-sizing: border-box;
+    padding: $spacing-lg $container-padding $spacing-xl;
+    @include safe-area-inline($container-padding);
+    @include fixed-footer-reserve($button-height + 280rpx, $spacing-lg);
   }
 
-  &__header {
-    padding-top: $spacing-xl;
-    margin-bottom: $spacing-xl;
+  &__stage {
+    opacity: 0;
+    transform: translateY(18rpx);
+    animation: essential-data-stage-in 0.32s ease-out forwards;
+
+    &--2 {
+      animation-delay: 0.06s;
+    }
+
+    &--3 {
+      animation-delay: 0.12s;
+    }
+
+    &--4 {
+      animation-delay: 0.18s;
+    }
+  }
+
+  &__hero {
+    margin-bottom: $spacing-md;
+  }
+
+  &__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 10rpx 20rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.92);
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
   }
 
   &__title {
     display: block;
+    margin-top: $spacing-sm;
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
-    color: $color-primary;
-    margin-bottom: $spacing-xs;
+    color: $color-text-primary;
+    line-height: 1.18;
   }
 
   &__subtitle {
     display: block;
+    margin-top: $spacing-sm;
     font-size: $font-size-base;
     color: $color-text-secondary;
+    line-height: 1.55;
   }
 
-  &__form {
+  &__coach {
+    @include card;
     display: flex;
-    flex-direction: column;
-    gap: $spacing-lg;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    margin-bottom: $spacing-md;
+    border: 2rpx solid rgba($color-secondary, 0.16);
+    background: linear-gradient(
+      135deg,
+      rgba($color-surface, 0.98) 0%,
+      rgba($color-primary-light, 0.8) 100%
+    );
+  }
+
+  &__coach-avatar {
+    width: 112rpx;
+    height: 112rpx;
+    flex-shrink: 0;
+  }
+
+  &__coach-copy {
+    min-width: 0;
+  }
+
+  &__coach-title {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  &__coach-text {
+    display: block;
+    margin-top: 10rpx;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.5;
+  }
+
+  &__card {
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-header {
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__card-subtitle {
+    display: block;
+    margin-top: 8rpx;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.5;
   }
 
   &__field {
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__field-grid {
     display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
+    gap: $spacing-md;
+
+    .essential-data__field {
+      flex: 1;
+      min-width: 0;
+    }
   }
 
   &__label {
-    font-size: $font-size-base;
+    display: block;
+    margin-bottom: 10rpx;
+    font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
   }
 
+  &__required {
+    margin-left: 6rpx;
+    color: $color-error;
+  }
+
   &__input {
+    box-sizing: border-box;
+    width: 100%;
     height: $input-height;
     padding: 0 $spacing-md;
-    background: $color-surface;
     border-radius: $card-radius-sm;
     border: 2rpx solid $color-border;
-    font-size: $font-size-base;
+    background: rgba($color-surface, 0.98);
     color: $color-text-primary;
+    font-size: $font-size-base;
 
     &:focus {
-      border-color: $color-primary;
+      border-color: rgba($color-primary, 0.42);
     }
   }
 
   &__hint {
+    display: block;
+    margin-top: 10rpx;
     font-size: $font-size-xs;
     color: $color-text-muted;
+    line-height: 1.45;
   }
 
   &__picker {
-    height: $input-height;
+    position: relative;
     display: flex;
     align-items: center;
+    min-height: $input-height;
     padding: 0 $spacing-md;
-    background: $color-surface;
     border-radius: $card-radius-sm;
     border: 2rpx solid $color-border;
+    background: rgba($color-surface, 0.98);
+
+    &::after {
+      content: '›';
+      position: absolute;
+      right: $spacing-md;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $color-text-muted;
+      font-size: $font-size-lg;
+      line-height: 1;
+    }
   }
 
-  &__picker-value {
+  &__picker-text {
+    display: block;
+    width: calc(100% - 40rpx);
+    padding-right: $spacing-md;
     font-size: $font-size-base;
+    color: $color-text-muted;
+    @include text-truncate;
+
+    &--filled {
+      color: $color-text-primary;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &__choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+
+    &--wrap {
+      gap: 14rpx;
+    }
+  }
+
+  &__choice-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72rpx;
+    padding: 0 $spacing-lg;
+    border-radius: 999rpx;
+    border: 2rpx solid rgba($color-border, 0.92);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 8rpx 22rpx rgba(45, 49, 66, 0.05);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease,
+      border-color 0.18s ease;
+
+    &:active {
+      transform: scale(0.97);
+    }
+
+    &--compact {
+      min-height: 64rpx;
+      padding: 0 $spacing-md;
+    }
+
+    &--selected {
+      border-color: transparent;
+      background: $brand-gradient;
+      box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.26);
+      transform: translateY(-2rpx);
+
+      .essential-data__choice-chip-text {
+        color: $color-text-white;
+      }
+    }
+  }
+
+  &__choice-chip-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__intent-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  &__intent-card {
+    box-sizing: border-box;
+    width: calc((100% - #{$spacing-sm}) / 2);
+    min-height: 176rpx;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid rgba($color-border, 0.96);
+    background: rgba($color-surface, 0.98);
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease,
+      border-color 0.18s ease;
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &--selected {
+      border-color: rgba($color-primary, 0.22);
+      background: linear-gradient(
+        145deg,
+        rgba($color-primary-light, 0.98) 0%,
+        rgba($color-surface, 0.98) 100%
+      );
+      box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.14);
+      transform: translateY(-2rpx);
+    }
+  }
+
+  &__intent-emoji {
+    display: block;
+    font-size: 40rpx;
+  }
+
+  &__intent-label {
+    display: block;
+    margin-top: 10rpx;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
 
-  &__picker-placeholder {
-    font-size: $font-size-base;
-    color: $color-text-muted;
+  &__intent-subtitle {
+    display: block;
+    margin-top: 8rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.45;
+  }
+
+  &__readiness-tray {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: $z-tab-bar;
+    box-sizing: border-box;
+    padding: $spacing-md $container-padding;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
+    border-top: 2rpx solid rgba($color-primary, 0.12);
+    background: linear-gradient(
+      180deg,
+      rgba($color-surface, 0.99) 0%,
+      rgba($color-primary-light, 0.94) 100%
+    );
+    box-shadow: 0 -16rpx 36rpx rgba($color-primary, 0.08);
+  }
+
+  &__readiness-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__readiness-copy {
+    min-width: 0;
+  }
+
+  &__readiness-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__readiness-subtitle {
+    display: block;
+    margin-top: 8rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.45;
+  }
+
+  &__readiness-progress {
+    display: inline-flex;
+    align-items: center;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.92);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    white-space: nowrap;
+  }
+
+  &__readiness-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: $spacing-sm;
+  }
+
+  &__readiness-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    border: 2rpx solid rgba($color-border, 0.92);
+    background: rgba($color-surface, 0.9);
+    color: $color-text-secondary;
+
+    &--done {
+      border-color: rgba($color-primary, 0.14);
+      background: rgba($color-primary-light, 0.98);
+      color: $color-primary;
+    }
+  }
+
+  &__readiness-chip-icon {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+  }
+
+  &__readiness-chip-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
   }
 
   &__error {
     display: block;
+    margin-top: $spacing-sm;
     font-size: $font-size-sm;
     color: $color-error;
-    margin-top: $spacing-md;
-    text-align: center;
-  }
-
-  &__footer {
-    margin-top: $spacing-xl;
-    @include safe-area-bottom;
   }
 
   &__submit {
-    @include button-primary;
     width: 100%;
+    margin-top: $spacing-sm;
     border: 0;
 
     &[disabled] {
-      opacity: 0.5;
+      opacity: 0.55;
     }
+  }
+}
+
+@keyframes essential-data-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

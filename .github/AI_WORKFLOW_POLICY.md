@@ -1,7 +1,7 @@
 # JoyJoin AI Workflow Policy
 
 **Status:** Active contributor policy  
-**Last updated:** 2026-04-14  
+**Last updated:** 2026-04-16  
 **Scope:** Repo-level AI-assisted delivery workflow, agent usage, and approval boundaries
 
 ## Document relationships
@@ -22,7 +22,7 @@ This policy does **not** approve new runtime AI product behavior by itself. Prod
 ## Core policy
 
 1. **Skills are the rules.** Skills capture repo boundaries, domain invariants, and placement rules. Agents package workflows around those rules; they do not replace them.
-2. **Use the smallest lane that preserves clarity.** Do not force broad planning onto a bounded task, and do not skip planning when the scope is genuinely cross-cutting or ambiguous.
+2. **Planning is mandatory; depth is proportional.** Every task starts with an explicit planning check. For bounded work, a compact micro-plan or execution checklist is enough. For broad, ambiguous, cross-cutting, or approval-first work, use the kickoff lane. Do not skip planning entirely.
 3. **No hidden autonomous execution.** Native orchestration is a guidance-and-handoff layer. `Researcher`, `Planner`, `Supervisor`, and the support agents are explicit workflow tools, not a silent background executor.
 4. **Keep repo workflow separate from runtime AI product authority.** Agent orchestration under `.github/` governs contributor workflow. Runtime AI behavior in `apps/server` remains bounded by deterministic product authority, fallback requirements, and typed contracts.
 5. **Prefer truth over implied certainty.** If scope, ownership, or runtime state is unclear, record that uncertainty and escalate. Do not let stale context, guessed file scope, or ambiguous routing masquerade as verified state.
@@ -35,20 +35,50 @@ JoyJoin uses three delivery lanes.
 
 | Lane | Use when | Required output |
 |---|---|---|
-| **Direct delivery** | The task is bounded, the affected surfaces are already known, and the implementation path is straightforward. | Minimal implementation or doc change plus local validation appropriate to the risk. |
+| **Direct delivery** | The task is bounded, the affected surfaces are already known, and the implementation path is straightforward. | A compact micro-plan plus the implementation or doc change, and local validation appropriate to the risk. |
 | **Kickoff lane** (`Researcher` -> `Planner`) | The task is broad, ambiguous, cross-workspace, architecture-shaping, or likely to branch into multiple specialists. | A verified research brief followed by an approval-first execution plan before implementation starts. |
 | **Operational lane** (`Auto-Eval`, `QA Agent`, `Launch Readiness Agent`, `Supervisor`) | The task is dominated by dirty-worktree review, release risk, regression investigation, launch readiness, or blocker routing. | Findings, verification evidence, and explicit go/no-go or next-step guidance. |
+
+## Planning check
+
+Every task begins with an explicit planning check.
+
+- State the goal, likely file or surface scope, and intended validation path before editing.
+- For bounded work, a micro-plan can be as small as 1-3 concrete steps.
+- If the planning check exposes ambiguity, multiple plausible solution shapes, or cross-cutting impact, route through `Researcher` -> `Planner`.
+- "Start coding and figure it out later" is out of policy even when the task looks small.
+
+## Threshold model
+
+Every planning check should classify the work into one of four thresholds.
+
+- **Minimal bounded addition** — stays inside one existing skill-owned boundary, one primary specialist, and one validation path. No new shared contract, sibling-platform review, or cross-domain ownership change is required.
+- **Bounded refactor** — cleans up repeated exceptions or boundary drift inside one owned surface. It may touch several files, but it stays inside the same primary skill boundary and does not require a new execution lane.
+- **Higher-level frontend revamp** — crosses app or shared UI boundaries, web or mini-program parity boundaries, route or loading architecture, or design-system rules across multiple frontend surfaces.
+- **Higher-level backend revamp** — crosses route, domain, repository, or storage boundaries, shared API contracts, execution or state-integrity assumptions, or rollout and observability obligations across multiple server surfaces.
+
+A task has crossed into a higher threshold when any of the following becomes true:
+
+- The change now needs a new shared DTO, API contract, or sibling-platform review.
+- The change no longer fits inside one owning skill boundary or one specialist lane.
+- Validation now requires QA, launch review, or a dirty-worktree gate that was not part of the original plan.
+- The fix is spreading through compatibility branches or repeated exceptions instead of staying local.
+
+When a task crosses threshold, stop treating it as the original lane by inertia. Use `Supervisor` to reroute approved work, or reopen `Researcher` -> `Planner` if the new scope is still unclear.
 
 ## How to choose the lane
 
 Use **direct delivery** when all of the following are true:
 
+- The planning check classifies the work as a **minimal bounded addition** or **bounded refactor**.
 - The task is small enough that the affected code or docs are obvious up front.
 - The change does not need a new architecture decision before implementation.
 - A single specialist or a single contributor can execute it without multi-stage routing.
+- A compact plan can be stated before editing: what will change, what will be validated, and why kickoff planning is unnecessary.
 
 Use the **kickoff lane** when any of the following are true:
 
+- The planning check already classifies the work as a **higher-level frontend revamp** or **higher-level backend revamp**.
 - The request spans multiple workspaces, domains, or contributor audiences.
 - The work touches agents, skills, hooks, orchestration contracts, contributor policy, or shared platform governance.
 - The user is asking for a plan, proposal, roadmap, or architectural recommendation before code changes.
@@ -58,12 +88,13 @@ Use the **operational lane** when any of the following are true:
 
 - Auto-Eval is blocking guarded tools or a dirty worktree needs deterministic review.
 - The request is primarily about validation, QA coverage, release blockers, or launch risk.
-- The request is about repeated agent, skill, orchestration, hook, prompt, or repo-memory governance drift and the right outcome is a proposal-only reviewer packet; use `SelfIteration` in the audited support lane.
+- The request is about repeated agent, skill, orchestration, hook, prompt, or repo-memory governance drift and the right outcome is a proposal-only reviewer packet; use `Workflow Governance Reviewer` in the audited support lane.
 - The work needs incident-style triage, blocker routing, or remediation sequencing.
 
 Use `Supervisor` inside the operational lane when the next move is rerouting rather than execution itself:
 
 - The task needs to go back to `Researcher` or `Planner` because new ambiguity or scope drift appeared midstream.
+- An approved task started as bounded work but crossed into a higher threshold and now needs a different specialist or validation path.
 - The next best specialist is an audited support agent such as `debug`, `Expert React Frontend Engineer`, `Taro Mini-Program Frontend Engineer`, `Taro Migration Specialist`, or `Mini-Program Parity Auditor`.
 - The work is branding-sensitive or crafted-polish UI delivery that should stay attached to existing frontend agents plus `design-system-governance`, `joyjoin-brand-guidelines`, and `wow-elements`, not a new branding-only or motion-only lane.
 
@@ -98,13 +129,22 @@ The following are non-optional workflow boundaries.
 
 ## Required execution rules
 
-1. Load the relevant skill or skills before making architectural or domain decisions.
-2. Keep changes aligned with active-flow docs and current runtime ownership.
-3. Update contributor-facing docs when workflow behavior, governance expectations, or canonical references change.
-4. Validate the change at the right level for the risk: contract checks, targeted tests, QA review, launch review, or a combination.
-5. Leave explicit findings when validation is partial; do not imply end-to-end confidence you did not establish.
-6. Keep `.git/.orchestration/` operational-only. If the work produces a durable memory candidate, stage it into `repo-memory/candidates/` instead of treating runtime state as a publication surface.
-7. Use the turn-reporting loop for agent work: read the last 5 relevant summaries from `.git/.orchestration/context.json`, emit a structured summary, and treat recorder acknowledgement as the persistence source of truth.
+1. Start with the planning check: define scope, lane, and validation depth before editing.
+2. Load the relevant skill or skills before making architectural or domain decisions.
+3. Keep changes aligned with active-flow docs and current runtime ownership.
+4. Update contributor-facing docs when workflow behavior, governance expectations, or canonical references change.
+5. Validate the change at the right level for the risk: contract checks, targeted tests, QA review, launch review, or a combination.
+6. Leave explicit findings when validation is partial; do not imply end-to-end confidence you did not establish.
+7. Keep `.git/.orchestration/` operational-only. If the work produces a durable memory candidate, stage it into `repo-memory/candidates/` instead of treating runtime state as a publication surface.
+8. Use the turn-reporting loop for agent work: read the last 5 relevant summaries from `.git/.orchestration/context.json`, emit a structured summary, and treat recorder acknowledgement as the persistence source of truth.
+
+## Branch isolation and worktree safety
+
+- Preferred default: perform implementation on a task-specific branch or isolated worktree.
+- If work must happen in a dirty or shared worktree, keep the task scope narrow and preserve unrelated changes.
+- Do not mix unrelated fixes, policy edits, and feature work into one branch or review packet unless the user explicitly wants a bundled change.
+- Before handoff or review, identify which files belong to the current task and which changes pre-dated it.
+- Branch isolation reduces review risk, but it does not replace `Auto-Eval`, local hooks, or GitHub workflows.
 
 ## Runtime AI boundaries that still apply
 
@@ -126,9 +166,10 @@ The default answer to portfolio growth is restraint.
 
 ## Working checklist
 
-1. Pick the correct delivery lane.
+1. Perform the planning check, then pick the correct delivery lane.
 2. Load the relevant skills.
-3. Use `Researcher` -> `Planner` before coding if the task is broad or approval-first.
-4. Keep runtime AI, repo orchestration, and product roadmap docs in their own lanes.
-5. Validate at the right depth for the actual risk.
-6. Escalate to QA or launch review when the change outgrows local confidence.
+3. If staying in direct delivery, write a compact micro-plan before coding.
+4. Use `Researcher` -> `Planner` before coding if the task is broad or approval-first.
+5. Keep runtime AI, repo orchestration, and product roadmap docs in their own lanes.
+6. Validate at the right depth for the actual risk.
+7. Escalate to QA or launch review when the change outgrows local confidence.

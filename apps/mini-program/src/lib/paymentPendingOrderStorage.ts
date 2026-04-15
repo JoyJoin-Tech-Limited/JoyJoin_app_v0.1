@@ -1,12 +1,16 @@
 import Taro from '@tarojs/taro'
 import {
   buildPendingOrderContext,
+  resolvePaymentReturnContext,
   resolvePendingOrder,
+  type MiniProgramPaymentReturnContext,
+  type MiniProgramPaymentReturnContextLookupResult,
   type MiniProgramPendingOrderLookupResult,
 } from './paymentPendingOrder'
 
 export const MINI_PROGRAM_PENDING_ORDER_KEY = 'pending_order'
 export const MINI_PROGRAM_PENDING_ORDER_CONTEXT_KEY = 'pending_order_context'
+export const MINI_PROGRAM_PAYMENT_RETURN_CONTEXT_KEY = 'payment_return_context'
 
 export interface PendingOrderStorageSnapshot {
   orderId: string
@@ -33,10 +37,22 @@ export function readStoredPendingOrder(options?: {
   })
 }
 
+export function readStoredPaymentReturnContext(options?: {
+  currentUserId?: string | null
+  now?: number
+}): MiniProgramPaymentReturnContextLookupResult {
+  return resolvePaymentReturnContext({
+    context: Taro.getStorageSync(MINI_PROGRAM_PAYMENT_RETURN_CONTEXT_KEY),
+    currentUserId: options?.currentUserId,
+    now: options?.now,
+  })
+}
+
 export function persistPendingOrder(input: {
   orderId: string
   type?: string | null
   userId?: string | null
+  returnContext?: MiniProgramPaymentReturnContext | null
   now?: number
 }): void {
   const createdAt = input.now ?? Date.now()
@@ -50,10 +66,17 @@ export function persistPendingOrder(input: {
         type: input.type,
         userId: input.userId,
         createdAt,
+        returnContext: input.returnContext,
       },
       createdAt,
     ),
   )
+}
+
+export function persistPaymentReturnContext(
+  context: MiniProgramPaymentReturnContext,
+): void {
+  Taro.setStorageSync(MINI_PROGRAM_PAYMENT_RETURN_CONTEXT_KEY, context)
 }
 
 export function markPendingOrderManuallyLeft(now = Date.now()): MiniProgramPendingOrderLookupResult {
@@ -88,4 +111,8 @@ export function markPendingOrderManuallyLeft(now = Date.now()): MiniProgramPendi
 export function clearPendingOrderStorage(): void {
   Taro.removeStorageSync(MINI_PROGRAM_PENDING_ORDER_KEY)
   Taro.removeStorageSync(MINI_PROGRAM_PENDING_ORDER_CONTEXT_KEY)
+}
+
+export function clearPaymentReturnContextStorage(): void {
+  Taro.removeStorageSync(MINI_PROGRAM_PAYMENT_RETURN_CONTEXT_KEY)
 }

@@ -7744,9 +7744,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
         poolDistrict: eventPools.district,
         poolDateTime: eventPools.dateTime,
         poolStatus: eventPools.status,
+        theme: eventPoolGroups.theme,
+        subtitle: eventPoolGroups.subtitle,
+        vibe: eventPoolGroups.vibe,
+        themeEmoji: eventPoolGroups.themeEmoji,
+        highlights: eventPoolGroups.themeHighlights,
+        venueName: eventPoolGroups.venueName,
+        venueAddress: eventPoolGroups.venueAddress,
+        finalDateTime: eventPoolGroups.finalDateTime,
       })
       .from(eventPoolRegistrations)
       .innerJoin(eventPools, eq(eventPoolRegistrations.poolId, eventPools.id))
+      .leftJoin(eventPoolGroups, eq(eventPoolRegistrations.assignedGroupId, eventPoolGroups.id))
       .where(eq(eventPoolRegistrations.userId, userId))
       .orderBy(desc(eventPoolRegistrations.registeredAt));
 
@@ -7895,6 +7904,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
       return {
         ...reg,
+        highlights: Array.isArray(reg.highlights) ? reg.highlights : [],
         invitationRole,
         relatedUserName,
       };
@@ -8078,6 +8088,11 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
           diversityScore: group.diversityScore,
           energyBalance: group.energyBalance,
           matchExplanation: group.matchExplanation,
+          theme: group.theme,
+          subtitle: group.subtitle,
+          vibe: group.vibe,
+          themeEmoji: group.themeEmoji,
+          highlights: Array.isArray(group.themeHighlights) ? group.themeHighlights : [],
           venueName: group.venueName,
           venueAddress: group.venueAddress,
           finalDateTime: group.finalDateTime,

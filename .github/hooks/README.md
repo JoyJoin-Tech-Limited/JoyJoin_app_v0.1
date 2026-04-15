@@ -31,7 +31,9 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 - `scripts/orchestration-supervisor.mjs` is the runtime entrypoint for Copilot hooks, local git hooks, and the GitHub orchestration workflow.
 - `scripts/orchestration-supervisor.mjs record-summary` is the explicit recorder path for agent and supervisor turn summaries, and it accepts stdin, `--json`, or `--file` payload input.
 - `scripts/memory-lib.mjs` provides the shared repo-memory substrate for note validation, indexing, and lexical retrieval.
+- `.github/agents/manifest.json` is the machine-readable inventory for canonical agent names and subagent allowlists.
 - `.github/orchestration.yaml` is the machine-readable contract for orchestrated agents, support agents, skill bindings, and tooling sufficiency notes.
+- `.vscode/settings.json` enables nested subagent invocation for the authored second-level Taro support lanes.
 - `repo-memory/generated/promoted-index.json` is the read-only retrieval source the orchestration hook uses when it is available.
 - `.github/agents/researcher.agent.md` and `.github/agents/planner.agent.md` define the approval-first kickoff lane that the orchestration hook recommends.
 

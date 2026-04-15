@@ -7,6 +7,7 @@ const {
   getMiniMaxClientMock,
   logAITraceMock,
   selectWhereMock,
+  updateSetMock,
   updateWhereMock,
 } = vi.hoisted(() => ({
   chatCreateMock: vi.fn(),
@@ -15,6 +16,7 @@ const {
   getMiniMaxClientMock: vi.fn(),
   logAITraceMock: vi.fn(),
   selectWhereMock: vi.fn(),
+  updateSetMock: vi.fn(),
   updateWhereMock: vi.fn(),
 }));
 
@@ -52,9 +54,7 @@ vi.mock('../db', () => ({
       })),
     })),
     update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: updateWhereMock,
-      })),
+      set: updateSetMock,
     })),
   },
 }));
@@ -83,7 +83,44 @@ describe('eventThemeTitleGenerator trace coverage', () => {
           selections: [{ label: '咖啡' }, { label: 'CityWalk' }],
         },
       ]);
+    updateSetMock.mockImplementation(() => ({
+      where: updateWhereMock,
+    }));
     updateWhereMock.mockResolvedValue(undefined);
+  });
+
+  it('persists sanitized theme highlights with generated theme metadata', async () => {
+    chatCreateMock.mockResolvedValue({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            eventThemeTitle: '星火局',
+            tagline: '一起聊出新火花',
+            emoji: '🔥',
+            themeHighlights: [' 咖啡脑暴 ', '城市夜游', '破冰快'],
+            vibe: 'creative',
+          }),
+        },
+      }],
+    });
+
+    const result = await generateAndAssignEventThemeTitle('group-1', group, '饭局');
+
+    expect(result).toMatchObject({
+      eventThemeTitle: '星火局',
+      themeHighlights: ['咖啡脑暴', '城市夜游', '破冰快'],
+      themeVibe: 'creative',
+    });
+    expect(updateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: '星火局',
+        subtitle: '一起聊出新火花',
+        themeEmoji: '🔥',
+        themeHighlights: ['咖啡脑暴', '城市夜游', '破冰快'],
+        vibe: 'creative',
+        updatedAt: expect.any(Date),
+      }),
+    );
   });
 
   it('traces provider_unavailable before template fallback', async () => {

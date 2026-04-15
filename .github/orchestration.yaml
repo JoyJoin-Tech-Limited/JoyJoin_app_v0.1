@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-14",
+  "updated": "2026-04-16",
   "portfolio_scope": {
     "kickoff_agents": [
       "Researcher",
@@ -23,10 +23,10 @@
       "Taro Migration Specialist",
       "Expert React Frontend Engineer",
       "debug",
-      "principal SWE",
+      "Principal Software Engineer",
       "SE: Product Manager",
-      "prompt engineer",
-      "SelfIteration"
+      "Prompt Engineer",
+      "Workflow Governance Reviewer"
     ]
   },
   "copilot_hooks": {
@@ -238,6 +238,42 @@
       "to": "Planner",
       "label": "Re-plan execution",
       "prompt": "Use the updated findings and current blocker to refresh the approval-first execution plan."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Auto-Eval",
+      "label": "Route local quality gate",
+      "prompt": "Use Auto-Eval when the immediate next step is the dirty-worktree gate, a manual rerun, or deterministic local sign-off."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Product Manager",
+      "label": "Refresh product scope",
+      "prompt": "Tighten the approved scope, acceptance criteria, or issue-ready framing before implementation continues."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Backend Engineer",
+      "label": "Route backend implementation",
+      "prompt": "Implement the approved backend scope or bounded backend refactor in apps/server while preserving the active domain boundaries and validation path."
+    },
+    {
+      "from": "Supervisor",
+      "to": "AI Engineer",
+      "label": "Route AI implementation",
+      "prompt": "Implement the approved runtime AI scope while keeping provider routing, fallback behavior, trace metadata, and deterministic authority boundaries explicit."
+    },
+    {
+      "from": "Supervisor",
+      "to": "QA Agent",
+      "label": "Request focused verification",
+      "prompt": "Turn the implemented scope into a concrete verification checklist or change-focused execution summary before more implementation continues."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Launch Readiness Agent",
+      "label": "Review launch readiness",
+      "prompt": "Assess whether the current scope now needs launch-risk review, operational readiness checks, or blocker consolidation beyond local correctness."
     },
     {
       "from": "Supervisor",
@@ -686,27 +722,6 @@
         ]
       }
     },
-    "principal SWE": {
-      "file": ".github/agents/principal SWE.md",
-      "portfolio_role": "architecture-advice",
-      "orchestration_status": "audited-support",
-      "current_tools": [
-        "read",
-        "search",
-        "execute"
-      ],
-      "tooling_assessment": {
-        "status": "sufficient",
-        "summary": "Principal-level architecture guidance is covered by normalized repo inspection and command execution without requiring legacy tool aliases.",
-        "recommended_extensions": [
-          {
-            "type": "optional-integration",
-            "label": "Add explicit GitHub review or issue integrations only if this advisory agent should own those workflows directly.",
-            "reason": "Architecture guidance can stay repo-grounded today, while GitHub-native follow-up remains a separate workflow concern."
-          }
-        ]
-      }
-    },
     "SE: Product Manager": {
       "file": ".github/agents/PM advisor.md",
       "portfolio_role": "issue-scoping",
@@ -728,28 +743,7 @@
         ]
       }
     },
-    "prompt engineer": {
-      "file": ".github/agents/prompt engineer.md",
-      "portfolio_role": "prompt-design",
-      "orchestration_status": "audited-support",
-      "current_tools": [
-        "read",
-        "search",
-        "edit"
-      ],
-      "tooling_assessment": {
-        "status": "sufficient",
-        "summary": "Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability.",
-        "recommended_extensions": [
-          {
-            "type": "optional-tool",
-            "label": "Add execute capability only if prompt maintenance should run validation commands or scripted prompt linting.",
-            "reason": "The current role can stay edit-focused until prompt workflows require deterministic command execution."
-          }
-        ]
-      }
-    },
-    "SelfIteration": {
+    "Workflow Governance Reviewer": {
       "file": ".github/agents/self-iteration.agent.md",
       "portfolio_role": "meta-governance",
       "orchestration_status": "audited-support",
@@ -767,6 +761,48 @@
             "type": "optional-tool",
             "label": "Add stronger reviewer-packet provenance only if support-lane evidence collection needs structured export artifacts.",
             "reason": "The current helper can already inspect repo state, draft proposals, and run validators without expanding its authority boundaries."
+          }
+        ]
+      }
+    },
+    "Principal Software Engineer": {
+      "file": ".github/agents/principal SWE.md",
+      "portfolio_role": "architecture-advice",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Principal-level architecture guidance is covered by normalized repo inspection and command execution without requiring legacy tool aliases.",
+        "recommended_extensions": [
+          {
+            "type": "optional-integration",
+            "label": "Add explicit GitHub review or issue integrations only if this advisory agent should own those workflows directly.",
+            "reason": "Architecture guidance can stay repo-grounded today, while GitHub-native follow-up remains a separate workflow concern."
+          }
+        ]
+      }
+    },
+    "Prompt Engineer": {
+      "file": ".github/agents/prompt engineer.md",
+      "portfolio_role": "prompt-design",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability.",
+        "recommended_extensions": [
+          {
+            "type": "optional-tool",
+            "label": "Add execute capability only if prompt maintenance should run validation commands or scripted prompt linting.",
+            "reason": "The current role can stay edit-focused until prompt workflows require deterministic command execution."
           }
         ]
       }
@@ -856,19 +892,19 @@
     "debug": [
       "testing-and-regression-guardrails"
     ],
-    "principal SWE": [
+    "SE: Product Manager": [
+      "draft-prd"
+    ],
+    "Workflow Governance Reviewer": [
+      "docs-sync",
+      "testing-and-regression-guardrails"
+    ],
+    "Principal Software Engineer": [
       "code-review",
       "reliability-and-state-integrity",
       "monorepo-workspace-governance"
     ],
-    "SE: Product Manager": [
-      "draft-prd"
-    ],
-    "prompt engineer": [],
-    "SelfIteration": [
-      "docs-sync",
-      "testing-and-regression-guardrails"
-    ]
+    "Prompt Engineer": []
   },
   "retry_policy": {
     "default": {

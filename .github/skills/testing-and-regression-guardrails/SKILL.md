@@ -10,7 +10,7 @@ description: >
 
 # Testing and Regression Guardrails
 
-**Core rule:** Tests in this repo serve two purposes: verifying correctness and locking in architectural decisions. When a boundary is established or a cleanup is completed, add a test to prevent regression.
+**Core rule:** Tests in this repo serve three purposes: verifying correctness, locking in architectural decisions, and, when practical, capturing expected behaviour before code changes land. When a boundary is established or a cleanup is completed, add a test to prevent regression.
 
 ## When to use this skill
 
@@ -18,6 +18,13 @@ description: >
 - Writing a test to enforce an architectural invariant (e.g. signal boundary, module ownership)
 - Adding a structural test that verifies file placement or import rules
 - Setting up a CI guardrail script for a convention that should not regress
+
+## Default stance on TDD
+
+- Prefer red-green-refactor for deterministic business logic, bug fixes, and stateful workflows when the failure can be expressed as an automated check.
+- For bounded work, a failing unit, integration, or structural test is the preferred starting point when the harness already exists.
+- If strict test-first work is impractical, record why before changing production code. Common reasons include missing harnesses, flaky external dependencies, or UI-only reproduction paths.
+- When you cannot start with a failing automated check, add the narrowest regression test immediately after the fix and keep the reproduction steps explicit in the change notes.
 
 ## Test infrastructure
 
@@ -72,10 +79,11 @@ CI-enforced checks that validate conventions beyond TypeScript types:
 
 When a bug is fixed or a cleanup is completed:
 
-1. Identify the specific behaviour that must not regress
-2. Write the narrowest test that would fail if the regression was reintroduced
-3. Add it to the appropriate `__tests__` directory
-4. Include a comment explaining what it is guarding against
+1. Decide whether the regression can be expressed as a failing automated check before the code change.
+2. If yes, write the smallest failing test first, then fix the code, then refactor.
+3. If no, document why not, preserve a reliable reproduction path, and add the narrowest regression test immediately after the fix.
+4. Add the test to the appropriate `__tests__` directory.
+5. Include a comment explaining what it is guarding against.
 
 ```typescript
 // guards against regression: interestSignalBoundary invariant (PR #379)

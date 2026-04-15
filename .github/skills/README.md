@@ -48,6 +48,7 @@ Patterns for making the system reliable, secure, and observable.
 | [`llm-runtime-safety-and-integration`](./llm-runtime-safety-and-integration/SKILL.md) | Safe runtime AI integration, provider routing, prompt metadata, fallback behavior, trace logging, deterministic-boundary protection |
 | [`admin-audit-and-rbac-governance`](./admin-audit-and-rbac-governance/SKILL.md) | Admin role hierarchy, endpoint permission mapping, audit-log obligations, and safe handling of sensitive admin writes |
 | [`reliability-and-state-integrity`](./reliability-and-state-integrity/SKILL.md) | Transactions, idempotency, execution guards, recovery/re-entry semantics, expiry handling, critical writes vs side effects |
+| [`payment-entitlement-authority`](./payment-entitlement-authority/SKILL.md) | Payment creation, verification, entitlement gating, refunds, event-pack credits, and cross-platform payment coordination |
 | [`database-migration-safety`](./database-migration-safety/SKILL.md) | Safe schema evolution, idempotent migration scripts, pre/post verification, rollout sequencing, and rollback thinking |
 | [`testing-and-regression-guardrails`](./testing-and-regression-guardrails/SKILL.md) | Regression tests, invariant tests, structural tests, CI guardrail scripts, test placement by workspace |
 | [`platform-observability-and-ops`](./platform-observability-and-ops/SKILL.md) | Structured logging, request IDs, Prometheus metrics, health/readiness, alerts, synthetic monitoring, audit logging |
@@ -153,6 +154,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I add an LLM call safely at runtime? | `llm-runtime-safety-and-integration` |
 | How do I wire RBAC and audit logging for an admin refund, ban, or override? | `admin-audit-and-rbac-governance` |
 | How do I make a multi-step operation atomic? | `reliability-and-state-integrity` |
+| Who owns payment creation, verification, refunds, or shared payment contracts? | `payment-entitlement-authority` |
 | How do I plan a safe migration or column rename? | `database-migration-safety` |
 | How do I lock in an architectural boundary with a test? | `testing-and-regression-guardrails` |
 | How do I add structured logging to a new route? | `platform-observability-and-ops` |

@@ -117,6 +117,60 @@
     margin-bottom: $spacing-md;
   }
 
+  &__resume-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    border: 2rpx solid rgba($color-primary, 0.14);
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.82) 100%);
+
+    &--paid {
+      border-color: rgba($color-success, 0.22);
+      background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-success, 0.1) 100%);
+    }
+  }
+
+  &__resume-kicker {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: rgba($color-primary-dark, 0.84);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__resume-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.5;
+  }
+
+  &__resume-copy {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.7;
+  }
+
+  &__resume-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  &__resume-pill {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    box-shadow: 0 8rpx 22rpx rgba($color-primary, 0.08);
+  }
+
   &__step-pill {
     flex: 1;
     min-width: 0;

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "hermes-local": {
+      "command": "/Users/vincentlai/.local/bin/hermes",
+      "args": [
+        "mcp",
+        "serve"
+      ]
+    }
+  }
+}

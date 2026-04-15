@@ -2,7 +2,7 @@
 
 This document explains the native custom-agent orchestration layer for JoyJoin.
 
-The machine-readable source of truth is `.github/orchestration.yaml`. This guide is the human-readable companion for contributors.
+The machine-readable orchestration contract is `.github/orchestration.yaml`. The machine-readable agent inventory and subagent allowlists live in `.github/agents/manifest.json`. This guide is the human-readable companion for contributors.
 
 ## Related docs
 
@@ -37,14 +37,24 @@ That split is deliberate:
 - keep the broader portfolio visible so future expansion stays explicit
 - capture tooling gaps now instead of rediscovering them later
 
-Supervisor also has explicit rerouting exits that do not promote more agents into the core graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, and it can route into selected audited support lanes for bug investigation, parity audit, web UI work, mini-program UI work, or parity-first migration.
+Supervisor also has explicit native exits that do not promote more agents into the default graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, route into core execution or validation exits when approved work crosses into product, backend, AI, QA, launch, or Auto-Eval territory, and route into selected audited support lanes for bug investigation, parity audit, web UI work, mini-program UI work, or parity-first migration.
 
-Those rerouting exits are now also declared as native Supervisor handoffs in the agent frontmatter so the routing buttons and the orchestration contract stay aligned.
+Those exits are declared as native Supervisor handoffs in the agent frontmatter and the orchestration contract so the buttons, docs, and machine-readable graph stay aligned. Nested subagents are also intentionally enabled at the workspace level because `Taro Migration Specialist` and `Taro Mini-Program Frontend Engineer` both author second-level delegation for parity and sibling-platform review work.
+
+## Threshold-guided routing
+
+- `Minimal bounded addition` stays with the current owning specialist and skill boundary. No new lane is needed.
+- `Bounded refactor` can stay in the current lane only while it remains inside one owning skill boundary and one validation path.
+- `Higher-level frontend revamp` should reopen kickoff when scope is broad, then route to `Expert React Frontend Engineer`, `Taro Mini-Program Frontend Engineer`, `Mini-Program Parity Auditor`, or `Taro Migration Specialist` based on renderer and parity needs.
+- `Higher-level backend revamp` should reopen kickoff when scope is broad, then route to `Backend Engineer`, `AI Engineer`, `QA Agent`, `Launch Readiness Agent`, or `Auto-Eval` as the approved work moves from implementation into verification and sign-off.
+- When approved work crosses threshold midstream, `Supervisor` is the rerouting surface. If the new scope is still unclear, reopen `Researcher` or `Planner` instead of guessing.
 
 ## Runtime surfaces
 
+- Agent inventory and subagent allowlists: `.github/agents/manifest.json`
 - Copilot hooks: `.github/hooks/auto-eval.json` and `.github/hooks/orchestration.json`
 - Local git hooks: `.githooks/pre-commit` and `.githooks/post-commit`
+- Workspace settings: `.vscode/settings.json`
 - GitHub workflow: `.github/workflows/orchestrate.yml`
 - Runtime context: `.git/.orchestration/context.json`
 - Runtime event log: `.git/.orchestration/events.jsonl`
@@ -101,17 +111,25 @@ This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bo
 - `QA Agent` -> `Launch Readiness Agent` and `Auto-Eval` for release escalation and final local gate recheck.
 - `Launch Readiness Agent` -> `Auto-Eval` or `Supervisor` depending on whether the next step is local sign-off or blocker routing.
 
-## Supervisor rerouting lanes
+## Supervisor routing exits
+
+These native exits now cover kickoff re-entry, core execution or validation, and selected audited support lanes when approved work crosses a threshold.
 
 - `Supervisor` -> `Researcher` when the current blocker exposes missing repo context or unresolved ambiguity.
 - `Supervisor` -> `Planner` when the findings exist but the plan, sequencing, or approval boundary must be refreshed.
+- `Supervisor` -> `Auto-Eval` when the immediate next step is the dirty-worktree gate, a manual rerun, or deterministic local sign-off.
+- `Supervisor` -> `Product Manager` when product scope, acceptance criteria, or issue-ready framing must be refreshed before implementation continues.
+- `Supervisor` -> `Backend Engineer` for approved backend implementation or bounded backend refactors in `apps/server`.
+- `Supervisor` -> `AI Engineer` for approved runtime AI implementation that must stay inside the AI safety lane.
+- `Supervisor` -> `QA Agent` when the next best move is flow-level verification or a regression checklist rather than more implementation.
+- `Supervisor` -> `Launch Readiness Agent` when release risk or operational readiness becomes the next gating question.
 - `Supervisor` -> `debug` for isolated bug investigation, failure reproduction, root-cause analysis, or the narrowest safe fix before another specialist takes over.
 - `Supervisor` -> `Mini-Program Parity Auditor` for compare-only parity review or migration backlog work.
 - `Supervisor` -> `Expert React Frontend Engineer` for web UI implementation in `apps/user-client`, including branding-sensitive UI work that should stay attached to frontend skills rather than a standalone branding agent.
 - `Supervisor` -> `Taro Mini-Program Frontend Engineer` for direct Taro UI implementation or refinement in `apps/mini-program`.
 - `Supervisor` -> `Taro Migration Specialist` for parity-first migration from `apps/user-client` into `apps/mini-program`.
 
-These are explicit support-lane exits, not a promotion of those agents into the default v1 graph.
+The frontend and parity agents remain audited support lanes. Adding core execution exits for product, backend, AI, QA, launch, and Auto-Eval makes the native contract match the current routing rules; it does not promote the frontend support lanes into the default v1 graph.
 
 ## Why the broader portfolio is still linked
 
@@ -147,7 +165,7 @@ Useful audited support bindings:
 - `Taro Migration Specialist` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
 - `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
 - `debug` -> `testing-and-regression-guardrails`
-- `SelfIteration` -> `docs-sync`, `testing-and-regression-guardrails`
+- `Workflow Governance Reviewer` -> `docs-sync`, `testing-and-regression-guardrails`
 
 Branding and crafted interaction polish remain skill boundaries on the frontend agents through `design-system-governance`, `joyjoin-brand-guidelines`, and `wow-elements`; there is no standalone branding agent in the current orchestration portfolio.
 
@@ -179,10 +197,10 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 | `Taro Migration Specialist` | `sufficient` | Migration work already has the right combination of edit, execute, and subagents. | Optional screenshot capture for source-versus-target visual comparison. |
 | `Expert React Frontend Engineer` | `sufficient` | Browser-first frontend implementation is covered by the normalized tool surface. | Add explicit subagent support only if cross-platform coordination should originate directly from this agent. |
 | `debug` | `sufficient` | Bug investigation and root-cause remediation are covered by the normalized tool surface. | Supervisor can now route bug investigation into `debug`; add explicit debug-to-domain handoffs only if resolved root causes should route directly into owning specialists. |
-| `principal SWE` | `sufficient` | Principal-level architecture guidance is covered by normalized repo inspection and command execution. | Add GitHub review or issue integrations only if this advisor should own those workflows directly. |
+| `Principal Software Engineer` | `sufficient` | Principal-level architecture guidance is covered by normalized repo inspection and command execution. | Add GitHub review or issue integrations only if this advisor should own those workflows directly. |
 | `SE: Product Manager` | `sufficient` | Issue-ready product scoping is covered by normalized repo inspection and editing without requiring direct tracker mutation. | Add issue-tracker write integration only if this agent should create or update backlog records directly. |
-| `prompt engineer` | `sufficient` | Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability. | Add execute capability only if prompt workflows need scripted validation or linting. |
-| `SelfIteration` | `sufficient` | Proposal-only portfolio review, reviewer-packet drafting, and deterministic validation are covered by read, search, edit, and execute without expanding authority. | Add stronger reviewer-packet provenance only if support-lane evidence export becomes a real operational need. |
+| `Prompt Engineer` | `sufficient` | Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability. | Add execute capability only if prompt workflows need scripted validation or linting. |
+| `Workflow Governance Reviewer` | `sufficient` | Proposal-only portfolio review, reviewer-packet drafting, and deterministic validation are covered by read, search, edit, and execute without expanding authority. | Add stronger reviewer-packet provenance only if support-lane evidence export becomes a real operational need. |
 
 ## Validation expectations
 
@@ -194,6 +212,7 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 - `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.
+- `npm run orchestration:validate` should fail if `.github/agents/manifest.json` drifts from agent frontmatter subagent allowlists or if `.vscode/settings.json` stops enabling authored nested delegation.
 
 ## Next expansion points
 

@@ -1,3 +1,4 @@
+@use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
 .verification-page {
@@ -23,13 +24,43 @@
   &__title {
     font-size: 48rpx;
     font-weight: 800;
-    color: #111827;
+    color: $color-text-primary;
+  }
+
+  &__context {
+    padding: 24rpx;
+    border-radius: 28rpx;
+    background: linear-gradient(145deg, rgba($color-primary-light, 0.92) 0%, rgba($color-surface, 0.96) 100%);
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__context-kicker {
+    display: block;
+    font-size: 22rpx;
+    color: $color-primary;
+    font-weight: 700;
+  }
+
+  &__context-title {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 32rpx;
+    font-weight: 800;
+    color: $color-text-primary;
+  }
+
+  &__context-copy {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: $color-text-secondary;
   }
 
   &__message {
     font-size: 28rpx;
     line-height: 1.6;
-    color: #4b5563;
+    color: $color-text-secondary;
   }
 
   &__spinner-wrap {
@@ -51,7 +82,7 @@
 
   &__meta {
     font-size: 24rpx;
-    color: #94a3b8;
+    color: $color-text-muted;
   }
 
   &__actions {
@@ -74,8 +105,8 @@
   }
 
   &__button--secondary {
-    background: #eef2ff;
-    color: #4f46e5;
+    background: rgba($color-primary-light, 0.94);
+    color: $color-primary-dark;
   }
 }
 

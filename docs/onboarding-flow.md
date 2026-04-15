@@ -79,6 +79,11 @@ Essential Data → Extended Data → Profile Review → Discover Page
 - On login: Send test results to backend, create user, link results
 - Uses endpoint: `POST /api/auth/wechat/login-with-test`
 
+**Mini-program results experience (current behaviour):**
+- The Taro results page preserves a replayable reveal state so users can rewatch the card reveal locally without regenerating backend results.
+- Native sharing is enabled on the page (`ShareAppMessage` and `ShareTimeline`), and the visible share CTA can generate a local poster before invoking the platform share sheet.
+- These share affordances sit alongside the same primary claim flow; they do not replace the auth gate or the backend result-linking step.
+
 **Auth-gate flow (current behaviour):**
 - The unauthenticated claim CTA on the results page routes to **`/personality-test/auth-gate`** rather than showing a loading spinner. This ensures users are not trapped in a spinner state if WeChat auth is not yet ready.
 - On the **`/personality-test/auth-gate`** page there is a **non-production-only testing quick-pass** text link labeled **`测试快速通过`**. It immediately continues the flow without triggering WeChat OAuth. This link is only rendered in development / staging builds, has **no `data-testid`**, and must never be exposed in production.

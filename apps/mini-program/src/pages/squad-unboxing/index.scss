@@ -3,14 +3,24 @@
 
 .squad-unboxing {
   @include page-gradient-bg;
-  padding: $container-padding;
+  min-height: 100vh;
+  position: relative;
 
-  // ── Error State ───────────────────────────────────────────────
+  &__scroll {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+    @include fixed-footer-reserve($button-height + 260rpx, $spacing-xl);
+  }
+
   &__error {
     @include flex-center;
     flex-direction: column;
     gap: $spacing-md;
     min-height: 80vh;
+    padding: 0 $container-padding;
+    text-align: center;
   }
 
   &__error-icon {
@@ -20,23 +30,24 @@
   &__error-text {
     font-size: $font-size-base;
     color: $color-text-secondary;
-    text-align: center;
+    line-height: 1.6;
   }
 
   &__error-btn {
+    width: 240rpx;
     margin-top: $spacing-sm;
   }
 
-  // ── Header ────────────────────────────────────────────────────
   &__header {
     @include flex-center;
     flex-direction: column;
-    gap: $spacing-xs;
+    gap: $spacing-sm;
     padding: $spacing-xl 0 $spacing-lg;
   }
 
   &__header-emoji {
     font-size: 96rpx;
+    animation: squad-unboxing-float 2.8s ease-in-out infinite;
   }
 
   &__header-title {
@@ -49,47 +60,275 @@
 
   &__header-tagline {
     display: block;
+    padding: 0 $spacing-md;
     font-size: $font-size-base;
     color: $color-text-secondary;
     text-align: center;
-    line-height: 1.6;
-    padding: 0 $spacing-md;
+    line-height: 1.7;
+  }
+
+  &__header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12rpx;
+  }
+
+  &__header-group-num,
+  &__header-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10rpx 20rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
   }
 
   &__header-group-num {
-    display: inline-block;
-    font-size: $font-size-sm;
     color: $color-primary;
-    font-weight: $font-weight-medium;
-    background: $color-primary-light;
-    padding: $spacing-xs $spacing-md;
-    border-radius: 100rpx;
-    margin-top: $spacing-xs;
+    background: rgba($color-primary, 0.12);
   }
 
-  // ── Match Score ───────────────────────────────────────────────
-  &__score {
-    @include flex-center;
-    flex-direction: column;
-    gap: $spacing-xs;
+  &__header-score {
+    color: $color-primary-dark;
+    background: rgba($color-secondary, 0.14);
+  }
+
+  &__blind-box-card,
+  &__info-card,
+  &__theme-card,
+  &__analysis-card {
+    @include card;
     margin-bottom: $spacing-lg;
   }
 
-  &__score-label {
+  &__blind-box-card {
+    position: relative;
+    overflow: hidden;
+    padding: $spacing-xl $spacing-lg;
+    text-align: center;
+    border: 2rpx solid rgba($color-primary, 0.14);
+    background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.86) 100%);
+    box-shadow: 0 22rpx 56rpx rgba(45, 49, 66, 0.12);
+  }
+
+  &__blind-box-card--shaking {
+    .squad-unboxing__blind-box-emoji-wrap {
+      animation: squad-unboxing-shake 0.9s ease-in-out infinite;
+    }
+  }
+
+  &__blind-box-glow {
+    position: absolute;
+    left: 50%;
+    top: 84rpx;
+    width: 340rpx;
+    height: 340rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba($color-primary, 0.28) 0%, rgba($color-primary, 0) 72%);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  &__blind-box-emoji-wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 176rpx;
+    height: 176rpx;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: rgba($color-surface, 0.82);
+    box-shadow: 0 20rpx 48rpx rgba(45, 49, 66, 0.12);
+    animation: squad-unboxing-float 2.8s ease-in-out infinite;
+  }
+
+  &__blind-box-emoji-wrap--shaking {
+    animation: squad-unboxing-shake 0.9s ease-in-out infinite;
+  }
+
+  &__blind-box-emoji {
+    font-size: 96rpx;
+    line-height: 1;
+  }
+
+  &__blind-box-title {
+    display: block;
+    margin-top: $spacing-lg;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+  }
+
+  &__blind-box-copy {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.7;
+  }
+
+  &__blind-box-theme-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: $spacing-md;
+    padding: 10rpx 20rpx;
+    border-radius: 999rpx;
+    border: 1rpx solid rgba($color-primary, 0.12);
+    background: rgba($color-surface, 0.84);
+  }
+
+  &__blind-box-theme-text {
     font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__open-btn {
+    width: 100%;
+    margin-top: $spacing-lg;
+  }
+
+  &__reveal-shell {
+    margin-bottom: $spacing-lg;
+  }
+
+  &__section-label {
+    display: block;
+    margin-bottom: $spacing-md;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     color: $color-text-secondary;
   }
 
-  &__score-value {
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    @include gradient-text;
+  &__member-grid {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__member-card {
+    @include card;
+    padding: $spacing-md $spacing-lg;
+    box-shadow: 0 12rpx 28rpx rgba(45, 49, 66, 0.07);
+    animation: squad-unboxing-card-rise 0.34s ease both;
+  }
+
+  &__member-card--current {
+    border: 2rpx solid $color-primary;
+    background: linear-gradient(135deg, #fafafe 0%, #f5f0ff 100%);
+  }
+
+  &__member-top {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-md;
+  }
+
+  &__member-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__member-avatar {
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50%;
+    background: $color-primary-light;
+    overflow: hidden;
+  }
+
+  &__member-avatar--placeholder {
+    @include flex-center;
+    background: $brand-gradient;
+  }
+
+  &__member-avatar-initial {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__member-badge {
+    position: absolute;
+    right: -4rpx;
+    bottom: -4rpx;
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    border: 2rpx solid $color-surface;
+    background: $color-primary;
+    @include flex-center;
+  }
+
+  &__member-badge-text {
+    font-size: 18rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__member-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+  }
+
+  &__member-name {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+
+  &__member-archetype {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+
+  &__member-meta {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__member-signal {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+    line-height: 1.6;
+  }
+
+  &__member-interests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+  }
+
+  &__member-interest-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba($color-secondary, 0.14);
+  }
+
+  &__member-interest-text {
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
   }
 
   &__info-card {
-    @include card;
     padding: $spacing-lg;
-    margin-bottom: $spacing-lg;
     background: linear-gradient(135deg, #fff7ed 0%, #fff1f2 100%);
   }
 
@@ -136,12 +375,34 @@
     line-height: 1.6;
   }
 
-  // ── Theme Card ────────────────────────────────────────────────
   &__theme-card {
-    @include card;
     padding: $spacing-lg;
-    margin-bottom: $spacing-lg;
-    background: linear-gradient(135deg, #FFF5F7 0%, #F5F0FF 100%);
+    background: linear-gradient(135deg, #fff5f7 0%, #f5f0ff 100%);
+  }
+
+  &__theme-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__theme-emoji {
+    font-size: $font-size-2xl;
+  }
+
+  &__theme-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__theme-subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-bottom: $spacing-sm;
   }
 
   &__theme-vibe {
@@ -158,8 +419,8 @@
 
   &__theme-vibe-value {
     font-size: $font-size-base;
-    color: $color-primary;
     font-weight: $font-weight-semibold;
+    color: $color-primary;
   }
 
   &__theme-highlights {
@@ -168,24 +429,9 @@
     gap: $spacing-xs;
   }
 
-  &__theme-highlights-title {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__theme-highlight-row {
+  &__theme-highlight {
     display: flex;
     align-items: flex-start;
-    gap: $spacing-xs;
-  }
-
-  &__theme-highlight-dot {
-    font-size: $font-size-base;
-    color: $color-primary;
-    line-height: 1.6;
-    flex-shrink: 0;
   }
 
   &__theme-highlight-text {
@@ -194,154 +440,199 @@
     line-height: 1.6;
   }
 
-  // ── Members Section ───────────────────────────────────────────
-  &__members-section {
+  &__analysis-stack {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
     margin-bottom: $spacing-lg;
   }
 
-  &__members-title {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-md;
+  &__analysis-card {
+    padding: $spacing-lg;
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.62) 100%);
+    animation: squad-unboxing-card-rise 0.34s ease both;
   }
 
-  &__members-empty {
-    @include flex-center;
-    padding: $spacing-xl 0;
+  &__analysis-card--chemistry {
+    background: linear-gradient(145deg, rgba($color-primary-light, 0.96) 0%, rgba($color-surface, 0.98) 100%);
   }
 
-  &__members-empty-text {
-    font-size: $font-size-base;
-    color: $color-text-muted;
-  }
-
-  &__members-list {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  // ── Member Card ───────────────────────────────────────────────
-  &__member-card {
-    @include card;
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-md $spacing-lg;
-
-    &--current {
-      border: 2rpx solid $color-primary;
-      background: linear-gradient(135deg, #FAFAFE 0%, #F5F0FF 100%);
-    }
-  }
-
-  &__member-avatar-wrap {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  &__member-avatar {
-    width: 100rpx;
-    height: 100rpx;
-    border-radius: 50%;
-    background: $color-primary-light;
-    overflow: hidden;
-
-    &--placeholder {
-      @include flex-center;
-      background: $brand-gradient;
-    }
-  }
-
-  &__member-avatar-initial {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-  }
-
-  &__member-badge {
-    position: absolute;
-    bottom: -4rpx;
-    right: -4rpx;
-    width: 36rpx;
-    height: 36rpx;
-    border-radius: 50%;
-    background: $color-primary;
-    @include flex-center;
-    border: 2rpx solid $color-surface;
-  }
-
-  &__member-badge-text {
-    font-size: 18rpx;
-    color: $color-text-white;
-    font-weight: $font-weight-bold;
-  }
-
-  &__member-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__member-name-row {
-    display: flex;
-    align-items: baseline;
-    gap: $spacing-xs;
-    margin-bottom: 4rpx;
-  }
-
-  &__member-name {
-    font-size: $font-size-md;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    @include text-truncate;
-  }
-
-  &__member-age {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-    flex-shrink: 0;
-  }
-
-  &__member-archetype {
+  &__analysis-text {
     display: block;
     font-size: $font-size-sm;
-    color: $color-primary;
-    margin-bottom: $spacing-xs;
+    color: $color-text-secondary;
+    line-height: 1.75;
   }
 
-  &__member-interests {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-    align-items: center;
-  }
-
-  &__member-interest-tag {
+  &__chemistry-chip {
     display: inline-flex;
     align-items: center;
-    padding: 4rpx $spacing-sm;
-    background: $color-primary-light;
-    border-radius: 100rpx;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    padding: 12rpx 22rpx;
+    border-radius: 999rpx;
   }
 
-  &__member-interest-text {
+  &__chemistry-chip--fire {
+    background: rgba($color-error, 0.12);
+  }
+
+  &__chemistry-chip--warm {
+    background: rgba($color-secondary, 0.14);
+  }
+
+  &__chemistry-chip--cold {
+    background: rgba($color-success, 0.12);
+  }
+
+  &__chemistry-chip--mild,
+  &__chemistry-chip--fallback {
+    background: rgba($color-primary-light, 0.96);
+  }
+
+  &__chemistry-emoji {
+    font-size: $font-size-base;
+  }
+
+  &__chemistry-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  &__skeleton {
+    border-radius: 24rpx;
+    background: linear-gradient(90deg, rgba($color-divider, 0.9) 0%, rgba($color-surface, 0.94) 50%, rgba($color-divider, 0.9) 100%);
+    background-size: 220% 100%;
+    animation: squad-unboxing-shimmer 1.2s linear infinite;
+  }
+
+  &__skeleton--banner {
+    height: 84rpx;
+  }
+
+  &__skeleton--line {
+    height: 24rpx;
+  }
+
+  &__skeleton--line-short {
+    width: 68%;
+  }
+
+  &__skeleton--pair {
+    height: 160rpx;
+  }
+
+  &__skeleton--topic {
+    width: calc((100% - #{$spacing-sm} * 2) / 3);
+    height: 72rpx;
+  }
+
+  &__tag-row,
+  &__pair-pill-row,
+  &__topic-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+  }
+
+  &__tag-row,
+  &__pair-pill-row {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__tag-chip,
+  &__pair-pill,
+  &__topic-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+  }
+
+  &__tag-chip,
+  &__topic-chip {
+    background: rgba($color-primary-light, 0.92);
+  }
+
+  &__pair-pill {
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 8rpx 18rpx rgba(45, 49, 66, 0.08);
+  }
+
+  &__tag-chip-text,
+  &__pair-pill-text,
+  &__topic-chip-text {
     font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
     color: $color-primary-dark;
   }
 
-  &__member-interest-more {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
-
-  // ── Actions ───────────────────────────────────────────────────
-  &__actions {
+  &__pair-list {
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
-    margin-top: $spacing-md;
+  }
+
+  &__pair-card {
+    padding: $spacing-md;
+    border-radius: 26rpx;
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.78) 100%);
+    box-shadow: 0 12rpx 28rpx rgba(45, 49, 66, 0.07);
+    animation: squad-unboxing-card-rise 0.34s ease both;
+  }
+
+  &__pair-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pair-label {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__pair-score {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  &__pair-copy {
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  &__topic-chip {
+    min-height: 72rpx;
+    animation: squad-unboxing-card-rise 0.3s ease both;
+  }
+
+  &__action-zone {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: $z-tab-bar;
+    box-sizing: border-box;
+    padding: $spacing-md $container-padding;
+    @include safe-area-inline($container-padding);
+    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 -18rpx 42rpx rgba(45, 49, 66, 0.12);
+    border-top: 2rpx solid rgba($color-border, 0.8);
   }
 
   &__confirm-btn {
@@ -350,29 +641,68 @@
     border: 0;
   }
 
-  &__chat-btn {
-    @include button-primary;
+  &__detail-btn {
     width: 100%;
-    border: 0;
+    margin-top: $spacing-sm;
   }
 
-  &__back-btn {
-    width: 100%;
-    height: $button-height;
-    border-radius: $button-radius;
-    background: $color-surface;
-    color: $color-text-secondary;
-    font-size: $font-size-base;
-    font-weight: $font-weight-medium;
-    border: 1rpx solid $color-border;
-
-    &:active {
-      transform: scale(0.98);
-    }
+  &__skip-link {
+    display: block;
+    margin-top: $spacing-sm;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
   }
 
-  // ── Spacer ────────────────────────────────────────────────────
   &__spacer {
-    height: $spacing-2xl;
+    height: $spacing-xl;
+  }
+}
+
+@keyframes squad-unboxing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+
+@keyframes squad-unboxing-shake {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  25% {
+    transform: rotate(-6deg) scale(1.02);
+  }
+
+  75% {
+    transform: rotate(6deg) scale(1.02);
+  }
+}
+
+@keyframes squad-unboxing-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes squad-unboxing-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
   }
 }

@@ -78,6 +78,18 @@ export interface EventThemeTitleResult {
   themeVibe: 'playful' | 'professional' | 'creative' | 'adventurous';
 }
 
+function sanitizeThemeHighlights(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((highlight): highlight is string => typeof highlight === 'string')
+    .map((highlight) => highlight.trim())
+    .filter((highlight) => highlight.length > 0)
+    .slice(0, 4);
+}
+
 export interface EventThemeTitleContext {
   groupId: string;
   memberArchetypes: string[];
@@ -151,6 +163,7 @@ export async function generateAndAssignEventThemeTitle(
         result = await generateEventThemeTitleWithAI(context, aiSelection);
         
         if (result && validateEventThemeTitleResult(result)) {
+          result.themeHighlights = sanitizeThemeHighlights(result.themeHighlights);
           const duration = Date.now() - startTime;
           console.log(`[EventThemeTitleGen] provider=${aiSelection.provider} latency=${duration}ms success=true`);
           console.log(`[EventThemeTitleGen] ✅ ${result.themeEmoji} ${result.eventThemeTitle}`);
@@ -172,7 +185,7 @@ export async function generateAndAssignEventThemeTitle(
               theme: result.eventThemeTitle,
               subtitle: result.themeTagline,
               themeEmoji: result.themeEmoji,
-              // Note: themeHighlights not saved to DB (no schema field)
+              themeHighlights: result.themeHighlights,
               vibe: result.themeVibe,
               updatedAt: new Date()
             })
@@ -213,6 +226,7 @@ export async function generateAndAssignEventThemeTitle(
 
     // Fallback to template-based generation
     result = generateFallbackEventThemeTitle(context);
+    result.themeHighlights = sanitizeThemeHighlights(result.themeHighlights);
     logAITrace({
       domain: 'theme_generation',
       feature: 'generateEventThemeTitle',
@@ -233,7 +247,7 @@ export async function generateAndAssignEventThemeTitle(
         theme: result.eventThemeTitle,
         subtitle: result.themeTagline,
         themeEmoji: result.themeEmoji,
-        // Note: themeHighlights not saved to DB (no schema field)
+        themeHighlights: result.themeHighlights,
         vibe: result.themeVibe,
         updatedAt: new Date()
       })
@@ -344,6 +358,8 @@ function isSingleGrapheme(input: string): boolean {
  * Validate event theme title result for content safety and structure
  */
 function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
+  const themeHighlights = sanitizeThemeHighlights(result.themeHighlights);
+
   // Structure validation
   if (!result.eventThemeTitle || result.eventThemeTitle.length < 2 || result.eventThemeTitle.length > 20) {
     console.warn('[AI] Invalid event theme title length:', result.eventThemeTitle);
@@ -364,7 +380,7 @@ function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
     return false;
   }
 
-  if (!Array.isArray(result.themeHighlights) || result.themeHighlights.length === 0) {
+  if (themeHighlights.length === 0) {
     console.warn('[AI] Invalid highlights');
     return false;
   }
@@ -379,7 +395,7 @@ function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
   const textToCheck = [
     result.eventThemeTitle,
     result.themeTagline,
-    ...result.themeHighlights
+    ...themeHighlights
   ].join(' ').toLowerCase();
 
   for (const keyword of NORMALIZED_BLOCKED_KEYWORDS) {

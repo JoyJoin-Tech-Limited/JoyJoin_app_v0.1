@@ -34,6 +34,9 @@ import {
   writeRuntimeContext,
 } from './orchestration-lib.mjs';
 
+const AGENT_INVENTORY_RELATIVE_PATH = path.join('.github', 'agents', 'manifest.json');
+const WORKSPACE_SETTINGS_RELATIVE_PATH = path.join('.vscode', 'settings.json');
+
 function readStdin() {
   try {
     return fs.readFileSync(0, 'utf8');
@@ -157,6 +160,221 @@ function outputJson(payload, exitCode = 0) {
 
 function relativeExists(repoRoot, relativePath) {
   return fs.existsSync(path.join(repoRoot, relativePath));
+}
+
+function normalizeFrontmatterScalar(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed === '') {
+    return null;
+  }
+
+  if (
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
+function parseInlineFrontmatterArray(value) {
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  const trimmed = value.trim();
+  if (trimmed === '[]') {
+    return [];
+  }
+
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return [];
+  }
+
+  const inner = trimmed.slice(1, -1).trim();
+  if (inner === '') {
+    return [];
+  }
+
+  return inner
+    .split(',')
+    .map((item) => normalizeFrontmatterScalar(item))
+    .filter((item) => typeof item === 'string' && item.trim() !== '');
+}
+
+function readAgentFrontmatterContract(repoRoot, inventoryFile) {
+  const filePath = path.join(repoRoot, '.github', 'agents', inventoryFile);
+  const source = fs.readFileSync(filePath, 'utf8');
+  const sections = source.split(/^---\s*$/m);
+
+  if (sections.length < 3) {
+    return {
+      name: null,
+      agents: [],
+    };
+  }
+
+  let frontmatterName = null;
+  let frontmatterAgents = [];
+
+  for (const rawLine of sections[1].split(/\r?\n/)) {
+    const line = rawLine.trim();
+
+    if (line.startsWith('name:')) {
+      frontmatterName = normalizeFrontmatterScalar(line.slice('name:'.length));
+      continue;
+    }
+
+    if (line.startsWith('agents:')) {
+      frontmatterAgents = parseInlineFrontmatterArray(line.slice('agents:'.length));
+    }
+  }
+
+  return {
+    name: frontmatterName,
+    agents: frontmatterAgents,
+  };
+}
+
+function loadAgentInventory(repoRoot) {
+  const inventoryPath = path.join(repoRoot, AGENT_INVENTORY_RELATIVE_PATH);
+  return JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+}
+
+function loadWorkspaceSettings(repoRoot) {
+  const settingsPath = path.join(repoRoot, WORKSPACE_SETTINGS_RELATIVE_PATH);
+  return JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+}
+
+function validateAgentInventoryContract(repoRoot, manifest, validationErrors) {
+  if (!relativeExists(repoRoot, AGENT_INVENTORY_RELATIVE_PATH)) {
+    validationErrors.push(`Referenced file is missing: ${AGENT_INVENTORY_RELATIVE_PATH}.`);
+    return;
+  }
+
+  let inventory;
+  try {
+    inventory = loadAgentInventory(repoRoot);
+  } catch (error) {
+    validationErrors.push(
+      `${AGENT_INVENTORY_RELATIVE_PATH} must be valid JSON. ${error instanceof Error ? error.message : String(error)}`
+    );
+    return;
+  }
+
+  if (!Array.isArray(inventory.agents)) {
+    validationErrors.push(`${AGENT_INVENTORY_RELATIVE_PATH}.agents must be an array.`);
+    return;
+  }
+
+  const inventoryNames = new Set();
+  const orchestrationAgentNames = new Set(Object.keys(manifest.agent_bindings ?? {}));
+
+  for (const [index, agent] of inventory.agents.entries()) {
+    const location = `${AGENT_INVENTORY_RELATIVE_PATH}.agents[${index}]`;
+
+    if (!agent || typeof agent !== 'object' || Array.isArray(agent)) {
+      validationErrors.push(`${location} must be an object.`);
+      continue;
+    }
+
+    if (typeof agent.name !== 'string' || agent.name.trim() === '') {
+      validationErrors.push(`${location}.name must be a non-empty string.`);
+      continue;
+    }
+
+    if (inventoryNames.has(agent.name)) {
+      validationErrors.push(`${location}.name must be unique. Duplicate agent name: ${agent.name}.`);
+      continue;
+    }
+
+    inventoryNames.add(agent.name);
+
+    if (!orchestrationAgentNames.has(agent.name)) {
+      validationErrors.push(`${location}.name is missing from ${MANIFEST_RELATIVE_PATH} agent_bindings: ${agent.name}.`);
+    }
+
+    if (typeof agent.file !== 'string' || agent.file.trim() === '') {
+      validationErrors.push(`${location}.file must be a non-empty string.`);
+      continue;
+    }
+
+    const agentRelativeFile = path.join('.github', 'agents', agent.file);
+    if (!relativeExists(repoRoot, agentRelativeFile)) {
+      validationErrors.push(`${location}.file references missing file ${agentRelativeFile}.`);
+      continue;
+    }
+
+    const frontmatter = readAgentFrontmatterContract(repoRoot, agent.file);
+    if (frontmatter.name !== agent.name) {
+      validationErrors.push(
+        `${location}.name must match the agent frontmatter name in ${agentRelativeFile}. Expected ${frontmatter.name ?? 'missing'}, received ${agent.name}.`
+      );
+    }
+
+    if (Array.isArray(agent.subagents)) {
+      const inventorySubagents = agent.subagents.filter((name) => typeof name === 'string' && name.trim() !== '');
+
+      for (const subagentName of inventorySubagents) {
+        if (!inventory.agents.some((candidate) => candidate?.name === subagentName)) {
+          validationErrors.push(`${location}.subagents references unknown agent ${subagentName}.`);
+        }
+      }
+
+      if (!sameStringList(inventorySubagents, frontmatter.agents)) {
+        validationErrors.push(
+          `${location}.subagents must match the frontmatter agents allowlist in ${agentRelativeFile}.`
+        );
+      }
+    }
+  }
+
+  for (const agentName of orchestrationAgentNames) {
+    if (!inventoryNames.has(agentName)) {
+      validationErrors.push(`${MANIFEST_RELATIVE_PATH}.agent_bindings.${agentName} is missing from ${AGENT_INVENTORY_RELATIVE_PATH}.`);
+    }
+  }
+
+  const nestedDelegationAgents = inventory.agents
+    .filter((agent) => Array.isArray(agent.subagents) && agent.subagents.length > 0)
+    .filter((agent) =>
+      inventory.agents.some(
+        (candidate) => Array.isArray(candidate.subagents) && candidate.subagents.includes(agent.name)
+      )
+    )
+    .map((agent) => agent.name);
+
+  if (nestedDelegationAgents.length === 0) {
+    return;
+  }
+
+  if (!relativeExists(repoRoot, WORKSPACE_SETTINGS_RELATIVE_PATH)) {
+    validationErrors.push(
+      `${WORKSPACE_SETTINGS_RELATIVE_PATH} must enable chat.subagents.allowInvocationsFromSubagents because nested delegation is authored for: ${nestedDelegationAgents.join(', ')}.`
+    );
+    return;
+  }
+
+  let settings;
+  try {
+    settings = loadWorkspaceSettings(repoRoot);
+  } catch (error) {
+    validationErrors.push(
+      `${WORKSPACE_SETTINGS_RELATIVE_PATH} must be valid JSON. ${error instanceof Error ? error.message : String(error)}`
+    );
+    return;
+  }
+
+  if (settings['chat.subagents.allowInvocationsFromSubagents'] !== true) {
+    validationErrors.push(
+      `${WORKSPACE_SETTINGS_RELATIVE_PATH} must set chat.subagents.allowInvocationsFromSubagents to true because nested delegation is authored for: ${nestedDelegationAgents.join(', ')}.`
+    );
+  }
 }
 
 function getGitValue(repoRoot, args) {
@@ -964,7 +1182,9 @@ function validateContextExample(repoRoot, manifest, validationErrors) {
 function validateReferencedFiles(repoRoot, manifest, validationErrors) {
   const references = [
     MANIFEST_RELATIVE_PATH,
+    AGENT_INVENTORY_RELATIVE_PATH,
     CONTEXT_EXAMPLE_RELATIVE_PATH,
+    WORKSPACE_SETTINGS_RELATIVE_PATH,
     '.github/hooks/auto-eval.json',
     '.github/hooks/orchestration.json',
     '.github/workflows/orchestrate.yml',
@@ -987,6 +1207,7 @@ function runValidate(repoRoot) {
   const manifest = loadOrchestrationManifest(repoRoot);
   const validation = validateOrchestrationManifest(manifest);
   validateContextExample(repoRoot, manifest, validation.errors);
+  validateAgentInventoryContract(repoRoot, manifest, validation.errors);
   validateReferencedFiles(repoRoot, manifest, validation.errors);
 
   if (!validation.valid || validation.errors.length > 0) {

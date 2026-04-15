@@ -18,11 +18,15 @@ import { logError, logWarn } from '../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import {
   buildPaymentVerificationUrl,
+  type MiniProgramPaymentReturnContext,
+  type MiniProgramPoolRegistrationReturnContext,
   type ReadyMiniProgramPendingOrder,
 } from '../../lib/paymentPendingOrder'
 import {
   clearPendingOrderStorage,
+  clearPaymentReturnContextStorage,
   persistPendingOrder,
+  readStoredPaymentReturnContext,
   readStoredPendingOrder,
 } from '../../lib/paymentPendingOrderStorage'
 import './index.scss'
@@ -76,8 +80,62 @@ function isEventPackPlan(planKey: PlanKey): planKey is EventPackPlanKey {
   return planKey === 'pack_3' || planKey === 'pack_6'
 }
 
+function isPoolRegistrationReturnContext(
+  context: MiniProgramPaymentReturnContext | null | undefined,
+): context is MiniProgramPoolRegistrationReturnContext {
+  return Boolean(context && context.kind === 'pool-registration')
+}
+
 function formatPrice(value: number): string {
   return `¥${value.toFixed(0)}`
+}
+
+function getPlanBadge(planKey: PlanKey): string {
+  switch (planKey) {
+    case 'vip_quarterly':
+      return '更省心'
+    case 'vip_monthly':
+      return '近期常用'
+    case 'pack_6':
+      return '更灵活'
+    case 'pack_3':
+    default:
+      return '先试试看'
+  }
+}
+
+function getPlanSupportCopy(planKey: PlanKey): string {
+  switch (planKey) {
+    case 'vip_quarterly':
+      return '适合这段时间想稳定多参加活动的人'
+    case 'vip_monthly':
+      return '适合最近一阵子想连续报名的人'
+    case 'pack_6':
+      return '按次参加但希望留出更充足余量'
+    case 'pack_3':
+    default:
+      return '先补回次数，再按自己的节奏继续报名'
+  }
+}
+
+function getRegistrationContextBudget(
+  context: MiniProgramPoolRegistrationReturnContext,
+): string {
+  return context.draft.barBudgetRange?.[0] ?? context.draft.budgetRange?.[0] ?? ''
+}
+
+function getRegistrationContextNote(
+  context: MiniProgramPoolRegistrationReturnContext,
+): string {
+  if (context.paymentStatus === 'paid') {
+    return '权益已经确认，回到报名页后可以直接完成这场报名。'
+  }
+
+  if (context.handoffCode === 'NO_AVAILABLE_EVENT_PACK_CREDITS') {
+    return '这次是为了续上活动权益。支付确认后会直接回到刚才那场报名。'
+  }
+
+  return '这次支付是为了继续刚才的报名。支付确认后会直接回到报名页。'
 }
 
 function requestMiniProgramPayment(paymentIntent: PaymentIntentResponse): Promise<void> {
@@ -135,11 +193,13 @@ export default function BlindBoxPaymentPage() {
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
   const [pendingOrderToResume, setPendingOrderToResume] = useState<ReadyMiniProgramPendingOrder | null>(null)
+  const [paymentReturnContext, setPaymentReturnContext] = useState<MiniProgramPaymentReturnContext | null>(null)
   const hasSkippedFirstDidShowRef = useRef(false)
   const paymentsDisabled = user?.paymentsEnabled === false
 
-  const refreshPendingOrderState = useCallback(() => {
+  const refreshPaymentFlowState = useCallback(() => {
     const pendingOrder = readStoredPendingOrder({ currentUserId: user?.id })
+    let nextReturnContext: MiniProgramPaymentReturnContext | null = null
 
     if (pendingOrder.status === 'clear') {
       clearPendingOrderStorage()
@@ -148,18 +208,31 @@ export default function BlindBoxPaymentPage() {
         reason: pendingOrder.reason,
         userId: user?.id ?? null,
       })
-      return
-    }
-
-    if (pendingOrder.status === 'ready') {
+    } else if (pendingOrder.status === 'ready') {
       setPendingOrderToResume({
         orderId: pendingOrder.orderId,
         context: pendingOrder.context,
       })
-      return
+      nextReturnContext = pendingOrder.context.returnContext ?? null
+    } else {
+      setPendingOrderToResume(null)
     }
 
-    setPendingOrderToResume(null)
+    const storedReturnContext = readStoredPaymentReturnContext({
+      currentUserId: user?.id,
+    })
+
+    if (storedReturnContext.status === 'clear') {
+      clearPaymentReturnContextStorage()
+      logWarn('Cleared invalid mini-program payment return context', {
+        reason: storedReturnContext.reason,
+        userId: user?.id ?? null,
+      })
+    } else if (pendingOrder.status !== 'ready' && !nextReturnContext && storedReturnContext.status === 'ready') {
+      nextReturnContext = storedReturnContext.context
+    }
+
+    setPaymentReturnContext(nextReturnContext)
   }, [user?.id])
 
   const navigateToVerification = useCallback(async (orderId: string) => {
@@ -184,7 +257,7 @@ export default function BlindBoxPaymentPage() {
   }, [])
 
   const showResumeOnlyState = useCallback(async (orderId: string, reason: string) => {
-    refreshPendingOrderState()
+    refreshPaymentFlowState()
     setPageError(PENDING_ORDER_RESUME_MESSAGE)
     logWarn('Mini-program payment left in resume-only state', {
       orderId,
@@ -194,7 +267,7 @@ export default function BlindBoxPaymentPage() {
       title: PENDING_ORDER_RESUME_MESSAGE,
       icon: 'none',
     })
-  }, [refreshPendingOrderState])
+  }, [refreshPaymentFlowState])
 
   const loadPageData = useCallback(async () => {
     setIsBootstrapping(true)
@@ -235,7 +308,7 @@ export default function BlindBoxPaymentPage() {
       return
     }
 
-    refreshPendingOrderState()
+    refreshPaymentFlowState()
 
     if (paymentsDisabled) {
       setIsBootstrapping(false)
@@ -243,14 +316,14 @@ export default function BlindBoxPaymentPage() {
     }
 
     void loadPageData()
-  }, [authLoading, loadPageData, paymentsDisabled, refreshPendingOrderState, user?.id])
+  }, [authLoading, loadPageData, paymentsDisabled, refreshPaymentFlowState, user?.id])
 
   useDidShow(() => {
     if (authLoading || !user?.id) {
       return
     }
 
-    refreshPendingOrderState()
+    refreshPaymentFlowState()
 
     if (!hasSkippedFirstDidShowRef.current) {
       hasSkippedFirstDidShowRef.current = true
@@ -264,6 +337,26 @@ export default function BlindBoxPaymentPage() {
 
     void loadPageData()
   })
+
+  const registrationReturnContext = isPoolRegistrationReturnContext(paymentReturnContext)
+    ? paymentReturnContext
+    : null
+
+  const registrationContextPills = useMemo(() => {
+    if (!registrationReturnContext) {
+      return [] as string[]
+    }
+
+    const pills = [
+      getRegistrationContextBudget(registrationReturnContext),
+      registrationReturnContext.draft.eventIntent?.length
+        ? `${registrationReturnContext.draft.eventIntent.length} 个期待`
+        : '',
+      registrationReturnContext.poolArea ?? '',
+    ]
+
+    return pills.filter(Boolean).slice(0, 3)
+  }, [registrationReturnContext])
 
   const selectedPlanData = useMemo(() => plans[selectedPlan], [plans, selectedPlan])
   const payableAmount = finalAmount ?? selectedPlanData.price
@@ -363,6 +456,7 @@ export default function BlindBoxPaymentPage() {
         orderId: paymentIntent.outTradeNo,
         type: paymentIntent.type,
         userId: user.id,
+        returnContext: paymentReturnContext ?? undefined,
       })
       persistedOrderId = paymentIntent.outTradeNo
 
@@ -420,11 +514,38 @@ export default function BlindBoxPaymentPage() {
     selectedCouponCode,
     selectedPlan,
     user?.id,
+    paymentReturnContext,
   ])
+
+  const payButtonLabel = isBootstrapping
+    ? '正在准备支付...'
+    : pendingOrderToResume
+      ? registrationReturnContext
+        ? '先确认当前订单并返回报名'
+        : '请先确认当前订单'
+      : registrationReturnContext
+        ? '支付并回到报名页'
+        : '微信支付'
+
+  const payHint = isCreatingIntent
+    ? '正在拉起微信支付，请勿重复点击'
+    : pendingOrderToResume
+      ? registrationReturnContext
+        ? '先确认这笔订单，系统会把你带回报名页继续'
+        : '你有一笔待确认订单，先继续查看支付结果'
+      : registrationReturnContext
+        ? '支付确认后会自动回到报名页，你刚才填写的偏好不会丢'
+        : isEventPackPlan(selectedPlan)
+          ? '购买成功后可直接用次数包报名活动'
+          : '切回应用后会自动校验订单结果'
 
   if (paymentsDisabled) {
     return (
       <View className='payment-page'>
+        <View className='payment-page__backdrop'>
+          <View className='payment-page__orb payment-page__orb--left' />
+          <View className='payment-page__orb payment-page__orb--right' />
+        </View>
         <View className='payment-page__header'>
           <Button
             className='payment-page__back-button'
@@ -432,19 +553,52 @@ export default function BlindBoxPaymentPage() {
           >
             返回
           </Button>
-          <Text className='payment-page__eyebrow'>福利柜</Text>
-          <Text className='payment-page__title'>开通会员权益</Text>
-          <Text className='payment-page__subtitle'>支付功能升级中，当前暂不支持发起新的订单。</Text>
+          <Text className='payment-page__eyebrow'>
+            {registrationReturnContext ? '继续报名' : '福利柜'}
+          </Text>
+          <Text className='payment-page__title'>
+            {registrationReturnContext ? '先确认已有订单，再回来完成报名' : '开通会员权益'}
+          </Text>
+          <Text className='payment-page__subtitle'>
+            {registrationReturnContext
+              ? '支付功能升级中。若你刚完成支付，继续确认订单后会直接回到报名页。'
+              : '支付功能升级中，当前暂不支持发起新的订单。'}
+          </Text>
         </View>
+
+        {registrationReturnContext ? (
+          <View className='payment-page__context-card'>
+            <Text className='payment-page__context-kicker'>继续报名</Text>
+            <Text className='payment-page__context-title'>
+              {registrationReturnContext.poolTitle || '刚才那场活动'}
+            </Text>
+            <Text className='payment-page__context-copy'>
+              {getRegistrationContextNote(registrationReturnContext)}
+            </Text>
+            {registrationContextPills.length > 0 ? (
+              <View className='payment-page__context-pills'>
+                {registrationContextPills.map((item) => (
+                  <Text key={item} className='payment-page__context-pill'>
+                    {item}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <View className='payment-page__summary-card'>
           <Text className='payment-page__summary-label'>支付状态</Text>
           <Text className='payment-page__summary-value'>支付功能维护中</Text>
           <Text className='payment-page__summary-note'>我们正在升级支付系统，请稍后再试。</Text>
-          <Text className='payment-page__summary-note'>若你刚完成支付，可继续查看已有订单结果。</Text>
+          <Text className='payment-page__summary-note'>
+            {registrationReturnContext
+              ? '若你刚完成支付，继续确认订单后会直接回到报名页。'
+              : '若你刚完成支付，可继续查看已有订单结果。'}
+          </Text>
           {pendingOrderToResume ? (
             <Button className='payment-page__resume-button' onClick={handleResumePendingOrder}>
-              继续查看已有订单
+              {registrationReturnContext ? '继续确认并返回报名' : '继续查看已有订单'}
             </Button>
           ) : null}
         </View>
@@ -454,6 +608,11 @@ export default function BlindBoxPaymentPage() {
 
   return (
     <View className='payment-page'>
+      <View className='payment-page__backdrop'>
+        <View className='payment-page__orb payment-page__orb--left' />
+        <View className='payment-page__orb payment-page__orb--right' />
+      </View>
+
       <View className='payment-page__header'>
         <Button
           className='payment-page__back-button'
@@ -461,18 +620,53 @@ export default function BlindBoxPaymentPage() {
         >
           返回
         </Button>
-        <Text className='payment-page__eyebrow'>福利柜</Text>
-        <Text className='payment-page__title'>开通会员权益</Text>
-        <Text className='payment-page__subtitle'>支付成功后将进入结果确认页，避免误判成功。</Text>
+        <Text className='payment-page__eyebrow'>
+          {registrationReturnContext ? '继续报名' : '福利柜'}
+        </Text>
+        <Text className='payment-page__title'>
+          {registrationReturnContext ? '先开通权益，再回来完成报名' : '开通会员权益'}
+        </Text>
+        <Text className='payment-page__subtitle'>
+          {registrationReturnContext
+            ? `你刚才在${registrationReturnContext.poolTitle ? `《${registrationReturnContext.poolTitle}》里` : '活动报名里'}填写的预算和偏好已经替你留好，支付确认后会自动回去继续。`
+            : '支付成功后将进入结果确认页，避免误判成功。'}
+        </Text>
       </View>
+
+      {registrationReturnContext ? (
+        <View className='payment-page__context-card'>
+          <Text className='payment-page__context-kicker'>
+            {registrationReturnContext.paymentStatus === 'paid' ? '权益已确认' : '继续报名'}
+          </Text>
+          <Text className='payment-page__context-title'>
+            {registrationReturnContext.poolTitle || '刚才那场活动'}
+          </Text>
+          <Text className='payment-page__context-copy'>
+            {getRegistrationContextNote(registrationReturnContext)}
+          </Text>
+          {registrationContextPills.length > 0 ? (
+            <View className='payment-page__context-pills'>
+              {registrationContextPills.map((item) => (
+                <Text key={item} className='payment-page__context-pill'>
+                  {item}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       {pendingOrderToResume ? (
         <View className='payment-page__summary-card'>
           <Text className='payment-page__summary-label'>待确认订单</Text>
           <Text className='payment-page__summary-value'>继续查看支付结果</Text>
-          <Text className='payment-page__summary-note'>你有一笔订单仍在等待确认，先完成结果确认再发起新的支付。</Text>
+          <Text className='payment-page__summary-note'>
+            {registrationReturnContext
+              ? '你有一笔订单仍在等待确认，先完成确认后系统会把你带回报名页。'
+              : '你有一笔订单仍在等待确认，先完成结果确认再发起新的支付。'}
+          </Text>
           <Button className='payment-page__resume-button' onClick={handleResumePendingOrder}>
-            继续查询订单
+            {registrationReturnContext ? '继续确认并返回报名' : '继续查询订单'}
           </Button>
         </View>
       ) : null}
@@ -481,6 +675,13 @@ export default function BlindBoxPaymentPage() {
         <Text className='payment-page__summary-label'>可用优惠</Text>
         <Text className='payment-page__summary-value'>{couponCount} 张</Text>
         <Text className='payment-page__summary-note'>支持会员权益与活动次数包</Text>
+      </View>
+
+      <View className='payment-page__section-heading'>
+        <Text className='payment-page__section-title'>选一个更适合你的权益方式</Text>
+        <Text className='payment-page__section-copy'>
+          常参加用会员更省心，按次参加可以选活动次数包。
+        </Text>
       </View>
 
       <View className='payment-page__plans'>
@@ -495,9 +696,13 @@ export default function BlindBoxPaymentPage() {
               onClick={() => setSelectedPlan(planKey)}
             >
               <View className='payment-page__plan-content'>
-                <View>
-                  <Text className='payment-page__plan-title'>{plan.displayName}</Text>
+                <View className='payment-page__plan-copy'>
+                  <View className='payment-page__plan-topline'>
+                    <Text className='payment-page__plan-title'>{plan.displayName}</Text>
+                    <Text className='payment-page__plan-badge'>{getPlanBadge(planKey)}</Text>
+                  </View>
                   <Text className='payment-page__plan-desc'>{plan.description || '悦聚会员专属权益'}</Text>
+                  <Text className='payment-page__plan-note'>{getPlanSupportCopy(planKey)}</Text>
                 </View>
                 <View className='payment-page__plan-price-wrap'>
                   {plan.originalPrice ? (
@@ -582,17 +787,9 @@ export default function BlindBoxPaymentPage() {
           disabled={isBootstrapping || isCreatingIntent || !user?.id || !!pendingOrderToResume}
           loading={isCreatingIntent}
         >
-          {isBootstrapping ? '正在准备支付...' : pendingOrderToResume ? '请先确认当前订单' : '微信支付'}
+          {payButtonLabel}
         </Button>
-        <Text className='payment-page__hint'>
-          {isCreatingIntent
-            ? '正在拉起微信支付，请勿重复点击'
-            : pendingOrderToResume
-              ? '你有一笔待确认订单，先继续查看支付结果'
-              : isEventPackPlan(selectedPlan)
-                ? '购买成功后可直接用次数包报名活动'
-                : '切回应用后会自动校验订单结果'}
-        </Text>
+        <Text className='payment-page__hint'>{payHint}</Text>
       </View>
     </View>
   )

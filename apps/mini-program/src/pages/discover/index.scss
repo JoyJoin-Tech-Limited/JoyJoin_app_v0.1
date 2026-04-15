@@ -150,16 +150,65 @@
   &__pool-card {
     @include card;
     padding: $spacing-lg;
+    border: 2rpx solid rgba($color-surface, 0.9);
+    background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.48) 100%);
+    opacity: 0;
+    transform: translateY(18rpx);
+    animation: discover-card-enter 0.34s ease-out forwards;
 
     &:active {
       transform: scale(0.98);
+    }
+
+    &--hover {
+      transform: translateY(-2rpx);
+      box-shadow: 0 14rpx 36rpx rgba($color-primary, 0.12);
     }
 
     // Skeleton variant
     &--skeleton {
       min-height: 200rpx;
       pointer-events: none;
+      opacity: 1;
+      transform: none;
+      animation: none;
     }
+  }
+
+  &__pool-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pool-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 10rpx;
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.92);
+  }
+
+  &__heat-dot {
+    width: 14rpx;
+    height: 14rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    animation: discover-live-pulse 1.8s ease-in-out infinite;
+  }
+
+  &__pool-live-label {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+  }
+
+  &__pool-inline-cta {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
   }
 
   &__pool-header {
@@ -176,6 +225,14 @@
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
     @include text-truncate;
+  }
+
+  &__pool-promise {
+    display: block;
+    margin-bottom: $spacing-sm;
+    font-size: $font-size-xs;
+    color: rgba($color-primary-dark, 0.86);
+    font-weight: $font-weight-semibold;
   }
 
   &__pool-badges {
@@ -225,6 +282,53 @@
     align-items: center;
     justify-content: space-between;
     gap: $spacing-md;
+  }
+
+  &__pool-signal {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding: $spacing-sm;
+    margin-bottom: $spacing-md;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.76);
+  }
+
+  &__pool-signal-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__pool-signal-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__pool-signal-desc {
+    display: block;
+    margin-top: 6rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__pool-signal-count {
+    flex-shrink: 0;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    text-align: right;
+  }
+
+  &__progress-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
   }
 
   &__progress {
@@ -290,6 +394,32 @@
     }
   }
 
+  &__trust-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+  }
+
+  &__trust-pill {
+    padding: 10rpx 16rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 8rpx 22rpx rgba($color-primary, 0.08);
+  }
+
+  &__trust-pill-text {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__pool-action {
+    flex-shrink: 0;
+    font-size: $font-size-sm;
+    color: $color-primary-dark;
+    font-weight: $font-weight-bold;
+  }
+
   // ── Skeleton shimmer ──────────────────────────────────────────
   &__skeleton-line {
     border-radius: $card-radius-sm;
@@ -323,6 +453,31 @@
   @keyframes shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+  }
+
+  @keyframes discover-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(18rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes discover-live-pulse {
+    0%,
+    100% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1.16);
+    }
   }
 
   // ── Empty / error states ──────────────────────────────────────

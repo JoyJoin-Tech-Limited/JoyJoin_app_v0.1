@@ -1,17 +1,29 @@
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getEventPool,
+  type NormalizedEventPoolRegistrationPayload,
   registerForPool,
   type EventPoolRegistrationPayload,
   type EventPoolSummary,
 } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { apiRequest } from '../../lib/api'
+import { apiRequest, type ApiError } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logInfo, logError } from '../../lib/logger'
+import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
+import {
+  buildPoolRegistrationPaymentReturnContext,
+  type MiniProgramPaymentEntitlementCode,
+  type MiniProgramPoolRegistrationReturnContext,
+} from '../../lib/paymentPendingOrder'
+import {
+  clearPaymentReturnContextStorage,
+  persistPaymentReturnContext,
+  readStoredPaymentReturnContext,
+} from '../../lib/paymentPendingOrderStorage'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -143,17 +155,108 @@ function resolveMessage(error: unknown, fallbackMessage: string): string {
   return fallbackMessage
 }
 
+function buildRegistrationPayload(
+  formState: RegistrationFormState,
+  eventType: PoolEventType,
+): EventPoolRegistrationPayload {
+  return {
+    eventIntent: formState.eventIntent,
+    preferredLanguages: formState.preferredLanguages,
+    ...(eventType === '酒局'
+      ? {
+          barBudgetRange: formState.barBudgetRange,
+          barThemes: formState.barThemes,
+          alcoholComfort: formState.alcoholComfort ? [formState.alcoholComfort] : undefined,
+        }
+      : {
+          budgetRange: formState.budgetRange,
+          cuisinePreferences: formState.cuisinePreferences,
+          dietaryRestrictions: formState.dietaryRestrictions,
+          tasteIntensity: formState.tasteIntensity ? [formState.tasteIntensity] : undefined,
+        }),
+  }
+}
+
+function buildFormStateFromDraft(
+  draft: NormalizedEventPoolRegistrationPayload,
+): RegistrationFormState {
+  const alcoholComfort = Array.isArray(draft.alcoholComfort)
+    ? draft.alcoholComfort[0]
+    : undefined
+  const tasteIntensity = Array.isArray(draft.tasteIntensity)
+    ? draft.tasteIntensity[0]
+    : undefined
+
+  return {
+    eventIntent: draft.eventIntent ?? [],
+    preferredLanguages: draft.preferredLanguages ?? [],
+    budgetRange: draft.budgetRange?.slice(0, 1),
+    cuisinePreferences: draft.cuisinePreferences ?? [],
+    dietaryRestrictions: draft.dietaryRestrictions ?? [],
+    tasteIntensity,
+    barThemes: draft.barThemes ?? [],
+    alcoholComfort,
+    barBudgetRange: draft.barBudgetRange?.slice(0, 1),
+  }
+}
+
+function resolveRegistrationStep(step: number): RegistrationStep {
+  switch (step) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      return step
+    default:
+      return 3
+  }
+}
+
+function getEntitlementCode(error: unknown): MiniProgramPaymentEntitlementCode | null {
+  const data = (error as ApiError | undefined)?.data
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return null
+  }
+
+  const code = (data as { code?: unknown }).code
+  if (code === 'NO_ACTIVE_ENTITLEMENT' || code === 'NO_AVAILABLE_EVENT_PACK_CREDITS') {
+    return code
+  }
+
+  return null
+}
+
+function getResumeNoticeCopy(
+  context: MiniProgramPoolRegistrationReturnContext,
+): { kicker: string; title: string; body: string } {
+  if (context.paymentStatus === 'paid') {
+    return {
+      kicker: '权益已到账',
+      title: '刚才那份报名偏好已经替你接回来',
+      body: '预算、期待和细节都已恢复，现在点下方按钮就能继续完成这场报名。',
+    }
+  }
+
+  return {
+    kicker: context.handoffCode === 'NO_AVAILABLE_EVENT_PACK_CREDITS' ? '次数已用完' : '偏好已保留',
+    title: '先开通权益，再回来继续报名',
+    body: '你刚填写的预算和偏好不会丢，完成支付确认后会自动回到这里继续。',
+  }
+}
+
 export default function PoolRegistrationPage() {
   const router = useRouter()
   const poolId = router.params.id ?? ''
-  const { isLoading: authLoading } = useAuthGuard()
+  const { user, isLoading: authLoading } = useAuthGuard()
   const queryClient = useQueryClient()
+  const appliedReturnContextRef = useRef(0)
 
   const [step, setStep] = useState<RegistrationStep>(0)
   const [formState, setFormState] = useState<RegistrationFormState>(INITIAL_FORM_STATE)
   const [isRegistering, setIsRegistering] = useState(false)
   const [registered, setRegistered] = useState(false)
   const [error, setError] = useState('')
+  const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
 
   const {
     data: pool,
@@ -211,12 +314,64 @@ export default function PoolRegistrationPage() {
   })
 
   useEffect(() => {
+    appliedReturnContextRef.current = 0
     setStep(0)
     setFormState(INITIAL_FORM_STATE)
     setRegistered(false)
     setError('')
     setIsRegistering(false)
+    setResumeContext(null)
   }, [poolId])
+
+  const applyStoredReturnContext = useCallback(() => {
+    if (!poolId || !user?.id) {
+      return
+    }
+
+    const storedReturnContext = readStoredPaymentReturnContext({
+      currentUserId: user.id,
+    })
+
+    if (storedReturnContext.status === 'clear') {
+      clearPaymentReturnContextStorage()
+      return
+    }
+
+    if (storedReturnContext.status !== 'ready') {
+      return
+    }
+
+    const nextContext = storedReturnContext.context
+    if (nextContext.kind !== 'pool-registration' || nextContext.poolId !== poolId) {
+      return
+    }
+
+    if (appliedReturnContextRef.current === nextContext.updatedAt) {
+      return
+    }
+
+    appliedReturnContextRef.current = nextContext.updatedAt
+    setFormState(buildFormStateFromDraft(nextContext.draft))
+    setStep(resolveRegistrationStep(nextContext.resumeStep))
+    setResumeContext(nextContext)
+    setError('')
+  }, [poolId, user?.id])
+
+  useEffect(() => {
+    if (authLoading || !user?.id) {
+      return
+    }
+
+    applyStoredReturnContext()
+  }, [applyStoredReturnContext, authLoading, user?.id])
+
+  useDidShow(() => {
+    if (authLoading || !user?.id) {
+      return
+    }
+
+    applyStoredReturnContext()
+  })
 
   const brief = briefData ?? fallbackBrief
   const budgetOptions = useMemo(() => getBudgetOptions(eventType), [eventType])
@@ -366,22 +521,7 @@ export default function PoolRegistrationPage() {
       return
     }
 
-    const payload: EventPoolRegistrationPayload = {
-      eventIntent: formState.eventIntent,
-      preferredLanguages: formState.preferredLanguages,
-      ...(eventType === '酒局'
-        ? {
-            barBudgetRange: formState.barBudgetRange,
-            barThemes: formState.barThemes,
-            alcoholComfort: formState.alcoholComfort ? [formState.alcoholComfort] : undefined,
-          }
-        : {
-            budgetRange: formState.budgetRange,
-            cuisinePreferences: formState.cuisinePreferences,
-            dietaryRestrictions: formState.dietaryRestrictions,
-            tasteIntensity: formState.tasteIntensity ? [formState.tasteIntensity] : undefined,
-          }),
-    }
+    const payload = buildRegistrationPayload(formState, eventType)
 
     setIsRegistering(true)
     setError('')
@@ -399,9 +539,61 @@ export default function PoolRegistrationPage() {
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] }),
         queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] }),
       ])
+      clearPaymentReturnContextStorage()
+      setResumeContext(null)
       setRegistered(true)
       Taro.showToast({ title: '报名成功！', icon: 'success', duration: 2000 })
     } catch (err) {
+      const entitlementCode = getEntitlementCode(err)
+
+      if (entitlementCode) {
+        const nextResumeContext = buildPoolRegistrationPaymentReturnContext({
+          userId: user?.id,
+          poolId,
+          poolTitle: pool?.title,
+          poolArea,
+          poolEventType: eventType,
+          draft: payload,
+          resumeStep: step,
+          handoffCode: entitlementCode,
+        })
+
+        persistPaymentReturnContext(nextResumeContext)
+        setResumeContext(nextResumeContext)
+
+        const handoffCopy =
+          entitlementCode === 'NO_AVAILABLE_EVENT_PACK_CREDITS'
+            ? '你当前的活动次数已经用完。我们已替你保留刚刚填写的偏好，续充权益后会自动回到这里继续报名。'
+            : '这场活动需要会员权益或活动次数包才能报名。我们已替你保留刚刚填写的偏好，开通后会自动回到这里继续报名。'
+
+        const modalResult = await Taro.showModal({
+          title: '先开通权益，再回来完成报名',
+          content: handoffCopy,
+          confirmText: '去开通',
+          cancelText: '稍后',
+          confirmColor: '#8B5CF6',
+        })
+
+        if (modalResult.confirm) {
+          try {
+            await openMiniProgramPaymentPage({
+              paymentsEnabled: user?.paymentsEnabled,
+              currentUserId: user?.id,
+              preserveReturnContext: true,
+            })
+          } catch (navigationError) {
+            const navigationMessage = resolveMessage(
+              navigationError,
+              '打开支付页失败，请稍后重试',
+            )
+            setError(navigationMessage)
+            Taro.showToast({ title: navigationMessage, icon: 'none', duration: 3000 })
+          }
+        }
+
+        return
+      }
+
       const message = resolveMessage(err, '报名失败，请重试')
       setError(message)
       logError('[PoolRegistration] Failed', {
@@ -414,7 +606,19 @@ export default function PoolRegistrationPage() {
     } finally {
       setIsRegistering(false)
     }
-  }, [canSubmit, eventType, formState, isRegistering, poolId, queryClient, step])
+  }, [
+    canSubmit,
+    eventType,
+    formState,
+    isRegistering,
+    pool?.title,
+    poolArea,
+    poolId,
+    queryClient,
+    step,
+    user?.id,
+    user?.paymentsEnabled,
+  ])
 
   if (authLoading || isLoading) {
     return <LoadingScreen />
@@ -466,6 +670,8 @@ export default function PoolRegistrationPage() {
     )
   }
 
+  const resumeNotice = resumeContext ? getResumeNoticeCopy(resumeContext) : null
+
   return (
     <ScrollView className='pool-reg' scrollY enhanced showScrollbar={false}>
       <View className='pool-reg__header'>
@@ -502,6 +708,28 @@ export default function PoolRegistrationPage() {
           </View>
         ) : null}
       </Card>
+
+      {resumeNotice ? (
+        <Card
+          className={[
+            'pool-reg__resume-card',
+            resumeContext?.paymentStatus === 'paid' ? 'pool-reg__resume-card--paid' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <Text className='pool-reg__resume-kicker'>{resumeNotice.kicker}</Text>
+          <Text className='pool-reg__resume-title'>{resumeNotice.title}</Text>
+          <Text className='pool-reg__resume-copy'>{resumeNotice.body}</Text>
+          <View className='pool-reg__resume-pills'>
+            {selectedBudget ? <Text className='pool-reg__resume-pill'>{selectedBudget}</Text> : null}
+            {formState.eventIntent.length > 0 ? (
+              <Text className='pool-reg__resume-pill'>{formState.eventIntent.length} 个期待</Text>
+            ) : null}
+            <Text className='pool-reg__resume-pill'>{eventType}</Text>
+          </View>
+        </Card>
+      ) : null}
 
       {step > 0 ? (
         <View className='pool-reg__stepper'>
@@ -734,7 +962,13 @@ export default function PoolRegistrationPage() {
               disabled={step === 3 ? isRegistering || !canSubmit : false}
               loading={step === 3 && isRegistering}
             >
-              {step === 3 ? (isRegistering ? '报名中…' : '确认加入这场局') : '继续填写'}
+              {step === 3
+                ? isRegistering
+                  ? '报名中…'
+                  : resumeContext?.paymentStatus === 'paid'
+                    ? '继续完成报名'
+                    : '确认加入这场局'
+                : '继续填写'}
             </Button>
           </View>
         )}

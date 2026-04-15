@@ -3,11 +3,13 @@ import { getHongKongDateForComparison } from './hongKongTime'
 export const MS_PER_HOUR = 1000 * 60 * 60
 export const VENUE_UNLOCK_HOURS = 24
 
+export type CenterTabPoolMatchStatus = 'pending' | 'matched' | 'completed' | 'unmatched'
+
 export interface CenterTabPoolRegistration {
   id: string
-  matchStatus?: 'pending' | 'matched' | 'completed'
+  matchStatus?: CenterTabPoolMatchStatus
   assignedGroupId?: string | null
-  poolDateTime?: string
+  poolDateTime?: string | null
 }
 
 export interface CenterTabEvent {
