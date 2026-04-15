@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,6 @@ import { getEventPhase } from "@shared/eventDetail";
 import { getUserAllInterests } from "@/lib/userFieldMappings";
 import PostMatchEventCard from "@/components/PostMatchEventCard";
 import ReunionButton from "@/components/ReunionButton";
-import MatchRevealAnimation from "@/components/MatchRevealAnimation";
 import MysteryWaitingCard from "@/components/MysteryWaitingCard";
 import MysteryLocationCard from "@/components/MysteryLocationCard";
 import MatchCelebrationOverlay from "@/components/MatchCelebrationOverlay";
@@ -34,6 +33,19 @@ import { useRevealStatus } from "@/hooks/useRevealStatus";
 import EventSessionBanner, { FloatingCheckinButton } from "@/components/EventSessionBanner";
 import { motion, AnimatePresence } from "framer-motion";
 import WechatServiceQRCard from "@/components/WechatServiceQRCard";
+
+const LazyMatchRevealAnimation = lazy(() => import("@/components/MatchRevealAnimation"));
+
+function MatchRevealAnimationFallback() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+      <div className="text-center space-y-4 px-6">
+        <div className="h-10 w-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-base font-medium text-primary">准备揭晓匹配结果...</p>
+      </div>
+    </div>
+  );
+}
 
 interface AnimationStatus {
   hasViewed: boolean;
@@ -131,6 +143,7 @@ export default function BlindBoxEventDetailPage() {
     setAnimationDecisionMade(true);
     
     if (hasRequiredUserData && hasParticipants && hasEventMetadata) {
+      void import("@/components/MatchRevealAnimation");
       setShowAnimation(true);
     } else {
       // Skip animation if any required data is missing - mark as viewed to prevent future attempts
@@ -369,18 +382,20 @@ export default function BlindBoxEventDetailPage() {
     <>
       {/* Match Reveal Animation - three-act storytelling experience */}
       {showAnimation && user && eventId && (
-        <MatchRevealAnimation
-          eventId={eventId}
-          eventTitle={animationStatus?.eventTitle || event?.eventType || "活动"}
-          eventType={animationStatus?.eventType || "饭局"}
-          userArchetype={user.primaryArchetype || "开心柯基"}
-          userName={user.displayName || "用户"}
-          participants={animationStatus?.participants || []}
-          onComplete={handleAnimationComplete}
-          onSkip={handleAnimationSkip}
-          onShare={handleAnimationShare}
-          onReplay={allowReplay ? handleAnimationReplay : undefined}
-        />
+        <Suspense fallback={<MatchRevealAnimationFallback />}>
+          <LazyMatchRevealAnimation
+            eventId={eventId}
+            eventTitle={animationStatus?.eventTitle || event?.eventType || "活动"}
+            eventType={animationStatus?.eventType || "饭局"}
+            userArchetype={user.primaryArchetype || "开心柯基"}
+            userName={user.displayName || "用户"}
+            participants={animationStatus?.participants || []}
+            onComplete={handleAnimationComplete}
+            onSkip={handleAnimationSkip}
+            onShare={handleAnimationShare}
+            onReplay={allowReplay ? handleAnimationReplay : undefined}
+          />
+        </Suspense>
       )}
       
       <div className="min-h-screen bg-background pb-20">
