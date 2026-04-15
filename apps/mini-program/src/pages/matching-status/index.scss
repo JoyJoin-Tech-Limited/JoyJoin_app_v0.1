@@ -215,6 +215,347 @@
     }
   }
 
+  &__arrival-toast {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10rpx;
+    margin-bottom: $spacing-sm;
+    padding: 14rpx $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 16rpx 34rpx rgba($color-primary, 0.12);
+    animation: matching-arrival-rise 0.24s ease-out;
+  }
+
+  &__arrival-emoji {
+    font-size: $font-size-base;
+  }
+
+  &__arrival-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__waiting-card,
+  &__chemistry-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__waiting-card {
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.84) 100%);
+    border: 2rpx solid rgba($color-primary, 0.12);
+    box-shadow: 0 18rpx 44rpx rgba($color-primary, 0.12);
+  }
+
+  &__waiting-top {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__waiting-badge {
+    align-self: flex-start;
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.92);
+    color: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__waiting-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__waiting-copy {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  &__waiting-progress-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-top: $spacing-lg;
+  }
+
+  &__waiting-progress-label,
+  &__waiting-progress-count {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__waiting-segments {
+    display: flex;
+    align-items: flex-end;
+    gap: 10rpx;
+    margin-top: $spacing-sm;
+  }
+
+  &__waiting-segment-wrap {
+    flex: 1;
+  }
+
+  &__waiting-segment {
+    height: 22rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.72);
+    transition: all 0.2s ease;
+
+    &--filled {
+      background: $brand-gradient;
+      box-shadow: 0 10rpx 20rpx rgba($color-primary, 0.18);
+    }
+
+    &--threshold {
+      height: 30rpx;
+    }
+  }
+
+  &__waiting-segment-label {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 18rpx;
+    color: $color-text-muted;
+    text-align: center;
+  }
+
+  &__waiting-progress-status,
+  &__waiting-hint {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary;
+  }
+
+  &__waiting-progress-status {
+    margin-top: $spacing-sm;
+  }
+
+  &__waiting-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-top: $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 26rpx;
+    background: rgba($color-surface, 0.88);
+  }
+
+  &__waiting-refresh-copy {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-xs;
+    line-height: 1.5;
+    color: $color-text-secondary;
+  }
+
+  &__waiting-refresh-btn {
+    flex-shrink: 0;
+    min-height: 74rpx;
+    padding: 0 26rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.96);
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+
+    &::after {
+      border: none;
+    }
+  }
+
+  &__waiting-hint {
+    margin-top: $spacing-sm;
+  }
+
+  &__notice-card,
+  &__squad-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__notice-card {
+    background: rgba($color-surface, 0.9);
+    border: 1rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__notice-text {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  &__squad-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__squad-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__squad-meta {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    flex-shrink: 0;
+  }
+
+  &__member-scroll {
+    width: 100%;
+  }
+
+  &__member-row {
+    display: flex;
+    gap: $spacing-md;
+    padding-bottom: $spacing-xs;
+  }
+
+  &__member-chip {
+    @include card;
+    min-width: 176rpx;
+    padding: $spacing-md;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
+  }
+
+  &__member-initial {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    background: $brand-gradient;
+    color: $color-text-white;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__member-name {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__member-signal {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+    line-height: 1.5;
+  }
+
+  &__member-archetype {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-primary;
+  }
+
+  &__chemistry-card {
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-secondary, 0.1) 100%);
+    border: 2rpx solid rgba($color-secondary, 0.14);
+  }
+
+  &__chemistry-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__chemistry-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10rpx;
+    padding: 12rpx 22rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.92);
+  }
+
+  &__chemistry-emoji {
+    font-size: $font-size-base;
+  }
+
+  &__chemistry-badge-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__chemistry-score {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  &__chemistry-title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__chemistry-copy,
+  &__chemistry-prompt {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  &__chemistry-copy {
+    margin-top: $spacing-sm;
+  }
+
+  &__chemistry-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__chemistry-pill {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.08);
+  }
+
+  &__chemistry-pill-text {
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__chemistry-prompt {
+    margin-top: $spacing-md;
+  }
+
   // ── Theme Card ────────────────────────────────────────────────
   &__theme-card {
     @include card;
@@ -372,6 +713,184 @@
   &__loading-card {
     padding: $spacing-lg;
     text-align: center;
+  }
+
+  // ── Live Reveal Overlay ───────────────────────────────────────
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl;
+  }
+
+  &__overlay-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.76);
+    backdrop-filter: blur(12rpx);
+  }
+
+  &__overlay-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 640rpx;
+    border-radius: 36rpx;
+    padding: $spacing-xl;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 240, 255, 0.98) 100%);
+    box-shadow: 0 30rpx 90rpx rgba(76, 29, 149, 0.24);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  &__overlay-card--members,
+  &__overlay-card--theme {
+    align-items: stretch;
+    text-align: left;
+  }
+
+  &__overlay-eyebrow {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
+  }
+
+  &__overlay-emoji {
+    display: block;
+    font-size: 112rpx;
+    line-height: 1;
+    margin: $spacing-md 0 $spacing-sm;
+  }
+
+  &__overlay-title {
+    display: block;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__overlay-copy {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-base;
+    line-height: 1.7;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__overlay-loading,
+  &__overlay-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: $spacing-md auto 0;
+    padding: 10rpx $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.1);
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+
+  &__overlay-member-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+    justify-content: center;
+    margin-top: $spacing-lg;
+  }
+
+  &__overlay-member-card {
+    width: calc(50% - #{$spacing-sm});
+    min-height: 176rpx;
+    border-radius: 28rpx;
+    padding: $spacing-md;
+    background: rgba($color-surface, 0.94);
+    box-shadow: inset 0 0 0 1rpx rgba($color-primary, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+    animation: matching-overlay-rise 0.45s ease both;
+  }
+
+  &__overlay-member-initial {
+    width: 60rpx;
+    height: 60rpx;
+    border-radius: 50%;
+    background: $brand-gradient;
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__overlay-member-name {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__overlay-member-note {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.5;
+  }
+
+  &__overlay-button {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+    margin-top: $spacing-lg;
+  }
+
+  &__overlay-highlight-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-md;
+  }
+
+  &__overlay-highlight-item {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  @keyframes matching-overlay-rise {
+    from {
+      opacity: 0;
+      transform: translateY(16rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes matching-arrival-rise {
+    from {
+      opacity: 0;
+      transform: translateY(-12rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   // ── Actions ───────────────────────────────────────────────────

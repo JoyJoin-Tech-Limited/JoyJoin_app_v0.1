@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-14",
+  "updated": "2026-04-16",
   "orchestrationContract": "../orchestration.yaml",
   "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
@@ -121,9 +121,8 @@
         "Taro Migration Specialist",
         "Expert React Frontend Engineer",
         "debug",
-        "principal SWE",
-        "SE: Product Manager",
-        "prompt engineer"
+        "Principal Software Engineer",
+        "Prompt Engineer"
       ],
       "portfolioRole": "kickoff-planning",
       "orchestrationPhase": "kickoff",
@@ -166,6 +165,12 @@
       "handoffs": [
         "Researcher",
         "Planner",
+        "Auto-Eval",
+        "Product Manager",
+        "Backend Engineer",
+        "AI Engineer",
+        "QA Agent",
+        "Launch Readiness Agent",
         "debug",
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer",
@@ -415,7 +420,7 @@
       "toolingStatus": "sufficient"
     },
     {
-      "name": "principal SWE",
+      "name": "Principal Software Engineer",
       "file": "principal SWE.md",
       "description": "Use when you need principal-level software engineering guidance, architecture tradeoff analysis, implementation review, or pragmatic plans for complex technical changes.",
       "tools": [
@@ -436,7 +441,7 @@
       "toolingStatus": "sufficient"
     },
     {
-      "name": "prompt engineer",
+      "name": "Prompt Engineer",
       "file": "prompt engineer.md",
       "description": "Use when analyzing or rewriting prompts, improving system prompts, maintaining repo-resident prompt files, adding better examples, or tightening prompt structure for more reliable model behavior.",
       "tools": [
@@ -453,9 +458,9 @@
       "toolingStatus": "sufficient"
     },
     {
-      "name": "SelfIteration",
+      "name": "Workflow Governance Reviewer",
       "file": "self-iteration.agent.md",
-      "description": "Use when repeated agent, skill, orchestration, hook, prompt, or repo-memory workflow problems need a proposal-only reviewer packet, validated draft, or audited support-lane recommendation instead of an immediate promotion into the core graph. Trigger phrases: self iteration, review the agent portfolio, fix orchestration drift, repeated routing misses, prepare a memory candidate draft.",
+      "description": "Use when repeated agent, skill, orchestration, hook, prompt, or repo-memory workflow problems need a proposal-only reviewer packet, validated draft, or audited support-lane recommendation instead of an immediate promotion into the core graph. Trigger phrases: workflow governance review, review the agent portfolio, fix orchestration drift, repeated routing misses, prepare a memory candidate draft.",
       "tools": [
         "read",
         "search",

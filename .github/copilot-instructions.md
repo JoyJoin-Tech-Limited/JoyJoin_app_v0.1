@@ -20,10 +20,15 @@
 ### Orchestration
 
 - The native agent orchestration contract lives in `.github/orchestration.yaml`.
+- `.github/agents/manifest.json` is the machine-readable inventory for canonical agent names and subagent allowlists.
+- `.vscode/settings.json` intentionally enables nested subagents for the authored support-lane workflows that delegate a second level.
 - Use `.github/ORCHESTRATION.md` for the human-readable graph, support-agent coverage, and tooling sufficiency audit.
 - Use `.github/AI_WORKFLOW_POLICY.md` to decide when work should stay in direct delivery, when it should start with `Researcher` -> `Planner`, and when it should escalate into QA or launch review.
+- Every task starts with an explicit planning check. For bounded work, a compact micro-plan or execution checklist is enough. For broad, ambiguous, cross-cutting, or approval-first work, use the kickoff lane. Do not skip planning entirely.
+- If staying in direct delivery, state the goal, likely file or surface scope, and intended validation path before editing.
 - Use `.github/ORCHESTRATION_GOVERNANCE.md` when changing agents, skills, hooks, orchestration scripts, or their contributor-facing documentation so the contract and discovery surfaces stay in sync.
 - For broad, ambiguous, or multi-step work, start with `Researcher` to gather verified context, then `Planner` to return an approval-first execution plan before implementation begins.
+- Prefer implementation on a task-specific branch or isolated worktree. If work happens in a dirty or shared worktree, keep the task scope narrow and preserve unrelated changes.
 - `Auto-Eval` remains the deterministic dirty-worktree gate. `Supervisor` is the manual routing surface across the core v1 agent graph.
 - Use `Supervisor` after approval or when work needs to be rerouted across specialists midstream.
 - Repo-managed local hooks live under `.githooks/`; contributors who want the local commit-time gate should set `git config core.hooksPath .githooks`.
@@ -57,5 +62,8 @@ The **Harness Engineering Framework** is the default review lens for these dimen
 
 ## Debugging Tips
 
-- Always check for errors in your code.
-- Use print statements for debugging.
+- Always reproduce and understand the bug before attempting a fix.
+- Prefer red-green-refactor when a reliable automated test, assertion, or reproduction script can express the bug first.
+- Write the smallest failing test first when feasible.
+- If a failing test first is not practical, record why and add the narrowest regression test immediately after the fix.
+- Use targeted logging or print statements when they help isolate the failure.

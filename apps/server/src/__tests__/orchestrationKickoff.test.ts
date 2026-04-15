@@ -256,6 +256,27 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(path.join(REPO_ROOT, relativePath), 'utf8');
 }
 
+function parseFrontmatterArray(source: string, fieldName: string): string[] {
+  const frontmatterMatch = source.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) {
+    return [];
+  }
+
+  const fieldMatch = frontmatterMatch[1].match(new RegExp(`^${fieldName}:\\s*\\[(.*)\\]$`, "m"));
+  if (!fieldMatch) {
+    return [];
+  }
+
+  const inner = fieldMatch[1].trim();
+  if (inner === "") {
+    return [];
+  }
+
+  return inner
+    .split(",")
+    .map((item) => item.trim().replace(/^["\x27]|["\x27]$/g, ""))
+    .filter(Boolean);
+}
 function runGitCommand(repoRoot: string, args: string[]) {
   const result = spawnSync('git', args, {
     cwd: repoRoot,
@@ -432,7 +453,7 @@ describe('orchestration kickoff lane', () => {
 });
 
 describe('orchestration supervisor routing boundaries', () => {
-  it('keeps frontend delivery in audited support while making Supervisor rerouting explicit', () => {
+  it('keeps frontend delivery in audited support while making Supervisor core and support exits explicit', () => {
     const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
@@ -487,6 +508,12 @@ describe('orchestration supervisor routing boundaries', () => {
       expect.arrayContaining([
         'Researcher',
         'Planner',
+        'Auto-Eval',
+        'Product Manager',
+        'Backend Engineer',
+        'AI Engineer',
+        'QA Agent',
+        'Launch Readiness Agent',
         'Mini-Program Parity Auditor',
         'Expert React Frontend Engineer',
         'Taro Mini-Program Frontend Engineer',
@@ -496,6 +523,13 @@ describe('orchestration supervisor routing boundaries', () => {
     expect(supervisor?.handoffs).toEqual([
       'Researcher',
       'Planner',
+      'Auto-Eval',
+      'Product Manager',
+      'Backend Engineer',
+      'AI Engineer',
+      'QA Agent',
+      'Launch Readiness Agent',
+      'debug',
       'Mini-Program Parity Auditor',
       'Expert React Frontend Engineer',
       'Taro Mini-Program Frontend Engineer',
@@ -504,6 +538,9 @@ describe('orchestration supervisor routing boundaries', () => {
     expect(supervisorSource).toContain('handoffs:');
     expect(supervisorSource).toContain('agent: "Researcher"');
     expect(supervisorSource).toContain('agent: "Planner"');
+    expect(supervisorSource).toContain('agent: "Auto-Eval"');
+    expect(supervisorSource).toContain('agent: "Backend Engineer"');
+    expect(supervisorSource).toContain('agent: "QA Agent"');
     expect(supervisorSource).toContain('agent: "Expert React Frontend Engineer"');
     expect(expertFrontendEngineer?.tools).toEqual(['read', 'search', 'edit', 'execute']);
     expect(expertFrontendEngineer?.orchestrationPhase).toBe('support-audited');
@@ -520,6 +557,12 @@ describe('orchestration supervisor routing boundaries', () => {
       expect.arrayContaining([
         expect.objectContaining({ from: 'Supervisor', to: 'Researcher' }),
         expect.objectContaining({ from: 'Supervisor', to: 'Planner' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Auto-Eval', label: 'Route local quality gate' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Product Manager' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Backend Engineer' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'AI Engineer' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'QA Agent' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Launch Readiness Agent', label: 'Review launch readiness' }),
         expect.objectContaining({ from: 'Supervisor', to: 'Mini-Program Parity Auditor' }),
         expect.objectContaining({ from: 'Supervisor', to: 'Expert React Frontend Engineer' }),
         expect.objectContaining({ from: 'Supervisor', to: 'Taro Mini-Program Frontend Engineer' }),
@@ -551,7 +594,7 @@ describe('orchestration supervisor routing boundaries', () => {
     };
 
     const debugAgent = manifest.agents.find((agent) => agent.name === 'debug');
-    const principalAgent = manifest.agents.find((agent) => agent.name === 'principal SWE');
+    const principalAgent = manifest.agents.find((agent) => agent.name === 'Principal Software Engineer');
     const debugSource = readRepoFile('.github/agents/debug.agent.md');
     const principalSource = readRepoFile('.github/agents/principal SWE.md');
 
@@ -575,7 +618,7 @@ describe('orchestration supervisor routing boundaries', () => {
         status: 'sufficient',
       },
     });
-    expect(orchestration.agent_bindings['principal SWE']).toMatchObject({
+    expect(orchestration.agent_bindings['Principal Software Engineer']).toMatchObject({
       orchestration_status: 'audited-support',
       current_tools: ['read', 'search', 'execute'],
       tooling_assessment: {
@@ -609,7 +652,7 @@ describe('orchestration supervisor routing boundaries', () => {
     };
 
     const productAdvisor = manifest.agents.find((agent) => agent.name === 'SE: Product Manager');
-    const promptEngineer = manifest.agents.find((agent) => agent.name === 'prompt engineer');
+    const promptEngineer = manifest.agents.find((agent) => agent.name === 'Prompt Engineer');
     const productAdvisorSource = readRepoFile('.github/agents/PM advisor.md');
     const promptEngineerSource = readRepoFile('.github/agents/prompt engineer.md');
 
@@ -635,7 +678,7 @@ describe('orchestration supervisor routing boundaries', () => {
         status: 'sufficient',
       },
     });
-    expect(orchestration.agent_bindings['prompt engineer']).toMatchObject({
+    expect(orchestration.agent_bindings['Prompt Engineer']).toMatchObject({
       orchestration_status: 'audited-support',
       current_tools: ['read', 'search', 'edit'],
       tooling_assessment: {
@@ -644,7 +687,62 @@ describe('orchestration supervisor routing boundaries', () => {
     });
   });
 
-  it('registers SelfIteration as a proposal-only audited support agent', () => {
+  it('treats the agent inventory as the machine-readable source of truth for subagent allowlists', () => {
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
+      agents: Array<{
+        name: string;
+        subagents?: string[];
+      }>;
+    };
+
+    const planner = manifest.agents.find((agent) => agent.name === 'Planner');
+    const taroMiniProgramEngineer = manifest.agents.find(
+      (agent) => agent.name === 'Taro Mini-Program Frontend Engineer'
+    );
+    const taroMigrationSpecialist = manifest.agents.find(
+      (agent) => agent.name === 'Taro Migration Specialist'
+    );
+    const plannerSource = readRepoFile('.github/agents/planner.agent.md');
+    const taroMiniProgramEngineerSource = readRepoFile('.github/agents/taro-mini-program-frontend-engineer.agent.md');
+    const taroMigrationSpecialistSource = readRepoFile('.github/agents/taro-migration-specialist.agent.md');
+
+    expect(planner?.subagents).toEqual(parseFrontmatterArray(plannerSource, 'agents'));
+    expect(planner?.subagents).toEqual(
+      expect.arrayContaining(['Principal Software Engineer', 'Prompt Engineer'])
+    );
+    expect(taroMiniProgramEngineer?.subagents).toEqual(
+      parseFrontmatterArray(taroMiniProgramEngineerSource, 'agents')
+    );
+    expect(taroMigrationSpecialist?.subagents).toEqual(
+      parseFrontmatterArray(taroMigrationSpecialistSource, 'agents')
+    );
+  });
+
+  it('enables nested subagent invocation for authored second-level delegation', () => {
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
+      agents: Array<{
+        name: string;
+        subagents?: string[];
+      }>;
+    };
+    const settings = JSON.parse(readRepoFile('.vscode/settings.json')) as Record<string, unknown>;
+
+    const nestedDelegationAgents = manifest.agents
+      .filter((agent) => Array.isArray(agent.subagents) && agent.subagents.length > 0)
+      .filter((agent) =>
+        manifest.agents.some(
+          (candidate) => Array.isArray(candidate.subagents) && candidate.subagents.includes(agent.name)
+        )
+      )
+      .map((agent) => agent.name);
+
+    expect(nestedDelegationAgents).toEqual(
+      expect.arrayContaining(['Taro Mini-Program Frontend Engineer', 'Taro Migration Specialist'])
+    );
+    expect(settings['chat.subagents.allowInvocationsFromSubagents']).toBe(true);
+  });
+
+  it('registers Workflow Governance Reviewer as a proposal-only audited support agent', () => {
     const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
@@ -676,11 +774,13 @@ describe('orchestration supervisor routing boundaries', () => {
       skill_bindings: Record<string, string[]>;
     };
 
-    const selfIteration = manifest.agents.find((agent) => agent.name === 'SelfIteration');
+    const workflowGovernanceReviewer = manifest.agents.find(
+      (agent) => agent.name === 'Workflow Governance Reviewer'
+    );
     const selfIterationSource = readRepoFile('.github/agents/self-iteration.agent.md');
     const selfIterationDoc = readRepoFile('docs/agents/SelfIteration.md');
 
-    expect(selfIteration).toMatchObject({
+    expect(workflowGovernanceReviewer).toMatchObject({
       file: 'self-iteration.agent.md',
       tools: ['read', 'search', 'edit', 'execute'],
       orchestrationPhase: 'support-audited',
@@ -688,9 +788,9 @@ describe('orchestration supervisor routing boundaries', () => {
       portfolioRole: 'meta-governance',
       skills: ['docs-sync', 'testing-and-regression-guardrails'],
     });
-    expect(orchestration.portfolio_scope.orchestrated_agents).not.toContain('SelfIteration');
-    expect(orchestration.portfolio_scope.audited_agents).toContain('SelfIteration');
-    expect(orchestration.agent_bindings.SelfIteration).toMatchObject({
+    expect(orchestration.portfolio_scope.orchestrated_agents).not.toContain('Workflow Governance Reviewer');
+    expect(orchestration.portfolio_scope.audited_agents).toContain('Workflow Governance Reviewer');
+    expect(orchestration.agent_bindings['Workflow Governance Reviewer']).toMatchObject({
       file: '.github/agents/self-iteration.agent.md',
       portfolio_role: 'meta-governance',
       orchestration_status: 'audited-support',
@@ -699,7 +799,10 @@ describe('orchestration supervisor routing boundaries', () => {
         status: 'sufficient',
       },
     });
-    expect(orchestration.skill_bindings.SelfIteration).toEqual(['docs-sync', 'testing-and-regression-guardrails']);
+    expect(orchestration.skill_bindings['Workflow Governance Reviewer']).toEqual([
+      'docs-sync',
+      'testing-and-regression-guardrails',
+    ]);
     expect(selfIterationSource).toContain('proposal-only');
     expect(selfIterationSource).toContain('DO NOT publish durable memory');
     expect(selfIterationSource).toContain('DO NOT change your own approval boundaries');
@@ -1206,24 +1309,26 @@ describe.sequential('orchestration runtime context persistence', () => {
     });
 
     const runtimeEvents = readRuntimeEventLog();
-    expect(runtimeEvents).toHaveLength(3);
-    expect(runtimeEvents[1]).toMatchObject({
+    const promptEvents = runtimeEvents.filter((entry) => entry.event === 'user-prompt-submit');
+
+    expect(promptEvents).toHaveLength(2);
+    expect(promptEvents[0]).toMatchObject({
       event: 'user-prompt-submit',
       kickoffRecommended: true,
       kickoffCleared: false,
       promptSummary: 'Add a new API endpoint for user profile retrieval with caching.',
-      memory: {
+      memory: expect.objectContaining({
         generatedIndexAvailable: true,
-      },
+      }),
     });
-    expect(runtimeEvents[2]).toMatchObject({
+    expect(promptEvents[1]).toMatchObject({
       event: 'user-prompt-submit',
       kickoffRecommended: false,
       kickoffCleared: true,
       promptSummary: 'fix typo',
-      memory: {
+      memory: expect.objectContaining({
         generatedIndexAvailable: true,
-      },
+      }),
     });
   });
 });

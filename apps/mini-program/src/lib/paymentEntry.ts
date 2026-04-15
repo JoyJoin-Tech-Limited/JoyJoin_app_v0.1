@@ -1,11 +1,16 @@
 import Taro from '@tarojs/taro'
 import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
 import type { MiniProgramPendingOrderLookupResult } from './paymentPendingOrder'
-import { clearPendingOrderStorage, readStoredPendingOrder } from './paymentPendingOrderStorage'
+import {
+  clearPaymentReturnContextStorage,
+  clearPendingOrderStorage,
+  readStoredPendingOrder,
+} from './paymentPendingOrderStorage'
 
 export interface OpenMiniProgramPaymentPageOptions {
   paymentsEnabled?: boolean
   currentUserId?: string | null
+  preserveReturnContext?: boolean
 }
 
 export type MiniProgramPaymentEntryDecision =
@@ -31,11 +36,16 @@ export function decideMiniProgramPaymentEntry(input: {
 export async function openMiniProgramPaymentPage({
   paymentsEnabled,
   currentUserId,
+  preserveReturnContext = false,
 }: OpenMiniProgramPaymentPageOptions): Promise<void> {
   const pendingOrder = readStoredPendingOrder({ currentUserId })
 
   if (pendingOrder.status === 'clear') {
     clearPendingOrderStorage()
+  }
+
+  if (!preserveReturnContext && pendingOrder.status !== 'ready') {
+    clearPaymentReturnContextStorage()
   }
 
   const decision = decideMiniProgramPaymentEntry({

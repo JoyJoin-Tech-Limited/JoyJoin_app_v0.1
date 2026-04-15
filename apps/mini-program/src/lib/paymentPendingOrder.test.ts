@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { MINI_PROGRAM_PAGE_PATHS } from './onboardingRoutes'
 import {
+  buildPoolRegistrationPaymentReturnContext,
   buildPendingOrderContext,
   decidePendingOrderAutoResume,
+  markPaymentReturnContextPaid,
   MINI_PROGRAM_PENDING_ORDER_MAX_AGE_MS,
+  resolvePaymentReturnContext,
   resolvePendingOrder,
 } from './paymentPendingOrder'
 
@@ -18,6 +21,29 @@ function createPendingOrderContext(
       type: 'event_bundle',
       userId: 'user-123',
       createdAt: NOW,
+      ...overrides,
+    },
+    NOW,
+  )
+}
+
+function createPaymentReturnContext(
+  overrides: Partial<ReturnType<typeof buildPoolRegistrationPaymentReturnContext>> = {},
+) {
+  return buildPoolRegistrationPaymentReturnContext(
+    {
+      userId: 'user-123',
+      poolId: 'pool-123',
+      poolTitle: '海风晚餐局',
+      poolArea: '南山区',
+      poolEventType: '饭局',
+      draft: {
+        budgetRange: ['150-200'],
+        eventIntent: ['make_friends'],
+        preferredLanguages: ['普通话'],
+      },
+      createdAt: NOW,
+      updatedAt: NOW,
       ...overrides,
     },
     NOW,
@@ -171,5 +197,64 @@ describe('mini-program pending-order recovery', () => {
       status: 'clear',
       reason: 'invalid-context',
     })
+  })
+
+  it('resolves a same-user pool-registration return context', () => {
+    expect(
+      resolvePaymentReturnContext({
+        context: createPaymentReturnContext(),
+        currentUserId: 'user-123',
+        now: NOW,
+      }),
+    ).toEqual({
+      status: 'ready',
+      context: createPaymentReturnContext(),
+    })
+  })
+
+  it('marks a registration return context as paid without dropping the draft', () => {
+    expect(markPaymentReturnContextPaid(createPaymentReturnContext(), NOW + 5000)).toMatchObject({
+      paymentStatus: 'paid',
+      updatedAt: NOW + 5000,
+      draft: {
+        budgetRange: ['150-200'],
+        eventIntent: ['make_friends'],
+      },
+    })
+  })
+
+  it('clears a mismatched-user return context instead of restoring it', () => {
+    expect(
+      resolvePaymentReturnContext({
+        context: createPaymentReturnContext({ userId: 'user-999' }),
+        currentUserId: 'user-123',
+        now: NOW,
+      }),
+    ).toEqual({
+      status: 'clear',
+      reason: 'wrong-user',
+    })
+  })
+
+  it('keeps a pending order resumable even if nested return context is malformed', () => {
+    const pendingOrder = resolvePendingOrder({
+      orderId: 'order-123',
+      context: {
+        ...createPendingOrderContext(),
+        returnContext: {
+          kind: 'pool-registration',
+          poolId: 'pool-123',
+        },
+      },
+      currentUserId: 'user-123',
+      now: NOW,
+    })
+
+    expect(pendingOrder.status).toBe('ready')
+    if (pendingOrder.status !== 'ready') {
+      throw new Error('Expected pending order to remain resumable')
+    }
+
+    expect(pendingOrder.context.returnContext).toBeUndefined()
   })
 })

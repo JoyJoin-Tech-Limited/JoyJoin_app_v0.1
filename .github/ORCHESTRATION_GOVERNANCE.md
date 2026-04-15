@@ -1,7 +1,7 @@
 # JoyJoin Orchestration Governance
 
 **Status:** Active governance reference  
-**Last updated:** 2026-04-14  
+**Last updated:** 2026-04-16  
 **Scope:** How JoyJoin changes agents, skills, hooks, orchestration contracts, and workflow-validation surfaces
 
 ## Purpose
@@ -36,12 +36,13 @@ This is a governance document, not a runtime-product AI architecture document. F
 | Surface | Source of truth | Notes |
 |---|---|---|
 | Agent portfolio | `.github/agents/*.agent.md` or existing legacy agent files | Frontmatter is the discovery contract. |
-| Agent inventory | `.github/agents/manifest.json` | Lightweight registry used for audits and validation. |
+| Agent inventory | `.github/agents/manifest.json` | Machine-readable agent inventory and subagent allowlist source used for audits and validation. |
 | Native orchestration contract | `.github/orchestration.yaml` | Machine-readable handoff graph, hook config, skill bindings, and tooling audit. |
 | Human-readable orchestration guide | `.github/ORCHESTRATION.md` | Contributor-facing explanation of the current graph and runtime surfaces. |
 | Contributor workflow policy | `.github/AI_WORKFLOW_POLICY.md` | Lane selection, escalation rules, and approval boundaries. |
 | Governance rules | `.github/ORCHESTRATION_GOVERNANCE.md` | This document. |
 | Hook behavior docs | `.github/hooks/README.md` | Explains what runs and how hooks behave. |
+| Workspace subagent setting | `.vscode/settings.json` | Enables nested subagent invocation when the repo intentionally authors second-level delegation. |
 | Durable repo memory | `repo-memory/README.md`, `repo-memory/candidates/README.md`, `repo-memory/promoted/`, `repo-memory/generated/` | Reviewable memory plane outside `.git`; publication remains explicit and fail-closed. |
 | Shared contributor instructions | `.github/copilot-instructions.md` | Entry-point guidance for contributors and Copilot. |
 | Runtime implementation | `scripts/orchestration-supervisor.mjs`, `scripts/orchestration-lib.mjs`, `scripts/memory-*.mjs`, `scripts/auto-eval*.mjs` | Deterministic behavior must match the documented contract. |
@@ -51,9 +52,9 @@ This is a governance document, not a runtime-product AI architecture document. F
 
 | Change type | Required updates | Minimum validation |
 |---|---|---|
-| Add or materially change an agent | Agent file, `.github/agents/README.md`, `manifest.json`, and `orchestration.yaml` when handoffs, skill links, or audit status change | `npm run orchestration:validate` |
+| Add or materially change an agent | Agent file, `.github/agents/README.md`, `manifest.json`, and `orchestration.yaml` when handoffs, skill links, audit status, or machine-readable names change | `npm run orchestration:validate` |
 | Add or materially change a skill | Skill `SKILL.md`, routing metadata, `.github/skills/README.md`, and routing validation coverage | `node scripts/validate-skill-routing.mjs` and `node scripts/test-skill-routing.mjs` |
-| Change the handoff graph, kickoff behavior, or tooling sufficiency status | `.github/orchestration.yaml`, `.github/ORCHESTRATION.md`, and any impacted agent docs or contributor guidance | `npm run orchestration:validate` and targeted hook/runtime checks |
+| Change the handoff graph, kickoff behavior, tooling sufficiency status, or nested subagent workspace behavior | `.github/orchestration.yaml`, `.github/agents/manifest.json`, `.vscode/settings.json`, `.github/ORCHESTRATION.md`, and any impacted agent docs or contributor guidance | `npm run orchestration:validate` and targeted hook/runtime checks |
 | Change orchestration or auto-eval hook behavior | Runtime scripts, `.github/hooks/README.md`, `.github/ORCHESTRATION.md`, and contributor-facing guidance when behavior changes are visible to users | `npm run orchestration:validate` and targeted hook/runtime checks |
 | Change repo-memory retrieval or publication flow | `.github/orchestration.yaml`, `.github/ORCHESTRATION.md`, `repo-memory/README.md`, `repo-memory/candidates/README.md`, and the relevant runtime scripts/tests | `npm run memory:validate`, `npm run memory:build-index`, `npm run orchestration:validate`, and targeted hook/runtime checks |
 | Change contributor workflow policy | `.github/AI_WORKFLOW_POLICY.md`, affected entrypoint docs, and any governance references that would otherwise drift | Review for policy consistency |
@@ -82,9 +83,9 @@ An agent may move into the core handoff graph only when all of the following are
 
 If those conditions are not met, keep the agent in the audited support portfolio.
 
-## SelfIteration boundary
+## Workflow Governance Reviewer boundary
 
-`SelfIteration` is an audited support agent, not part of the core handoff graph.
+`Workflow Governance Reviewer` is an audited support agent, not part of the core handoff graph.
 
 - It is proposal-only and user-invocable, not a background scheduler.
 - It has no merge authority.

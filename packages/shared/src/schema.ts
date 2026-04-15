@@ -479,6 +479,7 @@ export const eventPoolGroups = pgTable("event_pool_groups", {
   subtitle: varchar("subtitle", { length: 80 }), // Subtitle (15-25 chars): "广州老乡的咖啡×人脉派对"
   vibe: varchar("vibe", { length: 30 }), // Vibe: "🔥 超高能 (88分)"
   themeEmoji: varchar("theme_emoji", { length: 10 }), // Single emoji: "⚡"
+  themeHighlights: jsonb("theme_highlights").$type<string[]>().notNull().default([]), // Persisted reveal highlights
   themeReasoning: text("theme_reasoning"), // Full reasoning with data provenance
   themeGeneratedAt: timestamp("theme_generated_at"), // Theme generation timestamp
   

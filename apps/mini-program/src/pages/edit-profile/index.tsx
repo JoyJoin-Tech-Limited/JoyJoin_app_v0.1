@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { View, Text, Input, ScrollView, Picker } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { submitEssentialData, submitInterests } from '@shared/api'
+import {
+  getUserInterests,
+  submitEssentialData,
+  submitInterests,
+  type InterestSelectionLevel,
+} from '@shared/api'
 import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { apiRequest } from '../../lib/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
@@ -71,6 +76,7 @@ export default function EditProfilePage() {
   const [currentCity, setCurrentCity] = useState('')
   const [hometownRegionCity, setHometownRegionCity] = useState('')
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
+  const [interestLevels, setInterestLevels] = useState<Record<string, InterestSelectionLevel>>({})
   const [isSaving, setIsSaving] = useState(false)
 
   // Initialize form from user data
@@ -83,20 +89,87 @@ export default function EditProfilePage() {
     setCurrentCity(u.currentCity || '')
     setHometownRegionCity(u.hometownRegionCity || '')
 
-    // Interests may be an array of IDs or objects
+    // Interests may be an array of IDs or objects when the richer payload has not been loaded yet.
     const interests: string[] = Array.isArray(u.interests)
       ? u.interests.map((i: any) => (typeof i === 'string' ? i : i.id || i.interestId || ''))
       : []
-    setSelectedInterests(interests.filter(Boolean))
+    setSelectedInterests((current) => (current.length > 0 ? current : interests.filter(Boolean)))
+    setInterestLevels((current) => {
+      if (Object.keys(current).length > 0) {
+        return current
+      }
+
+      return Object.fromEntries(
+        interests.filter(Boolean).map((interestId) => [interestId, 1 as InterestSelectionLevel]),
+      )
+    })
   }, [user])
 
+  useEffect(() => {
+    let cancelled = false
+
+    if (authLoading || !user?.hasCompletedInterestsCarousel) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    void getUserInterests(apiRequest)
+      .then((interestProfile) => {
+        if (cancelled || !Array.isArray(interestProfile?.selections)) {
+          return
+        }
+
+        const levels = interestProfile.selections.reduce<Record<string, InterestSelectionLevel>>(
+          (acc, selection) => {
+            if (typeof selection?.topicId !== 'string' || selection.topicId.trim() === '') {
+              return acc
+            }
+
+            acc[selection.topicId] =
+              selection.level === 2 || selection.level === 3 ? selection.level : 1
+            return acc
+          },
+          {},
+        )
+
+        setSelectedInterests(Object.keys(levels))
+        setInterestLevels(levels)
+      })
+      .catch((error) => {
+        const statusCode =
+          typeof error === 'object' && error !== null && 'statusCode' in error
+            ? Number((error as { statusCode?: unknown }).statusCode)
+            : undefined
+
+        if (statusCode !== 404) {
+          logError('[EditProfile] Failed to load structured interests', {
+            statusCode,
+            message: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, user?.hasCompletedInterestsCarousel])
+
   const toggleInterest = useCallback((interestId: string) => {
-    setSelectedInterests((prev) =>
-      prev.includes(interestId)
-        ? prev.filter((id) => id !== interestId)
-        : [...prev, interestId],
-    )
-  }, [])
+    if (selectedInterests.includes(interestId)) {
+      setSelectedInterests(selectedInterests.filter((id) => id !== interestId))
+      const nextLevels = { ...interestLevels }
+      delete nextLevels[interestId]
+      setInterestLevels(nextLevels)
+      return
+    }
+
+    setSelectedInterests([...selectedInterests, interestId])
+    setInterestLevels({
+      ...interestLevels,
+      [interestId]: interestLevels[interestId] ?? 1,
+    })
+  }, [interestLevels, selectedInterests])
 
   const handleBirthYearChange = useCallback((e: any) => {
     const idx = e.detail.value as number
@@ -122,7 +195,12 @@ export default function EditProfilePage() {
 
       // Submit interests if changed
       if (selectedInterests.length > 0) {
-        await submitInterests(apiRequest, { interests: selectedInterests })
+        await submitInterests(apiRequest, {
+          interests: selectedInterests.map((topicId) => ({
+            topicId,
+            level: interestLevels[topicId] ?? 1,
+          })),
+        })
       }
 
       // Invalidate auth cache so profile page refreshes
@@ -139,7 +217,17 @@ export default function EditProfilePage() {
     } finally {
       setIsSaving(false)
     }
-  }, [isSaving, displayName, gender, birthYear, currentCity, hometownRegionCity, selectedInterests, invalidateAuth])
+  }, [
+    isSaving,
+    displayName,
+    gender,
+    birthYear,
+    currentCity,
+    hometownRegionCity,
+    selectedInterests,
+    interestLevels,
+    invalidateAuth,
+  ])
 
   if (authLoading) {
     return <LoadingScreen />

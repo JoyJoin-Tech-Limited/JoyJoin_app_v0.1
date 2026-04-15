@@ -513,7 +513,7 @@ Provides:
 2. **Recovery must be correct.** A user returning to the matching-status page after a forced refresh should land in the right state.
 3. **For full-screen matching-status screens, never duplicate `matching-bg.svg`.** Import the shared background only via `MatchingStateLayout`. Join-sheet interstitials inherit their presentation context from `JoinEventPoolSheet` and should not wrap themselves in `MatchingStateLayout`.
 4. **Asset locations:** `apps/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
-5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; `BlindBoxConfirmationPage` is quarantined and `/blindbox/confirmation` redirects to `/discover`.
+5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
 
 Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
 

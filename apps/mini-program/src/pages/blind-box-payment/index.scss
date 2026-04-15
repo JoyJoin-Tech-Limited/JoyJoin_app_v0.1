@@ -4,12 +4,48 @@
 .payment-page {
   min-height: 100vh;
   @include page-shell-padding(40rpx, 32rpx, 48rpx);
-  background: linear-gradient(180deg, #fff4f7 0%, #f7f1ff 42%, #ffffff 100%);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff7f2 0%, #f7f1ff 40%, #ffffff 100%);
   display: flex;
   flex-direction: column;
   gap: 24rpx;
 
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  &__orb {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.42;
+    filter: blur(8rpx);
+    animation: payment-orb-drift 8s ease-in-out infinite;
+
+    &--left {
+      top: 60rpx;
+      left: -40rpx;
+      width: 240rpx;
+      height: 240rpx;
+      background: rgba($color-secondary, 0.16);
+    }
+
+    &--right {
+      top: 180rpx;
+      right: -64rpx;
+      width: 300rpx;
+      height: 300rpx;
+      background: rgba($color-primary, 0.14);
+      animation-delay: 1.6s;
+    }
+  }
+
   &__header {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: 12rpx;
@@ -21,10 +57,10 @@
     padding: 0 24rpx;
     margin-left: 0;
     border-radius: 44rpx;
-    background: rgba(255, 255, 255, 0.9);
-    color: #4b5563;
+    background: rgba($color-surface, 0.94);
+    color: $color-text-secondary;
     font-size: 28rpx;
-    border: 2rpx solid rgba(139, 92, 246, 0.12);
+    border: 2rpx solid rgba($color-primary, 0.12);
 
     &::after {
       border: none;
@@ -33,7 +69,7 @@
 
   &__eyebrow {
     font-size: 24rpx;
-    color: #8b5cf6;
+    color: $color-primary;
     font-weight: 600;
   }
 
@@ -41,19 +77,76 @@
     font-size: 56rpx;
     line-height: 1.2;
     font-weight: 800;
-    color: #111827;
+    color: $color-text-primary;
   }
 
   &__subtitle {
     font-size: 26rpx;
-    color: #6b7280;
+    color: $color-text-secondary;
+    line-height: 1.6;
+  }
+
+  &__context-card,
+  &__summary-card,
+  &__footer,
+  &__section-heading {
+    position: relative;
+    z-index: 1;
+  }
+
+  &__context-card {
+    padding: 32rpx;
+    border-radius: 32rpx;
+    background: linear-gradient(145deg, rgba($color-surface, 0.96) 0%, rgba($color-primary-light, 0.86) 100%);
+    border: 2rpx solid rgba($color-primary, 0.14);
+    box-shadow: 0 24rpx 80rpx rgba($color-primary, 0.12);
+    animation: payment-card-rise 0.3s ease-out both;
+  }
+
+  &__context-kicker {
+    font-size: 24rpx;
+    color: $color-primary;
+    font-weight: 700;
+  }
+
+  &__context-title {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 40rpx;
+    line-height: 1.28;
+    color: $color-text-primary;
+    font-weight: 800;
+  }
+
+  &__context-copy {
+    display: block;
+    margin-top: 12rpx;
+    font-size: 26rpx;
+    line-height: 1.65;
+    color: $color-text-secondary;
+  }
+
+  &__context-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: 20rpx;
+  }
+
+  &__context-pill {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    color: $color-primary-dark;
+    font-size: 22rpx;
+    font-weight: 700;
   }
 
   &__summary-card {
     padding: 32rpx;
     border-radius: 32rpx;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 24rpx 80rpx rgba(139, 92, 246, 0.12);
+    background: rgba($color-surface, 0.92);
+    box-shadow: 0 24rpx 80rpx rgba($color-primary, 0.08);
     display: flex;
     flex-direction: column;
     gap: 8rpx;
@@ -61,27 +154,28 @@
 
   &__summary-label {
     font-size: 24rpx;
-    color: #8b5cf6;
+    color: $color-primary;
     font-weight: 600;
   }
 
   &__summary-value {
     font-size: 52rpx;
     font-weight: 800;
-    color: #111827;
+    color: $color-text-primary;
   }
 
   &__summary-note {
     font-size: 24rpx;
-    color: #6b7280;
+    color: $color-text-secondary;
+    line-height: 1.55;
   }
 
   &__resume-button {
     margin-top: 12rpx;
     min-height: 88rpx;
     border-radius: 44rpx;
-    background: #eef2ff;
-    color: #4f46e5;
+    background: rgba($color-primary-light, 0.94);
+    color: $color-primary-dark;
     font-size: 28rpx;
     font-weight: 700;
 
@@ -90,7 +184,27 @@
     }
   }
 
+  &__section-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+  }
+
+  &__section-title {
+    font-size: 30rpx;
+    font-weight: 700;
+    color: $color-text-primary;
+  }
+
+  &__section-copy {
+    font-size: 24rpx;
+    color: $color-text-secondary;
+    line-height: 1.55;
+  }
+
   &__plans {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: 20rpx;
@@ -100,9 +214,10 @@
     min-height: 184rpx;
     padding: 0 28rpx;
     border-radius: 32rpx;
-    background: rgba(255, 255, 255, 0.92);
-    border: 2rpx solid rgba(148, 163, 184, 0.15);
+    background: rgba($color-surface, 0.94);
+    border: 2rpx solid rgba($color-border, 0.72);
     text-align: left;
+    box-shadow: 0 12rpx 36rpx rgba(45, 49, 66, 0.06);
 
     &::after {
       border: none;
@@ -110,29 +225,59 @@
   }
 
   &__plan--selected {
-    border-color: #8b5cf6;
-    box-shadow: 0 16rpx 48rpx rgba(139, 92, 246, 0.18);
+    border-color: rgba($color-primary, 0.58);
+    box-shadow: 0 18rpx 52rpx rgba($color-primary, 0.16);
+    transform: translateY(-2rpx);
   }
 
   &__plan-content {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 24rpx;
+  }
+
+  &__plan-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__plan-topline {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    flex-wrap: wrap;
+    margin-bottom: 8rpx;
   }
 
   &__plan-title {
     display: block;
     font-size: 34rpx;
     font-weight: 700;
-    color: #111827;
-    margin-bottom: 8rpx;
+    color: $color-text-primary;
+  }
+
+  &__plan-badge {
+    padding: 8rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.94);
+    color: $color-primary-dark;
+    font-size: 20rpx;
+    font-weight: 700;
   }
 
   &__plan-desc {
     display: block;
     font-size: 24rpx;
-    color: #6b7280;
+    color: $color-text-secondary;
+  }
+
+  &__plan-note {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 22rpx;
+    color: $color-text-muted;
+    line-height: 1.45;
   }
 
   &__plan-price-wrap {
@@ -144,19 +289,19 @@
 
   &__plan-original {
     font-size: 22rpx;
-    color: #94a3b8;
+    color: $color-text-muted;
     text-decoration: line-through;
   }
 
   &__plan-price {
     font-size: 36rpx;
     font-weight: 800;
-    color: #8b5cf6;
+    color: $color-primary;
   }
 
   &__error {
     font-size: 24rpx;
-    color: #dc2626;
+    color: $color-error;
     padding: 0 8rpx;
   }
 
@@ -164,7 +309,7 @@
     margin-top: auto;
     padding: 32rpx;
     border-radius: 32rpx;
-    background: #ffffff;
+    background: rgba($color-surface, 0.98);
     box-shadow: 0 20rpx 80rpx rgba(15, 23, 42, 0.08);
     display: flex;
     flex-direction: column;
@@ -177,29 +322,29 @@
     justify-content: space-between;
     gap: 24rpx;
     font-size: 26rpx;
-    color: #4b5563;
+    color: $color-text-secondary;
   }
 
   &__amount-row--total {
     padding-top: 12rpx;
-    border-top: 2rpx solid #f3f4f6;
+    border-top: 2rpx solid rgba($color-divider, 0.98);
   }
 
   &__amount-label {
     font-size: 26rpx;
-    color: #6b7280;
+    color: $color-text-secondary;
   }
 
   &__amount-value {
     font-size: 30rpx;
     font-weight: 600;
-    color: #111827;
+    color: $color-text-primary;
   }
 
   &__amount-total {
     font-size: 44rpx;
     font-weight: 800;
-    color: #111827;
+    color: $color-text-primary;
   }
 
   &__pay-button {
@@ -217,7 +362,33 @@
 
   &__hint {
     font-size: 24rpx;
-    color: #6b7280;
+    color: $color-text-secondary;
     text-align: center;
+    line-height: 1.55;
+  }
+}
+
+@keyframes payment-orb-drift {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    opacity: 0.56;
+    transform: translate3d(0, -18rpx, 0) scale(1.04);
+  }
+}
+
+@keyframes payment-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

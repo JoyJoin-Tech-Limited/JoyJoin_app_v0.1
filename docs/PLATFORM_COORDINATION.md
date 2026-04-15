@@ -49,7 +49,7 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
 | API request wrapper | `apps/user-client/src/lib/queryClient.ts` | `apps/mini-program/src/lib/api.ts` | Different signatures, error handling, and caching |
 | Price/currency formatting | `apps/user-client/src/lib/currency.ts`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `packages/shared/src/api.ts` | Plan lookup and browser launch-url normalization are shared; some display formatting is still runtime-local |
 | Payment page orchestration | `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `packages/shared/src/api.ts` | Shared endpoint contract and plan normalization; runtime launch flow is still duplicated |
-| Payment verification / post-pay routing | none | `apps/mini-program/src/pages/payment-verification/index.tsx` | Missing on web; good candidate for shared state machine + platform renderer |
+| Payment verification / post-pay routing | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/mini-program/src/lib/paymentVerificationStatus.ts`; `packages/shared/src/api.ts` | Browser confirmation now exists, and pure verification decision helpers are shared; payment launch, pending-order persistence, and polling orchestration remain platform-local |
 
 ### API client analysis
 
@@ -86,7 +86,7 @@ There is no shared Zustand/Redux store. The closest shared state source of truth
 | --- | --- | --- | --- |
 | Payment plan selection | `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` | `apps/mini-program/src/pages/blind-box-payment/index.tsx` | `usePaymentPlanSelection` |
 | Payment bootstrap (pricing + coupons + auth/session) | same file | same file | `usePaymentBootstrap` |
-| Post-payment verification state machine | not shared today | `apps/mini-program/src/pages/payment-verification/index.tsx` | headless `usePaymentVerification` |
+| Post-payment verification state machine | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/mini-program/src/lib/paymentVerificationStatus.ts`; `packages/shared/src/api.ts` | Shared verification decision helpers already live in `packages/shared/src/api.ts`; full launch and polling orchestration still belong to each platform adapter |
 | Payment summary math (base price, savings, coupon totals) | `BlindBoxPaymentPage.tsx` | `blind-box-payment/index.tsx` | `paymentPricing.ts` utility |
 | Payment CTA state | disabled/loading/error logic in payment page | disabled/loading/error logic in payment page | headless action model |
 

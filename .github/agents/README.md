@@ -88,6 +88,7 @@ agents: []
 - Use `tools: []` for conversational or analysis-only agents that do not need tool access.
 - Add `argument-hint` whenever the task benefits from a precise input contract.
 - Use `agents: []` to explicitly block subagent delegation when an agent should stay self-contained.
+- When an agent exposes subagents, keep the frontmatter `agents:` allowlist exactly aligned with `.github/agents/manifest.json`.
 
 ---
 
@@ -114,4 +115,4 @@ agents: []
 
 ## Machine-readable inventory
 
-Use [`manifest.json`](./manifest.json) as the lightweight registry for portfolio audits, tooling, or future validation scripts, and [`../orchestration.yaml`](../orchestration.yaml) for the richer orchestration contract.
+Use [`manifest.json`](./manifest.json) as the machine-readable inventory for canonical agent names and subagent allowlists, and [`../orchestration.yaml`](../orchestration.yaml) for the orchestration graph, hooks, skill bindings, and tooling audit.

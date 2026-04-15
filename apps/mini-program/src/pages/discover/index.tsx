@@ -74,6 +74,51 @@ function getFillPercent(current?: number, max?: number): number {
   return Math.min(100, Math.round(((current ?? 0) / max) * 100))
 }
 
+function getPoolMomentum(pool: EventPoolSummary, fillPct: number): {
+  label: string
+  headline: string
+  detail: string
+  counter: string
+} {
+  const current = pool.currentParticipants ?? 0
+  const max = pool.maxParticipants ?? 0
+  const remaining = max > 0 ? Math.max(max - current, 0) : 0
+
+  if (pool.status === 'closed') {
+    return {
+      label: '报名收尾',
+      headline: '这一场正在等成组结果',
+      detail: '时间和区域已经锁定，成局后会继续揭晓后续安排。',
+      counter: current > 0 ? `${current} 人候局` : '等待下一轮',
+    }
+  }
+
+  if (current === 0) {
+    return {
+      label: '新场开局',
+      headline: '你来，局就热了',
+      detail: '时间和区域先锁定，成局后再揭晓同桌伙伴。',
+      counter: '虚位以待',
+    }
+  }
+
+  if (pool.status === 'filling' || fillPct >= 78) {
+    return {
+      label: '热度很高',
+      headline: '就差临门一脚',
+      detail: '这一场正在迅速升温，现在加入更容易跟上同一桌的节奏。',
+      counter: remaining > 0 ? `还差 ${remaining} 个席位` : `${current} 人已入池`,
+    }
+  }
+
+  return {
+    label: '慢慢热起来了',
+    headline: '已经有人在等这场局',
+    detail: '预算和偏好会一起参与匹配，不是只看一个标签硬凑局。',
+    counter: max > 0 ? `${current}/${max} 人入池` : `${current} 人已入池`,
+  }
+}
+
 // ─── Skeleton placeholder ─────────────────────────────────────────
 function PoolCardSkeleton() {
   return (
@@ -89,19 +134,31 @@ function PoolCardSkeleton() {
 interface PoolCardProps {
   pool: EventPoolSummary
   isRegistered: boolean
+  index: number
   onTap: (pool: EventPoolSummary) => void
 }
 
-function PoolCard({ pool, isRegistered, onTap }: PoolCardProps) {
+function PoolCard({ pool, isRegistered, index, onTap }: PoolCardProps) {
   const fillPct = getFillPercent(pool.currentParticipants, pool.maxParticipants)
   const statusMod = getStatusModifier(pool.status)
+  const momentum = getPoolMomentum(pool, fillPct)
+  const ctaLabel = isRegistered ? '查看报名进度' : '去填写偏好'
 
   return (
     <Card
-      className='discover-auth__pool-card'
+      className='discover-auth__pool-card discover-auth__pool-card--live'
+      hoverClass='discover-auth__pool-card--hover'
+      style={{ animationDelay: `${Math.min(index, 4) * 70}ms` }}
       onClick={() => onTap(pool)}
     >
-      {/* Top row: title + event-type badge */}
+      <View className='discover-auth__pool-topline'>
+        <View className='discover-auth__pool-live'>
+          <View className='discover-auth__heat-dot' />
+          <Text className='discover-auth__pool-live-label'>{momentum.label}</Text>
+        </View>
+        <Text className='discover-auth__pool-inline-cta'>点击继续</Text>
+      </View>
+
       <View className='discover-auth__pool-header'>
         <Text className='discover-auth__pool-title'>
           {pool.title || '悦聚活动'}
@@ -118,7 +175,8 @@ function PoolCard({ pool, isRegistered, onTap }: PoolCardProps) {
         </View>
       </View>
 
-      {/* Meta: location + date */}
+      <Text className='discover-auth__pool-promise'>时间区域已定 · 成局后再揭晓同桌伙伴</Text>
+
       <View className='discover-auth__pool-meta'>
         <Text className='discover-auth__pool-location'>
           📍 {[pool.city, pool.district].filter(Boolean).join(' · ') || '深圳'}
@@ -128,8 +186,15 @@ function PoolCard({ pool, isRegistered, onTap }: PoolCardProps) {
         </Text>
       </View>
 
-      {/* Progress bar + status */}
-      <View className='discover-auth__pool-footer'>
+      <View className='discover-auth__pool-signal'>
+        <View className='discover-auth__pool-signal-copy'>
+          <Text className='discover-auth__pool-signal-title'>{momentum.headline}</Text>
+          <Text className='discover-auth__pool-signal-desc'>{momentum.detail}</Text>
+        </View>
+        <Text className='discover-auth__pool-signal-count'>{momentum.counter}</Text>
+      </View>
+
+      <View className='discover-auth__progress-block'>
         <View className='discover-auth__progress'>
           <View className='discover-auth__progress-track'>
             <View
@@ -144,6 +209,18 @@ function PoolCard({ pool, isRegistered, onTap }: PoolCardProps) {
         <Text className={`discover-auth__status discover-auth__status--${statusMod}`}>
           {getStatusLabel(pool.status)}
         </Text>
+      </View>
+
+      <View className='discover-auth__pool-footer'>
+        <View className='discover-auth__trust-row'>
+          <View className='discover-auth__trust-pill'>
+            <Text className='discover-auth__trust-pill-text'>偏好参与匹配</Text>
+          </View>
+          <View className='discover-auth__trust-pill'>
+            <Text className='discover-auth__trust-pill-text'>成局后再揭晓桌友</Text>
+          </View>
+        </View>
+        <Text className='discover-auth__pool-action'>{ctaLabel} →</Text>
       </View>
     </Card>
   )
@@ -343,10 +420,11 @@ function AuthenticatedDiscover() {
           </Card>
         ) : filteredPools.length > 0 ? (
           <View className='discover-auth__pool-list'>
-            {filteredPools.map((pool) => (
+            {filteredPools.map((pool, index) => (
               <PoolCard
                 key={pool.id}
                 pool={pool}
+                index={index}
                 isRegistered={registeredPoolIds.has(pool.id)}
                 onTap={handlePoolTap}
               />
