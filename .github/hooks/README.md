@@ -14,7 +14,8 @@ This workspace uses hooks for deterministic auto-eval enforcement and for lightw
 
 - `SessionStart` checks whether the git worktree is dirty. If it is, it runs the fast auto-eval path and reports the result in a system message.
 - `PreToolUse` only guards edit and execute style tools. It denies those tools when the current dirty-worktree fingerprint has not passed auto-eval.
-- The orchestration hook keeps a runtime context file under `.git/.orchestration/context.json`, including an advisory top-level `memoryContext`, appends non-blocking event logs under `.git/.orchestration/events.jsonl`, and recommends the `Researcher` -> `Planner` kickoff path for broad prompts.
+- The orchestration hook keeps a runtime context file under `.git/.orchestration/context.json`, including an advisory top-level `memoryContext`, `sessionId`, and bounded `turnSummaryState`, appends non-blocking event logs under `.git/.orchestration/events.jsonl`, and recommends the `Researcher` -> `Planner` kickoff path for broad prompts.
+- Explicit `record-summary` calls from agents remain the authoritative source for turn-end summaries. Hooks capture supporting runtime context, not the final summary truth.
 - `SessionStart` builds advisory repo-memory context only from changed files under `.github/`, `scripts/`, and `repo-memory/`.
 - `UserPromptSubmit` queries the promoted repo-memory index only when the prompt is meaningful enough to avoid trivial-noise matches, then surfaces a concise relevant-memory summary when useful hits exist.
 - Repo-memory hits now carry deterministic lifecycle warnings. If a note is stale against the configured validation-age threshold or conflicts with the current workflow-relevant changed paths, the hook still surfaces it but marks it with explicit caution text.
@@ -28,6 +29,7 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 - `scripts/auto-eval.mjs --mode manual-report` prints the human-readable report.
 - `scripts/auto-eval-hook.mjs` translates evaluator results into the hook input and output contract.
 - `scripts/orchestration-supervisor.mjs` is the runtime entrypoint for Copilot hooks, local git hooks, and the GitHub orchestration workflow.
+- `scripts/orchestration-supervisor.mjs record-summary` is the explicit recorder path for agent and supervisor turn summaries.
 - `scripts/memory-lib.mjs` provides the shared repo-memory substrate for note validation, indexing, and lexical retrieval.
 - `.github/orchestration.yaml` is the machine-readable contract for orchestrated agents, support agents, skill bindings, and tooling sufficiency notes.
 - `repo-memory/generated/promoted-index.json` is the read-only retrieval source the orchestration hook uses when it is available.

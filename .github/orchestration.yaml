@@ -767,33 +767,44 @@
     }
   },
   "skill_bindings": {
-    "Researcher": [],
-    "Planner": [],
+    "Researcher": [
+      "orchestration-turn-reporting"
+    ],
+    "Planner": [
+      "orchestration-turn-reporting"
+    ],
     "Supervisor": [
+      "orchestration-turn-reporting",
       "monorepo-workspace-governance",
       "docs-sync"
     ],
     "Auto-Eval": [
+      "orchestration-turn-reporting",
       "code-review",
       "monorepo-workspace-governance"
     ],
     "Product Manager": [
+      "orchestration-turn-reporting",
       "draft-prd"
     ],
     "Backend Engineer": [
+      "orchestration-turn-reporting",
       "server-domain-architecture",
       "auth-session-and-safety-boundaries",
       "reliability-and-state-integrity"
     ],
     "AI Engineer": [
+      "orchestration-turn-reporting",
       "llm-runtime-safety-and-integration",
       "platform-observability-and-ops"
     ],
     "QA Agent": [
+      "orchestration-turn-reporting",
       "e2e-test-runner",
       "testing-and-regression-guardrails"
     ],
     "Launch Readiness Agent": [
+      "orchestration-turn-reporting",
       "security-scan",
       "platform-observability-and-ops",
       "code-review"
@@ -809,21 +820,25 @@
       "reliability-and-state-integrity"
     ],
     "Mini-Program Parity Auditor": [
+      "orchestration-turn-reporting",
       "platform-coordination-protocol",
       "frontend-component-architecture"
     ],
     "Taro Mini-Program Frontend Engineer": [
+      "orchestration-turn-reporting",
       "frontend-component-architecture",
       "design-system-governance",
       "joyjoin-brand-guidelines",
       "platform-coordination-protocol"
     ],
     "Taro Migration Specialist": [
+      "orchestration-turn-reporting",
       "platform-coordination-protocol",
       "frontend-component-architecture",
       "design-system-governance"
     ],
     "Expert React Frontend Engineer": [
+      "orchestration-turn-reporting",
       "frontend-component-architecture",
       "design-system-governance",
       "frontend-performance-and-loading",
@@ -866,6 +881,7 @@
     "required_fields": [
       "event",
       "triggerSource",
+      "sessionId",
       "commitSha",
       "branch",
       "prNumber",
@@ -879,6 +895,7 @@
       "retryCount",
       "recommendedNextAgents",
       "kickoff",
+      "turnSummaryState",
       "memoryContext",
       "lastUpdatedAt"
     ]

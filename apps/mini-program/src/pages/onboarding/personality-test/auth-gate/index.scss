@@ -4,7 +4,7 @@
 .personality-auth-gate {
   @include page-gradient-bg;
   min-height: 100vh;
-  @include page-shell-padding($spacing-lg, $container-padding, $spacing-2xl, true);
+  padding: $spacing-lg $container-padding $spacing-2xl;
 
   &__loading,
   &__empty {
@@ -24,12 +24,7 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
-    margin-bottom: $spacing-md;
-    padding: $spacing-lg;
-    border-radius: $card-radius;
-    border: 2rpx solid rgba($color-primary, 0.1);
-    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
-    box-shadow: $shadow-md;
+    margin-bottom: $spacing-lg;
   }
 
   &__eyebrow {
@@ -53,18 +48,17 @@
     line-height: 1.7;
   }
 
-  &__empty-actions {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    width: 100%;
-  }
-
   &__card {
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
     border: 2rpx solid rgba($color-primary, 0.08);
     background: rgba($color-surface, 0.94);
+
+    &--compact {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
   }
 
   &__card-title {
@@ -82,39 +76,16 @@
   }
 
   &__bullet,
-  &__summary-label {
+  &__meta {
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.7;
   }
 
-  &__summary-card {
-    display: flex;
-    align-items: stretch;
-    gap: $spacing-sm;
-    padding: $spacing-md $spacing-lg;
-    margin-bottom: $spacing-md;
-    border: 2rpx solid rgba($color-primary, 0.08);
-    background: rgba($color-surface, 0.94);
-  }
-
-  &__summary-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8rpx;
-  }
-
-  &__summary-divider {
-    width: 2rpx;
-    background: rgba($color-primary, 0.08);
-  }
-
-  &__summary-value {
+  &__meta-value {
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     color: $color-primary-dark;
-    line-height: 1.4;
   }
 
   &__actions {
@@ -122,13 +93,5 @@
     flex-direction: column;
     gap: $spacing-sm;
     margin-top: $spacing-lg;
-  }
-
-  &__action-note {
-    display: block;
-    text-align: center;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    line-height: 1.6;
   }
 }

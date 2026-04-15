@@ -110,6 +110,8 @@ The orchestration runtime under `.git/.orchestration/` is advisory state, not pr
 - If current scope cannot be derived truthfully, record it as unknown rather than backfilling with misleading context.
 - Recommendation state should clear when follow-up prompts narrow the task enough that the earlier broad recommendation is no longer true.
 - `memoryContext` inside `.git/.orchestration/context.json` is advisory retrieval state only; durable memory publication still lives under `repo-memory/`.
+- `turnSummaryState` inside `.git/.orchestration/context.json` is operational workflow state only; keep it bounded to compact last-5 projections instead of unbounded transcript history.
+- Full turn-summary entries belong in `.git/.orchestration/events.jsonl`; the bounded context cache is for active-session refinement, not archival truth.
 - When repo-memory hits are stale against the configured validation-age threshold or conflict with current workflow-relevant changed paths, `memoryContext` should surface that as advisory caution rather than clean guidance.
 - Dirty-worktree and changed-file summaries must describe the actual current state, not a convenient historical approximation.
 - Stateful behavior should be covered by tests, not only by dry-run validations with runtime writes disabled.
@@ -122,6 +124,7 @@ Minimum commands for orchestration-governance work:
 npm run memory:validate
 npm run memory:build-index
 npm run orchestration:validate
+env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary <<< '{"type":"agent_turn_summary","agentName":"Supervisor","done":["example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["example"],"nextTurnImprovements":["tighten scope"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'
 env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'
 node scripts/orchestration-supervisor.mjs workflow pull-request
 node scripts/auto-eval.mjs --mode manual-report

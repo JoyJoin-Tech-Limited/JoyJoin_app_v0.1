@@ -50,6 +50,9 @@ Use this skill when you are:
 6. Loading states are part of the feature, not a fallback afterthought.
    If a route or action can wait, the loading, empty, and retry states should be explicit.
 
+7. Mini-program package splitting is benchmark-driven.
+   Start with ordinary subpackages and `preloadRule` for heavy non-tab flows. Do not recommend independent subpackages by default, but do not reject them categorically either; use them only when measured wins justify self-contained bootstrap and duplicated setup.
+
 ## Current repo anchors
 
 - `docs/perf.md` defines the active web performance strategy and guardrails.
@@ -62,6 +65,7 @@ Use this skill when you are:
 - **Add a new user-client page**: default to `React.lazy()` unless it is part of the critical initial path.
 - **Review a long feed**: profile it, then use virtualization, pagination, or progressive disclosure before visible jank appears.
 - **Tune a mini-program collection**: use the shared thresholds reference and prefer renderer-appropriate approaches such as `VirtualList` or subpackages.
+- **Mini-program personality flow feels heavy**: measure main-package size and target-page first-open time, split into ordinary subpackages, add `preloadRule` from the likely entry page, and revisit independent subpackages only if the measured gain is still insufficient.
 
 ## Troubleshooting
 
@@ -77,6 +81,9 @@ Re-check item density, media cost, and the shared thresholds reference before ad
 **A performance fix is described without measurement**
 Pair the change with a benchmark, verification step, or before/after comparison instead of relying on feel alone.
 
+**The team wants independent subpackages immediately**
+Treat that as a hypothesis, not a conclusion. Compare ordinary subpackages plus preload against independent subpackages with real numbers and an explicit bootstrap plan.
+
 ## Review checklist
 
 - [ ] Non-critical routes use lazy loading by default on the web
@@ -84,6 +91,7 @@ Pair the change with a benchmark, verification step, or before/after comparison 
 - [ ] Asset prefetching is gated on real user need
 - [ ] Long-list heuristics come from the shared thresholds reference instead of copied numbers
 - [ ] Mini-program performance choices respect the Taro renderer rather than assuming DOM behavior
+- [ ] Mini-program package proposals compare ordinary subpackages plus preload against independent subpackages with a real benchmark and bootstrap plan
 - [ ] The change has a concrete validation path, not only subjective performance claims
 
 ## Related files

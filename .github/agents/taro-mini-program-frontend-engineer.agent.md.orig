@@ -101,5 +101,4 @@ When a request targets `apps/mini-program` but may affect duplicated business be
 - Optimize for maintainable mini-program product code, not browser-like demos.
 - Fix root platform incompatibilities rather than layering shims over browser assumptions.
 - Keep platform boundaries explicit so mini-program work does not silently change shared behavior.
-- Treat independent subpackages as a measured investment, not a default badge of optimization.
 - Preserve JoyJoin product quality and parity intent without hiding WeChat platform limitations.

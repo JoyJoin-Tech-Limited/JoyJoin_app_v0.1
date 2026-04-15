@@ -50,7 +50,13 @@ Those rerouting exits are now also declared as native Supervisor handoffs in the
 - Runtime event log: `.git/.orchestration/events.jsonl`
 - Promoted repo-memory index: `repo-memory/generated/promoted-index.json`
 
-The runtime context now carries a top-level advisory `memoryContext`. It records changed-file and prompt-based repo-memory hits when the generated promoted index is readable, and each hit now carries deterministic lifecycle signals. If a note is stale against the validation-age threshold or currently conflicted by workflow-relevant changed paths, the hook still surfaces it but adds explicit caution text instead of presenting it as clean guidance. This still does not turn `.git/.orchestration/` into durable memory storage.
+The runtime context also carries `sessionId` plus a bounded `turnSummaryState` working set:
+
+- `recentAgentSummaries` stores compact per-agent projections for the last 5 summaries per agent.
+- `recentSupervisorReports` stores compact consolidated turn reports for the last 5 turns.
+- `events.jsonl` remains the full append-only operational log and now records explicit `agent-turn-summary` and `supervisor-turn-report` events.
+
+The runtime context also carries a top-level advisory `memoryContext`. It records changed-file and prompt-based repo-memory hits when the generated promoted index is readable, and each hit now carries deterministic lifecycle signals. If a note is stale against the validation-age threshold or currently conflicted by workflow-relevant changed paths, the hook still surfaces it but adds explicit caution text instead of presenting it as clean guidance. This still does not turn `.git/.orchestration/` into durable memory storage.
 
 ## Local setup
 
@@ -76,11 +82,13 @@ node scripts/orchestration-supervisor.mjs workflow pull-request
 - `SessionStart` initializes the orchestration runtime, writes default kickoff state under `.git/.orchestration/context.json`, and builds advisory repo-memory context only from changed files under `.github/`, `scripts/`, and `repo-memory/`.
 - `UserPromptSubmit` inspects the first broad prompt and recommends `Researcher` -> `Planner` when the request is multi-step, ambiguous, or cross-cutting.
 - `UserPromptSubmit` also queries the promoted repo-memory index for meaningful prompts only, then surfaces a concise relevant-memory summary when useful hits exist.
+- Custom agents emit explicit end-of-turn JSON summaries. Those summaries are persisted through `node scripts/orchestration-supervisor.mjs record-summary`, not inferred from hook telemetry.
+- `Supervisor` consolidates child summaries into one turn-end report with cross-agent insights, per-agent feedback, and categorized task recommendations.
 - `Researcher` returns a structured research brief.
 - `Planner` turns that brief into an approval-first execution plan.
 - After approval, `Supervisor` or the named specialist carries execution forward.
 
-This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and advisory retrieval state, while agent delegation remains explicit.
+This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and advisory retrieval state, while explicit agent reporting and recorder acknowledgements remain the authoritative source for turn-end summaries.
 
 ## Core handoff graph
 
@@ -119,20 +127,23 @@ It does mean the current planning now records how those agents fit the portfolio
 
 Core orchestrated bindings:
 
-- `Product Manager` -> `draft-prd`
-- `Backend Engineer` -> `server-domain-architecture`, `auth-session-and-safety-boundaries`, `reliability-and-state-integrity`
-- `AI Engineer` -> `llm-runtime-safety-and-integration`, `platform-observability-and-ops`
-- `QA Agent` -> `e2e-test-runner`, `testing-and-regression-guardrails`
-- `Launch Readiness Agent` -> `security-scan`, `platform-observability-and-ops`, `code-review`
+- `Researcher` -> `orchestration-turn-reporting`
+- `Planner` -> `orchestration-turn-reporting`
+- `Supervisor` -> `orchestration-turn-reporting`, `monorepo-workspace-governance`, `docs-sync`
+- `Product Manager` -> `orchestration-turn-reporting`, `draft-prd`
+- `Backend Engineer` -> `orchestration-turn-reporting`, `server-domain-architecture`, `auth-session-and-safety-boundaries`, `reliability-and-state-integrity`
+- `AI Engineer` -> `orchestration-turn-reporting`, `llm-runtime-safety-and-integration`, `platform-observability-and-ops`
+- `QA Agent` -> `orchestration-turn-reporting`, `e2e-test-runner`, `testing-and-regression-guardrails`
+- `Launch Readiness Agent` -> `orchestration-turn-reporting`, `security-scan`, `platform-observability-and-ops`, `code-review`
 
 Useful audited support bindings:
 
 - `Admin Operations Advisor` -> `admin-audit-and-rbac-governance`, `auth-session-and-safety-boundaries`, `platform-observability-and-ops`
 - `Database Schema & Migration Auditor` -> `database-migration-safety`, `backend-models-standards`, `reliability-and-state-integrity`
-- `Mini-Program Parity Auditor` -> `platform-coordination-protocol`, `frontend-component-architecture`
-- `Taro Mini-Program Frontend Engineer` -> `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
-- `Taro Migration Specialist` -> `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
-- `Expert React Frontend Engineer` -> `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
+- `Mini-Program Parity Auditor` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`
+- `Taro Mini-Program Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
+- `Taro Migration Specialist` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
+- `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `platform-coordination-protocol`
 - `SelfIteration` -> `docs-sync`, `testing-and-regression-guardrails`
 
 Branding remains a skill boundary on the frontend agents through `design-system-governance` and `joyjoin-brand-guidelines`; there is no standalone branding agent in the current orchestration portfolio.
@@ -176,6 +187,7 @@ Branding remains a skill boundary on the frontend agents through `design-system-
 - `npm run orchestration:validate` should pass after orchestration changes.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Please explain separate durable memory from operational state for the orchestration runtime context."}'` should surface relevant repo memory without forcing a kickoff recommendation.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary <<< '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
 - `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.

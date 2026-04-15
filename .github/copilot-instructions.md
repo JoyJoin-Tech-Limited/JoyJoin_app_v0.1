@@ -28,6 +28,16 @@
 - Use `Supervisor` after approval or when work needs to be rerouted across specialists midstream.
 - Repo-managed local hooks live under `.githooks/`; contributors who want the local commit-time gate should set `git config core.hooksPath .githooks`.
 
+### Turn Reporting
+
+- When acting as a repo custom agent under `.github/agents/`, read `.git/.orchestration/context.json` when it exists and use the last 5 relevant summaries plus supervisor feedback to refine the current turn.
+- Use `.github/skills/orchestration-turn-reporting/SKILL.md` as the canonical schema for turn-end summary JSON and supervisor consolidation.
+- End every completed agent turn with a compact JSON summary that captures: what was delivered, files changed, decisions, blockers, what was learned, 1-2 self-suggested improvements for the next turn, categorized next steps, confidence, and unresolved assumptions.
+- If the active agent has execute access and is responsible for persistence, append the summary through `node scripts/orchestration-supervisor.mjs record-summary`.
+- If the active agent does not have execute access, or a parent agent is brokering persistence, still emit the JSON summary and let the caller record it.
+- `Supervisor` must consolidate child summaries into one turn-end report with key bullets, cross-agent insights, per-agent feedback, and actionable task-level recommendations.
+- Turn summaries are operational workflow state only. Keep them under `.git/.orchestration/`; never treat them as durable repo memory.
+
 ## Pull Request Review Standard
 
 When reviewing pull requests, evaluate not only local correctness but also:

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -402,6 +403,284 @@ function buildMemoryLogMetadata(memoryContext) {
   };
 }
 
+
+const DEFAULT_TURN_SUMMARY_WINDOW = 5;
+
+function cleanString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function toStringList(values) {
+  return Array.isArray(values)
+    ? values.map((value) => cleanString(value)).filter(Boolean)
+    : [];
+}
+
+function normalizeFeedbackByAgent(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([agentName, feedback]) => [cleanString(agentName), toStringList(feedback)])
+      .filter(([agentName]) => Boolean(agentName)),
+  );
+}
+
+function normalizeNextSteps(value) {
+  const nextSteps = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    bugFix: toStringList(nextSteps.bugFix),
+    enhancement: toStringList(nextSteps.enhancement),
+    validation: toStringList(nextSteps.validation),
+  };
+}
+
+function normalizeConfidence(value) {
+  const confidence = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const score = Number.isFinite(Number(confidence.score))
+    ? Math.max(0, Math.min(1, Number(confidence.score)))
+    : 0;
+
+  return {
+    score: Number(score.toFixed(2)),
+    reason: cleanString(confidence.reason),
+  };
+}
+
+export function createDefaultTurnSummaryState(focusWindowTurns = DEFAULT_TURN_SUMMARY_WINDOW) {
+  return {
+    focusWindowTurns,
+    lastTurnSequence: 0,
+    recentAgentSummaries: {},
+    recentSupervisorReports: [],
+  };
+}
+
+export function normalizeTurnSummaryState(value, focusWindowTurns = DEFAULT_TURN_SUMMARY_WINDOW) {
+  const normalizedFocusWindowTurns = Number.isInteger(value?.focusWindowTurns) && value.focusWindowTurns > 0
+    ? value.focusWindowTurns
+    : focusWindowTurns;
+  const recentAgentSummaries = value && typeof value === 'object' && !Array.isArray(value) && value.recentAgentSummaries && typeof value.recentAgentSummaries === 'object' && !Array.isArray(value.recentAgentSummaries)
+    ? Object.fromEntries(
+        Object.entries(value.recentAgentSummaries).map(([agentName, summaries]) => [
+          agentName,
+          Array.isArray(summaries) ? summaries.slice(-normalizedFocusWindowTurns) : [],
+        ]),
+      )
+    : {};
+
+  return {
+    focusWindowTurns: normalizedFocusWindowTurns,
+    lastTurnSequence: Number.isInteger(value?.lastTurnSequence) && value.lastTurnSequence >= 0 ? value.lastTurnSequence : 0,
+    recentAgentSummaries,
+    recentSupervisorReports: Array.isArray(value?.recentSupervisorReports)
+      ? value.recentSupervisorReports.slice(-normalizedFocusWindowTurns)
+      : [],
+  };
+}
+
+function deriveSessionId(existingSessionId) {
+  return cleanString(existingSessionId) || randomUUID();
+}
+
+function trimToWindow(entries, focusWindowTurns) {
+  return entries.slice(-focusWindowTurns);
+}
+
+function createSummaryId(type, agentName) {
+  const safeAgentName = cleanString(agentName)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'agent';
+  const prefix = type === 'supervisor_turn_report' ? 'supervisor-report' : 'agent-summary';
+  return prefix + '-' + safeAgentName + '-' + randomUUID().slice(0, 8);
+}
+
+function buildTurnSummaryArtifacts(existingArtifactPaths) {
+  return [
+    RUNTIME_CONTEXT_RELATIVE_PATH,
+    RUNTIME_EVENT_LOG_RELATIVE_PATH,
+    ...(Array.isArray(existingArtifactPaths) ? existingArtifactPaths : []),
+  ].filter((value, index, array) => array.indexOf(value) === index);
+}
+
+export function normalizeTurnSummaryPayload(payload, context = {}) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Turn summary payload must be a JSON object.');
+  }
+
+  const type = cleanString(payload.type || payload.summaryType);
+  if (type !== 'agent_turn_summary' && type !== 'supervisor_turn_report') {
+    throw new Error('Turn summary payload type must be agent_turn_summary or supervisor_turn_report.');
+  }
+
+  const focusWindowTurns = Number.isInteger(payload.focusWindowTurns) && payload.focusWindowTurns > 0
+    ? payload.focusWindowTurns
+    : normalizeTurnSummaryState(context.turnSummaryState).focusWindowTurns;
+  const agentName = type === 'supervisor_turn_report'
+    ? cleanString(payload.agentName) || 'Supervisor'
+    : cleanString(payload.agentName);
+
+  if (!agentName) {
+    throw new Error('Agent turn summaries must include agentName.');
+  }
+
+  const normalizedPayload = {
+    schemaVersion: 1,
+    type,
+    summaryId: cleanString(payload.summaryId) || createSummaryId(type, agentName),
+    agentName,
+    parentAgent: cleanString(payload.parentAgent) || null,
+    focusWindowTurns,
+    recordedAt: cleanString(payload.recordedAt) || new Date().toISOString(),
+    turnId: cleanString(payload.turnId) || null,
+    done: toStringList(payload.done),
+    filesChanged: toStringList(payload.filesChanged ?? payload.changedFiles),
+    decisions: toStringList(payload.decisions),
+    blockers: toStringList(payload.blockers),
+    nextSteps: normalizeNextSteps(payload.nextSteps),
+    confidence: normalizeConfidence(payload.confidence),
+    unresolvedAssumptions: toStringList(payload.unresolvedAssumptions),
+  };
+
+  if (type === 'agent_turn_summary') {
+    return {
+      ...normalizedPayload,
+      learned: toStringList(payload.learned),
+      nextTurnImprovements: toStringList(payload.nextTurnImprovements).slice(0, 2),
+      appliedFeedbackFrom: toStringList(payload.appliedFeedbackFrom),
+    };
+  }
+
+  return {
+    ...normalizedPayload,
+    keyBullets: toStringList(payload.keyBullets),
+    crossAgentInsights: toStringList(payload.crossAgentInsights),
+    sourceSummaryIds: toStringList(payload.sourceSummaryIds),
+    feedbackByAgent: normalizeFeedbackByAgent(payload.feedbackByAgent),
+  };
+}
+
+function buildCompactAgentSummary(summary) {
+  return {
+    summaryId: summary.summaryId,
+    agentName: summary.agentName,
+    parentAgent: summary.parentAgent,
+    recordedAt: summary.recordedAt,
+    focusWindowTurns: summary.focusWindowTurns,
+    done: summary.done,
+    learned: summary.learned,
+    nextTurnImprovements: summary.nextTurnImprovements,
+    confidenceScore: summary.confidence.score,
+    appliedFeedbackFrom: summary.appliedFeedbackFrom,
+  };
+}
+
+function buildCompactSupervisorReport(summary, turnId, turnSequence) {
+  return {
+    summaryId: summary.summaryId,
+    turnId,
+    turnSequence,
+    recordedAt: summary.recordedAt,
+    focusWindowTurns: summary.focusWindowTurns,
+    done: summary.done,
+    keyBullets: summary.keyBullets,
+    crossAgentInsights: summary.crossAgentInsights,
+    nextSteps: summary.nextSteps,
+    feedbackByAgent: summary.feedbackByAgent,
+    sourceSummaryIds: summary.sourceSummaryIds,
+    confidenceScore: summary.confidence.score,
+    unresolvedAssumptions: summary.unresolvedAssumptions,
+  };
+}
+
+export function recordTurnSummary(repoRoot, payload) {
+  const existingContext = loadRuntimeContext(repoRoot);
+  const sessionId = deriveSessionId(existingContext.sessionId);
+  const currentTurnSummaryState = normalizeTurnSummaryState(existingContext.turnSummaryState);
+  const summary = normalizeTurnSummaryPayload(payload, {
+    sessionId,
+    turnSummaryState: currentTurnSummaryState,
+  });
+  let nextTurnSummaryState = normalizeTurnSummaryState(currentTurnSummaryState, summary.focusWindowTurns);
+  let turnId = summary.turnId;
+  let turnSequence = null;
+
+  if (summary.type === 'supervisor_turn_report') {
+    turnSequence = nextTurnSummaryState.lastTurnSequence + 1;
+    turnId = turnId || sessionId + ':turn:' + turnSequence;
+    nextTurnSummaryState = {
+      ...nextTurnSummaryState,
+      focusWindowTurns: summary.focusWindowTurns,
+      lastTurnSequence: turnSequence,
+      recentSupervisorReports: trimToWindow(
+        [...nextTurnSummaryState.recentSupervisorReports, buildCompactSupervisorReport(summary, turnId, turnSequence)],
+        summary.focusWindowTurns,
+      ),
+    };
+  } else {
+    const recentAgentSummaries = Array.isArray(nextTurnSummaryState.recentAgentSummaries[summary.agentName])
+      ? nextTurnSummaryState.recentAgentSummaries[summary.agentName]
+      : [];
+    nextTurnSummaryState = {
+      ...nextTurnSummaryState,
+      focusWindowTurns: summary.focusWindowTurns,
+      recentAgentSummaries: {
+        ...nextTurnSummaryState.recentAgentSummaries,
+        [summary.agentName]: trimToWindow(
+          [...recentAgentSummaries, buildCompactAgentSummary(summary)],
+          summary.focusWindowTurns,
+        ),
+      },
+    };
+  }
+
+  const nextContext = {
+    ...existingContext,
+    event: 'record-summary',
+    triggerSource: 'explicit_summary',
+    sessionId,
+    artifactPaths: buildTurnSummaryArtifacts(existingContext.artifactPaths),
+    upstreamAgent: summary.agentName,
+    turnSummaryState: nextTurnSummaryState,
+    lastUpdatedAt: summary.recordedAt,
+  };
+
+  writeRuntimeContext(repoRoot, nextContext);
+  appendOrchestrationLog(repoRoot, {
+    recordedAt: summary.recordedAt,
+    triggerSource: 'explicit_summary',
+    event: summary.type === 'supervisor_turn_report' ? 'supervisor-turn-report' : 'agent-turn-summary',
+    sessionId,
+    summaryId: summary.summaryId,
+    agentName: summary.agentName,
+    turnId: turnId || null,
+    turnSequence,
+    summary: summary.type === 'supervisor_turn_report'
+      ? { ...summary, turnId, turnSequence }
+      : { ...summary, turnId: turnId || null },
+  });
+
+  return {
+    ok: true,
+    persisted: process.env.ORCHESTRATION_DISABLE_RUNTIME_WRITES !== '1',
+    sessionId,
+    summaryId: summary.summaryId,
+    type: summary.type,
+    turnId: turnId || null,
+    turnSequence,
+    focusWindowTurns: summary.focusWindowTurns,
+  };
+}
+
+function runRecordSummary(repoRoot) {
+  const payload = parseStdinJson();
+  const summaryPayload = payload.turnSummary && typeof payload.turnSummary === 'object' ? payload.turnSummary : payload;
+  outputJson(recordTurnSummary(repoRoot, summaryPayload));
+}
+
 function buildHookContext(repoRoot, eventName, payload, manifest) {
   const existingContext = loadRuntimeContext(repoRoot);
   const changedFiles = collectChangedFiles(repoRoot);
@@ -416,11 +695,14 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
     previousMemoryContext,
     evaluatedAt: now,
   });
+  const sessionId = deriveSessionId(existingContext.sessionId);
+  const turnSummaryState = normalizeTurnSummaryState(existingContext.turnSummaryState);
 
   return {
     ...existingContext,
     event: eventName,
     triggerSource: 'copilot_hook',
+    sessionId,
     commitSha: getGitValue(repoRoot, ['rev-parse', 'HEAD']),
     branch: getGitValue(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']),
     prNumber: existingContext.prNumber ?? null,
@@ -450,6 +732,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
       manifest.copilot_hooks?.auto_eval?.manual_recovery_agents ??
       ['Auto-Eval', 'Supervisor'],
     kickoff: existingContext.kickoff ?? null,
+    turnSummaryState,
     memoryContext,
     lastUpdatedAt: now,
   };
@@ -650,8 +933,10 @@ function runCopilotHook(repoRoot, eventName) {
   if (eventName === 'session-start') {
     context = {
       ...context,
+      sessionId: randomUUID(),
       kickoff: createDefaultKickoffState(kickoffConfig),
       recommendedNextAgents: kickoffConfig.entry_agents ?? ['Researcher', 'Planner'],
+      turnSummaryState: createDefaultTurnSummaryState(),
       memoryContext: buildMemoryContext({
         changedFiles: context.changedFiles ?? [],
         memoryConfig,
@@ -883,6 +1168,10 @@ if (isMainModule()) {
 
     if (command === 'copilot-hook') {
       runCopilotHook(repoRoot, process.argv[3] ?? 'session-start');
+    }
+
+    if (command === 'record-summary') {
+      runRecordSummary(repoRoot);
     }
 
     if (command === 'git-hook') {

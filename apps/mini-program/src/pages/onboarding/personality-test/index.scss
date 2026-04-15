@@ -3,20 +3,15 @@
 
 .personality-test {
   @include page-gradient-bg;
-  position: relative;
-  min-height: 100vh;
-
-  &__intro-scroll,
-  &__testing-scroll {
-    height: 100vh;
-  }
 
   &__loading,
-  &__status-shell {
-    @include page-shell-padding($spacing-xl, $container-padding, $spacing-xl, true);
+  &__intro,
+  &__completing {
     @include flex-center;
     flex-direction: column;
     min-height: 100vh;
+    padding: $container-padding;
+    text-align: center;
   }
 
   &__loading-text {
@@ -24,53 +19,11 @@
     color: $color-text-secondary;
   }
 
-  &__status-card {
-    width: 100%;
-    padding: $spacing-xl $spacing-lg;
-    text-align: center;
-    border: 2rpx solid rgba($color-primary, 0.1);
-    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
-    box-shadow: $shadow-md;
-  }
-
-  &__intro-shell {
-    @include page-shell-padding($spacing-lg, $container-padding, $spacing-2xl, true);
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  &__hero-card,
-  &__intro-card,
-  &__intro-note,
-  &__progress-card,
-  &__question-card,
-  &__bottom-card {
-    border: 2rpx solid rgba($color-primary, 0.08);
-    background: rgba($color-surface, 0.96);
-    box-shadow: $shadow-md;
-  }
-
-  &__hero-card {
-    padding: $spacing-lg;
-    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.9) 100%);
-  }
-
   &__title {
     display: block;
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
-    color: $color-text-primary;
-    margin-bottom: $spacing-sm;
-    line-height: 1.28;
-  }
-
-  &__eyebrow {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary-dark;
-    letter-spacing: 4rpx;
+    color: $color-primary;
     margin-bottom: $spacing-sm;
   }
 
@@ -78,84 +31,26 @@
     display: block;
     font-size: $font-size-base;
     color: $color-text-secondary;
+    margin-bottom: $spacing-md;
     line-height: 1.6;
   }
 
-  &__highlight-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-    margin-top: $spacing-lg;
-  }
-
-  &__highlight-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 10rpx;
-    padding: 14rpx 20rpx;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.78);
-    border: 2rpx solid rgba($color-primary, 0.08);
-  }
-
-  &__highlight-emoji {
-    font-size: $font-size-sm;
-    line-height: 1;
-  }
-
-  &__highlight-text {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.4;
-  }
-
-  &__intro-card {
-    padding: $spacing-lg;
-  }
-
-  &__section-title {
+  &__hint {
     display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    margin-bottom: $spacing-md;
-  }
-
-  &__step-list {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  &__step-item {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-  }
-
-  &__step-index {
-    @include flex-center;
-    width: 44rpx;
-    height: 44rpx;
-    flex-shrink: 0;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.12);
-    color: $color-primary-dark;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-  }
-
-  &__step-copy {
-    flex: 1;
     font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.7;
+    color: $color-text-muted;
+    margin-bottom: $spacing-xl;
   }
 
   &__intro-note {
+    @include card;
+    width: 100%;
+    max-width: 560rpx;
     padding: $spacing-md;
+    margin-bottom: $spacing-lg;
     text-align: left;
-    background: linear-gradient(160deg, rgba($color-surface, 0.96) 0%, rgba($color-secondary, 0.08) 100%);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    background: rgba($color-surface, 0.9);
   }
 
   &__intro-note-title {
@@ -173,116 +68,27 @@
     line-height: 1.6;
   }
 
-  &__start-panel {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    margin-top: $spacing-xs;
-  }
-
   &__start-btn {
     @include button-primary;
     width: 100%;
+    max-width: 480rpx;
     border: 0;
-  }
-
-  &__start-footnote {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    line-height: 1.6;
-    text-align: center;
   }
 
   &__error {
     display: block;
     font-size: $font-size-sm;
     color: $color-error;
-    line-height: 1.6;
-
-    &--bottom {
-      margin-bottom: $spacing-xs;
-    }
+    margin-top: $spacing-md;
+    text-align: center;
   }
 
-  &__testing-shell {
-    @include page-shell-padding($spacing-lg, $container-padding, 260rpx, true);
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-  }
-
-  &__progress-card {
-    padding: $spacing-lg;
-  }
-
-  &__progress-top {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-md;
-  }
-
-  &__progress-copy {
-    flex: 1;
-  }
-
-  &__progress-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 10rpx 18rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.1);
-    color: $color-primary-dark;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__progress-title {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    line-height: 1.4;
-    margin-bottom: $spacing-xs;
-  }
-
-  &__progress-caption {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-  }
-
-  &__progress-counter {
-    @include flex-center;
-    flex-direction: column;
-    min-width: 132rpx;
-    padding: $spacing-sm;
-    border-radius: $card-radius-sm;
-    background: rgba($color-primary-light, 0.92);
-  }
-
-  &__progress-counter-number {
-    display: block;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    color: $color-primary-dark;
-    line-height: 1.1;
-  }
-
-  &__progress-counter-label {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    margin-top: 4rpx;
-  }
-
+  // Progress bar
   &__progress-bar {
     height: 8rpx;
     background: rgba(0, 0, 0, 0.06);
     border-radius: 4rpx;
-    margin: $spacing-md 0 $spacing-sm;
+    margin: $spacing-md $container-padding;
     overflow: hidden;
   }
 
@@ -293,75 +99,34 @@
     transition: width 0.3s ease;
   }
 
-  &__progress-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-sm;
+  &__progress-label {
+    text-align: center;
+    margin-bottom: $spacing-lg;
   }
 
-  &__progress-meta-text {
-    font-size: $font-size-xs;
+  &__progress-text {
+    font-size: $font-size-sm;
     color: $color-text-muted;
   }
 
-  &__progress-pill {
-    margin-top: $spacing-md;
-    padding: 14rpx 18rpx;
-    border-radius: 24rpx;
-    background: rgba($color-secondary, 0.1);
-  }
-
-  &__progress-pill-text {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.5;
+  // Question
+  &__question {
+    padding: 0 $container-padding $spacing-2xl;
   }
 
   &__question-card {
+    @include card;
     padding: $spacing-lg;
-  }
-
-  &__question-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-sm;
-    margin-bottom: $spacing-md;
-  }
-
-  &__question-heading {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__question-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12rpx 18rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    color: $color-primary-dark;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
+    background: rgba($color-surface, 0.94);
+    border: 2rpx solid rgba($color-primary, 0.08);
   }
 
   &__scenario {
     display: block;
-    font-size: $font-size-base;
-    color: $color-text-primary;
+    font-size: $font-size-sm;
+    color: rgba($color-primary-dark, 0.85);
     font-weight: $font-weight-semibold;
-    line-height: 1.6;
-  }
-
-  &__scenario-label {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    margin-bottom: 10rpx;
-    letter-spacing: 2rpx;
+    margin-bottom: $spacing-md;
   }
 
   &__question-text {
@@ -370,58 +135,14 @@
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
     line-height: 1.6;
-    margin-bottom: $spacing-md;
-  }
-
-  &__helper-box {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    border-radius: $card-radius-sm;
-    background: rgba($color-primary-light, 0.7);
-    margin-bottom: $spacing-md;
-  }
-
-  &__helper-icon {
-    font-size: $font-size-base;
-    line-height: 1.2;
-  }
-
-  &__helper-copy {
-    flex: 1;
-  }
-
-  &__helper-title {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    margin-bottom: 6rpx;
-  }
-
-  &__helper-text {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.6;
-  }
-
-  &__matches-block {
-    margin-bottom: $spacing-lg;
-  }
-
-  &__matches-label {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    margin-bottom: $spacing-sm;
+    margin-bottom: $spacing-xl;
   }
 
   &__matches {
     display: flex;
     flex-wrap: wrap;
     gap: $spacing-xs;
+    margin-bottom: $spacing-lg;
   }
 
   &__match-chip {
@@ -436,6 +157,7 @@
     font-weight: $font-weight-semibold;
   }
 
+  // Options
   &__options {
     display: flex;
     flex-direction: column;
@@ -443,29 +165,27 @@
   }
 
   &__option {
+    @include card;
     display: flex;
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    min-height: 112rpx;
+    min-height: $button-height;
     padding: $spacing-md $spacing-lg;
-    border: 2rpx solid rgba($color-primary, 0.08);
-    background: rgba($color-surface, 0.96);
+    border: 2rpx solid transparent;
     font-size: $font-size-base;
     color: $color-text-primary;
     text-align: left;
     line-height: 1.5;
-    box-shadow: none;
 
     &::after {
       border: none;
     }
-  }
 
-  &__option--active {
-    border-color: $color-primary;
-    background: rgba($color-primary, 0.08);
-    box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.14);
+    &--active {
+      border-color: $color-primary;
+      background: $color-primary-light;
+    }
   }
 
   &__option-text {
@@ -481,6 +201,7 @@
   }
 
   &__emoji-option {
+    @include card;
     min-height: 220rpx;
     padding: $spacing-md;
     display: flex;
@@ -488,19 +209,17 @@
     align-items: center;
     justify-content: center;
     gap: $spacing-sm;
-    border: 2rpx solid rgba($color-primary, 0.08);
-    background: rgba($color-surface, 0.94);
-    box-shadow: none;
+    border: 2rpx solid transparent;
+    background: rgba($color-surface, 0.92);
 
     &::after {
       border: none;
     }
-  }
 
-  &__emoji-option--active {
-    border-color: $color-primary;
-    background: rgba($color-primary, 0.08);
-    box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.14);
+    &--active {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.08);
+    }
   }
 
   &__emoji-option-emoji {
@@ -559,54 +278,15 @@
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $color-primary-dark;
-    margin-top: $spacing-xs;
   }
 
   &__slider {
     margin: 0;
   }
 
-  &__slider-summary {
-    display: block;
-    text-align: center;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-  }
-
-  &__bottom-panel {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-    background: linear-gradient(180deg, rgba(250, 250, 250, 0) 0%, rgba(255, 245, 247, 0.92) 26%, rgba(255, 245, 247, 1) 100%);
-    @include fixed-footer-padding($spacing-sm, $container-padding, $spacing-sm);
-  }
-
-  &__bottom-card {
-    padding: $spacing-md;
-  }
-
-  &__bottom-title {
-    display: block;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    margin-bottom: 8rpx;
-  }
-
-  &__bottom-text {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.6;
-  }
-
   &__slider-submit {
     @include button-primary;
     width: 100%;
     border: 0;
-    margin-top: $spacing-md;
   }
 }

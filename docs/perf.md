@@ -1,6 +1,6 @@
 # JoyJoin 性能优化指南
 
-> **Last updated:** 2026-04-01 (PRs #385, #386, #388, #390)
+> **Last updated:** 2026-04-14 (subpackage loading guidance, PRs #385, #386, #388, #390)
 
 ## 性能预算
 
@@ -117,6 +117,17 @@ apps/user-client/src/assets/matching/
 - Only preload the critical vendor chunk and the initial route chunk.
 - Configure a reasonable `browserslist` target for the mobile-first audience.
 
+### 7. Mini Program 分包策略
+
+对 `apps/mini-program` 来说，分包是**基于证据的加载决策**，不是默认就要追求的结构复杂度。
+
+- **默认顺序：** 普通分包 -> `preloadRule` -> 资源与首屏清理 -> 再评估是否值得上独立分包
+- **主包约束：** tabBar 页面必须留在主包
+- **优先对象：** 人格测试、结果页、以及其他重资源但非 tabBar 的深链路页面
+- **何时考虑独立分包：** 只有在普通分包和 preload 之后，目标页冷启动或首达时间仍明显超预算，并且收益足以覆盖额外 bootstrap 成本
+- **JoyJoin 当前成本点：** `apps/mini-program/src/app.ts` 与 `apps/mini-program/src/providers/AuthProvider.tsx` 持有 app 级 providers；独立分包若落地，必须设计自举能力，不能默认依赖现有全局启动链
+- **注意：** 异步分包/异步加载可以补充延迟加载，但不能绕过微信分包边界规则
+
 ## 监控指标
 
 ### Web Vitals 日志
@@ -143,6 +154,7 @@ performance.measure('route-transition', 'route-start');
 1. **Lighthouse 审计**: 使用移动端节流模式运行
 2. **Bundle 分析**: `npm run build -- --analyze`
 3. **开发者工具**: Performance 面板录制路由切换
+4. **小程序分包评估**: 记录主包大小、目标页首达时间、`preloadRule` 是否命中，以及独立分包新增的 bootstrap / 重复资源成本
 
 ## 目标场景
 
@@ -159,3 +171,4 @@ performance.measure('route-transition', 'route-start');
 | Hero images | Use WebP + `decoding="async"`; avoid large PNG |
 | Archetype assets | Defer / gate — do not preload all 12 in the critical path |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users |
+| Mini Program package loading | Keep tabBar pages in the main package; try ordinary subpackages + `preloadRule` first; justify independent subpackages with measured wins and a self-contained bootstrap plan |

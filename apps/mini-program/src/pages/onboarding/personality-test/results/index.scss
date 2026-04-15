@@ -4,7 +4,7 @@
 .personality-results {
   @include page-gradient-bg;
   min-height: 100vh;
-  @include page-shell-padding($spacing-lg, $container-padding, $spacing-2xl, true);
+  padding: $spacing-lg $container-padding $spacing-2xl;
 
   &__loading,
   &__empty {
@@ -24,12 +24,7 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
-    margin-bottom: $spacing-md;
-    padding: $spacing-lg;
-    border-radius: $card-radius;
-    border: 2rpx solid rgba($color-primary, 0.1);
-    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
-    box-shadow: $shadow-md;
+    margin-bottom: $spacing-lg;
   }
 
   &__eyebrow {
@@ -60,26 +55,6 @@
     line-height: 1.7;
   }
 
-  &__hero-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-    margin-top: $spacing-sm;
-  }
-
-  &__hero-tag {
-    padding: 14rpx 20rpx;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.76);
-    border: 2rpx solid rgba($color-primary, 0.08);
-  }
-
-  &__hero-tag-text {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.4;
-  }
-
   &__card {
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
@@ -102,18 +77,11 @@
     line-height: 1.7;
   }
 
-  &__section-label {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    margin-top: $spacing-md;
-    margin-bottom: $spacing-sm;
-  }
-
   &__match-list {
     display: flex;
     flex-wrap: wrap;
     gap: $spacing-sm;
+    margin-top: $spacing-md;
   }
 
   &__match-chip {
@@ -185,13 +153,5 @@
     flex-direction: column;
     gap: $spacing-sm;
     margin-top: $spacing-lg;
-  }
-
-  &__action-note {
-    display: block;
-    text-align: center;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    line-height: 1.6;
   }
 }

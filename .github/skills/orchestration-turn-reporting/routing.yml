@@ -1,0 +1,41 @@
+skill: orchestration-turn-reporting
+
+primary_ownership: >
+  Structured turn-end summaries, supervisor consolidation, last-5-turn feedback
+  loops, and operational summary persistence for JoyJoin's native agent
+  orchestration.
+
+use_when:
+  - implementing a turn-end summary protocol for agents
+  - adding or changing supervisor consolidation of sub-agent summaries
+  - defining JSON schema for agent or supervisor turn reports
+  - wiring a last 5 turns improvement loop into orchestration behavior
+  - appending structured summaries to .git/.orchestration events or context state
+
+do_not_use_when:
+  - the task is about runtime product AI behavior in apps/server
+  - the task is only about durable repo-memory publication
+  - the task is a generic docs update unrelated to agent turn reporting
+
+strong_triggers:
+  - turn-end summary
+  - turn summary json
+  - agent summary json
+  - supervisor consolidation
+  - last 5 turns
+  - iterative improvement loop
+  - record-summary
+  - .git/.orchestration/events.jsonl
+  - .git/.orchestration/context.json
+  - orchestration turn reporting
+
+owned_files:
+  - .github/agents/supervisor.agent.md
+  - .github/orchestration.yaml
+  - .github/orchestration-context.example.json
+  - scripts/orchestration-supervisor.mjs
+  - .github/copilot-instructions.md
+
+related_skills:
+  - skill: testing-and-regression-guardrails
+    when: the recorder, ring buffer, or consolidation contract needs regression coverage

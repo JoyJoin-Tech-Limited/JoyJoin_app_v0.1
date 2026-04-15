@@ -698,6 +698,19 @@ test('DEVELOPER_QUICK_REFERENCE.md → docs-sync', () => {
   assertEqual(r.primary_skill, 'docs-sync');
 });
 
+// ---- Orchestration turn reporting ----
+console.log('\nOrchestration turn reporting scenarios:');
+
+test('turn-end summary protocol → orchestration-turn-reporting', () => {
+  const r = routeSkill({ ask: 'Implement a turn-end summary JSON protocol for Supervisor and sub-agents' });
+  assertEqual(r.primary_skill, 'orchestration-turn-reporting');
+});
+
+test('last 5 turns improvement loop → orchestration-turn-reporting', () => {
+  const r = routeSkill({ ask: 'Keep the agent improvement loop focused on the last 5 turns and append summaries to .git/.orchestration/events.jsonl' });
+  assertEqual(r.primary_skill, 'orchestration-turn-reporting');
+});
+
 // ---- E2E testing ----
 console.log('\nE2E scenarios:');
 
