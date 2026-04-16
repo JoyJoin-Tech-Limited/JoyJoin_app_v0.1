@@ -41,7 +41,11 @@
         "create_and_run_task",
         "create_new_workspace",
         "run_vscode_command",
-        "install_extension"
+        "install_extension",
+        "write",
+        "delete",
+        "shell",
+        "task"
       ],
       "manual_recovery_agents": [
         "Auto-Eval",

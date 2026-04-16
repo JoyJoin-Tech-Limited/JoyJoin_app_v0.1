@@ -37,6 +37,10 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 - `repo-memory/generated/promoted-index.json` is the read-only retrieval source the orchestration hook uses when it is available.
 - `.github/agents/researcher.agent.md` and `.github/agents/planner.agent.md` define the approval-first kickoff lane that the orchestration hook recommends.
 
+## Cursor IDE
+
+Cursor loads project hooks from [`../../.cursor/hooks.json`](../../.cursor/hooks.json) (camelCase events such as `sessionStart`, `beforeSubmitPrompt`, `postToolUse`; `preToolUse` is optional and not enabled by default). Those entries run [`../../.cursor/hooks/cursor-hook-adapter.mjs`](../../.cursor/hooks/cursor-hook-adapter.mjs), which calls the same `scripts/auto-eval-hook.mjs` and `scripts/orchestration-supervisor.mjs` commands as above and translates stdin/stdout to Cursor’s hook schemas. Do not duplicate Copilot’s JSON configs here; see [`../../.cursor/hooks/README.md`](../../.cursor/hooks/README.md) for the mapping.
+
 ## Pass cache
 
 Passing results are cached by exact dirty-worktree fingerprint under `.git/.auto-eval/pass-state.json`.
