@@ -1,8 +1,9 @@
-import { View, Text, Button, Textarea } from '@tarojs/components'
+import { View, Text, Button, Textarea, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { logInfo, logError } from '../../lib/logger'
 import './index.scss'
 
@@ -59,7 +60,11 @@ export default function EventFeedbackPage() {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__success'>
-          <Text className='event-feedback__success-emoji'>🎉</Text>
+          <Image
+            className='event-feedback__success-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset('thanksFeedback')}
+          />
           <Text className='event-feedback__success-title'>感谢你的反馈！</Text>
           <Text className='event-feedback__success-text'>你的评价帮助我们变得更好</Text>
           <Button

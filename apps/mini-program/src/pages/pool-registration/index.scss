@@ -22,9 +22,9 @@
   }
 
   &__success-title {
+    @include type-display-page-title;
     display: block;
     font-size: $font-size-xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
   }
 
@@ -66,9 +66,9 @@
   }
 
   &__title {
+    @include type-display-page-title;
     display: block;
     font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
     margin-bottom: $spacing-sm;
   }
@@ -483,6 +483,7 @@
   &__single-action,
   &__footer-btn {
     @include button-primary;
+    @include type-brand-cta-label;
     width: 100%;
     border: 0;
 
@@ -507,9 +508,9 @@
   }
 
   &__empty-title {
+    @include type-display-section-title;
     display: block;
     font-size: $font-size-xl;
-    font-weight: $font-weight-bold;
     color: $color-text-primary;
     margin-bottom: $spacing-sm;
   }

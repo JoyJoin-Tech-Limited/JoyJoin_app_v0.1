@@ -74,9 +74,9 @@
   }
 
   &__title {
+    @include type-display-page-title;
     font-size: 56rpx;
     line-height: 1.2;
-    font-weight: 800;
     color: $color-text-primary;
   }
 
@@ -84,6 +84,13 @@
     font-size: 26rpx;
     color: $color-text-secondary;
     line-height: 1.6;
+  }
+
+  &__mascot {
+    width: 200rpx;
+    height: 200rpx;
+    align-self: center;
+    margin-top: 8rpx;
   }
 
   &__context-card,
@@ -110,12 +117,12 @@
   }
 
   &__context-title {
+    @include type-display-page-title;
     display: block;
     margin-top: 10rpx;
     font-size: 40rpx;
     line-height: 1.28;
     color: $color-text-primary;
-    font-weight: 800;
   }
 
   &__context-copy {
@@ -159,8 +166,9 @@
   }
 
   &__summary-value {
+    @include type-en-brand-numeric;
     font-size: 52rpx;
-    font-weight: 800;
+    font-weight: $font-weight-black;
     color: $color-text-primary;
   }
 
@@ -171,13 +179,13 @@
   }
 
   &__resume-button {
+    @include type-brand-cta-label;
     margin-top: 12rpx;
     min-height: 88rpx;
     border-radius: 44rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary-dark;
     font-size: 28rpx;
-    font-weight: 700;
 
     &::after {
       border: none;
@@ -191,8 +199,8 @@
   }
 
   &__section-title {
+    @include type-display-section-title;
     font-size: 30rpx;
-    font-weight: 700;
     color: $color-text-primary;
   }
 
@@ -294,8 +302,9 @@
   }
 
   &__plan-price {
+    @include type-en-brand-numeric;
     font-size: 36rpx;
-    font-weight: 800;
+    font-weight: $font-weight-black;
     color: $color-primary;
   }
 
@@ -336,24 +345,26 @@
   }
 
   &__amount-value {
+    @include type-en-brand-numeric;
     font-size: 30rpx;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     color: $color-text-primary;
   }
 
   &__amount-total {
+    @include type-en-brand-numeric;
     font-size: 44rpx;
-    font-weight: 800;
+    font-weight: $font-weight-black;
     color: $color-text-primary;
   }
 
   &__pay-button {
+    @include type-brand-cta-label;
     min-height: 96rpx;
     border-radius: 48rpx;
     background: linear-gradient(135deg, #07c160 0%, #15d16f 100%);
     color: #ffffff;
     font-size: 32rpx;
-    font-weight: 700;
 
     &::after {
       border: none;

@@ -1,4 +1,4 @@
-import { Button, View, Text } from '@tarojs/components'
+import { Button, View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -26,12 +26,25 @@ import {
   persistPaymentReturnContext,
   readStoredPendingOrder,
 } from '../../lib/paymentPendingOrderStorage'
+import type { XiaoyueExpressionId } from '../../lib/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import './index.scss'
 
 // Poll for up to 20 seconds total so the user gets a fast answer without
 // hammering the status endpoint after returning from the WeChat pay sheet.
 const MAX_POLL_ATTEMPTS = 10
 const POLL_INTERVAL_MS = 2000
+
+function getVerificationMascotExpression(status: MiniProgramPaymentVerificationState): XiaoyueExpressionId {
+  switch (status) {
+    case 'paid':
+      return 'actionSuccess'
+    case 'failed':
+      return 'actionFailure'
+    default:
+      return 'paymentTrust'
+  }
+}
 
 function isPoolRegistrationReturnContext(
   context: MiniProgramPaymentReturnContext | null | undefined,
@@ -380,6 +393,12 @@ export default function PaymentVerificationPage() {
             </Text>
           </View>
         ) : null}
+
+        <Image
+          className='verification-page__mascot'
+          mode='aspectFit'
+          src={getXiaoyueExpressionAsset(getVerificationMascotExpression(status))}
+        />
 
         <Text className='verification-page__message'>{message}</Text>
 

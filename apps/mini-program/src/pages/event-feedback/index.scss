@@ -24,8 +24,10 @@
     text-align: center;
   }
 
-  &__success-emoji {
-    font-size: 96rpx;
+  &__success-mascot {
+    width: 220rpx;
+    height: 220rpx;
+    display: block;
   }
 
   &__success-title {

@@ -74,9 +74,9 @@
   }
 
   &__header-title {
+    @include type-display-page-title;
     display: block;
     font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
     text-align: center;
   }
@@ -138,6 +138,13 @@
 
   &__blind-box-card--shaking {
     background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-secondary, 0.18) 100%);
+  }
+
+  &__reveal-mascot {
+    width: 160rpx;
+    height: 160rpx;
+    margin: 0 auto $spacing-sm;
+    display: block;
   }
 
   &__blind-box-visual {
@@ -339,10 +346,10 @@
   }
 
   &__blind-box-title {
+    @include type-display-page-title;
     display: block;
     margin-top: $spacing-lg;
     font-size: $font-size-xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
   }
 
@@ -372,6 +379,7 @@
   }
 
   &__open-btn {
+    @include type-brand-cta-label;
     width: 100%;
     margin-top: $spacing-lg;
   }
@@ -388,10 +396,10 @@
   }
 
   &__reveal-title {
+    @include type-display-page-title;
     display: block;
     margin-top: $spacing-sm;
     font-size: $font-size-xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
     text-align: center;
   }
@@ -612,6 +620,7 @@
   }
 
   &__info-title {
+    @include font-cn-display;
     display: block;
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
@@ -667,8 +676,8 @@
   }
 
   &__theme-title {
+    @include type-display-section-title;
     font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
 
@@ -931,7 +940,9 @@
   }
 
   &__action-title {
+    @include font-cn-display;
     font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     color: $color-text-primary;
     line-height: 1.6;
   }
@@ -944,6 +955,7 @@
 
   &__confirm-btn {
     @include button-primary;
+    @include type-brand-cta-label;
     width: 100%;
     border: 0;
   }

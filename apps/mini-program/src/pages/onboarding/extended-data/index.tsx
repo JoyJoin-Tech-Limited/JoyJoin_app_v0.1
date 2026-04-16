@@ -23,7 +23,7 @@ import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
-import { getOnboardingXiaoyueAsset } from '../personality-test/visuals'
+import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
 const MIN_INTERESTS = 3
@@ -66,16 +66,18 @@ function getInterestLevelMeta(level: InterestSelectionLevel | undefined) {
 }
 
 export default function ExtendedDataPage() {
-  const { isLoading } = useAuthGuard()
-  const invalidateAuth = useInvalidateAuth()
-  const analytics = useOnboardingAnalytics('extended-data', { enabled: !isLoading })
-  const { saveCheckpoint } = useOnboardingCheckpoint()
-
   const [levelsById, setLevelsById] = useState<Record<string, InterestSelectionLevel>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
   const [showFirstSelectionHint, setShowFirstSelectionHint] = useState(false)
   const [hasShownFirstSelectionHint, setHasShownFirstSelectionHint] = useState(false)
+  const { isLoading } = useAuthGuard({
+    suspendOnboardingRedirect: isSubmitting || isPageExiting,
+  })
+  const invalidateAuth = useInvalidateAuth()
+  const analytics = useOnboardingAnalytics('extended-data', { enabled: !isLoading })
+  const { saveCheckpoint } = useOnboardingCheckpoint()
 
   useEffect(() => {
     if (!showFirstSelectionHint) {
@@ -144,6 +146,9 @@ export default function ExtendedDataPage() {
       : topPriorityCount > 0
         ? `已点亮 ${topPriorityCount} 个重点兴趣，当前热度 ${selectionPreview.totalHeat}。`
         : `当前热度 ${selectionPreview.totalHeat}，再点同一项就会继续升温。`
+  const pageClassName = ['extended-data', isPageExiting ? 'extended-data--exiting' : '']
+    .filter(Boolean)
+    .join(' ')
 
   const toggleInterestLevel = useCallback(
     (topicId: string) => {
@@ -210,8 +215,12 @@ export default function ExtendedDataPage() {
         nextStep: userState.nextStep ?? 'profile-review',
       })
 
-      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
+      await navigateToMiniProgramNextStep(userState.nextStep, {
+        mode: 'replace',
+        transition: { beforeNavigate: () => setIsPageExiting(true) },
+      })
     } catch (err) {
+      setIsPageExiting(false)
       const message = err instanceof Error ? err.message : '提交失败，请重试'
       setError(message)
       analytics.errorOccurred('submit_failed', message)
@@ -243,7 +252,7 @@ export default function ExtendedDataPage() {
   }
 
   return (
-    <View className='extended-data'>
+    <View className={pageClassName}>
       <View className='extended-data__header extended-data__stage extended-data__stage--1'>
         <Text className='extended-data__eyebrow'>Onboarding 3 / 4</Text>
         <Text className='extended-data__title'>把兴趣热度标出来</Text>
@@ -255,7 +264,7 @@ export default function ExtendedDataPage() {
       <View className='extended-data__coach extended-data__stage extended-data__stage--2'>
         <Image
           className='extended-data__coach-avatar'
-          src={getOnboardingXiaoyueAsset('pointing')}
+          src={getXiaoyueAsset('pointing')}
           mode='aspectFit'
         />
         <View className='extended-data__coach-copy'>
@@ -404,6 +413,7 @@ export default function ExtendedDataPage() {
         {error ? <Text className='extended-data__error'>{error}</Text> : null}
 
         <Button
+          variant='brand'
           className='extended-data__submit'
           onClick={handleSubmit}
           disabled={!canSubmit || isSubmitting}

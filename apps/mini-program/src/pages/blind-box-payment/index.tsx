@@ -1,4 +1,4 @@
-import { Button, View, Text } from '@tarojs/components'
+import { Button, View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
@@ -15,6 +15,7 @@ import {
 } from '@shared/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/logger'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import {
   buildPaymentVerificationUrl,
@@ -631,6 +632,11 @@ export default function BlindBoxPaymentPage() {
             ? `你刚才在${registrationReturnContext.poolTitle ? `《${registrationReturnContext.poolTitle}》里` : '活动报名里'}填写的预算和偏好已经替你留好，支付确认后会自动回去继续。`
             : '支付成功后将进入结果确认页，避免误判成功。'}
         </Text>
+        <Image
+          className='payment-page__mascot'
+          mode='aspectFit'
+          src={getXiaoyueExpressionAsset('paymentTrust')}
+        />
       </View>
 
       {registrationReturnContext ? (

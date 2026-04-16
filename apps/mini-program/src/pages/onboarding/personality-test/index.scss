@@ -3,6 +3,7 @@
 
 .personality-test {
   @include page-gradient-bg;
+  @include onboarding-page-exit-transition;
   display: flex;
   flex-direction: column;
 
@@ -13,6 +14,13 @@
     min-height: 100vh;
     padding: $container-padding;
     text-align: center;
+  }
+
+  &__completing-mascot {
+    width: 220rpx;
+    height: 220rpx;
+    margin-bottom: $spacing-md;
+    display: block;
   }
 
   &__intro {
@@ -68,9 +76,7 @@
   }
 
   &__stage {
-    opacity: 0;
-    transform: translateY(18rpx);
-    animation: personality-test-stage-in 0.34s ease-out forwards;
+    @include onboarding-stage(0s, 0.34s, 18rpx);
 
     &--2 {
       animation-delay: 0.06s;
@@ -102,6 +108,11 @@
     letter-spacing: 1rpx;
   }
 
+  &__eyebrow-en {
+    @include type-en-brand-label;
+    color: $color-primary;
+  }
+
   &__loading-text {
     display: block;
     font-size: $font-size-base;
@@ -120,10 +131,8 @@
   &__intro-title--accent {
     margin-top: 6rpx;
     font-size: 72rpx;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.02;
-    letter-spacing: -1rpx;
+    @include type-display-accent-line;
     @include gradient-text;
   }
 
@@ -331,9 +340,9 @@
   }
 
   &__intro-tease-title {
+    @include type-display-section-title;
     display: block;
     font-size: $font-size-md;
-    font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
 
@@ -424,6 +433,7 @@
 
   &__start-btn {
     @include button-primary;
+    @include type-brand-cta-label;
     width: 100%;
     border: 0;
     box-shadow: 0 10rpx 30rpx rgba(168, 107, 255, 0.24);
@@ -456,9 +466,9 @@
   }
 
   &__status-title {
+    @include type-display-page-title;
     display: block;
     font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
     color: $color-primary;
     margin-bottom: $spacing-sm;
   }
@@ -498,6 +508,7 @@
 
   // Question
   &__question {
+    @include onboarding-stage(0.04s, 0.34s, 20rpx);
     padding: 0 $container-padding $spacing-2xl;
   }
 
@@ -673,20 +684,9 @@
 
   &__slider-submit {
     @include button-primary;
+    @include type-brand-cta-label;
     width: 100%;
     border: 0;
-  }
-}
-
-@keyframes personality-test-stage-in {
-  from {
-    opacity: 0;
-    transform: translateY(18rpx);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 

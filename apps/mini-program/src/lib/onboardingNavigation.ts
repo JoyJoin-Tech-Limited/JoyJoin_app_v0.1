@@ -4,6 +4,12 @@ import { MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from './onboardingRou
 
 export type MiniProgramNavigationMode = 'replace' | 'root'
 export type MiniProgramNavigationAction = 'switchTab' | 'redirectTo' | 'reLaunch'
+export const MINI_PROGRAM_ROUTE_TRANSITION_DELAY_MS = 220
+
+export interface MiniProgramRouteTransition {
+  beforeNavigate?: () => Promise<unknown> | unknown
+  delayMs?: number
+}
 
 export interface MiniProgramNavigator {
   switchTab(options: { url: string }): Promise<unknown> | unknown
@@ -29,15 +35,39 @@ export function getMiniProgramRouteNavigationAction(
   return mode === 'root' ? 'reLaunch' : 'redirectTo'
 }
 
+function waitForTransitionDelay(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs)
+  })
+}
+
+export async function runMiniProgramRouteTransition(
+  transition?: MiniProgramRouteTransition,
+): Promise<void> {
+  if (!transition) {
+    return
+  }
+
+  await Promise.resolve(transition.beforeNavigate?.())
+
+  const delayMs = transition.delayMs ?? MINI_PROGRAM_ROUTE_TRANSITION_DELAY_MS
+  if (delayMs > 0) {
+    await waitForTransitionDelay(delayMs)
+  }
+}
+
 export async function navigateToMiniProgramRoute(
   route: string,
   options?: {
     mode?: MiniProgramNavigationMode
     taro?: MiniProgramNavigator
+    transition?: MiniProgramRouteTransition
   },
 ): Promise<void> {
   const navigator = options?.taro ?? Taro
   const action = getMiniProgramRouteNavigationAction(route, options?.mode)
+
+  await runMiniProgramRouteTransition(options?.transition)
 
   switch (action) {
     case 'switchTab':
@@ -56,6 +86,7 @@ export function navigateToMiniProgramNextStep(
   options?: {
     mode?: MiniProgramNavigationMode
     taro?: MiniProgramNavigator
+    transition?: MiniProgramRouteTransition
   },
 ): Promise<void> {
   return navigateToMiniProgramRoute(nextStepToMiniProgramRoute(step), options)

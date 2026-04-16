@@ -22,9 +22,15 @@
   }
 
   &__title {
+    @include type-display-page-title;
     font-size: 48rpx;
-    font-weight: 800;
     color: $color-text-primary;
+  }
+
+  &__mascot {
+    width: 200rpx;
+    height: 200rpx;
+    align-self: center;
   }
 
   &__context {
@@ -42,10 +48,10 @@
   }
 
   &__context-title {
+    @include type-display-page-title;
     display: block;
     margin-top: 10rpx;
     font-size: 32rpx;
-    font-weight: 800;
     color: $color-text-primary;
   }
 
@@ -92,12 +98,12 @@
   }
 
   &__button {
+    @include type-brand-cta-label;
     min-height: 96rpx;
     border-radius: 48rpx;
     background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
     color: #ffffff;
     font-size: 30rpx;
-    font-weight: 700;
 
     &::after {
       border: none;
