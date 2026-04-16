@@ -18,7 +18,7 @@ import {
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
-import { getOnboardingXiaoyueAsset } from './visuals'
+import { getArchetypeVisual, getOnboardingXiaoyueAsset } from './visuals'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -76,6 +76,36 @@ interface AssessmentAnswerResponse {
   progress?: AssessmentProgress
   currentMatches?: AssessmentMatch[]
 }
+
+const INTRO_ARCHETYPE_TEASERS = [
+  {
+    archetype: '开心柯基',
+    vibeLine: '一进场，就把气氛带热。',
+  },
+  {
+    archetype: '机智狐',
+    vibeLine: '普通话题，也能聊出火花。',
+  },
+  {
+    archetype: '暖心熊',
+    vibeLine: '会让人慢慢放松下来。',
+  },
+] as const
+
+const INTRO_VALUE_POINTS = [
+  {
+    title: '约 3-5 分钟',
+    description: '轻松做完，不用硬刷题。',
+  },
+  {
+    title: '题目会变化',
+    description: '会跟着你的感觉慢慢靠近。',
+  },
+  {
+    title: '先测也可以',
+    description: '未登录也能先把氛围点亮。',
+  },
+] as const
 
 function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestionType {
   if (!question?.questionType) {
@@ -158,6 +188,25 @@ export default function PersonalityTestPage() {
   const progressPercent = progress
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
+  const introTeasers = useMemo(
+    () =>
+      INTRO_ARCHETYPE_TEASERS.map((item) => ({
+        ...item,
+        visual: getArchetypeVisual(item.archetype),
+      })),
+    [],
+  )
+  const introCoachLine = hasStoredIncompleteSession
+    ? '上次停住的地方，我还帮你留着。再点一下，就能继续把你的氛围原型解锁出来。'
+    : '嗨，我是小悦～这不是考试，凭第一反应选就好。测完我会把你的社交气场亮出来。'
+  const introFooterLine = hasStoredIncompleteSession
+    ? '上次的进度还在，接着来就好'
+    : '没有标准答案，第一反应通常最像你'
+  const introPrimaryLabel = isSubmitting
+    ? '准备中…'
+    : hasStoredIncompleteSession
+      ? '继续解锁'
+      : '开始解锁'
 
   const completeAnonymousAssessment = useCallback(async (
     targetSessionId: string,
@@ -371,27 +420,102 @@ export default function PersonalityTestPage() {
   // Intro phase
   if (phase === 'intro') {
     return (
-      <View className='personality-test'>
-        <View className='personality-test__intro'>
-          <Image
-            className='personality-test__mascot'
-            src={getOnboardingXiaoyueAsset('casual')}
-            mode='aspectFit'
-          />
-          <Text className='personality-test__title'>氛围测试</Text>
-          <Text className='personality-test__subtitle'>
-            通过一系列有趣的问题，发现你独特的社交氛围原型
+      <View className='personality-test personality-test--intro'>
+        <ScrollView className='personality-test__intro-scroll' scrollY enhanced showScrollbar={false}>
+          <View className='personality-test__intro-shell'>
+            <View className='personality-test__stage personality-test__stage--1'>
+              <Text className='personality-test__eyebrow'>JoyJoin · 氛围原型</Text>
+              <Text className='personality-test__intro-title'>3 分钟，解锁你的</Text>
+              <Text className='personality-test__intro-title personality-test__intro-title--accent'>氛围原型</Text>
+              <Text className='personality-test__intro-subtitle'>
+                用一组轻巧的问题，把你的社交气场摸清楚。后面的匹配和资料预览，都会更像你。
+              </Text>
+            </View>
+
+            <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
+              <View className='personality-test__intro-hero-visual'>
+                <View className='personality-test__intro-hero-halo' />
+                <View className='personality-test__intro-hero-chip personality-test__intro-hero-chip--top'>
+                  <Text className='personality-test__intro-hero-chip-text'>约 3-5 分钟</Text>
+                </View>
+                <View className='personality-test__intro-hero-chip personality-test__intro-hero-chip--bottom'>
+                  <Text className='personality-test__intro-hero-chip-text'>未登录也能先完成</Text>
+                </View>
+                <Image
+                  className='personality-test__mascot'
+                  src={getOnboardingXiaoyueAsset('pointing')}
+                  mode='aspectFit'
+                />
+              </View>
+
+              <View className='personality-test__intro-bubble'>
+                <Text className='personality-test__intro-bubble-title'>小悦给你一句提示</Text>
+                <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
+              </View>
+            </View>
+
+            <View className='personality-test__intro-value-grid personality-test__stage personality-test__stage--3'>
+              {INTRO_VALUE_POINTS.map((item) => (
+                <View key={item.title} className='personality-test__intro-value-card'>
+                  <Text className='personality-test__intro-value-title'>{item.title}</Text>
+                  <Text className='personality-test__intro-value-description'>{item.description}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
+              <Text className='personality-test__intro-tease-title'>有人会在这里，亮出这样的气场</Text>
+              <Text className='personality-test__intro-tease-subtitle'>
+                你的画像会是哪一种，要开始之后才知道。
+              </Text>
+
+              <ScrollView
+                className='personality-test__intro-tease-scroll'
+                scrollX
+                enhanced
+                showScrollbar={false}
+              >
+                <View className='personality-test__intro-tease-list'>
+                  {introTeasers.map((item) => (
+                    <View key={item.archetype} className='personality-test__intro-tease-card'>
+                      <View
+                        className='personality-test__intro-tease-avatar-shell'
+                        style={{
+                          background: item.visual.accentSurface,
+                          borderColor: item.visual.accentBorder,
+                        }}
+                      >
+                        <Image
+                          className='personality-test__intro-tease-avatar'
+                          src={item.visual.asset}
+                          mode='aspectFit'
+                        />
+                      </View>
+                      <Text className='personality-test__intro-tease-name'>{item.archetype}</Text>
+                      <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </ScrollView>
+
+        <View className='personality-test__intro-footer'>
+          <Text className='personality-test__intro-footer-kicker'>
+            先把你的社交味道点亮，再让 JoyJoin 帮你把接下来的小局安排得更对味。
           </Text>
-          <Text className='personality-test__hint'>大约需要 3-5 分钟，未登录也可以先完成</Text>
-          {error ? <Text className='personality-test__error'>{error}</Text> : null}
+          {error ? <Text className='personality-test__error personality-test__error--footer'>{error}</Text> : null}
           <Button
             className='personality-test__start-btn'
             onClick={handleStart}
             disabled={isSubmitting}
             loading={isSubmitting}
+            hoverClass='personality-test__start-btn--hover'
           >
-            {isSubmitting ? '准备中…' : hasStoredIncompleteSession ? '继续测试' : '开始测试'}
+            {introPrimaryLabel}
           </Button>
+          <Text className='personality-test__intro-footer-note'>{introFooterLine}</Text>
         </View>
       </View>
     )
@@ -402,8 +526,8 @@ export default function PersonalityTestPage() {
     return (
       <View className='personality-test'>
         <View className='personality-test__completing'>
-          <Text className='personality-test__title'>分析中…</Text>
-          <Text className='personality-test__subtitle'>正在为你生成氛围原型画像</Text>
+          <Text className='personality-test__status-title'>分析中…</Text>
+          <Text className='personality-test__status-subtitle'>正在为你生成氛围原型画像</Text>
         </View>
       </View>
     )
