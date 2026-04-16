@@ -11,6 +11,7 @@ JoyJoin is an npm workspaces monorepo with 4 apps and 1 shared package. See `REA
 | `apps/server` | 5000 | Express API + WebSocket server |
 | `apps/user-client` | 5001 | User-facing React PWA (mobile-first) |
 | `apps/admin-client` | 5002 | Admin portal React SPA |
+| `apps/mini-program` | 10086 (H5) | Taro 4 + React WeChat Mini Program |
 | `packages/shared` | — | Shared types, schema, constants |
 
 ### Database (local PostgreSQL + neon wsproxy)
@@ -69,8 +70,27 @@ See `README.md` § "Validation commands" for full list. Key commands:
 - `npm run test` — tests across all workspaces (vitest for server)
 - `npm run lint` — lint all workspaces (currently aliased to typecheck)
 
+### WeChat Mini Program (`apps/mini-program`)
+
+Built with Taro 4.1.11 + React. See `apps/mini-program/README.md` for the full reference.
+
+**Build targets:**
+- `npm run build:weapp -w mini-program` — WeChat weapp (output in `apps/mini-program/dist/`)
+- `npm run build:h5 -w mini-program` — H5 web build
+- `npm run dev:h5 -w mini-program` — H5 dev server on port 10086
+- `npm run dev:weapp -w mini-program` — weapp watch mode (requires WeChat DevTools to preview)
+
+**Typecheck:** `npm run typecheck -w mini-program`
+
+**Tests:** `npx vitest run` from `apps/mini-program/` (no test script in package.json; vitest is hoisted). 13/17 test files pass; 4 failures are pre-existing (`@shared/api` alias not resolved by vitest, and api.test.ts assertion mismatches).
+
+**WeChat DevTools:** The weapp target requires WeChat DevTools (macOS/Windows only) to preview the native mini-program. In headless Cloud Agent VMs, use `build:weapp` to verify the build succeeds and `dev:h5` for live browser preview of the H5 rendition.
+
+**API base URL:** The mini-program resolves its API target from `TARO_APP_API_BASE_URL` > `API_URL` > `APP_URL` > `http://localhost:5001` (default). In local dev, the H5 mode connects to the user-client Vite proxy on 5001, which proxies `/api` to the server on 5000.
+
 ### Known issues in current codebase
 
 - `apps/user-client` has pre-existing TypeScript errors in `MatchingStatusPage.tsx` (null vs undefined type narrowing).
 - One server test (`orchestrationKickoff.test.ts`) expects `.vscode/settings.json` which may not exist.
 - The user client root page (`/`) may show a blank page due to a pre-existing runtime error in `DiscoverPage.tsx`; other routes like `/personality-test` render correctly.
+- Mini-program vitest: 3 payment-related test files fail due to unresolved `@shared/api` alias; `api.test.ts` has 2 assertion mismatches.
