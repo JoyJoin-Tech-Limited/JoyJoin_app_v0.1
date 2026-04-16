@@ -31,8 +31,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
+# IDE — keep the workspace settings that the orchestration contract requires
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo
