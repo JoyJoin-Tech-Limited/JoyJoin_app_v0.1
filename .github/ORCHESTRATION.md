@@ -206,13 +206,14 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 
 - `npm run memory:validate` and `npm run memory:build-index` should pass when repo-memory retrieval or publication behavior changes.
 - `npm run orchestration:validate` should pass after orchestration changes.
+- `node scripts/validate-skill-routing.mjs` and `node scripts/test-skill-routing.mjs` should pass when skill bindings, skill routing metadata, or advisory workflow skill references change.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Please explain separate durable memory from operational state for the orchestration runtime context."}'` should surface relevant repo memory without forcing a kickoff recommendation.
 - `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
 - `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
 - `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.
-- `npm run orchestration:validate` should fail if `.github/agents/manifest.json` drifts from agent frontmatter subagent allowlists or if `.vscode/settings.json` stops enabling authored nested delegation.
+- `npm run orchestration:validate` should fail if `.github/agents/manifest.json` drifts from agent frontmatter subagent allowlists, if `.vscode/settings.json` stops enabling authored nested delegation, or if orchestration skill references drift from active `.github/skills/` directories.
 
 ## Next expansion points
 
