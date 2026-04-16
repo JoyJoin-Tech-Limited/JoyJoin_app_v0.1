@@ -12,6 +12,7 @@ import {
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { logError, logInfo } from '../../lib/logger'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
@@ -20,12 +21,19 @@ import './index.scss'
 
 type FlowState = 'ready' | 'shaking' | 'revealed'
 type AnalysisStage = 0 | 1 | 2 | 3 | 4
+type ActionDockState = 'hidden' | 'tease' | 'ready'
+type BlindBoxVisualState = 'ready' | 'opening' | 'open'
 
 interface ChemistryTokens {
   emoji: string
   title: string
   description: string
   chipClassName: string
+}
+
+interface ViewerSpotlight {
+  pair: PairExplanation
+  otherMember: PoolGroupMemberSummary
 }
 
 function getMemberName(member: PoolGroupMemberSummary): string {
@@ -121,13 +129,53 @@ function triggerLightHaptic() {
   }
 }
 
+function BlindBoxVisual({
+  state,
+  shouldReduceMotion,
+}: {
+  state: BlindBoxVisualState
+  shouldReduceMotion: boolean
+}) {
+  return (
+    <View
+      className={[
+        'squad-unboxing__blind-box-visual',
+        `squad-unboxing__blind-box-visual--${state}`,
+        shouldReduceMotion ? 'squad-unboxing__blind-box-visual--reduced' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <View className='squad-unboxing__blind-box-aura squad-unboxing__blind-box-aura--left' />
+      <View className='squad-unboxing__blind-box-aura squad-unboxing__blind-box-aura--right' />
+      <View className='squad-unboxing__blind-box-spark squad-unboxing__blind-box-spark--1' />
+      <View className='squad-unboxing__blind-box-spark squad-unboxing__blind-box-spark--2' />
+      <View className='squad-unboxing__blind-box-spark squad-unboxing__blind-box-spark--3' />
+
+      <View className='squad-unboxing__blind-box-lid'>
+        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--lid-vertical' />
+        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--lid-horizontal' />
+        <View className='squad-unboxing__blind-box-knot' />
+      </View>
+
+      <View className='squad-unboxing__blind-box-body'>
+        <View className='squad-unboxing__blind-box-inner-glow' />
+        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--body-vertical' />
+        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--body-horizontal' />
+      </View>
+
+      <View className='squad-unboxing__blind-box-shadow' />
+    </View>
+  )
+}
+
 export default function SquadUnboxingPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
+  const { shouldReduceMotion } = useMiniRevealMotion(router.params)
 
   const [flowState, setFlowState] = useState<FlowState>('ready')
-  const [showActionZone, setShowActionZone] = useState(false)
   const [analysisStage, setAnalysisStage] = useState<AnalysisStage>(0)
 
   const {
@@ -262,6 +310,26 @@ export default function SquadUnboxingPage() {
     return map
   }, [currentUserId, pairKeyMemberMap, viewerPairs])
 
+  const viewerSpotlight = useMemo<ViewerSpotlight | null>(() => {
+    if (!currentUserId) {
+      return null
+    }
+
+    for (const pair of viewerPairs) {
+      const pairMembers = pairKeyMemberMap.get(pair.pairKey)
+      const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
+
+      if (otherMember) {
+        return {
+          pair,
+          otherMember,
+        }
+      }
+    }
+
+    return null
+  }, [currentUserId, pairKeyMemberMap, viewerPairs])
+
   const groupThemeHighlights = useMemo(
     () =>
       Array.isArray(group?.highlights)
@@ -278,9 +346,27 @@ export default function SquadUnboxingPage() {
     return groupThemeHighlights
   }, [groupAnalysis?.groupThemeTags, groupThemeHighlights])
 
+  const actionDockState = useMemo<ActionDockState>(() => {
+    if (flowState !== 'revealed') {
+      return 'hidden'
+    }
+
+    if (analysisStage >= 4) {
+      return 'ready'
+    }
+
+    if (analysisStage >= 3) {
+      return 'tease'
+    }
+
+    return 'hidden'
+  }, [analysisStage, flowState])
+  const rootClassName = ['squad-unboxing', shouldReduceMotion ? 'squad-unboxing--reduce-motion' : '']
+    .filter(Boolean)
+    .join(' ')
+
   const handleOpenBox = useCallback(() => {
     triggerLightHaptic()
-    setShowActionZone(false)
     setAnalysisStage(0)
     setFlowState('shaking')
   }, [])
@@ -326,22 +412,10 @@ export default function SquadUnboxingPage() {
     const timer = setTimeout(() => {
       triggerLightHaptic()
       setFlowState('revealed')
-    }, 1450)
+    }, shouldReduceMotion ? 220 : 1450)
 
     return () => clearTimeout(timer)
-  }, [flowState])
-
-  useEffect(() => {
-    if (flowState !== 'revealed') {
-      return undefined
-    }
-
-    const timer = setTimeout(() => {
-      setShowActionZone(true)
-    }, 2300)
-
-    return () => clearTimeout(timer)
-  }, [flowState])
+  }, [flowState, shouldReduceMotion])
 
   useEffect(() => {
     if (flowState !== 'revealed') {
@@ -350,10 +424,10 @@ export default function SquadUnboxingPage() {
 
     const timer = setTimeout(() => {
       setAnalysisStage((stage) => (stage === 0 ? 1 : stage))
-    }, 900)
+    }, shouldReduceMotion ? 120 : 900)
 
     return () => clearTimeout(timer)
-  }, [flowState])
+  }, [flowState, shouldReduceMotion])
 
   useEffect(() => {
     if (analysisStage < 1 || analysisStage >= 4) {
@@ -362,10 +436,10 @@ export default function SquadUnboxingPage() {
 
     const timer = setTimeout(() => {
       setAnalysisStage((stage) => (stage < 4 ? ((stage + 1) as AnalysisStage) : stage))
-    }, 1650)
+    }, shouldReduceMotion ? 420 : 1650)
 
     return () => clearTimeout(timer)
-  }, [analysisStage])
+  }, [analysisStage, shouldReduceMotion])
 
   useEffect(() => {
     if (analysisStage > 0) {
@@ -379,7 +453,7 @@ export default function SquadUnboxingPage() {
 
   if (fetchError || !poolGroup || !group || !pool) {
     return (
-      <View className='squad-unboxing'>
+      <View className={rootClassName}>
         <View className='squad-unboxing__error'>
           <Text className='squad-unboxing__error-icon'>😕</Text>
           <Text className='squad-unboxing__error-text'>
@@ -398,7 +472,7 @@ export default function SquadUnboxingPage() {
   }
 
   return (
-    <View className='squad-unboxing'>
+    <View className={rootClassName}>
       <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
         <View className='squad-unboxing__header'>
           <Text className='squad-unboxing__header-emoji'>🎉</Text>
@@ -420,10 +494,7 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'ready' ? (
           <Card className='squad-unboxing__blind-box-card'>
-            <View className='squad-unboxing__blind-box-glow' />
-            <View className='squad-unboxing__blind-box-emoji-wrap'>
-              <Text className='squad-unboxing__blind-box-emoji'>🎁</Text>
-            </View>
+            <BlindBoxVisual state='ready' shouldReduceMotion={shouldReduceMotion} />
             <Text className='squad-unboxing__blind-box-title'>你的桌友来了</Text>
             <Text className='squad-unboxing__blind-box-copy'>
               这一桌 {members.length} 位桌友已经就位。先开盒，再看为什么你们会被放在同一桌。
@@ -444,13 +515,10 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'shaking' ? (
           <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--shaking'>
-            <View className='squad-unboxing__blind-box-glow' />
-            <View className='squad-unboxing__blind-box-emoji-wrap squad-unboxing__blind-box-emoji-wrap--shaking'>
-              <Text className='squad-unboxing__blind-box-emoji'>🎁</Text>
-            </View>
-            <Text className='squad-unboxing__blind-box-title'>正在开盒…</Text>
+            <BlindBoxVisual state='opening' shouldReduceMotion={shouldReduceMotion} />
+            <Text className='squad-unboxing__blind-box-title'>盒子正在打开…</Text>
             <Text className='squad-unboxing__blind-box-copy'>
-              小悦正在把今晚最值得期待的那一页翻给你看。
+              小悦正在把盒盖掀开，把今晚最值得期待的那一页翻给你看。
             </Text>
           </Card>
         ) : null}
@@ -458,6 +526,51 @@ export default function SquadUnboxingPage() {
         {flowState === 'revealed' ? (
           <>
             <View className='squad-unboxing__reveal-shell'>
+              <Card className='squad-unboxing__reveal-hero'>
+                <Text className='squad-unboxing__section-label'>盒子打开了</Text>
+                <BlindBoxVisual state='open' shouldReduceMotion={shouldReduceMotion} />
+                <Text className='squad-unboxing__reveal-title'>这一桌已经为你留好位置</Text>
+                <Text className='squad-unboxing__reveal-copy'>
+                  先认一眼桌友，再看看你会先和谁聊开。
+                </Text>
+
+                <View className='squad-unboxing__viewer-spotlight'>
+                  <View className='squad-unboxing__viewer-spotlight-top'>
+                    <Text className='squad-unboxing__viewer-spotlight-eyebrow'>先给你看</Text>
+                    {viewerSpotlight ? (
+                      <Text className='squad-unboxing__viewer-spotlight-score'>
+                        默契 {viewerSpotlight.pair.chemistryScore}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text className='squad-unboxing__viewer-spotlight-title'>
+                    {viewerSpotlight
+                      ? `你会先和 ${getMemberName(viewerSpotlight.otherMember)} 聊开`
+                      : isLoadingAnalysis
+                        ? '小悦正在替你挑出最先聊开的桌友'
+                        : '先看看这一桌为什么会把你放在这里'}
+                  </Text>
+                  <Text className='squad-unboxing__viewer-spotlight-copy'>
+                    {viewerSpotlight?.pair.connectionPoints?.[0]
+                      ? `第一句很可能会从「${viewerSpotlight.pair.connectionPoints[0]}」开始。`
+                      : viewerSpotlight
+                        ? viewerSpotlight.pair.explanation
+                        : isLoadingAnalysis
+                          ? '分析正在补齐，下面会先把桌友和整体氛围揭晓给你。'
+                          : group.matchExplanation || '往下看，小悦会把这桌的连接点慢慢揭晓给你。'}
+                  </Text>
+                  {viewerSpotlight?.pair.connectionPoints?.length ? (
+                    <View className='squad-unboxing__viewer-spotlight-pills'>
+                      {viewerSpotlight.pair.connectionPoints.slice(0, 2).map((point) => (
+                        <View key={point} className='squad-unboxing__viewer-spotlight-pill'>
+                          <Text className='squad-unboxing__viewer-spotlight-pill-text'>{point}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              </Card>
+
               <Text className='squad-unboxing__section-label'>今晚同桌的是</Text>
               <View className='squad-unboxing__member-grid'>
                 {members.map((member, index) => {
@@ -471,7 +584,7 @@ export default function SquadUnboxingPage() {
                     <Card
                       key={member.userId}
                       className={`squad-unboxing__member-card${isCurrentUser ? ' squad-unboxing__member-card--current' : ''}`}
-                      style={{ animationDelay: `${index * 120}ms` }}
+                      style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
                     >
                       <View className='squad-unboxing__member-top'>
                         <View className='squad-unboxing__member-avatar-wrap'>
@@ -660,7 +773,7 @@ export default function SquadUnboxingPage() {
                             <View
                               key={pair.pairKey}
                               className='squad-unboxing__pair-card'
-                              style={{ animationDelay: `${index * 140}ms` }}
+                              style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 140}ms` }}
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
@@ -692,7 +805,7 @@ export default function SquadUnboxingPage() {
                             <View
                               key={pair.pairKey}
                               className='squad-unboxing__pair-card'
-                              style={{ animationDelay: `${index * 140}ms` }}
+                              style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 140}ms` }}
                             >
                               <View className='squad-unboxing__pair-top'>
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
@@ -726,7 +839,7 @@ export default function SquadUnboxingPage() {
                           <View
                             key={`${topic}-${index}`}
                             className='squad-unboxing__topic-chip'
-                            style={{ animationDelay: `${index * 120}ms` }}
+                            style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
                           >
                             <Text className='squad-unboxing__topic-chip-text'>{topic}</Text>
                           </View>
@@ -747,28 +860,47 @@ export default function SquadUnboxingPage() {
         <View className='squad-unboxing__spacer' />
       </ScrollView>
 
-      {flowState === 'revealed' && showActionZone ? (
-        <View className='squad-unboxing__action-zone'>
-          <Button
-            className='squad-unboxing__confirm-btn'
-            onClick={handleConfirmAttendance}
-            disabled={confirmAttendanceMutation.isPending}
-            loading={confirmAttendanceMutation.isPending}
-          >
-            {confirmAttendanceMutation.isPending ? '确认中…' : '确认出席'}
-          </Button>
+      {flowState === 'revealed' && actionDockState !== 'hidden' ? (
+        <View className={`squad-unboxing__action-zone squad-unboxing__action-zone--${actionDockState}`}>
+          <View className='squad-unboxing__action-copy'>
+            <Text className='squad-unboxing__action-eyebrow'>
+              {actionDockState === 'ready' ? '揭晓完成' : '揭晓继续中'}
+            </Text>
+            <Text className='squad-unboxing__action-title'>
+              {actionDockState === 'ready'
+                ? '如果这桌感觉对味，就把今晚定下来。'
+                : '最后一页马上到，先把这桌最关键的聊天入口看完。'}
+            </Text>
+          </View>
 
-          <Button
-            variant='secondary'
-            className='squad-unboxing__detail-btn'
-            onClick={handleOpenGroupDetail}
-          >
-            查看活动详情
-          </Button>
+          {actionDockState === 'ready' ? (
+            <>
+              <Button
+                className='squad-unboxing__confirm-btn'
+                onClick={handleConfirmAttendance}
+                disabled={confirmAttendanceMutation.isPending}
+                loading={confirmAttendanceMutation.isPending}
+              >
+                {confirmAttendanceMutation.isPending ? '确认中…' : '确认出席'}
+              </Button>
 
-          <Text className='squad-unboxing__skip-link' onClick={handleSkip}>
-            稍后再看
-          </Text>
+              <Button
+                variant='secondary'
+                className='squad-unboxing__detail-btn'
+                onClick={handleOpenGroupDetail}
+              >
+                查看活动详情
+              </Button>
+
+              <Text className='squad-unboxing__skip-link' onClick={handleSkip}>
+                稍后再看
+              </Text>
+            </>
+          ) : (
+            <Text className='squad-unboxing__action-pending'>
+              确认出席按钮会在完整分析落地后出现。
+            </Text>
+          )}
         </View>
       ) : null}
     </View>

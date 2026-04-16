@@ -19,6 +19,7 @@ import type {
 } from '@shared/wsEvents'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import { logError, logInfo } from '../../lib/logger'
 import LoadingScreen from '../../components/LoadingScreen'
@@ -286,6 +287,7 @@ export default function MatchingStatusPage() {
   const registrationId = router.params.registrationId ?? ''
   const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuthGuard()
+  const { shouldReduceMotion } = useMiniRevealMotion(router.params)
 
   const [isCancelling, setIsCancelling] = useState(false)
   const [liveStage, setLiveStage] = useState<LiveRevealStage>('idle')
@@ -299,7 +301,6 @@ export default function MatchingStatusPage() {
   const [newMemberArchetype, setNewMemberArchetype] = useState<string | null>(null)
 
   const liveStageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const liveThemeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const newMemberTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const {
@@ -376,6 +377,39 @@ export default function MatchingStatusPage() {
       : currentFill >= minGroupSize
         ? '已经达到成桌门槛，小悦正在优先为这桌完成配对。'
         : `还差 ${seatsNeeded} 位达到成桌门槛。`
+  const waitingSeats = useMemo(() => {
+    const seatCount = Math.min(Math.max(maxGroupSize, DEFAULT_MIN_GROUP_SIZE), DEFAULT_MAX_GROUP_SIZE)
+    const layoutKey = Math.min(Math.max(seatCount, DEFAULT_MIN_GROUP_SIZE), DEFAULT_MAX_GROUP_SIZE)
+    const filledSeatCount = Math.min(currentFill, seatCount)
+
+    return Array.from({ length: seatCount }).map((_, index) => {
+      const seatNumber = index + 1
+      const isFilled = seatNumber <= filledSeatCount
+      const isThreshold = seatNumber === minGroupSize
+      const isNewest = Boolean(newMemberJoined && isFilled && seatNumber === filledSeatCount)
+      const isBonusSeat = seatNumber > minGroupSize
+
+      return {
+        seatNumber,
+        isFilled,
+        isThreshold,
+        isNewest,
+        isBonusSeat,
+        seatMark: isFilled ? (isNewest ? '新' : `${seatNumber}`) : isThreshold ? '开' : '+',
+        caption: isNewest
+          ? newMemberArchetype ?? '新朋友'
+          : isThreshold
+            ? '成桌线'
+            : seatNumber === seatCount
+              ? '满员'
+              : null,
+        layoutClassName: `matching-status__waiting-seat--layout-${layoutKey}-${seatNumber}`,
+      }
+    })
+  }, [currentFill, maxGroupSize, minGroupSize, newMemberArchetype, newMemberJoined])
+  const rootClassName = ['matching-status', shouldReduceMotion ? 'matching-status--reduce-motion' : '']
+    .filter(Boolean)
+    .join(' ')
 
   const persistedThemeSummary = useMemo<ThemeSummary | null>(() => {
     if (themeRevealData) {
@@ -623,10 +657,6 @@ export default function MatchingStatusPage() {
         clearTimeout(liveStageTimerRef.current)
       }
 
-      if (liveThemeTimerRef.current) {
-        clearTimeout(liveThemeTimerRef.current)
-      }
-
       if (newMemberTimerRef.current) {
         clearTimeout(newMemberTimerRef.current)
       }
@@ -677,34 +707,21 @@ export default function MatchingStatusPage() {
       }
 
       finishLiveJourney()
-    }, 950)
+    }, shouldReduceMotion ? 140 : 950)
 
     return () => {
       if (liveStageTimerRef.current) {
         clearTimeout(liveStageTimerRef.current)
       }
     }
-  }, [effectiveGroupDetails, finishLiveJourney, isLoadingLiveGroupDetails, liveStage, persistedThemeSummary])
-
-  useEffect(() => {
-    if (liveStage !== 'theme') {
-      return undefined
-    }
-
-    if (liveThemeTimerRef.current) {
-      clearTimeout(liveThemeTimerRef.current)
-    }
-
-    liveThemeTimerRef.current = setTimeout(() => {
-      finishLiveJourney()
-    }, 3000)
-
-    return () => {
-      if (liveThemeTimerRef.current) {
-        clearTimeout(liveThemeTimerRef.current)
-      }
-    }
-  }, [finishLiveJourney, liveStage])
+  }, [
+    effectiveGroupDetails,
+    finishLiveJourney,
+    isLoadingLiveGroupDetails,
+    liveStage,
+    persistedThemeSummary,
+    shouldReduceMotion,
+  ])
 
   useWebSocket({
     eventTypes: ['POOL_MATCHED', 'POOL_REGISTRATION_ADDED', 'EVENT_THEME_TITLE_REVEALED', 'MATCH_PROGRESS_UPDATE'],
@@ -802,7 +819,7 @@ export default function MatchingStatusPage() {
 
   if (fetchError || !registration) {
     return (
-      <View className='matching-status'>
+      <View className={rootClassName}>
         <View className='matching-status__error'>
           <Text className='matching-status__error-icon'>😕</Text>
           <Text className='matching-status__error-text'>
@@ -822,7 +839,7 @@ export default function MatchingStatusPage() {
 
   if (isCancelled) {
     return (
-      <View className='matching-status'>
+      <View className={rootClassName}>
         <Card className='matching-status__special-card'>
           <Text className='matching-status__special-icon'>😔</Text>
           <Text className='matching-status__special-title'>这场活动已取消</Text>
@@ -848,7 +865,7 @@ export default function MatchingStatusPage() {
 
   if (isNoMatchState) {
     return (
-      <ScrollView className='matching-status' scrollY enhanced showScrollbar={false}>
+      <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
         <MatchingHero heroSrc={MATCHING_NO_MATCH_HERO_SRC} className='matching-status__hero--no-match' />
 
         <Card className='matching-status__special-card matching-status__special-card--stacked'>
@@ -905,7 +922,7 @@ export default function MatchingStatusPage() {
   const stageTemperature = getTemperatureCopy(matchedData?.temperatureLevel)
 
   return (
-    <ScrollView className='matching-status' scrollY enhanced showScrollbar={false}>
+    <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
       {matchStatus === 'pending' ? (
         <MatchingHero heroSrc={MATCHING_WAITING_HERO_SRC} className='matching-status__hero--waiting' />
       ) : null}
@@ -958,28 +975,66 @@ export default function MatchingStatusPage() {
               </Text>
             </View>
 
-            <View className='matching-status__waiting-segments'>
-              {Array.from({ length: maxGroupSize }).map((_, index) => {
-                const isFilled = index < currentFill
-                const isThreshold = index === minGroupSize - 1
+            <View className='matching-status__waiting-scene'>
+              <View className='matching-status__waiting-orbit matching-status__waiting-orbit--outer' />
+              <View className='matching-status__waiting-orbit matching-status__waiting-orbit--inner' />
 
-                return (
-                  <View key={`segment-${index + 1}`} className='matching-status__waiting-segment-wrap'>
-                    <View
-                      className={[
-                        'matching-status__waiting-segment',
-                        isFilled ? 'matching-status__waiting-segment--filled' : '',
-                        isThreshold ? 'matching-status__waiting-segment--threshold' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    />
-                    <Text className='matching-status__waiting-segment-label'>
-                      {isThreshold ? '成桌' : index + 1}
-                    </Text>
+              <View className='matching-status__waiting-table'>
+                <Text className='matching-status__waiting-table-eyebrow'>正在聚齐</Text>
+                <Text className='matching-status__waiting-table-count'>
+                  {currentFill}/{maxGroupSize}
+                </Text>
+                <Text className='matching-status__waiting-table-copy'>
+                  {currentFill >= minGroupSize ? '已经够开桌了' : `还差 ${seatsNeeded} 位成桌`}
+                </Text>
+              </View>
+
+              {waitingSeats.map((seat) => (
+                <View
+                  key={`seat-${seat.seatNumber}`}
+                  className={[
+                    'matching-status__waiting-seat',
+                    seat.layoutClassName,
+                    seat.isFilled ? 'matching-status__waiting-seat--filled' : '',
+                    seat.isThreshold ? 'matching-status__waiting-seat--threshold' : '',
+                    seat.isBonusSeat ? 'matching-status__waiting-seat--bonus' : '',
+                    seat.isNewest ? 'matching-status__waiting-seat--new' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <View className='matching-status__waiting-seat-core'>
+                    <Text className='matching-status__waiting-seat-mark'>{seat.seatMark}</Text>
                   </View>
-                )
-              })}
+                  {seat.caption ? (
+                    <Text className='matching-status__waiting-seat-caption'>{seat.caption}</Text>
+                  ) : null}
+                </View>
+              ))}
+
+              {newMemberJoined ? (
+                <View className='matching-status__waiting-seat-burst'>
+                  <Text className='matching-status__waiting-seat-burst-emoji'>✨</Text>
+                  <Text className='matching-status__waiting-seat-burst-text'>
+                    {newMemberArchetype ? `${newMemberArchetype} 刚入座` : '这桌刚多了一位新朋友'}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View className='matching-status__waiting-metrics'>
+              <View className='matching-status__waiting-metric'>
+                <Text className='matching-status__waiting-metric-label'>已入座</Text>
+                <Text className='matching-status__waiting-metric-value'>{currentFill} 位</Text>
+              </View>
+              <View className='matching-status__waiting-metric'>
+                <Text className='matching-status__waiting-metric-label'>成桌门槛</Text>
+                <Text className='matching-status__waiting-metric-value'>{minGroupSize} 位</Text>
+              </View>
+              <View className='matching-status__waiting-metric'>
+                <Text className='matching-status__waiting-metric-label'>满员上限</Text>
+                <Text className='matching-status__waiting-metric-value'>{maxGroupSize} 位</Text>
+              </View>
             </View>
 
             <Text className='matching-status__waiting-progress-status'>{fillStatusText}</Text>
@@ -1240,7 +1295,7 @@ export default function MatchingStatusPage() {
                   <View
                     key={member.userId}
                     className='matching-status__overlay-member-card'
-                    style={{ animationDelay: `${index * 120}ms` }}
+                    style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
                   >
                     <Text className='matching-status__overlay-member-initial'>
                       {(member.displayName ?? '神').slice(0, 1)}
@@ -1264,7 +1319,7 @@ export default function MatchingStatusPage() {
               </View>
 
               <Button className='matching-status__overlay-button' onClick={handleContinueFromMembers}>
-                继续揭晓
+                {persistedThemeSummary ? '看看今晚主题' : '前往完整详情'}
               </Button>
             </View>
           ) : null}
@@ -1293,8 +1348,11 @@ export default function MatchingStatusPage() {
                   ))}
                 </View>
               ) : null}
+              <Text className='matching-status__overlay-next-step'>
+                主题已经落定，下一页继续看完整时间、地点和这桌的出席安排。
+              </Text>
               <Button className='matching-status__overlay-button' onClick={finishLiveJourney}>
-                前往下一步
+                {resolvedGroupId ? '查看完整活动详情' : '继续前往下一步'}
               </Button>
             </View>
           ) : null}
