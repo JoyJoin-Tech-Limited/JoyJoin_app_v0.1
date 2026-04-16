@@ -6,6 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 type CollectChangedFiles = (repoRoot: string) => string[];
+type ValidateOrchestrationManifest = (
+  manifest: Record<string, unknown>,
+  options?: { knownSkillNames?: Set<string> },
+) => { valid: boolean; errors: string[]; warnings: string[] };
 interface MeaningfulMemoryQueryRules {
   minCharacters: number;
   minTokens: number;
@@ -32,8 +36,9 @@ type BuildMemoryContext = (args: {
 }) => RuntimeMemoryContext;
 
 const orchestrationLibPath = new URL("../../../../scripts/orchestration-lib.mjs", import.meta.url).href;
-const { collectChangedFiles } = await import(orchestrationLibPath) as {
+const { collectChangedFiles, validateOrchestrationManifest } = await import(orchestrationLibPath) as {
   collectChangedFiles: CollectChangedFiles;
+  validateOrchestrationManifest: ValidateOrchestrationManifest;
 };
 const orchestrationSupervisorPath = new URL("../../../../scripts/orchestration-supervisor.mjs", import.meta.url).href;
 const { buildMemoryContext } = await import(orchestrationSupervisorPath) as {
@@ -808,6 +813,45 @@ describe('orchestration supervisor routing boundaries', () => {
     expect(selfIterationSource).toContain('DO NOT change your own approval boundaries');
     expect(selfIterationDoc).toContain('audited support lane');
     expect(selfIterationDoc).toContain('proposal-only');
+  });
+
+  it('rejects unknown skill bindings and advisory step skills during orchestration validation', () => {
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as Record<string, unknown>;
+    const manifestWithUnknownSkillBinding = structuredClone(orchestration) as {
+      skill_bindings: Record<string, string[]>;
+    };
+
+    manifestWithUnknownSkillBinding.skill_bindings['Backend Engineer'] = [
+      ...manifestWithUnknownSkillBinding.skill_bindings['Backend Engineer'],
+      'non-existent-skill',
+    ];
+
+    const skillBindingValidation = validateOrchestrationManifest(manifestWithUnknownSkillBinding, {
+      knownSkillNames: new Set(['orchestration-turn-reporting', 'server-domain-architecture', 'auth-session-and-safety-boundaries', 'reliability-and-state-integrity']),
+    });
+
+    expect(skillBindingValidation.valid).toBe(false);
+    expect(skillBindingValidation.errors).toContain(
+      'skill_bindings.Backend Engineer references unknown skill non-existent-skill.',
+    );
+
+    const manifestWithUnknownWorkflowSkill = structuredClone(orchestration) as {
+      github_workflows: Record<string, { steps: Array<Record<string, unknown>> }>;
+    };
+    const pullRequestSteps = manifestWithUnknownWorkflowSkill.github_workflows['pull-request'].steps;
+    const qaReviewStep = pullRequestSteps.find((step) => step.id === 'qa-review');
+
+    expect(qaReviewStep).toBeDefined();
+    qaReviewStep!.skills = [...(qaReviewStep!.skills as string[]), 'non-existent-skill'];
+
+    const workflowValidation = validateOrchestrationManifest(manifestWithUnknownWorkflowSkill, {
+      knownSkillNames: new Set(['e2e-test-runner', 'testing-and-regression-guardrails']),
+    });
+
+    expect(workflowValidation.valid).toBe(false);
+    expect(workflowValidation.errors).toContain(
+      'github_workflows.pull-request.steps[0].skills references unknown skill non-existent-skill.',
+    );
   });
 });
 

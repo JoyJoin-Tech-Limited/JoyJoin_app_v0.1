@@ -33,6 +33,12 @@ jobs:
       - name: Verify workspace dependency ownership
         run: node scripts/check-workspace-dependency-ownership.mjs
 
+      - name: Validate skill routing coverage
+        run: node scripts/validate-skill-routing.mjs
+
+      - name: Run skill routing regression suite
+        run: node scripts/test-skill-routing.mjs
+
   lint-user:
     needs: [guardrails]
     name: Type Check User Client
