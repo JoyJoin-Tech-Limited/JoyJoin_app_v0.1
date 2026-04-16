@@ -27,7 +27,7 @@ import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
-import { getXiaoyueAsset } from '../personality-test/visuals'
+import { getOnboardingXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
 const HOT_OCCUPATIONS = getHotOccupations(18)
@@ -300,7 +300,7 @@ export default function EssentialDataPage() {
           <View className='essential-data__coach essential-data__stage essential-data__stage--2'>
             <Image
               className='essential-data__coach-avatar'
-              src={getXiaoyueAsset(intent.length > 0 ? 'pointing' : 'excited')}
+              src={getOnboardingXiaoyueAsset(intent.length > 0 ? 'pointing' : 'casual')}
               mode='aspectFit'
             />
             <View className='essential-data__coach-copy'>
