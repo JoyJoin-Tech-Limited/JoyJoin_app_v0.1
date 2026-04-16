@@ -1,5 +1,0 @@
-{
-  "$schema": "https://www.cursor.com/schemas/environment.schema.json",
-  "name": "JoyJoin monorepo",
-  "install": "npm install"
-}
