@@ -92,7 +92,7 @@ const INTRO_ARCHETYPE_TEASERS = [
   },
 ] as const
 
-const INTRO_META_PILLS = ['约 3-5 分钟', '自适应题目', '未登录也能先完成'] as const
+const INTRO_META_PILLS = ['约 3-5 分钟', '自适应题目', '可先完成再登录'] as const
 
 const INTRO_TRUST_POINTS = [
   {
@@ -200,7 +200,7 @@ export default function PersonalityTestPage() {
   )
   const introCoachLine = hasStoredIncompleteSession
     ? '上次的进度我还替你留着。继续往下答几分钟，这份氛围画像就能顺着刚才的位置接上。'
-    : '这不是标准化测评，更像一次轻量的社交画像。凭直觉选择就好，我会帮你把气场整理出来。'
+    : '这不是标准化测评，更像一次轻量的社交画像。按直觉选择就好，我会帮你把你的聚会气场整理清楚。'
   const introFooterKicker = hasStoredIncompleteSession
     ? '把剩下的几分钟补完，这份画像就能继续带着你往后走。'
     : '先完成这一步，后面的匹配与资料预览，才会真正更懂你。'
@@ -433,7 +433,7 @@ export default function PersonalityTestPage() {
               <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
               <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
               <Text className='personality-test__intro-subtitle'>
-                这一步会生成你的氛围原型画像，让后面的匹配和资料预览都更像你。
+                这一步会生成你的氛围原型画像，让后面的匹配和资料预览，都更像你。
               </Text>
             </View>
 
