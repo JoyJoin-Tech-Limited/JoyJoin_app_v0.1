@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -42,6 +42,22 @@ import {
 } from "@shared/api";
 
 import { getCurrencySymbol } from "@/lib/currency";
+import {
+  buildEntitlementResumeBrowserPendingOrderContext,
+  buildEventBrowserPendingOrderContext,
+  getBlindBoxPaymentPageModeFromUrl,
+  type BrowserPendingOrderContext,
+} from "@/lib/blindBoxPaymentRouting";
+import { getDiscoverJoinRoute } from "@/lib/poolRegistrationRouting";
+import {
+  clearStoredBrowserPoolRegistrationResumeContext,
+  getBrowserPoolRegistrationResumeBudget,
+  getBrowserPoolRegistrationResumeNote,
+  markBrowserPoolRegistrationResumeContextPaid,
+  persistBrowserPoolRegistrationResumeContext,
+  readStoredBrowserPoolRegistrationResumeContext,
+  type BrowserPoolRegistrationResumeContext,
+} from "@/lib/poolRegistrationResume";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,10 +73,6 @@ type CouponValidationResponse = {
     discountType?: string | null;
     discountValue?: number | null;
   } | null;
-};
-
-type BrowserPendingOrderContext = {
-  type: "event" | "event_bundle";
 };
 
 async function requestJson<T>(method: string, url: string, data?: unknown): Promise<T> {
@@ -103,8 +115,16 @@ const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
 
 
 export default function BlindBoxPaymentPage() {
+  const paymentPageUrl =
+    typeof window === "undefined"
+      ? "/blindbox/payment"
+      : `${window.location.pathname}${window.location.search}`;
+  const paymentPageMode = getBlindBoxPaymentPageModeFromUrl(paymentPageUrl);
+  const isEntitlementResumeMode = paymentPageMode === "entitlement-resume";
+
   const [, setLocation] = useLocation();
-  const { paymentsEnabled, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { user, paymentsEnabled, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const entitlementModeGuardHandledRef = useRef(false);
   const supportsCoupons = true;
   const supportsEventPacks = false;
   const [promoOpen, setPromoOpen] = useState(false);
@@ -115,11 +135,75 @@ export default function BlindBoxPaymentPage() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<
     "single" | "pack3" | "pack6" | "vip_monthly" | "vip_quarterly"
-  >("single");
+  >(() => (isEntitlementResumeMode ? "vip_monthly" : "single"));
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const registrationReturnContextLookup = useMemo(
+    () =>
+      isEntitlementResumeMode
+        ? readStoredBrowserPoolRegistrationResumeContext({ currentUserId: user?.id })
+        : ({ status: "missing" } as const),
+    [isEntitlementResumeMode, user?.id],
+  );
+
+  const registrationReturnContext =
+    registrationReturnContextLookup.status === "ready"
+      ? registrationReturnContextLookup.context
+      : null;
+  const registrationContextPills = useMemo(() => {
+    if (!registrationReturnContext) {
+      return [];
+    }
+
+    return [
+      getBrowserPoolRegistrationResumeBudget(registrationReturnContext),
+      registrationReturnContext.draft.eventIntent?.length
+        ? `${registrationReturnContext.draft.eventIntent.length} 个期待`
+        : "",
+      registrationReturnContext.poolArea ?? "",
+    ].filter((value): value is string => value.length > 0);
+  }, [registrationReturnContext]);
+  const closeDestination = registrationReturnContext
+    ? getDiscoverJoinRoute(registrationReturnContext.poolId)
+    : "/discover";
+
+  useEffect(() => {
+    if (!isEntitlementResumeMode || isAuthLoading || entitlementModeGuardHandledRef.current) {
+      return;
+    }
+
+    if (registrationReturnContextLookup.status === "ready") {
+      return;
+    }
+
+    entitlementModeGuardHandledRef.current = true;
+
+    if (registrationReturnContextLookup.status === "clear") {
+      clearStoredBrowserPoolRegistrationResumeContext();
+    }
+
+    toast({
+      title: "报名上下文已失效",
+      description: "请重新打开活动报名，再继续开通权益。",
+      variant: "destructive",
+    });
+    setLocation("/discover");
+  }, [
+    isEntitlementResumeMode,
+    isAuthLoading,
+    registrationReturnContextLookup,
+    setLocation,
+    toast,
+  ]);
+
+  useEffect(() => {
+    if (registrationReturnContext && selectedPlan === "single") {
+      setSelectedPlan("vip_monthly");
+    }
+  }, [registrationReturnContext, selectedPlan]);
 
   const launchBrowserPaymentFlow = (
     result: BrowserPaymentResponse,
@@ -256,9 +340,11 @@ export default function BlindBoxPaymentPage() {
   const displayEventType = storedEventData?.eventType || "饭局";
   const displayArea = storedEventData?.area || storedEventData?.district || `${city}·南山区`;
   const displayPoolId = storedEventData?.poolId;
-  const effectivePlan = !supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")
-    ? "single"
-    : selectedPlan;
+  const effectivePlan = registrationReturnContext
+    ? selectedPlan
+    : !supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")
+      ? "single"
+      : selectedPlan;
   const effectiveCoupon = supportsCoupons && effectivePlan === "single" ? appliedCoupon : null;
 
   // Get base price based on selected plan
@@ -290,8 +376,20 @@ export default function BlindBoxPaymentPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/events/joined"] });
     queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     localStorage.removeItem("blindbox_event_data");
     setLocation("/events");
+  };
+
+  const finalizeEntitlementResumeSuccess = (
+    nextReturnContext: BrowserPoolRegistrationResumeContext,
+  ) => {
+    persistBrowserPoolRegistrationResumeContext(
+      markBrowserPoolRegistrationResumeContextPaid(nextReturnContext),
+    );
+    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    setLocation(getDiscoverJoinRoute(nextReturnContext.poolId));
   };
 
   const applyValidatedCoupon = (validation: CouponValidationResponse) => {
@@ -408,6 +506,30 @@ export default function BlindBoxPaymentPage() {
 
   const handlePayment = async () => {
     try {
+      if (registrationReturnContext && !isVIP) {
+        toast({
+          title: "当前是继续报名模式",
+          description: "请先开通活动礼包，支付确认后会自动回到刚才的报名。",
+          variant: "destructive",
+        });
+        setSelectedPlan("vip_monthly");
+        return;
+      }
+
+      if (
+        registrationReturnContext &&
+        !supportsEventPacks &&
+        (selectedPlan === "pack3" || selectedPlan === "pack6")
+      ) {
+        toast({
+          title: "当前网页端暂不支持次数包续购",
+          description: "请先开通活动礼包，支付确认后会自动回到报名页。",
+          variant: "destructive",
+        });
+        setSelectedPlan("vip_monthly");
+        return;
+      }
+
       if (!supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")) {
         toast({
           title: "次数包暂未开放",
@@ -443,12 +565,29 @@ export default function BlindBoxPaymentPage() {
           throw new Error(error?.message || "订阅失败");
         }
 
-        if (launchBrowserPaymentFlow(result, { type: "event_bundle" })) {
+        if (
+          launchBrowserPaymentFlow(
+            result,
+            registrationReturnContext
+              ? buildEntitlementResumeBrowserPendingOrderContext(registrationReturnContext)
+              : { type: "event_bundle" },
+          )
+        ) {
           return;
         }
 
         if (result?.paymentStatus === "pending") {
           throw new Error("未收到支付跳转链接，请稍后重试");
+        }
+
+        if (registrationReturnContext) {
+          toast({
+            title: "权益已确认",
+            description: "正在带你回到刚才那场报名继续完成提交。",
+          });
+          finalizeEntitlementResumeSuccess(registrationReturnContext);
+          setIsProcessing(false);
+          return;
         }
 
         toast({
@@ -460,6 +599,7 @@ export default function BlindBoxPaymentPage() {
         });
 
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         setLocation("/discover");
         setIsProcessing(false);
         return;
@@ -488,7 +628,7 @@ export default function BlindBoxPaymentPage() {
         },
       );
 
-      if (launchBrowserPaymentFlow(result, { type: "event" })) {
+      if (launchBrowserPaymentFlow(result, buildEventBrowserPendingOrderContext(eventData))) {
         return;
       }
 
@@ -529,7 +669,7 @@ export default function BlindBoxPaymentPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
         <button
-          onClick={() => setLocation("/discover")}
+          onClick={() => setLocation(closeDestination)}
           className="absolute top-4 right-4 bg-white/80 rounded-full p-2 shadow-md"
           aria-label="返回"
         >
@@ -540,6 +680,15 @@ export default function BlindBoxPaymentPage() {
         <p className="text-gray-600 dark:text-gray-400 max-w-xs">
           我们正在升级支付系统，请稍后再试。感谢您的耐心等待！
         </p>
+      </div>
+    );
+  }
+
+  if (isEntitlementResumeMode && !registrationReturnContext) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-emerald-50 to-sky-50 dark:from-emerald-950/20 dark:to-sky-950/20 p-6 text-center">
+        <Loader className="mb-4 h-10 w-10 animate-spin text-emerald-500" />
+        <p className="text-gray-600 dark:text-gray-400">正在恢复刚才的报名进度…</p>
       </div>
     );
   }
@@ -576,7 +725,7 @@ export default function BlindBoxPaymentPage() {
 
       {/* 关闭按钮 */}
       <button
-        onClick={() => setLocation("/discover")}
+        onClick={() => setLocation(closeDestination)}
         className="absolute top-4 right-4 z-50 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-full p-2 backdrop-blur-sm transition-colors shadow-md"
         data-testid="button-close-payment"
         aria-label="关闭支付页面，返回发现页"
@@ -607,13 +756,15 @@ export default function BlindBoxPaymentPage() {
               <Sparkles className="h-12 w-12 text-purple-600 dark:text-purple-400" />
             </motion.div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              解锁神秘盲盒
+              {registrationReturnContext ? "先开通权益，再回来完成报名" : "解锁神秘盲盒"}
             </h1>
             <p className="text-gray-700 dark:text-gray-300 text-base mb-1">
-              AI精准匹配 · 惊喜体验 · 新朋友
+              {registrationReturnContext ? "你刚才填写的预算和偏好已经替你留好" : "AI精准匹配 · 惊喜体验 · 新朋友"}
             </p>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              告别尬聊，省去海量筛选时间
+              {registrationReturnContext
+                ? `支付确认后会自动回到${registrationReturnContext.poolTitle ? `《${registrationReturnContext.poolTitle}》` : "刚才那场活动"}继续完成报名`
+                : "告别尬聊，省去海量筛选时间"}
             </p>
           </motion.div>
         </div>
@@ -626,7 +777,7 @@ export default function BlindBoxPaymentPage() {
           className="bg-background rounded-t-[32px] shadow-2xl p-6 space-y-6"
         >
           {/* 新用户首单特惠横幅 - 使用梯度高亮 */}
-          {supportsCoupons && hasWelcomeCoupon && !appliedCoupon && (
+          {supportsCoupons && hasWelcomeCoupon && !appliedCoupon && !registrationReturnContext && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -649,68 +800,113 @@ export default function BlindBoxPaymentPage() {
           )}
 
           {/* 活动信息摘要 */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xl font-bold">{displayDate} {displayTime} · {displayEventType}</h2>
-              <Badge variant="default" className="bg-purple-500 hover:bg-purple-600 shrink-0">
-                盲盒模式
-              </Badge>
+          {registrationReturnContext ? (
+            <div className="space-y-3 rounded-3xl border border-emerald-200/70 bg-emerald-50/80 p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                    {registrationReturnContext.paymentStatus === "paid" ? "权益已确认" : "继续报名"}
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-emerald-950">
+                    {registrationReturnContext.poolTitle || "刚才那场活动"}
+                  </h2>
+                  {registrationReturnContext.poolDate ? (
+                    <p className="mt-1 text-sm text-emerald-800/80">
+                      {registrationReturnContext.poolDate}
+                    </p>
+                  ) : null}
+                </div>
+                <Badge className="shrink-0 border-0 bg-emerald-600/10 text-emerald-800 hover:bg-emerald-600/10">
+                  {registrationReturnContext.handoffCode === "NO_AVAILABLE_EVENT_PACK_CREDITS"
+                    ? "次数已用完"
+                    : "偏好已保留"}
+                </Badge>
+              </div>
+              <p className="text-sm leading-relaxed text-emerald-900/80">
+                {getBrowserPoolRegistrationResumeNote(registrationReturnContext)}
+              </p>
+              {registrationContextPills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {registrationContextPills.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-emerald-800 shadow-sm"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {displayArea}</p>
-              <p className="flex items-center gap-1"><Users className="h-4 w-4" /> 4-6人 · AI智能匹配</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xl font-bold">{displayDate} {displayTime} · {displayEventType}</h2>
+                <Badge variant="default" className="bg-purple-500 hover:bg-purple-600 shrink-0">
+                  盲盒模式
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {displayArea}</p>
+                <p className="flex items-center gap-1"><Users className="h-4 w-4" /> 4-6人 · AI智能匹配</p>
+              </div>
+              {!displayPoolId && (
+                <p className="text-xs text-destructive">活动数据不完整，请返回重新选择</p>
+              )}
             </div>
-            {!displayPoolId && (
-              <p className="text-xs text-destructive">活动数据不完整，请返回重新选择</p>
-            )}
-          </div>
+          )}
 
           {/* 价格选项 - 次数包 + VIP */}
           <div className="space-y-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Zap className="h-5 w-5 text-yellow-500" />
-              选择参与方式
+              {registrationReturnContext ? "选择开通方式" : "选择参与方式"}
             </h3>
             
             {/* 次数包选项 */}
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Ticket className="h-3 w-3" />
-                {supportsEventPacks ? "次数包 · 90天有效" : "单次体验"}
+                {registrationReturnContext
+                  ? "支付确认后会自动回到刚才的报名页"
+                  : supportsEventPacks
+                    ? "次数包 · 90天有效"
+                    : "单次体验"}
               </p>
               <div className="grid gap-3">
-                {/* 单次票 */}
-                <motion.div whileTap={{ scale: 0.98 }}>
-                  <Card 
-                    className={`p-4 border-2 hover-elevate cursor-pointer relative transition-all ${
-                      selectedPlan === "single" 
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                        : "border-muted"
-                    }`}
-                    onClick={() => setSelectedPlan("single")}
-                    data-testid="card-single-ticket"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                          selectedPlan === "single" ? "border-primary" : "border-muted-foreground"
-                        }`}>
-                          {selectedPlan === "single" && (
-                            <div className="w-3 h-3 rounded-full bg-primary" />
-                          )}
+                {!registrationReturnContext ? (
+                  <motion.div whileTap={{ scale: 0.98 }}>
+                    <Card 
+                      className={`p-4 border-2 hover-elevate cursor-pointer relative transition-all ${
+                        selectedPlan === "single" 
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
+                          : "border-muted"
+                      }`}
+                      onClick={() => setSelectedPlan("single")}
+                      data-testid="card-single-ticket"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            selectedPlan === "single" ? "border-primary" : "border-muted-foreground"
+                          }`}>
+                            {selectedPlan === "single" && (
+                              <div className="w-3 h-3 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-bold">单次体验票</h4>
+                            <p className="text-xs text-muted-foreground">零门槛尝鲜，体验AI精准匹配</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-bold">单次体验票</h4>
-                          <p className="text-xs text-muted-foreground">零门槛尝鲜，体验AI精准匹配</p>
+                        <div className="text-right shrink-0">
+                          <div className="text-xl font-bold text-primary">{currencySymbol}{(SINGLE_PRICE / 100).toFixed(0)}</div>
+                          <div className="text-xs text-muted-foreground">1次</div>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-xl font-bold text-primary">{currencySymbol}{(SINGLE_PRICE / 100).toFixed(0)}</div>
-                        <div className="text-xs text-muted-foreground">1次</div>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
+                    </Card>
+                  </motion.div>
+                ) : null}
 
                 {supportsEventPacks && (
                   <>
@@ -957,7 +1153,7 @@ export default function BlindBoxPaymentPage() {
           )}
 
           {/* Promo Code & Available Coupons - 仅单次票支持 */}
-          {supportsCoupons && !appliedCoupon && selectedPlan === "single" && (
+          {supportsCoupons && !appliedCoupon && selectedPlan === "single" && !registrationReturnContext && (
             <Collapsible open={promoOpen} onOpenChange={setPromoOpen}>
               <CollapsibleTrigger className="w-full" data-testid="button-promo-toggle">
                 <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -1138,11 +1334,12 @@ export default function BlindBoxPaymentPage() {
                 ) : (
                   <>
                     <SiWechat className="h-5 w-5 mr-2" />
-                    {effectivePlan === "single" && "微信支付"}
+                    {registrationReturnContext && isVIP && "微信支付 · 开通权益并返回报名"}
+                    {!registrationReturnContext && effectivePlan === "single" && "微信支付"}
                     {effectivePlan === "pack3" && "微信支付 · 购买3次包"}
                     {effectivePlan === "pack6" && "微信支付 · 购买6次包"}
-                    {effectivePlan === "vip_monthly" && "微信支付 · 购买月度活动礼包"}
-                    {effectivePlan === "vip_quarterly" && "微信支付 · 购买三月活动礼包"}
+                    {!registrationReturnContext && effectivePlan === "vip_monthly" && "微信支付 · 购买月度活动礼包"}
+                    {!registrationReturnContext && effectivePlan === "vip_quarterly" && "微信支付 · 购买三月活动礼包"}
                   </>
                 )}
               </Button>
@@ -1152,13 +1349,16 @@ export default function BlindBoxPaymentPage() {
             <div className="text-xs text-center text-muted-foreground space-y-1">
               {effectivePlan === "pack3" && <p><Package className="inline h-3 w-3 mr-1" />3次包90天内有效，可用于任意活动</p>}
               {effectivePlan === "pack6" && <p><Package className="inline h-3 w-3 mr-1" />6次包半年内有效，可用于任意活动</p>}
+              {registrationReturnContext ? (
+                <p><Sparkles className="inline h-3 w-3 mr-1" />支付确认后会自动回到刚才的报名页，并恢复你填写到的步骤</p>
+              ) : null}
               {isVIP && <p><Gift className="inline h-3 w-3 mr-1" />VIP期间无限参与所有活动 + 每月携友特权</p>}
               {isVIP && (
                 <p>
                   一次性购买 · 不自动续费 · 到期自动失效
                 </p>
               )}
-              {effectivePlan === "single" && <p><Sparkles className="inline h-3 w-3 mr-1" />支付后立即进入匹配队列</p>}
+              {!registrationReturnContext && effectivePlan === "single" && <p><Sparkles className="inline h-3 w-3 mr-1" />支付后立即进入匹配队列</p>}
               <p className="flex items-center justify-center gap-2">
                 <Shield className="h-3 w-3" />
                 <SiWechat className="h-3 w-3 text-[#07C160]" />

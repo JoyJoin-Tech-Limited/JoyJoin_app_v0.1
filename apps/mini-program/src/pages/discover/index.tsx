@@ -5,7 +5,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getEventPools,
   getMyPoolRegistrations,
+  type BlindBoxEventSummary,
   type EventPoolSummary,
+  type PoolRegistrationSummary,
 } from '@shared/api'
 import {
   shenzhenClusters,
@@ -27,6 +29,8 @@ import './index.scss'
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
+const EMPTY_TAB_BAR_POOL_REGISTRATIONS: PoolRegistrationSummary[] = []
+const EMPTY_TAB_BAR_EVENTS: BlindBoxEventSummary[] = []
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   dinner: '饭局',
@@ -452,10 +456,15 @@ export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const markAsRead = useMarkNotificationsAsRead()
   const hasMarkedRef = useRef(false)
+  const shouldSyncUnauthenticatedDiscoverState = !isLoading && !isAuthenticated
 
   useCustomTabBarSync({
     selectedIndex: MINI_PROGRAM_TAB_INDEX.discover,
-    enabled: isAuthenticated,
+    enabled: !isLoading,
+    poolRegistrations: shouldSyncUnauthenticatedDiscoverState
+      ? EMPTY_TAB_BAR_POOL_REGISTRATIONS
+      : undefined,
+    events: shouldSyncUnauthenticatedDiscoverState ? EMPTY_TAB_BAR_EVENTS : undefined,
   })
 
   useEffect(() => {

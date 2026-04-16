@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: '去参与',
+  navigationBarTitleText: '去发现',
 })

@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "steps": [
+    {
+      "label": "login-route-ready",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "wechat-button-found",
+      "found": true
+    },
+    {
+      "label": "wechat-button-tapped",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "after-1s",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "after-3s",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "after-7s",
+      "path": "pages/login/index"
+    }
+  ],
+  "errors": []
+}

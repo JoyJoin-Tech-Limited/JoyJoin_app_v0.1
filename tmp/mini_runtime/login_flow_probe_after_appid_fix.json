@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "steps": [],
+  "errors": [
+    "Error: Failed connecting to ws://127.0.0.1:9420, check if target project window is opened with automation enabled\n    at Launcher.connectTool (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Launcher.js:1:3020)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async Launcher.connect (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Launcher.js:1:2600)\n    at async Automator.connect (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Automator.js:1:1352)\n    at async run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/login_flow_probe.js:34:19)"
+  ]
+}
