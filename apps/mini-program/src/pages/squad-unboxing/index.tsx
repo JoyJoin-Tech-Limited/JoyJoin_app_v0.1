@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -13,6 +13,7 @@ import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnaly
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { logError, logInfo } from '../../lib/logger'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
@@ -515,6 +516,11 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'shaking' ? (
           <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--shaking'>
+            <Image
+              className='squad-unboxing__reveal-mascot'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset('loadingReveal')}
+            />
             <BlindBoxVisual state='opening' shouldReduceMotion={shouldReduceMotion} />
             <Text className='squad-unboxing__blind-box-title'>盒子正在打开…</Text>
             <Text className='squad-unboxing__blind-box-copy'>

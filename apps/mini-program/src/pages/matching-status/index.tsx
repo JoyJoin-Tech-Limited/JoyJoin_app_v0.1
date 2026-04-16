@@ -21,6 +21,7 @@ import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useWebSocket } from '../../hooks/useWebSocket'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { logError, logInfo } from '../../lib/logger'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
@@ -961,6 +962,11 @@ export default function MatchingStatusPage() {
 
           <Card className='matching-status__waiting-card'>
             <View className='matching-status__waiting-top'>
+              <Image
+                className='matching-status__waiting-mascot'
+                mode='aspectFit'
+                src={getXiaoyueExpressionAsset('matchWaiting')}
+              />
               {waitingCopy.badge ? (
                 <Text className='matching-status__waiting-badge'>{waitingCopy.badge}</Text>
               ) : null}
@@ -1238,15 +1244,22 @@ export default function MatchingStatusPage() {
         ) : null}
 
         {matchStatus === 'pending' ? (
-          <Button
-            variant='secondary'
-            className='matching-status__cancel-btn'
-            onClick={handleCancel}
-            disabled={isCancelling}
-            loading={isCancelling}
-          >
-            {isCancelling ? '取消中…' : '取消报名'}
-          </Button>
+          <View className='matching-status__cancel-row'>
+            <Image
+              className='matching-status__cancel-mascot'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset('optOutReassure')}
+            />
+            <Button
+              variant='secondary'
+              className='matching-status__cancel-btn'
+              onClick={handleCancel}
+              disabled={isCancelling}
+              loading={isCancelling}
+            >
+              {isCancelling ? '取消中…' : '取消报名'}
+            </Button>
+          </View>
         ) : null}
 
         {matchStatus === 'completed' ? (

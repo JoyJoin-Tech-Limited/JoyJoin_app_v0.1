@@ -1,4 +1,5 @@
-import { View, Text, Button, ScrollView, Slider, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Slider, Image } from '@tarojs/components'
+import Button from '../../../components/Button'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
@@ -16,9 +17,16 @@ import {
   type AnonymousAssessmentTopMatch,
 } from '../../../lib/anonymousOnboarding'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
-import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
+import {
+  navigateToMiniProgramNextStep,
+  runMiniProgramRouteTransition,
+} from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
-import { getArchetypeVisual, getOnboardingXiaoyueAsset } from './visuals'
+import {
+  getArchetypeVisual,
+  getXiaoyueExpressionAsset,
+  PERSONALITY_TEST_XIAOYUE_EXPRESSION,
+} from './visuals'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -163,6 +171,7 @@ export default function PersonalityTestPage() {
   const [currentMatches, setCurrentMatches] = useState<AssessmentMatch[]>([])
   const [sliderValue, setSliderValue] = useState(50)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
 
   const isAuthenticated = auth.isAuthenticated
@@ -212,6 +221,10 @@ export default function PersonalityTestPage() {
     : hasStoredIncompleteSession
       ? '继续测试'
       : '开始测试'
+  const getPageClassName = (...extraClasses: string[]) =>
+    ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '']
+      .filter(Boolean)
+      .join(' ')
 
   const completeAnonymousAssessment = useCallback(async (
     targetSessionId: string,
@@ -227,16 +240,22 @@ export default function PersonalityTestPage() {
       resultSequenceCompletedAt: undefined,
     })
 
-    Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
+    await runMiniProgramRouteTransition({
+      beforeNavigate: () => setIsPageExiting(true),
+    })
+    await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
   }, [currentMatches])
 
   useEffect(() => {
-    if (auth.isLoading) {
+    if (auth.isLoading || isSubmitting || isPageExiting) {
       return
     }
 
     if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test') {
-      void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'replace' })
+      void navigateToMiniProgramNextStep(auth.nextStep, {
+        mode: 'replace',
+        transition: { beforeNavigate: () => setIsPageExiting(true) },
+      })
       return
     }
 
@@ -246,7 +265,7 @@ export default function PersonalityTestPage() {
         Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
       }
     }
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, phase])
+  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isPageExiting, isSubmitting, phase])
 
   const handleStart = useCallback(async () => {
     setError('')
@@ -302,7 +321,10 @@ export default function PersonalityTestPage() {
             answerCount: completedAnswerCount,
             nextStep: userState.nextStep ?? 'essential-data',
           })
-          await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
+          await navigateToMiniProgramNextStep(userState.nextStep, {
+            mode: 'replace',
+            transition: { beforeNavigate: () => setIsPageExiting(true) },
+          })
           return
         }
 
@@ -317,6 +339,7 @@ export default function PersonalityTestPage() {
 
       setPhase('testing')
     } catch (err) {
+      setIsPageExiting(false)
       const message = err instanceof Error ? err.message : '启动测试失败，请重试'
       setError(message)
       analytics.errorOccurred('start_failed', message)
@@ -375,7 +398,10 @@ export default function PersonalityTestPage() {
             answerCount: completedAnswerCount,
             nextStep: userState.nextStep ?? 'essential-data',
           })
-          await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
+          await navigateToMiniProgramNextStep(userState.nextStep, {
+            mode: 'replace',
+            transition: { beforeNavigate: () => setIsPageExiting(true) },
+          })
           return
         }
 
@@ -393,6 +419,7 @@ export default function PersonalityTestPage() {
       setCurrentMatches(result.currentMatches ?? [])
       setSliderValue(50)
     } catch (err) {
+      setIsPageExiting(false)
       const message = err instanceof Error ? err.message : '提交答案失败，请重试'
       setError(message)
       analytics.errorOccurred('answer_failed', message)
@@ -414,7 +441,7 @@ export default function PersonalityTestPage() {
 
   if (auth.isLoading) {
     return (
-      <View className='personality-test'>
+      <View className={getPageClassName()}>
         <View className='personality-test__loading'>
           <Text className='personality-test__loading-text'>加载中…</Text>
         </View>
@@ -425,11 +452,14 @@ export default function PersonalityTestPage() {
   // Intro phase
   if (phase === 'intro') {
     return (
-      <View className='personality-test personality-test--intro'>
+      <View className={getPageClassName('personality-test--intro')}>
         <ScrollView className='personality-test__intro-scroll' scrollY enhanced showScrollbar={false}>
           <View className='personality-test__intro-shell'>
             <View className='personality-test__stage personality-test__stage--1'>
-              <Text className='personality-test__eyebrow'>JoyJoin · 氛围原型</Text>
+              <Text className='personality-test__eyebrow'>
+                <Text className='personality-test__eyebrow-en'>JoyJoin</Text>
+                <Text> · 氛围原型</Text>
+              </Text>
               <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
               <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
               <Text className='personality-test__intro-subtitle'>
@@ -442,7 +472,7 @@ export default function PersonalityTestPage() {
                 <View className='personality-test__intro-hero-halo' />
                 <Image
                   className='personality-test__mascot'
-                  src={getOnboardingXiaoyueAsset('casual')}
+                  src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.introHero)}
                   mode='aspectFit'
                 />
               </View>
@@ -522,6 +552,7 @@ export default function PersonalityTestPage() {
           </Text>
           {error ? <Text className='personality-test__error personality-test__error--footer'>{error}</Text> : null}
           <Button
+            variant='brand'
             className='personality-test__start-btn'
             onClick={handleStart}
             disabled={isSubmitting}
@@ -539,8 +570,13 @@ export default function PersonalityTestPage() {
   // Completing phase
   if (phase === 'completing') {
     return (
-      <View className='personality-test'>
+      <View className={getPageClassName()}>
         <View className='personality-test__completing'>
+          <Image
+            className='personality-test__completing-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing)}
+          />
           <Text className='personality-test__status-title'>分析中…</Text>
           <Text className='personality-test__status-subtitle'>正在为你生成氛围原型画像</Text>
         </View>
@@ -549,7 +585,7 @@ export default function PersonalityTestPage() {
   }
 
   return (
-    <ScrollView className='personality-test' scrollY enhanced showScrollbar={false}>
+    <ScrollView className={getPageClassName()} scrollY enhanced showScrollbar={false}>
       <View className='personality-test__progress-bar'>
         <View className='personality-test__progress-fill' style={{ width: `${progressPercent}%` }} />
       </View>
@@ -606,6 +642,7 @@ export default function PersonalityTestPage() {
                 />
 
                 <Button
+                  variant='brand'
                   className='personality-test__slider-submit'
                   onClick={() => {
                     const sliderOption = getNearestSliderOption(question, sliderValue)

@@ -20,7 +20,11 @@ import {
 import { logError, logInfo, logWarn } from '../../../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
-import { getArchetypeVisual, getXiaoyueAsset } from '../visuals'
+import {
+  getArchetypeVisual,
+  getXiaoyueExpressionAsset,
+  PERSONALITY_TEST_XIAOYUE_EXPRESSION,
+} from '../visuals'
 import {
   generatePersonalitySharePoster,
   PERSONALITY_SHARE_POSTER_CANVAS_ID,
@@ -276,7 +280,8 @@ export default function PersonalityTestResultsPage() {
     () => buildShareTitle(displayArchetypeName, visual.tagline || visual.description),
     [displayArchetypeName, visual.description, visual.tagline],
   )
-  const displayAsset = visual.asset || getXiaoyueAsset('excited')
+  const displayAsset =
+    visual.asset || getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate)
   const slotFocusVisual = useMemo(() => getArchetypeVisual(ARCHETYPE_SEQUENCE[reelIndex] ?? displayArchetype), [displayArchetype, reelIndex])
   const continueButtonLabel = auth.isLoading
     ? '检查登录状态中…'
@@ -661,7 +666,7 @@ export default function PersonalityTestResultsPage() {
         accentSoft: visual.accentSoft,
         accentStrong: visual.accentStrong,
         archetypeAsset: displayAsset,
-        xiaoyueAsset: getXiaoyueAsset('excited'),
+        xiaoyueAsset: getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
         confidenceLabel,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
@@ -733,7 +738,11 @@ export default function PersonalityTestResultsPage() {
 
   const renderLoadingState = () => (
     <View className='personality-results__centered-state'>
-      <Image className='personality-results__network-xiaoyue' mode='aspectFit' src={getXiaoyueAsset('normal')} />
+      <Image
+        className='personality-results__network-xiaoyue'
+        mode='aspectFit'
+        src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing)}
+      />
       <Text className='personality-results__state-title'>正在同步你的匿名结果</Text>
       <Text className='personality-results__state-copy'>
         {phaseText || '先把测试结果从当前设备和服务端对齐，再进入正式揭晓。'}
@@ -743,7 +752,11 @@ export default function PersonalityTestResultsPage() {
 
   const renderEmptyState = () => (
     <View className='personality-results__centered-state'>
-      <Image className='personality-results__network-xiaoyue' mode='aspectFit' src={getXiaoyueAsset('normal')} />
+      <Image
+        className='personality-results__network-xiaoyue'
+        mode='aspectFit'
+        src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsSlotFallback)}
+      />
       <Text className='personality-results__state-title'>这份结果还没准备好</Text>
       <Text className='personality-results__state-copy'>
         当前设备里没有找到完整的匿名测试结果。重新完成一次测试，系统会重新生成并保存这次揭晓流程。
@@ -756,7 +769,11 @@ export default function PersonalityTestResultsPage() {
 
   const renderErrorState = () => (
     <View className='personality-results__centered-state'>
-      <Image className='personality-results__network-xiaoyue' mode='aspectFit' src={getXiaoyueAsset('pointing')} />
+      <Image
+        className='personality-results__network-xiaoyue'
+        mode='aspectFit'
+        src={getXiaoyueExpressionAsset('actionFailure')}
+      />
       <Text className='personality-results__state-title'>揭晓过程被打断了</Text>
       <Text className='personality-results__state-copy'>
         {errorMessage || '结果同步出了点问题，重新试一次通常就能恢复。'}
@@ -801,7 +818,14 @@ export default function PersonalityTestResultsPage() {
                     boxShadow: isActive ? `0 18rpx 48rpx ${itemVisual.accentGlow}` : 'none',
                   }}
                 >
-                  <Image className='personality-results__slot-image' mode='aspectFit' src={itemVisual.asset || getXiaoyueAsset('normal')} />
+                  <Image
+                    className='personality-results__slot-image'
+                    mode='aspectFit'
+                    src={
+                      itemVisual.asset ||
+                      getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsSlotFallback)
+                    }
+                  />
                   <Text className='personality-results__slot-name'>{archetype}</Text>
                 </View>
               )
@@ -822,7 +846,11 @@ export default function PersonalityTestResultsPage() {
 
         {(slotPhase === 'holding' || isSlowNetwork) ? (
           <Card className='personality-results__network-card'>
-            <Image className='personality-results__network-xiaoyue' mode='aspectFit' src={getXiaoyueAsset('pointing')} />
+            <Image
+              className='personality-results__network-xiaoyue'
+              mode='aspectFit'
+              src={getXiaoyueExpressionAsset('loadingReveal')}
+            />
             <View className='personality-results__network-copy'>
               <Text className='personality-results__network-title'>小悦还在等最后一条同步</Text>
               <Text className='personality-results__network-text'>
@@ -971,7 +999,11 @@ export default function PersonalityTestResultsPage() {
 
       <Card className='personality-results__section-card'>
         <View className='personality-results__coach-card'>
-          <Image className='personality-results__coach-image' mode='aspectFit' src={getXiaoyueAsset('pointing')} />
+          <Image
+            className='personality-results__coach-image'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
+          />
           <View className='personality-results__coach-copy'>
             <Text className='personality-results__section-label'>小悦的结论</Text>
             <Text className='personality-results__coach-title'>这张卡为什么像你</Text>

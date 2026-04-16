@@ -6,11 +6,10 @@
   flex-direction: column;
   min-height: 100vh;
   @include page-gradient-bg;
+  @include onboarding-page-exit-transition;
 
   &__stage {
-    opacity: 0;
-    transform: translateY(18rpx);
-    animation: extended-data-stage-in 0.32s ease-out forwards;
+    @include onboarding-stage;
 
     &--2 {
       animation-delay: 0.06s;
@@ -42,12 +41,11 @@
   }
 
   &__title {
+    @include type-display-page-title;
     display: block;
     margin-top: $spacing-sm;
     font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.18;
   }
 
   &__subtitle {
@@ -398,9 +396,9 @@
   }
 
   &__footer-title {
+    @include type-display-section-title;
     display: block;
     font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
     color: $color-text-primary;
   }
 
@@ -424,21 +422,13 @@
     margin-top: $spacing-sm;
     border: 0;
 
+    &.joy-button--brand {
+      @include type-brand-cta-label;
+    }
+
     &[disabled] {
       opacity: 0.55;
     }
-  }
-}
-
-@keyframes extended-data-stage-in {
-  from {
-    opacity: 0;
-    transform: translateY(18rpx);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
