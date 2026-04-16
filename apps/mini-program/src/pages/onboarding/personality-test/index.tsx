@@ -379,14 +379,6 @@ export default function PersonalityTestPage() {
             通过一系列有趣的问题，发现你独特的社交氛围原型
           </Text>
           <Text className='personality-test__hint'>大约需要 3-5 分钟，未登录也可以先完成</Text>
-          {!isAuthenticated ? (
-            <View className='personality-test__intro-note'>
-              <Text className='personality-test__intro-note-title'>先做测试，再决定要不要登录</Text>
-              <Text className='personality-test__intro-note-text'>
-                结果会先保存在当前设备里，登录后再继续进入 essential-data。
-              </Text>
-            </View>
-          ) : null}
           {error ? <Text className='personality-test__error'>{error}</Text> : null}
           <Button
             className='personality-test__start-btn'
