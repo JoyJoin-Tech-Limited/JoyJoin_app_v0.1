@@ -23,7 +23,7 @@ import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
-import { getXiaoyueAsset } from '../personality-test/visuals'
+import { getOnboardingXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
 const MIN_INTERESTS = 3
@@ -253,7 +253,11 @@ export default function ExtendedDataPage() {
       </View>
 
       <View className='extended-data__coach extended-data__stage extended-data__stage--2'>
-        <Image className='extended-data__coach-avatar' src={getXiaoyueAsset('pointing')} mode='aspectFit' />
+        <Image
+          className='extended-data__coach-avatar'
+          src={getOnboardingXiaoyueAsset('pointing')}
+          mode='aspectFit'
+        />
         <View className='extended-data__coach-copy'>
           <Text className='extended-data__coach-title'>小悦提示</Text>
           <Text className='extended-data__coach-text'>{coachCopy}</Text>

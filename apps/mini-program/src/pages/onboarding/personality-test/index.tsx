@@ -18,7 +18,7 @@ import {
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logInfo, logError } from '../../../lib/logger'
-import { getXiaoyueAsset } from './visuals'
+import { getArchetypeVisual, getOnboardingXiaoyueAsset } from './visuals'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -76,6 +76,38 @@ interface AssessmentAnswerResponse {
   progress?: AssessmentProgress
   currentMatches?: AssessmentMatch[]
 }
+
+const INTRO_ARCHETYPE_TEASERS = [
+  {
+    archetype: '开心柯基',
+    vibeLine: '一进场，就把气氛带热。',
+  },
+  {
+    archetype: '机智狐',
+    vibeLine: '普通话题，也能聊出火花。',
+  },
+  {
+    archetype: '暖心熊',
+    vibeLine: '会让人慢慢放松下来。',
+  },
+] as const
+
+const INTRO_META_PILLS = ['约 3-5 分钟', '自适应题目', '可先完成再登录'] as const
+
+const INTRO_TRUST_POINTS = [
+  {
+    title: '约 3-5 分钟完成',
+    description: '轻量做完，不会把你困在一串冗长题目里。',
+  },
+  {
+    title: '题目会跟着你变化',
+    description: '系统会根据你的回答逐渐收敛出更像你的氛围原型。',
+  },
+  {
+    title: '未登录也能先完成',
+    description: '结果会先保存在这台设备里，准备好时再继续登录。',
+  },
+] as const
 
 function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestionType {
   if (!question?.questionType) {
@@ -158,6 +190,28 @@ export default function PersonalityTestPage() {
   const progressPercent = progress
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
+  const introTeasers = useMemo(
+    () =>
+      INTRO_ARCHETYPE_TEASERS.map((item) => ({
+        ...item,
+        visual: getArchetypeVisual(item.archetype),
+      })),
+    [],
+  )
+  const introCoachLine = hasStoredIncompleteSession
+    ? '上次的进度我还替你留着。继续往下答几分钟，这份氛围画像就能顺着刚才的位置接上。'
+    : '这不是标准化测评，更像一次轻量的社交画像。按直觉选择就好，我会帮你把你的聚会气场整理清楚。'
+  const introFooterKicker = hasStoredIncompleteSession
+    ? '把剩下的几分钟补完，这份画像就能继续带着你往后走。'
+    : '先完成这一步，后面的匹配与资料预览，才会真正更懂你。'
+  const introFooterLine = hasStoredIncompleteSession
+    ? '进度已经留好，从停下的地方继续就行'
+    : '没有标准答案，选最像你的感觉就好'
+  const introPrimaryLabel = isSubmitting
+    ? '准备中…'
+    : hasStoredIncompleteSession
+      ? '继续测试'
+      : '开始测试'
 
   const completeAnonymousAssessment = useCallback(async (
     targetSessionId: string,
@@ -371,23 +425,112 @@ export default function PersonalityTestPage() {
   // Intro phase
   if (phase === 'intro') {
     return (
-      <View className='personality-test'>
-        <View className='personality-test__intro'>
-          <Image className='personality-test__mascot' src={getXiaoyueAsset('excited')} mode='aspectFit' />
-          <Text className='personality-test__title'>氛围测试</Text>
-          <Text className='personality-test__subtitle'>
-            通过一系列有趣的问题，发现你独特的社交氛围原型
+      <View className='personality-test personality-test--intro'>
+        <ScrollView className='personality-test__intro-scroll' scrollY enhanced showScrollbar={false}>
+          <View className='personality-test__intro-shell'>
+            <View className='personality-test__stage personality-test__stage--1'>
+              <Text className='personality-test__eyebrow'>JoyJoin · 氛围原型</Text>
+              <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
+              <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
+              <Text className='personality-test__intro-subtitle'>
+                这一步会生成你的氛围原型画像，让后面的匹配和资料预览，都更像你。
+              </Text>
+            </View>
+
+            <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
+              <View className='personality-test__intro-hero-visual'>
+                <View className='personality-test__intro-hero-halo' />
+                <Image
+                  className='personality-test__mascot'
+                  src={getOnboardingXiaoyueAsset('casual')}
+                  mode='aspectFit'
+                />
+              </View>
+
+              <View className='personality-test__intro-bubble'>
+                <Text className='personality-test__intro-bubble-title'>这一步会带来什么</Text>
+                <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
+              </View>
+
+              <View className='personality-test__intro-meta-row'>
+                {INTRO_META_PILLS.map((item) => (
+                  <View key={item} className='personality-test__intro-meta-pill'>
+                    <Text className='personality-test__intro-meta-pill-text'>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
+              <Text className='personality-test__intro-trust-title'>做之前，你只需要知道这三件事</Text>
+              <View className='personality-test__intro-trust-list'>
+                {INTRO_TRUST_POINTS.map((item, index) => (
+                  <View key={item.title} className='personality-test__intro-trust-item'>
+                    <View className='personality-test__intro-trust-index'>
+                      <Text className='personality-test__intro-trust-index-text'>{`0${index + 1}`}</Text>
+                    </View>
+                    <View className='personality-test__intro-trust-copy'>
+                      <Text className='personality-test__intro-trust-item-title'>{item.title}</Text>
+                      <Text className='personality-test__intro-trust-item-description'>{item.description}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
+              <Text className='personality-test__intro-tease-title'>最后，你会看到这样的原型画像</Text>
+              <Text className='personality-test__intro-tease-subtitle'>
+                它不是给你贴标签，而是帮 JoyJoin 更快理解你在小局里的感觉。
+              </Text>
+
+              <ScrollView
+                className='personality-test__intro-tease-scroll'
+                scrollX
+                enhanced
+                showScrollbar={false}
+              >
+                <View className='personality-test__intro-tease-list'>
+                  {introTeasers.map((item) => (
+                    <View key={item.archetype} className='personality-test__intro-tease-card'>
+                      <View
+                        className='personality-test__intro-tease-avatar-shell'
+                        style={{
+                          background: item.visual.accentSurface,
+                          borderColor: item.visual.accentBorder,
+                        }}
+                      >
+                        <Image
+                          className='personality-test__intro-tease-avatar'
+                          src={item.visual.asset}
+                          mode='aspectFit'
+                        />
+                      </View>
+                      <Text className='personality-test__intro-tease-name'>{item.archetype}</Text>
+                      <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </ScrollView>
+
+        <View className='personality-test__intro-footer'>
+          <Text className='personality-test__intro-footer-kicker'>
+            {introFooterKicker}
           </Text>
-          <Text className='personality-test__hint'>大约需要 3-5 分钟，未登录也可以先完成</Text>
-          {error ? <Text className='personality-test__error'>{error}</Text> : null}
+          {error ? <Text className='personality-test__error personality-test__error--footer'>{error}</Text> : null}
           <Button
             className='personality-test__start-btn'
             onClick={handleStart}
             disabled={isSubmitting}
             loading={isSubmitting}
+            hoverClass='personality-test__start-btn--hover'
           >
-            {isSubmitting ? '准备中…' : hasStoredIncompleteSession ? '继续测试' : '开始测试'}
+            {introPrimaryLabel}
           </Button>
+          <Text className='personality-test__intro-footer-note'>{introFooterLine}</Text>
         </View>
       </View>
     )
@@ -398,8 +541,8 @@ export default function PersonalityTestPage() {
     return (
       <View className='personality-test'>
         <View className='personality-test__completing'>
-          <Text className='personality-test__title'>分析中…</Text>
-          <Text className='personality-test__subtitle'>正在为你生成氛围原型画像</Text>
+          <Text className='personality-test__status-title'>分析中…</Text>
+          <Text className='personality-test__status-subtitle'>正在为你生成氛围原型画像</Text>
         </View>
       </View>
     )

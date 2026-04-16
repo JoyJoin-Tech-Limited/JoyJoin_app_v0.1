@@ -2,11 +2,18 @@ import { formatHSL, getArchetypeHSL } from '@shared/archetypeColors'
 import { archetypeRegistry, type ArchetypeRecord } from '@shared/personality/archetypeRegistry'
 
 export type XiaoyueMood = 'normal' | 'excited' | 'pointing'
+export type OnboardingXiaoyueMood = 'casual' | 'thinking' | 'pointing'
 
 const XIAOYUE_ASSET_MAP: Record<XiaoyueMood, string> = {
   normal: '/assets/personality/xiaoyue/xiaoyue-normal.png',
   excited: '/assets/personality/xiaoyue/xiaoyue-excited.png',
   pointing: '/assets/personality/xiaoyue/xiaoyue-pointing.png',
+}
+
+const ONBOARDING_XIAOYUE_ASSET_MAP: Record<OnboardingXiaoyueMood, string> = {
+  casual: '/assets/personality/xiaoyue/xiaoyue-casual.png',
+  thinking: '/assets/personality/xiaoyue/xiaoyue-thinking.png',
+  pointing: '/assets/personality/xiaoyue/xiaoyue-idea.png',
 }
 
 const ARCHETYPE_ASSET_MAP: Record<string, string> = {
@@ -69,6 +76,10 @@ export interface ArchetypeVisual {
 
 export function getXiaoyueAsset(mood: XiaoyueMood): string {
   return XIAOYUE_ASSET_MAP[mood]
+}
+
+export function getOnboardingXiaoyueAsset(mood: OnboardingXiaoyueMood): string {
+  return ONBOARDING_XIAOYUE_ASSET_MAP[mood]
 }
 
 export function getArchetypeVisual(archetype: string | null | undefined): ArchetypeVisual {
