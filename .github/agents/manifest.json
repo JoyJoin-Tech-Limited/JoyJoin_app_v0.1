@@ -25,7 +25,9 @@
       "skills": [
         "orchestration-turn-reporting",
         "llm-runtime-safety-and-integration",
-        "platform-observability-and-ops"
+        "platform-observability-and-ops",
+        "payment-entitlement-authority",
+        "matching-domain"
       ],
       "toolingStatus": "sufficient"
     },
@@ -206,7 +208,12 @@
         "orchestration-turn-reporting",
         "server-domain-architecture",
         "auth-session-and-safety-boundaries",
-        "reliability-and-state-integrity"
+        "reliability-and-state-integrity",
+        "onboarding-state-architecture",
+        "payment-entitlement-authority",
+        "matching-domain",
+        "event-pool-and-matching-operations",
+        "social-icebreaker-domain"
       ],
       "toolingStatus": "sufficient"
     },
@@ -274,7 +281,8 @@
         "frontend-performance-and-loading",
         "joyjoin-brand-guidelines",
         "wow-elements",
-        "platform-coordination-protocol"
+        "platform-coordination-protocol",
+        "performance-benchmark"
       ],
       "toolingStatus": "sufficient"
     },
@@ -365,7 +373,8 @@
       "skills": [
         "orchestration-turn-reporting",
         "e2e-test-runner",
-        "testing-and-regression-guardrails"
+        "testing-and-regression-guardrails",
+        "performance-benchmark"
       ],
       "toolingStatus": "partial"
     },
@@ -415,7 +424,8 @@
         "design-system-governance",
         "joyjoin-brand-guidelines",
         "wow-elements",
-        "platform-coordination-protocol"
+        "platform-coordination-protocol",
+        "performance-benchmark"
       ],
       "toolingStatus": "sufficient"
     },
@@ -474,7 +484,8 @@
       "handoffs": [],
       "skills": [
         "docs-sync",
-        "testing-and-regression-guardrails"
+        "testing-and-regression-guardrails",
+        "skill-authoring-governance"
       ],
       "toolingStatus": "sufficient"
     },
