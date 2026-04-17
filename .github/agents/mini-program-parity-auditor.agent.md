@@ -73,6 +73,8 @@ Use `docs/PLATFORM_COORDINATION.md` as the source of truth for duplicated auth, 
 
 ## Output Format
 
+### Structured deliverable
+
 Return a concise audit with these sections:
 
 1. Scope
@@ -93,6 +95,10 @@ Return a concise audit with these sections:
    - Call out whether a step is safe to keep mini-program-local or requires sibling platform review.
 5. Validation Notes
    - State what evidence you used: file reads, route lists, existing docs, or build and typecheck commands.
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.
 
 ## Quality Bar
 

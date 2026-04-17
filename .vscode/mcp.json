@@ -1,0 +1,33 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "context7-api-key",
+      "description": "Context7 API key (create at https://context7.com/) — used for library/framework docs via MCP",
+      "password": true
+    }
+  ],
+  "servers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "${input:context7-api-key}"
+      }
+    },
+    "hermes": {
+      "type": "stdio",
+      "command": "hermes",
+      "args": ["mcp", "serve"]
+    },
+    "agentMemory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@adamrdrew/agent-memory-mcp"],
+      "env": {
+        "MEMORY_DB_PATH": ".joyjoin/agent-memory-db"
+      }
+    }
+  }
+}

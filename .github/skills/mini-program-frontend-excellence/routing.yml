@@ -1,0 +1,52 @@
+skill: mini-program-frontend-excellence
+
+primary_ownership: >
+  Brand-governed, native-quality UI delivery workflow for Taro mini-program
+  pages and components, including premium feel, full state design, and
+  WeChat-safe execution discipline.
+
+use_when:
+  - implementing or refining frontend UI in apps/mini-program
+  - asking how to make a Taro screen feel premium or native-quality
+  - reviewing a mini-program surface that feels generic, cheap, or off-brand
+  - translating web product intent into mini-program UI
+  - improving loading, empty, error, or completion states in the mini-program
+
+do_not_use_when:
+  - task is about web-only React UI
+  - task is purely about cross-platform auth, API, payment, or shared contract drift
+  - task is about mini-program migration planning without implementation
+  - task is about backend logic
+
+strong_triggers:
+  - mini-program UI
+  - Taro page
+  - apps/mini-program/src/components
+  - make this feel premium
+  - native-quality mini-program
+  - premium mini-program
+  - cheap mini-program feel
+  - JoyJoin mini-program design
+  - improve mini-program empty state
+  - improve mini-program loading state
+  - WXSS interaction polish
+
+owned_files:
+  - apps/mini-program/src/components/**
+  - apps/mini-program/src/native-custom-tab-bar/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: joyjoin-brand-guidelines
+    when: mini-program UI direction, typography, colour, or mascot usage must stay on-brand
+  - skill: design-system-governance
+    when: the work changes tokens, variants, or shared interaction baselines
+  - skill: wow-elements
+    when: the task needs crafted motion or a premium emotional moment
+  - skill: frontend-performance-and-loading
+    when: the mini-program surface is list-heavy, media-heavy, or performance-sensitive
+  - skill: platform-coordination-protocol
+    when: mini-program UI work also touches duplicated web, auth, payment, or API behavior

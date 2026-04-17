@@ -86,6 +86,16 @@ You are JoyJoin's debug agent. Your primary objective is to systematically ident
 
 Remember: Always reproduce and understand the bug before attempting to fix it, and prefer a failing test before the fix whenever the environment makes that practical. A well-understood problem is half solved.
 
+## Output format
+
+### Structured deliverable
+
+Follow the phase structure above: assessment, investigation, resolution, and QA notes with concrete evidence, root cause, fix, and verification.
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map findings into the briefing sections; include **`turnStatus`** in JSON when applicable.
+
 ## Frontend Excellence Notes
 
 // No frontend surface

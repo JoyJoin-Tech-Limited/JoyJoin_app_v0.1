@@ -7,22 +7,6 @@
   display: flex;
   flex-direction: column;
 
-  &__loading,
-  &__completing {
-    @include flex-center;
-    flex-direction: column;
-    min-height: 100vh;
-    padding: $container-padding;
-    text-align: center;
-  }
-
-  &__completing-mascot {
-    width: 220rpx;
-    height: 220rpx;
-    margin-bottom: $spacing-md;
-    display: block;
-  }
-
   &__intro {
     flex: 1;
   }
@@ -111,12 +95,6 @@
   &__eyebrow-en {
     @include type-en-brand-label;
     color: $color-primary;
-  }
-
-  &__loading-text {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
   }
 
   &__intro-title {
@@ -463,21 +441,6 @@
     color: $color-text-muted;
     text-align: center;
     line-height: 1.56;
-  }
-
-  &__status-title {
-    @include type-display-page-title;
-    display: block;
-    font-size: $font-size-2xl;
-    color: $color-primary;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__status-subtitle {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    line-height: 1.6;
   }
 
   // Progress bar

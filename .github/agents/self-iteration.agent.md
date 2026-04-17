@@ -29,6 +29,8 @@ Your job is to turn repeated workflow problems into the smallest reviewable prop
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise reviewer packet with:
 
 1. Trigger
@@ -38,3 +40,7 @@ Return a concise reviewer packet with:
 5. Validation
 6. Memory candidate status
 7. Reviewer decision needed
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.

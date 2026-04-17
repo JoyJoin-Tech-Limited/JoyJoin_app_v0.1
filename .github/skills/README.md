@@ -1,8 +1,10 @@
 # JoyJoin Skills
 
-`.github/skills/` contains reusable engineering and product-domain skills for contributors and GitHub Copilot.
+`.github/skills/` contains reusable engineering and product-domain skills for contributors and AI assistants. **Cursor and GitHub Copilot share this directory** as the single skill tree—do not duplicate skills under `.cursor/`; see `.github/AI_TOOLING_UNIFIED_BRAIN.md`. **Cursor only:** the Superpowers plugin adds separate **process** skills; see `.github/SUPERPOWERS_JOYOIN_INTEGRATION.md` for how they fit with these repo skills.
 
 Each skill is a focused, actionable reference — not a comprehensive handbook. Skills document the project's active architecture, conventions, and boundaries so that contributors and AI coding assistants can make correct decisions without having to reverse-engineer intent from the codebase.
+
+**Roadmap:** Prioritized skill-system follow-ups (briefing rollout, model catalog dedupe, tests) live in [`ITERATION_ROADMAP.md`](./ITERATION_ROADMAP.md).
 
 ## How to use these skills
 
@@ -84,6 +86,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 | Skill | What it covers |
 |-------|---------------|
+| [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` - native-quality execution, full state design, and WeChat-safe polish |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 
 ---
@@ -105,6 +108,7 @@ Skills for structured agent delivery loops, turn-end summaries, and bounded work
 | Skill | What it covers |
 |-------|---------------|
 | [`orchestration-turn-reporting`](./orchestration-turn-reporting/SKILL.md) | Per-agent turn-summary JSON, supervisor consolidation, last-5-turn feedback loops, and operational persistence under `.git/.orchestration/` |
+| [`first-principles-velocity`](./first-principles-velocity/SKILL.md) | Mission → inversion → critical path → model-tier fit ([`MODEL_CATALOG.md`](../agents/MODEL_CATALOG.md)); **five themes:** constraints first, slice ownership, smallest proof, deletion/quarantine, blocked with evidence. Cross-lane policy: [`AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) (core policy point 9); orchestration context: [`ORCHESTRATION.md`](../ORCHESTRATION.md) *Execution discipline*. Pairs with [`orchestration-turn-reporting`](./orchestration-turn-reporting/SKILL.md). |
 
 ---
 
@@ -166,8 +170,10 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I run a smoke test or end-to-end journey check? | `e2e-test-runner` |
 | How do I benchmark before and after a performance change? | `performance-benchmark` |
 | How do I add turn-end summaries or a supervisor consolidation loop? | `orchestration-turn-reporting` |
+| How do I pick model tier vs task depth or run critical-path prioritization? | `first-principles-velocity` + `MODEL_CATALOG.md` |
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
+| How do I keep a mini-program screen premium, on-brand, and Taro-native? | `mini-program-frontend-excellence` |
 | How do I keep docs in sync after a code change? | `docs-sync` |
 
 ---
