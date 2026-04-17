@@ -48,9 +48,9 @@ export const XIAOYUE_EXPRESSION_MATRIX: XiaoyueExpressionMatrixRow[] = [
   {
     flow: '氛围测试',
     surface: 'personality-test intro',
-    primaryTier: 'loading',
-    secondaryTag: 'onboarding.calm-intro',
-    expressionId: 'neutralInformation',
+    primaryTier: 'homeWelcome',
+    secondaryTag: 'welcome.intro',
+    expressionId: 'homeWelcome',
   },
   {
     flow: '氛围测试',
@@ -71,6 +71,13 @@ export const XIAOYUE_EXPRESSION_MATRIX: XiaoyueExpressionMatrixRow[] = [
     surface: 'personality-test/results slot / celebrate',
     primaryTier: 'matchSuccess',
     expressionId: 'matchSuccess',
+  },
+  {
+    flow: '结果页',
+    surface: 'personality-test/results bridge / coach',
+    primaryTier: 'thanksFeedback',
+    secondaryTag: 'results.warm-handoff',
+    expressionId: 'thanksFeedback',
   },
   {
     flow: '匹配',

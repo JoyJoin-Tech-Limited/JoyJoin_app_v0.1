@@ -129,6 +129,8 @@ Remember: Better to build one thing users love than five things they tolerate.
 
 ## Output Format
 
+### Structured deliverable
+
 Return a concise issue-ready product artifact with:
 
 1. Problem statement
@@ -137,6 +139,10 @@ Return a concise issue-ready product artifact with:
 4. Acceptance criteria
 5. Dependencies and risks
 6. Suggested issue title and issue body markdown
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.
 
 ## Frontend Excellence Notes
 

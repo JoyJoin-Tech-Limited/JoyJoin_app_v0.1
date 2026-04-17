@@ -28,19 +28,36 @@ const LEGACY_PATH = {
   pointing: `${BASE}/xiaoyue-pointing.png`,
 } as const
 
-export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
-  homeWelcome: LEGACY_PATH.excited,
-  matchWaiting: LEGACY_PATH.excited,
-  matchSuccess: LEGACY_PATH.excited,
-  loadingSystem: LEGACY_PATH.pointing,
-  loadingReveal: LEGACY_PATH.pointing,
-  actionSuccess: LEGACY_PATH.excited,
-  actionFailure: LEGACY_PATH.normal,
-  thanksFeedback: LEGACY_PATH.excited,
+const SEMANTIC_PATH = {
+  homeWelcome: `${BASE}/xiaoyue-home-welcome.png`,
+  matchWaiting: `${BASE}/xiaoyue-match-waiting.png`,
+  matchSuccess: `${BASE}/xiaoyue-match-success.png`,
+  loading: `${BASE}/xiaoyue-loading.png`,
+  actionSuccess: `${BASE}/xiaoyue-action-success.png`,
+  actionFailure: `${BASE}/xiaoyue-action-failure.png`,
+  thanksFeedback: `${BASE}/xiaoyue-thanks-feedback.png`,
+} as const
+
+const SUPPLEMENTARY_PATH = {
   coachGuide: LEGACY_PATH.pointing,
   paymentTrust: LEGACY_PATH.normal,
   optOutReassure: LEGACY_PATH.normal,
   neutralInformation: LEGACY_PATH.normal,
+} as const
+
+export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
+  homeWelcome: SEMANTIC_PATH.homeWelcome,
+  matchWaiting: SEMANTIC_PATH.matchWaiting,
+  matchSuccess: SEMANTIC_PATH.matchSuccess,
+  loadingSystem: SEMANTIC_PATH.loading,
+  loadingReveal: SEMANTIC_PATH.loading,
+  actionSuccess: SEMANTIC_PATH.actionSuccess,
+  actionFailure: SEMANTIC_PATH.actionFailure,
+  thanksFeedback: SEMANTIC_PATH.thanksFeedback,
+  coachGuide: SUPPLEMENTARY_PATH.coachGuide,
+  paymentTrust: SUPPLEMENTARY_PATH.paymentTrust,
+  optOutReassure: SUPPLEMENTARY_PATH.optOutReassure,
+  neutralInformation: SUPPLEMENTARY_PATH.neutralInformation,
 }
 
 export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpressionId> = {
@@ -50,11 +67,11 @@ export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpress
 }
 
 export const PERSONALITY_TEST_XIAOYUE_EXPRESSION = {
-  introHero: 'neutralInformation',
+  introHero: 'homeWelcome',
   completing: 'loadingSystem',
   resultsCelebrate: 'matchSuccess',
-  resultsCoach: 'coachGuide',
-  resultsSlotFallback: 'neutralInformation',
+  resultsCoach: 'thanksFeedback',
+  resultsSlotFallback: 'matchWaiting',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {

@@ -28,6 +28,18 @@
   }
 }
 
+@keyframes personality-results-bridge-settle {
+  0% {
+    opacity: 0;
+    transform: translateY(28rpx) scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .personality-results {
   @include page-gradient-bg;
   min-height: 100vh;
@@ -249,6 +261,10 @@
     justify-content: center;
   }
 
+  &__immersive-shell--bridge {
+    justify-content: center;
+  }
+
   &__reveal-orb {
     position: relative;
     width: 420rpx;
@@ -394,6 +410,85 @@
     font-size: $font-size-base;
     line-height: 1.7;
     color: $color-text-secondary;
+  }
+
+  &__bridge-card {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    width: 100%;
+    max-width: 620rpx;
+    padding: $spacing-lg;
+    border: 2rpx solid rgba($color-primary, 0.12);
+    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba(245, 241, 232, 0.98) 54%, rgba(244, 240, 255, 0.94) 100%);
+    box-shadow: 0 22rpx 68rpx rgba(76, 39, 146, 0.12);
+    animation: personality-results-bridge-settle 0.36s ease-out both;
+  }
+
+  &__bridge-figure {
+    position: relative;
+    width: 180rpx;
+    height: 180rpx;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__bridge-halo {
+    position: absolute;
+    inset: 16rpx;
+    border-radius: 999rpx;
+    background: radial-gradient(circle, rgba($color-primary, 0.18) 0%, rgba($color-primary, 0) 72%);
+  }
+
+  &__bridge-mascot {
+    position: relative;
+    z-index: 1;
+    width: 156rpx;
+    height: 156rpx;
+  }
+
+  &__bridge-copy {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  &__bridge-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    margin-bottom: 10rpx;
+  }
+
+  &__bridge-text {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.68;
+    color: $color-text-secondary;
+  }
+
+  &__bridge-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__bridge-badge {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.9);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+
+    &--accent {
+      background: rgba($color-primary, 0.12);
+      color: $color-primary-dark;
+    }
   }
 
   &__scroll {

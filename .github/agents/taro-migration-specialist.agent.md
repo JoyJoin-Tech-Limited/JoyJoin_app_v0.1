@@ -89,6 +89,8 @@ You have deep knowledge of:
 
 ## Output Format
 
+### Structured deliverable
+
 Return a concise migration report with these sections:
 
 1. Compatibility audit
@@ -103,6 +105,10 @@ Return a concise migration report with these sections:
    - State exactly how validation was performed.
    - Report whether `apps/mini-program/src/app.config.ts` and the migrated code are ready for immediate compilation.
    - If not, identify the exact blocker and the smallest next action needed.
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.
 
 ## Quality Bar
 

@@ -34,6 +34,8 @@ Your job is to consolidate the real release state: blockers, known risks, requir
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise launch-readiness report with:
 
 1. Scope and environment
@@ -41,3 +43,7 @@ Return a concise launch-readiness report with:
 3. Accepted or known risks
 4. Readiness verdict
 5. Next actions
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.

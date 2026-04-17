@@ -1,0 +1,58 @@
+{
+  "ok": false,
+  "startedAt": "2026-04-17T08:37:06.638Z",
+  "finishedAt": "2026-04-17T08:37:50.042Z",
+  "config": {
+    "cliPath": "/Applications/wechatwebdevtools.app/Contents/MacOS/cli",
+    "projectPath": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/apps/mini-program/dist",
+    "apiBaseUrl": "http://127.0.0.1:5001",
+    "loginCode": "wechat_test_local_smoke"
+  },
+  "args": {
+    "outputPath": "tmp/mini_runtime/matching_reveal_smoke.result.json",
+    "pendingRegistrationId": "37892493-3b84-4495-8ec0-b14cd3fa656d",
+    "matchedRegistrationId": "aee7a637-5357-41dd-a124-7f7004c12cb6",
+    "groupId": "ef77d280-4f6e-41ba-a6f1-8b98eeaa7456"
+  },
+  "resolvedIds": {
+    "pendingRegistrationId": "37892493-3b84-4495-8ec0-b14cd3fa656d",
+    "matchedRegistrationId": "aee7a637-5357-41dd-a124-7f7004c12cb6",
+    "groupId": "ef77d280-4f6e-41ba-a6f1-8b98eeaa7456"
+  },
+  "checks": [
+    {
+      "name": "devtools-cli-login",
+      "ok": true,
+      "blocked": false,
+      "exitCode": 0,
+      "rawOutput": "{\"login\":true}\n- initialize\n\n✔ IDE server has started, listening on http://127.0.0.1:64677\n- preparing\n✔ islogin"
+    },
+    {
+      "name": "launch-mini-program",
+      "route": "pages/index/index"
+    },
+    {
+      "name": "install-api-rewrite",
+      "rewrite": {
+        "ok": true,
+        "patched": true,
+        "targetOrigin": "http://127.0.0.1:5001"
+      }
+    },
+    {
+      "name": "login-with-test-code",
+      "loginStatusCode": 200,
+      "authUserStatusCode": 200,
+      "registrationStatusCode": 200,
+      "registrationCount": 3,
+      "discovered": {
+        "pendingRegistrationId": "37892493-3b84-4495-8ec0-b14cd3fa656d",
+        "matchedRegistrationId": "aee7a637-5357-41dd-a124-7f7004c12cb6",
+        "groupId": "ef77d280-4f6e-41ba-a6f1-8b98eeaa7456"
+      }
+    }
+  ],
+  "errors": [
+    "Error: pending matching-status selectors failed on route pages/matching-status/index with selector state {\".matching-status__waiting-card\":false,\".matching-status__waiting-scene\":false,\".matching-status__waiting-refresh-btn\":false}: Error: Timed out waiting for pending matching-status selectors after 15000ms\n    at waitFor (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:66:9)\n    at async waitForRouteSelectors (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:363:12)\n    at async run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:441:26)\n    at waitForRouteSelectors (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:375:11)\n    at async run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:441:26)"
+  ]
+}

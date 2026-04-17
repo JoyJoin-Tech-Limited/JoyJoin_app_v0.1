@@ -33,7 +33,7 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 - `scripts/memory-lib.mjs` provides the shared repo-memory substrate for note validation, indexing, and lexical retrieval.
 - `.github/agents/manifest.json` is the machine-readable inventory for canonical agent names and subagent allowlists.
 - `.github/orchestration.yaml` is the machine-readable contract for orchestrated agents, support agents, skill bindings, and tooling sufficiency notes.
-- `.vscode/settings.json` enables nested subagent invocation for the authored second-level Taro support lanes.
+- Optional local `.vscode/settings.json` (often gitignored) may enable nested subagent invocation for second-level support lanes; tracked `.vscode/mcp.json` is for VS Code / Copilot MCP—see `.github/AI_TOOLING_UNIFIED_BRAIN.md`.
 - `repo-memory/generated/promoted-index.json` is the read-only retrieval source the orchestration hook uses when it is available.
 - `.github/agents/researcher.agent.md` and `.github/agents/planner.agent.md` define the approval-first kickoff lane that the orchestration hook recommends.
 
@@ -75,4 +75,4 @@ If repo-memory summaries are unexpectedly absent after a retrieval-related chang
 npm run memory:build-index
 ```
 
-For broader multi-agent routing, start with `Researcher` and `Planner` for broad tasks, then use the `Supervisor` custom agent for explicit downstream routing. See `.github/ORCHESTRATION.md` for the current kickoff flow, graph, support-agent audit, and tooling recommendations.
+For broader multi-agent routing, use **`Supervisor`** first (it can sequence `Researcher` then `Planner` when kickoff applies) or start with `Researcher` and `Planner` directly; then use `Supervisor` for downstream routing as needed. See `.github/ORCHESTRATION.md` for the current kickoff flow, graph, support-agent audit, and tooling recommendations.

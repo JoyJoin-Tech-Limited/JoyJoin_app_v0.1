@@ -32,7 +32,7 @@ import {
 } from './sharePoster'
 import './index.scss'
 
-type FlowStage = 'loading' | 'slot' | 'reveal' | 'result' | 'error' | 'empty'
+type FlowStage = 'loading' | 'slot' | 'reveal' | 'bridge' | 'result' | 'error' | 'empty'
 type SlotPhase = 'anticipation' | 'spinning' | 'holding' | 'slowing' | 'nearMiss' | 'landed'
 type RevealPhase = 'silhouette' | 'fill' | 'sparkle'
 type CompletionMode = 'replay' | 'animated'
@@ -87,6 +87,7 @@ const FLOW_SAFETY_TIMEOUT_MS = 16000
 const REVEAL_SILHOUETTE_MS = 520
 const REVEAL_FILL_MS = 760
 const REVEAL_SPARKLE_MS = 820
+const RESULT_BRIDGE_MS = 1100
 const DEFAULT_ACCENT = '#8B5CF6'
 const GENERIC_API_ERROR_PREFIX = 'Request failed with status'
 
@@ -594,6 +595,14 @@ export default function PersonalityTestResultsPage() {
       return
     }
 
+    setFlowStage('bridge')
+    setPhaseText('我在把这份结果装进一张更好分享的 JoyJoin 卡面。')
+
+    await waitFor(RESULT_BRIDGE_MS)
+    if (!mountedRef.current || nextRunId !== runIdRef.current) {
+      return
+    }
+
     const currentSnapshot = readAnonymousAssessmentSession()
     const completedSnapshot: AnonymousAssessmentSessionSnapshot = {
       sessionId: resolvedResult.sessionId,
@@ -865,7 +874,7 @@ export default function PersonalityTestResultsPage() {
 
   const renderRevealStage = () => (
     <View className='personality-results__immersive-shell personality-results__immersive-shell--reveal'>
-      <Text className='personality-results__immersive-eyebrow'>Pokemon 式揭晓</Text>
+      <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
       <Text className='personality-results__immersive-title'>你的卡面正在显形</Text>
       <Text className='personality-results__immersive-copy'>
         {phaseText || '最后一点火花亮起之后，就会进入完整的结果页。'}
@@ -894,6 +903,41 @@ export default function PersonalityTestResultsPage() {
             ? '颜色和气场正在回到正确的位置。'
             : '最后这一圈火花之后，就是你的完整结果页。'}
       </Text>
+    </View>
+  )
+
+  const renderBridgeStage = () => (
+    <View className='personality-results__immersive-shell personality-results__immersive-shell--bridge'>
+      <Text className='personality-results__immersive-eyebrow'>结果已锁定</Text>
+      <Text className='personality-results__immersive-title'>你的 {displayArchetypeName} 已经准备好了</Text>
+      <Text className='personality-results__immersive-copy'>
+        先把这份气场翻成一张更好分享的 JoyJoin 卡面，再把完整结果交到你手上。
+      </Text>
+
+      <Card className='personality-results__bridge-card'>
+        <View className='personality-results__bridge-figure'>
+          <View className='personality-results__bridge-halo' />
+          <Image
+            className='personality-results__bridge-mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
+          />
+        </View>
+
+        <View className='personality-results__bridge-copy'>
+          <Text className='personality-results__bridge-title'>小悦正在替你装裱这张卡</Text>
+          <Text className='personality-results__bridge-text'>
+            {phaseText || `我已经把 ${displayArchetypeName} 的气场关键词、分享语和后续提示收进同一张卡里，马上展开给你。`}
+          </Text>
+
+          <View className='personality-results__bridge-badges'>
+            <Text className='personality-results__bridge-badge personality-results__bridge-badge--accent'>
+              {displayArchetypeName}
+            </Text>
+            <Text className='personality-results__bridge-badge'>{confidenceLabel || '结果已锁定'}</Text>
+          </View>
+        </View>
+      </Card>
     </View>
   )
 
@@ -933,7 +977,7 @@ export default function PersonalityTestResultsPage() {
       </View>
 
       <Card className='personality-results__section-card'>
-        <Text className='personality-results__section-label'>Pokemon 风格分享卡</Text>
+        <Text className='personality-results__section-label'>JoyJoin 卡面分享</Text>
         <View
           className='personality-results__pokemon-card'
           style={{
@@ -942,8 +986,8 @@ export default function PersonalityTestResultsPage() {
           }}
         >
           <View className='personality-results__pokemon-card-top'>
-            <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>JOYJOIN TCG</Text>
-            <Text className='personality-results__pokemon-chip'>{confidenceLabel || '匿名结果'}</Text>
+            <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>JOYJOIN CARD</Text>
+            <Text className='personality-results__pokemon-chip'>{confidenceLabel || 'JoyJoin 结果卡'}</Text>
           </View>
 
           <View className='personality-results__pokemon-card-hero'>
@@ -1055,6 +1099,9 @@ export default function PersonalityTestResultsPage() {
       break
     case 'reveal':
       content = renderRevealStage()
+      break
+    case 'bridge':
+      content = renderBridgeStage()
       break
     case 'result':
       content = renderFinalStage()

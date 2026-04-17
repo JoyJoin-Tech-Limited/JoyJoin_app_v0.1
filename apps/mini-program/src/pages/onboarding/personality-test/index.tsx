@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Slider, Image } from '@tarojs/components'
 import Button from '../../../components/Button'
+import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
@@ -441,11 +442,13 @@ export default function PersonalityTestPage() {
 
   if (auth.isLoading) {
     return (
-      <View className={getPageClassName()}>
-        <View className='personality-test__loading'>
-          <Text className='personality-test__loading-text'>加载中…</Text>
-        </View>
-      </View>
+      <OnboardingLoadingShell
+        stepLabel='Onboarding 1 / 4'
+        title='小悦在准备你的氛围测试入口'
+        subtitle='先把登录进度和本机记录对齐好，接着就带你进入这张聚会气场卡。'
+        hint='如果你上次答到一半，我会把那份进度顺着接回来。'
+        xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.introHero}
+      />
     )
   }
 
@@ -570,17 +573,13 @@ export default function PersonalityTestPage() {
   // Completing phase
   if (phase === 'completing') {
     return (
-      <View className={getPageClassName()}>
-        <View className='personality-test__completing'>
-          <Image
-            className='personality-test__completing-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing)}
-          />
-          <Text className='personality-test__status-title'>分析中…</Text>
-          <Text className='personality-test__status-subtitle'>正在为你生成氛围原型画像</Text>
-        </View>
-      </View>
+      <OnboardingLoadingShell
+        stepLabel='JoyJoin 氛围原型'
+        title='小悦在收束你的结果卡'
+        subtitle='把刚才的回答翻成更像你的 JoyJoin 气场卡，马上就会正式揭晓。'
+        hint='我会把轮廓、关键词和后面的分享卡一起整理好。'
+        xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing}
+      />
     )
   }
 

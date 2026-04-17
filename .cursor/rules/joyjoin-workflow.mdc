@@ -5,6 +5,8 @@ alwaysApply: true
 
 # JoyJoin workflow (Cursor)
 
+- **Single brain with Copilot:** Policy, skills, and agents live only under `.github/` (see `.github/AI_TOOLING_UNIFIED_BRAIN.md`). This file is Cursor glue—keep it short; do not duplicate long policy here.
+- **Superpowers (Cursor plugin) + JoyJoin:** Process skills from the Superpowers plugin (brainstorming, debugging, verification, etc.) complement **JoyJoin** `.github/skills/` (domain rules) and `.github/agents/` (workflows). Use Superpowers for *how* to approach a task when applicable; use JoyJoin skills/agents for *what* is correct in this repo. See `.github/SUPERPOWERS_JOYOIN_INTEGRATION.md`.
 - Canonical contributor instructions: `.github/copilot-instructions.md`.
 - Planning policy (direct delivery vs kickoff lane): `.github/AI_WORKFLOW_POLICY.md`.
 - Orchestration graph, agent portfolio, tooling notes: `.github/ORCHESTRATION.md` and `.github/orchestration.yaml`.
