@@ -25,6 +25,7 @@ import {
   appendOrchestrationLog,
   buildToolingAuditSummary,
   collectChangedFiles,
+  loadKnownSkillNames,
   loadOrchestrationManifest,
   loadRuntimeContext,
   resolveRepoRoot,
@@ -1238,7 +1239,9 @@ function validateReferencedFiles(repoRoot, manifest, validationErrors) {
 
 function runValidate(repoRoot) {
   const manifest = loadOrchestrationManifest(repoRoot);
-  const validation = validateOrchestrationManifest(manifest);
+  const validation = validateOrchestrationManifest(manifest, {
+    knownSkillNames: loadKnownSkillNames(repoRoot),
+  });
   validateContextExample(repoRoot, manifest, validation.errors);
   validateAgentInventoryContract(repoRoot, manifest, validation.errors);
   validateReferencedFiles(repoRoot, manifest, validation.errors);
@@ -1260,7 +1263,9 @@ function runValidate(repoRoot) {
 function runCopilotHook(repoRoot, eventName) {
   const payload = parseStdinJson();
   const manifest = loadOrchestrationManifest(repoRoot);
-  const validation = validateOrchestrationManifest(manifest);
+  const validation = validateOrchestrationManifest(manifest, {
+    knownSkillNames: loadKnownSkillNames(repoRoot),
+  });
   const kickoffConfig = getKickoffConfig(manifest);
   const memoryConfig = getMemoryConfig(manifest);
 

@@ -10,7 +10,7 @@
 
 The JoyJoin skill routing system ensures that the right repo skill is loaded at the right time for every ask or task. It follows a **simple, observable, maintainable** design — a lightweight rule-based router rather than a learned model.
 
-**v2.0 coverage:** All 17 active skills under `.github/skills/` now participate in routing. The validator enforces complete coverage — every new skill directory must include a `routing.yml` (or an explicit `routing-exempt.yml`) before the branch is considered valid.
+**v2.0 coverage:** All active skills under `.github/skills/` participate in routing. The validator enforces complete coverage — every new skill directory must include a `routing.yml` (or an explicit `routing-exempt.yml`) before the branch is considered valid.
 
 ---
 
@@ -248,7 +248,7 @@ node scripts/skill-router.mjs "Refactor this hook" \
 # Validate routing metadata AND coverage (all skills must have routing.yml or routing-exempt.yml)
 node scripts/validate-skill-routing.mjs
 
-# Run representative routing examples (75 test cases covering all 17 active skills)
+# Run representative routing examples covering all active skills
 node scripts/test-skill-routing.mjs
 ```
 
@@ -354,7 +354,7 @@ The current router is intentionally simple. If signal quality degrades, consider
 
 - Weighted scoring with per-skill calibration factors
 - Embedding-based similarity for phrase matching
-- CI enforcement: add `node scripts/validate-skill-routing.mjs` to CI pipeline
+- CI enforcement is active in `.github/workflows/cicd.yml`; keep `node scripts/validate-skill-routing.mjs` aligned with any routing-schema changes
 - Routing precision/recall tracking from real usage data
 - Automated trigger suggestion from recently changed files
 

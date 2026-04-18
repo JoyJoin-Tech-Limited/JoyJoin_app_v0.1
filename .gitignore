@@ -33,6 +33,7 @@ Thumbs.db
 
 # IDE
 .vscode/*
+!.vscode/settings.json
 !.vscode/mcp.json
 .idea/
 *.swp
