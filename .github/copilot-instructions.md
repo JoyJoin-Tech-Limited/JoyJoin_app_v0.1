@@ -53,7 +53,7 @@
 ### Turn Reporting
 
 - When acting as a repo custom agent under `.github/agents/`, read `.git/.orchestration/context.json` when it exists and use the last 5 relevant summaries plus supervisor feedback to refine the current turn.
-- Use `.github/skills/orchestration-turn-reporting/SKILL.md` as the canonical schema for turn-end summary JSON and supervisor consolidation. **Visible** turn summaries use the **executive briefing** shape (header, Observation, Implication / Context, Next Step, optional Bottom Line); **Supervisor** adds **Turn status** and **Routing (pick one)** as defined in that skill.
+- Use `.github/skills/orchestration-turn-reporting/SKILL.md` as the canonical schema for turn-end summary JSON and supervisor consolidation. **Visible** turn summaries use the **executive briefing** shape (header, Observation, Implication / Context, Next Step, optional Bottom Line); **Supervisor** adds **Turn status** and **Routing (pick one)** as defined in that skill. When possible, include optional **`utilization`** in JSON (task → agents → skills) and a short **Utilization** block in the visible note for coverage / gap analysis.
 - End every completed agent turn with a compact JSON summary that captures: what was delivered, files changed, decisions, blockers, what was learned, 1-2 self-suggested improvements for the next turn, categorized next steps, confidence, and unresolved assumptions.
 - If the active agent has execute access and is responsible for persistence, append the summary through `node scripts/orchestration-supervisor.mjs record-summary`.
 - If the active agent does not have execute access, or a parent agent is brokering persistence, still emit the JSON summary and let the caller record it.

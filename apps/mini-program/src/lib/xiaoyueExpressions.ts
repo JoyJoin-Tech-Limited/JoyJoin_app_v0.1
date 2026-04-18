@@ -1,6 +1,12 @@
 /**
- * Canonical Xiaoyue expression ids, asset paths, legacy mood mapping, and personality-test wiring.
- * Multiple ids may share the same PNG until design ships dedicated poses.
+ * Canonical Xiaoyue expression ids and asset paths.
+ *
+ * Raster spec (see `npm run optimize:xiaoyue` in apps/mini-program):
+ * - WebP only, max width 480px @ source (matches largest UI slot ~300rpx intro @ ~3x).
+ * - Regenerate from PNG masters with `scripts/optimize-xiaoyue-assets.mjs`.
+ * - Brand accent reference for art: #8B5CF6. WeChat `Image` supports WebP on current base libraries.
+ *
+ * Some expression ids share an asset where the emotion overlaps (e.g. match-waiting + reveal anticipation).
  */
 
 export type XiaoyueExpressionId =
@@ -22,42 +28,32 @@ export type LegacyXiaoyueMood = 'normal' | 'excited' | 'pointing'
 
 const BASE = '/assets/personality/xiaoyue'
 
-const LEGACY_PATH = {
-  normal: `${BASE}/xiaoyue-normal.png`,
-  excited: `${BASE}/xiaoyue-excited.png`,
-  pointing: `${BASE}/xiaoyue-pointing.png`,
-} as const
-
-const SEMANTIC_PATH = {
-  homeWelcome: `${BASE}/xiaoyue-home-welcome.png`,
-  matchWaiting: `${BASE}/xiaoyue-match-waiting.png`,
-  matchSuccess: `${BASE}/xiaoyue-match-success.png`,
-  loading: `${BASE}/xiaoyue-loading.png`,
-  actionSuccess: `${BASE}/xiaoyue-action-success.png`,
-  actionFailure: `${BASE}/xiaoyue-action-failure.png`,
-  thanksFeedback: `${BASE}/xiaoyue-thanks-feedback.png`,
-} as const
-
-const SUPPLEMENTARY_PATH = {
-  coachGuide: LEGACY_PATH.pointing,
-  paymentTrust: LEGACY_PATH.normal,
-  optOutReassure: LEGACY_PATH.normal,
-  neutralInformation: LEGACY_PATH.normal,
+/** Semantic basenames — nine shipped poses (开心欢迎 … 提醒通知). */
+const ART = {
+  homeWelcome: `${BASE}/xiaoyue-home-welcome.webp`,
+  matchWaiting: `${BASE}/xiaoyue-match-waiting.webp`,
+  matchSuccess: `${BASE}/xiaoyue-match-success.webp`,
+  thinking: `${BASE}/xiaoyue-thinking.webp`,
+  actionSuccess: `${BASE}/xiaoyue-action-success.webp`,
+  actionFailure: `${BASE}/xiaoyue-action-failure.webp`,
+  thanksFeedback: `${BASE}/xiaoyue-thanks-feedback.webp`,
+  cheerEncourage: `${BASE}/xiaoyue-cheer-encourage.webp`,
+  reminderNotice: `${BASE}/xiaoyue-reminder-notice.webp`,
 } as const
 
 export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
-  homeWelcome: SEMANTIC_PATH.homeWelcome,
-  matchWaiting: SEMANTIC_PATH.matchWaiting,
-  matchSuccess: SEMANTIC_PATH.matchSuccess,
-  loadingSystem: SEMANTIC_PATH.loading,
-  loadingReveal: SEMANTIC_PATH.loading,
-  actionSuccess: SEMANTIC_PATH.actionSuccess,
-  actionFailure: SEMANTIC_PATH.actionFailure,
-  thanksFeedback: SEMANTIC_PATH.thanksFeedback,
-  coachGuide: SUPPLEMENTARY_PATH.coachGuide,
-  paymentTrust: SUPPLEMENTARY_PATH.paymentTrust,
-  optOutReassure: SUPPLEMENTARY_PATH.optOutReassure,
-  neutralInformation: SUPPLEMENTARY_PATH.neutralInformation,
+  homeWelcome: ART.homeWelcome,
+  matchWaiting: ART.matchWaiting,
+  matchSuccess: ART.matchSuccess,
+  loadingSystem: ART.thinking,
+  loadingReveal: ART.matchWaiting,
+  actionSuccess: ART.actionSuccess,
+  actionFailure: ART.actionFailure,
+  thanksFeedback: ART.thanksFeedback,
+  coachGuide: ART.cheerEncourage,
+  paymentTrust: ART.reminderNotice,
+  optOutReassure: ART.cheerEncourage,
+  neutralInformation: ART.reminderNotice,
 }
 
 export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpressionId> = {
@@ -70,7 +66,7 @@ export const PERSONALITY_TEST_XIAOYUE_EXPRESSION = {
   introHero: 'homeWelcome',
   completing: 'loadingSystem',
   resultsCelebrate: 'matchSuccess',
-  resultsCoach: 'thanksFeedback',
+  resultsCoach: 'coachGuide',
   resultsSlotFallback: 'matchWaiting',
 } as const satisfies Record<string, XiaoyueExpressionId>
 

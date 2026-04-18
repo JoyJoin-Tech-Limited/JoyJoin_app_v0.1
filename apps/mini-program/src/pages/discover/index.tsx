@@ -15,6 +15,8 @@ import {
   heatConfig,
 } from '@shared/districts'
 import { apiRequest } from '../../lib/api'
+import { isLongListRowCount } from '../../lib/longListThreshold'
+import { logWarn } from '../../lib/logger'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
@@ -298,6 +300,14 @@ function AuthenticatedDiscover() {
       return true
     })
   }, [pools, selectedCluster, selectedDistrict, visibleDistricts])
+
+  useEffect(() => {
+    if (isLongListRowCount(filteredPools.length)) {
+      logWarn('[Discover] Long pool list — see docs/LIST_VIRTUALIZATION.md', {
+        count: filteredPools.length,
+      })
+    }
+  }, [filteredPools.length])
 
   // ── Handlers ──
   const handleClusterTap = useCallback((clusterId: string) => {

@@ -61,6 +61,7 @@ Use `docs/PLATFORM_COORDINATION.md` as the source of truth for duplicated auth, 
 
 ### Taro-Specific Considerations
 
+- Use [taro-ui-framework.md](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) as the checklist for non-portable **selectors**, **HTML injection**, **setData/list** patterns, and **asset weight** when those gaps affect parity or performance.
 - Validate mini-program surfaces against the [shared frontend thresholds reference](../skills/design-system-governance/references/frontend-excellence-thresholds.md) for touch-target and long-list expectations, along with `View` or `Text`-based composition, `hover-class` feedback, and subpackage awareness.
 - Flag DOM-only markup, browser-only CSS, or unsupported interaction assumptions as `PLATFORM_CONSTRAINT` when they cannot be preserved directly.
 - Treat long mini-program collections as under-optimized when they miss the shared thresholds without a documented reason.

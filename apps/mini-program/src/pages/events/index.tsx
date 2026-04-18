@@ -10,10 +10,21 @@ import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
+import { isLongListRowCount } from '../../lib/longListThreshold'
+import { logWarn } from '../../lib/logger'
 import { partitionJoinedEventsByDateTime } from './eventPartition'
 import './index.scss'
 
 type TabKey = 'upcoming' | 'completed'
+
+function EventCardSkeleton() {
+  return (
+    <Card className='events-page__card events-page__card--skeleton'>
+      <View className='events-page__skeleton-line events-page__skeleton-line--title' />
+      <View className='events-page__skeleton-line events-page__skeleton-line--meta' />
+    </Card>
+  )
+}
 
 export default function EventsPage() {
   const { isLoading: authLoading } = useAuthGuard()
@@ -38,6 +49,18 @@ export default function EventsPage() {
     queryFn: () => getJoinedEvents(apiRequest),
     enabled: !authLoading,
   })
+
+  useEffect(() => {
+    if (authLoading || isLoading) {
+      return
+    }
+
+    if (isLongListRowCount(events.length)) {
+      logWarn('[Events] Long joined-events list — see docs/LIST_VIRTUALIZATION.md', {
+        count: events.length,
+      })
+    }
+  }, [authLoading, isLoading, events.length])
 
   if (authLoading) {
     return <LoadingScreen />
@@ -95,9 +118,11 @@ export default function EventsPage() {
 
       <ScrollView className='events-page__list' scrollY enhanced showScrollbar={false}>
         {isLoading ? (
-          <View className='events-page__loading'>
-            <Text className='events-page__loading-text'>正在加载活动…</Text>
-          </View>
+          <>
+            <EventCardSkeleton />
+            <EventCardSkeleton />
+            <EventCardSkeleton />
+          </>
         ) : displayEvents.length > 0 ? (
           displayEvents.map((event) => (
             <Card

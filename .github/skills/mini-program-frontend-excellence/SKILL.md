@@ -14,6 +14,15 @@ description: >
 
 **Core rule:** JoyJoin mini-program UI must feel unmistakably JoyJoin and operationally native. Do not ship browser ideas squeezed into Taro, and do not ship low-effort mini-program UI that merely "works".
 
+## Taro framework (read first for structural UI work)
+
+For layout constraints, `setData` / list performance, cross-end files, `RichText` vs HTML, WeChat tooling, and **asset size budgets**, follow **[`references/taro-ui-framework.md`](references/taro-ui-framework.md)** in addition to this skill.
+
+- Prefer **Flex** layout and repo Sass/class patterns; avoid browser-only selectors and unsafe HTML (`dangerouslySetInnerHTML`); use **`RichText`** or structured nodes for rich content.
+- Treat **VirtualList**, **CustomWrapper**, and subpackage strategy as product decisions when lists or update hot spots are large—see the reference and [`frontend-performance-and-loading`](../frontend-performance-and-loading/SKILL.md).
+- Use **`process.env.TARO_ENV`** and **multi-suffix files** (`*.weapp.*`, etc.) for real platform splits.
+- **Flag** new or changed assets that exceed the reference thresholds; propose compression, SVG optimization, vector substitution, or route/subpackage moves before merging heavy binaries.
+
 ## When to use this skill
 
 - Implementing or refining UI in `apps/mini-program`
@@ -123,14 +132,19 @@ description: >
 - [ ] The screen has a clear JoyJoin visual direction and avoids generic AI aesthetics
 - [ ] Brand colours, typography, spacing, and mascot usage follow `joyjoin-brand-guidelines`
 - [ ] Taro-native primitives and WXSS-safe patterns are used instead of browser-first assumptions
+- [ ] Rich content uses `RichText` or structured Taro nodes—not `dangerouslySetInnerHTML` for cross-end HTML
+- [ ] Layout follows Flex-first discipline; cross-end or RN portability considered where selectors matter
+- [ ] Hot re-renders or large lists addressed with `CustomWrapper` / `VirtualList` or other profiled approach when thresholds suggest it (`references/taro-ui-framework.md`)
 - [ ] Loading, empty, error, disabled, busy, success, and pressed states are explicit
 - [ ] Touch targets are at least `44 pt` and active-state feedback is visible
 - [ ] Assets are crisp and package/performance costs are reasonable
+- [ ] New or changed rasters/icons were checked against size budgets; oversized files flagged and addressed (compression, SVG optimization, vector/CSS substitute, or subpackage—see `references/taro-ui-framework.md` §8)
 - [ ] Motion is restrained, `transform`/`opacity`-based, and safe for mini-program performance
 - [ ] A screen that still feels cheap but functional has not been signed off as complete
 
 ## Related files
 
+- [`references/taro-ui-framework.md`](references/taro-ui-framework.md)
 - `apps/mini-program/src/pages/`
 - `apps/mini-program/src/components/`
 - `apps/mini-program/README.md`

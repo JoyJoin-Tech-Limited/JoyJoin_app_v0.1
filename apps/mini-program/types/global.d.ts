@@ -23,6 +23,8 @@ declare namespace NodeJS {
      * @see https://taro-docs.jd.com/docs/next/env-mode-config#特殊环境变量-taro_app_id
      */
     TARO_APP_ID: string
+    /** Comma-separated WeChat subscribe message template IDs (mini-program build). */
+    TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS?: string
   }
 }
 

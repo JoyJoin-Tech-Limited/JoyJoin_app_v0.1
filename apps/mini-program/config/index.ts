@@ -10,6 +10,8 @@ type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<
 loadRepoRootEnvFile()
 
 const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()
+const MINI_PROGRAM_WECHAT_SUBSCRIBE_TMPL_IDS =
+  process.env.TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS ?? ''
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
@@ -29,7 +31,10 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
-      'process.env.TARO_APP_API_BASE_URL': JSON.stringify(MINI_PROGRAM_API_BASE_URL)
+      'process.env.TARO_APP_API_BASE_URL': JSON.stringify(MINI_PROGRAM_API_BASE_URL),
+      'process.env.TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS': JSON.stringify(
+        MINI_PROGRAM_WECHAT_SUBSCRIBE_TMPL_IDS,
+      ),
     },
     copy: {
       patterns: [

@@ -47,7 +47,9 @@ You are expert in Taro 4, React 18 authoring for WeChat Mini Programs, page regi
 - Preserve product intent, visible hierarchy, interaction states, and copy from the canonical web flow when relevant, but do not force exact browser mechanics where the platform differs.
 - Use `Taro.navigateTo`, `Taro.redirectTo`, `Taro.showToast`, storage APIs, and page lifecycle hooks where appropriate instead of browser navigation or DOM events.
 - Adapt styling to WXSS-safe patterns and mini-program rendering limits rather than copying browser CSS blindly.
-- For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow and co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, or `frontend-performance-and-loading` as the surface needs.
+- For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow and **read [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md)** for structural Taro rules (layout, setData/list performance, cross-end files, `RichText` vs unsafe HTML, asset budgets). Co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, or `frontend-performance-and-loading` as the surface needs.
+- Do not use `dangerouslySetInnerHTML` for cross-end HTML in mini-program work; use `RichText` or structured `View`/`Text` composition.
+- When adding or replacing **images or icons**, check file size against [`taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) §8. If over threshold, **flag** in review output and propose compression, SVG optimization, vector/CSS substitution, or subpackage/lazy routing so premium visuals do not regress load performance or package budget.
 - Use the repo's existing styling patterns by default. Do not introduce CSS-in-JS or a new styling system just because Taro can support it.
 - When a request depends on understanding the canonical web behavior, inspect `apps/user-client` directly or delegate to `Expert React Frontend Engineer`.
 
@@ -90,6 +92,7 @@ When a request targets `apps/mini-program` but may affect duplicated business be
 
 ### Taro-Specific Considerations
 
+- Apply [taro-ui-framework.md](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) for Flex-first layout, selector portability, `CustomWrapper` / `VirtualList` when profiling demands it, `process.env.TARO_ENV` and multi-suffix modules, and asset-size guardrails (including `apps/mini-program/scripts/check-xiaoyue-asset-size.mjs` where applicable).
 - Follow the [shared frontend thresholds reference](../skills/design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets, long-list handling, and subpackage-awareness expectations.
 - When launch or first-entry performance is the problem, prefer ordinary subpackages plus `preloadRule` for heavy non-tab flows before recommending independent subpackages.
 - Do not rule out independent subpackages categorically, but only recommend them with a benchmark and a self-contained bootstrap plan when the current `src/app.ts` and `src/providers/AuthProvider.tsx` assumptions would otherwise break.

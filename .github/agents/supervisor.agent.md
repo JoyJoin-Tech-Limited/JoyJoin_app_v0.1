@@ -43,7 +43,7 @@ handoffs:
     prompt: "Implement the web UI scope in apps/user-client while keeping branding and design-system decisions attached to the existing frontend skill bindings."
   - label: "Route mini-program implementation"
     agent: "Taro Mini-Program Frontend Engineer"
-    prompt: "Implement the mini-program UI scope in apps/mini-program. Instruct the engineer to follow mini-program-frontend-excellence and joyjoin-brand-guidelines, and to co-load wow-elements or design-system-governance when polish or tokens need it. Review sibling-platform implications when duplicated business behavior is involved."
+    prompt: "Implement the mini-program UI scope in apps/mini-program. Instruct the engineer to follow mini-program-frontend-excellence (including references/taro-ui-framework.md for layout, performance, cross-end, and asset budgets) and joyjoin-brand-guidelines, and to co-load wow-elements or design-system-governance when polish or tokens need it. Review sibling-platform implications when duplicated business behavior is involved."
   - label: "Route parity-first migration"
     agent: "Taro Migration Specialist"
     prompt: "Port the approved web source of truth into apps/mini-program while preserving parity and making platform limitations explicit."
@@ -176,4 +176,5 @@ Rules:
 - Do not use vague **Continue** / **Proceed.** Handoff buttons in frontmatter complement this list.
 - Do not print the raw `supervisor_turn_report` JSON in the user-facing note.
 - Build and persist the canonical JSON separately, citing **`sourceSummaryIds`** from child summaries.
+- **`utilization` (recommended):** In persisted JSON, include **`utilization`** rows (**task**, **agents**, **skills**) so turn reports show which **JoyJoin agents** and **repo skills** applied to which work—useful for **gap analysis** (e.g. missing domain skills). When non-empty, add a compact **Utilization** subsection to the visible note (plain language).
 - **Other agents** use the shared pointer [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md); Supervisor uses the template above (Turn status, Routing, model hints).

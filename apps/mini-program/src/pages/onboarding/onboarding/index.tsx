@@ -1,10 +1,9 @@
-import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
+import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
 import { useAuth } from '../../../hooks/useAuth'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
-import './index.scss'
 
 /**
  * OnboardingEntryPage — server-driven redirect hub.
@@ -29,10 +28,12 @@ export default function OnboardingEntryPage() {
   }, [isLoading, isAuthenticated, nextStep])
 
   return (
-    <View className='page'>
-      <View className='page__placeholder'>
-        <Text className='page__title'>正在准备…</Text>
-      </View>
-    </View>
+    <OnboardingLoadingShell
+      stepLabel='入门引导'
+      title='正在接上你的进度'
+      subtitle='小悦正在读取服务器上的下一步，马上跳转。'
+      hint='若首次进入，可能会加载一小会儿新手任务包。'
+      xiaoyueExpression='loadingSystem'
+    />
   )
 }

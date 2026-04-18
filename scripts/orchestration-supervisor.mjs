@@ -738,6 +738,41 @@ function normalizeFeedbackByAgent(value) {
   );
 }
 
+const MAX_UTILIZATION_ROWS = 30;
+
+/**
+ * Optional per-turn ledger: which JoyJoin agents and repo skills applied to which slice of work.
+ * Used for utilization / gap analytics in turn reports (not authoritative RBAC).
+ */
+function normalizeUtilization(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .slice(0, MAX_UTILIZATION_ROWS)
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return null;
+      }
+
+      const task = cleanString(entry.task) || cleanString(entry.label) || '';
+      const agents = toStringList(entry.agents);
+      const skills = toStringList(entry.skills);
+
+      if (!task && agents.length === 0 && skills.length === 0) {
+        return null;
+      }
+
+      return {
+        task: task || 'Unnamed task',
+        agents,
+        skills,
+      };
+    })
+    .filter(Boolean);
+}
+
 function normalizeNextSteps(value) {
   const nextSteps = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
@@ -883,6 +918,7 @@ export function normalizeTurnSummaryPayload(payload, context = {}) {
       learned: toStringList(payload.learned),
       nextTurnImprovements: toStringList(payload.nextTurnImprovements).slice(0, 2),
       appliedFeedbackFrom: toStringList(payload.appliedFeedbackFrom),
+      utilization: normalizeUtilization(payload.utilization),
     };
   }
 
@@ -892,6 +928,7 @@ export function normalizeTurnSummaryPayload(payload, context = {}) {
     crossAgentInsights: toStringList(payload.crossAgentInsights),
     sourceSummaryIds: toStringList(payload.sourceSummaryIds),
     feedbackByAgent: normalizeFeedbackByAgent(payload.feedbackByAgent),
+    utilization: normalizeUtilization(payload.utilization),
   };
 }
 
@@ -908,6 +945,7 @@ function buildCompactAgentSummary(summary) {
     nextTurnImprovements: summary.nextTurnImprovements,
     confidenceScore: summary.confidence.score,
     appliedFeedbackFrom: summary.appliedFeedbackFrom,
+    utilization: Array.isArray(summary.utilization) ? summary.utilization : [],
   };
 }
 
@@ -927,6 +965,7 @@ function buildCompactSupervisorReport(summary, turnId, turnSequence) {
     sourceSummaryIds: summary.sourceSummaryIds,
     confidenceScore: summary.confidence.score,
     unresolvedAssumptions: summary.unresolvedAssumptions,
+    utilization: Array.isArray(summary.utilization) ? summary.utilization : [],
   };
 }
 

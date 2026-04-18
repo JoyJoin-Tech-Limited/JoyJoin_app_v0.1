@@ -35,6 +35,19 @@
     line-height: 1.7;
   }
 
+  &__success-notify-hint {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    line-height: 1.6;
+    max-width: 600rpx;
+  }
+
+  &__notify-btn {
+    width: 100%;
+    max-width: 520rpx;
+  }
+
   &__success-pills {
     display: flex;
     flex-wrap: wrap;
