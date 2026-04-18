@@ -34,12 +34,15 @@
     font-weight: $font-weight-black;
     color: $color-text-primary;
     line-height: 1.4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   &__subtitle {
     font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.7;
+    overflow-wrap: anywhere;
   }
 
   &__card {

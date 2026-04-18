@@ -41,6 +41,9 @@ $font-brand: $font-cn-display;
 // Aligns with web `--font-en-brand`; Outfit omitted in mini-program to avoid an extra load.
 $font-en-brand: 'Quicksand', system-ui, sans-serif;
 
+// Body / UI copy: 28–32rpx (WeChat-friendly). Use `$font-size-base`–`$font-size-md`.
+// Headings / section titles: 36–48rpx. Use `$font-size-lg`–`$font-size-2xl`.
+// `$font-size-xs` / `$font-size-sm`: captions, meta, legal — not primary reading text.
 $font-size-xs:    22rpx;
 $font-size-sm:    24rpx;
 $font-size-base:  28rpx;
@@ -68,7 +71,10 @@ $container-padding: 40rpx;
 $grid-gap:          30rpx;
 
 // ─── Sizing ───────────────────────────────────────────────────────
+// Minimum tap target for primary CTAs (WeChat ~7–9mm intent on 750rpx canvas).
+$cta-min-tap:      88rpx;
 $button-height:    96rpx;
+// Compact controls (tabs, chips); not for full-width primary CTAs.
 $button-height-sm: 72rpx;
 $button-radius:    48rpx;
 $card-radius:      32rpx;

@@ -109,7 +109,7 @@
 .joy-custom-tab-bar__item-label {
   margin-top: 6rpx;
   max-width: 96rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 24rpx;
   color: #9CA3AF;
   text-align: center;
@@ -140,7 +140,7 @@
 }
 
 .joy-custom-tab-bar__item-badge-text {
-  font-size: 18rpx;
+  font-size: 20rpx;
   line-height: 1;
   font-weight: 700;
   color: #FFFFFF;

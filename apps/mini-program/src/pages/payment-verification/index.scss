@@ -42,7 +42,7 @@
 
   &__context-kicker {
     display: block;
-    font-size: 22rpx;
+    font-size: $font-size-sm;
     color: $color-primary;
     font-weight: 700;
   }
@@ -58,7 +58,7 @@
   &__context-copy {
     display: block;
     margin-top: 10rpx;
-    font-size: 24rpx;
+    font-size: $font-size-base;
     line-height: 1.6;
     color: $color-text-secondary;
   }
@@ -87,7 +87,7 @@
   }
 
   &__meta {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-text-muted;
   }
 
@@ -99,11 +99,13 @@
 
   &__button {
     @include type-brand-cta-label;
-    min-height: 96rpx;
-    border-radius: 48rpx;
-    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
-    color: #ffffff;
-    font-size: 30rpx;
+    min-height: max(96rpx, $cta-min-tap);
+    border-radius: $button-radius;
+    background: $brand-gradient;
+    color: $color-text-white;
+    font-size: $font-size-md;
+    box-shadow: 0 8rpx 32rpx rgba(168, 107, 255, 0.35);
+    @include cta-pressed-active;
 
     &::after {
       border: none;
@@ -113,6 +115,12 @@
   &__button--secondary {
     background: rgba($color-primary-light, 0.94);
     color: $color-primary-dark;
+    box-shadow: none;
+
+    &:active {
+      filter: brightness(0.96);
+      transform: scale(0.98);
+    }
   }
 }
 

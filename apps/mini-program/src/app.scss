@@ -1,23 +1,26 @@
 @use './styles/variables' as *;
+@use './styles/mixins' as *;
 @use './styles/reset';
 
 page {
   font-family: $font-body;
   background-color: $color-bg;
   color: $color-text-primary;
-  font-size: 28rpx;
+  font-size: $font-size-base;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
 .page__cta {
-  min-height: 96rpx;
+  min-height: max($button-height, $cta-min-tap);
   margin-top: 24rpx;
-  border-radius: 48rpx;
-  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
-  color: #ffffff;
-  font-size: 30rpx;
-  font-weight: 700;
+  border-radius: $button-radius;
+  background: $brand-gradient;
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  box-shadow: 0 8rpx 32rpx rgba(168, 107, 255, 0.35);
+  @include cta-pressed-active;
 
   &::after {
     border: none;

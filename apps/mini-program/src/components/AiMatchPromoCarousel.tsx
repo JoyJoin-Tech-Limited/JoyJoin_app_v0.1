@@ -1,5 +1,6 @@
 import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components'
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import './AiMatchPromoCarousel.scss'
 
 interface AiMatchPromoCarouselProps {
@@ -25,11 +26,42 @@ const PROMO_SLIDES = [
   },
 ] as const
 
+function webpFromPng(pngPath: string): string {
+  return pngPath.replace(/\.png$/i, '.webp')
+}
+
+function buildInitialResolvedSources(): Record<string, string> {
+  const next: Record<string, string> = {}
+  for (const slide of PROMO_SLIDES) {
+    next[slide.imageSrc] = webpFromPng(slide.imageSrc)
+  }
+  return next
+}
+
 export default function AiMatchPromoCarousel({
   className = '',
   compact = false,
 }: AiMatchPromoCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [resolvedSrcByPng, setResolvedSrcByPng] = useState(buildInitialResolvedSources)
+  const prefersReducedMotion = usePrefersReducedMotion()
+
+  const handleImageError = useCallback((pngPath: string) => {
+    setResolvedSrcByPng((current) => {
+      if (current[pngPath] === pngPath) {
+        return current
+      }
+      return { ...current, [pngPath]: pngPath }
+    })
+  }, [])
+
+  const autoplayEnabled = !prefersReducedMotion
+  const transitionMs = prefersReducedMotion ? 0 : 420
+
+  const swiperKey = useMemo(
+    () => `${autoplayEnabled ? 'auto' : 'still'}-${compact ? 'c' : 'full'}`,
+    [autoplayEnabled, compact],
+  )
 
   return (
     <View
@@ -40,35 +72,57 @@ export default function AiMatchPromoCarousel({
       ].filter(Boolean).join(' ')}
     >
       <Swiper
+        key={swiperKey}
         className='ai-match-promo-carousel__swiper'
         circular
-        autoplay
+        autoplay={autoplayEnabled}
         interval={4200}
-        duration={420}
+        duration={transitionMs}
         indicatorDots={false}
         onChange={(event) => setActiveIndex(event.detail.current)}
       >
-        {PROMO_SLIDES.map((slide) => (
-          <SwiperItem key={slide.imageSrc}>
-            <View className='ai-match-promo-carousel__slide'>
-              <View className='ai-match-promo-carousel__content'>
-                <Text className='ai-match-promo-carousel__eyebrow'>AI 匹配</Text>
-                <Text className='ai-match-promo-carousel__title'>{slide.title}</Text>
-                <Text className='ai-match-promo-carousel__subtitle'>{slide.subtitle}</Text>
-              </View>
+        {PROMO_SLIDES.map((slide) => {
+          const imageSrc = resolvedSrcByPng[slide.imageSrc] ?? slide.imageSrc
 
-              <View className='ai-match-promo-carousel__image-wrap'>
-                <View className='ai-match-promo-carousel__glow' />
-                <Image
-                  className='ai-match-promo-carousel__image'
-                  src={slide.imageSrc}
-                  mode='aspectFit'
-                  lazyLoad
-                />
-              </View>
+          const imageBlock = (
+            <View className='ai-match-promo-carousel__image-wrap'>
+              <View className='ai-match-promo-carousel__glow' />
+              <Image
+                className='ai-match-promo-carousel__image'
+                src={imageSrc}
+                mode='aspectFit'
+                lazyLoad
+                onError={() => handleImageError(slide.imageSrc)}
+              />
             </View>
-          </SwiperItem>
-        ))}
+          )
+
+          const copyBlock = (
+            <View className='ai-match-promo-carousel__content'>
+              <Text className='ai-match-promo-carousel__eyebrow'>AI 匹配</Text>
+              <Text className='ai-match-promo-carousel__title'>{slide.title}</Text>
+              <Text className='ai-match-promo-carousel__subtitle'>{slide.subtitle}</Text>
+            </View>
+          )
+
+          return (
+            <SwiperItem key={slide.imageSrc}>
+              <View className='ai-match-promo-carousel__slide'>
+                {compact ? (
+                  <>
+                    {copyBlock}
+                    {imageBlock}
+                  </>
+                ) : (
+                  <>
+                    {imageBlock}
+                    {copyBlock}
+                  </>
+                )}
+              </View>
+            </SwiperItem>
+          )
+        })}
       </Swiper>
 
       <View className='ai-match-promo-carousel__indicators'>

@@ -63,11 +63,20 @@
   letter-spacing: 0.02em;
 }
 
+// ─── Primary CTA pressed feedback (use with :active; pair with hoverClass in TSX where needed) ─
+@mixin cta-pressed-active {
+  &:active {
+    transform: scale(0.98);
+    filter: brightness(0.92);
+  }
+}
+
 // ─── Primary button ───────────────────────────────────────────────
 @mixin button-primary {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: max($button-height, $cta-min-tap);
   height: $button-height;
   border-radius: $button-radius;
   background: $brand-gradient;
@@ -75,9 +84,7 @@
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
   box-shadow: 0 8rpx 32rpx rgba(168, 107, 255, 0.35);
-  &:active {
-    transform: scale(0.98);
-  }
+  @include cta-pressed-active;
 }
 
 // ─── Card ─────────────────────────────────────────────────────────

@@ -266,7 +266,7 @@
   &__brief-promise,
   &__empty-text {
     display: block;
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.7;
   }
@@ -308,7 +308,7 @@
 
   &__reason-text {
     flex: 1;
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
     color: $color-text-primary;
     line-height: 1.7;
   }
@@ -422,7 +422,7 @@
   }
 
   &__chip-emoji {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     line-height: 1;
   }
 
@@ -533,6 +533,11 @@
     border: 2rpx solid rgba($color-border, 0.96);
     color: $color-text-primary;
     box-shadow: none;
+
+    &:active {
+      background: rgba($color-text-primary, 0.05);
+      border-color: rgba($color-primary, 0.4);
+    }
 
     &[disabled] {
       opacity: 0.5;

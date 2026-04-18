@@ -196,18 +196,24 @@
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   &__hero-archetype {
     display: inline-flex;
     align-items: center;
     margin-top: 10rpx;
+    max-width: 100%;
     padding: 8rpx 18rpx;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.92);
     color: $color-primary;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    box-sizing: border-box;
   }
 
   &__hero-summary {
@@ -216,6 +222,7 @@
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.55;
+    overflow-wrap: anywhere;
   }
 
   &__hero-tags {
@@ -466,6 +473,27 @@
       opacity: 0.55;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &--exiting {
+      transition: none;
+    }
+
+    &__stage--visible {
+      animation: none !important;
+      animation-delay: 0s !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    &__skeleton-line,
+    &__skeleton-chip {
+      animation: none;
+      opacity: 0.88;
+    }
+  }
 }
 
 @keyframes profile-review-pulse {
@@ -477,4 +505,4 @@
   50% {
     opacity: 1;
   }
-  }
+}
