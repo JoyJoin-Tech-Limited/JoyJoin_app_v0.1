@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "steps": [
+    {
+      "label": "after-events-relaunch",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "payment-relaunch-call-result",
+      "callResult": {
+        "errMsg": "reLaunch:ok"
+      }
+    },
+    {
+      "label": "immediately-after-payment-relaunch",
+      "path": "pages/blind-box-payment/index"
+    },
+    {
+      "label": "1s-after-payment-relaunch",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "3s-after-payment-relaunch",
+      "path": "pages/login/index"
+    },
+    {
+      "label": "7s-after-payment-relaunch",
+      "path": "pages/login/index"
+    }
+  ],
+  "errors": []
+}

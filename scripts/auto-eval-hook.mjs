@@ -1,7 +1,14 @@
 #!/usr/bin/env node
+/**
+ * Pre-tool use: by default Auto-Eval **warns** on failure but still **allows** guarded tools
+ * (soft gate), so the agent can apply fixes without a deadlock. Set
+ * `JOYJOIN_AUTO_EVAL_STRICT=1` to restore deny-on-fail behavior.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { evaluateWorkspace, readPassCache, RUBRIC_VERSION } from './auto-eval-core.mjs';
+
+const STRICT_AUTO_EVAL = process.env.JOYJOIN_AUTO_EVAL_STRICT === '1';
 
 const DEFAULT_GUARDED_TOOL_HINTS = [
   'apply_patch',
@@ -75,6 +82,7 @@ function output(payload, exitCode = 0) {
 function getToolName(payload) {
   const candidates = [
     payload.toolName,
+    payload.tool_name,
     payload.tool?.name,
     payload.name,
     payload.request?.toolName,
@@ -251,12 +259,21 @@ if (mode === 'pre-tool-use') {
     }
 
     if (result.status === 'fail') {
+      const detail = `Auto-Eval: dirty worktree ${result.fingerprintShort} has not passed. Top finding: ${summarizeTopFinding(result)}. Run \`node scripts/auto-eval.mjs\` after fixes. Recommended: ${recoveryAgents}.`;
+      if (STRICT_AUTO_EVAL) {
+        output(
+          denyResponse(
+            'Auto-Eval requires a passing result for the current dirty-worktree fingerprint before edit or execute tools may run.',
+            `Auto-Eval blocked this tool because the current dirty worktree has not passed evaluation. Fingerprint ${result.fingerprintShort}. Top finding: ${summarizeTopFinding(result)}. Re-run Auto-Eval to refresh the report after fixing the issue. Recommended manual path: ${recoveryAgents}.`,
+          ),
+          2,
+        );
+      }
       output(
-        denyResponse(
-          'Auto-Eval requires a passing result for the current dirty-worktree fingerprint before edit or execute tools may run.',
-          `Auto-Eval blocked this tool because the current dirty worktree has not passed evaluation. Fingerprint ${result.fingerprintShort}. Top finding: ${summarizeTopFinding(result)}. Re-run Auto-Eval to refresh the report after fixing the issue. Recommended manual path: ${recoveryAgents}.`,
+        allowResponse(
+          'Auto-Eval reported issues; allowing tool (soft gate). Set JOYJOIN_AUTO_EVAL_STRICT=1 to block on failure.',
+          detail,
         ),
-        2,
       );
     }
 

@@ -34,6 +34,7 @@
     "memory:stage-candidate": "node scripts/memory-stage-candidate.mjs",
     "memory:promote": "node scripts/memory-promote.mjs",
     "orchestration:validate": "node scripts/orchestration-supervisor.mjs validate",
+    "orchestration:test": "node scripts/orchestration-turn-summary.test.mjs",
     "orchestration:hook": "node scripts/orchestration-supervisor.mjs copilot-hook",
     "orchestration:git-hook": "node scripts/orchestration-supervisor.mjs git-hook",
     "orchestration:workflow": "node scripts/orchestration-supervisor.mjs workflow",

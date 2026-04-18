@@ -197,6 +197,24 @@ Avoid loud, bouncy, or distracting animation.
 - make the design feel cold, lonely, or overly serious
 - turn playfulness into childish clutter
 
+## Avoiding generic AI aesthetics
+
+JoyJoin screens should be unmistakably JoyJoin. Generic “AI-generated” aesthetics—the patterns that emerge when design intent is absent—dilute trust and brand identity.
+
+**Patterns to actively avoid:**
+
+| Generic pattern | Why it hurts JoyJoin | JoyJoin alternative |
+|----------------|---------------------|---------------------|
+| Purple gradient on plain white | Overused across every AI social product; no brand character | Warm Beige background, Vibrant Purple as a focused CTA accent |
+| Uniform card grid with no hierarchy | Flat, interchangeable | One card that leads the eye; spacing rhythm that guides the user |
+| `Inter` or `system-ui` on hero copy | Invisible, unmemorable | `font-cn-display` (AlibabaPuHuiTi) for the single emotional headline |
+| Spring-bounce animations | Corporate delight, not warm delight | Soft ease-out, calm reveals ≤ 300ms |
+| Symmetrical centered layouts everywhere | No spatial identity | Breathing asymmetry; generous leading space above the key moment |
+| Mascots used as background decoration | Cheapens the illustration value | One mascot per screen, placed intentionally at the emotional peak |
+| Status icons in isolation with no copy | Cold, system-feeling | Mascot or warm illustration + short contextual copy for key states |
+
+**The design direction test:** Could this exact screen appear in a generic dating, fitness, or productivity app without modification? If yes, it is not distinctive enough for JoyJoin.
+
 ## Output Standard
 
 Every JoyJoin design output should feel:

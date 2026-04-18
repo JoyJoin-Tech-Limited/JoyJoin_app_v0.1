@@ -66,6 +66,27 @@ interface EventPoolListItem {
   registrationCount: number;
 }
 
+type RevealMember = Pick<
+  AttendeeData,
+  | "userId"
+  | "displayName"
+  | "archetype"
+  | "topInterests"
+  | "primaryInterests"
+  | "socialTag"
+>;
+
+function adaptGroupMemberForReveal(
+  member: PoolGroupDetailsResponse["members"][number],
+): RevealMember {
+  return {
+    userId: member.userId,
+    displayName: member.displayName ?? "神秘嘉宾",
+    archetype: member.archetype ?? undefined,
+    topInterests: member.topInterests ?? undefined,
+  };
+}
+
 export default function MatchingStatusPage() {
   const { registrationId } = useParams();
   const [, setLocation] = useLocation();
@@ -102,6 +123,11 @@ export default function MatchingStatusPage() {
   });
 
   const registration = poolRegistrations?.find(r => r.id === registrationId);
+  const registrationPoolTitle = registration?.poolTitle ?? "盲盒社交活动";
+  const registrationPoolDateTime = registration?.poolDateTime ?? undefined;
+  const formattedRegistrationPoolDateTime = registrationPoolDateTime
+    ? formatDateInHongKong(registrationPoolDateTime, 'full')
+    : "活动时间待定";
 
   // Fetch pool stats for progress
   const { data: poolStats } = useQuery<PoolStats>({
@@ -131,7 +157,7 @@ export default function MatchingStatusPage() {
   };
 
   // Countdown to event
-  const countdown = useCountdown(registration?.poolDateTime);
+  const countdown = useCountdown(registrationPoolDateTime);
 
   // Fetch similar pools only when in no-match state (needs countdown, so placed after it)
   const { data: similarPools } = useQuery<EventPoolListItem[]>({
@@ -182,6 +208,10 @@ export default function MatchingStatusPage() {
     if (user.hometownAffinityOptin != null) ctx.hometownAffinityOptin = user.hometownAffinityOptin;
     return ctx;
   }, [user]);
+
+  const revealMembers = useMemo<RevealMember[]>(() => {
+    return groupMembersData?.members.map(adaptGroupMemberForReveal) ?? [];
+  }, [groupMembersData?.members]);
 
   // WebSocket subscriptions
   useEffect(() => {
@@ -311,15 +341,15 @@ export default function MatchingStatusPage() {
   const handleRevealContinue = useCallback(() => {
     // Compute chemistry line from current group data so the celebration overlay
     // can continue the V2 reveal narrative.
-    if (groupMembersData?.members) {
-      const payoff = generateChemistryPayoff(groupMembersData.members, currentUserContext);
+    if (revealMembers.length > 0) {
+      const payoff = generateChemistryPayoff(revealMembers, currentUserContext);
       setRevealChemistryLine(payoff.chemistryLine);
     }
     // Hide the reveal overlay and show match celebration
     setShowRevealAnimation(false);
     setRevealAnimationComplete(false);
     setShowMatchCelebration(true);
-  }, [groupMembersData, currentUserContext]);
+  }, [currentUserContext, revealMembers]);
 
   // Handle match celebration flow
   const handleCelebrationContinue = useCallback(() => {
@@ -385,10 +415,8 @@ export default function MatchingStatusPage() {
 
   // Handle invite
   const handleInvite = async () => {
-    const poolTitle = registration?.poolTitle ?? "盲盒社交活动";
-    const formattedDateTime = registration?.poolDateTime 
-      ? formatDateInHongKong(registration.poolDateTime, 'full')
-      : "活动时间待定";
+    const poolTitle = registrationPoolTitle;
+    const formattedDateTime = formattedRegistrationPoolDateTime;
     const shareText = `${poolTitle}\n${formattedDateTime}\n一起来参加盲盒社交活动吧！`;
     const shareUrl = `${window.location.origin}/discover`;
 
@@ -496,7 +524,7 @@ export default function MatchingStatusPage() {
   if (countdown.isExpired && registration.matchStatus === "pending") {
     return (
       <NoMatchScreen
-        poolTitle={registration.poolTitle}
+        poolTitle={registrationPoolTitle}
         onBrowse={() => setLocation("/")}
         onNotify={handleNoMatchNotify}
         onBack={() => setLocation("/")}
@@ -511,7 +539,7 @@ export default function MatchingStatusPage() {
     return (
       <>
         <MatchingWaitingScreen
-          poolTitle={registration.poolTitle}
+          poolTitle={registrationPoolTitle}
           filledCount={poolStats?.currentFill ?? 0}
           minGroupSize={poolStats?.minGroupSize ?? DEFAULT_MIN_GROUP_SIZE}
           maxGroupSize={poolStats?.maxGroupSize ?? DEFAULT_MAX_GROUP_SIZE}
@@ -597,10 +625,10 @@ export default function MatchingStatusPage() {
           </Button>
           <div className="ml-3 flex-1">
             <h1 className="font-semibold text-base line-clamp-1">
-              {registration.poolTitle}
+              {registrationPoolTitle}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {formatDateInHongKong(registration.poolDateTime, 'full')}
+              {formattedRegistrationPoolDateTime}
             </p>
           </div>
         </div>
@@ -1038,12 +1066,7 @@ export default function MatchingStatusPage() {
       {/* V2 Match Reveal Sequence */}
       {showRevealAnimation && groupMembersData && !isLoadingGroupData && (
         <MatchRevealSequenceV2
-          members={groupMembersData.members.map((m) => ({
-            userId: m.userId,
-            displayName: m.displayName ?? "神秘嘉宾",
-            archetype: m.archetype ?? undefined,
-            topInterests: m.topInterests ?? undefined,
-          }))}
+          members={revealMembers}
           currentUser={currentUserContext}
           onComplete={handleRevealContinue}
         />

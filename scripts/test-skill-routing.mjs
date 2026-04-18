@@ -262,6 +262,22 @@ test('apps/server/src/__tests__ path → testing-and-regression-guardrails', () 
   assertEqual(r.primary_skill, 'testing-and-regression-guardrails');
 });
 
+// ---- Mini-program frontend excellence ----
+console.log('\nMini-program frontend excellence scenarios:');
+
+test('premium mini-program UI ask → mini-program-frontend-excellence', () => {
+  const r = routeSkill({ ask: 'This Taro page feels like a cheap mini-program. Make it feel premium and native-quality.' });
+  assertEqual(r.primary_skill, 'mini-program-frontend-excellence');
+});
+
+test('native custom tab bar file path → mini-program-frontend-excellence', () => {
+  const r = routeSkill({
+    ask: 'Refine this mini-program screen UI so it feels premium and native-quality',
+    files: ['apps/mini-program/src/native-custom-tab-bar/index.js'],
+  });
+  assertEqual(r.primary_skill, 'mini-program-frontend-excellence');
+});
+
 // ---- Platform observability ----
 console.log('\nObservability scenarios:');
 
@@ -709,6 +725,19 @@ test('turn-end summary protocol → orchestration-turn-reporting', () => {
 test('last 5 turns improvement loop → orchestration-turn-reporting', () => {
   const r = routeSkill({ ask: 'Keep the agent improvement loop focused on the last 5 turns and append summaries to .git/.orchestration/events.jsonl' });
   assertEqual(r.primary_skill, 'orchestration-turn-reporting');
+});
+
+// ---- First-principles velocity ----
+console.log('\nFirst-principles velocity scenarios:');
+
+test('critical path bottleneck framing → first-principles-velocity', () => {
+  const r = routeSkill({ ask: 'What is the critical path bottleneck for shipping this feature under time pressure?' });
+  assertEqual(r.primary_skill, 'first-principles-velocity');
+});
+
+test('model tier vs complexity → first-principles-velocity', () => {
+  const r = routeSkill({ ask: 'Should this step use a cheap model or Opus given MODEL_CATALOG cost multipliers?' });
+  assertEqual(r.primary_skill, 'first-principles-velocity');
 });
 
 // ---- E2E testing ----

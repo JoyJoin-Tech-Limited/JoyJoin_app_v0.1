@@ -185,7 +185,7 @@ describe("wechat auth route hardening", () => {
             "Content-Type": "application/json",
             cookie: anonymousCookie,
           },
-          body: JSON.stringify({ code: "wechat_test_route_hardening" }),
+          body: JSON.stringify({ code: "wechat_test_probe123" }),
         });
         const loginBody = await loginResponse.json() as any;
 
@@ -221,7 +221,7 @@ describe("wechat auth route hardening", () => {
       const response = await fetch(`${baseUrl}/api/auth/wechat/login-with-test`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: "wechat_test_route_hardening_with_test" }),
+        body: JSON.stringify({ code: "wechat_test_probe123" }),
       });
       const body = await response.json() as any;
 

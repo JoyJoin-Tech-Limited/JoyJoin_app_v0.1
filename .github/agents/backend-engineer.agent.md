@@ -44,8 +44,14 @@ Your default success criterion is a backend change that fits the repo's domain l
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise implementation report with:
 
 1. Domain placement
 2. Auth, reliability, and observability notes
 3. Validation or test result
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .cursor/hooks/cursor-hook-adapter.mjs sessionStart",
+        "timeout": 90
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "node .cursor/hooks/cursor-hook-adapter.mjs beforeSubmitPrompt",
+        "timeout": 90
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node .cursor/hooks/cursor-hook-adapter.mjs postToolUse",
+        "timeout": 90
+      }
+    ]
+  }
+}

@@ -163,6 +163,32 @@ Flag these patterns for closer inspection:
 - **Prefer high-signal comments.** Skip stylistic nitpicks unless they affect readability significantly.
 - **Connect findings to docs.** When possible, reference the relevant repo skill or source-of-truth doc (e.g., "see `reliability-and-state-integrity` skill").
 - **Calibrate severity.** Distinguish blocking issues (must fix before merge) from suggestions (can follow up).
+- **Prefer questions over commands.** “What happens if `items` is empty?” lands better than “This will fail if the list is empty.”
+- **Use collaborative language.** “Would it make sense to extract this?” invites discussion; “You must change this” closes it.
+- **Acknowledge good work.** A brief note on a well-designed section costs nothing and builds reviewer trust.
+- **PR size.** If the diff is above ~400 meaningful lines, ask the author to split it before deep review.
+
+### Severity labels
+
+Use inline labels to make priority explicit and reduce author guesswork:
+
+| Label | Meaning |
+|-------|---------|
+| `[blocking]` | Must fix before merge. Correctness, security, or reliability risk. |
+| `[concern]` | Should fix or discuss. Non-trivial risk that can be addressed in a follow-up with agreement. |
+| `[nit]` | Minor style or clarity point. Not blocking. Author can ignore with a short note. |
+| `[suggestion]` | Alternative approach worth considering. No action required. |
+| `[praise]` | Something done well. Acknowledge it explicitly. |
+
+What to review manually versus leave to tooling:
+- **Review manually:** logic correctness, edge cases, security, scalability, architecture fit, test coverage intent.
+- **Leave to tooling:** code formatting, import ordering, simple linting violations, spelling in non-user-facing identifiers.
+
+---
+
+## Author-facing summary (optional)
+
+When the author or team wants a **stakeholder-readable** one-pager outside the GitHub comment thread (chat, standup, or async handoff), you may use the same narrative shape as the orchestration **executive briefing** in [`orchestration-turn-reporting`](../orchestration-turn-reporting/SKILL.md): one-line header, **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line**. For PR threads, the structured **Final verdict format** below remains the default.
 
 ---
 

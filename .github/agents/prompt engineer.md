@@ -28,6 +28,8 @@ When the prompt system lives in the repository, inspect the relevant prompt, age
 
 ## Output format
 
+### Structured deliverable
+
 Return:
 
 1. A brief diagnosis of what changed and why.
@@ -35,6 +37,10 @@ Return:
 3. Optional validation notes only when the user asked for them or the prompt change affects runtime safety or repo governance.
 
 Use fenced code blocks only when the user explicitly wants code-block formatting or the prompt is materially easier to review that way.
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.
 
 ## Frontend Excellence Notes
 

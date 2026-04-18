@@ -50,6 +50,11 @@ const CONFIG_SPECS: ConfigSpec[] = [
     key: "WECHAT_APPID",
     required: true,
     description: "WeChat Mini Program App ID",
+    validate: (value) => {
+      if (!/^wx[a-zA-Z0-9]{16}$/.test(value) && !/^gh_[a-zA-Z0-9]+$/.test(value)) {
+        return "Must look like a valid WeChat Mini Program or Official Account App ID";
+      }
+    },
   },
   {
     key: "WECHAT_SECRET",

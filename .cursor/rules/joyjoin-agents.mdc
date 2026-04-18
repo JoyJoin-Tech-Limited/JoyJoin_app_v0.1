@@ -1,0 +1,11 @@
+---
+description: Use when the user names a JoyJoin agent persona or asks which specialist to use
+alwaysApply: false
+---
+
+# JoyJoin custom agents (`.github/agents`)
+
+- Inventory and roles: `.github/agents/README.md`. Machine-readable names and subagent allowlists: `.github/agents/manifest.json`.
+- When the user invokes a persona by name (for example `Researcher`, `Planner`, `Backend Engineer`, `Taro Mini-Program Frontend Engineer`, `Supervisor`, `Auto-Eval`), open the matching `*.agent.md` file under `.github/agents/` and follow its frontmatter (`name`, `description`, tools) and body constraints for that turn.
+- Do not paste full agent bodies into chat; read the file in the workspace and align with the skills listed for that agent in the manifest.
+- File names may include spaces (legacy); the YAML `name` field is authoritative.

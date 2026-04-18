@@ -43,6 +43,8 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+    if (String(url).startsWith('/api')) return next();
+
     try {
       const clientTemplate = path.resolve(
         userClientRoot,
@@ -74,7 +76,8 @@ export function serveStatic(app: Express): boolean {
 
   app.use(express.static(distPath));
 
-  app.use("*", (_req, res) => {
+  app.use("*", (req, res, next) => {
+    if (String(req.path).startsWith("/api")) return next();
     res.sendFile(path.resolve(distPath, "index.html"));
   });
   

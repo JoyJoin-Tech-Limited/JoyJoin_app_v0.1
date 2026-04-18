@@ -38,6 +38,26 @@ Personality test completion, successful join, payment confirmation, and profile 
 **3. Empty and loading states**
 Empty states should feel like possibility, not absence. Loading states should feel like momentum, not waiting. A skeleton with a soft shimmer, a contextual illustration, or a warm short copy line transforms a neutral state into a brand-aligned moment.
 
+## Design direction before coding
+
+Before writing any polish or motion code, commit to a clear aesthetic direction for the moment you are building. Generic, interchangeable UI is the failure mode — every polished JoyJoin moment should feel like it could only exist in this product.
+
+**Anti-generic checklist — ask before you start:**
+
+- What is the single most emotionally significant moment in this flow? Polish that, nothing else.
+- Is this treatment warm, rounded, and distinctively JoyJoin — or is it a pattern that would feel equally at home in any other social app?
+- Have you avoided: purple-gradient-on-white backgrounds, generic floating cards with no brand character, default spring physics, system font labels on hero copy, and symmetrical layouts that feel undesigned?
+- Does the spatial composition do any work — breathing room, a soft asymmetry, a deliberate hierarchy — or is it a default flex column?
+
+**On Taro mini-program surfaces** — the same direction principle applies, but execution is constrained. Browser-only effects (backdrop-filter, CSS Grid masonry, custom cursor, hover-only reveals) have no direct equivalent. Translate the *intent* of the aesthetic into what Taro primitives (`View`, `Text`, `Image`, `ScrollView`) and WXSS-safe properties can actually deliver. A restrained, opinionated treatment with native press states and brand-aligned spacing beats a generic-looking attempt to clone browser effects.
+
+**What makes JoyJoin visually distinctive:**
+- warm Vibrant Purple as the single anchor, never scattered as a tint on every element
+- Warm Beige and soft white as breathing backgrounds, not harsh white
+- `font-cn-display` only on short emotional bursts — never on dense lists or body copy
+- rounded, tactile forms that feel social and approachable, not enterprise-flat
+- a single carefully placed mascot or illustration, never decorative wallpaper
+
 ## Guiding principles
 
 | Principle | What it means |
