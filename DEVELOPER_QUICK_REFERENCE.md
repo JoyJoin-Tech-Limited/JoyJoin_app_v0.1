@@ -51,6 +51,7 @@
 ### Guardrails: repo AI workflow and orchestration changes
 - Read `.github/AI_WORKFLOW_POLICY.md` before deciding whether work should stay in direct delivery, go through `Researcher` -> `Planner`, or escalate into the operational review lane.
 - Read `.github/ORCHESTRATION_GOVERNANCE.md` before changing `.github/agents/`, `.github/skills/`, `.github/orchestration.yaml`, hook behavior, or orchestration runtime scripts.
+- For coordinated refreshes across `docs/`, `.github/skills/`, and `.github/agents/`, follow `docs/ai-workflow-documentation-refresh.md` (scope tiers, routing lanes, `npm run orchestration:validate` when orchestration or skill routing changes).
 - Keep repo workflow governance separate from runtime product AI authority. For shipped AI behavior and rollout gates, continue to use `docs/ai-agent-harness-separation-strategy.md` and `docs/AI_INTEGRATION_PLAN.md`.
 - Do not add a new agent or skill by default. Prefer existing skills and audited support agents unless repeated workflow evidence justifies expansion.
 
@@ -126,16 +127,16 @@ joyjoin-monorepo/
 │   │   │   └── AdminApp.tsx  # Admin app entry
 │   │   └── index.html
 │   │
-│   ├── mini-program/         # WeChat Mini Program beta client (Taro + React)
+│   ├── mini-program/         # WeChat Mini Program — launch-primary client (Taro + React)
 │   │   ├── src/
-│   │   │   ├── pages/        # Mini Program page entries
+│   │   │   ├── pages/        # Taro page implementations (see lib/onboardingRoutes for app.json list)
 │   │   │   ├── components/   # Reusable Taro UI components
 │   │   │   ├── hooks/        # Cross-page Taro/query hooks
-│   │   │   ├── providers/    # App-level providers
-│   │   │   ├── lib/          # Runtime helpers, shared-route adapters, tab-bar config
-│   │   │   ├── native-custom-tab-bar/ # Native WeChat custom tab-bar files
+│   │   │   ├── providers/    # App-level providers (AuthProvider, etc.)
+│   │   │   ├── lib/          # onboardingRoutes.ts (page/subpackage/preload), api.ts, tabBarConfig, centerTabRouting
+│   │   │   ├── native-custom-tab-bar/ # Native WeChat custom tab-bar files (built to dist/custom-tab-bar)
 │   │   │   ├── app.ts        # Mini Program app lifecycle entry
-│   │   │   └── app.config.ts # Page registration + custom tab-bar config
+│   │   │   └── app.config.ts # Imports page lists from lib/onboardingRoutes + tabBar from tabBarConfig
 │   │   └── package.json
 │   │
 │   └── server/               # Express.js backend
@@ -157,7 +158,7 @@ joyjoin-monorepo/
 │           ├── matchExplanationService.ts           # AI match explanations
 │           ├── matchingSemantic.ts                  # Feature-flagged 7th scoring dimension (semantic similarity)
 │           ├── matchingMetrics.ts                   # Matching-specific Prometheus metrics
-│           ├── embeddingClient.ts                   # Embedding API client (OpenAI/DeepSeek provider)
+│           ├── embeddingClient.ts                   # Embedding API client (DeepSeek OpenAI-compatible API only)
 │           ├── predictiveRerankingService.ts        # Shadow predictive reranking A/B experiment
 │           ├── xiaoyueAnalysisService.ts            # AI personality analysis
 │           ├── icebreakerAIService.ts               # AI conversation topics
@@ -189,6 +190,27 @@ joyjoin-monorepo/
 └── shared/                   # Legacy shared folder (deprecated, use packages/shared)
 ```
 
+### Taro mini-program (launch focus)
+
+`apps/mini-program` is the **launch-primary** WeChat client. Web (`apps/user-client`) is the sandbox; coordinate cross-surface work via [`docs/PLATFORM_COORDINATION.md`](docs/PLATFORM_COORDINATION.md).
+
+| Concern | Location |
+|---------|----------|
+| Register pages / main vs onboarding subpackage / `preloadRule` | `apps/mini-program/src/lib/onboardingRoutes.ts` → consumed by `app.config.ts` |
+| Personality test (V4) | `apps/mini-program/src/pages/onboarding/personality-test/` (test, results, auth-gate); anonymous keys in `lib/anonymousOnboarding.ts` |
+| WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
+| Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts` |
+| Auth + API bootstrap | `apps/mini-program/src/lib/api.ts` |
+| Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`) |
+| Tab list + `tabBar.custom` | `apps/mini-program/src/lib/tabBarConfig.ts` + `app.config.ts` |
+| Shared contracts with web | `packages/shared/src/api.ts`, `centerTabRouting.ts`, `onboarding.ts`, `hongKongTime.ts` |
+| Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
+
+```bash
+npm run dev:weapp --workspace=mini-program
+npm run build:weapp --workspace=mini-program
+```
+
 ---
 
 ## Server Domain Architecture
@@ -217,8 +239,8 @@ Active domain modules in `routes/domains/`:
 | `admin.ts` | Admin management API |
 | `analytics.ts` | Analytics and KPI endpoints |
 | `payments.ts` | WeChat Pay v3, browser H5 payment creation, coupon validation, and webhook verification |
-| `eventPools.ts` | Event pool discovery and registration endpoints |
-| `icebreaker.ts` | Legacy/basic icebreaker endpoints |
+| `eventPools.ts` | Event pool discovery, registration, and `GET /api/event-pools/:poolId/stats` (`estimatedGroups`, archetype breakdown, historical group themes) |
+| `icebreaker.ts` | Mounts **`/api/social-icebreaker`** (Social Icebreaker router from `routes/socialIcebreaker.ts`) and **`/api/tts`** — not the legacy toolkit; legacy random topics live under monolithic `routes.ts` `/api/icebreakers/*` |
 | `icebreakerSessions.ts` | Icebreaker session discovery and access endpoints |
 | `eventGroupOutcomes.ts` | Protected `POST /api/event-pools/:poolId/group-outcome` outcome submission endpoint |
 | `adminMatchingShadow.ts` | Admin shadow matching experiments, predictive rerank status and controls |
@@ -330,9 +352,9 @@ interface UseAuthResult {
 
 ### Onboarding Architecture Summary
 
-**Authority chain:** `GET /api/auth/user` (server) → `useAuth()` → `AuthenticatedRouter` → `features/onboarding/active/`
+**Authority chain:** `GET /api/auth/user` (server) → `useAuth()` → `AuthenticatedRouter` → `features/onboarding/active/` — shared step mapping also in `packages/shared/src/onboarding.ts` for the mini-program.
 
-The client **never** computes its own onboarding position. `nextStep` is always the server's value.
+The client **never** computes its own onboarding position. `nextStep` is always the server's value. Optional **`onboardingCheckpoint`** on the user can move `nextStep` forward for recovery (see `routes/domains/auth.ts`).
 
 | `nextStep` value | Route | Completion signal |
 |----------------|-------|-------------------|
@@ -345,6 +367,7 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`; once the user is authenticated, routing authority switches to server-returned `nextStep`.
 
 Active onboarding pages: `apps/user-client/src/features/onboarding/active/pages/`  
+Mini-program mirror: `apps/mini-program/src/pages/onboarding/`  
 Legacy surfaces: `apps/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
 
 > Full reference: `docs/onboarding-flow.md` · skill: `onboarding-state-architecture`
@@ -450,10 +473,11 @@ npm run admin:create ops_user OpPass99 BYPASSSECRET12345678 operator "运营小�
 ### In-Event Icebreaker — Primary Flow
 
 The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker**:
-- Route: `/icebreaker/:sessionId`
-- Component: `IcebreakerSessionPage`
+- Client route: `/icebreaker/:sessionId`
+- API: `/api/social-icebreaker/*` (mounted in `routes/domains/icebreaker.ts`)
+- Component: `IcebreakerSessionPage` (web); `apps/mini-program/src/pages/icebreaker-session/` (mini-program)
 - Hook: `useSocialIcebreaker`
-- Phases: warmup → micro_challenge → lie_detective → recap
+- Phases: shared `PHASE_ORDER` ends in `recap`; default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless feature flags trim the list — see `packages/shared/src/socialIcebreaker.ts`
 - Full reference: `docs/icebreaker-system.md`
 
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.
@@ -1083,7 +1107,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `ADMIN_CREATE_SECRET_KEY` | Admin CLI bootstrap secret |
 | `AMAP_API_KEY` | Gaode Maps API |
 | `AMAP_SECURITY_KEY` | Gaode Maps security |
-| `DEEPSEEK_API_KEY` | AI service (via integration); AI features degrade if absent |
+| `DEEPSEEK_API_KEY` | AI service (via integration); also powers semantic profile embeddings in `embeddingClient.ts`; AI features degrade if absent |
 | `APP_URL` | Base public app URL; used as the fallback source for the WeChat Pay notify URL when `WECHAT_PAY_NOTIFY_URL` is unset |
 
 ### Dev / feature-flag env vars
@@ -1095,7 +1119,6 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `ENABLE_EVENT_THEME_TITLE_GENERATION` | `true`/`false` to toggle AI event theme generation |
 | `DEEPSEEK_TIMEOUT_MS` | AI request timeout in ms (default: 5000) |
 | `ENABLE_SEMANTIC_SIMILARITY` | `true` enables the 7th pair-scoring dimension (6% weight, semantic similarity); default `false` — 6D scoring. See `docs/LAUNCH_CONFIG.md` and `apps/server/src/matchingSemantic.ts`. |
-| `OPENAI_API_KEY` | OpenAI API key — used by `embeddingClient.ts` for async semantic profile embedding; takes precedence over `DEEPSEEK_API_KEY` in the embedding provider chain |
 | `EMBEDDING_TIMEOUT_MS` | Embedding API call timeout (default: 10000) |
 | `EMBEDDING_MAX_RETRIES` | Embedding API retry count (default: 2) |
 

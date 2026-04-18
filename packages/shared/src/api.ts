@@ -5,6 +5,7 @@ import {
   validateInterestIds,
   type MacroCategory,
 } from './interests'
+import type { ProfileTaglineResponse } from './ai/onboarding'
 import type { OnboardingNextStep } from './onboarding'
 import type { User } from './schema'
 import type { GroupAnalysisResponse } from './types/groupAnalysis'
@@ -604,6 +605,11 @@ export function getPaymentStatus(
 
 export function getCurrentUser(api: ApiTransport): Promise<AuthUserResponse> {
   return api<AuthUserResponse>({ path: '/api/auth/user' })
+}
+
+/** AI-generated profile insight for review / portrait surfaces (presentation-only). */
+export function getProfileTagline(api: ApiTransport): Promise<ProfileTaglineResponse> {
+  return api<ProfileTaglineResponse>({ path: '/api/onboarding/profile-tagline' })
 }
 
 export interface UserInterestsResponse {

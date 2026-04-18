@@ -23,6 +23,7 @@ Pair with:
 - [`.github/agents/MODEL_CATALOG.md`](../../agents/MODEL_CATALOG.md) — **which model tier** (cost vs capability, dimensions, escalation ladder)
 - [`orchestration-turn-reporting`](../orchestration-turn-reporting/SKILL.md) — **how** to report turns (executive briefing)
 - [`../agents/supervisor.agent.md`](../../agents/supervisor.agent.md) — **Critical-path orchestration** section
+- [`docs/ai-workflow-documentation-refresh.md`](../../../docs/ai-workflow-documentation-refresh.md) — **only when** the mission is a large coordinated documentation refresh (scope tiers, kickoff vs `docs-sync` vs governance lanes)
 
 **Agent wiring:** Loaded in [`orchestration.yaml`](../orchestration.yaml) `skill_bindings` for **`Researcher`**, **`Planner`**, **`Supervisor`**, **`Auto-Eval`**, **`Product Manager`**, **`Backend Engineer`**, **`AI Engineer`**, **`QA Agent`**, **`Verifier`**, **`Launch Readiness Agent`**, **`Database Schema & Migration Auditor`**, **`Mini-Program Parity Auditor`**, **`Taro Mini-Program Frontend Engineer`**, **`Taro Migration Specialist`**, **`Expert React Frontend Engineer`**, **`debug`**, and **`Principal Software Engineer`** so planning, implementation, verification, and release-facing agents share the same execution frame.
 

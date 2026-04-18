@@ -2,6 +2,7 @@ import { ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import {
+  getPoolGroupAnalysis,
   getPoolGroupDetails,
   type PoolGroupDetailsResponse,
   type PoolGroupMemberSummary,
@@ -11,6 +12,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
+import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import './index.scss'
 
 function getMemberName(member: PoolGroupMemberSummary) {
@@ -78,6 +80,14 @@ export default function PoolGroupDetailPage() {
     enabled: !!groupId && !authLoading,
   })
 
+  const { data: groupAnalysis, isLoading: isAnalysisLoading } = useQuery({
+    queryKey: ['mini-program', 'pool-group-analysis', groupId],
+    queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
+    enabled: !!groupId && !authLoading && Boolean(poolGroup),
+    staleTime: 1000 * 60 * 7,
+    retry: 1,
+  })
+
   if (authLoading || isLoading) {
     return <LoadingScreen message='加载小队详情…' />
   }
@@ -136,6 +146,21 @@ export default function PoolGroupDetailPage() {
         <Text className='pool-group-detail__subtitle'>
           {group.matchExplanation || pool.description || '见面信息已经为你准备好，出发前再确认一次时间和地点。'}
         </Text>
+        {isAnalysisLoading ? (
+          <Text className='pool-group-detail__analysis-hint'>正在加载 AI 解析…</Text>
+        ) : null}
+        {groupAnalysis?.groupDynamics ? (
+          <Card className='pool-group-detail__analysis-card'>
+            <Text className='pool-group-detail__analysis-label'>AI · 这桌氛围</Text>
+            <Text className='pool-group-detail__analysis-body'>{groupAnalysis.groupDynamics}</Text>
+            {groupAnalysis.iceBreakers && groupAnalysis.iceBreakers.length > 0 ? (
+              <Text className='pool-group-detail__analysis-ice'>
+                开场灵感：{groupAnalysis.iceBreakers[0]}
+              </Text>
+            ) : null}
+            <GroupAnalysisSourceHint analysis={groupAnalysis} />
+          </Card>
+        ) : null}
         <Text className='pool-group-detail__countdown'>
           {getCountdown(group.finalDateTime ?? pool.dateTime)}
         </Text>

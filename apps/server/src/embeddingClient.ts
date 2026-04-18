@@ -4,26 +4,22 @@ import { logger } from './lib/logger';
 const EMBEDDING_TIMEOUT_MS = parseInt(process.env.EMBEDDING_TIMEOUT_MS || '10000', 10);
 const EMBEDDING_MAX_RETRIES = parseInt(process.env.EMBEDDING_MAX_RETRIES || '2', 10);
 
+/**
+ * Semantic profile embeddings — OpenAI SDK against **DeepSeek** OpenAI-compatible API only.
+ *
+ * **Policy:** JoyJoin does not use OpenAI (vendor) for embeddings. Set `DEEPSEEK_API_KEY`.
+ * Chat/completion routing uses MiniMax + DeepSeek via `socialModelRouter` / `creativeModelRouter`.
+ */
 export interface EmbeddingResult {
   vector: number[];
   model: string;
   dimensions: number;
-  provider: 'openai' | 'deepseek';
+  provider: 'deepseek';
 }
 
-type ProviderConfig =
-  | { provider: 'openai'; apiKey: string; baseURL?: string }
-  | { provider: 'deepseek'; apiKey: string; baseURL: string }
-  | null;
+type ProviderConfig = { provider: 'deepseek'; apiKey: string; baseURL: string } | null;
 
 function getProviderConfig(): ProviderConfig {
-  if (process.env.OPENAI_API_KEY) {
-    return {
-      provider: 'openai',
-      apiKey: process.env.OPENAI_API_KEY,
-    };
-  }
-
   if (process.env.DEEPSEEK_API_KEY) {
     return {
       provider: 'deepseek',
@@ -33,6 +29,10 @@ function getProviderConfig(): ProviderConfig {
   }
 
   return null;
+}
+
+function resolveEmbeddingModel(): string {
+  return process.env.EMBEDDING_MODEL?.trim() || 'text-embedding-3-small';
 }
 
 export class EmbeddingClient {
@@ -68,8 +68,9 @@ export class EmbeddingClient {
     }
 
     try {
+      const modelId = resolveEmbeddingModel();
       const response = await client.embeddings.create({
-        model: process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small',
+        model: modelId,
         input,
       });
 
@@ -83,9 +84,9 @@ export class EmbeddingClient {
 
       return {
         vector,
-        model: response.model ?? (process.env.EMBEDDING_MODEL ?? 'text-embedding-3-small'),
+        model: response.model ?? modelId,
         dimensions: vector.length,
-        provider: this.providerConfig.provider,
+        provider: 'deepseek',
       };
     } catch (error) {
       logger.warn('Semantic embedding generation degraded', {

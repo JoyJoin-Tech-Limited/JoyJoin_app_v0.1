@@ -78,6 +78,7 @@ Follow these steps in order:
 - Are tests present and adequate for the regression/invariant risk introduced?
 - Do CI guardrails still pass?
 - Are new or changed behaviours covered?
+- **Mini-program UI (`apps/mini-program`):** If the diff changes layout, spacing, or typography, confirm the author followed [`mini-program-frontend-excellence/references/pixel-precision.md`](../mini-program-frontend-excellence/references/pixel-precision.md): spec-exact values or 8rpx rhythm, and **WeChat DevTools** verification (or screenshots / written evidence if reviewers cannot run DevTools). **Block merge** on avoidable visual drift or missing verification when the change is user-visible.
 
 **6. Provide constructive feedback and final verdict**
 - Group findings by severity.
@@ -133,6 +134,7 @@ Work through these explicitly before submitting your verdict:
 - [ ] Does it preserve maintainable architecture and correct code placement?
 - [ ] Are tests adequate for the regression/invariant risk?
 - [ ] Are CI guardrails still passing?
+- [ ] **Mini-program UI only:** Pixel discipline and DevTools / evidence requirements satisfied per `pixel-precision.md` (when applicable)
 
 ---
 
@@ -147,11 +149,13 @@ Flag these patterns for closer inspection:
 - **Missing observability** — new failure paths with no logs or metrics
 - **Security regressions** — removed auth checks, weakened fail-closed behaviour, new unauthenticated endpoints
 - **Architecture drift** — patterns inconsistent with repo skills without documented justification
+- **Mini-program visual drift** — unspecced odd rpx spacing, or spec-backed screens that diverge without `pixel-precision.md` exception + evidence
 
 ## Quick examples
 
 - **Payment or webhook PR** — start with this skill, then load `reliability-and-state-integrity` and `auth-session-and-safety-boundaries`; verify idempotency, retry safety, and fail-closed auth around money movement.
-- **Frontend component PR** — start with this skill, then load `frontend-component-architecture` and `design-system-governance`; check whether the component belongs in the app or shared package and whether accessibility/token usage are preserved.
+- **Frontend component PR (web)** — start with this skill, then load `frontend-component-architecture` and `design-system-governance`; check whether the component belongs in the app or shared package, whether accessibility/token usage are preserved, and whether spacing matches spec or the 8px token rhythm.
+- **Mini-program UI PR** — start with this skill, then load `mini-program-frontend-excellence` (especially `references/pixel-precision.md`) and `design-system-governance`; **block** avoidable spec drift, missing 8rpx rhythm when unspecced, or absent WeChat DevTools / screenshot evidence for user-visible layout changes.
 - **Onboarding routing PR** — start with this skill, then load `onboarding-state-architecture`; confirm server-owned `nextStep` remains the authority and that tests cover fallback/loop regressions.
 
 ---

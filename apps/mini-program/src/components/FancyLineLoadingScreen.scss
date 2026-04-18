@@ -1,0 +1,97 @@
+@use '../styles/variables' as *;
+
+.fancy-line-loading-screen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  touch-action: none;
+  pointer-events: none;
+  user-select: none;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  flex-direction: column;
+
+  &__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__bottom {
+    margin-top: $spacing-lg;
+    max-width: 90vw;
+  }
+
+  &__logo {
+    display: block;
+    width: min(520rpx, 65vw);
+    height: auto;
+    object-fit: contain;
+    animation: fancy-line-logo-entrance 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+      fancy-line-logo-shimmer 2.4s ease-in-out 0.6s infinite;
+    will-change: transform, filter, opacity;
+  }
+
+  &--fade-out {
+    animation: fancy-line-fade-out 260ms ease-in forwards;
+  }
+}
+
+@keyframes fancy-line-logo-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+    filter: drop-shadow(0 0 0 rgba(162, 89, 198, 0));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: drop-shadow(0 4rpx 24rpx rgba(162, 89, 198, 0.25));
+  }
+}
+
+@keyframes fancy-line-logo-shimmer {
+  0%,
+  100% {
+    filter: drop-shadow(0 4rpx 24rpx rgba(162, 89, 198, 0.25))
+      drop-shadow(0 0 12rpx rgba(139, 92, 246, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 6rpx 36rpx rgba(162, 89, 198, 0.55))
+      drop-shadow(0 0 40rpx rgba(139, 92, 246, 0.4));
+  }
+}
+
+@keyframes fancy-line-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16rpx);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fancy-line-loading-screen__logo {
+    animation: none !important;
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+  }
+
+  .fancy-line-loading-screen--fade-out {
+    animation: none !important;
+  }
+}

@@ -6,6 +6,8 @@
 **Scope:** Repo workflow architecture, durable memory-plane design, and staged rollout for JoyJoin's AI-assisted delivery system
 
 > **Proposal only.** This document is the first PR artifact for a future memory-plane rollout. It does not describe shipped behavior and does not replace the current-state authority of `.github/ORCHESTRATION.md`, `.github/AI_WORKFLOW_POLICY.md`, `.github/ORCHESTRATION_GOVERNANCE.md`, or `docs/ai-agent-harness-separation-strategy.md`.
+>
+> **Update (2026-04):** A first **file-backed** durable notes layer now lives under [`repo-memory/`](../repo-memory/README.md) (candidates → promoted, schema-validated). This RFC still describes the fuller **Profile C** vision (retrieval, SelfIteration publish path, richer planes); see also [`docs/proposals/README.md`](./README.md) for triage.
 
 ## Executive Summary
 

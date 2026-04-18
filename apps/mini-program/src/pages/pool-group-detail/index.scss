@@ -52,6 +52,46 @@
     color: $color-text-secondary;
   }
 
+  &__analysis-hint {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    font-style: italic;
+  }
+
+  &__analysis-card {
+    margin-top: $spacing-md;
+    text-align: left;
+    padding: $spacing-md;
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.96);
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__analysis-label {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    margin-bottom: 8rpx;
+  }
+
+  &__analysis-body {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.65;
+    color: $color-text-primary;
+  }
+
+  &__analysis-ice {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    line-height: 1.55;
+    color: $color-text-secondary;
+  }
+
   &__countdown {
     display: inline-flex;
     align-items: center;

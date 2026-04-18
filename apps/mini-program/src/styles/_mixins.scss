@@ -64,10 +64,11 @@
 }
 
 // ─── Primary CTA pressed feedback (use with :active; pair with hoverClass in TSX where needed) ─
+// Opacity instead of filter — WeChat devtools/runtime handle filter on buttons unreliably (see landing index.style.test.ts).
 @mixin cta-pressed-active {
   &:active {
     transform: scale(0.98);
-    filter: brightness(0.92);
+    opacity: 0.92;
   }
 }
 

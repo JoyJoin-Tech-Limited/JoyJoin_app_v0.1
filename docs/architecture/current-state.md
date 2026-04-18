@@ -6,12 +6,13 @@ Use it together with:
 - `.github/copilot-instructions.md`
 - `DEVELOPER_QUICK_REFERENCE.md`
 - `docs/onboarding-flow.md`
+- `docs/ai-workflow-documentation-refresh.md` — when updating documentation across `docs/`, `.github/skills/`, and `.github/agents/` in one effort (scope tiers, validation)
 
 ## Monorepo map
 
 - `apps/user-client` — user-facing React app
 - `apps/admin-client` — separate admin React app
-- `apps/mini-program` — WeChat Mini Program beta client built with Taro 4 + React 18
+- `apps/mini-program` — WeChat Mini Program client (Taro 4 + React 18); **launch-primary** surface for the current track (see [`apps/mini-program/README.md`](../../apps/mini-program/README.md))
 - `apps/server` — Express API and operational backend
 - `packages/shared` — shared schema, contracts, taxonomies, and engines
 
@@ -41,7 +42,11 @@ Use it together with:
 - Do not reconstruct onboarding progress as a new client-side source of truth.
 - Treat `guide` and `onboarding` as compatibility values, not new feature targets.
 - Keep server-owned completion semantics aligned with the `users` table and `/api/auth/user` response.
+- **`profileExtendedComplete`** (auth response) is not the same gate as **`hasCompletedInterestsCarousel`** — extended-data step uses the carousel flag.
+- **`onboardingCheckpoint`** (optional on `users`) can let `auth.ts` advance `nextStep` forward for recovery when the checkpoint is ahead of the base step.
 - Legacy onboarding surfaces stay under `apps/user-client/src/legacy/onboarding/`.
+
+**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) on the auth-gate page. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/PLATFORM_COORDINATION.md`](../PLATFORM_COORDINATION.md).
 
 Primary files:
 - `apps/user-client/src/features/onboarding/README.md`
@@ -49,13 +54,19 @@ Primary files:
 - `apps/user-client/src/hooks/useAuth.ts`
 - `apps/server/src/routes/domains/auth.ts`
 - `apps/server/src/routes/domains/onboarding.ts`
+- `packages/shared/src/onboarding.ts`
 
 ### 2. Matching, events, and post-match experience
 
 **Deterministic matching**
 - `apps/server/src/poolMatchingService.ts`
 - `apps/server/src/poolRealtimeMatchingService.ts`
+- `apps/server/src/matchingSemantic.ts` — optional 7th pair dimension when `ENABLE_SEMANTIC_SIMILARITY=true` (weights redistribute; see `poolMatchingService.ts` comments)
 - `packages/shared/src/personality/`
+
+**Event pool operations (stats, registration, outcomes)**
+- `apps/server/src/routes/domains/eventPools.ts` — includes `GET /api/event-pools/:poolId/stats`; `estimatedGroups` is conservative (`Math.floor` of registrations ÷ `minGroupSize`, capped by pool `targetGroups`)
+- `apps/server/src/routes/domains/eventGroupOutcomes.ts` — post-match group outcome submission
 
 **AI explanation and enrichment**
 - `apps/server/src/matchExplanationService.ts`
@@ -86,9 +97,12 @@ Boundary:
 - `packages/shared/src/socialIcebreaker.ts`
 
 **Server runtime**
+- `apps/server/src/routes/domains/icebreaker.ts` — mounts `app.use('/api/social-icebreaker', …, socialIcebreakerRoutes)` (see `routes/socialIcebreaker.ts`)
 - `apps/server/src/routes/socialIcebreaker.ts`
 - `apps/server/src/socialIcebreakerAIService.ts`
+- `apps/server/src/socialIcebreakerPhaseConfig.ts` — phase config aligned with `packages/shared/src/socialIcebreaker.ts`
 - `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL-backed session persistence layer (sessions, participants, lie-truths); replaced the previous in-memory Maps
+- `apps/server/src/lib/socialIcebreakerSweep.ts` — expiry sweep for persisted sessions
 
 **Client hook/surfaces**
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts`
@@ -123,7 +137,7 @@ Boundary:
 Boundary:
 - If more than one app/runtime must agree on a contract, define it in `packages/shared`.
 - If code is runtime-specific, keep it in that app and import only the shared definitions.
-- `apps/user-client` is the active web sandbox and future web release surface; `apps/mini-program` is the beta production client. Shared business rules should not fork between them.
+- `apps/user-client` is the active web sandbox and future web release surface; **`apps/mini-program` is the launch-primary WeChat client** for the current track. Shared business rules should not fork between them — use `packages/shared` and [`docs/PLATFORM_COORDINATION.md`](../PLATFORM_COORDINATION.md) when behaviour must align.
 
 ### 5. Server domain ownership
 
@@ -161,17 +175,19 @@ Boundary:
 - Client hook or query adapter: `apps/user-client/src/hooks/`
 - Pure browser utility: `apps/user-client/src/lib/` or `apps/user-client/src/utils/`
 
-### Mini Program
-- Taro page entry: `apps/mini-program/src/pages/` — register new pages in `apps/mini-program/src/lib/onboardingRoutes.ts`
-- Mini Program runtime helper: `apps/mini-program/src/lib/`
+### Mini Program (Taro — launch-primary)
+
+- **Page registration:** `apps/mini-program/src/lib/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the onboarding **subpackage** (`root: pages/onboarding`, seven page entries), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
+- Taro page implementations: `apps/mini-program/src/pages/`
+- Mini Program runtime helper: `apps/mini-program/src/lib/` (`api.ts`, `centerTabRouting.ts`, `tabBarConfig.ts`, `xiaoyueExpressions.ts`, etc.)
 - Mini Program hook: `apps/mini-program/src/hooks/`
-- Mini Program provider: `apps/mini-program/src/providers/`
+- Mini Program provider: `apps/mini-program/src/providers/` (`AuthProvider.tsx`, achievement/accent providers)
 - Native WeChat custom tab bar implementation: `apps/mini-program/src/native-custom-tab-bar/`
 - The build copies `apps/mini-program/src/native-custom-tab-bar/` into the runtime `custom-tab-bar/` directory; `apps/mini-program/src/custom-tab-bar/` is not the active runtime path.
 - Tab selection / center CTA sync: `apps/mini-program/src/lib/tabBarConfig.ts`, `apps/mini-program/src/lib/centerTabRouting.ts`, `apps/mini-program/src/hooks/useCustomTabBarSync.ts`
 - Active custom-tab-bar constraints live in `apps/mini-program/README.md`; keep the native tree within `cover-view` nesting rules and treat shadow, gradient, and overflow-driven protrusions as compatibility-sensitive.
-- App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (page list plus `tabBar.custom` ownership)
-- Cross-platform contract or pure business rule: `packages/shared/src/` (`api.ts`, `centerTabRouting.ts`, `hongKongTime.ts`)
+- App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (`lazyCodeLoading: 'requiredComponents'`, `tabBar.custom`, window defaults)
+- Cross-platform contract or pure business rule: `packages/shared/src/` (`api.ts`, `centerTabRouting.ts`, `hongKongTime.ts`, `onboarding.ts`)
 
 **Navigation rule:** Tab pages must use `Taro.switchTab()`. Sub-pages use `Taro.navigateTo()` or `Taro.redirectTo()`.
 

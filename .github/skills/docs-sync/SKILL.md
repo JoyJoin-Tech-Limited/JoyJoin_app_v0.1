@@ -28,8 +28,11 @@ description: Comprehensive documentation updater. Scans code changes, maps to do
 - "sync documentation"
 - "document recent changes"
 - "refresh reference docs"
+- "iterate skills and agents"
+- "full documentation refresh"
 - "docs are out of date"
 - `DEVELOPER_QUICK_REFERENCE.md`
+- `docs/ai-workflow-documentation-refresh.md`
 - `docs/onboarding-flow.md`
 - `docs/architecture/`
 - `docs/api/`
@@ -41,6 +44,7 @@ description: Comprehensive documentation updater. Scans code changes, maps to do
 - `DEVELOPER_QUICK_REFERENCE.md`
 - `PRODUCT_REQUIREMENTS.md`
 - `docs/` (entire directory)
+- `docs/ai-workflow-documentation-refresh.md` — coordinated multi-tier refresh (scope, lanes, validation)
 - `docs/architecture/current-state.md`
 - `docs/onboarding-flow.md`
 - `.github/skills/README.md`
@@ -54,6 +58,7 @@ description: Comprehensive documentation updater. Scans code changes, maps to do
 
 Use this skill when:
 - A PR has merged or is under review and its changes are not yet documented
+- You are running a **coordinated refresh** across canonical docs, `.github/skills/`, and `.github/agents/` (pair with `docs/ai-workflow-documentation-refresh.md` for scope and PR splitting)
 - An API, route, or data model has changed and reference docs are stale
 - An onboarding, matching, or icebreaker flow has been modified
 - A new shared component, variant, or token has been added
@@ -73,6 +78,7 @@ Use this skill when:
 - If a doc section describes something that was removed, mark it `<!-- REMOVED -->` or delete it. Do not leave stale content describing removed behaviour as if it is current.
 - The `QUICK_REFERENCE.md` file (legacy) is **not canonical**. Always update `DEVELOPER_QUICK_REFERENCE.md` instead.
 - Canonical docs are: `DEVELOPER_QUICK_REFERENCE.md`, `docs/architecture/current-state.md`, `docs/onboarding-flow.md`, and other active files under `docs/architecture/` that describe current production behaviour.
+- Coordinated refreshes that touch **several tiers at once** (see `docs/ai-workflow-documentation-refresh.md`) still obey this order: canonical product and engineering docs first, then skills and routing, then agents and orchestration—typically **separate PRs per tier** when changes are non-trivial.
 - Supplemental references to update after canonical docs include skills under `.github/skills/`, `apps/server/src/README.md`, `packages/shared/src/README.md`, and other per-module READMEs.
 
 ---
@@ -268,3 +274,4 @@ See `references/mapping.md` for the full source-to-doc mapping guide.
 - [ ] Proposed updates were presented for confirmation before being applied
 - [ ] Changes are the minimal diff needed — no unnecessary rewrites of accurate content
 - [ ] Commit message follows `docs: sync [area] after [change]` pattern
+- [ ] If orchestration or skill `routing.yml` changed, `npm run orchestration:validate` and `node scripts/validate-skill-routing.mjs` were run as required by `docs/ai-workflow-documentation-refresh.md`

@@ -1,11 +1,10 @@
 ---
 name: social-icebreaker-domain
 description: >
-  Primary live in-event system — session lifecycle, host/player authority, persistence/rejoin
-  behaviour, roster vs active presence, action integrity, and secrecy boundaries. Use when working
-  on icebreaker sessions, phase transitions, or AI content generation for live events. Trigger
-  phrases: "player reconnects to session", "enforce host-only action", "advance icebreaker phase",
-  "lie detective secrecy", "session rejoin".
+  Primary live in-event Social Icebreaker — phases (warmup through recap), host/player authority,
+  PostgreSQL session store, rejoin, roster vs presence, lie-detective secrecy. API under
+  /api/social-icebreaker. Triggers: reconnect, host-only action, advance phase, lie detective,
+  personality_dice, session rejoin.
 ---
 
 # Social Icebreaker Domain
@@ -24,25 +23,36 @@ description: >
 
 | Concern | Location |
 |---------|----------|
-| Shared contract + types | `packages/shared/src/socialIcebreaker.ts` |
-| Server route handlers | `apps/server/src/routes/socialIcebreaker.ts` |
+| Shared contract + types (`PHASE_ORDER`, `DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES`, `getNextEligiblePhase`) | `packages/shared/src/socialIcebreaker.ts` |
+| HTTP router (mounted at `/api/social-icebreaker`) | `apps/server/src/routes/socialIcebreaker.ts` |
+| Mount + auth wiring | `apps/server/src/routes/domains/icebreaker.ts` — `app.use('/api/social-icebreaker', isPhoneAuthenticated, socialIcebreakerRoutes)` |
+| Phase timeouts / min players (`PHASE_CONFIG`) | `apps/server/src/socialIcebreakerPhaseConfig.ts` (imports shared types) |
+| PostgreSQL session store | `apps/server/src/lib/socialIcebreakerStore.ts` |
+| Session expiry sweep | `apps/server/src/lib/socialIcebreakerSweep.ts` |
 | AI content generation | `apps/server/src/socialIcebreakerAIService.ts` |
-| Client hook | `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
-| Client page | `apps/user-client/src/pages/IcebreakerSessionPage.tsx` |
-| Phase config tests | `apps/server/src/__tests__/socialIcebreakerPhaseConfig.test.ts` |
-| Route tests | `apps/server/src/__tests__/socialIcebreakerRoutes.test.ts` |
+| Web client hook | `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
+| Web session page | `apps/user-client/src/pages/IcebreakerSessionPage.tsx` |
+| Mini-program session page | `apps/mini-program/src/pages/icebreaker-session/index.tsx` |
+| Tests | `apps/server/src/__tests__/socialIcebreakerRoutes.test.ts`, `socialIcebreakerPhaseConfig.test.ts`, `socialIcebreaker.test.ts`, `socialIcebreakerSweep.test.ts` |
 
 ## Session lifecycle
 
-```
-start → warmup → micro_challenge → lie_detective → recap
-```
+Canonical **phase order** (`PHASE_ORDER` in shared): `warmup` → `micro_challenge` → `lie_detective` → `auction` → `personality_dice` → `mini_script_beta` → `recap`.
 
-MVP phases: `['warmup', 'micro_challenge', 'lie_detective']`
+- **`MVP_PHASES`:** `warmup`, `micro_challenge`, `lie_detective` only.
+- **Default enabled set** (`DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES`): MVP **plus** `personality_dice` (so typical runs include the dice phase before recap when player counts allow). `auction` and `mini_script_beta` are optional / feature-flagged; `getNextEligiblePhase` skips phases that fail minimum player requirements.
+
+```
+start → (enabled phases in order) → recap
+```
 
 - First caller of `POST /api/social-icebreaker/start` becomes the host
 - Subsequent callers join as players
 - Only one session per group (idempotent join)
+
+### Server-enabled phases (env)
+
+Runtime list is **`getServerEnabledPhases()`** in `apps/server/src/socialIcebreakerPhaseConfig.ts`: starts from `DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES`, then optionally inserts `auction`, toggles `personality_dice` via **`SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE`** (default on), and may append **`mini_script_beta`** per env. Do not assume every deployment runs the same subset—check env + persisted `state.enabledPhases` on the session.
 
 ## Host vs player authority
 
@@ -110,16 +120,18 @@ Lie detective phase — secrecy rules:
 
 ## Related files
 
-- `packages/shared/src/socialIcebreaker.ts`
-- `apps/server/src/routes/socialIcebreaker.ts`
-- `apps/server/src/lib/socialIcebreakerStore.ts` — PostgreSQL-backed session/participant/lie-truth store; all reads and writes go through this module
-- `apps/server/src/socialIcebreakerAIService.ts`
-- `apps/user-client/src/hooks/useSocialIcebreaker.ts`
-- `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
-- `apps/server/src/__tests__/socialIcebreakerRoutes.test.ts`
-- `apps/server/src/__tests__/socialIcebreakerPhaseConfig.test.ts`
-- `packages/shared/src/types/aiMeta.ts`
-- `docs/icebreaker-system.md` — full technical reference
+- [`packages/shared/src/socialIcebreaker.ts`](../../../packages/shared/src/socialIcebreaker.ts)
+- [`apps/server/src/routes/domains/icebreaker.ts`](../../../apps/server/src/routes/domains/icebreaker.ts) — mounts `/api/social-icebreaker`
+- [`apps/server/src/routes/socialIcebreaker.ts`](../../../apps/server/src/routes/socialIcebreaker.ts)
+- [`apps/server/src/lib/socialIcebreakerStore.ts`](../../../apps/server/src/lib/socialIcebreakerStore.ts) — PostgreSQL-backed session/participant/lie-truth store; all reads and writes go through this module
+- [`apps/server/src/lib/socialIcebreakerSweep.ts`](../../../apps/server/src/lib/socialIcebreakerSweep.ts)
+- [`apps/server/src/socialIcebreakerPhaseConfig.ts`](../../../apps/server/src/socialIcebreakerPhaseConfig.ts)
+- [`apps/server/src/socialIcebreakerAIService.ts`](../../../apps/server/src/socialIcebreakerAIService.ts)
+- [`apps/user-client/src/hooks/useSocialIcebreaker.ts`](../../../apps/user-client/src/hooks/useSocialIcebreaker.ts)
+- [`apps/user-client/src/pages/IcebreakerSessionPage.tsx`](../../../apps/user-client/src/pages/IcebreakerSessionPage.tsx)
+- [`apps/mini-program/src/pages/icebreaker-session/index.tsx`](../../../apps/mini-program/src/pages/icebreaker-session/index.tsx)
+- [`packages/shared/src/types/aiMeta.ts`](../../../packages/shared/src/types/aiMeta.ts)
+- [`docs/icebreaker-system.md`](../../../docs/icebreaker-system.md) — full technical reference
 
 ## Quick examples
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-17",
+  "updated": "2026-04-18",
   "orchestrationContract": "../orchestration.yaml",
   "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
@@ -165,7 +165,9 @@
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer",
         "Taro Mini-Program Frontend Engineer",
-        "Taro Migration Specialist"
+        "Taro Migration Specialist",
+        "Repo Memory Steward",
+        "Workflow Governance Reviewer"
       ],
       "portfolioRole": "orchestrator",
       "orchestrationPhase": "core-v1",
@@ -183,7 +185,9 @@
         "Mini-Program Parity Auditor",
         "Expert React Frontend Engineer",
         "Taro Mini-Program Frontend Engineer",
-        "Taro Migration Specialist"
+        "Taro Migration Specialist",
+        "Repo Memory Steward",
+        "Workflow Governance Reviewer"
       ],
       "skills": [
         "orchestration-turn-reporting",
@@ -510,6 +514,31 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Repo Memory Steward",
+      "file": "repo-memory-steward.agent.md",
+      "description": "Use when you want durable repo knowledge captured semi-automatically: schema-valid candidate notes under repo-memory/candidates/ via npm run memory:draft-candidate, memory:query dedupe, memory:validate, and a PR summary — without promoting to promoted/ without explicit human approval. Trigger phrases: remember this in repo-memory, draft a memory candidate, automate repo memory, capture this lesson durably, memory steward, smart memory note.",
+      "tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "argumentHint": "Describe the lesson or recurring truth to capture; list authoritative repo paths that exist for relatedPaths/sources; say whether this is a new candidate or an update to an existing note.",
+      "subagents": [
+        "Workflow Governance Reviewer",
+        "Supervisor"
+      ],
+      "portfolioRole": "memory-automation",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "docs-sync"
+      ],
       "toolingStatus": "sufficient"
     },
     {

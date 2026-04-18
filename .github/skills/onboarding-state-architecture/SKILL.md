@@ -1,10 +1,9 @@
 ---
 name: onboarding-state-architecture
 description: >
-  Server-driven nextStep model, active onboarding module ownership, routing authority, and legacy
-  quarantine rules. Use when working on onboarding routing, completion flags, or any
-  onboarding-related page. Trigger phrases: "user is stuck in onboarding", "add a new onboarding
-  step", "why is nextStep wrong?", "onboarding routing loop", "modify completion flags".
+  Server-driven nextStep from GET /api/auth/user, onboardingCheckpoint recovery, web + mini-program
+  shared mapping (packages/shared/onboarding.ts), legacy quarantine. Triggers: stuck in onboarding,
+  new step, nextStep wrong, routing loop, completion flags, profileEssentialComplete.
 ---
 
 # Onboarding State Architecture
@@ -22,13 +21,16 @@ description: >
 
 ```
 GET /api/auth/user
-  └─ apps/server/src/routes/domains/auth.ts (computes nextStep)
+  └─ apps/server/src/routes/domains/auth.ts (computes nextStep; optional onboardingCheckpoint bump)
        └─ apps/user-client/src/hooks/useAuth.ts (exposes contract)
             └─ apps/user-client/src/App.tsx → AuthenticatedRouter (gates routes)
+                 ├─ packages/shared/src/onboarding.ts — same nextStep→step helpers for web + mini-program
                  └─ apps/user-client/src/features/onboarding/active/
-                      ├─ flow.ts (nextStep → route mapping)
+                      ├─ flow.ts (nextStep → route mapping — web)
                       └─ useOnboardingOrchestrator.ts (progress hook)
 ```
+
+**Mini-program:** parallel pages under `apps/mini-program/src/pages/onboarding/` (personality test, auth-gate, essential/extended/review) must obey the same server `nextStep`; do not invent a separate progression model.
 
 ## Active onboarding steps
 
@@ -40,7 +42,13 @@ GET /api/auth/user
 | `profile-review` | `/onboarding/review` | `FinalProfileReviewPage.tsx` | `hasSeenProfileReview` (`users` table flag) |
 | `guide` / `discover` | `/discover` | `DiscoverPage.tsx` | `hasSeenGuide` (`users` table flag) |
 
-All active onboarding pages live under `apps/user-client/src/features/onboarding/active/pages/`.
+**Extended data gate:** `extended-data` is driven by **`hasCompletedInterestsCarousel`** on the user record. **`profileExtendedComplete`** in `/api/auth/user` is a separate server-computed signal (education + industry + hometown) — do not use it as a substitute for the carousel flag in routing logic.
+
+**Checkpoint recovery:** if `users.onboardingCheckpoint` is set **ahead** of the base-computed step (and still before `discover`), `auth.ts` may advance `nextStep` forward to the step after the checkpoint so users can resume safely after interruptions.
+
+All active **web** onboarding pages live under `apps/user-client/src/features/onboarding/active/pages/` (plus `PersonalityTestResultPage` under `pages/`).
+
+**Legacy branch in server:** the `nextStep` computation in `routes/domains/auth.ts` still references `hasCompletedRegistration` in one branch to preserve backward compatibility — **do not** add new code that depends on it; new work uses the active flags in this table.
 
 Pre-auth entry into the active flow is `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`. After auth, `nextStep` becomes the only authority for onward routing.
 
@@ -90,15 +98,18 @@ if (nextStep !== 'discover') {
 
 ## Related files
 
-- `apps/user-client/src/App.tsx` — `AuthenticatedRouter` switch
-- `apps/user-client/src/hooks/useAuth.ts` — auth state including `nextStep`
-- `apps/user-client/src/features/onboarding/active/flow.ts` — `nextStep` → route mapping
-- `apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts` — progress hook
-- `apps/user-client/src/features/onboarding/README.md` — module boundary docs
-- `apps/server/src/routes/domains/auth.ts` — `nextStep` computation
-- `apps/server/src/routes/domains/onboarding.ts` — onboarding completion endpoints
-- `docs/onboarding-flow.md` — detailed flow documentation
-- `docs/architecture/current-state.md` — authority chain and file placement
+- [`packages/shared/src/onboarding.ts`](../../../packages/shared/src/onboarding.ts) — shared `nextStep` → active step helpers (web + mini-program)
+- [`apps/server/src/routes/domains/auth.ts`](../../../apps/server/src/routes/domains/auth.ts) — `nextStep`, `profileEssentialComplete` / `profileExtendedComplete`, checkpoint logic
+- [`apps/server/src/routes/domains/onboarding.ts`](../../../apps/server/src/routes/domains/onboarding.ts) — completion POST endpoints
+- [`apps/user-client/src/App.tsx`](../../../apps/user-client/src/App.tsx) — `AuthenticatedRouter`
+- [`apps/user-client/src/hooks/useAuth.ts`](../../../apps/user-client/src/hooks/useAuth.ts) — `NextStep` constants and auth query
+- [`apps/user-client/src/hooks/useOnboardingRoute.ts`](../../../apps/user-client/src/hooks/useOnboardingRoute.ts)
+- [`apps/user-client/src/hooks/useOnboardingProgress.ts`](../../../apps/user-client/src/hooks/useOnboardingProgress.ts)
+- [`apps/user-client/src/features/onboarding/active/flow.ts`](../../../apps/user-client/src/features/onboarding/active/flow.ts) — web `nextStep` → route mapping
+- [`apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts`](../../../apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts)
+- [`apps/user-client/src/features/onboarding/README.md`](../../../apps/user-client/src/features/onboarding/README.md)
+- [`docs/onboarding-flow.md`](../../../docs/onboarding-flow.md)
+- [`docs/architecture/current-state.md`](../../../docs/architecture/current-state.md)
 
 ## Quick examples
 
@@ -154,8 +165,8 @@ if (nextStep !== 'discover') {
 ## Review checklist
 
 - [ ] `nextStep` is computed server-side in `routes/domains/auth.ts` — never derived on the client
-- [ ] New completion flag is a persisted column on the `users` table, not client-local state
+- [ ] New completion flag is a persisted column on the `users` table (or server-computed field documented in this skill), not client-local state
 - [ ] Client re-fetches `/api/auth/user` after each step completes before navigating
-- [ ] New pages are placed under `features/onboarding/active/pages/`, not `legacy/`
-- [ ] `flow.ts` step → route mapping is updated for any new `nextStep` value
-- [ ] No legacy identifiers (`hasCompletedRegistration`, `registration_sessions`, etc.) in new code
+- [ ] New web pages are placed under `features/onboarding/active/pages/` (or documented `pages/` entry points); mini-program steps stay under `apps/mini-program/src/pages/onboarding/`
+- [ ] `flow.ts` and `packages/shared/src/onboarding.ts` stay aligned for any new `nextStep` value
+- [ ] No legacy identifiers (`hasCompletedRegistration`, `registration_sessions`, etc.) in **new** code (server may retain narrow compatibility branches only)

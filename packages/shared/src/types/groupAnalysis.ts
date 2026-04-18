@@ -53,6 +53,12 @@ export interface PairExplanation {
    * Examples: "同乡（广州）", "性格互补（柯基×狐狸）", "深度同好（4个共同深度兴趣）"
    */
   connectionPoints: string[];
+
+  /**
+   * One short icebreaker line — how to open the conversation naturally (≤24 chars typical).
+   * Optional; populated when the pair-explanation prompt returns structured JSON.
+   */
+  introAngle?: string;
 }
 
 /**

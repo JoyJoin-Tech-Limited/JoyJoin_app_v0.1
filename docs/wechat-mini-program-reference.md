@@ -1,12 +1,14 @@
 # WeChat Mini Program Implementation Reference
 
-> **Status:** Supplemental raw-reference guide only — retained for WXML/WXSS design translation patterns.
-> **Current active mini-program implementation:** `apps/mini-program` uses Taro + React, so this file is not the source of truth for the shipped mini-program client.
-> **Read first for active work:** `docs/PLATFORM_COORDINATION.md` and `apps/mini-program/README.md`.
+> **Status:** Supplemental guide — **not** the architecture or routing source of truth for the shipped client.
+>
+> **Shipped client (launch-primary):** [`apps/mini-program`](../apps/mini-program/) — **Taro 4 + React 18**. Page registration, main package vs **subpackage** (`pages/onboarding`), **`preloadRule`** (from `MINI_PROGRAM_PRELOAD_RULES`), and **`lazyCodeLoading: 'requiredComponents'`** are defined or wired in [`apps/mini-program/src/lib/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) and [`app.config.ts`](../apps/mini-program/src/app.config.ts). Auth/API: [`apps/mini-program/src/lib/api.ts`](../apps/mini-program/src/lib/api.ts). Native custom tab bar: [`apps/mini-program/README.md`](../apps/mini-program/README.md).
+>
+> **Read first for active work:** [`apps/mini-program/README.md`](../apps/mini-program/README.md) · [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) · [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../.github/skills/mini-program-frontend-excellence/SKILL.md) · [`docs/perf.md`](./perf.md) (mini-program package loading).
 
 ## Overview
 
-This document provides a raw-reference implementation for converting mobile-web design concepts into WeChat Mini Program primitives. It predates the current Taro + React client and should be used only as supplemental translation guidance.
+The sections below (WXML/WXSS/legacy `miniprogram/` tree) are **historical translation patterns** for turning design ideas into raw Mini Program primitives. The **JoyJoin product** does **not** ship that vanilla structure — it ships the Taro workspace above. Use this file when you need low-level WeChat API or rpx reminders; use **`apps/mini-program`** for every product change.
 
 ## Prerequisites
 
@@ -14,7 +16,9 @@ This document provides a raw-reference implementation for converting mobile-web 
 - WeChat Mini Program Account
 - Basic understanding of WXML/WXSS/JavaScript
 
-## Project Structure
+## Project Structure (historical example — not the repo layout)
+
+The tree below is a **generic** vanilla Mini Program layout for illustration. The real repo uses **`apps/mini-program/src/`** with Taro pages under `pages/` and config driven by **`lib/onboardingRoutes.ts`**.
 
 ```
 miniprogram/
@@ -825,6 +829,17 @@ wx.request({
 
 ## Conclusion
 
-This reference provides a foundation for converting the JoyJoin mobile web app to a WeChat Mini Program. Follow the examples and adapt as needed for your specific use case.
+Low-level patterns above (rpx, `hover-class`, `wx.request`) still apply inside Taro-generated layers, but **routing, bundling, and auth** are owned by **`apps/mini-program`**.
 
-For questions or clarifications, refer to the WeChat Mini Program official documentation.
+**Shipped wiring** (same facts as [`docs/perf.md`](./perf.md) §7 — mini-program package loading):
+
+| Mechanism | Location |
+|-----------|----------|
+| Main package pages, subpackages, preload rule source | [`onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) → [`app.config.ts`](../apps/mini-program/src/app.config.ts) (`preloadRule` is built from `MINI_PROGRAM_PRELOAD_RULES`) |
+| Onboarding subpackage | `root: pages/onboarding`, seven pages (`MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`) |
+| Preload | `MINI_PROGRAM_PRELOAD_RULES` preloads `pages/onboarding` from **index** and **login** |
+| On-demand injection | `lazyCodeLoading: 'requiredComponents'` in `app.config.ts` |
+
+Narrative and guardrails: [`apps/mini-program/README.md`](../apps/mini-program/README.md) (*Package Loading Strategy*). Repeatable cold-entry timing: [`scripts/measure-mini-program-cold-entry.sh`](../scripts/measure-mini-program-cold-entry.sh) (requires local WeChat DevTools CLI; see README *Cold-entry timing probe*).
+
+For framework API questions, prefer Taro and React docs in addition to [WeChat Mini Program official documentation](https://developers.weixin.qq.com/miniprogram/dev/framework/).

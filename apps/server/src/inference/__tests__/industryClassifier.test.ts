@@ -3,8 +3,8 @@ import { classifyIndustry } from '../industryClassifier';
 
 describe('Industry Classifier with Enhanced Tiers', () => {
   beforeAll(() => {
-    if (!process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
-      console.warn('DEEPSEEK_API_KEY or OPENAI_API_KEY not set, AI tests may fail');
+    if (!process.env.DEEPSEEK_API_KEY) {
+      console.warn('DEEPSEEK_API_KEY not set, AI tests may fail');
     }
   });
   

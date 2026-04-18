@@ -2,7 +2,13 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { completeProfileReview, getUserInterests, type UserInterestsResponse } from '@shared/api'
+import {
+  completeProfileReview,
+  getProfileTagline,
+  getUserInterests,
+  type UserInterestsResponse,
+} from '@shared/api'
+import { GENERIC_PROFILE_TAGLINE_FALLBACK } from '@shared/ai/onboarding'
 import { getIntentLabel } from '@shared/constants'
 import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
@@ -91,6 +97,14 @@ export default function ProfileReviewPage() {
   }, [isLoading])
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
+  const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
+    queryKey: ['mini-program', 'onboarding-profile-tagline'],
+    queryFn: () => getProfileTagline(apiRequest),
+    enabled: !isLoading && Boolean(user),
+    staleTime: 1000 * 60 * 30,
+    retry: 1,
+  })
+
   const {
     data: interestsData,
     isLoading: isInterestsLoading,
@@ -193,6 +207,10 @@ export default function ProfileReviewPage() {
     topInterestLabels.length > 0
       ? '进入发现后，小悦会优先参考这些高热兴趣，为你推荐更像你的活动和搭子。'
       : '进入发现后，你现在确认好的资料就会先帮你筛出更合适的活动。'
+
+  const aiInsightLine =
+    profileTagline?.insightLine?.trim() ||
+    (isTaglineLoading || isTaglineError ? GENERIC_PROFILE_TAGLINE_FALLBACK : '')
   const showInterestSkeleton = shouldLoadInterests && !interestsData && (isInterestsLoading || isInterestsFetching)
   const pageClassName = ['profile-review', isPageExiting ? 'profile-review--exiting' : '']
     .filter(Boolean)
@@ -304,6 +322,9 @@ export default function ProfileReviewPage() {
               ) : (
                 <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
               )}
+              {aiInsightLine ? (
+                <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
+              ) : null}
             </View>
           </View>
 

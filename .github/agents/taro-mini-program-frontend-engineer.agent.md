@@ -47,7 +47,7 @@ You are expert in Taro 4, React 18 authoring for WeChat Mini Programs, page regi
 - Preserve product intent, visible hierarchy, interaction states, and copy from the canonical web flow when relevant, but do not force exact browser mechanics where the platform differs.
 - Use `Taro.navigateTo`, `Taro.redirectTo`, `Taro.showToast`, storage APIs, and page lifecycle hooks where appropriate instead of browser navigation or DOM events.
 - Adapt styling to WXSS-safe patterns and mini-program rendering limits rather than copying browser CSS blindly.
-- For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow and **read [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md)** for structural Taro rules (layout, setData/list performance, cross-end files, `RichText` vs unsafe HTML, asset budgets). Co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, or `frontend-performance-and-loading` as the surface needs.
+- For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow. **Always read [`mini-program-frontend-excellence/references/pixel-precision.md`](../skills/mini-program-frontend-excellence/references/pixel-precision.md)** for spec-vs-rhythm rules, ≤1px tolerance, 8rpx spacing when no spec, and the mandatory **WeChat DevTools** pre-merge gate. **Read [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md)** for structural Taro rules (layout, setData/list performance, cross-end files, `RichText` vs unsafe HTML, asset budgets). Co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, or `frontend-performance-and-loading` as the surface needs.
 - Do not use `dangerouslySetInnerHTML` for cross-end HTML in mini-program work; use `RichText` or structured `View`/`Text` composition.
 - When adding or replacing **images or icons**, check file size against [`taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) §8. If over threshold, **flag** in review output and propose compression, SVG optimization, vector/CSS substitution, or subpackage/lazy routing so premium visuals do not regress load performance or package budget.
 - Use the repo's existing styling patterns by default. Do not introduce CSS-in-JS or a new styling system just because Taro can support it.
@@ -123,6 +123,7 @@ When this turn is persisted with **`record-summary`**, follow the **executive br
 
 ## Quality Bar
 
+- **Pixel precision is mandatory:** When a design spec gives measurements, match them **exactly** (no ad-hoc drift; see `mini-program-frontend-excellence/references/pixel-precision.md`). When there is no spec, enforce **8rpx spacing rhythm** and **consistent alignment** with sibling screens. **Request changes** on PRs that violate this or skip the DevTools verification path for UI changes.
 - Optimize for maintainable mini-program product code, not browser-like demos.
 - A UI that technically works but still feels like a low-effort mini-program is not complete.
 - Fix root platform incompatibilities rather than layering shims over browser assumptions.

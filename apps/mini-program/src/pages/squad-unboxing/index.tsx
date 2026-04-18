@@ -1,452 +1,55 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  confirmPoolGroupAttendance,
-  getPoolGroupAnalysis,
-  getPoolGroupDetails,
-  type PoolGroupDetailsResponse,
-  type PoolGroupMemberSummary,
-} from '@shared/api'
-import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
-import { apiRequest } from '../../lib/api'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { useRouter } from '@tarojs/taro'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
-import { logError, logInfo } from '../../lib/logger'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/Button'
+import { BlindBoxVisual } from './BlindBoxVisual'
+import {
+  formatDateTime,
+  getInitial,
+  getMemberName,
+  getVibeLabel,
+} from './squadUnboxingViewModels'
+import { useSquadUnboxingController } from './useSquadUnboxingController'
 import './index.scss'
-
-type FlowState = 'ready' | 'shaking' | 'revealed'
-type AnalysisStage = 0 | 1 | 2 | 3 | 4
-type ActionDockState = 'hidden' | 'tease' | 'ready'
-type BlindBoxVisualState = 'ready' | 'opening' | 'open'
-
-interface ChemistryTokens {
-  emoji: string
-  title: string
-  description: string
-  chipClassName: string
-}
-
-interface ViewerSpotlight {
-  pair: PairExplanation
-  otherMember: PoolGroupMemberSummary
-}
-
-function getMemberName(member: PoolGroupMemberSummary): string {
-  return member.displayName || '匿名'
-}
-
-function getInitial(name: string): string {
-  return name.charAt(0).toUpperCase()
-}
-
-function formatDateTime(dateTime?: string | null): string {
-  if (!dateTime) {
-    return '时间待定'
-  }
-
-  const parsedDate = new Date(dateTime)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return '时间待定'
-  }
-
-  return parsedDate.toLocaleDateString('zh-CN', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function getVibeLabel(vibe?: string | null): string {
-  switch (vibe) {
-    case 'playful':
-      return '轻松有趣'
-    case 'professional':
-      return '专业交流'
-    case 'creative':
-      return '创意碰撞'
-    case 'adventurous':
-      return '探索冒险'
-    default:
-      return vibe ?? '今晚成桌'
-  }
-}
-
-function getChemistryTokens(
-  chemistry?: OverallChemistry,
-  matchScore?: number | null,
-): ChemistryTokens {
-  const fallbackScore = typeof matchScore === 'number' ? Math.round(matchScore) : null
-
-  switch (chemistry) {
-    case 'fire':
-      return {
-        emoji: '🔥',
-        title: '超级火花',
-        description: '这桌的聊天温度很高，基本不会冷场。',
-        chipClassName: 'squad-unboxing__chemistry-chip--fire',
-      }
-    case 'warm':
-      return {
-        emoji: '✨',
-        title: '暖意融融',
-        description: '同频感很稳定，适合边吃边慢慢聊开。',
-        chipClassName: 'squad-unboxing__chemistry-chip--warm',
-      }
-    case 'cold':
-      return {
-        emoji: '🌱',
-        title: '慢慢发现',
-        description: '这桌是耐聊型组合，越往后越容易找到共同节奏。',
-        chipClassName: 'squad-unboxing__chemistry-chip--cold',
-      }
-    case 'mild':
-      return {
-        emoji: '💬',
-        title: '相聊甚欢',
-        description: '这桌的风格平衡又自然，很适合从小话题慢慢热起来。',
-        chipClassName: 'squad-unboxing__chemistry-chip--mild',
-      }
-    default:
-      return {
-        emoji: '💫',
-        title: fallbackScore !== null ? `默契度 ${fallbackScore}%` : '今晚有戏',
-        description: '小悦已经替你把这一桌锁定，接下来看看你们为什么会聊得来。',
-        chipClassName: 'squad-unboxing__chemistry-chip--fallback',
-      }
-  }
-}
-
-function triggerLightHaptic() {
-  if (typeof Taro.vibrateShort === 'function') {
-    void Taro.vibrateShort({ type: 'light' }).catch(() => undefined)
-  }
-}
-
-function BlindBoxVisual({
-  state,
-  shouldReduceMotion,
-}: {
-  state: BlindBoxVisualState
-  shouldReduceMotion: boolean
-}) {
-  return (
-    <View
-      className={[
-        'squad-unboxing__blind-box-visual',
-        `squad-unboxing__blind-box-visual--${state}`,
-        shouldReduceMotion ? 'squad-unboxing__blind-box-visual--reduced' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      <View className='squad-unboxing__blind-box-aura squad-unboxing__blind-box-aura--left' />
-      <View className='squad-unboxing__blind-box-aura squad-unboxing__blind-box-aura--right' />
-      <View className='squad-unboxing__blind-box-spark squad-unboxing__blind-box-spark--1' />
-      <View className='squad-unboxing__blind-box-spark squad-unboxing__blind-box-spark--2' />
-      <View className='squad-unboxing__blind-box-spark squad-unboxing__blind-box-spark--3' />
-
-      <View className='squad-unboxing__blind-box-lid'>
-        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--lid-vertical' />
-        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--lid-horizontal' />
-        <View className='squad-unboxing__blind-box-knot' />
-      </View>
-
-      <View className='squad-unboxing__blind-box-body'>
-        <View className='squad-unboxing__blind-box-inner-glow' />
-        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--body-vertical' />
-        <View className='squad-unboxing__blind-box-ribbon squad-unboxing__blind-box-ribbon--body-horizontal' />
-      </View>
-
-      <View className='squad-unboxing__blind-box-shadow' />
-    </View>
-  )
-}
 
 export default function SquadUnboxingPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
-  const { user: currentUser, isLoading: authLoading } = useAuthGuard()
-  const { shouldReduceMotion } = useMiniRevealMotion(router.params)
-
-  const [flowState, setFlowState] = useState<FlowState>('ready')
-  const [analysisStage, setAnalysisStage] = useState<AnalysisStage>(0)
 
   const {
-    data: poolGroup,
+    authLoading,
     isLoading,
-    error: fetchError,
-  } = useQuery<PoolGroupDetailsResponse>({
-    queryKey: ['mini-program', 'pool-group', groupId],
-    queryFn: () => getPoolGroupDetails(apiRequest, groupId),
-    enabled: !!groupId && !authLoading,
-  })
-
-  const {
-    data: groupAnalysis,
-    isLoading: isLoadingAnalysis,
-  } = useQuery({
-    queryKey: ['mini-program', 'pool-group-analysis', groupId],
-    queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
-    enabled: !!groupId && flowState === 'revealed',
-    staleTime: 1000 * 60 * 7,
-    retry: 1,
-  })
-
-  const currentUserId = currentUser?.id
-  const members = poolGroup?.members ?? []
-  const group = poolGroup?.group
-  const pool = poolGroup?.pool
-
-  const confirmAttendanceMutation = useMutation({
-    mutationFn: () => confirmPoolGroupAttendance(apiRequest, groupId),
-    onSuccess: async (response) => {
-      logInfo('[SquadUnboxing] Attendance confirmed', {
-        groupId,
-        blindBoxEventId: response.blindBoxEventId,
-      })
-
-      await Taro.showToast({
-        title: '已确认出席',
-        icon: 'success',
-        duration: 1800,
-      })
-
-      if (response.blindBoxEventId) {
-        Taro.redirectTo({ url: `/pages/event-detail/index?id=${response.blindBoxEventId}` })
-        return
-      }
-
-      Taro.navigateTo({ url: `/pages/pool-group-detail/index?groupId=${groupId}` })
-    },
-    onError: (error) => {
-      const message = error instanceof Error ? error.message : '确认出席失败'
-      logError('[SquadUnboxing] Attendance confirmation failed', {
-        groupId,
-        message,
-      })
-      Taro.showToast({ title: message, icon: 'none', duration: 2200 })
-    },
-  })
-
-  const chemistryTokens = useMemo(
-    () => getChemistryTokens(groupAnalysis?.overallChemistry, group?.matchScore),
-    [group?.matchScore, groupAnalysis?.overallChemistry],
-  )
-
-  const sortedPairExplanations = useMemo<PairExplanation[]>(() => {
-    if (!groupAnalysis?.pairExplanations) {
-      return []
-    }
-
-    if (!currentUserId) {
-      return groupAnalysis.pairExplanations
-    }
-
-    return [...groupAnalysis.pairExplanations].sort((left, right) => {
-      const leftHasCurrentUser = left.pairKey.includes(currentUserId)
-      const rightHasCurrentUser = right.pairKey.includes(currentUserId)
-
-      if (leftHasCurrentUser && !rightHasCurrentUser) return -1
-      if (!leftHasCurrentUser && rightHasCurrentUser) return 1
-      return 0
-    })
-  }, [currentUserId, groupAnalysis?.pairExplanations])
-
-  const pairKeyMemberMap = useMemo(() => {
-    const map = new Map<string, [PoolGroupMemberSummary, PoolGroupMemberSummary]>()
-
-    for (let index = 0; index < members.length; index += 1) {
-      for (let nextIndex = index + 1; nextIndex < members.length; nextIndex += 1) {
-        const pairKey = [members[index].userId, members[nextIndex].userId].sort().join('-')
-        map.set(pairKey, [members[index], members[nextIndex]])
-      }
-    }
-
-    return map
-  }, [members])
-
-  const strongConnectionCount = useMemo(() => {
-    const highChemistryPairs = sortedPairExplanations.filter((pair) => pair.chemistryScore >= 70)
-    return highChemistryPairs.length > 0 ? highChemistryPairs.length : sortedPairExplanations.length
-  }, [sortedPairExplanations])
-
-  const viewerPairs = useMemo<PairExplanation[]>(() => {
-    if (Array.isArray(groupAnalysis?.myPairs) && groupAnalysis.myPairs.length > 0) {
-      return groupAnalysis.myPairs
-    }
-
-    if (!currentUserId) {
-      return []
-    }
-
-    return sortedPairExplanations.filter((pair) => {
-      const members = pairKeyMemberMap.get(pair.pairKey)
-      return Boolean(members && members.some((member) => member.userId === currentUserId))
-    })
-  }, [currentUserId, groupAnalysis?.myPairs, pairKeyMemberMap, sortedPairExplanations])
-
-  const viewerPairByMemberId = useMemo(() => {
-    const map = new Map<string, PairExplanation>()
-
-    if (!currentUserId) {
-      return map
-    }
-
-    viewerPairs.forEach((pair) => {
-      const members = pairKeyMemberMap.get(pair.pairKey)
-      const otherMember = members?.find((member) => member.userId !== currentUserId)
-      if (otherMember) {
-        map.set(otherMember.userId, pair)
-      }
-    })
-
-    return map
-  }, [currentUserId, pairKeyMemberMap, viewerPairs])
-
-  const viewerSpotlight = useMemo<ViewerSpotlight | null>(() => {
-    if (!currentUserId) {
-      return null
-    }
-
-    for (const pair of viewerPairs) {
-      const pairMembers = pairKeyMemberMap.get(pair.pairKey)
-      const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
-
-      if (otherMember) {
-        return {
-          pair,
-          otherMember,
-        }
-      }
-    }
-
-    return null
-  }, [currentUserId, pairKeyMemberMap, viewerPairs])
-
-  const groupThemeHighlights = useMemo(
-    () =>
-      Array.isArray(group?.highlights)
-        ? group.highlights.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 4)
-        : [],
-    [group?.highlights],
-  )
-
-  const analysisThemeTags = useMemo(() => {
-    if (Array.isArray(groupAnalysis?.groupThemeTags) && groupAnalysis.groupThemeTags.length > 0) {
-      return groupAnalysis.groupThemeTags.slice(0, 4)
-    }
-
-    return groupThemeHighlights
-  }, [groupAnalysis?.groupThemeTags, groupThemeHighlights])
-
-  const actionDockState = useMemo<ActionDockState>(() => {
-    if (flowState !== 'revealed') {
-      return 'hidden'
-    }
-
-    if (analysisStage >= 4) {
-      return 'ready'
-    }
-
-    if (analysisStage >= 3) {
-      return 'tease'
-    }
-
-    return 'hidden'
-  }, [analysisStage, flowState])
-  const rootClassName = ['squad-unboxing', shouldReduceMotion ? 'squad-unboxing--reduce-motion' : '']
-    .filter(Boolean)
-    .join(' ')
-
-  const handleOpenBox = useCallback(() => {
-    triggerLightHaptic()
-    setAnalysisStage(0)
-    setFlowState('shaking')
-  }, [])
-
-  const handleConfirmAttendance = useCallback(() => {
-    if (confirmAttendanceMutation.isPending) {
-      return
-    }
-
-    confirmAttendanceMutation.mutate()
-  }, [confirmAttendanceMutation])
-
-  const handleOpenGroupDetail = useCallback(() => {
-    Taro.navigateTo({ url: `/pages/pool-group-detail/index?groupId=${groupId}` })
-  }, [groupId])
-
-  const handleSkip = useCallback(async () => {
-    if (analysisStage < 4) {
-      setAnalysisStage(4)
-    }
-
-    const { confirm } = await Taro.showModal({
-      title: '先离开这桌？',
-      content:
-        strongConnectionCount > 0
-          ? `系统已经看出这桌至少有 ${strongConnectionCount} 组潜在连接点，真的要先离开吗？`
-          : '你稍后仍然可以从活动页回来看这桌的揭晓内容。',
-      confirmText: '先离开',
-      cancelText: '再看看',
-      confirmColor: '#EF4444',
-    })
-
-    if (confirm) {
-      Taro.switchTab({ url: '/pages/events/index' })
-    }
-  }, [analysisStage, strongConnectionCount])
-
-  useEffect(() => {
-    if (flowState !== 'shaking') {
-      return undefined
-    }
-
-    const timer = setTimeout(() => {
-      triggerLightHaptic()
-      setFlowState('revealed')
-    }, shouldReduceMotion ? 220 : 1450)
-
-    return () => clearTimeout(timer)
-  }, [flowState, shouldReduceMotion])
-
-  useEffect(() => {
-    if (flowState !== 'revealed') {
-      return undefined
-    }
-
-    const timer = setTimeout(() => {
-      setAnalysisStage((stage) => (stage === 0 ? 1 : stage))
-    }, shouldReduceMotion ? 120 : 900)
-
-    return () => clearTimeout(timer)
-  }, [flowState, shouldReduceMotion])
-
-  useEffect(() => {
-    if (analysisStage < 1 || analysisStage >= 4) {
-      return undefined
-    }
-
-    const timer = setTimeout(() => {
-      setAnalysisStage((stage) => (stage < 4 ? ((stage + 1) as AnalysisStage) : stage))
-    }, shouldReduceMotion ? 420 : 1650)
-
-    return () => clearTimeout(timer)
-  }, [analysisStage, shouldReduceMotion])
-
-  useEffect(() => {
-    if (analysisStage > 0) {
-      triggerLightHaptic()
-    }
-  }, [analysisStage])
+    fetchError,
+    poolGroup,
+    group,
+    pool,
+    members,
+    currentUserId,
+    groupAnalysis,
+    isLoadingAnalysis,
+    chemistryTokens,
+    sortedPairExplanations,
+    pairKeyMemberMap,
+    viewerPairs,
+    viewerPairByMemberId,
+    viewerSpotlight,
+    groupThemeHighlights,
+    analysisThemeTags,
+    flowState,
+    analysisStage,
+    actionDockState,
+    rootClassName,
+    shouldReduceMotion,
+    confirmAttendanceMutation,
+    handleOpenBox,
+    handleConfirmAttendance,
+    handleOpenGroupDetail,
+    handleSkip,
+    navigateBackOrEventsTab,
+  } = useSquadUnboxingController({ groupId, routerParams: router.params })
 
   if (authLoading || isLoading) {
     return <LoadingScreen message='揭晓小队中…' />
@@ -460,11 +63,7 @@ export default function SquadUnboxingPage() {
           <Text className='squad-unboxing__error-text'>
             {fetchError ? '加载小队信息失败' : '未找到小队信息'}
           </Text>
-          <Button
-            variant='secondary'
-            className='squad-unboxing__error-btn'
-            onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/events/index' }) })}
-          >
+          <Button variant='secondary' className='squad-unboxing__error-btn' onClick={navigateBackOrEventsTab}>
             返回
           </Button>
         </View>
@@ -748,6 +347,7 @@ export default function SquadUnboxingPage() {
                           </Text>
                         ) : null}
                         <Text className='squad-unboxing__analysis-text'>{groupAnalysis.groupDynamics}</Text>
+                        <GroupAnalysisSourceHint analysis={groupAnalysis} />
                       </>
                     ) : (
                       <Text className='squad-unboxing__analysis-text'>{group.matchExplanation}</Text>
@@ -795,6 +395,9 @@ export default function SquadUnboxingPage() {
                                 </View>
                               ) : null}
                               <Text className='squad-unboxing__pair-copy'>{pair.explanation}</Text>
+                              {pair.introAngle ? (
+                                <Text className='squad-unboxing__pair-intro'>开场：{pair.introAngle}</Text>
+                              ) : null}
                             </View>
                           )
                         })}
@@ -818,6 +421,9 @@ export default function SquadUnboxingPage() {
                                 <Text className='squad-unboxing__pair-score'>{pair.chemistryScore}</Text>
                               </View>
                               <Text className='squad-unboxing__pair-copy'>{pair.explanation}</Text>
+                              {pair.introAngle ? (
+                                <Text className='squad-unboxing__pair-intro'>开场：{pair.introAngle}</Text>
+                              ) : null}
                             </View>
                           )
                         })}

@@ -144,6 +144,12 @@ export default function EventsPage() {
       }
       
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
+      if (themeTitleData.groupId) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/pool-groups", themeTitleData.groupId] });
+        await queryClient.invalidateQueries({
+          queryKey: ["/api/pool-groups", themeTitleData.groupId, "analysis"],
+        });
+      }
     });
 
     const unsubscribeStatus = subscribe('EVENT_STATUS_CHANGED', async (message) => {

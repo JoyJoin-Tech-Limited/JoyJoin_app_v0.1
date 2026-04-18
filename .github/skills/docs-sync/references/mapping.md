@@ -9,6 +9,8 @@ This guide maps areas of the JoyJoin codebase to the documentation files that mu
 4. `.github/skills/` SKILL.md files
 5. Workspace-level READMEs (`apps/server/src/README.md`, `packages/shared/src/README.md`, etc.)
 
+**Coordinated multi-tier refresh:** When the task is explicitly to align **product docs, skills, and agents** (not a single feature PR), read [`docs/ai-workflow-documentation-refresh.md`](../../../../docs/ai-workflow-documentation-refresh.md) first for scope tiers, lane choice (kickoff vs this skill vs Workflow Governance Reviewer), and validation commands. Prefer **one PR per tier** when diffs are large.
+
 **Anti-legacy rule:** Never propagate a legacy identifier, deprecated route, or removed component into any documentation target, even a supplementary one.
 
 ---
@@ -55,6 +57,35 @@ This guide maps areas of the JoyJoin codebase to the documentation files that mu
 | `apps/user-client/src/features/onboarding/README.md` | If onboarding feature structure changed — update module boundary description |
 
 **When to skip:** Adding a new page component without changing routing logic, hooks, or shared patterns.
+
+---
+
+## 2b. WeChat Mini Program — personality test, login, payment
+
+**Source paths:**
+- `apps/mini-program/src/pages/onboarding/personality-test/`
+- `apps/mini-program/src/pages/login/`
+- `apps/mini-program/src/hooks/useWeChatLogin.ts`
+- `apps/mini-program/src/lib/anonymousOnboarding.ts`
+- `apps/mini-program/src/pages/blind-box-payment/`
+- `apps/mini-program/src/pages/payment-verification/`
+- `apps/mini-program/src/lib/api.ts`, `paymentEntry.ts`, `paymentPendingOrder.ts`, `paymentPendingOrderStorage.ts`
+- `apps/mini-program/src/lib/onboardingRoutes.ts` (page registration / subpackages)
+- `apps/mini-program/src/app.ts` (pending-order resume on cold start)
+
+**Documentation targets:**
+
+| Doc | What to update |
+|-----|---------------|
+| `docs/PLATFORM_COORDINATION.md` | Cross-platform auth and payment table; mini-program file map |
+| `docs/PERSONALITY_TEST_SYSTEM.md` | Client surfaces table (web vs mini-program) if assessment UI or storage changes |
+| `docs/onboarding-flow.md` | Mini Program path mirror table if routes or auth endpoints change |
+| `docs/architecture/current-state.md` | Mini-program onboarding / payment bullets |
+| `DEVELOPER_QUICK_REFERENCE.md` | Taro mini-program table |
+| `apps/mini-program/README.md` | Source-of-truth bullets |
+| `.github/skills/platform-coordination-protocol/SKILL.md` | Coordinated areas table and related files |
+
+**When to skip:** Purely visual SCSS changes with no routing, API, or storage key changes.
 
 ---
 

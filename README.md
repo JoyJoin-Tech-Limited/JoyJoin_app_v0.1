@@ -196,8 +196,7 @@ The repo uses the following environment variables in active local and optional f
 | `ENABLE_DEV_AUTH_TOOLS` | Enables non-production auth/debug helper routes | Both (optional local debugging) |
 | `DEBUG_AUTH` | Enables extra auth logging in non-production | Both (optional local debugging) |
 | `VITE_ENABLE_DEV_TOOLS` | Enables client-side dev tools in the user app when `import.meta.env.DEV` is true | User app only (optional) |
-| `DEEPSEEK_API_KEY` | DeepSeek API key for AI-backed features | Both (optional AI features) |
-| `OPENAI_API_KEY` | OpenAI API key used by the embedding client when present | Both (optional AI features) |
+| `DEEPSEEK_API_KEY` | DeepSeek API key for AI-backed features (including **semantic profile embeddings** via `embeddingClient.ts`) | Both (optional AI features) |
 | `EMBEDDING_TIMEOUT_MS` | Embedding request timeout in milliseconds | Both (optional AI tuning) |
 | `EMBEDDING_MAX_RETRIES` | Embedding request retry count | Both (optional AI tuning) |
 | `ENABLE_SEMANTIC_SIMILARITY` | Enables the optional semantic matching dimension | Both (optional matching experiment) |

@@ -1,5 +1,6 @@
-import type { EventThemeVibe } from '@shared/api'
+import type { EventThemeVibe, PoolGroupSummary, PoolRegistrationSummary } from '@shared/api'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
+import type { EventThemeTitleRevealedData } from '@shared/wsEvents'
 
 export type LiveRevealStage = 'idle' | 'match' | 'members' | 'theme'
 
@@ -9,6 +10,56 @@ export interface ThemeSummary {
   emoji?: string | null
   vibe?: EventThemeVibe | null
   highlights: string[]
+}
+
+export type ThemeSummaryRegistrationSlice = Pick<
+  PoolRegistrationSummary,
+  'theme' | 'themeEmoji' | 'highlights' | 'subtitle' | 'vibe'
+>
+
+/**
+ * Single precedence for the theme block on matching-status after a pool is matched:
+ *
+ * 1. **WS `EVENT_THEME_TITLE_REVEALED`** — wins whenever present (live reveal payload).
+ * 2. Otherwise merge **group details** (`getPoolGroupDetails`) over **registration list**
+ *    (`getMyPoolRegistrations`): per field, group wins when set (server snapshot for the locked group).
+ */
+export function resolvePersistedThemeSummary(params: {
+  themeRevealData: EventThemeTitleRevealedData | null | undefined
+  group: PoolGroupSummary | null | undefined
+  registration: ThemeSummaryRegistrationSlice | null | undefined
+}): ThemeSummary | null {
+  const { themeRevealData, group, registration } = params
+
+  if (themeRevealData) {
+    return {
+      title: themeRevealData.eventThemeTitle,
+      subtitle: themeRevealData.themeTagline,
+      emoji: themeRevealData.themeEmoji,
+      vibe: themeRevealData.themeVibe,
+      highlights: themeRevealData.themeHighlights ?? [],
+    }
+  }
+
+  const title = group?.theme ?? registration?.theme ?? null
+  const emoji = group?.themeEmoji ?? registration?.themeEmoji ?? null
+  const highlights = group?.highlights ?? registration?.highlights ?? []
+
+  if (!title && !emoji) {
+    return null
+  }
+
+  return {
+    title: title ?? '活动主题',
+    subtitle: group?.subtitle ?? registration?.subtitle ?? null,
+    emoji,
+    vibe: group?.vibe ?? registration?.vibe ?? null,
+    highlights: Array.isArray(highlights)
+      ? highlights
+          .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+          .slice(0, 4)
+      : [],
+  }
 }
 
 export interface PoolFillStats {
@@ -147,10 +198,6 @@ function getHoursUntilEvent(dateTime?: string | null): number | null {
 export function isVenueUnlocked(dateTime?: string | null): boolean {
   const hoursUntilEvent = getHoursUntilEvent(dateTime)
   return hoursUntilEvent !== null && hoursUntilEvent > 0 && hoursUntilEvent < VENUE_UNLOCK_HOURS
-}
-
-export function buildMatchedDestinationUrl(groupId: string): string {
-  return `/pages/pool-group-detail/index?groupId=${encodeURIComponent(groupId)}`
 }
 
 export function getTemperatureCopy(level?: string | null): TemperatureCopy {

@@ -1,6 +1,7 @@
 # JoyJoin 性能优化指南
 
-> **Last updated:** 2026-04-14 (subpackage loading guidance, PRs #385, #386, #388, #390)
+> **Last updated:** 2026-04-19 (mini-program launch-primary wiring: `onboardingRoutes.ts`, `preloadRule`, cold-entry probe)
+> **Previous:** 2026-04-14 (subpackage loading guidance, PRs #385, #386, #388, #390)
 
 ## 性能预算
 
@@ -117,9 +118,22 @@ apps/user-client/src/assets/matching/
 - Only preload the critical vendor chunk and the initial route chunk.
 - Configure a reasonable `browserslist` target for the mobile-first audience.
 
-### 7. Mini Program 分包策略
+### 7. Mini Program 分包策略（launch-primary 客户端）
 
-对 `apps/mini-program` 来说，分包是**基于证据的加载决策**，不是默认就要追求的结构复杂度。
+`apps/mini-program` 是当前 **launch-primary** WeChat 客户端；性能预算与分包决策优先在这里验证，再对照 web。权威策略说明见 [`apps/mini-program/README.md`](../apps/mini-program/README.md) 的 *Package Loading Strategy*。
+
+**代码中的真实配置（与文档同步）：**
+
+| 机制 | 位置 |
+|------|------|
+| 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) → 由 [`app.config.ts`](../apps/mini-program/src/app.config.ts) 引用 |
+| Onboarding subpackage | `root: pages/onboarding`，7 个页面（见 `MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`） |
+| 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index` 与 `login` 预拉 `pages/onboarding` 分包 |
+| 按需注入 | `app.config.ts` 中 `lazyCodeLoading: 'requiredComponents'` |
+
+**可重复探测：** 仓库根目录 `scripts/measure-mini-program-cold-entry.sh`（需本机微信开发者工具 CLI）用于冷启动与 onboarding 预载代理场景，详见 mini-program README *Cold-entry timing probe*。
+
+对 `apps/mini-program` 来说，分包仍是**基于证据的加载决策**，不是默认追求结构复杂度。
 
 - **默认顺序：** 普通分包 -> `preloadRule` -> 资源与首屏清理 -> 再评估是否值得上独立分包
 - **主包约束：** tabBar 页面必须留在主包
@@ -171,4 +185,4 @@ performance.measure('route-transition', 'route-start');
 | Hero images | Use WebP + `decoding="async"`; avoid large PNG |
 | Archetype assets | Defer / gate — do not preload all 12 in the critical path |
 | Asset prefetching | Gate on real activity state — do not prefetch for no-activity users |
-| Mini Program package loading | Keep tabBar pages in the main package; try ordinary subpackages + `preloadRule` first; justify independent subpackages with measured wins and a self-contained bootstrap plan |
+| Mini Program package loading | Keep tabBar pages in the main package; onboarding subpackage + `preloadRule` from `onboardingRoutes.ts` first; justify independent subpackages with measured wins and a self-contained bootstrap plan |

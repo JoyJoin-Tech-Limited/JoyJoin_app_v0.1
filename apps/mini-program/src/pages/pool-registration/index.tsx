@@ -2,13 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  getEventPool,
-  type NormalizedEventPoolRegistrationPayload,
-  registerForPool,
-  type EventPoolRegistrationPayload,
-  type EventPoolSummary,
-} from '@shared/api'
+import { getEventPool, registerForPool, type EventPoolSummary } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { apiRequest, type ApiError } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -44,29 +38,19 @@ import {
   type FlowOption,
   type PoolEventType,
 } from './flowConfig'
+import {
+  buildFormStateFromDraft,
+  buildRegistrationPayload,
+  findLabels,
+  getPoolRegistrationAdvanceBlocker,
+  getPoolRegistrationSubmitBlocker,
+  INITIAL_FORM_STATE,
+  resolveRegistrationStep,
+  toggleValue,
+  type RegistrationFormState,
+  type RegistrationStep,
+} from './poolRegistrationForm'
 import './index.scss'
-
-type RegistrationStep = 0 | 1 | 2 | 3
-
-interface RegistrationFormState {
-  eventIntent: string[]
-  preferredLanguages: string[]
-  budgetRange?: string[]
-  cuisinePreferences: string[]
-  dietaryRestrictions: string[]
-  tasteIntensity?: string
-  barThemes: string[]
-  alcoholComfort?: string
-  barBudgetRange?: string[]
-}
-
-const INITIAL_FORM_STATE: RegistrationFormState = {
-  eventIntent: [],
-  preferredLanguages: [],
-  cuisinePreferences: [],
-  dietaryRestrictions: [],
-  barThemes: [],
-}
 
 interface ChoiceCardProps {
   option: FlowOption
@@ -140,77 +124,12 @@ function StepPill({ index, label, active, complete }: StepPillProps) {
   )
 }
 
-function toggleValue(values: string[], value: string): string[] {
-  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
-}
-
-function findLabels(values: string[], options: FlowOption[]): string[] {
-  return options.filter((option) => values.includes(option.value)).map((option) => option.label)
-}
-
 function resolveMessage(error: unknown, fallbackMessage: string): string {
   if (error instanceof Error && error.message) {
     return error.message
   }
 
   return fallbackMessage
-}
-
-function buildRegistrationPayload(
-  formState: RegistrationFormState,
-  eventType: PoolEventType,
-): EventPoolRegistrationPayload {
-  return {
-    eventIntent: formState.eventIntent,
-    preferredLanguages: formState.preferredLanguages,
-    ...(eventType === '酒局'
-      ? {
-          barBudgetRange: formState.barBudgetRange,
-          barThemes: formState.barThemes,
-          alcoholComfort: formState.alcoholComfort ? [formState.alcoholComfort] : undefined,
-        }
-      : {
-          budgetRange: formState.budgetRange,
-          cuisinePreferences: formState.cuisinePreferences,
-          dietaryRestrictions: formState.dietaryRestrictions,
-          tasteIntensity: formState.tasteIntensity ? [formState.tasteIntensity] : undefined,
-        }),
-  }
-}
-
-function buildFormStateFromDraft(
-  draft: NormalizedEventPoolRegistrationPayload,
-): RegistrationFormState {
-  const alcoholComfort = Array.isArray(draft.alcoholComfort)
-    ? draft.alcoholComfort[0]
-    : undefined
-  const tasteIntensity = Array.isArray(draft.tasteIntensity)
-    ? draft.tasteIntensity[0]
-    : undefined
-
-  return {
-    eventIntent: draft.eventIntent ?? [],
-    preferredLanguages: draft.preferredLanguages ?? [],
-    budgetRange: draft.budgetRange?.slice(0, 1),
-    cuisinePreferences: draft.cuisinePreferences ?? [],
-    dietaryRestrictions: draft.dietaryRestrictions ?? [],
-    tasteIntensity,
-    barThemes: draft.barThemes ?? [],
-    alcoholComfort,
-    barBudgetRange: draft.barBudgetRange?.slice(0, 1),
-  }
-}
-
-function resolveRegistrationStep(step: number): RegistrationStep {
-  switch (step) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-      return step
-    default:
-      return 3
-  }
 }
 
 function getEntitlementCode(error: unknown): MiniProgramPaymentEntitlementCode | null {
@@ -487,22 +406,20 @@ export default function PoolRegistrationPage() {
       return
     }
 
-    if (step === 1) {
-      if (!hasBudgetSelection) {
-        Taro.showToast({ title: '先选一个预算区间', icon: 'none', duration: 2500 })
-        return
-      }
-
-      setStep(2)
+    if (step === 3) {
       return
     }
 
-    if (!hasIntentSelection) {
-      Taro.showToast({ title: '至少选一个这次想收获的方向', icon: 'none', duration: 2500 })
+    const blocker = getPoolRegistrationAdvanceBlocker(step, {
+      hasBudgetSelection,
+      hasIntentSelection,
+    })
+    if (blocker) {
+      Taro.showToast({ title: blocker, icon: 'none', duration: 2500 })
       return
     }
 
-    setStep(3)
+    setStep((currentStep) => ((currentStep + 1) as RegistrationStep))
   }, [hasBudgetSelection, hasIntentSelection, step])
 
   const handleEnableMatchNotifications = useCallback(() => {
@@ -521,8 +438,12 @@ export default function PoolRegistrationPage() {
   const handleRegister = useCallback(async () => {
     if (!poolId || isRegistering) return
 
-    if (!canSubmit) {
-      Taro.showToast({ title: '先完成预算和这次想收获的选择', icon: 'none', duration: 2500 })
+    const submitBlocker = getPoolRegistrationSubmitBlocker({
+      hasBudgetSelection,
+      hasIntentSelection,
+    })
+    if (submitBlocker) {
+      Taro.showToast({ title: submitBlocker, icon: 'none', duration: 2500 })
       return
     }
 

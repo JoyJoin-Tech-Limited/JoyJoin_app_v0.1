@@ -32,7 +32,7 @@ const API_CONFIG = {
 };
 
 const GROUP_ANALYSIS_PROMPT_VERSION = 'group-analysis-v1';
-const PAIR_EXPLANATION_PROMPT_VERSION = 'pair-explanation-v1';
+const PAIR_EXPLANATION_PROMPT_VERSION = 'pair-explanation-v2';
 const GROUP_ICEBREAKERS_PROMPT_VERSION = 'group-icebreakers-v1';
 
 // ============ 重试与并发控制 ============
@@ -124,6 +124,7 @@ export interface MatchExplanation extends MatchExplanationContract {
   chemistryScore: number; // 化学反应分数
   sharedInterests: string[]; // 共同兴趣
   connectionPoints: string[]; // 连接点（同乡、同行业等）
+  introAngle?: string;
 }
 
 export interface GroupAnalysis extends GroupAnalysisContract {
@@ -645,6 +646,34 @@ function getPairKey(userId1: string, userId2: string): string {
   return [userId1, userId2].sort().join('-');
 }
 
+const DEFAULT_PAIR_EXPLANATION =
+  '这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！';
+
+/**
+ * Parse pair-explanation LLM output: `pair-explanation-v2` expects a single JSON object;
+ * legacy plain-text responses remain supported.
+ */
+function parsePairExplanationContent(raw: string): { explanation: string; introAngle?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { explanation: DEFAULT_PAIR_EXPLANATION };
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as { explanation?: unknown; introAngle?: unknown };
+    if (parsed && typeof parsed.explanation === 'string') {
+      const explanation = parsed.explanation.trim() || trimmed;
+      const introAngle =
+        typeof parsed.introAngle === 'string'
+          ? parsed.introAngle.trim().slice(0, 48)
+          : undefined;
+      return { explanation, introAngle };
+    }
+  } catch {
+    // legacy plain text
+  }
+  return { explanation: trimmed };
+}
+
 // ============ 核心生成函数 ============
 
 /**
@@ -661,7 +690,7 @@ async function generatePairExplanationWithMetadata(
   const sharedInterests = findSharedInterests(member1.interestsTop, member2.interestsTop);
   const connectionPoints = findConnectionPoints(member1, member2);
   
-  // 构建提示词
+  // 构建提示词（结构化 JSON：主解释 + 开场角度）
   const prompt = `你是一个社交活动的匹配分析师。请用2-3句温暖、正面的话语解释为什么这两位参与者可能会聊得来。
 
 用户A: ${member1.displayName || '神秘嘉宾'}
@@ -680,7 +709,11 @@ ${member2.socialStyle ? `- 社交风格: ${member2.socialStyle}` : ''}
 ${sharedInterests.length > 0 ? `共同兴趣: ${sharedInterests.join('、')}` : ''}
 ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : ''}
 
-请用中文回复，语气温暖友好，突出他们可能的互补或共鸣点。不要使用"用户A/B"的称呼，直接用描述性语言。回复长度控制在50-80字。`;
+请用中文，语气温暖友好，突出互补或共鸣点；不要使用「用户A/B」称呼。
+
+输出要求：只输出**一行**合法 JSON（不要 markdown 代码块），格式如下：
+{"explanation":"50-80字的解释正文","introAngle":"一句自然破冰的开场建议（≤24字）"}
+explanation 为正文；introAngle 为两人见面时如何开口的一句提示。`;
 
   const { client, model, provider } = getClientForFunction('generatePairExplanation');
   const t0 = Date.now();
@@ -689,7 +722,7 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       return client.chat.completions.create({
         model,
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 200,
+        max_tokens: 280,
         temperature: 0.7,
       });
     });
@@ -706,17 +739,18 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       fromCache: false,
       promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
     });
-    
-    const explanation = response.choices[0]?.message?.content?.trim() || 
-      `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
-    
+
+    const rawContent = response.choices[0]?.message?.content?.trim() || '';
+    const parsed = parsePairExplanationContent(rawContent || DEFAULT_PAIR_EXPLANATION);
+
     return {
       explanation: {
         pairKey: getPairKey(member1.userId, member2.userId),
-        explanation,
+        explanation: parsed.explanation,
         chemistryScore,
         sharedInterests,
         connectionPoints,
+        ...(parsed.introAngle ? { introAngle: parsed.introAngle } : {}),
       },
       providerUsed: provider,
       fallbackUsed: false,
@@ -731,7 +765,7 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
         const fbResponse = await fbClient.chat.completions.create({
           model: fbModel,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 200,
+          max_tokens: 280,
           temperature: 0.7,
         });
         const latencyMs = Date.now() - t0;
@@ -747,15 +781,16 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
           fromCache: false,
           promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
         });
-        const explanation = fbResponse.choices[0]?.message?.content?.trim() ||
-          `这两位都是有趣的人，期待你们在活动中发现彼此的闪光点！`;
+        const fbRaw = fbResponse.choices[0]?.message?.content?.trim() || '';
+        const fbParsed = parsePairExplanationContent(fbRaw || DEFAULT_PAIR_EXPLANATION);
         return {
           explanation: {
             pairKey: getPairKey(member1.userId, member2.userId),
-            explanation,
+            explanation: fbParsed.explanation,
             chemistryScore,
             sharedInterests,
             connectionPoints,
+            ...(fbParsed.introAngle ? { introAngle: fbParsed.introAngle } : {}),
           },
           providerUsed: 'deepseek',
           fallbackUsed: true,
@@ -792,13 +827,15 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
       });
     }
     // 降级处理：返回基于化学反应分数的模板解释
+    const fb = generateFallbackPairCopy(chemistryScore, sharedInterests);
     return {
       explanation: {
         pairKey: getPairKey(member1.userId, member2.userId),
-        explanation: generateFallbackExplanation(member1, member2, chemistryScore),
+        explanation: fb.explanation,
         chemistryScore,
         sharedInterests,
         connectionPoints,
+        ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
       },
       providerUsed: null,
       fallbackUsed: true,
@@ -810,19 +847,23 @@ ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : '
 /**
  * 降级模板解释（当API调用失败时使用）
  */
-function generateFallbackExplanation(
-  member1: MatchMember,
-  member2: MatchMember,
-  chemistryScore: number
-): string {
+function generateFallbackPairCopy(
+  chemistryScore: number,
+  sharedInterests: string[],
+): { explanation: string; introAngle?: string } {
+  let explanation: string;
   if (chemistryScore >= 85) {
-    return `这两位的性格特质非常互补，预计会擦出精彩的火花！`;
+    explanation = `这两位的性格特质非常互补，预计会擦出精彩的火花！`;
   } else if (chemistryScore >= 70) {
-    return `两位都是社交能量满满的人，相信会有很多话题可以聊。`;
+    explanation = `两位都是社交能量满满的人，相信会有很多话题可以聊。`;
   } else if (chemistryScore >= 55) {
-    return `虽然风格不同，但这正是发现新朋友的好机会！`;
+    explanation = `虽然风格不同，但这正是发现新朋友的好机会！`;
+  } else {
+    explanation = `每一次相遇都是缘分，期待你们发现彼此的独特之处。`;
   }
-  return `每一次相遇都是缘分，期待你们发现彼此的独特之处。`;
+  const introAngle =
+    sharedInterests.length > 0 ? `先从「${sharedInterests[0]}」聊起吧` : undefined;
+  return { explanation, introAngle };
 }
 
 /**

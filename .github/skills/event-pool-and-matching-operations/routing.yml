@@ -32,6 +32,7 @@ strong_triggers:
 owned_files:
   - apps/server/src/routes/domains/eventPools.ts
   - apps/server/src/routes/domains/eventGroupOutcomes.ts
+  - apps/server/src/poolRealtimeMatchingService.ts
   - docs/admin-rbac-matrix.md
 
 owned_paths:

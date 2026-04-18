@@ -9,6 +9,7 @@ The machine-readable orchestration contract is `.github/orchestration.yaml`. The
 - [`AI_TOOLING_UNIFIED_BRAIN.md`](./AI_TOOLING_UNIFIED_BRAIN.md) describes the shared Cursor / Copilot policy surface (skills, agents), MCP (Context7), and what stays IDE-specific.
 - [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) defines when to use direct delivery, the `Researcher` -> `Planner` kickoff lane (or **`Supervisor` first** to sequence that kickoff), and the operational review lane.
 - [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) defines how to change agents, skills, hooks, runtime scripts, and validation surfaces safely.
+- [`../docs/ai-workflow-documentation-refresh.md`](../docs/ai-workflow-documentation-refresh.md) defines scope tiers, routing lanes for large refreshes, and **Workflow Governance Reviewer** vs full doc sync.
 - [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) remains the source of truth for runtime product AI architecture and invariants.
 
 ## Execution discipline
@@ -177,6 +178,7 @@ Useful audited support bindings:
 - `Principal Software Engineer` -> `first-principles-velocity`, `code-review`, `reliability-and-state-integrity`, `monorepo-workspace-governance`
 - `SE: Product Manager` -> `draft-prd`
 - `Prompt Engineer` -> _(none — empty binding in YAML)_
+- `Repo Memory Steward` -> `orchestration-turn-reporting`, `first-principles-velocity`, `docs-sync`
 - `Workflow Governance Reviewer` -> `docs-sync`, `testing-and-regression-guardrails`
 
 Branding and crafted interaction polish remain skill boundaries on the frontend agents through `design-system-governance`, `joyjoin-brand-guidelines`, and `wow-elements`; there is no standalone branding agent in the current orchestration portfolio.
@@ -212,6 +214,7 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 | `Principal Software Engineer` | `sufficient` | Principal-level architecture guidance is covered by normalized repo inspection and command execution. | Add GitHub review or issue integrations only if this advisor should own those workflows directly. |
 | `SE: Product Manager` | `sufficient` | Issue-ready product scoping is covered by normalized repo inspection and editing without requiring direct tracker mutation. | Add issue-tracker write integration only if this agent should create or update backlog records directly. |
 | `Prompt Engineer` | `sufficient` | Prompt design and repo-resident prompt maintenance are covered by read, search, and edit capability. | Add execute capability only if prompt workflows need scripted validation or linting. |
+| `Repo Memory Steward` | `sufficient` | Candidate drafting via `memory:draft-candidate`, `memory:query`, and `memory:validate` is covered by read, search, edit, and execute. | Add issue-tracker integration only if this agent should open GitHub issues from gaps automatically. |
 | `Workflow Governance Reviewer` | `sufficient` | Proposal-only portfolio review, reviewer-packet drafting, and deterministic validation are covered by read, search, edit, and execute without expanding authority. | Add stronger reviewer-packet provenance only if support-lane evidence export becomes a real operational need. |
 
 ## Validation expectations

@@ -1,11 +1,10 @@
 ---
 name: matching-domain
 description: >
-  Deterministic server-owned matching system — scoring boundaries, execution safety, persistence
-  expectations, and separation from AI explanation/enrichment layers. Use when working on pool
-  matching, pair scoring, group formation, or match explanation features. Trigger phrases: "add a
-  scoring factor", "modify match weights", "why are groups not forming?", "debug low match
-  scores", "add match explanation".
+  Deterministic server-owned matching — default 6D pair weights; optional 7D when ENABLE_SEMANTIC_SIMILARITY.
+  Signal boundary: user_interest_signals never in scoring path. Use for pool matching, pair/group
+  formation, match explanation. Triggers: scoring factor, match weights, groups not forming, low scores,
+  match explanation, semantic similarity dimension.
 ---
 
 # Matching Domain
@@ -26,12 +25,15 @@ description: >
 |---------|----------|
 | Pair scoring + group formation | `apps/server/src/poolMatchingService.ts` |
 | Scheduled/realtime matching | `apps/server/src/poolRealtimeMatchingService.ts` |
+| Optional 7th pair dimension (semantic similarity) | `apps/server/src/matchingSemantic.ts` — active only when `ENABLE_SEMANTIC_SIMILARITY=true` |
 | Archetype chemistry matrix | `apps/server/src/archetypeChemistry.ts` (runtime) |
 | Chemistry matrix canonical | `packages/shared/src/personality/archetypeCompatibility.ts` |
 | AI match explanation | `apps/server/src/matchExplanationService.ts` |
 | `AIResponseMeta` contract | `packages/shared/src/types/aiMeta.ts` |
 
-## Active scoring dimensions (6)
+## Active scoring dimensions (default 6D vs optional 7D)
+
+**Default (6 dimensions)** — weights in `calculatePairScore()` / `calculateWeightedPairScore()`:
 
 | Dimension | Weight | Reads from |
 |-----------|--------|-----------|
@@ -41,6 +43,10 @@ description: >
 | Background Diversity | 15% | industry, gender |
 | Preference | 5% | event intent, venue preferences |
 | Language | 4% | `preferredLanguages` |
+
+**When `ENABLE_SEMANTIC_SIMILARITY=true` (7 dimensions)** — first six weights are redistributed to make room for semantic similarity; see the **ACTIVE** comment block on `calculatePairScore` in `poolMatchingService.ts` (approximately: chemistry 26% / interest 26% / socialAffinity 19% / backgroundDiversity 14% / preference 5% / language 4% / **semanticSimilarity 6%**). Pair cache keys include `semantic` vs `legacy` so 6D and 7D paths do not collide.
+
+Full narrative and matrices: `docs/MATCHING_ALGORITHM_REFERENCE.md`.
 
 ## Signal boundary (enforced invariant)
 
@@ -102,6 +108,7 @@ Only users passing all hard constraints are scored.
 
 - `apps/server/src/poolMatchingService.ts`
 - `apps/server/src/poolRealtimeMatchingService.ts`
+- `apps/server/src/matchingSemantic.ts`
 - `apps/server/src/archetypeChemistry.ts`
 - `apps/server/src/matchExplanationService.ts`
 - `apps/server/src/__tests__/poolMatchingService.test.ts`
@@ -114,7 +121,7 @@ Only users passing all hard constraints are scored.
 ## Quick examples
 
 **User says:** "Add a `language_affinity` scoring dimension weighted at 10%."
-**Apply this skill by:** Adding the dimension to `calculateInterestScoreAsync()` in `poolMatchingService.ts`, adjusting existing weights so they still sum to 100%, sourcing data only from the allowed tables (not `user_interest_signals`), and updating `poolMatchingService.test.ts`.
+**Apply this skill by:** Extending the weighted pair-score path in `poolMatchingService.ts`, adjusting **both** default 6D and semantic 7D weight tables so each sums to 100%, sourcing data only from allowed tables (not `user_interest_signals`), and updating `poolMatchingService.test.ts`.
 **Result:** New dimension is deterministic, correctly bounded, and covered by tests.
 
 ---
@@ -133,7 +140,7 @@ Only users passing all hard constraints are scored.
 ## Review checklist
 
 - [ ] New scoring data is read only from approved tables (not `user_interest_signals`)
-- [ ] Scoring weights still sum to 100% after any change
+- [ ] Scoring weights still sum to 100% after any change (check **both** 6D default and 7D semantic paths if `ENABLE_SEMANTIC_SIMILARITY` is relevant)
 - [ ] Hard constraints (budget, gender, industry) are applied as L1 filters, not soft scores
 - [ ] Matching execution is guarded against concurrent runs with a `finally` release
 - [ ] Match result is persisted before notifications fire

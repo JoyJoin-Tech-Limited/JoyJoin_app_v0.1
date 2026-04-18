@@ -1,8 +1,21 @@
 # Platform Coordination Playbook
 
-> **Status:** Active coordination playbook — verified against the current payment/auth surfaces in `apps/user-client`, `apps/admin-client`, `apps/mini-program`, and `apps/server/src/routes/domains/payments.ts`.
+> **Status:** Active coordination playbook — verified against the current payment/auth surfaces in `apps/user-client`, `apps/admin-client`, `apps/mini-program`, and `apps/server/src/routes/domains/payments.ts`. **Last reviewed for doc sync:** 2026-04-19.
 
 ## Executive Summary
+
+**Launch focus:** The **WeChat Mini Program** (`apps/mini-program`) is the **launch-primary** client; treat it as the first surface for release-critical fixes in auth, payments, and in-app flows. Web remains a sandbox and parity reference unless a product decision says otherwise.
+
+**Mini Program file map (personality test, WeChat login, payment):**
+
+| Concern | Canonical files |
+|---------|-------------------|
+| Personality test (V4 UI) | `apps/mini-program/src/pages/onboarding/personality-test/` — `index` (test), `results`, `auth-gate`; onboarding subpackage registration in `lib/onboardingRoutes.ts` |
+| Anonymous assessment keys | `apps/mini-program/src/lib/anonymousOnboarding.ts` (aligns with web `joyjoin_v4_presignup_answers` semantics) |
+| WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
+| WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api.ts` → `POST /api/auth/wechat/login-with-test` (used from personality-test auth-gate) |
+| Blind-box payment (JSAPI) | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `createMiniProgramPaymentIntent()` in `packages/shared/src/api.ts` → `POST /api/payments/miniprogram/create` → `Taro.requestPayment` |
+| Post-pay verification + pending order | `apps/mini-program/src/pages/payment-verification/index.tsx`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`, `lib/paymentVerificationStatus.ts`; app resume: `apps/mini-program/src/app.ts` |
 
 Current platform symmetry is **yellow**, and the previous payment-contract blockers are no longer endpoint-availability issues.
 
@@ -79,6 +92,17 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
 | Global state substrate | `QueryClientProvider` + a few React contexts in `App.tsx` | app lifecycle only in `app.ts`, no shared provider/store | Low |
 
 There is no shared Zustand/Redux store. The closest shared state source of truth is the backend plus `GET /api/auth/user`.
+
+### WebSocket → React Query invalidation (`EVENT_THEME_TITLE_REVEALED`)
+
+When the server broadcasts theme reveal for a pool group, clients should invalidate **group detail** and **group analysis** (AI explanations may incorporate updated theme metadata). Query keys differ by runtime:
+
+| Client | Group detail | Group analysis |
+| --- | --- | --- |
+| Mini Program | `['mini-program', 'pool-group', groupId]` | `['mini-program', 'pool-group-analysis', groupId]` |
+| Web (`user-client`) | `["/api/pool-groups", groupId]` | `["/api/pool-groups", groupId, "analysis"]` (`useGroupAnalysis`) |
+
+Handlers: `apps/mini-program/.../useMatchingStatusController.ts`; `apps/user-client/src/pages/MatchingStatusPage.tsx` and `EventsPage.tsx`.
 
 ### Component mapping: same logic, different renderer
 

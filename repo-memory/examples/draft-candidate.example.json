@@ -1,0 +1,13 @@
+{
+  "id": "repo.example.automation-sample",
+  "title": "Example candidate (replace before use)",
+  "owner": "your-team-or-handle",
+  "tags": ["example", "repo-memory"],
+  "triggerTerms": ["example memory", "draft candidate"],
+  "relatedPaths": ["repo-memory/README.md"],
+  "sources": ["repo-memory/README.md"],
+  "confidence": "low",
+  "body": "## Summary\n\n- Replace this body with at least one durable bullet the repo should remember.\n- `relatedPaths` and `sources` must exist in the working tree.\n",
+  "filename": "example-automation-sample",
+  "lastValidatedAt": "2026-04-18"
+}

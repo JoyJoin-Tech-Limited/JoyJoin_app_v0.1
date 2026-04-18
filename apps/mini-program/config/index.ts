@@ -12,6 +12,9 @@ loadRepoRootEnvFile()
 const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()
 const MINI_PROGRAM_WECHAT_SUBSCRIBE_TMPL_IDS =
   process.env.TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS ?? ''
+/** WP4: optional build-time flag to show "实时 vs 缓存" for group analysis (beta/preview only; off in normal prod). */
+const MINI_PROGRAM_SHOW_GROUP_ANALYSIS_DEBUG =
+  process.env.TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG ?? ''
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
@@ -34,6 +37,9 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       'process.env.TARO_APP_API_BASE_URL': JSON.stringify(MINI_PROGRAM_API_BASE_URL),
       'process.env.TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS': JSON.stringify(
         MINI_PROGRAM_WECHAT_SUBSCRIBE_TMPL_IDS,
+      ),
+      'process.env.TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG': JSON.stringify(
+        MINI_PROGRAM_SHOW_GROUP_ANALYSIS_DEBUG,
       ),
     },
     copy: {

@@ -68,6 +68,7 @@ When a request targets `apps/mini-program` directly:
 
 ### UI/UX & Aesthetic Guidance
 
+- **Pixel discipline:** When a design spec (Figma, redlines) exists, match spacing, type, and radii **exactly** via tokens and Tailwind — avoidable deviation is a defect. When no spec exists, use **8px** spacing rhythm (`gap-2`, `p-4`, etc.) and align section insets with sibling routes; see `design-system-governance` and `references/frontend-excellence-thresholds.md` (web subsection).
 - Use JoyJoin tokens, shared variants, and typography roles from `packages/shared/src/ui/buttonVariants.ts`, app `index.css` files, and the brand/design-system skills before inventing new presentation rules.
 - Prefer semantic HTML (`main`, `section`, `nav`, `form`, `label`, `button`, `a`) and ensure every feature has explicit loading, error, empty, disabled, success, and pressed states.
 - Every async interaction should acknowledge user input immediately through local feedback: pressed state, spinner or optimistic hint, and a recovery path if the request fails.

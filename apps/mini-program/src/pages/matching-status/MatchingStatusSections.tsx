@@ -1,8 +1,9 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import type { PoolGroupDetailsResponse } from '@shared/api'
-import type { PairExplanation } from '@shared/types/groupAnalysis'
+import type { GroupAnalysisResponse, PairExplanation } from '@shared/types/groupAnalysis'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
+import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import {
   getVibeLabel,
@@ -177,6 +178,8 @@ interface MatchingStatusDetailSectionsProps {
   chemistryTokens: ChemistryTokens
   leadIceBreaker: string | null
   persistedThemeSummary: ThemeSummary | null
+  /** WP4: optional; when set, dev/beta may show cache vs fresh for group analysis */
+  groupAnalysisDebugMeta?: Pick<GroupAnalysisResponse, 'fromCache' | 'generatedAt'> | null
 }
 
 export function MatchingStatusDetailSections({
@@ -188,6 +191,7 @@ export function MatchingStatusDetailSections({
   chemistryTokens,
   leadIceBreaker,
   persistedThemeSummary,
+  groupAnalysisDebugMeta,
 }: MatchingStatusDetailSectionsProps) {
   return (
     <>
@@ -247,6 +251,11 @@ export function MatchingStatusDetailSections({
           <Text className='matching-status__chemistry-copy'>
             {viewerSpotlight?.pair.explanation ?? chemistryTokens.body}
           </Text>
+          {viewerSpotlight?.pair.introAngle ? (
+            <Text className='matching-status__chemistry-intro-angle'>
+              开场：{viewerSpotlight.pair.introAngle}
+            </Text>
+          ) : null}
 
           {viewerSpotlight?.pair.connectionPoints?.length ? (
             <View className='matching-status__chemistry-pill-row'>
@@ -261,6 +270,7 @@ export function MatchingStatusDetailSections({
           {leadIceBreaker ? (
             <Text className='matching-status__chemistry-prompt'>破冰建议：{leadIceBreaker}</Text>
           ) : null}
+          <GroupAnalysisSourceHint analysis={groupAnalysisDebugMeta ?? undefined} />
         </Card>
       ) : null}
 

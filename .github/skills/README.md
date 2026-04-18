@@ -86,7 +86,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 | Skill | What it covers |
 |-------|---------------|
-| [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
+| [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; **pixel precision** (spec-exact or 8rpx rhythm, DevTools gate) in [`references/pixel-precision.md`](./mini-program-frontend-excellence/references/pixel-precision.md); structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 
 ---
@@ -94,6 +94,8 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 ## Documentation
 
 Keep docs aligned with the active codebase. Use after significant code changes or when docs are visibly stale.
+
+**Large refresh across `docs/`, `.github/skills/`, and `.github/agents/`:** Use scope tiers, pick the right lane (kickoff vs `docs-sync` vs governance), and run `npm run orchestration:validate` when orchestration or skill routing changes—see [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md). **Workflow Governance Reviewer** (`self-iteration.agent.md`) is for governance reviewer packets, not a substitute for [`docs-sync`](./docs-sync/SKILL.md).
 
 | Skill | What it covers |
 |-------|---------------|
@@ -175,6 +177,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
 | How do I keep a mini-program screen premium, on-brand, and Taro-native? | `mini-program-frontend-excellence` |
 | How do I keep docs in sync after a code change? | `docs-sync` |
+| How do I plan a cross-cutting refresh of product docs, skills, and agents? | [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md) + `docs-sync` where applicable |
 
 ---
 

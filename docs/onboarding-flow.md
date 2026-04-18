@@ -1,6 +1,6 @@
 # JoyJoin User Onboarding Flow
 
-> **Status:** Active onboarding reference — last verified 2026-04-11 against `apps/server/src/routes/domains/auth.ts`, `apps/user-client/src/hooks/useAuth.ts`, and `apps/user-client/src/features/onboarding/active/`.
+> **Status:** Active onboarding reference — last verified 2026-04-19 against `apps/server/src/routes/domains/auth.ts`, `packages/shared/src/onboarding.ts`, `apps/user-client/src/hooks/useAuth.ts`, `apps/user-client/src/features/onboarding/active/`, and mini-program onboarding routes under `apps/mini-program/src/pages/onboarding/` + `apps/mini-program/src/lib/onboardingRoutes.ts` / `api.ts`.
 > **Authority:** Post-auth progression is server-owned via `nextStep` from `GET /api/auth/user`. Historical routing-fix docs in this directory are reference-only.
 
 ## Overview (Updated 2026-04-07)
@@ -28,6 +28,20 @@ JoyJoin uses a **value-first** onboarding approach:
 Landing → Personality Test (Anonymous) → Results → WeChat Login → 
 Essential Data → Extended Data → Profile Review → Discover Page
 ```
+
+### Mini Program (Taro) path mirror
+
+Server `nextStep` and assessment APIs are the same as web; only routes and storage differ. Registration for Taro pages is centralized in [`apps/mini-program/src/lib/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) (onboarding flows live in the **`pages/onboarding`** subpackage).
+
+| Phase | Taro location | WeChat / API notes |
+|--------|----------------|---------------------|
+| Personality test (anonymous) | `pages/onboarding/personality-test/index` | Same `/api/assessment/v4/*` calls as web; anonymous answers via Taro storage (`apps/mini-program/src/lib/anonymousOnboarding.ts`) |
+| Results | `pages/onboarding/personality-test/results` | Reveal + share; primary claim routes to auth-gate |
+| Auth gate (post-result login) | `pages/onboarding/personality-test/auth-gate` | `authenticateMiniProgramUserWithTest()` in [`api.ts`](../apps/mini-program/src/lib/api.ts) → `POST /api/auth/wechat/login-with-test` |
+| Login only (returning users) | `pages/login/index` | [`useWeChatLogin`](../apps/mini-program/src/hooks/useWeChatLogin.ts) → `POST /api/auth/wechat/login` |
+| Post-auth onboarding | `pages/onboarding/onboarding`, `essential-data`, `extended-data`, `profile-review` | Navigate with [`navigateToMiniProgramNextStep`](../apps/mini-program/src/lib/onboardingNavigation.ts) per `GET /api/auth/user` |
+
+Blind-box **payment** after onboarding is **not** part of this table; see [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) (mini-program `blind-box-payment` + `payment-verification` pages).
 
 **Original planning target:** +15% signup conversion (based on Soul, 16Personalities benchmarks). Treat this as historical planning context, not a live KPI report.
 

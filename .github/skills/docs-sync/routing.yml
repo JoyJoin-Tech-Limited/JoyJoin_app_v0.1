@@ -7,6 +7,7 @@ primary_ownership: >
 
 use_when:
   - user asks to update, sync, or refresh documentation after a code change
+  - user asks to iterate or refresh skills, agents, and product docs together (coordinated multi-tier refresh)
   - a PR has merged and its changes are not yet reflected in reference docs
   - an API, route, or data model has changed and docs are stale
   - an architecture decision was made that is not yet documented
@@ -24,6 +25,9 @@ strong_triggers:
   - sync documentation
   - document recent changes
   - refresh reference docs
+  - iterate skills and agents
+  - full documentation refresh
+  - ai-workflow-documentation-refresh.md
   - docs are out of date
   - DEVELOPER_QUICK_REFERENCE.md
   - docs/onboarding-flow.md
@@ -37,6 +41,7 @@ strong_triggers:
 
 owned_files:
   - DEVELOPER_QUICK_REFERENCE.md
+  - docs/ai-workflow-documentation-refresh.md
   - docs/**
   - docs/architecture/current-state.md
   - docs/onboarding-flow.md

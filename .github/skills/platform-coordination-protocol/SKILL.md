@@ -32,6 +32,9 @@ description: >
 | Area | Mini Program reference | Web sibling | Shared reference today |
 |------|---------|-----------|--------|
 | Payment flow | `apps/mini-program/src/pages/blind-box-payment/index.tsx` | `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` | `docs/PLATFORM_COORDINATION.md` |
+| Payment verification / pending order | `apps/mini-program/src/pages/payment-verification/index.tsx`; `lib/paymentPendingOrder.ts` | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx` | `docs/PLATFORM_COORDINATION.md` |
+| WeChat login (mini-program) | `apps/mini-program/src/hooks/useWeChatLogin.ts`; `pages/login/index.tsx` (`/api/auth/wechat/login`); personality auth-gate uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) | `apps/user-client/src/hooks/useWeChatLogin.ts` (browser OAuth / web flows) | `docs/PLATFORM_COORDINATION.md` |
+| Personality test | `apps/mini-program/src/pages/onboarding/personality-test/` | `apps/user-client/src/features/onboarding/active/pages/` (`PersonalityTestPage`, results, auth-gate) | `packages/shared/src/personality/`; `docs/PERSONALITY_TEST_SYSTEM.md` |
 | Auth session bootstrap | `apps/mini-program/src/lib/api.ts` | `apps/user-client/src/hooks/useAuth.ts` | `docs/PLATFORM_COORDINATION.md` |
 | API request wrapper | `apps/mini-program/src/lib/api.ts` | `apps/user-client/src/lib/queryClient.ts` | `docs/PLATFORM_COORDINATION.md` |
 
@@ -90,6 +93,10 @@ Treat this classification as advisory only. If the heuristics and `docs/PLATFORM
 - `apps/user-client/src/lib/queryClient.ts` — current web API request wrapper
 - `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` — current web payment flow
 - `apps/mini-program/src/pages/blind-box-payment/index.tsx` — current mini-program payment flow
+- `apps/mini-program/src/pages/payment-verification/index.tsx` — mini-program post-`requestPayment` verification
+- `apps/mini-program/src/hooks/useWeChatLogin.ts` — mini-program WeChat login (`Taro.login` + `/api/auth/wechat/login`)
+- `apps/mini-program/src/pages/onboarding/personality-test/` — mini-program V4 personality test + auth-gate
+- `docs/PERSONALITY_TEST_SYSTEM.md` — V4 system reference (web + mini-program surfaces)
 
 ## Quick examples
 

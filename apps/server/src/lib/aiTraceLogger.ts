@@ -34,6 +34,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { AIProvider } from '@shared/types/aiMeta';
+import { recordAICallMetric } from '../middleware/metrics';
 
 /**
  * Structured record describing a single AI service call execution.
@@ -161,6 +162,19 @@ export function logAITrace(
   ) as AICallTrace;
 
   console.log(`[AITrace] ${JSON.stringify(compact)}`);
+
+  try {
+    recordAICallMetric({
+      domain: fields.domain,
+      feature: fields.feature,
+      latencyMs: fields.latencyMs,
+      fromCache: fields.fromCache,
+      success: fields.success,
+      fallbackUsed: fields.fallbackUsed,
+    });
+  } catch {
+    // Never fail the request path if metrics registry errors
+  }
 }
 
 /**

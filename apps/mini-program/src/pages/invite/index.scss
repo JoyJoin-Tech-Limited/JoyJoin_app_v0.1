@@ -90,6 +90,8 @@
     color: $color-text-secondary;
     line-height: 1.6;
     margin-top: $spacing-md;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   &__tier {
@@ -107,9 +109,26 @@
   }
 
   &__tier-emoji { font-size: $font-size-xl; flex-shrink: 0; }
-  &__tier-info { flex: 1; }
-  &__tier-target { display: block; font-size: $font-size-base; font-weight: $font-weight-semibold; color: $color-text-primary; }
-  &__tier-reward { display: block; font-size: $font-size-sm; color: $color-text-secondary; margin-top: 4rpx; }
+  &__tier-info {
+    flex: 1;
+    min-width: 0;
+  }
+  &__tier-target {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  &__tier-reward {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-top: 4rpx;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   &__tier-status { font-size: $font-size-sm; color: $color-text-muted; flex-shrink: 0; }
 
   &__spacer { height: 120rpx; }

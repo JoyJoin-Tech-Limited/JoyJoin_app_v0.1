@@ -2,6 +2,12 @@
 
 This directory is for reviewable candidate notes that are intentionally committed for discussion or promotion.
 
+## Current candidates
+
+| ID / file | Title |
+|-----------|--------|
+| [`mini-program-visual-qa-wechat-devtools-ci-gap.md`](./mini-program-visual-qa-wechat-devtools-ci-gap.md) | Mini-program visual QA — WeChat DevTools gate vs automated CI |
+
 Typical flow:
 
 - keep local drafts or reviewer packets under `.joyjoin/` until the wording is ready for code review

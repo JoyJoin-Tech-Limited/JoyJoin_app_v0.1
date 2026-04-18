@@ -227,6 +227,46 @@ export function planPredictiveRerank(params: {
   const applied = shouldApply && movedGroupCount > 0;
   const eligibleGroupCount = experiment.results.filter((result) => result.confidence >= confidenceThreshold).length;
 
+  // Shadow / ops telemetry: log rank deltas vs deterministic order (no extra persistence).
+  if (groups.length > 1) {
+    const deterministicKeys = [...experiment.results]
+      .sort((a, b) => a.deterministicRank - b.deterministicRank)
+      .map((r) => r.groupKey);
+    const predictedKeys = [...experiment.results]
+      .sort(
+        (a, b) =>
+          a.predictedRank - b.predictedRank ||
+          b.confidence - a.confidence ||
+          a.deterministicRank - b.deterministicRank,
+      )
+      .map((r) => r.groupKey);
+    const finalKeys = finalOrderKeys.map((key) => {
+      const idx = key.indexOf(':');
+      return idx >= 0 ? key.slice(idx + 1) : key;
+    });
+    const rankDeltaMax = Math.max(
+      0,
+      ...audits.map((a) => Math.abs(a.finalRank - a.deterministicRank)),
+    );
+    console.log(
+      `[AIShadowRerank] ${JSON.stringify({
+        poolId,
+        reason,
+        arm: reason === 'eligible' ? assignedArm : null,
+        applied,
+        shouldApply,
+        modelVersion: experiment.modelVersion,
+        groupCount: groups.length,
+        movedGroupCount,
+        rankDeltaMax,
+        deterministicKeys,
+        predictedKeys,
+        finalKeys,
+        shadowPoolCount,
+      })}`,
+    );
+  }
+
   return {
     arm: reason === "eligible" ? assignedArm : null,
     applied,

@@ -23,4 +23,11 @@ describe('matching-status page composition', () => {
     expect(pageSource).not.toContain('function getChemistryTokens')
     expect(pageSource).not.toContain('function getCountdownState')
   })
+
+  it('delegates orchestration to useMatchingStatusController', () => {
+    expect(pageSource).toContain("from './useMatchingStatusController'")
+    expect(pageSource).toContain('useMatchingStatusController(')
+    expect(pageSource).not.toContain('useWebSocket(')
+    expect(pageSource).not.toContain("queryKey: ['mini-program', 'pool-registration'")
+  })
 })

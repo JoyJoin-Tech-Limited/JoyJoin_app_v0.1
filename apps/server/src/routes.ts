@@ -8223,12 +8223,20 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
       );
 
       // Helper: map an internal PairExplanation to the shared response type
-      const mapPe = (pe: { pairKey: string; explanation: string; chemistryScore: number; sharedInterests?: string[]; connectionPoints?: string[] }) => ({
+      const mapPe = (pe: {
+        pairKey: string;
+        explanation: string;
+        chemistryScore: number;
+        sharedInterests?: string[];
+        connectionPoints?: string[];
+        introAngle?: string;
+      }) => ({
         pairKey: pe.pairKey,
         explanation: pe.explanation,
         chemistryScore: pe.chemistryScore,
         sharedInterests: pe.sharedInterests ?? [],
         connectionPoints: pe.connectionPoints ?? [],
+        ...(pe.introAngle ? { introAngle: pe.introAngle } : {}),
       });
 
       // Map internal GroupAnalysis → GroupAnalysisResponse
