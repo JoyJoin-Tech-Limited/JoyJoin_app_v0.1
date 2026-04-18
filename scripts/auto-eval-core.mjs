@@ -57,7 +57,8 @@ function defaultTimeoutProfile(mode) {
       syntax: 10_000,
       guardrails: 20_000,
       workspaceTypecheck: 60_000,
-      rootTypecheck: 90_000,
+      // Root `npm run typecheck` chains all workspaces; ~4min observed on dev machines.
+      rootTypecheck: 300_000,
       miniProgramTypecheck: 90_000,
     };
   }
@@ -66,7 +67,7 @@ function defaultTimeoutProfile(mode) {
     syntax: 8_000,
     guardrails: 15_000,
     workspaceTypecheck: 45_000,
-    rootTypecheck: 60_000,
+    rootTypecheck: 300_000,
     miniProgramTypecheck: 60_000,
   };
 }

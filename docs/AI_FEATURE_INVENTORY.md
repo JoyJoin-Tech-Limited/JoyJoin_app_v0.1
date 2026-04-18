@@ -25,8 +25,10 @@ Not counted as AI for this document:
 | Social icebreaker lie-detective statements | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/lie-detective/generate` | `generateLieDetectiveStatements` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Curated `FALLBACK_LIE_DETECTIVE_STATEMENTS` |
 | Social icebreaker recap summary | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `GET /api/social-icebreaker/:id/recap` | `generateRecapSummary` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Deterministic `getDefaultRecap(...)` |
 | Social icebreaker personality-dice challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/personality-dice/generate` | `generatePersonalityDiceChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter`; DeepSeek default in hybrid mode | Active when `personality_dice` phase is enabled | Curated `DICE_CURATED` map by dominant trait |
-| Semantic profile embeddings | Onboarding/profile update pages submit profile and interests | `queueSemanticProfileRecompute(...)` -> `embeddingClient.embed(...)` | OpenAI embeddings preferred, DeepSeek embedding fallback, default model `text-embedding-3-small` | Active backend AI triggered by mini-program actions | Stores profile as `degraded` with null embedding instead of breaking user flow |
-| Event theme title reveal | `apps/mini-program/src/pages/matching-status/index.tsx` listens for `EVENT_THEME_TITLE_REVEALED` and conditionally renders theme fields | `generateAndAssignEventThemeTitle(...)` in `apps/server/src/eventThemeTitleGenerator.ts` | `creativeModelRouter` with MiniMax or DeepSeek | Partial / incompletely surfaced | Template fallback via `generateFallbackEventThemeTitle(...)`; can also be fully disabled by env flag |
+| Match group analysis (pair copy, icebreakers, dynamics) | `matching-status/index.tsx`, `squad-unboxing/index.tsx`, `pool-group-detail/index.tsx` -> `GET /api/pool-groups/:groupId/analysis` via `getPoolGroupAnalysis` in `@shared/api` | `generateGroupAnalysis` in `apps/server/src/matchExplanationService.ts` | `socialModelRouter` (MiniMax / DeepSeek per router policy) | Active | Cached responses; structured fallbacks when generation fails |
+| Semantic profile embeddings | Onboarding/profile update pages submit profile and interests | `queueSemanticProfileRecompute(...)` -> `embeddingClient.embed(...)` | **DeepSeek only** (`DEEPSEEK_API_KEY`); default model from `EMBEDDING_MODEL` or `text-embedding-3-small` | Active backend AI triggered by mini-program actions | Stores profile as `degraded` with null embedding instead of breaking user flow |
+| Event theme title reveal | `matching-status/index.tsx` (WebSocket `EVENT_THEME_TITLE_REVEALED` + `persistedThemeSummary` from `GET /api/my-pool-registrations` and `getPoolGroupDetails`) | `generateAndAssignEventThemeTitle(...)` in `apps/server/src/eventThemeTitleGenerator.ts` | `creativeModelRouter` with MiniMax or DeepSeek | Active | Template fallback via `generateFallbackEventThemeTitle(...)`; can be disabled with `ENABLE_EVENT_THEME_TITLE_GENERATION` |
+| Onboarding profile tagline | `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (and shared API) | `generateProfileTagline` in `apps/server/src/profileTaglineService.ts` | `socialModelRouter` | Active | Short deterministic fallback string when the model fails validation |
 
 ## Feature Identification
 
@@ -37,22 +39,20 @@ Not counted as AI for this document:
 3. Social icebreaker lie-detective statement generation.
 4. Social icebreaker recap summary generation.
 5. Social icebreaker personality-dice challenge generation.
+6. Match group analysis (overall chemistry, pair explanations, suggested icebreakers, theme companion copy) on matching status, squad unboxing, and pool group detail via `GET /api/pool-groups/:groupId/analysis`.
+7. Onboarding profile tagline on the profile review step via `GET /api/onboarding/profile-tagline`.
 
 ### Confirmed backend AI triggered by mini-program actions
 
 1. Semantic profile embedding generation after profile or interests updates.
 
-### Confirmed partial AI feature with incomplete mini-program wiring
-
-1. Event theme title reveal after matching.
-
 ### Deterministic or non-reachable surfaces excluded from the counted inventory
 
 1. The V4 personality assessment flow and `login-with-test` import path are deterministic scoring and persistence logic, not LLM-backed AI.
-2. `group.matchExplanation` shown by the squad/group detail pages currently comes from deterministic `generateGroupExplanation(...)` in `apps/server/src/userMatchingService.ts`.
+2. `group.matchExplanation` in the pool group detail header still comes from deterministic `generateGroupExplanation(...)` in `apps/server/src/userMatchingService.ts`; the same page also loads `GET /api/pool-groups/:groupId/analysis` for an **AI · 这桌氛围** card (`apps/mini-program/src/pages/pool-group-detail/index.tsx`).
 3. The initial event theme metadata produced during match save uses deterministic logic from `apps/server/src/services/eventThemeTitleGenerator.ts`, even though a later async AI title generator also exists.
 4. `generateXiaoYueComment(...)` is mostly a default comment map first and only falls back to model generation when no canned comment exists; the mini-program code does not currently reference `xiaoYueComment` directly.
-5. AI match-intelligence endpoints exist at `/api/event-pool-groups/:groupId/match-explanations` and `/api/event-pool-groups/:groupId/ice-breakers`, but no mini-program caller was confirmed during this audit.
+5. Alternate match-intelligence routes under `/api/event-pool-groups/:groupId/...` may exist for other clients; the **mini-program uses** `GET /api/pool-groups/:groupId/analysis` (`packages/shared/src/api.ts` → `getPoolGroupAnalysis`), not those paths.
 
 ## Detailed Breakdown Per Feature
 
@@ -113,11 +113,29 @@ Not counted as AI for this document:
 ### 7. Event Theme Title Reveal
 
 - Description: Generates a themed title, subtitle, emoji, highlights, and vibe for a matched group after match results are saved.
-- Entry point(s): The mini-program matching-status page listens for `EVENT_THEME_TITLE_REVEALED` via WebSocket and conditionally renders `theme`, `subtitle`, `themeEmoji`, `highlights`, and `vibe` if they are present in the registration payload.
+- Entry point(s): `matching-status/index.tsx` merges WebSocket `EVENT_THEME_TITLE_REVEALED` with registration data from `GET /api/my-pool-registrations` and group details from `GET /api/pool-groups/:groupId` (`persistedThemeSummary` uses `registration` and `effectiveGroupDetails`).
 - AI model/service: `generateAndAssignEventThemeTitle(...)` in `apps/server/src/eventThemeTitleGenerator.ts`, routed through `apps/server/src/ai/creativeModelRouter.ts`. Function-level provider override is `CREATIVE_AI_TITLE_PROVIDER`, then `CREATIVE_AI_PROVIDER`, then MiniMax-if-configured else DeepSeek.
 - Configuration location: `apps/server/src/eventThemeTitleGenerator.ts`, `apps/server/src/ai/creativeModelRouter.ts`, and `apps/server/src/ai/minimaxClient.ts`.
-- Current state: Partial. The backend does generate AI titles and broadcasts `EVENT_THEME_TITLE_REVEALED`, but the mini-program only invalidates and refetches `/api/my-pool-registrations`. That route currently does not select or return `theme`, `subtitle`, `themeEmoji`, `highlights`, or `vibe`, so the visible theme card is not reliably fed by the refetch path.
+- Current state: Active. `GET /api/my-pool-registrations` selects `theme`, `subtitle`, `vibe`, `themeEmoji`, and `themeHighlights` from `eventPoolGroups` when joined, so refetch after match invalidation can populate the theme card alongside `getPoolGroupDetails`.
 - Fallback behavior: If generation is disabled or the provider fails validation, the service falls back to template generation via `generateFallbackEventThemeTitle(...)`. Separately, initial match save also uses deterministic title generation from `apps/server/src/services/eventThemeTitleGenerator.ts`.
+
+### 8. Match Group Analysis (Match Intelligence)
+
+- Description: Full group analysis for matched users: pair explanations, suggested icebreakers, group dynamics, optional theme tags.
+- Entry point(s): `matching-status/index.tsx`, `squad-unboxing/index.tsx`, and `pool-group-detail/index.tsx` call `getPoolGroupAnalysis(apiRequest, groupId)` → `GET /api/pool-groups/:groupId/analysis` (shared React Query cache key `['mini-program', 'pool-group-analysis', groupId]`).
+- AI model/service: `generateGroupAnalysis` in `apps/server/src/matchExplanationService.ts`, routed via `socialModelRouter` for LLM segments; responses include `fromCache`, `generatedAt`, `fallbackUsed`, `promptVersion`.
+- Configuration location: Match explanation prompts and cache keys in `matchExplanationService.ts`; router in `apps/server/src/ai/socialModelRouter.ts`.
+- Current state: Active and rendered on matching-status (e.g. lead icebreaker, chemistry), squad-unboxing progressive reveal, and pool group detail (compact **AI · 这桌氛围** card).
+- Fallback behavior: Service returns structured fallbacks when generation fails; cached hits skip the model.
+
+### 9. Onboarding Profile Tagline
+
+- Description: Short personalized line for the profile portrait / review moment; presentation-only (does not change onboarding state).
+- Entry point(s): `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` calls `getProfileTagline` from `@shared/api`.
+- AI model/service: `generateProfileTagline` in `apps/server/src/profileTaglineService.ts`, `promptVersion` `profile-tagline-v1`, routed through `socialModelRouter`.
+- Configuration location: `profileTaglineService.ts`, route `GET /api/onboarding/profile-tagline` in `apps/server/src/routes/domains/onboarding.ts`.
+- Current state: Active.
+- Fallback behavior: Short deterministic fallback when validation fails or the provider errors.
 
 ## Cross-Cutting Concerns
 
@@ -130,7 +148,7 @@ Not counted as AI for this document:
 - `apps/server/src/lib/aiTraceLogger.ts`: Trace logging for social-icebreaker and match-intelligence AI calls.
 - `@shared/types/aiMeta`: Shared response metadata contract for live-vs-fallback AI responses.
 - `packages/shared/src/api.ts`: Shared registration and group DTOs, including optional theme fields and `matchExplanation` fields used by mini-program pages.
-- `packages/shared/src/wsEvents.ts`: Shared WebSocket event contract; `EVENT_THEME_TITLE_REVEALED` includes theme payload fields even though the mini-program currently refetches instead of consuming them directly.
+- `packages/shared/src/wsEvents.ts`: Shared WebSocket event contract; `EVENT_THEME_TITLE_REVEALED` carries theme fields that `matching-status` merges with REST-fetched registration and group details.
 
 ### Feature flags and rollout controls
 
@@ -140,8 +158,7 @@ Relevant server-side flags and env controls found during the audit:
 
 - `SOCIAL_AI_PROVIDER`: `hybrid`, `minimax`, or `deepseek` for social-icebreaker and match-intelligence routing.
 - `MINIMAX_API_KEY`, `MINIMAX_MODEL`, `MINIMAX_BASE_URL`, `MINIMAX_TIMEOUT_MS`: MiniMax enablement and model/runtime configuration.
-- `DEEPSEEK_API_KEY`: DeepSeek enablement for chat and embedding fallback paths.
-- `OPENAI_API_KEY`: Primary embedding provider enablement in `embeddingClient.ts`.
+- `DEEPSEEK_API_KEY`: DeepSeek enablement for chat and for **semantic profile embeddings** in `embeddingClient.ts`.
 - `EMBEDDING_MODEL`, `EMBEDDING_TIMEOUT_MS`, `EMBEDDING_MAX_RETRIES`: Embedding runtime controls.
 - `CREATIVE_AI_PROVIDER`: Global creative-provider override.
 - `CREATIVE_AI_TITLE_PROVIDER`: Function-level override for event theme title generation.
@@ -173,12 +190,14 @@ All confirmed AI execution paths for the mini-program are server-side.
 
 ## Bottom Line
 
-The confirmed mini-program AI footprint is narrower than the repo-wide AI surface.
+The confirmed mini-program AI footprint is narrower than the repo-wide AI surface but includes the core social, match-narrative, and onboarding-copy paths.
 
 Today, the mini-program has:
 
-1. One clearly live AI suite: social icebreaker generation.
-2. One active backend AI enrichment pipeline triggered by mini-program profile actions: semantic embeddings.
-3. One partial AI experience with incomplete client wiring: event theme title reveal.
+1. A live **Social Icebreaker** suite (warmup through personality-dice and recap).
+2. **Match group analysis** on matched flows (`GET /api/pool-groups/:groupId/analysis`).
+3. **Semantic profile embeddings** triggered by profile and interest updates (backend-only output).
+4. **Event theme title** reveal after matching (WebSocket + REST + group details).
+5. **Onboarding profile tagline** on the profile review step.
 
-Several nearby surfaces that may look AI-powered in the UI or schema are currently deterministic, backend-only, or server-present but not mini-program-reachable.
+Several nearby surfaces remain deterministic or web-only (for example `group.matchExplanation` on pool group detail until analysis is loaded, and XiaoYue commentary). See `docs/mini-program-ai-roadmap-handoff.md` for deeper AI integration (Researcher → Planner → AI Engineer) and roadmap alignment with `docs/AI_INTEGRATION_PLAN.md`.

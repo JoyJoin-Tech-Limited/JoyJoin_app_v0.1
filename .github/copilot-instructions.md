@@ -12,6 +12,7 @@
 - **Ambiguous or cross-cutting tasks:** Run `node scripts/skill-router.mjs "your question"` and follow the suggested skill; routing metadata lives in `.github/skills/*/routing.yml`.
 - **Library and framework APIs (Taro, React, Prisma, etc.):** Prefer **Context7 via MCP** for current docs instead of relying on stale training data—after configuring MCP (`.vscode/mcp.json` for VS Code / Copilot; root `.mcp.json` for Cursor), use the Context7 tools when the task depends on accurate API or config details.
 - **Secrets:** Never commit API keys. Use `.env` (gitignored) for `CONTEXT7_API_KEY` where your IDE passes env to MCP, or VS Code `inputs` in `.vscode/mcp.json`. See `.env.example`.
+- **Cross-cutting documentation refresh:** When updating canonical docs, skills, and agents together, follow `docs/ai-workflow-documentation-refresh.md` (scope tiers, kickoff vs `docs-sync` vs Workflow Governance Reviewer, `npm run orchestration:validate` when orchestration or skill routing changes). Do not treat **Workflow Governance Reviewer** as a bulk documentation sync.
 
 ### Skills
 
@@ -76,6 +77,8 @@ The **Harness Engineering Framework** is the default review lens for these dimen
 
 **Start with:** `.github/skills/code-review/SKILL.md`
 **Then load** domain-specific skills from `.github/skills/README.md` for the areas affected by the change.
+
+**Mini-program UI changes (`apps/mini-program`):** Reviews must enforce pixel discipline in `.github/skills/mini-program-frontend-excellence/references/pixel-precision.md` — match design specs exactly when present; otherwise use strict **8rpx** spacing rhythm and consistent alignment. **WeChat DevTools** inspection (computed styles / layout) is mandatory before merge; reviewers **block** user-visible visual PRs that skip this or show avoidable drift. Automated CI does not replace DevTools.
 
 ---
 

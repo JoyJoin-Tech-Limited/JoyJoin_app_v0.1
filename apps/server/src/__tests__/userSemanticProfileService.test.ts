@@ -89,7 +89,7 @@ describe('userSemanticProfileService', () => {
       vector: [0.1, 0.2, 0.3],
       model: 'text-embedding-3-small',
       dimensions: 3,
-      provider: 'openai',
+      provider: 'deepseek',
     });
 
     await service.recomputeNow('user-1', 'profile_setup');

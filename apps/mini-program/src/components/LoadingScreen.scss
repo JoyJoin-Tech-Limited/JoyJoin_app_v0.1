@@ -1,32 +1,7 @@
 @use '../styles/variables' as *;
-@use '../styles/mixins' as *;
 
-.loading-screen {
-  @include flex-center;
-  flex-direction: column;
-  gap: $spacing-md;
-  min-height: 100vh;
-
-  &__spinner {
-    width: 48rpx;
-    height: 48rpx;
-    border-radius: 24rpx;
-    border: 4rpx solid rgba(139, 92, 246, 0.2);
-    border-top-color: $color-primary;
-    animation: joy-spin 0.8s linear infinite;
-  }
-
-  &__message {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-}
-
-@keyframes joy-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.loading-screen__message {
+  font-size: $font-size-base;
+  color: $color-text-secondary;
+  text-align: center;
 }

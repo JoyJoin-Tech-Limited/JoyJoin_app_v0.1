@@ -11,6 +11,8 @@
  *   http_requests_total{method, path, status_code}         — request counter
  *   http_request_duration_ms{method, path, status_code}    — latency histogram
  *     (buckets: 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000 ms)
+ *   joyjoin_ai_calls_total{domain, feature, outcome}       — AI calls (outcome: cache|live|fallback)
+ *   joyjoin_ai_call_latency_ms{domain, feature, outcome}   — latency for those calls
  *   http_errors_total{method, path, status_code}           — 4xx/5xx counter
  *   process_cpu_user_seconds_total                         — CPU usage
  *   process_cpu_system_seconds_total                       — CPU system usage
@@ -69,6 +71,9 @@ const runtimeLLMFallbackCounters = new Map<string, CounterEntry>();
 const llmFallbackRequestCounters = new Map<string, CounterEntry>();
 const llmFallbackCostTotals = new Map<string, CounterEntry>();
 const llmFallbackLatencyHistograms = new Map<string, HistogramEntry>();
+/** JoyJoin product AI calls (match explanation, icebreaker, tagline, theme, etc.) */
+const aiProductCallCounters = new Map<string, CounterEntry>();
+const aiProductLatencyHistograms = new Map<string, HistogramEntry>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -309,6 +314,32 @@ export function metricsMiddleware(
  * Generate the full Prometheus plain-text exposition and return it as a string.
  * Call this inside the /api/metrics route handler.
  */
+/**
+ * Record one AI call for Prometheus (`joyjoin_ai_calls_total` + latency histogram).
+ * Invoked from `logAITrace` — keep label cardinality low (domain + feature + outcome).
+ */
+export function recordAICallMetric(params: {
+  domain: string;
+  feature: string;
+  latencyMs: number;
+  fromCache: boolean;
+  success: boolean;
+  fallbackUsed: boolean;
+}): void {
+  const outcome = params.fromCache
+    ? 'cache'
+    : params.success && !params.fallbackUsed
+      ? 'live'
+      : 'fallback';
+  const labels = {
+    domain: params.domain,
+    feature: params.feature,
+    outcome,
+  };
+  incCounter(aiProductCallCounters, labels);
+  observeHistogram(aiProductLatencyHistograms, labels, params.latencyMs);
+}
+
 export async function getMetricsText(): Promise<string> {
   await measureEventLoopDelay();
 
@@ -354,6 +385,16 @@ export async function getMetricsText(): Promise<string> {
       _lastEventLoopDelayMs,
     ),
     renderProcessMetrics(),
+    renderCounter(
+      'joyjoin_ai_calls_total',
+      'JoyJoin AI product calls by domain, feature, and outcome (cache, live, fallback).',
+      aiProductCallCounters,
+    ),
+    renderHistogram(
+      'joyjoin_ai_call_latency_ms',
+      'JoyJoin AI call latency in milliseconds (same labels as joyjoin_ai_calls_total).',
+      aiProductLatencyHistograms,
+    ),
     getMatchingMetricsText(),
   ];
 
@@ -390,6 +431,8 @@ export function _resetMetricsForTest(): void {
   llmFallbackRequestCounters.clear();
   llmFallbackCostTotals.clear();
   llmFallbackLatencyHistograms.clear();
+  aiProductCallCounters.clear();
+  aiProductLatencyHistograms.clear();
 }
 
 export function recordRuntimeLLMFallbackMetric(

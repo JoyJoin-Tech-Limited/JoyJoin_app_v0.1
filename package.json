@@ -29,6 +29,8 @@
     "guardrails": "node scripts/check-guardrails.mjs",
     "dep-check": "node scripts/check-workspace-dependency-ownership.mjs",
     "memory:validate": "node scripts/memory-validate.mjs",
+    "memory:draft-candidate": "node scripts/memory-draft-candidate.mjs",
+    "memory:auto-land": "node scripts/memory-auto-land.mjs",
     "memory:build-index": "node scripts/memory-build-index.mjs",
     "memory:query": "node scripts/memory-query.mjs",
     "memory:stage-candidate": "node scripts/memory-stage-candidate.mjs",

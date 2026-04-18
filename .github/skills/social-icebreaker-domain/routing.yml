@@ -21,10 +21,13 @@ do_not_use_when:
 strong_triggers:
   - socialIcebreaker
   - useSocialIcebreaker
+  - /api/social-icebreaker
+  - social-icebreaker
   - /icebreaker/:sessionId
   - warmup
   - micro_challenge
   - lie_detective
+  - personality_dice
   - recap
   - host authority
   - player advance
@@ -40,23 +43,29 @@ strong_triggers:
   - icebreaker host
 
 owned_files:
+  - apps/server/src/routes/domains/icebreaker.ts
   - apps/server/src/routes/socialIcebreaker.ts
   - apps/server/src/lib/socialIcebreakerStore.ts
+  - apps/server/src/lib/socialIcebreakerSweep.ts
+  - apps/server/src/socialIcebreakerPhaseConfig.ts
+  - apps/server/src/socialIcebreakerAIService.ts
   - apps/user-client/src/pages/IcebreakerSessionPage.tsx
+  - apps/mini-program/src/pages/icebreaker-session/index.tsx
   - docs/icebreaker-system.md
 
 owned_paths:
-  - /api/icebreaker/**
+  - /api/social-icebreaker/**
   - /icebreaker/:sessionId
 
 owned_symbols:
   - useSocialIcebreaker
   - socialIcebreakerStore
   - advancePhase
-  - IcebreakerPhase
+  - SocialIcebreakerPhase
   - warmup
   - micro_challenge
   - lie_detective
+  - personality_dice
   - recap
   - isLie
 

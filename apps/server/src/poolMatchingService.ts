@@ -867,6 +867,161 @@ function generateGroupExplanation(group: MatchGroup): string {
   return `${tempEmoji} 这个小组有${group.members.length}位成员，包含${archetypes.length}种人格类型（${archetypes.join("、")}），来自${industries.length}个行业。配对兼容性${group.avgPairScore}分，多样性${group.diversityScore}分，能量平衡${group.communicationBalance}分，综合匹配度${group.overallScore}分。`;
 }
 
+export type GreedyPoolMatchingConfig = {
+  minGroupSize?: number | null;
+  maxGroupSize?: number | null;
+  targetGroups?: number | null;
+};
+
+/**
+ * In-memory greedy pool matching (same algorithm as `matchEventPool` after eligibility + caches).
+ * Exported for stress benchmarks and tests — **not** an HTTP entrypoint.
+ */
+export async function runGreedyPoolMatchingCore(
+  eligibleUsers: UserWithProfile[],
+  pool: GreedyPoolMatchingConfig,
+  interestsCache: UserInterestsCache,
+  pairScoreCache: Map<string, number>,
+  semanticProfileCache: SemanticProfileCache | undefined,
+  semanticSimilarityEnabled: boolean,
+  chemistryCalibrationMap: ChemistryCalibrationMap | undefined,
+  invitationPairs: Array<{ inviterId: string; inviteeId: string }>,
+): Promise<MatchGroup[]> {
+  // 4. 贪婪分组算法（优先处理邀请关系）
+  const groups: MatchGroup[] = [];
+  const used = new Set<string>();
+  const targetGroupSize = pool.maxGroupSize || 6;
+  const minGroupSize = pool.minGroupSize || 4;
+
+  // 计算所有可能的配对分数，并为邀请关系加权
+  const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
+  for (let i = 0; i < eligibleUsers.length; i++) {
+    for (let j = i + 1; j < eligibleUsers.length; j++) {
+      const user1 = eligibleUsers[i] as UserWithProfile;
+      const user2 = eligibleUsers[j] as UserWithProfile;
+      let score = await calculatePairScore(
+        user1,
+        user2,
+        interestsCache,
+        pairScoreCache,
+        semanticProfileCache,
+        semanticSimilarityEnabled,
+        chemistryCalibrationMap,
+      );
+
+      // Check if this pair has an invitation relationship
+      const isInvited = invitationPairs.some(pair =>
+        (pair.inviterId === user1.userId && pair.inviteeId === user2.userId) ||
+        (pair.inviterId === user2.userId && pair.inviteeId === user1.userId)
+      );
+
+      // Boost score for invited pairs (soft constraint)
+      if (isInvited) {
+        score = Math.min(100, score + 20); // Add 20 points bonus
+      }
+
+      pairScores.push({
+        user1,
+        user2,
+        score,
+        isInvited
+      });
+    }
+  }
+
+  // 按分数降序排序（邀请关系会自动排在前面因为有加分）
+  pairScores.sort((a, b) => b.score - a.score);
+
+  // 贪婪组建小组
+  for (const pair of pairScores) {
+    if (used.has(pair.user1.userId) || used.has(pair.user2.userId)) continue;
+
+    // 以这对高分用户为核心，找到其他合适的成员
+    const groupMembers = [pair.user1, pair.user2];
+    used.add(pair.user1.userId);
+    used.add(pair.user2.userId);
+
+    // 继续添加成员直到达到目标人数
+    while (groupMembers.length < targetGroupSize) {
+      let bestCandidate: UserWithProfile | null = null;
+      let bestScore = 0;
+
+      for (const candidate of eligibleUsers as UserWithProfile[]) {
+        if (used.has(candidate.userId)) continue;
+
+        // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
+        let totalScore = 0;
+        for (const member of groupMembers) {
+          totalScore += await calculatePairScore(
+            candidate,
+            member,
+            interestsCache,
+            pairScoreCache,
+            semanticProfileCache,
+            semanticSimilarityEnabled,
+            chemistryCalibrationMap,
+          );
+        }
+        const avgScore = totalScore / groupMembers.length;
+
+        if (avgScore > bestScore) {
+          bestScore = avgScore;
+          bestCandidate = candidate;
+        }
+      }
+
+      if (bestCandidate && bestScore >= 60) { // 最低质量门槛
+        groupMembers.push(bestCandidate);
+        used.add(bestCandidate.userId);
+      } else {
+        break; // 没有合适的候选人
+      }
+    }
+
+    // 只保留达到最小人数的小组
+    if (groupMembers.length >= minGroupSize) {
+      const avgPairScore = await calculateGroupPairScore(
+        groupMembers,
+        interestsCache,
+        pairScoreCache,
+        semanticProfileCache,
+        semanticSimilarityEnabled,
+        chemistryCalibrationMap,
+      );
+      // E: Compute true chemistry-only average (distinct from avgPairScore)
+      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
+      const diversity = calculateGroupDiversity(groupMembers);
+      const communicationBalance = calculateEnergyBalance(groupMembers);
+      const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
+      const temperatureLevel = getTemperatureLevel(overall);
+
+      const group: MatchGroup = {
+        members: groupMembers,
+        avgPairScore: avgPairScore,
+        avgChemistryScore: avgChemistryScore,
+        diversityScore: diversity,
+        communicationBalance: communicationBalance,
+        overallScore: overall,
+        temperatureLevel: temperatureLevel,
+        explanation: ""
+      };
+
+      group.explanation = generateGroupExplanation(group);
+      groups.push(group);
+    } else {
+      // 释放这些成员，允许他们加入其他组
+      groupMembers.forEach(m => used.delete(m.userId));
+    }
+
+    // 达到目标组数就停止
+    if (groups.length >= (pool.targetGroups || 1)) {
+      break;
+    }
+  }
+
+  return groups;
+}
+
 /**
  * 主匹配算法：贪婪+优化策略
  * 1. 按匹配分数排序所有可能的配对
@@ -975,140 +1130,17 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       invitationPairs.push({ inviterId: inviter.userId, inviteeId: invitee.userId });
     }
   }
-  
-  // 4. 贪婪分组算法（优先处理邀请关系）
-  const groups: MatchGroup[] = [];
-  const used = new Set<string>();
-  const targetGroupSize = pool.maxGroupSize || 6;
-  const minGroupSize = pool.minGroupSize || 4;
-  
-  // 计算所有可能的配对分数，并为邀请关系加权
-  const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
-  for (let i = 0; i < eligibleUsers.length; i++) {
-    for (let j = i + 1; j < eligibleUsers.length; j++) {
-      const user1 = eligibleUsers[i] as UserWithProfile;
-      const user2 = eligibleUsers[j] as UserWithProfile;
-      let score = await calculatePairScore(
-        user1,
-        user2,
-        interestsCache,
-        pairScoreCache,
-        semanticProfileCache,
-        semanticSimilarityEnabled,
-        chemistryCalibrationMap,
-      );
-      
-      // Check if this pair has an invitation relationship
-      const isInvited = invitationPairs.some(pair => 
-        (pair.inviterId === user1.userId && pair.inviteeId === user2.userId) ||
-        (pair.inviterId === user2.userId && pair.inviteeId === user1.userId)
-      );
-      
-      // Boost score for invited pairs (soft constraint)
-      if (isInvited) {
-        score = Math.min(100, score + 20); // Add 20 points bonus
-      }
-      
-      pairScores.push({
-        user1,
-        user2,
-        score,
-        isInvited
-      });
-    }
-  }
-  
-  // 按分数降序排序（邀请关系会自动排在前面因为有加分）
-  pairScores.sort((a, b) => b.score - a.score);
-  
-  // 贪婪组建小组
-  for (const pair of pairScores) {
-    if (used.has(pair.user1.userId) || used.has(pair.user2.userId)) continue;
-    
-    // 以这对高分用户为核心，找到其他合适的成员
-    const groupMembers = [pair.user1, pair.user2];
-    used.add(pair.user1.userId);
-    used.add(pair.user2.userId);
-    
-    // 继续添加成员直到达到目标人数
-    while (groupMembers.length < targetGroupSize) {
-      let bestCandidate: UserWithProfile | null = null;
-      let bestScore = 0;
-      
-      for (const candidate of eligibleUsers as UserWithProfile[]) {
-        if (used.has(candidate.userId)) continue;
-        
-        // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
-        let totalScore = 0;
-        for (const member of groupMembers) {
-          totalScore += await calculatePairScore(
-            candidate,
-            member,
-            interestsCache,
-            pairScoreCache,
-            semanticProfileCache,
-            semanticSimilarityEnabled,
-            chemistryCalibrationMap,
-          );
-        }
-        const avgScore = totalScore / groupMembers.length;
-        
-        if (avgScore > bestScore) {
-          bestScore = avgScore;
-          bestCandidate = candidate;
-        }
-      }
-      
-      if (bestCandidate && bestScore >= 60) { // 最低质量门槛
-        groupMembers.push(bestCandidate);
-        used.add(bestCandidate.userId);
-      } else {
-        break; // 没有合适的候选人
-      }
-    }
-    
-    // 只保留达到最小人数的小组
-    if (groupMembers.length >= minGroupSize) {
-      const avgPairScore = await calculateGroupPairScore(
-        groupMembers,
-        interestsCache,
-        pairScoreCache,
-        semanticProfileCache,
-        semanticSimilarityEnabled,
-        chemistryCalibrationMap,
-      );
-      // E: Compute true chemistry-only average (distinct from avgPairScore)
-      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
-      const diversity = calculateGroupDiversity(groupMembers);
-      const communicationBalance = calculateEnergyBalance(groupMembers);
-      const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
-      const temperatureLevel = getTemperatureLevel(overall);
-      
-      const group: MatchGroup = {
-        members: groupMembers,
-        avgPairScore: avgPairScore,
-        avgChemistryScore: avgChemistryScore,
-        diversityScore: diversity,
-        communicationBalance: communicationBalance,
-        overallScore: overall,
-        temperatureLevel: temperatureLevel,
-        explanation: ""
-      };
-      
-      group.explanation = generateGroupExplanation(group);
-      groups.push(group);
-    } else {
-      // 释放这些成员，允许他们加入其他组
-      groupMembers.forEach(m => used.delete(m.userId));
-    }
-    
-    // 达到目标组数就停止
-    if (groups.length >= (pool.targetGroups || 1)) {
-      break;
-    }
-  }
-  
-  return groups;
+
+  return runGreedyPoolMatchingCore(
+    eligibleUsers,
+    pool,
+    interestsCache,
+    pairScoreCache,
+    semanticProfileCache,
+    semanticSimilarityEnabled,
+    chemistryCalibrationMap,
+    invitationPairs,
+  );
 }
 
 /**

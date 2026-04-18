@@ -225,6 +225,16 @@
     overflow-wrap: anywhere;
   }
 
+  &__ai-tagline {
+    display: block;
+    margin-top: 10rpx;
+    font-size: $font-size-xs;
+    font-style: italic;
+    color: rgba($color-text-secondary, 0.88);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+
   &__hero-tags {
     display: flex;
     flex-wrap: wrap;

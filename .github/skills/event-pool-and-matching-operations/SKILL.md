@@ -96,7 +96,9 @@ Inspect `connectionRadar` targets first. The route only accepts other members of
 
 ## Related files
 
-- [`apps/server/src/routes/domains/eventPools.ts`](../../apps/server/src/routes/domains/eventPools.ts)
-- [`apps/server/src/routes/domains/eventGroupOutcomes.ts`](../../apps/server/src/routes/domains/eventGroupOutcomes.ts)
-- [`apps/server/src/poolMatchingService.ts`](../../apps/server/src/poolMatchingService.ts)
-- [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md)
+- [`apps/server/src/routes/domains/eventPools.ts`](../../../apps/server/src/routes/domains/eventPools.ts) — pool routes, `GET /api/event-pools/:poolId/stats`, `buildEventPoolStatsResponse` (`estimatedGroups` is `Math.floor` registrations ÷ `minGroupSize`, capped by `targetGroups`)
+- [`apps/server/src/routes/domains/eventGroupOutcomes.ts`](../../../apps/server/src/routes/domains/eventGroupOutcomes.ts)
+- [`apps/server/src/poolRealtimeMatchingService.ts`](../../../apps/server/src/poolRealtimeMatchingService.ts) — registration-triggered and scheduled match runs
+- [`apps/server/src/poolMatchingService.ts`](../../../apps/server/src/poolMatchingService.ts) — read-only for understanding how pool config feeds group formation (scoring changes belong to `matching-domain`)
+- [`docs/MATCHING_ALGORITHM_REFERENCE.md`](../../../docs/MATCHING_ALGORITHM_REFERENCE.md) — pair/group algorithm reference (cross-check with pool operations)
+- [`docs/admin-rbac-matrix.md`](../../../docs/admin-rbac-matrix.md)

@@ -320,6 +320,12 @@ export default function MatchingStatusPage() {
       }
       
       await queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
+      if (themeTitleData.groupId) {
+        await queryClient.invalidateQueries({ queryKey: ["/api/pool-groups", themeTitleData.groupId] });
+        await queryClient.invalidateQueries({
+          queryKey: ["/api/pool-groups", themeTitleData.groupId, "analysis"],
+        });
+      }
     });
 
     return () => {

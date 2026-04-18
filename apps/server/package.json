@@ -17,7 +17,8 @@
     "db:studio": "node --env-file=../../.env ../../node_modules/drizzle-kit/bin.cjs studio --config=./drizzle.config.ts",
     "admin:create": "node --env-file=../../.env --import tsx/esm src/cli/createAdminAccount.ts",
     "user:create": "node --env-file=../../.env --import tsx/esm src/cli/createUserAccount.ts",
-    "user:bypass": "node --env-file=../../.env --import tsx/esm src/cli/bypassLogin.ts"
+    "user:bypass": "node --env-file=../../.env --import tsx/esm src/cli/bypassLogin.ts",
+    "benchmark:matching-stress": "tsx src/benchmarks/matchingStressSimulation.cli.ts"
   },
   "dependencies": {
     "@joyjoin/shared": "^1.0.0",

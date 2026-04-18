@@ -1,6 +1,6 @@
 # Personality Test System - V4 Adaptive Assessment
 
-**Last Updated:** 2026-04-07  
+**Last Updated:** 2026-04-19  
 **Version:** V4 Adaptive Engine + V2 Matcher  
 **Status:** Production
 
@@ -38,7 +38,18 @@ The JoyJoin Personality Test System uses a scientifically calibrated adaptive as
 - Confusion pair disambiguation
 - Two interactive closing questions for richer secondary signals
 - Decisive match detection (confidence ≥ 70%)
-- **Back button available** in the active `PersonalityTestPage` — it rewinds through local answered-question history and only exits to the landing page when there is no earlier answer to review
+- **Back button available** in the active test UI — on web, `PersonalityTestPage` in `apps/user-client`; on the **WeChat Mini Program**, `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` — it rewinds through local answered-question history and only exits to the landing page when there is no earlier answer to review
+
+### Client surfaces (web vs WeChat Mini Program)
+
+The V4 engine and question bank live in **`packages/shared/src/personality/`**; both clients call the same assessment HTTP APIs (for example `POST /api/assessment/v4/start`, answer posts, and result reads).
+
+| Surface | Where | Anonymous storage | Post-test WeChat auth |
+|--------|--------|---------------------|------------------------|
+| **Web** (`apps/user-client`) | `features/onboarding/active/pages/` — personality test, results, auth-gate; routes `/personality-test`, `/personality-test/results`, `/personality-test/auth-gate` | Browser `localStorage` key `joyjoin_v4_presignup_answers` (and related keys per onboarding docs) | `POST /api/auth/wechat/login-with-test` with code + session + answers |
+| **Mini Program** (`apps/mini-program`, launch-primary) | `pages/onboarding/personality-test/` — `index` (test), `results`, `auth-gate`; registered in the **onboarding subpackage** via [`onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) | Same logical keys through Taro storage — see [`anonymousOnboarding.ts`](../apps/mini-program/src/lib/anonymousOnboarding.ts) (`joyjoin_v4_presignup_answers`, `joyjoin_v4_assessment_session`) | [`authenticateMiniProgramUserWithTest()`](../apps/mini-program/src/lib/api.ts) → `POST /api/auth/wechat/login-with-test` from the auth-gate page |
+
+**Returning users only (no in-flight test import):** Mini Program [`pages/login/index`](../apps/mini-program/src/pages/login/index.tsx) uses [`useWeChatLogin`](../apps/mini-program/src/hooks/useWeChatLogin.ts) → [`authenticateMiniProgramUser()`](../apps/mini-program/src/lib/api.ts) → `POST /api/auth/wechat/login` (not `login-with-test`). Coordination detail: [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md).
 
 **Supported Question Types:**
 
@@ -545,7 +556,7 @@ Hard constraints that disqualify extreme mismatches:
 ### Assessment Flow Diagram
 
 ```
-User opens /personality-test (unauthenticated)
+User opens the test (unauthenticated) — web: `/personality-test` · mini-program: `pages/onboarding/personality-test/index`
          ↓
 ┌────────────────────────┐
 │ Create assessment_     │

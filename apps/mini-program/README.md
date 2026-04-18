@@ -2,18 +2,32 @@
 
 This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 
+## Launch status
+
+**This is the launch-primary client** for the current execution track: production WeChat users ship here first. `apps/user-client` remains the web sandbox and parity reference; any change that touches auth, payments, or shared contracts should follow [`docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md) and [`.github/skills/platform-coordination-protocol/SKILL.md`](../../.github/skills/platform-coordination-protocol/SKILL.md). Visual and interaction quality bar: [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../../.github/skills/mini-program-frontend-excellence/SKILL.md) (including `references/pixel-precision.md`).
+
 ## Source-of-truth entry points
 
 - `apps/mini-program/src/app.ts` — app lifecycle entry
-- `apps/mini-program/src/app.config.ts` — route and page registration
-- `apps/mini-program/src/lib/api.ts` — mini-program auth/API bootstrap surface
+- `apps/mini-program/src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboardingRoutes.ts` + tab config from `lib/tabBarConfig.ts`
+- `apps/mini-program/src/lib/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
+- `apps/mini-program/src/lib/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
+- `apps/mini-program/src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate (same assessment APIs as web)
+- `apps/mini-program/src/pages/login/index.tsx` + `src/hooks/useWeChatLogin.ts` — **returning-user** WeChat login (`POST /api/auth/wechat/login`)
+- `apps/mini-program/src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling; helpers in `src/lib/paymentEntry.ts`, `paymentPendingOrder.ts`, `paymentPendingOrderStorage.ts`
 - `docs/PLATFORM_COORDINATION.md` — canonical coordination playbook for duplicated auth, API, and payment flows
+- [`../../docs/mini-program-data-fetching.md`](../../docs/mini-program-data-fetching.md) — React Query key conventions (`['mini-program', …]`) for pool registration, group detail, and matching surfaces
 
 ## Coordination rules
 
 - Treat the mini-program as the strongest current reference for payment mechanics.
 - Before changing auth/session, API wrapper behavior, or payment flow here, review the matching web surface in `apps/user-client` and the guidance in [`../../docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md).
 - Keep mini-program runtime wiring here, but move genuinely shared contracts toward `packages/shared/src/`.
+
+## Visual QA and pixel discipline
+
+- Canonical rules (spec-exact vs **8rpx** rhythm, **WeChat DevTools** pre-merge gate, reviewer expectations): [`.github/skills/mini-program-frontend-excellence/references/pixel-precision.md`](../../.github/skills/mini-program-frontend-excellence/references/pixel-precision.md).
+- Durable backlog for optional automation (PR template, narrow style tests): [`repo-memory/candidates/mini-program-visual-qa-wechat-devtools-ci-gap.md`](../../repo-memory/candidates/mini-program-visual-qa-wechat-devtools-ci-gap.md).
 
 ## Package Loading Strategy
 
@@ -98,6 +112,26 @@ SAMPLES=7 PRELOAD_SETTLE_MS=2000 bash scripts/measure-mini-program-cold-entry.sh
 ```
 
 The script installs `miniprogram-automator` only in a temporary directory, emits JSON with per-sample and summary stats, and treats `login -> personality-test` as a preload proxy rather than a full WeChat auth benchmark. It also exits early if WeChat DevTools CLI is not logged in.
+
+## Group analysis debug (WP4)
+
+For **matched** flows, `GET /api/pool-groups/:groupId/analysis` returns `fromCache` and `generatedAt`. To help QA trust the pipeline without exposing noise to all users:
+
+- **Local `dev:weapp`:** a subtle line (**调试 · 桌友分析 实时生成** or **缓存**, plus a short timestamp) appears under the AI group-analysis blocks on **matching status** (chemistry card), **squad unboxing** (“这桌的整体氛围”), and **pool group detail** (“AI · 这桌氛围”).
+- **Production WeChat releases:** that line is **off** unless you opt in at build time.
+- **Beta / internal preview:** set `TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG=1` in the environment when running `npm run build:weapp --workspace=mini-program` so preview builds show the same hint.
+
+## Manual QA — AI surfaces (WP4)
+
+Use this as a quick checklist before shipping AI-touched MP work; the same matrix lives in [`docs/runbooks/mini-program-ai-smoke.md`](../../docs/runbooks/mini-program-ai-smoke.md).
+
+| Check | Where |
+|-------|--------|
+| Profile tagline | Onboarding → profile review |
+| Pool detail AI card | Matched user → pool group detail page |
+| Theme after match / WS | Matching status after match + theme reveal |
+| Group analysis copy | Matching status, squad unboxing, pool group detail |
+| Social icebreaker | Host: warmup topics → phase advance |
 
 ## Related docs
 

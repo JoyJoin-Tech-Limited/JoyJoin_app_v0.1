@@ -4,7 +4,7 @@
 
 These agents are the orchestration layer that sits above the repo's reusable skills. Each agent should have a narrow role, a minimal tool set, and a keyword-rich description so both humans and parent agents can discover it reliably.
 
-Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whether a task belongs in direct delivery, the kickoff lane, or the operational lane. Read [`../ORCHESTRATION_GOVERNANCE.md`](../ORCHESTRATION_GOVERNANCE.md) before changing the portfolio, handoffs, or agent-governance surfaces.
+Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whether a task belongs in direct delivery, the kickoff lane, or the operational lane. Read [`../ORCHESTRATION_GOVERNANCE.md`](../ORCHESTRATION_GOVERNANCE.md) before changing the portfolio, handoffs, or agent-governance surfaces. For a coordinated refresh of product docs, skills, and agents, see [`../../docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md).
 
 ## How to use these agents
 
@@ -60,7 +60,8 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `debug` | Bug and issue investigation, regressions, failing tests, and root-cause debugging | [`debug.agent.md`](./debug.agent.md) |
 | `Principal Software Engineer` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
 | `Prompt Engineer` | Prompt review, repo-resident prompt maintenance, safety-aware structure tightening, and example cleanup | [`prompt engineer.md`](./prompt%20engineer.md) |
-| `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts | [`self-iteration.agent.md`](./self-iteration.agent.md) |
+| `Repo Memory Steward` | Semi-automated **candidate** notes (`memory:draft-candidate`, `memory:query`, `memory:validate`); does not promote without explicit human approval | [`repo-memory-steward.agent.md`](./repo-memory-steward.agent.md) |
+| `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts (not a bulk doc-sync substitute—see [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md)) | [`self-iteration.agent.md`](./self-iteration.agent.md) |
 | `Verifier` | Skeptical completion check after “done” claims — targeted tests/commands, verified vs claimed | [`verifier.agent.md`](./verifier.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.

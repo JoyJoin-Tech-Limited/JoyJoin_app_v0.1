@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-04-13
+**Last Updated:** 2026-04-19
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 

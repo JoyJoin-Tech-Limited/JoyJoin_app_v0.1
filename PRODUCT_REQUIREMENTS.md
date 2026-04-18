@@ -15,6 +15,7 @@
 >
 > - ❌ Never reference, reintroduce, or copy-paste from legacy flows, removed features, old routes, or deprecated components — even if they appear in git history, archived docs (`archived/`), or inline `TODO` comments.
 > - ❌ Never treat `QUICK_REFERENCE.md` as authoritative — it is a legacy redirect-only stub. Use `DEVELOPER_QUICK_REFERENCE.md`, this document, and `docs/README.md` instead.
+> - ✅ Coordinated refreshes that touch product/architecture docs **and** repo AI workflow surfaces (`.github/skills/`, `.github/agents/`, orchestration) must follow `docs/ai-workflow-documentation-refresh.md` so scope, lanes, and validation stay aligned.
 > - ✅ When in doubt about whether a pattern/term/route is active, check the canonical nav table below and §*Product Canon* before implementing.
 >
 > This rule applies to human engineers **and** AI coding agents.

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-17",
+  "updated": "2026-04-18",
   "portfolio_scope": {
     "kickoff_agents": [
       "Researcher",
@@ -26,6 +26,7 @@
       "Principal Software Engineer",
       "SE: Product Manager",
       "Prompt Engineer",
+      "Repo Memory Steward",
       "Workflow Governance Reviewer",
       "Verifier"
     ]
@@ -769,6 +770,28 @@
         ]
       }
     },
+    "Repo Memory Steward": {
+      "file": ".github/agents/repo-memory-steward.agent.md",
+      "portfolio_role": "memory-automation",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Schema-valid candidate drafting via npm run memory:draft-candidate, memory:query dedupe, and memory:validate are covered by the normalized execute surface.",
+        "recommended_extensions": [
+          {
+            "type": "optional-integration",
+            "label": "Add issue-tracker integration only if this agent should open GitHub issues automatically from memory gaps.",
+            "reason": "Drafting and validation stay repo-local; PRs remain the default publish path."
+          }
+        ]
+      }
+    },
     "Workflow Governance Reviewer": {
       "file": ".github/agents/self-iteration.agent.md",
       "portfolio_role": "meta-governance",
@@ -953,6 +976,11 @@
     ],
     "SE: Product Manager": [
       "draft-prd"
+    ],
+    "Repo Memory Steward": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "docs-sync"
     ],
     "Workflow Governance Reviewer": [
       "docs-sync",

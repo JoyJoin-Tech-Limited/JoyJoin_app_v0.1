@@ -23,6 +23,8 @@ export interface MatchExplanationContract {
   chemistryScore: number;
   sharedInterests: string[];
   connectionPoints: string[];
+  /** Optional one-line conversation opener suggestion (match intelligence layer). */
+  introAngle?: string;
 }
 
 export interface GroupAnalysisContract {

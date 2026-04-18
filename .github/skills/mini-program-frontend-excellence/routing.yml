@@ -19,6 +19,13 @@ do_not_use_when:
   - task is about backend logic
 
 strong_triggers:
+  - pixel perfect
+  - pixel-perfect
+  - match Figma
+  - spacing rhythm
+  - 8rpx
+  - WeChat DevTools
+  - visual QA mini-program
   - mini-program UI
   - Taro page
   - apps/mini-program/src/components

@@ -18,15 +18,20 @@ do_not_use_when:
 
 strong_triggers:
   - nextStep
+  - onboardingCheckpoint
   - /onboarding/setup
   - /onboarding/extended
   - /onboarding/review
+  - /personality-test/results
+  - /personality-test/auth-gate
   - profileEssentialComplete
   - profileExtendedComplete
+  - hasCompletedInterestsCarousel
   - hasSeenProfileReview
   - useAuth
   - useOnboardingOrchestrator
   - AuthenticatedRouter
+  - packages/shared/src/onboarding.ts
   - essential-data
   - extended-data
   - profile-review
@@ -45,19 +50,27 @@ owned_files:
   - apps/user-client/src/hooks/useOnboardingProgress.ts
   - apps/user-client/src/App.tsx
   - apps/server/src/routes/domains/auth.ts
+  - apps/server/src/routes/domains/onboarding.ts
+  - packages/shared/src/onboarding.ts
+  - apps/mini-program/src/pages/onboarding/personality-test/index.tsx
+  - apps/mini-program/src/pages/onboarding/essential-data/index.tsx
 
 owned_paths:
   - /onboarding/setup
   - /onboarding/extended
   - /onboarding/review
   - /personality-test
+  - /personality-test/results
+  - /personality-test/auth-gate
 
 owned_symbols:
   - nextStep
+  - onboardingCheckpoint
   - useOnboardingOrchestrator
   - AuthenticatedRouter
   - profileEssentialComplete
   - profileExtendedComplete
+  - hasCompletedInterestsCarousel
   - hasSeenProfileReview
 
 related_skills:

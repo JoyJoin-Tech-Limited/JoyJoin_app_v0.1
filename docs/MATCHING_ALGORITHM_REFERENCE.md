@@ -1,6 +1,6 @@
 # JoyJoin Matching Algorithm Reference
 
-> **Status:** Living document — last updated 2026-04-02  
+> **Status:** Living document — last updated 2026-04-19  
 > **Scope:** Covers all three matching layers: (1) Personality archetype assignment, (2) Pair compatibility scoring, (3) Group formation.
 
 ---

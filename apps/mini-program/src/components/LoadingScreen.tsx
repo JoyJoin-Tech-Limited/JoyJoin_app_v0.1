@@ -1,14 +1,15 @@
-import { View, Text } from '@tarojs/components'
+import { Text } from '@tarojs/components'
+import { FancyLineLoadingScreen } from './FancyLineLoadingScreen'
 import './LoadingScreen.scss'
 
 /**
- * Standard full-page loading state.
+ * Standard full-page loading state (user-client FancyLine + optional status line).
  */
 export default function LoadingScreen({ message = '加载中…' }: { message?: string }) {
   return (
-    <View className='loading-screen'>
-      <View className='loading-screen__spinner' />
-      <Text className='loading-screen__message'>{message}</Text>
-    </View>
+    <FancyLineLoadingScreen
+      loop
+      bottomContent={<Text className='loading-screen__message'>{message}</Text>}
+    />
   )
 }

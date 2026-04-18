@@ -1,0 +1,11 @@
+@use '../../styles/variables' as *;
+
+.group-analysis-source-hint {
+  margin-top: 10rpx;
+
+  &__text {
+    font-size: $font-size-xs;
+    line-height: 1.45;
+    color: $color-text-muted;
+  }
+}

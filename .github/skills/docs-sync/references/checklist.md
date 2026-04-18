@@ -13,6 +13,15 @@ Use this checklist to verify a documentation update is complete and correct befo
 
 ---
 
+## Coordinated multi-tier refresh (optional)
+
+Use when the change set spans `docs/`, `.github/skills/`, and `.github/agents/` in one initiative:
+
+- [ ] [`docs/ai-workflow-documentation-refresh.md`](../../../../docs/ai-workflow-documentation-refresh.md) was consulted for scope tiers and lanes
+- [ ] `npm run orchestration:validate` and/or `node scripts/validate-skill-routing.mjs` were run if orchestration or `routing.yml` files changed
+
+---
+
 ## Canonical priority
 
 - [ ] `DEVELOPER_QUICK_REFERENCE.md` was updated (or confirmed accurate) before any supplementary doc

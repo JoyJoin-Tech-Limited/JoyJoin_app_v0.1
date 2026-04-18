@@ -3,16 +3,27 @@ name: mini-program-frontend-excellence
 description: >
   Deliver premium, JoyJoin-native UI in apps/mini-program using Taro-native primitives,
   brand-aligned hierarchy, complete state design, and mini-program-safe performance discipline.
-  Use when implementing or refining Taro pages/components, raising a screen above generic
-  "cheap mini-program" quality, or reviewing whether a mini-program UI feels native-quality
-  and unmistakably JoyJoin. Trigger phrases: "mini-program UI", "Taro page",
-  "make this feel premium", "native-quality mini-program", "cheap mini-program feel",
-  "improve mini-program empty state".
+  Enforces pixel-precision when specs exist (match exactly; ≤1px effective deviation only with
+  documented exception) and strict 8rpx spacing rhythm when they do not; WeChat DevTools
+  inspection is mandatory before merge for UI changes. Use when implementing or refining Taro
+  pages/components, raising a screen above generic "cheap mini-program" quality, or reviewing
+  whether a mini-program UI feels native-quality and unmistakably JoyJoin. Trigger phrases:
+  "mini-program UI", "Taro page", "make this feel premium", "native-quality mini-program",
+  "cheap mini-program feel", "improve mini-program empty state", "pixel perfect", "match Figma",
+  "rpx spacing", "WeChat DevTools".
 ---
 
 # Mini-Program Frontend Excellence
 
 **Core rule:** JoyJoin mini-program UI must feel unmistakably JoyJoin and operationally native. Do not ship browser ideas squeezed into Taro, and do not ship low-effort mini-program UI that merely "works".
+
+## Pixel precision (non-negotiable)
+
+**Read [`references/pixel-precision.md`](references/pixel-precision.md) before shipping or approving UI.**
+
+- **Design spec present** — Match measurements **exactly** (zero tolerance for avoidable drift; ≤1px effective error only with documented platform exception + design sign-off).
+- **No spec** — Enforce **internal consistency**: primary spacing on **multiples of 8rpx**, align to existing container padding and section rhythm; **4rpx** only for hairlines/optical tweaks (comment if unusual).
+- **Pre-merge** — Authors run **WeChat DevTools** (Wxml + computed styles) on touched screens; reviewers **block** visual PRs without this evidence when the diff affects layout or typography. CI cannot replace DevTools.
 
 ## Taro framework (read first for structural UI work)
 
@@ -49,7 +60,10 @@ For layout constraints, `setData` / list performance, cross-end files, `RichText
    Use `hoverClass`, pressed states, transform/opacity motion, crisp asset treatment, and readable hierarchy. Reinterpret browser-only effects instead of force-porting them.
 
 6. **Run the quality bar**
-   Check brand, quality, and structure explicitly before calling the work complete.
+   Check brand, quality, structure, and **pixel-precision rules** (`references/pixel-precision.md`) explicitly before calling the work complete.
+
+7. **Verify in WeChat DevTools**
+   For any non-trivial UI change, confirm key spacing and type in DevTools before PR / merge request.
 
 ## Premium quality bar
 
@@ -129,6 +143,8 @@ For layout constraints, `setData` / list performance, cross-end files, `RichText
 ## Review checklist
 
 - [ ] Scope was classified as `MINI_PROGRAM_ONLY` or `BOTH_REQUIRED`
+- [ ] **Pixel discipline:** Spec-backed values match within the tolerance in [`references/pixel-precision.md`](references/pixel-precision.md); no-spec work uses **8rpx rhythm** and aligns with sibling screens; any exception is documented with design approval
+- [ ] **WeChat DevTools:** Author verified computed layout/typography on changed screens (and noted in PR when reviewers cannot reproduce)
 - [ ] The screen has a clear JoyJoin visual direction and avoids generic AI aesthetics
 - [ ] Brand colours, typography, spacing, and mascot usage follow `joyjoin-brand-guidelines`
 - [ ] Taro-native primitives and WXSS-safe patterns are used instead of browser-first assumptions
@@ -144,6 +160,7 @@ For layout constraints, `setData` / list performance, cross-end files, `RichText
 
 ## Related files
 
+- [`references/pixel-precision.md`](references/pixel-precision.md)
 - [`references/taro-ui-framework.md`](references/taro-ui-framework.md)
 - `apps/mini-program/src/pages/`
 - `apps/mini-program/src/components/`
