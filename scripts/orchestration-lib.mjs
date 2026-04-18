@@ -9,6 +9,7 @@ export const CONTEXT_EXAMPLE_RELATIVE_PATH = path.join('.github', 'orchestration
 export const RUNTIME_DIR_RELATIVE_PATH = path.join('.git', '.orchestration');
 export const RUNTIME_CONTEXT_RELATIVE_PATH = path.join(RUNTIME_DIR_RELATIVE_PATH, 'context.json');
 export const RUNTIME_EVENT_LOG_RELATIVE_PATH = path.join(RUNTIME_DIR_RELATIVE_PATH, 'events.jsonl');
+export const SKILLS_RELATIVE_PATH = path.join('.github', 'skills');
 
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 const STEP_TYPES = new Set(['shell', 'advisory-agent', 'log']);
@@ -77,6 +78,20 @@ export function loadOrchestrationManifest(repoRoot) {
   return readJsonCompatibleYaml(raw, MANIFEST_RELATIVE_PATH);
 }
 
+export function loadKnownSkillNames(repoRoot) {
+  const skillsPath = path.join(repoRoot, SKILLS_RELATIVE_PATH);
+
+  if (!fs.existsSync(skillsPath)) {
+    return new Set();
+  }
+
+  return new Set(
+    fs
+      .readdirSync(skillsPath)
+      .filter((entry) => fs.statSync(path.join(skillsPath, entry)).isDirectory()),
+  );
+}
+
 function requireString(container, key, location, errors) {
   if (typeof container?.[key] !== 'string' || container[key].trim() === '') {
     errors.push(`${location}.${key} must be a non-empty string.`);
@@ -128,7 +143,19 @@ function validateRecommendedExtensions(extensions, location, errors) {
   }
 }
 
-function validateStep(step, location, agentBindings, errors) {
+function validateKnownSkills(skills, location, knownSkillNames, errors) {
+  if (!(knownSkillNames instanceof Set)) {
+    return;
+  }
+
+  for (const skillName of skills) {
+    if (!knownSkillNames.has(skillName)) {
+      errors.push(`${location} references unknown skill ${skillName}.`);
+    }
+  }
+}
+
+function validateStep(step, location, agentBindings, knownSkillNames, errors) {
   if (!isPlainObject(step)) {
     errors.push(`${location} must be an object.`);
     return;
@@ -155,6 +182,9 @@ function validateStep(step, location, agentBindings, errors) {
     }
     if ('skills' in step) {
       validateStringArray(step.skills, `${location}.skills`, errors);
+      if (Array.isArray(step.skills)) {
+        validateKnownSkills(step.skills, `${location}.skills`, knownSkillNames, errors);
+      }
     }
     requireString(step, 'summary', location, errors);
   }
@@ -251,9 +281,10 @@ function validateMemoryContextContract(memoryContext, location, errors) {
   }
 }
 
-export function validateOrchestrationManifest(manifest) {
+export function validateOrchestrationManifest(manifest, options = {}) {
   const errors = [];
   const warnings = [];
+  const knownSkillNames = options.knownSkillNames instanceof Set ? options.knownSkillNames : null;
 
   if (!isPlainObject(manifest)) {
     return {
@@ -362,6 +393,9 @@ export function validateOrchestrationManifest(manifest) {
         errors.push(`skill_bindings references unknown agent ${agentName}.`);
       }
       validateStringArray(skills, `skill_bindings.${agentName}`, errors);
+      if (Array.isArray(skills)) {
+        validateKnownSkills(skills, `skill_bindings.${agentName}`, knownSkillNames, errors);
+      }
     }
   }
 
@@ -405,7 +439,7 @@ export function validateOrchestrationManifest(manifest) {
         continue;
       }
       for (const [index, step] of hookDefinition.steps.entries()) {
-        validateStep(step, `${location}.steps[${index}]`, agentBindings, errors);
+        validateStep(step, `${location}.steps[${index}]`, agentBindings, knownSkillNames, errors);
       }
     }
   }
@@ -423,7 +457,7 @@ export function validateOrchestrationManifest(manifest) {
         continue;
       }
       for (const [index, step] of workflowDefinition.steps.entries()) {
-        validateStep(step, `${location}.steps[${index}]`, agentBindings, errors);
+        validateStep(step, `${location}.steps[${index}]`, agentBindings, knownSkillNames, errors);
       }
     }
   }

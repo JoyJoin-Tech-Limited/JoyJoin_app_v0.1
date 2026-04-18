@@ -244,6 +244,8 @@ node scripts/skill-router.mjs "add a nextStep rule after profile review"
 node scripts/test-skill-routing.mjs
 ```
 
+The production pipeline also runs both routing commands from `.github/workflows/cicd.yml`, so stale routing metadata is now blocked in CI as well as during local validation.
+
 ### Maintenance rules
 
 - **When you add a trigger phrase** to `SKILL.md`, also add it to `strong_triggers` in `routing.yml`.

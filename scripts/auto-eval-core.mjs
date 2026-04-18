@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { readJsonCompatibleYaml, validateOrchestrationManifest } from './orchestration-lib.mjs';
+import { loadKnownSkillNames, readJsonCompatibleYaml, validateOrchestrationManifest } from './orchestration-lib.mjs';
 
 export const RUBRIC_VERSION = '2026-04-11.v1';
 export const QUALITY_PASS_THRESHOLD = 95;
@@ -500,7 +500,9 @@ function runSyntaxPreflight(repoRoot, changedFiles, timeoutProfile) {
     if (file.path === '.github/orchestration.yaml') {
       try {
         const manifest = readJsonCompatibleYaml(file.content ?? '', file.path);
-        const validation = validateOrchestrationManifest(manifest);
+        const validation = validateOrchestrationManifest(manifest, {
+          knownSkillNames: loadKnownSkillNames(repoRoot),
+        });
 
         if (!validation.valid) {
           for (const message of validation.errors.slice(0, 10)) {
