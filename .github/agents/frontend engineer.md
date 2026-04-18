@@ -98,6 +98,16 @@ When a request targets `apps/mini-program` directly:
 - Call out any required sibling-platform review when auth, API, or payment behavior is involved.
 - Use examples from the repo's patterns rather than generic React showcase snippets.
 
+## Output format
+
+### Structured deliverable
+
+Complete code and explanations per **Response Style** and **Quality Bar**; scope flags (`WEB_ONLY` / `MINI_PROGRAM_ONLY` / `BOTH_REQUIRED`) and sibling-platform callouts as required.
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the work into the briefing sections; include **`turnStatus`** in JSON when applicable.
+
 ## Quality Bar
 
 - Optimize for maintainable product code, not novelty.

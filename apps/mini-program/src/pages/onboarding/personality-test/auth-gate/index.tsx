@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Button from '../../../../components/Button'
 import Card from '../../../../components/Card'
+import OnboardingLoadingShell from '../../../../components/OnboardingLoadingShell'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useWeChatLogin } from '../../../../hooks/useWeChatLogin'
 import { useOnboardingAnalytics } from '../../../../hooks/useOnboardingAnalytics'
@@ -143,11 +144,13 @@ export default function PersonalityTestAuthGatePage() {
 
   if (auth.isLoading) {
     return (
-      <View className='personality-auth-gate'>
-        <View className='personality-auth-gate__loading'>
-          <Text className='personality-auth-gate__loading-text'>加载中…</Text>
-        </View>
-      </View>
+      <OnboardingLoadingShell
+        stepLabel='保存匿名结果'
+        title='小悦在确认你的登录状态'
+        subtitle='先检查微信会话和这台设备上的答题记录，确认好后再把结果稳稳接到正式账号里。'
+        hint='这一步不会丢掉刚才的测试结果，只是在做继续前的核对。'
+        xiaoyueExpression='loadingSystem'
+      />
     )
   }
 

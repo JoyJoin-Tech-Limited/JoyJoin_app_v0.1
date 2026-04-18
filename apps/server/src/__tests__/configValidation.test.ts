@@ -15,7 +15,7 @@ const { validateConfig } = await import("../lib/configValidation");
 const REQUIRED_VARS = {
   DATABASE_URL: "postgresql://localhost/test",
   SESSION_SECRET: "a".repeat(32),
-  WECHAT_APPID: "wx123456",
+  WECHAT_APPID: "wx1234567890abcdef",
   WECHAT_SECRET: "secret_value",
 };
 
@@ -84,6 +84,12 @@ describe("validateConfig", () => {
   it("calls process.exit(1) in production when WECHAT_APPID is missing", () => {
     process.env.NODE_ENV = "production";
     delete process.env.WECHAT_APPID;
+    expect(() => validateConfig()).toThrow("process.exit(1)");
+  });
+
+  it("calls process.exit(1) in production when WECHAT_APPID does not look like a WeChat app id", () => {
+    process.env.NODE_ENV = "production";
+    process.env.WECHAT_APPID = "not-a-wechat-appid";
     expect(() => validateConfig()).toThrow("process.exit(1)");
   });
 

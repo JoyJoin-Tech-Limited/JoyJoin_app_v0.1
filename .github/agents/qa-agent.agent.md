@@ -34,9 +34,15 @@ Your job is to turn changes into concrete verification work: smoke coverage, reg
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise QA report with:
 
 1. Scope under test
 2. Checks run or recommended
 3. Gaps and residual risks
 4. Verification status
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.

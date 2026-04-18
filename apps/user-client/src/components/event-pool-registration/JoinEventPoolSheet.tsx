@@ -24,6 +24,7 @@ import BarPreferencesStep from "./steps/BarPreferencesStep";
 import BlindPoolTrustExplainer from "./BlindPoolTrustExplainer";
 import JoinErrorScreen from "@/components/matching/JoinErrorScreen";
 import ExtendedDataEmptyScreen from "@/components/matching/ExtendedDataEmptyScreen";
+import { getBlindBoxEntitlementResumePaymentRoute } from "@/lib/blindBoxPaymentRouting";
 import { shenzhenClusters } from "@shared/districts";
 import {
   atmosphereFramingEnabled,
@@ -83,11 +84,15 @@ export default function JoinEventPoolSheet({
     preferences,
     updatePreferences,
     registerMutation,
+    resumeContext,
     saveDraft,
     isFormValid,
   } = useEventPoolRegistration({
     poolId: poolData.poolId,
     eventType: poolData.eventType,
+    poolTitle: poolData.title,
+    poolArea: poolData.area,
+    poolDate: poolData.date,
     onSuccess: () => {
       setShowSuccess(true);
     },
@@ -207,6 +212,9 @@ export default function JoinEventPoolSheet({
   // from the `preferences` closure inside useEventPoolRegistration, so retrying
   // without arguments re-uses the same form data correctly.
   const showJoinError = registerMutation.isError;
+  const showEntitlementHandoff = Boolean(
+    showJoinError && resumeContext?.paymentStatus === "payment-required",
+  );
 
   const totalSteps = 3;
 
@@ -235,12 +243,39 @@ export default function JoinEventPoolSheet({
         ) : showJoinError ? (
           /* ── Join error state ── */
           <JoinErrorScreen
-            isRetrying={registerMutation.isPending}
-            onRetry={() => registerMutation.mutate()}
-            onBrowse={() => {
+            variant={showEntitlementHandoff ? "entitlement" : "generic"}
+            isPrimaryPending={registerMutation.isPending}
+            onPrimary={() => {
+              if (showEntitlementHandoff) {
+                registerMutation.reset();
+                onOpenChange(false);
+                setLocation(getBlindBoxEntitlementResumePaymentRoute());
+                return;
+              }
+
+              registerMutation.mutate();
+            }}
+            onSecondary={() => {
               registerMutation.reset();
               onOpenChange(false);
             }}
+            statusLabel={
+              showEntitlementHandoff && resumeContext?.handoffCode === "NO_AVAILABLE_EVENT_PACK_CREDITS"
+                ? "活动次数已用完，偏好已替你保留"
+                : undefined
+            }
+            description={
+              showEntitlementHandoff
+                ? "你刚填写的预算和偏好不会丢。完成支付确认后，我们会重新打开这场报名，并把刚才的进度接回来。"
+                : undefined
+            }
+            primaryLabel={showEntitlementHandoff ? "开通权益并继续报名" : undefined}
+            secondaryLabel={showEntitlementHandoff ? "稍后再说" : undefined}
+            helperText={
+              showEntitlementHandoff
+                ? "支付确认后会回到这场报名，并恢复你刚才填写到的步骤。"
+                : undefined
+            }
           />
         ) : showSuccess ? (
           <SuccessCelebration

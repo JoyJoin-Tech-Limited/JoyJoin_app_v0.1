@@ -759,6 +759,27 @@ function normalizeConfidence(value) {
   };
 }
 
+/** @returns {'ready' | 'blocked' | 'done' | null} */
+function normalizeTurnStatus(value) {
+  const raw = cleanString(value);
+  if (!raw) {
+    return null;
+  }
+  const lower = raw.toLowerCase();
+  if (lower === 'ready' || lower === 'blocked' || lower === 'done') {
+    return lower;
+  }
+  return null;
+}
+
+function nextStepsHasItems(nextSteps) {
+  if (!nextSteps || typeof nextSteps !== 'object') {
+    return false;
+  }
+  const lists = [nextSteps.bugFix, nextSteps.enhancement, nextSteps.validation];
+  return lists.some((list) => Array.isArray(list) && list.length > 0);
+}
+
 export function createDefaultTurnSummaryState(focusWindowTurns = DEFAULT_TURN_SUMMARY_WINDOW) {
   return {
     focusWindowTurns,
@@ -846,6 +867,7 @@ export function normalizeTurnSummaryPayload(payload, context = {}) {
     focusWindowTurns,
     recordedAt: cleanString(payload.recordedAt) || new Date().toISOString(),
     turnId: cleanString(payload.turnId) || null,
+    turnStatus: normalizeTurnStatus(payload.turnStatus),
     done: toStringList(payload.done),
     filesChanged: toStringList(payload.filesChanged ?? payload.changedFiles),
     decisions: toStringList(payload.decisions),
@@ -880,6 +902,7 @@ function buildCompactAgentSummary(summary) {
     parentAgent: summary.parentAgent,
     recordedAt: summary.recordedAt,
     focusWindowTurns: summary.focusWindowTurns,
+    turnStatus: summary.turnStatus,
     done: summary.done,
     learned: summary.learned,
     nextTurnImprovements: summary.nextTurnImprovements,
@@ -895,6 +918,7 @@ function buildCompactSupervisorReport(summary, turnId, turnSequence) {
     turnSequence,
     recordedAt: summary.recordedAt,
     focusWindowTurns: summary.focusWindowTurns,
+    turnStatus: summary.turnStatus,
     done: summary.done,
     keyBullets: summary.keyBullets,
     crossAgentInsights: summary.crossAgentInsights,
@@ -914,6 +938,15 @@ export function recordTurnSummary(repoRoot, payload) {
     sessionId,
     turnSummaryState: currentTurnSummaryState,
   });
+  if (
+    summary.turnStatus === 'done'
+    && nextStepsHasItems(summary.nextSteps)
+    && process.env.ORCHESTRATION_DISABLE_RUNTIME_WRITES !== '1'
+  ) {
+    process.stderr.write(
+      '[orchestration] Warning: turnStatus is "done" but nextSteps still lists items. Prefer empty nextSteps when the turn is final.\n',
+    );
+  }
   let nextTurnSummaryState = normalizeTurnSummaryState(currentTurnSummaryState, summary.focusWindowTurns);
   let turnId = summary.turnId;
   let turnSequence = null;

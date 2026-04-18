@@ -6,19 +6,28 @@ import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw } from "lucid
 import {
   getPaymentVerificationErrorDecision,
   getPaymentVerificationStatusDecision,
+  type PoolRegistrationSummary,
   type PaymentVerificationState,
 } from "@shared/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  getBlindBoxConfirmationDestination,
+  resolveEventPaymentRegistrationId,
+  type BrowserPendingOrderContext,
+} from "@/lib/blindBoxPaymentRouting";
+import {
+  markBrowserPoolRegistrationResumeContextPaid,
+  persistBrowserPoolRegistrationResumeContext,
+} from "@/lib/poolRegistrationResume";
 import { apiRequest } from "@/lib/queryClient";
-
-type BrowserPendingOrderContext = {
-  type?: "event" | "event_bundle";
-};
 
 const MAX_POLL_ATTEMPTS = 10;
 const POLL_INTERVAL_MS = 2000;
+const MAX_EVENT_REGISTRATION_RESOLUTION_ATTEMPTS = 4;
+const EVENT_REGISTRATION_RESOLUTION_INTERVAL_MS = 500;
+const PAID_REDIRECT_DELAY_MS = 800;
 const BROWSER_PENDING_ORDER_KEY = "joyjoin.browser.pending_order";
 const BROWSER_PENDING_ORDER_CONTEXT_KEY = "joyjoin.browser.pending_order_context";
 
@@ -68,18 +77,45 @@ function readIncomingOrderId(): string {
 function getBrowserPaymentStatusMessage(
   status: PaymentVerificationState,
   context: BrowserPendingOrderContext | null,
+  destinationLabel: string,
+  destinationKind: "discover" | "events" | "matching" | "registration",
+  isResolvingEventRegistration: boolean,
 ): string {
   switch (status) {
     case "paid":
+      if (context?.type === "entitlement_resume") {
+        return `支付已确认，正在带你回到${destinationLabel}继续完成报名...`;
+      }
+
+      if (context?.type === "event" && isResolvingEventRegistration) {
+        return "支付已确认，正在为你打开匹配进度...";
+      }
+
+      if (destinationKind === "matching") {
+        return "支付已确认，正在带你进入匹配进度...";
+      }
+
       return context?.type === "event"
-        ? "支付已确认，正在把你加入活动匹配队列..."
+        ? `支付已确认，正在带你前往${destinationLabel}查看匹配状态...`
         : "支付已确认，正在为你发放会员权益...";
     case "failed":
+      if (context?.type === "entitlement_resume") {
+        return "支付未完成，你刚才填写的偏好已经保留，返回报名页后可以重新发起支付。";
+      }
+
       return "支付未完成，请返回支付页重新发起支付。";
     case "pending":
+      if (context?.type === "entitlement_resume") {
+        return "支付状态仍在同步中，你可以先回报名页，稍后继续确认这笔订单。";
+      }
+
       return "暂时无法确认支付结果，你可以稍后回来继续确认订单状态。";
     case "polling":
     default:
+      if (context?.type === "entitlement_resume") {
+        return "正在确认支付结果，确认后会自动回到报名页...";
+      }
+
       return "正在确认支付结果...";
   }
 }
@@ -91,7 +127,7 @@ function getBrowserPaymentErrorMessage(status: PaymentVerificationState): string
     case "polling":
       return "支付状态同步稍慢，正在重新确认...";
     default:
-      return getBrowserPaymentStatusMessage(status, null);
+      return "支付状态确认失败，请稍后重试。";
   }
 }
 
@@ -103,12 +139,15 @@ export default function BlindBoxConfirmationPage() {
   const [status, setStatus] = useState<PaymentVerificationState>("polling");
   const [message, setMessage] = useState("正在确认支付结果...");
   const [attemptCount, setAttemptCount] = useState(0);
+  const [resolvedRegistrationId, setResolvedRegistrationId] = useState<string | null>(null);
+  const [isResolvingEventRegistration, setIsResolvingEventRegistration] = useState(false);
   const isPollingRef = useRef(false);
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const destinationPath = context?.type === "event" ? "/events" : "/discover";
-  const destinationLabel = context?.type === "event" ? "活动页" : "探索页";
+  const destination = getBlindBoxConfirmationDestination(context, resolvedRegistrationId);
+  const destinationPath = destination.path;
+  const destinationLabel = destination.label;
 
   const clearTimer = useCallback(() => {
     if (timeoutRef.current) {
@@ -124,21 +163,105 @@ export default function BlindBoxConfirmationPage() {
     };
   }, [clearTimer]);
 
-  const navigateAfterPaid = useCallback((nextContext: BrowserPendingOrderContext | null) => {
+  const navigateAfterPaid = useCallback((
+    nextContext: BrowserPendingOrderContext | null,
+    registrationId?: string | null,
+  ) => {
     clearPendingOrderStorage();
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+
+    if (nextContext?.type === "entitlement_resume") {
+      if (nextContext.returnContext) {
+        persistBrowserPoolRegistrationResumeContext(
+          markBrowserPoolRegistrationResumeContextPaid(nextContext.returnContext),
+        );
+        setLocation(getBlindBoxConfirmationDestination(nextContext).path);
+        return;
+      }
+
+      setLocation("/discover");
+      return;
+    }
 
     if (nextContext?.type === "event") {
       window.localStorage.removeItem("blindbox_event_data");
       queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events/joined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-pool-registrations"] });
-      setLocation("/events");
+      setLocation(registrationId ? `/pool-matching/${registrationId}` : "/events");
       return;
     }
 
     setLocation("/discover");
   }, [queryClient, setLocation]);
+
+  const resolveEventRegistrationAndNavigate = useCallback(async (
+    nextContext: BrowserPendingOrderContext | null,
+    attempt = 1,
+  ) => {
+    if (nextContext?.type !== "event") {
+      timeoutRef.current = setTimeout(() => {
+        navigateAfterPaid(nextContext);
+      }, PAID_REDIRECT_DELAY_MS);
+      return;
+    }
+
+    try {
+      const registrations = await requestJson<Array<PoolRegistrationSummary>>(
+        "/api/my-pool-registrations",
+      );
+      queryClient.setQueryData(["/api/my-pool-registrations"], registrations);
+
+      const registrationId = resolveEventPaymentRegistrationId(registrations, nextContext);
+      if (registrationId) {
+        const matchingDestination = getBlindBoxConfirmationDestination(nextContext, registrationId);
+        setResolvedRegistrationId(registrationId);
+        setIsResolvingEventRegistration(false);
+        setMessage(
+          getBrowserPaymentStatusMessage(
+            "paid",
+            nextContext,
+            matchingDestination.label,
+            matchingDestination.kind,
+            false,
+          ),
+        );
+        timeoutRef.current = setTimeout(() => {
+          navigateAfterPaid(nextContext, registrationId);
+        }, PAID_REDIRECT_DELAY_MS);
+        return;
+      }
+    } catch {
+      // Keep the fallback bounded and quiet here; the page already communicates status.
+    }
+
+    if (attempt >= MAX_EVENT_REGISTRATION_RESOLUTION_ATTEMPTS) {
+      const fallbackDestination = getBlindBoxConfirmationDestination(nextContext, null);
+      setResolvedRegistrationId(null);
+      setIsResolvingEventRegistration(false);
+      setMessage(
+        getBrowserPaymentStatusMessage(
+          "paid",
+          nextContext,
+          fallbackDestination.label,
+          fallbackDestination.kind,
+          false,
+        ),
+      );
+      timeoutRef.current = setTimeout(() => {
+        navigateAfterPaid(nextContext);
+      }, PAID_REDIRECT_DELAY_MS);
+      return;
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
+      void resolveEventRegistrationAndNavigate(nextContext, attempt + 1);
+    }, EVENT_REGISTRATION_RESOLUTION_INTERVAL_MS);
+  }, [navigateAfterPaid, queryClient]);
 
   const pollPaymentStatus = useCallback(async (
     targetOrderId: string,
@@ -177,13 +300,44 @@ export default function BlindBoxConfirmationPage() {
         clearPendingOrderStorage();
       }
 
+      const defaultDestination = getBlindBoxConfirmationDestination(nextContext, null);
+
       setStatus(decision.status);
-      setMessage(getBrowserPaymentStatusMessage(decision.status, nextContext));
+      setMessage(
+        getBrowserPaymentStatusMessage(
+          decision.status,
+          nextContext,
+          defaultDestination.label,
+          defaultDestination.kind,
+          false,
+        ),
+      );
 
       if (decision.status === "paid") {
+        const shouldResolveEventRegistration = Boolean(
+          nextContext?.type === "event" && nextContext.eventRegistration?.poolId,
+        );
+
+        setResolvedRegistrationId(null);
+        setIsResolvingEventRegistration(shouldResolveEventRegistration);
+        setMessage(
+          getBrowserPaymentStatusMessage(
+            "paid",
+            nextContext,
+            defaultDestination.label,
+            defaultDestination.kind,
+            shouldResolveEventRegistration,
+          ),
+        );
+
+        if (shouldResolveEventRegistration) {
+          void resolveEventRegistrationAndNavigate(nextContext, 1);
+          return;
+        }
+
         timeoutRef.current = setTimeout(() => {
           navigateAfterPaid(nextContext);
-        }, 1200);
+        }, PAID_REDIRECT_DELAY_MS);
         return;
       }
 
@@ -211,7 +365,7 @@ export default function BlindBoxConfirmationPage() {
     } finally {
       isPollingRef.current = false;
     }
-  }, [navigateAfterPaid]);
+  }, [navigateAfterPaid, resolveEventRegistrationAndNavigate]);
 
   const bootstrap = useCallback((incomingOrderId?: string) => {
     clearTimer();
@@ -228,6 +382,8 @@ export default function BlindBoxConfirmationPage() {
     }
 
     setOrderId(targetOrderId);
+    setResolvedRegistrationId(null);
+    setIsResolvingEventRegistration(false);
     setStatus("polling");
     setMessage("正在确认支付结果...");
     void pollPaymentStatus(targetOrderId, nextContext, 1);
@@ -295,12 +451,23 @@ export default function BlindBoxConfirmationPage() {
               ) : null}
 
               {status === "paid" ? (
-                <div className="space-y-3">
-                  <Button className="w-full" onClick={() => navigateAfterPaid(context)} data-testid="button-confirmation-continue">
-                    进入{destinationLabel}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+                isResolvingEventRegistration ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-muted/50 p-4 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>正在为你打开匹配进度...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Button
+                      className="w-full"
+                      onClick={() => navigateAfterPaid(context, resolvedRegistrationId)}
+                      data-testid="button-confirmation-continue"
+                    >
+                      进入{destinationLabel}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )
               ) : null}
 
               {status === "pending" ? (

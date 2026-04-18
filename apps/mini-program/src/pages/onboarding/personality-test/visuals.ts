@@ -1,13 +1,18 @@
 import { formatHSL, getArchetypeHSL } from '@shared/archetypeColors'
 import { archetypeRegistry, type ArchetypeRecord } from '@shared/personality/archetypeRegistry'
 
-export type XiaoyueMood = 'normal' | 'excited' | 'pointing'
-
-const XIAOYUE_ASSET_MAP: Record<XiaoyueMood, string> = {
-  normal: '/assets/personality/xiaoyue/xiaoyue-normal.png',
-  excited: '/assets/personality/xiaoyue/xiaoyue-excited.png',
-  pointing: '/assets/personality/xiaoyue/xiaoyue-pointing.png',
-}
+export type {
+  LegacyXiaoyueMood,
+  XiaoyueExpressionId,
+  XiaoyueMood,
+} from '../../../lib/xiaoyueExpressions'
+export {
+  getXiaoyueAsset,
+  getXiaoyueExpressionAsset,
+  LEGACY_MOOD_TO_EXPRESSION,
+  PERSONALITY_TEST_XIAOYUE_EXPRESSION,
+  XIAOYUE_ASSET_BY_EXPRESSION,
+} from '../../../lib/xiaoyueExpressions'
 
 const ARCHETYPE_ASSET_MAP: Record<string, string> = {
   开心柯基: '/assets/personality/archetypes/archetype-corgi.png',
@@ -65,10 +70,6 @@ export interface ArchetypeVisual {
   counterIntuitive: string
   rarityPercentage: number | null
   record?: ArchetypeRecord
-}
-
-export function getXiaoyueAsset(mood: XiaoyueMood): string {
-  return XIAOYUE_ASSET_MAP[mood]
 }
 
 export function getArchetypeVisual(archetype: string | null | undefined): ArchetypeVisual {

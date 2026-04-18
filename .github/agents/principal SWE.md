@@ -42,6 +42,16 @@ When technical debt is incurred or identified:
 - Explicit documentation of assumptions and decisions
 - Technical debt remediation plans with explicit follow-up recommendations
 
+## Output format
+
+### Structured deliverable
+
+Use the **Deliverables** list above: feedback, risks, edge cases, assumptions, and debt plans as appropriate to the request.
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable into the briefing sections; include **`turnStatus`** in JSON when applicable.
+
 ## Frontend Excellence Notes
 
 // No frontend surface

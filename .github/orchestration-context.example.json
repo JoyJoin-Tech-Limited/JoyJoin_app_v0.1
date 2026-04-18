@@ -128,6 +128,7 @@
           "agentName": "Researcher",
           "recordedAt": "2026-04-13T00:00:00.000Z",
           "focusWindowTurns": 5,
+          "turnStatus": "ready",
           "done": [
             "Collected orchestration runtime files",
             "Confirmed PostToolUse is not the authoritative turn boundary"
@@ -150,6 +151,7 @@
         "turnSequence": 1,
         "recordedAt": "2026-04-13T00:00:00.000Z",
         "focusWindowTurns": 5,
+        "turnStatus": "ready",
         "keyBullets": [
           "Kickoff lane selected before implementation",
           "Operational state stayed under .git/.orchestration"

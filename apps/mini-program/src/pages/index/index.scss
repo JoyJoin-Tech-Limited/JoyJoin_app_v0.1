@@ -3,19 +3,16 @@
 
 .landing-page {
   @include page-gradient-bg;
+  @include onboarding-page-exit-transition(0.18s, -20rpx, 0.988);
   display: flex;
   flex-direction: column;
   width: 100%;
   box-sizing: border-box;
-  background-image:
-    linear-gradient(180deg, #FFF0E8 0%, #F5E6FF 35%, #EDE4FF 55%, #F8F4FF 80%, #FFFBF9 100%),
-    radial-gradient(circle at 20% 15%, rgba(255, 200, 160, 0.5), transparent 55%),
-    radial-gradient(circle at 80% 10%, rgba(200, 170, 255, 0.5), transparent 50%),
-    radial-gradient(circle at 50% 60%, rgba(255, 200, 230, 0.35), transparent 55%);
-  background-blend-mode: normal, screen, screen, screen;
+  background: linear-gradient(180deg, #FFF0E8 0%, #F5E6FF 42%, #F8F4FF 72%, #FFFBF9 100%);
 }
 
 .content-zone {
+  @include onboarding-stage(0s, 0.38s, 20rpx);
   flex: 1 0 auto;
   display: flex;
   flex-direction: column;
@@ -37,19 +34,26 @@
   height: 192rpx;
   align-items: center;
 
-  .logo-bg {
+  .logo-aura {
     position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 48rpx;
-    filter: blur(32rpx);
+    inset: 18rpx;
+    border-radius: 999rpx;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(245, 230, 255, 0.64) 38%,
+      rgba(245, 230, 255, 0.18) 60%,
+      rgba(245, 230, 255, 0) 78%
+    );
+    box-shadow: 0 22rpx 48rpx rgba(139, 92, 246, 0.16);
   }
 
   .logo-img {
     position: relative;
-    width: 160rpx;
-    height: 160rpx;
-    filter: drop-shadow(0 40rpx 26rpx rgba(0, 0, 0, 0.03)) drop-shadow(0 16rpx 10rpx rgba(0, 0, 0, 0.08));
+    z-index: 1;
+    width: 168rpx;
+    height: 168rpx;
+    display: block;
   }
 }
 
@@ -95,7 +99,7 @@
 
   .card-img-wrap {
     width: 100%;
-    aspect-ratio: 1;
+    height: 192rpx;
     overflow: hidden;
     border-radius: 22rpx;
 
@@ -140,6 +144,10 @@
   border: 6rpx solid #C9956B;
   background-color: #C9956B;
 
+  .card-img-wrap {
+    height: 260rpx;
+  }
+
   .card-text {
     color: white;
   }
@@ -167,14 +175,9 @@
   gap: $spacing-sm;
 
   .headline {
-    background: linear-gradient(135deg, #7C3AED 0%, #C060FF 40%, #FF6BAE 70%, #FFA64D 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    @include type-display-hero;
+    color: #7C3AED;
     font-size: 64rpx;
-    font-weight: $font-weight-black;
-    letter-spacing: -1.5rpx;
-    line-height: 1.14;
     display: block;
     max-width: 560rpx;
   }
@@ -214,7 +217,27 @@
   }
 }
 
+.landing-page__xiaoyue-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+}
+
+.landing-page__xiaoyue {
+  width: 200rpx;
+  height: 200rpx;
+  display: block;
+}
+
+.landing-page__xiaoyue-caption {
+  font-size: $font-size-sm;
+  color: #8B7AAD;
+}
+
 .bottom-zone {
+  @include onboarding-stage(0.08s, 0.42s, 24rpx);
   flex: none;
   width: 100%;
   margin-top: auto;
@@ -227,14 +250,13 @@
   @include safe-area-bottom-padding(padding-bottom, $spacing-md);
 
   .landing-page__cta {
-    --landing-cta-shadow: hsl(270, 55%, 35%);
+    @include type-brand-cta-label;
     width: 100%;
     height: 128rpx;
     border-radius: 32rpx;
     font-size: 40rpx;
-    font-weight: $font-weight-bold;
     color: white;
-    box-shadow: 0 12rpx 0 var(--landing-cta-shadow);
+    box-shadow: 0 12rpx 0 rgba(107, 91, 141, 0.36);
     transition: all 0.075s ease-in-out;
 
     &[disabled],
@@ -245,18 +267,22 @@
   }
 
   .landing-page__cta--primary {
-    --landing-cta-shadow: hsl(270, 55%, 35%);
     background: linear-gradient(90deg, #8B5CF6, #EC4899);
+    box-shadow: 0 12rpx 0 rgba(91, 45, 160, 0.88);
   }
 
   .landing-page__cta--login {
-    --landing-cta-shadow: rgba(17, 17, 17, 0.88);
     background: #111111;
+    box-shadow: 0 12rpx 0 rgba(17, 17, 17, 0.88);
   }
 
   .landing-page__cta-hover {
     transform: translateY(8rpx);
-    box-shadow: 0 4rpx 0 var(--landing-cta-shadow);
+    box-shadow: 0 4rpx 0 rgba(91, 45, 160, 0.72);
+  }
+
+  .landing-page__cta--login.landing-page__cta-hover {
+    box-shadow: 0 4rpx 0 rgba(17, 17, 17, 0.72);
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-16",
+  "updated": "2026-04-17",
   "portfolio_scope": {
     "kickoff_agents": [
       "Researcher",
@@ -26,7 +26,8 @@
       "Principal Software Engineer",
       "SE: Product Manager",
       "Prompt Engineer",
-      "Workflow Governance Reviewer"
+      "Workflow Governance Reviewer",
+      "Verifier"
     ]
   },
   "copilot_hooks": {
@@ -41,7 +42,11 @@
         "create_and_run_task",
         "create_new_workspace",
         "run_vscode_command",
-        "install_extension"
+        "install_extension",
+        "write",
+        "delete",
+        "shell",
+        "task"
       ],
       "manual_recovery_agents": [
         "Auto-Eval",
@@ -219,7 +224,7 @@
       "from": "Researcher",
       "to": "Planner",
       "label": "Turn research into a plan",
-      "prompt": "Use this research brief to create an approval-first execution plan with the right JoyJoin agents, dependencies, and validation steps."
+      "prompt": "Use this research brief to create an approval-first execution plan with the right JoyJoin agents, dependencies, validation steps, and a model recommendation for execution."
     },
     {
       "from": "Planner",
@@ -237,7 +242,7 @@
       "from": "Supervisor",
       "to": "Planner",
       "label": "Re-plan execution",
-      "prompt": "Use the updated findings and current blocker to refresh the approval-first execution plan."
+      "prompt": "Use the updated findings and current blocker to refresh the approval-first execution plan and end it with a model recommendation for execution."
     },
     {
       "from": "Supervisor",
@@ -268,6 +273,12 @@
       "to": "QA Agent",
       "label": "Request focused verification",
       "prompt": "Turn the implemented scope into a concrete verification checklist or change-focused execution summary before more implementation continues."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Verifier",
+      "label": "Skeptical completion check",
+      "prompt": "Independently verify claimed completion: run targeted tests or checks, confirm behavior matches claims, and report verified vs failed vs not checked."
     },
     {
       "from": "Supervisor",
@@ -535,6 +546,21 @@
             "reason": "Verification quality improves when the QA agent can rely on deterministic environment setup instead of guessing prerequisites."
           }
         ]
+      }
+    },
+    "Verifier": {
+      "file": ".github/agents/verifier.agent.md",
+      "portfolio_role": "verification-audit",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Read, search, and execute are enough for skeptical post-claim checks and targeted test runs; scope stays narrow versus full QA planning.",
+        "recommended_extensions": []
       }
     },
     "Launch Readiness Agent": {
@@ -810,43 +836,58 @@
   },
   "skill_bindings": {
     "Researcher": [
-      "orchestration-turn-reporting"
+      "orchestration-turn-reporting",
+      "first-principles-velocity"
     ],
     "Planner": [
-      "orchestration-turn-reporting"
+      "orchestration-turn-reporting",
+      "first-principles-velocity"
     ],
     "Supervisor": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "monorepo-workspace-governance",
       "docs-sync"
     ],
     "Auto-Eval": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "code-review",
       "monorepo-workspace-governance"
     ],
     "Product Manager": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "draft-prd"
     ],
     "Backend Engineer": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "server-domain-architecture",
       "auth-session-and-safety-boundaries",
       "reliability-and-state-integrity"
     ],
     "AI Engineer": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "llm-runtime-safety-and-integration",
       "platform-observability-and-ops"
     ],
     "QA Agent": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "e2e-test-runner",
+      "testing-and-regression-guardrails"
+    ],
+    "Verifier": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "code-review",
       "testing-and-regression-guardrails"
     ],
     "Launch Readiness Agent": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "security-scan",
       "platform-observability-and-ops",
       "code-review"
@@ -857,31 +898,38 @@
       "platform-observability-and-ops"
     ],
     "Database Schema & Migration Auditor": [
+      "first-principles-velocity",
       "database-migration-safety",
       "backend-models-standards",
       "reliability-and-state-integrity"
     ],
     "Mini-Program Parity Auditor": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "platform-coordination-protocol",
       "frontend-component-architecture"
     ],
     "Taro Mini-Program Frontend Engineer": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "mini-program-frontend-excellence",
       "frontend-component-architecture",
       "design-system-governance",
       "joyjoin-brand-guidelines",
       "wow-elements",
+      "frontend-performance-and-loading",
       "platform-coordination-protocol"
     ],
     "Taro Migration Specialist": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "platform-coordination-protocol",
       "frontend-component-architecture",
       "design-system-governance"
     ],
     "Expert React Frontend Engineer": [
       "orchestration-turn-reporting",
+      "first-principles-velocity",
       "frontend-component-architecture",
       "design-system-governance",
       "frontend-performance-and-loading",
@@ -890,6 +938,7 @@
       "platform-coordination-protocol"
     ],
     "debug": [
+      "first-principles-velocity",
       "testing-and-regression-guardrails"
     ],
     "SE: Product Manager": [
@@ -900,6 +949,7 @@
       "testing-and-regression-guardrails"
     ],
     "Principal Software Engineer": [
+      "first-principles-velocity",
       "code-review",
       "reliability-and-state-integrity",
       "monorepo-workspace-governance"

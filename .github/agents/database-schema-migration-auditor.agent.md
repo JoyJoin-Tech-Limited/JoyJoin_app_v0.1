@@ -27,9 +27,15 @@ Your job is to make schema evolution safe, reviewable, and compatible with live 
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise migration report with:
 
 1. Change classification
 2. Safe rollout plan
 3. Verification plan or result
 4. Remaining risk or rollback note
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.

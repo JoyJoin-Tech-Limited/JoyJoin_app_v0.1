@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "startedAt": "2026-04-17T08:06:52.375Z",
+  "error": "NeonDbError: column \"theme\" of relation \"event_pool_groups\" does not exist\n    at execute (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/node_modules/@neondatabase/serverless/index.js:1559:55)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async ensureMatchedGroup (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/seed_matching_reveal_data.js:46:22)\n    at async main (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/seed_matching_reveal_data.js:75:17)"
+}

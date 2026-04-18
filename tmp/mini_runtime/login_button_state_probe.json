@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "observations": [
+    {
+      "step": "before-tap",
+      "path": "pages/login/index",
+      "className": "login-page__wechat-btn"
+    },
+    {
+      "step": "300ms-after-tap",
+      "path": "pages/login/index",
+      "className": "login-page__wechat-btn login-page__wechat-btn--loading"
+    },
+    {
+      "step": "1500ms-after-tap",
+      "path": "pages/login/index",
+      "className": "login-page__wechat-btn"
+    }
+  ],
+  "errors": []
+}
