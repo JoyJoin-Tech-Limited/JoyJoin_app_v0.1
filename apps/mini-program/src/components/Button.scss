@@ -15,6 +15,10 @@
     @include button-primary;
   }
 
+  &--brand {
+    @include type-brand-cta-label;
+  }
+
   &--secondary {
     background: $color-surface;
     border: 2rpx solid $color-border;

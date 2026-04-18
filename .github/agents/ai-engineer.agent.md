@@ -34,9 +34,15 @@ Your job is to extend AI-backed features without violating deterministic product
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise implementation note with:
 
 1. Runtime boundary and owning files
 2. Safety and fallback behavior
 3. Observability details
 4. Validation result
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.

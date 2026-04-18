@@ -1,0 +1,14 @@
+BEGIN;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_checkpoint VARCHAR;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_checkpoint_timestamp TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_languages TEXT[];
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dietary_restrictions TEXT[];
+ALTER TABLE users ADD COLUMN IF NOT EXISTS table_vibe_preference VARCHAR(30);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tag TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tag_selected_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wechat_contact_id VARCHAR;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wechat_contact_id_set_at TIMESTAMP;
+
+COMMIT;

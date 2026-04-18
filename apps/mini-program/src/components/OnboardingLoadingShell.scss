@@ -23,12 +23,11 @@
   }
 
   &__title {
+    @include type-display-page-title;
     display: block;
     margin-top: $spacing-sm;
     font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.18;
   }
 
   &__subtitle {
@@ -48,6 +47,13 @@
       rgba($color-surface, 0.98) 0%,
       rgba($color-primary-light, 0.82) 100%
     );
+  }
+
+  &__mascot {
+    display: block;
+    width: 200rpx;
+    height: 200rpx;
+    margin: 0 auto $spacing-md;
   }
 
   &__orbit {

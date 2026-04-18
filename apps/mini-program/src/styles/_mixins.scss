@@ -8,6 +8,61 @@
   background-clip: text;
 }
 
+// ─── Brand display (Alimama) — short emotional surfaces only ─────
+@mixin font-cn-display {
+  font-family: $font-cn-display;
+}
+
+@mixin type-display-hero {
+  @include font-cn-display;
+  font-weight: $font-weight-black;
+  letter-spacing: -1.5rpx;
+  line-height: 1.14;
+}
+
+@mixin type-display-page-title {
+  @include font-cn-display;
+  font-weight: $font-weight-black;
+  line-height: 1.18;
+}
+
+@mixin type-display-section-title {
+  @include font-cn-display;
+  font-weight: $font-weight-bold;
+}
+
+@mixin type-brand-cta-label {
+  @include font-cn-display;
+  font-weight: $font-weight-bold;
+  letter-spacing: 0.5rpx;
+}
+
+@mixin type-display-accent-line {
+  @include font-cn-display;
+  font-weight: $font-weight-black;
+  line-height: 1.02;
+  letter-spacing: -1rpx;
+}
+
+// ─── English brand (Quicksand) — wordmarks, short Latin, hero numerals ─
+@mixin font-en-brand {
+  font-family: $font-en-brand;
+}
+
+/** Prices, totals, and stat figures where numerals should feel on-brand. */
+@mixin type-en-brand-numeric {
+  @include font-en-brand;
+  font-weight: $font-weight-bold;
+  font-variant-numeric: tabular-nums;
+}
+
+/** Short English labels (e.g. “JoyJoin” in a mixed line). */
+@mixin type-en-brand-label {
+  @include font-en-brand;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 0.02em;
+}
+
 // ─── Primary button ───────────────────────────────────────────────
 @mixin button-primary {
   display: flex;
@@ -118,6 +173,90 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+// ─── Shared page motion ───────────────────────────────────────────
+@mixin onboarding-page-exit-transition(
+  $duration: 0.22s,
+  $shift-x: -18rpx,
+  $scale: 0.986
+) {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center top;
+  transition:
+    opacity $duration ease,
+    transform $duration cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--exiting {
+    opacity: 0;
+    transform: translate3d($shift-x, 0, 0) scale($scale);
+    pointer-events: none;
+  }
+}
+
+// Distances must match a generated @keyframes block below so the initial transform
+// and the animation's first keyframe stay aligned.
+$onboarding-stage-shift-ids: (
+  18rpx: '18',
+  20rpx: '20',
+  24rpx: '24',
+);
+
+@mixin onboarding-stage(
+  $delay: 0s,
+  $duration: 0.32s,
+  $distance: 18rpx
+) {
+  $stage-id: map-get($onboarding-stage-shift-ids, $distance);
+
+  @if $stage-id == null {
+    @error 'onboarding-stage: unsupported $distance #{$distance} (use 18rpx, 20rpx, or 24rpx)';
+  }
+
+  opacity: 0;
+  transform: translate3d(0, $distance, 0) scale(0.986);
+  animation: joy-onboarding-stage-in-#{$stage-id} $duration cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: $delay;
+}
+
+@mixin onboarding-prelude(
+  $duration: 0.24s,
+  $distance: 12rpx
+) {
+  opacity: 0;
+  transform: translate3d(0, $distance, 0);
+  animation: joy-onboarding-prelude-in $duration ease-out forwards;
+}
+
+@each $stage-id, $shift in (
+  '18': 18rpx,
+  '20': 20rpx,
+  '24': 24rpx,
+) {
+  @keyframes joy-onboarding-stage-in-#{$stage-id} {
+    from {
+      opacity: 0;
+      transform: translate3d(0, $shift, 0) scale(0.986);
+    }
+
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+}
+
+@keyframes joy-onboarding-prelude-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12rpx, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 // ─── Text truncate ────────────────────────────────────────────────

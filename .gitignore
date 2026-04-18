@@ -34,6 +34,9 @@ Thumbs.db
 # IDE — keep the workspace settings that the orchestration contract requires
 .vscode/*
 !.vscode/settings.json
+# IDE
+.vscode/*
+!.vscode/mcp.json
 .idea/
 *.swp
 *.swo

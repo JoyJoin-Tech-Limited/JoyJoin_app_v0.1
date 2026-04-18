@@ -6,9 +6,14 @@ The machine-readable orchestration contract is `.github/orchestration.yaml`. The
 
 ## Related docs
 
-- [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) defines when to use direct delivery, the `Researcher` -> `Planner` kickoff lane, and the operational review lane.
+- [`AI_TOOLING_UNIFIED_BRAIN.md`](./AI_TOOLING_UNIFIED_BRAIN.md) describes the shared Cursor / Copilot policy surface (skills, agents), MCP (Context7), and what stays IDE-specific.
+- [`AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) defines when to use direct delivery, the `Researcher` -> `Planner` kickoff lane (or **`Supervisor` first** to sequence that kickoff), and the operational review lane.
 - [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) defines how to change agents, skills, hooks, runtime scripts, and validation surfaces safely.
 - [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) remains the source of truth for runtime product AI architecture and invariants.
+
+## Execution discipline
+
+Planning, kickoff, and routing should stay aligned with [`.github/skills/first-principles-velocity/SKILL.md`](./skills/first-principles-velocity/SKILL.md): mission and critical path, model-tier fit against [`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md), and the **five execution themes** (constraint-first design, end-to-end slice ownership, smallest validating proof, ruthless deletion or quarantine, direct escalation when blocked with evidence). That skill pairs with [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md) for structured turns and with [`.github/AI_WORKFLOW_POLICY.md`](./AI_WORKFLOW_POLICY.md) for delivery lanes and the planning check.
 
 ## Scope
 
@@ -17,7 +22,7 @@ Broad sessions now have a kickoff lane before the core handoff graph:
 - `Researcher`
 - `Planner`
 
-Those kickoff agents gather verified repo context and turn it into an approval-first plan. They do not replace `Supervisor`, which remains the manual routing surface once execution is approved or when work needs midstream rerouting.
+Those kickoff agents gather verified repo context and turn it into an approval-first plan. **`Supervisor`** may be invoked **first** and will route `Researcher` then `Planner` when kickoff applies (`AI_WORKFLOW_POLICY.md`). `Supervisor` also remains the routing surface once execution is approved or when work needs midstream rerouting.
 
 The v1 native handoff graph is intentionally narrow:
 
@@ -94,9 +99,9 @@ node scripts/orchestration-supervisor.mjs workflow pull-request
 - `UserPromptSubmit` also queries the promoted repo-memory index for meaningful prompts only, then surfaces a concise relevant-memory summary when useful hits exist.
 - Custom agents emit explicit end-of-turn JSON summaries. Those summaries are persisted through `node scripts/orchestration-supervisor.mjs record-summary` via stdin, `--json`, or `--file`, not inferred from hook telemetry.
 - `Supervisor` consolidates child summaries into one canonical `supervisor_turn_report` JSON object with cross-agent insights, per-agent feedback, and categorized task recommendations.
-- `Supervisor` returns a separate visible note using `What has been done`, optional `Key insight`, and mandatory `Recommended next action`, written in plain language for non-technical readers.
+- `Supervisor` returns a separate visible note using the **executive briefing** shape in [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md): **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line**, plus **Turn status** and **Routing (pick one)** (typically 3–5 **Role — action** lines when Ready), per [`.github/agents/supervisor.agent.md`](./agents/supervisor.agent.md)—plain language for non-technical readers.
 - `Researcher` returns a structured research brief.
-- `Planner` turns that brief into an approval-first execution plan.
+- `Planner` turns that brief into an approval-first execution plan and ends execution-ready plans with a model recommendation based on complexity, scope, and token load.
 - After approval, `Supervisor` or the named specialist carries execution forward.
 
 This is a guidance-and-handoff layer, not a hidden auto-execution path. Hooks bootstrap the recommendation and advisory retrieval state, while explicit agent reporting and recorder acknowledgements remain the authoritative source for turn-end summaries. The Supervisor's visible note is presentation only; the recorder payload remains the authoritative stored summary.
@@ -145,26 +150,33 @@ It does mean the current planning now records how those agents fit the portfolio
 
 ## Skill bindings
 
+**Canonical source:** per-agent lists are `skill_bindings` in [`.github/orchestration.yaml`](./orchestration.yaml) and the `skills` arrays in [`.github/agents/manifest.json`](./agents/manifest.json). The bullets below mirror the YAML (kept for quick reading; if they drift, trust the YAML).
+
 Core orchestrated bindings:
 
-- `Researcher` -> `orchestration-turn-reporting`
-- `Planner` -> `orchestration-turn-reporting`
-- `Supervisor` -> `orchestration-turn-reporting`, `monorepo-workspace-governance`, `docs-sync`
-- `Product Manager` -> `orchestration-turn-reporting`, `draft-prd`
-- `Backend Engineer` -> `orchestration-turn-reporting`, `server-domain-architecture`, `auth-session-and-safety-boundaries`, `reliability-and-state-integrity`
-- `AI Engineer` -> `orchestration-turn-reporting`, `llm-runtime-safety-and-integration`, `platform-observability-and-ops`
-- `QA Agent` -> `orchestration-turn-reporting`, `e2e-test-runner`, `testing-and-regression-guardrails`
-- `Launch Readiness Agent` -> `orchestration-turn-reporting`, `security-scan`, `platform-observability-and-ops`, `code-review`
+- `Researcher` -> `orchestration-turn-reporting`, `first-principles-velocity`
+- `Planner` -> `orchestration-turn-reporting`, `first-principles-velocity`
+- `Supervisor` -> `orchestration-turn-reporting`, `first-principles-velocity`, `monorepo-workspace-governance`, `docs-sync`
+- `Auto-Eval` -> `orchestration-turn-reporting`, `first-principles-velocity`, `code-review`, `monorepo-workspace-governance`
+- `Product Manager` -> `orchestration-turn-reporting`, `first-principles-velocity`, `draft-prd`
+- `Backend Engineer` -> `orchestration-turn-reporting`, `first-principles-velocity`, `server-domain-architecture`, `auth-session-and-safety-boundaries`, `reliability-and-state-integrity`
+- `AI Engineer` -> `orchestration-turn-reporting`, `first-principles-velocity`, `llm-runtime-safety-and-integration`, `platform-observability-and-ops`
+- `QA Agent` -> `orchestration-turn-reporting`, `first-principles-velocity`, `e2e-test-runner`, `testing-and-regression-guardrails`
+- `Verifier` -> `orchestration-turn-reporting`, `first-principles-velocity`, `code-review`, `testing-and-regression-guardrails`
+- `Launch Readiness Agent` -> `orchestration-turn-reporting`, `first-principles-velocity`, `security-scan`, `platform-observability-and-ops`, `code-review`
 
 Useful audited support bindings:
 
 - `Admin Operations Advisor` -> `admin-audit-and-rbac-governance`, `auth-session-and-safety-boundaries`, `platform-observability-and-ops`
-- `Database Schema & Migration Auditor` -> `database-migration-safety`, `backend-models-standards`, `reliability-and-state-integrity`
-- `Mini-Program Parity Auditor` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`
-- `Taro Mini-Program Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
-- `Taro Migration Specialist` -> `orchestration-turn-reporting`, `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
-- `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
-- `debug` -> `testing-and-regression-guardrails`
+- `Database Schema & Migration Auditor` -> `first-principles-velocity`, `database-migration-safety`, `backend-models-standards`, `reliability-and-state-integrity`
+- `Mini-Program Parity Auditor` -> `orchestration-turn-reporting`, `first-principles-velocity`, `platform-coordination-protocol`, `frontend-component-architecture`
+- `Taro Mini-Program Frontend Engineer` -> `orchestration-turn-reporting`, `first-principles-velocity`, `mini-program-frontend-excellence`, `frontend-component-architecture`, `design-system-governance`, `joyjoin-brand-guidelines`, `wow-elements`, `frontend-performance-and-loading`, `platform-coordination-protocol`
+- `Taro Migration Specialist` -> `orchestration-turn-reporting`, `first-principles-velocity`, `platform-coordination-protocol`, `frontend-component-architecture`, `design-system-governance`
+- `Expert React Frontend Engineer` -> `orchestration-turn-reporting`, `first-principles-velocity`, `frontend-component-architecture`, `design-system-governance`, `frontend-performance-and-loading`, `joyjoin-brand-guidelines`, `wow-elements`, `platform-coordination-protocol`
+- `debug` -> `first-principles-velocity`, `testing-and-regression-guardrails`
+- `Principal Software Engineer` -> `first-principles-velocity`, `code-review`, `reliability-and-state-integrity`, `monorepo-workspace-governance`
+- `SE: Product Manager` -> `draft-prd`
+- `Prompt Engineer` -> _(none — empty binding in YAML)_
 - `Workflow Governance Reviewer` -> `docs-sync`, `testing-and-regression-guardrails`
 
 Branding and crafted interaction polish remain skill boundaries on the frontend agents through `design-system-governance`, `joyjoin-brand-guidelines`, and `wow-elements`; there is no standalone branding agent in the current orchestration portfolio.

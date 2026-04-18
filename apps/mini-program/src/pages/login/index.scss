@@ -52,13 +52,13 @@
   }
 
   &__wechat-btn {
+    @include type-brand-cta-label;
     width: 100%;
     height: $button-height;
     border-radius: $button-radius;
     background: #07C160;
     color: $color-text-white;
     font-size: $font-size-md;
-    font-weight: $font-weight-semibold;
     display: flex;
     align-items: center;
     justify-content: center;

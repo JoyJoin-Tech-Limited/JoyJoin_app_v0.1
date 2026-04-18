@@ -1,4 +1,6 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
+import type { XiaoyueExpressionId } from '../lib/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset } from '../lib/xiaoyueExpressions'
 import Card from './Card'
 import './OnboardingLoadingShell.scss'
 
@@ -7,6 +9,8 @@ interface OnboardingLoadingShellProps {
   title: string
   subtitle: string
   hint?: string
+  /** Defaults to system-loading / thinking pose (`loadingSystem`). */
+  xiaoyueExpression?: XiaoyueExpressionId
 }
 
 export default function OnboardingLoadingShell({
@@ -14,6 +18,7 @@ export default function OnboardingLoadingShell({
   title,
   subtitle,
   hint = '小悦正在把这一页铺好，马上就能继续。',
+  xiaoyueExpression = 'loadingSystem',
 }: OnboardingLoadingShellProps) {
   return (
     <View className='onboarding-loading-shell'>
@@ -23,6 +28,11 @@ export default function OnboardingLoadingShell({
         <Text className='onboarding-loading-shell__subtitle'>{subtitle}</Text>
 
         <Card className='onboarding-loading-shell__card'>
+          <Image
+            className='onboarding-loading-shell__mascot'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset(xiaoyueExpression)}
+          />
           <View className='onboarding-loading-shell__orbit'>
             {[1, 2, 3].map((item) => (
               <View

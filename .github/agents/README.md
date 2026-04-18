@@ -1,6 +1,6 @@
 # JoyJoin Agents
 
-`.github/agents/` contains focused custom agents for recurring workflows in this repo.
+`.github/agents/` contains focused custom agents for recurring workflows in this repo. **Cursor and GitHub Copilot share this tree** with `.github/skills/`; do not duplicate agent definitions outside `.github/`. See `.github/AI_TOOLING_UNIFIED_BRAIN.md`. **How the layers fit together** (skills + agents + orchestration + hooks): [`.github/CONTRIBUTOR_AGENT_HARNESS.md`](../CONTRIBUTOR_AGENT_HARNESS.md). **Shared chat-visible turn narrative:** [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md).
 
 These agents are the orchestration layer that sits above the repo's reusable skills. Each agent should have a narrow role, a minimal tool set, and a keyword-rich description so both humans and parent agents can discover it reliably.
 
@@ -8,7 +8,7 @@ Read [`../AI_WORKFLOW_POLICY.md`](../AI_WORKFLOW_POLICY.md) when deciding whethe
 
 ## How to use these agents
 
-**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, start with `Researcher`, then `Planner`. Do not use `Supervisor` as a default third kickoff hop; use it after approval or when execution needs midstream rerouting. If the task is migration, debugging, prompt work, or workflow governance, use the specialist.
+**Contributors:** Pick the most specific agent that matches the workflow you need. If the task is broad or ambiguous, either start with **`Supervisor`** (it can sequence `Researcher` → `Planner` when kickoff applies) or start with `Researcher` then `Planner` directly. Execution-ready plans should end with a model recommendation section before handoff. **Model catalog (names, multipliers):** [`MODEL_CATALOG.md`](./MODEL_CATALOG.md). After a complete kickoff, use `Supervisor` for midstream routing or rerouting—not as an extra bounce on top of an already-approved plan that names the next specialist. If the task is migration, debugging, prompt work, or workflow governance, use the specialist.
 
 **Agent authors:** Treat the frontmatter as the discovery contract. The `name` is the canonical invocation name, and the `description` is the routing surface.
 
@@ -27,7 +27,7 @@ These agents sit ahead of the core handoff graph. Use them at the start of broad
 | Agent | Portfolio role | Primary use | File |
 |-------|----------------|-------------|------|
 | `Researcher` | Kickoff research | Gathers relevant files, verified repo context, external references, and open ambiguities before planning | [`researcher.agent.md`](./researcher.agent.md) |
-| `Planner` | Kickoff planning | Converts the research brief into an approval-first execution plan using the active JoyJoin agent portfolio | [`planner.agent.md`](./planner.agent.md) |
+| `Planner` | Kickoff planning | Converts the research brief into an approval-first execution plan and model recommendation for execution | [`planner.agent.md`](./planner.agent.md) |
 
 ---
 
@@ -54,13 +54,14 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Admin Operations Advisor` | Admin incident triage, RBAC or audit troubleshooting, and runbook-guided remediation | [`admin-operations-advisor.agent.md`](./admin-operations-advisor.agent.md) |
 | `Database Schema & Migration Auditor` | Schema evolution, migration planning, and rollout safety | [`database-schema-migration-auditor.agent.md`](./database-schema-migration-auditor.agent.md) |
 | `Mini-Program Parity Auditor` | Web versus mini-program parity audits and migration backlog creation | [`mini-program-parity-auditor.agent.md`](./mini-program-parity-auditor.agent.md) |
-| `Taro Mini-Program Frontend Engineer` | Direct Taro UI implementation and refinement in `apps/mini-program` | [`taro-mini-program-frontend-engineer.agent.md`](./taro-mini-program-frontend-engineer.agent.md) |
+| `Taro Mini-Program Frontend Engineer` | Direct Taro UI implementation and refinement in `apps/mini-program` with premium, brand-governed, native-quality execution | [`taro-mini-program-frontend-engineer.agent.md`](./taro-mini-program-frontend-engineer.agent.md) |
 | `Taro Migration Specialist` | Broad web-to-mini-program migration and parity restoration | [`taro-migration-specialist.agent.md`](./taro-migration-specialist.agent.md) |
 | `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend engineer.md`](./frontend%20engineer.md) |
 | `debug` | Bug and issue investigation, regressions, failing tests, and root-cause debugging | [`debug.agent.md`](./debug.agent.md) |
 | `Principal Software Engineer` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
 | `Prompt Engineer` | Prompt review, repo-resident prompt maintenance, safety-aware structure tightening, and example cleanup | [`prompt engineer.md`](./prompt%20engineer.md) |
 | `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts | [`self-iteration.agent.md`](./self-iteration.agent.md) |
+| `Verifier` | Skeptical completion check after “done” claims — targeted tests/commands, verified vs claimed | [`verifier.agent.md`](./verifier.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

@@ -37,7 +37,9 @@ const ONBOARDING_ROUTES = new Set(
  *
  * @returns { user, isLoading, isAuthenticated } from useAuth
  */
-export function useAuthGuard() {
+export function useAuthGuard(options?: {
+  suspendOnboardingRedirect?: boolean
+}) {
   const auth = useAuth()
 
   useEffect(() => {
@@ -51,8 +53,13 @@ export function useAuthGuard() {
     // For onboarding pages, verify the user belongs on this page
     const pages = Taro.getCurrentPages()
     const currentRoute = pages[pages.length - 1]?.route ?? ''
+    const isOnboardingRoute = ONBOARDING_ROUTES.has(currentRoute)
 
-    if (ONBOARDING_ROUTES.has(currentRoute) && auth.nextStep) {
+    if (isOnboardingRoute && options?.suspendOnboardingRedirect) {
+      return
+    }
+
+    if (isOnboardingRoute && auth.nextStep) {
       const expectedRoute = nextStepToRoute(auth.nextStep)
       // Strip leading slash for comparison since currentRoute doesn't have one
       const expectedRouteBare = expectedRoute.replace(/^\//, '')
@@ -67,7 +74,7 @@ export function useAuthGuard() {
         void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'replace' })
       }
     }
-  }, [auth.isLoading, auth.isAuthenticated, auth.nextStep])
+  }, [auth.isLoading, auth.isAuthenticated, auth.nextStep, options?.suspendOnboardingRedirect])
 
   return auth
 }

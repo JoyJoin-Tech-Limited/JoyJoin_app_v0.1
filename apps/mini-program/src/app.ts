@@ -8,6 +8,7 @@ import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
+import { loadBrandFonts } from './lib/brandFont'
 import './app.scss'
 
 function PendingOrderResumeBridge() {
@@ -83,6 +84,7 @@ function PendingOrderResumeBridge() {
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     logInfo('JoyJoin Mini Program launched')
+    loadBrandFonts()
   })
 
   return createElement(

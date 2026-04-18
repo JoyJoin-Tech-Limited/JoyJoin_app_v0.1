@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-16",
+  "updated": "2026-04-17",
   "orchestrationContract": "../orchestration.yaml",
   "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
@@ -24,6 +24,7 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "llm-runtime-safety-and-integration",
         "platform-observability-and-ops",
         "payment-entitlement-authority",
@@ -71,6 +72,7 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "code-review",
         "monorepo-workspace-governance"
       ],
@@ -93,7 +95,8 @@
         "Planner"
       ],
       "skills": [
-        "orchestration-turn-reporting"
+        "orchestration-turn-reporting",
+        "first-principles-velocity"
       ],
       "toolingStatus": "sufficient"
     },
@@ -132,7 +135,8 @@
         "Supervisor"
       ],
       "skills": [
-        "orchestration-turn-reporting"
+        "orchestration-turn-reporting",
+        "first-principles-velocity"
       ],
       "toolingStatus": "sufficient"
     },
@@ -155,6 +159,7 @@
         "Backend Engineer",
         "AI Engineer",
         "QA Agent",
+        "Verifier",
         "Launch Readiness Agent",
         "debug",
         "Mini-Program Parity Auditor",
@@ -172,6 +177,7 @@
         "Backend Engineer",
         "AI Engineer",
         "QA Agent",
+        "Verifier",
         "Launch Readiness Agent",
         "debug",
         "Mini-Program Parity Auditor",
@@ -181,6 +187,7 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "monorepo-workspace-governance",
         "docs-sync"
       ],
@@ -206,6 +213,7 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "server-domain-architecture",
         "auth-session-and-safety-boundaries",
         "reliability-and-state-integrity",
@@ -233,6 +241,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "first-principles-velocity",
         "database-migration-safety",
         "backend-models-standards",
         "reliability-and-state-integrity"
@@ -255,6 +264,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "first-principles-velocity",
         "testing-and-regression-guardrails"
       ],
       "toolingStatus": "sufficient"
@@ -276,6 +286,7 @@
       "handoffs": [],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "frontend-component-architecture",
         "design-system-governance",
         "frontend-performance-and-loading",
@@ -305,6 +316,7 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "security-scan",
         "platform-observability-and-ops",
         "code-review"
@@ -349,6 +361,7 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "draft-prd"
       ],
       "toolingStatus": "sufficient"
@@ -372,11 +385,38 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "e2e-test-runner",
         "testing-and-regression-guardrails",
         "performance-benchmark"
       ],
       "toolingStatus": "partial"
+    },
+    {
+      "name": "Verifier",
+      "file": "verifier.agent.md",
+      "description": "Use when you need a skeptical second pass after work is claimed done: confirm implementations exist, run targeted tests or checks, and report what actually passed vs what was only claimed. Trigger phrases: verify this is done, double-check the implementation, run a completion audit, skeptical review, prove it works, validate claimed work.",
+      "tools": [
+        "read",
+        "search",
+        "execute"
+      ],
+      "argumentHint": "Describe what was claimed complete, affected paths or commands, risk level, and whether to run automated tests, spot-check behavior, or both.",
+      "subagents": [],
+      "portfolioRole": "verification-audit",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Supervisor",
+        "QA Agent",
+        "Auto-Eval"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "code-review",
+        "testing-and-regression-guardrails"
+      ],
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Mini-Program Parity Auditor",
@@ -394,6 +434,7 @@
       "handoffs": [],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "platform-coordination-protocol",
         "frontend-component-architecture"
       ],
@@ -402,7 +443,7 @@
     {
       "name": "Taro Mini-Program Frontend Engineer",
       "file": "taro-mini-program-frontend-engineer.agent.md",
-      "description": "Use when implementing or refining frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, adapting layouts and interactions to WXSS and WeChat runtime constraints, polishing onboarding, loading, empty, or completion states in the mini-program, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review. Trigger phrases: mini-program UI polish, polish this Taro interaction, improve mini-program micro-interactions, make this screen feel premium, add delight to onboarding, refine loading state, improve mini-program empty state, WXSS interaction polish, WeChat UI refinement.",
+      "description": "Use when implementing or refining premium, brand-governed frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, raising a screen above generic cheap mini-program quality, adapting layouts and interactions to WXSS and WeChat runtime constraints, polishing onboarding, loading, empty, or completion states in the mini-program, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review. Trigger phrases: mini-program UI polish, premium mini-program UI, cheap mini-program feel, polish this Taro interaction, improve mini-program micro-interactions, make this screen feel premium, native-quality mini-program, add delight to onboarding, refine loading state, improve mini-program empty state, WXSS interaction polish, WeChat UI refinement.",
       "tools": [
         "read",
         "search",
@@ -420,12 +461,15 @@
       "handoffs": [],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "mini-program-frontend-excellence",
         "frontend-component-architecture",
         "design-system-governance",
         "joyjoin-brand-guidelines",
         "wow-elements",
         "platform-coordination-protocol",
         "performance-benchmark"
+        "frontend-performance-and-loading",
       ],
       "toolingStatus": "sufficient"
     },
@@ -444,6 +488,7 @@
       "orchestrationPhase": "support-audited",
       "handoffs": [],
       "skills": [
+        "first-principles-velocity",
         "code-review",
         "reliability-and-state-integrity",
         "monorepo-workspace-governance"
@@ -511,6 +556,7 @@
       "handoffs": [],
       "skills": [
         "orchestration-turn-reporting",
+        "first-principles-velocity",
         "platform-coordination-protocol",
         "frontend-component-architecture",
         "design-system-governance"

@@ -1,11 +1,19 @@
 {
   "mcpServers": {
-    "hermes-local": {
-      "command": "/Users/vincentlai/.local/bin/hermes",
-      "args": [
-        "mcp",
-        "serve"
-      ]
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "hermes": {
+      "command": "hermes",
+      "args": ["mcp", "serve"]
+    },
+    "agentMemory": {
+      "command": "npx",
+      "args": ["-y", "@adamrdrew/agent-memory-mcp"],
+      "env": {
+        "MEMORY_DB_PATH": ".joyjoin/agent-memory-db"
+      }
     }
   }
 }

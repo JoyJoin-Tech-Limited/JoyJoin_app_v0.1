@@ -1,0 +1,62 @@
+skill: first-principles-velocity
+
+primary_ownership: >
+  First-principles framing, critical-path prioritization, and pairing model cost tiers
+  to task depth—aligned with MODEL_CATALOG and Supervisor routing.
+
+use_when:
+  - planning or reframing ambiguous work with explicit mission and bottleneck
+  - choosing model tier or cost vs complexity for a step
+  - routing specialists so one narrow handoff removes the critical path
+  - applying inversion (what fails even if we execute the wrong plan well)
+  - avoiding thrash from parallelizing dependent work
+  - naming hard constraints before solution options (data, auth, platform, latency)
+  - scoping a vertical slice with one owning lane across API, client, and verification
+  - smallest validating proof (tests, guardrails) vs expanding scope or headcount
+  - removing or quarantining dead paths when drag outweighs option value
+  - escalating a blocked critical path with reproducible evidence
+
+do_not_use_when:
+  - the task is purely domain mechanics (use the relevant domain skill)
+  - the task is only turn JSON schema (use orchestration-turn-reporting)
+  - the task is only PR review mechanics (use code-review)
+  - the task is only schema design or migration mechanics (use backend-models-standards or database-migration-safety)
+
+strong_triggers:
+  - first principles
+  - critical path
+  - bottleneck
+  - mission in one sentence
+  - inversion
+  - ruthless prioritization
+  - velocity without thrash
+  - which model tier
+  - cheap model for
+  - Opus for
+  - MODEL_CATALOG
+  - cost vs complexity
+  - hard constraints
+  - non-negotiable constraints
+  - vertical slice
+  - single owner
+  - smallest proof
+  - quarantine legacy
+  - delete dead code
+  - blocked with evidence
+  - escalate with evidence
+
+owned_files:
+  - .github/agents/MODEL_CATALOG.md
+  - .github/agents/supervisor.agent.md
+  - .github/agents/planner.agent.md
+  - .github/agents/researcher.agent.md
+
+related_skills:
+  - skill: orchestration-turn-reporting
+    when: turn-end summaries, blocked turns with evidence, and executive briefing must stay consistent with routing decisions
+  - skill: monorepo-workspace-governance
+    when: changes touch root scripts, workspace boundaries, guardrails, or pruning workspace-wide paths
+  - skill: server-domain-architecture
+    when: end-to-end slice ownership touches routes, domains, or API boundaries
+  - skill: platform-coordination-protocol
+    when: the slice crosses web and mini-program or sibling platforms

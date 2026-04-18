@@ -37,6 +37,9 @@ jobs:
       - name: Validate orchestration contract
         run: npm run orchestration:validate
 
+      - name: Orchestration turn-summary regression tests
+        run: npm run orchestration:test
+
       - name: Run manifest-driven orchestration summary
         env:
           ORCHESTRATION_TARGET: ${{ inputs.target || 'auto' }}

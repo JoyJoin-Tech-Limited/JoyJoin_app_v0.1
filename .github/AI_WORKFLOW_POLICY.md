@@ -1,7 +1,7 @@
 # JoyJoin AI Workflow Policy
 
 **Status:** Active contributor policy  
-**Last updated:** 2026-04-16  
+**Last updated:** 2026-04-17  
 **Scope:** Repo-level AI-assisted delivery workflow, agent usage, and approval boundaries
 
 ## Document relationships
@@ -13,6 +13,8 @@ This policy defines how contributors should use AI in this repository.
 | **`AI_WORKFLOW_POLICY.md`** (this file) | Repo-level contributor policy for choosing the right delivery lane, escalation path, and approval boundary for AI-assisted work. |
 | [`ORCHESTRATION.md`](./ORCHESTRATION.md) | Human-readable description of the current native handoff graph, runtime surfaces, support-agent audit, and tooling sufficiency notes. |
 | [`ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) | Change-management rules for agents, skills, hooks, orchestration scripts, and their validation surfaces. |
+| [`AI_TOOLING_UNIFIED_BRAIN.md`](./AI_TOOLING_UNIFIED_BRAIN.md) | Cursor vs Copilot shared policy, MCP wiring (Context7, Hermes, optional agent memory), and IDE glue. |
+| [`SUPERPOWERS_JOYOIN_INTEGRATION.md`](./SUPERPOWERS_JOYOIN_INTEGRATION.md) | Cursor **Superpowers** plugin + JoyJoin skills/agents/memory (Copilot does not load Superpowers). |
 | [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md) | Current shipped runtime AI architecture, invariants, and separation boundaries. |
 | [`../docs/AI_INTEGRATION_PLAN.md`](../docs/AI_INTEGRATION_PLAN.md) | Product AI roadmap, rollout gates, and future-phase sequencing. |
 | [`../docs/AI_EXECUTION_ROADMAP.md`](../docs/AI_EXECUTION_ROADMAP.md) | 30-60-90 engineering roadmap for improving AI delivery workflow, orchestration validation, and operational readiness. |
@@ -28,6 +30,8 @@ This policy does **not** approve new runtime AI product behavior by itself. Prod
 5. **Prefer truth over implied certainty.** If scope, ownership, or runtime state is unclear, record that uncertainty and escalate. Do not let stale context, guessed file scope, or ambiguous routing masquerade as verified state.
 6. **Treat repo memory as advisory retrieval, not authority.** Runtime `memoryContext` can surface useful prior decisions, but durable publication still requires review through `repo-memory/candidates/` before promotion into `repo-memory/promoted/`.
 7. **Keep the turn-summary loop explicit.** When acting through repo agents, review the last 5 relevant operational summaries, emit a structured end-of-turn JSON summary, and let `Supervisor` consolidate child summaries into a task-level turn report.
+8. **Make execution-ready plans cost-aware.** Any plan or micro-plan that is ready for implementation should end with a short model recommendation that balances quality, scope, complexity, and token efficiency.
+9. **Apply execution discipline across lanes.** Use [`.github/skills/first-principles-velocity/SKILL.md`](./skills/first-principles-velocity/SKILL.md) so work names **hard constraints** before solution design where it matters, clarifies **vertical-slice ownership** when multiple surfaces are involved, prefers the **smallest validating proof** (tests and repo guardrails—without skipping migrations, auth, or review), records **removals or quarantines** when retiring paths, and **escalates blockers with evidence** (structured turns per [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md), `turnStatus` when applicable). See also [`.github/ORCHESTRATION.md`](./ORCHESTRATION.md) *Execution discipline*.
 
 ## Delivery lanes
 
@@ -39,6 +43,8 @@ JoyJoin uses three delivery lanes.
 | **Kickoff lane** (`Researcher` -> `Planner`) | The task is broad, ambiguous, cross-workspace, architecture-shaping, or likely to branch into multiple specialists. | A verified research brief followed by an approval-first execution plan before implementation starts. |
 | **Operational lane** (`Auto-Eval`, `QA Agent`, `Launch Readiness Agent`, `Supervisor`) | The task is dominated by dirty-worktree review, release risk, regression investigation, launch readiness, or blocker routing. | Findings, verification evidence, and explicit go/no-go or next-step guidance. |
 
+**Supervisor as a first hop:** You may invoke **`Supervisor` first** instead of `Researcher`. When the planning check implies the **kickoff lane** and there is no fresh research brief plus approval-ready plan already in context, Supervisor **sequences** `Researcher` → `Planner`—it does not replace them. For **direct delivery**, Supervisor routes to the narrowest specialist without running that sequence.
+
 ## Planning check
 
 Every task begins with an explicit planning check.
@@ -47,6 +53,41 @@ Every task begins with an explicit planning check.
 - For bounded work, a micro-plan can be as small as 1-3 concrete steps.
 - If the planning check exposes ambiguity, multiple plausible solution shapes, or cross-cutting impact, route through `Researcher` -> `Planner`.
 - "Start coding and figure it out later" is out of policy even when the task looks small.
+
+## Model recommendation for execution-ready plans
+
+Any approval-first plan or direct-delivery micro-plan that is ready for implementation should end with `## Model Recommendation for Execution`.
+
+Include:
+
+- **Recommended Model:** The model name.
+- **Justification:** 1-2 sentences covering complexity, scope size, list depth, and token load.
+- **Estimated Premium Request Cost:** The cost multiplier in premium-request units.
+
+Use these heuristics:
+
+- **Task complexity:** More intricate logic, edge cases, or system-level changes should lean toward stronger models.
+- **Scope size:** More files, more coordination, or broader impact should push the recommendation upward.
+- **List or iteration depth:** Longer checklists or nested passes need more precision and should factor into the recommendation.
+- **Expected token load:** Larger execution context or heavier reasoning should raise the model recommendation.
+
+Use these model baselines — **canonical table:** [`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md).
+
+## Division of responsibility: Planner vs Supervisor vs turn-report JSON
+
+Use this split so model recommendations, routing, and persistence stay in the right layer.
+
+| Concern | Owner | What to produce |
+| --- | --- | --- |
+| **Pre-execution planning** — steps, agents, dependencies, approval gates, deterministic checks | **`Planner`** (kickoff lane) or a **direct-delivery micro-plan** | Approval-first plan ending with **`## Model Recommendation for Execution`** (model name, justification, cost band). Same catalog as [`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md) and [`.github/agents/planner.agent.md`](./agents/planner.agent.md). |
+| **Model choice for fresh delegation** — no up-to-date plan on file | **`Supervisor`** only when issuing a **new** delegation brief midstream | **`### Model Assignment`** block; must stay aligned with Planner’s catalog—do not invent a parallel table. |
+| **Reusing a plan** | **`Supervisor`** (or implementer) | **Cite** the existing **`## Model Recommendation for Execution`** from the approved plan instead of re-selecting a model. |
+| **Per-turn operational truth** — what each agent did | **Each agent** | **`agent_turn_summary`** JSON; `record-summary` when applicable. Optional **`turnStatus`**: `ready` \| `blocked` \| `done` (see orchestration-turn-reporting skill). |
+| **Cross-agent consolidation** — insights across agents for the workflow | **`Supervisor`** | **`supervisor_turn_report`** JSON + visible note (**executive briefing**: Observation / Implication / Next Step / optional Bottom Line; **Turn status**; **Routing (pick one)** when applicable). See [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md). **Does not** replace Planner’s plan or the policy model table. |
+| **Durable skill or repo-memory updates** | **Humans / reviewed PRs** | Turn reports **do not** auto-edit `.github/skills/`; promote lessons through normal governance. |
+| **Per-next-step execution model** (which model to use when **implementing** a listed handoff) | **`Supervisor`** | When **Routing (pick one)** lines include implementation work, add a **short model hint per step** (or at least for the highest-priority implementation step) using the **same catalog** as Planner—e.g. trivial follow-up → GPT-5 mini / GPT-5.4 mini; complex multi-file → Opus tier. **Planner** still owns the **approval-first plan**-level recommendation; Supervisor refines **routing-time** execution hints. |
+
+**Do not** fork the canonical model catalog; if the pool of models or multipliers changes, update **[`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md)** in the same PR as **this policy**, **`planner.agent.md`**, and **`supervisor.agent.md`**.
 
 ## Threshold model
 
@@ -131,12 +172,13 @@ The following are non-optional workflow boundaries.
 
 1. Start with the planning check: define scope, lane, and validation depth before editing.
 2. Load the relevant skill or skills before making architectural or domain decisions.
-3. Keep changes aligned with active-flow docs and current runtime ownership.
-4. Update contributor-facing docs when workflow behavior, governance expectations, or canonical references change.
-5. Validate the change at the right level for the risk: contract checks, targeted tests, QA review, launch review, or a combination.
-6. Leave explicit findings when validation is partial; do not imply end-to-end confidence you did not establish.
-7. Keep `.git/.orchestration/` operational-only. If the work produces a durable memory candidate, stage it into `repo-memory/candidates/` instead of treating runtime state as a publication surface.
-8. Use the turn-reporting loop for agent work: read the last 5 relevant summaries from `.git/.orchestration/context.json`, emit a structured summary, and treat recorder acknowledgement as the persistence source of truth.
+3. End every execution-ready plan or micro-plan with a model recommendation and estimated premium-request cost.
+4. Keep changes aligned with active-flow docs and current runtime ownership.
+5. Update contributor-facing docs when workflow behavior, governance expectations, or canonical references change.
+6. Validate the change at the right level for the risk: contract checks, targeted tests, QA review, launch review, or a combination.
+7. Leave explicit findings when validation is partial; do not imply end-to-end confidence you did not establish.
+8. Keep `.git/.orchestration/` operational-only. If the work produces a durable memory candidate, stage it into `repo-memory/candidates/` instead of treating runtime state as a publication surface.
+9. Use the turn-reporting loop for agent work: read the last 5 relevant summaries from `.git/.orchestration/context.json`, emit a structured summary, and treat recorder acknowledgement as the persistence source of truth.
 
 ## Branch isolation and worktree safety
 
@@ -164,12 +206,28 @@ The default answer to portfolio growth is restraint.
 - Keep `Researcher` and `Planner` mostly skill-light unless an orchestration-specific ruleset proves repeatedly necessary.
 - Prefer documenting a rule first, validating the workflow, and only then deciding whether deterministic enforcement should be added.
 
+### Systematic expansion (agents and skills)
+
+When you **do** extend the portfolio, follow a consistent sequence so capabilities stay coherent:
+
+1. **Evidence** — Repeated real workflows that the current agent/skill set handles awkwardly (not one-off convenience).
+2. **Skill first when the gap is rules** — New boundaries, placement, or invariants belong in **`.github/skills/`** with `routing.yml` and README index updates unless the gap is purely procedural.
+3. **Agent when the gap is workflow** — New routing, handoffs, or role boundaries belong in **`.github/agents/`** with manifest + `orchestration.yaml` updates per [`.github/ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md).
+4. **Contract + docs together** — Machine-readable graph and human docs must match the same change.
+5. **Validation** — `npm run orchestration:validate`; for skills, `node scripts/validate-skill-routing.mjs` and `node scripts/test-skill-routing.mjs` where applicable.
+6. **Model / policy tables** — If execution guidance changes, update **[`.github/agents/MODEL_CATALOG.md`](./agents/MODEL_CATALOG.md)**, **this file**, and **`planner.agent.md`** / **`supervisor.agent.md`** references in the same PR when the model catalog is affected.
+
+### Custom orchestration outside the IDE
+
+The in-repo graph (hooks, `Supervisor`, turn summaries) is **guidance and handoff**, not a peer-to-peer multi-agent runtime. You **can** add **custom orchestration** around it: e.g. CI jobs, `scripts/orchestration-supervisor.mjs`, scheduled workflows, or external runners that aggregate multiple human or API sessions—provided you keep **deterministic authority** and **repo-memory** rules in [`.github/ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) and [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md). New automation must not imply hidden autonomous execution without an explicit approval boundary.
+
 ## Working checklist
 
 1. Perform the planning check, then pick the correct delivery lane.
 2. Load the relevant skills.
 3. If staying in direct delivery, write a compact micro-plan before coding.
-4. Use `Researcher` -> `Planner` before coding if the task is broad or approval-first.
-5. Keep runtime AI, repo orchestration, and product roadmap docs in their own lanes.
-6. Validate at the right depth for the actual risk.
-7. Escalate to QA or launch review when the change outgrows local confidence.
+4. End execution-ready plans with a model recommendation section.
+5. Use `Researcher` -> `Planner` before coding if the task is broad or approval-first.
+6. Keep runtime AI, repo orchestration, and product roadmap docs in their own lanes.
+7. Validate at the right depth for the actual risk.
+8. Escalate to QA or launch review when the change outgrows local confidence.

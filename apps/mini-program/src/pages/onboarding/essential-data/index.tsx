@@ -68,11 +68,6 @@ function getBirthYear(user: Record<string, unknown> | undefined): number {
 }
 
 export default function EssentialDataPage() {
-  const { user, isLoading } = useAuthGuard()
-  const invalidateAuth = useInvalidateAuth()
-  const analytics = useOnboardingAnalytics('essential-data', { enabled: !isLoading })
-  const { saveCheckpoint } = useOnboardingCheckpoint()
-
   const [displayName, setDisplayName] = useState('')
   const [gender, setGender] = useState('')
   const [birthYear, setBirthYear] = useState(0)
@@ -83,7 +78,14 @@ export default function EssentialDataPage() {
   const [occupationId, setOccupationId] = useState('')
   const [intent, setIntent] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+  const { user, isLoading } = useAuthGuard({
+    suspendOnboardingRedirect: isSubmitting || isPageExiting,
+  })
+  const invalidateAuth = useInvalidateAuth()
+  const analytics = useOnboardingAnalytics('essential-data', { enabled: !isLoading })
+  const { saveCheckpoint } = useOnboardingCheckpoint()
 
   const cityOptions = useMemo(() => [...CURRENT_CITY_OPTIONS], [])
   const relationshipOptions = useMemo(() => [...RELATIONSHIP_STATUS_OPTIONS], [])
@@ -168,6 +170,9 @@ export default function EssentialDataPage() {
   const completedRequiredCount = requiredFieldStates.filter((item) => item.done).length
   const missingRequiredFields = requiredFieldStates.filter((item) => !item.done)
   const requiredComplete = missingRequiredFields.length === 0
+  const pageClassName = ['essential-data', isPageExiting ? 'essential-data--exiting' : '']
+    .filter(Boolean)
+    .join(' ')
 
   const toggleIntent = useCallback(
     (value: string) => {
@@ -246,8 +251,12 @@ export default function EssentialDataPage() {
         nextStep: userState.nextStep ?? 'extended-data',
       })
 
-      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
+      await navigateToMiniProgramNextStep(userState.nextStep, {
+        mode: 'replace',
+        transition: { beforeNavigate: () => setIsPageExiting(true) },
+      })
     } catch (err) {
+      setIsPageExiting(false)
       const message = err instanceof Error ? err.message : '提交失败，请重试'
       setError(message)
       analytics.errorOccurred('submit_failed', message)
@@ -286,7 +295,7 @@ export default function EssentialDataPage() {
   }
 
   return (
-    <View className='essential-data'>
+    <View className={pageClassName}>
       <ScrollView className='essential-data__scroll' scrollY enhanced showScrollbar={false}>
         <View className='essential-data__shell'>
           <View className='essential-data__hero essential-data__stage essential-data__stage--1'>
@@ -300,7 +309,7 @@ export default function EssentialDataPage() {
           <View className='essential-data__coach essential-data__stage essential-data__stage--2'>
             <Image
               className='essential-data__coach-avatar'
-              src={getXiaoyueAsset(intent.length > 0 ? 'pointing' : 'excited')}
+              src={getXiaoyueAsset(intent.length > 0 ? 'pointing' : 'normal')}
               mode='aspectFit'
             />
             <View className='essential-data__coach-copy'>
@@ -582,6 +591,7 @@ export default function EssentialDataPage() {
         {error ? <Text className='essential-data__error'>{error}</Text> : null}
 
         <Button
+          variant='brand'
           className='essential-data__submit'
           onClick={handleSubmit}
           disabled={!requiredComplete || isSubmitting}
