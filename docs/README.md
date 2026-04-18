@@ -90,3 +90,4 @@ Use these as the main entry points before branching into topic-specific document
 - [`../.github/agents/README.md`](../.github/agents/README.md)
 - [`../apps/server/src/README.md`](../apps/server/src/README.md)
 - [`../packages/shared/src/README.md`](../packages/shared/src/README.md)
+- In-product legal copy (用户协议 / 隐私政策，中文单一事实来源): [`../packages/shared/src/legal/joyjoinTermsZh.ts`](../packages/shared/src/legal/joyjoinTermsZh.ts) — keep web and mini-program in sync via this module.

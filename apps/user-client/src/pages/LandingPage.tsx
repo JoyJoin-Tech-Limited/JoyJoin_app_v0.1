@@ -244,7 +244,7 @@ export default function LandingPage() {
             </a>
             和
             <a
-              href="/terms#ts-privacy"
+              href="/privacy"
               className="underline text-[#6B5B8D]"
               onClick={() => console.log('[Analytics] Landing: Privacy clicked')}
             >

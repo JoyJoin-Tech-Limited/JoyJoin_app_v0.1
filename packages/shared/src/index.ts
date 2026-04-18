@@ -46,3 +46,4 @@ export * from './archetypeColors';
 export * from './achievements';
 export * from './hongKongTime';
 export * from './centerTabRouting';
+export * from './legal/joyjoinTermsZh';

@@ -746,9 +746,9 @@ export default function LoginPage() {
                 {/* Terms */}
                 <p className="text-xs text-center text-muted-foreground leading-relaxed">
                   登录即表示同意
-                  <a href="#" className="text-primary hover:underline ml-1">《用户协议》</a>
+                  <a href="/terms" className="text-primary hover:underline ml-1">《用户协议》</a>
                   和
-                  <a href="#" className="text-primary hover:underline">《隐私政策》</a>
+                  <a href="/privacy" className="text-primary hover:underline">《隐私政策》</a>
                 </p>
               </CardContent>
             </Card>
@@ -880,9 +880,9 @@ export default function LoginPage() {
         <div className="max-w-lg mx-auto text-center text-sm text-muted-foreground">
           <p>© 2024 悦聚·JoyJoin. 专注香港和深圳本地社交</p>
           <p className="mt-2">
-            <a href="#" className="hover:text-foreground">服务条款</a>
+            <a href="/terms" className="hover:text-foreground">服务条款</a>
             <span className="mx-2">·</span>
-            <a href="#" className="hover:text-foreground">隐私政策</a>
+            <a href="/privacy" className="hover:text-foreground">隐私政策</a>
             <span className="mx-2">·</span>
             <a href="#" className="hover:text-foreground">联系我们</a>
           </p>

@@ -27,6 +27,9 @@ This package holds contracts and logic that are intentionally shared across mult
 ### Shared UI tokens
 - `packages/shared/src/archetypeColors.ts` — Archetype HSL color token definitions; both web (`@joyjoin/shared/archetypeColors`) and mini-program (`@shared/archetypeColors`) import from this single source
 
+### Legal copy (Chinese)
+- `packages/shared/src/legal/joyjoinTermsZh.ts` — canonical 用户协议 / 隐私政策 text for web (`TermsPage`) and mini-program terms page; update here only.
+
 ### Shared cross-platform flow helpers
 - `packages/shared/src/onboarding.ts` — `nextStepToOnboardingStep`, `buildOnboardingProgress`, and related step-mapping utilities
 - `packages/shared/src/api.ts` — typed API helpers and DTOs for onboarding/profile, pricing, coupons, payments, notifications, blind-box events, and pool-group details (shared across web and mini-program)

@@ -259,6 +259,8 @@ function AuthenticatedRouter() {
           <Route path="/profile/wallet" component={WalletPage} />
           <Route path="/profile/faq" component={FAQPage} />
           <Route path="/profile/terms" component={TermsPage} />
+          <Route path="/terms" component={TermsPage} />
+          <Route path="/privacy" component={TermsPage} />
           <Route path="/community/join" component={CommunityJoinPage} />
           <Route path="/onboarding/extended" component={ExtendedDataPage} />
           <Route path="/onboarding/review" component={FinalProfileReviewPage} />
@@ -323,6 +325,7 @@ function Router() {
         <Route path="/registration/chat" component={PersonalityTestPage} />
         <Route path="/register" component={PersonalityTestPage} />
         <Route path="/terms" component={TermsPage} />
+        <Route path="/privacy" component={TermsPage} />
         {/* Legacy login page still accessible */}
         <Route path="/login" component={LoginPage} />
         {/* New landing page is the default entry point */}
