@@ -865,19 +865,27 @@
       "first-principles-velocity",
       "server-domain-architecture",
       "auth-session-and-safety-boundaries",
-      "reliability-and-state-integrity"
+      "reliability-and-state-integrity",
+      "onboarding-state-architecture",
+      "payment-entitlement-authority",
+      "matching-domain",
+      "event-pool-and-matching-operations",
+      "social-icebreaker-domain"
     ],
     "AI Engineer": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "llm-runtime-safety-and-integration",
-      "platform-observability-and-ops"
+      "platform-observability-and-ops",
+      "payment-entitlement-authority",
+      "matching-domain"
     ],
     "QA Agent": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "e2e-test-runner",
-      "testing-and-regression-guardrails"
+      "testing-and-regression-guardrails",
+      "performance-benchmark"
     ],
     "Verifier": [
       "orchestration-turn-reporting",
@@ -917,8 +925,9 @@
       "design-system-governance",
       "joyjoin-brand-guidelines",
       "wow-elements",
+      "platform-coordination-protocol",
+      "performance-benchmark"
       "frontend-performance-and-loading",
-      "platform-coordination-protocol"
     ],
     "Taro Migration Specialist": [
       "orchestration-turn-reporting",
@@ -935,7 +944,8 @@
       "frontend-performance-and-loading",
       "joyjoin-brand-guidelines",
       "wow-elements",
-      "platform-coordination-protocol"
+      "platform-coordination-protocol",
+      "performance-benchmark"
     ],
     "debug": [
       "first-principles-velocity",
@@ -946,7 +956,8 @@
     ],
     "Workflow Governance Reviewer": [
       "docs-sync",
-      "testing-and-regression-guardrails"
+      "testing-and-regression-guardrails",
+      "skill-authoring-governance"
     ],
     "Principal Software Engineer": [
       "first-principles-velocity",
