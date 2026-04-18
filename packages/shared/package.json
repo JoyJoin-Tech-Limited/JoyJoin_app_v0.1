@@ -31,10 +31,11 @@
     "./ui/button": "./src/ui/Button.tsx",
     "./ui/buttonVariants": "./src/ui/buttonVariants.ts",
     "./archetypeColors": "./src/archetypeColors.ts",
-    "./achievements": "./src/achievements.ts"
+    "./achievements": "./src/achievements.ts",
+    "./legal/joyjoinTermsZh": "./src/legal/joyjoinTermsZh.ts"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.2.0",
+    "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.39.1",

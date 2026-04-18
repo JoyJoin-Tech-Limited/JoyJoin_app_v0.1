@@ -30,16 +30,16 @@
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "express": "^4.21.2",
-    "express-session": "^1.18.1",
+    "express-session": "^1.19.0",
     "jsonwebtoken": "^9.0.3",
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",
     "node-cache": "^5.1.2",
-    "openai": "^6.10.0",
+    "openai": "^6.34.0",
     "openid-client": "^6.8.2",
     "passport": "^0.7.0",
     "pg": "^8.20.0",
-    "ws": "^8.18.0",
+    "ws": "^8.20.0",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },
@@ -54,9 +54,9 @@
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.5.13",
     "drizzle-kit": "^0.31.4",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.12",
     "tsx": "^4.21.0",
     "typescript": "5.6.3",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.4"
   }
 }

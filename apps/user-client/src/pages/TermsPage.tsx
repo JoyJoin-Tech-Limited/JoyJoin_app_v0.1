@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useLocation } from "wouter";
 import {
   FileText,
   ShieldCheck,
@@ -8,102 +10,81 @@ import {
   Calendar,
   Scale,
   Mail,
+  Landmark,
+  type LucideIcon,
 } from "lucide-react";
+import type { TermsSectionZh, TermsEntrySection } from "@shared/legal/joyjoinTermsZh";
+import {
+  JOYJOIN_TERMS_SECTIONS_ZH,
+  LEGAL_LAST_UPDATED_LABEL_ZH,
+  JOYJOIN_COPYRIGHT_YEAR,
+  TERMS_ENTRY_META,
+} from "@shared/legal/joyjoinTermsZh";
 import MobileHeader from "@/components/MobileHeader";
 import BottomNav from "@/components/BottomNav";
 
 // ---------------------------------------------------------------------------
-// Types & data
+// Icons per section (canonical copy lives in @shared/legal/joyjoinTermsZh)
 // ---------------------------------------------------------------------------
 
-interface TermsSection {
-  id: string;
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  heading: string;
-  paragraphs: string[];
-}
-
-const TERMS_SECTIONS: TermsSection[] = [
-  {
-    id: "ts-service",
+const SECTION_ICON: Record<
+  string,
+  { icon: LucideIcon; iconColor: string; iconBg: string }
+> = {
+  "ts-service": {
     icon: FileText,
     iconColor: "text-purple-500",
     iconBg: "bg-purple-500/10",
-    heading: "一、服务说明",
-    paragraphs: [
-      "悦聚（JoyJoin）是一个面向都市青年的社交活动平台，致力于通过精心设计的线下活动帮助用户结识志趣相投的新朋友。",
-      "平台提供活动报名、智能配对、破冰工具及活动回顾等服务，旨在以轻松自然的方式促进真实的人际连接。",
-    ],
   },
-  {
-    id: "ts-eligibility",
+  "ts-eligibility": {
     icon: UserCheck,
     iconColor: "text-blue-500",
     iconBg: "bg-blue-500/10",
-    heading: "二、用户资格",
-    paragraphs: [
-      "使用悦聚服务须年满 18 周岁，未成年人不得注册或参与活动。",
-      "用户须使用真实身份注册，不得冒用他人信息。平台保留对注册信息进行核实的权利，如发现虚假信息将立即停止服务并取消活动资格。",
-    ],
   },
-  {
-    id: "ts-conduct",
+  "ts-conduct": {
     icon: ShieldCheck,
     iconColor: "text-green-500",
     iconBg: "bg-green-500/10",
-    heading: "三、用户行为准则",
-    paragraphs: [
-      "参与者须以尊重、友善的态度对待所有活动成员，严禁任何形式的骚扰、歧视或不当行为。",
-      "如遭受不当对待，请立即通过 App 内举报功能或联系客服，悦聚将认真对待每一条举报并依据情节予以处理，情节严重者将永久封禁账号。",
-    ],
   },
-  {
-    id: "ts-privacy",
+  "ts-privacy": {
     icon: Lock,
     iconColor: "text-rose-500",
     iconBg: "bg-rose-500/10",
-    heading: "四、隐私保护",
-    paragraphs: [
-      "悦聚收集的个人信息（包括性格标签、兴趣偏好等）仅用于活动配对算法，不会出售或共享给第三方商业机构。",
-      "活动中使用昵称，手机号码全程加密保护。您可随时在账户设置中申请删除个人数据。",
-    ],
   },
-  {
-    id: "ts-events",
+  "ts-events": {
     icon: Calendar,
     iconColor: "text-orange-500",
     iconBg: "bg-orange-500/10",
-    heading: "五、活动参与规则",
-    paragraphs: [
-      "报名时须如实填写个人信息，虚假信息将影响匹配质量，情节严重者将限制未来报名资格。",
-      "无故缺席活动（未提前取消）将影响个人匹配优先级评分。频繁缺席者，平台有权暂停其报名功能。退款政策详见「常见问题」页面。",
-    ],
   },
-  {
-    id: "ts-disclaimer",
+  "ts-disclaimer": {
     icon: Scale,
     iconColor: "text-yellow-500",
     iconBg: "bg-yellow-500/10",
-    heading: "六、免责声明",
-    paragraphs: [
-      "悦聚平台的职责是为用户创造高质量的相遇机会，活动结束后双方形成的任何关系（友谊、恋爱或其他）均属个人私事，平台不承担任何连带责任。",
-      "平台不对活动中因个人行为引发的纠纷负责。如需法律援助，请通过正规法律途径解决。",
-    ],
   },
-  {
-    id: "ts-contact",
+  "ts-contact": {
     icon: Mail,
     iconColor: "text-cyan-500",
     iconBg: "bg-cyan-500/10",
-    heading: "七、联系我们",
-    paragraphs: [
-      "如您对以上条款有任何疑问，或需要行使数据权利（查阅、更正、删除），欢迎通过以下方式联系我们：",
-      "📧 邮箱：hello@joyjoin.cn\n我们将在 3 个工作日内回复您的邮件。",
-    ],
   },
-];
+  "ts-legal-basis": {
+    icon: Landmark,
+    iconColor: "text-indigo-500",
+    iconBg: "bg-indigo-500/10",
+  },
+};
+
+type TermsSectionView = TermsSectionZh & {
+  icon: LucideIcon;
+  iconColor: string;
+  iconBg: string;
+};
+
+const TERMS_SECTIONS_VIEW: TermsSectionView[] = JOYJOIN_TERMS_SECTIONS_ZH.map(
+  (s) => {
+    const meta = SECTION_ICON[s.id] ?? SECTION_ICON["ts-service"];
+    return { ...s, ...meta };
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Animation variants
@@ -130,16 +111,25 @@ const sectionVariants = {
 // Sub-component: single terms section card
 // ---------------------------------------------------------------------------
 
-function TermsSectionCard({ section }: { section: TermsSection }) {
+function TermsSectionCard({
+  section,
+  focusId,
+}: {
+  section: TermsSectionView;
+  focusId?: string;
+}) {
   const Icon = section.icon;
+  const isFocus = Boolean(focusId && focusId === section.id);
 
   return (
     <motion.div
       variants={sectionVariants}
-      className="glass rounded-2xl p-5"
+      id={section.id}
+      className={`glass rounded-2xl p-5 scroll-mt-24 ${
+        isFocus ? "ring-2 ring-[hsl(280_45%_55%)]/25 shadow-md" : ""
+      }`}
       data-testid={`terms-section-${section.id}`}
     >
-      {/* Section heading */}
       <div className="flex items-center gap-3 mb-3">
         <div
           className={`h-8 w-8 rounded-lg ${section.iconBg} flex items-center justify-center flex-shrink-0`}
@@ -150,7 +140,6 @@ function TermsSectionCard({ section }: { section: TermsSection }) {
         <h2 className="text-sm font-bold">{section.heading}</h2>
       </div>
 
-      {/* Paragraphs */}
       <div className="space-y-2 pl-11">
         {section.paragraphs.map((para, idx) => (
           <p
@@ -170,13 +159,41 @@ function TermsSectionCard({ section }: { section: TermsSection }) {
 // ---------------------------------------------------------------------------
 
 export default function TermsPage() {
+  const [loc] = useLocation();
+  const [entrySection, setEntrySection] = useState<TermsEntrySection>("terms");
+
+  useEffect(() => {
+    if (loc === "/privacy") {
+      setEntrySection("privacy");
+      return;
+    }
+    const q = new URLSearchParams(window.location.search).get("section");
+    setEntrySection(q === "privacy" ? "privacy" : "terms");
+  }, [loc]);
+
+  const entryMeta = TERMS_ENTRY_META[entrySection];
+
+  useEffect(() => {
+    if (entrySection !== "privacy" || !entryMeta.focusId) return;
+    const t = window.setTimeout(() => {
+      document.getElementById(entryMeta.focusId!)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [entrySection, entryMeta.focusId]);
+
+  const documentTitle = useMemo(
+    () => (entrySection === "privacy" ? "隐私政策" : "用户协议"),
+    [entrySection],
+  );
+
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* ── Header ── */}
-      <MobileHeader title="服务条款" />
+      <MobileHeader title={documentTitle} />
 
       <main className="px-4 pt-5 space-y-4">
-        {/* ── Meta banner: last updated + intro ── */}
         <motion.div
           initial={{ opacity: 0, y: -14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -188,17 +205,16 @@ export default function TermsPage() {
             <AlertCircle className="h-5 w-5 text-[hsl(280_45%_55%)]" />
           </div>
           <div>
-            <p className="text-sm font-semibold">服务条款</p>
+            <p className="text-sm font-semibold">{entryMeta.title}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              最后更新：2024年12月1日
+              最后更新：{LEGAL_LAST_UPDATED_LABEL_ZH}
             </p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              在使用悦聚服务前，请仔细阅读以下条款。继续使用即视为您已同意本协议全部内容。
+              {entryMeta.intro}
             </p>
           </div>
         </motion.div>
 
-        {/* ── Terms sections ── */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -206,12 +222,15 @@ export default function TermsPage() {
           className="space-y-3"
           data-testid="terms-sections-list"
         >
-          {TERMS_SECTIONS.map((section) => (
-            <TermsSectionCard key={section.id} section={section} />
+          {TERMS_SECTIONS_VIEW.map((section) => (
+            <TermsSectionCard
+              key={section.id}
+              section={section}
+              focusId={entryMeta.focusId}
+            />
           ))}
         </motion.div>
 
-        {/* ── Agreement footer ── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -220,10 +239,10 @@ export default function TermsPage() {
           data-testid="terms-agreement-footer"
         >
           <p className="text-xs text-muted-foreground leading-relaxed">
-            使用悦聚服务即代表您已阅读、理解并同意本服务条款。
+            使用悦聚服务即代表您已阅读、理解并同意本页所示用户协议与隐私相关说明。
           </p>
           <p className="text-xs text-muted-foreground">
-            © 2025 JoyJoin. 保留所有权利。
+            © {JOYJOIN_COPYRIGHT_YEAR} JoyJoin. 保留所有权利。
           </p>
         </motion.div>
 
