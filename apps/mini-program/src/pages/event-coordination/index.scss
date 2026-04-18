@@ -95,7 +95,7 @@
 
   &__participant-archetype {
     display: block;
-    font-size: 20rpx;
+    font-size: $font-size-xs;
     color: $color-text-muted;
     margin-top: 4rpx;
     @include text-truncate;
@@ -305,7 +305,7 @@
   }
 
   &__message-tag {
-    font-size: 20rpx;
+    font-size: $font-size-xs;
     color: $color-primary;
     background: rgba($color-primary, 0.1);
     border-radius: 999rpx;
@@ -339,7 +339,7 @@
 
   &__message-action,
   &__message-status {
-    font-size: 20rpx;
+    font-size: $font-size-xs;
   }
 
   &__message-action {

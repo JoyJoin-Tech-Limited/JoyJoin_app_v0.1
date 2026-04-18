@@ -74,7 +74,7 @@
   }
 
   &__item-label {
-    font-size: 20rpx;
+    font-size: $font-size-xs;
     line-height: 1.2;
     color: $color-text-muted;
 
@@ -103,7 +103,7 @@
   }
 
   &__item-badge-text {
-    font-size: 18rpx;
+    font-size: 20rpx;
     line-height: 1;
     font-weight: $font-weight-bold;
     color: $color-text-white;
@@ -168,7 +168,7 @@
   &__center-label {
     margin-top: 8rpx;
     max-width: 192rpx;
-    font-size: 20rpx;
+    font-size: $font-size-xs;
     line-height: 1.2;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;

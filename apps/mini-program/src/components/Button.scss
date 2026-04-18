@@ -2,7 +2,7 @@
 @use '../styles/mixins' as *;
 
 .joy-button {
-  min-height: $button-height;
+  min-height: max($button-height, $cta-min-tap);
   border-radius: $button-radius;
   font-size: $font-size-base;
   font-weight: $font-weight-semibold;
@@ -20,8 +20,14 @@
   }
 
   &--secondary {
+    min-height: max($button-height, $cta-min-tap);
     background: $color-surface;
     border: 2rpx solid $color-border;
     color: $color-text-primary;
+
+    &:active {
+      background: rgba($color-text-primary, 0.05);
+      border-color: rgba($color-primary, 0.4);
+    }
   }
 }

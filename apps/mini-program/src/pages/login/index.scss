@@ -54,15 +54,20 @@
   &__wechat-btn {
     @include type-brand-cta-label;
     width: 100%;
+    min-height: max($button-height, $cta-min-tap);
     height: $button-height;
     border-radius: $button-radius;
-    background: #07C160;
+    background: #07c160;
     color: $color-text-white;
     font-size: $font-size-md;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: $shadow-md;
+
+    &:active {
+      filter: brightness(0.92);
+    }
 
     &--loading {
       opacity: 0.7;

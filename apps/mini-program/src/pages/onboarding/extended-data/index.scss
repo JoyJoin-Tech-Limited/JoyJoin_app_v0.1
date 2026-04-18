@@ -430,6 +430,35 @@
       opacity: 0.55;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &--exiting {
+      transition: none;
+    }
+
+    &__stage {
+      animation: none !important;
+      animation-delay: 0s !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    &__interest-card {
+      transition: none;
+    }
+
+    &__hint-toast {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    &__footer-meter-fill {
+      transition: none;
+    }
+  }
 }
 
 @keyframes extended-data-hint-in {

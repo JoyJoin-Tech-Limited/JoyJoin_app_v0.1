@@ -442,4 +442,24 @@
       opacity: 0.55;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &--exiting {
+      transition: none;
+    }
+
+    &__stage {
+      animation: none !important;
+      animation-delay: 0s !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    &__choice-chip,
+    &__intent-card {
+      transition: none;
+    }
+  }
 }

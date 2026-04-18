@@ -512,6 +512,7 @@ export default function PersonalityTestPage() {
             </View>
 
             <View className='personality-test__intro-tease personality-test__stage personality-test__stage--4'>
+              <Text className='personality-test__intro-tease-kicker'>Preview</Text>
               <Text className='personality-test__intro-tease-title'>最后，你会看到这样的原型画像</Text>
               <Text className='personality-test__intro-tease-subtitle'>
                 它不是给你贴标签，而是帮 JoyJoin 更快理解你在小局里的感觉。
@@ -524,20 +525,33 @@ export default function PersonalityTestPage() {
                 showScrollbar={false}
               >
                 <View className='personality-test__intro-tease-list'>
-                  {introTeasers.map((item) => (
-                    <View key={item.archetype} className='personality-test__intro-tease-card'>
-                      <View
-                        className='personality-test__intro-tease-avatar-shell'
-                        style={{
-                          background: item.visual.accentSurface,
-                          borderColor: item.visual.accentBorder,
-                        }}
-                      >
-                        <Image
-                          className='personality-test__intro-tease-avatar'
-                          src={item.visual.asset}
-                          mode='aspectFit'
+                  {introTeasers.map((item, teaserIndex) => (
+                    <View
+                      key={item.archetype}
+                      className='personality-test__intro-tease-card'
+                      style={{
+                        animationDelay: `${80 + teaserIndex * 100}ms`,
+                      }}
+                    >
+                      <View className='personality-test__intro-tease-avatar-wrap'>
+                        <View
+                          className='personality-test__intro-tease-avatar-glow'
+                          style={{ background: item.visual.accentStrong }}
                         />
+                        <View
+                          className='personality-test__intro-tease-avatar-shell'
+                          style={{
+                            background: item.visual.accentSurface,
+                            borderColor: item.visual.accentBorder,
+                            boxShadow: `0 14rpx 36rpx ${item.visual.accentGlow}`,
+                          }}
+                        >
+                          <Image
+                            className='personality-test__intro-tease-avatar'
+                            src={item.visual.asset}
+                            mode='aspectFit'
+                          />
+                        </View>
                       </View>
                       <Text className='personality-test__intro-tease-name'>{item.archetype}</Text>
                       <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>

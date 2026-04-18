@@ -68,7 +68,7 @@
   }
 
   &__eyebrow {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-primary;
     font-weight: 600;
   }
@@ -81,7 +81,7 @@
   }
 
   &__subtitle {
-    font-size: 26rpx;
+    font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.6;
   }
@@ -111,7 +111,7 @@
   }
 
   &__context-kicker {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-primary;
     font-weight: 700;
   }
@@ -128,7 +128,7 @@
   &__context-copy {
     display: block;
     margin-top: 12rpx;
-    font-size: 26rpx;
+    font-size: $font-size-base;
     line-height: 1.65;
     color: $color-text-secondary;
   }
@@ -145,7 +145,7 @@
     border-radius: 999rpx;
     background: rgba($color-surface, 0.94);
     color: $color-primary-dark;
-    font-size: 22rpx;
+    font-size: $font-size-sm;
     font-weight: 700;
   }
 
@@ -160,7 +160,7 @@
   }
 
   &__summary-label {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-primary;
     font-weight: 600;
   }
@@ -173,7 +173,7 @@
   }
 
   &__summary-note {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.55;
   }
@@ -181,11 +181,16 @@
   &__resume-button {
     @include type-brand-cta-label;
     margin-top: 12rpx;
-    min-height: 88rpx;
+    min-height: max(88rpx, $cta-min-tap);
     border-radius: 44rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary-dark;
-    font-size: 28rpx;
+    font-size: $font-size-base;
+
+    &:active {
+      filter: brightness(0.96);
+      transform: scale(0.98);
+    }
 
     &::after {
       border: none;
@@ -200,12 +205,12 @@
 
   &__section-title {
     @include type-display-section-title;
-    font-size: 30rpx;
+    font-size: $font-size-md;
     color: $color-text-primary;
   }
 
   &__section-copy {
-    font-size: 24rpx;
+    font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.55;
   }
@@ -270,20 +275,20 @@
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary-dark;
-    font-size: 20rpx;
+    font-size: $font-size-xs;
     font-weight: 700;
   }
 
   &__plan-desc {
     display: block;
-    font-size: 24rpx;
+    font-size: $font-size-base;
     color: $color-text-secondary;
   }
 
   &__plan-note {
     display: block;
     margin-top: 10rpx;
-    font-size: 22rpx;
+    font-size: $font-size-sm;
     color: $color-text-muted;
     line-height: 1.45;
   }
@@ -296,7 +301,7 @@
   }
 
   &__plan-original {
-    font-size: 22rpx;
+    font-size: $font-size-sm;
     color: $color-text-muted;
     text-decoration: line-through;
   }
@@ -309,7 +314,7 @@
   }
 
   &__error {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-error;
     padding: 0 8rpx;
   }
@@ -330,7 +335,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 24rpx;
-    font-size: 26rpx;
+    font-size: $font-size-base;
     color: $color-text-secondary;
   }
 
@@ -340,13 +345,13 @@
   }
 
   &__amount-label {
-    font-size: 26rpx;
+    font-size: $font-size-base;
     color: $color-text-secondary;
   }
 
   &__amount-value {
     @include type-en-brand-numeric;
-    font-size: 30rpx;
+    font-size: $font-size-md;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
   }
@@ -360,11 +365,17 @@
 
   &__pay-button {
     @include type-brand-cta-label;
-    min-height: 96rpx;
-    border-radius: 48rpx;
+    min-height: max(96rpx, $cta-min-tap);
+    border-radius: $button-radius;
     background: linear-gradient(135deg, #07c160 0%, #15d16f 100%);
-    color: #ffffff;
-    font-size: 32rpx;
+    color: $color-text-white;
+    font-size: $font-size-md;
+    box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.35);
+
+    &:active {
+      filter: brightness(0.92);
+      transform: scale(0.98);
+    }
 
     &::after {
       border: none;
@@ -372,7 +383,7 @@
   }
 
   &__hint {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-text-secondary;
     text-align: center;
     line-height: 1.55;

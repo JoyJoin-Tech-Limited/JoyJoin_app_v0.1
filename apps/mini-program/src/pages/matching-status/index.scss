@@ -453,8 +453,8 @@
   }
 
   &__waiting-seat-caption {
-    min-height: 24rpx;
-    font-size: 18rpx;
+    min-height: 28rpx;
+    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: $color-text-secondary;
     text-align: center;
@@ -557,7 +557,7 @@
   }
 
   &__waiting-seat-burst-text {
-    font-size: 18rpx;
+    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
   }
@@ -580,7 +580,7 @@
   }
 
   &__waiting-metric-label {
-    font-size: 18rpx;
+    font-size: $font-size-xs;
     color: $color-text-secondary;
   }
 

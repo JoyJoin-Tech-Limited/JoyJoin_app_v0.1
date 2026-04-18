@@ -252,23 +252,31 @@
   .landing-page__cta {
     @include type-brand-cta-label;
     width: 100%;
+    min-height: max(128rpx, $cta-min-tap);
     height: 128rpx;
     border-radius: 32rpx;
-    font-size: 40rpx;
-    color: white;
-    box-shadow: 0 12rpx 0 rgba(107, 91, 141, 0.36);
-    transition: all 0.075s ease-in-out;
+    font-size: $font-size-xl;
+    color: $color-text-white;
+    box-shadow: 0 12rpx 0 rgba(168, 107, 255, 0.42);
+    transition:
+      transform 0.075s ease-in-out,
+      box-shadow 0.075s ease-in-out,
+      opacity 0.075s ease-in-out;
+
+    &:active {
+      opacity: 0.94;
+    }
 
     &[disabled],
     &.landing-page__cta--disabled {
       opacity: 0.48;
-      box-shadow: 0 8rpx 0 rgba(107, 91, 141, 0.28);
+      box-shadow: 0 8rpx 0 rgba(168, 107, 255, 0.28);
     }
   }
 
   .landing-page__cta--primary {
-    background: linear-gradient(90deg, #8B5CF6, #EC4899);
-    box-shadow: 0 12rpx 0 rgba(91, 45, 160, 0.88);
+    background: $brand-gradient;
+    box-shadow: 0 12rpx 0 rgba(168, 107, 255, 0.55);
   }
 
   .landing-page__cta--login {
