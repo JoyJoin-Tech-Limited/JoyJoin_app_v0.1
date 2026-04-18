@@ -64,7 +64,8 @@ Use this skill when you are:
 
 - **Add a new user-client page**: default to `React.lazy()` unless it is part of the critical initial path.
 - **Review a long feed**: profile it, then use virtualization, pagination, or progressive disclosure before visible jank appears.
-- **Tune a mini-program collection**: use the shared thresholds reference and prefer renderer-appropriate approaches such as `VirtualList` or subpackages.
+- **Tune a mini-program collection**: use the shared thresholds reference and prefer renderer-appropriate approaches such as `VirtualList` or subpackages; deeper Taro patterns (`CustomWrapper`, setData awareness, cross-end splits) are in [`mini-program-frontend-excellence/references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md).
+- **Budget large new assets**: flag oversized rasters or SVGs per that reference’s §8 and repo scripts (e.g. `apps/mini-program/scripts/check-xiaoyue-asset-size.mjs`); align first-load and CWV expectations with `docs/perf.md` and this skill’s loading strategy.
 - **Mini-program personality flow feels heavy**: measure main-package size and target-page first-open time, split into ordinary subpackages, add `preloadRule` from the likely entry page, and revisit independent subpackages only if the measured gain is still insufficient.
 
 ## Troubleshooting
@@ -91,6 +92,7 @@ Treat that as a hypothesis, not a conclusion. Compare ordinary subpackages plus 
 - [ ] Asset prefetching is gated on real user need
 - [ ] Long-list heuristics come from the shared thresholds reference instead of copied numbers
 - [ ] Mini-program performance choices respect the Taro renderer rather than assuming DOM behavior
+- [ ] Large new mini-program assets were budgeted (see `taro-ui-framework.md` §8) and do not undermine first-load or package-size goals without an explicit tradeoff
 - [ ] Mini-program package proposals compare ordinary subpackages plus preload against independent subpackages with a real benchmark and bootstrap plan
 - [ ] The change has a concrete validation path, not only subjective performance claims
 
@@ -103,4 +105,5 @@ Treat that as a hypothesis, not a conclusion. Compare ordinary subpackages plus 
 - `apps/user-client/src/pages/DiscoverPage.tsx`
 - `apps/user-client/src/pages/MatchingStatusPage.tsx`
 - `apps/mini-program/src/pages/`
+- `.github/skills/mini-program-frontend-excellence/references/taro-ui-framework.md`
 - `scripts/test-performance-fixes.sh`

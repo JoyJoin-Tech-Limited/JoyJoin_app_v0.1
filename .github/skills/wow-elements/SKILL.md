@@ -161,6 +161,7 @@ Only when the exact same animation pattern appears in 3+ unrelated places. A `us
 ### Taro-Specific Considerations
 
 - Follow the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, prefer native components like `View`, `Text`, `Button`, and `ScrollView`, and replace CSS hover behavior with `hover-class` or pressed-state styling.
+- Premium polish must not trade scroll or tap latency for **unbounded** bitmap weight—when hero art or motion depends on heavy assets, use [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../mini-program-frontend-excellence/references/taro-ui-framework.md) §8 for budgets and remediation.
 - Keep animation-heavy routes and large media assets aware of mini-program subpackage budgets, and use `VirtualList` for long lists before adding per-item polish.
 - Favor lightweight transform and opacity effects over DOM-like choreography that depends on browser-only APIs or expensive layout work.
 

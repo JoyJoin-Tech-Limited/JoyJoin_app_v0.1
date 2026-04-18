@@ -30,6 +30,20 @@ strong_triggers:
   - improve mini-program empty state
   - improve mini-program loading state
   - WXSS interaction polish
+  - CustomWrapper
+  - VirtualList
+  - setData
+  - RichText
+  - TARO_ENV
+  - rpx
+  - BEM
+  - baseLevel
+  - postcss-pxtransform
+  - asset size
+  - WebP
+  - SVG
+  - compression
+  - package size
 
 owned_files:
   - apps/mini-program/src/components/**

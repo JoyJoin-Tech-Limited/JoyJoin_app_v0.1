@@ -6,7 +6,9 @@ Agents that persist a turn with **`record-summary`** must align the **chat-visib
 
 **Shape:** one-line header, **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line:**. Use a `!` prefix on urgent observations when appropriate.
 
-**JSON:** Same skill; include **`turnStatus`** (`ready` \| `blocked` \| `done`) when the agent ends a discrete unit of work.
+**Optional — Utilization:** When the turn involves identifiable slices of work, add a short **Utilization** block (after **Bottom Line** or before **Routing** for Supervisor) summarizing **task → agents → skills** so readers can spot coverage gaps. Mirror the optional **`utilization`** array in `record-summary` JSON (see **Utilization ledger** in the orchestration skill).
+
+**JSON:** Same skill; include **`turnStatus`** (`ready` \| `blocked` \| `done`) when the agent ends a discrete unit of work; include **`utilization`** when you can attribute tasks to agents and repo skills.
 
 **Structured deliverables:** Research briefs, execution plans, QA reports, migration notes, and similar sections remain the **primary** artifact for detail. The executive briefing is the **stakeholder-readable** layer when orchestration records the turn—map facts from the structured deliverable into the briefing sections; avoid raw jargon unless the user needs it.
 

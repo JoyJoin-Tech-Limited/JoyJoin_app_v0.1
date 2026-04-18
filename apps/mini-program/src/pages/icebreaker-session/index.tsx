@@ -6,7 +6,7 @@ import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/logger'
-import LoadingScreen from '../../components/LoadingScreen'
+import OnboardingLoadingShell from '../../components/OnboardingLoadingShell'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
@@ -526,7 +526,15 @@ export default function IcebreakerSessionPage() {
   const isBootstrapping = !!resolvedSessionId && !socialSessionId && pendingAction === 'start' && !session
 
   if (authLoading || eventSessionLoading || sessionLoading || isBootstrapping) {
-    return <LoadingScreen message='加载破冰游戏…' />
+    return (
+      <OnboardingLoadingShell
+        stepLabel='同桌游戏'
+        title='正在加入破冰会话'
+        subtitle='小悦正在对齐活动与同桌状态，马上就能开始。'
+        hint='若网络稍慢，多等几秒不会错过开场。'
+        xiaoyueExpression='loadingSystem'
+      />
+    )
   }
 
   if (!resolvedSessionId || pageError || !session) {

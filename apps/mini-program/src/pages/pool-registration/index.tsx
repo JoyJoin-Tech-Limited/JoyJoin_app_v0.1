@@ -25,6 +25,7 @@ import {
   readStoredPaymentReturnContext,
 } from '../../lib/paymentPendingOrderStorage'
 import LoadingScreen from '../../components/LoadingScreen'
+import { requestPoolMatchSubscribeMessage } from '../../lib/wechatSubscribeMessage'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
@@ -504,6 +505,10 @@ export default function PoolRegistrationPage() {
     setStep(3)
   }, [hasBudgetSelection, hasIntentSelection, step])
 
+  const handleEnableMatchNotifications = useCallback(() => {
+    void requestPoolMatchSubscribeMessage()
+  }, [])
+
   const handleBack = useCallback(() => {
     if (step === 0) {
       Taro.navigateBack()
@@ -649,6 +654,16 @@ export default function PoolRegistrationPage() {
           <Text className='pool-reg__success-text'>
             我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
           </Text>
+          <Text className='pool-reg__success-notify-hint'>
+            想在小悦帮你匹配成功时收到微信提醒？点一下授权（可在系统弹窗中选择）。
+          </Text>
+          <Button
+            variant='secondary'
+            className='pool-reg__notify-btn'
+            onClick={handleEnableMatchNotifications}
+          >
+            开启匹配结果通知
+          </Button>
           {successHighlights.length > 0 ? (
             <View className='pool-reg__success-pills'>
               {successHighlights.map((item) => (

@@ -15,7 +15,7 @@ You are the JoyJoin **Supervisor** subagent.
 
 ## Visible note (required every turn)
 
-Fill this skeleton for the **user-facing** reply unless the user explicitly asked for another shape. Full rules: `.github/skills/orchestration-turn-reporting/SKILL.md` (executive briefing + Supervisor extensions), `.github/agents/supervisor.agent.md` § Output format. Persist `supervisor_turn_report` JSON via `record-summary` when applicable; **do not** paste raw JSON into the visible note.
+Fill this skeleton for the **user-facing** reply unless the user explicitly asked for another shape. Full rules: `.github/skills/orchestration-turn-reporting/SKILL.md` (executive briefing + Supervisor extensions), `.github/agents/supervisor.agent.md` § Output format. Persist `supervisor_turn_report` JSON via `record-summary` when applicable; **do not** paste raw JSON into the visible note. When routing spans multiple slices, include **`utilization`** in JSON (task / agents / skills) and a short **Utilization** subsection in the note for gap spotting.
 
 ```text
 [One-line header — what you need to know and what we're doing next.]

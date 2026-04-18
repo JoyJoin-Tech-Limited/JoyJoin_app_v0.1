@@ -12,15 +12,15 @@ If that still fails: **Cursor → Settings** → search `subagent`, ensure the w
 
 | Location | Purpose |
 |----------|---------|
-| **`.cursor/agents/*.md`** | Cursor-native subagents (YAML frontmatter + body). |
+| **`.cursor/agents/*.md`** | Cursor-native subagents (YAML frontmatter + body). Kickoff lane: `researcher.md`, `planner.md`; routing: `supervisor.md`. |
 | **`~/.cursor/agents/*.md`** | Your personal subagents (all projects). |
 | **[`.github/agents/`](../.github/agents/)** | Full JoyJoin Copilot-style personas; use those files as the source of truth or via thin pointers here. |
 
 ## How to use
 
 1. Open **Chat** in **Agent** (Composer Agent mode).
-2. Run **`/supervisor`**, **`/verifier`**, **`/backend-engineer`**, or another `name` from a file in this folder (e.g. `.cursor/agents/supervisor.md`), or ask naturally to use that subagent.
-3. Repo-wide personas also live under `.github/agents/*.agent.md`; Cursor stubs here can point at those files (see `supervisor.md`, `backend-engineer.md`).
+2. Run **`/supervisor`**, **`/researcher`**, **`/planner`**, **`/verifier`**, **`/backend-engineer`**, or another `name` from a file in this folder (e.g. `.cursor/agents/supervisor.md`), or ask naturally to use that subagent.
+3. Repo-wide personas also live under `.github/agents/*.agent.md`; Cursor stubs here can point at those files (see `supervisor.md`, `researcher.md`, `planner.md`, `backend-engineer.md`).
 4. See [Subagents](https://cursor.com/docs/agent/subagents) for `/name`, parallel runs, and model options.
 
 ### Cursor vs Claude Code agent files
@@ -36,10 +36,17 @@ If that still fails: **Cursor → Settings** → search `subagent`, ensure the w
 
 **Token usage:** Each subagent has its **own** context and token meter; parallel subagents multiply total usage. Choosing `fast` for shallow subagents reduces **their** per-call cost; it does not change the fact that parent + child each consume tokens. See [Performance and cost](https://cursor.com/docs/agent/subagents#performance-and-cost) in Cursor’s docs.
 
+### Kickoff lane (`Researcher` → `Planner`)
+
+- **`/researcher`** → `.cursor/agents/researcher.md` → **`.github/agents/researcher.agent.md`**. Enriched stub: first-principles habits + **executive briefing** skeleton for visible notes + research brief spine.
+- **`/planner`** → `.cursor/agents/planner.md` → **`.github/agents/planner.agent.md`**. Enriched stub: five themes / constraints + **`## Model Recommendation for Execution`** + executive briefing skeleton.
+
+For **broad / unclear** work you may run **`/researcher`** then **`/planner`**, or **`/supervisor` first** (it can sequence the same when kickoff applies — see `.github/AI_WORKFLOW_POLICY.md`).
+
 ### Supervisor
 
-- Thin entry: **`/supervisor`** → `.cursor/agents/supervisor.md` → full contract in **`.github/agents/supervisor.agent.md`**.
-- For **broad / unclear** work you may **`/supervisor` first**: it can sequence **`Researcher`** → **`Planner`** when the kickoff lane applies (see `.github/AI_WORKFLOW_POLICY.md`). You can still invoke `Researcher` then `Planner` directly if you prefer. Use **`Supervisor`** again for midstream rerouting after kickoff when needed.
+- **Entry:** **`/supervisor`** → `.cursor/agents/supervisor.md` → full contract in **`.github/agents/supervisor.agent.md`**. Enriched stub: critical-path habits + **Turn status** + **Routing (pick one)** visible-note skeleton.
+- For **midstream rerouting** after kickoff, use **`/supervisor`** when the next move is coordination across specialists rather than more research/planning.
 
 ### Verifier
 

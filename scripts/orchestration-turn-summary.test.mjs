@@ -50,6 +50,18 @@ const bogus = normalizeTurnSummaryPayload(
 );
 assert.equal(bogus.turnStatus, null, 'invalid turnStatus becomes null');
 
+const withUtil = normalizeTurnSummaryPayload(
+  baseAgentPayload({
+    utilization: [
+      { task: 'API route', agents: ['Backend Engineer'], skills: ['server-domain-architecture'] },
+      { invalid: true },
+    ],
+  }),
+);
+assert.equal(withUtil.utilization.length, 1, 'drops invalid utilization rows');
+assert.equal(withUtil.utilization[0].task, 'API route', 'preserves utilization task');
+assert.deepEqual(withUtil.utilization[0].skills, ['server-domain-architecture'], 'preserves skills');
+
 const sup = normalizeTurnSummaryPayload({
   type: 'supervisor_turn_report',
   turnStatus: 'done',

@@ -86,7 +86,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 
 | Skill | What it covers |
 |-------|---------------|
-| [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` - native-quality execution, full state design, and WeChat-safe polish |
+| [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 
 ---

@@ -80,7 +80,7 @@ Bottom Line: Pause estimates until scope is firm; treat rate limits as a real ri
 
 ### Machine layer (unchanged)
 
-Continue to emit **`record-summary`** JSON (`done`, `learned`, `nextSteps`, `turnStatus`, …). Derive the briefing **from the same facts** as the JSON; do not contradict persisted fields.
+Continue to emit **`record-summary`** JSON (`done`, `learned`, `nextSteps`, `turnStatus`, optional **`utilization`**, …). Derive the briefing **from the same facts** as the JSON; do not contradict persisted fields.
 
 ### Mapping (authoring aid)
 
@@ -90,6 +90,20 @@ Continue to emit **`record-summary`** JSON (`done`, `learned`, `nextSteps`, `tur
 | Implication / Context | `blockers`, `unresolvedAssumptions`, `confidence.reason`, cross-agent context |
 | Next Step | `nextSteps` buckets, `nextTurnImprovements`, or narrative next actions |
 | Bottom Line | One-line synthesis of confidence + blockers + priority |
+| **Utilization** (optional heading in visible note) | Summarize **`utilization`** rows: which **tasks** used which **agents** and **skills**—supports gap analysis (missing skills, over-used agents) |
+
+### Utilization ledger (optional JSON; recommended when reporting)
+
+Include **`utilization`** on both `agent_turn_summary` and `supervisor_turn_report` when you can name how work broke down. This is **not** access control—only an honest ledger for analytics and **gap spotting** (e.g. “payment path touched but `payment-entitlement-authority` not listed”).
+
+- **`utilization`:** array (max **30** rows per turn after normalization) of objects:
+  - **`task`** — short label for the slice of work (e.g. “Pool API validation”, “Kickoff research brief”).
+  - **`agents`** — JoyJoin agent names that **owned or executed** that slice this turn (e.g. `Backend Engineer`, `Researcher`). Use the names from [`.github/agents/manifest.json`](../../agents/manifest.json).
+  - **`skills`** — repo skill ids from [`.github/skills/`](../) that were **actively applied** for that slice (e.g. `server-domain-architecture`, `first-principles-velocity`). Use **skill folder names**, not file paths.
+
+**Supervisor:** When consolidating multiple children, either **merge** into one row per thematic task or **list** rows per child handoff—whichever makes gaps clearer. Prefer **skills** you know were co-loaded or decisive for the task, not every skill bound to the agent.
+
+**Visible note:** Add a short **Utilization** subsection (bulleted table or compact list) when `utilization` is non-empty so humans see agent/skill coverage without opening JSON.
 
 ## Supervisor visible note (extends executive briefing)
 
@@ -153,7 +167,14 @@ Every summary JSON object should include:
     "reason": "Runtime recorder and bounded context state were both exercised"
   },
   "unresolvedAssumptions": ["Direct standalone non-execute agents still rely on caller-brokered persistence"],
-  "appliedFeedbackFrom": ["supervisor-report-4"]
+  "appliedFeedbackFrom": ["supervisor-report-4"],
+  "utilization": [
+    {
+      "task": "Implement record-summary path",
+      "agents": ["Backend Engineer"],
+      "skills": ["server-domain-architecture", "orchestration-turn-reporting"]
+    }
+  ]
 }
 ```
 
@@ -174,7 +195,19 @@ Supervisor-only additions (also include `turnStatus` when recording):
   "feedbackByAgent": {
     "Researcher": ["Tighten file scope before handing off"],
     "Supervisor": ["Prefer recorded child JSON over prose paraphrase"]
-  }
+  },
+  "utilization": [
+    {
+      "task": "Kickoff research and plan",
+      "agents": ["Researcher", "Planner"],
+      "skills": ["orchestration-turn-reporting", "first-principles-velocity", "draft-prd"]
+    },
+    {
+      "task": "Route to backend implementation",
+      "agents": ["Backend Engineer"],
+      "skills": ["server-domain-architecture"]
+    }
+  ]
 }
 ```
 
@@ -213,6 +246,7 @@ Supervisor-only additions (also include `turnStatus` when recording):
 ## Review checklist
 
 - [ ] Visible note uses **executive briefing** (header, Observation, Implication / Context, Next Step, optional Bottom Line); Supervisor adds **Turn status** + **Routing** when needed.
+- [ ] When work spans identifiable slices, **`utilization`** lists **task → agents → skills** (or explicitly note why it is empty).
 - [ ] `turnStatus` set when recording JSON; visible note matches **Ready / Blocked / Done** (Supervisor).
 - [ ] Agent summaries are truthful to the current turn only.
 - [ ] `nextTurnImprovements` contains 1-2 items, not a backlog dump.

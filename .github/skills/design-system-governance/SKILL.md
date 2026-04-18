@@ -147,6 +147,7 @@ When standardising an existing component to use the shared primitive:
 
 ### Taro-Specific Considerations
 
+- Structural layout rules, setData/list patterns, cross-end files, and asset-size discipline for `apps/mini-program` live in [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../mini-program-frontend-excellence/references/taro-ui-framework.md)—use it instead of duplicating long Taro-specific lists here.
 - Follow the [shared frontend thresholds reference](references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, and prefer native components such as `View`, `Text`, `Button`, `Input`, and `ScrollView` over DOM tags.
 - Use `hover-class` and pressed-state styling instead of CSS `:hover`, keep heavy visual assets or low-frequency routes in subpackages when they do not belong in the main launch bundle, and adopt `VirtualList` for long mini-program collections.
 

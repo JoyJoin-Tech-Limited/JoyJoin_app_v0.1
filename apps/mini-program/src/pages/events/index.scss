@@ -70,6 +70,48 @@
     &:active {
       transform: scale(0.98);
     }
+
+    &--skeleton {
+      pointer-events: none;
+      min-height: 120rpx;
+
+      &:active {
+        transform: none;
+      }
+    }
+  }
+
+  &__skeleton-line {
+    border-radius: $card-radius-sm;
+    background: linear-gradient(
+      90deg,
+      $color-divider 25%,
+      rgba($color-divider, 0.5) 50%,
+      $color-divider 75%
+    );
+    background-size: 400% 100%;
+    animation: events-skeleton-shimmer 1.5s ease-in-out infinite;
+
+    &--title {
+      width: 60%;
+      height: 36rpx;
+      margin-bottom: $spacing-sm;
+    }
+
+    &--meta {
+      width: 80%;
+      height: 28rpx;
+    }
+  }
+
+  @keyframes events-skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   &__card-header {
