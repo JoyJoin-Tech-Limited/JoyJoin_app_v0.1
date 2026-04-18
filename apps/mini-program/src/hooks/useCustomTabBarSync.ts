@@ -75,7 +75,7 @@ export function useCustomTabBarSync({
   )
 
   useDidShow(() => {
-    if (!page) {
+    if (!enabled || !page) {
       return
     }
 
@@ -84,13 +84,13 @@ export function useCustomTabBarSync({
   })
 
   useEffect(() => {
-    if (!page) {
+    if (!enabled || !page) {
       return
     }
 
     const tabBar = Taro.getTabBar<NativeCustomTabBar>(page)
     tabBar?.syncState(syncState)
-  }, [page, syncState])
+  }, [enabled, page, syncState])
 
   return {
     centerState: syncState.center,

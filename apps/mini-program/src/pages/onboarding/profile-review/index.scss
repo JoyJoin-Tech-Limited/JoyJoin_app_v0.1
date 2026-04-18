@@ -3,6 +3,7 @@
 
 .profile-review {
   @include page-gradient-bg;
+  @include onboarding-page-exit-transition;
 
   &__shell {
     box-sizing: border-box;
@@ -12,12 +13,12 @@
   }
 
   &__prelude {
+    @include onboarding-prelude;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
     border-radius: $card-radius;
     border: 2rpx solid rgba($color-primary, 0.12);
     background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.84) 100%);
-    animation: profile-review-prelude-in 0.24s ease-out forwards;
   }
 
   &__prelude-eyebrow {
@@ -32,10 +33,10 @@
   }
 
   &__prelude-title {
+    @include type-display-page-title;
     display: block;
     margin-top: $spacing-sm;
     font-size: $font-size-xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
   }
 
@@ -52,7 +53,7 @@
     transform: translateY(18rpx);
 
     &--visible {
-      animation: profile-review-stage-in 0.32s ease-out forwards;
+      @include onboarding-stage;
     }
 
     &--2.profile-review__stage--visible {
@@ -96,12 +97,16 @@
   }
 
   &__title {
+    @include type-display-page-title;
     display: block;
     margin-top: $spacing-sm;
     font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
     color: $color-text-primary;
-    line-height: 1.18;
+  }
+
+  &__title-en {
+    @include type-en-brand-label;
+    display: inline;
   }
 
   &__subtitle {
@@ -434,9 +439,9 @@
   }
 
   &__cta-title {
+    @include type-display-section-title;
     display: block;
     font-size: $font-size-md;
-    font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
 
@@ -453,33 +458,13 @@
     margin-top: $spacing-md;
     border: 0;
 
+    &.joy-button--brand {
+      @include type-brand-cta-label;
+    }
+
     &[disabled] {
       opacity: 0.55;
     }
-  }
-}
-
-@keyframes profile-review-prelude-in {
-  from {
-    opacity: 0;
-    transform: translateY(12rpx);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes profile-review-stage-in {
-  from {
-    opacity: 0;
-    transform: translateY(18rpx);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 

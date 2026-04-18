@@ -6,7 +6,7 @@ Component({
   data: {
     selected: 0,
     center: {
-      label: '去参与',
+      label: '去发现',
       showBadge: false,
       action: {
         kind: 'discover',

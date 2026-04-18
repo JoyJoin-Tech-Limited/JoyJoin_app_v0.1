@@ -1,0 +1,16 @@
+---
+description: JoyJoin workflow, policy, orchestration, and where to find PR review standards
+alwaysApply: true
+---
+
+# JoyJoin workflow (Cursor)
+
+- **Single brain with Copilot:** Policy, skills, and agents live only under `.github/` (see `.github/AI_TOOLING_UNIFIED_BRAIN.md`). This file is Cursor glue—keep it short; do not duplicate long policy here.
+- **Superpowers (Cursor plugin) + JoyJoin:** Process skills from the Superpowers plugin (brainstorming, debugging, verification, etc.) complement **JoyJoin** `.github/skills/` (domain rules) and `.github/agents/` (workflows). Use Superpowers for *how* to approach a task when applicable; use JoyJoin skills/agents for *what* is correct in this repo. See `.github/SUPERPOWERS_JOYOIN_INTEGRATION.md`.
+- Canonical contributor instructions: `.github/copilot-instructions.md`.
+- Planning policy (direct delivery vs kickoff lane): `.github/AI_WORKFLOW_POLICY.md`.
+- Orchestration graph, agent portfolio, tooling notes: `.github/ORCHESTRATION.md` and `.github/orchestration.yaml`.
+- Pull requests: use the Harness-style dimensions in `.github/copilot-instructions.md`; start reviews with `.github/skills/code-review/SKILL.md`, then load domain skills from `.github/skills/README.md` for touched areas.
+- CI runs guardrails and orchestration validation on `main` and in PRs (see `.github/workflows/cicd.yml`, `.github/workflows/orchestrate.yml`). After changing `.github/orchestration.yaml` or agents, run `npm run orchestration:validate` locally before pushing.
+- For ambiguous tasks, you may run `node scripts/skill-router.mjs "your question"` to pick a skill; routing metadata lives under `.github/skills/*/routing.yml`.
+- **Cursor hooks** (`.cursor/hooks.json`): default setup avoids `preToolUse` so Auto-Eval does not block normal agent tools. Orchestration runs on session / prompt / post-tool. Optional: `CURSOR_SESSION_AUTO_EVAL=1` for session-start Auto-Eval (slower on dirty worktrees). `JOYJOIN_AUTO_EVAL_STRICT=1` hard-denies guarded tools only if you wire `preToolUse` into `hooks.json` (see `.cursor/hooks/README.md`). Copilot hook JSON under `.github/hooks/` is unchanged.

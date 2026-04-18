@@ -21,6 +21,12 @@ Use it when a change affects:
 
 Keep this operational. These summaries are workflow state, not durable repo memory.
 
+### Skills are not auto-updated from sessions
+
+**Turn reports do not rewrite `.github/skills/`.** Iteration is **you** (or an agent acting under review) applying lessons: read the last summaries, improve the next turn, and—when something should become **durable repo guidance**—open a normal change to skills or `repo-memory/candidates/` per governance. Hooks and `record-summary` **do not** silently edit skill files to “reflect behaviour.”
+
+**Why not fully automate “agent writes skills” (e.g. like some external memory agents)?** Skill files are **contracts**: they drive routing, CI validation (`validate-skill-routing`, `orchestration:validate`), and contributor trust. Unsupervised edits risk **drift, bad triggers, and security-sensitive instructions** in-repo. **Agents may propose** skill or memory updates (draft text, candidate notes, proposals under `docs/proposals/`); **humans merge** after review per [`.github/skills/skill-authoring-governance/SKILL.md`](../skill-authoring-governance/SKILL.md). **`Supervisor`** is explicitly forbidden from autonomously editing skills (see [`.github/agents/supervisor.agent.md`](../../agents/supervisor.agent.md) constraints).
+
 ## Core rules
 
 - Record only what happened in the current turn. Do not infer files changed, decisions made, or blockers from vague recollection.
@@ -31,36 +37,93 @@ Keep this operational. These summaries are workflow state, not durable repo memo
 - Persist summaries only under `.git/.orchestration/`; never publish them to `repo-memory/`.
 - If persistence is skipped or fails, say so explicitly instead of implying the summary was recorded.
 
-## Supervisor presentation
+## Executive briefing (visible note — all agents)
 
-The Supervisor has two separate surfaces:
+Use this for the **human-facing** turn summary for **every** repo agent (Backend Engineer, Researcher, Supervisor, etc.). **Plain language, no jargon**—confident and direct, like a product lead briefing a CEO.
 
-- The canonical `supervisor_turn_report` JSON object is for persistence and runtime state.
-- The visible note shown to the user is a presentation layer.
+**Structure** (bullets only under each heading):
 
-When the Supervisor speaks to the user, the visible note should use this structure:
+1. **One-line header** — Answers: *What you need to know and what we're doing next.*
 
-What has been done:
-- [Concrete action or output delivered this turn]
-- [Concrete action or output delivered this turn]
+2. **Observation** — Facts and insights from this turn (one bullet = one idea; **scannable in under ~10 seconds**).
+3. **Implication / Context** — Why each observation matters **now** (keep **one-to-one** order with Observation rows where possible).
+4. **Next Step** — Clear action or decision that follows (aligned one-to-one where possible).
 
-Key insight: [One concise sentence stating a critical observation or implication]
+**Optional:** **Bottom Line:** one sentence — overall recommendation or outcome.
 
-Recommended next action:
-- [Immediate next action or required input]
+**Urgent items needing a decision:** prefix the **Observation** bullet with `! `.
 
-Presentation rules:
+**Sub-bullets:** only for short **options, risks, or trade-offs**—never for long explanation.
 
-- `What has been done` is mandatory.
-- `Recommended next action` is mandatory.
-- Use bullets only under `What has been done` and `Recommended next action`.
-- Keep each bullet under 15 words.
-- Use plain, everyday language for a non-technical reader.
-- Focus on outcomes and next actions, not internal implementation details.
-- Avoid jargon like schema, payload, validation, routing, or file paths unless necessary.
-- Include `Key insight` only for a non-obvious finding, surfaced constraint, or strategic implication.
-- Keep `Key insight` to one sentence.
-- If the work is fully complete, say so plainly in `Recommended next action`.
+**Example:**
+
+```text
+What you need to know and what we're doing next.
+
+Observation
+- User asked for a timeline but scope is still incomplete.
+- ! API rate limit warnings appeared twice this turn.
+- Parsed and stored 12 new requirements successfully.
+
+Implication / Context
+- Timeline estimates would be unreliable without a fixed scope.
+- May signal throttling risk if traffic grows.
+- Gives a solid base for the next planning pass.
+
+Next Step
+- Ask for three missing scope pieces before estimating dates.
+- Ask infra to watch the rate limit threshold.
+- Run a dependency check on the new requirements next turn.
+
+Bottom Line: Pause estimates until scope is firm; treat rate limits as a real risk.
+```
+
+### Machine layer (unchanged)
+
+Continue to emit **`record-summary`** JSON (`done`, `learned`, `nextSteps`, `turnStatus`, …). Derive the briefing **from the same facts** as the JSON; do not contradict persisted fields.
+
+### Mapping (authoring aid)
+
+| Briefing section | Typical JSON sources |
+| --- | --- |
+| Observation | `done`, key `decisions`, `learned`, `filesChanged` (plain descriptions) |
+| Implication / Context | `blockers`, `unresolvedAssumptions`, `confidence.reason`, cross-agent context |
+| Next Step | `nextSteps` buckets, `nextTurnImprovements`, or narrative next actions |
+| Bottom Line | One-line synthesis of confidence + blockers + priority |
+
+## Supervisor visible note (extends executive briefing)
+
+The Supervisor still uses **two surfaces**: canonical `supervisor_turn_report` JSON + presentation.
+
+1. Use the **executive briefing** sections above as the main narrative.
+2. **Immediately after the one-line header**, add **Turn status:** **Ready** \| **Blocked** \| **Done** — [one line why] (must match JSON `turnStatus`).
+3. When **multiple specialist routes** exist, add **after Bottom Line** a **Routing (pick one):** numbered list (**3–5** options when Ready), each line **Role — action** with optional **(suggested model: …)** for implementation work—same rules as [`.github/agents/supervisor.agent.md`](../../agents/supervisor.agent.md). Sub-bullets **only** for options or trade-offs.
+4. When **Turn status: Done**, omit or shorten **Routing**. When **Blocked**, prioritize the unblock path in **Next Step** and keep Routing minimal.
+
+**Persist JSON before returning control**; include **`turnStatus`** and child **`sourceSummaryIds`** on supervisor reports.
+
+### Turn status line templates (plain language)
+
+Use these as patterns; keep each status line under **20 words**.
+
+| Status | Template |
+| --- | --- |
+| **Ready** | `Turn status: Ready — [what is lined up next and why it is unblocked].` |
+| **Blocked** | `Turn status: Blocked — [single clearest blocker; what input would unblock].` |
+| **Done** | `Turn status: Done — [what completed; optional “no further steps”].` |
+
+### JSON `turnStatus` (must match the visible line)
+
+Optional on each payload; recommended for every recorded turn.
+
+- `turnStatus`: `null` | `"ready"` | `"blocked"` | `"done"` (lowercase in JSON; matches the visible **Ready / Blocked / Done**).
+- When `turnStatus` is **`done`**, prefer **empty** `nextSteps` buckets unless you intentionally track follow-ups outside this session.
+- The recorder may **warn** (stderr) if `turnStatus` is `done` but `nextSteps` still contains items—clean up before recording when possible.
+
+### Batching and routing churn
+
+- Prefer **one** turn with a **rich** summary over many tiny handoffs when the same agent could complete the slice.
+- **Supervisor** may consolidate multiple small child outcomes into **one** supervisor report for that routing episode.
 
 ## Shared schema
 
@@ -73,6 +136,7 @@ Every summary JSON object should include:
   "agentName": "Backend Engineer",
   "parentAgent": "Supervisor",
   "focusWindowTurns": 5,
+  "turnStatus": "ready",
   "done": ["Implemented record-summary command"],
   "filesChanged": ["scripts/orchestration-supervisor.mjs"],
   "decisions": ["Stored full events in events.jsonl and compact projections in context.json"],
@@ -93,11 +157,12 @@ Every summary JSON object should include:
 }
 ```
 
-Supervisor-only additions:
+Supervisor-only additions (also include `turnStatus` when recording):
 
 ```json
 {
   "type": "supervisor_turn_report",
+  "turnStatus": "ready",
   "keyBullets": [
     "Recorder path implemented and tested",
     "Every agent now follows the same turn-summary schema"
@@ -120,8 +185,8 @@ Supervisor-only additions:
 1. Read `.git/.orchestration/context.json` when available.
 2. Review your own recent summaries and any supervisor feedback addressed to your agent.
 3. Do the work.
-4. End with one compact summary JSON object.
-5. If you have execute and are responsible for persistence, call the recorder. Otherwise return the JSON for the caller to record.
+4. End with one compact summary JSON object **and** a visible note in **executive briefing** format (above).
+5. If you have execute and are responsible for persistence, call the recorder **before** handing back. Otherwise return the JSON for the caller to record.
 
 ### Supervisor turn
 
@@ -129,7 +194,7 @@ Supervisor-only additions:
 2. Persist any child summaries that were not already recorded.
 3. Build one canonical `supervisor_turn_report` JSON object with key bullets, cross-agent insights, and categorized next steps.
 4. Persist the supervisor report.
-5. Return the visible supervisor note in the required presentation format.
+5. Return the visible note: **executive briefing** + **Turn status** + **Routing (pick one)** when applicable.
 6. Use the last 5 reports and relevant child summaries to refine the next routing decision.
 
 ## Quick examples
@@ -147,6 +212,8 @@ Supervisor-only additions:
 
 ## Review checklist
 
+- [ ] Visible note uses **executive briefing** (header, Observation, Implication / Context, Next Step, optional Bottom Line); Supervisor adds **Turn status** + **Routing** when needed.
+- [ ] `turnStatus` set when recording JSON; visible note matches **Ready / Blocked / Done** (Supervisor).
 - [ ] Agent summaries are truthful to the current turn only.
 - [ ] `nextTurnImprovements` contains 1-2 items, not a backlog dump.
 - [ ] Supervisor reports cite child summary IDs instead of paraphrasing from memory.

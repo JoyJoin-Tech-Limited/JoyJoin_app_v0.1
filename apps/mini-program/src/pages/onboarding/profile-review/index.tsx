@@ -67,13 +67,15 @@ function getAgeLabel(user: Record<string, unknown> | undefined): string {
 }
 
 export default function ProfileReviewPage() {
-  const { user, isLoading } = useAuthGuard()
-  const invalidateAuth = useInvalidateAuth()
-  const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
-
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
   const [isRevealReady, setIsRevealReady] = useState(false)
+  const { user, isLoading } = useAuthGuard({
+    suspendOnboardingRedirect: isSubmitting || isPageExiting,
+  })
+  const invalidateAuth = useInvalidateAuth()
+  const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
 
   useEffect(() => {
     if (isLoading) {
@@ -192,6 +194,9 @@ export default function ProfileReviewPage() {
       ? '进入发现后，小悦会优先参考这些高热兴趣，为你推荐更像你的活动和搭子。'
       : '进入发现后，你现在确认好的资料就会先帮你筛出更合适的活动。'
   const showInterestSkeleton = shouldLoadInterests && !interestsData && (isInterestsLoading || isInterestsFetching)
+  const pageClassName = ['profile-review', isPageExiting ? 'profile-review--exiting' : '']
+    .filter(Boolean)
+    .join(' ')
 
   const handleComplete = useCallback(async () => {
     if (isSubmitting) {
@@ -218,8 +223,12 @@ export default function ProfileReviewPage() {
         nextStep: userState.nextStep,
       })
 
-      await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'replace' })
+      await navigateToMiniProgramNextStep(userState.nextStep, {
+        mode: 'replace',
+        transition: { beforeNavigate: () => setIsPageExiting(true) },
+      })
     } catch (err) {
+      setIsPageExiting(false)
       const message = err instanceof Error ? err.message : '操作失败，请重试'
       setError(message)
       analytics.errorOccurred('complete_failed', message)
@@ -250,7 +259,7 @@ export default function ProfileReviewPage() {
   }
 
   return (
-    <ScrollView className='profile-review' scrollY enhanced showScrollbar={false}>
+    <ScrollView className={pageClassName} scrollY enhanced showScrollbar={false}>
       <View className='profile-review__shell'>
         {!isRevealReady ? (
           <View className='profile-review__prelude'>
@@ -264,7 +273,9 @@ export default function ProfileReviewPage() {
 
         <View className={`profile-review__hero ${getStageClassName(1)}`}>
           <Text className='profile-review__eyebrow'>Onboarding 4 / 4</Text>
-          <Text className='profile-review__title'>你的 JoyJoin 入场卡已就绪</Text>
+          <Text className='profile-review__title'>
+            你的 <Text className='profile-review__title-en'>JoyJoin</Text> 入场卡已就绪
+          </Text>
           <Text className='profile-review__subtitle'>确认这张入场卡后，就去发现第一场适合你的局。</Text>
         </View>
 
@@ -451,6 +462,7 @@ export default function ProfileReviewPage() {
             这里不是终点，后续都可以在「我的」里继续补充或修改资料。
           </Text>
           <Button
+            variant='brand'
             className='profile-review__submit'
             onClick={handleComplete}
             disabled={isSubmitting}

@@ -2,6 +2,8 @@ import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState } from "react"
 import Button from "../../components/Button"
+import { getXiaoyueExpressionAsset } from "../../lib/xiaoyueExpressions"
+import { runMiniProgramRouteTransition } from "../../lib/onboardingNavigation"
 import "./index.scss"
 
 type LandingHeroKey = "match" | "dinner" | "continue"
@@ -14,6 +16,7 @@ const heroFallbackSources: Record<LandingHeroKey, string> = {
 
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
+  const [isPageExiting, setIsPageExiting] = useState(false)
   const [heroSources, setHeroSources] = useState<Record<LandingHeroKey, string>>({
     match: "/assets/match.webp",
     dinner: "/assets/dinner.webp",
@@ -21,13 +24,26 @@ export default function MiniProgramLandingPage() {
   })
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
+  const pageClassName = ["landing-page", isPageExiting ? "landing-page--exiting" : ""]
+    .filter(Boolean)
+    .join(" ")
 
   const navigateWithLegalGate = (url: string) => {
     if (!hasAcceptedLegal) {
       return
     }
 
-    void Taro.navigateTo({ url })
+    void (async () => {
+      try {
+        await runMiniProgramRouteTransition({
+          beforeNavigate: () => setIsPageExiting(true),
+          delayMs: 180,
+        })
+        await Taro.navigateTo({ url })
+      } catch {
+        setIsPageExiting(false)
+      }
+    })()
   }
 
   const handleHeroError = (key: LandingHeroKey) => {
@@ -44,10 +60,10 @@ export default function MiniProgramLandingPage() {
   }
 
   return (
-    <View className="landing-page">
+    <View className={pageClassName}>
       <View className="content-zone">
         <View className="logo-container">
-          <View className="logo-bg"></View>
+          <View className="logo-aura"></View>
           <Image src="/assets/box_logo_archetypes.png" className="logo-img" mode="aspectFit" />
         </View>
 
@@ -108,11 +124,21 @@ export default function MiniProgramLandingPage() {
               </View>
             ))}
           </View>
+
+          <View className="landing-page__xiaoyue-wrap">
+            <Image
+              className="landing-page__xiaoyue"
+              src={getXiaoyueExpressionAsset("homeWelcome")}
+              mode="aspectFit"
+            />
+            <Text className="landing-page__xiaoyue-caption">小悦在这等你</Text>
+          </View>
         </View>
       </View>
 
       <View className="bottom-zone">
         <Button
+          variant="brand"
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           disabled={!hasAcceptedLegal}
@@ -122,6 +148,7 @@ export default function MiniProgramLandingPage() {
         </Button>
 
         <Button
+          variant="brand"
           className={"landing-page__cta landing-page__cta--login" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           disabled={!hasAcceptedLegal}

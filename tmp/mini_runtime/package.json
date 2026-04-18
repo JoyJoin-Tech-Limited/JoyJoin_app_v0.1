@@ -1,0 +1,8 @@
+{
+  "name": "joyjoin-mini-runtime-smoke",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "miniprogram-automator": "^0.12.1"
+  }
+}

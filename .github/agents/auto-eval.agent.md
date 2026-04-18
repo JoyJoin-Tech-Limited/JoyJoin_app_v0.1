@@ -35,9 +35,15 @@ Your job is to evaluate the current dirty worktree using the repo's deterministi
 
 ## Output format
 
+### Structured deliverable
+
 Return a concise evaluation note with:
 
 1. Verdict
 2. Fingerprint scope
 3. Blocking module or warning source
 4. Top findings
+
+### Turn visible note (orchestration)
+
+When this turn is persisted with **`record-summary`**, follow the **executive briefing** in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md) and [`AGENT_TURN_VISIBLE_FORMAT.md`](./AGENT_TURN_VISIBLE_FORMAT.md). Map the structured deliverable above into the briefing sections; include **`turnStatus`** in JSON when applicable.
