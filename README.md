@@ -14,7 +14,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 │   └── shared/          # @joyjoin/shared — internal shared library
 ├── scripts/             # Repo-wide tooling scripts (guardrails, migration helpers)
 ├── docs/                # Architecture and feature documentation
-├── deployment/          # Docker / Caddy deployment configs
+├── deployment/          # Docker / Nginx deployment configs
 ├── tsconfig.base.json   # Shared TypeScript compiler options (extended by all workspaces)
 └── tsconfig.json        # Solution-style TypeScript references file (root typecheck)
 ```

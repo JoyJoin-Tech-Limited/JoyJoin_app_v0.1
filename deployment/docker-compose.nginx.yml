@@ -1,0 +1,34 @@
+services:
+  joyjoin-api:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    container_name: joyjoin-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+    ports:
+      - "127.0.0.1:5000:5000"
+
+  joyjoin-user:
+    build:
+      context: ..
+      dockerfile: apps/user-client/Dockerfile
+      args:
+        VITE_API_URL: https://api.yuejuapp.com
+    container_name: joyjoin-user
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:80"
+
+  joyjoin-admin:
+    build:
+      context: ..
+      dockerfile: apps/admin-client/Dockerfile
+    container_name: joyjoin-admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:80"
