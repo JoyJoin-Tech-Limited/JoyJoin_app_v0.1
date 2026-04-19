@@ -472,8 +472,8 @@
         "joyjoin-brand-guidelines",
         "wow-elements",
         "platform-coordination-protocol",
-        "performance-benchmark"
-        "frontend-performance-and-loading",
+        "performance-benchmark",
+        "frontend-performance-and-loading"
       ],
       "toolingStatus": "sufficient"
     },
