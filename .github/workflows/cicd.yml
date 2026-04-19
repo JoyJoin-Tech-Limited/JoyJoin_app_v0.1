@@ -218,7 +218,14 @@ jobs:
             # --- 2) Restart containers ---
             echo "🐳 Restarting containers..."
             cd ~/JoyJoin/deployment
-            docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans
+            docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+
+            echo "🌐 Syncing and reloading host Nginx config..."
+            sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
+            sudo nginx -t
+            sudo systemctl reload nginx
+            echo "🔎 Active Nginx joyjoin.conf markers..."
+            sudo awk 'NR<=120{print}' /etc/nginx/conf.d/joyjoin.conf | sed -n '/X-JoyJoin-Edge/p;/X-JoyJoin-Proxy/p;/upstream joyjoin_api/,/}/p'
 
             # --- 3) DB Sync (same DATABASE_URL as API) ---
             echo "🗄️ Syncing database schema..."
@@ -262,15 +269,30 @@ jobs:
             sleep 10
 
             echo "   Checking internal API..."
-            curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5000/api/health > /dev/null \
-              || (echo "❌ API Failed" && docker logs joyjoin-api --tail 120 && exit 1)
+            if ! curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5000/api/health > /dev/null; then
+              curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5001/api/health > /dev/null \
+                || (echo "❌ API Failed on 5000/5001" && docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && docker logs joyjoin-api --tail 120 && exit 1)
+            fi
 
-            echo "   Checking Caddy..."
-            if [ "$(docker inspect -f '{{.State.Running}}' joyjoin-caddy 2>/dev/null || echo false)" != "true" ]; then
-              echo "❌ Caddy is NOT running."
-              docker logs joyjoin-caddy --tail 80 || true
+            echo "   Checking Nginx-routed health endpoint..."
+            if ! curl -s --retry 5 --retry-delay 3 -H "Host: 129.226.61.77" http://127.0.0.1/api/health > /dev/null; then
+              echo "❌ Nginx route check failed: http://127.0.0.1/api/health"
+              echo "📋 Socket listeners (80/443/5000/5001):"
+              ss -ltnp | rg ':80|:443|:5000|:5001' || true
+              echo "📋 Container status:"
+              docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+              echo "📋 API port bindings:"
+              docker inspect joyjoin-api --format '{{json .NetworkSettings.Ports}}' || true
+              echo "📋 Local direct probes:"
+              curl -sSI http://127.0.0.1:5000/api/health || true
+              curl -sSI http://127.0.0.1:5001/api/health || true
+              echo "📋 Container logs:"
+              docker logs joyjoin-nginx --tail 120 || true
+              docker logs joyjoin-api --tail 120 || true
               exit 1
             fi
+            echo "   Nginx route response headers:"
+            curl -sSI -H "Host: 129.226.61.77" http://127.0.0.1/api/health || true
 
             # --- 5) Post-deploy cleanup ---
             soft_cleanup

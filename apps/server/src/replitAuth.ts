@@ -42,7 +42,7 @@ export function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    proxy: isProduction, // Trust proxy only in production (Caddy)
+    proxy: isProduction, // Trust proxy only in production (Nginx / HTTPS reverse proxy)
     cookie: {
       httpOnly: true,
       secure: isProduction, // true for HTTPS in production, false for HTTP in dev

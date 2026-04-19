@@ -142,7 +142,7 @@ Refunds are audit-logged (`PAYMENT_REFUND_INITIATED`) with `paymentId` and `reas
 
 **Checklist:**
 1. Check that the **admin-client** build is deployed (`apps/admin-client/dist/`).
-2. Verify the Caddy reverse proxy is routing `admin.yuejuapp.com` correctly (separate deployment from the user client).
+2. Verify the Nginx reverse proxy is routing `admin.yuejuapp.com` correctly (separate deployment from the user client).
 3. Check server liveness: `GET /api/health` should return `200`. If the symptom looks DB/session-related, check `GET /api/readyz` too; a `503` there points to dependency/config failure while the process is still up.
 4. Check browser console for CORS or 5xx errors.
 5. Verify the session store (PostgreSQL connect-pg-simple) is reachable — a DB outage will break session reads.

@@ -7,10 +7,10 @@
 1. GitHub Actions 触发生产流水线
 2. 通过 SSH 连接远程应用服务器（`SERVER_IP` / `SERVER_USER`）
 3. 在远程服务器的 `~/JoyJoin` 目录执行代码同步
-4. 在 `~/JoyJoin/deployment` 下运行 `docker compose -f docker-compose.caddy.yml up -d --build --remove-orphans`
-5. 由 `Caddyfile` 统一处理 HTTPS、域名入口和反向代理
+4. 在 `~/JoyJoin/deployment` 下运行 `docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans`
+5. 由宿主机 `Nginx`（配置见 `deployment/nginx/joyjoin.conf`）统一处理 HTTPS、域名入口和反向代理
 
-> 结论：当前运行时是**自管远程服务器 + Docker Compose + Caddy**。
+> 结论：当前运行时是**自管远程服务器 + Docker Compose + Nginx**。
 
 ---
 
@@ -19,16 +19,16 @@
 ```text
 GitHub Actions
   └─ SSH 到远程服务器
-       └─ cd ~/JoyJoin/deployment && docker compose -f docker-compose.caddy.yml up -d --build
-            ├─ joyjoin-caddy   (80/443, HTTPS 与反向代理)
-            ├─ joyjoin-user    (用户端静态站点)
-            ├─ joyjoin-admin   (管理后台静态站点)
-            └─ joyjoin-api     (Node.js API, 5000)
+       └─ cd ~/JoyJoin/deployment && docker compose -f docker-compose.nginx.yml up -d --build
+            ├─ host nginx      (80/443, HTTPS 与反向代理)
+            ├─ joyjoin-user    (用户端静态站点, 127.0.0.1:3000)
+            ├─ joyjoin-admin   (管理后台静态站点, 127.0.0.1:3001)
+            └─ joyjoin-api     (Node.js API, 127.0.0.1:5000)
 
 公网域名
-  ├─ yuejuapp.com / www.yuejuapp.com  -> Caddy -> joyjoin-user
-  ├─ admin.yuejuapp.com               -> Caddy -> joyjoin-admin
-  └─ api.yuejuapp.com                 -> Caddy -> joyjoin-api
+  ├─ yuejuapp.com / www.yuejuapp.com  -> Nginx -> joyjoin-user
+  ├─ admin.yuejuapp.com               -> Nginx -> joyjoin-admin
+  └─ api.yuejuapp.com                 -> Nginx -> joyjoin-api
 
 数据库
   └─ DATABASE_URL -> 外部 PostgreSQL
@@ -39,8 +39,8 @@ GitHub Actions
 ## 仓库里哪些文件是当前权威来源
 
 - 生产部署流水线：`.github/workflows/cicd.yml`
-- 运行时编排：`deployment/docker-compose.caddy.yml`
-- 网关与域名：`deployment/Caddyfile`
+- 运行时编排：`deployment/docker-compose.nginx.yml`
+- 网关与域名：`deployment/nginx/joyjoin.conf`
 - 生产环境变量模板：`deployment/.env.production.example`
 
 如果这些文件与其他旧文档冲突，以这里列出的文件为准。
@@ -60,7 +60,6 @@ GitHub Actions
 
 当前 Compose 文件会启动这些服务：
 
-- `joyjoin-caddy`
 - `joyjoin-api`
 - `joyjoin-user`
 - `joyjoin-admin`
@@ -74,7 +73,7 @@ GitHub Actions
 ### 当前状态
 
 - 应用通过 `DATABASE_URL` 连接 PostgreSQL
-- `deployment/docker-compose.caddy.yml` 中没有 `postgres` 服务
+- `deployment/docker-compose.nginx.yml` 中没有 `postgres` 服务
 - 仓库中没有远程服务器本地 PostgreSQL 的编排、备份、迁移或端口暴露配置
 
 ### 这意味着什么
@@ -120,7 +119,7 @@ admin.yuejuapp.com
 api.yuejuapp.com
 ```
 
-`deployment/Caddyfile` 负责：
+`deployment/nginx/joyjoin.conf` 负责：
 
 - 自动 HTTPS
 - HTTP -> HTTPS 跳转
@@ -162,7 +161,7 @@ cp deployment/.env.production.example deployment/.env.production
 ./deployment/scripts/deploy.sh production
 ```
 
-该脚本现在对齐当前的自管服务器部署方式：使用现有 Docker Compose + Caddy，并直接读取 `deployment/.env.production`。当前脚本只支持 `production`，因为现有 Compose 文件、域名和 `env_file` 都绑定到生产拓扑。
+该脚本现在对齐当前的自管服务器部署方式：使用现有 Docker Compose + Nginx，并直接读取 `deployment/.env.production`。当前脚本只支持 `production`，因为现有 Compose 文件、域名和 `env_file` 都绑定到生产拓扑。
 
 ---
 
@@ -171,7 +170,8 @@ cp deployment/.env.production.example deployment/.env.production
 ```bash
 curl -fsS http://127.0.0.1:5000/api/health
 docker logs joyjoin-api --tail 120
-docker logs joyjoin-caddy --tail 80
+sudo nginx -t
+sudo systemctl reload nginx
 docker ps
 ```
 

@@ -143,4 +143,18 @@ describe("validateConfig", () => {
     process.env.DATABASE_URL = "mysql://invalid";
     expect(() => validateConfig()).toThrow("process.exit(1)");
   });
+
+  it("does not exit in production when fatal issues exist but exitOnFatal is disabled", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.DATABASE_URL;
+
+    const result = validateConfig({ exitOnFatal: false });
+
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("DATABASE_URL is not set"),
+      ]),
+    );
+  });
 });

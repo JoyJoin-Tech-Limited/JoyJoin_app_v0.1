@@ -6,10 +6,35 @@ import { wrapDb } from "./db_proxy";
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set. Please check your environment variables.");
+const DATABASE_URL_MISSING_MESSAGE =
+  "DATABASE_URL must be set. Please check your environment variables.";
+
+type WrappedDb = ReturnType<typeof wrapDb>;
+
+function createUnavailableDb(): WrappedDb {
+  const throwUnavailable = () => {
+    throw new Error(DATABASE_URL_MISSING_MESSAGE);
+  };
+
+  return new Proxy({} as WrappedDb, {
+    get(_target, prop) {
+      if (prop === Symbol.toStringTag) {
+        return "UnavailableDb";
+      }
+
+      return throwUnavailable;
+    },
+  });
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const _db = drizzle(pool, { schema });
-export const db = wrapDb(_db);
+const databaseUrl = process.env.DATABASE_URL?.trim();
+
+export const pool = databaseUrl
+  ? new Pool({ connectionString: databaseUrl })
+  : null;
+
+const wrappedDb = pool
+  ? wrapDb(drizzle(pool, { schema }))
+  : null;
+
+export const db: WrappedDb = wrappedDb ?? createUnavailableDb();
