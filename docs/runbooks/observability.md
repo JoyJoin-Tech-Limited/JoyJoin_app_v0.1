@@ -66,14 +66,14 @@ Each line should be valid JSON:
 
 > **Important:** the current Promtail configuration uses `docker_sd_configs`, so
 > Loki ingestion verification requires the JoyJoin API to be running in Docker
-> (for example via `deployment/docker-compose.caddy.yml`, where the backend
+> (for example via `deployment/docker-compose.nginx.yml`, where the backend
 > container is `joyjoin-api`). A host-run `node ... apps/server/src/index.ts`
 > process will not be discovered by Promtail.
 
 ```bash
 # Start the deployed stack (or at minimum the API container) so Promtail can
 # discover Docker logs from `joyjoin-api`.
-docker compose -f deployment/docker-compose.caddy.yml up -d api
+docker compose -f deployment/docker-compose.nginx.yml up -d api
 
 curl http://localhost:9080/targets | python3 -m json.tool | grep joyjoin
 ```

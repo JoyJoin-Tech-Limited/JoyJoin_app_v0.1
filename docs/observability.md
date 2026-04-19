@@ -130,7 +130,7 @@ Set `LOG_LEVEL=debug` in `.env` to enable debug output.
 
 The `requestIdMiddleware` (mounted first in `index.ts`) attaches a UUID to every
 incoming request as `req.requestId` and echoes it in the `X-Request-Id` response
-header.  Upstream proxies (Caddy, Nginx, ALB) can propagate their own trace ID
+header. Upstream proxies (Nginx, ALB) can propagate their own trace ID
 by setting the `X-Request-Id` request header.
 
 To filter all log lines for a single request in Loki:
