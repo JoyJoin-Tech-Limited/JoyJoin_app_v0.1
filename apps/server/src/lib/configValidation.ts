@@ -209,12 +209,18 @@ export function getReadinessConfigErrors(
   );
 }
 
+interface ValidateConfigOptions {
+  exitOnFatal?: boolean;
+}
+
 /**
  * Validate all config specifications.
  * In non-production environments, missing REQUIRED vars are warnings (not fatal).
  * In production, missing REQUIRED vars cause process.exit(1).
  */
-export function validateConfig(): void {
+export function validateConfig(
+  options?: ValidateConfigOptions,
+): ConfigIssueBuckets {
   const env = process.env;
   const nodeEnv = env.NODE_ENV ?? "development";
   const isProduction = nodeEnv === "production";
@@ -236,7 +242,13 @@ export function validateConfig(): void {
     console.error(
       "\n  Set these environment variables and restart. See docs/LAUNCH_CONFIG.md for details.\n"
     );
-    process.exit(1);
+    if (options?.exitOnFatal ?? true) {
+      process.exit(1);
+    }
+
+    console.error(
+      "[config] Continuing startup so /api/health stays reachable; /api/readyz will report not_ready until config is fixed.\n"
+    );
   }
 
   if (warnings.length > 0 && !isProduction) {
@@ -245,4 +257,6 @@ export function validateConfig(): void {
         "This may cause feature degradation. See docs/LAUNCH_CONFIG.md.\n"
     );
   }
+
+  return { errors, warnings };
 }

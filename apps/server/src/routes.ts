@@ -325,11 +325,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    proxy: isProduction, // Required for secure cookies behind Caddy proxy
+    proxy: isProduction, // Required for secure cookies behind an HTTPS reverse proxy
     cookie: {
       domain: cookieDomain, // '.yuejuapp.com' enables sharing across api/admin/www subdomains
       httpOnly: true,
-      secure: isProduction, // true when Caddy provides HTTPS
+      secure: isProduction, // true when Nginx provides HTTPS
       maxAge: sessionTtl,
       sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-subdomain in production
     },

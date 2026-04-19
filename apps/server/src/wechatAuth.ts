@@ -558,7 +558,7 @@ export function setupWechatAuth(app: Express) {
    */
   app.get("/api/auth/wechat/oauth/start", (req: Request, res) => {
     // APP_URL is the public-facing origin of the app (e.g. https://yuejuapp.com).
-    // The Caddy reverse proxy routes /api/* from this same origin to the backend
+    // The Nginx reverse proxy routes /api/* from this same origin to the backend
     // (path-based, not subdomain), so a single variable covers both the WeChat OAuth2
     // redirect_uri AND the post-login redirect target.
     const appUrl = (process.env.APP_URL ?? "http://localhost:5173").replace(/\/$/, "");

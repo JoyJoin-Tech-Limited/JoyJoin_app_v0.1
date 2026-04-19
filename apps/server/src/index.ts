@@ -11,8 +11,8 @@ import { logger } from "./lib/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { metricsMiddleware } from "./middleware/metrics";
 
-// Validate required configuration early — exits in production if critical vars are missing
-validateConfig();
+// Keep liveness reachable even when config is incomplete; readiness reports the failure.
+validateConfig({ exitOnFatal: false });
 
 const app = express();
 

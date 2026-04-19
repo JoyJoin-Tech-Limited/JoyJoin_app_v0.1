@@ -45,6 +45,7 @@ export async function evaluateReadiness(
 
 export function registerHealthRoutes(app: Express): void {
   app.get("/api/health", (_req, res) => {
+    res.setHeader("X-JoyJoin-API", "health-route");
     res.status(200).json({
       status: "ok",
       timestamp: new Date().toISOString(),
