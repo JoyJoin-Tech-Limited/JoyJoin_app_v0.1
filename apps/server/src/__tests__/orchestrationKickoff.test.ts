@@ -261,78 +261,6 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(path.join(REPO_ROOT, relativePath), 'utf8');
 }
 
-function parseRepoJsonFile<T>(relativePath: string): T {
-  const raw = readRepoFile(relativePath);
-  const hypothesisId =
-    relativePath === '.github/agents/manifest.json'
-      ? 'A'
-      : relativePath === '.github/orchestration.yaml'
-        ? 'B'
-        : relativePath === '.vscode/settings.json'
-          ? 'D'
-          : 'C';
-
-  try {
-    const parsed = JSON.parse(raw) as T;
-    const topLevelKeys =
-      parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-        ? Object.keys(parsed as Record<string, unknown>).slice(0, 8)
-        : [];
-
-    // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/caaa0f5a-74d6-4da5-9594-cc377f96bc32', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '670616' },
-      body: JSON.stringify({
-        sessionId: '670616',
-        runId: 'initial-debug',
-        hypothesisId,
-        location: 'apps/server/src/__tests__/orchestrationKickoff.test.ts:274',
-        message: 'Parsed repo JSON-compatible file',
-        data: {
-          relativePath,
-          length: raw.length,
-          topLevelKeys,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    return parsed;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const positionMatch = errorMessage.match(/position (\d+)/);
-    const position = positionMatch ? Number(positionMatch[1]) : null;
-    const excerptStart = position === null ? 0 : Math.max(0, position - 80);
-    const excerptEnd = position === null ? Math.min(raw.length, 160) : Math.min(raw.length, position + 80);
-
-    // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/caaa0f5a-74d6-4da5-9594-cc377f96bc32', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '670616' },
-      body: JSON.stringify({
-        sessionId: '670616',
-        runId: 'initial-debug',
-        hypothesisId,
-        location: 'apps/server/src/__tests__/orchestrationKickoff.test.ts:300',
-        message: 'Failed to parse repo JSON-compatible file',
-        data: {
-          relativePath,
-          length: raw.length,
-          position,
-          excerpt: raw.slice(excerptStart, excerptEnd),
-          errorMessage,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    throw error;
-  }
-}
-
 function parseFrontmatterArray(source: string, fieldName: string): string[] {
   const frontmatterMatch = source.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!frontmatterMatch) {
@@ -490,13 +418,13 @@ function clearTestMemoryLifecycleFiles() {
 
 describe('orchestration kickoff lane', () => {
   it('registers Researcher and Planner in both machine-readable registries', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{ name: string }>;
-    }>('.github/agents/manifest.json');
-    const orchestration = parseRepoJsonFile<{
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
       portfolio_scope: { kickoff_agents: string[] };
       agent_bindings: Record<string, { orchestration_status: string }>;
-    }>('.github/orchestration.yaml');
+    };
 
     expect(manifest.agents.some((agent) => agent.name === 'Researcher')).toBe(true);
     expect(manifest.agents.some((agent) => agent.name === 'Planner')).toBe(true);
@@ -531,7 +459,7 @@ describe('orchestration kickoff lane', () => {
 
 describe('orchestration supervisor routing boundaries', () => {
   it('keeps frontend delivery in audited support while making Supervisor core and support exits explicit', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
         subagents?: string[];
@@ -540,8 +468,8 @@ describe('orchestration supervisor routing boundaries', () => {
         orchestrationPhase?: string;
         toolingStatus?: string;
       }>;
-    }>('.github/agents/manifest.json');
-    const orchestration = parseRepoJsonFile<{
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
       portfolio_scope: {
         orchestrated_agents: string[];
         audited_agents: string[];
@@ -557,31 +485,12 @@ describe('orchestration supervisor routing boundaries', () => {
           };
         }
       >;
-    }>('.github/orchestration.yaml');
+    };
 
     const supervisor = manifest.agents.find((agent) => agent.name === 'Supervisor');
     const expertFrontendEngineer = manifest.agents.find((agent) => agent.name === 'Expert React Frontend Engineer');
     const supervisorSource = readRepoFile('.github/agents/supervisor.agent.md');
     const expertFrontendEngineerSource = readRepoFile('.github/agents/frontend engineer.md');
-
-    // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/caaa0f5a-74d6-4da5-9594-cc377f96bc32', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '670616' },
-      body: JSON.stringify({
-        sessionId: '670616',
-        runId: 'expectation-debug',
-        hypothesisId: 'F',
-        location: 'apps/server/src/__tests__/orchestrationKickoff.test.ts:566',
-        message: 'Supervisor routing arrays',
-        data: {
-          subagents: supervisor?.subagents ?? [],
-          handoffs: supervisor?.handoffs ?? [],
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     expect(orchestration.portfolio_scope.orchestrated_agents).toEqual([
       'Supervisor',
@@ -671,15 +580,15 @@ describe('orchestration supervisor routing boundaries', () => {
   });
 
   it('normalizes debug and principal support agents to the current tool taxonomy', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
         tools?: string[];
         orchestrationPhase?: string;
         toolingStatus?: string;
       }>;
-    }>('.github/agents/manifest.json');
-    const orchestration = parseRepoJsonFile<{
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
       agent_bindings: Record<
         string,
         {
@@ -690,7 +599,7 @@ describe('orchestration supervisor routing boundaries', () => {
           };
         }
       >;
-    }>('.github/orchestration.yaml');
+    };
 
     const debugAgent = manifest.agents.find((agent) => agent.name === 'debug');
     const principalAgent = manifest.agents.find((agent) => agent.name === 'Principal Software Engineer');
@@ -727,7 +636,7 @@ describe('orchestration supervisor routing boundaries', () => {
   });
 
   it('re-scopes backlog and prompt support agents to truthful normalized tool surfaces', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
         tools?: string[];
@@ -735,8 +644,8 @@ describe('orchestration supervisor routing boundaries', () => {
         toolingStatus?: string;
         portfolioRole?: string;
       }>;
-    }>('.github/agents/manifest.json');
-    const orchestration = parseRepoJsonFile<{
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
       agent_bindings: Record<
         string,
         {
@@ -748,7 +657,7 @@ describe('orchestration supervisor routing boundaries', () => {
           };
         }
       >;
-    }>('.github/orchestration.yaml');
+    };
 
     const productAdvisor = manifest.agents.find((agent) => agent.name === 'SE: Product Manager');
     const promptEngineer = manifest.agents.find((agent) => agent.name === 'Prompt Engineer');
@@ -787,12 +696,12 @@ describe('orchestration supervisor routing boundaries', () => {
   });
 
   it('treats the agent inventory as the machine-readable source of truth for subagent allowlists', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
         subagents?: string[];
       }>;
-    }>('.github/agents/manifest.json');
+    };
 
     const planner = manifest.agents.find((agent) => agent.name === 'Planner');
     const taroMiniProgramEngineer = manifest.agents.find(
@@ -818,13 +727,13 @@ describe('orchestration supervisor routing boundaries', () => {
   });
 
   it('enables nested subagent invocation for authored second-level delegation', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
         subagents?: string[];
       }>;
-    }>('.github/agents/manifest.json');
-    const settings = parseRepoJsonFile<Record<string, unknown>>('.vscode/settings.json');
+    };
+    const settings = JSON.parse(readRepoFile('.vscode/settings.json')) as Record<string, unknown>;
 
     const nestedDelegationAgents = manifest.agents
       .filter((agent) => Array.isArray(agent.subagents) && agent.subagents.length > 0)
@@ -842,7 +751,7 @@ describe('orchestration supervisor routing boundaries', () => {
   });
 
   it('registers Workflow Governance Reviewer as a proposal-only audited support agent', () => {
-    const manifest = parseRepoJsonFile<{
+    const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
       agents: Array<{
         name: string;
         file?: string;
@@ -852,8 +761,8 @@ describe('orchestration supervisor routing boundaries', () => {
         portfolioRole?: string;
         skills?: string[];
       }>;
-    }>('.github/agents/manifest.json');
-    const orchestration = parseRepoJsonFile<{
+    };
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as {
       portfolio_scope: {
         orchestrated_agents: string[];
         audited_agents: string[];
@@ -871,33 +780,13 @@ describe('orchestration supervisor routing boundaries', () => {
         }
       >;
       skill_bindings: Record<string, string[]>;
-    }>('.github/orchestration.yaml');
+    };
 
     const workflowGovernanceReviewer = manifest.agents.find(
       (agent) => agent.name === 'Workflow Governance Reviewer'
     );
     const selfIterationSource = readRepoFile('.github/agents/self-iteration.agent.md');
     const selfIterationDoc = readRepoFile('docs/agents/SelfIteration.md');
-
-    // #region agent log
-    fetch('http://127.0.0.1:7467/ingest/caaa0f5a-74d6-4da5-9594-cc377f96bc32', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '670616' },
-      body: JSON.stringify({
-        sessionId: '670616',
-        runId: 'expectation-debug',
-        hypothesisId: 'G',
-        location: 'apps/server/src/__tests__/orchestrationKickoff.test.ts:860',
-        message: 'Workflow Governance Reviewer manifest entry',
-        data: {
-          skills: workflowGovernanceReviewer?.skills ?? [],
-          toolingStatus: workflowGovernanceReviewer?.toolingStatus ?? null,
-          orchestrationPhase: workflowGovernanceReviewer?.orchestrationPhase ?? null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
 
     expect(workflowGovernanceReviewer).toMatchObject({
       file: 'self-iteration.agent.md',
@@ -931,7 +820,7 @@ describe('orchestration supervisor routing boundaries', () => {
   });
 
   it('rejects unknown skill bindings and advisory step skills during orchestration validation', () => {
-    const orchestration = parseRepoJsonFile<Record<string, unknown>>('.github/orchestration.yaml');
+    const orchestration = JSON.parse(readRepoFile('.github/orchestration.yaml')) as Record<string, unknown>;
     const manifestWithUnknownSkillBinding = structuredClone(orchestration) as {
       skill_bindings: Record<string, string[]>;
     };

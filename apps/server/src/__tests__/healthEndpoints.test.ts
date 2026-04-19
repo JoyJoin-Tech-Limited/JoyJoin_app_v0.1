@@ -79,7 +79,7 @@ describe("GET /api/readyz", () => {
     delete process.env.WECHAT_PAY_PLATFORM_CERT;
     process.env.DATABASE_URL = "postgresql://test";
     process.env.SESSION_SECRET = "a".repeat(32);
-    process.env.WECHAT_APPID = "wx123";
+    process.env.WECHAT_APPID = "wx1234567890abcdef";
     process.env.WECHAT_SECRET = "secret";
   });
 
