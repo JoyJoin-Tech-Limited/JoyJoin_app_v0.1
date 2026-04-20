@@ -216,11 +216,32 @@ jobs:
             git reset --hard origin/main
 
             # --- 2) Restart containers ---
+            echo "🐳 Removing stale joyjoin-api container if present..."
+            docker rm -f joyjoin-api || true
             echo "🐳 Restarting containers..."
             cd ~/JoyJoin/deployment
             docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
             echo "🌐 Syncing and reloading host Nginx config..."
+            REQUIRED_TLS_FILES=(
+              /etc/letsencrypt/live/yuejuapp.com/fullchain.pem
+              /etc/letsencrypt/live/yuejuapp.com/privkey.pem
+              /etc/letsencrypt/live/admin.yuejuapp.com/fullchain.pem
+              /etc/letsencrypt/live/admin.yuejuapp.com/privkey.pem
+              /etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem
+              /etc/letsencrypt/live/api.yuejuapp.com/privkey.pem
+            )
+            missing_tls=0
+            for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
+              if ! sudo test -r "$tls_file"; then
+                echo "❌ Missing required TLS certificate file: $tls_file"
+                missing_tls=1
+              fi
+            done
+            if [ "$missing_tls" -ne 0 ]; then
+              echo "❌ Aborting deploy before nginx reload. Provision the Let's Encrypt certificates on the host first."
+              exit 1
+            fi
             sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
             sudo nginx -t
             sudo systemctl reload nginx
