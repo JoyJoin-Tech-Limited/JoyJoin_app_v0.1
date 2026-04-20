@@ -35,8 +35,35 @@ echo "🚀 Deploying JoyJoin via self-managed Docker Compose + Nginx ($ENVIRONME
 echo "📦 Repo root: $REPO_ROOT"
 echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
 
+REQUIRED_TLS_FILES=(
+    "/etc/letsencrypt/live/yuejuapp.com/fullchain.pem"
+    "/etc/letsencrypt/live/yuejuapp.com/privkey.pem"
+    "/etc/letsencrypt/live/admin.yuejuapp.com/fullchain.pem"
+    "/etc/letsencrypt/live/admin.yuejuapp.com/privkey.pem"
+    "/etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem"
+    "/etc/letsencrypt/live/api.yuejuapp.com/privkey.pem"
+)
+
+echo "🔐 Step 0: Verify host TLS certificate files..."
+MISSING_TLS_FILES=()
+for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
+    if ! sudo test -r "$tls_file"; then
+        MISSING_TLS_FILES+=("$tls_file")
+    fi
+done
+
+if [[ ${#MISSING_TLS_FILES[@]} -gt 0 ]]; then
+    echo "❌ Missing required TLS certificate files for host Nginx:"
+    printf '   - %s\n' "${MISSING_TLS_FILES[@]}"
+    echo "   Provision the Let's Encrypt certificates on the deployment host before re-running deploy."
+    echo "   Expected domains: yuejuapp.com, admin.yuejuapp.com, api.yuejuapp.com"
+    exit 1
+fi
+
 echo "🐳 Step 1: Rebuild and restart containers..."
 cd "$DEPLOY_DIR"
+echo "🧹 Removing stale joyjoin-api container if present..."
+docker rm -f joyjoin-api || true
 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
 echo "🌐 Step 1.5: Sync and reload host Nginx config..."

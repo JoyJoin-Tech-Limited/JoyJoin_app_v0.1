@@ -127,6 +127,20 @@ api.yuejuapp.com
 - 管理后台 `/api/*` 反代到 `joyjoin-api:5000`
 - `api.yuejuapp.com` 全量反代到 `joyjoin-api:5000`
 
+在执行部署前，宿主机必须已经具备以下可读证书文件，否则 `nginx -t`
+会失败：
+
+```text
+/etc/letsencrypt/live/yuejuapp.com/fullchain.pem
+/etc/letsencrypt/live/yuejuapp.com/privkey.pem
+/etc/letsencrypt/live/admin.yuejuapp.com/fullchain.pem
+/etc/letsencrypt/live/admin.yuejuapp.com/privkey.pem
+/etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem
+/etc/letsencrypt/live/api.yuejuapp.com/privkey.pem
+```
+
+如果证书尚未签发，先在服务器上通过 Certbot 或等效方式为这些域名签发证书，再执行部署。
+
 ---
 
 ## 环境变量
