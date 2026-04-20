@@ -8,7 +8,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'users' AND column_name = 'primary_role'
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'primary_role'
   ) THEN
     ALTER TABLE users RENAME COLUMN primary_role TO primary_archetype;
   END IF;
@@ -18,7 +18,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'users' AND column_name = 'secondary_role'
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'secondary_role'
   ) THEN
     ALTER TABLE users RENAME COLUMN secondary_role TO secondary_archetype;
   END IF;
@@ -29,7 +29,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'role_results' AND column_name = 'primary_role'
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'primary_role'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN primary_role TO primary_archetype;
   END IF;
@@ -39,7 +39,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'role_results' AND column_name = 'primary_role_score'
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'primary_role_score'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN primary_role_score TO primary_archetype_score;
   END IF;
@@ -49,7 +49,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'role_results' AND column_name = 'secondary_role'
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'secondary_role'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN secondary_role TO secondary_archetype;
   END IF;
@@ -59,7 +59,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'role_results' AND column_name = 'secondary_role_score'
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'secondary_role_score'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN secondary_role_score TO secondary_archetype_score;
   END IF;
@@ -70,7 +70,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'users' AND column_name = 'primary_archetype'
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'primary_archetype'
   ) THEN
     COMMENT ON COLUMN users.primary_archetype IS '12 archetypes from V4 adaptive assessment (single source of truth)';
     COMMENT ON COLUMN users.secondary_archetype IS 'Second highest archetype from V4 assessment (used in algorithm, hidden from UI)';
@@ -83,7 +83,7 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'users' AND column_name = 'primary_archetype'
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'primary_archetype'
   ) THEN
     UPDATE users u
     SET primary_archetype = a.primary_archetype
