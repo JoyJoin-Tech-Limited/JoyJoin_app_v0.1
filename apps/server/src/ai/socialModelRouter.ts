@@ -7,7 +7,7 @@
  * provider clients directly.
  *
  * Services routed through this file:
- *   - socialIcebreakerAIService.ts  (warmup topics, XiaoYue, recap, lie detective)
+ *   - socialIcebreakerAIService.ts  (warmup topics, XiaoYue, recap, lie detective, miniscript framework — MiniMax-first; JSON paths fall back to DeepSeek json_object when needed)
  *   - matchExplanationService.ts    (pair explanations, icebreakers)
  *   - inference/hybridSemantic.ts   (semantic attribute analysis)
  *
@@ -44,13 +44,15 @@ type SocialFunction =
   | 'generateLieDetectiveStatements'
   | 'generateMicroChallenges'
   | 'generatePersonalityDiceChallenges'
+  | 'generateAuctionLots'
   | 'generateProfileTagline'
   | 'generateConversationTopics'
   | 'generateWelcomeMessage'
   | 'generateClosingMessage'
   | 'generatePairExplanation'       // matchExplanationService — MiniMax preferred (warm narrative copy)
   | 'generateIceBreakers'           // matchExplanationService — MiniMax preferred (warm narrative copy)
-  | 'analyzeComplexSemantics';      // hybridSemantic — DeepSeek default (structured JSON inference)
+  | 'analyzeComplexSemantics'      // hybridSemantic — DeepSeek default (structured JSON inference)
+  | 'generateMiniScriptFramework'; // MiniScript story framework JSON (MiniMax-first; DeepSeek json_object fallback)
 
 type SocialFunctionRoutingPolicy = {
   preferredProvider: 'minimax' | 'deepseek';
@@ -62,8 +64,9 @@ const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolic
   generateXiaoYueComment: { preferredProvider: 'minimax' },
   generateRecapSummary: { preferredProvider: 'minimax' },
   generateLieDetectiveStatements: { preferredProvider: 'minimax' },
-  generateMicroChallenges: { preferredProvider: 'deepseek' },
-  generatePersonalityDiceChallenges: { preferredProvider: 'deepseek' },
+  generateMicroChallenges: { preferredProvider: 'minimax' },
+  generatePersonalityDiceChallenges: { preferredProvider: 'minimax' },
+  generateAuctionLots: { preferredProvider: 'minimax' },
   generateProfileTagline: { preferredProvider: 'minimax' },
   generateConversationTopics: { preferredProvider: 'minimax' },
   generateWelcomeMessage: { preferredProvider: 'minimax' },
@@ -71,6 +74,7 @@ const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolic
   generatePairExplanation: { preferredProvider: 'minimax' },
   generateIceBreakers: { preferredProvider: 'minimax' },
   analyzeComplexSemantics: { preferredProvider: 'deepseek', forceProvider: 'deepseek' },
+  generateMiniScriptFramework: { preferredProvider: 'minimax' },
 };
 
 export type RoutedSocialFunction = Exclude<SocialFunction, 'analyzeComplexSemantics'>;
@@ -97,8 +101,8 @@ export interface ClientSelection {
  * Respects SOCIAL_AI_PROVIDER env var (hybrid | minimax | deepseek) with automatic
  * fallback to DeepSeek when MiniMax is not configured.
  *
- * Functions with `forceProvider: 'deepseek'` always receive a DeepSeek
- * selection regardless of the configured mode — they rely on
+ * Functions with `forceProvider: 'deepseek'` (currently `analyzeComplexSemantics`)
+ * always receive a DeepSeek selection regardless of the configured mode — they rely on
  * DeepSeek-specific API features (e.g. response_format: json_object).
  */
 export function getClientForFunction(fn: SocialFunction): ClientSelection {

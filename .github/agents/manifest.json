@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-18",
+  "updated": "2026-04-21",
   "orchestrationContract": "../orchestration.yaml",
   "orchestrationGuide": "../ORCHESTRATION.md",
   "agents": [
@@ -127,7 +127,10 @@
         "Expert React Frontend Engineer",
         "debug",
         "Principal Software Engineer",
-        "Prompt Engineer"
+        "Prompt Engineer",
+        "Icebreaker Auction Phase Agent",
+        "Lie Detective Icebreaker Agent",
+        "Personality Dice Icebreaker Agent"
       ],
       "portfolioRole": "kickoff-planning",
       "orchestrationPhase": "kickoff",
@@ -167,7 +170,10 @@
         "Taro Mini-Program Frontend Engineer",
         "Taro Migration Specialist",
         "Repo Memory Steward",
-        "Workflow Governance Reviewer"
+        "Workflow Governance Reviewer",
+        "Icebreaker Auction Phase Agent",
+        "Lie Detective Icebreaker Agent",
+        "Personality Dice Icebreaker Agent"
       ],
       "portfolioRole": "orchestrator",
       "orchestrationPhase": "core-v1",
@@ -187,7 +193,10 @@
         "Taro Mini-Program Frontend Engineer",
         "Taro Migration Specialist",
         "Repo Memory Steward",
-        "Workflow Governance Reviewer"
+        "Workflow Governance Reviewer",
+        "Icebreaker Auction Phase Agent",
+        "Lie Detective Icebreaker Agent",
+        "Personality Dice Icebreaker Agent"
       ],
       "skills": [
         "orchestration-turn-reporting",
@@ -560,6 +569,138 @@
         "docs-sync",
         "testing-and-regression-guardrails",
         "skill-authoring-governance"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Game Design Agent",
+      "file": "game-design-agent.agent.md",
+      "description": "Use when compiling or curating post-match, pre-event Social Icebreaker run plans (IcebreakerRunPlan), psychological safety scoring, energy arc sequencing, cohort personalization, and dev-ready handoff artifacts. Trigger phrases: compile icebreaker plan, Game Design Agent, run plan JSON, PressureGauge, FlowCurator, post-match icebreaker, minimal peer pressure flow.",
+      "tools": ["read", "search", "edit"],
+      "argumentHint": "Provide pool/group context, target cohort size, event window, and any theme or match metadata. Say whether output is repo docs only or sample JSON for a worker.",
+      "subagents": [],
+      "portfolioRole": "icebreaker-plan-compilation",
+      "orchestrationPhase": "support-audited",
+      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "game-design-icebreaker-compilation",
+        "social-icebreaker-domain",
+        "miniscript-story-framework",
+        "lie-detective-icebreaker",
+        "personality-dice-icebreaker",
+        "icebreaker-auction-phase",
+        "event-pool-and-matching-operations",
+        "llm-runtime-safety-and-integration",
+        "draft-prd"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Game Development Agent",
+      "file": "game-development-agent.agent.md",
+      "description": "Use when binding compiled IcebreakerRunPlan segments to shipped Social Icebreaker templates, implementing or updating mini-program phase views first, web registry parity, server advance rules, and regression tests. Trigger phrases: implement icebreaker phase, phaseViews, socialIcebreakerPhaseRegistry, TemplateMatcher, ship mini-program first, parity with web.",
+      "tools": ["read", "search", "edit", "execute"],
+      "argumentHint": "Provide the plan segment or phase id, target files (Taro vs web vs server), acceptance criteria, and any env flags (e.g. SOCIAL_ICEBREAKER_ENABLE_*).",
+      "subagents": [],
+      "portfolioRole": "icebreaker-template-implementation",
+      "orchestrationPhase": "support-audited",
+      "handoffs": ["QA Agent", "Mini-Program Parity Auditor"],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "social-icebreaker-domain",
+        "miniscript-story-framework",
+        "lie-detective-icebreaker",
+        "personality-dice-icebreaker",
+        "icebreaker-auction-phase",
+        "mini-program-frontend-excellence",
+        "frontend-component-architecture",
+        "server-domain-architecture",
+        "platform-coordination-protocol",
+        "testing-and-regression-guardrails"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "MiniScript Story Agent",
+      "file": "miniscript-story-agent.agent.md",
+      "description": "Use when shaping or reviewing 迷你剧本杀 JSON (MiniScriptStoryFramework), POST /api/miniscript/generate contracts, style/genre enums, in-session tool flow, or safety constraints for Social phase mini_script. Trigger phrases: MiniScriptAgent, miniscript-story-framework, 迷你剧本杀, sinHook, act_flow, /api/miniscript/generate.",
+      "tools": ["read", "search", "edit"],
+      "argumentHint": "Provide social session lifecycle context, whether change is docs-only vs code, and target surface (Taro vs web).",
+      "subagents": [],
+      "portfolioRole": "miniscript-story-contracts",
+      "orchestrationPhase": "support-audited",
+      "handoffs": ["Game Development Agent", "AI Engineer", "Backend Engineer"],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "miniscript-story-framework",
+        "social-icebreaker-domain",
+        "llm-runtime-safety-and-integration",
+        "mini-program-frontend-excellence",
+        "platform-coordination-protocol"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Icebreaker Auction Phase Agent",
+      "file": "icebreaker-auction-phase-agent.agent.md",
+      "description": "Use when reviewing or extending Social phase auction: virtual-coin bidding, generateAuctionLots (social-auction-lots-v1, SOCIAL_AUCTION_LLM_ENABLED), REST auction/* routes, advance guard auctionAllLotsClosed, or recap auctionRecapLines. Trigger phrases: auction phase, SOCIAL_ICEBREAKER_ENABLE_AUCTION, /auction/generate-lots, virtual coin auction.",
+      "tools": ["read", "search", "edit"],
+      "argumentHint": "State whether LLM is enabled in env, target clients (web AuctionPhase vs Taro AuctionPhaseView), and any economy tuning requested.",
+      "subagents": [],
+      "portfolioRole": "icebreaker-auction-vertical",
+      "orchestrationPhase": "support-audited",
+      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "icebreaker-auction-phase",
+        "social-icebreaker-domain",
+        "llm-runtime-safety-and-integration",
+        "platform-coordination-protocol"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Lie Detective Icebreaker Agent",
+      "file": "lie-detective-icebreaker-agent.agent.md",
+      "description": "Use when reviewing or extending Social phase lie_detective: isLie secrecy, vote/reveal ordering, REST routes, or social-lie-detective-v1 prompts. Trigger phrases: lie_detective, lie detective secrecy, two truths one lie, /lie-detective/generate, isLie.",
+      "tools": ["read", "search", "edit"],
+      "argumentHint": "Provide socialSessionId context, repro steps, and whether change is server-only vs web/Taro parity.",
+      "subagents": [],
+      "portfolioRole": "icebreaker-lie-detective-vertical",
+      "orchestrationPhase": "support-audited",
+      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "lie-detective-icebreaker",
+        "social-icebreaker-domain",
+        "llm-runtime-safety-and-integration",
+        "testing-and-regression-guardrails"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Personality Dice Icebreaker Agent",
+      "file": "personality-dice-icebreaker-agent.agent.md",
+      "description": "Use when reviewing or extending Social phase personality_dice: roster-sized generatePersonalityDiceChallenges, REST generate/complete, social-personality-dice-v1, or playful challenge copy. Trigger phrases: personality_dice, 人格骰子, personality dice, /personality-dice/generate.",
+      "tools": ["read", "search", "edit"],
+      "argumentHint": "Provide roster size, tone constraints, and target surfaces (web vs Taro vs server).",
+      "subagents": [],
+      "portfolioRole": "icebreaker-personality-dice-vertical",
+      "orchestrationPhase": "support-audited",
+      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "personality-dice-icebreaker",
+        "social-icebreaker-domain",
+        "llm-runtime-safety-and-integration",
+        "joyjoin-brand-guidelines"
       ],
       "toolingStatus": "sufficient"
     },

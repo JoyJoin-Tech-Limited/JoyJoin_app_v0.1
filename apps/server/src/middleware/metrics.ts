@@ -13,6 +13,7 @@
  *     (buckets: 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000 ms)
  *   joyjoin_ai_calls_total{domain, feature, outcome}       — AI calls (outcome: cache|live|fallback)
  *   joyjoin_ai_call_latency_ms{domain, feature, outcome}   — latency for those calls
+ *   joyjoin_ai_provider_recovery_total{domain, feature}   — secondary provider produced accepted output (e.g. DeepSeek after MiniMax failure)
  *   http_errors_total{method, path, status_code}           — 4xx/5xx counter
  *   process_cpu_user_seconds_total                         — CPU usage
  *   process_cpu_system_seconds_total                       — CPU system usage
@@ -74,6 +75,8 @@ const llmFallbackLatencyHistograms = new Map<string, HistogramEntry>();
 /** JoyJoin product AI calls (match explanation, icebreaker, tagline, theme, etc.) */
 const aiProductCallCounters = new Map<string, CounterEntry>();
 const aiProductLatencyHistograms = new Map<string, HistogramEntry>();
+/** Narrow counter: MiniMax (or primary) failed; secondary provider output was accepted. */
+const aiProviderRecoveryCounters = new Map<string, CounterEntry>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -340,6 +343,19 @@ export function recordAICallMetric(params: {
   observeHistogram(aiProductLatencyHistograms, labels, params.latencyMs);
 }
 
+/**
+ * Record when the **secondary** LLM provider produced the accepted result (e.g. DeepSeek
+ * json_object after MiniMax parse/API failure). Use with low-cardinality domain/feature only.
+ * Alerts: rate(joyjoin_ai_provider_recovery_total[5m]) / rate(joyjoin_ai_calls_total{outcome="fallback"}[5m])
+ * is a rough recovery share; tune in Grafana.
+ */
+export function recordAIProviderRecoveryMetric(params: { domain: string; feature: string }): void {
+  incCounter(aiProviderRecoveryCounters, {
+    domain: params.domain,
+    feature: params.feature,
+  });
+}
+
 export async function getMetricsText(): Promise<string> {
   await measureEventLoopDelay();
 
@@ -395,6 +411,11 @@ export async function getMetricsText(): Promise<string> {
       'JoyJoin AI call latency in milliseconds (same labels as joyjoin_ai_calls_total).',
       aiProductLatencyHistograms,
     ),
+    renderCounter(
+      'joyjoin_ai_provider_recovery_total',
+      'AI calls where a secondary provider produced the accepted result after primary failure (e.g. DeepSeek after MiniMax).',
+      aiProviderRecoveryCounters,
+    ),
     getMatchingMetricsText(),
   ];
 
@@ -433,6 +454,7 @@ export function _resetMetricsForTest(): void {
   llmFallbackLatencyHistograms.clear();
   aiProductCallCounters.clear();
   aiProductLatencyHistograms.clear();
+  aiProviderRecoveryCounters.clear();
 }
 
 export function recordRuntimeLLMFallbackMetric(

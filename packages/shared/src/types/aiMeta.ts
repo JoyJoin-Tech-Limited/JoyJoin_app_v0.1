@@ -103,6 +103,12 @@ export interface AIResponseMeta {
    * Optional: omit when no evaluator stage ran, or when output was accepted.
    */
   evaluatorRejectionReason?: string;
+
+  /**
+   * Opaque id matching `[AITrace].traceId` for this generation (client feedback join).
+   * Omit when no model call was made (e.g. canned copy) or correlation is unavailable.
+   */
+  aiCorrelationId?: string;
 }
 
 // ─── Builder helpers ───────────────────────────────────────────────────────────
@@ -117,7 +123,8 @@ export interface AIResponseMeta {
  */
 export function buildLiveAIMeta(
   provider: LiveAIProvider,
-  promptVersion?: string
+  promptVersion?: string,
+  aiCorrelationId?: string,
 ): AIResponseMeta {
   return {
     generatedAt: new Date().toISOString(),
@@ -125,6 +132,7 @@ export function buildLiveAIMeta(
     provider,
     fallbackUsed: false,
     promptVersion,
+    ...(aiCorrelationId ? { aiCorrelationId } : {}),
   };
 }
 
@@ -141,7 +149,8 @@ export function buildLiveAIMeta(
 export function buildCachedAIMeta(
   generatedAt: string,
   provider: AIProvider,
-  promptVersion?: string
+  promptVersion?: string,
+  aiCorrelationId?: string,
 ): AIResponseMeta {
   return {
     generatedAt,
@@ -149,6 +158,7 @@ export function buildCachedAIMeta(
     provider,
     fallbackUsed: false,
     promptVersion,
+    ...(aiCorrelationId ? { aiCorrelationId } : {}),
   };
 }
 
@@ -161,7 +171,8 @@ export function buildCachedAIMeta(
  */
 export function buildFallbackAIMeta(
   evaluatorRejectionReason?: string,
-  promptVersion?: string
+  promptVersion?: string,
+  aiCorrelationId?: string,
 ): AIResponseMeta {
   return {
     generatedAt: new Date().toISOString(),
@@ -170,5 +181,6 @@ export function buildFallbackAIMeta(
     fallbackUsed: true,
     promptVersion,
     evaluatorRejectionReason,
+    ...(aiCorrelationId ? { aiCorrelationId } : {}),
   };
 }

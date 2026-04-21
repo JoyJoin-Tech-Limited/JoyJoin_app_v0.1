@@ -65,6 +65,10 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Verifier` | Skeptical completion check after “done” claims — targeted tests/commands, verified vs claimed | [`verifier.agent.md`](./verifier.agent.md) |
 | `Game Design Agent` | Post-match, pre-event **IcebreakerRunPlan** compilation, safety/energy-curve curation, and dev-ready handoff artifacts | [`game-design-agent.agent.md`](./game-design-agent.agent.md) |
 | `Game Development Agent` | Bind plans to **shipped phase templates** (`socialIcebreakerPhaseRegistry`), server advance rules, parity, and tests | [`game-development-agent.agent.md`](./game-development-agent.agent.md) |
+| `MiniScript Story Agent` | **迷你剧本杀** JSON contracts, `/api/miniscript/generate`, style/genre enums, and mini-program-first story UX alignment | [`miniscript-story-agent.agent.md`](./miniscript-story-agent.agent.md) |
+| `Icebreaker Auction Phase Agent` | Virtual-coin `auction` phase: lots generation, bid/close-lot routes, advance guard, recap lines | [`icebreaker-auction-phase-agent.agent.md`](./icebreaker-auction-phase-agent.agent.md) |
+| `Lie Detective Icebreaker Agent` | `lie_detective` secrecy (`isLie`), votes/reveals, `social-lie-detective-v1` | [`lie-detective-icebreaker-agent.agent.md`](./lie-detective-icebreaker-agent.agent.md) |
+| `Personality Dice Icebreaker Agent` | `personality_dice` roster-sized challenges, `social-personality-dice-v1`, tone/safety | [`personality-dice-icebreaker-agent.agent.md`](./personality-dice-icebreaker-agent.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

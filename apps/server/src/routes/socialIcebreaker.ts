@@ -7,8 +7,13 @@ import type {
   LieDetectiveVote,
   PulseCheckResult,
   LieDetectiveReveal,
+  SocialSessionParticipantSummary,
 } from '@shared/socialIcebreaker';
-import { getNextEligiblePhase } from '@shared/socialIcebreaker';
+import {
+  getNextEligiblePhase,
+  migrateLegacySocialIcebreakerPhases,
+  AUCTION_STARTING_COINS,
+} from '@shared/socialIcebreaker';
 import {
   generateWarmupTopics,
   generateMicroChallenges,
@@ -16,6 +21,7 @@ import {
   generateXiaoYueComment,
   generateRecapSummary,
   generatePersonalityDiceChallenges,
+  generateAuctionLots,
 } from '../socialIcebreakerAIService';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
@@ -23,6 +29,8 @@ import {
   ensureSessionEnabledPhases,
   getServerEnabledPhases,
 } from '../socialIcebreakerPhaseConfig';
+import { socialIcebreakerAiFeedbackRepo } from '../repositories/socialIcebreakerAiFeedbackRepo';
+import { submitSocialIcebreakerAiFeedbackSchema } from '@shared/schema';
 import {
   getSocialSessionId,
   getSessionWithExpiry,
@@ -91,6 +99,7 @@ async function buildClientState(state: SocialSessionState): Promise<SocialSessio
 }
 
 function hydrateDerivedState(state: SocialSessionState): SocialSessionState {
+  migrateLegacySocialIcebreakerPhases(state);
   if (state.commonGroundCount === undefined) {
     state.commonGroundCount = 0;
   }
@@ -114,6 +123,77 @@ function hasAllRosterParticipantsResponded(userIds: string[] | undefined, player
 function getMicroChallengeDeadlineMs(state: SocialSessionState): number | null {
   if (!state.currentChallenge?.durationSeconds) return null;
   return state.phaseStartedAt + state.currentChallenge.durationSeconds * 1000;
+}
+
+function recapDisplayNameByUserId(
+  roster: SocialSessionParticipantSummary[],
+  state: SocialSessionState,
+  userId: string,
+): string {
+  const fromRoster = roster.find((p) => p.userId === userId)?.displayName;
+  if (fromRoster) return fromRoster;
+  if (userId === state.hostUserId) return state.hostDisplayName;
+  const fromLie = state.lieDetectivePlayers?.find((p) => p.userId === userId)?.displayName;
+  return fromLie || '某位参与者';
+}
+
+function buildLieDetectiveRecapHighlights(
+  state: SocialSessionState,
+  roster: SocialSessionParticipantSummary[],
+  sessionLieMap: Map<string, Array<{ index: number; text: string; isLie: boolean }>>,
+): string[] {
+  const highlights: string[] = [];
+  for (const vote of state.votes || []) {
+    const stmts = sessionLieMap.get(vote.targetUserId);
+    const lieStmt = stmts?.find((s) => s.isLie);
+    if (!lieStmt || vote.guessedStatementIndex !== lieStmt.index) continue;
+    const voterName = recapDisplayNameByUserId(roster, state, vote.voterId);
+    const targetName = recapDisplayNameByUserId(roster, state, vote.targetUserId);
+    highlights.push(`${voterName}猜对了${targetName}的谎言`);
+  }
+  return highlights.slice(0, 8);
+}
+
+function buildPersonalityDiceRecapLines(state: SocialSessionState): string[] {
+  const challenges = state.personalityDiceChallenges || [];
+  return challenges.slice(0, 6).map((c) => {
+    const title = c.challengeTitle.length > 48 ? `${c.challengeTitle.slice(0, 47)}…` : c.challengeTitle;
+    return `${c.displayName}：${title}`;
+  });
+}
+
+function buildMiniScriptRecapLine(state: SocialSessionState): string | undefined {
+  const premise = state.miniScriptFramework?.premise?.trim();
+  if (!premise) return undefined;
+  return premise.length > 220 ? `${premise.slice(0, 219)}…` : premise;
+}
+
+function buildAuctionRecapLines(state: SocialSessionState): string[] {
+  const lines = state.auctionRecapLines;
+  if (!Array.isArray(lines) || lines.length === 0) return [];
+  return lines.map((l) => (l.length > 120 ? `${l.slice(0, 119)}…` : l)).slice(0, 8);
+}
+
+function buildRecapParticipants(
+  roster: SocialSessionParticipantSummary[],
+  state: SocialSessionState,
+): Array<{ displayName: string; archetype?: string }> {
+  if (roster.length > 0) {
+    return roster.map((p) => ({ displayName: p.displayName }));
+  }
+  const out: Array<{ displayName: string; archetype?: string }> = [];
+  const seen = new Set<string>();
+  if (state.hostDisplayName) {
+    out.push({ displayName: state.hostDisplayName });
+    seen.add(state.hostUserId);
+  }
+  for (const pl of state.lieDetectivePlayers || []) {
+    if (!seen.has(pl.userId)) {
+      out.push({ displayName: pl.displayName });
+      seen.add(pl.userId);
+    }
+  }
+  return out.length > 0 ? out : [{ displayName: '参与者' }];
 }
 
 function incrementCommonGround(state: SocialSessionState): void {
@@ -525,6 +605,14 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
+  if (currentPhase === 'auction') {
+    if (!state.auctionAllLotsClosed) {
+      return res.status(400).json({
+        error: 'Host must close every auction lot (use close-lot) before advancing out of auction',
+      });
+    }
+  }
+
   const resolvedEnabledPhases = ensureSessionEnabledPhases(state);
   const effectiveNextPhase = getNextEligiblePhase(currentPhase, resolvedEnabledPhases, state.playerCount);
 
@@ -560,15 +648,26 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  const comment = await generateXiaoYueComment({
+  const xyResult = await generateXiaoYueComment({
     phase: effectiveNextPhase,
     event: 'phase_start',
-  }).catch(() => '');
+  }).catch(
+    (): { data: string; meta: AIResponseMeta } => ({
+      data: '',
+      meta: {
+        generatedAt: new Date().toISOString(),
+        fromCache: false,
+        provider: null,
+        fallbackUsed: false,
+      },
+    }),
+  );
 
   return res.json({
     nextPhase: effectiveNextPhase,
     content,
-    xiaoYueComment: comment,
+    xiaoYueComment: xyResult.data,
+    xiaoYueCommentMeta: xyResult.meta,
     meta,
     state: await buildClientState(state),
   });
@@ -850,6 +949,202 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/auction/generate-lots
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can generate auction lots' });
+  }
+
+  if (state.currentPhase !== 'auction') {
+    return res.status(400).json({ error: 'Not in auction phase' });
+  }
+
+  if ((state.auctionLots || []).length > 0) {
+    const cachedMeta =
+      state.auctionLotsMeta ??
+      buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-auction-lots-v1');
+    return res.json({
+      lots: state.auctionLots,
+      meta: cachedMeta,
+      balances: state.auctionBalances,
+      currentLotIndex: state.auctionCurrentLotIndex ?? 0,
+      state: await buildClientState(state),
+    });
+  }
+
+  try {
+    const roster = await listParticipants(socialSessionId);
+    const lotResult = await generateAuctionLots({
+      participantCount: Math.max(state.playerCount, roster.length || 1),
+      eventType: state.eventType,
+    });
+    const balances: Record<string, number> = {};
+    for (const p of roster) {
+      balances[p.userId] = AUCTION_STARTING_COINS;
+    }
+    if (!balances[state.hostUserId]) {
+      balances[state.hostUserId] = AUCTION_STARTING_COINS;
+    }
+
+    state.auctionLots = lotResult.data;
+    state.auctionLotsMeta = lotResult.meta;
+    state.auctionBalances = balances;
+    state.auctionCurrentLotIndex = 0;
+    state.auctionHighBid = null;
+    state.auctionAllLotsClosed = false;
+    state.auctionRecapLines = [];
+    await updateSession(socialSessionId, state);
+
+    return res.json({
+      lots: lotResult.data,
+      meta: lotResult.meta,
+      balances: state.auctionBalances,
+      currentLotIndex: 0,
+      state: await buildClientState(state),
+    });
+  } catch (error) {
+    console.error('[SocialIcebreaker] auction/generate-lots error:', error);
+    return res.status(500).json({ error: 'Failed to generate auction lots' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/auction/bid
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { amount } = req.body as { amount?: number };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.currentPhase !== 'auction') {
+    return res.status(400).json({ error: 'Not in auction phase' });
+  }
+
+  const lots = state.auctionLots || [];
+  if (lots.length === 0) {
+    return res.status(400).json({ error: 'Auction lots have not been generated yet' });
+  }
+
+  if (state.auctionAllLotsClosed) {
+    return res.status(400).json({ error: 'Auction is complete' });
+  }
+
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || !Number.isInteger(amount) || amount < 1) {
+    return res.status(400).json({ error: 'amount must be a positive integer' });
+  }
+
+  const balances = { ...(state.auctionBalances || {}) };
+  const available = balances[userId] ?? 0;
+  const high = state.auctionHighBid;
+
+  if (high && amount <= high.amount) {
+    return res.status(400).json({ error: 'Bid must be higher than the current high bid' });
+  }
+
+  if (amount > available) {
+    return res.status(400).json({ error: 'Insufficient virtual coins for this bid' });
+  }
+
+  if (high) {
+    balances[high.userId] = (balances[high.userId] ?? 0) + high.amount;
+  }
+
+  balances[userId] = available - amount;
+  state.auctionBalances = balances;
+  state.auctionHighBid = { userId, amount };
+
+  await updateSession(socialSessionId, state);
+
+  return res.json({
+    highBid: state.auctionHighBid,
+    balances: state.auctionBalances,
+    state: await buildClientState(state),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/auction/close-lot
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can close an auction lot' });
+  }
+
+  if (state.currentPhase !== 'auction') {
+    return res.status(400).json({ error: 'Not in auction phase' });
+  }
+
+  const lots = state.auctionLots || [];
+  const idx = state.auctionCurrentLotIndex ?? 0;
+  if (lots.length === 0 || idx >= lots.length) {
+    return res.status(400).json({ error: 'No active auction lot' });
+  }
+
+  if (state.auctionAllLotsClosed) {
+    return res.status(400).json({ error: 'All auction lots are already closed' });
+  }
+
+  const lot = lots[idx];
+  const high = state.auctionHighBid;
+  const roster = await listParticipants(socialSessionId);
+  const nameOf = (uid: string) =>
+    recapDisplayNameByUserId(roster, state, uid);
+
+  const lines = [...(state.auctionRecapLines || [])];
+  if (high) {
+    lines.push(`${lot.title}由${nameOf(high.userId)}以${high.amount}虚拟币拍下`);
+  } else {
+    lines.push(`${lot.title}流拍（无人出价）`);
+  }
+
+  state.auctionRecapLines = lines.slice(0, 16);
+  state.auctionHighBid = null;
+
+  if (idx >= lots.length - 1) {
+    state.auctionAllLotsClosed = true;
+  } else {
+    state.auctionCurrentLotIndex = idx + 1;
+  }
+
+  await updateSession(socialSessionId, state);
+
+  return res.json({
+    currentLotIndex: state.auctionCurrentLotIndex ?? 0,
+    allLotsClosed: state.auctionAllLotsClosed ?? false,
+    recapLines: state.auctionRecapLines,
+    state: await buildClientState(state),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/personality-dice/generate
 // ---------------------------------------------------------------------------
 router.post('/:socialSessionId/personality-dice/generate', async (req: any, res) => {
@@ -1013,18 +1308,64 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
   }
 
   try {
-    const players = state.lieDetectivePlayers || [];
+    const roster = await listParticipants(socialSessionId);
+    const lieHighlights = buildLieDetectiveRecapHighlights(state, roster, sessionLieMap);
+    const personalityDiceRecapLines = buildPersonalityDiceRecapLines(state);
+    const miniScriptRecapLine = buildMiniScriptRecapLine(state);
+    const auctionRecapLines = buildAuctionRecapLines(state);
+
     const summaryResult = await generateRecapSummary({
-      participants: players.map((p: LieDetectivePlayer) => ({ displayName: p.displayName })),
+      participants: buildRecapParticipants(roster, state),
       topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
       challengesCompleted: state.challengeCompletedBy?.length || 0,
       commonGroundCount: state.commonGroundCount || 0,
+      lieDetectiveHighlights: lieHighlights.length ? lieHighlights : undefined,
+      personalityDiceRecapLines: personalityDiceRecapLines.length ? personalityDiceRecapLines : undefined,
+      miniScriptRecapLine,
+      auctionRecapLines: auctionRecapLines.length ? auctionRecapLines : undefined,
       durationMinutes,
     });
 
     return res.json({ summary: summaryResult.data, meta: summaryResult.meta, medals, state: await buildClientState(state) });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to generate recap' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/ai-feedback
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/ai-feedback', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = submitSocialIcebreakerAiFeedbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId } = req.params;
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const participant = await getParticipant(socialSessionId, userId);
+  if (!participant) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
+  try {
+    await socialIcebreakerAiFeedbackRepo.upsertFeedback({
+      socialSessionId,
+      submittedBy: userId,
+      phase: parsed.data.phase,
+      promptVersion: parsed.data.promptVersion,
+      aiCorrelationId: parsed.data.aiCorrelationId,
+      rating: parsed.data.rating,
+    });
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('[SocialIcebreaker] ai-feedback error:', error);
+    return res.status(500).json({ error: 'Failed to save feedback' });
   }
 });
 

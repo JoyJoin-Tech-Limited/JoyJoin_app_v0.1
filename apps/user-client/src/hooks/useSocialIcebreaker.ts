@@ -7,6 +7,7 @@ import type {
   SocialTopic,
   PersonalityDiceChallenge,
 } from '@shared/socialIcebreaker';
+import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 
 function getSocialSessionStorageKey(sessionId: string): string {
   return `joyjoin_social_session_id:${sessionId}`;
@@ -59,6 +60,16 @@ interface UseSocialIcebreakerReturn {
   completeChallenge: () => Promise<void>;
   generateDiceChallenges: (participants: Array<{ userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> }>) => Promise<PersonalityDiceChallenge[]>;
   completeDiceChallenge: () => Promise<void>;
+  generateMiniScript: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[] }) => Promise<void>;
+  generateAuctionLots: () => Promise<void>;
+  placeAuctionBid: (amount: number) => Promise<void>;
+  closeAuctionLot: () => Promise<void>;
+  submitPhaseAiFeedback: (payload: {
+    phase: string;
+    promptVersion: string;
+    aiCorrelationId: string;
+    rating: 'helpful' | 'neutral' | 'awkward';
+  }) => Promise<boolean>;
   isStarting: boolean;
   isAdvancing: boolean;
   /** The last action error, or null if no error. */
@@ -396,6 +407,76 @@ export function useSocialIcebreaker({
     [socialSessionId, qc]
   );
 
+  const generateMiniScript = useCallback(
+    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[] }) => {
+      if (!socialSessionId || !state) return;
+      try {
+        await apiRequest('POST', '/api/miniscript/generate', {
+          socialSessionId,
+          playerCount: state.playerCount,
+          style: payload.style,
+          genres: payload.genres,
+        });
+        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+      } catch (e) {
+        setError(await classifyError(e));
+      }
+    },
+    [socialSessionId, state, qc]
+  );
+
+  const generateAuctionLots = useCallback(async () => {
+    if (!socialSessionId) return;
+    try {
+      await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/auction/generate-lots`, {});
+      qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+    } catch (e) {
+      setError(await classifyError(e));
+    }
+  }, [socialSessionId, qc]);
+
+  const placeAuctionBid = useCallback(
+    async (amount: number) => {
+      if (!socialSessionId) return;
+      try {
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/auction/bid`, { amount });
+        qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+      } catch (e) {
+        setError(await classifyError(e));
+      }
+    },
+    [socialSessionId, qc]
+  );
+
+  const closeAuctionLot = useCallback(async () => {
+    if (!socialSessionId) return;
+    try {
+      await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/auction/close-lot`, {});
+      qc.invalidateQueries({ queryKey: ['/api/social-icebreaker', socialSessionId] });
+    } catch (e) {
+      setError(await classifyError(e));
+    }
+  }, [socialSessionId, qc]);
+
+  const submitPhaseAiFeedback = useCallback(
+    async (payload: {
+      phase: string;
+      promptVersion: string;
+      aiCorrelationId: string;
+      rating: 'helpful' | 'neutral' | 'awkward';
+    }): Promise<boolean> => {
+      if (!socialSessionId) return false;
+      try {
+        await apiRequest('POST', `/api/social-icebreaker/${socialSessionId}/ai-feedback`, payload);
+        return true;
+      } catch (e) {
+        setError(await classifyError(e));
+        return false;
+      }
+    },
+    [socialSessionId]
+  );
+
   return {
     state: state ?? null,
     isLoading,
@@ -414,6 +495,11 @@ export function useSocialIcebreaker({
     completeChallenge,
     generateDiceChallenges,
     completeDiceChallenge,
+    generateMiniScript,
+    generateAuctionLots,
+    placeAuctionBid,
+    closeAuctionLot,
+    submitPhaseAiFeedback,
     isStarting,
     isAdvancing,
     error,

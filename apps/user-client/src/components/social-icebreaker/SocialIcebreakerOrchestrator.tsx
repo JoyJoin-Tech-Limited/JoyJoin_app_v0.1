@@ -14,6 +14,7 @@ import {
 } from './socialIcebreakerPhaseRegistry';
 import { DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES } from '@shared/socialIcebreaker';
 import type { SocialIcebreakerPhase, AtmosphereMood, SocialTopic } from '@shared/socialIcebreaker';
+import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 
 interface SocialIcebreakerOrchestratorProps {
   sessionId: string;
@@ -92,6 +93,10 @@ export function SocialIcebreakerOrchestrator({
     completeChallenge,
     generateDiceChallenges,
     completeDiceChallenge,
+    generateMiniScript,
+    generateAuctionLots,
+    placeAuctionBid,
+    closeAuctionLot,
     isAdvancing,
     error,
     clearError,
@@ -311,6 +316,25 @@ export function SocialIcebreakerOrchestrator({
     await completeDiceChallenge();
   };
 
+  const handleGenerateMiniScript = async (payload: {
+    style: MiniScriptStyle;
+    genres: MiniScriptGenre[];
+  }) => {
+    await generateMiniScript(payload);
+  };
+
+  const handleGenerateAuctionLots = async () => {
+    await generateAuctionLots();
+  };
+
+  const handlePlaceAuctionBid = async (amount: number) => {
+    await placeAuctionBid(amount);
+  };
+
+  const handleCloseAuctionLot = async () => {
+    await closeAuctionLot();
+  };
+
   const phasePanelProps: SocialIcebreakerPhasePanelProps = {
     sessionId,
     socialSessionId: socialSessionId || '',
@@ -330,6 +354,10 @@ export function SocialIcebreakerOrchestrator({
     onNextLieDetectivePlayer: nextLieDetectivePlayer,
     onGenerateDice: handleGenerateDice,
     onCompleteDice: handleCompleteDice,
+    onGenerateMiniScript: handleGenerateMiniScript,
+    onGenerateAuctionLots: handleGenerateAuctionLots,
+    onPlaceAuctionBid: handlePlaceAuctionBid,
+    onCloseAuctionLot: handleCloseAuctionLot,
     onEnd,
     eventId,
   };

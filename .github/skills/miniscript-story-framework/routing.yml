@@ -1,0 +1,13 @@
+owned_files:
+  - packages/shared/src/miniscriptStoryFramework.ts
+  - apps/server/src/lib/miniscriptAgent.ts
+  - apps/server/src/routes/domains/miniscript.ts
+  - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
+  - apps/mini-program/src/pages/icebreaker-session/index.tsx
+  - apps/user-client/src/components/social-icebreaker/miniscript/
+related_skills:
+  - llm-runtime-safety-and-integration
+  - social-icebreaker-domain
+  - mini-program-frontend-excellence
+  - platform-coordination-protocol
+  - server-domain-architecture

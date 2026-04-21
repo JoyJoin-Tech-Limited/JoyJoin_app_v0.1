@@ -34,6 +34,7 @@ Use these as **ordered checklists** when compiling an `IcebreakerRunPlan`. Each 
 
 - **Input:** JoyJoin catalog: Social phases + optional `IcebreakerToolkit` game titles as *ideas only* (not wired until dev maps them).
 - **Action:** pick **atomic labels** (e.g. “two_truths_one_lie”, “timed_tap_challenge”, “mood_topics”) and map each to **`SocialIcebreakerPhase`** where possible.
+- **Rule:** when a plan includes **`mini_script`**, also require **`miniscript-story-framework`** (JSON contract + `POST /api/miniscript/generate`); **min players 4** per `PHASE_CONFIG`.
 - **Output:** internal draft list → translated to `segments[].phase`.
 
 ### FlowCurator
@@ -45,7 +46,7 @@ Use these as **ordered checklists** when compiling an `IcebreakerRunPlan`. Each 
 ### TimeBoxOptimizer
 
 - **Input:** `event_pools.dateTime` vs compile time, expected in-event icebreaker minutes (product default), `memberCount`.
-- **Action:** assign notional **minute budget** per segment; if sum exceeds budget, drop lowest-priority optional segments first (`auction`, `mini_script_beta` unless experimental flag).
+- **Action:** assign notional **minute budget** per segment; if sum exceeds budget, drop lowest-priority optional segments first (`auction`, `mini_script` unless experimental flag).
 - **Output:** optional `context` notes or future `segment.maxMinutes` when schema extends.
 
 ---
@@ -84,9 +85,9 @@ Use these as **ordered checklists** when compiling an `IcebreakerRunPlan`. Each 
 | `warmup` | `WarmupPhaseView` in `phaseViews.tsx` | `WarmupPhase` |
 | `micro_challenge` | `MicroChallengePhaseView` | `MicroChallengePhase` |
 | `lie_detective` | `LieDetectivePhaseView` | `LieDetectivePhase` |
-| `auction` | `FallbackPhaseView` / stub pattern in `index.tsx` | `AuctionPhaseStub` |
+| `auction` | `AuctionPhaseView` in `phaseViews.tsx` | `AuctionPhase` + `useSocialIcebreaker` auction routes |
 | `personality_dice` | `PersonalityDicePhaseView` | `PersonalityDicePhase` |
-| `mini_script_beta` | `FallbackPhaseView` / stub pattern | `MiniScriptBetaStub` |
+| `mini_script` | `MiniScriptPhaseView` + `IcebreakerToolSelector` / `MiniScriptConfigModal` in `icebreaker-session` | `MiniScriptPhasePanel` + `miniscript/*` |
 | `recap` | `RecapPhaseView` | `SocialIcebreakerRecap` |
 
 - **Output:** table in handoff doc for Game Development Agent; acceptance tests **run on mini-program** first.
