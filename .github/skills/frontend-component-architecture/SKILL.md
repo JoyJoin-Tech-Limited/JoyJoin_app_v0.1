@@ -19,6 +19,12 @@ description: >
 - Reviewing a component for semantic correctness or accessibility
 - Adding interactive state (loading, disabled, error) to a component
 
+## Viewport / zero-scroll defaults
+
+- Full-viewport web flows should follow [viewport-zero-scroll](../viewport-zero-scroll/SKILL.md): use **`apps/user-client/src/styles/viewport-lockdown.css`** (already pulled in by `apps/user-client/src/index.css`), prefer **`.no-scroll-container`**, use **`ResponsiveSpacer`** (`@shared/ui/ResponsiveSpacer`) for collapsible vertical rhythm, and keep **`ScrollSentinel`** mounted in **`App.tsx`** during development.
+- **Mini-program (prioritised launch):** follow the same skill for Taro — **`ScrollView`** as the explicit scroll port, **`apps/mini-program/src/components/ResponsiveSpacer.tsx`**, and SCSS mixins **`viewport-min-height`** / **`no-scroll-page-shell`** in **`apps/mini-program/src/styles/_mixins.scss`**. Do not put DOM-only viewport utilities into `packages/shared` unless they are style-agnostic tokens; keep WeChat-specific layout in `apps/mini-program`.
+- Do not introduce document-level vertical scroll for “hero + form” surfaces; use flex columns and explicit inner scroll only where the product exception applies (feeds, long lists) with a code comment at the scroll root.
+
 ## Source of truth
 
 | Layer | Location |

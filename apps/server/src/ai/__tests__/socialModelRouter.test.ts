@@ -133,20 +133,20 @@ describe('callSocialAI', () => {
       expect(mockDeepseekCreate).not.toHaveBeenCalled();
     });
 
-    it('uses explicit socialFunction routing for deepseek-preferred functions', async () => {
-      mockDeepseekCreate.mockResolvedValue(deepseekResponse('Structured output'));
+    it('uses explicit socialFunction routing for minimax-preferred icebreaker JSON functions', async () => {
+      mockMinimaxCreate.mockResolvedValue(minimaxResponse('[{"id":"x"}]'));
 
       const result = await callSocialAI({
         ...baseParams,
         socialFunction: 'generateMicroChallenges',
       });
 
-      expect(result.content).toBe('Structured output');
-      expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-chat');
+      expect(result.content).toBe('[{"id":"x"}]');
+      expect(result.provider).toBe('minimax');
+      expect(result.model).toBe('minimax-m2.7');
       expect(result.fallbackUsed).toBe(false);
-      expect(mockMinimaxCreate).not.toHaveBeenCalled();
-      expect(mockDeepseekCreate).toHaveBeenCalledOnce();
+      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
+      expect(mockDeepseekCreate).not.toHaveBeenCalled();
     });
 
     it('throws a clear error when MiniMax fails and DEEPSEEK_API_KEY is not set', async () => {

@@ -36,6 +36,15 @@ middleware) may still fail to initialize if required variables like
 | `COOKIE_DOMAIN` | Cookie domain for cross-subdomain sessions | _unset_ (auto-detected) |
 | `PORT` | Server listen port | `5001` |
 
+### Social / icebreaker AI (recommended vs degraded)
+
+| Posture | Keys / env | Behaviour |
+| --- | --- | --- |
+| **Recommended (production)** | `MINIMAX_API_KEY` **and** `DEEPSEEK_API_KEY` | [`socialModelRouter`](../apps/server/src/ai/socialModelRouter.ts): MiniMax-first for most social functions; DeepSeek fallback on failure; MiniScript framework JSON can recover via DeepSeek `json_object` if MiniMax returns unusable JSON. Optional: `MINIMAX_MODEL`, `MINIMAX_BASE_URL`, `SOCIAL_AI_PROVIDER` (`hybrid` default; `minimax` or `deepseek` force). |
+| **Degraded (MiniMax-only)** | `MINIMAX_API_KEY` set, **no** `DEEPSEEK_API_KEY` | Router falls back to DeepSeek only where required (e.g. `analyzeComplexSemantics`) may **throw** if DeepSeek is missing; MiniScript has **no** DeepSeek recovery path—orchestrator may use deterministic stub after LLM failure. |
+
+See also: [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md), [`production-ai-surfaces.md`](../.github/skills/social-icebreaker-domain/references/production-ai-surfaces.md), [Icebreaker AI observability (Prometheus / alerts)](./ops/icebreaker-ai-observability.md).
+
 ---
 
 ## Payment Feature Flag
@@ -64,6 +73,15 @@ payments are disabled.
 > **Beta guidance**: Leave `PAYMENTS_ENABLED=false` during the initial internal
 > beta unless live payments are explicitly in scope. When you are ready to enable
 > payments, also configure the WeChat Pay variables below.
+
+### Open beta (self-serve, payments required)
+
+For the **wider open beta** cohort, product requires **`PAYMENTS_ENABLED=true`**. Before turning it on in any environment:
+
+1. Set **all** WeChat Pay variables in the table below; confirm `WECHAT_PAY_APP_ID` matches `WECHAT_APPID` in production.
+2. Run **staging** end-to-end: mini-program (and web if in scope) create payment → verify → entitlement; exercise `/api/webhooks/wechat-pay` with a valid signature path (see webhook section above).
+3. Confirm **`GET /api/readyz`** returns `200` after deploy; add `/api/readyz` and `/api/metrics` to synthetic monitoring (see [Follow-ups](#follow-ups-for-later-batches)).
+4. Record sign-off in [`open-beta-wider.md`](./open-beta-wider.md) go/no-go table.
 
 ---
 
@@ -143,8 +161,10 @@ available at the `/api/metrics` endpoint.
 
 | Variable | Description | Default |
 |---|---|---|
-| `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Enable auction phase (beta) | `false` |
-| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Enable mini-script beta phase | `false` |
+| `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Enable auction phase (virtual-coin lots + bidding) | `false` |
+| `SOCIAL_AUCTION_LLM_ENABLED` | When `true`, `generateAuctionLots` calls the model; when unset/false, curated fallback lots only | `false` |
+| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enable **迷你剧本杀** (`mini_script`) phase | `false` |
+| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | `false` |
 
 ---
 
@@ -220,4 +240,4 @@ their session expires mid-flow.
 - Move rate-limit store to Redis for multi-instance deployments (current store is
   in-memory and not shared across processes).
 - Add structured logging backend (Batch 2 observability work).
-- Add `/api/readyz` to deployment smoke tests / synthetic monitoring.
+- Add `/api/readyz` to deployment smoke tests / synthetic monitoring (required for open beta per [`open-beta-wider.md`](./open-beta-wider.md)).

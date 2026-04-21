@@ -2,6 +2,7 @@ import type {
   SocialSessionState,
   SocialIcebreakerPhase,
 } from '@shared/socialIcebreaker'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SessionParticipant, SessionPhase } from './phaseViews'
 
 export interface IcebreakerSession extends SocialSessionState {
@@ -58,6 +59,7 @@ export interface SocialRecapResponse {
     description: string
   }>
   state?: SocialSessionState
+  meta?: AIResponseMeta
 }
 
 export function normaliseSession(state: SocialSessionState): IcebreakerSession {

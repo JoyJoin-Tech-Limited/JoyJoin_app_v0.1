@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { requireAdmin } from "../../adminAuth";
+import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
 import { matchingThresholds } from "@shared/schema";
 import { matchEventPool } from "../../poolMatchingService";
@@ -82,7 +82,7 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/matching-shadow-experiments", requireAdmin, async (req: any, res) => {
+  app.post("/api/admin/matching-shadow-experiments", requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { poolId } = runMatchingShadowSchema.parse(req.body);
       const groups = await matchEventPool(poolId);

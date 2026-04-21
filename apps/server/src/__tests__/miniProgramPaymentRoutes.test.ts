@@ -7,6 +7,7 @@ process.env.DATABASE_URL ??= "postgres://postgres:postgres@127.0.0.1:5432/joyjoi
 
 vi.mock("../adminAuth", () => ({
   requireAdmin: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireOperatorOrAbove: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
 vi.mock("../rateLimiter", () => ({

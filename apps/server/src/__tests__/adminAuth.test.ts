@@ -406,4 +406,46 @@ describe("admin auth routes", () => {
       expect(body.role).toBe("super_admin");
     });
   });
+
+  describe("production admin hardening", () => {
+    const prevNodeEnv = process.env.NODE_ENV;
+
+    afterEach(() => {
+      process.env.NODE_ENV = prevNodeEnv;
+    });
+
+    it("rejects userId-only legacy admin session on requireAdmin in production", async () => {
+      process.env.NODE_ENV = "production";
+      vi.mocked(storage.getUser).mockResolvedValue({ id: "legacy-user-1", isAdmin: true } as any);
+
+      await withServer(async (baseUrl) => {
+        const legacyLogin = await fetch(`${baseUrl}/__test__/legacy-login`, {
+          method: "POST",
+        });
+        const cookie = cookieHeader(legacyLogin);
+
+        const response = await fetch(`${baseUrl}/__test__/admin-only`, {
+          headers: { Cookie: cookie },
+        });
+
+        expect(response.status).toBe(403);
+      });
+    });
+
+    it("does not accept legacy phone admin login in production", async () => {
+      process.env.NODE_ENV = "production";
+      vi.mocked(storage.getAdminAccountByUsername).mockResolvedValue(undefined as any);
+      vi.mocked(storage.getUserByPhone).mockResolvedValue([legacyAdminUser] as any);
+
+      await withServer(async (baseUrl) => {
+        const response = await fetch(`${baseUrl}/api/admin/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneNumber: legacyAdminUser.phoneNumber, password: legacyAdminPassword }),
+        });
+
+        expect(response.status).toBe(401);
+      });
+    });
+  });
 });

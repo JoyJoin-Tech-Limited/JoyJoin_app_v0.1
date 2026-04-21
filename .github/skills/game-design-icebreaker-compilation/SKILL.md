@@ -20,6 +20,9 @@ Turn **match-complete context** (group size, pool type, theme metadata, safe pro
 Pair with:
 
 - [`social-icebreaker-domain`](../social-icebreaker-domain/SKILL.md) — phase order, host authority, lie-detective secrecy; **mini-program first** client policy
+- [`lie-detective-icebreaker`](../lie-detective-icebreaker/SKILL.md) — `lie_detective` mechanics + secrecy when compiling that segment
+- [`personality-dice-icebreaker`](../personality-dice-icebreaker/SKILL.md) — `personality_dice` roster + tone when compiling that segment
+- [`icebreaker-auction-phase`](../icebreaker-auction-phase/SKILL.md) — `auction` virtual-coin constraints when compiling that segment
 - [`platform-coordination-protocol`](../platform-coordination-protocol/SKILL.md) — sibling web + mini-program when touching both surfaces
 - [`event-pool-and-matching-operations`](../event-pool-and-matching-operations/SKILL.md) — group row semantics after match
 - [`llm-runtime-safety-and-integration`](../llm-runtime-safety-and-integration/SKILL.md) — when LLMs fill template slots

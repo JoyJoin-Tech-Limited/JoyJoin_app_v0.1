@@ -10,12 +10,13 @@ import type { ReactNode } from 'react';
  */
 import { motion } from 'framer-motion';
 import type { SocialIcebreakerPhase, AtmosphereMood, SocialTopic, SocialSessionState } from '@shared/socialIcebreaker';
+import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import { WarmupPhase } from './warmup/WarmupPhase';
 import { MicroChallengePhase } from './micro-challenge/MicroChallengePhase';
 import { LieDetectivePhase } from './lie-detective/LieDetectivePhase';
-import { AuctionPhaseStub } from './AuctionPhaseStub';
+import { AuctionPhase } from './AuctionPhase';
 import { PersonalityDicePhase } from './PersonalityDicePhase';
-import { MiniScriptBetaStub } from './MiniScriptBetaStub';
+import { MiniScriptPhasePanel } from './miniscript/MiniScriptPhasePanel';
 import { SocialIcebreakerRecap } from './SocialIcebreakerRecap';
 
 export type SocialIcebreakerParticipantBrief = {
@@ -47,6 +48,13 @@ export interface SocialIcebreakerPhasePanelProps {
   onNextLieDetectivePlayer: () => Promise<void>;
   onGenerateDice: () => Promise<void>;
   onCompleteDice: () => Promise<void>;
+  onGenerateMiniScript: (payload: {
+    style: MiniScriptStyle;
+    genres: MiniScriptGenre[];
+  }) => Promise<void>;
+  onGenerateAuctionLots: () => Promise<void>;
+  onPlaceAuctionBid: (amount: number) => Promise<void>;
+  onCloseAuctionLot: () => Promise<void>;
   onEnd: () => void;
   eventId?: string;
 }
@@ -148,7 +156,16 @@ export const SOCIAL_ICEBREAKER_PHASE_REGISTRY: Record<
     motionKey: 'auction',
     render: (p) => (
       <motion.div key="auction" className="h-full" {...fadeMotionProps()}>
-        <AuctionPhaseStub isHost={p.isHost} onAdvance={p.onAdvancePhase} isAdvancing={p.isAdvancing} />
+        <AuctionPhase
+          state={p.state}
+          userId={p.userId}
+          isHost={p.isHost}
+          isAdvancing={p.isAdvancing}
+          onGenerateAuctionLots={p.onGenerateAuctionLots}
+          onPlaceAuctionBid={p.onPlaceAuctionBid}
+          onCloseAuctionLot={p.onCloseAuctionLot}
+          onAdvancePhase={p.onAdvancePhase}
+        />
       </motion.div>
     ),
   },
@@ -172,11 +189,17 @@ export const SOCIAL_ICEBREAKER_PHASE_REGISTRY: Record<
       </motion.div>
     ),
   },
-  mini_script_beta: {
-    motionKey: 'mini_script_beta',
+  mini_script: {
+    motionKey: 'mini_script',
     render: (p) => (
-      <motion.div key="mini_script_beta" className="h-full" {...fadeMotionProps()}>
-        <MiniScriptBetaStub isHost={p.isHost} onAdvance={p.onAdvancePhase} isAdvancing={p.isAdvancing} />
+      <motion.div key="mini_script" className="h-full" {...fadeMotionProps()}>
+        <MiniScriptPhasePanel
+          state={p.state}
+          isHost={p.isHost}
+          isAdvancing={p.isAdvancing}
+          onAdvancePhase={p.onAdvancePhase}
+          onGenerateMiniScript={p.onGenerateMiniScript}
+        />
       </motion.div>
     ),
   },

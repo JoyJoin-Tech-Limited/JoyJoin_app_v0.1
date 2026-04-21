@@ -8,7 +8,7 @@ Reference for which admin portal pages map to which API endpoints and which role
 |------|-------------|
 | `super_admin` | Full access, including account management |
 | `operator` | Operational access: events, users, content, moderation, finance read |
-| `viewer` | Read-only (not yet fully enforced at route level; all routes require at least `requireAdmin`) |
+| `viewer` | Read-only: mutating `/api/admin/*` routes require `requireOperatorOrAbove` (or `requireSuperAdmin`) after `requireAdmin`; GETs may remain `requireAdmin` only. Guardrail: `apps/server/src/__tests__/adminRbacCoverage.test.ts`. |
 
 > **Middleware:** `requireAdmin` validates an active admin session. `requireSuperAdmin` additionally asserts `role === 'super_admin'`. `requireOperatorOrAbove` asserts `role` is `super_admin` or `operator`.
 
@@ -41,11 +41,11 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/users` | List users | GET | `/api/admin/users` | `requireAdmin` |
 | `/admin/users` | Get user | GET | `/api/admin/users/:id` | `requireAdmin` |
 | `/admin/users` | Get user detail | GET | `/api/admin/users/:id/detail` | `requireAdmin` |
-| `/admin/users` | Ban user ⚠️ | PATCH | `/api/admin/users/:id/ban` | `requireAdmin` |
-| `/admin/users` | Unban user ⚠️ | PATCH | `/api/admin/users/:id/unban` | `requireAdmin` |
+| `/admin/users` | Ban user | PATCH | `/api/admin/users/:id/ban` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/users` | Unban user | PATCH | `/api/admin/users/:id/unban` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/stats` | Platform stats | GET | `/api/admin/stats` | `requireAdmin` |
 
-> ⚠️ Ban/unban are moderation writes. Currently protected at `requireAdmin` (operator-level). Escalating to `requireOperatorOrAbove` is recommended post-beta.
+> Ban/unban are moderation writes and require operator or above on the API.
 
 ---
 
@@ -55,9 +55,9 @@ Reference for which admin portal pages map to which API endpoints and which role
 |------------|--------|--------|----------|---------------------|
 | `/admin/events` | List events | GET | `/api/admin/events` | `requireAdmin` |
 | `/admin/events` | Get event | GET | `/api/admin/events/:id` | `requireAdmin` |
-| `/admin/events` | Update event | PATCH | `/api/admin/events/:id` | `requireAdmin` |
+| `/admin/events` | Update event | PATCH | `/api/admin/events/:id` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/events` | List event pools | GET | `/api/admin/event-pools` | `requireAdmin` |
-| `/admin/events` | Create event pool | POST | `/api/admin/event-pools` | `requireAdmin` |
+| `/admin/events` | Create event pool | POST | `/api/admin/event-pools` | `requireAdmin` + `requireOperatorOrAbove` |
 | `/admin/events` | Update event pool | PATCH | `/api/admin/event-pools/:id` | `requireAdmin` |
 | `/admin/events` | Pool registrations | GET | `/api/admin/event-pools/:id/registrations` | `requireAdmin` |
 | `/admin/events` | Pool groups | GET | `/api/admin/event-pools/:id/groups` | `requireAdmin` |

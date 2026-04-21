@@ -1,6 +1,8 @@
 // Social Icebreaker System - Shared Types
 
+import { z } from 'zod';
 import type { AIResponseMeta } from './types/aiMeta';
+import type { MiniScriptStoryFramework } from './miniscriptStoryFramework';
 
 export type SocialIcebreakerPhase =
   | 'warmup'
@@ -8,7 +10,7 @@ export type SocialIcebreakerPhase =
   | 'lie_detective'
   | 'auction'
   | 'personality_dice'
-  | 'mini_script_beta'
+  | 'mini_script'
   | 'recap';
 
 export type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
@@ -87,6 +89,41 @@ export interface LieDetectiveReveal {
   revealedAt: number;
 }
 
+/** Virtual-currency auction lots (no real-money semantics). */
+export interface AuctionLot {
+  id: string;
+  title: string;
+  teaser?: string;
+}
+
+export interface AuctionHighBid {
+  userId: string;
+  amount: number;
+}
+
+/** Starting balance per player when auction lots are generated. */
+export const AUCTION_STARTING_COINS = 100;
+
+export const AUCTION_MIN_LOTS = 2;
+
+export const AUCTION_MAX_LOTS = 5;
+
+export const auctionLotSchema = z.object({
+  id: z.string().min(1).max(48),
+  title: z.string().min(1).max(100),
+  teaser: z.string().max(200).optional(),
+});
+
+export const auctionLotsLlmPayloadSchema = z.object({
+  lots: z.array(auctionLotSchema).min(AUCTION_MIN_LOTS).max(AUCTION_MAX_LOTS),
+});
+
+export type AuctionLotsLlmPayload = z.infer<typeof auctionLotsLlmPayloadSchema>;
+
+export function parseAuctionLotsPayload(input: unknown): AuctionLotsLlmPayload {
+  return auctionLotsLlmPayloadSchema.parse(input);
+}
+
 export interface SocialSessionState {
   socialSessionId: string;
   icebreakerSessionId: string;
@@ -127,6 +164,18 @@ export interface SocialSessionState {
   personalityDiceChallengesMeta?: AIResponseMeta;
   currentDicePlayerIndex?: number;
   diceCompletedBy?: string[];
+  // Auction phase (virtual coins; see payment-entitlement-authority if real value ever touches this)
+  auctionLots?: AuctionLot[];
+  auctionLotsMeta?: AIResponseMeta;
+  /** userId -> remaining coins while in auction phase */
+  auctionBalances?: Record<string, number>;
+  /** Index into `auctionLots` for the active lot */
+  auctionCurrentLotIndex?: number;
+  auctionHighBid?: AuctionHighBid | null;
+  /** Set when host has closed the final lot; required before advancing out of `auction`. */
+  auctionAllLotsClosed?: boolean;
+  /** Server-written one-liners for recap LLM (bounded strings). */
+  auctionRecapLines?: string[];
   // Recap data
   recapData?: {
     topicsDiscussed: string[];
@@ -134,6 +183,10 @@ export interface SocialSessionState {
     lieDetectiveWinner?: string;
     funMoments: string[];
   };
+  /** 迷你剧本杀 — generated story framework (JSON), host-only mutation via POST /api/miniscript/generate */
+  miniScriptFramework?: MiniScriptStoryFramework;
+  miniScriptFrameworkGeneratedAt?: number;
+  miniScriptFrameworkGeneratedByUserId?: string;
 }
 
 // Phase config
@@ -193,15 +246,15 @@ export const PHASE_CONFIG = {
     timeoutMinutes: 15,
     minPlayersRequired: 2,
   },
-  mini_script_beta: {
-    emoji: '🧪',
-    name: '剧本杀β',
-    nameEn: 'Mini Script Beta',
+  mini_script: {
+    emoji: '🎭',
+    name: '迷你剧本杀',
+    nameEn: 'Mini Script',
     gradient: 'from-indigo-500 to-slate-700',
     bgGradient: 'from-indigo-50 via-slate-50 to-violet-50',
     darkBgGradient: 'from-slate-950 via-indigo-950 to-zinc-900',
     pillColor: 'bg-indigo-100/80 text-indigo-700 border border-indigo-300',
-    timeoutMinutes: 20,
+    timeoutMinutes: 45,
     minPlayersRequired: 4,
   },
   recap: {
@@ -223,7 +276,7 @@ export const PHASE_ORDER: SocialIcebreakerPhase[] = [
   'lie_detective',
   'auction',
   'personality_dice',
-  'mini_script_beta',
+  'mini_script',
   'recap',
 ];
 
@@ -258,4 +311,26 @@ export function getNextEligiblePhase(
   }
 
   return 'recap';
+}
+
+const LEGACY_MINI_SCRIPT_PHASE = 'mini_script_beta' as const;
+
+/**
+ * Normalizes DB-backed session JSON that still uses the deprecated phase id
+ * `mini_script_beta` (renamed to `mini_script`).
+ */
+export function migrateLegacySocialIcebreakerPhases(state: SocialSessionState): void {
+  if ((state.currentPhase as string) === LEGACY_MINI_SCRIPT_PHASE) {
+    state.currentPhase = 'mini_script';
+  }
+  if (Array.isArray(state.enabledPhases)) {
+    state.enabledPhases = state.enabledPhases.map((phase) =>
+      (phase as string) === LEGACY_MINI_SCRIPT_PHASE ? 'mini_script' : phase,
+    );
+  }
+  if (Array.isArray(state.completedPhases)) {
+    state.completedPhases = state.completedPhases.map((phase) =>
+      (phase as string) === LEGACY_MINI_SCRIPT_PHASE ? 'mini_script' : phase,
+    );
+  }
 }

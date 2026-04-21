@@ -1,0 +1,38 @@
+skill: personality-dice-icebreaker
+
+primary_ownership: >
+  Personality dice phase AI batch generation, per-player challenges, REST generate/complete,
+  and mini-program/web parity.
+
+use_when:
+  - editing personality_dice prompts or fallback table
+  - changing personality-dice routes or session fields
+  - reviewing challenge copy for safety / tone
+
+do_not_use_when:
+  - auction or lie_detective specifics (use sibling vertical skills)
+  - generic session store without dice fields
+
+strong_triggers:
+  - personality_dice
+  - personality dice
+  - 人格骰子
+  - personality-dice/generate
+  - social-personality-dice-v1
+
+owned_files:
+  - apps/server/src/routes/socialIcebreaker.ts
+  - apps/server/src/socialIcebreakerAIService.ts
+  - apps/user-client/src/components/social-icebreaker/PersonalityDicePhase.tsx
+  - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
+
+owned_paths:
+  - /api/social-icebreaker/*/personality-dice/
+
+related_skills:
+  - skill: social-icebreaker-domain
+    when: enabledPhases gating or advance ordering also changes
+  - skill: llm-runtime-safety-and-integration
+    when: provider routing or promptVersion bumps
+  - skill: platform-coordination-protocol
+    when: web + Taro UX must stay aligned

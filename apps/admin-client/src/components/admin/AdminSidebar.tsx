@@ -19,6 +19,7 @@ import {
   ReceiptText,
   ShieldCheck,
   Database,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +57,7 @@ const safetyItems = [
 const contentRevenueItems = [
   { title: "数据洞察", url: "/admin/insights", icon: BarChart3 },
   { title: "Outcome 分析", url: "/admin/outcome-analytics", icon: Database },
+  { title: "破冰 AI 反馈", url: "/admin/icebreaker-ai-feedback", icon: Sparkles },
   { title: "内容管理", url: "/admin/content", icon: FileText },
   { title: "通知推送", url: "/admin/notifications", icon: Bell },
   { title: "活动管理", url: "/admin/events", icon: CalendarDays },

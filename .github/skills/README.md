@@ -67,6 +67,10 @@ Deep expertise for the two core product engines.
 | [`event-pool-and-matching-operations`](./event-pool-and-matching-operations/SKILL.md) | Event-pool lifecycle, pool stats semantics, match-run operations, and post-match group outcome handling |
 | [`matching-domain`](./matching-domain/SKILL.md) | Deterministic pair scoring, 6-dimension weights, signal boundary invariant, execution safety, AI explanation separation |
 | [`social-icebreaker-domain`](./social-icebreaker-domain/SKILL.md) | Session lifecycle, host/player authority, persistence/rejoin, roster vs presence, action integrity, secrecy boundaries, AI content |
+| [`miniscript-story-framework`](./miniscript-story-framework/SKILL.md) | MiniScript `MiniScriptStoryFramework` schema, LLM vs stub orchestration, host authority (`style` / `genres` / `playerCount`), idempotent generate route |
+| [`lie-detective-icebreaker`](./lie-detective-icebreaker/SKILL.md) | `lie_detective` secrecy (`isLie`), votes/reveals, routes, `social-lie-detective-v1` |
+| [`personality-dice-icebreaker`](./personality-dice-icebreaker/SKILL.md) | `personality_dice` roster-sized challenges, routes, `social-personality-dice-v1`, tone/safety |
+| [`icebreaker-auction-phase`](./icebreaker-auction-phase/SKILL.md) | `auction` virtual-coin flow, optional `generateAuctionLots` (`social-auction-lots-v1`), bid/close-lot routes, advance guard |
 
 ---
 

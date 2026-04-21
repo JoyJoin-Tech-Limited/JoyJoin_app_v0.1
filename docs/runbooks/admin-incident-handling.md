@@ -275,5 +275,14 @@ UPDATE admin_accounts SET status = 'disabled' WHERE username = '<compromised>';
 
 ---
 
+## 5. Open beta (self-serve) additions
+
+- **Untrusted users:** Prefer disabling or tightly scoping `viewer` accounts; mutating admin APIs require operator or above (see [`open-beta-wider.md`](../open-beta-wider.md)).
+- **Single replica:** If the cohort runs on **one** Node process, document that restarts reset in-memory rate limits and abuse soft counters (`docs/launch-risks.md` R-01/R-02); bans and DB-backed state still apply. Do **not** scale to multiple replicas without Redis/shared limits (see [`open-beta-single-replica.md`](./open-beta-single-replica.md)).
+- **Payments:** Payment incidents follow Finance escalation above; verify `PAYMENTS_ENABLED` and WeChat Pay env per [`LAUNCH_CONFIG.md`](../LAUNCH_CONFIG.md).
+- **Emergency auth:** See [`emergency-auth-surfaces.md`](./emergency-auth-surfaces.md) for debug flags and CLI bypass policy.
+
+---
+
 *For RBAC role definitions and endpoint permissions, see [`docs/admin-rbac-matrix.md`](../admin-rbac-matrix.md).*  
 *For known MVP limitations, see [`docs/launch-risks.md`](../launch-risks.md).*

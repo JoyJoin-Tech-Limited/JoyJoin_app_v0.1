@@ -16,11 +16,11 @@ describe('social icebreaker phase configuration', () => {
     );
   });
 
-  it('adds optional auction and mini script beta phases via server flags', () => {
+  it('adds optional auction and mini script phases via server flags', () => {
     expect(
       getServerEnabledPhases({
         SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'true',
-        SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT: 'true',
       } as NodeJS.ProcessEnv),
     ).toEqual([
       'warmup',
@@ -28,8 +28,16 @@ describe('social icebreaker phase configuration', () => {
       'lie_detective',
       'auction',
       'personality_dice',
-      'mini_script_beta',
+      'mini_script',
     ]);
+  });
+
+  it('enables mini script via legacy SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA', () => {
+    expect(
+      getServerEnabledPhases({
+        SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA: 'true',
+      } as NodeJS.ProcessEnv),
+    ).toEqual([...DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES, 'mini_script']);
   });
 
   it('can disable personality dice without dropping later flagged phases', () => {
@@ -37,14 +45,14 @@ describe('social icebreaker phase configuration', () => {
       getServerEnabledPhases({
         SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE: 'false',
         SOCIAL_ICEBREAKER_ENABLE_AUCTION: 'true',
-        SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA: 'true',
+        SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT: 'true',
       } as NodeJS.ProcessEnv),
     ).toEqual([
       'warmup',
       'micro_challenge',
       'lie_detective',
       'auction',
-      'mini_script_beta',
+      'mini_script',
     ]);
   });
 
@@ -113,5 +121,25 @@ describe('social icebreaker phase configuration', () => {
     expect(state.diceCompletedBy).toBeUndefined();
     expect(state.warmupTopics).toEqual([{ id: 't1', question: 'Q1', mood: 'funny', emoji: '😂' }]);
     expect(state.challengeCompletedBy).toEqual(['host-1']);
+
+    (state as { miniScriptFramework?: unknown }).miniScriptFramework = { schemaVersion: 1 };
+    state.miniScriptFrameworkGeneratedAt = 1;
+    state.miniScriptFrameworkGeneratedByUserId = 'host-1';
+    cleanupPhaseStateForNextPhase(state, 'mini_script');
+    expect(state.miniScriptFramework).toBeUndefined();
+    expect(state.miniScriptFrameworkGeneratedAt).toBeUndefined();
+    expect(state.miniScriptFrameworkGeneratedByUserId).toBeUndefined();
+
+    state.auctionLots = [{ id: 'a', title: 'Lot' }];
+    state.auctionBalances = { u1: 10 };
+    state.auctionHighBid = { userId: 'u1', amount: 5 };
+    state.auctionRecapLines = ['line'];
+    state.auctionAllLotsClosed = true;
+    cleanupPhaseStateForNextPhase(state, 'auction');
+    expect(state.auctionLots).toBeUndefined();
+    expect(state.auctionBalances).toBeUndefined();
+    expect(state.auctionHighBid).toBeUndefined();
+    expect(state.auctionRecapLines).toBeUndefined();
+    expect(state.auctionAllLotsClosed).toBeUndefined();
   });
 });
