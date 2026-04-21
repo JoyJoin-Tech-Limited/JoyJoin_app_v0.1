@@ -31,6 +31,30 @@ set -a
 source "$ENV_FILE"
 set +a
 
+retry_command() {
+    local max_attempts=$1
+    local delay_seconds=$2
+    shift 2
+    local attempt=1
+    local exit_code=0
+
+    while true; do
+        if "$@"; then
+            return 0
+        fi
+
+        exit_code=$?
+        if [[ $attempt -ge $max_attempts ]]; then
+            echo "❌ Command failed after ${max_attempts} attempts: $*"
+            return "$exit_code"
+        fi
+
+        echo "⚠️ Command failed with exit code ${exit_code}. Retrying in ${delay_seconds}s (${attempt}/${max_attempts})..."
+        sleep "$delay_seconds"
+        attempt=$((attempt + 1))
+    done
+}
+
 echo "🚀 Deploying JoyJoin via self-managed Docker Compose + Nginx ($ENVIRONMENT)..."
 echo "📦 Repo root: $REPO_ROOT"
 echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
@@ -64,7 +88,7 @@ echo "🐳 Step 1: Rebuild and restart containers..."
 cd "$DEPLOY_DIR"
 echo "🧹 Removing stale joyjoin-api container if present..."
 docker rm -f joyjoin-api || true
-docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
 echo "🌐 Step 1.5: Sync and reload host Nginx config..."
 if [[ ! -f "$DEPLOY_DIR/nginx/joyjoin.conf" ]]; then
