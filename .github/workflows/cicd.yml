@@ -283,7 +283,7 @@ jobs:
             
             # Then sync schema with push
             echo "   Running schema push..."
-            npx drizzle-kit push --config=apps/server/drizzle.config.ts
+            npx drizzle-kit push --config=apps/server/drizzle.config.cjs
 
             # --- 4) Health checks ---
             echo "🏥 Verifying service status..."
