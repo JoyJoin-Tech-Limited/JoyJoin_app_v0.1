@@ -433,10 +433,10 @@ export default function DiscoverPage() {
   const archetypeInfo = user?.primaryArchetype ? archetypeConfig[user.primaryArchetype] : null;
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="flex min-h-full min-h-0 flex-col bg-background">
       <MobileHeader showLogo={true} />
-      
-      <div className="space-y-4">
+      {/* Scroll: variable-length event feed and modules — exception to zero-scroll document policy */}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden pb-16">
         {/* Coach Mark: Archetype Welcome Banner */}
         {shouldShowCoachMarks && 
          !coachMarkState.welcomeBanner && 

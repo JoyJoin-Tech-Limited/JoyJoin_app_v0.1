@@ -1,0 +1,37 @@
+/**
+ * Viewport lockdown — Zero-scroll policy baseline (see .cursor/skills/viewport-zero-scroll/SKILL.md).
+ * Uses 100dvh so mobile browser chrome retraction does not clip the shell.
+ * body overflow is hidden so the document does not scroll; route content must use an
+ * explicit scroll port (e.g. App shell) or .no-scroll-container until each screen is migrated.
+ */
+
+html {
+  height: 100%;
+  height: 100dvh;
+}
+
+body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/**
+ * Flex column that fills its parent and clips overflow — use for full-viewport flows
+ * (onboarding steps, splash) instead of relying on document scroll.
+ */
+.no-scroll-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}

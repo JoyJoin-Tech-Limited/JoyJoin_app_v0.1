@@ -30,6 +30,7 @@
     "./ai/onboarding": "./src/ai/onboarding.ts",
     "./ui/button": "./src/ui/Button.tsx",
     "./ui/buttonVariants": "./src/ui/buttonVariants.ts",
+    "./ui/responsiveSpacer": "./src/ui/ResponsiveSpacer.tsx",
     "./archetypeColors": "./src/archetypeColors.ts",
     "./achievements": "./src/achievements.ts",
     "./legal/joyjoinTermsZh": "./src/legal/joyjoinTermsZh.ts"
