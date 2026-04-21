@@ -30,7 +30,11 @@
       "Workflow Governance Reviewer",
       "Verifier",
       "Game Design Agent",
-      "Game Development Agent"
+      "Game Development Agent",
+      "MiniScript Story Agent",
+      "Icebreaker Auction Phase Agent",
+      "Lie Detective Icebreaker Agent",
+      "Personality Dice Icebreaker Agent"
     ]
   },
   "copilot_hooks": {
@@ -537,6 +541,66 @@
         "recommended_extensions": []
       }
     },
+    "MiniScript Story Agent": {
+      "file": ".github/agents/miniscript-story-agent.agent.md",
+      "portfolio_role": "miniscript-story-contracts",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Schema- and policy-first work is covered by read/search/edit; execute only if adding scripted validation.",
+        "recommended_extensions": []
+      }
+    },
+    "Icebreaker Auction Phase Agent": {
+      "file": ".github/agents/icebreaker-auction-phase-agent.agent.md",
+      "portfolio_role": "icebreaker-auction-vertical",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Auction vertical is contract- and route-heavy; read/search/edit cover audits and doc updates alongside small code edits.",
+        "recommended_extensions": []
+      }
+    },
+    "Lie Detective Icebreaker Agent": {
+      "file": ".github/agents/lie-detective-icebreaker-agent.agent.md",
+      "portfolio_role": "icebreaker-lie-detective-vertical",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Secrecy and route reviews are documentation- and code-path-first; execute is optional for targeted tests.",
+        "recommended_extensions": []
+      }
+    },
+    "Personality Dice Icebreaker Agent": {
+      "file": ".github/agents/personality-dice-icebreaker-agent.agent.md",
+      "portfolio_role": "icebreaker-personality-dice-vertical",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Roster batch prompts and UX copy fit read/search/edit; add execute when validating generation in CI.",
+        "recommended_extensions": []
+      }
+    },
     "Launch Readiness Agent": {
       "file": ".github/agents/launch-readiness.agent.md",
       "portfolio_role": "release-review",
@@ -894,6 +958,10 @@
       "first-principles-velocity",
       "game-design-icebreaker-compilation",
       "social-icebreaker-domain",
+      "miniscript-story-framework",
+      "lie-detective-icebreaker",
+      "personality-dice-icebreaker",
+      "icebreaker-auction-phase",
       "event-pool-and-matching-operations",
       "llm-runtime-safety-and-integration",
       "draft-prd"
@@ -902,11 +970,48 @@
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "social-icebreaker-domain",
+      "miniscript-story-framework",
+      "lie-detective-icebreaker",
+      "personality-dice-icebreaker",
+      "icebreaker-auction-phase",
       "mini-program-frontend-excellence",
       "frontend-component-architecture",
       "server-domain-architecture",
       "platform-coordination-protocol",
       "testing-and-regression-guardrails"
+    ],
+    "MiniScript Story Agent": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "miniscript-story-framework",
+      "social-icebreaker-domain",
+      "llm-runtime-safety-and-integration",
+      "mini-program-frontend-excellence",
+      "platform-coordination-protocol"
+    ],
+    "Icebreaker Auction Phase Agent": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "icebreaker-auction-phase",
+      "social-icebreaker-domain",
+      "llm-runtime-safety-and-integration",
+      "platform-coordination-protocol"
+    ],
+    "Lie Detective Icebreaker Agent": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "lie-detective-icebreaker",
+      "social-icebreaker-domain",
+      "llm-runtime-safety-and-integration",
+      "testing-and-regression-guardrails"
+    ],
+    "Personality Dice Icebreaker Agent": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "personality-dice-icebreaker",
+      "social-icebreaker-domain",
+      "llm-runtime-safety-and-integration",
+      "joyjoin-brand-guidelines"
     ],
     "Launch Readiness Agent": [
       "orchestration-turn-reporting",

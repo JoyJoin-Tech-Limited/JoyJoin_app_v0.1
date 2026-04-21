@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Input } from '@tarojs/components'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
@@ -9,7 +9,13 @@ import {
   type LieDetectiveVote,
   type PersonalityDiceChallenge,
   type SocialIcebreakerPhase,
+  type SocialSessionState,
 } from '@shared/socialIcebreaker'
+import type { MiniScriptStoryFramework } from '@shared/miniscriptStoryFramework'
+import { useEffect, useState } from 'react'
+import { apiRequest } from '../../lib/api'
+import { buildSocialPath } from './icebreakerSessionModel'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
@@ -44,8 +50,8 @@ export function getPhaseLabel(phase: SessionPhase): string {
       return '🎲 人格骰子'
     case 'auction':
       return '🎪 拍卖'
-    case 'mini_script_beta':
-      return '🧪 剧本体验'
+    case 'mini_script':
+      return '🎭 迷你剧本杀'
     case 'recap':
       return '✨ 回顾'
     case 'ended':
@@ -632,6 +638,249 @@ export function PersonalityDicePhaseView({
   )
 }
 
+export function MiniScriptPhaseView({
+  framework,
+  phaseStartedAt,
+  timeoutMinutes,
+  isHost,
+  onAdvance,
+  isAdvancing,
+}: {
+  framework: MiniScriptStoryFramework | null | undefined
+  phaseStartedAt: number
+  timeoutMinutes: number
+  isHost: boolean
+  onAdvance: () => void
+  isAdvancing: boolean
+}) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const endMs = phaseStartedAt + timeoutMinutes * 60 * 1000
+  const remainSec = Math.max(0, Math.ceil((endMs - now) / 1000))
+  const mm = Math.floor(remainSec / 60)
+  const ss = remainSec % 60
+
+  if (!framework) {
+    return (
+      <View className='icebreaker__challenge'>
+        <Card className='icebreaker__challenge-card'>
+          <Text className='icebreaker__challenge-emoji'>🎭</Text>
+          <Text className='icebreaker__challenge-title'>剧本尚未生成</Text>
+          <Text className='icebreaker__challenge-desc'>
+            {isHost ? '点击上方「迷你剧本杀」配置风格与题材，生成你们的剧本。' : '请等待主持人生成剧本…'}
+          </Text>
+        </Card>
+      </View>
+    )
+  }
+
+  return (
+    <View className='icebreaker__challenge'>
+      <Card className='icebreaker__challenge-card'>
+        <Text className='icebreaker__challenge-emoji'>🎭</Text>
+        <Text className='icebreaker__challenge-title'>迷你剧本杀</Text>
+        <Text className='icebreaker__challenge-meta'>
+          剩余时间 {String(mm).padStart(2, '0')}:{String(ss).padStart(2, '0')}
+        </Text>
+        <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
+      </Card>
+
+      <Card className='icebreaker__challenge-card'>
+        <Text className='icebreaker__challenge-title'>角色与「小麻烦」钩子</Text>
+        {framework.characters.map((character) => (
+          <View key={character.slotIndex} className='icebreaker__ms-role'>
+            <Text className='icebreaker__ms-role-title'>{character.roleLabel}</Text>
+            <Text className='icebreaker__ms-role-line'>钩子：{character.sinHook}</Text>
+            <Text className='icebreaker__ms-role-line'>表面：{character.alibi}</Text>
+            <Text className='icebreaker__ms-role-line'>秘密：{character.secret}</Text>
+          </View>
+        ))}
+      </Card>
+
+      <Card className='icebreaker__challenge-card'>
+        <Text className='icebreaker__challenge-title'>流程节拍</Text>
+        {framework.act_flow.map((act) => (
+          <View key={act.actNumber} className='icebreaker__ms-act'>
+            <Text className='icebreaker__ms-act-title'>
+              第{act.actNumber}幕 · {act.title}
+            </Text>
+            {act.beats.map((beat, index) => (
+              <Text key={index} className='icebreaker__ms-role-line'>
+                · {beat}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </Card>
+
+      <Card className='icebreaker__challenge-card'>
+        <Text className='icebreaker__challenge-title'>结局机制</Text>
+        <Text className='icebreaker__challenge-desc'>{framework.ending.resolutionSummary}</Text>
+        <Text className='icebreaker__challenge-desc'>{framework.ending.confessionMechanic}</Text>
+      </Card>
+
+      {isHost ? (
+        <Button
+          variant='secondary'
+          className='icebreaker__action-btn'
+          onClick={onAdvance}
+          disabled={isAdvancing}
+          loading={isAdvancing}
+        >
+          {isAdvancing ? '切换中…' : '进入回顾'}
+        </Button>
+      ) : (
+        <Text className='icebreaker__helper-text'>跟随剧本节奏游玩，结束由主持人推进。</Text>
+      )}
+    </View>
+  )
+}
+
+export function AuctionPhaseView({
+  session,
+  currentUserId,
+  isHost,
+  onGenerateLots,
+  onPlaceBid,
+  onCloseLot,
+  onAdvance,
+  isAdvancing,
+  isGeneratingLots,
+  isPlacingBid,
+  isClosingLot,
+}: {
+  session: SocialSessionState
+  currentUserId: string
+  isHost: boolean
+  onGenerateLots: () => void
+  onPlaceBid: (amount: number) => void
+  onCloseLot: () => void
+  onAdvance: () => void
+  isAdvancing: boolean
+  isGeneratingLots: boolean
+  isPlacingBid: boolean
+  isClosingLot: boolean
+}) {
+  const [bidText, setBidText] = useState('10')
+  const lots = session.auctionLots ?? []
+  const idx = session.auctionCurrentLotIndex ?? 0
+  const currentLot = lots[idx]
+  const high = session.auctionHighBid
+  const balance = session.auctionBalances?.[currentUserId] ?? 0
+  const allClosed = session.auctionAllLotsClosed ?? false
+
+  if (lots.length === 0) {
+    return (
+      <View className='icebreaker__challenge'>
+        <Card className='icebreaker__challenge-card'>
+          <Text className='icebreaker__challenge-emoji'>🎪</Text>
+          <Text className='icebreaker__challenge-title'>脑洞拍卖会</Text>
+          <Text className='icebreaker__challenge-desc'>
+            虚拟币竞拍，仅供娱乐。主持人生成竞拍条目后，大家按轮出价。
+          </Text>
+        </Card>
+        {isHost ? (
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={onGenerateLots}
+            disabled={isGeneratingLots}
+            loading={isGeneratingLots}
+          >
+            {isGeneratingLots ? '生成中…' : '生成竞拍条目'}
+          </Button>
+        ) : (
+          <Text className='icebreaker__helper-text'>等待主持人生成竞拍条目…</Text>
+        )}
+      </View>
+    )
+  }
+
+  if (allClosed) {
+    return (
+      <View className='icebreaker__challenge'>
+        <Card className='icebreaker__challenge-card'>
+          <Text className='icebreaker__challenge-emoji'>🎪</Text>
+          <Text className='icebreaker__challenge-title'>拍卖结束</Text>
+          <Text className='icebreaker__challenge-desc'>全部竞拍已完成。</Text>
+        </Card>
+        {isHost ? (
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={onAdvance}
+            disabled={isAdvancing}
+            loading={isAdvancing}
+          >
+            {isAdvancing ? '切换中…' : '进入下一阶段'}
+          </Button>
+        ) : (
+          <Text className='icebreaker__helper-text'>等待主持人进入下一阶段…</Text>
+        )}
+      </View>
+    )
+  }
+
+  return (
+    <View className='icebreaker__challenge'>
+      <Card className='icebreaker__challenge-card'>
+        <Text className='icebreaker__challenge-emoji'>🎪</Text>
+        <Text className='icebreaker__challenge-title'>第 {idx + 1} / {lots.length} 标</Text>
+        <Text className='icebreaker__challenge-desc'>{currentLot?.title ?? ''}</Text>
+        {currentLot?.teaser ? (
+          <Text className='icebreaker__challenge-hint'>{currentLot.teaser}</Text>
+        ) : null}
+        <View className='icebreaker__challenge-meta'>
+          <Text className='icebreaker__challenge-duration'>
+            当前最高：{high ? `${high.amount} 币` : '暂无'}
+          </Text>
+          <Text className='icebreaker__challenge-completed'>我的余额：{balance} 币</Text>
+        </View>
+      </Card>
+
+      {!isHost ? (
+        <View className='icebreaker__action-stack'>
+          <Text className='icebreaker__helper-text'>输入出价（整数，须高于当前最高且不超过余额）</Text>
+          <Input
+            type='number'
+            className='icebreaker__input'
+            value={bidText}
+            onInput={(e) => setBidText(e.detail.value)}
+          />
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={() => {
+              const n = Number.parseInt(bidText, 10)
+              if (Number.isFinite(n)) onPlaceBid(n)
+            }}
+            disabled={isPlacingBid}
+            loading={isPlacingBid}
+          >
+            {isPlacingBid ? '提交中…' : '出价'}
+          </Button>
+        </View>
+      ) : null}
+
+      {isHost ? (
+        <Button
+          variant='secondary'
+          className='icebreaker__action-btn'
+          onClick={onCloseLot}
+          disabled={isClosingLot}
+          loading={isClosingLot}
+        >
+          {isClosingLot ? '处理中…' : '关闭本标（落槌）'}
+        </Button>
+      ) : null}
+    </View>
+  )
+}
+
 export function FallbackPhaseView({
   phase,
   isHost,
@@ -660,12 +909,70 @@ export function FallbackPhaseView({
   )
 }
 
+function RecapAiFeedbackBar({
+  socialSessionId,
+  recapMeta,
+}: {
+  socialSessionId: string
+  recapMeta?: AIResponseMeta | null
+}) {
+  const [done, setDone] = useState(false)
+  const [busy, setBusy] = useState(false)
+  if (!recapMeta?.promptVersion || !recapMeta.aiCorrelationId) {
+    return null
+  }
+  if (done) {
+    return (
+      <Card className='icebreaker__recap-section'>
+        <Text className='icebreaker__recap-item'>感谢你的反馈</Text>
+      </Card>
+    )
+  }
+  const submit = async (rating: 'helpful' | 'neutral' | 'awkward') => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await apiRequest({
+        path: buildSocialPath(socialSessionId, '/ai-feedback'),
+        method: 'POST',
+        data: {
+          phase: 'recap',
+          promptVersion: recapMeta.promptVersion,
+          aiCorrelationId: recapMeta.aiCorrelationId,
+          rating,
+        },
+      })
+      setDone(true)
+    } catch {
+      setBusy(false)
+    }
+  }
+  return (
+    <Card className='icebreaker__recap-section'>
+      <Text className='icebreaker__recap-section-title'>这场 AI 回顾有帮助吗？</Text>
+      <View className='icebreaker__feedback-row'>
+        <Button variant='secondary' disabled={busy} onClick={() => void submit('helpful')}>
+          有帮助
+        </Button>
+        <Button variant='secondary' disabled={busy} onClick={() => void submit('neutral')}>
+          一般
+        </Button>
+        <Button variant='secondary' disabled={busy} onClick={() => void submit('awkward')}>
+          略尴尬
+        </Button>
+      </View>
+    </Card>
+  )
+}
+
 export function RecapPhaseView({
   recapData,
   summary,
   medals,
   playerCount,
   onLeave,
+  socialSessionId,
+  recapMeta,
 }: {
   recapData: {
     topicsDiscussed: string[]
@@ -686,6 +993,8 @@ export function RecapPhaseView({
   }>
   playerCount: number
   onLeave: () => void
+  socialSessionId?: string | null
+  recapMeta?: AIResponseMeta | null
 }) {
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
 
@@ -704,6 +1013,10 @@ export function RecapPhaseView({
           <Text className='icebreaker__recap-subtitle'>{summary.closingLine}</Text>
         ) : null}
       </Card>
+
+      {socialSessionId ? (
+        <RecapAiFeedbackBar socialSessionId={socialSessionId} recapMeta={recapMeta} />
+      ) : null}
 
       {(recapData || medals.length > 0 || recapMoments.length > 0) && (
         <View className='icebreaker__recap-details'>

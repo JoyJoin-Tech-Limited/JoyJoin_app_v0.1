@@ -21,10 +21,10 @@ Not counted as AI for this document:
 | Feature | Mini-program entry point | Backend path | Model/service | Current state | Fallback behavior |
 | --- | --- | --- | --- | --- | --- |
 | Social icebreaker warmup topics | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/topics` | `generateWarmupTopics` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Curated `FALLBACK_WARMUP_TOPICS` |
-| Social icebreaker micro-challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/advance` into `micro_challenge` | `generateMicroChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter`; DeepSeek default in hybrid mode | Active | Curated `FALLBACK_MICRO_CHALLENGES` |
+| Social icebreaker micro-challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/advance` into `micro_challenge` | `generateMicroChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` — MiniMax preferred in hybrid when `MINIMAX_API_KEY` is set; JSON extracted from model text | Active | Curated `FALLBACK_MICRO_CHALLENGES` |
 | Social icebreaker lie-detective statements | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/lie-detective/generate` | `generateLieDetectiveStatements` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Curated `FALLBACK_LIE_DETECTIVE_STATEMENTS` |
 | Social icebreaker recap summary | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `GET /api/social-icebreaker/:id/recap` | `generateRecapSummary` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` with MiniMax preferred in hybrid mode, DeepSeek fallback | Active | Deterministic `getDefaultRecap(...)` |
-| Social icebreaker personality-dice challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/personality-dice/generate` | `generatePersonalityDiceChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter`; DeepSeek default in hybrid mode | Active when `personality_dice` phase is enabled | Curated `DICE_CURATED` map by dominant trait |
+| Social icebreaker personality-dice challenges | `apps/mini-program/src/pages/icebreaker-session/index.tsx` -> `POST /api/social-icebreaker/:id/personality-dice/generate` | `generatePersonalityDiceChallenges` in `apps/server/src/socialIcebreakerAIService.ts` | `socialModelRouter` — MiniMax preferred in hybrid when configured; JSON extracted from model text | Active when `personality_dice` phase is enabled | Curated `DICE_CURATED` map by dominant trait |
 | Match group analysis (pair copy, icebreakers, dynamics) | `matching-status/index.tsx`, `squad-unboxing/index.tsx`, `pool-group-detail/index.tsx` -> `GET /api/pool-groups/:groupId/analysis` via `getPoolGroupAnalysis` in `@shared/api` | `generateGroupAnalysis` in `apps/server/src/matchExplanationService.ts` | `socialModelRouter` (MiniMax / DeepSeek per router policy) | Active | Cached responses; structured fallbacks when generation fails |
 | Semantic profile embeddings | Onboarding/profile update pages submit profile and interests | `queueSemanticProfileRecompute(...)` -> `embeddingClient.embed(...)` | **DeepSeek only** (`DEEPSEEK_API_KEY`); default model from `EMBEDDING_MODEL` or `text-embedding-3-small` | Active backend AI triggered by mini-program actions | Stores profile as `degraded` with null embedding instead of breaking user flow |
 | Event theme title reveal | `matching-status/index.tsx` (WebSocket `EVENT_THEME_TITLE_REVEALED` + `persistedThemeSummary` from `GET /api/my-pool-registrations` and `getPoolGroupDetails`) | `generateAndAssignEventThemeTitle(...)` in `apps/server/src/eventThemeTitleGenerator.ts` | `creativeModelRouter` with MiniMax or DeepSeek | Active | Template fallback via `generateFallbackEventThemeTitle(...)`; can be disabled with `ENABLE_EVENT_THEME_TITLE_GENERATION` |
@@ -88,7 +88,7 @@ Not counted as AI for this document:
 - Description: Produces the closing headline, key moments, and closing line for the recap phase.
 - Entry point(s): `apps/mini-program/src/pages/icebreaker-session/index.tsx` uses `GET /api/social-icebreaker/:socialSessionId/recap` once the session reaches the recap phase.
 - AI model/service: `generateRecapSummary(...)` in `apps/server/src/socialIcebreakerAIService.ts`, routed through `apps/server/src/ai/socialModelRouter.ts`.
-- Configuration location: Prompt version `social-recap-summary-v1` in `apps/server/src/socialIcebreakerAIService.ts`; routing in `apps/server/src/ai/socialModelRouter.ts`.
+- Configuration location: Prompt version `social-recap-summary-v2` in `apps/server/src/socialIcebreakerAIService.ts`; routing in `apps/server/src/ai/socialModelRouter.ts`.
 - Current state: Active and directly rendered in the recap view.
 - Fallback behavior: Uses deterministic `getDefaultRecap(...)` output if the model response is empty, malformed, or errors.
 
@@ -166,8 +166,9 @@ Relevant server-side flags and env controls found during the audit:
 - `AI_USAGE_TRACKING_ENABLED`: Enables event-theme AI usage tracking logs.
 - `AI_TIMEOUT_MS`, `DEEPSEEK_TIMEOUT_MS`, `MINIMAX_TIMEOUT_MS`: Timeouts used by the event-theme generator.
 - `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE`: Removes the personality-dice AI phase when set false.
-- `SOCIAL_ICEBREAKER_ENABLE_AUCTION`: Inserts a non-AI `auction` phase into the social-icebreaker flow.
-- `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA`: Adds a beta phase into the social-icebreaker phase list.
+- `SOCIAL_ICEBREAKER_ENABLE_AUCTION`: Inserts the `auction` phase into the social-icebreaker flow (before `personality_dice` when enabled).
+- `SOCIAL_AUCTION_LLM_ENABLED`: When `true`, auction lot titles are model-generated (`generateAuctionLots`); when unset/false, server uses curated fallback lots only.
+- `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`: Adds the **迷你剧本杀** (`mini_script`) phase to the social-icebreaker phase list. Legacy: `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` is accepted as an alias.
 
 ### Local or on-device AI in the mini-program
 

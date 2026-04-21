@@ -83,7 +83,7 @@ type SocialIcebreakerPhase =
   | 'lie_detective'    // 🕵️ Two Truths One Lie — AI-generated statements
   | 'auction'          // 🎪 Auction (feature-flagged)
   | 'personality_dice' // 🎲 Personality Dice
-  | 'mini_script_beta' // 🧪 Mini Script Mystery beta (feature-flagged)
+  | 'mini_script'       // 🎭 迷你剧本杀 (feature-flagged)
   | 'recap';           // ✨ Session summary
 
 type AtmosphereMood = 'relaxed' | 'funny' | 'life' | 'emotional';
@@ -100,9 +100,9 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 | `warmup` | 🌅 | 热身 | 20 min | 2 | Mood-filtered topics, host navigates, all see same topic |
 | `micro_challenge` | ⚡ | 挑战 | 15 min | 2 | Timed group task, each player taps "done" |
 | `lie_detective` | 🕵️ | 侦探 | 25 min | 3 | Per-player AI statements, group votes on which is the lie |
-| `auction` | 🎪 | 拍卖 | 30 min | 3 | Feature-flagged phase stub |
+| `auction` | 🎪 | 拍卖 | 30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks) |
 | `personality_dice` | 🎲 | 骰子 | 15 min | 2 | AI-generated archetype dares |
-| `mini_script_beta` | 🧪 | 剧本杀β | 20 min | 4 | Feature-flagged beta stub |
+| `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | Feature-flagged collaborative script |
 | `recap` | ✨ | 回顾 | 5 min | 1 | AI-generated session summary |
 
 ### Session Lifecycle
@@ -141,8 +141,23 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   Host → POST .../lie-detective/next-player to move to the next player after reveal
         │
         ▼ Host calls POST .../advance
+[AUCTION] (only when `SOCIAL_ICEBREAKER_ENABLE_AUCTION=true`, inserted before `personality_dice`)
+  Host → POST .../auction/generate-lots (AI or curated `auctionLots[]`, initializes `auctionBalances`)
+  Players → POST .../auction/bid { amount } (virtual coins; outbid refunds previous high)
+  Host → POST .../auction/close-lot after each lot (records `auctionRecapLines`, advances lot index)
+        │
+        ▼ Host calls POST .../advance only when `auctionAllLotsClosed` is true
+[PERSONALITY_DICE] (optional; default enabled)
+  Host → POST .../personality-dice/generate
+  Players → POST .../personality-dice/complete
+        │
+        ▼ Host calls POST .../advance
+[MINI_SCRIPT] (when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` or legacy `_BETA` true)
+  Host → POST /api/miniscript/generate (see miniscript routes)
+        │
+        ▼ Host calls POST .../advance
 [RECAP]
-  GET .../recap → AI-generated { headline, moments[], closingLine }
+  GET .../recap → AI-generated { headline, moments[], closingLine } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present)
 ```
 
 ### Session State (`SocialSessionState`)
@@ -184,6 +199,15 @@ interface SocialSessionState {
 
   // Cross-phase
   pulseChecks?: PulseCheckResult[]; // reset on each phase advance
+
+  // Auction (virtual currency; see `SOCIAL_ICEBREAKER_ENABLE_AUCTION`)
+  // AuctionLot = { id: string; title: string; teaser?: string } (see packages/shared/src/socialIcebreaker.ts)
+  auctionLots?: Array<{ id: string; title: string; teaser?: string }>;
+  auctionBalances?: Record<string, number>;
+  auctionCurrentLotIndex?: number;
+  auctionHighBid?: { userId: string; amount: number } | null;
+  auctionAllLotsClosed?: boolean;
+  auctionRecapLines?: string[];
 
   // Recap
   recapData?: {
@@ -370,7 +394,7 @@ Social Icebreaker v2 phase availability is now owned by the server. Each `Social
 Current server flags:
 - `SOCIAL_ICEBREAKER_ENABLE_AUCTION=true` → inserts `auction` before `personality_dice`
 - `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE=false` → removes `personality_dice`
-- `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA=true` → appends `mini_script_beta` before recap
+- `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true` → appends `mini_script` before recap (legacy alias: `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA`)
 
 If a configured phase does not meet `PHASE_CONFIG[phase].minPlayersRequired`, the server skips only that phase and advances to the next enabled phase instead of jumping straight to recap.
 

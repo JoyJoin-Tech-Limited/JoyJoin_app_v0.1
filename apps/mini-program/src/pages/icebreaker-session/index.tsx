@@ -10,16 +10,22 @@ import OnboardingLoadingShell from '../../components/OnboardingLoadingShell'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
+  AuctionPhaseView,
   FallbackPhaseView,
   getPhaseLabel,
   LieDetectivePhaseView,
   MicroChallengePhaseView,
+  MiniScriptPhaseView,
   PersonalityDicePhaseView,
   RecapPhaseView,
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
+import { IcebreakerToolSelector } from './IcebreakerToolSelector'
+import { MiniScriptConfigModal } from './MiniScriptConfigModal'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
+import { PHASE_CONFIG } from '@shared/socialIcebreaker'
+import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -53,6 +59,8 @@ export default function IcebreakerSessionPage() {
   const [bootstrapState, setBootstrapState] = useState<SocialSessionState | null>(null)
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
+  const [miniScriptModalOpen, setMiniScriptModalOpen] = useState(false)
+  const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
 
   const {
@@ -332,11 +340,62 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('dice-complete', '/personality-dice/complete', {})
   }, [performSocialAction])
 
+  const handleGenerateAuctionLots = useCallback(() => {
+    void performSocialAction('auction-gen', '/auction/generate-lots', {})
+  }, [performSocialAction])
+
+  const handleAuctionBid = useCallback(
+    (amount: number) => {
+      void performSocialAction('auction-bid', '/auction/bid', { amount })
+    },
+    [performSocialAction],
+  )
+
+  const handleCloseAuctionLot = useCallback(() => {
+    void performSocialAction('auction-close', '/auction/close-lot', {})
+  }, [performSocialAction])
+
   const handleGoBack = useCallback(() => {
     Taro.navigateBack({
       fail: () => Taro.switchTab({ url: '/pages/events/index' }),
     })
   }, [])
+
+  const submitMiniScriptGenerate = useCallback(
+    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[] }) => {
+      if (!socialSessionId || !session) {
+        return
+      }
+
+      setMiniScriptSubmitting(true)
+      try {
+        await apiRequest({
+          path: '/api/miniscript/generate',
+          method: 'POST',
+          data: {
+            socialSessionId,
+            playerCount: session.playerCount,
+            style: payload.style,
+            genres: payload.genres,
+          },
+        })
+        await socialSessionQuery.refetch()
+        setMiniScriptModalOpen(false)
+        Taro.showToast({ title: '剧本已生成', icon: 'success', duration: 2000 })
+      } catch (error) {
+        const message = getErrorText(error, '生成失败，请稍后重试')
+        logError('[IcebreakerSession] MiniScript generate failed', { socialSessionId, message })
+        Taro.showToast({
+          title: message.length > 14 ? '生成失败' : message,
+          icon: 'none',
+          duration: 2200,
+        })
+      } finally {
+        setMiniScriptSubmitting(false)
+      }
+    },
+    [socialSessionId, session, socialSessionQuery],
+  )
 
   const pageError =
     bootstrapError ??
@@ -395,7 +454,12 @@ export default function IcebreakerSessionPage() {
     </View>
   )
 
-  const hostControls = isHost && phase !== 'recap' && phase !== 'ended' && phase !== 'waiting' && (
+  const hostControls =
+    isHost &&
+    phase !== 'recap' &&
+    phase !== 'ended' &&
+    phase !== 'waiting' &&
+    phase !== 'auction' && (
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
         <Text className='icebreaker__host-badge-text'>👑 你是主持人</Text>
@@ -417,7 +481,9 @@ export default function IcebreakerSessionPage() {
     'warmup',
     'micro_challenge',
     'lie_detective',
+    'auction',
     'personality_dice',
+    'mini_script',
     'recap',
     'ended',
   ]
@@ -492,6 +558,44 @@ export default function IcebreakerSessionPage() {
           onNextPlayer={handleNextLieDetectivePlayer}
           isMovingNextPlayer={pendingAction === 'lie-next-player'}
         />
+      )}
+
+      {phase === 'auction' && session && (
+        <AuctionPhaseView
+          session={session}
+          currentUserId={currentUserId}
+          isHost={isHost}
+          onGenerateLots={handleGenerateAuctionLots}
+          onPlaceBid={handleAuctionBid}
+          onCloseLot={handleCloseAuctionLot}
+          onAdvance={handleAdvancePhase}
+          isAdvancing={pendingAction === 'advance'}
+          isGeneratingLots={pendingAction === 'auction-gen'}
+          isPlacingBid={pendingAction === 'auction-bid'}
+          isClosingLot={pendingAction === 'auction-close'}
+        />
+      )}
+
+      {phase === 'mini_script' && session && (
+        <>
+          {isHost && session.enabledPhases?.includes('mini_script') ? (
+            <IcebreakerToolSelector onOpenMiniScript={() => setMiniScriptModalOpen(true)} />
+          ) : null}
+          <MiniScriptPhaseView
+            framework={session.miniScriptFramework}
+            phaseStartedAt={session.phaseStartedAt}
+            timeoutMinutes={PHASE_CONFIG.mini_script.timeoutMinutes}
+            isHost={isHost}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
+          />
+          <MiniScriptConfigModal
+            open={miniScriptModalOpen}
+            onClose={() => setMiniScriptModalOpen(false)}
+            isSubmitting={miniScriptSubmitting}
+            onSubmit={submitMiniScriptGenerate}
+          />
+        </>
       )}
 
       {phase === 'personality_dice' && session && (

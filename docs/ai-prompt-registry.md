@@ -11,7 +11,8 @@ Sources of truth are the **const** in each service file below.
 | `social-warmup-topics-v1` | `WARMUP_TOPICS_PROMPT_VERSION` |
 | `social-micro-challenges-v1` | `MICRO_CHALLENGES_PROMPT_VERSION` |
 | `social-lie-detective-v1` | `LIE_DETECTIVE_PROMPT_VERSION` |
-| `social-recap-summary-v1` | `RECAP_SUMMARY_PROMPT_VERSION` |
+| `social-recap-summary-v2` | `RECAP_SUMMARY_PROMPT_VERSION` |
+| `social-auction-lots-v1` | `AUCTION_LOTS_PROMPT_VERSION` |
 | `social-personality-dice-v1` | `PERSONALITY_DICE_PROMPT_VERSION` |
 
 ## Onboarding tagline (`profileTaglineService.ts`)

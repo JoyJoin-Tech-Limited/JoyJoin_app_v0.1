@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import MobilePrimaryButton from '@/components/mobile/MobilePrimaryButton';
+import type { AIResponseMeta } from '@shared/types/aiMeta';
+import { IcebreakerRecapFeedbackBar } from '@/components/social-icebreaker/IcebreakerRecapFeedbackBar';
 
 interface SocialIcebreakerRecapProps {
   socialSessionId: string;
@@ -39,6 +41,7 @@ export function SocialIcebreakerRecap({
     summary: RecapSummary;
     medals?: Medal[];
     state: any;
+    meta?: AIResponseMeta;
   }>({
     queryKey: ['/api/social-icebreaker', socialSessionId, 'recap'],
     queryFn: async () => {
@@ -126,6 +129,8 @@ export function SocialIcebreakerRecap({
             <div className="bg-white/10 rounded-2xl p-4 text-center">
               <p className="text-sm text-violet-200 leading-relaxed">{summary.closingLine}</p>
             </div>
+
+            <IcebreakerRecapFeedbackBar socialSessionId={socialSessionId} meta={recapData?.meta} />
           </motion.div>
         ) : null}
 

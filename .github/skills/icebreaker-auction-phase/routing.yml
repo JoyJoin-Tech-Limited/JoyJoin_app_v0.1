@@ -1,0 +1,43 @@
+skill: icebreaker-auction-phase
+
+primary_ownership: >
+  Auction phase virtual economy, AI lot generation (optional), bidding/close-lot routes,
+  advance guards, and recap line accumulation.
+
+use_when:
+  - editing auction routes, balances, or lot JSON schema
+  - reviewing SOCIAL_ICEBREAKER_ENABLE_AUCTION / SOCIAL_AUCTION_LLM_ENABLED behaviour
+  - pairing web AuctionPhase with Taro AuctionPhaseView
+
+do_not_use_when:
+  - real-money checkout or refunds (use payment-entitlement-authority)
+  - unrelated social session phases
+
+strong_triggers:
+  - auction
+  - SOCIAL_ICEBREAKER_ENABLE_AUCTION
+  - SOCIAL_AUCTION_LLM_ENABLED
+  - auction/generate-lots
+  - auction/bid
+  - auction/close-lot
+  - social-auction-lots-v1
+
+owned_files:
+  - apps/server/src/routes/socialIcebreaker.ts
+  - apps/server/src/socialIcebreakerAIService.ts
+  - apps/server/src/socialIcebreakerPhaseConfig.ts
+  - packages/shared/src/socialIcebreaker.ts
+  - apps/user-client/src/components/social-icebreaker/AuctionPhase.tsx
+  - apps/mini-program/src/pages/icebreaker-session/index.tsx
+  - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
+
+owned_paths:
+  - /api/social-icebreaker/*/auction/
+
+related_skills:
+  - skill: social-icebreaker-domain
+    when: phase order, enable flags, or umbrella recap behaviour also changes
+  - skill: llm-runtime-safety-and-integration
+    when: auction LLM promptVersion, traces, or provider routing change
+  - skill: platform-coordination-protocol
+    when: sibling client parity is required

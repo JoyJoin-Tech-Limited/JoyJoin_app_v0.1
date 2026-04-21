@@ -894,6 +894,15 @@ export const insertEventGroupOutcomeSchema = createInsertSchema(eventGroupOutcom
   freeTextSignal: z.string().trim().max(1000).optional().nullable(),
 });
 
+export const icebreakerAiFeedbackRatingSchema = z.enum(['helpful', 'neutral', 'awkward']);
+
+export const submitSocialIcebreakerAiFeedbackSchema = z.object({
+  phase: z.string().min(1),
+  promptVersion: z.string().min(1),
+  aiCorrelationId: z.string().uuid(),
+  rating: icebreakerAiFeedbackRatingSchema,
+});
+
 // Blind Box Events table
 export const blindBoxEvents = pgTable("blind_box_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3478,4 +3487,26 @@ export const socialIcebreakerLieTruths = pgTable("social_icebreaker_lie_truths",
 }, (table) => [
   uniqueIndex("idx_social_icebreaker_lie_truths_session_user").on(table.socialSessionId, table.userId),
   index("idx_social_icebreaker_lie_truths_session").on(table.socialSessionId),
+]);
+
+/** Per-generation human ratings for Social Icebreaker AI (join via ai_correlation_id to AITrace). */
+export const socialIcebreakerAiFeedback = pgTable("social_icebreaker_ai_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  socialSessionId: varchar("social_session_id").notNull().references(() => socialIcebreakerSessions.id, { onDelete: "cascade" }),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  phase: varchar("phase").notNull(),
+  promptVersion: varchar("prompt_version").notNull(),
+  aiCorrelationId: varchar("ai_correlation_id", { length: 36 }).notNull(),
+  rating: varchar("rating", { length: 16 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("idx_social_icebreaker_ai_feedback_dedupe").on(
+    table.submittedBy,
+    table.socialSessionId,
+    table.phase,
+    table.aiCorrelationId,
+  ),
+  index("idx_social_icebreaker_ai_feedback_session").on(table.socialSessionId),
+  index("idx_social_icebreaker_ai_feedback_phase_prompt").on(table.phase, table.promptVersion),
+  index("idx_social_icebreaker_ai_feedback_created").on(table.createdAt),
 ]);

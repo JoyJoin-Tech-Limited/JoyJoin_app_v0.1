@@ -9,7 +9,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { metricsMiddleware, getMetricsText, _resetMetricsForTest, recordRuntimeLLMFallbackMetric } from '../middleware/metrics';
+import {
+  metricsMiddleware,
+  getMetricsText,
+  _resetMetricsForTest,
+  recordRuntimeLLMFallbackMetric,
+  recordAIProviderRecoveryMetric,
+} from '../middleware/metrics';
 import type { Request, Response } from 'express';
 import { EventEmitter } from 'events';
 
@@ -195,5 +201,14 @@ describe('metricsMiddleware', () => {
     expect(text).toContain('outcome="applied"');
     expect(text).toContain('outcome="rejected_unapproved"');
     expect(text).not.toContain('field="surpriseField"');
+  });
+
+  it('exposes joyjoin_ai_provider_recovery_total for secondary-provider wins', async () => {
+    recordAIProviderRecoveryMetric({ domain: 'miniscript', feature: 'generateMiniScriptFramework' });
+
+    const text = await getMetricsText();
+    expect(text).toContain('joyjoin_ai_provider_recovery_total');
+    expect(text).toContain('domain="miniscript"');
+    expect(text).toContain('feature="generateMiniScriptFramework"');
   });
 });

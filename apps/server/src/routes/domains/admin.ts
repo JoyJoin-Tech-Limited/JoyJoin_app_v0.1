@@ -8,6 +8,7 @@ import {
 import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../inference/runtimeLLMFallback";
 import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
+import { socialIcebreakerAiFeedbackRepo } from "../../repositories/socialIcebreakerAiFeedbackRepo";
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -59,6 +60,27 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error("[AdminOutcomeAnalytics] Failed to build dashboard:", error);
       res.status(500).json({ message: "Failed to load outcome analytics dashboard" });
+    }
+  });
+
+  app.get("/api/admin/icebreaker-ai-feedback/summary", requireAdmin, async (req, res) => {
+    try {
+      const daysRaw = req.query.days;
+      const days =
+        typeof daysRaw === "string" && /^\d+$/.test(daysRaw)
+          ? Math.min(365, Math.max(1, parseInt(daysRaw, 10)))
+          : 30;
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const summary = await socialIcebreakerAiFeedbackRepo.getSummary({ since });
+      res.json({
+        days,
+        since: since.toISOString(),
+        generatedAt: new Date().toISOString(),
+        ...summary,
+      });
+    } catch (error) {
+      console.error("[AdminIcebreakerAiFeedback] summary failed:", error);
+      res.status(500).json({ message: "Failed to load icebreaker AI feedback summary" });
     }
   });
 }

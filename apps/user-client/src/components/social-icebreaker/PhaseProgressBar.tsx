@@ -16,7 +16,7 @@ const ALL_PHASES: SocialIcebreakerPhase[] = [
   'lie_detective',
   'auction',
   'personality_dice',
-  'mini_script_beta',
+  'mini_script',
   'recap',
 ];
 

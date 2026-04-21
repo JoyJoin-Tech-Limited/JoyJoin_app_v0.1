@@ -33,7 +33,8 @@
 |----------|--------|
 | `SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE` | Disable personality-dice AI phase when false. |
 | `SOCIAL_ICEBREAKER_ENABLE_AUCTION` | Insert auction phase. |
-| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Beta phase. |
+| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` | Enables **迷你剧本杀** (`mini_script`) in social icebreaker. |
+| `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA` | Legacy alias for `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`. |
 
 ## Matching / semantics
 

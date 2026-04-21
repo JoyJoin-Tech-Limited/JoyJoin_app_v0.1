@@ -1,5 +1,6 @@
 import type { Express, Request, RequestHandler } from "express";
 import bcrypt from "bcrypt";
+import { isProductionEnvironment } from "./auth/policy";
 import { storage } from "./storage";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 
@@ -138,6 +139,12 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   }
 
   if (userId) {
+    if (isProductionEnvironment()) {
+      return res.status(403).json({
+        message:
+          "Forbidden - Admin access required. Use POST /api/admin/login with an admin_accounts username (legacy phone admin is disabled in production).",
+      });
+    }
     try {
       const user = await storage.getUser(userId);
       if (!user?.isAdmin) {
@@ -216,20 +223,22 @@ export function registerAdminAuthRoutes(app: Express) {
         });
       }
 
-      const legacyAdmin = await tryLegacyPhoneAdminLogin(req, loginId, password);
-      if (legacyAdmin) {
-        logAdminAudit({
-          action: "ADMIN_LOGIN",
-          adminId: legacyAdmin.id,
-          adminRole: legacyAdmin.role,
-          targetEntityType: "user",
-          targetEntityId: legacyAdmin.id,
-        });
+      if (!isProductionEnvironment()) {
+        const legacyAdmin = await tryLegacyPhoneAdminLogin(req, loginId, password);
+        if (legacyAdmin) {
+          logAdminAudit({
+            action: "ADMIN_LOGIN",
+            adminId: legacyAdmin.id,
+            adminRole: legacyAdmin.role,
+            targetEntityType: "user",
+            targetEntityId: legacyAdmin.id,
+          });
 
-        return res.json({
-          message: "登录成功",
-          ...legacyAdmin,
-        });
+          return res.json({
+            message: "登录成功",
+            ...legacyAdmin,
+          });
+        }
       }
 
       return res.status(401).json({ message: INVALID_CREDENTIALS_MESSAGE });
