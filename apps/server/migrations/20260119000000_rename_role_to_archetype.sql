@@ -3,12 +3,15 @@
 -- from the V4 adaptive assessment (assessment_sessions.primaryArchetype)
 -- IDEMPOTENT: Safe to run multiple times
 
--- Step 1: Rename columns in users table (only if old column exists)
+-- Step 1: Rename columns in users table (only if old column exists AND new column does not)
 DO $$ 
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'primary_role'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'primary_archetype'
   ) THEN
     ALTER TABLE users RENAME COLUMN primary_role TO primary_archetype;
   END IF;
@@ -19,17 +22,23 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'secondary_role'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'secondary_archetype'
   ) THEN
     ALTER TABLE users RENAME COLUMN secondary_role TO secondary_archetype;
   END IF;
 END $$;
 
--- Step 2: Rename columns in role_results table (only if old columns exist)
+-- Step 2: Rename columns in role_results table (only if old columns exist AND new columns do not)
 DO $$ 
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'primary_role'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'primary_archetype'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN primary_role TO primary_archetype;
   END IF;
@@ -40,6 +49,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'primary_role_score'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'primary_archetype_score'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN primary_role_score TO primary_archetype_score;
   END IF;
@@ -50,6 +62,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'secondary_role'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'secondary_archetype'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN secondary_role TO secondary_archetype;
   END IF;
@@ -60,6 +75,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'secondary_role_score'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'role_results' AND column_name = 'secondary_archetype_score'
   ) THEN
     ALTER TABLE role_results RENAME COLUMN secondary_role_score TO secondary_archetype_score;
   END IF;
