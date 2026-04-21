@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-04-19
+**Last Updated:** 2026-04-21
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -260,6 +260,57 @@ const {
 
 Polls via `useQuery` with `refetchInterval: 3000`.
 
+### Pre-event run plan lifecycle (post-match → start time → in-event execution)
+
+This subsection describes **production** behaviour: after a match is known (typical groups of about **4–6** people), JoyJoin uses the **interval before event start** to prepare a **compiled icebreaker run plan** stored **on disk** (PostgreSQL). The live Social Icebreaker session then **executes** that plan instead of improvising structure at the table.
+
+#### When it runs
+
+| Window | What happens |
+|--------|----------------|
+| **Post-match** | Pool matching persists `event_pool_groups` (and related rows). Roster size and match metadata are known. |
+| **Pre-event (minutes to days)** | Automated jobs may **compile**, **validate**, and **upsert** a per-scope run plan. Work is **async** and must **not** block matching or the user’s first open of the icebreaker page. |
+| **In-event** | `POST /api/social-icebreaker/start` and polling read server state; phase advances remain **host-driven** and **server-authoritative**. Existing rules (`getNextEligiblePhase`, min players per phase, lie-detective secrecy) stay in force. |
+
+#### Inputs available for compilation (reuse + “fascinating”)
+
+Use only **bounded, non-secret** fields suitable for JSON plans and prompts, for example:
+
+- From **`event_pool_groups`**: `memberCount`, `temperatureLevel`, `overallScore`, `matchExplanation`, `theme`, `subtitle`, `themeEmoji`, `themeHighlights` (when populated), pool-linked context.
+- From **`event_pools`**: `eventType`, city/district, title, scheduled `dateTime`.
+- **Routine segments** to reuse: Social Icebreaker phases (warmup / micro-challenge / lie detective / personality dice / recap), curated **话题** patterns (warmup `SocialTopic` flow), and over time **catalog segment IDs** that map to the same HTTP + UI templates (not one-off pages).
+
+Later async updates (venue assignment, refreshed theme highlights, cached pair explanations) may arrive **after** the first compile tick. Production pipelines should either **re-run compile** when critical fields change, **merge** into a new plan version, or ship **v1** with “best effort at match time” and document the limitation.
+
+#### On-disk artifact: `IcebreakerRunPlan`
+
+- **Shared contract (types + validation):** `packages/shared/src/icebreakerRunPlan.ts` — Zod schema, `parseIcebreakerRunPlan`, version literal.
+- **Persistence (implementation):** a dedicated table (for example `icebreaker_run_plans`) keyed by match scope such as **`pool_group` + `event_pool_groups.id`**, storing `plan_json`, `plan_hash`, `compiler_id`, timestamps. See `docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md` for the engineering task breakdown.
+
+#### Production automation: Game Design Agent and Game Dev Agent
+
+In production, “agents” are **deployed workers** (queue consumers or scheduled jobs), not interactive Cursor sessions. Recommended split:
+
+**Game Design Agent (production)** — *compile*
+
+- **Input:** frozen snapshot of group + pool (+ optional safe profile summaries).
+- **Output:** a single **`IcebreakerRunPlan`** JSON that passes **`parseIcebreakerRunPlan`** (and any future stricter policy checks).
+- **May use an LLM** only inside **fixed slots** (copy tone, short rationale, ordering hints among **allowed** catalog segments). It must **not** invent new phase types, store `isLie`, or embed PII.
+- **Objective:** bonding with **low peer pressure**; prefer reusing proven routines (话题卡-style warmup, standard phases) and vary **presentation** and **ordering** rather than unsafe novel mechanics.
+
+**Game Dev Agent (production)** — *bind templates, not arbitrary codegen*
+
+- **Does not** generate and execute arbitrary TypeScript on the live request path (unsafe for security, review, and rollback).
+- **Does** one or both of:
+  1. **Template registry selection:** choose `templatePackId` / `segmentBindings` that map to **already-shipped** server routes and UI shells (`SocialIcebreakerOrchestrator`, existing phase components). The running binary is the source of truth for what can execute.
+  2. **Offline / CI worker (optional):** produces **reviewed** template or prompt updates that ship in a **normal release** (PR + tests). Production only **selects versions** baked into that release.
+
+Together, Design writes **data**; Dev ensures **code paths exist** for every referenced template. Novel mechanics ship through **releases**, not ad-hoc generation during a user’s event.
+
+#### Failure behaviour
+
+If no valid plan exists at session start, the server falls back to **today’s defaults** (`enabledPhases` / `PHASE_ORDER` from `packages/shared/src/socialIcebreaker.ts` and `apps/server/src/socialIcebreakerPhaseConfig.ts`). Missing plans should log a structured warning for operations.
+
 ---
 
 ## §2 — IcebreakerToolkit (Legacy Host-Prep Tool — NOT the Primary Flow)
@@ -408,6 +459,8 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 | `apps/user-client/src/pages/IcebreakerGamePage.tsx` | Card game page (`/icebreaker-game`) |
 | `apps/server/src/icebreakerCardGenerationService.ts` | Card generation service (DB-persisted) |
 | `apps/user-client/src/components/IcebreakerTool.tsx` | Lightweight random question widget |
+| `packages/shared/src/icebreakerRunPlan.ts` | Zod contract for pre-compiled per-match `IcebreakerRunPlan` (post-match automation) |
+| `docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md` | Implementation plan: persist plan on disk, hook match, wire Social Icebreaker |
 | `docs/icebreaker-ux-report.md` | UX analysis and design decisions |
 
 ---
