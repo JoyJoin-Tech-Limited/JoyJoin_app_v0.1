@@ -17,8 +17,6 @@ services:
     build:
       context: ..
       dockerfile: apps/user-client/Dockerfile
-      args:
-        VITE_API_URL: https://api.yuejuapp.com
     container_name: joyjoin-user
     restart: unless-stopped
     ports:

@@ -156,8 +156,10 @@ PORT=5000
 APP_URL=https://yuejuapp.com
 DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=require
 COOKIE_DOMAIN=.yuejuapp.com
-VITE_API_URL=https://api.yuejuapp.com
 ```
+
+前端生产构建默认保持 `VITE_API_URL` 为空，让浏览器继续请求同源 `/api/*`，
+由宿主机 Nginx 反向代理到 API，避免带 cookie 的跨域请求依赖浏览器 CORS。
 
 不要把真实 secret 提交到仓库。
 
@@ -194,6 +196,7 @@ docker ps
 ```text
 https://yuejuapp.com
 https://admin.yuejuapp.com
+https://yuejuapp.com/api/health
 https://api.yuejuapp.com/api/health
 ```
 
