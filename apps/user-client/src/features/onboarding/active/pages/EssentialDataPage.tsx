@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type WorkMode, INTENT_OPTIONS as SHARED_INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION, type IntentIconHint } from "@shared/constants";
+import { ResponsiveSpacer } from "@shared/ui/ResponsiveSpacer";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateUserDerivedQueries } from "@/lib/userStateInvalidation";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -537,7 +538,7 @@ export default function EssentialDataPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="no-scroll-container min-h-full bg-background">
       {/* Header with Match Potential Bar */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
         <div className="flex items-center gap-3">
@@ -1151,8 +1152,8 @@ export default function EssentialDataPage() {
         </AnimatePresence>
       </div>
 
-      {/* Spacer for floating button */}
-      <div className="h-32" />
+      {/* Spacer for floating CTA — collapses on short phones (viewport-zero-scroll) */}
+      <ResponsiveSpacer height={128} collapseBelow={700} />
 
       {/* Floating CTA button */}
       <motion.div 

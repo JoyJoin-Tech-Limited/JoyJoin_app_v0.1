@@ -96,9 +96,24 @@
 }
 
 // ─── Page gradient background ─────────────────────────────────────
-@mixin page-gradient-bg {
+/// Full-viewport minimum height — 100dvh first-class for WeChat / dynamic toolbar (see viewport-zero-scroll skill).
+@mixin viewport-min-height {
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@mixin page-gradient-bg {
+  @include viewport-min-height;
   background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+}
+
+/// Flex column shell: page fills window; clip overflow — put ScrollView only where lists/steps need it (zero-scroll policy).
+@mixin no-scroll-page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 // ─── Safe area helpers ───────────────────────────────────────────
