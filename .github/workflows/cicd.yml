@@ -314,25 +314,21 @@ jobs:
             sleep 10
 
             echo "   Checking internal API..."
-            if ! curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5000/api/health > /dev/null; then
-              curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5001/api/health > /dev/null \
-                || (echo "❌ API Failed on 5000/5001" && docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && docker logs joyjoin-api --tail 120 && exit 1)
-            fi
+            curl -s --retry 5 --retry-delay 3 http://127.0.0.1:5000/api/health > /dev/null \
+              || (echo "❌ API failed on 5000" && docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && docker logs joyjoin-api --tail 120 && exit 1)
 
             echo "   Checking Nginx-routed health endpoint..."
             if ! curl -s --retry 5 --retry-delay 3 -H "Host: 129.226.61.77" http://127.0.0.1/api/health > /dev/null; then
               echo "❌ Nginx route check failed: http://127.0.0.1/api/health"
-              echo "📋 Socket listeners (80/443/5000/5001):"
-              ss -ltnp | rg ':80|:443|:5000|:5001' || true
+              echo "📋 Socket listeners (80/443/5000):"
+              ss -ltnp | rg ':80|:443|:5000' || true
               echo "📋 Container status:"
               docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
               echo "📋 API port bindings:"
               docker inspect joyjoin-api --format '{{json .NetworkSettings.Ports}}' || true
               echo "📋 Local direct probes:"
               curl -sSI http://127.0.0.1:5000/api/health || true
-              curl -sSI http://127.0.0.1:5001/api/health || true
               echo "📋 Container logs:"
-              docker logs joyjoin-nginx --tail 120 || true
               docker logs joyjoin-api --tail 120 || true
               exit 1
             fi
