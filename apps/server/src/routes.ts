@@ -20,7 +20,7 @@ import { formatAge } from "@shared/utils";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
-import { registerAdminAuthRoutes, requireAdmin, requireOperatorOrAbove } from "./adminAuth";
+import { requireAdmin, requireOperatorOrAbove } from "./adminAuth";
 import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 import { buildEventPoolRegistrationInsert } from "./lib/eventPoolRegistration";
