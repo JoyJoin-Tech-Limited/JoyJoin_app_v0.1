@@ -13,13 +13,14 @@ description: >-
 
 ## Purpose
 
-Turn **match-complete context** (group size, pool type, theme metadata, safe profile signals) into a **validated `IcebreakerRunPlan`** (see `packages/shared/src/icebreakerRunPlan.ts`) that only references **shipped phase templates** registered in `apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx`, unless an explicit **novelty flag** documents a gap for a release-track follow-up.
+Turn **match-complete context** (group size, pool type, theme metadata, safe profile signals) into a **validated `IcebreakerRunPlan`** (see `packages/shared/src/icebreakerRunPlan.ts`) that only references **shipped phase templates** realisable on **WeChat mini-program (Taro)** first (`apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx`), with **web** registry (`socialIcebreakerPhaseRegistry.tsx`) kept in naming parity, unless an explicit **novelty flag** documents a gap for a release-track follow-up.
 
 **Production rule:** the compile worker outputs **JSON + hash**, not executable code. Novel mechanics ship via **Game Development Agent** in normal PRs.
 
 Pair with:
 
-- [`social-icebreaker-domain`](../social-icebreaker-domain/SKILL.md) — phase order, host authority, lie-detective secrecy
+- [`social-icebreaker-domain`](../social-icebreaker-domain/SKILL.md) — phase order, host authority, lie-detective secrecy; **mini-program first** client policy
+- [`platform-coordination-protocol`](../platform-coordination-protocol/SKILL.md) — sibling web + mini-program when touching both surfaces
 - [`event-pool-and-matching-operations`](../event-pool-and-matching-operations/SKILL.md) — group row semantics after match
 - [`llm-runtime-safety-and-integration`](../llm-runtime-safety-and-integration/SKILL.md) — when LLMs fill template slots
 - [`first-principles-velocity`](../first-principles-velocity/SKILL.md) — constraints before options; smallest proof plans
@@ -78,7 +79,7 @@ Load the relevant subsection **before** finalizing a plan.
 ## Review checklist
 
 - [ ] `parseIcebreakerRunPlan` would accept the output (version + segments + strict context)
-- [ ] Every `segment.phase` exists in `SOCIAL_ICEBREAKER_PHASE_REGISTRY` **or** `NoveltyFlag` is true with a written gap analysis
+- [ ] Every `segment.phase` exists in mini-program `phaseViews` / session flow **and** web `SOCIAL_ICEBREAKER_PHASE_REGISTRY` **or** `NoveltyFlag` is true with a written gap analysis
 - [ ] Pressure and opt-out rules applied (`references/design-modules.md`)
 - [ ] Energy arc is monotonic or explicitly justified
 - [ ] Timebox fits event window (`TimeBoxOptimizer`)

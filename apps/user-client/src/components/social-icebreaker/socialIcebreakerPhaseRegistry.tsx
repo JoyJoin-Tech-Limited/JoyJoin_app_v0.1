@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 
 /**
- * Registry of Social Icebreaker phase UI modules.
- * Each phase maps to one shipped template (React subtree). The Game Design compile
- * step should only reference `SocialIcebreakerPhase` values that exist here and on
- * the server advance path.
+ * Registry of Social Icebreaker phase UI modules (web / React).
+ * Product policy: **WeChat mini-program (Taro) is the primary ship target** — keep
+ * `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` aligned with these
+ * phases first; this registry exists for web parity and orchestrator routing.
+ * The Game Design compile step should only reference `SocialIcebreakerPhase` values
+ * that exist here, on mini-program phase views, and on the server advance path.
  */
 import { motion } from 'framer-motion';
 import type { SocialIcebreakerPhase, AtmosphereMood, SocialTopic, SocialSessionState } from '@shared/socialIcebreaker';

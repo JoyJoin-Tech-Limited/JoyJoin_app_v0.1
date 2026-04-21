@@ -7,7 +7,7 @@ agents: []
 handoffs:
   - label: "Implement templates or new phase"
     agent: "Game Development Agent"
-    prompt: "Given the IcebreakerRunPlan handoff and TemplateMatcher table, add or extend registry entries, server advance rules, and tests. Respect social-icebreaker-domain invariants."
+    prompt: "Given the IcebreakerRunPlan handoff and TemplateMatcher table, implement on mini-program (phaseViews) first, then web registry + server advance rules + tests. Respect social-icebreaker-domain invariants."
   - label: "AI slot-fill or prompts"
     agent: "AI Engineer"
     prompt: "Wire LLM slot generation with llm-runtime-safety-and-integration: versioned prompts, fallbacks, no authority bleed into deterministic phase gates."

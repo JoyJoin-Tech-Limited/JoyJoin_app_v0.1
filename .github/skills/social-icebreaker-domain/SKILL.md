@@ -11,6 +11,8 @@ description: >
 
 **Core rule:** The Social Icebreaker is the primary mandatory in-event icebreaking flow. All new in-event icebreaker features must integrate with this system. The legacy IcebreakerToolkit is quarantined and must not receive new CTAs.
 
+**Client priority:** Ship and validate **WeChat mini-program (Taro)** behaviour first (`apps/mini-program/src/pages/icebreaker-session/`), then bring **web** (`apps/user-client`) to parity. Smooth in-session experience on mini-program is the default success criterion.
+
 ## When to use this skill
 
 - Adding or modifying Social Icebreaker phase behaviour
@@ -30,9 +32,9 @@ description: >
 | PostgreSQL session store | `apps/server/src/lib/socialIcebreakerStore.ts` |
 | Session expiry sweep | `apps/server/src/lib/socialIcebreakerSweep.ts` |
 | AI content generation | `apps/server/src/socialIcebreakerAIService.ts` |
-| Web client hook | `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
-| Web session page | `apps/user-client/src/pages/IcebreakerSessionPage.tsx` |
-| Mini-program session page | `apps/mini-program/src/pages/icebreaker-session/index.tsx` |
+| **Mini-program session + phase UI (primary client)** | `apps/mini-program/src/pages/icebreaker-session/index.tsx`, `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` |
+| Web session page + hook (parity) | `apps/user-client/src/pages/IcebreakerSessionPage.tsx`, `apps/user-client/src/hooks/useSocialIcebreaker.ts` |
+| Web phase registry (parity; naming reference for templates) | `apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx` |
 | Tests | `apps/server/src/__tests__/socialIcebreakerRoutes.test.ts`, `socialIcebreakerPhaseConfig.test.ts`, `socialIcebreaker.test.ts`, `socialIcebreakerSweep.test.ts` |
 
 ## Session lifecycle

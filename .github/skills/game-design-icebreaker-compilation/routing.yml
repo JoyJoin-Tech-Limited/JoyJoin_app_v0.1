@@ -26,6 +26,8 @@ strong_triggers:
   - socialIcebreakerPhaseRegistry
 
 owned_files:
+  - apps/mini-program/src/pages/icebreaker-session/index.tsx
+  - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
   - packages/shared/src/icebreakerRunPlan.ts
   - apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx
   - docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md

@@ -69,6 +69,10 @@
 ### Overview
 The Social Icebreaker is a **multi-phase, real-time group experience** backed by a PostgreSQL session store. It is the **primary and default in-event icebreaking experience** for all JoyJoin matched groups. It is session-keyed, host-driven, and designed for small groups. Each phase enforces its own minimum: most phases require ≥2 players; `lie_detective` requires ≥3 (auto-skipped otherwise). There is no enforced upper cap on player count.
 
+### Client implementation priority (mini-program first)
+
+**WeChat mini-program (Taro) is the core ship target** for in-event Social Icebreaker UX: implement phase behaviour, polish, and regressions in **`apps/mini-program/src/pages/icebreaker-session/`** (including `phaseViews`) first, then align **`apps/user-client`** for web parity. Server contracts (`/api/social-icebreaker`, `SocialSessionState`) are shared; both clients must stay consistent, but **mini-program smoothness takes precedence** when scheduling or scoping work.
+
 ### Shared Types
 **File:** `shared/socialIcebreaker.ts` (also `packages/shared/src/socialIcebreaker.ts`)
 
@@ -231,10 +235,11 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 
 ### Frontend Surfaces
 
-**Files:**
-- `apps/user-client/src/hooks/useSocialIcebreaker.ts`
-- `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
-- `apps/mini-program/src/pages/icebreaker-session/index.tsx`
+**Files (mini-program first):**
+- `apps/mini-program/src/pages/icebreaker-session/index.tsx` — Taro session page (primary in-field client)
+- `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — phase UI modules for mini-program
+- `apps/user-client/src/pages/IcebreakerSessionPage.tsx` — web session page (parity)
+- `apps/user-client/src/hooks/useSocialIcebreaker.ts` — web hook (parity)
 
 The mini-program surface consumes the same `SocialSessionState` contract and prefers `joinedParticipants` when the server provides it.
 
@@ -287,9 +292,13 @@ Later async updates (venue assignment, refreshed theme highlights, cached pair e
 - **Shared contract (types + validation):** `packages/shared/src/icebreakerRunPlan.ts` — Zod schema, `parseIcebreakerRunPlan`, version literal.
 - **Persistence (implementation):** a dedicated table (for example `icebreaker_run_plans`) keyed by match scope such as **`pool_group` + `event_pool_groups.id`**, storing `plan_json`, `plan_hash`, `compiler_id`, timestamps. See `docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md` for the engineering task breakdown.
 
-#### Shipped phase templates (web registry)
+#### Shipped phase templates (web registry + mini-program phase views)
 
-In-app phase UI is registered in **`apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx`** (`SOCIAL_ICEBREAKER_PHASE_REGISTRY`). The orchestrator renders the active phase via **`renderSocialIcebreakerPhasePanel`**. Any compiled plan must only reference phases present in that registry **unless** a release-track **Game Development Agent** change adds a new phase.
+**Web:** phase UI is registered in **`apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx`** (`SOCIAL_ICEBREAKER_PHASE_REGISTRY`); the orchestrator uses **`renderSocialIcebreakerPhasePanel`**.
+
+**Mini-program (primary):** the same phase set is implemented in **`apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx`** (and composed from `index.tsx`). New or changed phases must land **here first**, then the web registry is updated for parity.
+
+Any compiled plan must only reference phases that exist in **both** surfaces **unless** a release-track **Game Development Agent** change explicitly adds a phase (with mini-program delivered first).
 
 #### Production automation: Game Design Agent and Game Dev Agent
 
