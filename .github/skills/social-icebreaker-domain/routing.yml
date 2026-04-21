@@ -43,6 +43,8 @@ strong_triggers:
   - icebreaker host
 
 owned_files:
+  - apps/mini-program/src/pages/icebreaker-session/index.tsx
+  - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
   - apps/server/src/routes/domains/icebreaker.ts
   - apps/server/src/routes/socialIcebreaker.ts
   - apps/server/src/lib/socialIcebreakerStore.ts
@@ -50,7 +52,7 @@ owned_files:
   - apps/server/src/socialIcebreakerPhaseConfig.ts
   - apps/server/src/socialIcebreakerAIService.ts
   - apps/user-client/src/pages/IcebreakerSessionPage.tsx
-  - apps/mini-program/src/pages/icebreaker-session/index.tsx
+  - apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx
   - docs/icebreaker-system.md
 
 owned_paths:
