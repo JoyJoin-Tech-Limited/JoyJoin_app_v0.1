@@ -63,6 +63,8 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Repo Memory Steward` | Semi-automated **candidate** notes (`memory:draft-candidate`, `memory:query`, `memory:validate`); does not promote without explicit human approval | [`repo-memory-steward.agent.md`](./repo-memory-steward.agent.md) |
 | `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts (not a bulk doc-sync substitute—see [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md)) | [`self-iteration.agent.md`](./self-iteration.agent.md) |
 | `Verifier` | Skeptical completion check after “done” claims — targeted tests/commands, verified vs claimed | [`verifier.agent.md`](./verifier.agent.md) |
+| `Game Design Agent` | Post-match, pre-event **IcebreakerRunPlan** compilation, safety/energy-curve curation, and dev-ready handoff artifacts | [`game-design-agent.agent.md`](./game-design-agent.agent.md) |
+| `Game Development Agent` | Bind plans to **shipped phase templates** (`socialIcebreakerPhaseRegistry`), server advance rules, parity, and tests | [`game-development-agent.agent.md`](./game-development-agent.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 
