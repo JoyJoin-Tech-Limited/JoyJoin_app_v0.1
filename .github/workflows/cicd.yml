@@ -187,6 +187,30 @@ jobs:
               docker system prune -af || true
             }
 
+            retry_command() {
+              local max_attempts=$1
+              local delay_seconds=$2
+              shift 2
+              local attempt=1
+              local exit_code=0
+
+              while true; do
+                if "$@"; then
+                  return 0
+                fi
+
+                exit_code=$?
+                if [ "$attempt" -ge "$max_attempts" ]; then
+                  echo "❌ Command failed after ${max_attempts} attempts: $*"
+                  return "$exit_code"
+                fi
+
+                echo "⚠️ Command failed with exit code ${exit_code}. Retrying in ${delay_seconds}s (${attempt}/${max_attempts})..."
+                sleep "$delay_seconds"
+                attempt=$((attempt + 1))
+              done
+            }
+
             disk_guard() {
               local usep
               usep=$(df -P / | awk 'NR==2{gsub("%","",$5); print $5}')
@@ -220,7 +244,7 @@ jobs:
             docker rm -f joyjoin-api || true
             echo "🐳 Restarting containers..."
             cd ~/JoyJoin/deployment
-            docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+            retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
             echo "🌐 Syncing and reloading host Nginx config..."
             REQUIRED_TLS_FILES=(
