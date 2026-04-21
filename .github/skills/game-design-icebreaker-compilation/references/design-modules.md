@@ -77,19 +77,19 @@ Use these as **ordered checklists** when compiling an `IcebreakerRunPlan`. Each 
 ### TemplateMatcher
 
 - **Input:** each `segment.phase`.
-- **Action:** map to **registry file** + React component name:
+- **Action:** map to **mini-program phase view** (primary) and **web** component (parity):
 
-| Phase | Template |
-|-------|----------|
-| `warmup` | `WarmupPhase` |
-| `micro_challenge` | `MicroChallengePhase` |
-| `lie_detective` | `LieDetectivePhase` |
-| `auction` | `AuctionPhaseStub` |
-| `personality_dice` | `PersonalityDicePhase` |
-| `mini_script_beta` | `MiniScriptBetaStub` |
-| `recap` | `SocialIcebreakerRecap` |
+| Phase | Mini-program (Taro) — ship first | Web (React parity) |
+|-------|----------------------------------|---------------------|
+| `warmup` | `WarmupPhaseView` in `phaseViews.tsx` | `WarmupPhase` |
+| `micro_challenge` | `MicroChallengePhaseView` | `MicroChallengePhase` |
+| `lie_detective` | `LieDetectivePhaseView` | `LieDetectivePhase` |
+| `auction` | `FallbackPhaseView` / stub pattern in `index.tsx` | `AuctionPhaseStub` |
+| `personality_dice` | `PersonalityDicePhaseView` | `PersonalityDicePhase` |
+| `mini_script_beta` | `FallbackPhaseView` / stub pattern | `MiniScriptBetaStub` |
+| `recap` | `RecapPhaseView` | `SocialIcebreakerRecap` |
 
-- **Output:** table in handoff doc for Game Development Agent.
+- **Output:** table in handoff doc for Game Development Agent; acceptance tests **run on mini-program** first.
 
 ### StateMachineDraft
 
