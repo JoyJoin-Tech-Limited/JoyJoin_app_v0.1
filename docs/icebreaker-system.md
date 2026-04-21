@@ -287,9 +287,15 @@ Later async updates (venue assignment, refreshed theme highlights, cached pair e
 - **Shared contract (types + validation):** `packages/shared/src/icebreakerRunPlan.ts` — Zod schema, `parseIcebreakerRunPlan`, version literal.
 - **Persistence (implementation):** a dedicated table (for example `icebreaker_run_plans`) keyed by match scope such as **`pool_group` + `event_pool_groups.id`**, storing `plan_json`, `plan_hash`, `compiler_id`, timestamps. See `docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md` for the engineering task breakdown.
 
+#### Shipped phase templates (web registry)
+
+In-app phase UI is registered in **`apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx`** (`SOCIAL_ICEBREAKER_PHASE_REGISTRY`). The orchestrator renders the active phase via **`renderSocialIcebreakerPhasePanel`**. Any compiled plan must only reference phases present in that registry **unless** a release-track **Game Development Agent** change adds a new phase.
+
 #### Production automation: Game Design Agent and Game Dev Agent
 
 In production, “agents” are **deployed workers** (queue consumers or scheduled jobs), not interactive Cursor sessions. Recommended split:
+
+Repo agent specs for human/IDE orchestration of the same responsibilities: [`.github/agents/game-design-agent.agent.md`](../.github/agents/game-design-agent.agent.md) and [`.github/agents/game-development-agent.agent.md`](../.github/agents/game-development-agent.agent.md). Modular compile checklists: [`.github/skills/game-design-icebreaker-compilation/SKILL.md`](../.github/skills/game-design-icebreaker-compilation/SKILL.md).
 
 **Game Design Agent (production)** — *compile*
 
@@ -451,7 +457,11 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 | `packages/shared/src/socialIcebreaker.ts` | Package alias of above |
 | `apps/server/src/routes/socialIcebreaker.ts` | All Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store |
 | `apps/server/src/socialIcebreakerAIService.ts` | AI generation functions (DeepSeek) with curated fallbacks |
+| `apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx` | Phase id → shipped UI template registry (`renderSocialIcebreakerPhasePanel`) |
 | `apps/user-client/src/hooks/useSocialIcebreaker.ts` | React hook: session management, polling, all actions |
+| `.github/skills/game-design-icebreaker-compilation/SKILL.md` | Game Design compile skill + modular safety/mechanics/handoff references |
+| `.github/agents/game-design-agent.agent.md` | Game Design Agent (plan compilation handoff) |
+| `.github/agents/game-development-agent.agent.md` | Game Development Agent (registry + server implementation) |
 | `shared/icebreakerGames.ts` | 13 curated game definitions for IcebreakerToolkit |
 | `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx` | Pre-event game browser (user-facing) |
 | `apps/admin-client/src/components/icebreaker/IcebreakerToolkit.tsx` | Pre-event game browser (admin-facing) |
