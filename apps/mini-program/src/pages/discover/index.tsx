@@ -5,9 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getEventPools,
   getMyPoolRegistrations,
-  type BlindBoxEventSummary,
   type EventPoolSummary,
-  type PoolRegistrationSummary,
 } from '@shared/api'
 import {
   shenzhenClusters,
@@ -15,13 +13,12 @@ import {
   heatConfig,
 } from '@shared/districts'
 import { apiRequest } from '../../lib/api'
-import { isLongListRowCount } from '../../lib/longListThreshold'
-import { logWarn } from '../../lib/logger'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import StatusCard from '../../components/StatusCard'
 import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
@@ -31,8 +28,6 @@ import './index.scss'
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
-const EMPTY_TAB_BAR_POOL_REGISTRATIONS: PoolRegistrationSummary[] = []
-const EMPTY_TAB_BAR_EVENTS: BlindBoxEventSummary[] = []
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   dinner: '饭局',
@@ -301,14 +296,6 @@ function AuthenticatedDiscover() {
     })
   }, [pools, selectedCluster, selectedDistrict, visibleDistricts])
 
-  useEffect(() => {
-    if (isLongListRowCount(filteredPools.length)) {
-      logWarn('[Discover] Long pool list — see docs/LIST_VIRTUALIZATION.md', {
-        count: filteredPools.length,
-      })
-    }
-  }, [filteredPools.length])
-
   // ── Handlers ──
   const handleClusterTap = useCallback((clusterId: string) => {
     setSelectedCluster(clusterId)
@@ -427,11 +414,13 @@ function AuthenticatedDiscover() {
             <PoolCardSkeleton />
           </View>
         ) : poolsError ? (
-          <Card className='discover-auth__empty-state'>
-            <Text className='discover-auth__empty-emoji'>😥</Text>
-            <Text className='discover-auth__empty'>加载失败</Text>
-            <Text className='discover-auth__empty-hint'>请下拉刷新重试</Text>
-          </Card>
+          <StatusCard
+            className='discover-auth__empty-state'
+            tone='error'
+            icon='😥'
+            title='加载失败'
+            description='请下拉刷新重试'
+          />
         ) : filteredPools.length > 0 ? (
           <View className='discover-auth__pool-list'>
             {filteredPools.map((pool, index) => (
@@ -445,15 +434,17 @@ function AuthenticatedDiscover() {
             ))}
           </View>
         ) : (
-          <Card className='discover-auth__empty-state'>
-            <Text className='discover-auth__empty-emoji'>✨</Text>
-            <Text className='discover-auth__empty'>暂无可报名的活动</Text>
-            <Text className='discover-auth__empty-hint'>
-              {selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
+          <StatusCard
+            className='discover-auth__empty-state'
+            tone='empty'
+            icon='✨'
+            title='暂无可报名的活动'
+            description={
+              selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
                 ? '试试切换其他区域'
-                : '新活动即将上线，敬请期待'}
-            </Text>
-          </Card>
+                : '新活动即将上线，敬请期待'
+            }
+          />
         )}
       </View>
 
@@ -466,15 +457,10 @@ export default function DiscoverPage() {
   const { isAuthenticated, isLoading } = useAuth()
   const markAsRead = useMarkNotificationsAsRead()
   const hasMarkedRef = useRef(false)
-  const shouldSyncUnauthenticatedDiscoverState = !isLoading && !isAuthenticated
 
   useCustomTabBarSync({
     selectedIndex: MINI_PROGRAM_TAB_INDEX.discover,
-    enabled: !isLoading,
-    poolRegistrations: shouldSyncUnauthenticatedDiscoverState
-      ? EMPTY_TAB_BAR_POOL_REGISTRATIONS
-      : undefined,
-    events: shouldSyncUnauthenticatedDiscoverState ? EMPTY_TAB_BAR_EVENTS : undefined,
+    enabled: isAuthenticated,
   })
 
   useEffect(() => {
