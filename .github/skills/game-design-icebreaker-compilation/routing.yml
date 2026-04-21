@@ -1,0 +1,39 @@
+skill: game-design-icebreaker-compilation
+
+primary_ownership: >
+  Post-match, pre-event compilation of IcebreakerRunPlan JSON: psychological safety
+  scoring, energy arc, timeboxing, cohort personalization, template matching against
+  socialIcebreakerPhaseRegistry, and handoff artifacts (StateMachineDraft, NoveltyFlag).
+
+use_when:
+  - compiling or reviewing IcebreakerRunPlan segments after event match
+  - curating icebreaker flow for minimal peer pressure
+  - mapping designed flow to shipped Social Icebreaker phase templates
+  - authoring Game Design Agent handoff for Game Development Agent
+
+do_not_use_when:
+  - implementing server routes or DB migrations (use server-domain-architecture, database-migration-safety)
+  - generic product PRD with no icebreaker compile angle (use draft-prd alone)
+
+strong_triggers:
+  - IcebreakerRunPlan
+  - game-design-icebreaker-compilation
+  - PressureGauge
+  - FlowCurator
+  - TemplateMatcher
+  - NoveltyFlag
+  - post-match icebreaker compile
+  - socialIcebreakerPhaseRegistry
+
+owned_files:
+  - packages/shared/src/icebreakerRunPlan.ts
+  - apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx
+  - docs/superpowers/plans/2026-04-21-icebreaker-compilation-implementation-plan.md
+
+related_skills:
+  - skill: social-icebreaker-domain
+    when: execution-time phase rules, host authority, or lie-detective secrecy must stay consistent
+  - skill: event-pool-and-matching-operations
+    when: compile inputs come from event_pool_groups or pool matching lifecycle
+  - skill: llm-runtime-safety-and-integration
+    when: LLM fills copy slots inside a fixed plan schema

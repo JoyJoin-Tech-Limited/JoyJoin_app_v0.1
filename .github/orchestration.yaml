@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-04-18",
+  "updated": "2026-04-21",
   "portfolio_scope": {
     "kickoff_agents": [
       "Researcher",
@@ -28,7 +28,9 @@
       "Prompt Engineer",
       "Repo Memory Steward",
       "Workflow Governance Reviewer",
-      "Verifier"
+      "Verifier",
+      "Game Design Agent",
+      "Game Development Agent"
     ]
   },
   "copilot_hooks": {
@@ -552,6 +554,37 @@
         "recommended_extensions": []
       }
     },
+    "Game Design Agent": {
+      "file": ".github/agents/game-design-agent.agent.md",
+      "portfolio_role": "icebreaker-plan-compilation",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Plan compilation and handoff artifacts are documentation- and JSON-first; edit is needed for specs and sample plans in-repo.",
+        "recommended_extensions": []
+      }
+    },
+    "Game Development Agent": {
+      "file": ".github/agents/game-development-agent.agent.md",
+      "portfolio_role": "icebreaker-template-implementation",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Registry and server changes require the same normalized implementation tool set as other engineering agents.",
+        "recommended_extensions": []
+      }
+    },
     "Launch Readiness Agent": {
       "file": ".github/agents/launch-readiness.agent.md",
       "portfolio_role": "release-review",
@@ -902,6 +935,24 @@
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "code-review",
+      "testing-and-regression-guardrails"
+    ],
+    "Game Design Agent": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "game-design-icebreaker-compilation",
+      "social-icebreaker-domain",
+      "event-pool-and-matching-operations",
+      "llm-runtime-safety-and-integration",
+      "draft-prd"
+    ],
+    "Game Development Agent": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "social-icebreaker-domain",
+      "frontend-component-architecture",
+      "server-domain-architecture",
+      "platform-coordination-protocol",
       "testing-and-regression-guardrails"
     ],
     "Launch Readiness Agent": [
