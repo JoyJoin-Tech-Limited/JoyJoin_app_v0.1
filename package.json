@@ -41,7 +41,7 @@
     "orchestration:git-hook": "node scripts/orchestration-supervisor.mjs git-hook",
     "orchestration:workflow": "node scripts/orchestration-supervisor.mjs workflow",
     "orchestration:tooling-report": "node scripts/orchestration-supervisor.mjs tooling-report",
-    "db:push": "drizzle-kit push --config=apps/server/drizzle.config.ts",
+    "db:push": "drizzle-kit push --config=apps/server/drizzle.config.cjs",
     "set-admin": "npm run admin:create",
     "admin:create": "npm run admin:create -w @joyjoin/server",
     "user:create": "npm run user:create -w @joyjoin/server",
