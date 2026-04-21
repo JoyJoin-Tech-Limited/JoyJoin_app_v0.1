@@ -61,6 +61,7 @@ afterEach(() => {
   delete process.env.SOCIAL_AI_PROVIDER;
   delete process.env.MINIMAX_API_KEY;
   delete process.env.MINIMAX_MODEL;
+  delete process.env.DEEPSEEK_API_KEY;
 });
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ describe('socialModelRouter', () => {
         'generateLieDetectiveStatements',
         'generateMicroChallenges',
         'generatePersonalityDiceChallenges',
+        'generateAuctionLots',
         'generateProfileTagline',
         'generateConversationTopics',
         'generateWelcomeMessage',
@@ -99,6 +101,8 @@ describe('socialModelRouter', () => {
         'generateWarmupTopics',
         'generateMicroChallenges',
         'generatePersonalityDiceChallenges',
+        'generateAuctionLots',
+        'generateMiniScriptFramework',
         'generateProfileTagline',
         'generateConversationTopics',
         'generateWelcomeMessage',
@@ -143,17 +147,19 @@ describe('socialModelRouter', () => {
       }
     });
 
-    it('routes DeepSeek-designated functions to deepseek even when MINIMAX_API_KEY is set', () => {
+    it('routes analyzeComplexSemantics to deepseek even when MINIMAX_API_KEY is set', () => {
+      setEnv({ MINIMAX_API_KEY: 'sk-minimax-test', DEEPSEEK_API_KEY: 'sk-deepseek-test' });
+
+      const result = getClientForFunction('analyzeComplexSemantics');
+      expect(result.provider).toBe('deepseek');
+    });
+
+    it('routes JSON-heavy icebreaker functions to minimax when MINIMAX_API_KEY is set', () => {
       setEnv({ MINIMAX_API_KEY: 'sk-minimax-test' });
 
-      const deepseekFns = [
-        'generateMicroChallenges',
-        'generatePersonalityDiceChallenges',
-      ] as const;
-
-      for (const fn of deepseekFns) {
+      for (const fn of ['generateMicroChallenges', 'generatePersonalityDiceChallenges', 'generateAuctionLots', 'generateMiniScriptFramework'] as const) {
         const result = getClientForFunction(fn);
-        expect(result.provider, `${fn} should be deepseek`).toBe('deepseek');
+        expect(result.provider, `${fn} should be minimax`).toBe('minimax');
       }
     });
 
@@ -196,11 +202,11 @@ describe('socialModelRouter', () => {
       expect(result.provider).toBe('minimax');
     });
 
-    it('uses deepseek for structural functions (hybrid fallback)', () => {
+    it('uses minimax for structural icebreaker functions when key is set (hybrid fallback)', () => {
       setEnv({ SOCIAL_AI_PROVIDER: 'bad_value', MINIMAX_API_KEY: 'sk-minimax-test' });
 
       const result = getClientForFunction('generateMicroChallenges');
-      expect(result.provider).toBe('deepseek');
+      expect(result.provider).toBe('minimax');
     });
   });
 

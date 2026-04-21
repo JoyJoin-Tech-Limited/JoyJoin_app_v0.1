@@ -20,7 +20,7 @@ import { formatAge } from "@shared/utils";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
 import { setupPhoneAuth, isPhoneAuthenticated, validateVerificationCode } from "./phoneAuth";
 import { setupWechatAuth } from "./wechatAuth";
-import { registerAdminAuthRoutes, requireAdmin } from "./adminAuth";
+import { registerAdminAuthRoutes, requireAdmin, requireOperatorOrAbove } from "./adminAuth";
 import { isDebugAuthLoggingEnabled, isDevAuthToolsEnabled } from "./auth/policy";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 import { buildEventPoolRegistrationInsert } from "./lib/eventPoolRegistration";
@@ -2163,7 +2163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 🍸 DEMO: Create "弥所 Homebar" partner venue with exclusive deal
-  app.post('/api/demo/create-homebar-venue', requireAdmin, async (_req, res) => {
+  app.post('/api/demo/create-homebar-venue', requireAdmin, requireOperatorOrAbove, async (_req, res) => {
     try {
       const { db } = await import("./db");
       const { venues, venueDeals } = await import("@shared/schema");
@@ -3360,7 +3360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: override attendance status for a specific user
-  app.patch('/api/admin/events/:eventId/attendees/:userId/attendance-status', requireAdmin, async (req: any, res) => {
+  app.patch('/api/admin/events/:eventId/attendees/:userId/attendance-status', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const adminId = req.session.userId;
       const { eventId, userId } = req.params;
@@ -3411,7 +3411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: create a blind box event (桌) that admins manage
-  app.post('/api/admin/blind-box-events', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/blind-box-events', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const adminId = req.session.userId;
       if (!adminId) {
@@ -3531,7 +3531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: manual match trigger for blind box event
-  app.post('/api/admin/events/:id/match', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/events/:id/match', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const adminId = req.session.userId;
       const eventId = req.params.id;
@@ -5824,7 +5824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Management - Ban user
-  app.patch("/api/admin/users/:id/ban", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id/ban", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -5851,7 +5851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Management - Unban user
-  app.patch("/api/admin/users/:id/unban", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id/unban", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -5912,7 +5912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subscription Management - Create subscription
-  app.post("/api/admin/subscriptions", requireAdmin, async (req, res) => {
+  app.post("/api/admin/subscriptions", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { userId, planType, durationMonths } = req.body;
       
@@ -5941,7 +5941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subscription Management - Update subscription
-  app.patch("/api/admin/subscriptions/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/subscriptions/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { isActive, autoRenew, endDate } = req.body;
       
@@ -5995,7 +5995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Coupon Management - Create coupon
-  app.post("/api/admin/coupons", requireAdmin, async (req, res) => {
+  app.post("/api/admin/coupons", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { code, discountType, discountValue, validFrom, validUntil, maxUses } = req.body;
       
@@ -6021,7 +6021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Coupon Management - Update coupon
-  app.patch("/api/admin/coupons/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/coupons/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const coupon = await storage.updateCoupon(req.params.id, req.body);
       res.json(coupon);
@@ -6114,7 +6114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin - Update pricing setting
-  app.patch("/api/admin/pricing/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/pricing/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { displayName, displayNameEn, description, priceInCents, originalPriceInCents, durationDays, sortOrder, isActive, isFeatured } = req.body;
       
@@ -6176,7 +6176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Venue Management - Create venue
-  app.post("/api/admin/venues", requireAdmin, async (req, res) => {
+  app.post("/api/admin/venues", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { 
         name, type, address, city, district, clusterId, districtId,
@@ -6230,7 +6230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Venue Management - Update venue
-  app.patch("/api/admin/venues/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/venues/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const venue = await storage.updateVenue(req.params.id, req.body);
       logAdminAudit({
@@ -6249,7 +6249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Venue Management - Delete venue
-  app.delete("/api/admin/venues/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/admin/venues/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       await storage.deleteVenue(req.params.id);
       logAdminAudit({
@@ -6291,7 +6291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create venue deal (admin)
-  app.post("/api/admin/venues/:venueId/deals", requireAdmin, async (req, res) => {
+  app.post("/api/admin/venues/:venueId/deals", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const deal = await storage.createVenueDeal({
         ...req.body,
@@ -6305,7 +6305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update venue deal (admin)
-  app.patch("/api/admin/venue-deals/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/venue-deals/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const deal = await storage.updateVenueDeal(req.params.id, req.body);
       res.json(deal);
@@ -6316,7 +6316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete venue deal (admin)
-  app.delete("/api/admin/venue-deals/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/admin/venue-deals/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       await storage.deleteVenueDeal(req.params.id);
       res.json({ message: "Venue deal deleted successfully" });
@@ -6475,7 +6475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Venue Booking - Update revenue (Admin only)
-  app.patch("/api/admin/venues/bookings/:bookingId/revenue", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/venues/bookings/:bookingId/revenue", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { actualRevenue } = req.body;
       
@@ -6505,7 +6505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Migrate a booking to a new venue
-  app.post("/api/admin/venues/bookings/:bookingId/migrate", requireAdmin, async (req, res) => {
+  app.post("/api/admin/venues/bookings/:bookingId/migrate", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { newVenueId, reason } = req.body;
       
@@ -6585,7 +6585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a time slot for a venue
-  app.post("/api/admin/venues/:venueId/time-slots", requireAdmin, async (req, res) => {
+  app.post("/api/admin/venues/:venueId/time-slots", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { dayOfWeek, specificDate, startTime, endTime, maxConcurrentEvents, notes } = req.body;
       
@@ -6616,7 +6616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Batch create time slots (for weekly recurring)
-  app.post("/api/admin/venues/:venueId/time-slots/batch", requireAdmin, async (req, res) => {
+  app.post("/api/admin/venues/:venueId/time-slots/batch", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { timeSlots } = req.body;
       
@@ -6637,7 +6637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a time slot
-  app.patch("/api/admin/time-slots/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/time-slots/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const timeSlot = await storage.updateVenueTimeSlot(req.params.id, req.body);
       res.json(timeSlot);
@@ -6648,7 +6648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a time slot
-  app.delete("/api/admin/time-slots/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/admin/time-slots/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       await storage.deleteVenueTimeSlot(req.params.id);
       res.json({ message: "Time slot deleted successfully" });
@@ -6783,7 +6783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event Templates - Create template
-  app.post("/api/admin/event-templates", requireAdmin, async (req, res) => {
+  app.post("/api/admin/event-templates", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { name, eventType, dayOfWeek, timeOfDay, theme, genderRestriction, minAge, maxAge, minParticipants, maxParticipants, customPrice } = req.body;
       
@@ -6814,7 +6814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event Templates - Update template
-  app.patch("/api/admin/event-templates/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/event-templates/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const template = await storage.updateEventTemplate(req.params.id, req.body);
       res.json(template);
@@ -6825,7 +6825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event Templates - Delete template
-  app.delete("/api/admin/event-templates/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/admin/event-templates/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       await storage.deleteEventTemplate(req.params.id);
       res.json({ message: "Event template deleted successfully" });
@@ -6861,7 +6861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event Management - Update event status
-  app.patch("/api/admin/events/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/events/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const eventId = req.params.id;
       const user = req.user as User;
@@ -7006,7 +7006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 // Event Pools - Create new event pool
-app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
+  app.post("/api/admin/event-pools", requireAdmin, requireOperatorOrAbove, async (req, res) => {
   try {
     const anyReq = req as any;
     const user = anyReq.user as User | undefined;
@@ -7063,7 +7063,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
 });
 
   // Event Pools - Update event pool
-  app.patch("/api/admin/event-pools/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/event-pools/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const updates: any = { ...req.body };
       
@@ -7249,7 +7249,7 @@ app.post("/api/admin/event-pools", requireAdmin, async (req, res) => {
   });
 
   // Event Pools - Trigger matching algorithm
-  app.post("/api/admin/event-pools/:id/match", requireAdmin, async (req, res) => {
+  app.post("/api/admin/event-pools/:id/match", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const poolId = req.params.id;
       
@@ -8387,7 +8387,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Moderation - Update report status
-  app.patch("/api/admin/moderation/reports/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/moderation/reports/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { status, adminNotes } = req.body;
       const report = await storage.updateReportStatus(req.params.id, status, adminNotes);
@@ -8399,7 +8399,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Moderation - Create moderation log
-  app.post("/api/admin/moderation/logs", requireAdmin, async (req, res) => {
+  app.post("/api/admin/moderation/logs", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const session = req.session as any;
       const log = await storage.createModerationLog({
@@ -8530,7 +8530,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Create content
-  app.post("/api/admin/contents", requireAdmin, async (req, res) => {
+  app.post("/api/admin/contents", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const session = req.session as any;
       const content = await storage.createContent({
@@ -8545,7 +8545,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Update content
-  app.patch("/api/admin/contents/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/contents/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const content = await storage.updateContent(req.params.id, req.body);
       res.json(content);
@@ -8556,7 +8556,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Delete content
-  app.delete("/api/admin/contents/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/admin/contents/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       await storage.deleteContent(req.params.id);
       res.json({ success: true });
@@ -8567,7 +8567,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Publish content (update status to published and set published_at)
-  app.post("/api/admin/contents/:id/publish", requireAdmin, async (req, res) => {
+  app.post("/api/admin/contents/:id/publish", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const session = req.session as any;
       const adminId = session.userId;
@@ -8630,7 +8630,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Broadcast notification to multiple users
-  app.post("/api/admin/notifications/broadcast", requireAdmin, async (req, res) => {
+  app.post("/api/admin/notifications/broadcast", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const session = req.session as any;
       const adminId = session.userId;
@@ -8658,7 +8658,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Send notification to a single user
-  app.post("/api/admin/notifications/send", requireAdmin, async (req, res) => {
+  app.post("/api/admin/notifications/send", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const session = req.session as any;
       const adminId = session.userId;
@@ -8757,7 +8757,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ MATCHING ALGORITHM ENDPOINTS ============
   
   // Calculate match score between two users
-  app.post("/api/matching/calculate-pair", requireAdmin, async (req, res) => {
+  app.post("/api/matching/calculate-pair", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { userId1, userId2, weights } = req.body;
       
@@ -8786,7 +8786,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // Match users to groups (主匹配算法)
-  app.post("/api/matching/create-groups", requireAdmin, async (req, res) => {
+  app.post("/api/matching/create-groups", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { userIds, config } = req.body;
       
@@ -8854,7 +8854,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // Update matching configuration (Admin only)
-  app.post("/api/matching/config", requireAdmin, async (req, res) => {
+  app.post("/api/matching/config", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       
       const config = req.body;
@@ -8912,7 +8912,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // Test matching scenario (Admin only - for algorithm tuning)
-  app.post("/api/matching/test-scenario", requireAdmin, async (req, res) => {
+  app.post("/api/matching/test-scenario", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       
       const { userIds, config } = req.body;
@@ -9042,7 +9042,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // PATCH /api/admin/chat-reports/:id - Admin reviews/processes a report
-  app.patch("/api/admin/chat-reports/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/chat-reports/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const { id } = req.params;
       const session = req.session as any;
@@ -9188,7 +9188,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // PUT /api/admin/matching-thresholds - Update matching threshold config
-  app.put("/api/admin/matching-thresholds", requireAdmin, async (req, res) => {
+  app.put("/api/admin/matching-thresholds", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const userId = resolveMatchingThresholdCreatorId(req);
       
@@ -9276,7 +9276,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // POST /api/admin/pools/:id/scan - Manually trigger pool scan
-  app.post("/api/admin/pools/:id/scan", requireAdmin, async (req, res) => {
+  app.post("/api/admin/pools/:id/scan", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       const poolId = req.params.id;
       const { scanPoolAndMatch } = await import("./poolRealtimeMatchingService");
@@ -9857,7 +9857,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  app.post('/api/admin/evolution/weights/activation', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/evolution/weights/activation', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { enabled } = req.body ?? {};
       if (typeof enabled !== 'boolean') {
@@ -9897,7 +9897,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
     }
   });
 
-  app.post('/api/admin/evolution/weights/rollback', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/evolution/weights/rollback', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { matchingWeightsService } = await import('./matchingWeightsService');
       const before = await matchingWeightsService.getRolloutStatus();
@@ -10001,7 +10001,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // 标记黄金话术
-  app.post('/api/admin/evolution/golden-dialogues', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/evolution/golden-dialogues', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const adminId = req.session.userId;
       const { dialogueContent, category, sourceSessionId, sourceUserId } = req.body;
@@ -10027,7 +10027,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // 更新黄金话术精炼版本
-  app.patch('/api/admin/evolution/golden-dialogues/:id', requireAdmin, async (req: any, res) => {
+  app.patch('/api/admin/evolution/golden-dialogues/:id', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { id } = req.params;
       const { refinedVersion, isActive } = req.body;
@@ -10604,7 +10604,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Admin endpoint to regenerate explanations for an event pool
-  app.post('/api/admin/event-pools/:poolId/regenerate-explanations', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/event-pools/:poolId/regenerate-explanations', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { poolId } = req.params;
 
@@ -10703,7 +10703,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Generate daily KPI snapshot (can be called manually or via cron)
-  app.post('/api/admin/kpi/generate-snapshot', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/kpi/generate-snapshot', kpiEndpointLimiter, requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { kpiService } = await import('./kpiService');
       await kpiService.generateDailyKpiSnapshot();
@@ -10715,7 +10715,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Update user engagement metrics
-  app.post('/api/admin/kpi/update-user-engagement/:userId', kpiEndpointLimiter, requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/kpi/update-user-engagement/:userId', kpiEndpointLimiter, requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const { kpiService } = await import('./kpiService');
@@ -12380,7 +12380,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Admin: send reminders to pending attendees
-  app.post('/api/admin/blind-box-events/:eventId/chase-attendees', requireAdmin, async (req: any, res) => {
+  app.post('/api/admin/blind-box-events/:eventId/chase-attendees', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       // In a real implementation this would send push notifications.
       // For now we acknowledge the action and return success.
@@ -12392,7 +12392,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Admin: override a single attendee's pre-attendance status
-  app.patch('/api/admin/blind-box-events/:eventId/attendees/:userId/attendance', requireAdmin, async (req: any, res) => {
+  app.patch('/api/admin/blind-box-events/:eventId/attendees/:userId/attendance', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const { eventId, userId } = req.params;
       const { status } = req.body;

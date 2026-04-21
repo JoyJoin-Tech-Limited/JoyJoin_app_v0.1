@@ -32,6 +32,14 @@ GET /api/auth/user
 
 **Mini-program:** parallel pages under `apps/mini-program/src/pages/onboarding/` (personality test, auth-gate, essential/extended/review) must obey the same server `nextStep`; do not invent a separate progression model.
 
+## FormStepper / viewport density (FormStepper skill)
+
+**Input cap:** A single onboarding step must not contain **more than four (4)** text/numeric inputs (`input`, `textarea`, or bulky `select`). If the story needs five or more such fields, **split into additional steps** (progress indicator, server `nextStep` or client sub-steps as appropriate) without waiting for a separate ticket.
+
+**Layout:** Full-height steps should compose with the [viewport-zero-scroll](../viewport-zero-scroll/SKILL.md) shell: **web** — `.no-scroll-container`, `@shared/ui/ResponsiveSpacer`; **mini-program (launch)** — `@include no-scroll-page-shell` / bounded `ScrollView`, `apps/mini-program/src/components/ResponsiveSpacer.tsx`, and `100dvh`-aware mixins in `apps/mini-program/src/styles/_mixins.scss`. Avoid native page scroll for fixed-CTA steps.
+
+**Reference implementation:** Web — `EssentialDataPage.tsx` + `STEP_CONFIG`. Mini-program — `apps/mini-program/src/pages/onboarding/*` (split stages / single focus per route where possible); align field count and step boundaries with web when both ship the same journey.
+
 ## Active onboarding steps
 
 | nextStep value | Route | Component | Completion signal (source) |

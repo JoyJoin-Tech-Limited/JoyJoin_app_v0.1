@@ -1,0 +1,42 @@
+skill: lie-detective-icebreaker
+
+primary_ownership: >
+  Lie detective phase secrecy, vote integrity, reveal ordering, REST routes, and
+  `generateLieDetectiveStatements` integration.
+
+use_when:
+  - changing lie_detective REST contracts or state fields
+  - reviewing secrecy of isLie across server vs clients
+  - debugging vote / reveal / next-player sequencing
+
+do_not_use_when:
+  - general session lifecycle without lie_detective specifics (use social-icebreaker-domain)
+  - mini_script JSON schema (use miniscript-story-framework)
+
+strong_triggers:
+  - lie_detective
+  - lie detective
+  - two truths one lie
+  - isLie
+  - lie-detective/generate
+  - lie-detective/vote
+  - lie-detective/next-player
+  - social-lie-detective-v1
+
+owned_files:
+  - apps/server/src/routes/socialIcebreaker.ts
+  - apps/server/src/socialIcebreakerAIService.ts
+  - apps/server/src/lib/socialIcebreakerStore.ts
+  - apps/user-client/src/components/social-icebreaker/lie-detective
+  - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
+
+owned_paths:
+  - /api/social-icebreaker/*/lie-detective/
+
+related_skills:
+  - skill: social-icebreaker-domain
+    when: cross-phase advance, roster, or host authority also changes
+  - skill: llm-runtime-safety-and-integration
+    when: promptVersion, provider routing, or AITrace for lie detective changes
+  - skill: platform-coordination-protocol
+    when: touching both Taro phaseViews and web LieDetectivePhase

@@ -16,6 +16,7 @@ const AdminEventPoolsPage = lazy(() => import("@/pages/admin/AdminEventPoolsPage
 const AdminFinancePage = lazy(() => import("@/pages/admin/AdminFinancePage"));
 const AdminDataInsightsPage = lazy(() => import("@/pages/admin/AdminDataInsightsPage"));
 const AdminOutcomeAnalyticsPage = lazy(() => import("@/pages/admin/AdminOutcomeAnalyticsPage"));
+const AdminIcebreakerAiFeedbackPage = lazy(() => import("@/pages/admin/AdminIcebreakerAiFeedbackPage"));
 const AdminContentPage = lazy(() => import("@/pages/admin/AdminContentPage"));
 const AdminModerationPage = lazy(() => import("@/pages/admin/AdminModerationPage"));
 const AdminMatchingLabPage = lazy(() => import("@/pages/admin/AdminMatchingLabPage"));
@@ -69,6 +70,7 @@ export default function AdminLayout() {
                 <Route path="/admin/finance" component={AdminFinancePage} />
                 <Route path="/admin/insights" component={AdminDataInsightsPage} />
                 <Route path="/admin/outcome-analytics" component={AdminOutcomeAnalyticsPage} />
+                <Route path="/admin/icebreaker-ai-feedback" component={AdminIcebreakerAiFeedbackPage} />
                 <Route path="/admin/feedback" component={AdminFeedbackPage} />
                 <Route path="/admin/content" component={AdminContentPage} />
                 <Route path="/admin/notifications" component={AdminNotificationsPage} />

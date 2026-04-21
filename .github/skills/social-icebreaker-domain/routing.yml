@@ -1,7 +1,7 @@
 skill: social-icebreaker-domain
 
 primary_ownership: >
-  Session lifecycle phases (warmup → micro_challenge → lie_detective → recap),
+  Session lifecycle phases (warmup → micro_challenge → lie_detective → personality_dice → mini_script → auction → recap),
   host/player authority boundaries, persistence/rejoin semantics, roster vs active
   presence, action integrity, and lie-detective secrecy.
 
@@ -12,6 +12,7 @@ use_when:
   - implementing lie-detective secrecy boundaries
   - adding or changing icebreaker AI content generation
   - debugging icebreaker session state issues
+  - mapping production LLM surfaces (promptVersion, AITrace) across phases — see references/production-ai-surfaces.md
 
 do_not_use_when:
   - task is about pool matching (use matching-domain)
@@ -46,17 +47,21 @@ owned_files:
   - apps/mini-program/src/pages/icebreaker-session/index.tsx
   - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
   - apps/server/src/routes/domains/icebreaker.ts
+  - apps/server/src/routes/domains/miniscript.ts
   - apps/server/src/routes/socialIcebreaker.ts
   - apps/server/src/lib/socialIcebreakerStore.ts
   - apps/server/src/lib/socialIcebreakerSweep.ts
+  - apps/server/src/lib/miniscriptAgent.ts
   - apps/server/src/socialIcebreakerPhaseConfig.ts
   - apps/server/src/socialIcebreakerAIService.ts
+  - apps/server/src/ai/socialModelRouter.ts
   - apps/user-client/src/pages/IcebreakerSessionPage.tsx
   - apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx
   - docs/icebreaker-system.md
 
 owned_paths:
   - /api/social-icebreaker/**
+  - /api/miniscript/**
   - /icebreaker/:sessionId
 
 owned_symbols:
@@ -72,6 +77,14 @@ owned_symbols:
   - isLie
 
 related_skills:
+  - skill: lie-detective-icebreaker
+    when: lie_detective secrecy, votes, reveals, or lie-detective routes / prompt change
+  - skill: personality-dice-icebreaker
+    when: personality_dice generation, challenge copy, or dice routes
+  - skill: icebreaker-auction-phase
+    when: auction lots, bidding, env flags, or auction UI parity
+  - skill: miniscript-story-framework
+    when: the task touches mini_script framework JSON, schema, UI binding, or compile/generate contracts (pair with this skill for session/API boundaries)
   - skill: llm-runtime-safety-and-integration
     when: the task changes provider routing, prompt metadata, fallback behavior, or AI trace logging for icebreaker generation
   - skill: reliability-and-state-integrity

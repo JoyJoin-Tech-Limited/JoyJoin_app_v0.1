@@ -15,6 +15,8 @@
  * 2. Every other `/api/admin/*` route MUST include `requireAdmin`.
  * 3. Account-management routes (list, create, update, reset-password) MUST
  *    additionally include `requireSuperAdmin`.
+ * 4. Mutating methods (POST / PATCH / PUT / DELETE) on `/api/admin/*` MUST include
+ *    `requireOperatorOrAbove` **or** `requireSuperAdmin` so `viewer` cannot mutate.
  *
  * Running this test
  * ─────────────────
@@ -47,6 +49,8 @@ const ADMIN_ROUTE_FILES = [
   'apps/server/src/routes.ts',
   'apps/server/src/routes/domains/payments.ts',
 ] as const;
+
+const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 const SUPER_ADMIN_REQUIRED: Array<{ method: string; pathPattern: RegExp }> = [
   { method: 'GET', pathPattern: /^\/api\/admin\/accounts$/ },
@@ -147,6 +151,23 @@ describe('Admin RBAC coverage audit', () => {
         sourceFile: 'apps/server/src/adminAuth.ts',
       },
     ]);
+  });
+
+  it('mutating /api/admin/* routes include requireOperatorOrAbove or requireSuperAdmin', () => {
+    const missing = adminRoutes.filter((route) => {
+      if (!MUTATING_METHODS.has(route.method)) return false;
+      if (route.method === 'POST' && route.path === '/api/admin/login') return false;
+      if (!route.path.startsWith('/api/admin')) return false;
+      const names = route.middlewareNames;
+      return !names.includes('requireOperatorOrAbove') && !names.includes('requireSuperAdmin');
+    });
+
+    expect(
+      missing,
+      `Mutating admin routes missing operator-or-super guard:\n${missing
+        .map((route) => `${route.method} ${route.path} [${route.middlewareNames.join(', ')}] in ${route.sourceFile}`)
+        .join('\n')}`,
+    ).toHaveLength(0);
   });
 
   it('account-management routes include requireSuperAdmin', () => {

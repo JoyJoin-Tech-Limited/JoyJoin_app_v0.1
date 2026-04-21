@@ -185,3 +185,8 @@ export function logAITrace(
 function generateTraceId(): string {
   return randomUUID();
 }
+
+/** Opaque id for `[AITrace].traceId` and client `AIResponseMeta.aiCorrelationId`. */
+export function createAiCorrelationId(): string {
+  return randomUUID();
+}

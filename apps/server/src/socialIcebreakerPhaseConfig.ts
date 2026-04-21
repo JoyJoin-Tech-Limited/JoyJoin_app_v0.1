@@ -6,6 +6,12 @@ function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   return value.toLowerCase() === 'true';
 }
 
+/** Official flag: `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`. Legacy: `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA`. */
+function isMiniScriptPhaseEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT, false)) return true;
+  return isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA, false);
+}
+
 export function getServerEnabledPhases(env: NodeJS.ProcessEnv = process.env): SocialIcebreakerPhase[] {
   const enabledPhases = [...DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES];
   const personalityDiceEnabled = isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE, true);
@@ -18,14 +24,14 @@ export function getServerEnabledPhases(env: NodeJS.ProcessEnv = process.env): So
 
   if (personalityDiceEnabled === false) {
     const filteredPhases = enabledPhases.filter((phase) => phase !== 'personality_dice');
-    if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA, false)) {
-      filteredPhases.push('mini_script_beta');
+    if (isMiniScriptPhaseEnabled(env)) {
+      filteredPhases.push('mini_script');
     }
     return filteredPhases;
   }
 
-  if (isEnabled(env.SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA, false)) {
-    enabledPhases.push('mini_script_beta');
+  if (isMiniScriptPhaseEnabled(env)) {
+    enabledPhases.push('mini_script');
   }
 
   return enabledPhases;
@@ -65,6 +71,20 @@ export function cleanupPhaseStateForNextPhase(
       state.personalityDiceChallenges = undefined;
       state.currentDicePlayerIndex = undefined;
       state.diceCompletedBy = undefined;
+      return;
+    case 'mini_script':
+      state.miniScriptFramework = undefined;
+      state.miniScriptFrameworkGeneratedAt = undefined;
+      state.miniScriptFrameworkGeneratedByUserId = undefined;
+      return;
+    case 'auction':
+      state.auctionLots = undefined;
+      state.auctionLotsMeta = undefined;
+      state.auctionBalances = undefined;
+      state.auctionCurrentLotIndex = undefined;
+      state.auctionHighBid = undefined;
+      state.auctionAllLotsClosed = undefined;
+      state.auctionRecapLines = undefined;
       return;
     default:
       return;

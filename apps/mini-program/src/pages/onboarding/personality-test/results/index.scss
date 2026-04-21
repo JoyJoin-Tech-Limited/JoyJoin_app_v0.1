@@ -634,7 +634,6 @@
 
   &__pokemon-card-top {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: $spacing-sm;
@@ -642,16 +641,12 @@
   }
 
   &__pokemon-chip {
-    box-sizing: border-box;
-    max-width: 100%;
     padding: 10rpx 20rpx;
     border-radius: 999rpx;
     background: rgba(255, 255, 255, 0.92);
     font-size: $font-size-xs;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    overflow-wrap: anywhere;
-    word-break: break-word;
 
     &--dark {
       background: #23123d;
@@ -690,8 +685,6 @@
     font-weight: $font-weight-black;
     color: $color-text-primary;
     margin-bottom: 8rpx;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__pokemon-tagline {
@@ -701,8 +694,6 @@
     color: $color-text-primary;
     line-height: 1.6;
     margin-bottom: 10rpx;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__pokemon-share-line {
@@ -710,8 +701,6 @@
     font-size: $font-size-sm;
     line-height: 1.7;
     color: $color-text-secondary;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__pokemon-match-row {
@@ -722,16 +711,12 @@
   }
 
   &__pokemon-match-chip {
-    box-sizing: border-box;
-    max-width: 100%;
     padding: 10rpx 18rpx;
     border-radius: 999rpx;
     background: rgba(255, 248, 214, 0.94);
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: #7a5a09;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__pokemon-skill-grid {
@@ -742,7 +727,6 @@
   }
 
   &__pokemon-skill {
-    min-width: 0;
     padding: $spacing-sm;
     border-radius: 24rpx;
     border: 2rpx solid rgba($color-primary, 0.08);
@@ -775,8 +759,6 @@
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     margin-bottom: 8rpx;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__pokemon-skill-copy {
@@ -784,8 +766,6 @@
     font-size: $font-size-xs;
     line-height: 1.6;
     color: $color-text-secondary;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__pokemon-actions {
@@ -808,7 +788,6 @@
 
   &__coach-copy {
     flex: 1;
-    min-width: 0;
   }
 
   &__coach-title {
@@ -817,8 +796,6 @@
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     margin-bottom: 10rpx;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   &__coach-text {
@@ -826,8 +803,6 @@
     font-size: $font-size-sm;
     line-height: 1.7;
     color: $color-text-secondary;
-    overflow-wrap: anywhere;
-    word-break: break-word;
 
     & + & {
       margin-top: 10rpx;
@@ -848,9 +823,8 @@
 
   &__trait-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12rpx;
   }
 
   &__trait-label,
@@ -859,15 +833,7 @@
     color: $color-text-primary;
   }
 
-  &__trait-label {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
   &__trait-value {
-    flex-shrink: 0;
     font-weight: $font-weight-bold;
     color: $color-primary-dark;
   }

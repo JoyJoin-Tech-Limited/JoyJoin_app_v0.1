@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { isEventPackPlanType, normalizeSubscriptionPlanType } from "@shared/api";
 import { eventPoolRegistrations } from "@shared/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { requireAdmin } from "../../adminAuth";
+import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { paymentEndpointLimiter, webhookEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
@@ -886,7 +886,7 @@ export function registerPaymentRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/payments/:paymentId/refund", requireAdmin, async (req, res) => {
+  app.post("/api/admin/payments/:paymentId/refund", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const { paymentId } = req.params;

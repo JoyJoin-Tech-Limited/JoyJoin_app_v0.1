@@ -127,7 +127,15 @@ vi.mock('../socialIcebreakerAIService', () => ({
       },
     };
   }),
-  generateXiaoYueComment: vi.fn().mockResolvedValue('ok'),
+  generateXiaoYueComment: vi.fn().mockResolvedValue({
+    data: 'ok',
+    meta: {
+      generatedAt: new Date().toISOString(),
+      fromCache: false,
+      provider: null,
+      fallbackUsed: false,
+    },
+  }),
   generateRecapSummary: vi.fn().mockResolvedValue({
     data: { headline: 'summary', moments: ['m1'], closingLine: 'bye' },
     meta: {
@@ -135,7 +143,7 @@ vi.mock('../socialIcebreakerAIService', () => ({
       fromCache: false,
       provider: 'deepseek',
       fallbackUsed: false,
-      promptVersion: 'social-recap-summary-v1',
+      promptVersion: 'social-recap-summary-v2',
     },
   }),
   generatePersonalityDiceChallenges: vi.fn().mockImplementation(async (participants: Array<{ userId: string; displayName: string }>) => {
@@ -157,6 +165,19 @@ vi.mock('../socialIcebreakerAIService', () => ({
         promptVersion: 'social-personality-dice-v1',
       },
     };
+  }),
+  generateAuctionLots: vi.fn().mockResolvedValue({
+    data: [
+      { id: 'lot_1', title: 'Test lot one', teaser: 'fun' },
+      { id: 'lot_2', title: 'Test lot two' },
+    ],
+    meta: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      fromCache: false,
+      provider: 'deepseek',
+      fallbackUsed: true,
+      promptVersion: 'social-auction-lots-v1',
+    },
   }),
 }));
 
