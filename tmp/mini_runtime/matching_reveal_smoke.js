@@ -438,8 +438,78 @@ async function run() {
     result.resolvedIds = resolvedIds
     const pendingRoute = buildMatchingStatusRoute(resolvedIds.pendingRegistrationId)
     await miniProgram.callWxMethod("reLaunch", { url: pendingRoute })
-    const pendingState = await waitForRouteSelectors(miniProgram, pendingRoute, SELECTORS.pending, "pending matching-status selectors")
-    result.checks.push({ name: "matching-status-pending", route: pendingState.page.path, url: pendingRoute, selectors: pendingState.found })
+    const pendingPage = await waitForRoute(miniProgram, pendingRoute)
+    await sleep(Math.max(CONFIG.readyTimeoutMs, 6000))
+    const pendingSelectors = SELECTORS.pending.concat([".fancy-line-loading-screen", ".loading-screen__message", ".matching-status__error", ".matching-status__special-card"])
+    const pendingFound = await collectSelectorState(pendingPage, pendingSelectors)
+    const pendingRuntime = await miniProgram.evaluate(function (expectedRegistrationId) {
+      function isRecord(value) { return Boolean(value) && typeof value === "object" && !Array.isArray(value) }
+      function serializeError(error) { if (!error) return null; if (error instanceof Error && error.message) return error.message; if (isRecord(error) && typeof error.message === "string") return error.message; return String(error) }
+      function serializeQueryState(state) { if (!state) return null; return { status: state.status || null, fetchStatus: state.fetchStatus || null, dataUpdatedAt: typeof state.dataUpdatedAt === "number" ? state.dataUpdatedAt : null, error: serializeError(state.error) } }
+      function loadRuntimeCommonModule() {
+        if (typeof require !== "function") return { ok: false, reason: "require-unavailable", attempts: [] }
+        const attempts = []
+        for (const modulePath of ["../../common.js", "../common.js", "./common.js", "common.js"]) {
+          try {
+            const moduleExports = require(modulePath)
+            if (moduleExports && moduleExports.queryClient) return { ok: true, modulePath, moduleExports }
+            attempts.push({ modulePath, reason: "missing-query-client" })
+          } catch (error) {
+            attempts.push({ modulePath, reason: error && error.message ? error.message : String(error) })
+          }
+        }
+        return { ok: false, reason: "common-module-unavailable", attempts }
+      }
+      const currentPages = typeof getCurrentPages === "function" ? getCurrentPages() : []
+      const currentPage = currentPages[currentPages.length - 1] || null
+      const runtimeCommon = loadRuntimeCommonModule()
+      const queryClient = runtimeCommon.ok ? runtimeCommon.moduleExports.queryClient : null
+      const authKey = ["mini-program", "auth-user"]
+      const registrationKey = ["mini-program", "pool-registration", expectedRegistrationId]
+      return {
+        observedRoute: currentPage && currentPage.route ? currentPage.route : null,
+        pageOptions: currentPage && isRecord(currentPage.options) ? currentPage.options : null,
+        matchingStatusDebug: isRecord(globalThis.__JOYJOIN_MATCHING_STATUS_DEBUG__) ? globalThis.__JOYJOIN_MATCHING_STATUS_DEBUG__ : null,
+        authUser: queryClient ? queryClient.getQueryData(authKey) : null,
+        authQueryState: queryClient ? serializeQueryState(queryClient.getQueryState(authKey)) : null,
+        registrationQueryState: queryClient ? serializeQueryState(queryClient.getQueryState(registrationKey)) : null,
+        registrationQueries: queryClient ? queryClient.getQueryCache().findAll({ queryKey: ["mini-program", "pool-registration"] }).map((query) => ({
+          key: Array.isArray(query.queryKey) ? query.queryKey : [],
+          state: serializeQueryState(query.state),
+          observers: Array.isArray(query.observers) ? query.observers.map((observer) => ({ enabled: typeof observer.options.enabled === "function" ? "function" : observer.options.enabled })) : [],
+          observerCount: typeof query.getObserversCount === "function" ? query.getObserversCount() : Array.isArray(query.observers) ? query.observers.length : null,
+          isDisabled: typeof query.isDisabled === "function" ? query.isDisabled() : null,
+          isActive: typeof query.isActive === "function" ? query.isActive() : null
+        })) : [],
+        runtimeCommon: { ok: runtimeCommon.ok, modulePath: runtimeCommon.modulePath || null, reason: runtimeCommon.reason || null }
+      }
+    }, resolvedIds.pendingRegistrationId)
+    const pendingManualFetch = await miniProgram.evaluate(async function (expectedRegistrationId) {
+      function isRecord(value) { return Boolean(value) && typeof value === "object" && !Array.isArray(value) }
+      function serializeError(error) { if (!error) return null; if (error instanceof Error && error.message) return error.message; if (isRecord(error) && typeof error.message === "string") return error.message; return String(error) }
+      function serializeQueryState(state) { if (!state) return null; return { status: state.status || null, fetchStatus: state.fetchStatus || null, dataUpdatedAt: typeof state.dataUpdatedAt === "number" ? state.dataUpdatedAt : null, error: serializeError(state.error) } }
+      function loadRuntimeCommonModule() {
+        if (typeof require !== "function") return { ok: false, reason: "require-unavailable" }
+        for (const modulePath of ["../../common.js", "../common.js", "./common.js", "common.js"]) {
+          try { const moduleExports = require(modulePath); if (moduleExports && moduleExports.queryClient) return { ok: true, moduleExports } } catch (_error) {}
+        }
+        return { ok: false, reason: "common-module-unavailable" }
+      }
+      const runtimeCommon = loadRuntimeCommonModule()
+      const queryClient = runtimeCommon.ok ? runtimeCommon.moduleExports.queryClient : null
+      const query = queryClient ? queryClient.getQueryCache().find({ queryKey: ["mini-program", "pool-registration", expectedRegistrationId] }) : null
+      if (!query || typeof query.fetch !== "function") return { ok: false, reason: "missing-query", before: query ? serializeQueryState(query.state) : null }
+      const before = serializeQueryState(query.state)
+      try {
+        const data = await query.fetch()
+        return { ok: true, before, after: serializeQueryState(query.state), dataLength: Array.isArray(data) ? data.length : null, matchedRegistration: Array.isArray(data) ? data.some((item) => item && item.id === expectedRegistrationId) : false }
+      } catch (error) {
+        return { ok: false, before, after: serializeQueryState(query.state), error: serializeError(error) }
+      }
+    }, resolvedIds.pendingRegistrationId)
+    result.checks.push({ name: "matching-status-pending", route: pendingPage.path, url: pendingRoute, selectors: pendingFound, runtime: pendingRuntime, manualFetch: pendingManualFetch })
+    const pendingMissing = SELECTORS.pending.filter((selector) => !pendingFound[selector])
+    if (pendingMissing.length > 0) throw new Error("pending matching-status selectors missing: " + pendingMissing.join(", "))
     const matchedRoute = buildMatchingStatusRoute(resolvedIds.matchedRegistrationId)
     await miniProgram.callWxMethod("reLaunch", { url: matchedRoute })
     const matchedState = await waitForRouteSelectors(miniProgram, matchedRoute, SELECTORS.matched, "matched matching-status selectors")

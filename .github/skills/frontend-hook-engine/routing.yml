@@ -1,0 +1,56 @@
+skill: frontend-hook-engine
+
+primary_ownership: >
+  Screen-level and interaction-level Seven Deadly Sins diagnosis for frontend
+  surfaces, with Brainstorm, Execute, and Debug UI output modes.
+
+use_when:
+  - user asks for frontend sin mapping or a Seven Deadly Sins interface review
+  - auditing CTA hierarchy, state design, or interaction clarity on a screen
+  - turning a UI direction into a build-ready component or state plan
+  - diagnosing a confusing interaction, broken state path, or weak screen conversion
+  - comparing interface directions with tables, code params, and pseudocode
+  - the user asks plain-language questions such as what should people click first or why this page feels confusing
+
+do_not_use_when:
+  - task is mainly about token governance or button variants
+  - task is mainly about component placement or shared primitive ownership
+  - task is purely about motion polish with no broader screen diagnosis
+  - task is mainly about funnel strategy, idea selection, or product prioritization beyond one screen
+
+strong_triggers:
+  - @sin-fe
+  - /7sins-fe
+  - Frontend Hook Engine
+  - frontend sin mapping
+  - screen sin mapping
+  - audit this interface
+  - audit this screen
+  - CTA hierarchy
+  - broken interaction
+  - state model
+  - weak screen conversion
+  - this page feels confusing
+  - what should people click first
+  - make this screen clearer
+  - people are not tapping the main button
+
+owned_files:
+  - apps/user-client/src/**
+  - apps/mini-program/src/**
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: pm-sin-mapper
+    when: the issue expands from one screen into funnel strategy, idea selection, or product prioritization
+  - skill: frontend-component-architecture
+    when: the task shifts from screen diagnosis into shared-component placement or ownership
+  - skill: design-system-governance
+    when: the task is primarily about tokens, variants, or CSS custom properties
+  - skill: wow-elements
+    when: the user mainly wants premium motion or micro-interaction polish
+  - skill: frontend-performance-and-loading
+    when: list size, loading strategy, or bundle behavior becomes the primary constraint

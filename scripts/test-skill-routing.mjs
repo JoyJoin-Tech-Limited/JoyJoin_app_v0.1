@@ -579,6 +579,24 @@ test('scope a feature brief → draft-prd', () => {
   assertEqual(r.primary_skill, 'draft-prd');
 });
 
+// ---- PM sin mapper ----
+console.log('\nPM sin mapper scenarios:');
+
+test('/7sins-pm trigger → pm-sin-mapper', () => {
+  const r = routeSkill({ ask: '/7sins-pm audit this activation funnel and identify the biggest product-design sin' });
+  assertEqual(r.primary_skill, 'pm-sin-mapper');
+});
+
+test('sin mapping funnel drop-off → pm-sin-mapper', () => {
+  const r = routeSkill({ ask: 'Do a sin mapping pass on why users are dropping off after activation step 2' });
+  assertEqual(r.primary_skill, 'pm-sin-mapper');
+});
+
+test('plain-language product confusion → pm-sin-mapper', () => {
+  const r = routeSkill({ ask: 'People keep dropping off halfway through signup. What is probably confusing or unnecessary, and what should we change first?' });
+  assertEqual(r.primary_skill, 'pm-sin-mapper');
+});
+
 // ---- Monorepo workspace governance ----
 console.log('\nMonorepo workspace governance scenarios:');
 
@@ -764,6 +782,24 @@ test('before and after performance comparison → performance-benchmark', () => 
 test('performance baseline request → performance-benchmark', () => {
   const r = routeSkill({ ask: 'I need a repeatable performance baseline for this bundle regression' });
   assertEqual(r.primary_skill, 'performance-benchmark');
+});
+
+// ---- Frontend hook engine ----
+console.log('\nFrontend hook engine scenarios:');
+
+test('@sin-fe trigger → frontend-hook-engine', () => {
+  const r = routeSkill({ ask: '@sin-fe audit this checkout screen for CTA hierarchy and state clarity' });
+  assertEqual(r.primary_skill, 'frontend-hook-engine');
+});
+
+test('screen sin mapping → frontend-hook-engine', () => {
+  const r = routeSkill({ ask: 'Run a screen sin mapping pass on this confirmation page and turn it into a build-ready state model' });
+  assertEqual(r.primary_skill, 'frontend-hook-engine');
+});
+
+test('plain-language screen confusion → frontend-hook-engine', () => {
+  const r = routeSkill({ ask: 'This page feels confusing. What do people notice first, what feels messy, and what should stand out more?' });
+  assertEqual(r.primary_skill, 'frontend-hook-engine');
 });
 
 // ---- Wow elements ----

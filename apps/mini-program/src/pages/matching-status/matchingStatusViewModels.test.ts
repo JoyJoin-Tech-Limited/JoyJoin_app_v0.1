@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { PoolGroupSummary, PoolRegistrationSummary } from '@shared/api'
 import type { EventThemeTitleRevealedData } from '@shared/wsEvents'
-import { resolvePersistedThemeSummary } from './matchingStatusViewModels'
+import {
+  getMatchingStatusScreenState,
+  resolveMatchingStatusAuthBootstrap,
+  resolvePersistedThemeSummary,
+} from './matchingStatusViewModels'
 
 function baseGroup(overrides: Partial<PoolGroupSummary> = {}): PoolGroupSummary {
   return {
@@ -110,5 +114,98 @@ describe('resolvePersistedThemeSummary', () => {
       registration: undefined,
     })
     expect(result?.highlights).toEqual(['1', '2', '3', '4'])
+  })
+})
+
+describe('getMatchingStatusScreenState', () => {
+  it('keeps unresolved registration bootstrap in loading state', () => {
+    expect(
+      getMatchingStatusScreenState({
+        hasRegistrationId: true,
+        isRegistrationUnresolved: true,
+        hasFetchError: false,
+        registration: undefined,
+        isCancelled: false,
+        isNoMatchState: false,
+      }),
+    ).toEqual({ kind: 'loading' })
+  })
+
+  it('shows not-found only after the registration query resolves without data', () => {
+    expect(
+      getMatchingStatusScreenState({
+        hasRegistrationId: true,
+        isRegistrationUnresolved: false,
+        hasFetchError: false,
+        registration: undefined,
+        isCancelled: false,
+        isNoMatchState: false,
+      }),
+    ).toEqual({ kind: 'not-found' })
+  })
+
+  it('surfaces fetch errors separately from missing-registration state', () => {
+    expect(
+      getMatchingStatusScreenState({
+        hasRegistrationId: true,
+        isRegistrationUnresolved: false,
+        hasFetchError: true,
+        registration: undefined,
+        isCancelled: false,
+        isNoMatchState: false,
+      }),
+    ).toEqual({ kind: 'error' })
+  })
+
+  it('keeps explicit terminal registration states after a successful resolve', () => {
+    expect(
+      getMatchingStatusScreenState({
+        hasRegistrationId: true,
+        isRegistrationUnresolved: false,
+        hasFetchError: false,
+        registration: baseRegistration(),
+        isCancelled: true,
+        isNoMatchState: false,
+      }),
+    ).toMatchObject({ kind: 'cancelled', registration: { id: 'r1' } })
+
+    expect(
+      getMatchingStatusScreenState({
+        hasRegistrationId: true,
+        isRegistrationUnresolved: false,
+        hasFetchError: false,
+        registration: baseRegistration(),
+        isCancelled: false,
+        isNoMatchState: true,
+      }),
+    ).toMatchObject({ kind: 'no-match', registration: { id: 'r1' } })
+  })
+})
+
+describe('resolveMatchingStatusAuthBootstrap', () => {
+  it('falls back to cached auth user while the hook is still settling', () => {
+    const authState = resolveMatchingStatusAuthBootstrap({
+      authUser: undefined,
+      cachedAuthUser: { id: 'cached-user' },
+      authLoading: true,
+    })
+
+    expect(authState).toEqual({
+      effectiveAuthUser: { id: 'cached-user' },
+      isAuthBootstrapPending: false,
+    })
+  })
+
+  it('keeps bootstrap pending only when no live or cached auth user exists', () => {
+    expect(
+      resolveMatchingStatusAuthBootstrap({
+        authUser: undefined,
+        cachedAuthUser: undefined,
+        authLoading: true,
+      }),
+    ).toEqual({
+      effectiveAuthUser: undefined,
+      isAuthBootstrapPending: true,
+    })
   })
 })

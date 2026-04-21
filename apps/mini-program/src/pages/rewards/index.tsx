@@ -18,6 +18,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
+import StatusCard from '../../components/StatusCard'
 import './index.scss'
 
 const HISTORY_LIMIT = 6
@@ -209,19 +210,21 @@ export default function RewardsPage() {
     return (
       <View className='rewards-page rewards-page--error'>
         <View className='rewards-page__error'>
-          <Text className='rewards-page__error-emoji'>😕</Text>
-          <Text className='rewards-page__error-title'>奖励加载失败</Text>
-          <Text className='rewards-page__error-text'>请稍后重试，或返回个人主页继续浏览。</Text>
-          <Button className='rewards-page__error-btn' onClick={handleRefresh}>
-            重新加载
-          </Button>
-          <Button
-            variant='secondary'
-            className='rewards-page__back-btn'
-            onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })}
-          >
-            返回我的主页
-          </Button>
+          <StatusCard
+            tone='error'
+            title='奖励加载失败'
+            description='请稍后重试，或返回个人主页继续浏览。'
+            action={{ label: '重新加载', onClick: handleRefresh }}
+            footer={
+              <Button
+                variant='secondary'
+                className='rewards-page__back-btn'
+                onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })}
+              >
+                返回我的主页
+              </Button>
+            }
+          />
         </View>
       </View>
     )

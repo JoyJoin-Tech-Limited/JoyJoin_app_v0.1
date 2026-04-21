@@ -20,18 +20,17 @@ export interface DerivedMiniProgramAuthState<TUser extends MiniProgramAuthUser =
 export function deriveMiniProgramAuthState<TUser extends MiniProgramAuthUser>(
   input: MiniProgramAuthStateInput<TUser>
 ): DerivedMiniProgramAuthState<TUser> {
+  const user = input.user ?? undefined
   const isAuthPending = input.isLoading || input.isFetching
 
   if (isAuthPending) {
     return {
-      user: undefined,
+      user,
       isLoading: true,
       isAuthenticated: false,
-      nextStep: undefined,
+      nextStep: user?.nextStep ?? undefined,
     }
   }
-
-  const user = input.user ?? undefined
 
   return {
     user,

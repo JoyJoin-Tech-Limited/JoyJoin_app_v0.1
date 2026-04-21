@@ -77,6 +77,38 @@ function createApiError(
   return error
 }
 
+function appendCacheBustParam(requestUrl: string): string {
+  try {
+    const url = new URL(requestUrl)
+    url.searchParams.set('_mpcb', Date.now().toString())
+    return url.toString()
+  } catch {
+    const separator = requestUrl.includes('?') ? '&' : '?'
+    return requestUrl + separator + '_mpcb=' + Date.now()
+  }
+}
+
+type MiniProgramRequestResponse = string | TaroGeneral.IAnyObject | ArrayBuffer
+
+async function executeMiniProgramRequest(options: {
+  requestUrl: string
+  method: HttpMethod
+  data?: unknown
+}): Promise<Taro.request.SuccessCallbackResult<MiniProgramRequestResponse>> {
+  return Taro.request<MiniProgramRequestResponse>({
+    url: options.requestUrl,
+    method: options.method,
+    data: options.data,
+    enableCookie: true,
+    timeout: REQUEST_TIMEOUT_MS,
+    header: {
+      'content-type': 'application/json',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
+  })
+}
+
 function getApiRequestTarget(requestUrl: string): string {
   try {
     return new URL(requestUrl).origin
@@ -140,25 +172,31 @@ export async function apiRequest<T>(options: {
   handleUnauthorized?: boolean
 }): Promise<T> {
   const requestUrl = buildApiUrl(options.path)
+  const method = options.method ?? 'GET'
 
   let response
   try {
-    response = await Taro.request<T>({
-      url: requestUrl,
-      method: options.method ?? 'GET',
+    response = await executeMiniProgramRequest({
+      requestUrl,
+      method,
       data: options.data,
-      enableCookie: true,
-      timeout: REQUEST_TIMEOUT_MS,
-      header: {
-        'content-type': 'application/json',
-      },
     })
+
+    // WeChat dev/runtime can surface a cached GET as 304 directly to JS.
+    // Retry once with a cache-busting query string so callers still receive data.
+    if (response.statusCode === 304 && method === 'GET') {
+      response = await executeMiniProgramRequest({
+        requestUrl: appendCacheBustParam(requestUrl),
+        method,
+        data: options.data,
+      })
+    }
   } catch (error) {
     throw createTransportApiError(requestUrl, error)
   }
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
-    return response.data
+    return response.data as T
   }
 
   if (options.handleUnauthorized !== false && response.statusCode === 401) {

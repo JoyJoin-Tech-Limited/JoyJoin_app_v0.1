@@ -1,0 +1,31 @@
+{
+  "ok": false,
+  "startedAt": "2026-04-20T08:04:19.593Z",
+  "finishedAt": "2026-04-20T08:04:33.654Z",
+  "config": {
+    "cliPath": "/Applications/wechatwebdevtools.app/Contents/MacOS/cli",
+    "projectPath": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/apps/mini-program/dist",
+    "apiBaseUrl": "http://127.0.0.1:5001",
+    "loginCode": "wechat_test_local_smoke"
+  },
+  "args": {
+    "outputPath": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.result.5001.after-fix.json",
+    "pendingRegistrationId": "",
+    "matchedRegistrationId": "",
+    "groupId": ""
+  },
+  "resolvedIds": null,
+  "checks": [
+    {
+      "name": "devtools-cli-login",
+      "ok": true,
+      "blocked": false,
+      "exitCode": 0,
+      "rawOutput": "{\"login\":true}\n- initialize\n\n✔ IDE server has started, listening on http://127.0.0.1:64677\n- preparing\n✔ islogin"
+    }
+  ],
+  "errors": [
+    "Error: Connection closed, check if wechat web devTools is still running\n    at /Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Connection.js:1:1413\n    at new Promise (<anonymous>)\n    at Connection.send (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Connection.js:1:1354)\n    at MiniProgram.send (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/MiniProgram.js:1:4820)\n    at MiniProgram.currentPage (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/MiniProgram.js:1:1727)\n    at /Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:354:36\n    at waitFor (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:62:25)\n    at waitForLaunchReady (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:353:10)\n    at run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:407:32)",
+    "close-error: Error: Connection closed, check if wechat web devTools is still running\n    at /Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Connection.js:1:1413\n    at new Promise (<anonymous>)\n    at Connection.send (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Connection.js:1:1354)\n    at MiniProgram.send (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/MiniProgram.js:1:4820)\n    at MiniProgram.close (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/MiniProgram.js:1:3011)\n    at async run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:464:9)"
+  ]
+}

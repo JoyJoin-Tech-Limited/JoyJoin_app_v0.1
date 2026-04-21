@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJoinedEvents, type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
-import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { isLongListRowCount } from '../../lib/longListThreshold'
@@ -27,7 +26,7 @@ function EventCardSkeleton() {
 }
 
 export default function EventsPage() {
-  const { isLoading: authLoading } = useAuthGuard()
+  const { authLoading, renderGate } = useMiniPageGate()
   const markAsRead = useMarkNotificationsAsRead()
   useCustomTabBarSync({
     selectedIndex: MINI_PROGRAM_TAB_INDEX.events,
@@ -62,10 +61,6 @@ export default function EventsPage() {
     }
   }, [authLoading, isLoading, events.length])
 
-  if (authLoading) {
-    return <LoadingScreen />
-  }
-
   const partitionedEvents = partitionJoinedEventsByDateTime(events)
   let resolvedActiveTab = activeTab
 
@@ -94,7 +89,7 @@ export default function EventsPage() {
     Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
   }
 
-  return (
+  return renderGate(
     <View className='events-page'>
       <View className='events-page__header'>
         <Text className='events-page__title'>我的足迹</Text>

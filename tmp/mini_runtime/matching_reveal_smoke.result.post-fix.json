@@ -1,0 +1,42 @@
+{
+  "ok": false,
+  "startedAt": "2026-04-20T08:35:12.201Z",
+  "finishedAt": "2026-04-20T08:35:38.512Z",
+  "config": {
+    "cliPath": "/Applications/wechatwebdevtools.app/Contents/MacOS/cli",
+    "projectPath": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/apps/mini-program/dist",
+    "apiBaseUrl": "http://127.0.0.1:5003",
+    "loginCode": "wechat_test_local_smoke"
+  },
+  "args": {
+    "outputPath": "tmp/mini_runtime/matching_reveal_smoke.result.post-fix.json",
+    "pendingRegistrationId": "",
+    "matchedRegistrationId": "",
+    "groupId": ""
+  },
+  "resolvedIds": null,
+  "checks": [
+    {
+      "name": "devtools-cli-login",
+      "ok": true,
+      "blocked": false,
+      "exitCode": 0,
+      "rawOutput": "{\"login\":true}\n- initialize\n\n✔ IDE server has started, listening on http://127.0.0.1:64677\n- preparing\n✔ islogin"
+    },
+    {
+      "name": "launch-mini-program",
+      "route": "pages/index/index"
+    },
+    {
+      "name": "install-api-rewrite",
+      "rewrite": {
+        "ok": true,
+        "patched": true,
+        "targetOrigin": "http://127.0.0.1:5003"
+      }
+    }
+  ],
+  "errors": [
+    "Error\n    at Connection.onMessage (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Connection.js:1:985)\n    at Transport.emit (node:events:508:28)\n    at WebSocket.<anonymous> (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/miniprogram-automator/out/Transport.js:1:220)\n    at WebSocket.onMessage (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/ws/lib/event-target.js:120:16)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/ws/lib/websocket.js:789:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/ws/lib/receiver.js:422:14)\n    at Receiver.getData (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/ws/lib/receiver.js:352:17)\n    at Receiver.startLoop (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/node_modules/ws/lib/receiver.js:138:22)"
+  ]
+}

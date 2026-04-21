@@ -1,0 +1,50 @@
+skill: pm-sin-mapper
+
+primary_ownership: >
+  Product-level Seven Deadly Sins diagnosis for feature ideas, funnels, and
+  roadmap slices, with Brainstorm, Execute, and Debug output modes.
+
+use_when:
+  - user asks for a Seven Deadly Sins or sin-mapping product review
+  - auditing onboarding, activation, monetization, or retention through a product lens
+  - comparing product directions before writing a spec
+  - diagnosing product drop-off, weak conversion, or poor adoption with a structured heuristic
+  - turning a product diagnosis into tables, code params, and pseudocode
+  - the user asks plain-language questions such as why people are dropping off or what should change first
+
+do_not_use_when:
+  - task is standard PRD writing without a sin-mapping lens
+  - task is primarily about one screen's CTA hierarchy, state clarity, or page clutter
+  - task is mainly code review of an existing implementation
+
+strong_triggers:
+  - /7sins-pm
+  - PM Sin Mapper
+  - seven deadly sins product design
+  - seven deadly sins
+  - sin mapping
+  - product sins
+  - audit this funnel
+  - funnel audit
+  - activation issue
+  - conversion issue
+  - why are users dropping off
+  - which idea is better for users
+  - what should we change first
+  - where are people getting stuck
+
+owned_files: []
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: draft-prd
+    when: the diagnosis is turning into a formal feature brief, acceptance criteria set, or backlog artifact
+  - skill: frontend-hook-engine
+    when: the issue is mostly about one screen's CTA hierarchy, state clarity, or page clutter
+  - skill: docs-sync
+    when: the work is documenting shipped behavior rather than diagnosing a product direction
+  - skill: skill-authoring-governance
+    when: the user wants this heuristic packaged or updated as a repo skill

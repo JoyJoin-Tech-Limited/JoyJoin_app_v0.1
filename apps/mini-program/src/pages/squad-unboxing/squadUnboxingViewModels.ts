@@ -26,38 +26,12 @@ export function getInitial(name: string): string {
   return name.charAt(0).toUpperCase()
 }
 
-export function formatDateTime(dateTime?: string | null): string {
-  if (!dateTime) {
-    return '时间待定'
-  }
+export { formatDateTime } from '../../lib/groupDisplay'
 
-  const parsedDate = new Date(dateTime)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return '时间待定'
-  }
-
-  return parsedDate.toLocaleDateString('zh-CN', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+import { getVibeLabel as getVibeLabelShared } from '../../lib/groupDisplay'
 
 export function getVibeLabel(vibe?: string | null): string {
-  switch (vibe) {
-    case 'playful':
-      return '轻松有趣'
-    case 'professional':
-      return '专业交流'
-    case 'creative':
-      return '创意碰撞'
-    case 'adventurous':
-      return '探索冒险'
-    default:
-      return vibe ?? '今晚成桌'
-  }
+  return getVibeLabelShared(vibe, '今晚成桌')
 }
 
 export function getSquadChemistryTokens(

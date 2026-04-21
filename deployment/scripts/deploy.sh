@@ -103,7 +103,7 @@ else
 fi
 
 echo "  Running schema push..."
-node node_modules/drizzle-kit/bin.cjs push --config=apps/server/drizzle.config.cjs
+npx drizzle-kit push --config=apps/server/drizzle.config.cjs
 
 echo "🏥 Step 3: Verify runtime health..."
 API_HOST="127.0.0.1"

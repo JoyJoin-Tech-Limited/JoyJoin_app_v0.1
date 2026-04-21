@@ -2,10 +2,9 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
-import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
@@ -20,7 +19,7 @@ interface Connection {
 }
 
 export default function ConnectionsPage() {
-  const { isLoading: authLoading } = useAuthGuard()
+  const { authLoading, renderGate } = useMiniPageGate()
   const markAsRead = useMarkNotificationsAsRead()
 
   useCustomTabBarSync({
@@ -38,11 +37,7 @@ export default function ConnectionsPage() {
     enabled: !authLoading,
   })
 
-  if (authLoading) {
-    return <LoadingScreen />
-  }
-
-  return (
+  return renderGate(
     <View className='connections-page'>
       <View className='connections-page__header'>
         <Text className='connections-page__title'>我的连接</Text>

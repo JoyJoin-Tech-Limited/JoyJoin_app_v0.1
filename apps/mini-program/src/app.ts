@@ -1,3 +1,4 @@
+import "./lib/abortControllerPolyfill"
 import { PropsWithChildren, createElement, useCallback, useEffect, useRef } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
 import { useAuth } from './hooks/useAuth'

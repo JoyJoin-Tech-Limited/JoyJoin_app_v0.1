@@ -10,9 +10,8 @@ import {
 import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { apiRequest } from '../../lib/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { logInfo, logError } from '../../lib/logger'
-import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import './index.scss'
@@ -66,7 +65,7 @@ function normalizeGenderValue(value: unknown): string {
 // ─── Component ────────────────────────────────────────────────────
 
 export default function EditProfilePage() {
-  const { isLoading: authLoading } = useAuthGuard()
+  const { authLoading, renderGate } = useMiniPageGate()
   const { user } = useAuth()
   const invalidateAuth = useInvalidateAuth()
 
@@ -229,13 +228,9 @@ export default function EditProfilePage() {
     invalidateAuth,
   ])
 
-  if (authLoading) {
-    return <LoadingScreen />
-  }
-
   const birthYearIndex = birthYear ? BIRTH_YEAR_RANGE.indexOf(String(birthYear)) : -1
 
-  return (
+  return renderGate(
     <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
       {/* ── 基本信息 ── */}
       <View className='edit-profile__section'>

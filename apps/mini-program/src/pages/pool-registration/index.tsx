@@ -490,7 +490,7 @@ export default function PoolRegistrationPage() {
         const handoffCopy =
           entitlementCode === 'NO_AVAILABLE_EVENT_PACK_CREDITS'
             ? '你当前的活动次数已经用完。我们已替你保留刚刚填写的偏好，续充权益后会自动回到这里继续报名。'
-            : '这场活动需要会员权益或活动次数包才能报名。我们已替你保留刚刚填写的偏好，开通后会自动回到这里继续报名。'
+            : '这场活动需要专属权益或活动次数包才能报名。我们已替你保留刚刚填写的偏好，开通后会自动回到这里继续报名。'
 
         const modalResult = await Taro.showModal({
           title: '先开通权益，再回来完成报名',

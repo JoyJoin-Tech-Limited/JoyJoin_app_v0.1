@@ -13,6 +13,7 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
+import { formatDateTime } from '../../lib/groupDisplay'
 import './index.scss'
 
 function getMemberName(member: PoolGroupMemberSummary) {
@@ -21,25 +22,6 @@ function getMemberName(member: PoolGroupMemberSummary) {
 
 function getInitial(name: string) {
   return name.charAt(0).toUpperCase()
-}
-
-function formatDateTime(dateTime?: string | null) {
-  if (!dateTime) {
-    return '时间待定'
-  }
-
-  const parsedDate = new Date(dateTime)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return '时间待定'
-  }
-
-  return parsedDate.toLocaleDateString('zh-CN', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function getCountdown(dateTime?: string | null) {

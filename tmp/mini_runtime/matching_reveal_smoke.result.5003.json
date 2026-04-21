@@ -1,0 +1,274 @@
+{
+  "ok": false,
+  "startedAt": "2026-04-20T09:01:46.080Z",
+  "finishedAt": "2026-04-20T09:02:48.725Z",
+  "config": {
+    "cliPath": "/Applications/wechatwebdevtools.app/Contents/MacOS/cli",
+    "projectPath": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/apps/mini-program/dist",
+    "apiBaseUrl": "http://127.0.0.1:5003",
+    "loginCode": "wechat_test_local_smoke"
+  },
+  "args": {
+    "outputPath": "tmp/mini_runtime/matching_reveal_smoke.result.5003.json",
+    "pendingRegistrationId": "d3347968-53f6-4783-9db3-801451200616",
+    "matchedRegistrationId": "aee7a637-5357-41dd-a124-7f7004c12cb6",
+    "groupId": "ef77d280-4f6e-41ba-a6f1-8b98eeaa7456"
+  },
+  "resolvedIds": {
+    "pendingRegistrationId": "d3347968-53f6-4783-9db3-801451200616",
+    "matchedRegistrationId": "aee7a637-5357-41dd-a124-7f7004c12cb6",
+    "groupId": "ef77d280-4f6e-41ba-a6f1-8b98eeaa7456"
+  },
+  "checks": [
+    {
+      "name": "devtools-cli-login",
+      "ok": true,
+      "blocked": false,
+      "exitCode": 0,
+      "rawOutput": "{\"login\":true}\n- initialize\n\n✔ IDE server has started, listening on http://127.0.0.1:64677\n- preparing\n✔ islogin"
+    },
+    {
+      "name": "launch-mini-program",
+      "route": "pages/index/index"
+    },
+    {
+      "name": "install-api-rewrite",
+      "rewrite": {
+        "ok": true,
+        "patched": true,
+        "targetOrigin": "http://127.0.0.1:5003"
+      }
+    },
+    {
+      "name": "login-with-test-code",
+      "loginStatusCode": 200,
+      "authUserStatusCode": 200,
+      "registrationStatusCode": 200,
+      "registrationCount": 4,
+      "discovered": {
+        "pendingRegistrationId": "d3347968-53f6-4783-9db3-801451200616",
+        "matchedRegistrationId": "aee7a637-5357-41dd-a124-7f7004c12cb6",
+        "groupId": "ef77d280-4f6e-41ba-a6f1-8b98eeaa7456"
+      }
+    },
+    {
+      "name": "matching-status-pending",
+      "route": "pages/matching-status/index",
+      "url": "/pages/matching-status/index?registrationId=d3347968-53f6-4783-9db3-801451200616",
+      "selectors": {
+        ".matching-status__waiting-card": true,
+        ".matching-status__waiting-scene": true,
+        ".matching-status__waiting-refresh-btn": true,
+        ".fancy-line-loading-screen": false,
+        ".loading-screen__message": false,
+        ".matching-status__error": false,
+        ".matching-status__special-card": false
+      },
+      "runtime": {
+        "observedRoute": "pages/matching-status/index",
+        "pageOptions": {
+          "registrationId": "d3347968-53f6-4783-9db3-801451200616"
+        },
+        "matchingStatusDebug": {
+          "stage": "before-return",
+          "registrationId": "d3347968-53f6-4783-9db3-801451200616",
+          "authLoading": false,
+          "hasUser": true,
+          "hasCachedAuthUser": true,
+          "hasEffectiveAuthUser": true,
+          "isAuthBootstrapPending": false,
+          "hasResolvedAuthBootstrap": true,
+          "screenState": "ready",
+          "matchStatus": "pending",
+          "resolvedGroupId": "",
+          "currentUserId": "e2a63d44-d07b-4500-b4d7-667ed742a893",
+          "hasGroupAnalysis": false,
+          "hasViewerSpotlight": false
+        },
+        "authUser": {
+          "id": "e2a63d44-d07b-4500-b4d7-667ed742a893",
+          "email": null,
+          "firstName": null,
+          "lastName": null,
+          "profileImageUrl": null,
+          "displayName": "测试主角",
+          "hasCompletedProfileSetup": false,
+          "hasCompletedVoiceQuiz": false,
+          "birthdate": null,
+          "ageVisibility": "show_age_range",
+          "gender": null,
+          "pronouns": null,
+          "relationshipStatus": null,
+          "lifeStage": null,
+          "ageMatchPreference": null,
+          "educationLevel": null,
+          "educationVisibility": "hide_all",
+          "occupationId": null,
+          "workMode": null,
+          "workVisibility": "show_industry_only",
+          "hometownRegionCity": null,
+          "hometownAffinityOptin": true,
+          "currentCity": null,
+          "placeOfOrigin": null,
+          "longTermBase": null,
+          "wechatId": null,
+          "phoneNumber": null,
+          "wechatNickname": null,
+          "wechatAvatarUrl": null,
+          "accessibilityNeeds": null,
+          "safetyNoteHost": null,
+          "intent": null,
+          "hasCompletedRegistration": false,
+          "hasCompletedInterestsTopics": false,
+          "hasCompletedPersonalityTest": false,
+          "hasSeenGuide": false,
+          "hasSeenProfileReview": false,
+          "hasCompletedInterestsCarousel": false,
+          "onboardingCheckpoint": null,
+          "onboardingCheckpointTimestamp": null,
+          "interestFavorite": null,
+          "interestsRankedTop3": [
+            "咖啡",
+            "城市散步",
+            "展览"
+          ],
+          "interestsDeep": null,
+          "interestsTelemetry": null,
+          "bio": null,
+          "preferredLanguages": null,
+          "dietaryRestrictions": null,
+          "tableVibePreference": null,
+          "socialStyle": null,
+          "icebreakerRole": null,
+          "venueStylePreference": null,
+          "cuisinePreference": null,
+          "favoriteRestaurant": null,
+          "favoriteRestaurantReason": null,
+          "vibeVector": null,
+          "archetype": "开心柯基",
+          "debateComfort": null,
+          "needsPersonalityRetake": false,
+          "personalityTraits": null,
+          "personalityChallenges": null,
+          "idealMatch": null,
+          "energyLevel": null,
+          "primaryArchetype": null,
+          "secondaryArchetype": null,
+          "roleSubtype": null,
+          "eventsAttended": 0,
+          "matchesMade": 0,
+          "experiencePoints": 0,
+          "joyCoins": 0,
+          "currentLevel": 1,
+          "activityStreak": 0,
+          "lastActivityDate": null,
+          "streakFreezeAvailable": true,
+          "eventCredits": 0,
+          "eventCreditsExpiry": null,
+          "isAdmin": false,
+          "isBanned": false,
+          "violationCount": 0,
+          "dailyTokenUsed": 0,
+          "lastTokenResetDate": null,
+          "aiFrozenUntil": null,
+          "lastViolationReason": null,
+          "viewedEventAnimations": null,
+          "registrationMethod": null,
+          "registrationCompletedAt": null,
+          "conversationMode": null,
+          "primaryLinguisticStyle": null,
+          "conversationEnergy": null,
+          "negationReliability": null,
+          "inferredTraits": null,
+          "inferenceConfidence": null,
+          "industrySegment": null,
+          "structuredOccupation": null,
+          "insightLedger": null,
+          "industryCategory": null,
+          "industryCategoryLabel": null,
+          "industrySegmentNew": null,
+          "industrySegmentLabel": null,
+          "industryNiche": null,
+          "industryNicheLabel": null,
+          "industryRawInput": null,
+          "industryNormalized": null,
+          "industrySource": null,
+          "industryConfidence": null,
+          "industryClassifiedAt": null,
+          "industryLastVerifiedAt": null,
+          "socialTag": null,
+          "socialTagSelectedAt": null,
+          "wechatContactId": null,
+          "wechatContactIdSetAt": null,
+          "createdAt": "2026-04-16T05:00:23.234Z",
+          "updatedAt": "2026-04-20T09:02:06.738Z",
+          "nextStep": "onboarding",
+          "profileEssentialComplete": false,
+          "profileExtendedComplete": false,
+          "activeAssessmentSessionId": null,
+          "paymentsEnabled": false
+        },
+        "authQueryState": {
+          "status": "success",
+          "fetchStatus": "idle",
+          "dataUpdatedAt": 1776675730599,
+          "error": null
+        },
+        "registrationQueryState": {
+          "status": "success",
+          "fetchStatus": "idle",
+          "dataUpdatedAt": 1776675734006,
+          "error": null
+        },
+        "registrationQueries": [
+          {
+            "key": [
+              "mini-program",
+              "pool-registration",
+              "d3347968-53f6-4783-9db3-801451200616"
+            ],
+            "state": {
+              "status": "success",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 1776675734006,
+              "error": null
+            },
+            "observers": [
+              {
+                "enabled": true
+              }
+            ],
+            "observerCount": 1,
+            "isDisabled": false,
+            "isActive": true
+          }
+        ],
+        "runtimeCommon": {
+          "ok": true,
+          "modulePath": "common.js",
+          "reason": null
+        }
+      },
+      "manualFetch": {
+        "ok": true,
+        "before": {
+          "status": "success",
+          "fetchStatus": "idle",
+          "dataUpdatedAt": 1776675734006,
+          "error": null
+        },
+        "after": {
+          "status": "success",
+          "fetchStatus": "idle",
+          "dataUpdatedAt": 1776675752689,
+          "error": null
+        },
+        "dataLength": null,
+        "matchedRegistration": false
+      }
+    }
+  ],
+  "errors": [
+    "Error: matched matching-status selectors failed on route pages/matching-status/index with selector state {\".matching-status__squad-card\":false,\".matching-status__theme-card\":true,\".matching-status__cta-btn\":true}: Error: Timed out waiting for matched matching-status selectors after 15000ms\n    at waitFor (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:66:9)\n    at async waitForRouteSelectors (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:363:12)\n    at async run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:515:26)\n    at waitForRouteSelectors (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:375:11)\n    at async run (/Users/vincentlai/GitHub/JoyJoin_app_v0.1/tmp/mini_runtime/matching_reveal_smoke.js:515:26)"
+  ]
+}

@@ -1,0 +1,60 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.status-card {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  box-sizing: border-box;
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+
+  &--empty {
+    background: rgba($color-surface, 0.96);
+  }
+
+  &--error {
+    border: 2rpx solid rgba($color-error, 0.14);
+    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-error, 0.06) 100%);
+  }
+
+  &--info {
+    border: 2rpx solid rgba($color-primary, 0.1);
+    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.5) 100%);
+  }
+
+  &__icon {
+    font-size: 72rpx;
+    line-height: 1;
+  }
+
+  &__title {
+    @include type-display-section-title;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__description {
+    font-size: $font-size-base;
+    line-height: 1.6;
+    color: $color-text-secondary;
+  }
+
+  &__action,
+  &__footer {
+    align-self: stretch;
+  }
+
+  &__action {
+    margin-top: $spacing-sm;
+  }
+
+  &__footer {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+}
