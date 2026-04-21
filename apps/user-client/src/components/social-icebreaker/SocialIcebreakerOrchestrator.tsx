@@ -1,20 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Loader2, Volume2, VolumeX, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { useSocialIcebreaker } from '@/hooks/useSocialIcebreaker';
 import { useXiaoyueTTS } from '@/hooks/useXiaoyueTTS';
 import { PhaseProgressBar } from './PhaseProgressBar';
-import { WarmupPhase } from './warmup/WarmupPhase';
 import { MoodVoteOverlay } from './warmup/MoodVoteOverlay';
-import { MicroChallengePhase } from './micro-challenge/MicroChallengePhase';
-import { LieDetectivePhase } from './lie-detective/LieDetectivePhase';
-import { AuctionPhaseStub } from './AuctionPhaseStub';
-import { PersonalityDicePhase } from './PersonalityDicePhase';
-import { MiniScriptBetaStub } from './MiniScriptBetaStub';
-import { SocialIcebreakerRecap } from './SocialIcebreakerRecap';
 import { PulseCheckOverlay } from './PulseCheckOverlay';
 import { SocialPhaseTransition } from './SocialPhaseTransition';
 import { XiaoYueFloatingHost } from './XiaoYueFloatingHost';
+import {
+  renderSocialIcebreakerPhasePanel,
+  type SocialIcebreakerPhasePanelProps,
+} from './socialIcebreakerPhaseRegistry';
 import { DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES } from '@shared/socialIcebreaker';
 import type { SocialIcebreakerPhase, AtmosphereMood, SocialTopic } from '@shared/socialIcebreaker';
 
@@ -306,13 +303,35 @@ export function SocialIcebreakerOrchestrator({
   const completedPhases = state.completedPhases || [];
   const currentTopics = warmupTopics.length > 0 ? warmupTopics : state.warmupTopics || [];
 
-  // Handlers for personality dice
   const handleGenerateDice = async () => {
     await generateDiceChallenges(participants);
   };
 
   const handleCompleteDice = async () => {
     await completeDiceChallenge();
+  };
+
+  const phasePanelProps: SocialIcebreakerPhasePanelProps = {
+    sessionId,
+    socialSessionId: socialSessionId || '',
+    userId,
+    isHost,
+    isAdvancing,
+    participants,
+    state,
+    currentTopics,
+    onFetchTopics: handleFetchTopics,
+    onWarmupReady: handleWarmupReady,
+    onNextWarmupTopic: handleNextWarmupTopic,
+    onAdvancePhase: handleAdvancePhase,
+    onCompleteChallenge: completeChallenge,
+    onGenerateStatements: generateMyStatements,
+    onCastVote: castVote,
+    onNextLieDetectivePlayer: nextLieDetectivePlayer,
+    onGenerateDice: handleGenerateDice,
+    onCompleteDice: handleCompleteDice,
+    onEnd,
+    eventId,
   };
 
   return (
@@ -361,158 +380,7 @@ export function SocialIcebreakerOrchestrator({
       {/* Phase content */}
       <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {state.currentPhase === 'warmup' && (
-            <motion.div
-              key="warmup"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              className="h-full"
-            >
-              <WarmupPhase
-                sessionId={sessionId}
-                socialSessionId={socialSessionId || ''}
-                isHost={isHost}
-                participants={participants}
-                topics={currentTopics}
-                currentTopicIndex={state.currentTopicIndex ?? 0}
-                readyUserIds={state.warmupReadyUserIds || []}
-                currentUserId={userId}
-                commonGroundCount={state.commonGroundCount ?? 0}
-                onFetchTopics={handleFetchTopics}
-                onReadyChange={handleWarmupReady}
-                onNextTopic={handleNextWarmupTopic}
-                onAdvance={handleAdvancePhase}
-                isAdvancing={isAdvancing}
-              />
-            </motion.div>
-          )}
-
-          {state.currentPhase === 'micro_challenge' && (
-            <motion.div
-              key="micro_challenge"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              className="h-full"
-            >
-              <MicroChallengePhase
-                sessionId={sessionId}
-                socialSessionId={socialSessionId || ''}
-                isHost={isHost}
-                participants={participants}
-                challenge={state.currentChallenge || null}
-                completedBy={state.challengeCompletedBy || []}
-                userId={userId}
-                phaseStartedAt={state.phaseStartedAt}
-                onComplete={completeChallenge}
-                onAdvance={handleAdvancePhase}
-                isAdvancing={isAdvancing}
-              />
-            </motion.div>
-          )}
-
-          {state.currentPhase === 'lie_detective' && (
-            <motion.div
-              key="lie_detective"
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              className="h-full"
-            >
-              <LieDetectivePhase
-                sessionId={sessionId}
-                socialSessionId={socialSessionId || ''}
-                userId={userId}
-                isHost={isHost}
-                participants={participants}
-                players={state.lieDetectivePlayers || []}
-                votes={state.votes || []}
-                currentPlayerIndex={state.currentLieDetectivePlayerIndex || 0}
-                currentReveal={state.currentLieDetectiveReveal || null}
-                onGenerateStatements={generateMyStatements}
-                onCastVote={castVote}
-                onNextPlayer={nextLieDetectivePlayer}
-                onAdvance={handleAdvancePhase}
-                isAdvancing={isAdvancing}
-              />
-            </motion.div>
-          )}
-
-          {state.currentPhase === 'auction' && (
-            <motion.div
-              key="auction"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-full"
-            >
-              <AuctionPhaseStub
-                isHost={isHost}
-                onAdvance={handleAdvancePhase}
-                isAdvancing={isAdvancing}
-              />
-            </motion.div>
-          )}
-
-          {state.currentPhase === 'personality_dice' && (
-            <motion.div
-              key="personality_dice"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-full"
-            >
-              <PersonalityDicePhase
-                socialSessionId={socialSessionId || ''}
-                userId={userId}
-                isHost={isHost}
-                participants={participants}
-                challenges={state.personalityDiceChallenges || []}
-                currentPlayerIndex={state.currentDicePlayerIndex ?? 0}
-                completedBy={state.diceCompletedBy || []}
-                onGenerate={handleGenerateDice}
-                onComplete={handleCompleteDice}
-                onAdvance={handleAdvancePhase}
-                isAdvancing={isAdvancing}
-              />
-            </motion.div>
-          )}
-
-          {state.currentPhase === 'mini_script_beta' && (
-            <motion.div
-              key="mini_script_beta"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-full"
-            >
-              <MiniScriptBetaStub
-                isHost={isHost}
-                onAdvance={handleAdvancePhase}
-                isAdvancing={isAdvancing}
-              />
-            </motion.div>
-          )}
-
-          {state.currentPhase === 'recap' && (
-            <motion.div
-              key="recap"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-full"
-            >
-              <SocialIcebreakerRecap
-                socialSessionId={socialSessionId || ''}
-                participants={participants}
-                durationMinutes={Math.max(1, Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000))}
-                commonGroundCount={state.commonGroundCount ?? 0}
-                onLeave={onEnd}
-                eventId={eventId}
-              />
-            </motion.div>
-          )}
+          {renderSocialIcebreakerPhasePanel(state.currentPhase, phasePanelProps)}
         </AnimatePresence>
       </div>
 
