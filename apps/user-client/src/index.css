@@ -960,3 +960,6 @@ body {
 .mask-ticket-both {
   clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%);
 }
+
+/* Viewport shell: html/body/#root + .no-scroll-container (100dvh, document scroll off) */
+@import './styles/viewport-lockdown.css';

@@ -4,7 +4,6 @@
 .essential-data {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
 

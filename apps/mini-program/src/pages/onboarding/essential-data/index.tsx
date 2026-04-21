@@ -27,6 +27,7 @@ import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
+import { ResponsiveSpacer } from '../../../components/ResponsiveSpacer'
 import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -551,6 +552,8 @@ export default function EssentialDataPage() {
               <Text className='essential-data__hint'>最多可选 {MAX_INTENTS} 个，多选会影响后续活动推荐。</Text>
             </View>
           </Card>
+          {/* Collapses on short windows so fixed tray + primary CTA stay reachable (viewport-zero-scroll) */}
+          <ResponsiveSpacer heightRpx={48} collapseBelow={700} />
         </View>
       </ScrollView>
 
