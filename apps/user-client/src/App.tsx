@@ -69,6 +69,7 @@ const DevMobileLandingPage = lazy(() => import("@/pages/dev/MobileLandingPage"))
 const DevUnlockOverlayTestPage = lazy(() => import("@/pages/dev/UnlockOverlayTestPage"));
 
 import LevelUpProvider from "@/components/LevelUpProvider";
+import { ScrollSentinel } from "@/components/dev/ScrollSentinel";
 import { ADMIN_PORTAL_URL } from "@/config/admin";
 import { CENTER_TAB_EMPTY_STATE_ROUTE } from "@/lib/centerTabRouting";
 
@@ -354,19 +355,29 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <DynamicAccentProvider enabled={true}>
-          <AchievementProvider>
-            <LevelUpProvider>
-              <Toaster />
-              <AchievementPopup />
-              <Suspense fallback={<LoadingScreen />}>
-                <Router />
-              </Suspense>
-            </LevelUpProvider>
-          </AchievementProvider>
-        </DynamicAccentProvider>
-      </TooltipProvider>
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <TooltipProvider>
+          <DynamicAccentProvider enabled={true}>
+            <AchievementProvider>
+              <LevelUpProvider>
+                <Toaster />
+                <AchievementPopup />
+                {import.meta.env.DEV ? <ScrollSentinel /> : null}
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <Suspense fallback={<LoadingScreen />}>
+                    <div
+                      id="jj-scroll-chassis"
+                      className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain"
+                    >
+                      <Router />
+                    </div>
+                  </Suspense>
+                </div>
+              </LevelUpProvider>
+            </AchievementProvider>
+          </DynamicAccentProvider>
+        </TooltipProvider>
+      </div>
     </QueryClientProvider>
   );
 }
