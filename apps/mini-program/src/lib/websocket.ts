@@ -468,20 +468,17 @@ export class MiniProgramWebSocket {
 // ---------------------------------------------------------------------------
 
 let instance: MiniProgramWebSocket | null = null
+const DEFAULT_MINI_PROGRAM_WS_BASE_URL = 'http://localhost:5001'
 
 /**
  * Derive the WebSocket URL from `TARO_APP_API_BASE_URL`.
  *
- * The env var is expected to be an http(s) URL (e.g. `https://api.example.com`).
- * We swap the protocol to `wss://` (or `ws://` for plain http) and append `/ws`.
+ * Falls back to the same local default as the API transport so pages that use
+ * `useWebSocket()` do not crash during render when the env var is omitted in
+ * local builds or runtime smoke bundles.
  */
 function buildWebSocketUrl(): string {
-  const base = (process.env.TARO_APP_API_BASE_URL ?? '').replace(/\/$/, '')
-  if (!base) {
-    throw new Error(
-      '[WS] TARO_APP_API_BASE_URL is not configured – cannot build WebSocket URL',
-    )
-  }
+  const base = (process.env.TARO_APP_API_BASE_URL ?? DEFAULT_MINI_PROGRAM_WS_BASE_URL).replace(/\/$/, '')
 
   const wsUrl = base
     .replace(/^https:\/\//, 'wss://')

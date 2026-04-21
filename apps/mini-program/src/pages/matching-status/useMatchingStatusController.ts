@@ -1,7 +1,8 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  type AuthUserResponse,
   cancelPoolRegistration,
   getMyPoolRegistrations,
   getPoolGroupAnalysis,
@@ -28,15 +29,20 @@ import {
   switchToEventsTab,
 } from '../../lib/matchingNavigation'
 import {
+  AUTH_QUERY_KEY,
+} from '../../lib/authSession'
+import {
   buildWaitingSeats,
   DEFAULT_MAX_GROUP_SIZE,
   DEFAULT_MIN_GROUP_SIZE,
   DEFAULT_REFRESH_INTERVAL_SECONDS,
+  getMatchingStatusScreenState,
   getChemistryTokens,
   getCountdownState,
   getTemperatureCopy,
   getWaitingStateCopy,
   isVenueUnlocked,
+  resolveMatchingStatusAuthBootstrap,
   resolvePersistedThemeSummary,
   type LiveRevealStage,
   type PoolFillStats,
@@ -72,6 +78,13 @@ export function useMatchingStatusController({
   const queryClient = useQueryClient()
   const { user, isLoading: authLoading } = useAuthGuard()
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
+  const cachedAuthUser = queryClient.getQueryData<AuthUserResponse | null>(AUTH_QUERY_KEY)
+  const { effectiveAuthUser, isAuthBootstrapPending } = resolveMatchingStatusAuthBootstrap({
+    authUser: user,
+    cachedAuthUser,
+    authLoading,
+  })
+  const hasResolvedAuthBootstrap = !isAuthBootstrapPending
 
   const [isCancelling, setIsCancelling] = useState(false)
   const [liveStage, setLiveStage] = useState<LiveRevealStage>('idle')
@@ -90,19 +103,21 @@ export function useMatchingStatusController({
 
   const {
     data: registration,
-    isLoading,
+    status: registrationQueryStatus,
     error: fetchError,
+    refetch: refetchRegistration,
   } = useQuery<PoolRegistrationSummary | undefined>({
     queryKey: ['mini-program', 'pool-registration', registrationId],
     queryFn: async () => {
       const registrations = await getMyPoolRegistrations(apiRequest)
       return registrations.find((item) => item.id === registrationId)
     },
-    enabled: !!registrationId && !authLoading,
+    enabled: Boolean(registrationId),
     refetchInterval: 30_000,
   })
 
   const matchStatus = registration?.matchStatus ?? 'pending'
+
 
   const {
     data: poolFillStats,
@@ -113,7 +128,7 @@ export function useMatchingStatusController({
       apiRequest<PoolFillStats>({
         path: `/api/event-pools/${encodeURIComponent(registration?.poolId ?? '')}/group-fill`,
       }),
-    enabled: !authLoading && matchStatus === 'pending' && Boolean(registration?.poolId),
+    enabled: hasResolvedAuthBootstrap && matchStatus === 'pending' && Boolean(registration?.poolId),
     staleTime: 0,
   })
 
@@ -123,7 +138,7 @@ export function useMatchingStatusController({
     queryKey: ['mini-program', 'pool-group', resolvedGroupId],
     queryFn: () => getPoolGroupDetails(apiRequest, resolvedGroupId),
     enabled:
-      !authLoading &&
+      hasResolvedAuthBootstrap &&
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
     staleTime: 60_000,
@@ -133,7 +148,7 @@ export function useMatchingStatusController({
     queryKey: ['mini-program', 'pool-group-analysis', resolvedGroupId],
     queryFn: () => getPoolGroupAnalysis(apiRequest, resolvedGroupId),
     enabled:
-      !authLoading &&
+      hasResolvedAuthBootstrap &&
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
     staleTime: 1000 * 60 * 7,
@@ -150,6 +165,17 @@ export function useMatchingStatusController({
   const countdown = getCountdownState(registration?.poolDateTime)
   const isCancelled = registration?.poolStatus === 'cancelled'
   const isNoMatchState = registration?.matchStatus === 'pending' && countdown.isExpired
+  const isRegistrationUnresolved =
+    Boolean(registrationId) && (isAuthBootstrapPending || registrationQueryStatus === 'pending')
+  const screenState = getMatchingStatusScreenState({
+    hasRegistrationId: Boolean(registrationId),
+    isRegistrationUnresolved,
+    hasFetchError: registrationQueryStatus === 'error' || Boolean(fetchError),
+    registration,
+    isCancelled,
+    isNoMatchState,
+  })
+
   const venueUnlocked = isVenueUnlocked(effectiveEventDateTime)
   const waitingCopy = getWaitingStateCopy(poolFillStats)
   const currentFill = poolFillStats?.currentFill ?? 0
@@ -202,7 +228,7 @@ export function useMatchingStatusController({
     return map
   }, [effectiveGroupDetails?.members])
 
-  const currentUserId = user?.id ?? null
+  const currentUserId = effectiveAuthUser?.id ?? null
 
   const viewerPairs = useMemo<PairExplanation[]>(() => {
     if (!groupAnalysis) {
@@ -471,7 +497,7 @@ export function useMatchingStatusController({
   ])
 
   useWebSocket({
-    eventTypes: ['POOL_MATCHED', 'POOL_REGISTRATION_ADDED', 'EVENT_THEME_TITLE_REVEALED', 'MATCH_PROGRESS_UPDATE'],
+    eventTypes: ['POOL_MATCHED', 'POOL_REGISTRATION_ADDED', 'EVENT_THEME_TITLE_REVEALED'],
     onMessage: (message) => {
       if (!registration) {
         return
@@ -566,16 +592,19 @@ export function useMatchingStatusController({
       apiRequest<SimilarPoolSummary[]>({
         path: `/api/event-pools?city=${encodeURIComponent(registration?.poolCity ?? '')}&eventType=${encodeURIComponent(registration?.poolEventType ?? '')}`,
       }),
-    enabled: isNoMatchState && Boolean(registration?.poolCity) && Boolean(registration?.poolEventType),
+    enabled:
+      hasResolvedAuthBootstrap &&
+      isNoMatchState &&
+      Boolean(registration?.poolCity) &&
+      Boolean(registration?.poolEventType),
     select: (pools) => pools.filter((pool) => pool.id !== registration?.poolId).slice(0, 3),
   })
 
   const stageTemperature = getTemperatureCopy(matchedData?.temperatureLevel)
 
+
   return {
-    authLoading,
-    isLoading,
-    fetchError,
+    screenState,
     registration,
     rootClassName,
     shouldReduceMotion,
@@ -586,8 +615,6 @@ export function useMatchingStatusController({
     effectiveGroupDetails,
     effectiveEventDateTime,
     countdown,
-    isCancelled,
-    isNoMatchState,
     venueUnlocked,
     waitingCopy,
     currentFill,

@@ -12,6 +12,18 @@ export interface ThemeSummary {
   highlights: string[]
 }
 
+export interface MatchingStatusResolvedScreenState<TRegistration extends { id: string }> {
+  registration: TRegistration
+}
+
+export type MatchingStatusScreenState<TRegistration extends { id: string } = { id: string }> =
+  | { kind: 'loading' }
+  | { kind: 'error' }
+  | { kind: 'not-found' }
+  | ({ kind: 'cancelled' } & MatchingStatusResolvedScreenState<TRegistration>)
+  | ({ kind: 'no-match' } & MatchingStatusResolvedScreenState<TRegistration>)
+  | ({ kind: 'ready' } & MatchingStatusResolvedScreenState<TRegistration>)
+
 export type ThemeSummaryRegistrationSlice = Pick<
   PoolRegistrationSummary,
   'theme' | 'themeEmoji' | 'highlights' | 'subtitle' | 'vibe'
@@ -115,19 +127,67 @@ export const DEFAULT_MIN_GROUP_SIZE = 4
 export const DEFAULT_MAX_GROUP_SIZE = 6
 export const DEFAULT_REFRESH_INTERVAL_SECONDS = 20
 
-export function formatDateTime(dateTime?: string | null): string {
-  if (!dateTime) return '时间待定'
-  const parsedDate = new Date(dateTime)
-  if (Number.isNaN(parsedDate.getTime())) return '时间待定'
+export function resolveMatchingStatusAuthBootstrap<TUser>(params: {
+  authUser: TUser | null | undefined
+  cachedAuthUser: TUser | null | undefined
+  authLoading: boolean
+}): {
+  effectiveAuthUser: TUser | undefined
+  isAuthBootstrapPending: boolean
+} {
+  const effectiveAuthUser = params.authUser ?? params.cachedAuthUser ?? undefined
 
-  return parsedDate.toLocaleDateString('zh-CN', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return {
+    effectiveAuthUser,
+    isAuthBootstrapPending: params.authLoading && !effectiveAuthUser,
+  }
 }
+
+export function getMatchingStatusScreenState<TRegistration extends { id: string }>(params: {
+  hasRegistrationId: boolean
+  isRegistrationUnresolved: boolean
+  hasFetchError: boolean
+  registration: TRegistration | null | undefined
+  isCancelled: boolean
+  isNoMatchState: boolean
+}): MatchingStatusScreenState<TRegistration> {
+  const {
+    hasRegistrationId,
+    isRegistrationUnresolved,
+    hasFetchError,
+    registration,
+    isCancelled,
+    isNoMatchState,
+  } = params
+
+  if (!hasRegistrationId) {
+    return { kind: 'not-found' }
+  }
+
+  if (isRegistrationUnresolved) {
+    return { kind: 'loading' }
+  }
+
+  if (hasFetchError) {
+    return { kind: 'error' }
+  }
+
+  if (!registration) {
+    return { kind: 'not-found' }
+  }
+
+  if (isCancelled) {
+    return { kind: 'cancelled', registration }
+  }
+
+  if (isNoMatchState) {
+    return { kind: 'no-match', registration }
+  }
+
+  return { kind: 'ready', registration }
+}
+
+export { formatDateTime } from '../../lib/groupDisplay'
 
 export function getStatusLabel(status?: string): string {
   switch (status) {
@@ -141,20 +201,7 @@ export function getStatusLabel(status?: string): string {
   }
 }
 
-export function getVibeLabel(vibe?: EventThemeVibe | string | null): string {
-  switch (vibe) {
-    case 'playful':
-      return '轻松有趣'
-    case 'professional':
-      return '专业交流'
-    case 'creative':
-      return '创意碰撞'
-    case 'adventurous':
-      return '探索冒险'
-    default:
-      return vibe ?? ''
-  }
-}
+export { getVibeLabel } from '../../lib/groupDisplay'
 
 export function getCountdownState(dateTime?: string | null): { isExpired: boolean; label: string } {
   if (!dateTime) {

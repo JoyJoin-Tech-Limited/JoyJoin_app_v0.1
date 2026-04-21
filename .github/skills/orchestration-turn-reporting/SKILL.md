@@ -114,6 +114,8 @@ The Supervisor still uses **two surfaces**: canonical `supervisor_turn_report` J
 3. When **multiple specialist routes** exist, add **after Bottom Line** a **Routing (pick one):** numbered list (**3–5** options when Ready), each line **Role — action** with optional **(suggested model: …)** for implementation work—same rules as [`.github/agents/supervisor.agent.md`](../../agents/supervisor.agent.md). Sub-bullets **only** for options or trade-offs.
 4. When **Turn status: Done**, omit or shorten **Routing**. When **Blocked**, prioritize the unblock path in **Next Step** and keep Routing minimal.
 
+- Avoid generic “Proceed” or “Continue” wording in the visible note or Routing list; use explicit specialist actions instead.
+
 **Persist JSON before returning control**; include **`turnStatus`** and child **`sourceSummaryIds`** on supervisor reports.
 
 ### Turn status line templates (plain language)

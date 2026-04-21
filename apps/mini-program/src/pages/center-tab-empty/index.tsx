@@ -1,7 +1,6 @@
 import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
-import LoadingScreen from '../../components/LoadingScreen'
+import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import Button from '../../components/Button'
 import BottomNav from '../../components/BottomNav'
 import './index.scss'
@@ -9,13 +8,9 @@ import './index.scss'
 const BODY = '去看看为你准备的活动\n也许下一次连接就从这里开始'
 
 export default function CenterTabEmptyPage() {
-  const { isLoading: authLoading } = useAuthGuard()
+  const { renderGate } = useMiniPageGate()
 
-  if (authLoading) {
-    return <LoadingScreen message='加载中…' />
-  }
-
-  return (
+  return renderGate(
     <View className='center-tab-empty'>
       <View className='center-tab-empty__content'>
         <View className='center-tab-empty__art'>

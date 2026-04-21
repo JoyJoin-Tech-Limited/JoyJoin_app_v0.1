@@ -11,9 +11,9 @@ function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
 }
 
 describe('deriveMiniProgramAuthState', () => {
-  // Guards against regression: foreground auth refresh must not trust stale
-  // cached auth data while the session revalidation request is in flight.
-  it('fails closed while an authenticated cache entry is being refetched', () => {
+  // Guards against regression: foreground auth refresh still fails closed,
+  // but dependent queries can keep using the cached user metadata.
+  it('preserves cached user metadata while auth is being refetched', () => {
     expect(
       deriveMiniProgramAuthState({
         user: createAuthUser(),
@@ -21,10 +21,10 @@ describe('deriveMiniProgramAuthState', () => {
         isFetching: true,
       })
     ).toEqual({
-      user: undefined,
+      user: createAuthUser(),
       isLoading: true,
       isAuthenticated: false,
-      nextStep: undefined,
+      nextStep: 'discover',
     })
   })
 

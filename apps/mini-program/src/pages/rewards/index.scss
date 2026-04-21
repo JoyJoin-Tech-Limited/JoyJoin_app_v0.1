@@ -9,6 +9,12 @@
     @include flex-center;
   }
 
+  &__error {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 $container-padding;
+  }
+
   &__hero {
     text-align: center;
     padding: $spacing-2xl $container-padding $spacing-lg;

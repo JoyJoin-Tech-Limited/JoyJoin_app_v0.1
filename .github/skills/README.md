@@ -77,6 +77,7 @@ Planning artifacts and scoping help before implementation begins.
 | Skill | What it covers |
 |-------|---------------|
 | [`draft-prd`](./draft-prd/SKILL.md) | Product requirements drafts, user stories, scope boundaries, measurable success metrics, and proposal framing |
+| [`pm-sin-mapper`](./pm-sin-mapper/SKILL.md) | Structured Seven Deadly Sins product diagnosis for feature ideas, funnels, activation gaps, and PM-ready recommendations with Brainstorm / Execute / Debug outputs |
 
 ---
 
@@ -87,6 +88,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 | Skill | What it covers |
 |-------|---------------|
 | [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; **pixel precision** (spec-exact or 8rpx rhythm, DevTools gate) in [`references/pixel-precision.md`](./mini-program-frontend-excellence/references/pixel-precision.md); structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
+| [`frontend-hook-engine`](./frontend-hook-engine/SKILL.md) | Screen-level Seven Deadly Sins UI diagnosis for CTA hierarchy, state design, interaction clarity, and build-ready component/state plans |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 
 ---
@@ -169,6 +171,8 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | Can I add `user_interest_signals` to the matching score? | `matching-domain` (no — see signal boundary) |
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I draft a PRD or feature brief? | `draft-prd` |
+| How do I run a product sin-mapping review on a funnel or feature idea? | `pm-sin-mapper` |
+| How do I audit a screen for CTA hierarchy, states, or UI conversion risk? | `frontend-hook-engine` |
 | How do I run a smoke test or end-to-end journey check? | `e2e-test-runner` |
 | How do I benchmark before and after a performance change? | `performance-benchmark` |
 | How do I add turn-end summaries or a supervisor consolidation loop? | `orchestration-turn-reporting` |

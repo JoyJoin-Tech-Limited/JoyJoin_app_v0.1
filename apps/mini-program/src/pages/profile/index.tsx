@@ -10,20 +10,19 @@ import {
   getApiErrorStatusCode,
   isUnauthorizedApiError,
 } from '../../lib/authSession'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import type { AuthUser } from '../../hooks/useAuth'
 import { logError, logInfo } from '../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
-import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
 
 export default function ProfilePage() {
-  const { isLoading: authLoading, user: authUser } = useAuthGuard()
+  const { authLoading, authUser, renderGate } = useMiniPageGate()
   const logoutLockRef = useRef(false)
 
   useCustomTabBarSync({
@@ -89,15 +88,11 @@ export default function ProfilePage() {
     }
   }
 
-  if (authLoading) {
-    return <LoadingScreen />
-  }
-
   const displayName = user?.nickname || user?.displayName || authUser?.nickname || authUser?.displayName || '悦聚用户'
   const archetype = user?.archetype || authUser?.archetype
   const nextStep = user?.nextStep || authUser?.nextStep
 
-  return (
+  return renderGate(
     <ScrollView className='profile-page' scrollY enhanced showScrollbar={false}>
       {/* Hero section */}
       <View className='profile-page__hero'>
@@ -158,7 +153,7 @@ export default function ProfilePage() {
           onClick={handleOpenPayment}
         >
           <Text className='profile-page__action-icon'>🎁</Text>
-          <Text className='profile-page__action-text'>会员权益</Text>
+          <Text className='profile-page__action-text'>我的权益</Text>
           <Text className='profile-page__action-arrow'>›</Text>
         </View>
 

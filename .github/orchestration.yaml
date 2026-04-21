@@ -253,75 +253,15 @@
     },
     {
       "from": "Supervisor",
-      "to": "Product Manager",
-      "label": "Refresh product scope",
-      "prompt": "Tighten the approved scope, acceptance criteria, or issue-ready framing before implementation continues."
-    },
-    {
-      "from": "Supervisor",
-      "to": "Backend Engineer",
-      "label": "Route backend implementation",
-      "prompt": "Implement the approved backend scope or bounded backend refactor in apps/server while preserving the active domain boundaries and validation path."
-    },
-    {
-      "from": "Supervisor",
-      "to": "AI Engineer",
-      "label": "Route AI implementation",
-      "prompt": "Implement the approved runtime AI scope while keeping provider routing, fallback behavior, trace metadata, and deterministic authority boundaries explicit."
-    },
-    {
-      "from": "Supervisor",
       "to": "QA Agent",
       "label": "Request focused verification",
       "prompt": "Turn the implemented scope into a concrete verification checklist or change-focused execution summary before more implementation continues."
     },
     {
       "from": "Supervisor",
-      "to": "Verifier",
-      "label": "Skeptical completion check",
-      "prompt": "Independently verify claimed completion: run targeted tests or checks, confirm behavior matches claims, and report verified vs failed vs not checked."
-    },
-    {
-      "from": "Supervisor",
-      "to": "Launch Readiness Agent",
-      "label": "Review launch readiness",
-      "prompt": "Assess whether the current scope now needs launch-risk review, operational readiness checks, or blocker consolidation beyond local correctness."
-    },
-    {
-      "from": "Supervisor",
       "to": "debug",
       "label": "Route bug investigation",
       "prompt": "Investigate the bug or failing behavior, reproduce the issue, isolate the root cause, and implement or recommend the narrowest safe fix before another specialist takes over."
-    },
-    {
-      "from": "Supervisor",
-      "to": "Mini-Program Parity Auditor",
-      "label": "Audit parity scope",
-      "prompt": "Compare the current web and mini-program surfaces, identify parity drift, and return the smallest actionable backlog before implementation continues."
-    },
-    {
-      "from": "Supervisor",
-      "to": "Expert React Frontend Engineer",
-      "label": "Route web frontend implementation",
-      "prompt": "Implement the web UI scope in apps/user-client while keeping branding and design-system decisions attached to the existing frontend skill bindings."
-    },
-    {
-      "from": "Supervisor",
-      "to": "Taro Mini-Program Frontend Engineer",
-      "label": "Route mini-program implementation",
-      "prompt": "Implement the mini-program UI scope in apps/mini-program and review sibling-platform implications when duplicated business behavior is involved."
-    },
-    {
-      "from": "Supervisor",
-      "to": "Taro Migration Specialist",
-      "label": "Route parity-first migration",
-      "prompt": "Port the approved web source of truth into apps/mini-program while preserving parity and making platform limitations explicit."
-    },
-    {
-      "from": "Auto-Eval",
-      "to": "Supervisor",
-      "label": "Route remediation through Supervisor",
-      "prompt": "Use the current dirty-worktree findings, changed files, and fingerprint scope to route the next implementation or investigation step."
     },
     {
       "from": "Auto-Eval",

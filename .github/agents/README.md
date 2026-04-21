@@ -47,7 +47,7 @@ These are the v1 agents wired into the native handoff graph documented in [`../O
 
 ## Audited support agents
 
-These agents are still part of the active portfolio, but they are not in the v1 native handoff graph by default. They are catalogued in the orchestration contract with skill links and tooling sufficiency notes so future expansion stays deliberate. Some of them are explicit `Supervisor` support-lane exits for debugging, frontend, and parity work, but they still remain outside the small core graph.
+These agents are still part of the active portfolio, but they are not in the v1 native handoff graph by default. They are catalogued in the orchestration contract with skill links and tooling sufficiency notes so future expansion stays deliberate. `Supervisor` can still route into them via its visible briefing and manual agent selection even when they are not exposed as native Copilot handoff buttons.
 
 | Agent | Current scope | File |
 |-------|---------------|------|

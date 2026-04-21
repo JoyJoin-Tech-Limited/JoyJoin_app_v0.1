@@ -43,9 +43,9 @@ That split is deliberate:
 - keep the broader portfolio visible so future expansion stays explicit
 - capture tooling gaps now instead of rediscovering them later
 
-Supervisor also has explicit native exits that do not promote more agents into the default graph. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, route into core execution or validation exits when approved work crosses into product, backend, AI, QA, launch, or Auto-Eval territory, and route into selected audited support lanes for bug investigation, parity audit, web UI work, mini-program UI work, or parity-first migration.
+Supervisor also has a deliberately small native button set. It can send work back to `Researcher` or `Planner` when discovery or approval-first planning must reopen, route into `Auto-Eval` for the local quality gate, request focused verification from `QA Agent`, and open `debug` for root-cause investigation.
 
-Those exits are declared as native Supervisor handoffs in the agent frontmatter and the orchestration contract so the buttons, docs, and machine-readable graph stay aligned. Nested subagents are also intentionally enabled at the workspace level because `Taro Migration Specialist` and `Taro Mini-Program Frontend Engineer` both author second-level delegation for parity and sibling-platform review work.
+Broader routing into product, backend, AI, launch, frontend, parity, migration, or memory and governance lanes stays available through the visible routing note and manual agent selection instead of static Copilot buttons. The small native set is declared in the agent frontmatter and the orchestration contract so the buttons, docs, and machine-readable graph stay aligned without flooding the VS Code action row. Nested subagents are also intentionally enabled at the workspace level because `Taro Migration Specialist` and `Taro Mini-Program Frontend Engineer` both author second-level delegation for parity and sibling-platform review work.
 
 ## Threshold-guided routing
 

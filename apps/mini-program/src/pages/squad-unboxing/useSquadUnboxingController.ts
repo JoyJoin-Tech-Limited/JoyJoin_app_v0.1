@@ -48,7 +48,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   } = useQuery<PoolGroupDetailsResponse>({
     queryKey: ['mini-program', 'pool-group', groupId],
     queryFn: () => getPoolGroupDetails(apiRequest, groupId),
-    enabled: !!groupId && !authLoading,
+    enabled: !!groupId && (!!currentUser || !authLoading),
   })
 
   const {

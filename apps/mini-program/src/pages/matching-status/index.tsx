@@ -1,195 +1,227 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
-import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import LoadingScreen from '../../components/LoadingScreen'
-import Card from '../../components/Card'
 import Button from '../../components/Button'
+import Card from '../../components/Card'
+import StatusCard from '../../components/StatusCard'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import {
   MatchingHero,
   MatchingStatusDetailSections,
   MatchingStatusLiveOverlay,
   MatchingStatusPendingSection,
 } from './MatchingStatusSections'
-import {
-  formatDateTime,
-  getStatusLabel,
-  MATCHING_NO_MATCH_HERO_SRC,
-  MATCHING_WAITING_HERO_SRC,
-} from './matchingStatusViewModels'
+import * as matchingStatusViewModels from './matchingStatusViewModels'
 import { useMatchingStatusController } from './useMatchingStatusController'
 import './index.scss'
 
 export default function MatchingStatusPage() {
   const router = useRouter()
   const registrationId = router.params.registrationId ?? ''
+  const controller = useMatchingStatusController({
+    registrationId,
+    routerParams: router.params,
+  })
 
   const {
-    authLoading,
-    isLoading,
-    fetchError,
-    registration,
-    rootClassName,
-    shouldReduceMotion,
-    matchStatus,
-    resolvedGroupId,
-    matchedData,
-    effectiveGroupDetails,
-    effectiveEventDateTime,
-    countdown,
-    isCancelled,
-    isNoMatchState,
-    venueUnlocked,
-    waitingCopy,
-    currentFill,
-    minGroupSize,
-    maxGroupSize,
-    seatsNeeded,
-    fillStatusText,
-    waitingSeats,
-    newMemberJoined,
-    newMemberArchetype,
-    refreshCountdown,
-    persistedThemeSummary,
-    viewerPairSummaryByMemberId,
-    viewerSpotlight,
     chemistryTokens,
-    leadIceBreaker,
+    countdown,
+    currentFill,
+    effectiveEventDateTime,
+    effectiveGroupDetails,
+    fillStatusText,
+    finishLiveJourney,
     groupAnalysis,
+    handleBrowsePools,
+    handleCancel,
+    handleContinueFromMembers,
+    handleOpenMatchedJourney,
+    handleRefreshWaitingState,
+    handleRejoinPool,
+    invalidateRegistrationQuery,
+    isCancelling,
+    isLoadingLiveGroupDetails,
+    leadIceBreaker,
     liveRevealError,
     liveStage,
-    isLoadingLiveGroupDetails,
-    handleRefreshWaitingState,
-    handleOpenMatchedJourney,
-    handleBrowsePools,
-    handleRejoinPool,
-    handleCancel,
-    isCancelling,
-    handleContinueFromMembers,
-    finishLiveJourney,
+    matchStatus,
+    matchedData,
+    maxGroupSize,
+    minGroupSize,
+    newMemberArchetype,
+    newMemberJoined,
+    persistedThemeSummary,
+    refreshCountdown,
+    registration,
+    resolvedGroupId,
+    rootClassName,
+    seatsNeeded,
+    screenState,
+    shouldReduceMotion,
     similarPools,
-    invalidateRegistrationQuery,
+    stageTemperature,
     switchToEventsTab,
     navigateBackOrEventsTab,
-    stageTemperature,
-  } = useMatchingStatusController({ registrationId, routerParams: router.params })
+    venueUnlocked,
+    viewerPairSummaryByMemberId,
+    viewerSpotlight,
+    waitingCopy,
+    waitingSeats,
+  } = controller
 
-  if (authLoading || isLoading) {
-    return <LoadingScreen message='加载匹配状态…' />
-  }
-
-  if (fetchError || !registration) {
-    return (
-      <View className={rootClassName}>
-        <View className='matching-status__error'>
-          <Text className='matching-status__error-icon'>😕</Text>
-          <Text className='matching-status__error-text'>
-            {fetchError ? '加载匹配信息失败' : '未找到报名记录'}
-          </Text>
-          <Button
-            variant='secondary'
-            className='matching-status__error-btn'
-            onClick={navigateBackOrEventsTab}
-          >
-            返回
-          </Button>
+  switch (screenState.kind) {
+    case 'loading':
+      return <LoadingScreen message='加载匹配状态…' />
+    case 'error':
+      return (
+        <View className={rootClassName}>
+          <View className='matching-status__error'>
+            <StatusCard
+              tone='error'
+              title='加载匹配信息失败'
+              action={{
+                label: '返回',
+                onClick: navigateBackOrEventsTab,
+                variant: 'secondary',
+              }}
+            />
+          </View>
         </View>
-      </View>
-    )
+      )
+    case 'not-found':
+      return (
+        <View className={rootClassName}>
+          <View className='matching-status__error'>
+            <StatusCard
+              tone='info'
+              icon='😕'
+              title='未找到报名记录'
+              action={{
+                label: '返回',
+                onClick: navigateBackOrEventsTab,
+                variant: 'secondary',
+              }}
+            />
+          </View>
+        </View>
+      )
+    case 'cancelled':
+      return (
+        <View className={rootClassName}>
+          <Card className='matching-status__special-card'>
+            <Text className='matching-status__special-icon'>😔</Text>
+            <Text className='matching-status__special-title'>这场活动已取消</Text>
+            <Text className='matching-status__special-text'>
+              很抱歉，这场活动未能按计划进行。你可以回到发现页，重新挑一场更适合你的局。
+            </Text>
+            <View className='matching-status__actions'>
+              <Button className='matching-status__cta-btn' onClick={handleBrowsePools}>
+                去看看别的活动
+              </Button>
+              <Button
+                variant='secondary'
+                className='matching-status__secondary-btn'
+                onClick={switchToEventsTab}
+              >
+                返回我的活动
+              </Button>
+            </View>
+          </Card>
+        </View>
+      )
+    case 'no-match': {
+      const currentRegistration = screenState.registration
+
+      return (
+        <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
+          <MatchingHero
+            heroSrc={matchingStatusViewModels.MATCHING_NO_MATCH_HERO_SRC}
+            className='matching-status__hero--no-match'
+          />
+
+          <Card className='matching-status__special-card matching-status__special-card--stacked'>
+            <Text className='matching-status__special-title'>这次还没等到合适的一桌</Text>
+            <Text className='matching-status__special-text'>
+              {countdown.label}。与其勉强凑桌，我们更想把你留给更对味的人。
+            </Text>
+            <View className='matching-status__actions'>
+              <Button className='matching-status__cta-btn' onClick={handleBrowsePools}>
+                看看别的活动
+              </Button>
+              <Button
+                variant='secondary'
+                className='matching-status__secondary-btn'
+                onClick={invalidateRegistrationQuery}
+              >
+                刷新状态
+              </Button>
+            </View>
+          </Card>
+
+          {similarPools.length > 0 ? (
+            <View className='matching-status__similar-section'>
+              <Text className='matching-status__similar-title'>附近还有这些局</Text>
+              {similarPools.map((pool) => (
+                <Card key={pool.id} className='matching-status__similar-card'>
+                  <Text className='matching-status__similar-name'>{pool.title ?? '推荐活动'}</Text>
+                  <Text className='matching-status__similar-meta'>
+                    {pool.eventType ?? currentRegistration.poolEventType}
+                    {pool.city ? ` · ${pool.city}` : ''}
+                    {pool.district ? ` ${pool.district}` : ''}
+                  </Text>
+                  <Text className='matching-status__similar-meta'>
+                    {matchingStatusViewModels.formatDateTime(pool.dateTime)}
+                    {typeof pool.registrationCount === 'number'
+                      ? ` · 已有 ${pool.registrationCount} 人入座`
+                      : ''}
+                  </Text>
+                  <Button
+                    variant='secondary'
+                    className='matching-status__similar-btn'
+                    onClick={() => handleRejoinPool(pool.id)}
+                  >
+                    重新报名这场
+                  </Button>
+                </Card>
+              ))}
+            </View>
+          ) : null}
+
+          <View className='matching-status__spacer' />
+        </ScrollView>
+      )
+    }
+    case 'ready':
+      break
   }
 
-  if (isCancelled) {
-    return (
-      <View className={rootClassName}>
-        <Card className='matching-status__special-card'>
-          <Text className='matching-status__special-icon'>😔</Text>
-          <Text className='matching-status__special-title'>这场活动已取消</Text>
-          <Text className='matching-status__special-text'>
-            很抱歉，这场活动未能按计划进行。你可以回到发现页，重新挑一场更适合你的局。
-          </Text>
-          <View className='matching-status__actions'>
-            <Button className='matching-status__cta-btn' onClick={handleBrowsePools}>
-              去看看别的活动
-            </Button>
-            <Button
-              variant='secondary'
-              className='matching-status__secondary-btn'
-              onClick={switchToEventsTab}
-            >
-              返回我的活动
-            </Button>
-          </View>
-        </Card>
-      </View>
-    )
-  }
+  const currentRegistration = screenState.registration
 
-  if (isNoMatchState) {
-    return (
-      <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
-        <MatchingHero heroSrc={MATCHING_NO_MATCH_HERO_SRC} className='matching-status__hero--no-match' />
-
-        <Card className='matching-status__special-card matching-status__special-card--stacked'>
-          <Text className='matching-status__special-title'>这次还没等到合适的一桌</Text>
-          <Text className='matching-status__special-text'>
-            {countdown.label}。与其勉强凑桌，我们更想把你留给更对味的人。
-          </Text>
-          <View className='matching-status__actions'>
-            <Button className='matching-status__cta-btn' onClick={handleBrowsePools}>
-              看看别的活动
-            </Button>
-            <Button
-              variant='secondary'
-              className='matching-status__secondary-btn'
-              onClick={invalidateRegistrationQuery}
-            >
-              刷新状态
-            </Button>
-          </View>
-        </Card>
-
-        {similarPools.length > 0 ? (
-          <View className='matching-status__similar-section'>
-            <Text className='matching-status__similar-title'>附近还有这些局</Text>
-            {similarPools.map((pool) => (
-              <Card key={pool.id} className='matching-status__similar-card'>
-                <Text className='matching-status__similar-name'>{pool.title ?? '推荐活动'}</Text>
-                <Text className='matching-status__similar-meta'>
-                  {pool.eventType ?? registration.poolEventType}
-                  {pool.city ? ` · ${pool.city}` : ''}
-                  {pool.district ? ` ${pool.district}` : ''}
-                </Text>
-                <Text className='matching-status__similar-meta'>
-                  {formatDateTime(pool.dateTime)}
-                  {typeof pool.registrationCount === 'number' ? ` · 已有 ${pool.registrationCount} 人入座` : ''}
-                </Text>
-                <Button
-                  variant='secondary'
-                  className='matching-status__similar-btn'
-                  onClick={() => handleRejoinPool(pool.id)}
-                >
-                  重新报名这场
-                </Button>
-              </Card>
-            ))}
-          </View>
-        ) : null}
-
-        <View className='matching-status__spacer' />
-      </ScrollView>
-    )
-  }
+  const groupAnalysisDebugMeta = groupAnalysis
+    ? {
+        fromCache: groupAnalysis.fromCache,
+        generatedAt: groupAnalysis.generatedAt,
+      }
+    : null
 
   return (
     <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
       {matchStatus === 'pending' ? (
-        <MatchingHero heroSrc={MATCHING_WAITING_HERO_SRC} className='matching-status__hero--waiting' />
+        <MatchingHero
+          heroSrc={matchingStatusViewModels.MATCHING_WAITING_HERO_SRC}
+          className='matching-status__hero--waiting'
+        />
       ) : null}
 
-      <View className={`matching-status__header${matchStatus === 'pending' ? ' matching-status__header--with-hero' : ''}`}>
+      <View
+        className={`matching-status__header${matchStatus === 'pending' ? ' matching-status__header--with-hero' : ''}`}
+      >
         <Text className='matching-status__status-emoji'>
           {matchStatus === 'matched' ? '🎉' : matchStatus === 'completed' ? '✅' : '⏳'}
         </Text>
-        <Text className='matching-status__status-title'>{getStatusLabel(matchStatus)}</Text>
+        <Text className='matching-status__status-title'>
+          {matchingStatusViewModels.getStatusLabel(matchStatus)}
+        </Text>
         {matchStatus === 'pending' ? (
           <View className='matching-status__dots'>
             <View className='matching-status__dot matching-status__dot--1' />
@@ -223,39 +255,45 @@ export default function MatchingStatusPage() {
       ) : null}
 
       <Card className='matching-status__card'>
-        <Text className='matching-status__card-title'>{registration.poolTitle ?? '活动信息'}</Text>
+        <Text className='matching-status__card-title'>{currentRegistration.poolTitle ?? '活动信息'}</Text>
 
-        {registration.poolEventType ? (
+        {currentRegistration.poolEventType ? (
           <View className='matching-status__info-row'>
             <Text className='matching-status__info-label'>🎯 类型</Text>
-            <Text className='matching-status__info-value'>{registration.poolEventType}</Text>
+            <Text className='matching-status__info-value'>{currentRegistration.poolEventType}</Text>
           </View>
         ) : null}
 
-        {(effectiveEventDateTime ?? registration.poolDateTime) ? (
+        {(effectiveEventDateTime ?? currentRegistration.poolDateTime) ? (
           <View className='matching-status__info-row'>
             <Text className='matching-status__info-label'>📅 时间</Text>
             <Text className='matching-status__info-value'>
-              {formatDateTime(effectiveEventDateTime ?? registration.poolDateTime)}
+              {matchingStatusViewModels.formatDateTime(
+                effectiveEventDateTime ?? currentRegistration.poolDateTime,
+              )}
             </Text>
           </View>
         ) : null}
 
-        {(effectiveGroupDetails?.group.venueName || registration.poolCity) ? (
+        {(effectiveGroupDetails?.group.venueName || currentRegistration.poolCity) ? (
           <View className='matching-status__info-row'>
             <Text className='matching-status__info-label'>📍 地点</Text>
             <Text className='matching-status__info-value'>
-              {effectiveGroupDetails?.group.venueName ?? registration.venueName ?? registration.poolCity}
-              {(effectiveGroupDetails?.group.venueAddress ?? registration.venueAddress) ? ` · ${effectiveGroupDetails?.group.venueAddress ?? registration.venueAddress}` : registration.poolDistrict ? ` · ${registration.poolDistrict}` : ''}
+              {effectiveGroupDetails?.group.venueName ?? currentRegistration.venueName ?? currentRegistration.poolCity}
+              {(effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress)
+                ? ` · ${effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress}`
+                : currentRegistration.poolDistrict
+                  ? ` · ${currentRegistration.poolDistrict}`
+                  : ''}
             </Text>
           </View>
         ) : null}
 
-        {registration.matchScore != null ? (
+        {currentRegistration.matchScore != null ? (
           <View className='matching-status__info-row'>
             <Text className='matching-status__info-label'>💯 匹配分</Text>
             <Text className='matching-status__info-value matching-status__info-value--score'>
-              {registration.matchScore}
+              {currentRegistration.matchScore}
             </Text>
           </View>
         ) : null}
@@ -278,11 +316,7 @@ export default function MatchingStatusPage() {
         chemistryTokens={chemistryTokens}
         leadIceBreaker={leadIceBreaker}
         persistedThemeSummary={persistedThemeSummary}
-        groupAnalysisDebugMeta={
-          groupAnalysis
-            ? { fromCache: groupAnalysis.fromCache, generatedAt: groupAnalysis.generatedAt }
-            : null
-        }
+        groupAnalysisDebugMeta={groupAnalysisDebugMeta}
       />
 
       <View className='matching-status__actions'>
@@ -295,7 +329,9 @@ export default function MatchingStatusPage() {
         {matchStatus === 'matched' && !resolvedGroupId ? (
           <Card className='matching-status__loading-card'>
             <Text className='matching-status__loading-title'>正在整理你的小队信息</Text>
-            <Text className='matching-status__loading-text'>匹配已经完成，桌友卡片和主题揭晓马上就会到位。</Text>
+            <Text className='matching-status__loading-text'>
+              匹配已经完成，桌友卡片和主题揭晓马上就会到位。
+            </Text>
             <Button
               variant='secondary'
               className='matching-status__secondary-btn'
@@ -336,11 +372,7 @@ export default function MatchingStatusPage() {
         ) : null}
 
         {matchStatus === 'completed' ? (
-          <Button
-            variant='primary'
-            className='matching-status__back-btn'
-            onClick={switchToEventsTab}
-          >
+          <Button variant='primary' className='matching-status__back-btn' onClick={switchToEventsTab}>
             查看更多活动
           </Button>
         ) : null}

@@ -34,6 +34,10 @@ import {
   validateOrchestrationManifest,
   writeRuntimeContext,
 } from './orchestration-lib.mjs';
+import {
+  NEXT_ACTIONS_ARTIFACT_RELATIVE_PATH,
+  syncNextActionsArtifact,
+} from './orchestration-next-actions.mjs';
 
 const AGENT_INVENTORY_RELATIVE_PATH = path.join('.github', 'agents', 'manifest.json');
 const WORKSPACE_SETTINGS_RELATIVE_PATH = path.join('.vscode', 'settings.json');
@@ -868,8 +872,16 @@ function buildTurnSummaryArtifacts(existingArtifactPaths) {
   return [
     RUNTIME_CONTEXT_RELATIVE_PATH,
     RUNTIME_EVENT_LOG_RELATIVE_PATH,
+    NEXT_ACTIONS_ARTIFACT_RELATIVE_PATH,
     ...(Array.isArray(existingArtifactPaths) ? existingArtifactPaths : []),
   ].filter((value, index, array) => array.indexOf(value) === index);
+}
+
+function persistRuntimeContext(repoRoot, context, manifest) {
+  writeRuntimeContext(repoRoot, context);
+  syncNextActionsArtifact(repoRoot, context, manifest, {
+    generatedAt: cleanString(context?.lastUpdatedAt) || new Date().toISOString(),
+  });
 }
 
 export function normalizeTurnSummaryPayload(payload, context = {}) {
@@ -941,6 +953,9 @@ function buildCompactAgentSummary(summary) {
     focusWindowTurns: summary.focusWindowTurns,
     turnStatus: summary.turnStatus,
     done: summary.done,
+    filesChanged: summary.filesChanged,
+    blockers: summary.blockers,
+    nextSteps: summary.nextSteps,
     learned: summary.learned,
     nextTurnImprovements: summary.nextTurnImprovements,
     confidenceScore: summary.confidence.score,
@@ -971,6 +986,7 @@ function buildCompactSupervisorReport(summary, turnId, turnSequence) {
 
 export function recordTurnSummary(repoRoot, payload) {
   const existingContext = loadRuntimeContext(repoRoot);
+  const manifest = loadOrchestrationManifest(repoRoot);
   const sessionId = deriveSessionId(existingContext.sessionId);
   const currentTurnSummaryState = normalizeTurnSummaryState(existingContext.turnSummaryState);
   const summary = normalizeTurnSummaryPayload(payload, {
@@ -1030,7 +1046,7 @@ export function recordTurnSummary(repoRoot, payload) {
     lastUpdatedAt: summary.recordedAt,
   };
 
-  writeRuntimeContext(repoRoot, nextContext);
+  persistRuntimeContext(repoRoot, nextContext, manifest);
   appendOrchestrationLog(repoRoot, {
     recordedAt: summary.recordedAt,
     triggerSource: 'explicit_summary',
@@ -1096,6 +1112,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
     artifactPaths: [
       RUNTIME_CONTEXT_RELATIVE_PATH,
       RUNTIME_EVENT_LOG_RELATIVE_PATH,
+      NEXT_ACTIONS_ARTIFACT_RELATIVE_PATH,
       ...(memoryContext.generatedIndex.available ? [memoryContext.generatedIndex.path] : []),
       ...(existingContext.artifactPaths ?? []),
     ].filter((value, index, array) => array.indexOf(value) === index),
@@ -1333,7 +1350,7 @@ function runCopilotHook(repoRoot, eventName) {
       }),
     };
 
-    writeRuntimeContext(repoRoot, context);
+    persistRuntimeContext(repoRoot, context, manifest);
     appendOrchestrationLog(repoRoot, {
       recordedAt: new Date().toISOString(),
       triggerSource: 'copilot_hook',
@@ -1396,7 +1413,7 @@ function runCopilotHook(repoRoot, eventName) {
       memoryContext,
     };
 
-    writeRuntimeContext(repoRoot, context);
+    persistRuntimeContext(repoRoot, context, manifest);
     appendOrchestrationLog(repoRoot, {
       recordedAt: new Date().toISOString(),
       triggerSource: 'copilot_hook',
@@ -1429,7 +1446,7 @@ function runCopilotHook(repoRoot, eventName) {
     outputJson({ continue: true });
   }
 
-  writeRuntimeContext(repoRoot, context);
+  persistRuntimeContext(repoRoot, context, manifest);
   appendOrchestrationLog(repoRoot, {
     recordedAt: new Date().toISOString(),
     triggerSource: 'copilot_hook',

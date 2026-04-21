@@ -15,6 +15,7 @@ Use these as the main entry points before branching into topic-specific document
 The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client for the current track. Start here for structure, commands, tab bar, and package strategy:
 
 - [`../apps/mini-program/README.md`](../apps/mini-program/README.md) — workspace entry points, `onboardingRoutes.ts` registration, native custom tab bar, build commands
+- [`mini-program-product-reference.md`](./mini-program-product-reference.md) — compact product-to-code bridge for page inventory, active journeys, admin impact, and docs-sync triggers
 - [`PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) — web vs mini-program auth, API, and payment coordination
 - [`perf.md`](./perf.md) — web Vitals + **mini-program** subpackage / preload strategy
 - [`wechat-mini-program-reference.md`](./wechat-mini-program-reference.md) — supplemental WeChat primitives (rpx, APIs); **not** the Taro source of truth
