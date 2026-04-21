@@ -26,7 +26,7 @@
     "build:admin": "npm run build -w @joyjoin/admin-client",
     "build:server": "npm run build -w @joyjoin/server",
     "start": "npm run db:push && npm run start -w @joyjoin/server",
-    "guardrails": "node scripts/check-guardrails.mjs",
+    "guardrails": "node scripts/check-guardrails.mjs && node --test scripts/check-guardrails.test.mjs",
     "dep-check": "node scripts/check-workspace-dependency-ownership.mjs",
     "memory:validate": "node scripts/memory-validate.mjs",
     "memory:draft-candidate": "node scripts/memory-draft-candidate.mjs",
