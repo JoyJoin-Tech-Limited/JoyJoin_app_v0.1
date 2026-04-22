@@ -70,3 +70,5 @@ related_skills:
     when: adding signal boundary invariant tests or scoring regression tests
   - skill: platform-observability-and-ops
     when: adding metrics or logging for matching execution telemetry
+  - skill: multi-agent-deliberation
+    when: scoring math or matching algorithm changes that need multi-perspective validation

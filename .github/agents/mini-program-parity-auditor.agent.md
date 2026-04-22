@@ -40,6 +40,15 @@ Use `docs/PLATFORM_COORDINATION.md` as the source of truth for duplicated auth, 
 6. Prioritize the backlog by user impact and migration dependency order.
 7. Recommend the smallest next migration step that materially increases parity.
 
+## Screenshot Parity Verification
+
+When visual parity is in scope:
+
+1. **Playwright MCP:** Use the **Playwright MCP server** (`playwright`) to capture baseline screenshots from the web client (`apps/user-client`). The E2E suite in `packages/e2e/tests/parity-screenshots.spec.ts` captures web baselines for landing, onboarding, discover, event pool detail, profile, and admin login.
+2. **Mini-program comparison:** Capture equivalent screenshots in WeChat DevTools and compare against web baselines. Check layout structure (±8rpx tolerance), typography hierarchy, copy text, and interaction states.
+3. **Tolerance rules:** Brand palette alignment is required; exact hex match is not required for platform-native components. Copy must be identical Chinese text. Loading, error, and empty states must be present on both platforms.
+4. If screenshot comparison is not possible (no DevTools access), document the visual gap explicitly and flag it for manual verification.
+
 ## Frontend Excellence Notes
 
 ### Platform Applicability

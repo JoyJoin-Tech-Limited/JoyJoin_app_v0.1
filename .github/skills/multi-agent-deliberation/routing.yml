@@ -1,0 +1,75 @@
+skill: multi-agent-deliberation
+
+primary_ownership: >
+  Structured 5-phase multi-agent deliberation protocol: delegate roles, anonymous peer review,
+  roundtable debate, ACK-ALL consensus with veto powers, and transcript persistence.
+
+use_when:
+  - user explicitly asks to deliberate, review, or get multiple perspectives
+  - task is cross-domain, architecturally significant, or high-blast-radius
+  - new public API surface or breaking contract change
+  - UX-heavy feature with Taro/WeChat runtime constraints
+  - core engine changes (matching, personality, payments)
+
+do_not_use_when:
+  - task is a single-domain bug fix or copy change
+  - task is documentation-only or test-only
+  - one specialist clearly owns the entire scope
+  - task is small (<50 lines, single file)
+
+strong_triggers:
+  - deliberate this
+  - multi-agent review
+  - architecture consensus
+  - design review
+  - get multiple perspectives
+  - cross-workspace deliberation
+  - team assembly
+  - peer review
+  - roundtable
+  - consensus poll
+  - ACK-ALL
+  - NACK
+  - delegate role
+  - alpha architect
+  - beta ux
+  - gamma realist
+  - veto power
+  - deliberation moderator
+  - synthesizer summary
+  - converged position
+
+owned_files:
+  - .github/agents/deliberation-moderator.agent.md
+  - .github/orchestration.yaml
+  - .github/agents/manifest.json
+
+owned_paths:
+  - /.github/agents/deliberation-moderator.agent.md
+
+owned_symbols:
+  - Deliberation Moderator
+  - multi-agent-deliberation
+  - teamAssembly
+  - peerReview
+  - roundtable
+  - consensusPoll
+  - synthesizerSummary
+  - ACK
+  - NACK
+
+related_skills:
+  - skill: first-principles-velocity
+    when: bottleneck analysis and model tier selection for deliberation scope
+  - skill: orchestration-turn-reporting
+    when: turn-summary JSON format for Moderator and delegates
+  - skill: server-domain-architecture
+    when: Alpha's backend architecture decisions
+  - skill: mini-program-frontend-excellence
+    when: Beta's Taro/WeChat UX decisions
+  - skill: testing-and-regression-guardrails
+    when: Gamma's edge-case and coverage concerns
+  - skill: platform-coordination-protocol
+    when: deliberation spans web + mini-program
+  - skill: wow-elements
+    when: premium interactions, micro-animations, or emotional UX moments need cross-perspective review

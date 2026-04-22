@@ -1,0 +1,87 @@
+skill: websocket-realtime
+
+primary_ownership: >
+  WebSocket server infrastructure: connection lifecycle, session-cookie auth, room-based broadcasting,
+  heartbeat/reconnect, rate limiting, and HTTP polling boundaries for social icebreaker.
+
+use_when:
+  - adding or modifying WebSocket message types
+  - changing broadcast patterns or real-time delivery
+  - modifying WS auth, heartbeat, or reconnection logic
+  - debugging real-time delivery issues
+  - working on King Game real-time sync or legacy icebreaker WS flow
+  - adding event lifecycle notifications over WebSocket
+
+do_not_use_when:
+  - task is about social icebreaker phase logic (uses HTTP polling)
+  - task is about matching algorithms
+  - task is about general HTTP API design
+
+strong_triggers:
+  - WebSocket
+  - websocket
+  - ws
+  - realtime
+  - real-time
+  - broadcast
+  - event room
+  - heartbeat
+  - reconnect
+  - pool matching notification
+  - king game
+  - icebreaker websocket
+  - connectSocket
+  - Taro websocket
+  - USER_JOINED
+  - broadcastToUser
+  - broadcastToEvent
+  - wsService
+  - eventBroadcast
+  - RATE_LIMITED
+  - PING
+  - PONG
+  - ICEBREAKER_CHECKIN
+  - KING_GAME_JOIN
+
+owned_files:
+  - apps/server/src/wsService.ts
+  - apps/server/src/eventBroadcast.ts
+  - packages/shared/src/wsEvents.ts
+  - apps/user-client/src/hooks/useWebSocket.ts
+  - apps/user-client/src/hooks/useIcebreakerWebSocket.ts
+  - apps/user-client/src/hooks/useKingGameWebSocket.ts
+  - apps/mini-program/src/lib/websocket.ts
+  - apps/mini-program/src/hooks/useWebSocket.ts
+
+owned_paths:
+  - /ws
+
+owned_symbols:
+  - wsService
+  - broadcastToUser
+  - broadcastToEvent
+  - broadcastToAll
+  - broadcastToIcebreakerSession
+  - broadcastToKingGameRoom
+  - handleMessage
+  - handleDisconnect
+  - WebSocketMessage
+  - WSMessage
+  - USER_JOINED
+  - EVENT_MATCHED
+  - POOL_MATCHED
+  - PING
+  - PONG
+  - RATE_LIMITED
+
+related_skills:
+  - skill: social-icebreaker-domain
+    when: social icebreaker uses HTTP polling, not WebSocket
+  - skill: matching-domain
+    when: pool matching algorithm and scoring
+  - skill: event-pool-and-matching-operations
+    when: event pool lifecycle and match-run operations
+  - skill: platform-coordination-protocol
+    when: WS changes affect both web and mini-program
+  - skill: server-domain-architecture
+    when: adding new HTTP routes rather than WS events

@@ -49,6 +49,11 @@ Use this skill when you are:
 - `.github/workflows/synthetic-probe.yml` schedules the probe every 5 minutes.
 - `scripts/test-e2e-flow.ts` exists but is explicitly marked as using a deprecated V2 assessment flow.
 
+## MCP-assisted E2E testing
+
+- **Playwright MCP:** For browser-driven journey validation across `apps/user-client`, use the **Playwright MCP server** (`playwright`) to navigate routes, interact with forms, and capture screenshots. This is the fastest way to verify a critical path (e.g., onboarding → discovery → event registration) without writing a full test script.
+- **WeChat DevTools MCP:** For mini-program journey validation, use the **WeChat DevTools MCP server** (`wechat-devtools`) to automate page navigation, element interaction, and visual state checks within the WeChat runtime.
+
 ## Quick examples
 
 - **Post-deploy verification**: run the synthetic probe or use `workflow_dispatch` to validate health, metrics, and auth response basics.

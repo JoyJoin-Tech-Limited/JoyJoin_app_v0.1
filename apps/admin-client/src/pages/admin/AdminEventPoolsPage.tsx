@@ -1,6 +1,7 @@
 // my path:/Users/felixg/projects/JoyJoin3/client/src/pages/admin/AdminEventPoolsPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import FieldInfoTooltip from "@/components/FieldInfoTooltip";
 import {
   Card,
   CardContent,
@@ -875,7 +876,13 @@ export default function AdminEventPoolsPage() {
                       name="targetGroups"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>目标组数 *</FormLabel>
+                          <FormLabel className="flex items-center gap-1.5">
+                            目标组数 *
+                            <FieldInfoTooltip
+                              title="目标组数"
+                              description="预计分成几组，影响场地预订数量。每组建议 4-8 人，人数过多会降低互动质量。"
+                            />
+                          </FormLabel>
                           <FormControl>
                             <Input
                               type="number"

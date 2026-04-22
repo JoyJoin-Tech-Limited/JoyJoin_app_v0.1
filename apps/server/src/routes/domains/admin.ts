@@ -9,6 +9,7 @@ import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../i
 import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
 import { socialIcebreakerAiFeedbackRepo } from "../../repositories/socialIcebreakerAiFeedbackRepo";
+import { queryAdminAuditLogs } from "../../repositories/adminAuditLogsRepo";  
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -81,6 +82,29 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error("[AdminIcebreakerAiFeedback] summary failed:", error);
       res.status(500).json({ message: "Failed to load icebreaker AI feedback summary" });
+    }
+  });
+
+  // Admin audit logs — read-only query endpoint
+  app.get("/api/admin/audit-logs", requireAdmin, async (req, res) => {
+    try {
+      const { adminId, action, targetEntityType, targetEntityId, startDate, endDate, limit, offset } = req.query;
+
+      const result = await queryAdminAuditLogs({
+        adminId: typeof adminId === "string" ? adminId : undefined,
+        action: typeof action === "string" ? action : undefined,
+        targetEntityType: typeof targetEntityType === "string" ? targetEntityType : undefined,
+        targetEntityId: typeof targetEntityId === "string" ? targetEntityId : undefined,
+        startDate: typeof startDate === "string" ? new Date(startDate) : undefined,
+        endDate: typeof endDate === "string" ? new Date(endDate) : undefined,
+        limit: typeof limit === "string" ? parseInt(limit, 10) : undefined,
+        offset: typeof offset === "string" ? parseInt(offset, 10) : undefined,
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("[AdminAuditLogs] query failed:", error);
+      res.status(500).json({ message: "Failed to load audit logs" });
     }
   });
 }

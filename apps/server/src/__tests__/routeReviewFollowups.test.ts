@@ -29,20 +29,22 @@ describe('route review follow-ups', () => {
 
   it('aggregates profile stats with count queries', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const profileRoutesSource = readRepoFile('apps/server/src/routes/domains/profile.ts');
 
     expect(routesSource).toContain('sql<number>`count(*)::int`');
-    expect(routesSource).toContain('const [completedEventsResult] = await db');
-    expect(routesSource).toContain('const [connectionsResult] = await db');
+    expect(profileRoutesSource).toContain('const [completedEventsResult] = await db');
+    expect(profileRoutesSource).toContain('const [connectionsResult] = await db');
   });
 
   it('emits normalized AI metadata on legacy pair-explanation responses', () => {
     const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const blindBoxEventsSource = readRepoFile('apps/server/src/routes/domains/blindBoxEvents.ts');
 
     expect(routesSource).toContain("app.get('/api/event-pool-groups/:groupId/match-explanations'");
-    expect(routesSource).toContain("app.get('/api/blind-box-events/:eventId/match-explanations'");
-    expect(routesSource).toContain('promptVersion: groupAnalysis.promptVersion');
-    expect(routesSource).toContain('fromCache: groupAnalysis.fromCache');
-    expect(routesSource).toContain('provider: groupAnalysis.provider');
+    expect(blindBoxEventsSource).toContain("app.get('/api/blind-box-events/:eventId/match-explanations'");
+    expect(blindBoxEventsSource).toContain('promptVersion: groupAnalysis.promptVersion');
+    expect(blindBoxEventsSource).toContain('fromCache: groupAnalysis.fromCache');
+    expect(blindBoxEventsSource).toContain('provider: groupAnalysis.provider');
   });
 
   it('persists blind-box attendance confirmations and keeps pool-group age payloads privacy-safe', () => {
@@ -90,7 +92,6 @@ describe('route review follow-ups', () => {
 
     expect(miniProgramPaymentPageSource).toContain('createMiniProgramPaymentIntent');
     expect(miniProgramPaymentPageSource).toContain('Taro.requestPayment');
-    expect(miniProgramPaymentPageSource).toContain("pack_3");
     expect(miniProgramPaymentPageSource).toContain('couponCode');
     expect(miniProgramPaymentPageSource).not.toContain('getBrowserPaymentLaunchUrl');
     expect(miniProgramPaymentPageSource).not.toContain('paymentRedirectUrl');

@@ -207,6 +207,8 @@ Hand off to design-system-governance for tokens and variants, frontend-component
 - references/examples.md
 - .github/skills/pm-sin-mapper/SKILL.md
 - .github/skills/frontend-component-architecture/SKILL.md
+- [`../process-brainstorming/SKILL.md`](../process-brainstorming/SKILL.md) — structured divergent thinking before choosing a design direction
+- [`../process-systematic-debugging/SKILL.md`](../process-systematic-debugging/SKILL.md) — structured debugging when a UI bug spans layers or is intermittent
 - .github/skills/design-system-governance/SKILL.md
 - .github/skills/wow-elements/SKILL.md
 - .github/skills/frontend-performance-and-loading/SKILL.md

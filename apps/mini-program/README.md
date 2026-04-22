@@ -2,128 +2,182 @@
 
 This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 
-## Launch status
+> **Launch status:** This is the **launch-primary client** for the current execution track. Production WeChat users ship here first. `apps/user-client` remains the web sandbox and parity reference.
 
-**This is the launch-primary client** for the current execution track: production WeChat users ship here first. `apps/user-client` remains the web sandbox and parity reference; any change that touches auth, payments, or shared contracts should follow [`docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md) and [`.github/skills/platform-coordination-protocol/SKILL.md`](../../.github/skills/platform-coordination-protocol/SKILL.md). Visual and interaction quality bar: [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../../.github/skills/mini-program-frontend-excellence/SKILL.md) (including `references/pixel-precision.md`).
+---
 
-## Source-of-truth entry points
+## Quick Reference
 
-- `apps/mini-program/src/app.ts` — app lifecycle entry
-- `apps/mini-program/src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboardingRoutes.ts` + tab config from `lib/tabBarConfig.ts`
-- `apps/mini-program/src/lib/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
-- `apps/mini-program/src/lib/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
-- `apps/mini-program/src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate (same assessment APIs as web)
-- `apps/mini-program/src/pages/login/index.tsx` + `src/hooks/useWeChatLogin.ts` — **returning-user** WeChat login (`POST /api/auth/wechat/login`)
-- `apps/mini-program/src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling; helpers in `src/lib/paymentEntry.ts`, `paymentPendingOrder.ts`, `paymentPendingOrderStorage.ts`
-- `docs/PLATFORM_COORDINATION.md` — canonical coordination playbook for duplicated auth, API, and payment flows
-- [`../../docs/mini-program-data-fetching.md`](../../docs/mini-program-data-fetching.md) — React Query key conventions (`['mini-program', …]`) for pool registration, group detail, and matching surfaces
+| | |
+|---|---|
+| **Platform** | WeChat Mini Program (`weapp`) |
+| **Framework** | Taro 4.2.0 + React 18 |
+| **Language** | TypeScript 5.4+ (strict, ESM) |
+| **Styling** | Sass / SCSS (custom token system) |
+| **State** | TanStack React Query v5 |
+| **Build** | Vite 4 (via `@tarojs/vite-runner`) |
+| **Test** | Vitest (Node environment) |
 
-## Coordination rules
+---
+
+## Source-of-Truth Entry Points
+
+- `src/app.ts` — app lifecycle entry (launch, providers, pending-order resume bridge)
+- `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboardingRoutes.ts` + tab config from `lib/tabBarConfig.ts`
+- `src/lib/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
+- `src/lib/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
+- `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate
+- `src/pages/login/index.tsx` + `src/hooks/useWeChatLogin.ts` — returning-user WeChat login
+- `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
+
+---
+
+## Project Structure
+
+```
+src/
+├── pages/               # Mini-program pages (one folder per route)
+│   ├── discover/        # Tab 0: Event pool discovery feed
+│   ├── events/          # Tab 1: "足迹" — user's event history
+│   ├── connections/     # Tab 2: "连接" — matched group & social connections
+│   ├── profile/         # Tab 3: "我的" — user profile & settings
+│   ├── index/           # Landing / splash page (cold entry)
+│   ├── login/           # WeChat login entry for returning users
+│   ├── onboarding/      # Subpackage: onboarding flow
+│   ├── blind-box-payment/
+│   ├── payment-verification/
+│   ├── event-detail/
+│   ├── event-feedback/
+│   ├── pool-registration/
+│   ├── matching-status/
+│   ├── squad-unboxing/
+│   ├── pool-group-detail/
+│   ├── icebreaker-session/
+│   ├── edit-profile/
+│   ├── rewards/
+│   ├── invite/
+│   ├── terms/
+│   └── center-tab-empty/
+├── components/          # Shared UI components & primitives
+├── hooks/               # Custom React hooks
+├── lib/                 # Runtime helpers & business logic
+├── providers/           # App-level React context providers
+├── assets/              # Static assets (copied to dist/assets)
+├── styles/              # Global Sass token system
+├── native-custom-tab-bar/  # ACTIVE native WeChat tab bar (WXML/WXSS/JS)
+├── custom-tab-bar/      # INACTIVE Taro JSX tab bar (not shipped)
+├── app.ts               # App lifecycle entry
+├── app.config.ts        # App config: pages, subpackages, tabBar, preloadRule
+└── app.scss             # Global styles
+```
+
+---
+
+## Build & Development Commands
+
+```bash
+# Development
+npm run dev:weapp --workspace=mini-program
+
+# Production build (WeChat)
+npm run build:weapp --workspace=mini-program
+
+# Type checking
+npm run typecheck --workspace=mini-program
+
+# Testing (Vitest)
+npm run test --workspace=mini-program
+
+# Asset optimization (Xiaoyue personality assets)
+npm run optimize:xiaoyue --workspace=mini-program
+npm run check:xiaoyue-assets --workspace=mini-program
+```
+
+---
+
+## Native Custom Tab Bar
+
+The shipped mini-program tab bar is the **native WeChat component** copied from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/` during build. The Taro JSX implementation in `src/custom-tab-bar/` is **not** the active runtime path.
+
+| Aspect | Details |
+|--------|---------|
+| **Active runtime** | `src/native-custom-tab-bar/` → copied to `dist/custom-tab-bar/` at build time |
+| **Inactive Taro JSX** | `src/custom-tab-bar/index.tsx` (kept for reference; not compiled into dist) |
+| **Copy rule** | `config/index.ts` `copy.patterns` handles the native → dist copy |
+| **WXML root** | `<cover-view class="joy-custom-tab-bar">` with nested `<cover-view>` and `<cover-image>` only |
+| **Center CTA** | Floating circular button ("去发现") with gradient, shadow, and negative offset geometry |
+| **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow` |
+| **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories |
+
+### Layering & compatibility rules
+
+- Only `cover-view`, `cover-image`, and `button` are valid children inside the native tab bar tree.
+- Root uses `position: fixed` + `z-index: 120`.
+- `textarea` and `input` near the bottom of the screen require real-device verification.
+- Skyline renderer is **disabled** by default; re-validate `getTabBar` behavior if enabling later.
+
+---
+
+## Package Loading Strategy
+
+1. **Tab pages** (`discover`, `events`, `connections`, `profile`) live in the **main package**.
+2. **Heavy non-tab flows** (onboarding: personality test, profile forms, review) are in the **`pages/onboarding` subpackage**.
+3. **Preload rules** are declared from likely entry pages (`index`, `login`) before reaching for independent subpackages.
+4. Any proposal for independent subpackages must include a self-contained bootstrap plan because `app.ts` and `AuthProvider` centralize app-level providers and auth setup.
+
+---
+
+## Where New Files Go
+
+| What | Where |
+|------|-------|
+| New page | `apps/mini-program/src/pages/<page-name>/index.tsx` (+ `.scss`, `.config.ts` if needed) |
+| New component | `apps/mini-program/src/components/<ComponentName>.tsx` (+ `.scss`) |
+| New hook | `apps/mini-program/src/hooks/use<HookName>.ts` |
+| New lib helper | `apps/mini-program/src/lib/<helper>.ts` |
+| UI constants (timing, colors, intervals) | `apps/mini-program/src/lib/uiConstants.ts` — **centralized source of truth** |
+| App-level config / registration | `apps/mini-program/src/app.ts`, `src/app.config.ts` |
+| Shared types, schemas, constants | `packages/shared/src/` (import via `@shared/*` or `@joyjoin/shared`) |
+| New tab bar item | `src/lib/tabBarConfig.ts` + `src/native-custom-tab-bar/index.js` + `src/app.config.ts` |
+
+---
+
+## Coordination Rules
 
 - Treat the mini-program as the strongest current reference for payment mechanics.
 - Before changing auth/session, API wrapper behavior, or payment flow here, review the matching web surface in `apps/user-client` and the guidance in [`../../docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md).
 - Keep mini-program runtime wiring here, but move genuinely shared contracts toward `packages/shared/src/`.
 
-## Visual QA and pixel discipline
+---
 
-- Canonical rules (spec-exact vs **8rpx** rhythm, **WeChat DevTools** pre-merge gate, reviewer expectations): [`.github/skills/mini-program-frontend-excellence/references/pixel-precision.md`](../../.github/skills/mini-program-frontend-excellence/references/pixel-precision.md).
-- Durable backlog for optional automation (PR template, narrow style tests): [`repo-memory/candidates/mini-program-visual-qa-wechat-devtools-ci-gap.md`](../../repo-memory/candidates/mini-program-visual-qa-wechat-devtools-ci-gap.md).
+## Visual QA and Pixel Discipline
 
-## Package Loading Strategy
+- Canonical rules (spec-exact vs **8rpx** rhythm, **WeChat DevTools** pre-merge gate): [`.github/skills/mini-program-frontend-excellence/references/pixel-precision.md`](../../.github/skills/mini-program-frontend-excellence/references/pixel-precision.md).
+- Durable backlog for optional automation: [`repo-memory/candidates/mini-program-visual-qa-wechat-devtools-ci-gap.md`](../../repo-memory/candidates/mini-program-visual-qa-wechat-devtools-ci-gap.md).
 
-- Keep tabBar pages in the main package.
-- Move heavy non-tab flows into ordinary subpackages first.
-- Add `preloadRule` from likely entry pages before reaching for more complex package modes.
-- Do not reject independent subpackages categorically, but only propose them when benchmarks show a material first-open or launch win after ordinary splitting, preload, and asset cleanup.
-- Any independent-subpackage proposal must include a self-contained bootstrap plan because `src/app.ts` and `src/providers/AuthProvider.tsx` currently centralize app-level providers and auth/query setup.
-- Async loading can help defer code paths, but it does not remove WeChat package-boundary rules.
+---
 
-## Native Custom Tab Bar
-
-The shipped mini-program tab bar is the native WeChat component copied from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/` during build. The Taro JSX implementation in `src/custom-tab-bar/` is not the active runtime path.
-
-### Source-of-truth files
-
-- `apps/mini-program/src/app.config.ts` — `tabBar.custom` ownership plus tab list
-- `apps/mini-program/config/index.ts` — build copy from `src/native-custom-tab-bar/` to `dist/custom-tab-bar/`
-- `apps/mini-program/src/native-custom-tab-bar/` — active WXML/WXSS/JS runtime
-- `apps/mini-program/src/hooks/useCustomTabBarSync.ts` — per-page selected-state and center-CTA sync
-
-### Renderer and layering rules
-
-- For `custom-tab-bar` specifically, WeChat docs still recommend `cover-view` plus `cover-image` with bottom-fixed positioning. Do not generalize that recommendation to ordinary page overlays.
-- Keep the native tab bar tree within `cover-view` nesting rules: only `cover-view`, `cover-image`, and `button`.
-- The outermost `cover-view` may use `position: fixed` and `z-index`; keep the root bar fixed to the bottom when changing layout.
-- Same-layer rendering reduces many historical native-component stacking issues, but it does not remove the specialized `custom-tab-bar` guidance or the need to test against bottom-page content.
-- `textarea` and `input` interactions near the bottom of the screen still require device verification.
-
-### Styling caveats
-
-- Treat shadows, gradients, and overflow-based protrusions as compatibility-sensitive, not guaranteed cross-renderer primitives.
-- The current center CTA uses shadow, gradient, and negative-offset geometry to create the floating circular look. Keep that design only if you are willing to verify it on target devices after every visual change.
-- If you need maximum compatibility, prefer simple filled shapes, internal spacing, and non-overflowing geometry over decorative effects.
-
-### State and instance model
-
-- Each tab page gets its own custom-tab-bar instance; selection state is not a global singleton.
-- Keep selected-index and center CTA updates page-driven through `useCustomTabBarSync`.
-- If `getTabBar` lookup or instance shape changes, update both the page hook and the native component contract together.
-
-### Skyline caveat
-
-- Current local dev config keeps Skyline disabled by default.
-- If Skyline is enabled later, re-validate root positioning, pointer events, and tab-bar instance lookup against the active WeChat docs before assuming the current implementation still works unchanged.
-
-### Change checklist
-
-1. Keep `tabBar.custom: true` and the full tab list in `src/app.config.ts`.
-2. Keep the active runtime under `src/native-custom-tab-bar/` when the change depends on WeChat-specific layering behavior.
-3. Do not add non-`cover-*` children to the native tab bar tree.
-4. When changing the center button shape or height, test the protruding geometry on real devices because overflow-style layouts are the least stable part of the implementation.
-5. After changing selection or badge logic, verify every tab page re-synchronizes through `useCustomTabBarSync`.
-6. After enabling Skyline or changing renderer assumptions, re-check `getTabBar` behavior before shipping.
-
-## Where new files go
-
-- **New mini-program page:** `apps/mini-program/src/pages/`
-- **Mini-program runtime helpers:** `apps/mini-program/src/lib/`
-- **App-level registration/config:** `apps/mini-program/src/app.ts` and `apps/mini-program/src/app.config.ts`
-- **Shared contracts/constants:** `packages/shared/src/`
-
-## Common commands
-
-```bash
-npm run build:weapp --workspace=mini-program
-npm run dev:weapp --workspace=mini-program
-```
-
-## Cold-entry timing probe
-
-Use the repo-root probe when you need repeatable DevTools-based timing for mini-program cold entry and onboarding preload checks.
+## Cold-Entry Timing Probe
 
 ```bash
 bash scripts/measure-mini-program-cold-entry.sh
 ```
 
-Optional overrides are available via environment variables, for example:
+Optional overrides: `SAMPLES=7 PRELOAD_SETTLE_MS=2000 bash scripts/measure-mini-program-cold-entry.sh`
 
-```bash
-SAMPLES=7 PRELOAD_SETTLE_MS=2000 bash scripts/measure-mini-program-cold-entry.sh
-```
+---
 
-The script installs `miniprogram-automator` only in a temporary directory, emits JSON with per-sample and summary stats, and treats `login -> personality-test` as a preload proxy rather than a full WeChat auth benchmark. It also exits early if WeChat DevTools CLI is not logged in.
-
-## Group analysis debug (WP4)
+## Group Analysis Debug (WP4)
 
 For **matched** flows, `GET /api/pool-groups/:groupId/analysis` returns `fromCache` and `generatedAt`. To help QA trust the pipeline without exposing noise to all users:
 
-- **Local `dev:weapp`:** a subtle line (**调试 · 桌友分析 实时生成** or **缓存**, plus a short timestamp) appears under the AI group-analysis blocks on **matching status** (chemistry card), **squad unboxing** (“这桌的整体氛围”), and **pool group detail** (“AI · 这桌氛围”).
+- **Local `dev:weapp`:** a subtle line appears under the AI group-analysis blocks on matching status, squad unboxing, and pool group detail.
 - **Production WeChat releases:** that line is **off** unless you opt in at build time.
-- **Beta / internal preview:** set `TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG=1` in the environment when running `npm run build:weapp --workspace=mini-program` so preview builds show the same hint.
+- **Beta / internal preview:** set `TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG=1` in the environment when running `npm run build:weapp --workspace=mini-program`.
 
-## Manual QA — AI surfaces (WP4)
+---
 
-Use this as a quick checklist before shipping AI-touched MP work; the same matrix lives in [`docs/runbooks/mini-program-ai-smoke.md`](../../docs/runbooks/mini-program-ai-smoke.md).
+## Manual QA — AI Surfaces (WP4)
 
 | Check | Where |
 |-------|--------|
@@ -133,9 +187,19 @@ Use this as a quick checklist before shipping AI-touched MP work; the same matri
 | Group analysis copy | Matching status, squad unboxing, pool group detail |
 | Social icebreaker | Host: warmup topics → phase advance |
 
-## Related docs
+---
 
-- [`../../docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md)
-- [`../../docs/perf.md`](../../docs/perf.md)
-- [`../../docs/wechat-mini-program-reference.md`](../../docs/wechat-mini-program-reference.md)
-- [`../../.github/skills/platform-coordination-protocol/SKILL.md`](../../.github/skills/platform-coordination-protocol/SKILL.md)
+## Related Docs
+
+| Document | Purpose |
+|----------|---------|
+| [`../../docs/PLATFORM_COORDINATION.md`](../../docs/PLATFORM_COORDINATION.md) | Auth, API, and payment flow parity between mini-program and web |
+| [`../../docs/perf.md`](../../docs/perf.md) | Performance guidelines for the monorepo |
+| [`../../docs/wechat-mini-program-reference.md`](../../docs/wechat-mini-program-reference.md) | WeChat-specific API reference |
+| [`../../docs/mini-program-data-fetching.md`](../../docs/mini-program-data-fetching.md) | React Query key conventions |
+| [`docs/TECH_STACK.md`](./docs/TECH_STACK.md) | Deep technical stack reference |
+| [`docs/USER_FLOW.md`](./docs/USER_FLOW.md) | Complete user flow mapping |
+| [`.github/skills/platform-coordination-protocol/SKILL.md`](../../.github/skills/platform-coordination-protocol/SKILL.md) | Skill: cross-platform coordination |
+| [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../../.github/skills/mini-program-frontend-excellence/SKILL.md) | Skill: UI quality, pixel precision, 8rpx rhythm |
+| [`docs/DEVICE_QA_CHECKLIST.md`](./docs/DEVICE_QA_CHECKLIST.md) | Pre-release device QA checklist |
+| [`docs/LIST_VIRTUALIZATION.md`](./docs/LIST_VIRTUALIZATION.md) | Long-list thresholds and animation budget |

@@ -44,6 +44,7 @@ describe('mini-program onboarding page transitions', () => {
       const source = readFileSync(filePath, 'utf8')
 
       expect(source).toContain('@include onboarding-page-exit-transition')
+      expect(source).toContain('@include onboarding-page-enter-transition')
       expect(source).toContain('@include onboarding-stage')
     })
   })
@@ -73,6 +74,13 @@ describe('mini-program onboarding page transitions', () => {
     expect(source).toContain("'20': 20rpx")
     expect(source).toContain("'24': 24rpx")
     expect(source).toContain('$onboarding-stage-shift-ids')
+  })
+
+  it('generates a shared entrance keyframe for onboarding pages', () => {
+    const source = readFileSync(MIXINS_PATH, 'utf8')
+
+    expect(source).toContain('@keyframes joy-onboarding-enter')
+    expect(source).toContain('@mixin onboarding-page-enter-transition')
   })
 })
 

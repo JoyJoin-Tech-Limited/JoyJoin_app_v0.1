@@ -25,6 +25,7 @@
     "./matchingWeights": "./src/matchingWeights.ts",
     "./personality": "./src/personality/index.ts",
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
+    "./personality/resultViewModel": "./src/personality/resultViewModel.ts",
     "./types/groupAnalysis": "./src/types/groupAnalysis.ts",
     "./types/aiMeta": "./src/types/aiMeta.ts",
     "./ai/onboarding": "./src/ai/onboarding.ts",

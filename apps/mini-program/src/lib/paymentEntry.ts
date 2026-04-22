@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
+import { TOAST_LONG_MS } from './uiConstants'
 import type { MiniProgramPendingOrderLookupResult } from './paymentPendingOrder'
 import {
   clearPaymentReturnContextStorage,
@@ -11,6 +12,8 @@ export interface OpenMiniProgramPaymentPageOptions {
   paymentsEnabled?: boolean
   currentUserId?: string | null
   preserveReturnContext?: boolean
+  /** Tab to return to if navigateBack fails (e.g. 'discover', 'events', 'profile') */
+  returnTab?: string
 }
 
 export type MiniProgramPaymentEntryDecision =
@@ -37,6 +40,7 @@ export async function openMiniProgramPaymentPage({
   paymentsEnabled,
   currentUserId,
   preserveReturnContext = false,
+  returnTab,
 }: OpenMiniProgramPaymentPageOptions): Promise<void> {
   const pendingOrder = readStoredPendingOrder({ currentUserId })
 
@@ -57,10 +61,11 @@ export async function openMiniProgramPaymentPage({
     await Taro.showToast({
       title: '支付功能维护中，请稍后再试',
       icon: 'none',
-      duration: 2400,
+      duration: TOAST_LONG_MS,
     })
     return
   }
 
-  await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.blindBoxPayment })
+  const returnTabParam = returnTab ? `?returnTab=${encodeURIComponent(returnTab)}` : ''
+  await Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.blindBoxPayment}${returnTabParam}` })
 }

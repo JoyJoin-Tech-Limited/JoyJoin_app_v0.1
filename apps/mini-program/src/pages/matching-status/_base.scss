@@ -1,0 +1,35 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+@mixin matching-status-base {
+  @include page-gradient-bg;
+  padding: $container-padding;
+
+  &--reduce-motion {
+    .matching-status__dot,
+    .matching-status__waiting-seat--new .matching-status__waiting-seat-core,
+    .matching-status__arrival-toast,
+    .matching-status__overlay-member-card {
+      animation: none !important;
+    }
+
+    .matching-status__waiting-seat-core,
+    .matching-status__waiting-seat-burst,
+    .matching-status__overlay-member-card {
+      transition-duration: 0s !important;
+    }
+
+    .matching-status__hero-glow {
+      filter: none;
+    }
+  }
+
+  &--exiting {
+    opacity: 0;
+    transform: translate3d(-18rpx, 0, 0) scale(0.986);
+    transition:
+      opacity 0.22s ease,
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+}

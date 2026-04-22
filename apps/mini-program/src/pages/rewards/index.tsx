@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -15,6 +15,7 @@ import {
 } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { COLOR_ACCENT_PINK, TOAST_MEDIUM_MS, TOAST_ERROR_MS } from '../../lib/uiConstants'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -163,12 +164,12 @@ export default function RewardsPage() {
       Taro.showToast({
         title: response.redeemedItem?.nameCn ? `已兑换${response.redeemedItem.nameCn}` : '兑换成功',
         icon: 'success',
-        duration: 2200,
+        duration: TOAST_MEDIUM_MS,
       })
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : '兑换失败，请稍后重试'
-      Taro.showToast({ title: message, icon: 'none', duration: 2600 })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_ERROR_MS })
     },
   })
 
@@ -190,7 +191,7 @@ export default function RewardsPage() {
         content: `确定使用 ${costCoins} 悦币兑换「${nameCn}」吗？`,
         confirmText: '立即兑换',
         cancelText: '再想想',
-        confirmColor: '#FF6B9D',
+        confirmColor: COLOR_ACCENT_PINK,
       })
 
       if (!confirm) {
@@ -212,6 +213,7 @@ export default function RewardsPage() {
         <View className='rewards-page__error'>
           <StatusCard
             tone='error'
+            heroSrc='/assets/lovart/lovart-generic-error.webp'
             title='奖励加载失败'
             description='请稍后重试，或返回个人主页继续浏览。'
             action={{ label: '重新加载', onClick: handleRefresh }}
@@ -370,7 +372,12 @@ export default function RewardsPage() {
           ))
         ) : (
           <Card className='rewards-page__empty-card'>
-            <Text className='rewards-page__empty-emoji'>✨</Text>
+            <Image
+              className='rewards-page__empty-hero'
+              src='/assets/lovart/lovart-generic-empty.webp'
+              mode='aspectFit'
+              lazyLoad
+            />
             <Text className='rewards-page__empty-title'>还没有奖励资产</Text>
             <Text className='rewards-page__empty-text'>参加活动、完善资料或邀请好友后，奖励会显示在这里。</Text>
           </Card>
@@ -425,6 +432,12 @@ export default function RewardsPage() {
           })
         ) : (
           <Card className='rewards-page__empty-card rewards-page__empty-card--compact'>
+            <Image
+              className='rewards-page__empty-hero rewards-page__empty-hero--compact'
+              src='/assets/lovart/lovart-generic-empty.webp'
+              mode='aspectFit'
+              lazyLoad
+            />
             <Text className='rewards-page__empty-text'>兑换商城正在准备中，稍后会开放更多奖励。</Text>
           </Card>
         )}
@@ -463,6 +476,12 @@ export default function RewardsPage() {
           </Card>
         ) : (
           <Card className='rewards-page__empty-card rewards-page__empty-card--compact'>
+            <Image
+              className='rewards-page__empty-hero rewards-page__empty-hero--compact'
+              src='/assets/lovart/lovart-generic-empty.webp'
+              mode='aspectFit'
+              lazyLoad
+            />
             <Text className='rewards-page__empty-text'>还没有奖励记录，继续参与活动就会积累成长值与奖励。</Text>
           </Card>
         )}

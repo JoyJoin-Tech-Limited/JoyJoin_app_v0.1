@@ -30,6 +30,11 @@ description: >
 
 Tests use **Vitest** in the workspaces that currently have active test suites, but not every workspace `test` script invokes Vitest yet.
 
+### MCP-assisted verification
+
+- **Playwright MCP:** For regression tests that cover browser-based user journeys (onboarding, event discovery, payment flows), use the **Playwright MCP server** (`playwright`) to automate navigation, form interaction, and visual verification. This complements Vitest unit tests with flow-level validation.
+- **WeChat DevTools MCP:** For mini-program regression coverage, use the **WeChat DevTools MCP server** (`wechat-devtools`) to automate page navigation, element tapping, and WXML inspection within the WeChat Mini Program runtime.
+
 ```bash
 # Run server tests
 npm run test -w @joyjoin/server
@@ -165,3 +170,8 @@ Do not remove guardrail checks — if a convention changes, update the check, no
 - [ ] `npm run guardrails` passes after any changes to root scripts or env conventions
 - [ ] New CI guardrail checks update `check-guardrails.mjs`, not remove it
 - [ ] Test includes a comment referencing what it guards against (PR number or description)
+
+## Related skills
+
+- [`../process-test-first/SKILL.md`](../process-test-first/SKILL.md) — red-green-refactor discipline for bug fixes and deterministic logic
+- [`../process-systematic-debugging/SKILL.md`](../process-systematic-debugging/SKILL.md) — structured root-cause analysis before writing regression tests

@@ -39,6 +39,10 @@ export function useOnboardingAnalytics(
     onboardingAnalytics.errorOccurred(step, errorType, errorMessage)
   }, [step])
 
+  const interaction = useCallback((action: string, metadata?: Record<string, unknown>) => {
+    onboardingAnalytics.interaction(step, action, metadata)
+  }, [step])
+
   useEffect(() => {
     if (!enabled || !autoTrackStart || hasStartedRef.current) {
       return
@@ -53,5 +57,6 @@ export function useOnboardingAnalytics(
     stepAbandoned,
     validationFailed,
     errorOccurred,
-  }), [errorOccurred, stepAbandoned, stepCompleted, stepStarted, validationFailed])
+    interaction,
+  }), [errorOccurred, interaction, stepAbandoned, stepCompleted, stepStarted, validationFailed])
 }

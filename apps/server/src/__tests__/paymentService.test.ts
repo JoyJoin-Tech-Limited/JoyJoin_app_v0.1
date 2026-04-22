@@ -52,6 +52,13 @@ vi.mock("../repositories/eventCreditsRepo", () => ({
     getRefundBlockerCountForPayment: vi.fn().mockResolvedValue(0),
   },
 }));
+vi.mock("../repositories/refundAttemptsRepo", () => ({
+  refundAttemptsRepo: {
+    create: vi.fn().mockResolvedValue({ id: "ra-001" }),
+    findPendingByPaymentId: vi.fn().mockResolvedValue(undefined),
+    updateStatus: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 import { PaymentService } from "../paymentService";
 import { eventCreditsRepo } from "../repositories/eventCreditsRepo";

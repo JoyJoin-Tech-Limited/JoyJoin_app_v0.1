@@ -95,3 +95,5 @@ related_skills:
     when: adding session telemetry or audit logging for icebreaker actions
   - skill: matching-domain
     when: icebreaker is launched from a post-match flow and context bridges both domains
+  - skill: multi-agent-deliberation
+    when: new phase or session flow changes with UX + backend + AI tension

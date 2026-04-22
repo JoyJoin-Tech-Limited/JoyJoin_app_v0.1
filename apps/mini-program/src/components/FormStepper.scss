@@ -1,0 +1,91 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.form-stepper {
+  flex-shrink: 0;
+
+  &__progress-track {
+    width: 100%;
+    height: 6rpx;
+    background: $color-divider;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: $brand-gradient;
+    border-radius: 3rpx;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 112rpx;
+    padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__back {
+    width: 64rpx;
+    height: 64rpx;
+    min-height: 64rpx;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: transparent;
+    border: 2rpx solid $color-border;
+
+    &:active {
+      background: rgba($color-text-primary, 0.05);
+      border-color: rgba($color-primary, 0.4);
+    }
+
+    &::after {
+      border: none;
+    }
+  }
+
+  &__back-icon {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+    line-height: 1;
+  }
+
+  &__back-placeholder {
+    width: 64rpx;
+    height: 64rpx;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+  }
+
+  &__step-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.4;
+  }
+
+  &__title-wrap {
+    padding: 0 $container-padding $spacing-md;
+    @include safe-area-inline($container-padding);
+  }
+
+  &__title {
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.3;
+    display: block;
+  }
+}

@@ -1,0 +1,113 @@
+skill: venue-location-services
+
+primary_ownership: >
+  Venue catalog CRUD, automatic venue-to-group assignment, venue matching for event planning,
+  time-slot availability, venue deals and bookings, AMap/Gaode geocoding integration,
+  and venue data quality validation.
+
+use_when:
+  - working with venue records, creation, updates, or admin venue management
+  - changing venue assignment logic after pool matching
+  - modifying venue matching scoring or criteria
+  - adding or debugging venue time slots or availability checks
+  - integrating AMap/Gaode geocoding, place search, or address resolution
+  - working with venue deals, discounts, or redemption flows
+  - investigating venue data quality reports or duplicate names
+  - adding new API routes under /api/admin/venues or /api/venues
+
+do_not_use_when:
+  - task is about pool matching or group formation (use event-pool-and-matching-operations)
+  - task is about pair compatibility weights (use matching-domain)
+  - task is purely about admin RBAC or audit logging (use admin-audit-and-rbac-governance)
+  - task is about LLM provider routing or AI generation (use llm-runtime-safety-and-integration)
+
+strong_triggers:
+  - venue-location-services
+  - assignVenuesToGroups
+  - saveVenueAssignments
+  - VenueMatchingService
+  - findMatchingVenues
+  - selectBestVenue
+  - venueAssignmentService
+  - venueMatchingService
+  - AmapPicker
+  - AMap_API_KEY
+  - AMAP_SECURITY_KEY
+  - /api/config/amap
+  - /api/admin/venues
+  - /api/venues
+  - venueTimeSlots
+  - venueTimeSlotBookings
+  - venueDeals
+  - checkVenueDataQuality
+  - normalizeVenueQualityRecord
+  - getAvailableVenuesForDateTime
+
+owned_files:
+  - apps/server/src/venueAssignmentService.ts
+  - apps/server/src/venueMatchingService.ts
+  - apps/server/src/lib/venueDataQuality.ts
+  - apps/admin-client/src/components/AmapPicker.tsx
+  - packages/shared/src/schema.ts
+
+owned_paths:
+  - /api/admin/venues
+  - /api/admin/venues/data-quality
+  - /api/admin/venues/*/deals
+  - /api/admin/venue-deals/*
+  - /api/admin/venues/*/time-slots
+  - /api/admin/time-slots/*
+  - /api/admin/venues/*/bookings
+  - /api/venues/*/deals
+  - /api/venues/*/with-deals
+  - /api/venues/by-name
+  - /api/venues/active-districts
+  - /api/venues/check-availability
+  - /api/venues/book
+  - /api/config/amap
+
+owned_symbols:
+  - assignVenuesToGroups
+  - saveVenueAssignments
+  - VenueMatchingService
+  - findMatchingVenues
+  - selectBestVenue
+  - checkVenueDataQuality
+  - normalizeVenueQualityRecord
+  - AmapPicker
+  - getAvailableVenuesForDateTime
+  - getAllVenues
+  - getVenue
+  - createVenue
+  - updateVenue
+  - deleteVenue
+  - getVenueDeals
+  - createVenueDeal
+  - updateVenueDeal
+  - deleteVenueDeal
+  - getVenueTimeSlots
+  - createVenueTimeSlot
+  - updateVenueTimeSlot
+  - deleteVenueTimeSlot
+  - venues
+  - venueDeals
+  - venueTimeSlots
+  - venueTimeSlotBookings
+
+related_skills:
+  - skill: event-pool-and-matching-operations
+    when: venue assignment is called from match-run lifecycle or pool group outcomes
+  - skill: matching-domain
+    when: changes blur the line between venue scoring and pair/group matching weights
+  - skill: admin-audit-and-rbac-governance
+    when: adding new admin routes or changing venue mutation permissions
+  - skill: database-migration-safety
+    when: adding venue schema columns, new tables, or tightening constraints
+  - skill: platform-coordination-protocol
+    when: venue details or deals appear in both web and mini-program surfaces
+  - skill: llm-runtime-safety-and-integration
+    when: adding AI-generated venue descriptions or vibe copy
+  - skill: backend-models-standards
+    when: defining new Drizzle tables or relationships for venue sub-features
+  - skill: payment-entitlement-authority
+    when: venue deals tie into payment flows or redemption gating

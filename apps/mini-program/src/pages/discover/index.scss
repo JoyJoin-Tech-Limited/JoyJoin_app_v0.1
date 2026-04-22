@@ -20,6 +20,14 @@
   min-height: 100vh;
   background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
 
+  // ── Sticky header ─────────────────────────────────────────────
+  &__sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: inherit;
+  }
+
   // ── Hero ──────────────────────────────────────────────────────
   &__hero {
     padding: $spacing-xl $container-padding $spacing-lg;
@@ -107,7 +115,7 @@
     background: $color-surface;
     box-shadow: $shadow-sm;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 
     &--sm {
       padding: 6rpx $spacing-sm;
@@ -139,11 +147,22 @@
     margin-bottom: $spacing-md;
   }
 
+  // ── Pool list wrapper (VirtualList root) ──────────────────────
+  &__pool-list-wrapper {
+    // No special styles needed — VirtualList handles its own layout
+  }
+
   // ── Pool list ─────────────────────────────────────────────────
   &__pool-list {
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
+  }
+
+  // ── VirtualList placeholder ───────────────────────────────────
+  .virtual-list__placeholder {
+    // Inherits height from inline style
+    // No visual styling — completely invisible spacer
   }
 
   // ── Pool card ─────────────────────────────────────────────────
@@ -155,6 +174,7 @@
     opacity: 0;
     transform: translateY(18rpx);
     animation: discover-card-enter 0.34s ease-out forwards;
+    will-change: transform, opacity;
 
     &:active {
       transform: scale(0.98);
@@ -165,13 +185,41 @@
       box-shadow: 0 14rpx 36rpx rgba($color-primary, 0.12);
     }
 
-    // Skeleton variant
+    // Skeleton variant (initial loading state)
     &--skeleton {
       min-height: 200rpx;
       pointer-events: none;
       opacity: 1;
       transform: none;
       animation: none;
+    }
+
+    // Virtualized items without animation
+    &--no-animate {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
+
+    // ── Quantized accent families ──
+    &--accent-warm {
+      border-left: 4rpx solid #F59E0B;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#F59E0B, 0.06) 100%);
+    }
+
+    &--accent-cool {
+      border-left: 4rpx solid #06B6D4;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#06B6D4, 0.06) 100%);
+    }
+
+    &--accent-fire {
+      border-left: 4rpx solid #EF4444;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#EF4444, 0.06) 100%);
+    }
+
+    &--accent-calm {
+      border-left: 4rpx solid #8B5CF6;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#8B5CF6, 0.06) 100%);
     }
   }
 
@@ -198,6 +246,7 @@
     border-radius: 50%;
     background: $color-primary;
     animation: discover-live-pulse 1.8s ease-in-out infinite;
+    will-change: transform, opacity;
   }
 
   &__pool-live-label {
@@ -259,6 +308,54 @@
       background: rgba($color-success, 0.15);
       color: $color-success;
     }
+  }
+
+  // ── Personality palette ───────────────────────────────────────
+  &__pool-palette {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    min-height: 36rpx;
+  }
+
+  &__pool-palette-label {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    white-space: nowrap;
+  }
+
+  &__pool-palette-glyphs {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  &__pool-palette-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28rpx;
+    height: 28rpx;
+    padding: 0 6rpx;
+    border-radius: 999rpx;
+    background: $color-divider;
+    font-size: 20rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__pool-match-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4rpx;
+    padding: 4rpx 12rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.1);
+    font-size: 20rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    margin-left: auto;
   }
 
   // ── Pool meta (location / date) ───────────────────────────────
@@ -349,7 +446,8 @@
   &__progress-fill {
     height: 100%;
     border-radius: 6rpx;
-    transition: width 0.3s ease;
+    transform-origin: left;
+    transition: transform 0.4s ease-out;
 
     &--open {
       background: $color-primary;
@@ -361,6 +459,23 @@
 
     &--closed {
       background: $color-text-muted;
+    }
+
+    // Family-driven accent colors (override when card has accent family)
+    .discover-auth__pool-card--accent-warm &--open {
+      background: #F59E0B;
+    }
+
+    .discover-auth__pool-card--accent-cool &--open {
+      background: #06B6D4;
+    }
+
+    .discover-auth__pool-card--accent-fire &--open {
+      background: #EF4444;
+    }
+
+    .discover-auth__pool-card--accent-calm &--open {
+      background: #8B5CF6;
     }
   }
 
@@ -476,7 +591,19 @@
 
     50% {
       opacity: 1;
-      transform: scale(1.16);
+      transform: scale(1.08);
+    }
+  }
+
+  @keyframes discover-palette-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 
@@ -508,5 +635,29 @@
   // ── Bottom spacer ─────────────────────────────────────────────
   &__spacer {
     height: 160rpx;
+  }
+}
+
+// ── Archetype Glyph (global, used inside PoolCard) ──────────────
+.archetype-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+
+  &--warm {
+    color: #F59E0B;
+  }
+
+  &--cool {
+    color: #06B6D4;
+  }
+
+  &--fire {
+    color: #EF4444;
+  }
+
+  &--calm {
+    color: #8B5CF6;
   }
 }

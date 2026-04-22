@@ -3,7 +3,7 @@ import type {
   SocialIcebreakerPhase,
 } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
-import type { SessionParticipant, SessionPhase } from './phaseViews'
+import type { SessionParticipant, SessionPhase } from './PhaseViews'
 
 export interface IcebreakerSession extends SocialSessionState {
   id: string
@@ -26,7 +26,6 @@ export interface SessionDetailsParticipant {
   interests?: string[]
   topicsHappy?: string[]
   topicsAvoid?: string[]
-  [key: string]: unknown
 }
 
 export interface LegacyIcebreakerSessionDetails {
@@ -35,7 +34,6 @@ export interface LegacyIcebreakerSessionDetails {
   eventType?: string
   eventTitle?: string
   participants?: SessionDetailsParticipant[]
-  [key: string]: unknown
 }
 
 export interface SocialStartResponse {

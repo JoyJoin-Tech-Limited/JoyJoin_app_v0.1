@@ -5,6 +5,12 @@
       "id": "context7-api-key",
       "description": "Context7 API key (create at https://context7.com/) — used for library/framework docs via MCP",
       "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "github-pat",
+      "description": "GitHub Personal Access Token (classic or fine-grained) with repo, workflow, and read:org scopes — used for PR status, CI checks, and release readiness via MCP",
+      "password": true
     }
   ],
   "servers": {
@@ -28,6 +34,49 @@
       "env": {
         "MEMORY_DB_PATH": ".joyjoin/agent-memory-db"
       }
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github-pat}"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server"]
+    },
+    "observability": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/e2e/mcp-servers/observability.mjs"]
+    },
+    "postgres": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/mcp-launchers/postgres.sh"],
+      "env": {}
+    },
+    "wechat-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "wechat-dev-mcp"],
+      "env": {
+        "WECHAT_DEVTOOLS_CLI_PATH": "/Applications/wechatwebdevtools.app/Contents/MacOS/cli"
+      }
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+      "env": {}
     }
   }
 }

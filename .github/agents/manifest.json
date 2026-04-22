@@ -76,7 +76,7 @@
         "code-review",
         "monorepo-workspace-governance"
       ],
-      "toolingStatus": "sufficient"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "Researcher",
@@ -141,7 +141,7 @@
         "orchestration-turn-reporting",
         "first-principles-velocity"
       ],
-      "toolingStatus": "sufficient"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "Supervisor",
@@ -236,7 +236,7 @@
         "event-pool-and-matching-operations",
         "social-icebreaker-domain"
       ],
-      "toolingStatus": "sufficient"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "Database Schema & Migration Auditor",
@@ -259,7 +259,7 @@
         "backend-models-standards",
         "reliability-and-state-integrity"
       ],
-      "toolingStatus": "sufficient"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "debug",
@@ -284,8 +284,8 @@
     },
     {
       "name": "Expert React Frontend Engineer",
-      "file": "frontend engineer.md",
-      "description": "Use when working on JoyJoin browser-first frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, polishing motion, loading states, empty states, onboarding moments, or visual hierarchy, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review. Trigger phrases: web UI polish, polish the interaction, improve micro-interactions, make this feel premium, add delight here, loading state delight, empty state polish, motion design.",
+      "file": "frontend-engineer.agent.md",
+      "description": "Use when working on JoyJoin web reference frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, polishing motion, loading states, empty states, onboarding moments, or visual hierarchy, reviewing the web source-of-truth during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review. Trigger phrases: web UI polish, polish the interaction, improve micro-interactions, make this feel premium, add delight here, loading state delight, empty state polish, motion design.",
       "tools": [
         "read",
         "search",
@@ -308,7 +308,7 @@
         "platform-coordination-protocol",
         "performance-benchmark"
       ],
-      "toolingStatus": "sufficient"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "Launch Readiness Agent",
@@ -332,13 +332,17 @@
         "first-principles-velocity",
         "security-scan",
         "platform-observability-and-ops",
-        "code-review"
+        "code-review",
+        "feature-flags-launch-config",
+        "caching-strategy",
+        "websocket-realtime",
+        "analytics-tracking"
       ],
-      "toolingStatus": "partial"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "SE: Product Manager",
-      "file": "PM advisor.md",
+      "file": "pm-advisor.agent.md",
       "description": "Use when drafting issue-ready product scope, aligning business value with user needs, prioritizing roadmap tradeoffs, or defining success metrics for work that should be tracked as a backlog item.",
       "tools": [
         "read",
@@ -401,9 +405,12 @@
         "first-principles-velocity",
         "e2e-test-runner",
         "testing-and-regression-guardrails",
-        "performance-benchmark"
+        "performance-benchmark",
+        "notification-system",
+        "error-handling-patterns",
+        "websocket-realtime"
       ],
-      "toolingStatus": "partial"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "Verifier",
@@ -484,11 +491,11 @@
         "performance-benchmark",
         "frontend-performance-and-loading"
       ],
-      "toolingStatus": "sufficient"
+      "toolingStatus": "enhanced"
     },
     {
       "name": "Principal Software Engineer",
-      "file": "principal SWE.md",
+      "file": "principal-swe.agent.md",
       "description": "Use when you need principal-level software engineering guidance, architecture tradeoff analysis, implementation review, or pragmatic plans for complex technical changes.",
       "tools": [
         "read",
@@ -510,7 +517,7 @@
     },
     {
       "name": "Prompt Engineer",
-      "file": "prompt engineer.md",
+      "file": "prompt-engineer.agent.md",
       "description": "Use when analyzing or rewriting prompts, improving system prompts, maintaining repo-resident prompt files, adding better examples, or tightening prompt structure for more reliable model behavior.",
       "tools": [
         "read",
@@ -576,12 +583,19 @@
       "name": "Game Design Agent",
       "file": "game-design-agent.agent.md",
       "description": "Use when compiling or curating post-match, pre-event Social Icebreaker run plans (IcebreakerRunPlan), psychological safety scoring, energy arc sequencing, cohort personalization, and dev-ready handoff artifacts. Trigger phrases: compile icebreaker plan, Game Design Agent, run plan JSON, PressureGauge, FlowCurator, post-match icebreaker, minimal peer pressure flow.",
-      "tools": ["read", "search", "edit"],
+      "tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "argumentHint": "Provide pool/group context, target cohort size, event window, and any theme or match metadata. Say whether output is repo docs only or sample JSON for a worker.",
       "subagents": [],
       "portfolioRole": "icebreaker-plan-compilation",
       "orchestrationPhase": "support-audited",
-      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "handoffs": [
+        "Game Development Agent",
+        "AI Engineer"
+      ],
       "skills": [
         "orchestration-turn-reporting",
         "first-principles-velocity",
@@ -601,12 +615,20 @@
       "name": "Game Development Agent",
       "file": "game-development-agent.agent.md",
       "description": "Use when binding compiled IcebreakerRunPlan segments to shipped Social Icebreaker templates, implementing or updating mini-program phase views first, web registry parity, server advance rules, and regression tests. Trigger phrases: implement icebreaker phase, phaseViews, socialIcebreakerPhaseRegistry, TemplateMatcher, ship mini-program first, parity with web.",
-      "tools": ["read", "search", "edit", "execute"],
+      "tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
       "argumentHint": "Provide the plan segment or phase id, target files (Taro vs web vs server), acceptance criteria, and any env flags (e.g. SOCIAL_ICEBREAKER_ENABLE_*).",
       "subagents": [],
       "portfolioRole": "icebreaker-template-implementation",
       "orchestrationPhase": "support-audited",
-      "handoffs": ["QA Agent", "Mini-Program Parity Auditor"],
+      "handoffs": [
+        "QA Agent",
+        "Mini-Program Parity Auditor"
+      ],
       "skills": [
         "orchestration-turn-reporting",
         "first-principles-velocity",
@@ -627,12 +649,20 @@
       "name": "MiniScript Story Agent",
       "file": "miniscript-story-agent.agent.md",
       "description": "Use when shaping or reviewing 迷你剧本杀 JSON (MiniScriptStoryFramework), POST /api/miniscript/generate contracts, style/genre enums, in-session tool flow, or safety constraints for Social phase mini_script. Trigger phrases: MiniScriptAgent, miniscript-story-framework, 迷你剧本杀, sinHook, act_flow, /api/miniscript/generate.",
-      "tools": ["read", "search", "edit"],
+      "tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "argumentHint": "Provide social session lifecycle context, whether change is docs-only vs code, and target surface (Taro vs web).",
       "subagents": [],
       "portfolioRole": "miniscript-story-contracts",
       "orchestrationPhase": "support-audited",
-      "handoffs": ["Game Development Agent", "AI Engineer", "Backend Engineer"],
+      "handoffs": [
+        "Game Development Agent",
+        "AI Engineer",
+        "Backend Engineer"
+      ],
       "skills": [
         "orchestration-turn-reporting",
         "first-principles-velocity",
@@ -648,12 +678,19 @@
       "name": "Icebreaker Auction Phase Agent",
       "file": "icebreaker-auction-phase-agent.agent.md",
       "description": "Use when reviewing or extending Social phase auction: virtual-coin bidding, generateAuctionLots (social-auction-lots-v1, SOCIAL_AUCTION_LLM_ENABLED), REST auction/* routes, advance guard auctionAllLotsClosed, or recap auctionRecapLines. Trigger phrases: auction phase, SOCIAL_ICEBREAKER_ENABLE_AUCTION, /auction/generate-lots, virtual coin auction.",
-      "tools": ["read", "search", "edit"],
+      "tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "argumentHint": "State whether LLM is enabled in env, target clients (web AuctionPhase vs Taro AuctionPhaseView), and any economy tuning requested.",
       "subagents": [],
       "portfolioRole": "icebreaker-auction-vertical",
       "orchestrationPhase": "support-audited",
-      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "handoffs": [
+        "Game Development Agent",
+        "AI Engineer"
+      ],
       "skills": [
         "orchestration-turn-reporting",
         "first-principles-velocity",
@@ -668,12 +705,19 @@
       "name": "Lie Detective Icebreaker Agent",
       "file": "lie-detective-icebreaker-agent.agent.md",
       "description": "Use when reviewing or extending Social phase lie_detective: isLie secrecy, vote/reveal ordering, REST routes, or social-lie-detective-v1 prompts. Trigger phrases: lie_detective, lie detective secrecy, two truths one lie, /lie-detective/generate, isLie.",
-      "tools": ["read", "search", "edit"],
+      "tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "argumentHint": "Provide socialSessionId context, repro steps, and whether change is server-only vs web/Taro parity.",
       "subagents": [],
       "portfolioRole": "icebreaker-lie-detective-vertical",
       "orchestrationPhase": "support-audited",
-      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "handoffs": [
+        "Game Development Agent",
+        "AI Engineer"
+      ],
       "skills": [
         "orchestration-turn-reporting",
         "first-principles-velocity",
@@ -688,12 +732,19 @@
       "name": "Personality Dice Icebreaker Agent",
       "file": "personality-dice-icebreaker-agent.agent.md",
       "description": "Use when reviewing or extending Social phase personality_dice: roster-sized generatePersonalityDiceChallenges, REST generate/complete, social-personality-dice-v1, or playful challenge copy. Trigger phrases: personality_dice, 人格骰子, personality dice, /personality-dice/generate.",
-      "tools": ["read", "search", "edit"],
+      "tools": [
+        "read",
+        "search",
+        "edit"
+      ],
       "argumentHint": "Provide roster size, tone constraints, and target surfaces (web vs Taro vs server).",
       "subagents": [],
       "portfolioRole": "icebreaker-personality-dice-vertical",
       "orchestrationPhase": "support-audited",
-      "handoffs": ["Game Development Agent", "AI Engineer"],
+      "handoffs": [
+        "Game Development Agent",
+        "AI Engineer"
+      ],
       "skills": [
         "orchestration-turn-reporting",
         "first-principles-velocity",
@@ -707,7 +758,7 @@
     {
       "name": "Taro Migration Specialist",
       "file": "taro-migration-specialist.agent.md",
-      "description": "Use when cloning apps/user-client into apps/mini-program with Taro, porting browser-first React or Vue code to a WeChat Mini Program, identifying unsupported DOM APIs and CSS, preserving near-100% parity without modifying source user-client files, or generating and validating apps/mini-program/src/app.config.ts.",
+      "description": "Use when cloning apps/user-client into apps/mini-program with Taro, porting web reference React code to a WeChat Mini Program, identifying unsupported DOM APIs and CSS, preserving near-100% parity without modifying source user-client files, or generating and validating apps/mini-program/src/app.config.ts.",
       "tools": [
         "read",
         "search",
@@ -730,6 +781,153 @@
         "platform-coordination-protocol",
         "frontend-component-architecture",
         "design-system-governance"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "DevOps / SRE",
+      "file": "devops-sre.agent.md",
+      "description": "Use when working on deployment infrastructure, Docker Compose, Nginx configuration, CI/CD pipelines, observability stack (Prometheus, Grafana, Loki), production environment setup, or infrastructure troubleshooting. Trigger phrases: deploy, docker, nginx, prometheus, grafana, loki, CI/CD, production environment, infrastructure, observability, alerting, TLS, reverse proxy, container orchestration.",
+      "tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "argumentHint": "Describe the infrastructure concern, affected environments (staging/production), current symptoms, and any logs, metrics, or runbook context you already have.",
+      "subagents": [],
+      "portfolioRole": "infrastructure-operations",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Launch Readiness Agent",
+        "Backend Engineer"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "platform-observability-and-ops",
+        "security-scan",
+        "caching-strategy"
+      ],
+      "toolingStatus": "enhanced"
+    },
+    {
+      "name": "Harness Runtime Controller",
+      "file": "harness-runtime-controller.agent.md",
+      "description": "Use when a task requires the full Harness Engineering deliberation pipeline: PGE iterative refinement, Council Mode with Harness-pillar delegates, Consensus Synthesis, and optional Token Circulation for emergent consensus. Orchestrates a governed multi-agent chamber that operates entirely before user-facing output. Trigger phrases: harness this, run harness deliberation, production harness, PGE pipeline, harness engineering review, token circulation, reliability scalability security review, full harness chamber, engineering quality gate.",
+      "tools": [
+        "read",
+        "search",
+        "agent"
+      ],
+      "argumentHint": "Describe the task scope, affected workspaces/domains, why Harness deliberation is warranted, and which mode to use: pge-council (default), council-only, or token-ring.",
+      "subagents": [
+        "Principal Software Engineer",
+        "Backend Engineer",
+        "Verifier",
+        "Launch Readiness Agent",
+        "debug",
+        "AI Engineer",
+        "QA Agent",
+        "Database Schema & Migration Auditor"
+      ],
+      "portfolioRole": "harness-orchestrator",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Supervisor",
+        "Planner",
+        "Auto-Eval",
+        "Deliberation Moderator",
+        "QA Agent",
+        "Launch Readiness Agent"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "harness-engineering-deliberation",
+        "harness-verification-gate",
+        "server-domain-architecture",
+        "reliability-and-state-integrity",
+        "database-query-optimization",
+        "auth-session-and-safety-boundaries",
+        "platform-observability-and-ops",
+        "code-review",
+        "testing-and-regression-guardrails",
+        "caching-strategy",
+        "security-scan",
+        "error-handling-patterns",
+        "database-migration-safety",
+        "content-safety-abuse-detection",
+        "monorepo-workspace-governance",
+        "api-contract-versioning",
+        "feature-flags-launch-config",
+        "performance-benchmark",
+        "matching-domain"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Deliberation Moderator",
+      "file": "deliberation-moderator.agent.md",
+      "description": "Use when a task requires structured multi-perspective review before implementation: architecture decisions, cross-workspace changes, new public APIs, UX-heavy features with Taro constraints, or any high-blast-radius work. Orchestrates a 5-phase deliberation with Alpha (Architect), Beta (UX Visionary), and Gamma (Code Realist). Trigger phrases: deliberate this, multi-agent review, architecture consensus, design review, get multiple perspectives.",
+      "tools": [
+        "read",
+        "search",
+        "agent"
+      ],
+      "argumentHint": "Describe the task scope, affected workspaces/domains, why deliberation is warranted, and whether you want the Moderator to also act as Synthesizer.",
+      "subagents": [
+        "Principal Software Engineer",
+        "Taro Mini-Program Frontend Engineer",
+        "Verifier",
+        "Backend Engineer",
+        "Expert React Frontend Engineer",
+        "debug",
+        "AI Engineer",
+        "Product Manager"
+      ],
+      "portfolioRole": "deliberation-orchestrator",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Supervisor",
+        "Planner",
+        "Auto-Eval"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "server-domain-architecture",
+        "mini-program-frontend-excellence",
+        "testing-and-regression-guardrails",
+        "platform-coordination-protocol"
+      ],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Visual Designer",
+      "file": "visual-designer.agent.md",
+      "description": "Use when creating, refining, or requesting brand-aligned visual assets via Lovart AI Design Agent. Generates optimized Lovart prompts and design briefs, guides iterative asset creation, and ensures JoyJoin brand consistency across mascot illustrations, UI mockups, marketing materials, and icon sets. Trigger phrases: design asset, Lovart prompt, mascot illustration, UI mockup, marketing graphic, brand visual, generate illustration, create poster, icon design, visual brief, Lovart workflow.",
+      "tools": [
+        "read",
+        "search"
+      ],
+      "argumentHint": "Describe the visual asset needed: type (mascot/UI mockup/marketing/icon), target platform (web/mini-program/both), emotional tone, any specific scene or composition requirements, and where the asset will be used in the product.",
+      "subagents": [],
+      "portfolioRole": "visual-design",
+      "orchestrationPhase": "support-audited",
+      "handoffs": [
+        "Expert React Frontend Engineer",
+        "Taro Mini-Program Frontend Engineer",
+        "Supervisor"
+      ],
+      "skills": [
+        "orchestration-turn-reporting",
+        "first-principles-velocity",
+        "lovart-design-workflow",
+        "joyjoin-brand-guidelines",
+        "design-system-governance",
+        "wow-elements",
+        "frontend-component-architecture"
       ],
       "toolingStatus": "sufficient"
     }

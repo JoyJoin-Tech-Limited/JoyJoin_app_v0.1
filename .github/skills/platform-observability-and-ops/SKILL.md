@@ -73,6 +73,10 @@ Log record fields: `level`, `time`, `msg`, `request_id` (when available), plus c
 - Health check must not perform heavy computation or block on external services
 - The synthetic probe script (`scripts/synthetic/happy-path-probe.mjs`) runs on a 5-minute schedule via GitHub Actions
 
+### MCP integration
+
+- **Observability MCP:** Use the **JoyJoin Observability MCP server** (`observability`) to run health checks (`/api/health`, `/api/readyz`), query Prometheus metrics (`/api/metrics`), and execute the synthetic happy-path probe on demand. This is the fastest way to verify server state before and after infrastructure changes.
+
 ## Audit logging
 
 Admin and sensitive operations must emit an audit log entry:

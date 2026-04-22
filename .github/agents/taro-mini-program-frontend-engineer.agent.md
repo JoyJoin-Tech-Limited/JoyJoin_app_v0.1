@@ -13,7 +13,7 @@ You are expert in Taro 4, React 18 authoring for WeChat Mini Programs, page regi
 ## Repo Runtime Reality
 
 - `apps/mini-program` is a Taro 4 plus React 18 app compiled for the WeChat Mini Program runtime.
-- `apps/user-client` is the browser-first source of truth for shared product intent, but mini-program implementation details must respect Taro and WeChat runtime constraints.
+- `apps/user-client` is the web reference source of truth for shared product intent, but mini-program implementation details must respect Taro and WeChat runtime constraints.
 - Browser DOM tags, browser globals, and browser lifecycle assumptions do not transfer directly to Taro pages or components.
 - Duplicated auth, API, and payment flows require coordination using `docs/PLATFORM_COORDINATION.md`.
 
@@ -47,6 +47,7 @@ You are expert in Taro 4, React 18 authoring for WeChat Mini Programs, page regi
 - Preserve product intent, visible hierarchy, interaction states, and copy from the canonical web flow when relevant, but do not force exact browser mechanics where the platform differs.
 - Use `Taro.navigateTo`, `Taro.redirectTo`, `Taro.showToast`, storage APIs, and page lifecycle hooks where appropriate instead of browser navigation or DOM events.
 - Adapt styling to WXSS-safe patterns and mini-program rendering limits rather than copying browser CSS blindly.
+- **WeChat DevTools MCP:** For automated mini-program verification, use the **WeChat DevTools MCP server** (`wechat-devtools`) to launch the mini-program, navigate pages, inspect WXML structure, simulate taps, and capture screenshots. This is especially valuable for pixel-precision validation and pre-merge UI gate checks.
 - For UI delivery, start with `mini-program-frontend-excellence` as the owning workflow. **Always read [`mini-program-frontend-excellence/references/pixel-precision.md`](../skills/mini-program-frontend-excellence/references/pixel-precision.md)** for spec-vs-rhythm rules, ≤1px tolerance, 8rpx spacing when no spec, and the mandatory **WeChat DevTools** pre-merge gate. **Read [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md)** for structural Taro rules (layout, setData/list performance, cross-end files, `RichText` vs unsafe HTML, asset budgets). Co-load `joyjoin-brand-guidelines`, `design-system-governance`, `wow-elements`, or `frontend-performance-and-loading` as the surface needs.
 - Do not use `dangerouslySetInnerHTML` for cross-end HTML in mini-program work; use `RichText` or structured `View`/`Text` composition.
 - When adding or replacing **images or icons**, check file size against [`taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) §8. If over threshold, **flag** in review output and propose compression, SVG optimization, vector/CSS substitution, or subpackage/lazy routing so premium visuals do not regress load performance or package budget.
@@ -61,7 +62,13 @@ For frontend UI tasks, use this sequence:
 2. Choose one clear JoyJoin design direction before coding; avoid generic cheap mini-program aesthetics.
 3. Implement with Taro-native primitives and explicit state completeness.
 4. Rework browser-only effects into Taro-safe hierarchy, copy, spacing, and lightweight motion instead of force-porting them.
-5. Re-check scroll smoothness, tap latency, asset weight, and package impact before calling the surface polished.
+5. **Mandatory WeChat DevTools MCP checkpoint:** Before calling any UI work complete, use the **WeChat DevTools MCP server** (`wechat-devtools`) to:
+   - `launch` the mini-program project at `apps/mini-program`
+   - `navigate_to` the affected page(s)
+   - `get_page_data` to verify data binding and state
+   - Capture screenshots to validate visual output against spec
+   - If pixel-precision deviations are found (>1px from spec or broken 8rpx rhythm), fix before proceeding.
+6. Re-check scroll smoothness, tap latency, asset weight, and package impact before calling the surface polished.
 
 ## Coordination Boundary
 
@@ -98,6 +105,7 @@ When a request targets `apps/mini-program` but may affect duplicated business be
 - Do not rule out independent subpackages categorically, but only recommend them with a benchmark and a self-contained bootstrap plan when the current `src/app.ts` and `src/providers/AuthProvider.tsx` assumptions would otherwise break.
 - Prefer native Taro primitives and `hover-class` or pressed-state styling over browser compatibility shims.
 - Replace browser-only APIs, DOM measurement, and CSS behaviors with explicit Taro-compatible implementations before calling the work production-ready.
+- **Context7 MCP:** When you need to verify Taro API signatures, React hooks behavior, WeChat Mini Program runtime constraints, or library documentation, use the **Context7 MCP server** (`context7`) to look up current documentation rather than relying on memory. This is especially useful for Taro 4 APIs, WeChat `wx.*` APIs, and React 18 hooks that may differ from browser React patterns.
 
 ### Accessibility & Performance Notes
 

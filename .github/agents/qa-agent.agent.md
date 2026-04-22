@@ -27,10 +27,13 @@ Your job is to turn changes into concrete verification work: smoke coverage, reg
 ## Default workflow
 
 1. Identify the risky user flows and affected surfaces.
-2. Separate automated coverage, smoke coverage, and manual gaps.
-3. Produce a concrete verification checklist or run summary.
-4. Call out blockers, missing harnesses, and residual risk precisely.
-5. End with a clear status: verified, partially verified, or not verified, and the next escalation path when the work is not yet ready.
+2. **GitHub MCP:** When evaluating test coverage against CI reality, use the **GitHub MCP server** (`github`) to read recent workflow run results, test job outputs, and PR check statuses. Cross-reference local test claims against actual CI execution.
+3. **Playwright MCP:** For browser-based user-journey verification, use the **Playwright MCP server** (`playwright`) to navigate the web client, interact with UI elements, take screenshots, and validate critical paths end-to-end. The E2E test suite lives in `packages/e2e/` — you may run `npm run test:e2e` directly or use Playwright MCP tools for ad-hoc journey verification.
+4. **Observability MCP:** Before declaring a backend change safe, use the **JoyJoin Observability MCP server** (`observability`) to run health checks (`/api/health`, `/api/readyz`), query Prometheus metrics (`/api/metrics`), and run the synthetic happy-path probe. Do not rely on local dev server health alone.
+5. Separate automated coverage, smoke coverage, and manual gaps.
+6. Produce a concrete verification checklist or run summary.
+7. Call out blockers, missing harnesses, and residual risk precisely.
+8. End with a clear status: verified, partially verified, or not verified, and the next escalation path when the work is not yet ready.
 
 ## Output format
 

@@ -1,0 +1,102 @@
+skill: content-safety-abuse-detection
+
+primary_ownership: >
+  Abuse detection, content filtering, user moderation, trust-and-safety
+  mechanics, rate limiting, and admin moderation surfaces.
+
+use_when:
+  - implementing or reviewing content-filter logic, sensitive-word detection, or profanity filtering
+  - modifying abuse-detection thresholds, violation counts, or penalty escalation
+  - adding or tuning rate limiters for AI, auth, payment, or webhook endpoints
+  - working with user bans, AI freezes, or moderation reports/logs
+  - adding content-moderation guards to AI-generated output
+  - reviewing chat-report or user-report table schemas and endpoints
+
+do_not_use_when:
+  - task is about auth session policy or route gating (use auth-session-and-safety-boundaries)
+  - task is about admin RBAC matrices or audit-log obligations (use admin-audit-and-rbac-governance)
+  - task is purely about observability, metrics, or logging infrastructure (use platform-observability-and-ops)
+  - task is about generic code review with no safety focus (use code-review)
+
+strong_triggers:
+  - abuse detection
+  - content filter
+  - content filtering
+  - profanity filter
+  - sensitive word
+  - ban user
+  - unban user
+  - moderation
+  - moderation log
+  - report user
+  - chat report
+  - rate limit
+  - rate limiting
+  - violation count
+  - ai frozen
+  - ai freeze
+  - daily token limit
+  - conversation turns
+  - gibberish detection
+  - repetition detection
+  - checkUserAbuse
+  - filterContent
+  - recordViolation
+  - createRateLimiter
+  - aiEndpointLimiter
+  - authEndpointLimiter
+  - BLACKLIST_KEYWORDS
+  - isBanned
+  - violationCount
+  - aiFrozenUntil
+  - /api/admin/moderation
+  - /api/admin/users/*/ban
+  - /api/admin/users/*/unban
+
+owned_files:
+  - apps/server/src/contentFilter.ts
+  - apps/server/src/abuseDetection.ts
+  - apps/server/src/rateLimiter.ts
+  - apps/server/src/tagGenerationService.ts
+
+owned_paths:
+  - /api/admin/moderation/**
+  - /api/admin/users/*/ban
+  - /api/admin/users/*/unban
+
+owned_symbols:
+  - checkUserAbuse
+  - filterContent
+  - recordViolation
+  - recordTokenUsage
+  - detectGibberish
+  - detectRepetition
+  - createRateLimiter
+  - aiEndpointLimiter
+  - authEndpointLimiter
+  - paymentEndpointLimiter
+  - webhookEndpointLimiter
+  - kpiEndpointLimiter
+  - BLACKLIST_KEYWORDS
+  - validateTag
+  - ViolationType
+  - ContentFilterResult
+  - AbuseCheckResult
+  - reports
+  - moderationLogs
+  - chatReports
+  - chatLogs
+
+related_skills:
+  - skill: admin-audit-and-rbac-governance
+    when: admin moderation routes need RBAC mapping or audit-log obligations
+  - skill: auth-session-and-safety-boundaries
+    when: auth gating, session middleware, or fail-closed route policy changes
+  - skill: platform-observability-and-ops
+    when: adding metrics, alerts, or structured logging around abuse/moderation events
+  - skill: llm-runtime-safety-and-integration
+    when: AI-generated output needs prompt-level safety or fallback behavior beyond post-generation filtering
+  - skill: server-domain-architecture
+    when: new moderation routes need placement in routes/domains/* or repository extraction
+  - skill: reliability-and-state-integrity
+    when: moderation workflows need idempotency, transaction guards, or retry safety

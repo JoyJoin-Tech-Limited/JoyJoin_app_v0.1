@@ -1,0 +1,89 @@
+skill: api-contract-versioning
+
+primary_ownership: >
+  Shared API contract governance: Zod schemas in packages/shared/src/schema.ts,
+  DTOs and transport types in packages/shared/src/api.ts, cross-platform type
+  consumption, and the lightweight /api/v1/* versioning rewrite.
+
+use_when:
+  - adding, changing, or removing a field in a shared API request/response type
+  - creating or modifying a Zod validation schema for a route payload
+  - changing packages/shared/src/schema.ts or packages/shared/src/api.ts
+  - reviewing whether a server route response shape matches client expectations
+  - diagnosing type mismatches between server and client
+  - adding a new API endpoint consumed by both mini-program and web
+  - normalizing ambiguous server response shapes into a strict client contract
+
+do_not_use_when:
+  - task is only about internal server business logic with no exposed contract
+  - task is only about a client-local UI type that never crosses the network
+  - task is about database schema evolution without API surface impact
+  - task is about route file placement or domain decomposition
+
+strong_triggers:
+  - add a shared DTO
+  - change API response shape
+  - Zod schema drift
+  - safeParse validation
+  - cross-platform contract
+  - api.ts type
+  - packages/shared/src/schema.ts
+  - packages/shared/src/api.ts
+  - insertEventPoolSchema
+  - insertEventGroupOutcomeSchema
+  - updateFullProfileSchema
+  - AuthUserResponse
+  - ApiTransport
+  - normalizeEventPoolRegistrationPayload
+  - /api/v1/
+  - createInsertSchema
+  - z.object
+  - z.enum
+  - z.string().min
+  - safeParse
+  - flatten()
+  - type mismatch
+  - optional vs required
+  - shared type
+  - contract versioning
+
+owned_files:
+  - packages/shared/src/schema.ts
+  - packages/shared/src/api.ts
+  - packages/shared/src/types/**
+  - packages/shared/src/index.ts
+
+owned_paths:
+  - /api/**
+  - /api/v1/**
+
+owned_symbols:
+  - createInsertSchema
+  - safeParse
+  - ApiTransport
+  - AuthUserResponse
+  - insertEventPoolSchema
+  - insertEventPoolRegistrationSchema
+  - insertEventGroupOutcomeSchema
+  - updateFullProfileSchema
+  - updateProfileSchema
+  - insertBlindBoxEventSchema
+  - normalizeEventPoolRegistrationPayload
+  - buildStructuredInterestsPayload
+  - submitEssentialData
+  - getCurrentUser
+  - getEventPools
+
+related_skills:
+  - skill: server-domain-architecture
+    when: deciding where to place a new route or service file
+  - skill: platform-coordination-protocol
+    when: a contract change affects both mini-program and web clients
+  - skill: database-migration-safety
+    when: schema evolution must precede the API contract change
+  - skill: backend-models-standards
+    when: adding a new Drizzle table or choosing data types and constraints
+  - skill: testing-and-regression-guardrails
+    when: adding structural or type-level tests to lock in the contract
+  - skill: auth-session-and-safety-boundaries
+    when: the contract change touches auth or session types

@@ -20,6 +20,7 @@ export type OnboardingAnalyticsEventType =
   | 'step_abandoned'
   | 'validation_failed'
   | 'error_occurred'
+  | 'interaction'
 
 export interface MiniProgramOnboardingSystemInfo {
   brand?: string
@@ -222,6 +223,19 @@ class MiniProgramOnboardingAnalytics {
       'error_occurred',
       step,
       { errorType, errorMessage },
+      this.stepStartTimes.get(step),
+    )
+  }
+
+  interaction(
+    step: MiniProgramOnboardingAnalyticsStep,
+    action: string,
+    metadata?: Record<string, unknown>,
+  ): void {
+    this.track(
+      'interaction',
+      step,
+      { action, ...(metadata ?? {}) },
       this.stepStartTimes.get(step),
     )
   }

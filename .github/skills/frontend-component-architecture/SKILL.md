@@ -87,6 +87,7 @@ Do not fork behaviour casually. Keep local wrappers behaviourally aligned with t
 - Prefer wrapping/composing shared primitives over forking them
 - Use `asChild` (Radix Slot) when a shared primitive should render as a different element for routing purposes
 - Use `React.lazy()` for non-critical page-level components in `App.tsx` — never static imports for pages
+- **Filesystem MCP:** When scaffolding a new component across multiple workspaces (e.g., adding a shared primitive to `packages/shared/src/ui/` and wrappers in both clients), use the **Filesystem MCP server** (`filesystem`) to create files, verify directory structure, and ensure consistent naming across surfaces
 
 ## Common mistakes to avoid
 

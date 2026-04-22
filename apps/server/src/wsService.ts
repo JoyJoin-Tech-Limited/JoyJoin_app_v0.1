@@ -1,11 +1,16 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
+import { parse as parseCookie } from 'cookie';
+import { unsign } from 'cookie-signature';
 import type { WSMessage, WSEventType } from '@shared/wsEvents';
 import { eventPoolsRepo } from './repositories/eventPoolsRepo';
 import { icebreakerRepo } from './repositories/icebreakerRepo';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
+  authenticated?: boolean;
   isAlive?: boolean;
   messageTimestamps?: number[];
   isBlocked?: boolean;
@@ -66,9 +71,38 @@ class WebSocketService {
   initialize(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws' });
 
-    this.wss.on('connection', (ws: AuthenticatedWebSocket, req) => {
-      console.log('[WS] New client connected');
+    this.wss.on('connection', async (ws: AuthenticatedWebSocket, req) => {
       ws.isAlive = true;
+      ws.authenticated = false;
+
+      // Authenticate via session cookie from the HTTP upgrade request
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        try {
+          const cookies = parseCookie(cookieHeader);
+          const signedSid = cookies['connect.sid'];
+          if (signedSid) {
+            const secret = process.env.SESSION_SECRET || '';
+            const sid = unsign(signedSid, secret);
+            if (sid) {
+              const sessionResult = await db.execute(sql`
+                SELECT sess FROM sessions 
+                WHERE sid = ${sid} AND expire > NOW()
+              `);
+              const sess = sessionResult.rows[0]?.sess;
+              const sessionData = typeof sess === 'string' ? JSON.parse(sess) : sess;
+              if (sessionData?.userId) {
+                ws.userId = sessionData.userId;
+                ws.authenticated = true;
+              }
+            }
+          }
+        } catch (e) {
+          // Auth failed, continue unauthenticated
+        }
+      }
+
+      console.log(`[WS] New client connected${ws.authenticated ? ` (user: ${ws.userId})` : ''}`);
 
       // 心跳检测
       ws.on('pong', () => {
@@ -174,6 +208,13 @@ class WebSocketService {
       return;
     }
 
+    // Validate userId: if authenticated via session, message.userId must match
+    const userId = ws.userId || message.userId;
+    if (ws.userId && message.userId && message.userId !== ws.userId) {
+      console.warn(`[WS] User ID mismatch in ${message.type}: ws=${ws.userId}, msg=${message.userId}`);
+      return;
+    }
+
     switch (message.type) {
       case 'PING':
         this.sendToClient(ws, { type: 'PONG', timestamp: new Date().toISOString() });
@@ -181,14 +222,13 @@ class WebSocketService {
 
       case 'USER_JOINED':
         // 用户加入时，保存userId和订阅eventId
-        if (message.userId) {
-          ws.userId = message.userId;
-          this.addClientToUser(message.userId, ws);
+        if (userId) {
+          this.addClientToUser(userId, ws);
         }
         if (message.eventId) {
           this.subscribeToEvent(ws, message.eventId);
         }
-        console.log(`[WS] User ${message.userId} joined event ${message.eventId}`);
+        console.log(`[WS] User ${userId} joined event ${message.eventId}`);
         break;
 
       case 'USER_LEFT':
@@ -198,35 +238,34 @@ class WebSocketService {
         break;
 
       case 'ICEBREAKER_JOIN_SESSION':
-        if (message.userId && message.data?.sessionId) {
-          ws.userId = message.userId;
-          this.addClientToUser(message.userId, ws);
-          this.joinIcebreakerSession(message.data.sessionId, message.userId, ws);
-          console.log(`[WS] User ${message.userId} joined icebreaker session ${message.data.sessionId}`);
+        if (userId && message.data?.sessionId) {
+          this.addClientToUser(userId, ws);
+          this.joinIcebreakerSession(message.data.sessionId, userId, ws);
+          console.log(`[WS] User ${userId} joined icebreaker session ${message.data.sessionId}`);
         }
         break;
 
       case 'ICEBREAKER_CHECKIN':
-        if (message.userId && message.data?.sessionId) {
-          this.handleCheckin(message.data.sessionId, message.userId);
+        if (userId && message.data?.sessionId) {
+          this.handleCheckin(message.data.sessionId, userId);
         }
         break;
 
       case 'ICEBREAKER_READY_VOTE':
-        if (message.userId && message.data?.sessionId && message.data?.phase) {
-          this.handleReadyVote(message.data.sessionId, message.userId, message.data.phase, message.data.isAutoVote || false);
+        if (userId && message.data?.sessionId && message.data?.phase) {
+          this.handleReadyVote(message.data.sessionId, userId, message.data.phase, message.data.isAutoVote || false);
         }
         break;
 
       case 'ICEBREAKER_TOPIC_SELECTED':
-        if (message.userId && message.data?.sessionId) {
+        if (userId && message.data?.sessionId) {
           this.broadcastToIcebreakerSession(message.data.sessionId, {
             type: 'ICEBREAKER_TOPIC_SELECTED',
             data: {
               sessionId: message.data.sessionId,
               topicId: message.data.topicId,
               topicTitle: message.data.topicTitle,
-              selectedBy: message.userId,
+              selectedBy: userId,
             },
             timestamp: new Date().toISOString(),
           });
@@ -235,14 +274,14 @@ class WebSocketService {
         break;
 
       case 'ICEBREAKER_GAME_STARTED':
-        if (message.userId && message.data?.sessionId) {
+        if (userId && message.data?.sessionId) {
           this.broadcastToIcebreakerSession(message.data.sessionId, {
             type: 'ICEBREAKER_GAME_STARTED',
             data: {
               sessionId: message.data.sessionId,
               gameId: message.data.gameId,
               gameName: message.data.gameName,
-              startedBy: message.userId,
+              startedBy: userId,
             },
             timestamp: new Date().toISOString(),
           });
@@ -252,13 +291,12 @@ class WebSocketService {
 
       // ============ King Game handlers ============
       case 'KING_GAME_JOIN':
-        if (message.userId && message.data?.sessionId) {
-          ws.userId = message.userId;
-          this.addClientToUser(message.userId, ws);
+        if (userId && message.data?.sessionId) {
+          this.addClientToUser(userId, ws);
           this.handleKingGameJoin(
             message.data.sessionId,
             message.data.icebreakerSessionId,
-            message.userId,
+            userId,
             message.data.displayName || 'Player',
             message.data.playerCount || 5,
             ws
@@ -267,28 +305,28 @@ class WebSocketService {
         break;
 
       case 'KING_GAME_PLAYER_READY':
-        if (message.userId && message.data?.sessionId) {
-          this.handleKingGamePlayerReady(message.data.sessionId, message.userId);
+        if (userId && message.data?.sessionId) {
+          this.handleKingGamePlayerReady(message.data.sessionId, userId);
         }
         break;
 
       case 'KING_GAME_START_DEAL':
-        if (message.userId && message.data?.sessionId) {
-          this.handleKingGameStartDeal(message.data.sessionId, message.userId);
+        if (userId && message.data?.sessionId) {
+          this.handleKingGameStartDeal(message.data.sessionId, userId);
         }
         break;
 
       case 'KING_GAME_CARD_DEALT':
-        if (message.userId && message.data?.sessionId) {
-          this.handleKingGameCardDrawn(message.data.sessionId, message.userId);
+        if (userId && message.data?.sessionId) {
+          this.handleKingGameCardDrawn(message.data.sessionId, userId);
         }
         break;
 
       case 'KING_GAME_COMMAND_ISSUED':
-        if (message.userId && message.data?.sessionId) {
+        if (userId && message.data?.sessionId) {
           this.handleKingGameCommand(
             message.data.sessionId,
-            message.userId,
+            userId,
             message.data.command,
             message.data.targetNumber
           );
@@ -296,14 +334,14 @@ class WebSocketService {
         break;
 
       case 'KING_GAME_ROUND_COMPLETE':
-        if (message.userId && message.data?.sessionId) {
+        if (userId && message.data?.sessionId) {
           this.handleKingGameRoundComplete(message.data.sessionId);
         }
         break;
 
       case 'KING_GAME_STATE_SYNC':
-        if (message.userId && message.data?.sessionId) {
-          this.sendKingGameStateSync(message.data.sessionId, message.userId, ws);
+        if (userId && message.data?.sessionId) {
+          this.sendKingGameStateSync(message.data.sessionId, userId, ws);
         }
         break;
 

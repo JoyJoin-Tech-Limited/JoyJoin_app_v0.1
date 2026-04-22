@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { getEventPool, registerForPool, type EventPoolSummary } from '@shared/ap
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
 import { apiRequest, type ApiError } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { COLOR_PRIMARY, TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/uiConstants'
 import { logInfo, logError } from '../../lib/logger'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import {
@@ -51,6 +52,13 @@ import {
   type RegistrationStep,
 } from './poolRegistrationForm'
 import './index.scss'
+
+const PRIMARY_BRAND_COLOR = COLOR_PRIMARY
+
+const STEP_BRIEF = 0
+const STEP_BUDGET = 1
+const STEP_INTENT = 2
+const STEP_DETAILS = 3
 
 interface ChoiceCardProps {
   option: FlowOption
@@ -401,12 +409,12 @@ export default function PoolRegistrationPage() {
   }, [])
 
   const handleAdvance = useCallback(() => {
-    if (step === 0) {
-      setStep(1)
+    if (step === STEP_BRIEF) {
+      setStep(STEP_BUDGET)
       return
     }
 
-    if (step === 3) {
+    if (step === STEP_DETAILS) {
       return
     }
 
@@ -415,7 +423,7 @@ export default function PoolRegistrationPage() {
       hasIntentSelection,
     })
     if (blocker) {
-      Taro.showToast({ title: blocker, icon: 'none', duration: 2500 })
+      Taro.showToast({ title: blocker, icon: 'none', duration: TOAST_LONG_MS })
       return
     }
 
@@ -427,14 +435,21 @@ export default function PoolRegistrationPage() {
   }, [])
 
   const handleBack = useCallback(() => {
-    if (step === 0) {
+    if (step === STEP_BRIEF) {
       Taro.navigateBack()
       return
     }
 
-    setStep((currentStep) => (currentStep > 0 ? ((currentStep - 1) as RegistrationStep) : 0))
+    setStep((currentStep) => (currentStep > STEP_BRIEF ? ((currentStep - 1) as RegistrationStep) : STEP_BRIEF))
   }, [step])
 
+  /**
+   * Submits the pool registration with the current form state.
+   * @returns Promise that resolves when registration completes or fails
+   * @description Builds the registration payload, submits via registerForPool(),
+   *              and handles entitlement errors by routing to payment.
+   * @sideEffects Invalidates query cache, shows toast, sets registered/error state.
+   */
   const handleRegister = useCallback(async () => {
     if (!poolId || isRegistering) return
 
@@ -443,7 +458,7 @@ export default function PoolRegistrationPage() {
       hasIntentSelection,
     })
     if (submitBlocker) {
-      Taro.showToast({ title: submitBlocker, icon: 'none', duration: 2500 })
+      Taro.showToast({ title: submitBlocker, icon: 'none', duration: TOAST_LONG_MS })
       return
     }
 
@@ -468,7 +483,7 @@ export default function PoolRegistrationPage() {
       clearPaymentReturnContextStorage()
       setResumeContext(null)
       setRegistered(true)
-      Taro.showToast({ title: '报名成功！', icon: 'success', duration: 2000 })
+      Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
     } catch (err) {
       const entitlementCode = getEntitlementCode(err)
 
@@ -497,7 +512,7 @@ export default function PoolRegistrationPage() {
           content: handoffCopy,
           confirmText: '去开通',
           cancelText: '稍后',
-          confirmColor: '#8B5CF6',
+          confirmColor: PRIMARY_BRAND_COLOR,
         })
 
         if (modalResult.confirm) {
@@ -506,6 +521,7 @@ export default function PoolRegistrationPage() {
               paymentsEnabled: user?.paymentsEnabled,
               currentUserId: user?.id,
               preserveReturnContext: true,
+              returnTab: 'events',
             })
           } catch (navigationError) {
             const navigationMessage = resolveMessage(
@@ -513,7 +529,7 @@ export default function PoolRegistrationPage() {
               '打开支付页失败，请稍后重试',
             )
             setError(navigationMessage)
-            Taro.showToast({ title: navigationMessage, icon: 'none', duration: 3000 })
+            Taro.showToast({ title: navigationMessage, icon: 'none', duration: TOAST_FATAL_MS })
           }
         }
 
@@ -528,7 +544,7 @@ export default function PoolRegistrationPage() {
         step,
         message,
       })
-      Taro.showToast({ title: message, icon: 'none', duration: 3000 })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsRegistering(false)
     }
@@ -554,6 +570,12 @@ export default function PoolRegistrationPage() {
     return (
       <View className='pool-reg'>
         <Card className='pool-reg__empty'>
+          <Image
+            className='pool-reg__empty-hero'
+            src='/assets/lovart/lovart-generic-error.webp'
+            mode='aspectFit'
+            lazyLoad
+          />
           <Text className='pool-reg__empty-title'>这场活动暂时打不开</Text>
           <Text className='pool-reg__empty-text'>
             {resolveMessage(poolError, '活动池可能已下线，或者网络刚刚抖了一下。')}
