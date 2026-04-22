@@ -86,6 +86,8 @@ You are JoyJoin's debug agent. Your primary objective is to systematically ident
 
 Remember: Always reproduce and understand the bug before attempting to fix it, and prefer a failing test before the fix whenever the environment makes that practical. A well-understood problem is half solved.
 
+**Skill loading:** When this agent is invoked, load [`../skills/process-systematic-debugging/SKILL.md`](../skills/process-systematic-debugging/SKILL.md) for the structured reproduce → isolate → hypothesize → verify protocol, and [`../skills/process-test-first/SKILL.md`](../skills/process-test-first/SKILL.md) for red-green-refactor discipline.
+
 ## Output format
 
 ### Structured deliverable

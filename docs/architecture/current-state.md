@@ -87,8 +87,8 @@ Boundary:
 - `PoolForecastStrip` is deterministic client-side atmosphere guidance only; it does not participate in pair scoring or group formation.
 - Matching is not deadline-only: `poolRealtimeMatchingService.ts` supports registration-triggered realtime scans and scheduled scans via `scanPoolAndMatch`.
 - Post-match clients consume `PoolGroupMemberSummary` from `packages/shared/src/api.ts`; use `ageLabel` and the visibility flags instead of reconstructing exact age or other hidden profile fields client-side.
-- Browser blind-box checkout returns through `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx` and `apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx`; both pages poll `/api/payments/status/:wechatOrderId`, keep transient verification failures recoverable, and then hand off to `/events` or `/discover` after confirmation.
-- Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there rather than reusing the browser H5 confirmation path.
+- Browser blind-box checkout returns through `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx` and `apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx`; both pages poll `/api/payments/status/:wechatOrderId`, keep transient verification failures recoverable, and then hand off to `/events` or `/discover` after confirmation. (Web is reference-only; not shipping.)
+- Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there as the canonical launch-primary flow. The browser H5 confirmation path is reference-only.
 - Mini-program personality-test results live in `apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx`; keep reveal replay, native share hooks, and the poster composition helper in `apps/mini-program/src/pages/onboarding/personality-test/results/sharePoster.ts` inside that Taro onboarding surface rather than moving them into server or shared runtime modules.
 
 ### 3. Social Icebreaker

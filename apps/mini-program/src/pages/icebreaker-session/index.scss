@@ -12,6 +12,10 @@
     min-height: 100vh;
   }
 
+  &__phase-shell {
+    animation: icebreaker-phase-in 0.24s ease both;
+  }
+
   // ── Error State ───────────────────────────────────────────────
   &__error {
     @include flex-center;
@@ -20,8 +24,9 @@
     min-height: 80vh;
   }
 
-  &__error-icon {
-    font-size: 80rpx;
+  &__error-hero {
+    width: 320rpx;
+    height: 240rpx;
   }
 
   &__error-text {
@@ -963,5 +968,24 @@
 
   &__cta {
     width: 100%;
+  }
+}
+
+@keyframes icebreaker-phase-in {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icebreaker__phase-shell {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }

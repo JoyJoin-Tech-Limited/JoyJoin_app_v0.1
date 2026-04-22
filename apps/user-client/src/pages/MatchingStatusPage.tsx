@@ -131,7 +131,7 @@ export default function MatchingStatusPage() {
   };
 
   // Countdown to event
-  const countdown = useCountdown(registration?.poolDateTime);
+  const countdown = useCountdown(registration?.poolDateTime ?? undefined);
 
   // Fetch similar pools only when in no-match state (needs countdown, so placed after it)
   const { data: similarPools } = useQuery<EventPoolListItem[]>({
@@ -312,7 +312,13 @@ export default function MatchingStatusPage() {
     // Compute chemistry line from current group data so the celebration overlay
     // can continue the V2 reveal narrative.
     if (groupMembersData?.members) {
-      const payoff = generateChemistryPayoff(groupMembersData.members, currentUserContext);
+      const payoff = generateChemistryPayoff(
+        groupMembersData.members.map(m => ({
+          archetype: m.archetype ?? undefined,
+          topInterests: m.topInterests ?? undefined,
+        })),
+        currentUserContext
+      );
       setRevealChemistryLine(payoff.chemistryLine);
     }
     // Hide the reveal overlay and show match celebration
@@ -496,7 +502,7 @@ export default function MatchingStatusPage() {
   if (countdown.isExpired && registration.matchStatus === "pending") {
     return (
       <NoMatchScreen
-        poolTitle={registration.poolTitle}
+        poolTitle={registration.poolTitle ?? undefined}
         onBrowse={() => setLocation("/")}
         onNotify={handleNoMatchNotify}
         onBack={() => setLocation("/")}
@@ -511,7 +517,7 @@ export default function MatchingStatusPage() {
     return (
       <>
         <MatchingWaitingScreen
-          poolTitle={registration.poolTitle}
+          poolTitle={registration.poolTitle ?? undefined}
           filledCount={poolStats?.currentFill ?? 0}
           minGroupSize={poolStats?.minGroupSize ?? DEFAULT_MIN_GROUP_SIZE}
           maxGroupSize={poolStats?.maxGroupSize ?? DEFAULT_MAX_GROUP_SIZE}
@@ -600,7 +606,7 @@ export default function MatchingStatusPage() {
               {registration.poolTitle}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {formatDateInHongKong(registration.poolDateTime, 'full')}
+              {registration.poolDateTime ? formatDateInHongKong(registration.poolDateTime, 'full') : '活动时间待定'}
             </p>
           </div>
         </div>

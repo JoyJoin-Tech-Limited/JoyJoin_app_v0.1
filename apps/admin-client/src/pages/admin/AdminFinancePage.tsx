@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table,
@@ -11,9 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DollarSign, CreditCard, TrendingUp, Receipt, Store } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle } from "lucide-react";
+import FieldInfoTooltip from "@/components/FieldInfoTooltip";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface FinanceStats {
   totalRevenue: number;
@@ -27,7 +40,7 @@ interface Payment {
   user_id: string;
   amount: number;
   payment_type: "subscription" | "event";
-  status: "completed" | "pending" | "failed";
+  status: "completed" | "pending" | "failed" | "refunded";
   payment_method: string;
   created_at: string;
   user_first_name: string | null;
@@ -44,10 +57,11 @@ interface VenueCommission {
   total_commission: number;
 }
 
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
+const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   completed: { label: "已完成", variant: "default" },
   pending: { label: "待处理", variant: "secondary" },
   failed: { label: "失败", variant: "destructive" },
+  refunded: { label: "已退款", variant: "outline" },
 };
 
 const PAYMENT_TYPE_MAP: Record<string, { label: string; variant: "default" | "outline" }> = {
@@ -55,9 +69,37 @@ const PAYMENT_TYPE_MAP: Record<string, { label: string; variant: "default" | "ou
   event: { label: "活动", variant: "outline" },
 };
 
+interface RefundAttempt {
+  id: string;
+  payment_id: string;
+  status: "pending" | "success" | "failed";
+  reason: string | null;
+  wechat_refund_id: string | null;
+  amount: number;
+  initiated_by: string | null;
+  initiated_at: string;
+  resolved_at: string | null;
+  failure_reason: string | null;
+  payment_wechat_order_id: string | null;
+  payment_type: string | null;
+  user_first_name: string | null;
+  user_last_name: string | null;
+  user_phone_number: string | null;
+}
+
+const REFUND_STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  pending: { label: "退款中", variant: "secondary" },
+  success: { label: "已退款", variant: "default" },
+  failed: { label: "退款失败", variant: "destructive" },
+};
+
 export default function AdminFinancePage() {
-  const [mainTab, setMainTab] = useState<"payments" | "commissions">("payments");
+  const [mainTab, setMainTab] = useState<"payments" | "commissions" | "refunds">("payments");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "subscription" | "event">("all");
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundPayment, setRefundPayment] = useState<Payment | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+  const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading } = useQuery<FinanceStats>({
     queryKey: ["/api/admin/finance/stats"],
@@ -69,6 +111,41 @@ export default function AdminFinancePage() {
 
   const { data: commissions = [], isLoading: commissionsLoading } = useQuery<VenueCommission[]>({
     queryKey: ["/api/admin/finance/commissions"],
+  });
+
+  const { data: refundAttempts = [], isLoading: refundsLoading } = useQuery<RefundAttempt[]>({
+    queryKey: ["/api/admin/refund-attempts"],
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: async ({ paymentId, reason }: { paymentId: string; reason: string }) => {
+      const res = await fetch(`/api/admin/payments/${paymentId}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "退款失败" }));
+        throw new Error(err.message || "退款失败");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "退款已提交", description: "退款申请已成功提交处理。" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/finance/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-attempts"] });
+      setRefundDialogOpen(false);
+      setRefundPayment(null);
+      setRefundReason("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "退款失败",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const formatCurrency = (amount: number) => {
@@ -182,6 +259,20 @@ export default function AdminFinancePage() {
               <TabsTrigger value="commissions" data-testid="tab-commissions">
                 场地佣金
               </TabsTrigger>
+              <TabsTrigger value="refunds" data-testid="tab-refunds" className="gap-1">
+                退款历史
+                {refundAttempts.some((r) => r.status === "failed") && (
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                    {refundAttempts.filter((r) => r.status === "failed").length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <div className="flex items-center px-2">
+                <FieldInfoTooltip
+                  title="退款流程说明"
+                  description="退款申请提交后，系统会向微信支付发起退款请求。成功退款通常需要 1-3 分钟。失败的退款会显示红色标记，请检查用户账户状态或联系技术支持。"
+                />
+              </div>
             </TabsList>
           </CardHeader>
 
@@ -222,6 +313,7 @@ export default function AdminFinancePage() {
                         <TableHead data-testid="header-status">状态</TableHead>
                         <TableHead data-testid="header-payment-method">支付方式</TableHead>
                         <TableHead data-testid="header-created-at">创建时间</TableHead>
+                        <TableHead data-testid="header-actions">操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -266,6 +358,91 @@ export default function AdminFinancePage() {
                           </TableCell>
                           <TableCell className="text-sm" data-testid={`text-created-at-${payment.id}`}>
                             {formatDateTime(payment.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            {payment.status === "completed" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setRefundPayment(payment);
+                                  setRefundDialogOpen(true);
+                                }}
+                                data-testid={`btn-refund-${payment.id}`}
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                退款
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Refund History Tab */}
+            <TabsContent value="refunds" className="space-y-4">
+              {refundsLoading ? (
+                <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-refunds">
+                  加载中...
+                </div>
+              ) : refundAttempts.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-refunds">
+                  暂无退款记录
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>退款ID</TableHead>
+                        <TableHead>用户</TableHead>
+                        <TableHead>支付类型</TableHead>
+                        <TableHead>金额</TableHead>
+                        <TableHead>状态</TableHead>
+                        <TableHead>原因</TableHead>
+                        <TableHead>发起时间</TableHead>
+                        <TableHead>完成时间</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {refundAttempts.map((attempt) => (
+                        <TableRow key={attempt.id} data-testid={`row-refund-${attempt.id}`}>
+                          <TableCell className="font-mono text-sm">
+                            {attempt.id.slice(0, 8)}...
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">
+                              {`${attempt.user_first_name || ""} ${attempt.user_last_name || ""}`.trim() || "未知用户"}
+                            </div>
+                            {attempt.user_phone_number && (
+                              <div className="text-xs text-muted-foreground">{attempt.user_phone_number}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={PAYMENT_TYPE_MAP[attempt.payment_type || ""]?.variant || "outline"}>
+                              {PAYMENT_TYPE_MAP[attempt.payment_type || ""]?.label || attempt.payment_type || "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(attempt.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={REFUND_STATUS_MAP[attempt.status]?.variant || "secondary"}>
+                              {REFUND_STATUS_MAP[attempt.status]?.label || attempt.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm" title={attempt.reason || undefined}>
+                            {attempt.reason || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDateTime(attempt.initiated_at)}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {attempt.resolved_at ? formatDateTime(attempt.resolved_at) : "—"}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -330,6 +507,46 @@ export default function AdminFinancePage() {
           </CardContent>
         </Tabs>
       </Card>
+
+      {/* Refund Dialog */}
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认退款</DialogTitle>
+            <DialogDescription>
+              为用户 <strong>{refundPayment ? getUserName(refundPayment) : ""}</strong> 的支付{" "}
+              <span className="font-mono">{refundPayment?.id.slice(0, 8)}...</span>{" "}
+              申请退款，金额 <strong>{refundPayment ? formatCurrency(refundPayment.amount) : ""}</strong>。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">退款原因</label>
+              <Textarea
+                placeholder="请输入退款原因（必填）"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                data-testid="input-refund-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                if (!refundPayment || !refundReason.trim()) return;
+                refundMutation.mutate({ paymentId: refundPayment.id, reason: refundReason.trim() });
+              }}
+              disabled={!refundReason.trim() || refundMutation.isPending}
+              data-testid="btn-confirm-refund"
+            >
+              {refundMutation.isPending ? "处理中..." : "确认退款"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

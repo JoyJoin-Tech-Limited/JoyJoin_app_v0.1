@@ -7,6 +7,7 @@ import {
   type BlindBoxEventSummary,
   type PoolRegistrationSummary,
 } from '@shared/api'
+import { STALE_TIME_DEFAULT_MS } from '../lib/uiConstants'
 import { apiRequest } from '../lib/api'
 import { getMiniProgramCenterState, type CustomTabBarSyncState } from '../lib/centerTabRouting'
 import { useNotificationCounts } from './useNotificationCounts'
@@ -41,7 +42,7 @@ export function useCustomTabBarSync({
     queryKey: ['mini-program', 'my-pool-registrations'],
     queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: enabled && providedPoolRegistrations === undefined,
-    staleTime: 30_000,
+    staleTime: STALE_TIME_DEFAULT_MS,
   })
 
   const { data: queriedEvents } = useQuery({

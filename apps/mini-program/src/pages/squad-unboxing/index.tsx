@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
+import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
@@ -18,6 +19,7 @@ import './index.scss'
 export default function SquadUnboxingPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
+  const { isExiting, navigateBack } = useJoyJoinNavigation()
 
   const {
     authLoading,
@@ -48,8 +50,9 @@ export default function SquadUnboxingPage() {
     handleConfirmAttendance,
     handleOpenGroupDetail,
     handleSkip,
-    navigateBackOrEventsTab,
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
+
+  const pageClassName = [rootClassName, isExiting ? 'squad-unboxing--exiting' : ''].filter(Boolean).join(' ')
 
   if (authLoading || isLoading) {
     return <LoadingScreen message='揭晓小队中…' />
@@ -57,13 +60,18 @@ export default function SquadUnboxingPage() {
 
   if (fetchError || !poolGroup || !group || !pool) {
     return (
-      <View className={rootClassName}>
+      <View className={pageClassName}>
         <View className='squad-unboxing__error'>
-          <Text className='squad-unboxing__error-icon'>😕</Text>
+          <Image
+            className='squad-unboxing__error-hero'
+            src='/assets/lovart/lovart-generic-error.webp'
+            mode='aspectFit'
+            lazyLoad
+          />
           <Text className='squad-unboxing__error-text'>
             {fetchError ? '加载小队信息失败' : '未找到小队信息'}
           </Text>
-          <Button variant='secondary' className='squad-unboxing__error-btn' onClick={navigateBackOrEventsTab}>
+          <Button variant='secondary' className='squad-unboxing__error-btn' onClick={() => navigateBack()}>
             返回
           </Button>
         </View>
@@ -72,7 +80,7 @@ export default function SquadUnboxingPage() {
   }
 
   return (
-    <View className={rootClassName}>
+    <View className={pageClassName}>
       <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
         <View className='squad-unboxing__header'>
           <Text className='squad-unboxing__header-emoji'>🎉</Text>

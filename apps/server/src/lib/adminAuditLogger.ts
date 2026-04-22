@@ -22,6 +22,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { db } from '../db';
+import { adminAuditLogs } from '@joyjoin/shared';
 
 // ── Action type vocabulary ──────────────────────────────────────────────────
 
@@ -153,6 +155,27 @@ export function logAdminAudit(
   ) as AdminAuditRecord;
 
   console.log(`[AdminAudit] ${JSON.stringify(compact)}`);
+
+  // Persist to DB asynchronously (fire-and-forget; never block the caller)
+  Promise.resolve().then(async () => {
+    try {
+      await db.insert(adminAuditLogs).values({
+        auditId: record.auditId,
+        timestamp: new Date(record.timestamp),
+        adminId: record.adminId,
+        adminRole: record.adminRole,
+        action: record.action,
+        targetEntityType: record.targetEntityType,
+        targetEntityId: record.targetEntityId,
+        before: record.before,
+        after: record.after,
+        context: record.context,
+      });
+    } catch (err) {
+      // If DB persistence fails, stdout log remains the source of truth
+      console.error('[AdminAudit] DB persistence failed:', err);
+    }
+  });
 }
 
 const REDACTED_VALUE = '[REDACTED]';

@@ -1,0 +1,92 @@
+- generic [ref=e2]:
+  - heading "Admin Finance Page — Smoke Test" [level=1] [ref=e3]
+  - paragraph [ref=e4]: Visual verification of refund button placement and dialog
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 总收入
+      - generic [ref=e8]: ¥128,450.00
+    - generic [ref=e9]:
+      - generic [ref=e10]: 会员收入
+      - generic [ref=e11]: ¥45,200.00
+    - generic [ref=e12]:
+      - generic [ref=e13]: 活动收入
+      - generic [ref=e14]: ¥83,250.00
+    - generic [ref=e15]:
+      - generic [ref=e16]: 总支付数
+      - generic [ref=e17]: 156 笔
+  - generic [ref=e18]:
+    - generic [ref=e20]:
+      - button "支付记录" [ref=e21] [cursor=pointer]
+      - button "场地佣金" [ref=e22] [cursor=pointer]
+    - generic [ref=e24]:
+      - button "全部" [ref=e25] [cursor=pointer]
+      - button "会员" [ref=e26] [cursor=pointer]
+      - button "活动" [ref=e27] [cursor=pointer]
+    - table [ref=e30]:
+      - rowgroup [ref=e31]:
+        - row "支付ID 用户 类型 金额 状态 支付方式 创建时间 操作" [ref=e32]:
+          - columnheader "支付ID" [ref=e33]
+          - columnheader "用户" [ref=e34]
+          - columnheader "类型" [ref=e35]
+          - columnheader "金额" [ref=e36]
+          - columnheader "状态" [ref=e37]
+          - columnheader "支付方式" [ref=e38]
+          - columnheader "创建时间" [ref=e39]
+          - columnheader "操作" [ref=e40]
+      - rowgroup [ref=e41]:
+        - row "a3f7b2d8... 张三 zhangsan@example.com 活动 ¥88.00 已完成 微信支付 2026年04月20日 14:30 退款" [ref=e42]:
+          - cell "a3f7b2d8..." [ref=e43]
+          - cell "张三 zhangsan@example.com" [ref=e44]:
+            - generic [ref=e45]: 张三
+            - generic [ref=e46]: zhangsan@example.com
+          - cell "活动" [ref=e47]:
+            - generic [ref=e48]: 活动
+          - cell "¥88.00" [ref=e49]
+          - cell "已完成" [ref=e50]:
+            - generic [ref=e51]: 已完成
+          - cell "微信支付" [ref=e52]
+          - cell "2026年04月20日 14:30" [ref=e53]
+          - cell "退款" [ref=e54]:
+            - button "退款" [ref=e55] [cursor=pointer]:
+              - img [ref=e56]
+              - text: 退款
+        - row "c9e1a4f5... 李四 lisi@example.com 会员 ¥98.00 待处理 微信支付 2026年04月21日 09:15" [ref=e58]:
+          - cell "c9e1a4f5..." [ref=e59]
+          - cell "李四 lisi@example.com" [ref=e60]:
+            - generic [ref=e61]: 李四
+            - generic [ref=e62]: lisi@example.com
+          - cell "会员" [ref=e63]:
+            - generic [ref=e64]: 会员
+          - cell "¥98.00" [ref=e65]
+          - cell "待处理" [ref=e66]:
+            - generic [ref=e67]: 待处理
+          - cell "微信支付" [ref=e68]
+          - cell "2026年04月21日 09:15" [ref=e69]
+          - cell [ref=e70]
+        - row "b2d8e7a1... 王五 wangwu@example.com 活动 ¥88.00 已退款 微信支付 2026年04月21日 11:45" [ref=e71]:
+          - cell "b2d8e7a1..." [ref=e72]
+          - cell "王五 wangwu@example.com" [ref=e73]:
+            - generic [ref=e74]: 王五
+            - generic [ref=e75]: wangwu@example.com
+          - cell "活动" [ref=e76]:
+            - generic [ref=e77]: 活动
+          - cell "¥88.00" [ref=e78]
+          - cell "已退款" [ref=e79]:
+            - generic [ref=e80]: 已退款
+          - cell "微信支付" [ref=e81]
+          - cell "2026年04月21日 11:45" [ref=e82]
+          - cell [ref=e83]
+  - generic [ref=e87]:
+    - heading "确认退款" [level=2] [ref=e88]
+    - paragraph [ref=e89]:
+      - text: 为用户
+      - strong [ref=e90]: 张三
+      - text: 的支付 a3f7b2d8... 申请退款，金额
+      - strong [ref=e91]: ¥88.00
+      - text: 。
+    - generic [ref=e92]:
+      - text: 退款原因
+      - textbox "请输入退款原因（必填）" [ref=e93]: 用户申请退款，活动时间冲突
+    - generic [ref=e94]:
+      - button "取消" [ref=e95] [cursor=pointer]
+      - button "确认退款" [ref=e96] [cursor=pointer]

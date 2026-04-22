@@ -1,8 +1,9 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
+import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/logger'
@@ -20,7 +21,7 @@ import {
   RecapPhaseView,
   type SessionPhase,
   WarmupPhaseView,
-} from './phaseViews'
+} from './PhaseViews'
 import { IcebreakerToolSelector } from './IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './MiniScriptConfigModal'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
@@ -184,7 +185,7 @@ export default function IcebreakerSessionPage() {
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     queryFn: () => apiRequest<SocialSessionState>({ path: buildSocialPath(socialSessionId ?? '') }),
     enabled: !!socialSessionId && !authLoading,
-    refetchInterval: 3000,
+    refetchInterval: POLL_SOCIAL_SESSION_MS,
     staleTime: 0,
   })
 
@@ -204,7 +205,7 @@ export default function IcebreakerSessionPage() {
   const recapQuery = useQuery<SocialRecapResponse>({
     queryKey: ['mini-program', 'social-icebreaker-recap', socialSessionId],
     queryFn: () => apiRequest<SocialRecapResponse>({ path: buildSocialPath(socialSessionId ?? '', '/recap') }),
-    enabled: phase === 'recap' && !!socialSessionId && !authLoading,
+    enabled: (phase === 'recap' || phase === 'ended') && !!socialSessionId && !authLoading,
     staleTime: 0,
   })
 
@@ -252,7 +253,7 @@ export default function IcebreakerSessionPage() {
         Taro.showToast({
           title: message.length > 12 ? '操作失败，请稍后重试' : message,
           icon: 'none',
-          duration: 2200,
+          duration: TOAST_MEDIUM_MS,
         })
         return null
       } finally {
@@ -381,14 +382,14 @@ export default function IcebreakerSessionPage() {
         })
         await socialSessionQuery.refetch()
         setMiniScriptModalOpen(false)
-        Taro.showToast({ title: '剧本已生成', icon: 'success', duration: 2000 })
+        Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
       } catch (error) {
         const message = getErrorText(error, '生成失败，请稍后重试')
         logError('[IcebreakerSession] MiniScript generate failed', { socialSessionId, message })
         Taro.showToast({
           title: message.length > 14 ? '生成失败' : message,
           icon: 'none',
-          duration: 2200,
+          duration: TOAST_MEDIUM_MS,
         })
       } finally {
         setMiniScriptSubmitting(false)
@@ -421,7 +422,12 @@ export default function IcebreakerSessionPage() {
     return (
       <View className='icebreaker icebreaker--error'>
         <View className='icebreaker__error'>
-          <Text className='icebreaker__error-icon'>😕</Text>
+          <Image
+            className='icebreaker__error-hero'
+            src='/assets/lovart/lovart-generic-error.webp'
+            mode='aspectFit'
+            lazyLoad
+          />
           <Text className='icebreaker__error-text'>
             {pageError ?? '无法加入破冰会话'}
           </Text>
@@ -459,7 +465,8 @@ export default function IcebreakerSessionPage() {
     phase !== 'recap' &&
     phase !== 'ended' &&
     phase !== 'waiting' &&
-    phase !== 'auction' && (
+    phase !== 'auction' &&
+    phase !== 'mini_script' && (
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
         <Text className='icebreaker__host-badge-text'>👑 你是主持人</Text>
@@ -501,131 +508,135 @@ export default function IcebreakerSessionPage() {
     <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false}>
       {phaseHeader}
 
-      {phase === 'waiting' && (
-        <WaitingPhase
-          playerCount={playerCount}
-          hostName={session?.hostDisplayName}
-          isHost={isHost}
-          onAdvance={handleAdvancePhase}
-        />
-      )}
-
-      {phase === 'warmup' && session && (
-        <WarmupPhaseView
-          topics={session.warmupTopics ?? []}
-          currentIndex={session.currentTopicIndex ?? 0}
-          readyUserIds={session.warmupReadyUserIds ?? []}
-          participants={participants}
-          currentUserId={currentUserId}
-          selectedMood={session.selectedMood}
-          isHost={isHost}
-          onGenerateTopics={handleGenerateTopics}
-          onToggleReady={handleToggleWarmupReady}
-          onNextTopic={handleNextWarmupTopic}
-          isGeneratingTopics={pendingAction === 'topics'}
-          isUpdatingReady={pendingAction === 'warmup-ready'}
-          isAdvancingTopic={pendingAction === 'warmup-next-topic'}
-        />
-      )}
-
-      {phase === 'micro_challenge' && session && (
-        <MicroChallengePhaseView
-          challenge={session.currentChallenge ?? null}
-          completedBy={session.challengeCompletedBy ?? []}
-          currentUserId={currentUserId}
-          playerCount={playerCount}
-          onComplete={handleCompleteChallenge}
-          isCompleting={pendingAction === 'micro-complete'}
-        />
-      )}
-
-      {phase === 'lie_detective' && session && (
-        <LieDetectivePhaseView
-          players={session.lieDetectivePlayers ?? []}
-          playerCount={playerCount}
-          currentPlayerIndex={session.currentLieDetectivePlayerIndex ?? 0}
-          votes={session.votes ?? []}
-          reveal={session.currentLieDetectiveReveal ?? null}
-          currentUserId={currentUserId}
-          myVoteIndex={myVoteIndex}
-          onVote={handleCastVote}
-          isVoting={pendingAction === 'lie-vote'}
-          hasGeneratedStatements={hasGeneratedStatements}
-          onGenerateStatements={handleGenerateStatements}
-          isGeneratingStatements={pendingAction === 'lie-generate'}
-          isHost={isHost}
-          canMoveToNextPlayer={canMoveToNextPlayer}
-          onNextPlayer={handleNextLieDetectivePlayer}
-          isMovingNextPlayer={pendingAction === 'lie-next-player'}
-        />
-      )}
-
-      {phase === 'auction' && session && (
-        <AuctionPhaseView
-          session={session}
-          currentUserId={currentUserId}
-          isHost={isHost}
-          onGenerateLots={handleGenerateAuctionLots}
-          onPlaceBid={handleAuctionBid}
-          onCloseLot={handleCloseAuctionLot}
-          onAdvance={handleAdvancePhase}
-          isAdvancing={pendingAction === 'advance'}
-          isGeneratingLots={pendingAction === 'auction-gen'}
-          isPlacingBid={pendingAction === 'auction-bid'}
-          isClosingLot={pendingAction === 'auction-close'}
-        />
-      )}
-
-      {phase === 'mini_script' && session && (
-        <>
-          {isHost && session.enabledPhases?.includes('mini_script') ? (
-            <IcebreakerToolSelector onOpenMiniScript={() => setMiniScriptModalOpen(true)} />
-          ) : null}
-          <MiniScriptPhaseView
-            framework={session.miniScriptFramework}
-            phaseStartedAt={session.phaseStartedAt}
-            timeoutMinutes={PHASE_CONFIG.mini_script.timeoutMinutes}
+      <View className='icebreaker__phase-shell' key={phase}>
+        {phase === 'waiting' && (
+          <WaitingPhase
+            playerCount={playerCount}
+            hostName={session?.hostDisplayName}
             isHost={isHost}
             onAdvance={handleAdvancePhase}
+          />
+        )}
+
+        {phase === 'warmup' && session && (
+          <WarmupPhaseView
+            topics={session.warmupTopics ?? []}
+            currentIndex={session.currentTopicIndex ?? 0}
+            readyUserIds={session.warmupReadyUserIds ?? []}
+            participants={participants}
+            currentUserId={currentUserId}
+            selectedMood={session.selectedMood}
+            isHost={isHost}
+            onGenerateTopics={handleGenerateTopics}
+            onToggleReady={handleToggleWarmupReady}
+            onNextTopic={handleNextWarmupTopic}
+            isGeneratingTopics={pendingAction === 'topics'}
+            isUpdatingReady={pendingAction === 'warmup-ready'}
+            isAdvancingTopic={pendingAction === 'warmup-next-topic'}
+          />
+        )}
+
+        {phase === 'micro_challenge' && session && (
+          <MicroChallengePhaseView
+            challenge={session.currentChallenge ?? null}
+            completedBy={session.challengeCompletedBy ?? []}
+            currentUserId={currentUserId}
+            playerCount={playerCount}
+            onComplete={handleCompleteChallenge}
+            isCompleting={pendingAction === 'micro-complete'}
+          />
+        )}
+
+        {phase === 'lie_detective' && session && (
+          <LieDetectivePhaseView
+            players={session.lieDetectivePlayers ?? []}
+            playerCount={playerCount}
+            currentPlayerIndex={session.currentLieDetectivePlayerIndex ?? 0}
+            votes={session.votes ?? []}
+            reveal={session.currentLieDetectiveReveal ?? null}
+            currentUserId={currentUserId}
+            myVoteIndex={myVoteIndex}
+            onVote={handleCastVote}
+            isVoting={pendingAction === 'lie-vote'}
+            hasGeneratedStatements={hasGeneratedStatements}
+            onGenerateStatements={handleGenerateStatements}
+            isGeneratingStatements={pendingAction === 'lie-generate'}
+            isHost={isHost}
+            canMoveToNextPlayer={canMoveToNextPlayer}
+            onNextPlayer={handleNextLieDetectivePlayer}
+            isMovingNextPlayer={pendingAction === 'lie-next-player'}
+          />
+        )}
+
+        {phase === 'auction' && session && (
+          <AuctionPhaseView
+            session={session}
+            currentUserId={currentUserId}
+            isHost={isHost}
+            onGenerateLots={handleGenerateAuctionLots}
+            onPlaceBid={handleAuctionBid}
+            onCloseLot={handleCloseAuctionLot}
+            onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
+            isGeneratingLots={pendingAction === 'auction-gen'}
+            isPlacingBid={pendingAction === 'auction-bid'}
+            isClosingLot={pendingAction === 'auction-close'}
           />
-          <MiniScriptConfigModal
-            open={miniScriptModalOpen}
-            onClose={() => setMiniScriptModalOpen(false)}
-            isSubmitting={miniScriptSubmitting}
-            onSubmit={submitMiniScriptGenerate}
+        )}
+
+        {phase === 'mini_script' && session && (
+          <>
+            {isHost && session.enabledPhases?.includes('mini_script') ? (
+              <IcebreakerToolSelector onOpenMiniScript={() => setMiniScriptModalOpen(true)} />
+            ) : null}
+            <MiniScriptPhaseView
+              framework={session.miniScriptFramework}
+              phaseStartedAt={session.phaseStartedAt}
+              timeoutMinutes={PHASE_CONFIG.mini_script.timeoutMinutes}
+              isHost={isHost}
+              onAdvance={handleAdvancePhase}
+              isAdvancing={pendingAction === 'advance'}
+            />
+            <MiniScriptConfigModal
+              open={miniScriptModalOpen}
+              onClose={() => setMiniScriptModalOpen(false)}
+              isSubmitting={miniScriptSubmitting}
+              onSubmit={submitMiniScriptGenerate}
+            />
+          </>
+        )}
+
+        {phase === 'personality_dice' && session && (
+          <PersonalityDicePhaseView
+            participants={participants}
+            challenges={session.personalityDiceChallenges ?? []}
+            currentPlayerIndex={session.currentDicePlayerIndex ?? 0}
+            completedBy={session.diceCompletedBy ?? []}
+            currentUserId={currentUserId}
+            isHost={isHost}
+            onGenerate={handleGenerateDiceChallenges}
+            onComplete={handleCompleteDiceChallenge}
+            isGenerating={pendingAction === 'dice-generate'}
+            isCompleting={pendingAction === 'dice-complete'}
           />
-        </>
-      )}
+        )}
 
-      {phase === 'personality_dice' && session && (
-        <PersonalityDicePhaseView
-          participants={participants}
-          challenges={session.personalityDiceChallenges ?? []}
-          currentPlayerIndex={session.currentDicePlayerIndex ?? 0}
-          completedBy={session.diceCompletedBy ?? []}
-          currentUserId={currentUserId}
-          isHost={isHost}
-          onGenerate={handleGenerateDiceChallenges}
-          onComplete={handleCompleteDiceChallenge}
-          isGenerating={pendingAction === 'dice-generate'}
-          isCompleting={pendingAction === 'dice-complete'}
-        />
-      )}
+        {(phase === 'recap' || phase === 'ended') && session && (
+          <RecapPhaseView
+            recapData={recapQuery.data?.state?.recapData ?? session.recapData ?? null}
+            summary={recapQuery.data?.summary ?? null}
+            medals={recapQuery.data?.medals ?? []}
+            playerCount={playerCount}
+            onLeave={handleGoBack}
+            socialSessionId={socialSessionId}
+            recapMeta={recapQuery.data?.meta ?? null}
+          />
+        )}
 
-      {(phase === 'recap' || phase === 'ended') && session && (
-        <RecapPhaseView
-          recapData={recapQuery.data?.state?.recapData ?? session.recapData ?? null}
-          summary={recapQuery.data?.summary ?? null}
-          medals={recapQuery.data?.medals ?? []}
-          playerCount={playerCount}
-          onLeave={handleGoBack}
-        />
-      )}
-
-      {!supportedPhases.includes(phase) && session && (
-        <FallbackPhaseView phase={phase} isHost={isHost} onAdvance={handleAdvancePhase} />
-      )}
+        {!supportedPhases.includes(phase) && session && (
+          <FallbackPhaseView phase={phase} isHost={isHost} onAdvance={handleAdvancePhase} />
+        )}
+      </View>
 
       {hostControls}
 

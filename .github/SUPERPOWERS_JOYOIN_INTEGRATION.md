@@ -21,7 +21,13 @@ This document explains how **Cursor Superpowers plugin skills** (e.g. brainstorm
 4. **Agent pick** — [`.github/agents/README.md`](./agents/README.md): for broad kickoff, either **`Supervisor` first** (sequences `Researcher` → `Planner` when needed) or `Researcher` → `Planner` directly; **`Supervisor`** also for approval or midstream rerouting; specialists by surface.
 5. **Turn reporting** — When using repo agents with execute + recorder, follow [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md).
 
-**Copilot (VS Code)** does not load Cursor Superpowers. Use **JoyJoin skills + agents +** built-in **Plan** / **Agent** modes; process habits (brainstorming, etc.) must be **applied manually** or via instructions in **`.github/copilot-instructions.md`**.
+**Copilot (VS Code) and Kimi** do not load Cursor Superpowers. For equivalent process discipline, use the native JoyJoin process skills:
+- `.github/skills/process-brainstorming/SKILL.md` — divergent thinking before convergence
+- `.github/skills/process-systematic-debugging/SKILL.md` — structured root-cause analysis
+- `.github/skills/process-verification-gate/SKILL.md` — pre-ship Harness 5-pillar checklist
+- `.github/skills/process-test-first/SKILL.md` — red-green-refactor discipline
+
+These are bound to `Supervisor`, `debug`, `Auto-Eval`, `QA Agent`, and `Backend Engineer` in `.github/orchestration.yaml`.
 
 ## Cursor wiring
 

@@ -1,0 +1,82 @@
+skill: error-handling-patterns
+
+primary_ownership: >
+  Consistent API error response shapes, Zod validation error formatting,
+  client-safe message sanitization, transport-layer error handling, and
+  retry patterns across Express routes, web client, and mini-program.
+
+use_when:
+  - adding or changing an API route that returns error responses
+  - formatting Zod validation errors for client consumption
+  - handling 401/session expiry, transport failures, or retries on either client
+  - creating a new custom error class for domain-specific failures
+  - standardizing error response shapes across server routes
+  - adding client-side error copy (title/description) for status-code-based failures
+
+do_not_use_when:
+  - task is purely about auth gating logic (use auth-session-and-safety-boundaries)
+  - task is about transaction atomicity or idempotency (use reliability-and-state-integrity)
+  - task is about logging or metrics for errors (use platform-observability-and-ops)
+  - task is purely about UI toast/notification styling (use frontend-component-architecture)
+
+strong_triggers:
+  - sendApiError
+  - toSafeMessage
+  - globalErrorHandler
+  - safeParse
+  - zod validation error
+  - 401 redirect
+  - session expired
+  - handleSessionExpired
+  - handleMiniProgramUnauthorized
+  - ApiError
+  - transport error
+  - retry pattern
+  - error response shape
+  - client-safe error
+  - InvalidTransitionError
+  - IcebreakerSessionRequestError
+  - isUnauthorizedApiError
+  - getApiErrorStatusCode
+  - error handling
+  - format validation errors
+
+owned_files:
+  - apps/server/src/lib/errorResponse.ts
+  - apps/server/src/index.ts
+  - apps/server/src/lib/stateTransitions.ts
+  - apps/user-client/src/lib/queryClient.ts
+  - apps/user-client/src/lib/icebreakerSessionRequest.ts
+  - apps/mini-program/src/lib/api.ts
+  - apps/mini-program/src/lib/authSession.ts
+
+owned_paths:
+  - /api/**
+
+owned_symbols:
+  - sendApiError
+  - toSafeMessage
+  - globalErrorHandler
+  - ApiError
+  - createApiError
+  - InvalidTransitionError
+  - handleSessionExpired
+  - handleMiniProgramUnauthorized
+  - isUnauthorizedApiError
+  - getApiErrorStatusCode
+  - IcebreakerSessionRequestError
+  - getIcebreakerSessionErrorCopy
+
+related_skills:
+  - skill: auth-session-and-safety-boundaries
+    when: auth gating, role checks, session middleware, or fail-closed policy
+  - skill: reliability-and-state-integrity
+    when: transactions, idempotency, execution guards, or side-effect separation
+  - skill: platform-observability-and-ops
+    when: structured logging, request IDs, metrics, or audit logging for errors
+  - skill: server-domain-architecture
+    when: determining where a new route, service, or middleware file belongs
+  - skill: platform-coordination-protocol
+    when: cross-platform impact of changing shared API contracts
+  - skill: testing-and-regression-guardrails
+    when: adding regression tests for error response shapes or 401 behavior

@@ -71,3 +71,5 @@ related_skills:
     when: the mini-program surface is list-heavy, media-heavy, or performance-sensitive
   - skill: platform-coordination-protocol
     when: mini-program UI work also touches duplicated web, auth, payment, or API behavior
+  - skill: multi-agent-deliberation
+    when: Taro UX decisions with performance or constraint trade-offs

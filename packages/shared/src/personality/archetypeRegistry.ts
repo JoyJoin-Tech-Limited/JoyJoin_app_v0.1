@@ -47,6 +47,33 @@ export interface ArchetypeDisplayTokens {
   gradientKey: string;
 }
 
+export interface ArchetypeUniqueTrait {
+  trait: string;
+  description: string;
+}
+
+export interface ArchetypeXiaoyueFallback {
+  headline: string;
+  shareLine: string;
+  stateLabel: string;
+  analysis: string;
+  socialRole: string;
+  bestScene: string;
+  microAction: string;
+}
+
+export interface ArchetypeShareVariants {
+  selfIntro: string;
+  friendCallout: string;
+  socialInvite: string;
+}
+
+export interface ArchetypeDisplay {
+  uniqueTraits: ArchetypeUniqueTrait[];
+  xiaoyueFallback: ArchetypeXiaoyueFallback;
+  shareVariants: ArchetypeShareVariants;
+}
+
 export interface ArchetypeRecord {
   id: string;
   name: string;
@@ -55,6 +82,7 @@ export interface ArchetypeRecord {
   narrative: ArchetypeNarrative;
   insights: ArchetypeInsights;
   displayTokens: ArchetypeDisplayTokens;
+  display: ArchetypeDisplay;
 }
 
 export const archetypeRegistry: Record<string, ArchetypeRecord> = {
@@ -93,7 +121,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-orange-600 dark:text-orange-400",
       bgColorClass: "bg-orange-100 dark:bg-orange-900/20",
       gradientKey: "from-yellow-500 via-orange-500 to-red-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "自带氛围感", description: "你走到哪里，快乐就跟到哪里。这种天然的感染力让你在人群中像发光体一样，总能带动周围人的情绪。" },
+        { trait: "破冰达人", description: "让陌生人也能迅速放下防备。你善于寻找轻松的话题切入点，能敏锐察觉尴尬气氛并用幽默化解，让初次见面变得简单。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是硬撑热闹，你是自然带热的人",
+        shareLine: "我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。",
+        stateLabel: "快热带动型",
+        analysis: "你是开心柯基型：热场快，接梗快，给人安全感也快。很多局有你在，气氛会自然松下来。只是别总顾着让大家开心，自己的电量也得留一点。",
+        socialRole: "你更像开场加速器，能让陌生局更快松下来。",
+        bestScene: "更适合6到8人的轻松热场局，有接梗空间会更舒服。",
+        microAction: "下次进新局先抛一个轻松问题，再接住第一个回应你的人。",
+      },
+      shareVariants: {
+        selfIntro: "我是开心柯基型，属于一进场就会慢慢把气氛带起来的那种。",
+        friendCallout: "认识我的人应该会懂，你不是硬撑热闹，你是自然带热的人。",
+        socialInvite: "如果一起组局，我更适合6到8人的轻松热场局，会比较容易进入状态。",
+      },
+    },
   },
   "太阳鸡": {
     id: "rooster",
@@ -130,7 +178,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-amber-600 dark:text-amber-400",
       bgColorClass: "bg-amber-100 dark:bg-amber-900/20",
       gradientKey: "from-amber-500 via-yellow-500 to-orange-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "正能量持久输出", description: "你的积极态度不是一时兴起，而是源于内在的稳定发电。即便在压力之下，你也能保持乐观，给予他人持续的鼓舞。" },
+        { trait: "情绪恒温器", description: "遇事不慌，还能稳住别人。你拥有强大的自我调节能力，像一个恒温器一样维持着环境的心理安全感。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不抢镜，但全场会跟着你稳下来",
+        shareLine: "我是太阳鸡型，不吵，但会把场子慢慢稳住。",
+        stateLabel: "稳场推进型",
+        analysis: "你是太阳鸡型：情绪稳，正能量真，出了状况也不慌。别人焦虑的时候你那份稳，让整个场子缓下来。这种底气不是表演出来的，是刻在里头的。",
+        socialRole: "你更像节奏稳定器，能把场子从散乱拉回舒服的推进感。",
+        bestScene: "更适合有主题、能边聊边推进的饭局或桌游局。",
+        microAction: "下次参加活动，先认领一个能稳节奏的小动作。",
+      },
+      shareVariants: {
+        selfIntro: "我是太阳鸡型，不吵，但会把场子慢慢稳住。",
+        friendCallout: "认识我的人应该会懂，你不抢镜，但全场会跟着你稳下来。",
+        socialInvite: "如果一起组局，我更适合有主题、能边聊边推进的饭局或桌游局，会比较容易进入状态。",
+      },
+    },
   },
   "夸夸豚": {
     id: "dolphin_praise",
@@ -167,7 +235,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-cyan-600 dark:text-cyan-400",
       bgColorClass: "bg-cyan-100 dark:bg-cyan-900/20",
       gradientKey: "from-cyan-500 via-blue-500 to-indigo-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "真诚赞美", description: "你的夸奖从不是客套的奉承，而是基于细致观察后的真心认可。这种真诚让你播撒的善意拥有真实的力量。" },
+        { trait: "情感敏锐", description: "你总能敏锐地捕捉到别人被忽略的闪光点。通过你这面镜子，周围的人往往能看到一个更美好、更有价值的自己。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是场面话选手，你是真的会看见人",
+        shareLine: "我是夸夸豚型，看着温和，其实很会把关系聊热。",
+        stateLabel: "熟了更有火花型",
+        analysis: "你是夸夸豚型：发现别人的好，然后真心说出来，不是客套。被你夸到的人，会记很久。这种看见人的能力，比多数社交技巧都稀缺。",
+        socialRole: "你更像关系升温器，能把陌生感聊成舒服感。",
+        bestScene: "更适合2到6人的局，能给彼此一点真实交流空间。",
+        microAction: "下次遇到顺眼的人，先给一个具体的真诚反馈。",
+      },
+      shareVariants: {
+        selfIntro: "我是夸夸豚型，看着温和，其实很会把关系聊热。",
+        friendCallout: "认识我的人应该会懂，你不是场面话选手，你是真的会看见人。",
+        socialInvite: "如果一起组局，我更适合2到6人的局，会比较容易进入状态。",
+      },
+    },
   },
   "机智狐": {
     id: "fox",
@@ -204,7 +292,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-red-600 dark:text-red-400",
       bgColorClass: "bg-red-100 dark:bg-red-900/20",
       gradientKey: "from-orange-500 via-red-500 to-pink-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "创意脑洞", description: "你能把平凡的事物变得趣味横生，点子源源不断且不落俗套。你的存在让原本枯燥的聚会总能多出一份惊喜。" },
+        { trait: "快速适应", description: "无论环境如何变化，你总能迅速找准定位并与不同背景的人接轨。这种灵活的认知切换让你在各种场合都能游刃有余。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不靠硬聊破冰，你靠灵感把场子聊活",
+        shareLine: "我是机智狐型，属于会把普通聊天聊出新鲜感的那种。",
+        stateLabel: "灵感破冰型",
+        analysis: "你是机智狐型：反应快，点子多，能在谈话里找到最有意思的角度。饭桌上那个率先提新方向的，通常是你。有时候话说快了，记得等一等慢半拍的人。",
+        socialRole: "你更像话题点火器，能把普通聊天拐到更有意思的方向。",
+        bestScene: "更适合有探索感的新局、主题活动或能交换想法的场子。",
+        microAction: "下次开场先准备一个最近看到的有趣东西。",
+      },
+      shareVariants: {
+        selfIntro: "我是机智狐型，属于会把普通聊天聊出新鲜感的那种。",
+        friendCallout: "认识我的人应该会懂，你不靠硬聊破冰，你靠灵感把场子聊活。",
+        socialInvite: "如果一起组局，我更适合有探索感的新局、主题活动或能交换想法的场子，会比较容易进入状态。",
+      },
+    },
   },
   "淡定海豚": {
     id: "dolphin_calm",
@@ -241,7 +349,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-blue-600 dark:text-blue-400",
       bgColorClass: "bg-blue-100 dark:bg-blue-900/20",
       gradientKey: "from-blue-500 via-indigo-500 to-purple-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "张弛有度", description: "你在热闹喧嚣与宁静独处之间自如切换。你懂得在社交中释放魅力，也懂得在安静中通过自我思考来沉淀和恢复。" },
+        { trait: "情商在线", description: "你对社交分寸感的把握精准。你能在不冒犯他人的前提下表达真实见解，在人际网络中游走得既自在又得体。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是掉线型，你是先看气场再发力",
+        shareLine: "我是淡定海豚型，习惯先看气场，再决定什么时候出手。",
+        stateLabel: "低耗观察型",
+        analysis: "你是淡定海豚型：情绪稳，读人准，在任何人群里都能找到自己的节奏。你那种淡定不是疏离，是心里有底。局里最让人放心的，往往是你这种人。",
+        socialRole: "你更像安静观察者，关键时刻往往说到点上。",
+        bestScene: "更适合3到6人的轻松聚会，或者先有共同话题的场景。",
+        microAction: "下次别逼自己立刻热起来，先记住一个想继续聊的人。",
+      },
+      shareVariants: {
+        selfIntro: "我是淡定海豚型，习惯先看气场，再决定什么时候出手。",
+        friendCallout: "认识我的人应该会懂，你不是掉线型，你是先看气场再发力。",
+        socialInvite: "如果一起组局，我更适合3到6人的轻松聚会，会比较容易进入状态。",
+      },
+    },
   },
   "织网蛛": {
     id: "spider",
@@ -278,7 +406,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-purple-600 dark:text-purple-400",
       bgColorClass: "bg-purple-100 dark:bg-purple-900/20",
       gradientKey: "from-purple-500 via-pink-500 to-fuchsia-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "人脉连接", description: "你不仅是信息的汇聚点，更是人际关系的桥接者。你总能一眼看出谁和谁会碰撞出火花，并乐于成就他人的连接。" },
+        { trait: "长情维护", description: "你珍视每一份关系，记得朋友们那些细碎的喜好与重要时刻。你的细水长流让关系网络不仅广阔，而且温润持久。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是社交用力派，你是把关系慢慢织起来",
+        shareLine: "我是织网蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
+        stateLabel: "局内升温型",
+        analysis: "你是织网蛛型：发现两个人应该认识，然后悄悄搭一座桥。撮合成功了你是最高兴的那个，也是最不显眼的那个。这种连接的眼光，不是所有人都有。",
+        socialRole: "你更像连接器，擅长让对的人自然搭上线。",
+        bestScene: "更适合有轮流交流空间的小局，而不是只顾抢话的大场子。",
+        microAction: "下次进局先记下两个可能聊得来的人，再顺手搭一座桥。",
+      },
+      shareVariants: {
+        selfIntro: "我是织网蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
+        friendCallout: "认识我的人应该会懂，你不是社交用力派，你是把关系慢慢织起来。",
+        socialInvite: "如果一起组局，我更适合有轮流交流空间的小局，会比较容易进入状态。",
+      },
+    },
   },
   "暖心熊": {
     id: "bear",
@@ -315,7 +463,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-pink-600 dark:text-pink-400",
       bgColorClass: "bg-pink-100 dark:bg-pink-900/20",
       gradientKey: "from-rose-500 via-pink-500 to-red-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "主动关怀", description: "你拥有极强的共情能力，往往在对方开口之前就已感知其需求。这种无声的理解往往比任何言语都更具疗愈力。" },
+        { trait: "安全感担当", description: "你温和且包容的特质让人不自觉地想要敞开心扉。在你面前，人们无需伪装，这种心理安全感是你给予他人最珍贵的礼物。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是慢，你只是只对对的人升温",
+        shareLine: "我是暖心熊型，看着慢热，其实聊到点上就很能聊。",
+        stateLabel: "慢热深聊型",
+        analysis: "你是暖心熊型：别人说话你真的在听，不是在等自己开口。这种陪伴让人觉得被接住了，在社交里很稀缺。只是别忘了，你自己也需要被接住的时候。",
+        socialRole: "你更像深聊引线，能让对方很快觉得被接住。",
+        bestScene: "更适合2到4人的小局、饭后散步局或咖啡局。",
+        microAction: "下次先和一个顺眼的人聊深两轮，不用急着全场营业。",
+      },
+      shareVariants: {
+        selfIntro: "我是暖心熊型，看着慢热，其实聊到点上就很能聊。",
+        friendCallout: "认识我的人应该会懂，你不是慢，你只是只对对的人升温。",
+        socialInvite: "如果一起组局，我更适合2到4人的小局、饭后散步局或咖啡局，会比较容易进入状态。",
+      },
+    },
   },
   "灵感章鱼": {
     id: "octopus",
@@ -352,7 +520,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-violet-600 dark:text-violet-400",
       bgColorClass: "bg-violet-100 dark:bg-violet-900/20",
       gradientKey: "from-violet-500 via-purple-500 to-indigo-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "跨界联想", description: "你的思维跳跃且广阔，能将互不相关的领域奇妙地联系起来。这种独特的跨界洞察力让你总能提供令人耳目一新的视角。" },
+        { trait: "深度对话", description: "你厌倦浅尝辄止的社交，更倾心于直抵灵魂的深度交流。在这一对一的深谈中，你的智慧和深度总能带给对方深刻启发。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不靠热闹存在，你靠脑洞让人记住",
+        shareLine: "我是灵感章鱼型，属于会把聊天聊出新方向的那种。",
+        stateLabel: "灵感破冰型",
+        analysis: "你是灵感章鱼型：脑洞停不下来，能把八竿子打不着的东西串在一起，然后说一句让大家愣一下的话。这种跳跃性思维是创意的核心。如果有时候能把想法落地一下就更完整了。",
+        socialRole: "你更像灵感点火器，总能把聊天拐到别人没想到的地方。",
+        bestScene: "更适合主题活动、创意局，或能交换观点的小范围聚会。",
+        microAction: "下次开场先抛一个你最近觉得有意思的问题。",
+      },
+      shareVariants: {
+        selfIntro: "我是灵感章鱼型，属于会把聊天聊出新方向的那种。",
+        friendCallout: "认识我的人应该会懂，你不靠热闹存在，你靠脑洞让人记住。",
+        socialInvite: "如果一起组局，我更适合主题活动、创意局，或能交换观点的小范围聚会，会比较容易进入状态。",
+      },
+    },
   },
   "沉思猫头鹰": {
     id: "owl",
@@ -389,7 +577,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-slate-600 dark:text-slate-400",
       bgColorClass: "bg-slate-100 dark:bg-slate-900/20",
       gradientKey: "from-slate-500 via-gray-500 to-zinc-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "观察敏锐", description: "你像是一个冷静的旁观者，那些被大多数人忽略的细节和底层逻辑都逃不过你的眼睛。这让你总能把握事物的本质。" },
+        { trait: "一针见血", description: "你不喜欢废话，但每一次开口都直指核心。你的言语虽然不多，但分量十足，总能在关键时刻提供关键的决策参考。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是社交慢，你只是更擅长聊到点上",
+        shareLine: "我是沉思猫头鹰型，看着安静，其实聊到点上会很能聊。",
+        stateLabel: "慢热深聊型",
+        analysis: "你是沉思猫头鹰型：大群体里你不一定最活跃，但你说出来的话往往比热闹了半天的人更准。观察、消化、再开口，这个节奏是你的强项，不是弱点。",
+        socialRole: "你更像深聊引线，话不一定多，但往往最有记忆点。",
+        bestScene: "更适合2到4人的小局、一对一深聊，或有明确主题的场景。",
+        microAction: "下次只要提前准备一个你真想聊的问题就够了。",
+      },
+      shareVariants: {
+        selfIntro: "我是沉思猫头鹰型，看着安静，其实聊到点上会很能聊。",
+        friendCallout: "认识我的人应该会懂，你不是社交慢，你只是更擅长聊到点上。",
+        socialInvite: "如果一起组局，我更适合2到4人的小局、一对一深聊，或有明确主题的场景，会比较容易进入状态。",
+      },
+    },
   },
   "定心大象": {
     id: "elephant",
@@ -426,7 +634,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-gray-600 dark:text-gray-400",
       bgColorClass: "bg-gray-100 dark:bg-gray-900/20",
       gradientKey: "from-gray-500 via-slate-500 to-stone-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "稳定可靠", description: "你是团队中的定海神针，在混乱局面中依然能保持定力。这种基于实力的稳重，让你自然而然地成为大家的依赖。" },
+        { trait: "责任担当", description: "你对承诺有着近乎偏执的坚守，言出必行是你的底色。这种极高的可预测性，构建了你无可替代的个人品牌信誉。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不抢戏，但大家会因为你在而更安心",
+        shareLine: "我是定心大象型，不吵，但会让场子先稳下来。",
+        stateLabel: "稳场推进型",
+        analysis: "你是定心大象型：出了状况你不乱，身边的人看见你在就先稳了三分。这种靠谱是从内到外的，不是刻意维持的。只是别把别人的事全扛到自己身上。",
+        socialRole: "你更像局里的稳定器，能让大家更快进入舒服节奏。",
+        bestScene: "更适合有一点主题、需要人稳住节奏的小局。",
+        microAction: "下次参加活动，先认领一个能帮大家进入状态的小动作。",
+      },
+      shareVariants: {
+        selfIntro: "我是定心大象型，不吵，但会让场子先稳下来。",
+        friendCallout: "认识我的人应该会懂，你不抢戏，但大家会因为你在而更安心。",
+        socialInvite: "如果一起组局，我更适合有一点主题、需要人稳住节奏的小局，会比较容易进入状态。",
+      },
+    },
   },
   "稳如龟": {
     id: "turtle",
@@ -463,7 +691,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-emerald-600 dark:text-emerald-400",
       bgColorClass: "bg-emerald-100 dark:bg-emerald-900/20",
       gradientKey: "from-green-500 via-emerald-500 to-teal-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "看人准", description: "你从不急于对人下定论，而是通过长期的静默观察来过滤噪音。这种慢火烘焙出的洞察力，让你极少在重大判断上失误。" },
+        { trait: "深度交往", description: "你的朋友圈可能不大，但每一段关系都历经考验且深厚无比。你更愿意把精力投入在那些值得深交一生的人身上。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是慢半拍，你是先判断再投入",
+        shareLine: "我是稳如龟型，习惯先判断气场，再决定什么时候发力。",
+        stateLabel: "低耗观察型",
+        analysis: "你是稳如龟型：慢热，但认准了就是真的认准了。你那双看人的眼睛很准，不容易看走眼。这种判断力在人多的场合里其实是优势。",
+        socialRole: "你更像安静观察者，一旦决定靠近就会很靠谱。",
+        bestScene: "更适合允许留白的3到6人局，而不是一上来就很吵的场子。",
+        microAction: "下次别要求自己立刻融入，先锁定一个值得继续聊的人。",
+      },
+      shareVariants: {
+        selfIntro: "我是稳如龟型，习惯先判断气场，再决定什么时候发力。",
+        friendCallout: "认识我的人应该会懂，你不是慢半拍，你是先判断再投入。",
+        socialInvite: "如果一起组局，我更适合允许留白的3到6人局，会比较容易进入状态。",
+      },
+    },
   },
   "隐身猫": {
     id: "cat",
@@ -500,7 +748,27 @@ export const archetypeRegistry: Record<string, ArchetypeRecord> = {
       colorClass: "text-indigo-600 dark:text-indigo-400",
       bgColorClass: "bg-indigo-100 dark:bg-indigo-900/20",
       gradientKey: "from-indigo-500 via-purple-500 to-violet-500"
-    }
+    },
+    display: {
+      uniqueTraits: [
+        { trait: "独立自主", description: "你拥有一个丰盈且自洽的内心世界，不随波逐流。这种精神上的独立让你即便身处孤身，也能自得其乐且保持高昂的能量。" },
+        { trait: "质量至上", description: "你对社交极度挑剔，坚持'无意义的社交不如高质量的独处'。这种对品质的坚持，确保了你生活中的每一份连接都是真实且有意义的。" },
+      ],
+      xiaoyueFallback: {
+        headline: "你不是掉线型，你是先观察再发力",
+        shareLine: "我是隐身猫型，习惯先看气场，再决定什么时候出手。",
+        stateLabel: "低耗观察型",
+        analysis: "你是隐身猫型：坐在那里不怎么说话，但其实全场最清楚谁是真有趣、谁在表演。人群让你耗电，但一对一你完全是另一个人。这种深度，多数人一辈子才遇到一两次。",
+        socialRole: "你更像安静观察者，关键时刻往往能说到点上。",
+        bestScene: "更适合一对一深聊，或节奏不吵、允许留白的小局。",
+        microAction: "下次先记住一个你真正想继续聊的人，再顺着靠近。",
+      },
+      shareVariants: {
+        selfIntro: "我是隐身猫型，习惯先看气场，再决定什么时候出手。",
+        friendCallout: "认识我的人应该会懂，你不是掉线型，你是先观察再发力。",
+        socialInvite: "如果一起组局，我更适合一对一深聊，或节奏不吵、允许留白的小局，会比较容易进入状态。",
+      },
+    },
   }
 };
 

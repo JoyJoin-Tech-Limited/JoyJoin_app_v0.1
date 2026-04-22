@@ -850,6 +850,51 @@ test('validate-skill-routing.mjs fails when routing.yml is missing', () => {
   }
 });
 
+// ---- Feature flags and launch config ----
+console.log('\nFeature flags and launch config scenarios:');
+
+test('add a feature flag → feature-flags-launch-config', () => {
+  const r = routeSkill({ ask: 'Add a new feature flag to gate the event reminder push notifications' });
+  assertEqual(r.primary_skill, 'feature-flags-launch-config');
+});
+
+test('kill switch for payments → feature-flags-launch-config', () => {
+  const r = routeSkill({ ask: 'How do I safely roll out the payment flow behind a kill switch?' });
+  assertEqual(r.primary_skill, 'feature-flags-launch-config');
+});
+
+test('toggle semantic similarity → feature-flags-launch-config', () => {
+  const r = routeSkill({ ask: 'Enable ENABLE_SEMANTIC_SIMILARITY in staging and monitor the metrics before production' });
+  assertEqual(r.primary_skill, 'feature-flags-launch-config');
+});
+
+test('audit icebreaker phase flags → feature-flags-launch-config', () => {
+  const r = routeSkill({ ask: 'Audit whether SOCIAL_ICEBREAKER_ENABLE_AUCTION and SOCIAL_MINISCRIPT_LLM_ENABLED degrade gracefully when disabled' });
+  assertEqual(r.primary_skill, 'feature-flags-launch-config');
+});
+
+// ---- Notification system ----
+console.log('\nNotification system scenarios:');
+
+test('add a notification trigger → notification-system', () => {
+  const r = routeSkill({ ask: 'Add a notification when an event is cancelled' });
+  assertEqual(r.primary_skill, 'notification-system');
+});
+
+test('debug notification badge → notification-system', () => {
+  const r = routeSkill({ ask: 'Why is the notification badge on the activities tab not updating?' });
+  assertEqual(r.primary_skill, 'notification-system');
+});
+
+test('admin broadcast notification → notification-system', () => {
+  const r = routeSkill({ ask: 'How do I send a broadcast notification to all users from the admin panel?' });
+  assertEqual(r.primary_skill, 'notification-system');
+});
+
+// ---------------------------------------------------------------------------
+// Validation edge cases
+// ---------------------------------------------------------------------------
+
 test('validate-skill-routing.mjs fails when routing-exempt.yml has no reason', () => {
   const skillDir = join(REPO_ROOT, '.github', 'skills', 'wow-elements');
   const target = join(skillDir, 'routing.yml');

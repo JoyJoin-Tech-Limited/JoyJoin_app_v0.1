@@ -40,7 +40,8 @@ Full golden standard for evaluating any skill in `.github/skills/`.
 - [ ] Error handling or fail-safe behavior is described where relevant
 - [ ] At least one realistic quick example is included (`## Quick examples`)
 - [ ] Troubleshooting section is present with 3–5 common issues and fixes
-- [ ] MCP/tool usage is correct if the skill depends on external tools
+- [ ] MCP/tool usage is correct if the skill depends on external tools or MCP servers
+- [ ] If the skill references an MCP server (e.g., `context7`, `agentMemory`), the agent prompt that loads this skill also instructs when and how to invoke that MCP server
 
 ---
 
@@ -74,4 +75,5 @@ Full golden standard for evaluating any skill in `.github/skills/`.
 
 - [ ] Skill is self-contained — a reader can act on it without needing other context
 - [ ] MCP dependency is documented if the skill requires an MCP server or external tool
+- [ ] The skill's `routing.yml` notes any MCP or integration dependencies under `related_skills` or a dedicated `tooling_dependencies` field when applicable
 - [ ] Skill is listed in `.github/skills/README.md` under an appropriate category

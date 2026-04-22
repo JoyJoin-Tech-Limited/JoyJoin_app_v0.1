@@ -51,6 +51,12 @@ vi.mock("../repositories/eventCreditsRepo", () => ({
   },
 }));
 vi.mock("../repositories/usersRepo", () => ({ usersRepo: { getUser: vi.fn() } }));
+vi.mock("../repositories/refundAttemptsRepo", () => ({
+  refundAttemptsRepo: {
+    findPendingByPaymentId: vi.fn().mockResolvedValue(undefined),
+    updateStatus: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 vi.mock("@shared/gamification", () => ({ getLevelDiscount: vi.fn().mockReturnValue(0) }));
 
 // Use dynamic import after mocks are set up

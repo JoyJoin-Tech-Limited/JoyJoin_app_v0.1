@@ -26,7 +26,6 @@ export interface SessionParticipant {
   interests?: string[]
   isHost?: boolean
   isActive?: boolean
-  [key: string]: unknown
 }
 
 const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; emoji: string; label: string }> = [

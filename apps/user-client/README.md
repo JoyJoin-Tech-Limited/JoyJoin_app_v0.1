@@ -1,6 +1,6 @@
 # User Client Workspace
 
-This workspace contains JoyJoin's browser-first user experience built with React + Vite.
+This workspace contains JoyJoin's web reference user experience built with React + Vite.
 
 ## Source-of-truth entry points
 

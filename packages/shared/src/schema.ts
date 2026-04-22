@@ -515,6 +515,28 @@ export const eventGroupOutcomes = pgTable("event_group_outcomes", {
   uniqueIndex("idx_event_group_outcomes_group_submitter").on(table.groupId, table.submittedBy),
 ]);
 
+// Event Pool AI Copy Cache - 活动池卡片AI文案缓存
+export const poolAICopy = pgTable("pool_ai_copy", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  poolId: varchar("pool_id").notNull().references(() => eventPools.id),
+  segmentHash: varchar("segment_hash").notNull(), // hash(user_archetype + top_3_interests)
+  
+  headline: text("headline"),
+  subheadline: text("subheadline"),
+  displayStatus: varchar("display_status").default("shadow"), // shadow | live | fallback
+  
+  generatedAt: timestamp("generated_at").defaultNow(),
+  provider: varchar("provider"), // e.g. 'deepseek', 'minimax'
+  fallbackUsed: boolean("fallback_used").default(false),
+  promptVersion: varchar("prompt_version").default("discover-card-v1"),
+  expiresAt: timestamp("expires_at"),
+}, (table) => [
+  index("idx_pool_ai_copy_pool_id").on(table.poolId),
+  index("idx_pool_ai_copy_expires_at").on(table.expiresAt),
+  uniqueIndex("idx_pool_ai_copy_pool_segment").on(table.poolId, table.segmentHash),
+]);
+
 // ============ 实时匹配系统配置 ============
 
 // Matching Thresholds table - 动态匹配阈值配置（管理员可调整）
@@ -1274,6 +1296,20 @@ export const payments = pgTable("payments", {
   paidAt: timestamp("paid_at"),
   
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Refund attempts - Track every refund initiation for audit and status monitoring
+export const refundAttempts = pgTable("refund_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentId: varchar("payment_id").notNull().references(() => payments.id),
+  status: varchar("status").notNull().default("pending"), // pending, success, failed
+  reason: text("reason"),
+  wechatRefundId: varchar("wechat_refund_id"), // out_refund_no sent to WeChat Pay
+  amount: integer("amount").notNull(),
+  initiatedBy: varchar("initiated_by"), // admin account ID
+  initiatedAt: timestamp("initiated_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  failureReason: text("failure_reason"),
 });
 
 // Coupons table - Discount codes
@@ -3363,6 +3399,40 @@ export const insertAdminAccountSchema = createInsertSchema(adminAccounts).omit({
 
 export type AdminAccount = typeof adminAccounts.$inferSelect;
 export type InsertAdminAccount = z.infer<typeof insertAdminAccountSchema>;
+
+// ============ Admin Audit Logs ============
+
+/**
+ * Persistent admin audit log storage.
+ *
+ * Mirrors the structure of AdminAuditRecord from adminAuditLogger.ts
+ * so audit events can be queried programmatically by admin tools and agents.
+ */
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auditId: varchar("audit_id", { length: 64 }).notNull().unique(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  adminId: varchar("admin_id", { length: 64 }).notNull(),
+  adminRole: varchar("admin_role", { length: 32 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  targetEntityType: varchar("target_entity_type", { length: 64 }).notNull(),
+  targetEntityId: varchar("target_entity_id", { length: 64 }),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  context: jsonb("context"),
+}, (table) => [
+  index("idx_audit_logs_admin_id").on(table.adminId),
+  index("idx_audit_logs_action").on(table.action),
+  index("idx_audit_logs_timestamp").on(table.timestamp),
+  index("idx_audit_logs_target").on(table.targetEntityType, table.targetEntityId),
+]);
+
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({
+  id: true,
+});
+
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
 
 // ============ Interest Signal Boost ============
 

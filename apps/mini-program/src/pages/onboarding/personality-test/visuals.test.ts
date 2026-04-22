@@ -13,7 +13,7 @@ const PAGE_WIRING_EXPECTATIONS = [
   },
   {
     filePath: path.resolve(currentDir, '../essential-data/index.tsx'),
-    expectedSnippet: "getXiaoyueAsset(intent.length > 0 ? 'pointing' : 'normal')",
+    expectedSnippet: "XiaoyueChatBubble",
   },
   {
     filePath: path.resolve(currentDir, '../extended-data/index.tsx'),

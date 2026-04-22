@@ -35,49 +35,77 @@ import {
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
-const coreOpsItems = [
-  { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "用户管理", url: "/admin/users", icon: Users },
-  { title: "活动池管理", url: "/admin/event-pools", icon: Layers },
-  { title: "场地管理", url: "/admin/venues", icon: MapPin },
+type AdminRole = "super_admin" | "operator" | "viewer";
+
+interface NavItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles?: AdminRole[];
+}
+
+const ALL_ROLES: AdminRole[] = ["super_admin", "operator", "viewer"];
+const SUPER_ONLY: AdminRole[] = ["super_admin"];
+const SUPER_OPERATOR: AdminRole[] = ["super_admin", "operator"];
+
+const coreOpsItems: NavItem[] = [
+  { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
+  { title: "用户管理", url: "/admin/users", icon: Users, roles: ALL_ROLES },
+  { title: "活动池管理", url: "/admin/event-pools", icon: Layers, roles: ALL_ROLES },
+  { title: "场地管理", url: "/admin/venues", icon: MapPin, roles: ALL_ROLES },
 ];
 
-const matchingItems = [
-  { title: "匹配实验室", url: "/admin/matching", icon: FlaskConical },
-  { title: "匹配配置", url: "/admin/matching-config", icon: Settings },
-  { title: "匹配日志", url: "/admin/matching-logs", icon: ScrollText },
+const matchingItems: NavItem[] = [
+  { title: "匹配实验室", url: "/admin/matching", icon: FlaskConical, roles: SUPER_ONLY },
+  { title: "匹配配置", url: "/admin/matching-config", icon: Settings, roles: SUPER_ONLY },
+  { title: "匹配日志", url: "/admin/matching-logs", icon: ScrollText, roles: SUPER_ONLY },
 ];
 
-const safetyItems = [
-  { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare },
-  { title: "举报审核", url: "/admin/moderation", icon: Flag },
-  { title: "连接日志", url: "/admin/interaction-logs", icon: FileText },
+const safetyItems: NavItem[] = [
+  { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare, roles: SUPER_OPERATOR },
+  { title: "举报审核", url: "/admin/moderation", icon: Flag, roles: SUPER_OPERATOR },
+  { title: "连接日志", url: "/admin/interaction-logs", icon: FileText, roles: SUPER_ONLY },
 ];
 
-const contentRevenueItems = [
-  { title: "数据洞察", url: "/admin/insights", icon: BarChart3 },
-  { title: "Outcome 分析", url: "/admin/outcome-analytics", icon: Database },
-  { title: "破冰 AI 反馈", url: "/admin/icebreaker-ai-feedback", icon: Sparkles },
-  { title: "内容管理", url: "/admin/content", icon: FileText },
-  { title: "通知推送", url: "/admin/notifications", icon: Bell },
-  { title: "活动管理", url: "/admin/events", icon: CalendarDays },
-  { title: "订阅管理", url: "/admin/subscriptions", icon: CreditCard },
-  { title: "定价管理", url: "/admin/pricing", icon: DollarSign },
-  { title: "优惠券", url: "/admin/coupons", icon: Tag },
-  { title: "财务管理", url: "/admin/finance", icon: DollarSign },
-  { title: "举报管理", url: "/admin/reports", icon: ReceiptText },
-  { title: "小悦进化", url: "/admin/evolution", icon: Brain },
+const contentRevenueItems: NavItem[] = [
+  { title: "数据洞察", url: "/admin/insights", icon: BarChart3, roles: SUPER_ONLY },
+  { title: "Outcome 分析", url: "/admin/outcome-analytics", icon: Database, roles: SUPER_ONLY },
+  { title: "破冰 AI 反馈", url: "/admin/icebreaker-ai-feedback", icon: Sparkles, roles: SUPER_OPERATOR },
+  { title: "内容管理", url: "/admin/content", icon: FileText, roles: SUPER_ONLY },
+  { title: "通知推送", url: "/admin/notifications", icon: Bell, roles: SUPER_ONLY },
+  { title: "活动管理", url: "/admin/events", icon: CalendarDays, roles: SUPER_OPERATOR },
+  { title: "订阅管理", url: "/admin/subscriptions", icon: CreditCard, roles: SUPER_ONLY },
+  { title: "定价管理", url: "/admin/pricing", icon: DollarSign, roles: SUPER_ONLY },
+  { title: "优惠券", url: "/admin/coupons", icon: Tag, roles: SUPER_ONLY },
+  { title: "财务管理", url: "/admin/finance", icon: DollarSign, roles: SUPER_OPERATOR },
+  { title: "举报管理", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },
+  { title: "小悦进化", url: "/admin/evolution", icon: Brain, roles: SUPER_ONLY },
 ];
 
-// Only shown to super_admin
-const systemItems = [
-  { title: "管理员账号", url: "/admin/accounts", icon: ShieldCheck },
+const systemItems: NavItem[] = [
+  { title: "管理员账号", url: "/admin/accounts", icon: ShieldCheck, roles: SUPER_ONLY },
 ];
+
+function filterByRole(items: NavItem[], role?: string): NavItem[] {
+  return items.filter((item) => {
+    if (!item.roles) return true;
+    if (!role) return false;
+    return item.roles.includes(role as AdminRole);
+  });
+}
 
 export function AdminSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const isSuperAdmin = user?.adminRole === 'super_admin';
+  const role = user?.adminRole || "viewer";
+
+  const groups = [
+    { label: "核心运营", items: filterByRole(coreOpsItems, role) },
+    { label: "盲盒匹配", items: filterByRole(matchingItems, role) },
+    { label: "反馈与安全", items: filterByRole(safetyItems, role) },
+    { label: "内容与收入", items: filterByRole(contentRevenueItems, role) },
+    { label: "系统管理", items: filterByRole(systemItems, role) },
+  ].filter((g) => g.items.length > 0);
 
   return (
     <Sidebar>
@@ -93,13 +121,7 @@ export function AdminSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {[
-          { label: "核心运营", items: coreOpsItems },
-          { label: "盲盒匹配", items: matchingItems },
-          { label: "反馈与安全", items: safetyItems },
-          { label: "内容与收入", items: contentRevenueItems },
-          ...(isSuperAdmin ? [{ label: "系统管理", items: systemItems }] : []),
-        ].map((group) => (
+        {groups.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>

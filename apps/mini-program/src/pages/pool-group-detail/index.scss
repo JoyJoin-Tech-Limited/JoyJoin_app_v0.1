@@ -327,6 +327,12 @@
     text-align: center;
   }
 
+  &__error-hero {
+    width: 320rpx;
+    height: 240rpx;
+    margin-bottom: $spacing-sm;
+  }
+
   &__error-text {
     margin-bottom: $spacing-lg;
     color: $color-text-secondary;

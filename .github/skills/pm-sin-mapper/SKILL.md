@@ -207,6 +207,8 @@ Reset to the normalized seven-lens model above and state that public taxonomies 
 ## Related files
 
 - references/examples.md
+- [`../process-brainstorming/SKILL.md`](../process-brainstorming/SKILL.md) — structured divergent thinking before converging on a product direction
+- [`../process-systematic-debugging/SKILL.md`](../process-systematic-debugging/SKILL.md) — structured debugging when diagnosing drop-off or conversion issues
 - .github/skills/draft-prd/SKILL.md
 - .github/skills/frontend-hook-engine/SKILL.md
 - .github/skills/skill-authoring-governance/SKILL.md

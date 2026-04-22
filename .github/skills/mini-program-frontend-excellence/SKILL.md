@@ -47,7 +47,9 @@ For layout constraints, `setData` / list performance, cross-end files, `RichText
 1. **Classify the scope first**
    Use `platform-coordination-protocol` to decide whether the change is `MINI_PROGRAM_ONLY` or `BOTH_REQUIRED`.
 
-2. **Choose a design direction before coding**
+2. **WeChat DevTools MCP:** Before calling UI work complete, use the **WeChat DevTools MCP server** (`wechat-devtools`) to launch the mini-program, navigate to the affected page, and verify visual state. This is mandatory for pixel-precision checks and pre-merge UI validation. Capture screenshots when deviation from spec is suspected.
+
+3. **Choose a design direction before coding**
    Name the one visual or emotional idea that should define the screen. Run the anti-generic check from `joyjoin-brand-guidelines` and `wow-elements`. If the design spec conflicts with JoyJoin brand rules, stop and flag the exact conflict.
 
 3. **Translate the intent into Taro-native structure**

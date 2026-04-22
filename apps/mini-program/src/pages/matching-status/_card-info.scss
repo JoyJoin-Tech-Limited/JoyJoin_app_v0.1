@@ -1,0 +1,73 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+@mixin matching-status-card-info {
+  // ── Pool Info Card ────────────────────────────────────────────
+  &__card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__card-title {
+    @include type-display-section-title;
+    display: block;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+  }
+
+  &__info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-sm 0;
+    border-bottom: 1rpx solid $color-divider;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__info-label {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    flex-shrink: 0;
+  }
+
+  &__info-value {
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    text-align: right;
+
+    &--score {
+      @include gradient-text;
+      font-weight: $font-weight-bold;
+      font-size: $font-size-md;
+    }
+  }
+
+  &__arrival-toast {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10rpx;
+    margin-bottom: $spacing-sm;
+    padding: 14rpx $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 16rpx 34rpx rgba($color-primary, 0.12);
+    animation: matching-arrival-rise 0.24s ease-out;
+  }
+
+  &__arrival-emoji {
+    font-size: $font-size-base;
+  }
+
+  &__arrival-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+}

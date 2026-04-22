@@ -1,0 +1,103 @@
+skill: wechat-ecosystem-integration
+
+primary_ownership: >
+  WeChat auth flows (Mini Program jscode2session, OA web OAuth, Open Platform QR),
+  WeChat Pay v3 (JSAPI, H5, webhooks, refunds), Taro/Mini Program API patterns,
+  and cross-platform WeChat coordination boundaries.
+
+use_when:
+  - working with WeChat login, auth, or session handling on server or client
+  - modifying WeChat Pay creation, verification, webhooks, or refunds
+  - changing mini-program API transport, auth bootstrap, or payment launch flow
+  - configuring or debugging WECHAT_APPID, WECHAT_SECRET, or WECHAT_PAY_* env vars
+  - handling jscode2session, openid, session_key, or encrypted-data decryption
+  - integrating Taro WeChat-specific APIs (Taro.login, Taro.requestPayment, Taro.request)
+  - deciding whether a WeChat-specific change needs sibling-platform review
+
+do_not_use_when:
+  - task is generic React/Vite web UI with no WeChat API or payment impact
+  - task is admin-only with no WeChat integration surface
+  - task is purely cosmetic mini-program UI without auth/payment/WeChat API impact
+  - task is database schema design unrelated to WeChat
+
+strong_triggers:
+  - wechat auth
+  - wx.login
+  - Taro.login
+  - jscode2session
+  - WeChat Pay
+  - Taro.requestPayment
+  - mini-program payment
+  - wechat oauth
+  - openid
+  - session_key
+  - WECHAT_APPID
+  - WECHAT_SECRET
+  - WECHAT_PAY_APP_ID
+  - WECHAT_PAY_MCH_ID
+  - WECHAT_PAY_APIV3_KEY
+  - getWechatOpenId
+  - getWechatOAuthOpenId
+  - createMiniProgramPayment
+  - handleWebhook
+  - paymentService
+  - /api/auth/wechat/login
+  - /api/auth/wechat/login-with-test
+  - /api/auth/wechat/oauth/start
+  - /api/auth/wechat/oauth/callback
+  - /api/payments/miniprogram/create
+  - /api/webhooks/wechat-pay
+  - authenticateMiniProgramUser
+  - useWeChatLogin
+  - enableCookie
+
+owned_files:
+  - apps/server/src/wechatAuth.ts
+  - apps/server/src/paymentService.ts
+  - apps/server/src/routes/domains/payments.ts
+  - apps/server/src/routes/domains/auth.ts
+  - apps/server/src/lib/configValidation.ts
+  - apps/mini-program/src/lib/api.ts
+  - apps/mini-program/src/hooks/useWeChatLogin.ts
+  - apps/mini-program/src/pages/blind-box-payment/index.tsx
+  - apps/mini-program/src/pages/payment-verification/index.tsx
+  - apps/user-client/src/hooks/useWeChatLogin.ts
+  - docs/PLATFORM_COORDINATION.md
+  - docs/wechat-mini-program-reference.md
+
+owned_paths:
+  - /api/auth/wechat/login
+  - /api/auth/wechat/login-with-test
+  - /api/auth/wechat/oauth/start
+  - /api/auth/wechat/oauth/callback
+  - /api/payments/miniprogram/create
+  - /api/payments/create
+  - /api/webhooks/wechat-pay
+  - /api/payments/*/status
+
+owned_symbols:
+  - getWechatOpenId
+  - getWechatOAuthOpenId
+  - findOrCreateWechatUser
+  - PaymentService
+  - createMiniProgramPayment
+  - createPayment
+  - handleWebhook
+  - authenticateMiniProgramUser
+  - authenticateMiniProgramUserWithTest
+  - getUserState
+  - useWeChatLogin
+  - getDirectMiniProgramAppIdConsistencyIssue
+  - canUseMockWechatAuth
+
+related_skills:
+  - skill: platform-coordination-protocol
+    when: deciding whether a WeChat change needs sibling-platform review
+  - skill: mini-program-frontend-excellence
+    when: Taro UI implementation, pixel precision, or DevTools verification
+  - skill: payment-entitlement-authority
+    when: payment creation, refunds, event-pack credits, or entitlement gating
+  - skill: auth-session-and-safety-boundaries
+    when: auth policy, session contracts, dev-only surfaces, or fail-closed gating
+  - skill: server-domain-architecture
+    when: adding new API routes or repositories on the server

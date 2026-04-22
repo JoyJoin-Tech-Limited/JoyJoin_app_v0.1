@@ -114,7 +114,7 @@ async function createUserAccount() {
     console.log('\n⏳ Creating user account...');
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Check if user exists
     const existingUsers = await storage.getUserByPhone(phoneNumber);

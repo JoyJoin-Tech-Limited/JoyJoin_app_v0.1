@@ -1,3 +1,36 @@
+skill: miniscript-story-framework
+
+primary_ownership: >
+  MiniScript (迷你剧本杀) story framework JSON schema, POST /api/miniscript/generate,
+  host-owned style/genre enums, idempotent compilation, and mini-program-first UX binding
+  for the social icebreaker mini_script phase.
+
+use_when:
+  - working on mini_script phase JSON contracts or schema changes
+  - implementing or reviewing /api/miniscript/generate or miniscript routes
+  - changing MiniScriptAgent worker output format or compilation pipeline
+  - updating mini_script UI bindings in phaseViews or icebreaker-session pages
+  - adding or modifying mini_script story style/genre enums
+  - debugging mini_script generation, host authority, or roster-size gating
+
+do_not_use_when:
+  - task is about general social icebreaker session flow (use social-icebreaker-domain)
+  - task is about lie_detective or personality_dice phases (use those specific skills)
+  - task is purely about generic UI layout not tied to mini_script content
+
+strong_triggers:
+  - mini_script
+  - miniscript
+  - MiniScriptStoryFramework
+  - miniscriptAgent
+  - MiniScriptAgent
+  - /api/miniscript/generate
+  - /api/miniscript
+  - sinHook
+  - act_flow
+  - mini_script phase
+  - 迷你剧本杀
+
 owned_files:
   - packages/shared/src/miniscriptStoryFramework.ts
   - apps/server/src/lib/miniscriptAgent.ts
@@ -5,9 +38,15 @@ owned_files:
   - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
   - apps/mini-program/src/pages/icebreaker-session/index.tsx
   - apps/user-client/src/components/social-icebreaker/miniscript/
+
 related_skills:
-  - llm-runtime-safety-and-integration
-  - social-icebreaker-domain
-  - mini-program-frontend-excellence
-  - platform-coordination-protocol
-  - server-domain-architecture
+  - skill: llm-runtime-safety-and-integration
+    when: changes to LLM provider routing, prompt metadata, fallback behavior, or AI trace logging for miniscript generation
+  - skill: social-icebreaker-domain
+    when: the task touches session lifecycle, host authority, or phase transitions around mini_script
+  - skill: mini-program-frontend-excellence
+    when: mini-program UI polish, pixel precision, or Taro-specific rendering for mini_script views
+  - skill: platform-coordination-protocol
+    when: mini_script changes require sibling-platform (web vs mini-program) parity review
+  - skill: server-domain-architecture
+    when: adding new miniscript routes or changing domain ownership boundaries

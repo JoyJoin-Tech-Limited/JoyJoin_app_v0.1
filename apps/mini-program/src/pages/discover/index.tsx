@@ -1,6 +1,6 @@
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import Taro, { useReady, usePullDownRefresh } from '@tarojs/taro'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getEventPools,
@@ -17,9 +17,12 @@ import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import LoadingScreen from '../../components/LoadingScreen'
+import PageMorphWrapper from '../../components/PageMorphWrapper'
 import Card from '../../components/Card'
 import StatusCard from '../../components/StatusCard'
 import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
+import VirtualList from '../../components/VirtualList'
+import ArchetypeGlyph from '../../components/ArchetypeGlyph'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import MiniProgramLandingPage from '../index/LandingPage'
@@ -28,6 +31,11 @@ import './index.scss'
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
+
+// Measured PoolCard height in rpx.
+// TODO: Verify in WeChat DevTools on iPhone + low-end Android.
+// If measured variance exceeds 2px across devices, dynamic-height fallback triggers.
+const DISCOVER_CARD_HEIGHT_RPX = 580
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   dinner: '饭局',
@@ -43,19 +51,16 @@ const STATUS_LABELS: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
-/** Resolve a human-readable event-type badge label */
 function getEventTypeLabel(eventType?: string): string {
   if (!eventType) return '其他'
   return EVENT_TYPE_LABELS[eventType] ?? '其他'
 }
 
-/** Resolve a status badge label */
 function getStatusLabel(status?: string): string {
   if (!status) return '报名中'
   return STATUS_LABELS[status] ?? status
 }
 
-/** Status → CSS modifier */
 function getStatusModifier(status?: string): string {
   switch (status) {
     case 'open':
@@ -69,7 +74,6 @@ function getStatusModifier(status?: string): string {
   }
 }
 
-/** Participant fill percentage clamped 0-100 */
 function getFillPercent(current?: number, max?: number): number {
   if (!max || max === 0) return 0
   return Math.min(100, Math.round(((current ?? 0) / max) * 100))
@@ -120,7 +124,7 @@ function getPoolMomentum(pool: EventPoolSummary, fillPct: number): {
   }
 }
 
-// ─── Skeleton placeholder ─────────────────────────────────────────
+// ─── Skeleton placeholder (initial loading) ───────────────────────
 function PoolCardSkeleton() {
   return (
     <View className='discover-auth__pool-card discover-auth__pool-card--skeleton'>
@@ -137,19 +141,39 @@ interface PoolCardProps {
   isRegistered: boolean
   index: number
   onTap: (pool: EventPoolSummary) => void
+  animate?: boolean
 }
 
-function PoolCard({ pool, isRegistered, index, onTap }: PoolCardProps) {
+const PoolCard = React.memo(function PoolCard({
+  pool,
+  isRegistered,
+  index,
+  onTap,
+  animate = true,
+}: PoolCardProps) {
   const fillPct = getFillPercent(pool.currentParticipants, pool.maxParticipants)
   const statusMod = getStatusModifier(pool.status)
   const momentum = getPoolMomentum(pool, fillPct)
   const ctaLabel = isRegistered ? '查看报名进度' : '去填写偏好'
 
+  const accentFamily = pool.accentFamily ?? 'calm'
+  const sampleArchetypes = pool.sampleArchetypes ?? []
+  const registrationCount = pool.registrationCount ?? 0
+  const aiHeadline = pool.aiHeadline
+  const hasUserArchetypeMatch = pool.hasUserArchetypeMatch ?? false
+
+  // Show up to 5 unique glyphs; if more registrants exist, show +N badge
+  const visibleGlyphs = sampleArchetypes.slice(0, 5)
+  const hasMore = registrationCount > visibleGlyphs.length
+  const moreCount = hasMore ? registrationCount - visibleGlyphs.length : 0
+
+  const headline = aiHeadline ?? momentum.headline
+
   return (
     <Card
-      className='discover-auth__pool-card discover-auth__pool-card--live'
+      className={`discover-auth__pool-card discover-auth__pool-card--live discover-auth__pool-card--accent-${accentFamily}`}
       hoverClass='discover-auth__pool-card--hover'
-      style={{ animationDelay: `${Math.min(index, 4) * 70}ms` }}
+      style={animate ? { animationDelay: `${Math.min(index, 4) * 60}ms` } : undefined}
       onClick={() => onTap(pool)}
     >
       <View className='discover-auth__pool-topline'>
@@ -176,7 +200,36 @@ function PoolCard({ pool, isRegistered, index, onTap }: PoolCardProps) {
         </View>
       </View>
 
-      <Text className='discover-auth__pool-promise'>时间区域已定 · 成局后再揭晓同桌伙伴</Text>
+      {/* Personality palette — social proof */}
+      {visibleGlyphs.length > 0 ? (
+        <View className='discover-auth__pool-palette'>
+          <Text className='discover-auth__pool-palette-label'>
+            已有 {registrationCount} 人
+          </Text>
+          <View className='discover-auth__pool-palette-glyphs'>
+            {visibleGlyphs.map((archetype, i) => (
+              <ArchetypeGlyph
+                key={`${archetype}-${i}`}
+                archetype={archetype}
+                family={accentFamily}
+                size={18}
+              />
+            ))}
+            {hasMore && (
+              <Text className='discover-auth__pool-palette-more'>+{moreCount}</Text>
+            )}
+          </View>
+          {hasUserArchetypeMatch && (
+            <View className='discover-auth__pool-match-badge'>
+              <Text>你的同类已加入</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <Text className='discover-auth__pool-palette-label' style={{ marginBottom: '12rpx' }}>
+          首批探索者已就位
+        </Text>
+      )}
 
       <View className='discover-auth__pool-meta'>
         <Text className='discover-auth__pool-location'>
@@ -189,7 +242,7 @@ function PoolCard({ pool, isRegistered, index, onTap }: PoolCardProps) {
 
       <View className='discover-auth__pool-signal'>
         <View className='discover-auth__pool-signal-copy'>
-          <Text className='discover-auth__pool-signal-title'>{momentum.headline}</Text>
+          <Text className='discover-auth__pool-signal-title'>{headline}</Text>
           <Text className='discover-auth__pool-signal-desc'>{momentum.detail}</Text>
         </View>
         <Text className='discover-auth__pool-signal-count'>{momentum.counter}</Text>
@@ -200,7 +253,7 @@ function PoolCard({ pool, isRegistered, index, onTap }: PoolCardProps) {
           <View className='discover-auth__progress-track'>
             <View
               className={`discover-auth__progress-fill discover-auth__progress-fill--${statusMod}`}
-              style={{ width: `${fillPct}%` }}
+              style={{ transform: `scaleX(${fillPct / 100})` }}
             />
           </View>
           <Text className='discover-auth__progress-text'>
@@ -225,7 +278,7 @@ function PoolCard({ pool, isRegistered, index, onTap }: PoolCardProps) {
       </View>
     </Card>
   )
-}
+})
 
 // ─── AuthenticatedDiscover ────────────────────────────────────────
 function AuthenticatedDiscover() {
@@ -236,12 +289,29 @@ function AuthenticatedDiscover() {
     void openMiniProgramPaymentPage({
       paymentsEnabled: user?.paymentsEnabled,
       currentUserId: user?.id,
+      returnTab: 'discover',
     })
   }, [user?.id, user?.paymentsEnabled])
 
   // ── Filter state ──
   const [selectedCluster, setSelectedCluster] = useState<string>(ALL_CLUSTER_ID)
   const [selectedDistrict, setSelectedDistrict] = useState<string>(ALL_DISTRICT_ID)
+
+  // ── Sticky header height ──
+  const [stickyHeaderHeight, setStickyHeaderHeight] = useState(0)
+  useReady(() => {
+    try {
+      Taro.createSelectorQuery()
+        .select('.discover-auth__sticky-header')
+        .boundingClientRect((rect) => {
+          const r = Array.isArray(rect) ? rect[0] : rect
+          if (r) setStickyHeaderHeight(r.height)
+        })
+        .exec()
+    } catch {
+      // ignore measurement errors — VirtualList has fallback gates
+    }
+  })
 
   // ── Data fetching ──
   const {
@@ -276,7 +346,6 @@ function AuthenticatedDiscover() {
   // ── Derived: filtered pool list ──
   const filteredPools = useMemo<EventPoolSummary[]>(() => {
     return pools.filter((pool) => {
-      // Cluster filter
       if (selectedCluster !== ALL_CLUSTER_ID) {
         const clusterDistricts = shenzhenClusters
           .find((c) => c.id === selectedCluster)
@@ -285,7 +354,6 @@ function AuthenticatedDiscover() {
           return false
         }
       }
-      // District filter
       if (selectedDistrict !== ALL_DISTRICT_ID) {
         const district = visibleDistricts.find((d) => d.id === selectedDistrict)
         if (district && pool.district !== district.name) {
@@ -299,7 +367,7 @@ function AuthenticatedDiscover() {
   // ── Handlers ──
   const handleClusterTap = useCallback((clusterId: string) => {
     setSelectedCluster(clusterId)
-    setSelectedDistrict(ALL_DISTRICT_ID) // reset district when cluster changes
+    setSelectedDistrict(ALL_DISTRICT_ID)
   }, [])
 
   const handleDistrictTap = useCallback((districtId: string) => {
@@ -315,93 +383,111 @@ function AuthenticatedDiscover() {
     queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
   }, [queryClient])
 
+  // ── Pull-to-refresh ──
+  usePullDownRefresh(() => {
+    handleRefresh()
+    setTimeout(() => {
+      Taro.stopPullDownRefresh()
+    }, 800)
+  })
+
+  // ── Render helpers ──
+  const renderPoolCard = useCallback(
+    (pool: EventPoolSummary, index: number, _hasBeenRendered: boolean) => (
+      <PoolCard
+        pool={pool}
+        index={index}
+        isRegistered={registeredPoolIds.has(pool.id)}
+        onTap={handlePoolTap}
+        animate={index < 6}
+      />
+    ),
+    [registeredPoolIds, handlePoolTap]
+  )
+
+  const poolKeyExtractor = useCallback(
+    (pool: EventPoolSummary) => pool.id,
+    []
+  )
+
   // ── Render ──
   return (
-    <ScrollView
-      className='discover-auth'
-      scrollY
-      enhanced
-      showScrollbar={false}
-      refresherEnabled
-      refresherTriggered={poolsLoading}
-      onRefresherRefresh={handleRefresh}
-    >
-      {/* Hero greeting */}
-      <View className='discover-auth__hero'>
-        <Text className='discover-auth__greeting'>你好，{displayName} 👋</Text>
-        <Text className='discover-auth__subtitle'>探索你的下一场悦聚</Text>
-      </View>
+    <View className='discover-auth'>
+      {/* Sticky header: hero + actions + promo + filters */}
+      <View className='discover-auth__sticky-header'>
+        <View className='discover-auth__hero'>
+          <Text className='discover-auth__greeting'>你好，{displayName} 👋</Text>
+          <Text className='discover-auth__subtitle'>探索你的下一场悦聚</Text>
+        </View>
 
-      {/* Quick actions */}
-      <View className='discover-auth__actions'>
-        <Card className='discover-auth__action-card' onClick={handleOpenPayment}>
-          <Text className='discover-auth__action-emoji'>🎁</Text>
-          <Text className='discover-auth__action-label'>开通权益</Text>
-        </Card>
-        <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
-          <Text className='discover-auth__action-emoji'>📅</Text>
-          <Text className='discover-auth__action-label'>我的活动</Text>
-        </Card>
-        <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
-          <Text className='discover-auth__action-emoji'>🤝</Text>
-          <Text className='discover-auth__action-label'>我的连接</Text>
-        </Card>
-      </View>
+        <View className='discover-auth__actions'>
+          <Card className='discover-auth__action-card' onClick={handleOpenPayment}>
+            <Text className='discover-auth__action-emoji'>🎁</Text>
+            <Text className='discover-auth__action-label'>开通权益</Text>
+          </Card>
+          <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
+            <Text className='discover-auth__action-emoji'>📅</Text>
+            <Text className='discover-auth__action-label'>我的活动</Text>
+          </Card>
+          <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
+            <Text className='discover-auth__action-emoji'>🤝</Text>
+            <Text className='discover-auth__action-label'>我的连接</Text>
+          </Card>
+        </View>
 
-      <AiMatchPromoCarousel className='discover-auth__promo' />
+        <AiMatchPromoCarousel className='discover-auth__promo' />
 
-      {/* ── City / District filter chips ── */}
-      <View className='discover-auth__filter-section'>
-        {/* Cluster row */}
-        <ScrollView className='discover-auth__chips-row' scrollX enhanced showScrollbar={false}>
-          <View className='discover-auth__chips-inner'>
-            <Text
-              className={`discover-auth__chip ${selectedCluster === ALL_CLUSTER_ID ? 'discover-auth__chip--active' : ''}`}
-              onClick={() => handleClusterTap(ALL_CLUSTER_ID)}
-            >
-              全部
-            </Text>
-            {shenzhenClusters.map((cluster) => (
-              <Text
-                key={cluster.id}
-                className={`discover-auth__chip ${selectedCluster === cluster.id ? 'discover-auth__chip--active' : ''}`}
-                onClick={() => handleClusterTap(cluster.id)}
-              >
-                {cluster.displayName}
-              </Text>
-            ))}
-          </View>
-        </ScrollView>
-
-        {/* District row — shown when a specific cluster is selected or when "全部" shows all districts */}
-        {visibleDistricts.length > 0 && (
-          <ScrollView className='discover-auth__chips-row discover-auth__chips-row--districts' scrollX enhanced showScrollbar={false}>
+        {/* City / District filter chips */}
+        <View className='discover-auth__filter-section'>
+          <ScrollView className='discover-auth__chips-row' scrollX enhanced showScrollbar={false}>
             <View className='discover-auth__chips-inner'>
               <Text
-                className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === ALL_DISTRICT_ID ? 'discover-auth__chip--active' : ''}`}
-                onClick={() => handleDistrictTap(ALL_DISTRICT_ID)}
+                className={`discover-auth__chip ${selectedCluster === ALL_CLUSTER_ID ? 'discover-auth__chip--active' : ''}`}
+                onClick={() => handleClusterTap(ALL_CLUSTER_ID)}
               >
                 全部
               </Text>
-              {visibleDistricts.map((district) => {
-                const heat = heatConfig[district.heat]
-                return (
-                  <Text
-                    key={district.id}
-                    className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === district.id ? 'discover-auth__chip--active' : ''}`}
-                    onClick={() => handleDistrictTap(district.id)}
-                  >
-                    {district.name}
-                    {heat.label ? ` ${heat.label}` : ''}
-                  </Text>
-                )
-              })}
+              {shenzhenClusters.map((cluster) => (
+                <Text
+                  key={cluster.id}
+                  className={`discover-auth__chip ${selectedCluster === cluster.id ? 'discover-auth__chip--active' : ''}`}
+                  onClick={() => handleClusterTap(cluster.id)}
+                >
+                  {cluster.displayName}
+                </Text>
+              ))}
             </View>
           </ScrollView>
-        )}
+
+          {visibleDistricts.length > 0 && (
+            <ScrollView className='discover-auth__chips-row discover-auth__chips-row--districts' scrollX enhanced showScrollbar={false}>
+              <View className='discover-auth__chips-inner'>
+                <Text
+                  className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === ALL_DISTRICT_ID ? 'discover-auth__chip--active' : ''}`}
+                  onClick={() => handleDistrictTap(ALL_DISTRICT_ID)}
+                >
+                  全部
+                </Text>
+                {visibleDistricts.map((district) => {
+                  const heat = heatConfig[district.heat]
+                  return (
+                    <Text
+                      key={district.id}
+                      className={`discover-auth__chip discover-auth__chip--sm ${selectedDistrict === district.id ? 'discover-auth__chip--active' : ''}`}
+                      onClick={() => handleDistrictTap(district.id)}
+                    >
+                      {district.name}
+                      {heat.label ? ` ${heat.label}` : ''}
+                    </Text>
+                  )
+                })}
+              </View>
+            </ScrollView>
+          )}
+        </View>
       </View>
 
-      {/* ── Pool listing ── */}
+      {/* Pool listing */}
       <View className='discover-auth__section'>
         <Text className='discover-auth__section-title'>
           活动池 {!poolsLoading && `(${filteredPools.length})`}
@@ -417,27 +503,25 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='error'
-            icon='😥'
+            heroSrc='/assets/lovart/lovart-generic-error.webp'
             title='加载失败'
             description='请下拉刷新重试'
           />
         ) : filteredPools.length > 0 ? (
-          <View className='discover-auth__pool-list'>
-            {filteredPools.map((pool, index) => (
-              <PoolCard
-                key={pool.id}
-                pool={pool}
-                index={index}
-                isRegistered={registeredPoolIds.has(pool.id)}
-                onTap={handlePoolTap}
-              />
-            ))}
-          </View>
+          <VirtualList
+            className='discover-auth__pool-list-wrapper'
+            listClassName='discover-auth__pool-list'
+            items={filteredPools}
+            itemHeight={DISCOVER_CARD_HEIGHT_RPX}
+            keyExtractor={poolKeyExtractor}
+            renderItem={renderPoolCard}
+            headerHeight={stickyHeaderHeight}
+          />
         ) : (
           <StatusCard
             className='discover-auth__empty-state'
             tone='empty'
-            icon='✨'
+            heroSrc='/assets/lovart/lovart-generic-empty.webp'
             title='暂无可报名的活动'
             description={
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
@@ -449,7 +533,7 @@ function AuthenticatedDiscover() {
       </View>
 
       <View className='discover-auth__spacer' />
-    </ScrollView>
+    </View>
   )
 }
 
@@ -472,9 +556,11 @@ export default function DiscoverPage() {
     return () => clearTimeout(timer)
   }, [isAuthenticated, markAsRead])
 
-  if (isLoading) {
-    return <LoadingScreen />
-  }
-
-  return isAuthenticated ? <AuthenticatedDiscover /> : <MiniProgramLandingPage />
+  return (
+    <PageMorphWrapper
+      isLoading={isLoading}
+      loading={<LoadingScreen />}
+      content={isAuthenticated ? <AuthenticatedDiscover /> : <MiniProgramLandingPage />}
+    />
+  )
 }

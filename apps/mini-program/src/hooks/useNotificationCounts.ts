@@ -4,6 +4,7 @@ import {
   markNotificationsAsRead,
   type NotificationCountsResponse,
 } from '@shared/api'
+import { POLL_NOTIFICATIONS_MS, STALE_TIME_DEFAULT_MS } from '../lib/uiConstants'
 import { apiRequest } from '../lib/api'
 
 const NOTIFICATION_COUNTS_KEY = ['mini-program', 'notification-counts'] as const
@@ -13,8 +14,8 @@ export function useNotificationCounts(enabled = true) {
     queryKey: NOTIFICATION_COUNTS_KEY,
     queryFn: () => getNotificationCounts(apiRequest),
     enabled,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: POLL_NOTIFICATIONS_MS,
+    staleTime: STALE_TIME_DEFAULT_MS,
   })
 }
 

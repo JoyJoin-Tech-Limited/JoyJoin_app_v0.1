@@ -29,9 +29,11 @@ Your job is to evaluate the current dirty worktree using the repo's deterministi
 
 1. Run `node scripts/auto-eval.mjs --mode manual-report`.
 2. Treat that script output as the canonical evaluation result for the current fingerprint.
-3. If the result is a blocking failure, surface the blocking module and top findings first.
-4. If the result is an infrastructure warning, say that clearly and distinguish it from a real quality failure.
-5. End with the current verdict, the exact fingerprint scope, and the most relevant next handoff if the user needs routing.
+3. **GitHub MCP:** If evaluating a PR or branch, use the **GitHub MCP server** (`github`) to check CI workflow status, PR checks, and mergeability. Cross-reference local findings against actual CI execution.
+4. **Observability MCP:** For backend changes, use the **JoyJoin Observability MCP server** (`observability`) to run health checks and the synthetic probe against the local API before reporting pass/fail.
+5. If the result is a blocking failure, surface the blocking module and top findings first.
+6. If the result is an infrastructure warning, say that clearly and distinguish it from a real quality failure.
+7. End with the current verdict, the exact fingerprint scope, and the most relevant next handoff if the user needs routing.
 
 ## Output format
 

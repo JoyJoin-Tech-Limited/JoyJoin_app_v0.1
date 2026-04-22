@@ -75,6 +75,8 @@ interface User {
   hasCompletedInterestsCarousel?: boolean;
   hasSeenProfileReview?: boolean;
   hasSeenGuide?: boolean;
+  onboardingCheckpoint?: string | null;
+  onboardingCheckpointTimestamp?: string | null;
   createdAt: string;
   profileCompleteness?: ProfileCompleteness;
 }
@@ -165,7 +167,7 @@ export default function AdminUsersPage() {
   const [, setLocation] = useLocation();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "subscribed" | "banned">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "subscribed" | "banned" | "stuck">("all");
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [cityFilter, setCityFilter] = useState<string>("");
   const [archetypeFilter, setArchetypeFilter] = useState<string>("");
@@ -323,6 +325,7 @@ export default function AdminUsersPage() {
                 <TabsTrigger value="all" data-testid="filter-all">全部</TabsTrigger>
                 <TabsTrigger value="subscribed" data-testid="filter-subscribed">会员</TabsTrigger>
                 <TabsTrigger value="banned" data-testid="filter-banned">已封禁</TabsTrigger>
+                <TabsTrigger value="stuck" data-testid="filter-stuck">卡壳用户</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -371,6 +374,54 @@ export default function AdminUsersPage() {
           </Card>
         )}
       </div>
+
+      {/* Onboarding Funnel Mini-Chart */}
+      {!isLoading && users.length > 0 && (
+        <Card className="mb-4" data-testid="card-onboarding-funnel">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Onboarding 漏斗</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const total = users.length;
+              const steps = [
+                { label: "注册开始", count: total, key: null },
+                { label: "完成注册", count: users.filter((u) => u.hasCompletedRegistration).length, key: "hasCompletedRegistration" },
+                { label: "性格测试", count: users.filter((u) => u.hasCompletedPersonalityTest).length, key: "hasCompletedPersonalityTest" },
+                { label: "兴趣选择", count: users.filter((u) => u.hasCompletedInterestsCarousel).length, key: "hasCompletedInterestsCarousel" },
+                { label: "资料回顾", count: users.filter((u) => u.hasSeenProfileReview).length, key: "hasSeenProfileReview" },
+                { label: "引导完成", count: users.filter((u) => u.hasSeenGuide).length, key: "hasSeenGuide" },
+              ];
+              const maxCount = Math.max(...steps.map((s) => s.count), 1);
+              return (
+                <div className="space-y-2">
+                  {steps.map((step, i) => {
+                    const widthPercent = Math.round((step.count / maxCount) * 100);
+                    const dropoff = i > 0 ? steps[i - 1].count - step.count : 0;
+                    return (
+                      <div key={step.label} className="flex items-center gap-3">
+                        <div className="w-20 text-xs text-muted-foreground text-right shrink-0">{step.label}</div>
+                        <div className="flex-1 h-6 bg-muted rounded overflow-hidden relative">
+                          <div
+                            className="h-full bg-primary/80 rounded transition-all"
+                            style={{ width: `${widthPercent}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center px-2 text-xs font-medium mix-blend-difference text-white">
+                            {step.count}
+                            {dropoff > 0 && i > 0 && (
+                              <span className="ml-1.5 text-[10px] opacity-70">↓{dropoff}</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

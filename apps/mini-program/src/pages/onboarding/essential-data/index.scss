@@ -4,461 +4,219 @@
 .essential-data {
   display: flex;
   flex-direction: column;
+  @include viewport-min-height;
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
+  @include onboarding-page-enter-transition;
 
   &__scroll {
     flex: 1;
+    min-height: 0;
   }
 
   &__shell {
     box-sizing: border-box;
-    padding: $spacing-lg $container-padding $spacing-xl;
+    padding: $spacing-md $container-padding $spacing-xl;
     @include safe-area-inline($container-padding);
-    @include fixed-footer-reserve($button-height + 280rpx, $spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
   }
 
   &__stage {
     @include onboarding-stage;
 
     &--2 {
-      animation-delay: 0.06s;
+      animation-delay: 0.08s;
     }
-
-    &--3 {
-      animation-delay: 0.12s;
-    }
-
-    &--4 {
-      animation-delay: 0.18s;
-    }
-  }
-
-  &__hero {
-    margin-bottom: $spacing-md;
-  }
-
-  &__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    padding: 10rpx 20rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.92);
-    color: $color-primary;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__title {
-    @include type-display-page-title;
-    display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-2xl;
-    color: $color-text-primary;
-  }
-
-  &__subtitle {
-    display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-    line-height: 1.55;
-  }
-
-  &__coach {
-    @include card;
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-md;
-    margin-bottom: $spacing-md;
-    border: 2rpx solid rgba($color-secondary, 0.16);
-    background: linear-gradient(
-      135deg,
-      rgba($color-surface, 0.98) 0%,
-      rgba($color-primary-light, 0.8) 100%
-    );
-  }
-
-  &__coach-avatar {
-    width: 112rpx;
-    height: 112rpx;
-    flex-shrink: 0;
-  }
-
-  &__coach-copy {
-    min-width: 0;
-  }
-
-  &__coach-title {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-  }
-
-  &__coach-text {
-    display: block;
-    margin-top: 10rpx;
-    font-size: $font-size-base;
-    color: $color-text-primary;
-    line-height: 1.5;
   }
 
   &__card {
     padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-  }
-
-  &__card-header {
-    margin-bottom: $spacing-md;
-  }
-
-  &__card-title {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__card-subtitle {
-    display: block;
-    margin-top: 8rpx;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
   }
 
   &__field {
-    margin-bottom: $spacing-md;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  &__field-grid {
     display: flex;
-    gap: $spacing-md;
-
-    .essential-data__field {
-      flex: 1;
-      min-width: 0;
-    }
+    flex-direction: column;
+    gap: $spacing-xs;
   }
 
   &__label {
-    display: block;
-    margin-bottom: 10rpx;
     font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    line-height: 1.4;
   }
 
   &__required {
-    margin-left: 6rpx;
     color: $color-error;
+    margin-left: 4rpx;
   }
 
   &__input {
-    box-sizing: border-box;
-    width: 100%;
-    height: $input-height;
+    height: 96rpx;
     padding: 0 $spacing-md;
-    border-radius: $card-radius-sm;
+    background: $color-bg;
     border: 2rpx solid $color-border;
-    background: rgba($color-surface, 0.98);
-    color: $color-text-primary;
+    border-radius: 24rpx;
     font-size: $font-size-base;
+    color: $color-text-primary;
+    line-height: 1.4;
 
-    &:focus {
-      border-color: rgba($color-primary, 0.42);
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__picker {
+    height: 96rpx;
+    padding: 0 $spacing-md;
+    background: $color-bg;
+    border: 2rpx solid $color-border;
+    border-radius: 24rpx;
+    display: flex;
+    align-items: center;
+  }
+
+  &__picker-text {
+    font-size: $font-size-base;
+    color: $color-text-muted;
+
+    &--filled {
+      color: $color-text-primary;
     }
   }
 
   &__hint {
-    display: block;
-    margin-top: 10rpx;
     font-size: $font-size-xs;
     color: $color-text-muted;
-    line-height: 1.45;
-  }
-
-  &__picker {
-    position: relative;
-    display: flex;
-    align-items: center;
-    min-height: $input-height;
-    padding: 0 $spacing-md;
-    border-radius: $card-radius-sm;
-    border: 2rpx solid $color-border;
-    background: rgba($color-surface, 0.98);
-
-    &::after {
-      content: '›';
-      position: absolute;
-      right: $spacing-md;
-      top: 50%;
-      transform: translateY(-50%);
-      color: $color-text-muted;
-      font-size: $font-size-lg;
-      line-height: 1;
-    }
-  }
-
-  &__picker-text {
-    display: block;
-    width: calc(100% - 40rpx);
-    padding-right: $spacing-md;
-    font-size: $font-size-base;
-    color: $color-text-muted;
-    @include text-truncate;
-
-    &--filled {
-      color: $color-text-primary;
-      font-weight: $font-weight-medium;
-    }
+    line-height: 1.4;
   }
 
   &__choice-row {
     display: flex;
-    flex-wrap: wrap;
     gap: $spacing-sm;
 
     &--wrap {
-      gap: 14rpx;
+      flex-wrap: wrap;
     }
   }
 
   &__choice-chip {
-    display: inline-flex;
+    flex: 1;
+    min-height: 88rpx;
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 72rpx;
-    padding: 0 $spacing-lg;
-    border-radius: 999rpx;
-    border: 2rpx solid rgba($color-border, 0.92);
-    background: rgba($color-surface, 0.96);
-    box-shadow: 0 8rpx 22rpx rgba(45, 49, 66, 0.05);
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease,
-      background 0.18s ease,
-      border-color 0.18s ease;
+    padding: $spacing-xs $spacing-md;
+    background: $color-bg;
+    border: 2rpx solid $color-border;
+    border-radius: 48rpx;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
-    &:active {
-      transform: scale(0.97);
+    &--selected {
+      background: linear-gradient(135deg, rgba($color-primary, 0.1), rgba($color-secondary, 0.1));
+      border-color: $color-primary;
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.15);
     }
 
     &--compact {
-      min-height: 64rpx;
-      padding: 0 $spacing-md;
-    }
-
-    &--selected {
-      border-color: transparent;
-      background: $brand-gradient;
-      box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.26);
-      transform: translateY(-2rpx);
-
-      .essential-data__choice-chip-text {
-        color: $color-text-white;
-      }
+      flex: 0 0 auto;
+      min-height: 72rpx;
+      padding: $spacing-xs $spacing-sm;
+      border-radius: 32rpx;
     }
   }
 
   &__choice-chip-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
   }
 
   &__intent-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: $spacing-sm;
   }
 
   &__intent-card {
-    box-sizing: border-box;
-    width: calc((100% - #{$spacing-sm}) / 2);
-    min-height: 176rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
     padding: $spacing-md;
-    border-radius: $card-radius-sm;
-    border: 2rpx solid rgba($color-border, 0.96);
-    background: rgba($color-surface, 0.98);
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.18s ease,
-      background 0.18s ease,
-      border-color 0.18s ease;
-
-    &:active {
-      transform: scale(0.98);
-    }
+    background: $color-bg;
+    border: 2rpx solid $color-border;
+    border-radius: 24rpx;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
     &--selected {
-      border-color: rgba($color-primary, 0.22);
-      background: linear-gradient(
-        145deg,
-        rgba($color-primary-light, 0.98) 0%,
-        rgba($color-surface, 0.98) 100%
-      );
-      box-shadow: 0 12rpx 28rpx rgba($color-primary, 0.14);
-      transform: translateY(-2rpx);
+      background: linear-gradient(135deg, rgba($color-primary, 0.1), rgba($color-secondary, 0.1));
+      border-color: $color-primary;
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.15);
     }
   }
 
   &__intent-emoji {
-    display: block;
-    font-size: 40rpx;
+    font-size: $font-size-xl;
   }
 
   &__intent-label {
-    display: block;
-    margin-top: 10rpx;
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     color: $color-text-primary;
+    text-align: center;
   }
 
   &__intent-subtitle {
-    display: block;
-    margin-top: 8rpx;
     font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.45;
+    color: $color-text-muted;
+    text-align: center;
+    line-height: 1.3;
   }
 
-  &__readiness-tray {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: $z-tab-bar;
-    box-sizing: border-box;
+  &__tray {
+    flex-shrink: 0;
     padding: $spacing-md $container-padding;
-    @include safe-area-inline($container-padding);
-    @include safe-area-bottom-padding(padding-bottom, $spacing-md);
-    border-top: 2rpx solid rgba($color-primary, 0.12);
-    background: linear-gradient(
-      180deg,
-      rgba($color-surface, 0.99) 0%,
-      rgba($color-primary-light, 0.94) 100%
-    );
-    box-shadow: 0 -16rpx 36rpx rgba($color-primary, 0.08);
-  }
-
-  &__readiness-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-sm;
-  }
-
-  &__readiness-copy {
-    min-width: 0;
-  }
-
-  &__readiness-title {
-    display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__readiness-subtitle {
-    display: block;
-    margin-top: 8rpx;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.45;
-  }
-
-  &__readiness-progress {
-    display: inline-flex;
-    align-items: center;
-    padding: 10rpx 18rpx;
-    border-radius: 999rpx;
+    padding-bottom: max($spacing-md, constant(safe-area-inset-bottom));
+    padding-bottom: max($spacing-md, env(safe-area-inset-bottom));
     background: rgba($color-surface, 0.92);
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-    white-space: nowrap;
-  }
-
-  &__readiness-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12rpx;
-    margin-top: $spacing-sm;
-  }
-
-  &__readiness-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    padding: 10rpx 18rpx;
-    border-radius: 999rpx;
-    border: 2rpx solid rgba($color-border, 0.92);
-    background: rgba($color-surface, 0.9);
-    color: $color-text-secondary;
-
-    &--done {
-      border-color: rgba($color-primary, 0.14);
-      background: rgba($color-primary-light, 0.98);
-      color: $color-primary;
-    }
-  }
-
-  &__readiness-chip-icon {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-bold;
-  }
-
-  &__readiness-chip-text {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
+    backdrop-filter: blur(12rpx);
+    border-top: 2rpx solid $color-divider;
+    @include safe-area-inline($container-padding);
   }
 
   &__error {
-    display: block;
-    margin-top: $spacing-sm;
     font-size: $font-size-sm;
     color: $color-error;
+    text-align: center;
+    margin-bottom: $spacing-sm;
   }
 
   &__submit {
     width: 100%;
-    margin-top: $spacing-sm;
-    border: 0;
+  }
+}
 
-    &.joy-button--brand {
-      @include type-brand-cta-label;
-    }
-
-    &[disabled] {
-      opacity: 0.55;
-    }
+@media (prefers-reduced-motion: reduce) {
+  .essential-data {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
+  .essential-data__stage {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .essential-data__choice-chip,
+  .essential-data__intent-card {
     transition: none;
-
-    &--exiting {
-      transition: none;
-    }
-
-    &__stage {
-      animation: none !important;
-      animation-delay: 0s !important;
-      opacity: 1 !important;
-      transform: none !important;
-    }
-
-    &__choice-chip,
-    &__intent-card {
-      transition: none;
-    }
   }
 }

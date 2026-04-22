@@ -1,0 +1,61 @@
+skill: viewport-zero-scroll
+
+primary_ownership: >
+  Zero-scroll viewport policy for web and WeChat mini-program: 100dvh shell, no document/page scroll,
+  no-scroll containers, ResponsiveSpacer, ScrollSentinel, and FormStepper density caps.
+
+use_when:
+  - user asks about viewport lock, zero scroll, or 100dvh
+  - user changes layout shells, scrolling behavior, or viewport containment
+  - user adds onboarding steps with dense input forms
+  - user works on mini-program layout or Taro ScrollView configuration
+  - user asks about ResponsiveSpacer, ScrollSentinel, or collapseBelow
+
+do_not_use_when:
+  - task is purely about color, typography, or brand tokens (use design-system-governance)
+  - task is about generic component placement not tied to viewport locking
+  - task is about server-side rendering or meta viewport tags only
+
+strong_triggers:
+  - zero scroll
+  - viewport lock
+  - 100dvh
+  - ResponsiveSpacer
+  - ScrollSentinel
+  - collapseBelow
+  - no-scroll-container
+  - overflow hidden
+  - viewport shell
+  - locked viewport
+  - mini-program layout
+  - Taro ScrollView
+  - FormStepper
+  - max 4 inputs
+  - onboarding density
+  - viewport-lockdown.css
+  - jj-scroll-chassis
+
+owned_files:
+  - apps/user-client/src/styles/viewport-lockdown.css
+  - apps/user-client/src/index.css
+  - apps/user-client/src/App.tsx
+  - apps/user-client/src/components/dev/ScrollSentinel.tsx
+  - packages/shared/src/ui/ResponsiveSpacer.tsx
+  - apps/mini-program/src/app.config.ts
+
+owned_symbols:
+  - ResponsiveSpacer
+  - ScrollSentinel
+  - viewport-lockdown.css
+  - no-scroll-container
+  - jj-scroll-chassis
+
+related_skills:
+  - skill: frontend-component-architecture
+    when: the task also involves shared component structure or semantic HTML
+  - skill: design-system-governance
+    when: the task involves tokens, spacing scale, or brand-aligned layout
+  - skill: mini-program-frontend-excellence
+    when: the task is mini-program-specific and needs pixel-precision or Taro-native patterns
+  - skill: onboarding-state-architecture
+    when: viewport changes affect onboarding flow density or step layout

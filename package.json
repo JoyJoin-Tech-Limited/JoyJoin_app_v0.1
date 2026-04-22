@@ -18,6 +18,8 @@
     "check:full": "npm run guardrails && npm run lint && npm run test && npm run build",
     "lint": "npm run lint -w @joyjoin/shared && npm run lint -w @joyjoin/user-client && npm run lint -w @joyjoin/admin-client && npm run lint -w @joyjoin/server",
     "test": "npm run test -w @joyjoin/shared && npm run test -w @joyjoin/user-client && npm run test -w @joyjoin/admin-client && npm run test -w @joyjoin/server",
+    "test:e2e": "npm run test:e2e -w @joyjoin/e2e",
+    "test:e2e:ui": "npm run test:e2e:ui -w @joyjoin/e2e",
     "dev:user": "npm run dev -w @joyjoin/user-client",
     "dev:admin": "npm run dev -w @joyjoin/admin-client",
     "dev:server": "npm run dev -w @joyjoin/server",
@@ -45,6 +47,7 @@
     "set-admin": "npm run admin:create",
     "admin:create": "npm run admin:create -w @joyjoin/server",
     "user:create": "npm run user:create -w @joyjoin/server",
-    "user:bypass": "npm run user:bypass -w @joyjoin/server"
+    "user:bypass": "npm run user:bypass -w @joyjoin/server",
+    "seed:test-data": "npm run seed:test-data -w @joyjoin/server"
   }
 }

@@ -53,7 +53,7 @@ Use this skill when you are:
    The `payments`, `event_credit_grants`, and `event_credit_redemptions` tables define the persistence contract. Behavior changes should stay aligned with that schema and its tests.
 
 8. Platform launch and pending-order persistence stay local.
-   Mini Program owns `Taro.requestPayment` and pending-order storage; browser clients own H5 redirect launch. Coordinate shared contract changes through `docs/PLATFORM_COORDINATION.md`.
+   Mini Program owns `Taro.requestPayment` and pending-order storage (launch-primary); browser clients own H5 redirect launch (reference-only, not shipping). Coordinate shared contract changes through `docs/PLATFORM_COORDINATION.md`.
 
 9. Admin refunds require both auth and audit truth.
    `/api/admin/payments/:paymentId/refund` is protected by `requireAdmin` and records `PAYMENT_REFUND_INITIATED`. If refund permissions, logging, or failure handling changes, review the admin governance skill too.

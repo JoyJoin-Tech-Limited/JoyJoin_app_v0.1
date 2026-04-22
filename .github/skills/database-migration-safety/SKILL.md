@@ -32,7 +32,9 @@ Use this skill when you are:
    Additive schema-only changes may be compatible with `db:push`.
    Renames, backfills, constraint cleanup, and destructive changes need an explicit migration plan.
 
-2. Prefer expand, verify, then contract.
+2. **Postgres MCP:** Before writing any migration, use the **Postgres MCP server** (`postgres`) to inspect the live database schema — table structures, column types, existing constraints, indexes, and approximate row counts. Do not rely solely on `schema.ts` or local assumptions when the production database may differ.
+
+3. Prefer expand, verify, then contract.
    For non-trivial live-data changes, design the rollout so the app can survive intermediate states instead of assuming a one-shot cutover.
 
 3. Make migration scripts idempotent and environment-aware.

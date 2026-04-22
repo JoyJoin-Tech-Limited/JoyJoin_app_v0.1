@@ -2,6 +2,11 @@
  * Rate Limiter Middleware
  * 
  * Simple in-memory rate limiting for AI-powered endpoints
+ * 
+ * TODO: Migrate to Redis-backed rate limiting for horizontal scalability.
+ * The current in-memory Map will not share state across multiple server instances,
+ * allowing distributed attackers to bypass limits by hitting different processes.
+ * Consider packages like `rate-limit-redis` or moving rate limiting to the API gateway.
  */
 
 import { Request, Response, NextFunction } from 'express';

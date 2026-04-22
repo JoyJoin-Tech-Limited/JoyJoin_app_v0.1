@@ -8,7 +8,7 @@
 
 - **Single source of truth:** Skills, custom agents, orchestration, and this file are shared by Cursor and GitHub Copilot. Do not maintain a second copy of skills or agents outside `.github/` (see `.github/AI_TOOLING_UNIFIED_BRAIN.md`).
 - **Planner vs Supervisor vs turn JSON:** Pre-execution plans and **model recommendations** belong to **`Planner`** (and this policy); **`Supervisor`** consolidates **`supervisor_turn_report`** and routing; see **Division of responsibility** in `.github/AI_WORKFLOW_POLICY.md`.
-- **Cursor Superpowers plugin:** Not available in GitHub Copilot. In Cursor, Superpowers process skills complement JoyJoin skills—see `.github/SUPERPOWERS_JOYOIN_INTEGRATION.md`.
+- **Cursor Superpowers plugin:** Not available in GitHub Copilot. In Cursor, Superpowers process skills complement JoyJoin skills—see `.github/SUPERPOWERS_JOYOIN_INTEGRATION.md`. For equivalent process discipline in Copilot and Kimi, use the native `.github/skills/process-*` skills: `process-brainstorming`, `process-systematic-debugging`, `process-verification-gate`, `process-test-first`.
 - **Ambiguous or cross-cutting tasks:** Run `node scripts/skill-router.mjs "your question"` and follow the suggested skill; routing metadata lives in `.github/skills/*/routing.yml`.
 - **Library and framework APIs (Taro, React, Prisma, etc.):** Prefer **Context7 via MCP** for current docs instead of relying on stale training data—after configuring MCP (`.vscode/mcp.json` for VS Code / Copilot; root `.mcp.json` for Cursor), use the Context7 tools when the task depends on accurate API or config details.
 - **Secrets:** Never commit API keys. Use `.env` (gitignored) for `CONTEXT7_API_KEY` where your IDE passes env to MCP, or VS Code `inputs` in `.vscode/mcp.json`. See `.env.example`.

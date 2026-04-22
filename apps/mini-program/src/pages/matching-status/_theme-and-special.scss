@@ -1,0 +1,163 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+@mixin matching-status-theme-and-special {
+  // ── Theme Card ────────────────────────────────────────────────
+  &__theme-card {
+    @include card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+    background: linear-gradient(135deg, #FFF5F7 0%, #F5F0FF 100%);
+  }
+
+  &__theme-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__theme-emoji {
+    font-size: $font-size-2xl;
+  }
+
+  &__theme-title {
+    @include type-display-section-title;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__theme-tagline {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+    line-height: 1.6;
+  }
+
+  &__theme-vibe {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__theme-vibe-label {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  &__theme-vibe-value {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+
+  &__theme-highlights {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  &__theme-highlight {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-xs;
+  }
+
+  &__theme-highlight-dot {
+    font-size: $font-size-base;
+    color: $color-primary;
+    line-height: 1.6;
+    flex-shrink: 0;
+  }
+
+  &__theme-highlight-text {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    line-height: 1.6;
+  }
+
+  &__special-card,
+  &__loading-card,
+  &__similar-card {
+    @include card;
+  }
+
+  &__special-card {
+    padding: $spacing-xl;
+    text-align: center;
+    margin-top: $spacing-xl;
+
+    &--stacked {
+      margin-top: 0;
+    }
+  }
+
+  &__special-icon {
+    display: block;
+    font-size: 88rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__special-title,
+  &__loading-title,
+  &__similar-title {
+    @include type-display-section-title;
+    display: block;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__special-text,
+  &__loading-text {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.7;
+    margin-top: $spacing-sm;
+  }
+
+  &__secondary-btn {
+    width: 100%;
+  }
+
+  &__similar-section {
+    margin-top: $spacing-lg;
+  }
+
+  &__similar-title {
+    margin-bottom: $spacing-md;
+  }
+
+  &__similar-card {
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+  }
+
+  &__similar-name {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__similar-meta {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    margin-top: 6rpx;
+  }
+
+  &__similar-btn {
+    width: 100%;
+    margin-top: $spacing-md;
+  }
+
+  &__loading-card {
+    padding: $spacing-lg;
+    text-align: center;
+  }
+}

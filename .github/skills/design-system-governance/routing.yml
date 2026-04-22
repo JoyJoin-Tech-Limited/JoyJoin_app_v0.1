@@ -61,3 +61,5 @@ related_skills:
     when: introducing a new colour that must align with brand identity
   - skill: wow-elements
     when: token change involves motion or transition values
+  - skill: multi-agent-deliberation
+    when: system-wide design token or component changes

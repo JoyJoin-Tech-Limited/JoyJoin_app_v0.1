@@ -1,6 +1,6 @@
 ---
 name: "Taro Migration Specialist"
-description: "Use when cloning apps/user-client into apps/mini-program with Taro, porting browser-first React or Vue code to a WeChat Mini Program, identifying unsupported DOM APIs and CSS, preserving near-100% parity without modifying source user-client files, or generating and validating apps/mini-program/src/app.config.ts."
+description: "Use when cloning apps/user-client into apps/mini-program with Taro, porting web reference React code to a WeChat Mini Program, identifying unsupported DOM APIs and CSS, preserving near-100% parity without modifying source user-client files, or generating and validating apps/mini-program/src/app.config.ts."
 tools: [read, search, edit, execute, agent]
 argument-hint: "Describe the web page, feature, or files to migrate, plus any constraints on navigation, networking, or styling."
 agents: ["Mini-Program Parity Auditor", "Expert React Frontend Engineer", "Taro Mini-Program Frontend Engineer"]
@@ -82,6 +82,7 @@ You have deep knowledge of:
 - Follow the [shared frontend thresholds reference](../skills/design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, and replace DOM tags with native Taro components such as `View`, `Text`, `Button`, `Input`, `Image`, and `ScrollView`.
 - Use `hover-class` rather than CSS hover, keep heavy route families and asset sets aware of subpackage budgets, and adopt `VirtualList` for long mini-program collections.
 - Prefer platform-native feedback and layout behavior over brittle compatibility shims.
+- **Context7 MCP:** When migrating browser APIs to Taro equivalents or verifying WeChat Mini Program runtime behavior, use the **Context7 MCP server** (`context7`) to query current Taro 4, React 18, and WeChat API documentation. Do not guess API signatures or lifecycle behavior—look it up via MCP when uncertain.
 
 ### Accessibility & Performance Notes
 
