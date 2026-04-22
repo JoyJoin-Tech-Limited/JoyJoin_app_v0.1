@@ -1,5 +1,27 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+export function resolveApiUrl(url: string, apiBaseUrl = API_BASE_URL): string {
+  if (/^https?:\/\//.test(url)) {
+    return url;
+  }
+
+  const normalizedUrl = url.startsWith("/") ? url : `/${url}`;
+
+  // Default to same-origin `/api/*` so production can use the host Nginx proxy
+  // without relying on browser CORS for credentialed requests.
+  if (!apiBaseUrl) {
+    return normalizedUrl;
+  }
+
+  if (apiBaseUrl === "/api" && normalizedUrl.startsWith("/api/")) {
+    return normalizedUrl;
+  }
+
+  return `${apiBaseUrl}${normalizedUrl}`;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -40,7 +62,7 @@ export async function apiRequest(
   data?: unknown | undefined,
   options?: ApiRequestOptions,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const res = await fetch(resolveApiUrl(url), {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -68,7 +90,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetch(resolveApiUrl(queryKey.join("/") as string), {
       credentials: "include",
     });
 
