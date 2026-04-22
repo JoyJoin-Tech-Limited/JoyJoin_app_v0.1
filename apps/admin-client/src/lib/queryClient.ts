@@ -2,16 +2,24 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
-export function resolveApiUrl(url: string): string {
+export function resolveApiUrl(url: string, apiBaseUrl = API_BASE_URL): string {
   if (/^https?:\/\//.test(url)) {
     return url;
   }
 
-  if (!API_BASE_URL) {
-    return url;
+  const normalizedUrl = url.startsWith("/") ? url : `/${url}`;
+
+  // Default to same-origin `/api/*` so production can use the host Nginx proxy
+  // without relying on browser CORS for credentialed requests.
+  if (!apiBaseUrl) {
+    return normalizedUrl;
   }
 
-  return `${API_BASE_URL}${url.startsWith("/") ? url : `/${url}`}`;
+  if (apiBaseUrl === "/api" && normalizedUrl.startsWith("/api/")) {
+    return normalizedUrl;
+  }
+
+  return `${apiBaseUrl}${normalizedUrl}`;
 }
 
 async function throwIfResNotOk(res: Response) {

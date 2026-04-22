@@ -31,6 +31,30 @@ set -a
 source "$ENV_FILE"
 set +a
 
+retry_command() {
+    local max_attempts=$1
+    local delay_seconds=$2
+    shift 2
+    local attempt=1
+    local exit_code=0
+
+    while true; do
+        if "$@"; then
+            return 0
+        fi
+
+        exit_code=$?
+        if [[ $attempt -ge $max_attempts ]]; then
+            echo "❌ Command failed after ${max_attempts} attempts: $*"
+            return "$exit_code"
+        fi
+
+        echo "⚠️ Command failed with exit code ${exit_code}. Retrying in ${delay_seconds}s (${attempt}/${max_attempts})..."
+        sleep "$delay_seconds"
+        attempt=$((attempt + 1))
+    done
+}
+
 echo "🚀 Deploying JoyJoin via self-managed Docker Compose + Nginx ($ENVIRONMENT)..."
 echo "📦 Repo root: $REPO_ROOT"
 echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
@@ -64,7 +88,7 @@ echo "🐳 Step 1: Rebuild and restart containers..."
 cd "$DEPLOY_DIR"
 echo "🧹 Removing stale joyjoin-api container if present..."
 docker rm -f joyjoin-api || true
-docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
 echo "🌐 Step 1.5: Sync and reload host Nginx config..."
 if [[ ! -f "$DEPLOY_DIR/nginx/joyjoin.conf" ]]; then
@@ -107,7 +131,7 @@ npx drizzle-kit push --config=apps/server/drizzle.config.cjs
 
 echo "🏥 Step 3: Verify runtime health..."
 API_HOST="127.0.0.1"
-API_PORTS=("5000" "5001")
+API_PORTS=("5000")
 MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
 HEALTH_CHECK_RETRY_DELAY_SECONDS="${HEALTH_CHECK_RETRY_DELAY_SECONDS:-5}"
 API_HEALTH_OK="false"
@@ -137,17 +161,15 @@ echo "🌐 Step 4: Verify Nginx route /api/health..."
 if ! curl -fsS -H "Host: 129.226.61.77" "http://127.0.0.1/api/health" > /dev/null; then
     echo "❌ Nginx route check failed at http://127.0.0.1/api/health"
     echo "📋 Debug info:"
-    echo "📋 Socket listeners (80/443/5000/5001):"
-    ss -ltnp | rg ':80|:443|:5000|:5001' || true
+    echo "📋 Socket listeners (80/443/5000):"
+    ss -ltnp | rg ':80|:443|:5000' || true
     echo "📋 Container status:"
     docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
     echo "📋 API port bindings:"
     docker inspect joyjoin-api --format '{{json .NetworkSettings.Ports}}' || true
     echo "📋 Local direct probes:"
     curl -sSI "http://127.0.0.1:5000/api/health" || true
-    curl -sSI "http://127.0.0.1:5001/api/health" || true
     echo "📋 Container logs:"
-    docker logs joyjoin-nginx --tail 120 || true
     docker logs joyjoin-api --tail 120 || true
     exit 1
 fi

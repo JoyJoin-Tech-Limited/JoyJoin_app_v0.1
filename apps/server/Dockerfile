@@ -58,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 
 EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "run", "start"]

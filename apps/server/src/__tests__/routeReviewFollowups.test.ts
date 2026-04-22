@@ -70,6 +70,7 @@ describe('route review follow-ups', () => {
     const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
     const userAppSource = readRepoFile('apps/user-client/src/App.tsx');
     const miniProgramPaymentPageSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
+    const miniProgramPaymentPageModelSource = readRepoFile('apps/mini-program/src/lib/paymentPageModel.ts');
 
     expect(userPaymentPageSource).toContain('/api/coupons/validate');
     expect(userPaymentPageSource).toContain('/api/payments/create');
@@ -92,6 +93,7 @@ describe('route review follow-ups', () => {
 
     expect(miniProgramPaymentPageSource).toContain('createMiniProgramPaymentIntent');
     expect(miniProgramPaymentPageSource).toContain('Taro.requestPayment');
+    expect(miniProgramPaymentPageModelSource).toContain("pack_3");
     expect(miniProgramPaymentPageSource).toContain('couponCode');
     expect(miniProgramPaymentPageSource).not.toContain('getBrowserPaymentLaunchUrl');
     expect(miniProgramPaymentPageSource).not.toContain('paymentRedirectUrl');
