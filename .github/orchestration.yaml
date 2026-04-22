@@ -95,6 +95,33 @@
           "Researcher",
           "Planner"
         ],
+      "harness_lane": {
+        "entry_agent": "Harness Runtime Controller",
+        "approval_mode": "harness-first",
+        "recommend_on_harness_signals": true,
+        "harness_signals": {
+          "prompt_terms": [
+            "harness",
+            "reliability",
+            "scalability",
+            "security review",
+            "observability gap",
+            "production harness",
+            "engineering quality gate",
+            "PGE pipeline",
+            "token circulation"
+          ],
+          "path_patterns": [
+            "packages/shared/src/personality/**",
+            "packages/shared/src/poolMatchingService.ts",
+            "apps/server/src/routes/domains/*.ts",
+            "apps/server/src/payment-entitlement/**",
+            "apps/server/src/auth/**"
+          ],
+          "min_blast_radius_lines": 100,
+          "min_cross_workspace_domains": 2
+        }
+      },
         "approval_mode": "plan-first",
         "recommend_on_first_broad_prompt": true,
         "broad_prompt_signals": {
