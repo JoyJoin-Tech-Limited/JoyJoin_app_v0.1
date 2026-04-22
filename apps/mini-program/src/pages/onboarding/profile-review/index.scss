@@ -4,6 +4,7 @@
 .profile-review {
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
+  @include onboarding-page-enter-transition;
 
   &__shell {
     box-sizing: border-box;
@@ -56,6 +57,10 @@
       @include onboarding-stage;
     }
 
+    &--0.profile-review__stage--visible {
+      animation-delay: 0s;
+    }
+
     &--2.profile-review__stage--visible {
       animation-delay: 0.06s;
     }
@@ -79,6 +84,23 @@
     &--7.profile-review__stage--visible {
       animation-delay: 0.36s;
     }
+  }
+
+  &__welcome-illustration {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-md;
+  }
+
+  &__welcome-image {
+    width: 400rpx;
+    height: 400rpx;
+
+    /*
+     * Asset optimized via `npm run optimize:lovart`.
+     * WebP 800px @ quality 85 — ~52KB from original ~1179KB PNG.
+     * Master PNG kept in raw-assets/lovart/ for re-generation.
+     */
   }
 
   &__hero {
@@ -200,20 +222,24 @@
     word-break: break-word;
   }
 
-  &__hero-archetype {
+  &__hero-archetype-badge {
     display: inline-flex;
     align-items: center;
     margin-top: 10rpx;
     max-width: 100%;
-    padding: 8rpx 18rpx;
+    padding: 8rpx 20rpx;
     border-radius: 999rpx;
-    background: rgba($color-surface, 0.92);
-    color: $color-primary;
+    border: 2rpx solid transparent;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     overflow-wrap: anywhere;
     word-break: break-word;
     box-sizing: border-box;
+  }
+
+  &__hero-archetype-badge-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
   }
 
   &__hero-summary {
@@ -225,9 +251,24 @@
     overflow-wrap: anywhere;
   }
 
-  &__ai-tagline {
-    display: block;
+  &__ai-tagline-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 8rpx;
     margin-top: 10rpx;
+    padding: 10rpx 16rpx;
+    background: linear-gradient(135deg, rgba($color-primary, 0.04), rgba($color-secondary, 0.04));
+    border-radius: 16rpx;
+    border: 2rpx solid rgba($color-primary, 0.08);
+  }
+
+  &__ai-tagline-sparkle {
+    font-size: $font-size-sm;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  &__ai-tagline {
     font-size: $font-size-xs;
     font-style: italic;
     color: rgba($color-text-secondary, 0.88);
@@ -485,6 +526,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+    transform: none;
     transition: none;
 
     &--exiting {

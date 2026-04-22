@@ -23,7 +23,8 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const ASSET_DIR = path.join(ROOT, 'src/assets/personality/xiaoyue')
+const INPUT_DIR = path.join(ROOT, 'raw-assets/personality/xiaoyue')
+const OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/xiaoyue')
 
 const MAX_WIDTH = 480
 const WEBP_QUALITY = 85
@@ -46,8 +47,8 @@ async function main() {
   const { default: sharp } = await import('sharp')
 
   for (const base of MANIFEST) {
-    const inputPng = path.join(ASSET_DIR, `${base}.png`)
-    const outputWebp = path.join(ASSET_DIR, `${base}.webp`)
+    const inputPng = path.join(INPUT_DIR, `${base}.png`)
+    const outputWebp = path.join(OUTPUT_DIR, `${base}.webp`)
 
     if (!fs.existsSync(inputPng)) {
       console.error(`Missing input: ${inputPng}`)

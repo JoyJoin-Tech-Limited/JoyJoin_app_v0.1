@@ -51,6 +51,33 @@ export function getArchetypeHSL(archetype: string | null | undefined): Archetype
 }
 
 /**
+ * Quantized color families for mini-program card theming.
+ * Maps 12 archetypes into 4 CSS families to avoid per-card inline style bloat.
+ */
+export const ARCHETYPE_FAMILY_MAP: Record<string, 'warm' | 'cool' | 'fire' | 'calm'> = {
+  '开心柯基': 'warm',
+  '太阳鸡': 'warm',
+  '夸夸豚': 'warm',
+  '机智狐': 'cool',
+  '淡定海豚': 'cool',
+  '灵感章鱼': 'cool',
+  '暖心熊': 'fire',
+  '织网蛛': 'fire',
+  '沉思猫头鹰': 'calm',
+  '定心大象': 'calm',
+  '稳如龟': 'calm',
+  '隐身猫': 'calm',
+}
+
+/**
+ * Get the quantized color family for an archetype.
+ */
+export function getArchetypeFamily(archetype: string | null | undefined): 'warm' | 'cool' | 'fire' | 'calm' {
+  if (!archetype) return 'calm'
+  return ARCHETYPE_FAMILY_MAP[archetype] || 'calm'
+}
+
+/**
  * Format HSL values as a CSS string.
  */
 export function formatHSL(hsl: ArchetypeHSL): string {

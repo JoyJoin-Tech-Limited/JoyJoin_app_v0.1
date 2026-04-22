@@ -5,9 +5,35 @@ import { AlertCircle, Home, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
+/** Routes accessible only to super_admin */
+const SUPER_ADMIN_ROUTES: string[] = [
+  "/admin/matching",
+  "/admin/matching-config",
+  "/admin/matching-logs",
+  "/admin/interaction-logs",
+  "/admin/insights",
+  "/admin/outcome-analytics",
+  "/admin/content",
+  "/admin/notifications",
+  "/admin/subscriptions",
+  "/admin/pricing",
+  "/admin/coupons",
+  "/admin/evolution",
+  "/admin/accounts",
+];
+
+function isRouteAllowed(path: string, role?: string): boolean {
+  if (role === "super_admin") return true;
+  // Exact match
+  if (SUPER_ADMIN_ROUTES.includes(path)) return false;
+  // Prefix match (e.g. /admin/matching/123)
+  if (SUPER_ADMIN_ROUTES.some((r) => path.startsWith(r + "/"))) return false;
+  return true;
+}
+
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -21,6 +47,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       return () => clearTimeout(timer);
     }
   }, [isLoading, user, setLocation]);
+
+  // Route-level role guard
+  useEffect(() => {
+    if (!isLoading && user && user.isAdmin && !isRouteAllowed(location, user.adminRole)) {
+      setLocation("/admin/dashboard");
+    }
+  }, [isLoading, user, location, setLocation]);
 
   if (isLoading) {
     return (

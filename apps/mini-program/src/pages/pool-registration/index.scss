@@ -520,6 +520,12 @@
     text-align: center;
   }
 
+  &__empty-hero {
+    width: 320rpx;
+    height: 240rpx;
+    margin-bottom: $spacing-sm;
+  }
+
   &__empty-title {
     @include type-display-section-title;
     display: block;

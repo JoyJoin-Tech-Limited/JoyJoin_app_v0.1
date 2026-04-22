@@ -1,0 +1,80 @@
+skill: harness-engineering-deliberation
+
+primary_ownership: >
+  Full Harness Engineering deliberation protocol: PGE iterative refinement,
+  Council Mode with Harness-pillar delegates, ACK-ALL consensus, explicit
+  Harness Verification Gate, and optional Token Ring emergent consensus.
+
+use_when:
+  - user asks for "harness this", "production harness", or "engineering quality gate"
+  - task requires pre-validation against reliability, scalability, security, observability, maintainability
+  - core engine change (matching, personality, payments, auth)
+  - cross-workspace high-blast-radius change with novelty
+  - new public API or breaking contract needs rigorous review
+  - explicit request for PGE pipeline, token circulation, or Harness deliberation
+
+do_not_use_when:
+  - task is a single-domain bug fix <50 lines
+  - task is copy, styling, or color change
+  - task is documentation-only or test-only
+  - one specialist clearly owns the entire scope with no pillar risk
+
+strong_triggers:
+  - harness this
+  - production harness
+  - harness engineering review
+  - harness deliberation
+  - PGE pipeline
+  - planner generator evaluator
+  - token circulation
+  - token ring
+  - emergent consensus
+  - engineering quality gate
+  - harness verification
+  - reliability review
+  - scalability review
+  - security review
+  - observability gap
+  - harness pillar
+  - sprint contract
+  - acceptance criteria gate
+  - harness runtime
+  - harness chamber
+
+owned_files:
+  - .github/agents/harness-runtime-controller.agent.md
+  - .github/skills/harness-engineering-deliberation/SKILL.md
+  - .github/skills/harness-verification-gate/SKILL.md
+  - .git/.orchestration/harness/**
+
+owned_paths:
+  - /.github/agents/harness-runtime-controller.agent.md
+
+owned_symbols:
+  - Harness Runtime Controller
+  - harness-engineering-deliberation
+  - harness-verification-gate
+  - HarnessDeliberationState
+  - Sprint Contract
+  - Harness Verification Gate
+  - PGE Loop
+  - Token Ring
+  - pge-council
+  - council-only
+  - token-ring
+
+related_skills:
+  - skill: first-principles-velocity
+    when: bottleneck analysis and model tier selection for deliberation scope
+  - skill: orchestration-turn-reporting
+    when: turn-summary JSON format for Controller and delegates
+  - skill: harness-verification-gate
+    when: post-deliberation or standalone rapid Harness sanity check
+  - skill: multi-agent-deliberation
+    when: general-purpose architecture review when Harness pillars are not primary concern
+  - skill: code-review
+    when: PR review using the same Harness Framework pillars
+  - skill: reliability-and-state-integrity
+    when: Alpha delegate needs canonical reference for transactions and retries
+  - skill: platform-observability-and-ops
+    when: Gamma delegate needs canonical reference for logging and metrics

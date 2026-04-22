@@ -16,6 +16,7 @@
 .personality-test {
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
+  @include onboarding-page-enter-transition;
   display: flex;
   flex-direction: column;
 
@@ -522,29 +523,26 @@
   }
 
   // Progress bar
-  &__progress-bar {
-    height: 8rpx;
-    background: rgba(0, 0, 0, 0.06);
-    border-radius: 4rpx;
-    margin: $spacing-md $container-padding;
-    overflow: hidden;
-  }
-
-  &__progress-fill {
-    height: 100%;
-    background: $brand-gradient;
-    border-radius: 4rpx;
-    transition: width 0.3s ease;
+  &__progress-wrap {
+    padding: $spacing-md $container-padding $spacing-lg;
+    @include safe-area-inline($container-padding);
   }
 
   &__progress-label {
     text-align: center;
-    margin-bottom: $spacing-lg;
+    margin-top: $spacing-sm;
   }
 
   &__progress-text {
     font-size: $font-size-sm;
     color: $color-text-muted;
+  }
+
+  // Milestone coaching bubbles
+  &__milestone-coach {
+    padding: 0 $container-padding $spacing-md;
+    @include safe-area-inline($container-padding);
+    @include onboarding-stage(0.06s, 0.34s, 20rpx);
   }
 
   // Question
@@ -754,6 +752,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 1;
+    transform: none;
     transition: none;
 
     &--exiting {
@@ -777,18 +778,5 @@
     &__progress-fill {
       transition: none;
     }
-  }
-}
-
-@keyframes personality-test-ring-pulse {
-  0%,
-  100% {
-    transform: scale(0.94);
-    opacity: 0.72;
-  }
-
-  50% {
-    transform: scale(1.06);
-    opacity: 1;
   }
 }

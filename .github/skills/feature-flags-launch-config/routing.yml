@@ -1,0 +1,116 @@
+skill: feature-flags-launch-config
+
+primary_ownership: >
+  JoyJoin feature flags, launch configuration, and safe rollout patterns —
+  env-var feature gates, startup validation, client exposure, kill-switch semantics,
+  and rollout/rollback discipline.
+
+use_when:
+  - adding, changing, or auditing a feature flag or env-gated behavior
+  - planning a staged rollout or rollback without a code deploy
+  - updating launch config docs (LAUNCH_CONFIG.md, ai-feature-flags.md) or env examples
+  - exposing a server-side flag to the client via /api/auth/user or a config endpoint
+  - auditing whether a feature degrades gracefully when its flag is disabled
+  - writing a runbook that mentions toggling a feature flag for incident response
+
+do_not_use_when:
+  - task is about implementing the feature logic itself (use the domain skill)
+  - task is purely about auth policy or RBAC (use auth-session-and-safety-boundaries)
+  - task is about adding an LLM call safely (use llm-runtime-safety-and-integration)
+  - task is generic code review with no feature-flag focus (use code-review)
+
+strong_triggers:
+  - feature flag
+  - feature flags
+  - kill switch
+  - launch config
+  - rollout behind a flag
+  - toggle a feature
+  - env feature gate
+  - safe rollout
+  - rollback a feature
+  - PAYMENTS_ENABLED
+  - ENABLE_SEMANTIC_SIMILARITY
+  - ENABLE_DEV_AUTH_TOOLS
+  - DEBUG_AUTH
+  - ALLOW_PRODUCTION_AUTH_DEBUG
+  - SOCIAL_ICEBREAKER_ENABLE_AUCTION
+  - SOCIAL_AUCTION_LLM_ENABLED
+  - SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT
+  - SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT_BETA
+  - SOCIAL_MINISCRIPT_LLM_ENABLED
+  - SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE
+  - ENABLE_EVENT_THEME_TITLE_GENERATION
+  - AI_USAGE_TRACKING_ENABLED
+  - paymentsEnabled
+  - semanticSimilarityEnabled
+  - isSemanticSimilarityEnabled
+  - isAuctionLlmEnabled
+  - isMiniscriptLlmEnabled
+  - configValidation
+  - validateConfig
+  - docs/LAUNCH_CONFIG.md
+  - docs/ai-feature-flags.md
+
+owned_files:
+  - docs/LAUNCH_CONFIG.md
+  - docs/ai-feature-flags.md
+  - apps/server/src/lib/configValidation.ts
+  - apps/server/src/auth/policy.ts
+  - apps/server/src/matchingSemantic.ts
+  - apps/server/src/socialIcebreakerPhaseConfig.ts
+  - apps/server/src/eventThemeTitleGenerator.ts
+
+owned_paths:
+  - /api/auth/user
+  - /api/readyz
+  - /api/metrics
+
+owned_symbols:
+  - validateConfig
+  - getConfigValidationIssues
+  - isPaymentsEnabled
+  - isSemanticSimilarityEnabled
+  - isAuctionLlmEnabled
+  - isMiniscriptLlmEnabled
+  - isDevAuthToolsEnabled
+  - assertProductionAuthDebugSurfaceAllowed
+  - getServerEnabledPhases
+  - checkPaymentsEnabled
+  - PAYMENTS_ENABLED
+  - ENABLE_SEMANTIC_SIMILARITY
+  - ENABLE_DEV_AUTH_TOOLS
+  - DEBUG_AUTH
+  - ALLOW_PRODUCTION_AUTH_DEBUG
+  - SOCIAL_ICEBREAKER_ENABLE_AUCTION
+  - SOCIAL_AUCTION_LLM_ENABLED
+  - SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT
+  - SOCIAL_MINISCRIPT_LLM_ENABLED
+  - ENABLE_EVENT_THEME_TITLE_GENERATION
+  - AI_USAGE_TRACKING_ENABLED
+  - joyjoin_matching_semantic_feature_enabled
+  - joyjoin_matching_semantic_similarity_score
+
+related_skills:
+  - skill: payment-entitlement-authority
+    when: implementing payment routes, refunds, or entitlement checks gated by PAYMENTS_ENABLED
+  - skill: matching-domain
+    when: changing scoring weights or the semantic-similarity dimension logic
+  - skill: social-icebreaker-domain
+    when: adding or removing icebreaker phases, session state, or host authority
+  - skill: icebreaker-auction-phase
+    when: auction phase LLM flag behavior or curated fallback lots
+  - skill: miniscript-story-framework
+    when: mini_script LLM vs stub orchestration
+  - skill: llm-runtime-safety-and-integration
+    when: adding an LLM call that needs prompt versioning, fallback, or trace logging
+  - skill: auth-session-and-safety-boundaries
+    when: auth/debug tool gating, fail-closed policy, or production override surfaces
+  - skill: platform-observability-and-ops
+    when: adding metrics, alerts, or structured logging around flag state changes
+  - skill: reliability-and-state-integrity
+    when: multi-step rollout that needs idempotency, execution guards, or retry safety
+  - skill: docs-sync
+    when: updating launch docs or env examples after a flag change merges
+  - skill: multi-agent-deliberation
+    when: launch decisions requiring consensus on rollout strategy

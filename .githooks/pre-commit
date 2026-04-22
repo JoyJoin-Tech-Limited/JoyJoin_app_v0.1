@@ -1,4 +1,37 @@
 #!/bin/sh
 set -eu
 
+# --- Lovart asset auto-optimization ---
+# If raw Lovart masters changed, auto-run optimizer and stage outputs
+if git diff --cached --name-only | grep -qE "^apps/mini-program/raw-assets/lovart/"; then
+  echo "[pre-commit] Lovart raw assets changed — auto-optimizing..."
+  (
+    cd apps/mini-program
+    node scripts/optimize-lovart-assets.mjs
+  )
+  git add apps/mini-program/src/assets/lovart/
+  echo "[pre-commit] Optimized Lovart assets staged."
+fi
+
+# Guardrail: fail commit if any Lovart asset exceeds size budget
+if [ -d "apps/mini-program/src/assets/lovart" ]; then
+  (
+    cd apps/mini-program
+    node scripts/check-lovart-asset-size.mjs
+  )
+fi
+
+# --- Mini-program MCP verification (opt-in) ---
+# If MINI_PROGRAM_MCP_VERIFY=1 is set and mini-program files changed,
+# remind the committer to run WeChat DevTools MCP verification.
+if [ "${MINI_PROGRAM_MCP_VERIFY:-}" = "1" ]; then
+  if git diff --cached --name-only | grep -qE "^apps/mini-program/"; then
+    echo "[pre-commit] Mini-program files changed."
+    echo "[pre-commit] Reminder: Run WeChat DevTools MCP verification before pushing:"
+    echo "[pre-commit]   scripts/mcp-launchers/weapp-verify.sh"
+    echo "[pre-commit] Or prompt your AI: 'Use wechat-devtools MCP to verify the mini-program'"
+  fi
+fi
+
+# --- Orchestration validation ---
 node scripts/orchestration-supervisor.mjs git-hook pre-commit

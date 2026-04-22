@@ -29,6 +29,15 @@
     }
   }
 
+  &--exiting {
+    opacity: 0;
+    transform: translate3d(-18rpx, 0, 0) scale(0.986);
+    transition:
+      opacity 0.22s ease,
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
   &__scroll {
     min-height: 100vh;
     box-sizing: border-box;
@@ -46,8 +55,9 @@
     text-align: center;
   }
 
-  &__error-icon {
-    font-size: 80rpx;
+  &__error-hero {
+    width: 320rpx;
+    height: 240rpx;
   }
 
   &__error-text {

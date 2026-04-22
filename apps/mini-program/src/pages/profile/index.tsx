@@ -16,6 +16,7 @@ import type { AuthUser } from '../../hooks/useAuth'
 import { logError, logInfo } from '../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
+import { TOAST_FATAL_MS } from '../../lib/uiConstants'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
@@ -46,6 +47,7 @@ export default function ProfilePage() {
     void openMiniProgramPaymentPage({
       paymentsEnabled: user?.paymentsEnabled ?? authUser?.paymentsEnabled,
       currentUserId: user?.id ?? authUser?.id,
+      returnTab: 'profile',
     })
   }
 
@@ -81,7 +83,7 @@ export default function ProfilePage() {
       Taro.showToast({
         title: '退出登录失败，请稍后重试',
         icon: 'none',
-        duration: 3000,
+        duration: TOAST_FATAL_MS,
       })
     } finally {
       logoutLockRef.current = false

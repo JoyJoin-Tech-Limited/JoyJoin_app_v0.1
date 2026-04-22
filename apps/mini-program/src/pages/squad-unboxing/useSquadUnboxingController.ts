@@ -13,6 +13,7 @@ import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { logError, logInfo } from '../../lib/logger'
+import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/uiConstants'
 import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/matchingNavigation'
 import {
   computeActionDockState,
@@ -58,7 +59,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     queryKey: ['mini-program', 'pool-group-analysis', groupId],
     queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
     enabled: !!groupId && flowState === 'revealed',
-    staleTime: 1000 * 60 * 7,
+    staleTime: STALE_TIME_GROUP_ANALYSIS_MS,
     retry: 1,
   })
 
@@ -78,7 +79,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       await Taro.showToast({
         title: '已确认出席',
         icon: 'success',
-        duration: 1800,
+        duration: TOAST_SHORT_MS,
       })
 
       if (response.blindBoxEventId) {
@@ -94,7 +95,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
         groupId,
         message,
       })
-      Taro.showToast({ title: message, icon: 'none', duration: 2200 })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_MEDIUM_MS })
     },
   })
 
@@ -249,7 +250,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
           : '你稍后仍然可以从活动页回来看这桌的揭晓内容。',
       confirmText: '先离开',
       cancelText: '再看看',
-      confirmColor: '#EF4444',
+      confirmColor: COLOR_DANGER,
     })
 
     if (confirm) {

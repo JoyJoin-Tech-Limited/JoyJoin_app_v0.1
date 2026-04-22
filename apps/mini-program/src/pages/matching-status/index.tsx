@@ -1,6 +1,7 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
 import LoadingScreen from '../../components/LoadingScreen'
+import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import StatusCard from '../../components/StatusCard'
@@ -18,6 +19,7 @@ import './index.scss'
 export default function MatchingStatusPage() {
   const router = useRouter()
   const registrationId = router.params.registrationId ?? ''
+  const { isExiting, navigateBack } = useJoyJoinNavigation()
   const controller = useMatchingStatusController({
     registrationId,
     routerParams: router.params,
@@ -61,7 +63,6 @@ export default function MatchingStatusPage() {
     similarPools,
     stageTemperature,
     switchToEventsTab,
-    navigateBackOrEventsTab,
     venueUnlocked,
     viewerPairSummaryByMemberId,
     viewerSpotlight,
@@ -74,14 +75,15 @@ export default function MatchingStatusPage() {
       return <LoadingScreen message='加载匹配状态…' />
     case 'error':
       return (
-        <View className={rootClassName}>
+        <View className={`${rootClassName} ${isExiting ? 'matching-status--exiting' : ''}`}>
           <View className='matching-status__error'>
             <StatusCard
               tone='error'
+              heroSrc='/assets/lovart/lovart-generic-error.webp'
               title='加载匹配信息失败'
               action={{
                 label: '返回',
-                onClick: navigateBackOrEventsTab,
+                onClick: () => navigateBack(),
                 variant: 'secondary',
               }}
             />
@@ -90,15 +92,15 @@ export default function MatchingStatusPage() {
       )
     case 'not-found':
       return (
-        <View className={rootClassName}>
+        <View className={`${rootClassName} ${isExiting ? 'matching-status--exiting' : ''}`}>
           <View className='matching-status__error'>
             <StatusCard
               tone='info'
-              icon='😕'
+              heroSrc='/assets/lovart/lovart-generic-error.webp'
               title='未找到报名记录'
               action={{
                 label: '返回',
-                onClick: navigateBackOrEventsTab,
+                onClick: () => navigateBack(),
                 variant: 'secondary',
               }}
             />
@@ -107,7 +109,7 @@ export default function MatchingStatusPage() {
       )
     case 'cancelled':
       return (
-        <View className={rootClassName}>
+        <View className={`${rootClassName} ${isExiting ? 'matching-status--exiting' : ''}`}>
           <Card className='matching-status__special-card'>
             <Text className='matching-status__special-icon'>😔</Text>
             <Text className='matching-status__special-title'>这场活动已取消</Text>
@@ -133,7 +135,7 @@ export default function MatchingStatusPage() {
       const currentRegistration = screenState.registration
 
       return (
-        <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
+        <ScrollView className={`${rootClassName} ${isExiting ? 'matching-status--exiting' : ''}`} scrollY enhanced showScrollbar={false}>
           <MatchingHero
             heroSrc={matchingStatusViewModels.MATCHING_NO_MATCH_HERO_SRC}
             className='matching-status__hero--no-match'
@@ -205,7 +207,7 @@ export default function MatchingStatusPage() {
     : null
 
   return (
-    <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
+    <ScrollView className={`${rootClassName} ${isExiting ? 'matching-status--exiting' : ''}`} scrollY enhanced showScrollbar={false}>
       {matchStatus === 'pending' ? (
         <MatchingHero
           heroSrc={matchingStatusViewModels.MATCHING_WAITING_HERO_SRC}

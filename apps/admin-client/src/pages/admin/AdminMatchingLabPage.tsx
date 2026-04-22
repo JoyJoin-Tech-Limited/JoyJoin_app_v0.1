@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import FieldInfoTooltip from "@/components/FieldInfoTooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -660,7 +661,13 @@ export default function AdminMatchingLabPage() {
                   <TestTube2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle>测试场景</CardTitle>
+                  <CardTitle className="flex items-center gap-1.5">
+                    测试场景
+                    <FieldInfoTooltip
+                      title="匹配测试"
+                      description="选择至少 5 个用户运行匹配算法测试。系统会根据当前的权重配置计算最佳分组。测试结果仅用于预览，不会影响实际活动分组。"
+                    />
+                  </CardTitle>
                   <CardDescription>选择用户运行匹配测试</CardDescription>
                 </div>
               </div>

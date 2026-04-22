@@ -32,6 +32,12 @@ import {
   AUTH_QUERY_KEY,
 } from '../../lib/authSession'
 import {
+  STALE_TIME_BRIEF_MS,
+  TOAST_DEFAULT_MS,
+  TOAST_FATAL_MS,
+  COLOR_DANGER,
+} from '../../lib/uiConstants'
+import {
   buildWaitingSeats,
   DEFAULT_MAX_GROUP_SIZE,
   DEFAULT_MIN_GROUP_SIZE,
@@ -50,15 +56,17 @@ import {
   type ViewerPairSpotlight,
 } from './matchingStatusViewModels'
 
-export interface SimilarPoolSummary {
-  id: string
-  title?: string
-  eventType?: string
-  city?: string
-  district?: string | null
-  dateTime?: string
-  registrationCount?: number
-}
+const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
+const GROUP_DETAILS_STALE_TIME_MS = 60_000
+const GROUP_ANALYSIS_STALE_TIME_MS = STALE_TIME_BRIEF_MS
+const CANCEL_NAVIGATION_DELAY_MS = 1500
+const NEW_MEMBER_BADGE_DURATION_MS = TOAST_DEFAULT_MS
+const LIVE_STAGE_DELAY_MS = 950
+const LIVE_STAGE_DELAY_REDUCED_MS = 140
+const MAX_SIMILAR_POOLS = 3
+const DANGER_COLOR = COLOR_DANGER
+
+import type { SimilarPoolSummary } from '@shared/api'
 
 function triggerLightHaptic() {
   if (typeof Taro.vibrateShort === 'function') {
@@ -71,6 +79,16 @@ export interface UseMatchingStatusControllerArgs {
   routerParams: Record<string, string | undefined>
 }
 
+/**
+ * Hook that manages the full matching-status screen state machine.
+ * @param args - Controller arguments
+ * @param args.registrationId - The current pool registration ID
+ * @param args.routerParams - URL route parameters
+ * @returns Screen state, registration data, group details, and action handlers
+ * @description Coordinates registration queries, group fill stats, WebSocket
+ *              messages for live match reveals, countdown timers, and navigation.
+ * @sideEffects Subscribes to WebSocket events, manages multiple setTimeout refs.
+ */
 export function useMatchingStatusController({
   registrationId,
   routerParams,
@@ -113,7 +131,7 @@ export function useMatchingStatusController({
       return registrations.find((item) => item.id === registrationId)
     },
     enabled: Boolean(registrationId),
-    refetchInterval: 30_000,
+    refetchInterval: REGISTRATION_REFETCH_INTERVAL_MS,
   })
 
   const matchStatus = registration?.matchStatus ?? 'pending'
@@ -141,7 +159,7 @@ export function useMatchingStatusController({
       hasResolvedAuthBootstrap &&
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
-    staleTime: 60_000,
+    staleTime: GROUP_DETAILS_STALE_TIME_MS,
   })
 
   const { data: groupAnalysis } = useQuery({
@@ -151,7 +169,7 @@ export function useMatchingStatusController({
       hasResolvedAuthBootstrap &&
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
-    staleTime: 1000 * 60 * 7,
+    staleTime: GROUP_ANALYSIS_STALE_TIME_MS,
     retry: 1,
   })
 
@@ -361,6 +379,7 @@ export function useMatchingStatusController({
 
   const handleContinueFromMembers = useCallback(() => {
     if (persistedThemeSummary) {
+      triggerLightHaptic()
       setLiveStage('theme')
       return
     }
@@ -377,7 +396,7 @@ export function useMatchingStatusController({
         content: '确定要取消报名吗？取消后可以重新报名。',
         confirmText: '确定取消',
         cancelText: '再想想',
-        confirmColor: '#EF4444',
+        confirmColor: DANGER_COLOR,
       })
       if (!confirm) return
 
@@ -385,7 +404,7 @@ export function useMatchingStatusController({
       logInfo('[MatchingStatus] Cancelling registration', { registrationId })
       await cancelPoolRegistration(apiRequest, registrationId)
 
-      Taro.showToast({ title: '已取消报名', icon: 'success', duration: 2000 })
+      Taro.showToast({ title: '已取消报名', icon: 'success', duration: TOAST_DEFAULT_MS })
 
       if (cancelNavigationTimerRef.current) {
         clearTimeout(cancelNavigationTimerRef.current)
@@ -393,11 +412,11 @@ export function useMatchingStatusController({
 
       cancelNavigationTimerRef.current = setTimeout(() => {
         navigateBackOrEventsTab()
-      }, 1500)
+      }, CANCEL_NAVIGATION_DELAY_MS)
     } catch (error) {
       const message = error instanceof Error ? error.message : '取消失败，请重试'
       logError('[MatchingStatus] Cancel failed', { message })
-      Taro.showToast({ title: message, icon: 'none', duration: 3000 })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsCancelling(false)
     }
@@ -470,17 +489,19 @@ export function useMatchingStatusController({
 
     liveStageTimerRef.current = setTimeout(() => {
       if (effectiveGroupDetails?.members && effectiveGroupDetails.members.length > 0) {
+        triggerLightHaptic()
         setLiveStage('members')
         return
       }
 
       if (persistedThemeSummary) {
+        triggerLightHaptic()
         setLiveStage('theme')
         return
       }
 
       finishLiveJourney()
-    }, shouldReduceMotion ? 140 : 950)
+    }, shouldReduceMotion ? LIVE_STAGE_DELAY_REDUCED_MS : LIVE_STAGE_DELAY_MS)
 
     return () => {
       if (liveStageTimerRef.current) {
@@ -549,7 +570,7 @@ export function useMatchingStatusController({
         newMemberTimerRef.current = setTimeout(() => {
           setNewMemberJoined(false)
           setNewMemberArchetype(null)
-        }, 2000)
+        }, NEW_MEMBER_BADGE_DURATION_MS)
 
         void queryClient.invalidateQueries({
           queryKey: ['mini-program', 'pool-group-fill', registration.poolId],
@@ -597,7 +618,7 @@ export function useMatchingStatusController({
       isNoMatchState &&
       Boolean(registration?.poolCity) &&
       Boolean(registration?.poolEventType),
-    select: (pools) => pools.filter((pool) => pool.id !== registration?.poolId).slice(0, 3),
+    select: (pools) => pools.filter((pool) => pool.id !== registration?.poolId).slice(0, MAX_SIMILAR_POOLS),
   })
 
   const stageTemperature = getTemperatureCopy(matchedData?.temperatureLevel)

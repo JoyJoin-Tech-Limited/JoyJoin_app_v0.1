@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -13,6 +13,7 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
+import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/uiConstants'
 import { formatDateTime } from '../../lib/groupDisplay'
 import './index.scss'
 
@@ -38,9 +39,9 @@ function getCountdown(dateTime?: string | null) {
     return '活动进行中'
   }
 
-  const totalMinutes = Math.floor(diff / (1000 * 60))
+  const totalMinutes = Math.floor(diff / MS_PER_MINUTE)
   if (totalMinutes >= 60) {
-    const totalHours = Math.ceil(diff / (1000 * 60 * 60))
+    const totalHours = Math.ceil(diff / MS_PER_HOUR)
     return `距离开始约 ${totalHours} 小时`
   }
 
@@ -66,7 +67,7 @@ export default function PoolGroupDetailPage() {
     queryKey: ['mini-program', 'pool-group-analysis', groupId],
     queryFn: () => getPoolGroupAnalysis(apiRequest, groupId),
     enabled: !!groupId && !authLoading && Boolean(poolGroup),
-    staleTime: 1000 * 60 * 7,
+    staleTime: STALE_TIME_GROUP_ANALYSIS_MS,
     retry: 1,
   })
 
@@ -77,6 +78,12 @@ export default function PoolGroupDetailPage() {
   if (error || !poolGroup) {
     return (
       <View className='pool-group-detail__error'>
+        <Image
+          className='pool-group-detail__error-hero'
+          src='/assets/lovart/lovart-generic-error.webp'
+          mode='aspectFit'
+          lazyLoad
+        />
         <Text className='pool-group-detail__error-text'>加载小队详情失败</Text>
         <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
           返回活动
@@ -97,7 +104,7 @@ export default function PoolGroupDetailPage() {
     Taro.setClipboardData({
       data: locationText,
       success: () => {
-        Taro.showToast({ title: '地点已复制', icon: 'success', duration: 1800 })
+        Taro.showToast({ title: '地点已复制', icon: 'success', duration: TOAST_SHORT_MS })
       },
     })
   }
@@ -111,7 +118,7 @@ export default function PoolGroupDetailPage() {
     Taro.setClipboardData({
       data: address,
       success: () => {
-        Taro.showToast({ title: '地址已复制，请打开地图搜索', icon: 'none', duration: 2500 })
+        Taro.showToast({ title: '地址已复制，请打开地图搜索', icon: 'none', duration: TOAST_MEDIUM_MS })
       },
     })
   }
@@ -289,6 +296,9 @@ export default function PoolGroupDetailPage() {
       </Card>
 
       <View className='pool-group-detail__actions'>
+        <Button onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/index?eventId=${poolGroup.pool?.id ?? ''}` })}>
+          开始破冰
+        </Button>
         <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
           返回活动
         </Button>

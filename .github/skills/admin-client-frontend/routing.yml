@@ -1,0 +1,85 @@
+skill: admin-client-frontend
+
+primary_ownership: >
+  Admin portal frontend in apps/admin-client — pages, components, Recharts dashboards,
+  shadcn/ui tables and forms, RBAC UI gating, sidebar/routing, and auth patterns.
+
+use_when:
+  - adding or modifying an admin portal page, component, or route
+  - building dashboards with Recharts (BarChart, LineChart, PieChart)
+  - working with admin tables, forms, dialogs, or filtering UIs
+  - gating UI by admin RBAC role (super_admin, operator, viewer)
+  - modifying AdminSidebar, AdminGuard, AdminLoginPage, or AdminLayout
+  - creating or editing event-pool admin surfaces
+  - admin auth/session handling (login, logout, useAuth bootstrap)
+
+do_not_use_when:
+  - task is about backend admin API routes or audit logging
+  - task is purely about shared UI primitives in packages/shared
+  - task is about the user-facing web app or WeChat mini-program
+  - task is about generic CSS tokens or design-system variants
+
+strong_triggers:
+  - apps/admin-client
+  - AdminDashboard
+  - AdminLayout
+  - AdminSidebar
+  - AdminGuard
+  - AdminLoginPage
+  - AdminEventPoolsPage
+  - AdminAccountsPage
+  - admin dashboard
+  - add an admin page
+  - Recharts chart
+  - admin sidebar
+  - pool management UI
+  - admin login
+  - RBAC admin
+  - super_admin only UI
+  - event pool admin
+  - admin table
+  - admin guard
+  - useAuth
+  - adminRole
+
+owned_files:
+  - apps/admin-client/src/pages/admin/**
+  - apps/admin-client/src/components/admin/**
+  - apps/admin-client/src/hooks/useAuth.ts
+  - apps/admin-client/src/lib/queryClient.ts
+
+owned_paths:
+  - /admin
+  - /admin/login
+  - /admin/dashboard
+  - /admin/event-pools
+  - /admin/users
+  - /admin/accounts
+  - /admin/matching
+  - /admin/insights
+
+owned_symbols:
+  - AdminAuthUser
+  - useAuth
+  - AdminGuard
+  - AdminSidebar
+  - AdminLayout
+  - apiRequest
+  - resolveApiUrl
+  - queryClient
+  - adminRole
+  - isSuperAdmin
+
+related_skills:
+  - skill: server-domain-architecture
+    when: adding or changing admin API routes or backend services
+  - skill: admin-audit-and-rbac-governance
+    when: changing admin permissions, audit logging, or sensitive admin actions
+  - skill: frontend-component-architecture
+    when: deciding whether a component belongs in packages/shared vs admin-client
+  - skill: design-system-governance
+    when: adding new CSS tokens, CVA variants, or accessibility changes
+  - skill: event-pool-and-matching-operations
+    when: understanding pool lifecycle, match runs, or group semantics
+  - skill: auth-session-and-safety-boundaries
+    when: gating routes at the API layer or adding auth checks

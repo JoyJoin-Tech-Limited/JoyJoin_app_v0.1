@@ -1,0 +1,90 @@
+skill: personality-system
+
+primary_ownership: >
+  JoyJoin's 12-archetype personality engine, ACOEXP 6-trait model, V4 adaptive assessment,
+  MatcherV2 assignment algorithm, and archetype chemistry system.
+
+use_when:
+  - modifying archetype definitions, narratives, colors, or skills
+  - changing assessment questions, options, or trait-score mappings
+  - modifying the adaptive engine, matcher algorithm, or termination logic
+  - working on result display, share cards, or slot-machine reveal
+  - debugging incorrect archetype assignment or suspicious trait scores
+  - reviewing changes to the V4 assessment API or client test UI
+
+do_not_use_when:
+  - task is about pool matching group formation (use matching-domain)
+  - task is about onboarding routing/gating (use onboarding-state-architecture)
+  - task is about generic UI layout not tied to personality state
+
+strong_triggers:
+  - archetype
+  - personality test
+  - personality assessment
+  - trait score
+  - matcher
+  - MatcherV2
+  - assessment V4
+  - prototype match
+  - chemistry matrix
+  - 开心柯基
+  - 太阳鸡
+  - 12原型
+  - ACOEXP
+  - adaptive engine
+  - archetypeRegistry
+  - questionsV4
+  - archetypeCompatibility
+  - slot machine
+  - share card
+  - conflictPosture
+  - Q_PLAYFUL_SLIDER
+  - Q_PLAYFUL_EMOJI
+  - /api/assessment/v4
+  - findBestMatches
+  - isDecisiveMatch
+  - breakTie
+
+owned_files:
+  - packages/shared/src/personality/**
+  - packages/shared/src/archetypeColors.ts
+  - apps/server/src/archetypeConfig.ts
+  - apps/server/src/archetypeChemistry.ts
+  - apps/mini-program/src/pages/onboarding/personality-test/**
+
+owned_paths:
+  - /api/assessment/v4/**
+
+owned_symbols:
+  - ARCHETYPE_CANONICAL_ORDER
+  - archetypeRegistry
+  - adaptiveEngine
+  - matcherV2
+  - prototypeMatcher
+  - findBestMatchingArchetypesV2
+  - isDecisiveMatch
+  - breakTie
+  - shouldTerminate
+  - getFinalResult
+  - selectNextQuestion
+  - questionsV4
+  - archetypeCompatibility
+  - archetypeSkills
+  - CANONICAL_COLORS
+  - SECONDARY_QUESTION_MAP
+  - traitCorrection
+  - conflictPosture
+
+related_skills:
+  - skill: matching-domain
+    when: chemistry matrix consumption in pool matching; signal boundary rules
+  - skill: onboarding-state-architecture
+    when: assessment is wrapped in onboarding flow changes
+  - skill: llm-runtime-safety-and-integration
+    when: adding AI-generated assessment content or explanations
+  - skill: platform-coordination-protocol
+    when: changing assessment UI in both mini-program and web
+  - skill: design-system-governance
+    when: archetype color theming or share card visual updates
+  - skill: multi-agent-deliberation
+    when: archetype or assessment changes affecting core product engine

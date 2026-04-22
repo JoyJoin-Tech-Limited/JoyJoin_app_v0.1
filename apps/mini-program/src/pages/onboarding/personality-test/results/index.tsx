@@ -1,9 +1,8 @@
-import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
+import { Canvas, View } from '@tarojs/components'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
-import Button from '../../../../components/Button'
-import Card from '../../../../components/Card'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useOnboardingAnalytics } from '../../../../hooks/useOnboardingAnalytics'
 import { apiRequest } from '../../../../lib/api'
@@ -13,10 +12,9 @@ import {
   isAnonymousAssessmentSessionCompleted,
   readAnonymousAssessmentSession,
   saveAnonymousAssessmentSession,
-  type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
-  type AnonymousAssessmentTopMatch,
 } from '../../../../lib/anonymousOnboarding'
+import { haptics } from '../../../../lib/haptics'
 import { logError, logInfo, logWarn } from '../../../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
@@ -25,183 +23,47 @@ import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from '../visuals'
+import { getArchetypeCardVariants } from '../archetypeVariants'
 import {
   generatePersonalitySharePoster,
   PERSONALITY_SHARE_POSTER_CANVAS_ID,
   type PersonalitySharePosterInput,
 } from './sharePoster'
+import {
+  buildResolvedResultState,
+  buildShareLine,
+  buildShareTitle,
+  FLOW_SAFETY_TIMEOUT_MS,
+  getConfidenceLabel,
+  getTraitEntries,
+  getTopMatches,
+  resolveResultErrorMessage,
+  RESULT_BRIDGE_MS,
+  RESULT_SLOW_NETWORK_MS,
+  REVEAL_FILL_MS,
+  REVEAL_SILHOUETTE_MS,
+  REVEAL_SPARKLE_MS,
+  SLOT_ANTICIPATION_MS,
+  SLOT_HOLD_INTERVAL_MS,
+  SLOT_NEAR_MISS_MS,
+  SLOT_REVEAL_PAUSE_MS,
+  SLOT_SLOW_STEP_DELAYS,
+  SLOT_SPIN_INTERVAL_MS,
+  SLOT_SPIN_MS,
+  waitFor,
+  type FlowStage,
+  type ResolvedResultState,
+  type RevealPhase,
+  type SlotPhase,
+} from './resultHelpers'
+import LoadingStage from './stages/LoadingStage'
+import EmptyStage from './stages/EmptyStage'
+import ErrorStage from './stages/ErrorStage'
+import SlotStage from './stages/SlotStage'
+import RevealStage from './stages/RevealStage'
+import BridgeStage from './stages/BridgeStage'
+import FinalStage from './stages/FinalStage'
 import './index.scss'
-
-type FlowStage = 'loading' | 'slot' | 'reveal' | 'bridge' | 'result' | 'error' | 'empty'
-type SlotPhase = 'anticipation' | 'spinning' | 'holding' | 'slowing' | 'nearMiss' | 'landed'
-type RevealPhase = 'silhouette' | 'fill' | 'sparkle'
-type CompletionMode = 'replay' | 'animated'
-
-interface AssessmentResultEnvelope {
-  sessionId: string
-  completedAt?: string
-  result: AnonymousAssessmentResult
-  topArchetypes?: AnonymousAssessmentTopMatch[]
-}
-
-interface ResolvedResultState {
-  sessionId: string
-  completedAt?: string
-  result: AnonymousAssessmentResult
-  topMatches: AnonymousAssessmentTopMatch[]
-}
-
-const ARCHETYPE_SEQUENCE = [
-  '开心柯基',
-  '太阳鸡',
-  '夸夸豚',
-  '机智狐',
-  '淡定海豚',
-  '织网蛛',
-  '暖心熊',
-  '灵感章鱼',
-  '沉思猫头鹰',
-  '定心大象',
-  '稳如龟',
-  '隐身猫',
-]
-
-const TRAIT_LABELS: Array<{ key: string; label: string }> = [
-  { key: 'A', label: '亲和力' },
-  { key: 'O', label: '开放性' },
-  { key: 'C', label: '责任心' },
-  { key: 'E', label: '稳定感' },
-  { key: 'X', label: '外向度' },
-  { key: 'P', label: '快乐值' },
-]
-
-const SLOT_ANTICIPATION_MS = 900
-const SLOT_SPIN_MS = 2800
-const SLOT_NEAR_MISS_MS = 360
-const SLOT_REVEAL_PAUSE_MS = 280
-const SLOT_SPIN_INTERVAL_MS = 120
-const SLOT_HOLD_INTERVAL_MS = 180
-const SLOT_SLOW_STEP_DELAYS = [80, 130, 180, 230, 280, 330, 380, 430, 480, 530]
-const RESULT_SLOW_NETWORK_MS = 3200
-const FLOW_SAFETY_TIMEOUT_MS = 16000
-const REVEAL_SILHOUETTE_MS = 520
-const REVEAL_FILL_MS = 760
-const REVEAL_SPARKLE_MS = 820
-const RESULT_BRIDGE_MS = 1100
-const DEFAULT_ACCENT = '#8B5CF6'
-const GENERIC_API_ERROR_PREFIX = 'Request failed with status'
-
-function getInitialIndex(seed: string | undefined): number {
-  if (!seed) {
-    return 0
-  }
-
-  return Array.from(seed).reduce((accumulator, char) => accumulator + char.charCodeAt(0), 0) % ARCHETYPE_SEQUENCE.length
-}
-
-function waitFor(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-function trimSentence(text: string | undefined): string {
-  return (text ?? '').replace(/[。！!？?]+$/g, '').trim()
-}
-
-function buildShareLine(archetype: string, tagline: string, summary: string): string {
-  const detail = trimSentence(tagline) || trimSentence(summary)
-  if (!detail) {
-    return `我是${archetype}型，来 JoyJoin 看看我会点亮哪张卡。`
-  }
-
-  return `我是${archetype}型，${detail}。`
-}
-
-function buildShareTitle(archetype: string, tagline: string): string {
-  const detail = trimSentence(tagline)
-  if (!detail) {
-    return `我在 JoyJoin 解锁了 ${archetype}`
-  }
-
-  return `${archetype}已解锁：${detail}`
-}
-
-function resolveResultErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message && !error.message.startsWith(GENERIC_API_ERROR_PREFIX)) {
-    return error.message
-  }
-
-  return '结果同步失败，请稍后重试。'
-}
-
-function getTraitEntries(
-  result: AnonymousAssessmentResult | null | undefined,
-): Array<{ key: string; label: string; value: number }> {
-  const traitScores = result?.traitScores ?? {}
-
-  return TRAIT_LABELS.map(({ key, label }) => {
-    const rawValue = Number(traitScores[key] ?? 50)
-    return {
-      key,
-      label,
-      value: Math.max(0, Math.min(Math.round(rawValue), 100)),
-    }
-  })
-}
-
-function getTopMatches(
-  result: AnonymousAssessmentResult | null | undefined,
-  storedMatches: AnonymousAssessmentTopMatch[] | null | undefined,
-): AnonymousAssessmentTopMatch[] {
-  if (Array.isArray(storedMatches) && storedMatches.length > 0) {
-    return storedMatches
-  }
-
-  return Array.isArray(result?.topMatches) ? result.topMatches : []
-}
-
-function getVisibleReelItems(currentIndex: number): string[] {
-  const length = ARCHETYPE_SEQUENCE.length
-  const previousIndex = (currentIndex - 1 + length) % length
-  const nextIndex = (currentIndex + 1) % length
-  return [
-    ARCHETYPE_SEQUENCE[previousIndex] ?? ARCHETYPE_SEQUENCE[0],
-    ARCHETYPE_SEQUENCE[currentIndex] ?? ARCHETYPE_SEQUENCE[0],
-    ARCHETYPE_SEQUENCE[nextIndex] ?? ARCHETYPE_SEQUENCE[0],
-  ]
-}
-
-function getConfidenceLabel(
-  result: AnonymousAssessmentResult | null | undefined,
-  topMatches: AnonymousAssessmentTopMatch[],
-): string | undefined {
-  const topScore = Number(topMatches[0]?.score)
-  if (Number.isFinite(topScore) && topScore > 0) {
-    return `匹配 ${Math.round(topScore)}%`
-  }
-
-  const rawConfidence = Number(result?.archetypeConfidence)
-  if (!Number.isFinite(rawConfidence) || rawConfidence <= 0) {
-    return undefined
-  }
-
-  const normalized = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence
-  return `匹配 ${Math.round(normalized)}%`
-}
-
-function buildResolvedResultState(snapshot: AnonymousAssessmentSessionSnapshot | null): ResolvedResultState | null {
-  if (!snapshot?.sessionId || !hasAnonymousAssessmentResult(snapshot) || !snapshot.result) {
-    return null
-  }
-
-  return {
-    sessionId: snapshot.sessionId,
-    completedAt: snapshot.completedAt,
-    result: snapshot.result,
-    topMatches: getTopMatches(snapshot.result, snapshot.topArchetypes),
-  }
-}
 
 export default function PersonalityTestResultsPage() {
   const auth = useAuth()
@@ -219,10 +81,18 @@ export default function PersonalityTestResultsPage() {
   const [isFetchingResult, setIsFetchingResult] = useState(false)
   const [isSlowNetwork, setIsSlowNetwork] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [reelIndex, setReelIndex] = useState(() => getInitialIndex(initialSnapshot?.result?.primaryArchetype ?? initialSnapshot?.sessionId))
+  const [reelIndex, setReelIndex] = useState(() =>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    buildResolvedResultState(initialSnapshot)?.result.primaryArchetype
+      ? 0
+      : 0,
+  )
   const [sharePosterPath, setSharePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
-  const [completionMode, setCompletionMode] = useState<CompletionMode | null>(hasCompletedReplay ? 'replay' : null)
+  const [generationPhase, setGenerationPhase] = useState('')
+  const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
+  const [cardNickname, setCardNickname] = useState('')
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
 
   const mountedRef = useRef(false)
   const runIdRef = useRef(0)
@@ -241,7 +111,6 @@ export default function PersonalityTestResultsPage() {
 
   useEffect(() => {
     mountedRef.current = true
-
     return () => {
       mountedRef.current = false
       runIdRef.current += 1
@@ -256,7 +125,6 @@ export default function PersonalityTestResultsPage() {
     if (Array.isArray(resultState?.topMatches) && resultState.topMatches.length > 0) {
       return resultState.topMatches
     }
-
     return getTopMatches(sessionSnapshot?.result, sessionSnapshot?.topArchetypes)
   }, [resultState, sessionSnapshot])
 
@@ -266,9 +134,32 @@ export default function PersonalityTestResultsPage() {
     ?? null
   const displayArchetypeName = displayArchetype ?? '神秘原型'
   const visual = useMemo(() => getArchetypeVisual(displayArchetype), [displayArchetype])
-  const summary = trimSentence(visual.summary) || '你的社交氛围已经有了清晰的轮廓。'
+  const summary = useMemo(() => visual.summary, [visual.summary])
   const traitEntries = useMemo(() => getTraitEntries(resultState?.result ?? sessionSnapshot?.result), [resultState, sessionSnapshot])
   const skillSet = useMemo(() => (displayArchetype ? getArchetypeSkills(displayArchetype) : undefined), [displayArchetype])
+
+  // Phase 2: card variants, energy, rank badges
+  const variants = useMemo(() => (displayArchetype ? getArchetypeCardVariants(displayArchetype) : []), [displayArchetype])
+  const energyLevel = useMemo(() => {
+    if (!displayArchetype) return undefined
+    return archetypeRegistry[displayArchetype]?.profile.energyLevel
+  }, [displayArchetype])
+  const archetypeRank = useMemo(() => {
+    if (!displayArchetype) return undefined
+    const names = Object.keys(archetypeRegistry)
+    return names.indexOf(displayArchetype) + 1
+  }, [displayArchetype])
+  const serialNumber = useMemo(() => {
+    const sessionId = sessionSnapshot?.sessionId ?? 'unknown'
+    // Deterministic pseudo-serial from sessionId hash
+    let hash = 0
+    for (let i = 0; i < sessionId.length; i++) {
+      hash = ((hash << 5) - hash + sessionId.charCodeAt(i)) | 0
+    }
+    const num = Math.abs(hash) % 90000 + 10000
+    return `#${num}`
+  }, [sessionSnapshot?.sessionId])
+
   const confidenceLabel = useMemo(
     () => getConfidenceLabel(resultState?.result ?? sessionSnapshot?.result, topMatches),
     [resultState, sessionSnapshot, topMatches],
@@ -281,9 +172,10 @@ export default function PersonalityTestResultsPage() {
     () => buildShareTitle(displayArchetypeName, visual.tagline || visual.description),
     [displayArchetypeName, visual.description, visual.tagline],
   )
-  const displayAsset =
-    visual.asset || getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate)
-  const slotFocusVisual = useMemo(() => getArchetypeVisual(ARCHETYPE_SEQUENCE[reelIndex] ?? displayArchetype), [displayArchetype, reelIndex])
+  const displayAsset = useMemo(
+    () => visual.asset || getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
+    [visual.asset],
+  )
   const continueButtonLabel = auth.isLoading
     ? '检查登录状态中…'
     : auth.isAuthenticated
@@ -306,7 +198,6 @@ export default function PersonalityTestResultsPage() {
     if (flowStage !== 'result' || !completionMode || didTrackCompletionRef.current) {
       return
     }
-
     didTrackCompletionRef.current = true
     analytics.stepCompleted({
       completionMode,
@@ -337,7 +228,12 @@ export default function PersonalityTestResultsPage() {
     setIsFetchingResult(true)
 
     try {
-      const response = await apiRequest<AssessmentResultEnvelope>({
+      const response = await apiRequest<{
+        sessionId: string
+        completedAt?: string
+        result: NonNullable<typeof latestSnapshot.result>
+        topArchetypes?: typeof topMatches
+      }>({
         path: `/api/assessment/v4/${encodeURIComponent(latestSnapshot.sessionId)}/result`,
       })
 
@@ -377,12 +273,10 @@ export default function PersonalityTestResultsPage() {
       return resolved
     } catch (error) {
       const message = resolveResultErrorMessage(error)
-
       if (mountedRef.current && runId === runIdRef.current) {
         setErrorMessage(message)
         analytics.errorOccurred('result_fetch_failed', message)
       }
-
       logError('[PersonalityResults] Failed to fetch result', { message })
       return null
     } finally {
@@ -390,7 +284,7 @@ export default function PersonalityTestResultsPage() {
         setIsFetchingResult(false)
       }
     }
-  }, [analytics])
+  }, [analytics, topMatches])
 
   const runResultFlow = useCallback(async (options?: { forceRefresh?: boolean }) => {
     const nextRunId = runIdRef.current + 1
@@ -409,7 +303,7 @@ export default function PersonalityTestResultsPage() {
     setRevealPhase('silhouette')
     setSlotPhase('anticipation')
     setSharePosterPath('')
-    setReelIndex(getInitialIndex(latestSnapshot?.result?.primaryArchetype ?? latestSnapshot?.sessionId))
+    setReelIndex(0)
 
     if (!latestSnapshot?.sessionId) {
       logWarn('[PersonalityResults] Missing anonymous session id')
@@ -473,7 +367,7 @@ export default function PersonalityTestResultsPage() {
 
     const spinSteps = Math.max(1, Math.floor(SLOT_SPIN_MS / SLOT_SPIN_INTERVAL_MS))
     for (let step = 0; step < spinSteps; step += 1) {
-      setReelIndex((previous) => (previous + 1) % ARCHETYPE_SEQUENCE.length)
+      setReelIndex((previous) => (previous + 1) % 12)
       setProgress(10 + ((step + 1) / spinSteps) * 50)
 
       await waitFor(SLOT_SPIN_INTERVAL_MS)
@@ -492,7 +386,7 @@ export default function PersonalityTestResultsPage() {
       setSlotPhase('holding')
       setPhaseText(shouldShowSlowNetwork ? '网络有点慢，动画继续等结果到位...' : '正在同步最终画像...')
       setProgress(68)
-      setReelIndex((previous) => (previous + 1) % ARCHETYPE_SEQUENCE.length)
+      setReelIndex((previous) => (previous + 1) % 12)
 
       await waitFor(SLOT_HOLD_INTERVAL_MS)
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
@@ -523,12 +417,12 @@ export default function PersonalityTestResultsPage() {
       return
     }
 
-    const targetName = resolvedResult.result.primaryArchetype ?? ARCHETYPE_SEQUENCE[0]
-    const targetIndex = ARCHETYPE_SEQUENCE.indexOf(targetName)
+    const targetName = resolvedResult.result.primaryArchetype ?? '开心柯基'
+    const targetIndex = ['开心柯基', '太阳鸡', '夸夸豚', '机智狐', '淡定海豚', '织网蛛', '暖心熊', '灵感章鱼', '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'].indexOf(targetName)
     const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
     const approachPositions = SLOT_SLOW_STEP_DELAYS.map((_, index) => (
-      safeTargetIndex - SLOT_SLOW_STEP_DELAYS.length + index + ARCHETYPE_SEQUENCE.length
-    ) % ARCHETYPE_SEQUENCE.length)
+      safeTargetIndex - SLOT_SLOW_STEP_DELAYS.length + index + 12
+    ) % 12)
 
     setSlotPhase('slowing')
     setPhaseText('就快锁定了...')
@@ -547,7 +441,7 @@ export default function PersonalityTestResultsPage() {
     if (shouldNearMiss) {
       setSlotPhase('nearMiss')
       setPhaseText('等等...')
-      setReelIndex((safeTargetIndex + 1) % ARCHETYPE_SEQUENCE.length)
+      setReelIndex((safeTargetIndex + 1) % 12)
       setProgress(92)
       await waitFor(SLOT_NEAR_MISS_MS)
 
@@ -636,7 +530,11 @@ export default function PersonalityTestResultsPage() {
     analytics.stepAbandoned('restart')
     clearAnonymousAssessmentStorage()
     setSharePosterPath('')
-    void Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.personalityTest })
+    Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.personalityTest }).catch(() => {
+      // If reLaunch fails, at least storage is already cleared.
+      // User can manually navigate back.
+      void Taro.showToast({ title: '请手动返回重新测试', icon: 'none', duration: 2000 })
+    })
   }, [analytics])
 
   const handleContinue = useCallback(async () => {
@@ -657,25 +555,135 @@ export default function PersonalityTestResultsPage() {
     await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestAuthGate })
   }, [auth.isAuthenticated, auth.isLoading, auth.nextStep])
 
+  /**
+   * Present a frictionless action sheet for sharing the generated poster.
+   * Options: save to album, share to friends, or preview.
+   */
+  const presentShareOptions = useCallback(async (posterPath: string) => {
+    const taroWithShareImageMenu = Taro as typeof Taro & {
+      showShareImageMenu?: (options: { path: string }) => Promise<unknown>
+    }
+    const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
+
+    let tapIndex: number
+    try {
+      const res = await Taro.showActionSheet({
+        itemList: hasNativeShareMenu
+          ? ['保存到相册', '分享给朋友', '预览海报']
+          : ['保存到相册', '预览海报'],
+      })
+      tapIndex = res.tapIndex
+    } catch {
+      // User cancelled or action sheet failed
+      analytics.interaction('share_action_dismissed', { primaryArchetype: displayArchetypeName })
+      return
+    }
+
+    if (tapIndex === 0) {
+      // Save to album
+      haptics('medium')
+      analytics.interaction('share_action_selected', { option: 'save', primaryArchetype: displayArchetypeName })
+      try {
+        const settingRes = await Taro.getSetting()
+        const authKey = 'scope.writePhotosAlbum' as const
+        const hasAuth = settingRes.authSetting[authKey] as boolean | undefined
+
+        if (hasAuth === false) {
+          // Previously denied — guide user to settings
+          analytics.interaction('share_save_permission_denied', { primaryArchetype: displayArchetypeName })
+          const { confirm } = await Taro.showModal({
+            title: '需要相册权限',
+            content: '保存卡片到相册需要您授权访问相册。',
+            confirmText: '去设置',
+            cancelText: '取消',
+          })
+          if (confirm) {
+            await Taro.openSetting()
+          }
+          return
+        }
+
+        await Taro.saveImageToPhotosAlbum({ filePath: posterPath })
+        haptics('success')
+        analytics.interaction('share_save_success', { primaryArchetype: displayArchetypeName })
+        void Taro.showToast({ title: '已保存到相册', icon: 'success', duration: 2000 })
+      } catch (saveErr) {
+        const error = String(saveErr)
+        logError('[PersonalityResults] Save to album failed', {
+          error,
+          primaryArchetype: displayArchetypeName,
+        })
+        analytics.interaction('share_save_failed', { error, primaryArchetype: displayArchetypeName })
+        void Taro.showToast({
+          title: '小悦没能把卡片存进相册，可能需要你授权一下~',
+          icon: 'none',
+          duration: 2500,
+        })
+      }
+    } else if (hasNativeShareMenu && tapIndex === 1) {
+      // Share to friends
+      haptics('light')
+      analytics.interaction('share_action_selected', { option: 'share', primaryArchetype: displayArchetypeName })
+      await taroWithShareImageMenu.showShareImageMenu!({ path: posterPath })
+    } else {
+      // Preview
+      haptics('light')
+      analytics.interaction('share_action_selected', { option: 'preview', primaryArchetype: displayArchetypeName })
+      await Taro.previewImage({
+        current: posterPath,
+        urls: [posterPath],
+      })
+    }
+  }, [analytics, displayArchetypeName])
+
+  const handleInviteFriend = useCallback(async () => {
+    if (sharePosterPath) {
+      // Poster exists — share it directly via native image menu
+      haptics('light')
+      const taroWithShareImageMenu = Taro as typeof Taro & {
+        showShareImageMenu?: (options: { path: string }) => Promise<unknown>
+      }
+      if (typeof taroWithShareImageMenu.showShareImageMenu === 'function') {
+        await taroWithShareImageMenu.showShareImageMenu({ path: sharePosterPath })
+        analytics.interaction('share_invite_with_poster', { primaryArchetype: displayArchetypeName })
+      } else {
+        await Taro.previewImage({ current: sharePosterPath, urls: [sharePosterPath] })
+      }
+      return
+    }
+
+    // No poster yet — trigger native page share (uses useShareAppMessage)
+    // WeChat requires openType='share' to trigger this programmatically,
+    // so we guide the user to use the top-right menu instead.
+    void Taro.showToast({
+      title: '先点「生成并分享卡片」生成海报，再分享给朋友~',
+      icon: 'none',
+      duration: 2500,
+    })
+  }, [analytics, displayArchetypeName, sharePosterPath])
+
   const handleGeneratePoster = useCallback(async () => {
     if (isGeneratingPoster || !displayArchetype) {
       return
     }
 
     setIsGeneratingPoster(true)
+    setGenerationPhase('准备素材中…')
 
     try {
+      const selectedVariant = variants[selectedVariantIndex]
+      const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
+      const accentSoft = selectedVariant?.accentSoft ?? visual.accentSoft
+
       const posterInput: PersonalitySharePosterInput = {
         archetype: displayArchetypeName,
-        nickname: visual.nickname || displayArchetypeName,
+        nickname: cardNickname || visual.nickname || displayArchetypeName,
         tagline: visual.tagline || visual.description || summary,
         summary,
         shareLine,
-        accentColor: visual.accent || DEFAULT_ACCENT,
-        accentSoft: visual.accentSoft,
-        accentStrong: visual.accentStrong,
+        accentColor,
+        accentSoft,
         archetypeAsset: displayAsset,
-        xiaoyueAsset: getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate),
         confidenceLabel,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
@@ -686,431 +694,174 @@ export default function PersonalityTestResultsPage() {
         activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。',
         passiveSkillTitle: skillSet?.passiveSkill.name ?? '气场持续发光',
         passiveSkillEffect: skillSet?.passiveSkill.shortEffect ?? '不用刻意用力，也会让人想靠近你。',
-        traitEntries,
         topMatches: topMatches.map((match) => ({
           archetype: match.archetype,
           score: Number(match.score) || 0,
         })),
+        energyLevel,
+        archetypeRank,
+        serialNumber,
       }
 
+      setGenerationPhase('正在渲染全息卡面…')
       const nextPosterPath = await generatePersonalitySharePoster(posterInput)
+      setGenerationPhase('正在导出高清图片…')
       setSharePosterPath(nextPosterPath)
 
+      haptics('success')
       logInfo('[PersonalityResults] Poster generated', {
         primaryArchetype: displayArchetypeName,
+        variant: selectedVariant?.name,
       })
 
-      const taroWithShareImageMenu = Taro as typeof Taro & {
-        showShareImageMenu?: (options: { path: string }) => Promise<unknown>
-      }
-
-      if (typeof taroWithShareImageMenu.showShareImageMenu === 'function') {
-        await taroWithShareImageMenu.showShareImageMenu({ path: nextPosterPath })
-      } else {
-        await Taro.previewImage({
-          current: nextPosterPath,
-          urls: [nextPosterPath],
-        })
-
-        Taro.showToast({
-          title: '海报已生成，可长按保存',
-          icon: 'none',
-          duration: 2200,
-        })
-      }
+      // Present frictionless sharing options
+      await presentShareOptions(nextPosterPath)
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : '海报生成失败，请稍后重试。'
+      haptics('warning')
       analytics.errorOccurred('poster_generation_failed', message)
-      logError('[PersonalityResults] Failed to generate poster', { message })
-      Taro.showToast({
-        title: message,
-        icon: 'none',
-        duration: 2600,
+      logError('[PersonalityResults] Failed to generate poster', {
+        message,
+        primaryArchetype: displayArchetypeName,
       })
+      void Taro.showToast({ title: '卡片生成遇到小状况，请重试一下~', icon: 'none', duration: 2500 })
     } finally {
       setIsGeneratingPoster(false)
+      setGenerationPhase('')
     }
   }, [
     analytics,
+    archetypeRank,
+    cardNickname,
     confidenceLabel,
     displayArchetype,
     displayArchetypeName,
     displayAsset,
+    energyLevel,
     isGeneratingPoster,
+    presentShareOptions,
+    selectedVariantIndex,
+    serialNumber,
     shareLine,
     skillSet,
     summary,
     topMatches,
-    traitEntries,
+    variants,
     visual,
   ])
 
-  const renderLoadingState = () => (
-    <View className='personality-results__centered-state'>
-      <Image
-        className='personality-results__network-xiaoyue'
-        mode='aspectFit'
-        src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing)}
-      />
-      <Text className='personality-results__state-title'>正在同步你的匿名结果</Text>
-      <Text className='personality-results__state-copy'>
-        {phaseText || '先把测试结果从当前设备和服务端对齐，再进入正式揭晓。'}
-      </Text>
-    </View>
-  )
-
-  const renderEmptyState = () => (
-    <View className='personality-results__centered-state'>
-      <Image
-        className='personality-results__network-xiaoyue'
-        mode='aspectFit'
-        src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsSlotFallback)}
-      />
-      <Text className='personality-results__state-title'>这份结果还没准备好</Text>
-      <Text className='personality-results__state-copy'>
-        当前设备里没有找到完整的匿名测试结果。重新完成一次测试，系统会重新生成并保存这次揭晓流程。
-      </Text>
-      <View className='personality-results__stack-actions'>
-        <Button onClick={handleRestart}>返回重新测试</Button>
-      </View>
-    </View>
-  )
-
-  const renderErrorState = () => (
-    <View className='personality-results__centered-state'>
-      <Image
-        className='personality-results__network-xiaoyue'
-        mode='aspectFit'
-        src={getXiaoyueExpressionAsset('actionFailure')}
-      />
-      <Text className='personality-results__state-title'>揭晓过程被打断了</Text>
-      <Text className='personality-results__state-copy'>
-        {errorMessage || '结果同步出了点问题，重新试一次通常就能恢复。'}
-      </Text>
-      <View className='personality-results__stack-actions'>
-        <Button onClick={handleRetry} disabled={isFetchingResult} loading={isFetchingResult}>
-          {isFetchingResult ? '正在重新同步…' : '重试揭晓'}
-        </Button>
-        <Button variant='secondary' onClick={handleRestart}>重新测试一次</Button>
-      </View>
-    </View>
-  )
-
-  const renderSlotStage = () => {
-    const visibleItems = getVisibleReelItems(reelIndex)
-    const progressWidth = `${Math.min(100, Math.max(progress, 4))}%`
-
-    return (
-      <View className='personality-results__immersive-shell'>
-        <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
-        <Text className='personality-results__immersive-title'>你的社交卡面正在靠近</Text>
-        <Text className='personality-results__immersive-copy'>
-          先让命运转几圈，再锁定真正属于你的那一张牌。
-        </Text>
-
-        <View className='personality-results__slot-frame'>
-          <View className='personality-results__slot-rail' />
-          <View className='personality-results__slot-highlight' />
-
-          <View className='personality-results__slot-track'>
-            {visibleItems.map((archetype, index) => {
-              const itemVisual = getArchetypeVisual(archetype)
-              const isActive = index === 1
-
-              return (
-                <View
-                  key={`${archetype}-${index}`}
-                  className={`personality-results__slot-card${isActive ? ' personality-results__slot-card--active' : ''}`}
-                  style={{
-                    background: isActive ? itemVisual.accentSurface : 'rgba(255, 255, 255, 0.78)',
-                    borderColor: isActive ? itemVisual.accentBorder : 'rgba(139, 92, 246, 0.12)',
-                    boxShadow: isActive ? `0 18rpx 48rpx ${itemVisual.accentGlow}` : 'none',
-                  }}
-                >
-                  <Image
-                    className='personality-results__slot-image'
-                    mode='aspectFit'
-                    src={
-                      itemVisual.asset ||
-                      getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsSlotFallback)
-                    }
-                  />
-                  <Text className='personality-results__slot-name'>{archetype}</Text>
-                </View>
-              )
-            })}
-          </View>
-        </View>
-
-        <View className='personality-results__progress-track'>
-          <View
-            className='personality-results__progress-fill'
-            style={{
-              width: progressWidth,
-              background: slotFocusVisual.accent || DEFAULT_ACCENT,
-            }}
+  const content = useMemo(() => {
+    switch (flowStage) {
+      case 'empty':
+        return <EmptyStage onRestart={handleRestart} />
+      case 'error':
+        return (
+          <ErrorStage
+            errorMessage={errorMessage}
+            isFetchingResult={isFetchingResult}
+            onRetry={handleRetry}
+            onRestart={handleRestart}
           />
-        </View>
-        <Text className='personality-results__progress-copy'>{phaseText || '正在准备最终揭晓...'}</Text>
-
-        {(slotPhase === 'holding' || isSlowNetwork) ? (
-          <Card className='personality-results__network-card'>
-            <Image
-              className='personality-results__network-xiaoyue'
-              mode='aspectFit'
-              src={getXiaoyueExpressionAsset('loadingReveal')}
-            />
-            <View className='personality-results__network-copy'>
-              <Text className='personality-results__network-title'>小悦还在等最后一条同步</Text>
-              <Text className='personality-results__network-text'>
-                网络有点慢也没关系，动画会继续转到结果真正到位为止。
-              </Text>
-            </View>
-          </Card>
-        ) : null}
-      </View>
-    )
-  }
-
-  const renderRevealStage = () => (
-    <View className='personality-results__immersive-shell personality-results__immersive-shell--reveal'>
-      <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
-      <Text className='personality-results__immersive-title'>你的卡面正在显形</Text>
-      <Text className='personality-results__immersive-copy'>
-        {phaseText || '最后一点火花亮起之后，就会进入完整的结果页。'}
-      </Text>
-
-      <View className='personality-results__reveal-orb'>
-        <View className='personality-results__reveal-glow' style={{ background: visual.accent || DEFAULT_ACCENT }} />
-        <Image
-          className={`personality-results__reveal-image personality-results__reveal-image--${revealPhase}`}
-          mode='aspectFit'
-          src={displayAsset}
-        />
-        <View className={`personality-results__reveal-scrim personality-results__reveal-scrim--${revealPhase}`} />
-        <View className={`personality-results__sparkle-field personality-results__sparkle-field--${revealPhase}`}>
-          {Array.from({ length: 7 }).map((_, index) => (
-            <Text key={String(index)} className={`personality-results__sparkle personality-results__sparkle--${index + 1}`}>✦</Text>
-          ))}
-        </View>
-      </View>
-
-      <Text className='personality-results__reveal-label'>{displayArchetypeName}</Text>
-      <Text className='personality-results__reveal-copy'>
-        {revealPhase === 'silhouette'
-          ? '先看轮廓，留一点悬念。'
-          : revealPhase === 'fill'
-            ? '颜色和气场正在回到正确的位置。'
-            : '最后这一圈火花之后，就是你的完整结果页。'}
-      </Text>
-    </View>
-  )
-
-  const renderBridgeStage = () => (
-    <View className='personality-results__immersive-shell personality-results__immersive-shell--bridge'>
-      <Text className='personality-results__immersive-eyebrow'>结果已锁定</Text>
-      <Text className='personality-results__immersive-title'>你的 {displayArchetypeName} 已经准备好了</Text>
-      <Text className='personality-results__immersive-copy'>
-        先把这份气场翻成一张更好分享的 JoyJoin 卡面，再把完整结果交到你手上。
-      </Text>
-
-      <Card className='personality-results__bridge-card'>
-        <View className='personality-results__bridge-figure'>
-          <View className='personality-results__bridge-halo' />
-          <Image
-            className='personality-results__bridge-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
+        )
+      case 'slot':
+        return (
+          <SlotStage
+            reelIndex={reelIndex}
+            slotPhase={slotPhase}
+            isSlowNetwork={isSlowNetwork}
+            progress={progress}
+            phaseText={phaseText}
           />
-        </View>
-
-        <View className='personality-results__bridge-copy'>
-          <Text className='personality-results__bridge-title'>小悦正在替你装裱这张卡</Text>
-          <Text className='personality-results__bridge-text'>
-            {phaseText || `我已经把 ${displayArchetypeName} 的气场关键词、分享语和后续提示收进同一张卡里，马上展开给你。`}
-          </Text>
-
-          <View className='personality-results__bridge-badges'>
-            <Text className='personality-results__bridge-badge personality-results__bridge-badge--accent'>
-              {displayArchetypeName}
-            </Text>
-            <Text className='personality-results__bridge-badge'>{confidenceLabel || '结果已锁定'}</Text>
-          </View>
-        </View>
-      </Card>
-    </View>
-  )
-
-  const renderFinalStage = () => (
-    <ScrollView className='personality-results__scroll' scrollY enhanced showScrollbar={false}>
-      <View
-        className='personality-results__hero-card'
-        style={{
-          background: visual.accentSurface,
-          borderColor: visual.accentBorder,
-          boxShadow: `0 22rpx 72rpx ${visual.accentGlow}`,
-        }}
-      >
-        <View className='personality-results__hero-copy'>
-          <Text className='personality-results__hero-eyebrow'>匿名结果已解锁</Text>
-          <Text className='personality-results__hero-title'>你的 JoyJoin 原型是</Text>
-          <Text className='personality-results__hero-name'>{displayArchetypeName}</Text>
-          <Text className='personality-results__hero-summary'>{summary}</Text>
-
-          <View className='personality-results__hero-badges'>
-            {confidenceLabel ? (
-              <Text className='personality-results__hero-badge'>{confidenceLabel}</Text>
-            ) : null}
-            {typeof visual.rarityPercentage === 'number' ? (
-              <Text className='personality-results__hero-badge'>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
-            ) : null}
-            {visual.nickname ? (
-              <Text className='personality-results__hero-badge'>{visual.nickname}</Text>
-            ) : null}
-          </View>
-        </View>
-
-        <View className='personality-results__hero-art-shell'>
-          <View className='personality-results__hero-art-bg' style={{ background: visual.accentSoft }} />
-          <Image className='personality-results__hero-art' mode='aspectFit' src={displayAsset} />
-        </View>
-      </View>
-
-      <Card className='personality-results__section-card'>
-        <Text className='personality-results__section-label'>JoyJoin 卡面分享</Text>
-        <View
-          className='personality-results__pokemon-card'
-          style={{
-            background: `linear-gradient(160deg, ${visual.accentSoft} 0%, #fff8ee 50%, rgba(255, 255, 255, 0.98) 100%)`,
-            boxShadow: `0 24rpx 72rpx ${visual.accentGlow}`,
-          }}
-        >
-          <View className='personality-results__pokemon-card-top'>
-            <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>JOYJOIN CARD</Text>
-            <Text className='personality-results__pokemon-chip'>{confidenceLabel || 'JoyJoin 结果卡'}</Text>
-          </View>
-
-          <View className='personality-results__pokemon-card-hero'>
-            <View className='personality-results__pokemon-art-shell'>
-              <Image className='personality-results__pokemon-art' mode='aspectFit' src={displayAsset} />
-            </View>
-            <View className='personality-results__pokemon-copy'>
-              <Text className='personality-results__pokemon-name'>{displayArchetypeName}</Text>
-              <Text className='personality-results__pokemon-tagline'>{visual.tagline || visual.description}</Text>
-              <Text className='personality-results__pokemon-share-line'>{shareLine}</Text>
-            </View>
-          </View>
-
-          {topMatches.length > 0 ? (
-            <View className='personality-results__pokemon-match-row'>
-              {topMatches.slice(0, 3).map((match) => (
-                <Text key={match.archetype} className='personality-results__pokemon-match-chip'>
-                  {match.archetype} {Math.round(match.score)}%
-                </Text>
-              ))}
-            </View>
-          ) : null}
-
-          <View className='personality-results__pokemon-skill-grid'>
-            <View className='personality-results__pokemon-skill personality-results__pokemon-skill--warm'>
-              <Text className='personality-results__pokemon-skill-label'>主动技</Text>
-              <Text className='personality-results__pokemon-skill-name'>
-                {skillSet?.activeSkill.name ?? '瞬间点亮全场'}
-              </Text>
-              <Text className='personality-results__pokemon-skill-copy'>
-                {skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。'}
-              </Text>
-            </View>
-            <View className='personality-results__pokemon-skill personality-results__pokemon-skill--cool'>
-              <Text className='personality-results__pokemon-skill-label'>被动技</Text>
-              <Text className='personality-results__pokemon-skill-name'>
-                {skillSet?.passiveSkill.name ?? '气场持续发光'}
-              </Text>
-              <Text className='personality-results__pokemon-skill-copy'>
-                {skillSet?.passiveSkill.shortEffect ?? '不用刻意用力，也会让人想靠近你。'}
-              </Text>
-            </View>
-          </View>
-
-          <View className='personality-results__pokemon-actions'>
-            <Button onClick={() => void handleGeneratePoster()} disabled={isGeneratingPoster} loading={isGeneratingPoster}>
-              {isGeneratingPoster ? '正在生成海报…' : '生成并分享卡片'}
-            </Button>
-            <Button variant='secondary' openType='share'>邀请朋友也测一下</Button>
-          </View>
-        </View>
-      </Card>
-
-      <Card className='personality-results__section-card'>
-        <View className='personality-results__coach-card'>
-          <Image
-            className='personality-results__coach-image'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
+        )
+      case 'reveal':
+        return (
+          <RevealStage
+            displayArchetypeName={displayArchetypeName}
+            displayAsset={displayAsset}
+            visual={visual}
+            revealPhase={revealPhase}
+            phaseText={phaseText}
           />
-          <View className='personality-results__coach-copy'>
-            <Text className='personality-results__section-label'>小悦的结论</Text>
-            <Text className='personality-results__coach-title'>这张卡为什么像你</Text>
-            <Text className='personality-results__coach-text'>{summary}</Text>
-            <Text className='personality-results__coach-text'>
-              {visual.hiddenStrength || '你的社交存在感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
-            </Text>
-          </View>
-        </View>
-      </Card>
-
-      <Card className='personality-results__section-card'>
-        <Text className='personality-results__section-label'>你的社交雷达</Text>
-        <View className='personality-results__trait-list'>
-          {traitEntries.map((trait) => (
-            <View key={trait.key} className='personality-results__trait-row'>
-              <View className='personality-results__trait-header'>
-                <Text className='personality-results__trait-label'>{trait.label}</Text>
-                <Text className='personality-results__trait-value'>{trait.value}</Text>
-              </View>
-              <View className='personality-results__trait-track'>
-                <View className='personality-results__trait-fill' style={{ width: `${trait.value}%`, background: visual.accent || DEFAULT_ACCENT }} />
-              </View>
-            </View>
-          ))}
-        </View>
-      </Card>
-
-      <View className='personality-results__stack-actions personality-results__stack-actions--spacious'>
-        <Button onClick={() => void handleContinue()} disabled={auth.isLoading}>
-          {continueButtonLabel}
-        </Button>
-        <Button variant='secondary' onClick={handleRestart}>重新测试一次</Button>
-      </View>
-    </ScrollView>
-  )
-
-  let content = renderLoadingState()
-
-  switch (flowStage) {
-    case 'empty':
-      content = renderEmptyState()
-      break
-    case 'error':
-      content = renderErrorState()
-      break
-    case 'slot':
-      content = renderSlotStage()
-      break
-    case 'reveal':
-      content = renderRevealStage()
-      break
-    case 'bridge':
-      content = renderBridgeStage()
-      break
-    case 'result':
-      content = renderFinalStage()
-      break
-    case 'loading':
-    default:
-      content = renderLoadingState()
-      break
-  }
+        )
+      case 'bridge':
+        return (
+          <BridgeStage
+            displayArchetypeName={displayArchetypeName}
+            confidenceLabel={confidenceLabel}
+            phaseText={phaseText}
+          />
+        )
+      case 'result':
+        return (
+          <FinalStage
+            displayArchetypeName={displayArchetypeName}
+            displayAsset={displayAsset}
+            visual={visual}
+            summary={summary}
+            shareLine={shareLine}
+            traitEntries={traitEntries}
+            topMatches={topMatches}
+            skillSet={skillSet}
+            confidenceLabel={confidenceLabel}
+            isGeneratingPoster={isGeneratingPoster}
+            sharePosterPath={sharePosterPath}
+            generationPhase={generationPhase}
+            energyLevel={energyLevel}
+            archetypeRank={archetypeRank}
+            serialNumber={serialNumber}
+            variants={variants}
+            selectedVariantIndex={selectedVariantIndex}
+            nickname={cardNickname}
+            onGeneratePoster={handleGeneratePoster}
+            onInviteFriend={handleInviteFriend}
+            onNicknameChange={setCardNickname}
+            onVariantSelect={setSelectedVariantIndex}
+            continueButtonLabel={continueButtonLabel}
+            onContinue={handleContinue}
+            onRestart={handleRestart}
+            authIsLoading={auth.isLoading}
+          />
+        )
+      case 'loading':
+      default:
+        return <LoadingStage phaseText={phaseText} />
+    }
+  }, [
+    flowStage,
+    phaseText,
+    errorMessage,
+    isFetchingResult,
+    handleRetry,
+    handleRestart,
+    reelIndex,
+    slotPhase,
+    isSlowNetwork,
+    progress,
+    displayArchetypeName,
+    displayAsset,
+    visual,
+    revealPhase,
+    confidenceLabel,
+    summary,
+    shareLine,
+    traitEntries,
+    topMatches,
+    skillSet,
+    isGeneratingPoster,
+    sharePosterPath,
+    generationPhase,
+    energyLevel,
+    archetypeRank,
+    serialNumber,
+    variants,
+    selectedVariantIndex,
+    cardNickname,
+    handleGeneratePoster,
+    handleInviteFriend,
+    continueButtonLabel,
+    handleContinue,
+    auth.isLoading,
+  ])
 
   return (
     <View className={`personality-results personality-results--${flowStage}`}>
@@ -1119,4 +870,3 @@ export default function PersonalityTestResultsPage() {
     </View>
   )
 }
-

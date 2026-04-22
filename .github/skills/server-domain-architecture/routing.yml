@@ -65,3 +65,5 @@ related_skills:
     when: adding structured logging, request IDs, or metrics to a new route
   - skill: testing-and-regression-guardrails
     when: locking in route ownership boundaries with structural tests
+  - skill: multi-agent-deliberation
+    when: architecture decisions with high blast radius or cross-domain impact

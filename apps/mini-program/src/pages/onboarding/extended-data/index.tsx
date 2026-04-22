@@ -18,6 +18,7 @@ import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api'
 import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
+import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
 import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
@@ -159,7 +160,7 @@ export default function ExtendedDataPage() {
         Taro.showToast({
           title: `最多选择 ${MAX_INTERESTS} 个兴趣`,
           icon: 'none',
-          duration: 2000,
+          duration: TOAST_DEFAULT_MS,
         })
         return
       }
@@ -225,7 +226,7 @@ export default function ExtendedDataPage() {
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
-      Taro.showToast({ title: message, icon: 'none', duration: 3000 })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsSubmitting(false)
     }

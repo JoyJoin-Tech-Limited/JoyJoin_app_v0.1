@@ -62,3 +62,5 @@ related_skills:
     when: the AI change is tied to live icebreaker session rules or host/player authority
   - skill: onboarding-state-architecture
     when: onboarding routing or completion authority is changing alongside AI helper text
+  - skill: multi-agent-deliberation
+    when: AI feature changes with safety, UX, and performance tension

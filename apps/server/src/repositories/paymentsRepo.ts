@@ -1,5 +1,6 @@
 import { db } from "../db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
+import { subscriptions, coupons, payments } from "@shared/schema";
 
 interface CreateSubscriptionData {
   userId: string;
@@ -89,39 +90,23 @@ export const paymentsRepo: PaymentsRepository = {
   },
 
   async updateSubscription(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
+    const setData: any = {};
+    if (updates.isActive !== undefined) setData.isActive = updates.isActive;
+    if (updates.autoRenew !== undefined) setData.autoRenew = updates.autoRenew;
+    if (updates.endDate !== undefined) setData.endDate = updates.endDate;
+    if (updates.status !== undefined) setData.status = updates.status;
+    if (updates.paymentId !== undefined) setData.paymentId = updates.paymentId;
 
-    if (updates.isActive !== undefined) {
-      setClauses.push(`is_active = $${values.length + 1}`);
-      values.push(updates.isActive);
-    }
-    if (updates.autoRenew !== undefined) {
-      setClauses.push(`auto_renew = $${values.length + 1}`);
-      values.push(updates.autoRenew);
-    }
-    if (updates.endDate !== undefined) {
-      setClauses.push(`end_date = $${values.length + 1}`);
-      values.push(updates.endDate);
-    }
-    if (updates.status !== undefined) {
-      setClauses.push(`status = $${values.length + 1}`);
-      values.push(updates.status);
-    }
-    if (updates.paymentId !== undefined) {
-      setClauses.push(`payment_id = $${values.length + 1}`);
-      values.push(updates.paymentId);
-    }
-
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       const result = await db.execute(sql`SELECT * FROM subscriptions WHERE id = ${id}`);
       return result.rows[0];
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE subscriptions SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(subscriptions)
+      .set(setData)
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return result;
   },
 
   async getAllCoupons(): Promise<any[]> {
@@ -165,46 +150,24 @@ export const paymentsRepo: PaymentsRepository = {
   },
 
   async updateCoupon(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
+    const setData: any = {};
+    if (updates.code !== undefined) setData.code = updates.code;
+    if (updates.discountType !== undefined) setData.discountType = updates.discountType;
+    if (updates.discountValue !== undefined) setData.discountValue = updates.discountValue;
+    if (updates.validFrom !== undefined) setData.validFrom = updates.validFrom;
+    if (updates.validUntil !== undefined) setData.validUntil = updates.validUntil;
+    if (updates.maxUses !== undefined) setData.usageLimit = updates.maxUses;
+    if (updates.isActive !== undefined) setData.isActive = updates.isActive;
 
-    if (updates.code !== undefined) {
-      setClauses.push(`code = $${values.length + 1}`);
-      values.push(updates.code);
-    }
-    if (updates.discountType !== undefined) {
-      setClauses.push(`discount_type = $${values.length + 1}`);
-      values.push(updates.discountType);
-    }
-    if (updates.discountValue !== undefined) {
-      setClauses.push(`discount_value = $${values.length + 1}`);
-      values.push(updates.discountValue);
-    }
-    if (updates.validFrom !== undefined) {
-      setClauses.push(`valid_from = $${values.length + 1}`);
-      values.push(updates.validFrom);
-    }
-    if (updates.validUntil !== undefined) {
-      setClauses.push(`valid_until = $${values.length + 1}`);
-      values.push(updates.validUntil);
-    }
-    if (updates.maxUses !== undefined) {
-      setClauses.push(`usage_limit = $${values.length + 1}`);
-      values.push(updates.maxUses);
-    }
-    if (updates.isActive !== undefined) {
-      setClauses.push(`is_active = $${values.length + 1}`);
-      values.push(updates.isActive);
-    }
-
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       return paymentsRepo.getCoupon(id);
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE coupons SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(coupons)
+      .set(setData)
+      .where(eq(coupons.id, id))
+      .returning();
+    return result;
   },
 
   async getCouponUsageStats(couponId: string): Promise<any> {
@@ -325,35 +288,22 @@ export const paymentsRepo: PaymentsRepository = {
   },
 
   async updatePayment(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
+    const setData: any = {};
+    if (updates.status !== undefined) setData.status = updates.status;
+    if (updates.wechatTransactionId !== undefined) setData.wechatTransactionId = updates.wechatTransactionId;
+    if (updates.wechatPrepayId !== undefined) setData.wechatPrepayId = updates.wechatPrepayId;
+    if (updates.paidAt !== undefined) setData.paidAt = updates.paidAt;
 
-    if (updates.status !== undefined) {
-      setClauses.push(`status = $${values.length + 1}`);
-      values.push(updates.status);
-    }
-    if (updates.wechatTransactionId !== undefined) {
-      setClauses.push(`wechat_transaction_id = $${values.length + 1}`);
-      values.push(updates.wechatTransactionId);
-    }
-    if (updates.wechatPrepayId !== undefined) {
-      setClauses.push(`wechat_prepay_id = $${values.length + 1}`);
-      values.push(updates.wechatPrepayId);
-    }
-    if (updates.paidAt !== undefined) {
-      setClauses.push(`paid_at = $${values.length + 1}`);
-      values.push(updates.paidAt);
-    }
-
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       const result = await db.execute(sql`SELECT * FROM payments WHERE id = ${id}`);
       return result.rows[0];
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE payments SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(payments)
+      .set(setData)
+      .where(eq(payments.id, id))
+      .returning();
+    return result;
   },
 
   async getAllPayments(): Promise<any[]> {

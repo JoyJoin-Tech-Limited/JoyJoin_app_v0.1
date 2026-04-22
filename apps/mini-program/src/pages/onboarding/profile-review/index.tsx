@@ -1,4 +1,8 @@
+import { STALE_TIME_PROFILE_TAGLINE_MS, TOAST_FATAL_MS } from '../../../lib/uiConstants'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import AnalyzingAnimation from '../../../components/AnalyzingAnimation'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import { haptics } from '../../../lib/haptics'
 import Taro from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -73,6 +77,7 @@ function getAgeLabel(user: Record<string, unknown> | undefined): string {
 }
 
 export default function ProfileReviewPage() {
+  const { shouldReduceMotion } = useMiniRevealMotion()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
@@ -101,7 +106,7 @@ export default function ProfileReviewPage() {
     queryKey: ['mini-program', 'onboarding-profile-tagline'],
     queryFn: () => getProfileTagline(apiRequest),
     enabled: !isLoading && Boolean(user),
-    staleTime: 1000 * 60 * 30,
+    staleTime: STALE_TIME_PROFILE_TAGLINE_MS,
     retry: 1,
   })
 
@@ -251,7 +256,7 @@ export default function ProfileReviewPage() {
       setError(message)
       analytics.errorOccurred('complete_failed', message)
       logError('[ProfileReview] Complete failed', { message })
-      Taro.showToast({ title: message, icon: 'none', duration: 3000 })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsSubmitting(false)
     }
@@ -280,14 +285,23 @@ export default function ProfileReviewPage() {
     <ScrollView className={pageClassName} scrollY enhanced showScrollbar={false}>
       <View className='profile-review__shell'>
         {!isRevealReady ? (
-          <View className='profile-review__prelude'>
-            <Text className='profile-review__prelude-eyebrow'>最后一页</Text>
-            <Text className='profile-review__prelude-title'>小悦在轻轻翻开你的入场卡</Text>
-            <Text className='profile-review__prelude-copy'>
-              再看这一眼，我们就带着这张卡去发现今天更适合你的第一场局。
-            </Text>
-          </View>
+          <AnalyzingAnimation
+            label='正在生成你的专属画像'
+            subtitle='小悦正在分析你的性格密码...'
+            minDuration={1200}
+            onComplete={() => setIsRevealReady(true)}
+            shouldReduceMotion={shouldReduceMotion}
+          />
         ) : null}
+
+        <View className={`profile-review__welcome-illustration ${getStageClassName(0)}`}>
+          <Image
+            className='profile-review__welcome-image'
+            src='../../assets/lovart/lovart-mascot-corgi-welcome-20260422-v1.webp'
+            mode='aspectFit'
+            lazyLoad
+          />
+        </View>
 
         <View className={`profile-review__hero ${getStageClassName(1)}`}>
           <Text className='profile-review__eyebrow'>Onboarding 4 / 4</Text>
@@ -316,14 +330,32 @@ export default function ProfileReviewPage() {
             </View>
             <View className='profile-review__hero-copy'>
               <Text className='profile-review__hero-name'>{displayName}</Text>
-              {archetype ? <Text className='profile-review__hero-archetype'>{archetype}</Text> : null}
+              {archetype && visual ? (
+                <View
+                  className='profile-review__hero-archetype-badge'
+                  style={{
+                    background: visual.accentSoft,
+                    borderColor: visual.accentBorder,
+                  }}
+                >
+                  <Text
+                    className='profile-review__hero-archetype-badge-text'
+                    style={{ color: visual.accent }}
+                  >
+                    {archetype}
+                  </Text>
+                </View>
+              ) : null}
               {visual?.summary ? (
                 <Text className='profile-review__hero-summary'>{visual.summary}</Text>
               ) : (
                 <Text className='profile-review__hero-summary'>你的基础资料和兴趣画像已经准备好被看见了。</Text>
               )}
               {aiInsightLine ? (
-                <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
+                <View className='profile-review__ai-tagline-wrap'>
+                  <Text className='profile-review__ai-tagline-sparkle'>✨</Text>
+                  <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
+                </View>
               ) : null}
             </View>
           </View>
@@ -485,7 +517,10 @@ export default function ProfileReviewPage() {
           <Button
             variant='brand'
             className='profile-review__submit'
-            onClick={handleComplete}
+            onClick={() => {
+              haptics('heavy')
+              handleComplete()
+            }}
             disabled={isSubmitting}
             loading={isSubmitting}
           >

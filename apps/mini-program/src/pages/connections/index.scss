@@ -91,6 +91,34 @@
     margin-top: 4rpx;
   }
 
+  &__card-wechat {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+    padding: 4rpx 12rpx;
+    background: rgba($color-primary, 0.08);
+    border-radius: 8rpx;
+    width: fit-content;
+  }
+
+  &__card-wechat-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__card-wechat-id {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__card-wechat-action {
+    font-size: $font-size-xs;
+    color: $color-primary;
+    margin-left: 4rpx;
+  }
+
   &__empty-state {
     @include flex-center;
     flex-direction: column;
@@ -99,8 +127,9 @@
     text-align: center;
   }
 
-  &__empty-emoji {
-    font-size: 64rpx;
+  &__empty-hero {
+    width: 320rpx;
+    height: 240rpx;
   }
 
   &__empty-text {

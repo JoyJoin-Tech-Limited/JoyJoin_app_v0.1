@@ -13,6 +13,15 @@
   border-radius: $card-radius;
   padding: $spacing-md;
   box-shadow: $shadow-lg;
+  will-change: transform, opacity;
+
+  &--entering {
+    animation: achievement-popup-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &--exiting {
+    animation: achievement-popup-exit 0.3s ease-in both;
+  }
 
   &__content {
     display: flex;
@@ -89,8 +98,18 @@
     bottom: 0;
     left: 0;
     height: 4rpx;
+    width: 100%;
     border-radius: 0 0 $card-radius $card-radius;
-    animation: achievement-shrink 3.5s linear forwards;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 100%;
+      transform-origin: left center;
+      animation: achievement-shrink-transform 3.5s linear forwards;
+    }
   }
 
   // ─── Rarity colour variants ────────────────────────────────
@@ -99,7 +118,7 @@
     border: 2rpx solid #D1D5DB;
 
     .achievement-popup__rarity { color: #6B7280; }
-    .achievement-popup__progress { background: #9CA3AF; }
+    .achievement-popup__progress::after { background: #9CA3AF; }
   }
 
   &--rare {
@@ -107,7 +126,7 @@
     border: 2rpx solid #60A5FA;
 
     .achievement-popup__rarity { color: #2563EB; }
-    .achievement-popup__progress { background: #60A5FA; }
+    .achievement-popup__progress::after { background: #60A5FA; }
   }
 
   &--epic {
@@ -115,7 +134,7 @@
     border: 2rpx solid #A78BFA;
 
     .achievement-popup__rarity { color: #7C3AED; }
-    .achievement-popup__progress { background: #A78BFA; }
+    .achievement-popup__progress::after { background: #A78BFA; }
   }
 
   &--legendary {
@@ -124,11 +143,45 @@
     box-shadow: $shadow-lg, 0 0 24rpx rgba(245, 158, 11, 0.25);
 
     .achievement-popup__rarity { color: #D97706; }
-    .achievement-popup__progress { background: #F59E0B; }
+    .achievement-popup__progress::after { background: #F59E0B; }
   }
 }
 
-@keyframes achievement-shrink {
-  from { width: 100%; }
-  to   { width: 0%; }
+@keyframes achievement-popup-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-24rpx) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes achievement-popup-exit {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-16rpx) scale(0.96);
+  }
+}
+
+@keyframes achievement-shrink-transform {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .achievement-popup,
+  .achievement-popup--entering,
+  .achievement-popup--exiting {
+    animation: none !important;
+  }
+
+  .achievement-popup__progress::after {
+    animation: none !important;
+  }
 }

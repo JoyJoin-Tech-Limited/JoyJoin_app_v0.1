@@ -1,0 +1,65 @@
+skill: caching-strategy
+
+primary_ownership: >
+  Caching backend selection, TTL design, key naming, invalidation contracts, rate-limiting strategy,
+  and horizontal-scaling guardrails for in-memory and PostgreSQL caches.
+
+use_when:
+  - adding a new cache layer or changing cache backend
+  - modifying rate-limit rules, windows, or key patterns
+  - debugging stale data or cache invalidation bugs
+  - changing session store configuration
+  - reviewing caching for horizontal-scaling readiness
+
+do_not_use_when:
+  - task is about database query optimization
+  - task is about AI prompt caching or LLM output reuse
+  - task is about frontend asset caching
+
+strong_triggers:
+  - cache
+  - caching
+  - Redis
+  - rate limit
+  - rateLimiter
+  - matchingCache
+  - node-cache
+  - TTL
+  - eviction
+  - invalidate cache
+  - stale data
+  - thundering herd
+  - connect-pg-simple
+  - session store
+  - fixed-window rate limit
+  - sliding-window rate limit
+  - cache hit
+  - cache miss
+  - fromCache
+
+owned_files:
+  - apps/server/src/matchingCache.ts
+  - apps/server/src/rateLimiter.ts
+  - apps/server/src/matchExplanationService.ts
+  - apps/server/src/inference/cache.ts
+  - apps/server/src/ai/minimaxTTSService.ts
+  - apps/server/src/xiaoyueAnalysisService.ts
+  - apps/server/src/triggerPerformanceService.ts
+
+owned_symbols:
+  - matchingCache
+  - rateLimiter
+  - getCachedPairScore
+  - getCachedSignature
+  - invalidateUserCache
+  - nodeCache
+  - connectPgSimple
+  - SESSION_TTL
+
+related_skills:
+  - skill: server-domain-architecture
+    when: adding new routes or repositories
+  - skill: llm-runtime-safety-and-integration
+    when: AI prompt caching or LLM output reuse
+  - skill: platform-observability-and-ops
+    when: cache metrics and alerting

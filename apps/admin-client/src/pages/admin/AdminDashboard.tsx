@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog, Trophy, Coins, Flame } from "lucide-react";
+import { Users, CreditCard, Calendar, DollarSign, UserPlus, TrendingUp, AlertCircle, RefreshCw, Star, MapPin, UserCog, Trophy, Coins, Flame, Bell, AlertTriangle, Clock, UsersRound, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useMemo } from "react";
@@ -58,10 +58,39 @@ interface AdminStats {
   };
 }
 
+interface TodayEvent {
+  id: string;
+  title: string;
+  dateTime: string;
+  location: string;
+  status: string;
+  maxAttendees: number;
+  registeredCount: number;
+  checkedInCount: number;
+  noShowCount: number;
+}
+
+interface OpsAlerts {
+  pendingReports: number;
+  underfilledPoolsClosingSoon: number;
+  refundsPending: number;
+  usersStuckInOnboarding: number;
+}
+
+interface OpsDashboard {
+  todayEvents: TodayEvent[];
+  alerts: OpsAlerts;
+}
+
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { data: stats, isLoading, isError, error, refetch } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
+    retry: 2,
+  });
+
+  const { data: ops, isLoading: opsLoading } = useQuery<OpsDashboard>({
+    queryKey: ["/api/admin/ops-dashboard"],
     retry: 2,
   });
   
@@ -190,6 +219,132 @@ export default function AdminDashboard() {
         <h2 className="text-2xl font-bold">数据看板</h2>
         <p className="text-muted-foreground">核心业务指标概览</p>
       </div>
+
+      {/* 今日待办 Alerts */}
+      {!opsLoading && ops && (
+        <Card className="mb-6" data-testid="card-today-alerts">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              今日待办
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {ops.alerts.pendingReports > 0 && (
+                <button
+                  onClick={() => setLocation("/admin/moderation")}
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left hover:bg-red-100 transition-colors"
+                  data-testid="alert-pending-reports"
+                >
+                  <div className="flex items-center gap-1.5 text-red-700">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">举报待审核</span>
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-red-700">{ops.alerts.pendingReports} 条</div>
+                </button>
+              )}
+              {ops.alerts.underfilledPoolsClosingSoon > 0 && (
+                <button
+                  onClick={() => setLocation("/admin/event-pools")}
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left hover:bg-amber-100 transition-colors"
+                  data-testid="alert-underfilled-pools"
+                >
+                  <div className="flex items-center gap-1.5 text-amber-700">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">即将截止 · 报名不足</span>
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-amber-700">{ops.alerts.underfilledPoolsClosingSoon} 个</div>
+                </button>
+              )}
+              {ops.alerts.refundsPending > 0 && (
+                <button
+                  onClick={() => setLocation("/admin/finance")}
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left hover:bg-amber-100 transition-colors"
+                  data-testid="alert-refunds-pending"
+                >
+                  <div className="flex items-center gap-1.5 text-amber-700">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">退款待处理</span>
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-amber-700">{ops.alerts.refundsPending} 笔</div>
+                </button>
+              )}
+              {ops.alerts.usersStuckInOnboarding > 0 && (
+                <button
+                  onClick={() => setLocation("/admin/users")}
+                  className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left hover:bg-blue-100 transition-colors"
+                  data-testid="alert-stuck-users"
+                >
+                  <div className="flex items-center gap-1.5 text-blue-700">
+                    <UsersRound className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">用户卡壳在 onboarding</span>
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-blue-700">{ops.alerts.usersStuckInOnboarding} 人</div>
+                </button>
+              )}
+              {Object.values(ops.alerts).every((v) => v === 0) && (
+                <div className="col-span-full rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-center" data-testid="alert-all-clear">
+                  <div className="flex items-center justify-center gap-1.5 text-green-700">
+                    <Activity className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">一切正常 — 今日无待处理预警</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 今日活动 */}
+      {!opsLoading && ops && ops.todayEvents.length > 0 && (
+        <Card className="mb-6" data-testid="card-today-events">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              今日活动 ({ops.todayEvents.length} 场)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {ops.todayEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                  data-testid={`today-event-${event.id}`}
+                >
+                  <div className="space-y-1">
+                    <div className="font-medium">{event.title}</div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {event.location}
+                      </span>
+                      <Badge variant={event.status === "ongoing" ? "default" : event.status === "completed" ? "secondary" : "outline"} className="text-[10px]">
+                        {event.status === "upcoming" ? "待开始" : event.status === "ongoing" ? "进行中" : "已结束"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-semibold">{event.registeredCount}</div>
+                      <div className="text-xs text-muted-foreground">已报名</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-semibold text-green-600">{event.checkedInCount}</div>
+                      <div className="text-xs text-muted-foreground">已签到</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-semibold text-red-600">{event.noShowCount}</div>
+                      <div className="text-xs text-muted-foreground">未出席</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 运营健康记分卡 */}
       {stats && (

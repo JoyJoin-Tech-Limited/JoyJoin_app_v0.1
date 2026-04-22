@@ -4,6 +4,13 @@ import {
   MINI_PROGRAM_SUBPACKAGES,
 } from './lib/onboardingRoutes'
 import { MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS } from './lib/tabBarConfig'
+import {
+  COLOR_TAB_INACTIVE,
+  COLOR_PRIMARY,
+  COLOR_SURFACE,
+  COLOR_BACKGROUND,
+  COLOR_NAVBAR_BG,
+} from './lib/uiConstants'
 
 const MINI_PROGRAM_SUBPACKAGES_CONFIG = MINI_PROGRAM_SUBPACKAGES.map((subpackage) => ({
   ...subpackage,
@@ -28,17 +35,17 @@ export default defineAppConfig({
   usingComponents: {},
   tabBar: {
     custom: true,
-    color: '#9CA3AF',
-    selectedColor: '#8B5CF6',
-    backgroundColor: '#ffffff',
+    color: COLOR_TAB_INACTIVE,
+    selectedColor: COLOR_PRIMARY,
+    backgroundColor: COLOR_SURFACE,
     borderStyle: 'white',
     list: MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS,
   },
   window: {
     backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#ffffff',
+    navigationBarBackgroundColor: COLOR_NAVBAR_BG,
     navigationBarTitleText: 'JoyJoin',
     navigationBarTextStyle: 'black',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: COLOR_BACKGROUND,
   },
 })

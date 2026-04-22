@@ -34,7 +34,10 @@
       "MiniScript Story Agent",
       "Icebreaker Auction Phase Agent",
       "Lie Detective Icebreaker Agent",
-      "Personality Dice Icebreaker Agent"
+      "Personality Dice Icebreaker Agent",
+      "Deliberation Moderator",
+      "Harness Runtime Controller",
+      "Visual Designer"
     ]
   },
   "copilot_hooks": {
@@ -92,6 +95,33 @@
           "Researcher",
           "Planner"
         ],
+      "harness_lane": {
+        "entry_agent": "Harness Runtime Controller",
+        "approval_mode": "harness-first",
+        "recommend_on_harness_signals": true,
+        "harness_signals": {
+          "prompt_terms": [
+            "harness",
+            "reliability",
+            "scalability",
+            "security review",
+            "observability gap",
+            "production harness",
+            "engineering quality gate",
+            "PGE pipeline",
+            "token circulation"
+          ],
+          "path_patterns": [
+            "packages/shared/src/personality/**",
+            "packages/shared/src/poolMatchingService.ts",
+            "apps/server/src/routes/domains/*.ts",
+            "apps/server/src/payment-entitlement/**",
+            "apps/server/src/auth/**"
+          ],
+          "min_blast_radius_lines": 100,
+          "min_cross_workspace_domains": 2
+        }
+      },
         "approval_mode": "plan-first",
         "recommend_on_first_broad_prompt": true,
         "broad_prompt_signals": {
@@ -334,6 +364,90 @@
       "to": "Supervisor",
       "label": "Route blocker remediation",
       "prompt": "Use Supervisor to route the next remediation step based on the current blockers, affected surfaces, and required specialists."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Deliberation Moderator",
+      "label": "Request multi-agent deliberation",
+      "prompt": "Use the Deliberation Moderator when the task is cross-domain, architecturally significant, or high-blast-radius. Provide task scope, affected workspaces, and trigger rationale."
+    },
+    {
+      "from": "Planner",
+      "to": "Deliberation Moderator",
+      "label": "Deliberate before execution",
+      "prompt": "Use the Deliberation Moderator to run a structured 5-phase review before finalizing the execution plan."
+    },
+    {
+      "from": "Deliberation Moderator",
+      "to": "Supervisor",
+      "label": "Route consensus plan to implementation",
+      "prompt": "Use this consensus-locked deliberation plan to route the correct implementation specialist."
+    },
+    {
+      "from": "Deliberation Moderator",
+      "to": "Planner",
+      "label": "Re-plan with deliberation findings",
+      "prompt": "Convert the deliberation output into a refined approval-first execution plan."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Harness Runtime Controller",
+      "label": "Request Harness engineering deliberation",
+      "prompt": "Use the Harness Runtime Controller when the task requires pre-validation against the 5 Harness pillars (reliability, scalability, security, observability, maintainability), touches core engines, or the user explicitly requests a production harness. Provide task scope, affected workspaces, and recommended mode (pge-council, council-only, token-ring)."
+    },
+    {
+      "from": "Planner",
+      "to": "Harness Runtime Controller",
+      "label": "Harness before execution",
+      "prompt": "Use the Harness Runtime Controller to run the full PGE → Council → Consensus pipeline before finalizing the execution plan."
+    },
+    {
+      "from": "Harness Runtime Controller",
+      "to": "Supervisor",
+      "label": "Route Harness consensus to implementation",
+      "prompt": "Use this Harness consensus-locked plan, Sprint Contract, and pillar verdicts to route the correct implementation specialist."
+    },
+    {
+      "from": "Harness Runtime Controller",
+      "to": "Planner",
+      "label": "Re-plan with Harness findings",
+      "prompt": "Convert the Harness deliberation output into a refined approval-first execution plan with updated risks, dependencies, and model recommendations."
+    },
+    {
+      "from": "Harness Runtime Controller",
+      "to": "Auto-Eval",
+      "label": "Run Harness verification gate",
+      "prompt": "Run the dirty-worktree quality gate and cross-check against the Harness Verification Checklist before execution begins."
+    },
+    {
+      "from": "Harness Runtime Controller",
+      "to": "Deliberation Moderator",
+      "label": "Escalate unresolved dissent",
+      "prompt": "A Harness deliberation reached unresolved dissent or veto override. Use general deliberation to resolve the remaining disagreement."
+    },
+    {
+      "from": "Visual Designer",
+      "to": "Expert React Frontend Engineer",
+      "label": "Asset brief ready — route to web frontend",
+      "prompt": "The Lovart design brief is ready. Implement the component or screen that consumes this asset in apps/user-client or apps/admin-client, following asset placement, lazy loading, and import path rules."
+    },
+    {
+      "from": "Visual Designer",
+      "to": "Taro Mini-Program Frontend Engineer",
+      "label": "Asset brief ready — route to mini-program",
+      "prompt": "The Lovart design brief is ready. Implement the mini-program component or page that consumes this asset in apps/mini-program, following bundle size, format optimization, and subpackage rules."
+    },
+    {
+      "from": "Visual Designer",
+      "to": "Supervisor",
+      "label": "Brand parameter conflict",
+      "prompt": "The design request conflicts with existing brand guidelines or requires brand system expansion. Route to the appropriate specialist for brand system resolution."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Visual Designer",
+      "label": "Route visual asset creation",
+      "prompt": "Route to Visual Designer when the task requires creating, refining, or requesting brand-aligned visual assets via Lovart AI Design Agent."
     }
   ],
   "agent_bindings": {
@@ -601,6 +715,50 @@
         "recommended_extensions": []
       }
     },
+    "Deliberation Moderator": {
+      "file": ".github/agents/deliberation-moderator.agent.md",
+      "portfolio_role": "deliberation-orchestrator",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Deliberation orchestration requires repo inspection, search, and child agent delegation to manage the 5-phase protocol.",
+        "recommended_extensions": []
+      }
+    },
+    "Harness Runtime Controller": {
+      "file": ".github/agents/harness-runtime-controller.agent.md",
+      "portfolio_role": "harness-orchestrator",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Harness deliberation orchestration requires repo inspection, search, and child agent delegation to manage the PGE → Council → Consensus pipeline and optional Token Ring.",
+        "recommended_extensions": []
+      }
+    },
+    "Visual Designer": {
+      "file": ".github/agents/visual-designer.agent.md",
+      "portfolio_role": "visual-design",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Visual design brief generation requires repo inspection and brand reference lookup. No edit or execute needed since output is a copy-paste Lovart brief, not a file mutation.",
+        "recommended_extensions": []
+      }
+    },
     "Launch Readiness Agent": {
       "file": ".github/agents/launch-readiness.agent.md",
       "portfolio_role": "release-review",
@@ -743,7 +901,7 @@
       }
     },
     "Expert React Frontend Engineer": {
-      "file": ".github/agents/frontend engineer.md",
+      "file": ".github/agents/frontend-engineer.agent.md",
       "portfolio_role": "implementation",
       "orchestration_status": "audited-support",
       "current_tools": [
@@ -787,7 +945,7 @@
       }
     },
     "SE: Product Manager": {
-      "file": ".github/agents/PM advisor.md",
+      "file": ".github/agents/pm-advisor.agent.md",
       "portfolio_role": "issue-scoping",
       "orchestration_status": "audited-support",
       "current_tools": [
@@ -852,7 +1010,7 @@
       }
     },
     "Principal Software Engineer": {
-      "file": ".github/agents/principal SWE.md",
+      "file": ".github/agents/principal-swe.agent.md",
       "portfolio_role": "architecture-advice",
       "orchestration_status": "audited-support",
       "current_tools": [
@@ -873,7 +1031,7 @@
       }
     },
     "Prompt Engineer": {
-      "file": ".github/agents/prompt engineer.md",
+      "file": ".github/agents/prompt-engineer.agent.md",
       "portfolio_role": "prompt-design",
       "orchestration_status": "audited-support",
       "current_tools": [
@@ -892,33 +1050,69 @@
           }
         ]
       }
+    },
+    "DevOps / SRE": {
+      "file": ".github/agents/devops-sre.agent.md",
+      "portfolio_role": "infrastructure-operations",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Infrastructure operations require full repo inspection, configuration editing, and command execution for deployment, observability, and troubleshooting.",
+        "recommended_extensions": []
+      }
     }
   },
   "skill_bindings": {
     "Researcher": [
       "orchestration-turn-reporting",
-      "first-principles-velocity"
+      "first-principles-velocity",
+      "docs-sync",
+      "platform-coordination-protocol",
+      "process-docs"
     ],
     "Planner": [
       "orchestration-turn-reporting",
-      "first-principles-velocity"
+      "first-principles-velocity",
+      "lane-selection-governance",
+      "process-brainstorming",
+      "process-docs",
+      "process-parity"
     ],
     "Supervisor": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "monorepo-workspace-governance",
-      "docs-sync"
+      "docs-sync",
+      "lane-selection-governance",
+      "code-review",
+      "process-brainstorming",
+      "process-systematic-debugging",
+      "process-verification-gate",
+      "process-test-first",
+      "process-refactoring",
+      "process-docs",
+      "process-parity"
     ],
     "Auto-Eval": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "code-review",
-      "monorepo-workspace-governance"
+      "monorepo-workspace-governance",
+      "process-verification-gate"
     ],
     "Product Manager": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
-      "draft-prd"
+      "draft-prd",
+      "pm-sin-mapper",
+      "joyjoin-brand-guidelines",
+      "process-docs"
     ],
     "Backend Engineer": [
       "orchestration-turn-reporting",
@@ -930,7 +1124,10 @@
       "payment-entitlement-authority",
       "matching-domain",
       "event-pool-and-matching-operations",
-      "social-icebreaker-domain"
+      "social-icebreaker-domain",
+      "process-test-first",
+      "process-systematic-debugging",
+      "process-refactoring"
     ],
     "AI Engineer": [
       "orchestration-turn-reporting",
@@ -938,14 +1135,21 @@
       "llm-runtime-safety-and-integration",
       "platform-observability-and-ops",
       "payment-entitlement-authority",
-      "matching-domain"
+      "matching-domain",
+      "process-test-first",
+      "process-refactoring"
     ],
     "QA Agent": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "e2e-test-runner",
       "testing-and-regression-guardrails",
-      "performance-benchmark"
+      "performance-benchmark",
+      "notification-system",
+      "error-handling-patterns",
+      "websocket-realtime",
+      "process-verification-gate",
+      "process-test-first"
     ],
     "Verifier": [
       "orchestration-turn-reporting",
@@ -978,7 +1182,8 @@
       "frontend-component-architecture",
       "server-domain-architecture",
       "platform-coordination-protocol",
-      "testing-and-regression-guardrails"
+      "testing-and-regression-guardrails",
+      "process-parity"
     ],
     "MiniScript Story Agent": [
       "orchestration-turn-reporting",
@@ -987,7 +1192,8 @@
       "social-icebreaker-domain",
       "llm-runtime-safety-and-integration",
       "mini-program-frontend-excellence",
-      "platform-coordination-protocol"
+      "platform-coordination-protocol",
+      "process-parity"
     ],
     "Icebreaker Auction Phase Agent": [
       "orchestration-turn-reporting",
@@ -1013,17 +1219,54 @@
       "llm-runtime-safety-and-integration",
       "joyjoin-brand-guidelines"
     ],
+    "Deliberation Moderator": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "server-domain-architecture",
+      "mini-program-frontend-excellence",
+      "testing-and-regression-guardrails",
+      "platform-coordination-protocol",
+      "multi-agent-deliberation"
+    ],
+    "Harness Runtime Controller": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "harness-engineering-deliberation",
+      "harness-verification-gate",
+      "server-domain-architecture",
+      "reliability-and-state-integrity",
+      "database-query-optimization",
+      "auth-session-and-safety-boundaries",
+      "platform-observability-and-ops",
+      "code-review",
+      "testing-and-regression-guardrails",
+      "caching-strategy",
+      "security-scan",
+      "error-handling-patterns",
+      "database-migration-safety",
+      "content-safety-abuse-detection",
+      "monorepo-workspace-governance",
+      "api-contract-versioning",
+      "feature-flags-launch-config",
+      "performance-benchmark",
+      "matching-domain"
+    ],
     "Launch Readiness Agent": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "security-scan",
       "platform-observability-and-ops",
-      "code-review"
+      "code-review",
+      "feature-flags-launch-config",
+      "caching-strategy",
+      "websocket-realtime",
+      "analytics-tracking"
     ],
     "Admin Operations Advisor": [
       "admin-audit-and-rbac-governance",
       "auth-session-and-safety-boundaries",
-      "platform-observability-and-ops"
+      "platform-observability-and-ops",
+      "error-handling-patterns"
     ],
     "Database Schema & Migration Auditor": [
       "first-principles-velocity",
@@ -1035,7 +1278,8 @@
       "orchestration-turn-reporting",
       "first-principles-velocity",
       "platform-coordination-protocol",
-      "frontend-component-architecture"
+      "frontend-component-architecture",
+      "process-parity"
     ],
     "Taro Mini-Program Frontend Engineer": [
       "orchestration-turn-reporting",
@@ -1047,7 +1291,8 @@
       "wow-elements",
       "platform-coordination-protocol",
       "performance-benchmark",
-      "frontend-performance-and-loading"
+      "frontend-performance-and-loading",
+      "process-parity"
     ],
     "Taro Migration Specialist": [
       "orchestration-turn-reporting",
@@ -1065,11 +1310,14 @@
       "joyjoin-brand-guidelines",
       "wow-elements",
       "platform-coordination-protocol",
-      "performance-benchmark"
+      "performance-benchmark",
+      "process-parity"
     ],
     "debug": [
       "first-principles-velocity",
-      "testing-and-regression-guardrails"
+      "testing-and-regression-guardrails",
+      "process-systematic-debugging",
+      "process-test-first"
     ],
     "SE: Product Manager": [
       "draft-prd"
@@ -1077,20 +1325,39 @@
     "Repo Memory Steward": [
       "orchestration-turn-reporting",
       "first-principles-velocity",
-      "docs-sync"
+      "docs-sync",
+      "process-docs"
     ],
     "Workflow Governance Reviewer": [
       "docs-sync",
       "testing-and-regression-guardrails",
-      "skill-authoring-governance"
+      "skill-authoring-governance",
+      "process-docs"
     ],
     "Principal Software Engineer": [
       "first-principles-velocity",
       "code-review",
       "reliability-and-state-integrity",
-      "monorepo-workspace-governance"
+      "monorepo-workspace-governance",
+      "process-refactoring"
     ],
-    "Prompt Engineer": []
+    "Prompt Engineer": [],
+    "DevOps / SRE": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "platform-observability-and-ops",
+      "security-scan",
+      "caching-strategy"
+    ],
+    "Visual Designer": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "lovart-design-workflow",
+      "joyjoin-brand-guidelines",
+      "design-system-governance",
+      "wow-elements",
+      "frontend-component-architecture"
+    ]
   },
   "retry_policy": {
     "default": {

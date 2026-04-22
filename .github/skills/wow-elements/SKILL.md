@@ -186,6 +186,17 @@ Before marking a polished interaction complete, verify:
 - [ ] Is the copy/visual state still readable and correct without the animation?
 - [ ] Would a new contributor understand why this animation exists?
 
+## Related skills
+
+| Skill | When to hand off |
+|-------|-----------------|
+| `frontend-component-architecture` | wow element is a new shared primitive or requires workspace placement decision |
+| `design-system-governance` | motion uses or introduces transition tokens or CSS custom properties |
+| `joyjoin-brand-guidelines` | animation direction must align with JoyJoin's brand motion personality |
+| `mini-program-frontend-excellence` | the polish is for the launch-primary mini-program surface |
+| `frontend-performance-and-loading` | the animation is list-heavy, media-heavy, or performance-sensitive |
+| `multi-agent-deliberation` | cross-perspective review of premium interaction decisions with performance vs UX tension |
+
 ## Related files and docs
 
 | Resource | What it covers |
@@ -198,3 +209,8 @@ Before marking a polished interaction complete, verify:
 | `docs/ui-matching-reveal-improvements.md` | Existing premium reveal pattern — reference for choreography decisions |
 | `docs/matching-reveal-implementation-summary.md` | Implementation detail behind the matching reveal |
 | `references/examples.md` | 3–4 concrete wow element examples with TypeScript/React snippets |
+| `apps/mini-program/src/components/AchievementPopup.tsx` | Gamification achievement reveal animation |
+| `apps/mini-program/src/components/AnalyzingAnimation.tsx` | Personality test "analyzing" state animation |
+| `apps/mini-program/src/components/FancyLineLoadingScreen.tsx` | Premium loading state with motion |
+| `apps/mini-program/src/components/XiaoyueChatBubble.tsx` | Conversational AI character bubble animation |
+| `apps/mini-program/src/components/OnboardingLoadingShell.tsx` | Onboarding first-load emotional state |

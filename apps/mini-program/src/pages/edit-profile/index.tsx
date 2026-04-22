@@ -12,6 +12,7 @@ import { apiRequest } from '../../lib/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { logInfo, logError } from '../../lib/logger'
+import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/uiConstants'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import './index.scss'
@@ -205,14 +206,14 @@ export default function EditProfilePage() {
       // Invalidate auth cache so profile page refreshes
       invalidateAuth()
 
-      Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 })
+      Taro.showToast({ title: '保存成功', icon: 'success', duration: TOAST_DEFAULT_MS })
       setTimeout(() => {
         Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })
       }, 1000)
     } catch (err) {
       const msg = err instanceof Error ? err.message : '保存失败'
       logError('[EditProfile] Save failed', { message: msg })
-      Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
+      Taro.showToast({ title: msg, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsSaving(false)
     }

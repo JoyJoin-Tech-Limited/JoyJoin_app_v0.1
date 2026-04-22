@@ -393,6 +393,13 @@ export interface PaymentStatusResponse {
   status?: string
 }
 
+export interface CouponValidationResponse {
+  valid: boolean
+  message?: string
+  discountAmount?: number
+  finalAmount?: number
+}
+
 export type PaymentVerificationState = 'polling' | 'paid' | 'pending' | 'failed'
 
 export interface PaymentVerificationDecision {
@@ -523,6 +530,9 @@ export interface JoinedEventSummary {
   id: string
   title?: string
   dateTime?: string
+  location?: string
+  status?: string
+  description?: string
   [key: string]: unknown
 }
 
@@ -530,6 +540,18 @@ export interface BlindBoxEventSummary {
   id: string
   status?: string
   dateTime?: string
+  [key: string]: unknown
+}
+
+export interface BlindBoxEventDetail {
+  id: string
+  title?: string
+  dateTime?: string
+  location?: string
+  type?: string
+  status?: string
+  attendeeCount?: number
+  description?: string
   [key: string]: unknown
 }
 
@@ -969,7 +991,38 @@ export interface EventPoolSummary {
   description?: string
   maxParticipants?: number
   currentParticipants?: number
+  registrationCount?: number
+  spotsLeft?: number
+  sampleArchetypes?: string[]
+  topArchetypes?: Array<{ archetype: string; count: number }>
+  accentFamily?: 'warm' | 'cool' | 'fire' | 'calm'
+  aiHeadline?: string | null
+  hasUserArchetypeMatch?: boolean
   [key: string]: unknown
+}
+
+export interface SimilarPoolSummary {
+  id: string
+  title?: string
+  eventType?: string
+  city?: string
+  district?: string | null
+  dateTime?: string
+  registrationCount?: number
+}
+
+export interface MyConnection {
+  id: string
+  eventId: string
+  eventType?: string | null
+  eventDate?: string | null
+  peerId: string
+  peerDisplayName?: string | null
+  peerArchetype?: string | null
+  peerWechatId?: string | null
+  connectionReasons?: string[] | null
+  nextStepPreference?: string | null
+  createdAt?: Date | string | null
 }
 
 export type EventThemeVibe = 'playful' | 'professional' | 'creative' | 'adventurous'

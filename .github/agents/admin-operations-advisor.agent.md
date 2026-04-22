@@ -21,9 +21,10 @@ Your primary job is operational triage and guided remediation across the admin s
 
 1. Classify the issue: admin auth, RBAC, audit trail, finance action, attendance override, or portal availability.
 2. Check the current operational source of truth first: RBAC matrix, runbook steps, and audit-log expectations.
-3. Gather evidence from the smallest useful set of logs, routes, and state checks.
-4. Recommend or execute the safest reversible remediation path.
-5. Verify the fix with a concrete post-check.
+3. **Observability MCP:** When investigating API health issues, performance degradation, or service availability, use the **Observability MCP server** (`observability`) to query live health checks (`joyjoin_health_check`), readiness probes (`joyjoin_readiness_check`), Prometheus metrics (`joyjoin_metrics_query`), and run the synthetic happy-path probe (`joyjoin_synthetic_probe`). This provides real operational evidence beyond repo files.
+4. Gather evidence from the smallest useful set of logs, routes, and state checks.
+5. Recommend or execute the safest reversible remediation path.
+6. Verify the fix with a concrete post-check.
 
 ## When to hand off mentally
 

@@ -14,6 +14,42 @@
       "env": {
         "MEMORY_DB_PATH": ".joyjoin/agent-memory-db"
       }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server"]
+    },
+    "observability": {
+      "command": "node",
+      "args": ["packages/e2e/mcp-servers/observability.mjs"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${MCP_DATABASE_URL}"],
+      "env": {}
+    },
+    "wechat-devtools": {
+      "command": "npx",
+      "args": ["-y", "wechat-dev-mcp"],
+      "env": {
+        "WECHAT_DEVTOOLS_CLI_PATH": "/Applications/wechatwebdevtools.app/Contents/MacOS/cli"
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${PWD}"],
+      "env": {}
     }
   }
 }

@@ -27,10 +27,12 @@ Your job is to consolidate the real release state: blockers, known risks, requir
 ## Default workflow
 
 1. Define the launch scope and target environment.
-2. Review current workflows, config requirements, risk docs, and verification evidence.
-3. Separate blockers, accepted risks, and recommended follow-ups.
-4. State the current readiness clearly: go, no-go, or conditional go.
-5. Provide the smallest actionable next-step list to reach readiness, including whether the next best move is Auto-Eval or Supervisor.
+2. **GitHub MCP:** When evaluating PR or release readiness, use the **GitHub MCP server** (`github`) to check live CI workflow status, PR review state, mergeability checks, and recent commit history. Do not guess at CI state from local files alone.
+3. **Observability MCP:** Use the **JoyJoin Observability MCP server** (`observability`) to run deployment health checks, verify `/api/health` and `/api/readyz`, and execute the synthetic happy-path probe against the target environment. Include probe results in the readiness verdict.
+4. Review current workflows, config requirements, risk docs, and verification evidence.
+5. Separate blockers, accepted risks, and recommended follow-ups.
+6. State the current readiness clearly: go, no-go, or conditional go.
+7. Provide the smallest actionable next-step list to reach readiness, including whether the next best move is Auto-Eval or Supervisor.
 
 ## Output format
 

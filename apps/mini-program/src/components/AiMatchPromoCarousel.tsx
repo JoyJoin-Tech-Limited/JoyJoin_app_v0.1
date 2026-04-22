@@ -1,6 +1,7 @@
 import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components'
-import { useCallback, useMemo, useState } from 'react'
-import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
+import { useCallback, useState } from 'react'
+import { SWIPER_INTERVAL_MS, SWIPER_TRANSITION_MS } from '../lib/uiConstants'
+import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
 import './AiMatchPromoCarousel.scss'
 
 interface AiMatchPromoCarouselProps {
@@ -44,7 +45,7 @@ export default function AiMatchPromoCarousel({
 }: AiMatchPromoCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [resolvedSrcByPng, setResolvedSrcByPng] = useState(buildInitialResolvedSources)
-  const prefersReducedMotion = usePrefersReducedMotion()
+  const { shouldReduceMotion } = useMiniRevealMotion()
 
   const handleImageError = useCallback((pngPath: string) => {
     setResolvedSrcByPng((current) => {
@@ -55,13 +56,8 @@ export default function AiMatchPromoCarousel({
     })
   }, [])
 
-  const autoplayEnabled = !prefersReducedMotion
-  const transitionMs = prefersReducedMotion ? 0 : 420
-
-  const swiperKey = useMemo(
-    () => `${autoplayEnabled ? 'auto' : 'still'}-${compact ? 'c' : 'full'}`,
-    [autoplayEnabled, compact],
-  )
+  const autoplayEnabled = !shouldReduceMotion
+  const transitionMs = shouldReduceMotion ? 0 : SWIPER_TRANSITION_MS
 
   return (
     <View
@@ -72,11 +68,10 @@ export default function AiMatchPromoCarousel({
       ].filter(Boolean).join(' ')}
     >
       <Swiper
-        key={swiperKey}
         className='ai-match-promo-carousel__swiper'
         circular
         autoplay={autoplayEnabled}
-        interval={4200}
+        interval={SWIPER_INTERVAL_MS}
         duration={transitionMs}
         indicatorDots={false}
         onChange={(event) => setActiveIndex(event.detail.current)}

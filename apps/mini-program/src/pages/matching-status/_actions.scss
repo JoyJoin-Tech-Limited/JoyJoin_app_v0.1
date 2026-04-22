@@ -1,0 +1,62 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+@mixin matching-status-actions {
+  // ── Actions ───────────────────────────────────────────────────
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    margin-top: $spacing-lg;
+  }
+
+  &__cta-btn {
+    @include button-primary;
+    width: 100%;
+    border: 0;
+  }
+
+  &__cancel-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+  }
+
+  &__cancel-mascot {
+    width: 120rpx;
+    height: 120rpx;
+  }
+
+  &__cancel-btn {
+    width: 100%;
+    height: $button-height;
+    border-radius: $button-radius;
+    background: $color-surface;
+    color: $color-error;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    border: 1rpx solid $color-border;
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &__back-btn {
+    @include button-primary;
+    @include type-brand-cta-label;
+    width: 100%;
+    border: 0;
+  }
+
+  // ── Spacer ────────────────────────────────────────────────────
+  &__spacer {
+    height: $spacing-2xl;
+  }
+}

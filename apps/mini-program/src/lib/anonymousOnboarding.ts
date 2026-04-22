@@ -16,7 +16,6 @@ export interface AnonymousAssessmentResult {
   topMatches?: AnonymousAssessmentTopMatch[]
   totalQuestionsAnswered?: number
   archetypeConfidence?: number
-  [key: string]: unknown
 }
 
 export interface AnonymousAssessmentAnswer {

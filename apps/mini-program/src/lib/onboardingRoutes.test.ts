@@ -19,17 +19,17 @@ describe('mini-program onboarding routes', () => {
     expect(MINI_PROGRAM_PAGES).toContain('pages/discover/index')
   })
 
-  it('retains the canonical events tab page and both legacy events aliases', () => {
+  it('retains the canonical events tab page and core pages', () => {
     expect(MINI_PROGRAM_PAGES).toContain('pages/events/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/terms/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/event-detail/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/pool-registration/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/my-events/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/journey/index')
   })
 
-  it('does not keep the removed chats redirect alias registered', () => {
+  it('does not keep removed redirect aliases registered', () => {
     expect(MINI_PROGRAM_PAGES).not.toContain('pages/chats/index')
+    expect(MINI_PROGRAM_PAGES).not.toContain('pages/my-events/index')
+    expect(MINI_PROGRAM_PAGES).not.toContain('pages/journey/index')
   })
 
   it('does not duplicate registered page paths', () => {

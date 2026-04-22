@@ -6,6 +6,15 @@
   background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
   padding: $container-padding;
 
+  &--exiting {
+    opacity: 0;
+    transform: translate3d(-18rpx, 0, 0) scale(0.986);
+    transition:
+      opacity 0.22s ease,
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
   &__loading,
   &__error {
     @include flex-center;
@@ -15,6 +24,11 @@
   }
 
   &__loading-text,
+  &__error-hero {
+    width: 320rpx;
+    height: 240rpx;
+  }
+
   &__error-text {
     font-size: $font-size-base;
     color: $color-text-secondary;

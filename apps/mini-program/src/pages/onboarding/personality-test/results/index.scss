@@ -774,6 +774,146 @@
     gap: $spacing-sm;
   }
 
+  &__pokemon-rank-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pokemon-rank-chip {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.92);
+    border: 2rpx solid rgba(139, 92, 246, 0.15);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+
+    &--gold {
+      background: rgba(255, 248, 214, 0.94);
+      border-color: rgba(180, 140, 40, 0.15);
+      color: #7a5a09;
+    }
+  }
+
+  &__pokemon-energy {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pokemon-energy-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8rpx;
+  }
+
+  &__pokemon-energy-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__pokemon-energy-value {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-black;
+    color: $color-primary-dark;
+  }
+
+  &__pokemon-energy-track {
+    width: 100%;
+    height: 16rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    overflow: hidden;
+  }
+
+  &__pokemon-energy-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #fbbf24 0%, #f97316 50%, #ef4444 100%);
+    transition: width 0.6s ease-out;
+  }
+
+  &__pokemon-nickname {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pokemon-nickname-label {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: rgba($color-primary-dark, 0.78);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
+    margin-bottom: 8rpx;
+  }
+
+  &__pokemon-nickname-input {
+    width: 100%;
+    height: 72rpx;
+    padding: 0 $spacing-md;
+    border-radius: 18rpx;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2rpx solid rgba($color-primary, 0.12);
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+  }
+
+  &__pokemon-variants {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pokemon-variants-label {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: rgba($color-primary-dark, 0.78);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
+    margin-bottom: 8rpx;
+  }
+
+  &__pokemon-variants-row {
+    display: flex;
+    gap: 12rpx;
+  }
+
+  &__pokemon-variant-swatch {
+    position: relative;
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 20rpx;
+    border: 4rpx solid transparent;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 8rpx;
+    box-sizing: border-box;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+
+    &--active {
+      border-color: $color-primary;
+      transform: scale(1.06);
+    }
+  }
+
+  &__pokemon-variant-swatch-label {
+    font-size: 20rpx;
+    font-weight: $font-weight-bold;
+    color: #ffffff;
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 4rpx 10rpx;
+    border-radius: 999rpx;
+  }
+
   &__coach-card {
     display: flex;
     align-items: center;
@@ -851,6 +991,387 @@
     border-radius: inherit;
   }
 
+  &__pokemon-card--tilt {
+    transition: transform 0.15s ease-out;
+  }
+
+  &__pokemon-holo-shimmer {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    animation: personality-results-holo-shimmer 4s ease-in-out infinite;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        115deg,
+        transparent 20%,
+        rgba(255, 215, 0, 0.12) 25%,
+        rgba(64, 224, 208, 0.1) 30%,
+        rgba(255, 182, 193, 0.12) 35%,
+        rgba(230, 230, 250, 0.1) 40%,
+        transparent 45%
+      );
+      transform: translateX(-100%);
+      animation: personality-results-holo-sweep 4s ease-in-out infinite;
+    }
+  }
+
+  &__pokemon-corner-shine {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 999rpx;
+    opacity: 0;
+    animation: personality-results-corner-fade 3s ease-in-out infinite;
+
+    &--top-right {
+      top: 20rpx;
+      right: 20rpx;
+      width: 80rpx;
+      height: 80rpx;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, transparent 70%);
+      filter: blur(8rpx);
+    }
+
+    &--bottom-left {
+      bottom: 20rpx;
+      left: 20rpx;
+      width: 60rpx;
+      height: 60rpx;
+      background: radial-gradient(circle, rgba(255, 248, 220, 0.4) 0%, transparent 70%);
+      filter: blur(6rpx);
+      animation-delay: 1.5s;
+    }
+  }
+
+  &__pokemon-holo-stamp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: $spacing-sm 0;
+    padding: 10rpx 0;
+    border-radius: 999rpx;
+    background: linear-gradient(90deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+    box-shadow: 0 2rpx 8rpx rgba(180, 140, 40, 0.25);
+  }
+
+  &__pokemon-holo-stamp-text {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-black;
+    color: #4a2e00;
+    letter-spacing: 2rpx;
+  }
+
+  @keyframes personality-results-holo-shimmer {
+    0%, 100% {
+      opacity: 0;
+    }
+
+    40%, 60% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes personality-results-holo-sweep {
+    0% {
+      transform: translateX(-100%) rotate(0deg);
+    }
+
+    100% {
+      transform: translateX(100%) rotate(0deg);
+    }
+  }
+
+  @keyframes personality-results-corner-fade {
+    0%, 100% {
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 1;
+    }
+  }
+
+  // ── Stagger entrance animations (mount-only, no scroll jank) ──
+  &__stagger--1,
+  &__stagger--2,
+  &__stagger--3,
+  &__stagger--4,
+  &__stagger--5,
+  &__stagger--6 {
+    opacity: 0;
+    transform: translateY(20rpx);
+    animation: personality-results-stagger-in 0.5s ease-out forwards;
+  }
+
+  &__stagger--1 { animation-delay: 0.08s; }
+  &__stagger--2 { animation-delay: 0.18s; }
+  &__stagger--3 { animation-delay: 0.28s; }
+  &__stagger--4 { animation-delay: 0.38s; }
+  &__stagger--5 { animation-delay: 0.48s; }
+  &__stagger--6 { animation-delay: 0.58s; }
+
+  @keyframes personality-results-stagger-in {
+    0% {
+      opacity: 0;
+      transform: translateY(20rpx);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // ── Tap hint on card ──
+  &__pokemon-tap-hint {
+    position: absolute;
+    top: 12rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    padding: 6rpx 16rpx;
+    border-radius: 999rpx;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  &__pokemon-card:hover &__pokemon-tap-hint,
+  &__pokemon-card--pressed &__pokemon-tap-hint {
+    opacity: 1;
+  }
+
+  &__pokemon-tap-hint-text {
+    font-size: 22rpx;
+    font-weight: $font-weight-semibold;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  // ── Detail sheet overlay ──
+  &__detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.45);
+    animation: personality-results-detail-fade-in 0.25s ease-out both;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  @keyframes personality-results-detail-fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  &__detail-sheet {
+    background: rgba($color-surface, 0.98);
+    border-radius: 40rpx 40rpx 0 0;
+    padding: $spacing-md $container-padding $spacing-xl;
+    @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
+    animation: personality-results-detail-slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @keyframes personality-results-detail-slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(60rpx);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__detail-handle {
+    width: 64rpx;
+    height: 6rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.2);
+    margin: 0 auto $spacing-md;
+  }
+
+  &__detail-header {
+    text-align: center;
+    margin-bottom: $spacing-md;
+  }
+
+  &__detail-title {
+    display: block;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    margin-bottom: 6rpx;
+  }
+
+  &__detail-subtitle {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__detail-section {
+    margin-bottom: $spacing-md;
+  }
+
+  &__detail-section-label {
+    display: block;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: rgba($color-primary-dark, 0.78);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__detail-partners {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__detail-partner {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-radius: 20rpx;
+    background: rgba($color-primary, 0.04);
+    border: 2rpx solid rgba($color-primary, 0.06);
+  }
+
+  &__detail-partner-dot {
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: 999rpx;
+    flex: 0 0 auto;
+  }
+
+  &__detail-partner-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__detail-partner-name {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin-bottom: 4rpx;
+  }
+
+  &__detail-partner-meta {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__detail-close {
+    text-align: center;
+    padding: $spacing-sm 0;
+  }
+
+  &__detail-close-text {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+  }
+
+  // ── Collect-them-all teaser ──
+  &__collect-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__collect-count {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-primary-dark;
+  }
+
+  &__collect-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__collect-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16rpx 8rpx;
+    border-radius: 18rpx;
+    background: rgba($color-primary, 0.04);
+    border: 2rpx solid rgba($color-primary, 0.06);
+    min-height: 96rpx;
+    overflow: hidden;
+
+    &--unlocked {
+      border-color: rgba($color-primary, 0.18);
+      background: rgba($color-primary, 0.08);
+    }
+  }
+
+  &__collect-glow {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  &__collect-number {
+    font-size: 20rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-muted;
+    margin-bottom: 4rpx;
+  }
+
+  &__collect-cell--unlocked &__collect-number {
+    color: $color-primary-dark;
+  }
+
+  &__collect-name {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  &__collect-hint {
+    display: block;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin-top: $spacing-sm;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     &__reveal-orb {
       animation: none;
@@ -859,6 +1380,35 @@
     &__sparkle-field--sparkle &__sparkle {
       animation: none !important;
       opacity: 0.5;
+    }
+
+    &__pokemon-holo-shimmer,
+    &__pokemon-holo-shimmer::before,
+    &__pokemon-corner-shine {
+      animation: none !important;
+      opacity: 0.3;
+    }
+
+    &__pokemon-card {
+      transform: none !important;
+    }
+
+    &__stagger--1,
+    &__stagger--2,
+    &__stagger--3,
+    &__stagger--4,
+    &__stagger--5,
+    &__stagger--6 {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    &__detail-overlay,
+    &__detail-sheet {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
     }
   }
 }

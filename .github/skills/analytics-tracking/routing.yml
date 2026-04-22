@@ -1,0 +1,91 @@
+skill: analytics-tracking
+
+primary_ownership: >
+  Product analytics event tracking, KPI calculations (CSAT/NPS/engagement/churn),
+  registration funnel analysis, trigger performance monitoring, and matching benchmarks.
+
+use_when:
+  - adding or modifying a product analytics event or client tracking call
+  - building or changing a KPI dashboard, CSAT, NPS, or engagement metric
+  - analyzing registration funnel dropoff or conversion rates
+  - instrumenting trigger performance for the AI evolution system
+  - adding or reviewing matching stress-test benchmarks
+  - tracking onboarding checkpoint progression or step-level analytics
+  - reviewing what user data is collected and where it is stored
+
+do_not_use_when:
+  - task is about operational logging, health checks, or Prometheus metrics
+  - task is purely about server route structure or API design
+  - task is about frontend UI implementation or component architecture
+  - task is about A/B test design or product requirement drafting
+
+strong_triggers:
+  - analytics
+  - track this event
+  - add analytics
+  - funnel conversion
+  - KPI dashboard
+  - registration dropoff
+  - trigger performance
+  - CSAT
+  - NPS
+  - participation_experiment
+  - personality_result
+  - onboarding_analytics
+  - kpiService
+  - generateDailyKpiSnapshot
+  - updateUserEngagement
+  - recordTriggerActivation
+  - getTriggerThreshold
+  - matchingStressSimulation
+  - registrationFunnelAnalytics
+  - /api/analytics/participation_experiment
+  - /api/analytics/personality_result
+  - /api/analytics/onboarding
+
+owned_files:
+  - apps/server/src/routes/domains/analytics.ts
+  - apps/server/src/routes/domains/onboarding.ts
+  - apps/server/src/kpiService.ts
+  - apps/server/src/triggerPerformanceService.ts
+  - apps/server/src/analytics/registrationFunnelAnalytics.ts
+  - apps/server/src/matchingMetrics.ts
+  - apps/server/src/benchmarks/matchingStressSimulation.ts
+  - apps/server/src/benchmarks/matchingStressSimulation.cli.ts
+
+owned_paths:
+  - /api/analytics/participation_experiment
+  - /api/analytics/personality_result
+  - /api/analytics/onboarding
+  - /api/registration/sessions/stats
+
+owned_symbols:
+  - kpiService
+  - triggerPerformanceService
+  - recordTriggerActivation
+  - getTriggerThreshold
+  - generateDailyKpiSnapshot
+  - updateUserEngagement
+  - updateEventSatisfaction
+  - calculateCSAT
+  - calculateNPS
+  - getRegistrationFunnelData
+  - runMatchingCpuStress
+  - observeSemanticSimilarityMetrics
+  - getMatchingMetricsSnapshot
+
+related_skills:
+  - skill: platform-observability-and-ops
+    when: operational logging, Prometheus metrics, health checks, or audit logs are involved
+  - skill: server-domain-architecture
+    when: new analytics routes or services need structural placement
+  - skill: reliability-and-state-integrity
+    when: KPI snapshot generation needs idempotency, retries, or execution guards
+  - skill: database-migration-safety
+    when: adding new analytics tables, columns, or indexes
+  - skill: testing-and-regression-guardrails
+    when: locking in analytics event validation or KPI calculation invariants with tests
+  - skill: performance-benchmark
+    when: measuring before/after performance of matching or route changes
+  - skill: draft-prd
+    when: defining new metrics, funnels, or A/B tests before implementation

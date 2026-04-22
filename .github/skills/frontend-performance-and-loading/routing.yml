@@ -60,3 +60,5 @@ related_skills:
     when: a performance-sensitive flow is duplicated across web and mini-program
   - skill: performance-benchmark
     when: the task is about measurement, baselines, or before-after comparison rather than implementation
+  - skill: multi-agent-deliberation
+    when: performance vs UX trade-off decisions

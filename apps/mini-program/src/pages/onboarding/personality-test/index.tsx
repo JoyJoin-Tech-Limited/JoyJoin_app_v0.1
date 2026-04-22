@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api'
 import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
+import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/uiConstants'
 import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
 import {
   clearAnonymousAssessmentStorage,
@@ -28,6 +29,9 @@ import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from './visuals'
+import SegmentedProgress from '../../../components/SegmentedProgress'
+import XiaoyueChatBubble from '../../../components/XiaoyueChatBubble'
+import { haptics } from '../../../lib/haptics'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -269,6 +273,7 @@ export default function PersonalityTestPage() {
   }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, isPageExiting, isSubmitting, phase])
 
   const handleStart = useCallback(async () => {
+    haptics('medium')
     setError('')
     setIsSubmitting(true)
     try {
@@ -599,14 +604,42 @@ export default function PersonalityTestPage() {
 
   return (
     <ScrollView className={getPageClassName()} scrollY enhanced showScrollbar={false}>
-      <View className='personality-test__progress-bar'>
-        <View className='personality-test__progress-fill' style={{ width: `${progressPercent}%` }} />
+      <View className='personality-test__progress-wrap'>
+        <SegmentedProgress
+          progress={progressPercent}
+          totalSegments={Math.max(progress?.softMaxQuestions ?? 12, 8)}
+          variant='duolingo'
+          smooth
+          milestone={progress?.answered && progress.answered >= 8 ? 66 : null}
+        />
+        <View className='personality-test__progress-label'>
+          <Text className='personality-test__progress-text'>
+            已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
+          </Text>
+        </View>
       </View>
-      <View className='personality-test__progress-label'>
-        <Text className='personality-test__progress-text'>
-          已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
-        </Text>
-      </View>
+
+      {/* Milestone coaching: Q4 and Q8 */}
+      {progress && progress.answered === 4 && (
+        <View className='personality-test__milestone-coach personality-test__stage'>
+          <XiaoyueChatBubble
+            content='已经答完一半了！你的画像轮廓开始清晰起来了，继续按直觉选就好。'
+            pose='casual'
+            horizontal
+            showGlow
+          />
+        </View>
+      )}
+      {progress && progress.answered === 8 && (
+        <View className='personality-test__milestone-coach personality-test__stage'>
+          <XiaoyueChatBubble
+            content='太棒了！进入精准收敛阶段，接下来的题目会更聚焦，帮你锁定最像你的原型。'
+            pose='pointing'
+            horizontal
+            showGlow
+          />
+        </View>
+      )}
 
       {question ? (
         <View className='personality-test__question'>
@@ -644,9 +677,9 @@ export default function PersonalityTestPage() {
                   max={100}
                   step={1}
                   value={sliderValue}
-                  activeColor='#8B5CF6'
-                  backgroundColor='#EDE9FE'
-                  blockColor='#8B5CF6'
+                  activeColor={COLOR_PRIMARY}
+                  backgroundColor={COLOR_PRIMARY_LIGHT}
+                  blockColor={COLOR_PRIMARY}
                   blockSize={22}
                   showValue={false}
                   onChanging={(event) => setSliderValue(Number(event.detail.value))}
@@ -658,6 +691,7 @@ export default function PersonalityTestPage() {
                   variant='brand'
                   className='personality-test__slider-submit'
                   onClick={() => {
+                    haptics('light')
                     const sliderOption = getNearestSliderOption(question, sliderValue)
                     if (sliderOption) {
                       void handleAnswer(sliderOption)
@@ -682,7 +716,10 @@ export default function PersonalityTestPage() {
                     <Button
                       key={option.value}
                       className='personality-test__emoji-option'
-                      onClick={() => void handleAnswer(option)}
+                      onClick={() => {
+                        haptics('light')
+                        void handleAnswer(option)
+                      }}
                       disabled={isSubmitting}
                       hoverClass='personality-test__emoji-option--active'
                     >
@@ -700,7 +737,10 @@ export default function PersonalityTestPage() {
                   <Button
                     key={option.value}
                     className='personality-test__option'
-                    onClick={() => void handleAnswer(option)}
+                    onClick={() => {
+                      haptics('light')
+                      void handleAnswer(option)
+                    }}
                     disabled={isSubmitting}
                     hoverClass='personality-test__option--active'
                   >
