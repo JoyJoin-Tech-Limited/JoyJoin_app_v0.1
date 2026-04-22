@@ -27,6 +27,14 @@ On **every** research turn, apply [`.github/skills/first-principles-velocity/SKI
 - DO NOT return raw search dumps. Synthesize the minimum context needed for planning.
 - When `Supervisor` routed you here for kickoff, deliver a real **research brief**—do not ask the user to invoke `Researcher` again manually. `Researcher` still ends by clarifying whether `Planner` is needed or the task is simple enough for a compact direct-execution micro-plan.
 
+## Skill loading protocol
+
+Load skills explicitly based on the research domain:
+- **Cross-workspace or platform questions** → [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md)
+- **Documentation refresh or doc alignment** → [`docs-sync`](../../.github/skills/docs-sync/SKILL.md)
+- **Architecture or placement questions** → [`server-domain-architecture`](../../.github/skills/server-domain-architecture/SKILL.md) or [`frontend-component-architecture`](../../.github/skills/frontend-component-architecture/SKILL.md)
+- **Monorepo boundaries** → [`monorepo-workspace-governance`](../../.github/skills/monorepo-workspace-governance/SKILL.md)
+
 ## Default workflow
 
 1. Restate the user query in repo-specific terms and note whether it likely needs kickoff planning or only a compact direct-execution plan.

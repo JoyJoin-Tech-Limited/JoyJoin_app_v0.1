@@ -26,8 +26,17 @@ Core structure, ownership, and placement rules. Start here if you are new to the
 | [`onboarding-state-architecture`](./onboarding-state-architecture/SKILL.md) | Server-driven `nextStep`, active onboarding module ownership, routing authority, legacy quarantine |
 | [`server-domain-architecture`](./server-domain-architecture/SKILL.md) | `routes.ts` as composition root, `routes/domains/*` ownership, `repositories/*` for new persistence, `storage.ts` as compatibility facade |
 | [`monorepo-workspace-governance`](./monorepo-workspace-governance/SKILL.md) | Root orchestration-only principle, workspace dependency ownership, tsconfig/script normalization, env/secret/legacy guardrails |
+| [`api-contract-versioning`](./api-contract-versioning/SKILL.md) | Zod schemas, shared DTOs in `packages/shared/src/api.ts`, cross-platform type consumption, and the `/api/v1/*` versioning rewrite |
 | [`platform-coordination-protocol`](./platform-coordination-protocol/SKILL.md) | PRIMARY/SECONDARY/SHARED ownership, sibling-platform review, shared API contract boundaries, impact-check workflow |
-
+| [`admin-client-frontend`](./admin-client-frontend/SKILL.md) | Admin portal UI in `apps/admin-client` — Recharts dashboards, shadcn/ui tables/forms, RBAC gating, pool admin, auth patterns |
+| [`viewport-zero-scroll`](./viewport-zero-scroll/SKILL.md) | Zero-scroll viewport policy (`100dvh`), no-scroll containers, `ResponsiveSpacer`, `ScrollSentinel`, `FormStepper` density caps |
+| [`caching-strategy`](./caching-strategy/SKILL.md) | Backend selection, TTL design, key naming, invalidation contracts, rate limiting, horizontal-scaling guardrails |
+| [`lane-selection-governance`](./lane-selection-governance/SKILL.md) | Deterministic 4-gate heuristic for choosing the correct delivery lane (HRC / DM / Kickoff / Direct) before implementation begins |
+| [`process-brainstorming`](./process-brainstorming/SKILL.md) | Divergent-thinking discipline: constraint-first ideation, 3-option evaluation, lane mapping before convergence |
+| [`process-systematic-debugging`](./process-systematic-debugging/SKILL.md) | Structured root-cause analysis: reproduce → isolate → hypothesize → verify |
+| [`process-verification-gate`](./process-verification-gate/SKILL.md) | Pre-ship Harness 5-pillar checklist (reliability, scalability, security, observability, maintainability) |
+| [`process-test-first`](./process-test-first/SKILL.md) | Red-green-refactor discipline for deterministic logic, bug fixes, and stateful workflows |
+| [`websocket-realtime`](./websocket-realtime/SKILL.md) | WebSocket connection lifecycle, auth, room broadcasting, heartbeat/reconnect, rate limiting, HTTP polling boundaries |
 ---
 
 ## Review and Quality
@@ -52,9 +61,15 @@ Patterns for making the system reliable, secure, and observable.
 | [`reliability-and-state-integrity`](./reliability-and-state-integrity/SKILL.md) | Transactions, idempotency, execution guards, recovery/re-entry semantics, expiry handling, critical writes vs side effects |
 | [`payment-entitlement-authority`](./payment-entitlement-authority/SKILL.md) | Payment creation, verification, entitlement gating, refunds, event-pack credits, and cross-platform payment coordination |
 | [`database-migration-safety`](./database-migration-safety/SKILL.md) | Safe schema evolution, idempotent migration scripts, pre/post verification, rollout sequencing, and rollback thinking |
+| [`database-query-optimization`](./database-query-optimization/SKILL.md) | Drizzle query patterns, index strategy, N+1 avoidance, batch loading, and query-plan review for PostgreSQL |
+| [`error-handling-patterns`](./error-handling-patterns/SKILL.md) | Consistent API error shapes, Zod validation formatting, client-safe responses, transport errors, and retry patterns across server, web, and mini-program |
 | [`testing-and-regression-guardrails`](./testing-and-regression-guardrails/SKILL.md) | Regression tests, invariant tests, structural tests, CI guardrail scripts, test placement by workspace |
 | [`platform-observability-and-ops`](./platform-observability-and-ops/SKILL.md) | Structured logging, request IDs, Prometheus metrics, health/readiness, alerts, synthetic monitoring, audit logging |
+| [`analytics-tracking`](./analytics-tracking/SKILL.md) | Product analytics events, KPI dashboards (CSAT/NPS/engagement/churn), registration funnel analysis, trigger performance, matching benchmarks |
 | [`security-scan`](./security-scan/SKILL.md) | Security scan and posture review for auth/debug surfaces, secret handling, dependency risk, CI guardrails, and production overrides |
+| [`content-safety-abuse-detection`](./content-safety-abuse-detection/SKILL.md) | Abuse detection, content filtering, user moderation, trust-and-safety mechanics, rate limiting, and admin moderation surfaces |
+| [`feature-flags-launch-config`](./feature-flags-launch-config/SKILL.md) | Feature flags, launch configuration, env-gated behavior, kill switches, safe rollout/rollback discipline, and startup validation |
+| [`notification-system`](./notification-system/SKILL.md) | In-app notification persistence, WebSocket broadcast fallback, admin broadcast/send, per-user unread counts, and mark-read semantics |
 
 ---
 
@@ -66,11 +81,15 @@ Deep expertise for the two core product engines.
 |-------|---------------|
 | [`event-pool-and-matching-operations`](./event-pool-and-matching-operations/SKILL.md) | Event-pool lifecycle, pool stats semantics, match-run operations, and post-match group outcome handling |
 | [`matching-domain`](./matching-domain/SKILL.md) | Deterministic pair scoring, 6-dimension weights, signal boundary invariant, execution safety, AI explanation separation |
+| [`personality-system`](./personality-system/SKILL.md) | 12-archetype engine, ACOEXP 6-trait model, V4 adaptive assessment, MatcherV2 assignment, archetype chemistry |
 | [`social-icebreaker-domain`](./social-icebreaker-domain/SKILL.md) | Session lifecycle, host/player authority, persistence/rejoin, roster vs presence, action integrity, secrecy boundaries, AI content |
 | [`miniscript-story-framework`](./miniscript-story-framework/SKILL.md) | MiniScript `MiniScriptStoryFramework` schema, LLM vs stub orchestration, host authority (`style` / `genres` / `playerCount`), idempotent generate route |
 | [`lie-detective-icebreaker`](./lie-detective-icebreaker/SKILL.md) | `lie_detective` secrecy (`isLie`), votes/reveals, routes, `social-lie-detective-v1` |
 | [`personality-dice-icebreaker`](./personality-dice-icebreaker/SKILL.md) | `personality_dice` roster-sized challenges, routes, `social-personality-dice-v1`, tone/safety |
 | [`icebreaker-auction-phase`](./icebreaker-auction-phase/SKILL.md) | `auction` virtual-coin flow, optional `generateAuctionLots` (`social-auction-lots-v1`), bid/close-lot routes, advance guard |
+| [`venue-location-services`](./venue-location-services/SKILL.md) | Venue catalog, assignment, matching, time slots, deals, AMap geocoding, and data quality |
+| [`wechat-ecosystem-integration`](./wechat-ecosystem-integration/SKILL.md) | WeChat auth (Mini Program / OA OAuth), WeChat Pay v3, Taro patterns, JSAPI/H5 payments, webhooks, and cross-platform WeChat coordination |
+| [`semantic-matching-embeddings`](./semantic-matching-embeddings/SKILL.md) | Semantic similarity 7th scoring dimension, feature-hash vectors, DeepSeek embedding client, async semantic profile pipeline, and dialogue insight storage |
 
 ---
 
@@ -94,6 +113,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 | [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; **pixel precision** (spec-exact or 8rpx rhythm, DevTools gate) in [`references/pixel-precision.md`](./mini-program-frontend-excellence/references/pixel-precision.md); structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
 | [`frontend-hook-engine`](./frontend-hook-engine/SKILL.md) | Screen-level Seven Deadly Sins UI diagnosis for CTA hierarchy, state design, interaction clarity, and build-ready component/state plans |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
+| [`lovart-design-workflow`](./lovart-design-workflow/SKILL.md) | Lovart AI Design Agent prompt generation, brand-aligned visual asset briefs, and design-to-code handoff for illustrations, mockups, marketing graphics, and icons |
 
 ---
 
@@ -138,6 +158,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | Skill | What it covers |
 |-------|---------------|
 | [`skill-authoring-governance`](./skill-authoring-governance/SKILL.md) | Governing standard for creating, updating, auditing, and improving repo skills — use this when writing a new skill, updating an existing one, or auditing the skills system |
+| [`multi-agent-deliberation`](./multi-agent-deliberation/SKILL.md) | Structured 5-phase deliberation protocol: delegate roles, anonymous peer review, roundtable debate, ACK-ALL consensus with veto powers |
 
 ---
 
@@ -161,18 +182,28 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | What controls the onboarding step a user sees? | `onboarding-state-architecture` |
 | Where does a new API route go? | `server-domain-architecture` |
 | How do I add a dependency to the monorepo? | `monorepo-workspace-governance` |
+| How do I define or change a shared API contract? | `api-contract-versioning` |
 | How do I know whether I need to update the sibling platform too? | `platform-coordination-protocol` |
+| How do I build or update the admin portal UI? | `admin-client-frontend` |
 | How do I gate a route for admin-only access? | `auth-session-and-safety-boundaries` |
 | How do I add an LLM call safely at runtime? | `llm-runtime-safety-and-integration` |
 | How do I wire RBAC and audit logging for an admin refund, ban, or override? | `admin-audit-and-rbac-governance` |
 | How do I make a multi-step operation atomic? | `reliability-and-state-integrity` |
 | Who owns payment creation, verification, refunds, or shared payment contracts? | `payment-entitlement-authority` |
 | How do I plan a safe migration or column rename? | `database-migration-safety` |
+| How do I optimize a slow database query? | `database-query-optimization` |
+| How do I handle API errors consistently? | `error-handling-patterns` |
 | How do I lock in an architectural boundary with a test? | `testing-and-regression-guardrails` |
 | How do I add structured logging to a new route? | `platform-observability-and-ops` |
+| How do I add product analytics or track a funnel? | `analytics-tracking` |
 | How do I audit this change for security risk or missing scan coverage? | `security-scan` |
+| How do I detect abuse or filter content? | `content-safety-abuse-detection` |
+| How do I safely roll out a feature behind a flag? | `feature-flags-launch-config` |
+| How do I send or debug notifications? | `notification-system` |
 | How do I create an event pool or interpret `estimatedGroups` correctly? | `event-pool-and-matching-operations` |
 | Can I add `user_interest_signals` to the matching score? | `matching-domain` (no — see signal boundary) |
+| How does the personality assessment or archetype assignment work? | `personality-system` |
+| How do I add or change an assessment question? | `personality-system` |
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I draft a PRD or feature brief? | `draft-prd` |
 | How do I run a product sin-mapping review on a funnel or feature idea? | `pm-sin-mapper` |
@@ -184,8 +215,16 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How do I define a new database model? | `backend-models-standards` |
 | What colours can I use for a new UI element? | `joyjoin-brand-guidelines` + `design-system-governance` |
 | How do I keep a mini-program screen premium, on-brand, and Taro-native? | `mini-program-frontend-excellence` |
+| How do I enforce zero-scroll viewport lock or `100dvh` shell? | `viewport-zero-scroll` |
+| How do I add caching or rate limiting? | `caching-strategy` |
+| How do I add or debug WebSocket real-time notifications? | `websocket-realtime` |
+| Why isn't the client receiving real-time match updates? | `websocket-realtime` |
 | How do I keep docs in sync after a code change? | `docs-sync` |
+| How do I assign venues or handle location/geocoding? | `venue-location-services` |
+| How do I work with WeChat auth, Taro, or Mini Program APIs? | `wechat-ecosystem-integration` |
+| How does semantic similarity matching work? | `semantic-matching-embeddings` |
 | How do I plan a cross-cutting refresh of product docs, skills, and agents? | [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md) + `docs-sync` where applicable |
+| How do I run a structured multi-agent review or architecture consensus? | `multi-agent-deliberation` |
 
 ---
 

@@ -68,6 +68,8 @@ export const PERSONALITY_TEST_XIAOYUE_EXPRESSION = {
   resultsCelebrate: 'matchSuccess',
   resultsCoach: 'coachGuide',
   resultsSlotFallback: 'matchWaiting',
+  networkHolding: 'loadingReveal',
+  errorState: 'actionFailure',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {

@@ -388,10 +388,16 @@
     }
   }
 
-  &__empty-emoji {
+  &__empty-hero {
     display: block;
-    font-size: 72rpx;
-    margin-bottom: $spacing-sm;
+    width: 280rpx;
+    height: 210rpx;
+    margin: 0 auto $spacing-sm;
+
+    &--compact {
+      width: 200rpx;
+      height: 150rpx;
+    }
   }
 
   &__empty-title {

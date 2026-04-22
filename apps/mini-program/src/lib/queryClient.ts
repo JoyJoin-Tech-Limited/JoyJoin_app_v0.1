@@ -1,10 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
+import { STALE_TIME_DEFAULT_MS } from './uiConstants'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 30_000,
+      staleTime: STALE_TIME_DEFAULT_MS,
       refetchOnWindowFocus: false,
     },
     mutations: {

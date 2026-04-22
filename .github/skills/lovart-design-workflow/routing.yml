@@ -1,0 +1,63 @@
+skill: lovart-design-workflow
+
+primary_ownership: >
+  Lovart AI Design Agent prompt generation, design brief creation, and
+  brand-aligned visual asset workflow for JoyJoin.
+
+use_when:
+  - generating a Lovart prompt for any visual asset
+  - creating a design brief for illustration, mockup, or marketing material
+  - requesting mascot artwork or character design
+  - producing UI screen mockups or component visuals
+  - generating social media graphics or promotional assets
+  - iterating on existing Lovart-generated assets
+  - converting a product requirement into a visual design brief
+
+do_not_use_when:
+  - task is about coding the UI component (use frontend-component-architecture)
+  - task is about design system tokens or CSS properties (use design-system-governance)
+  - task is about brand strategy or narrative changes (use joyjoin-brand-guidelines)
+  - task is about animation, motion, or interaction polish (use wow-elements)
+  - task requires API integration or server-side logic (use server-domain-architecture)
+
+strong_triggers:
+  - Lovart
+  - generate Lovart prompt
+  - illustration brief
+  - mascot design
+  - UI mockup
+  - design asset
+  - brand illustration
+  - social media graphic
+  - poster design
+  - icon set
+  - ChatCanvas
+  - Nano Banana Pro
+  - lovart_brief.md
+  - visual asset
+  - design brief
+  - corgi illustration
+  - koala illustration
+  - turtle illustration
+
+owned_files: []
+
+owned_paths:
+  - /apps/*/src/assets/lovart/
+  - /packages/shared/src/assets/lovart/
+
+owned_symbols: []
+
+related_skills:
+  - skill: joyjoin-brand-guidelines
+    when: brand color, mascot personality, or typography changes are needed
+  - skill: design-system-governance
+    when: generated assets must map to CSS tokens or component variants
+  - skill: frontend-component-architecture
+    when: asset placement, import paths, or lazy loading strategy is needed
+  - skill: wow-elements
+    when: illustration is for empty states, loading states, or micro-interactions
+  - skill: mini-program-frontend-excellence
+    when: asset targets WeChat Mini Program and needs format/bundle optimization
+  - skill: draft-prd
+    when: the design request originates from an unscoped product idea

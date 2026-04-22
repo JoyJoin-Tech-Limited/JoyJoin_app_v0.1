@@ -17,7 +17,7 @@ import {
   type UserInterestSignal,
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
-  pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues,
+  pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues, venueDeals, eventTemplates,
   icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
   assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections,
   adminAccounts,
@@ -29,6 +29,32 @@ import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import * as schema from "@shared/schema";
 import { logAdminAudit } from "../lib/adminAuditLogger";
 
+/**
+ * @deprecated Compatibility facade — do not add new query logic here.
+ *
+ * `LegacyStorage` is a transitional compatibility layer that predates the focused
+ * repository pattern. New code should use domain-specific repositories under
+ * `apps/server/src/repositories/` instead:
+ *
+ * - `usersRepo.ts`          — user queries
+ * - `paymentsRepo.ts`       — payment records
+ * - `assessmentRepo.ts`     — assessment sessions
+ * - `eventPoolsRepo.ts`     — event pools
+ * - `icebreakerRepo.ts`     — icebreaker sessions
+ * - `notificationsRepo.ts`  — notifications
+ * - `eventGroupOutcomesRepo.ts` — group outcomes
+ * - `onboardingRepo.ts`     — onboarding state
+ * - `eventCreditsRepo.ts`   — event credits
+ * - `paymentFulfillmentRepo.ts` — payment fulfillment
+ * - `adminOutcomeAnalyticsRepo.ts` — admin analytics
+ * - `matchingShadowExperimentsRepo.ts` — shadow experiments
+ * - `socialIcebreakerAiFeedbackRepo.ts` — AI feedback
+ * - `archetypePairFeedbackStatsRepo.ts` — archetype feedback
+ * - `userSemanticProfilesRepo.ts` — semantic profiles
+ *
+ * Migration is in progress. When adding new persistence logic, prefer creating
+ * a new focused repository over extending this interface.
+ */
 export interface LegacyStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
@@ -1548,31 +1574,21 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async updateSubscription(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
-    
-    if (updates.isActive !== undefined) {
-      setClauses.push(`is_active = $${values.length + 1}`);
-      values.push(updates.isActive);
-    }
-    if (updates.autoRenew !== undefined) {
-      setClauses.push(`auto_renew = $${values.length + 1}`);
-      values.push(updates.autoRenew);
-    }
-    if (updates.endDate !== undefined) {
-      setClauses.push(`end_date = $${values.length + 1}`);
-      values.push(updates.endDate);
-    }
+    const setData: any = {};
+    if (updates.isActive !== undefined) setData.isActive = updates.isActive;
+    if (updates.autoRenew !== undefined) setData.autoRenew = updates.autoRenew;
+    if (updates.endDate !== undefined) setData.endDate = updates.endDate;
 
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       const result = await db.execute(sql`SELECT * FROM subscriptions WHERE id = ${id}`);
       return result.rows[0];
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE subscriptions SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(subscriptions)
+      .set(setData)
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return result;
   }
 
   // Admin Coupon operations
@@ -1610,46 +1626,24 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async updateCoupon(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
-    
-    if (updates.code !== undefined) {
-      setClauses.push(`code = $${values.length + 1}`);
-      values.push(updates.code);
-    }
-    if (updates.discountType !== undefined) {
-      setClauses.push(`discount_type = $${values.length + 1}`);
-      values.push(updates.discountType);
-    }
-    if (updates.discountValue !== undefined) {
-      setClauses.push(`discount_value = $${values.length + 1}`);
-      values.push(updates.discountValue);
-    }
-    if (updates.validFrom !== undefined) {
-      setClauses.push(`valid_from = $${values.length + 1}`);
-      values.push(updates.validFrom);
-    }
-    if (updates.validUntil !== undefined) {
-      setClauses.push(`valid_until = $${values.length + 1}`);
-      values.push(updates.validUntil);
-    }
-    if (updates.maxUses !== undefined) {
-      setClauses.push(`usage_limit = $${values.length + 1}`);
-      values.push(updates.maxUses);
-    }
-    if (updates.isActive !== undefined) {
-      setClauses.push(`is_active = $${values.length + 1}`);
-      values.push(updates.isActive);
-    }
+    const setData: any = {};
+    if (updates.code !== undefined) setData.code = updates.code;
+    if (updates.discountType !== undefined) setData.discountType = updates.discountType;
+    if (updates.discountValue !== undefined) setData.discountValue = updates.discountValue;
+    if (updates.validFrom !== undefined) setData.validFrom = updates.validFrom;
+    if (updates.validUntil !== undefined) setData.validUntil = updates.validUntil;
+    if (updates.maxUses !== undefined) setData.usageLimit = updates.maxUses;
+    if (updates.isActive !== undefined) setData.isActive = updates.isActive;
 
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       return this.getCoupon(id);
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE coupons SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(coupons)
+      .set(setData)
+      .where(eq(coupons.id, id))
+      .returning();
+    return result;
   }
 
   async getCouponUsageStats(couponId: string): Promise<any> {
@@ -1732,31 +1726,21 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async updatePayment(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
-    
-    if (updates.status !== undefined) {
-      setClauses.push(`status = $${values.length + 1}`);
-      values.push(updates.status);
-    }
-    if (updates.wechatTransactionId !== undefined) {
-      setClauses.push(`wechat_transaction_id = $${values.length + 1}`);
-      values.push(updates.wechatTransactionId);
-    }
-    if (updates.paidAt !== undefined) {
-      setClauses.push(`paid_at = $${values.length + 1}`);
-      values.push(updates.paidAt);
-    }
+    const setData: any = {};
+    if (updates.status !== undefined) setData.status = updates.status;
+    if (updates.wechatTransactionId !== undefined) setData.wechatTransactionId = updates.wechatTransactionId;
+    if (updates.paidAt !== undefined) setData.paidAt = updates.paidAt;
 
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       const result = await db.execute(sql`SELECT * FROM payments WHERE id = ${id}`);
       return result.rows[0];
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE payments SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(payments)
+      .set(setData)
+      .where(eq(payments.id, id))
+      .returning();
+    return result;
   }
 
   // ============ VENUES ============
@@ -1957,6 +1941,7 @@ export class LegacyStorageRepo implements LegacyStorage {
     }
 
     values.push(id);
+    // SECURITY: setClauses contains only hardcoded column names. Never make them dynamic.
     const query = sql.raw(`UPDATE venues SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`);
     const result = await db.execute(query);
     return result.rows[0];
@@ -2007,75 +1992,34 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async updateVenueDeal(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
-    
-    if (updates.title !== undefined) {
-      setClauses.push(`title = $${values.length + 1}`);
-      values.push(updates.title);
-    }
-    if (updates.discountType !== undefined) {
-      setClauses.push(`discount_type = $${values.length + 1}`);
-      values.push(updates.discountType);
-    }
-    if (updates.discountValue !== undefined) {
-      setClauses.push(`discount_value = $${values.length + 1}`);
-      values.push(updates.discountValue);
-    }
-    if (updates.description !== undefined) {
-      setClauses.push(`description = $${values.length + 1}`);
-      values.push(updates.description);
-    }
-    if (updates.redemptionMethod !== undefined) {
-      setClauses.push(`redemption_method = $${values.length + 1}`);
-      values.push(updates.redemptionMethod);
-    }
-    if (updates.redemptionCode !== undefined) {
-      setClauses.push(`redemption_code = $${values.length + 1}`);
-      values.push(updates.redemptionCode);
-    }
-    if (updates.minSpend !== undefined) {
-      setClauses.push(`min_spend = $${values.length + 1}`);
-      values.push(updates.minSpend);
-    }
-    if (updates.maxDiscount !== undefined) {
-      setClauses.push(`max_discount = $${values.length + 1}`);
-      values.push(updates.maxDiscount);
-    }
-    if (updates.perPersonLimit !== undefined) {
-      setClauses.push(`per_person_limit = $${values.length + 1}`);
-      values.push(updates.perPersonLimit);
-    }
-    if (updates.validFrom !== undefined) {
-      setClauses.push(`valid_from = $${values.length + 1}`);
-      values.push(updates.validFrom);
-    }
-    if (updates.validUntil !== undefined) {
-      setClauses.push(`valid_until = $${values.length + 1}`);
-      values.push(updates.validUntil);
-    }
-    if (updates.terms !== undefined) {
-      setClauses.push(`terms = $${values.length + 1}`);
-      values.push(updates.terms);
-    }
-    if (updates.excludedDates !== undefined) {
-      setClauses.push(`excluded_dates = $${values.length + 1}`);
-      values.push(updates.excludedDates);
-    }
-    if (updates.isActive !== undefined) {
-      setClauses.push(`is_active = $${values.length + 1}`);
-      values.push(updates.isActive);
-    }
+    const setData: any = {};
+    if (updates.title !== undefined) setData.title = updates.title;
+    if (updates.discountType !== undefined) setData.discountType = updates.discountType;
+    if (updates.discountValue !== undefined) setData.discountValue = updates.discountValue;
+    if (updates.description !== undefined) setData.description = updates.description;
+    if (updates.redemptionMethod !== undefined) setData.redemptionMethod = updates.redemptionMethod;
+    if (updates.redemptionCode !== undefined) setData.redemptionCode = updates.redemptionCode;
+    if (updates.minSpend !== undefined) setData.minSpend = updates.minSpend;
+    if (updates.maxDiscount !== undefined) setData.maxDiscount = updates.maxDiscount;
+    if (updates.perPersonLimit !== undefined) setData.perPersonLimit = updates.perPersonLimit;
+    if (updates.validFrom !== undefined) setData.validFrom = updates.validFrom;
+    if (updates.validUntil !== undefined) setData.validUntil = updates.validUntil;
+    if (updates.terms !== undefined) setData.terms = updates.terms;
+    if (updates.excludedDates !== undefined) setData.excludedDates = updates.excludedDates;
+    if (updates.isActive !== undefined) setData.isActive = updates.isActive;
 
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       const result = await db.execute(sql`SELECT * FROM venue_deals WHERE id = ${id}`);
       return result.rows[0];
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE venue_deals SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    setData.updatedAt = new Date();
+
+    const [result] = await db.update(venueDeals)
+      .set(setData)
+      .where(eq(venueDeals.id, id))
+      .returning();
+    return result;
   }
 
   async deleteVenueDeal(id: string): Promise<void> {
@@ -2296,66 +2240,29 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async updateEventTemplate(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
-    
-    if (updates.name !== undefined) {
-      setClauses.push(`name = $${values.length + 1}`);
-      values.push(updates.name);
-    }
-    if (updates.eventType !== undefined) {
-      setClauses.push(`event_type = $${values.length + 1}`);
-      values.push(updates.eventType);
-    }
-    if (updates.dayOfWeek !== undefined) {
-      setClauses.push(`day_of_week = $${values.length + 1}`);
-      values.push(updates.dayOfWeek);
-    }
-    if (updates.timeOfDay !== undefined) {
-      setClauses.push(`time_of_day = $${values.length + 1}`);
-      values.push(updates.timeOfDay);
-    }
-    if (updates.theme !== undefined) {
-      setClauses.push(`theme = $${values.length + 1}`);
-      values.push(updates.theme);
-    }
-    if (updates.genderRestriction !== undefined) {
-      setClauses.push(`gender_restriction = $${values.length + 1}`);
-      values.push(updates.genderRestriction);
-    }
-    if (updates.minAge !== undefined) {
-      setClauses.push(`min_age = $${values.length + 1}`);
-      values.push(updates.minAge);
-    }
-    if (updates.maxAge !== undefined) {
-      setClauses.push(`max_age = $${values.length + 1}`);
-      values.push(updates.maxAge);
-    }
-    if (updates.minParticipants !== undefined) {
-      setClauses.push(`min_participants = $${values.length + 1}`);
-      values.push(updates.minParticipants);
-    }
-    if (updates.maxParticipants !== undefined) {
-      setClauses.push(`max_participants = $${values.length + 1}`);
-      values.push(updates.maxParticipants);
-    }
-    if (updates.customPrice !== undefined) {
-      setClauses.push(`custom_price = $${values.length + 1}`);
-      values.push(updates.customPrice);
-    }
-    if (updates.isActive !== undefined) {
-      setClauses.push(`is_active = $${values.length + 1}`);
-      values.push(updates.isActive);
-    }
+    const setData: any = {};
+    if (updates.name !== undefined) setData.name = updates.name;
+    if (updates.eventType !== undefined) setData.eventType = updates.eventType;
+    if (updates.dayOfWeek !== undefined) setData.dayOfWeek = updates.dayOfWeek;
+    if (updates.timeOfDay !== undefined) setData.timeOfDay = updates.timeOfDay;
+    if (updates.theme !== undefined) setData.theme = updates.theme;
+    if (updates.genderRestriction !== undefined) setData.genderRestriction = updates.genderRestriction;
+    if (updates.minAge !== undefined) setData.minAge = updates.minAge;
+    if (updates.maxAge !== undefined) setData.maxAge = updates.maxAge;
+    if (updates.minParticipants !== undefined) setData.minParticipants = updates.minParticipants;
+    if (updates.maxParticipants !== undefined) setData.maxParticipants = updates.maxParticipants;
+    if (updates.customPrice !== undefined) setData.customPrice = updates.customPrice;
+    if (updates.isActive !== undefined) setData.isActive = updates.isActive;
 
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       return this.getEventTemplate(id);
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE event_templates SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(eventTemplates)
+      .set(setData)
+      .where(eq(eventTemplates.id, id))
+      .returning();
+    return result;
   }
 
   async deleteEventTemplate(id: string): Promise<void> {
@@ -2393,22 +2300,18 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async updateBlindBoxEventAdmin(id: string, updates: any): Promise<any> {
-    const setClauses = [];
-    const values: any[] = [];
-    
-    if (updates.status !== undefined) {
-      setClauses.push(`status = $${values.length + 1}`);
-      values.push(updates.status);
-    }
+    const setData: any = {};
+    if (updates.status !== undefined) setData.status = updates.status;
 
-    if (setClauses.length === 0) {
+    if (Object.keys(setData).length === 0) {
       return this.getBlindBoxEventAdmin(id);
     }
 
-    values.push(id);
-    const query = sql.raw(`UPDATE blind_box_events SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`);
-    const result = await db.execute(query);
-    return result.rows[0];
+    const [result] = await db.update(blindBoxEvents)
+      .set(setData)
+      .where(eq(blindBoxEvents.id, id))
+      .returning();
+    return result;
   }
 
   // ============ FINANCE MANAGEMENT ============
@@ -3031,10 +2934,11 @@ export class LegacyStorageRepo implements LegacyStorage {
   }
 
   async saveMatchingResult(result: any): Promise<any> {
-    // Format userIds as properly escaped PostgreSQL array
+    // Format userIds as properly escaped PostgreSQL array using Drizzle's sql.join
     const userIdsArray = result.userIds || [];
-    // Each UUID needs to be quoted and escaped
-    const userIdsLiteral = `ARRAY[${userIdsArray.map((id: string) => `'${id}'`).join(',')}]::text[]`;
+    const userIdsParam = userIdsArray.length === 0
+      ? sql`ARRAY[]::text[]`
+      : sql`ARRAY[${sql.join(userIdsArray.map((id: string) => sql`${id}`), sql.raw(', '))}]::text[]`;
     
     const insertResult = await db.execute(sql`
       INSERT INTO matching_results (
@@ -3053,7 +2957,7 @@ export class LegacyStorageRepo implements LegacyStorage {
       ) VALUES (
         ${result.eventId || null},
         ${result.configId || null},
-        ${sql.raw(userIdsLiteral)},
+        ${userIdsParam},
         ${result.userCount || 0},
         ${JSON.stringify(result.groups || [])}::jsonb,
         ${result.groupCount || 0},

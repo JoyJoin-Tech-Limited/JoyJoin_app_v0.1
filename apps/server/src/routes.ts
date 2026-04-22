@@ -7,6 +7,12 @@ import { registerAnalyticsRoutes } from "./routes/domains/analytics";
 import { determineSubtype, generateInsights, registerAssessmentRoutes } from "./routes/domains/assessment";
 import { registerAuthRoutes } from "./routes/domains/auth";
 import { registerEventGroupOutcomeRoutes } from "./routes/domains/eventGroupOutcomes";
+import { registerAssessmentV4Routes } from "./routes/domains/assessmentV4";
+import { registerBlindBoxEventRoutes } from "./routes/domains/blindBoxEvents";
+import { registerDemoRoutes } from "./routes/domains/demo";
+import { registerGeoRoutes } from "./routes/domains/geo";
+import { registerIcebreakerGameRoutes } from "./routes/domains/icebreakerGame";
+import { registerProfileRoutes } from "./routes/domains/profile";
 import { registerEventPoolRoutes } from "./routes/domains/eventPools";
 import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerIcebreakerSessionRoutes } from "./routes/domains/icebreakerSessions";
@@ -31,7 +37,7 @@ import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import { ARCHETYPE_NAMES } from "./archetypeConfig";
 import type { ArchetypeName } from "./archetypeConfig";
 import { enrichProfileFromRegistration } from "./lib/profileEnrichment";
-import { getMetricsText } from "./middleware/metrics";
+import { getMetricsText, recordPoolCardCopyCache } from "./middleware/metrics";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import { describePoolRegistrationAvailability } from "./lib/poolRegistrationRules";
@@ -52,9 +58,10 @@ import { aiEndpointLimiter, kpiEndpointLimiter } from "./rateLimiter";
 import { checkUserAbuse, resetConversationTurns, recordTokenUsage } from "./abuseDetection";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, type ChatMessage, type User } from "@shared/schema";
+import { updateProfileSchema, updateFullProfileSchema, updatePersonalitySchema, insertChatMessageSchema, insertEventFeedbackSchema, registerUserSchema, insertChatReportSchema, insertChatLogSchema, events, eventAttendance, chatMessages, users, eventPools, eventPoolRegistrations, eventPoolGroups, poolAICopy, insertEventPoolSchema, insertEventPoolRegistrationSchema, invitations, invitationUses, matchingThresholds, poolMatchingLogs, blindBoxEvents, referralCodes, referralConversions, assessmentSessions, industryAiLogs, industrySeedCandidates, userInterests, userInterestSignals, venues, venueTimeSlots, onboardingAnalytics, matchHistory, connections, reports, payments, type ChatMessage, type User } from "@shared/schema";
 import * as schema from "@shared/schema";
 import { normalizeProfileInterests, validateTelemetry, TAXONOMY_VERSION, getInterestById } from "@shared/interests";
+import { getArchetypeFamily } from "@shared/archetypeColors";
 import { db } from "./db";
 import { eq, or, and, desc, inArray, isNotNull, gt, sql } from "drizzle-orm";
 import type { NeonDatabase } from "drizzle-orm/neon-serverless";
@@ -203,107 +210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Reverse geocode endpoint - converts GPS coordinates to city/district
   // Uses Amap API for accurate Chinese address resolution
-  app.post('/api/geo/reverse-geocode', async (req, res) => {
-    try {
-      const { latitude, longitude } = req.body;
-      
-      // Validate inputs are numbers
-      const lat = parseFloat(latitude);
-      const lng = parseFloat(longitude);
-      
-      if (isNaN(lat) || isNaN(lng)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "经纬度参数格式错误" 
-        });
-      }
-      
-      // Validate coordinate ranges (Shenzhen/Hong Kong area roughly)
-      if (lat < 20 || lat > 25 || lng < 112 || lng > 116) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "坐标超出服务范围" 
-        });
-      }
-
-      const apiKey = process.env.AMAP_API_KEY;
-      
-      // Helper function to detect district from coordinates using bounding boxes
-      const detectDistrictFromCoords = (lat: number, lng: number): string | null => {
-        const districts = [
-          { name: "南山区", minLat: 22.45, maxLat: 22.60, minLng: 113.85, maxLng: 114.05 },
-          { name: "福田区", minLat: 22.50, maxLat: 22.58, minLng: 114.00, maxLng: 114.15 },
-          { name: "罗湖区", minLat: 22.52, maxLat: 22.60, minLng: 114.10, maxLng: 114.20 },
-          { name: "宝安区", minLat: 22.52, maxLat: 22.85, minLng: 113.75, maxLng: 113.95 },
-          { name: "龙岗区", minLat: 22.55, maxLat: 22.80, minLng: 114.15, maxLng: 114.45 },
-        ];
-        
-        for (const d of districts) {
-          if (lat >= d.minLat && lat <= d.maxLat && lng >= d.minLng && lng <= d.maxLng) {
-            return d.name;
-          }
-        }
-        return null;
-      };
-
-      // Helper function to normalize district names
-      const normalizeDistrictName = (district: string): string => {
-        if (!district) return "";
-        return district.replace(/市辖区$/, "").replace(/区区$/, "区");
-      };
-      
-      if (!apiKey) {
-        // Fallback to local boundary detection (use parsed numeric values)
-        const district = detectDistrictFromCoords(lat, lng);
-        return res.json({
-          success: !!district,
-          city: district ? "深圳" : undefined,
-          district: district,
-          source: "local"
-        });
-      }
-
-      // Call Amap reverse geocoding API with encoded coordinates
-      const encodedLocation = encodeURIComponent(`${lng.toFixed(6)},${lat.toFixed(6)}`);
-      const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${apiKey}&location=${encodedLocation}&extensions=base`;
-      
-      const response = await fetch(amapUrl);
-      const data: any = await response.json();
-      
-      if (data.status === "1" && data.regeocode) {
-        const addressComponent = data.regeocode.addressComponent;
-        const city = addressComponent.city || addressComponent.province;
-        const district = addressComponent.district;
-        
-        // Normalize district name to match our clusters
-        const normalizedDistrict = normalizeDistrictName(district);
-        
-        res.json({
-          success: true,
-          city: city === "深圳市" ? "深圳" : city,
-          district: normalizedDistrict,
-          rawDistrict: district,
-          source: "amap"
-        });
-      } else {
-        // Fallback to local detection (use parsed numeric values)
-        const district = detectDistrictFromCoords(lat, lng);
-        res.json({
-          success: !!district,
-          city: district ? "深圳" : undefined,
-          district: district,
-          source: "local",
-          amapError: data.info
-        });
-      }
-    } catch (error) {
-      console.error("Reverse geocode error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "定位服务暂时不可用" 
-      });
-    }
-  });
 
   // Session middleware
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -340,50 +246,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPaymentRoutes(app);
 
   // Profile stats endpoint
-  app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
-      
-      // Calculate events completed: count completed events the user attended
-      const [completedEventsResult] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(eventAttendance)
-        .innerJoin(events, eq(eventAttendance.eventId, events.id))
-        .where(
-          and(
-            eq(eventAttendance.userId, userId),
-            eq(events.status, 'completed')
-          )
-        );
-
-      const eventsCompleted = completedEventsResult?.count ?? 0;
-
-      // Calculate connections made: count mutual connections where user is participant
-      const [connectionsResult] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(connections)
-        .where(
-          and(
-            or(
-              eq(connections.userAId, userId),
-              eq(connections.userBId, userId)
-            ),
-            eq(connections.status, 'mutual')
-          )
-        );
-
-      const connectionsMade = connectionsResult?.count ?? 0;
-      
-      res.json({
-        eventsCompleted,
-        connectionsMade,
-      });
-    } catch (error) {
-      console.error("Error fetching profile stats:", error);
-      res.status(500).json({ message: "Failed to fetch profile stats" });
-    }
-  });
 
   // ============ AI Chat Registration Routes (小悦对话注册) ============
   
@@ -632,68 +494,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerEventGroupOutcomeRoutes(app);
   registerIcebreakerRoutes(app);
   registerIcebreakerSessionRoutes(app);
+  registerAssessmentV4Routes(app);
+  registerBlindBoxEventRoutes(app);
+  registerDemoRoutes(app);
+  registerGeoRoutes(app);
+  registerIcebreakerGameRoutes(app);
+  registerProfileRoutes(app);
   registerEventPoolRoutes(app);
 
   // Profile routes
-  app.post('/api/profile/setup', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const result = updateProfileSchema.safeParse(req.body);
-      
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      const user = await storage.updateProfile(userId, result.data);
-      await storage.markProfileSetupComplete(userId);
-      queueSemanticProfileRecompute(userId, 'profile_setup');
-      
-      res.json(user);
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      res.status(500).json({ message: "Failed to update profile" });
-    }
-  });
 
   // ❌ DEPRECATED: Legacy interests-topics endpoint
   // Use /api/user/interests (Interest Carousel) instead
   /*
-  app.post('/api/user/interests-topics', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const result = interestsTopicsSchema.safeParse(req.body);
-      
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      // Validate and normalize interest fields
-      const normalized = normalizeProfileInterests({
-        interestsTop: result.data.interestsTop,
-        primaryInterests: result.data.primaryInterests,
-        topicAvoidances: result.data.topicAvoidances,
-      });
-
-      // Log warnings for observability
-      if (normalized.warnings.length > 0) {
-        console.log(`[InterestsTopics] Normalization warnings for user ${userId}:`, normalized.warnings);
-      }
-
-      const normalizedData = {
-        ...result.data,
-        interestsTop: normalized.interestsTop,
-        primaryInterests: normalized.primaryInterests,
-        topicAvoidances: normalized.topicAvoidances,
-      };
-
-      const user = await storage.updateInterestsTopics(userId, normalizedData);
-      
-      res.json(user);
-    } catch (error) {
-      console.error("Error updating interests and topics:", error);
-      res.status(500).json({ message: "Failed to update interests and topics" });
-    }
-  });
   */
 
   // Validation schemas for carousel-based interest selection
@@ -723,216 +536,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // New carousel-based interest selection endpoint with full validation and transaction
-  app.post('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { interests } = req.body;
 
-      // Validate interests is a proper object (not array, not null)
-      if (typeof interests !== 'object' || Array.isArray(interests) || interests === null) {
-        return res.status(400).json({ error: "Invalid interests data - must be an object" });
-      }
 
-      // Validate using Zod schema
-      const validationResult = userInterestsDataSchema.safeParse(interests);
-      if (!validationResult.success) {
-        console.error("[InterestsAPI] Validation failed:", validationResult.error.issues);
-        return res.status(400).json({ 
-          error: "Invalid interests data structure",
-          details: process.env.NODE_ENV === 'development' ? validationResult.error.issues : undefined
-        });
-      }
-
-      const { totalHeat, totalSelections, categoryHeat, selections, topPriorities } = validationResult.data;
-
-      // Additional business logic validation
-      if (totalSelections < 3) {
-        return res.status(400).json({ error: "Minimum 3 selections required" });
-      }
-
-      // Use transaction to ensure atomicity - both operations succeed or both fail
-      const result = await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
-        // Check if user already has interests
-        const existing = await tx
-          .select()
-          .from(userInterests)
-          .where(eq(userInterests.userId, userId))
-          .limit(1);
-
-        let interestRecord;
-
-        if (existing.length > 0) {
-          // Update existing record
-          const [updated] = await tx
-            .update(userInterests)
-            .set({
-              totalHeat,
-              totalSelections,
-              categoryHeat,
-              selections,
-              topPriorities: topPriorities || null,
-              updatedAt: new Date(),
-            })
-            .where(eq(userInterests.userId, userId))
-            .returning();
-          interestRecord = updated;
-        } else {
-          // Create new record
-          const [created] = await tx
-            .insert(userInterests)
-            .values({
-              userId,
-              totalHeat,
-              totalSelections,
-              categoryHeat,
-              selections,
-              topPriorities: topPriorities || null,
-            })
-            .returning();
-          interestRecord = created;
-        }
-
-        // Update user's completion flag in same transaction
-        await tx
-          .update(users)
-          .set({ hasCompletedInterestsCarousel: true })
-          .where(eq(users.id, userId));
-
-        return interestRecord;
-      });
-
-      queueSemanticProfileRecompute(userId, 'interests_update');
-
-      res.json({
-        success: true,
-        message: "兴趣已保存",
-        data: {
-          interestId: result.id,
-          userId: result.userId,
-          totalHeat: result.totalHeat,
-        },
-      });
-    } catch (error) {
-      console.error("Error saving user interests:", error);
-      const errorMessage = process.env.NODE_ENV === 'development' && error instanceof Error 
-        ? error.message 
-        : "Failed to save interests";
-      res.status(500).json({ message: errorMessage });
-    }
-  });
-
-  app.get('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-
-      const result = await db
-        .select()
-        .from(userInterests)
-        .where(eq(userInterests.userId, userId))
-        .limit(1);
-
-      if (result.length === 0) {
-        return res.status(404).json({ error: "No interests found" });
-      }
-
-      res.json(result[0]);
-    } catch (error) {
-      console.error("Error fetching user interests:", error);
-      res.status(500).json({ message: "Failed to fetch interests" });
-    }
-  });
-
-  app.get('/api/user/interests/summary', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-
-      const result = await db
-        .select({
-          totalHeat: userInterests.totalHeat,
-          totalSelections: userInterests.totalSelections,
-          topPriorities: userInterests.topPriorities,
-          categoryHeat: userInterests.categoryHeat,
-        })
-        .from(userInterests)
-        .where(eq(userInterests.userId, userId))
-        .limit(1);
-
-      if (result.length === 0) {
-        return res.status(404).json({ error: "No interests found" });
-      }
-
-      res.json(result[0]);
-    } catch (error) {
-      console.error("Error fetching interest summary:", error);
-      res.status(500).json({ message: "Failed to fetch interest summary" });
-    }
-  });
 
 
   // PATCH /api/user/interests/nudge
   // Bumps heat level (+1, capped at level 3) for specified topic IDs already in the user's selections.
   // Updates user_interests.updated_at — making it a meaningful behavioral signal.
   // Used by the post-event interest nudge step in EventFeedbackFlow.
-  app.patch('/api/user/interests/nudge', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { boostTopicIds } = req.body;
-
-      if (!Array.isArray(boostTopicIds) || boostTopicIds.length === 0) {
-        return res.status(400).json({ error: "boostTopicIds must be a non-empty array" });
-      }
-
-      // Load existing interests
-      const existing = await db
-        .select()
-        .from(userInterests)
-        .where(eq(userInterests.userId, userId))
-        .limit(1);
-
-      if (existing.length === 0) {
-        return res.status(404).json({ error: "No interests found" });
-      }
-
-      // Heat values are normalized from level — single source of truth prevents aggregate drift
-      const HEAT_BY_LEVEL: Record<number, number> = { 1: 3, 2: 10, 3: 25 };
-      // Only boost topics already in the user's selections — nudge refines existing signals.
-      // Adding new topics requires the full edit flow (/profile/edit/interests).
-      let boostedCount = 0;
-      const selections = (existing[0].selections as any[]).map(s => {
-        // Normalize heat from level for all entries to prevent aggregate drift from stale data
-        const normalizedHeat = HEAT_BY_LEVEL[s.level] ?? s.heat;
-        if (boostTopicIds.includes(s.topicId) && s.level < 3) {
-          const newLevel = (s.level + 1) as 1 | 2 | 3;
-          boostedCount++;
-          return { ...s, level: newLevel, heat: HEAT_BY_LEVEL[newLevel] };
-        }
-        return { ...s, heat: normalizedHeat };
-      });
-
-      // Recompute totals
-      const totalHeat = selections.reduce((sum: number, s: any) => sum + s.heat, 0);
-      const totalSelections = selections.length;
-      const categoryHeat: Record<string, number> = {};
-      selections.forEach((s: any) => {
-        categoryHeat[s.categoryId] = (categoryHeat[s.categoryId] || 0) + s.heat;
-      });
-      const topPriorities = selections
-        .filter((s: any) => s.level === 3)
-        .map((s: any) => ({ topicId: s.topicId, label: s.label, heat: s.heat }));
-
-      await db
-        .update(userInterests)
-        .set({ selections, totalHeat, totalSelections, categoryHeat, topPriorities, updatedAt: new Date() })
-        .where(eq(userInterests.userId, userId));
-
-      queueSemanticProfileRecompute(userId, 'interests_nudge');
-
-      res.json({ success: true, boostedCount });
-    } catch (error) {
-      console.error("Error applying interest nudge:", error);
-      res.status(500).json({ message: "Failed to apply interest nudge" });
-    }
-  });
 
   // ============ Interest Signal Boost endpoints ============
   // Optional pre-match signal: stores per-user per-interest calibration data.
@@ -975,70 +586,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // POST /api/user/interest-signals — create or update a signal for one interest
-  app.post('/api/user/interest-signals', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const result = interestSignalSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      const interest = getInterestById(result.data.interestKey);
-      if (!interest?.active) {
-        return res.status(400).json({ message: "Invalid interestKey: not found in active interest taxonomy" });
-      }
-
-      // Derive enthusiasm from onboarding data so we never duplicate the self-report
-      const heat = await getOnboardingHeatForInterest(userId, result.data.interestKey);
-      const enthusiasmLevel = deriveEnthusiasmFromHeat(heat);
-
-      const signal = await storage.upsertInterestSignal(userId, {
-        interestKey: result.data.interestKey,
-        interestLabel: interest.label,
-        enthusiasmLevel,
-        discussionStyle: result.data.discussionStyle,
-        conversationDepth: result.data.conversationDepth,
-      });
-
-      // Instrumentation: log completion for opt-in rate metrics
-      console.info(`[InterestSignalBoost] completed userId=${userId} interestKey=${result.data.interestKey} style=${result.data.discussionStyle} depth=${result.data.conversationDepth} derivedEnthusiasm=${enthusiasmLevel}`);
-
-      res.json({ success: true, data: signal });
-    } catch (error) {
-      console.error("Error upserting interest signal:", error);
-      res.status(500).json({ message: "Failed to save interest signal" });
-    }
-  });
 
   // GET /api/user/interest-signals — retrieve all signals for the current user
-  app.get('/api/user/interest-signals', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const signals = await storage.getUserInterestSignals(userId);
-      res.json({ signals });
-    } catch (error) {
-      console.error("Error fetching interest signals:", error);
-      res.status(500).json({ message: "Failed to fetch interest signals" });
-    }
-  });
 
-  app.post('/api/profile/personality', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const result = updatePersonalitySchema.safeParse(req.body);
-      
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      const user = await storage.updatePersonality(userId, result.data);
-      
-      res.json(user);
-    } catch (error) {
-      console.error("Error updating personality:", error);
-      res.status(500).json({ message: "Failed to update personality" });
-    }
-  });
 
   // Update full profile (for editing in profile page)
   app.patch('/api/profile', isPhoneAuthenticated, async (req: any, res) => {
@@ -1725,527 +1275,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // 🎯 DEMO: Seed demonstration events
-  app.post('/api/demo/seed-events', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { db } = await import("./db");
-      const { blindBoxEvents } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      // Check if user already has demo events
-      const existingEvents = await db.select().from(blindBoxEvents).where(eq(blindBoxEvents.userId, userId));
-      const hasMatchedDemo = existingEvents.some((e: any) => e.status === 'matched' && e.restaurantName?.includes('Sushi'));
-      const hasCompletedDemo = existingEvents.some((e: any) => e.status === 'completed' && e.restaurantName?.includes('Tap House'));
-      
-      if (hasMatchedDemo && hasCompletedDemo) {
-        console.log("✅ Demo events already exist for user:", userId);
-        return res.json({ message: "Demo events already exist" });
-      }
-      
-      // Create a matched event (tomorrow evening)
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(19, 0, 0, 0);
-      
-      const matchedEvent = await db.insert(blindBoxEvents).values({
-        userId,
-        title: "周四 19:00 · 饭局",
-        eventType: "饭局",
-        city: "香港",
-        district: "中环",
-        dateTime: tomorrow,
-        budgetTier: "150-250",
-        selectedLanguages: ["粤语", "普通话"],
-        selectedCuisines: ["日本料理", "粤菜"],
-        acceptNearby: true,
-        status: "matched",
-        progress: 100,
-        currentParticipants: 5,
-        totalParticipants: 5,
-        maleCount: 2,
-        femaleCount: 3,
-        restaurantName: "鮨一 Sushi Ichi",
-        restaurantAddress: "中环云咸街28号",
-        cuisineTags: ["日本料理", "寿司"],
-        matchedAttendees: [
-          { 
-            userId: "demo-1", 
-            displayName: "小美", 
-            archetype: "夸夸豚", 
-            topInterests: ["美食", "旅行", "艺术"], 
-            age: 27, 
-            birthdate: "1998-05-15", 
-            industry: "科技", 
-            gender: "Woman",
-            educationLevel: "Master's",
-            studyLocale: "Overseas",
-            seniority: "Mid",
-            relationshipStatus: "Single",
-            fieldOfStudy: "计算机科学",
-            hometownRegionCity: "上海",
-            languagesComfort: ["普通话 (Mandarin)", "English", "粤语 (Cantonese)"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-2", 
-            displayName: "阿强", 
-            archetype: "机智狐", 
-            topInterests: ["美食", "摄影", "旅行"], 
-            age: 30, 
-            birthdate: "1995-03-20", 
-            industry: "设计",
-            gender: "Man",
-            educationLevel: "Bachelor's",
-            studyLocale: "Domestic",
-            seniority: "Senior",
-            relationshipStatus: "Single",
-            fieldOfStudy: "设计",
-            hometownRegionCity: "广州",
-            languagesComfort: ["粤语 (Cantonese)", "普通话 (Mandarin)"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-3", 
-            displayName: "Lisa", 
-            archetype: "织网蛛", 
-            topInterests: ["美食", "艺术", "音乐"], 
-            age: 28, 
-            birthdate: "1997-07-10", 
-            industry: "金融",
-            gender: "Woman",
-            educationLevel: "Master's",
-            studyLocale: "Both",
-            seniority: "Mid",
-            relationshipStatus: "Married/Partnered",
-            fieldOfStudy: "金融学",
-            hometownRegionCity: "香港",
-            languagesComfort: ["English", "粤语 (Cantonese)", "普通话 (Mandarin)"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-4", 
-            displayName: "David", 
-            archetype: "灵感章鱼", 
-            topInterests: ["美食", "音乐", "电影"], 
-            age: 32, 
-            birthdate: "1993-11-05", 
-            industry: "媒体",
-            gender: "Man",
-            educationLevel: "Master's",
-            studyLocale: "Overseas",
-            seniority: "Senior",
-            relationshipStatus: "Single",
-            fieldOfStudy: "传媒",
-            hometownRegionCity: "北京",
-            languagesComfort: ["普通话 (Mandarin)", "English"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          }
-        ],
-        matchExplanation: "这桌是日料爱好者的聚会！大家都对精致料理和文化交流充满热情，年龄相近，话题契合度高。"
-      }).returning();
-      
-      // Create a completed event (last week)
-      const lastWeek = new Date();
-      lastWeek.setDate(lastWeek.getDate() - 7);
-      lastWeek.setHours(20, 0, 0, 0);
-      
-      const completedEvent = await db.insert(blindBoxEvents).values({
-        userId,
-        title: "周三 20:00 · 酒局",
-        eventType: "酒局",
-        city: "深圳",
-        district: "南山区",
-        dateTime: lastWeek,
-        budgetTier: "200-300",
-        selectedLanguages: ["普通话", "英语"],
-        selectedCuisines: ["西餐", "酒吧"],
-        acceptNearby: false,
-        status: "completed",
-        progress: 100,
-        currentParticipants: 6,
-        totalParticipants: 6,
-        maleCount: 3,
-        femaleCount: 3,
-        restaurantName: "The Tap House 精酿酒吧",
-        restaurantAddress: "南山区海德三道1186号",
-        cuisineTags: ["酒吧", "西餐"],
-        matchedAttendees: [
-          { 
-            userId: "demo-5", 
-            displayName: "Sarah", 
-            archetype: "太阳鸡", 
-            topInterests: ["音乐", "社交", "美食"], 
-            age: 29, 
-            birthdate: "1996-04-12", 
-            industry: "创业",
-            gender: "Woman",
-            educationLevel: "Bachelor's",
-            studyLocale: "Overseas",
-            seniority: "Founder",
-            relationshipStatus: "Single",
-            fieldOfStudy: "市场营销",
-            hometownRegionCity: "深圳",
-            languagesComfort: ["普通话 (Mandarin)", "English"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-6", 
-            displayName: "Alex", 
-            archetype: "开心柯基", 
-            topInterests: ["创业", "科技", "阅读"], 
-            age: 31, 
-            birthdate: "1994-09-08", 
-            industry: "互联网",
-            gender: "Man",
-            educationLevel: "Master's",
-            studyLocale: "Both",
-            seniority: "Senior",
-            relationshipStatus: "Single",
-            fieldOfStudy: "软件工程",
-            hometownRegionCity: "杭州",
-            languagesComfort: ["普通话 (Mandarin)", "English"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-7", 
-            displayName: "小红", 
-            archetype: "暖心熊", 
-            topInterests: ["旅行", "摄影", "美食"], 
-            age: 28, 
-            birthdate: "1997-02-18", 
-            industry: "市场",
-            gender: "Woman",
-            educationLevel: "Bachelor's",
-            studyLocale: "Domestic",
-            seniority: "Mid",
-            relationshipStatus: "Single",
-            fieldOfStudy: "市场营销",
-            hometownRegionCity: "成都",
-            languagesComfort: ["普通话 (Mandarin)"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-8", 
-            displayName: "Tom", 
-            archetype: "机智狐", 
-            topInterests: ["音乐", "电影", "旅行"], 
-            age: 30, 
-            birthdate: "1995-07-22", 
-            industry: "设计",
-            gender: "Man",
-            educationLevel: "Bachelor's",
-            studyLocale: "Overseas",
-            seniority: "Mid",
-            relationshipStatus: "Married/Partnered",
-            fieldOfStudy: "视觉设计",
-            hometownRegionCity: "香港",
-            languagesComfort: ["English", "粤语 (Cantonese)"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          },
-          { 
-            userId: "demo-9", 
-            displayName: "Emma", 
-            archetype: "织网蛛", 
-            topInterests: ["艺术", "文化", "咖啡"], 
-            age: 27, 
-            birthdate: "1998-01-30", 
-            industry: "咨询",
-            gender: "Woman",
-            educationLevel: "Master's",
-            studyLocale: "Both",
-            seniority: "Junior",
-            relationshipStatus: "Single",
-            fieldOfStudy: "管理咨询",
-            hometownRegionCity: "上海",
-            languagesComfort: ["普通话 (Mandarin)", "English"],
-            ageVisible: true,
-            educationVisible: true,
-            industryVisible: true
-          }
-        ],
-        matchExplanation: "这是一场创意人的深夜聚会！精酿啤酒配上有趣的灵魂，大家都喜欢分享故事和创意想法。"
-      }).returning();
-      
-      console.log("✅ Demo events created:", { matched: matchedEvent[0].id, completed: completedEvent[0].id });
-      
-      res.json({ 
-        message: "Demo events created successfully",
-        events: {
-          matched: matchedEvent[0],
-          completed: completedEvent[0]
-        }
-      });
-    } catch (error) {
-      console.error("Error seeding demo events:", error);
-      res.status(500).json({ message: "Failed to seed demo events" });
-    }
-  });
 
   // 🎯 DEMO: Seed registrations into a pool for quick matching tests
-  app.post('/api/demo/seed-pool-registrations', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        console.error("[DemoSeedPoolRegistrations] No userId in session");
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const { poolId, count, budgetTier } = req.body || {};
-
-      if (!poolId) {
-        console.warn("[DemoSeedPoolRegistrations] missing poolId");
-        return res.status(400).json({ message: "poolId is required" });
-      }
-
-      // 确认这个池子存在
-      const [pool] = await db
-        .select()
-        .from(eventPools)
-        .where(eq(eventPools.id, poolId));
-
-      if (!pool) {
-        console.warn("[DemoSeedPoolRegistrations] pool not found:", poolId);
-        return res.status(404).json({ message: "Pool not found" });
-      }
-
-      const insertCount = typeof count === "number" && count > 0 ? count : 4;
-      const finalBudget = budgetTier ?? "100以下";
-
-      const demoUsersToInsert = Array.from({ length: insertCount }, (_, index) => {
-        const suffix = randomUUID();
-        const archetype = ARCHETYPE_NAMES[index % ARCHETYPE_NAMES.length];
-        return {
-          email: `demo.pool.${suffix}@joyjoin.local`,
-          phoneNumber: `demo-pool-${suffix}`,
-          displayName: `测试桌友${index + 1}`,
-          gender: index % 2 === 0 ? "女性" : "男性",
-          currentCity: pool.city,
-          archetype,
-          primaryArchetype: archetype,
-          hasCompletedRegistration: true,
-          hasCompletedPersonalityTest: true,
-          hasCompletedInterestsCarousel: true,
-        };
-      });
-
-      const demoUsers = await db
-        .insert(users)
-        .values(demoUsersToInsert)
-        .returning({ id: users.id });
-
-      const registrationsToInsert = demoUsers.map((demoUser: { id: string }) => ({
-        poolId,
-        userId: demoUser.id,
-        budgetRange: [finalBudget],
-        preferredLanguages: [],
-        tasteIntensity: [],
-        cuisinePreferences: [],
-        eventIntent: [],
-        dietaryRestrictions: [],
-        matchStatus: "pending",
-      }));
-
-      const inserted = await db
-        .insert(eventPoolRegistrations)
-        .values(registrationsToInsert)
-        .returning();
-
-      // 更新池子的报名计数
-      await db
-        .update(eventPools)
-        .set({
-          totalRegistrations: sql`${eventPools.totalRegistrations} + ${inserted.length}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(eventPools.id, poolId));
-
-      console.log("[DemoSeedPoolRegistrations] inserted registrations:", {
-        poolId,
-        requestedByUserId: userId,
-        count: inserted.length,
-      });
-
-      return res.json({
-        ok: true,
-        poolId,
-        insertedCount: inserted.length,
-      });
-    } catch (error: any) {
-      console.error("[DemoSeedPoolRegistrations] Error seeding registrations:", error);
-      res.status(500).json({
-        message: "Failed to seed pool registrations",
-        error: error?.message || String(error),
-      });
-    }
-  });
 
   // 🎄 DEMO: Create a Christmas Mystery Cocktail Pool for testing
-  app.post('/api/demo/create-christmas-pool', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        console.error("[DemoChristmasPool] No userId in session");
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const { db } = await import("./db");
-      const { blindBoxEvents } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      // Check if user already has a Christmas pool demo
-      const existingPools = await db
-        .select()
-        .from(blindBoxEvents)
-        .where(eq(blindBoxEvents.userId, userId));
-      
-      const hasChristmasPool = existingPools.some((e: any) => 
-        e.title && e.title.includes("圣诞") && e.status === "pending_match"
-      );
-      
-      if (hasChristmasPool) {
-        console.log("✅ Christmas pool already exists for user:", userId);
-        return res.json({ 
-          message: "Christmas pool already exists",
-          poolExists: true 
-        });
-      }
-      
-      // Create Christmas event on Dec 25, 2025 at 9 PM China time (UTC+8)
-      const christmasDate = new Date("2025-12-25T21:00:00+08:00");
-      
-      const created = await db.insert(blindBoxEvents).values({
-        userId,
-        title: "圣诞神秘酒局 · 南山夜聊",
-        eventType: "酒局",
-        city: "深圳",
-        district: "南山",
-        dateTime: christmasDate,
-        budgetTier: "150-250",
-        selectedLanguages: ["粤语", "普通话"],
-        selectedCuisines: ["鸡尾酒吧", "创意小食"],
-        acceptNearby: true,
-        status: "pending_match",
-        progress: 0,
-        currentParticipants: 1, // Just the creator
-      }).returning();
-
-      console.log("✅ Demo Christmas pool created:", created[0].id);
-      
-      res.json({
-        message: "Christmas pool created successfully",
-        event: created[0],
-        eventId: created[0].id,
-        instructions: "你现在可以体验报名流程。系统将自动为你匹配其他参加者，生成完整的匹配桌。"
-      });
-    } catch (error) {
-      console.error("[DemoChristmasPool] Error creating pool:", error);
-      res.status(500).json({ 
-        message: "Failed to create Christmas pool",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
 
   // 🍸 DEMO: Create "弥所 Homebar" partner venue with exclusive deal
-  app.post('/api/demo/create-homebar-venue', requireAdmin, requireOperatorOrAbove, async (_req, res) => {
-    try {
-      const { db } = await import("./db");
-      const { venues, venueDeals } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      // Check if venue already exists
-      const existingVenues = await db
-        .select()
-        .from(venues)
-        .where(eq(venues.name, "弥所 Homebar"));
-      
-      if (existingVenues.length > 0) {
-        const existingVenue = existingVenues[0];
-        const existingDeals = await storage.getVenueDeals(existingVenue.id);
-        return res.json({ 
-          message: "Venue already exists",
-          venue: existingVenue,
-          deals: existingDeals
-        });
-      }
-      
-      // Create 弥所 Homebar venue
-      const [venue] = await db.insert(venues).values({
-        name: "弥所 Homebar",
-        venueType: "homebar",
-        address: "深圳市南山区科技园某商业街",
-        city: "深圳",
-        area: "南山区",
-        contactPerson: "弥所老板",
-        contactPhone: null,
-        commissionRate: 15,
-        tags: ["cozy", "lively", "小众", "适合破冰"],
-        cuisines: ["鸡尾酒", "威士忌", "创意小食"],
-        priceRange: "150以下",
-        decorStyle: ["轻奢现代风", "温馨日式风"],
-        capacity: 2,
-        operatingHours: "18:00-02:00",
-        priceNote: "一杯酒约100元起",
-        coverImageUrl: null,
-        galleryImages: [],
-        partnerStatus: "active",
-        partnerSince: "2025-01-01",
-        isActive: true,
-      }).returning();
-      
-      console.log("✅ Demo venue created:", venue.id, venue.name);
-      
-      // Create 20% off exclusive deal
-      const [deal] = await db.insert(venueDeals).values({
-        venueId: venue.id,
-        title: "悦聚专属8折优惠",
-        discountType: "percentage",
-        discountValue: 20, // 20 means 20% off, so 8折
-        description: "凡通过「悦聚」参加活动的朋友，全单消费可享8折优惠",
-        redemptionMethod: "show_page",
-        redemptionCode: null,
-        minSpend: null,
-        maxDiscount: null,
-        perPersonLimit: false,
-        validFrom: "2025-01-01",
-        validUntil: "2025-12-31",
-        terms: "每桌限使用一次，不可与其他优惠叠加使用",
-        excludedDates: ["2025-02-14", "2025-12-24", "2025-12-25", "2025-12-31"],
-        isActive: true,
-      }).returning();
-      
-      console.log("✅ Demo deal created:", deal.id, deal.title);
-      
-      res.json({
-        message: "Homebar venue and deal created successfully",
-        venue,
-        deals: [deal],
-        instructions: "场地和优惠已创建成功，可在活动详情页查看"
-      });
-    } catch (error) {
-      console.error("[DemoHomebarVenue] Error creating venue:", error);
-      res.status(500).json({ 
-        message: "Failed to create Homebar venue",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
 
   // Debug middleware for blind box event routes
   app.use('/api/blind-box-events', (req, _res, next) => {
@@ -2301,196 +1336,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
-  app.post('/api/blind-box-events', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        console.error("[BlindBoxPayment] No userId in session");
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      // 尽量把当前用户查出来，方便 debug（可选）
-      try {
-        const usersResult = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId));
-        console.log("[BlindBoxPayment] current user from DB:", usersResult);
-      } catch (userErr) {
-        console.warn("[BlindBoxPayment] failed to load user for debug:", userErr);
-      }
-
-      // 支付页 / 发现页传过来的盲盒报名数据（兼容老字段）
-      const {
-        // 新版字段
-        city,
-        district,
-        eventType,
-        budgetTier,
-        selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
-        eventIntent,
-        dietaryRestrictions,
-        poolId,
-        // 兼容旧版字段
-        area,
-        budget,
-        acceptNearby,
-        inviteFriends,
-        friendsCount,
-      } = req.body || {};
-
-      console.log("[BlindBoxPayment] incoming payload:", {
-        userId,
-        city,
-        district,
-        area,
-        eventType,
-        budgetTier,
-        budget,
-        selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
-        eventIntent,
-        dietaryRestrictions,
-        poolId,
-        acceptNearby,
-        inviteFriends,
-        friendsCount,
-      });
-
-      // ✅ 必须显式指定 poolId（这个池子是 admin 在后台创好的）
-      if (!poolId) {
-        console.warn("[BlindBoxPayment] missing poolId in request");
-        return res.status(400).json({
-          message: "缺少必填字段：poolId",
-        });
-      }
-
-      // ✅ 统一处理预算：优先用 budgetTier，其次用 budget 数组
-      let budgetRange: string[] = [];
-      if (budgetTier !== undefined && budgetTier !== null) {
-        if (Array.isArray(budgetTier)) {
-          budgetRange = budgetTier.map((b) => String(b));
-        } else {
-          budgetRange = [String(budgetTier)];
-        }
-      } else if (Array.isArray(budget)) {
-        budgetRange = budget.map((b: any) => String(b));
-      }
-
-      if (budgetRange.length === 0) {
-        console.warn("[BlindBoxPayment] missing budget info");
-        return res.status(400).json({
-          message: "参数不完整：需要 budgetTier 或 budget",
-        });
-      }
-
-      // ✅ 只允许报名已经存在且开放报名的池子（status = active 且 registrationDeadline 未来）
-      const now = new Date();
-      const poolsById = await db
-        .select()
-        .from(eventPools)
-        .where(
-          and(
-            eq(eventPools.id, poolId),
-            eq(eventPools.status, "active"),
-            gt(eventPools.registrationDeadline, now)
-          )
-        );
-
-      if (!poolsById || poolsById.length === 0) {
-        console.warn("[BlindBoxPayment] pool not found or not active / expired:", poolId);
-        return res.status(404).json({
-          message: "指定的活动池不存在或已关闭报名",
-        });
-      }
-
-      const pool = poolsById[0];
-
-      console.log("[BlindBoxPayment] final chosen pool for registration:", {
-        id: pool.id,
-        title: pool.title,
-        city: pool.city,
-        district: pool.district,
-      });
-
-      // ✅ 防止重复报名：同一用户 + 同一池子只允许一条报名记录
-      const existingRegistrations = await db
-        .select({ id: eventPoolRegistrations.id })
-        .from(eventPoolRegistrations)
-        .where(
-          and(
-            eq(eventPoolRegistrations.poolId, pool.id),
-            eq(eventPoolRegistrations.userId, userId)
-          )
-        );
-
-      if (existingRegistrations.length > 0) {
-        console.warn("[BlindBoxPayment] user already registered for this pool:", {
-          userId,
-          poolId: pool.id,
-        });
-        return res.status(400).json({
-          message: "你已经报名过这个活动盲盒啦，无法重复报名",
-        });
-      }
-
-      // ✅ 在 event_pool_registrations 中插入报名记录（用户付完钱就直接进池子）
-      const registrationData = {
-        poolId: pool.id,
-        userId,
-        budgetRange,
-        preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
-        tasteIntensity: Array.isArray(selectedTasteIntensity) ? selectedTasteIntensity : [],
-        cuisinePreferences: Array.isArray(selectedCuisines) ? selectedCuisines : [],
-        eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
-        dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
-      };
-
-      console.log("[BlindBoxPayment] creating eventPoolRegistration with data:", registrationData);
-
-      const [registration] = await db
-        .insert(eventPoolRegistrations)
-        .values(registrationData)
-        .returning();
-
-      console.log("[BlindBoxPayment] created eventPoolRegistration:", registration);
-
-      // ✅ 更新活动池的 totalRegistrations 计数
-      const [updatedPool] = await db
-        .update(eventPools)
-        .set({
-          totalRegistrations: sql`${eventPools.totalRegistrations} + 1`,
-          updatedAt: new Date(),
-        })
-        .where(eq(eventPools.id, pool.id))
-        .returning();
-
-      console.log("[BlindBoxPayment] updated eventPool after registration:", updatedPool);
-
-      broadcastPoolRegistrationAdded(
-        pool.id,
-        undefined,
-        userId,
-        updatedPool?.totalRegistrations ?? pool.totalRegistrations + 1,
-      );
-
-      // ✅ 返回报名信息（前端目前只需要知道成功了 & 池子信息）
-      return res.json({
-        ok: true,
-        registration,
-        pool: updatedPool || pool,
-      });
-    } catch (error: any) {
-      console.error("[BlindBoxPayment] Failed to create pool registration:", error);
-      res.status(500).json({
-        message: "Failed to create blind box registration",
-        error: error?.message || String(error),
-      });
-    }
-  });
   // app.post('/api/blind-box-events', isPhoneAuthenticated, async (req: any, res) => {
   //   try {
   //     const userId = req.session.userId;
@@ -3050,43 +1895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
-  app.get('/api/blind-box-events/:eventId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-      const event = await storage.getBlindBoxEventById(eventId, userId);
-      
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-      
-      res.json(event);
-    } catch (error) {
-      console.error("Error fetching blind box event:", error);
-      res.status(500).json({ message: "Failed to fetch blind box event" });
-    }
-  });
 
-  app.patch('/api/blind-box-events/:eventId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-      const { budget, acceptNearby, selectedLanguages, selectedTasteIntensity, selectedCuisines } = req.body;
-      
-      const event = await storage.updateBlindBoxEventPreferences(eventId, userId, {
-        budget,
-        acceptNearby,
-        selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
-      });
-      
-      res.json(event);
-    } catch (error) {
-      console.error("Error updating blind box event:", error);
-      res.status(500).json({ message: "Failed to update blind box event" });
-    }
-  });
 
   // app.post('/api/blind-box-events/:eventId/cancel', isPhoneAuthenticated, async (req: any, res) => {
   //   try {
@@ -3099,134 +1908,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     res.status(500).json({ message: "Failed to cancel blind box event" });
   //   }
   // });
-  app.post('/api/blind-box-events/:eventId/cancel', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      console.log("[BlindBoxCancel] route hit, raw request:", {
-        method: req.method,
-        originalUrl: req.originalUrl,
-        params: req.params,
-        body: req.body,
-        sessionUserId: req.session?.userId,
-      });
-
-      const userId = req.session.userId;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
-      const { eventId } = req.params;
-
-      console.log("[BlindBoxCancel] incoming cancel request:", {
-        userId,
-        eventId,
-      });
-
-      // 1) 先尝试旧逻辑：如果你之前有真正的 blindBoxEvent 记录
-      try {
-        const legacyResult = await storage.cancelBlindBoxEvent(eventId, userId);
-        if (legacyResult) {
-          console.log("[BlindBoxCancel] legacy cancelBlindBoxEvent succeeded:", {
-            eventId,
-            userId,
-          });
-          return res.json(legacyResult);
-        }
-      } catch (legacyErr) {
-        console.warn("[BlindBoxCancel] legacy cancelBlindBoxEvent failed or not applicable:", legacyErr);
-      }
-
-      // 2) 新逻辑优先：把 eventId 当作报名记录 id（event_pool_registrations.id）来删除
-      // 这样 Activities 页如果传 registrationId 也可以正常取消
-      let deletedRegistrations = await db
-        .delete(eventPoolRegistrations)
-        .where(
-          and(
-            eq(eventPoolRegistrations.id, eventId),
-            eq(eventPoolRegistrations.userId, userId)
-          )
-        )
-        .returning();
-
-      if (deletedRegistrations.length > 0) {
-        console.log("[BlindBoxCancel] cancelled by registrationId:", {
-          userId,
-          registrationId: eventId,
-          count: deletedRegistrations.length,
-        });
-        console.log("[BlindBoxCancel] response (by registrationId):", {
-          userId,
-          cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
-        });
-
-        // 对每个被删除的报名，把对应池子的 totalRegistrations - 1
-        for (const reg of deletedRegistrations) {
-          if (reg.poolId) {
-            await db
-              .update(eventPools)
-              .set({
-                totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-                updatedAt: new Date(),
-              })
-              .where(eq(eventPools.id, reg.poolId));
-          }
-        }
-
-        return res.json({
-          ok: true,
-          cancelledRegistrationIds: deletedRegistrations.map((r: any) => r.id),
-        });
-      }
-
-      // 3) 兼容旧调用方式：把 eventId 当作 poolId，用于删除当前用户在该池子的报名记录
-      deletedRegistrations = await db
-        .delete(eventPoolRegistrations)
-        .where(
-          and(
-            eq(eventPoolRegistrations.poolId, eventId),
-            eq(eventPoolRegistrations.userId, userId)
-          )
-        )
-        .returning();
-
-      if (deletedRegistrations.length === 0) {
-        console.warn("[BlindBoxCancel] no registration found to cancel:", {
-          userId,
-          eventId,
-        });
-        return res.status(404).json({
-          message: "没有找到可取消的报名记录，可能已经取消过了",
-        });
-      }
-
-      console.log("[BlindBoxCancel] cancelled by poolId:", {
-        userId,
-        poolId: eventId,
-        count: deletedRegistrations.length,
-      });
-      console.log("[BlindBoxCancel] response (by poolId):", {
-        userId,
-        cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
-      });
-
-      // 同样更新对应池子的 totalRegistrations
-      for (const reg of deletedRegistrations) {
-        if (reg.poolId) {
-          await db
-            .update(eventPools)
-            .set({
-              totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-              updatedAt: new Date(),
-            })
-            .where(eq(eventPools.id, reg.poolId));
-        }
-      }
-
-      return res.json({
-        ok: true,
-        cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
-      });
-    } catch (error) {
-      console.error("[BlindBoxCancel] Error canceling blind box event / pool registration:", error);
-      res.status(500).json({ message: "Failed to cancel blind box event" });
-    }
-  });
 
   // ============ ATTENDANCE STATUS ROUTES ============
 
@@ -3241,111 +1922,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // User: get my attendance status for an event
-  app.get('/api/blind-box-events/:eventId/my-attendance-status', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-      const status = await storage.getAttendanceStatus(eventId, userId);
-      if (!status) {
-        return res.json({ status: 'pending', estimatedLateMinutes: null, absentReason: null });
-      }
-      res.json(status);
-    } catch (error) {
-      console.error("[AttendanceStatus] Error fetching status:", error);
-      res.status(500).json({ message: "Failed to fetch attendance status" });
-    }
-  });
 
   // User: update my attendance status for an event
-  app.post('/api/blind-box-events/:eventId/attendance-status', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-      const { status, estimatedLateMinutes, absentReason } = req.body;
-
-      // Only allow user-settable statuses (not 'pending')
-      const validStatuses = ['confirmed', 'late', 'absent'] as const;
-      type AttendanceStatus = (typeof validStatuses)[number];
-      const isValidStatus = (s: unknown): s is AttendanceStatus =>
-        typeof s === 'string' && (validStatuses as readonly string[]).includes(s);
-      if (!isValidStatus(status)) {
-        return res.status(400).json({ message: "Invalid status value" });
-      }
-      const normalizedStatus: AttendanceStatus = status;
-
-      // Verify the caller is a participant in this event
-      const event = await storage.getBlindBoxEventAdmin(eventId);
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-      if (!isParticipantOfBlindBoxEvent(event, userId)) {
-        return res.status(403).json({ message: "Not a participant in this event" });
-      }
-
-      // Enforce time-window constraints
-      const eventStart = new Date(event.date_time);
-      const now = new Date();
-      const diffMinutes = (now.getTime() - eventStart.getTime()) / 60000;
-
-      let normalizedEstimatedLateMinutes: number | null = null;
-      let normalizedAbsentReason: string | null = null;
-
-      if (normalizedStatus === 'absent') {
-        if (diffMinutes >= 0) {
-          return res.status(400).json({ message: "Cannot mark absent after the event has started" });
-        }
-        if (typeof absentReason !== 'string' || absentReason.trim().length === 0) {
-          return res.status(400).json({ message: "absentReason is required when marking absent" });
-        }
-        normalizedAbsentReason = absentReason.trim();
-      } else if (normalizedStatus === 'late') {
-        if (diffMinutes < -120 || diffMinutes > 45) {
-          return res.status(400).json({ message: "Late status can only be set within 2 hours before to 45 minutes after the event" });
-        }
-        if (typeof estimatedLateMinutes !== 'number' || !Number.isFinite(estimatedLateMinutes) || estimatedLateMinutes <= 0) {
-          return res.status(400).json({ message: "estimatedLateMinutes must be a positive number when marking late" });
-        }
-        normalizedEstimatedLateMinutes = estimatedLateMinutes;
-      }
-      // 'confirmed' uses no auxiliary fields
-
-      await storage.updateAttendanceStatus(eventId, userId, normalizedStatus, normalizedEstimatedLateMinutes, normalizedAbsentReason);
-
-      // Fetch user displayName for broadcast
-      const user = await storage.getUser(userId);
-      const displayName = getUserDisplayName(user);
-
-      broadcastAttendanceStatusUpdated(eventId, userId, displayName, normalizedStatus, normalizedEstimatedLateMinutes ?? undefined, normalizedAbsentReason ?? undefined);
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("[AttendanceStatus] Error updating status:", error);
-      res.status(500).json({ message: "Failed to update attendance status" });
-    }
-  });
 
   // User/TableMates: get attendance summary for an event (all attendees' statuses)
-  app.get('/api/blind-box-events/:eventId/attendance-summary', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-
-      // Verify the caller is a participant in this event
-      const event = await storage.getBlindBoxEventAdmin(eventId);
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-      if (!isParticipantOfBlindBoxEvent(event, userId)) {
-        return res.status(403).json({ message: "Not a participant in this event" });
-      }
-
-      const summary = await storage.getEventAttendanceSummary(eventId);
-      res.json(summary);
-    } catch (error) {
-      console.error("[AttendanceStatus] Error fetching attendance summary:", error);
-      res.status(500).json({ message: "Failed to fetch attendance summary" });
-    }
-  });
 
   // Admin: get attendance summary for an event
   app.get('/api/admin/events/:eventId/attendance-summary', requireAdmin, async (req: any, res) => {
@@ -3884,108 +2464,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Demo endpoint to set match data for testing
-  app.post('/api/blind-box-events/:eventId/set-demo-match', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-      
-      // Demo matched attendees data with rich hidden attributes for interesting connections
-      const demoMatchedAttendees = [
-        {
-          userId: "demo1",
-          displayName: "Alex",
-          archetype: "机智狐",
-          topInterests: ["film_entertainment", "travel_exploration", "photography"],
-          age: 29,
-          birthdate: "1996-03-15",
-          gender: "Man",
-          industry: "科技",
-          educationLevel: "Master's",
-          fieldOfStudy: "计算机科学",
-          hometownRegionCity: "北京",
-          studyLocale: "Overseas",
-          seniority: "Mid",
-          relationshipStatus: "Single",
-          languagesComfort: ["普通话 (Mandarin)", "English"],
-          ageVisible: true,
-          industryVisible: true,
-          educationVisible: true
-        },
-        {
-          userId: "demo2",
-          displayName: "小明",
-          archetype: "暖心熊",
-          topInterests: ["food_dining", "music_concerts", "travel_exploration"],
-          age: 27,
-          birthdate: "1998-07-20",
-          gender: "Man",
-          industry: "艺术",
-          educationLevel: "Bachelor's",
-          fieldOfStudy: "视觉艺术",
-          hometownRegionCity: "上海",
-          studyLocale: "Domestic",
-          seniority: "Junior",
-          relationshipStatus: "Single",
-          languagesComfort: ["普通话 (Mandarin)"],
-          ageVisible: true,
-          industryVisible: true,
-          educationVisible: true
-        },
-        {
-          userId: "demo3",
-          displayName: "Sarah",
-          archetype: "智者",
-          topInterests: ["reading_books", "film_entertainment", "coffee_tea"],
-          age: 32,
-          birthdate: "1993-05-10",
-          gender: "Woman",
-          industry: "金融",
-          educationLevel: "Master's",
-          fieldOfStudy: "金融工程",
-          hometownRegionCity: "香港",
-          studyLocale: "Overseas",
-          seniority: "Senior",
-          relationshipStatus: "Married/Partnered",
-          languagesComfort: ["English", "粤语 (Cantonese)", "普通话 (Mandarin)"],
-          ageVisible: true,
-          industryVisible: true,
-          educationVisible: true
-        },
-        {
-          userId: "demo4",
-          displayName: "李华",
-          archetype: "太阳鸡",
-          topInterests: ["fitness_health", "travel_exploration", "outdoor_activities"],
-          age: 28,
-          birthdate: "1997-09-25",
-          gender: "Woman",
-          industry: "医疗",
-          educationLevel: "Doctorate",
-          fieldOfStudy: "临床医学",
-          hometownRegionCity: "深圳",
-          studyLocale: "Both",
-          seniority: "Mid",
-          relationshipStatus: "Single",
-          languagesComfort: ["普通话 (Mandarin)", "English"],
-          ageVisible: true,
-          industryVisible: true,
-          educationVisible: true
-        }
-      ];
-      
-      const demoExplanation = "这桌聚集了对电影、旅行充满热情的朋友。我们平衡了机智狐的探索新鲜与暖心熊的深度倾听，确保对话既热烈又有深度。";
-      
-      const event = await storage.setBlindBoxEventMatchData(eventId, userId, {
-        matchedAttendees: demoMatchedAttendees,
-        matchExplanation: demoExplanation
-      });
-      
-      res.json(event);
-    } catch (error) {
-      console.error("Error setting demo match data:", error);
-      res.status(500).json({ message: "Failed to set demo match data" });
-    }
-  });
 
   // Icebreaker routes - Multi-layered questions for deeper connection
   const icebreakerQuestions = {
@@ -4315,429 +2793,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Generate cards for current round
-  app.post('/api/icebreaker/game/generate-cards', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { sessionId, eventId, groupId, roundNumber, cardsCount, aiRatio } = req.body;
-      
-      if (!sessionId && !eventId && !groupId) {
-        return res.status(400).json({ message: "sessionId, eventId, or groupId required" });
-      }
-      
-      const { generateMixedCards } = await import('./icebreakerCardGenerationService');
-      const { db } = await import('./db');
-      const { 
-        icebreakerSessions, 
-        icebreakerGameCards, 
-        icebreakerGameProgress,
-        users,
-        userInterests,
-        eventPoolRegistrations,
-        eventPoolGroups,
-        assessmentSessions,
-      } = await import('@shared/schema');
-      const { eq, and, inArray, sql, desc, isNotNull } = await import('drizzle-orm');
-      
-      // Find or create icebreaker session
-      let session;
-      if (sessionId) {
-        const sessions = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.id, sessionId)).limit(1);
-        session = sessions[0];
-      } else if (eventId) {
-        const sessions = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.blindBoxEventId, eventId)).limit(1);
-        session = sessions[0];
-        
-        if (!session) {
-          // Create new session for blind box event
-          const [newSession] = await db.insert(icebreakerSessions).values({
-            blindBoxEventId: eventId,
-            currentPhase: 'icebreaker',
-            phaseStartedAt: new Date(),
-          }).returning();
-          session = newSession;
-        }
-      } else if (groupId) {
-        const sessions = await db.select().from(icebreakerSessions).where(eq(icebreakerSessions.groupId, groupId)).limit(1);
-        session = sessions[0];
-        
-        if (!session) {
-          // Create new session for pool group
-          const [newSession] = await db.insert(icebreakerSessions).values({
-            groupId: groupId,
-            currentPhase: 'icebreaker',
-            phaseStartedAt: new Date(),
-          }).returning();
-          session = newSession;
-        }
-      }
-      
-      if (!session) {
-        return res.status(404).json({ message: "Session not found" });
-      }
-      
-      // Verify user authorization to access this session
-      const isAuthorized = await verifySessionAccess(session.id, userId, db, {
-        icebreakerSessions,
-        eventPoolRegistrations,
-        eventPoolGroups,
-      });
-      
-      if (!isAuthorized) {
-        return res.status(403).json({ message: "Unauthorized to access this session" });
-      }
-      
-      // Get attendees data for personalization
-      let attendees: any[] = [];
-      
-      if (session.groupId) {
-        // Pool event - get group members
-        const [group] = await db.select().from(eventPoolGroups).where(eq(eventPoolGroups.id, session.groupId)).limit(1);
-        if (group && group.members) {
-          const memberIds = (group.members as any[]).map((m: any) => m.userId).filter(Boolean);
-          if (memberIds.length > 0) {
-            attendees = await db.select({
-              id: users.id,
-              displayName: users.displayName,
-              birthdate: users.birthdate,
-              gender: users.gender,
-              educationLevel: users.educationLevel,
-              industryCategory: users.industryCategory,
-              industrySegment: users.industrySegment,
-              relationshipStatus: users.relationshipStatus,
-              primaryArchetype: users.primaryArchetype,
-              secondaryArchetype: users.secondaryArchetype,
-              conversationMode: users.conversationMode,
-              conversationEnergy: users.conversationEnergy,
-            }).from(users).where(inArray(users.id, memberIds));
-          }
-        }
-      } else if (session.blindBoxEventId) {
-        // Blind box event - get matched attendees
-        const event = await storage.getBlindBoxEventById(session.blindBoxEventId, userId);
-        if (event && event.matchedAttendees) {
-          const attendeeUserIds = (event.matchedAttendees as any[]).map((a: any) => a.userId).filter(Boolean);
-          if (attendeeUserIds.length > 0) {
-            attendees = await db.select({
-              id: users.id,
-              displayName: users.displayName,
-              birthdate: users.birthdate,
-              gender: users.gender,
-              educationLevel: users.educationLevel,
-              industryCategory: users.industryCategory,
-              industrySegment: users.industrySegment,
-              relationshipStatus: users.relationshipStatus,
-              primaryArchetype: users.primaryArchetype,
-              secondaryArchetype: users.secondaryArchetype,
-              conversationMode: users.conversationMode,
-              conversationEnergy: users.conversationEnergy,
-            }).from(users).where(inArray(users.id, attendeeUserIds));
-          }
-        }
-      }
-      
-      // Enrich with interests and trait scores
-      for (const attendee of attendees) {
-        // Get interests
-        const [interests] = await db.select().from(userInterests).where(eq(userInterests.userId, attendee.id)).limit(1);
-        if (interests && interests.selections) {
-          attendee.interests = (interests.selections as any[]).map((s: any) => s.label);
-          attendee.topPriorities = interests.topPriorities;
-        }
-        
-        // Get personality trait scores from assessment results using Drizzle query builder
-        const [assessment] = await db
-          .select({
-            traitScores: assessmentSessions.traitScores,
-            primaryArchetype: assessmentSessions.primaryArchetype,
-          })
-          .from(assessmentSessions)
-          .where(
-            and(
-              eq(assessmentSessions.userId, attendee.id),
-              isNotNull(assessmentSessions.completedAt)
-            )
-          )
-          .orderBy(desc(assessmentSessions.completedAt))
-          .limit(1);
-        
-        if (assessment) {
-          attendee.traitScores = assessment.traitScores;
-        }
-        
-        // Get intent from pool registration if available
-        if (session.groupId) {
-          const [registration] = await db.select()
-            .from(eventPoolRegistrations)
-            .where(and(
-              eq(eventPoolRegistrations.userId, attendee.id),
-              eq(eventPoolRegistrations.assignedGroupId, session.groupId)
-            ))
-            .limit(1);
-          if (registration && registration.intent) {
-            attendee.intent = registration.intent;
-          }
-        }
-      }
-      
-      // Generate cards
-      const round = roundNumber || 1;
-      const count = cardsCount || 3;
-      const ratio = aiRatio !== undefined ? aiRatio : 70;
-      
-      const { cards, sources } = await generateMixedCards(attendees, round, count, ratio);
-      
-      // Save cards to database
-      const savedCards = [];
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
-        const source = sources[i];
-        
-        const [savedCard] = await db.insert(icebreakerGameCards).values({
-          sessionId: session.id,
-          cardType: card.cardType,
-          content: card.content,
-          hint: card.hint,
-          category: card.category,
-          difficulty: card.difficulty,
-          voteOptions: card.voteOptions ? card.voteOptions : null,
-          missionType: card.missionType,
-          unlockCondition: card.unlockCondition,
-          isAiGenerated: source === 'ai',
-          generationSource: source === 'ai' ? 'ai_deepseek' : 'curated',
-          aiRecommendReason: card.aiRecommendReason,
-          personalizedFor: {
-            archetypes: attendees.map(a => a.primaryArchetype).filter(Boolean),
-            interests: Array.from(new Set(attendees.flatMap(a => a.interests || []))).slice(0, 10),
-            industries: attendees.map(a => a.industryCategory).filter(Boolean),
-          },
-          roundNumber: round,
-          displayOrder: i,
-          isRevealed: false,
-          interactionCount: 0,
-          skipCount: 0,
-        }).returning();
-        
-        savedCards.push(savedCard);
-      }
-      
-      // Update or create game progress
-      const [progress] = await db.select().from(icebreakerGameProgress).where(eq(icebreakerGameProgress.sessionId, session.id)).limit(1);
-      
-      if (!progress) {
-        await db.insert(icebreakerGameProgress).values({
-          sessionId: session.id,
-          totalRounds: 5,
-          roundDurationMinutes: 20,
-          currentRound: round,
-          roundStartedAt: new Date(),
-          gameStartedAt: round === 1 ? new Date() : undefined,
-          aiGenerationRatio: ratio,
-          cardsPerRound: count,
-          roundHistory: [{ round, startedAt: new Date(), cardsGenerated: cards.length }],
-        });
-      } else {
-        // Update existing progress
-        const history = (progress.roundHistory as any[]) || [];
-        history.push({ round, startedAt: new Date(), cardsGenerated: cards.length });
-        
-        await db.update(icebreakerGameProgress)
-          .set({
-            currentRound: round,
-            roundStartedAt: new Date(),
-            roundHistory: history,
-            updatedAt: new Date(),
-          })
-          .where(eq(icebreakerGameProgress.sessionId, session.id));
-      }
-      
-      res.json({
-        sessionId: session.id,
-        cards: savedCards,
-        roundNumber: round,
-        totalCards: savedCards.length,
-        aiGeneratedCount: sources.filter(s => s === 'ai').length,
-        curatedCount: sources.filter(s => s === 'curated').length,
-      });
-    } catch (error) {
-      console.error("Error generating icebreaker cards:", error);
-      res.status(500).json({ message: "Failed to generate cards", error: String(error) });
-    }
-  });
   
   // Get cards for a session
-  app.get('/api/icebreaker/game/cards/:sessionId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { sessionId } = req.params;
-      const { roundNumber } = req.query;
-      
-      const { db } = await import('./db');
-      const { icebreakerGameCards, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
-      const { eq, and } = await import('drizzle-orm');
-      
-      // Verify user authorization
-      const isAuthorized = await verifySessionAccess(sessionId, userId, db, {
-        icebreakerSessions,
-        eventPoolRegistrations,
-        eventPoolGroups,
-      });
-      
-      if (!isAuthorized) {
-        return res.status(403).json({ message: "Unauthorized to access this session" });
-      }
-      
-      let query = db.select().from(icebreakerGameCards).where(eq(icebreakerGameCards.sessionId, sessionId));
-      
-      if (roundNumber) {
-        query = db.select().from(icebreakerGameCards).where(
-          and(
-            eq(icebreakerGameCards.sessionId, sessionId),
-            eq(icebreakerGameCards.roundNumber, parseInt(roundNumber))
-          )
-        );
-      }
-      
-      const cards = await query.orderBy(icebreakerGameCards.roundNumber, icebreakerGameCards.displayOrder);
-      
-      res.json({ cards });
-    } catch (error) {
-      console.error("Error fetching icebreaker cards:", error);
-      res.status(500).json({ message: "Failed to fetch cards" });
-    }
-  });
   
   // Record card interaction
-  app.post('/api/icebreaker/game/interact', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { cardId, sessionId, interactionType, voteOptionId, reaction } = req.body;
-      
-      if (!cardId || !sessionId || !interactionType) {
-        return res.status(400).json({ message: "cardId, sessionId, and interactionType required" });
-      }
-      
-      const { db } = await import('./db');
-      const { icebreakerCardInteractions, icebreakerGameCards, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
-      const { eq, and } = await import('drizzle-orm');
-      
-      // Verify user authorization
-      const isAuthorized = await verifySessionAccess(sessionId, userId, db, {
-        icebreakerSessions,
-        eventPoolRegistrations,
-        eventPoolGroups,
-      });
-      
-      if (!isAuthorized) {
-        return res.status(403).json({ message: "Unauthorized to access this session" });
-      }
-      
-      // Use transaction to prevent race conditions and ensure atomic updates
-      await db.transaction(async (tx: DbTransaction) => {
-        // For vote interactions, check for duplicate votes first
-        if (interactionType === 'vote') {
-          const existingVote = await tx
-            .select()
-            .from(icebreakerCardInteractions)
-            .where(
-              and(
-                eq(icebreakerCardInteractions.cardId, cardId),
-                eq(icebreakerCardInteractions.userId, userId),
-                eq(icebreakerCardInteractions.interactionType, 'vote')
-              )
-            )
-            .limit(1);
-          
-          if (existingVote.length > 0) {
-            throw new Error('User has already voted on this card');
-          }
-        }
-        
-        // Record interaction
-        await tx.insert(icebreakerCardInteractions).values({
-          cardId,
-          userId,
-          sessionId,
-          interactionType,
-          voteOptionId,
-          reaction,
-        });
-        
-        // Lock the card row and update interaction counts atomically
-        const [card] = await tx
-          .select()
-          .from(icebreakerGameCards)
-          .where(eq(icebreakerGameCards.id, cardId))
-          .limit(1)
-          .for('update');
-        
-        if (card) {
-          const newCount = (card.interactionCount || 0) + 1;
-          const newSkipCount = interactionType === 'skip' ? (card.skipCount || 0) + 1 : card.skipCount;
-          
-          await tx
-            .update(icebreakerGameCards)
-            .set({ 
-              interactionCount: newCount, 
-              skipCount: newSkipCount,
-              updatedAt: new Date(),
-            })
-            .where(eq(icebreakerGameCards.id, cardId));
-          
-          // For vote cards, update vote results under the same lock
-          if (interactionType === 'vote' && voteOptionId && card.voteOptions) {
-            const currentResults = (card.voteResults as Record<string, number>) || {};
-            currentResults[voteOptionId] = (currentResults[voteOptionId] || 0) + 1;
-            
-            await tx
-              .update(icebreakerGameCards)
-              .set({ voteResults: currentResults })
-              .where(eq(icebreakerGameCards.id, cardId));
-          }
-        }
-      });
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error recording card interaction:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to record interaction";
-      res.status(error instanceof Error && error.message.includes('already voted') ? 409 : 500)
-        .json({ message: errorMessage });
-    }
-  });
   
   // Get game progress
-  app.get('/api/icebreaker/game/progress/:sessionId', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { sessionId } = req.params;
-      
-      const { db } = await import('./db');
-      const { icebreakerGameProgress, icebreakerSessions, eventPoolRegistrations, eventPoolGroups } = await import('@shared/schema');
-      const { eq } = await import('drizzle-orm');
-      
-      // Verify user authorization
-      const isAuthorized = await verifySessionAccess(sessionId, userId, db, {
-        icebreakerSessions,
-        eventPoolRegistrations,
-        eventPoolGroups,
-      });
-      
-      if (!isAuthorized) {
-        return res.status(403).json({ message: "Unauthorized to access this session" });
-      }
-      
-      const [progress] = await db.select().from(icebreakerGameProgress).where(eq(icebreakerGameProgress.sessionId, sessionId)).limit(1);
-      
-      if (!progress) {
-        return res.status(404).json({ message: "Game progress not found" });
-      }
-      
-      res.json(progress);
-    } catch (error) {
-      console.error("Error fetching game progress:", error);
-      res.status(500).json({ message: "Failed to fetch game progress" });
-    }
-  });
 
   // Notification endpoints
   app.get('/api/notifications/counts', isPhoneAuthenticated, async (req: any, res) => {
@@ -5072,211 +3133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Demo: Create sample chat data
-  app.post('/api/chats/seed-demo', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      console.log(`[SEED-DEMO] Starting demo data creation for user: ${userId}`);
-
-      // Create demo users with different archetypes and complete profiles
-      const [demoUser1] = await db.insert(users).values({
-        displayName: '小明',
-        archetype: '开心柯基',
-        hasCompletedProfileSetup: true,
-        hasCompletedPersonalityTest: true,
-        hasCompletedInterestsTopics: true,
-        gender: 'Man',
-        age: 28,
-        educationLevel: "Master's",
-        industry: '科技',
-        relationshipStatus: 'Single',
-        interestsTop: ['科技', '创业', '咖啡', '产品'],
-        interestsRankedTop3: ['科技', '创业', '咖啡'],
-        topicsHappy: ['AI发展', '产品设计', '创业故事'],
-        eventsAttended: 5,
-        matchesMade: 8,
-      }).returning();
-
-      const [demoUser2] = await db.insert(users).values({
-        displayName: '小红',
-        archetype: '织网蛛',
-        hasCompletedProfileSetup: true,
-        hasCompletedPersonalityTest: true,
-        hasCompletedInterestsTopics: true,
-        gender: 'Woman',
-        age: 26,
-        educationLevel: "Bachelor's",
-        industry: '设计',
-        relationshipStatus: 'In a relationship',
-        interestsTop: ['设计', '艺术', '旅行', '摄影'],
-        interestsRankedTop3: ['设计', '艺术', '旅行'],
-        topicsHappy: ['UI/UX设计', '摄影', '文化交流'],
-        eventsAttended: 12,
-        matchesMade: 15,
-      }).returning();
-
-      const [demoUser3] = await db.insert(users).values({
-        displayName: '阿杰',
-        archetype: '机智狐',
-        hasCompletedProfileSetup: true,
-        hasCompletedPersonalityTest: true,
-        hasCompletedInterestsTopics: true,
-        gender: 'Man',
-        age: 30,
-        educationLevel: "Doctorate",
-        industry: '金融',
-        relationshipStatus: 'Single',
-        interestsTop: ['投资', '徒步', '读书', '历史'],
-        interestsRankedTop3: ['投资', '徒步', '读书'],
-        topicsHappy: ['股市分析', '户外运动', '历史'],
-        eventsAttended: 8,
-        matchesMade: 10,
-      }).returning();
-
-      // Create demo events with different unlock states
-      const now = new Date();
-      
-      // Event 1: Unlocked (event is in 12 hours - within 24h window)
-      const in12Hours = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-      
-      const [event1] = await db.insert(events).values({
-        title: '今晚聚餐 · 港式茶餐厅',
-        description: '饭局 · ¥100-200',
-        dateTime: in12Hours,
-        location: '中环翠华餐厅',
-        area: '中环',
-        price: null,
-        maxAttendees: 6,
-        currentAttendees: 4,
-        hostId: userId,
-        status: 'upcoming',
-      }).returning();
-
-      // Add current user and demo users to event 1
-      await db.insert(eventAttendance).values([
-        {
-          eventId: event1.id,
-          userId,
-          status: 'confirmed',
-        },
-        {
-          eventId: event1.id,
-          userId: demoUser1.id,
-          status: 'confirmed',
-        },
-        {
-          eventId: event1.id,
-          userId: demoUser2.id,
-          status: 'confirmed',
-        },
-        {
-          eventId: event1.id,
-          userId: demoUser3.id,
-          status: 'confirmed',
-        },
-      ]);
-
-      // Create demo messages for event 1 with different users
-      const demoMessages = [
-        { message: '大家好！很期待明天的聚会 👋', userId: demoUser1.id },
-        { message: '我也是！有人知道这家店的招牌菜是什么吗？', userId: demoUser2.id },
-        { message: '听说他们的菠萝包和奶茶超赞！', userId: demoUser3.id },
-      ];
-
-      for (const msg of demoMessages) {
-        await db.insert(chatMessages).values({
-          eventId: event1.id,
-          userId: msg.userId,
-          message: msg.message,
-        });
-      }
-
-      // Event 2: Locked (event is in 3 days)
-      const in3Days = new Date(now);
-      in3Days.setDate(in3Days.getDate() + 3);
-      in3Days.setHours(14, 0, 0, 0);
-      
-      const [event2] = await db.insert(events).values({
-        title: '周日下午茶 · 咖啡厅',
-        description: '咖啡 · ¥≤100',
-        dateTime: in3Days,
-        location: '尖沙咀 % Arabica',
-        area: '尖沙咀',
-        price: null,
-        maxAttendees: 5,
-        currentAttendees: 3,
-        hostId: userId,
-        status: 'upcoming',
-      }).returning();
-
-      await db.insert(eventAttendance).values({
-        eventId: event2.id,
-        userId,
-        status: 'confirmed',
-      });
-
-      // Event 3: Past event (2 hours ago)
-      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-      
-      const [event3] = await db.insert(events).values({
-        title: '刚结束的桌游局',
-        description: '玩乐 · ¥200-300',
-        dateTime: twoHoursAgo,
-        location: '铜锣湾 Game On',
-        area: '铜锣湾',
-        price: null,
-        maxAttendees: 6,
-        currentAttendees: 5,
-        hostId: userId,
-        status: 'completed',
-      }).returning();
-
-      await db.insert(eventAttendance).values({
-        eventId: event3.id,
-        userId,
-        status: 'confirmed',
-      });
-
-      // Create demo messages for past event with different users
-      const pastMessages = [
-        { message: '今天玩得太开心了！', userId: demoUser2.id },
-        { message: '狼人杀太刺激了哈哈', userId: demoUser1.id },
-        { message: '下次还要一起玩！', userId: demoUser3.id },
-      ];
-
-      for (const msg of pastMessages) {
-        await db.insert(chatMessages).values({
-          eventId: event3.id,
-          userId: msg.userId,
-          message: msg.message,
-        });
-      }
-
-      // Also add demo users as event attendees
-      await db.insert(eventAttendance).values([
-        { eventId: event3.id, userId: demoUser1.id, status: 'confirmed' },
-        { eventId: event3.id, userId: demoUser2.id, status: 'confirmed' },
-        { eventId: event3.id, userId: demoUser3.id, status: 'confirmed' },
-      ]);
-
-      console.log(`[SEED-DEMO] Demo data creation completed successfully for user: ${userId}`);
-      res.json({ 
-        success: true, 
-        message: 'Demo chat data created',
-        events: [
-          { title: event1.title, status: 'unlocked', dateTime: event1.dateTime },
-          { title: event2.title, status: 'locked', dateTime: event2.dateTime },
-          { title: event3.title, status: 'past', dateTime: event3.dateTime },
-        ],
-      });
-    } catch (error) {
-      console.error("[SEED-DEMO] Error creating demo chat data:", error);
-      res.status(500).json({ message: "Failed to create demo chat data", error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  });
 
   // Demo: Create sample notifications
   app.post('/api/notifications/seed-demo', isPhoneAuthenticated, async (req: any, res) => {
@@ -5538,6 +3394,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Operational Dashboard — Today's Events + Alerts
+  app.get("/api/admin/ops-dashboard", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Today's events
+      const todayEventsResult = await db.execute(sql`
+        SELECT
+          e.id,
+          e.title,
+          e.date_time as "dateTime",
+          e.location,
+          e.status,
+          e.max_attendees as "maxAttendees",
+          COUNT(CASE WHEN ea.status != 'cancelled' THEN 1 END) as "registeredCount",
+          COUNT(CASE WHEN ea.status = 'attended' THEN 1 END) as "checkedInCount"
+        FROM events e
+        LEFT JOIN event_attendance ea ON e.id = ea.event_id
+        WHERE e.date_time >= ${todayStart} AND e.date_time <= ${todayEnd}
+        GROUP BY e.id, e.title, e.date_time, e.location, e.status, e.max_attendees
+        ORDER BY e.date_time ASC
+      `);
+
+      const todayEvents = (todayEventsResult.rows as any[]).map((row) => ({
+        id: row.id,
+        title: row.title,
+        dateTime: row.dateTime,
+        location: row.location,
+        status: row.status,
+        maxAttendees: row.maxAttendees,
+        registeredCount: Number(row.registeredCount) || 0,
+        checkedInCount: Number(row.checkedInCount) || 0,
+        noShowCount: Math.max(0, (Number(row.registeredCount) || 0) - (Number(row.checkedInCount) || 0)),
+      }));
+
+      // Alerts
+      const pendingReportsResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM reports WHERE status = 'pending'
+      `);
+      const pendingReports = Number((pendingReportsResult.rows[0] as any).count) || 0;
+
+      const underfilledPoolsResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM event_pools
+        WHERE registration_deadline > NOW()
+          AND registration_deadline <= NOW() + INTERVAL '24 hours'
+      `);
+      const underfilledPoolsClosingSoon = Number((underfilledPoolsResult.rows[0] as any).count) || 0;
+
+      const refundsPendingResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM payments WHERE status = 'refund_pending'
+      `);
+      const refundsPending = Number((refundsPendingResult.rows[0] as any).count) || 0;
+
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const stuckUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM users
+        WHERE (
+          onboarding_checkpoint IS NULL
+          OR onboarding_checkpoint NOT IN ('profile-review', 'guide')
+        )
+        AND COALESCE(onboarding_checkpoint_timestamp, created_at) < ${sevenDaysAgo}
+        AND created_at < ${sevenDaysAgo}
+      `);
+      const usersStuckInOnboarding = Number((stuckUsersResult.rows[0] as any).count) || 0;
+
+      res.json({
+        todayEvents,
+        alerts: {
+          pendingReports,
+          underfilledPoolsClosingSoon,
+          refundsPending,
+          usersStuckInOnboarding,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching ops dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch ops dashboard" });
+    }
+  });
+
   // Helper function to calculate profile completeness
   function calculateProfileCompleteness(user: any): { score: number; starRating: number; missingFields: string[] } {
     const essentialFields = [
@@ -5616,6 +3557,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         users = [];
       } else if (filter === "non-subscribed") {
         users = users;
+      } else if (filter === "stuck") {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        users = users.filter((user: any) => {
+          const checkpoint = user.onboardingCheckpoint;
+          const checkpointTime = user.onboardingCheckpointTimestamp ? new Date(user.onboardingCheckpointTimestamp) : null;
+          const createdAt = user.createdAt ? new Date(user.createdAt) : null;
+          const isComplete = checkpoint === 'profile-review' || checkpoint === 'guide';
+          if (isComplete) return false;
+          const isStale = (checkpointTime && checkpointTime < sevenDaysAgo) || (createdAt && createdAt < sevenDaysAgo);
+          return isStale;
+        });
       }
       
       // Apply city filter
@@ -5820,6 +3773,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user detail:", error);
       res.status(500).json({ message: "Failed to fetch user detail" });
+    }
+  });
+
+  // Icebreaker Session Monitor — Read-only view of active sessions
+  app.get("/api/admin/icebreaker-sessions", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const sessionsResult = await db.execute(sql`
+        SELECT
+          s.id,
+          s.current_phase as "currentPhase",
+          s.phase_started_at as "phaseStartedAt",
+          s.expected_attendees as "expectedAttendees",
+          s.checked_in_count as "checkedInCount",
+          s.host_user_id as "hostUserId",
+          s.started_at as "startedAt",
+          s.created_at as "createdAt",
+          e.title as "eventTitle",
+          u.first_name as "hostFirstName",
+          u.last_name as "hostLastName"
+        FROM icebreaker_sessions s
+        LEFT JOIN events e ON s.event_id = e.id
+        LEFT JOIN users u ON s.host_user_id = u.id
+        WHERE s.ended_at IS NULL
+        ORDER BY s.created_at DESC
+      `);
+
+      const sessions = (sessionsResult.rows as any[]).map((row) => {
+        const phaseStarted = row.phaseStartedAt ? new Date(row.phaseStartedAt) : null;
+        const now = new Date();
+        const phaseDurationMinutes = phaseStarted
+          ? Math.floor((now.getTime() - phaseStarted.getTime()) / 60000)
+          : null;
+
+        return {
+          id: row.id,
+          currentPhase: row.currentPhase || "waiting",
+          phaseStartedAt: row.phaseStartedAt,
+          phaseDurationMinutes,
+          expectedAttendees: Number(row.expectedAttendees) || 0,
+          checkedInCount: Number(row.checkedInCount) || 0,
+          hostUserId: row.hostUserId,
+          hostName: row.hostFirstName || row.hostLastName
+            ? `${row.hostFirstName || ""} ${row.hostLastName || ""}`.trim()
+            : null,
+          eventTitle: row.eventTitle || "未关联活动",
+          startedAt: row.startedAt,
+        };
+      });
+
+      res.json({ sessions });
+    } catch (error) {
+      console.error("Error fetching icebreaker sessions:", error);
+      res.status(500).json({ message: "Failed to fetch icebreaker sessions" });
     }
   });
 
@@ -7052,6 +5058,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     console.log("[EventPools] created pool:", pool);
 
+    // Fire-and-forget: generate AI card copy for new pool
+    const { generateAndSavePoolCardCopy } = await import("./ai/workers/poolCardCopyWorker");
+    generateAndSavePoolCardCopy(pool.id).catch((err: any) => {
+      console.error(`[poolCardCopyWorker] Failed to generate copy for new pool ${pool.id}:`, err);
+    });
+
     res.json(pool);
   } catch (error: any) {
     console.error("Error creating event pool:", error);
@@ -7418,6 +5430,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sampleUserRows.map((row: { id: string; archetype: string | null }) => [row.id, row.archetype]),
       );
 
+      // ── Fetch current user's archetype for personalization ──
+      const [currentUserRow] = await db
+        .select({
+          archetype: sql<string | null>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const userArchetype = currentUserRow?.archetype ?? null;
+
+      // ── Aggregate top archetypes per visible pool ──
+      const topArchetypeRows = visiblePoolIds.length > 0
+        ? await db
+            .select({
+              poolId: eventPoolRegistrations.poolId,
+              archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, '未设置')`,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(eventPoolRegistrations)
+            .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
+            .where(inArray(eventPoolRegistrations.poolId, visiblePoolIds))
+            .groupBy(eventPoolRegistrations.poolId, sql`coalesce(${users.primaryArchetype}, ${users.archetype}, '未设置')`)
+            .orderBy(eventPoolRegistrations.poolId, sql`count(*) desc`)
+        : [];
+
+      const topArchetypesByPool = new Map<string, Array<{ archetype: string; count: number }>>();
+      for (const row of topArchetypeRows as Array<{ poolId: string; archetype: string; count: number }>) {
+        const entries = topArchetypesByPool.get(row.poolId) ?? [];
+        if (entries.length < 3) {
+          entries.push({ archetype: row.archetype, count: row.count });
+          topArchetypesByPool.set(row.poolId, entries);
+        }
+      }
+
+      // ── Fetch cached AI headlines (Slice 3 will populate this) ──
+      const aiCopyRows = visiblePoolIds.length > 0
+        ? await db
+            .select({
+              poolId: poolAICopy.poolId,
+              headline: poolAICopy.headline,
+            })
+            .from(poolAICopy)
+            .where(
+              and(
+                inArray(poolAICopy.poolId, visiblePoolIds),
+                eq(poolAICopy.displayStatus, 'live'),
+                gt(poolAICopy.expiresAt, new Date())
+              )
+            )
+        : [];
+
+      const aiHeadlineByPool = new Map<string, string | null>();
+      for (const row of aiCopyRows) {
+        if (row.headline) {
+          aiHeadlineByPool.set(row.poolId, row.headline);
+        }
+      }
+
+      // Instrument cache hit/miss per pool for observability
+      for (const poolId of visiblePoolIds) {
+        recordPoolCardCopyCache(aiHeadlineByPool.has(poolId) ? 'hit' : 'miss');
+      }
+
       const poolsWithSocialProof = visiblePools.map((pool: any) => {
         const registrations = sampleRegistrationsByPool.get(pool.id) ?? [];
         const registrationCount = registrationCountByPool.get(pool.id) ?? 0;
@@ -7425,11 +5500,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map((registration) => userArchetypeMap.get(registration.userId))
           .filter((archetype): archetype is string => Boolean(archetype));
 
+        const topArchetypes = topArchetypesByPool.get(pool.id) ?? [];
+        const dominantArchetype = topArchetypes[0]?.archetype;
+        const accentFamily = getArchetypeFamily(dominantArchetype);
+        const hasUserArchetypeMatch = userArchetype
+          ? sampleArchetypes.includes(userArchetype)
+          : false;
+
         return {
           ...pool,
           registrationCount,
           spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrationCount,
           sampleArchetypes,
+          topArchetypes,
+          accentFamily,
+          aiHeadline: aiHeadlineByPool.get(pool.id) ?? null,
+          hasUserArchetypeMatch,
         };
       });
 
@@ -7458,15 +5544,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event pool not found" });
       }
 
-      // Get registration count
+      // Get registration count + archetype breakdown
       const registrations = await db.query.eventPoolRegistrations.findMany({
         where: (regs: any, { eq }: any) => eq(regs.poolId, req.params.id)
       });
+
+      const regUserIds = registrations.map((r: any) => r.userId);
+      const regUsers = regUserIds.length > 0
+        ? await db
+            .select({
+              id: users.id,
+              archetype: sql<string | null>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
+            })
+            .from(users)
+            .where(inArray(users.id, regUserIds))
+        : [];
+
+      const sampleArchetypes = regUsers
+        .map((u: { archetype: string | null }) => u.archetype)
+        .filter((a: string | null): a is string => Boolean(a));
+
+      const archetypeCounts = new Map<string, number>();
+      for (const a of sampleArchetypes) {
+        archetypeCounts.set(a, (archetypeCounts.get(a) ?? 0) + 1);
+      }
+      const topArchetypes = Array.from(archetypeCounts.entries())
+        .map(([archetype, count]) => ({ archetype, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+
+      const accentFamily = getArchetypeFamily(topArchetypes[0]?.archetype);
 
       res.json({
         ...pool,
         registrationCount: registrations.length,
         spotsLeft: ((pool.minGroupSize || 4) * (pool.targetGroups || 1)) - registrations.length,
+        sampleArchetypes,
+        topArchetypes,
+        accentFamily,
+        aiHeadline: null,
+        hasUserArchetypeMatch: false,
       });
     } catch (error) {
       console.error("Error fetching event pool:", error);
@@ -7651,6 +5768,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       scanPoolAndMatch(poolId, "realtime", "user_registration").catch((err: any) =>  {
         console.error(`[Realtime Matching] Scan failed after registration:`, err);
         // Error logged, operation continues
+      });
+
+      // Fire-and-forget: regenerate AI card copy when archetype mix changes
+      const { generateAndSavePoolCardCopy } = await import("./ai/workers/poolCardCopyWorker");
+      generateAndSavePoolCardCopy(poolId).catch((err: any) => {
+        console.error(`[poolCardCopyWorker] Failed to regenerate copy after registration ${poolId}:`, err);
       });
 
       // Silently backfill empty profile fields from registration data (fire-and-forget)
@@ -9648,57 +7771,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
   
   // POST /api/profile/update-industry - 更新用户三层行业分类
-  app.post("/api/profile/update-industry", isPhoneAuthenticated, async (req, res) => {
-    try {
-      if (!req.session?.userId) {
-        return res.status(401).json({ error: "未登录" });
-      }
-      
-      const {
-        category,
-        categoryLabel,
-        segment,
-        segmentLabel,
-        niche,
-        nicheLabel,
-        rawInput,
-        normalizedInput,
-        source,
-        confidence,
-      } = req.body;
-      
-      if (!category || !segment) {
-        return res.status(400).json({ error: "Category and segment are required" });
-      }
-      
-      // 构建完整路径用于显示
-      const pathParts = [categoryLabel, segmentLabel, nicheLabel].filter(Boolean);
-      const fullPath = pathParts.join(" > ");
-      
-      await db.update(users)
-        .set({
-          industryCategory: category,
-          industryCategoryLabel: categoryLabel,
-          industrySegmentNew: segment,
-          industrySegmentLabel: segmentLabel,
-          industryNiche: niche || null,
-          industryNicheLabel: nicheLabel || null,
-          industry: fullPath, // 更新legacy字段以向后兼容
-          industryRawInput: rawInput,
-          industryNormalized: normalizedInput || rawInput, // Use normalized or fallback to raw
-          industrySource: source,
-          industryConfidence: confidence?.toString(),
-          industryClassifiedAt: new Date(),
-          industryLastVerifiedAt: new Date(),
-        })
-        .where(eq(users.id, req.session.userId));
-      
-      res.json({ success: true, industry: fullPath });
-    } catch (error: any) {
-      console.error("Update industry error:", error);
-      res.status(500).json({ error: "Update failed", message: error.message });
-    }
-  });
   
   // GET /api/inference/logs - 获取推断日志
   app.get("/api/inference/logs", requireAdmin, async (req, res) => {
@@ -10331,107 +8403,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // Match explanations for blind box events (using matchedAttendees field)
-  app.get('/api/blind-box-events/:eventId/match-explanations', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
-    try {
-      const { eventId } = req.params;
-      const userId = req.user?.id || req.session?.userId;
-
-      if (!userId) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-
-      // Get the blind box event
-      const event = await db.query.blindBoxEvents.findFirst({
-        where: eq(blindBoxEvents.id, eventId),
-      });
-
-      if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
-      }
-
-      // Check if user is the creator or in matched attendees
-      const matchedAttendees = event.matchedAttendees as any[];
-      const isParticipant = event.userId === userId || 
-        matchedAttendees?.some((a: any) => a.userId === userId);
-
-      if (!isParticipant) {
-        return res.status(403).json({ message: 'Not a participant in this event' });
-      }
-
-      if (!matchedAttendees || matchedAttendees.length === 0) {
-        return res.status(404).json({ message: 'Match not ready yet' });
-      }
-
-      // Get full user info for matched attendees
-      const memberIds = matchedAttendees.map((a: any) => a.userId);
-      const members = await db.query.users.findMany({
-        where: sql`${users.id} = ANY(${memberIds})`,
-      });
-
-      const { matchExplanationService } = await import('./matchExplanationService');
-
-      // Load user interests (with heat levels) for deep interest overlap detection
-      const memberInterestsRows = await db.query.userInterests.findMany({
-        where: sql`${userInterests.userId} = ANY(${memberIds})`,
-      }) as Array<{
-        userId: string;
-        selections: Array<{ topicId: string; level?: number | null }> | null;
-      }>;
-      const interestsByUserId = new Map(
-        memberInterestsRows.map((row) => [row.userId, row] as const)
-      );
-
-      const matchMembers = members.map((m: any) => {
-        const interestRow = interestsByUserId.get(m.id);
-        const interestsWithHeat = interestRow?.selections
-          ? (interestRow.selections as Array<{ topicId: string; level: number }>).map(
-              (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
-            )
-          : null;
-        return {
-          userId: m.id,
-          displayName: m.displayName || '神秘嘉宾',
-          archetype: m.archetype,
-          secondaryArchetype: m.secondaryArchetype,
-          interestsTop: m.interestsTop,
-          industry: m.industryNicheLabel || m.industryCategoryLabel,
-          hometown: m.hometownRegionCity,
-          socialStyle: m.socialStyle,
-          educationLevel: m.educationLevel,
-          relationshipStatus: m.relationshipStatus,
-          workMode: m.workMode,
-          industryCategory: m.industryCategory,
-          industryCategoryLabel: m.industryCategoryLabel,
-          interestsWithHeat,
-        };
-      });
-
-      const groupAnalysis = await matchExplanationService.generateGroupAnalysis(
-        eventId,
-        matchMembers,
-        event.eventType || '饭局'
-      );
-
-      res.json({
-        eventId,
-        overallChemistry: groupAnalysis.overallChemistry,
-        groupDynamics: groupAnalysis.groupDynamics,
-        explanations: groupAnalysis.pairExplanations,
-        iceBreakers: groupAnalysis.iceBreakers,
-        existingExplanation: event.matchExplanation,
-        meta: {
-          generatedAt: groupAnalysis.generatedAt,
-          fromCache: groupAnalysis.fromCache,
-          provider: groupAnalysis.provider,
-          fallbackUsed: groupAnalysis.fallbackUsed,
-          promptVersion: groupAnalysis.promptVersion,
-        },
-      });
-    } catch (error: any) {
-      console.error('[Match Explanations] Error:', error);
-      res.status(500).json({ message: 'Failed to generate match explanations', error: error.message });
-    }
-  });
 
   // Conversation topics for event participants (DeepSeek AI)
   app.post('/api/events/:eventId/conversation-topics', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
@@ -10755,875 +8726,18 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ V4 Adaptive Personality Assessment API ============
 
   // Start assessment session (with optional pre-signup answers from onboarding)
-  app.post('/api/assessment/v4/start', async (req: any, res) => {
-    try {
-      const { preSignupAnswers, sessionId: existingSessionId, forceNew } = req.body;
-      const userId = req.session?.userId || null;
-      
-      console.log('[Assessment V4 Start] Called with:', {
-        existingSessionId,
-        userId,
-        forceNew,
-        preSignupAnswersCount: preSignupAnswers?.length || 0,
-        hasSession: !!req.session,
-      });
-      
-      // Import adaptive engine
-      const { 
-        initializeEngineState, 
-        processAnswer, 
-        selectNextQuestion,
-        shouldTerminate,
-        getClosingQuestionsRemaining,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
-      } = await import('@shared/personality');
-      
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
-      
-      let session;
-      let engineState;
-      
-      // Determine if this is an explicit restart request vs automatic forceNew from presignup flow
-      // forceNew + preSignupAnswers = automatic (post-login, should resume existing session)
-      // forceNew + NO preSignupAnswers = explicit restart (user wants fresh start)
-      const isExplicitRestart = forceNew && (!preSignupAnswers || preSignupAnswers.length === 0);
-      
-      // PRIORITY 1: For logged-in users, check for existing session first
-      // Resume existing session UNLESS user explicitly wants to restart
-      if (userId && !isExplicitRestart) {
-        const existingUserSession = await storage.getAssessmentSessionByUser(userId);
-        console.log('[V4 Start] Checked for existing user session:', {
-          userId,
-          foundSession: !!existingUserSession,
-          sessionId: existingUserSession?.id,
-          isCompleted: existingUserSession?.completedAt ? true : false,
-        });
-        
-        if (existingUserSession && !existingUserSession.completedAt) {
-          // Resume existing session - it was created by presignup-sync
-          session = existingUserSession;
-          
-          // Reconstruct engine state from session data
-          const answers = await storage.getAssessmentAnswers(session.id);
-          engineState = initializeEngineState(assessmentConfig);
-          
-          // Replay answers to rebuild state
-          for (const answer of answers) {
-            const question = (await import('@shared/personality')).questionsV4.find(
-              q => q.id === answer.questionId
-            );
-            if (question) {
-              engineState = processAnswer(engineState, question, answer.selectedOption);
-            }
-          }
-          
-          console.log('[V4 Start] Resuming existing session for user:', userId, 'with', answers.length, 'answers');
-        } else if (existingUserSession && existingUserSession.completedAt) {
-          // User has a completed session - start fresh
-          console.log('[V4 Start] User has completed session, creating new one');
-        } else {
-          console.log('[V4 Start] No existing session found for user:', userId);
-        }
-      } else if (userId && isExplicitRestart) {
-        console.log('[V4 Start] Explicit restart requested for user:', userId);
-      }
-      
-      // If resuming by session ID (anonymous pre-signup flow)
-      if (!session && existingSessionId && !forceNew) {
-        console.log('[V4 Start] Attempting to resume by sessionId:', existingSessionId);
-        session = await storage.getAssessmentSession(existingSessionId);
-        if (!session) {
-          console.error('[V4 Start] Session not found by sessionId:', existingSessionId);
-          return res.status(404).json({ message: 'Session not found' });
-        }
-        
-        console.log('[V4 Start] Found session by sessionId:', {
-          sessionId: session.id,
-          userId: session.userId,
-          phase: session.phase,
-        });
-        
-        // Reconstruct engine state from session data
-        const answers = await storage.getAssessmentAnswers(existingSessionId);
-        engineState = initializeEngineState(assessmentConfig);
-        
-        // Replay answers to rebuild state
-        for (const answer of answers) {
-          const question = (await import('@shared/personality')).questionsV4.find(
-            q => q.id === answer.questionId
-          );
-          if (question) {
-            engineState = processAnswer(engineState, question, answer.selectedOption);
-          }
-        }
-        
-        console.log('[V4 Start] Replayed', answers.length, 'answers for session:', existingSessionId);
-      }
-      
-      // Create new session if none exists
-      if (!session) {
-        // Create new session - fresh start
-        session = await storage.createAssessmentSession({
-          userId,
-          phase: userId ? 'post_signup' : 'pre_signup',
-          preSignupAnswers: preSignupAnswers || null,
-        });
-        
-        engineState = initializeEngineState(assessmentConfig);
-        
-        // If we have pre-signup answers, process them (only for new session)
-        if (preSignupAnswers && Array.isArray(preSignupAnswers)) {
-          const { questionsV4 } = await import('@shared/personality');
-          
-          // Defensive deduplication: keep only the latest answer per questionId
-          const dedupedAnswers = new Map<string, typeof preSignupAnswers[0]>();
-          for (const ans of preSignupAnswers) {
-            dedupedAnswers.set(ans.questionId, ans);
-          }
-          const uniqueAnswers = Array.from(dedupedAnswers.values());
-          
-          for (const ans of uniqueAnswers) {
-            const question = questionsV4.find(q => q.id === ans.questionId);
-            if (question) {
-              engineState = processAnswer(engineState, question, ans.selectedOption);
-              
-              // Save answer to database
-              await storage.createAssessmentAnswer({
-                sessionId: session.id,
-                questionId: ans.questionId,
-                questionLevel: question.level,
-                selectedOption: ans.selectedOption,
-                traitScores: question.options.find(o => o.value === ans.selectedOption)?.traitScores || {},
-              });
-            }
-          }
-        }
-      }
-      
-      // Ensure engineState is initialized (should always be by this point)
-      if (!engineState) {
-        console.log('[V4 Start] Engine state was not initialized, initializing now');
-        engineState = initializeEngineState(assessmentConfig);
-      }
-      
-      // Ensure session exists by this point
-      if (!session) {
-        console.error('[V4 Start] No session available after all checks - this should not happen');
-        return res.status(500).json({ message: 'Failed to create or find session' });
-      }
-      
-      // Get next question
-      const nextQuestion = selectNextQuestion(engineState);
-      
-      console.log('[Assessment V4 Start] Engine state:', {
-        answeredCount: engineState.answeredQuestionIds.size,
-        skipCount: engineState.skipCount,
-        phase: session.phase,
-        hasNextQuestion: !!nextQuestion,
-        nextQuestionId: nextQuestion?.id,
-      });
-      
-      const response = {
-        sessionId: session.id,
-        phase: session.phase,
-        currentQuestionIndex: engineState.answeredQuestionIds.size,
-        nextQuestion: nextQuestion ? {
-          id: nextQuestion.id,
-          level: nextQuestion.level,
-          category: nextQuestion.category,
-          scenarioText: nextQuestion.scenarioText,
-          questionText: nextQuestion.questionText,
-          options: shuffleOptions(nextQuestion.options),
-          questionType: nextQuestion.questionType,
-          sliderConfig: nextQuestion.sliderConfig,
-        } : null,
-        progress: {
-          answered: engineState.answeredQuestionIds.size,
-          minQuestions: engineState.config.minQuestions,
-          softMaxQuestions: engineState.config.softMaxQuestions,
-          hardMaxQuestions: engineState.config.hardMaxQuestions,
-          estimatedRemaining: shouldTerminate(engineState)
-            ? getClosingQuestionsRemaining(engineState)
-            : Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size) + getClosingQuestionsRemaining(engineState),
-        },
-        currentMatches: engineState.currentMatches.slice(0, 3),
-        isComplete: nextQuestion === null,
-      };
-      
-      console.log('[Assessment V4 Start] Response:', {
-        sessionId: response.sessionId,
-        phase: response.phase,
-        answered: response.progress.answered,
-        hasNextQuestion: !!response.nextQuestion,
-        isComplete: response.isComplete,
-      });
-      
-      res.json(response);
-    } catch (error: any) {
-      console.error('[Assessment V4 Start] Error:', error);
-      res.status(500).json({ message: 'Failed to start assessment', error: error.message });
-    }
-  });
 
   // Submit answer and get next question
-  app.post('/api/assessment/v4/:sessionId/answer', async (req: any, res) => {
-    try {
-      const { sessionId } = req.params;
-      const { questionId, selectedOption } = req.body;
-      
-      console.log('[Assessment V4 Answer] Called with:', {
-        sessionId,
-        questionId,
-        selectedOption,
-      });
-      
-      if (!questionId || !selectedOption) {
-        return res.status(400).json({ message: 'questionId and selectedOption are required' });
-      }
-      
-      const session = await storage.getAssessmentSession(sessionId);
-      if (!session) {
-        console.error('[Assessment V4 Answer] Session not found:', sessionId);
-        return res.status(404).json({ message: 'Session not found' });
-      }
-      
-      // Import modules
-      const { 
-        questionsV4, 
-        initializeEngineState, 
-        processAnswer, 
-        selectNextQuestion,
-        shouldTerminate,
-        isAssessmentComplete,
-        getClosingQuestionsRemaining,
-        getFinalResult,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG,
-        SECONDARY_QUESTION_MAP,
-      } = await import('@shared/personality');
-      
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
-      
-      // Find the question
-      const question = questionsV4.find(q => q.id === questionId);
-      if (!question) {
-        return res.status(400).json({ message: 'Invalid question ID' });
-      }
-      
-      // Validate option
-      const option = question.options.find(o => o.value === selectedOption);
-      if (!option) {
-        return res.status(400).json({ message: 'Invalid option selected' });
-      }
-
-      // Detect playful secondary questions and persist the decoded value
-      if (SECONDARY_QUESTION_MAP[questionId]) {
-        const { field, valueMap } = SECONDARY_QUESTION_MAP[questionId];
-        const secondaryValue = valueMap[selectedOption];
-        if (secondaryValue) {
-          const currentPreSignup = session.preSignupData as any;
-          const existingSecondary =
-            currentPreSignup && !Array.isArray(currentPreSignup)
-              ? currentPreSignup.secondaryData ?? {}
-              : {};
-          const newPreSignupData = Array.isArray(currentPreSignup)
-            ? currentPreSignup
-            : {
-                ...(currentPreSignup ?? {}),
-                secondaryData: { ...existingSecondary, [field]: secondaryValue },
-              };
-          await storage.updateAssessmentSession(sessionId, {
-            preSignupAnswers: newPreSignupData,
-          });
-        }
-      }
-      
-      // Save answer
-      await storage.createAssessmentAnswer({
-        sessionId,
-        questionId,
-        questionLevel: question.level,
-        selectedOption,
-        traitScores: option.traitScores,
-      });
-      
-      // Rebuild engine state
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      for (const answer of answers) {
-        const q = questionsV4.find(quest => quest.id === answer.questionId);
-        if (q) {
-          engineState = processAnswer(engineState, q, answer.selectedOption);
-        }
-      }
-      
-      // Check if complete (adaptive phase done AND all universal closing questions answered)
-      const isComplete = isAssessmentComplete(engineState);
-      
-      if (isComplete) {
-        // Load secondary data accumulated from playful questions (re-fetch to pick up any update above)
-        const freshSession = await storage.getAssessmentSession(sessionId);
-        const userSecondaryData = (freshSession?.preSignupData as any)?.secondaryData ?? {};
-
-        // Generate final result
-        const finalResult = getFinalResult(engineState, userSecondaryData);
-        
-        // Update session
-        await storage.updateAssessmentSession(sessionId, {
-          phase: 'completed',
-          currentQuestionIndex: answers.length,
-          traitConfidences: engineState.traitConfidences,
-          topArchetypes: engineState.currentMatches,
-          finalResult,
-          primaryArchetype: finalResult.primaryArchetype,
-          isDecisive: finalResult.isDecisive,
-          completedAt: new Date(),
-        });
-        
-        // Sync V4 result to role_results table (overwrite any previous results)
-        if (session.userId) {
-          const primaryArchetype = finalResult.primaryArchetype;
-          const secondaryArchetype = finalResult.secondaryArchetype || null;
-          const roleSubtype = determineSubtype(primaryArchetype, {});
-          const insights = generateInsights(primaryArchetype, secondaryArchetype);
-          
-          // Use actual archetype match scores from engineState
-          const primaryMatchScore = engineState.currentMatches[0]?.score || 80;
-          const secondaryMatchScore = engineState.currentMatches[1]?.score || 70;
-          
-          await storage.saveRoleResult(session.userId, {
-            userId: session.userId,
-            primaryArchetype,
-            primaryArchetypeScore: Math.round(primaryMatchScore),
-            secondaryArchetype,
-            secondaryArchetypeScore: secondaryArchetype ? Math.round(secondaryMatchScore) : 0,
-            roleSubtype,
-            roleScores: {},
-            affinityScore: finalResult.traitScores?.A || 50,
-            opennessScore: finalResult.traitScores?.O || 50,
-            conscientiousnessScore: finalResult.traitScores?.C || 50,
-            emotionalStabilityScore: finalResult.traitScores?.E || 50,
-            extraversionScore: finalResult.traitScores?.X || 50,
-            positivityScore: finalResult.traitScores?.P || 50,
-            ...insights,
-            testVersion: 4,
-          });
-          
-          // Mark personality test as complete
-          await storage.markPersonalityTestComplete(session.userId);
-          
-          // Log algorithm version and match details for A/B testing
-          const algorithmVersion = finalResult.algorithmVersion || 'v1.0';
-          const isDecisive = finalResult.isDecisive ?? true;
-          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryArchetype} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
-        }
-        
-        res.json({
-          isComplete: true,
-          result: finalResult,
-          progress: {
-            answered: answers.length,
-            minQuestions: engineState.config.minQuestions,
-            softMaxQuestions: engineState.config.softMaxQuestions,
-            hardMaxQuestions: engineState.config.hardMaxQuestions,
-          },
-        });
-      } else {
-        // Get next question
-        const nextQuestion = selectNextQuestion(engineState);
-        
-        // Generate milestone encouragement if applicable
-        let encouragement = null;
-        const { getMilestoneMessage } = await import('@shared/personality');
-        const milestoneMsg = getMilestoneMessage(answers.length);
-        if (milestoneMsg) {
-          encouragement = milestoneMsg.message;
-        }
-        
-        // Update session progress
-        await storage.updateAssessmentSession(sessionId, {
-          currentQuestionIndex: answers.length,
-          traitConfidences: engineState.traitConfidences,
-          topArchetypes: engineState.currentMatches,
-        });
-        
-        res.json({
-          isComplete: false,
-          nextQuestion: nextQuestion ? {
-            id: nextQuestion.id,
-            level: nextQuestion.level,
-            category: nextQuestion.category,
-            scenarioText: nextQuestion.scenarioText,
-            questionText: nextQuestion.questionText,
-            options: shuffleOptions(nextQuestion.options),
-            questionType: nextQuestion.questionType,
-            sliderConfig: nextQuestion.sliderConfig,
-          } : null,
-          progress: {
-            answered: answers.length,
-            minQuestions: engineState.config.minQuestions,
-            softMaxQuestions: engineState.config.softMaxQuestions,
-            hardMaxQuestions: engineState.config.hardMaxQuestions,
-            // After adaptive phase, only closing questions remain; during adaptive,
-            // add the 2 closing questions to the estimate so the progress bar doesn't
-            // jump at the adaptive→closing transition.
-            estimatedRemaining: shouldTerminate(engineState)
-              ? getClosingQuestionsRemaining(engineState)
-              : Math.max(0, engineState.config.minQuestions - answers.length) + getClosingQuestionsRemaining(engineState),
-          },
-          currentMatches: engineState.currentMatches.slice(0, 3),
-          encouragement,
-        });
-        
-        console.log('[Assessment V4 Answer] Response:', {
-          isComplete: false,
-          hasNextQuestion: !!nextQuestion,
-          nextQuestionId: nextQuestion?.id,
-          answered: answers.length,
-        });
-      }
-    } catch (error: any) {
-      console.error('[Assessment V4 Answer] Error:', error);
-      res.status(500).json({ message: 'Failed to submit answer', error: error.message });
-    }
-  });
 
   // Skip current question and get alternative
-  app.post('/api/assessment/v4/:sessionId/skip', async (req: any, res) => {
-    try {
-      const { sessionId } = req.params;
-      const { questionId } = req.body;
-      
-      console.log('[Assessment V4 Skip] Called with:', {
-        sessionId,
-        questionId,
-      });
-      
-      if (!questionId) {
-        return res.status(400).json({ message: 'questionId is required' });
-      }
-      
-      const session = await storage.getAssessmentSession(sessionId);
-      if (!session) {
-        console.error('[Assessment V4 Skip] Session not found:', sessionId);
-        return res.status(404).json({ message: 'Session not found' });
-      }
-      
-      const { 
-        questionsV4, 
-        initializeEngineState, 
-        processAnswer, 
-        skipQuestion,
-        MAX_SKIP_COUNT,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
-      } = await import('@shared/personality');
-      
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
-      
-      // Get current skip count from session
-      const currentSkipCount = session.skipCount || 0;
-      const skippedQuestionIds: string[] = (session.skippedQuestionIds as string[]) || [];
-      
-      if (currentSkipCount >= MAX_SKIP_COUNT) {
-        return res.status(400).json({ 
-          success: false,
-          message: 'Maximum skip limit reached',
-          skipCount: currentSkipCount,
-          canSkip: false,
-          remainingSkips: 0,
-        });
-      }
-      
-      // Rebuild engine state with skipped questions
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      // Add previously skipped questions to state
-      for (const skippedId of skippedQuestionIds) {
-        engineState.skippedQuestionIds.add(skippedId);
-      }
-      engineState.skipCount = currentSkipCount;
-      
-      // Process previous answers
-      for (const answer of answers) {
-        const q = questionsV4.find(quest => quest.id === answer.questionId);
-        if (q) {
-          engineState = processAnswer(engineState, q, answer.selectedOption);
-        }
-      }
-      
-      // Skip current question
-      const skipResult = skipQuestion(engineState, questionId);
-      
-      if (!skipResult) {
-        return res.status(400).json({ 
-          success: false,
-          message: 'Cannot skip question',
-          skipCount: currentSkipCount,
-          canSkip: false,
-          remainingSkips: 0,
-        });
-      }
-      
-      // Update session with new skip info
-      const newSkippedIds = [...skippedQuestionIds, questionId];
-      await storage.updateAssessmentSession(sessionId, {
-        skipCount: skipResult.newState.skipCount,
-        skippedQuestionIds: newSkippedIds,
-      });
-      
-      const newQuestion = skipResult.newQuestion;
-      
-      res.json({
-        success: true,
-        newQuestion: newQuestion ? {
-          id: newQuestion.id,
-          level: newQuestion.level,
-          category: newQuestion.category,
-          scenarioText: newQuestion.scenarioText,
-          questionText: newQuestion.questionText,
-          options: shuffleOptions(newQuestion.options),
-          questionType: newQuestion.questionType,
-          sliderConfig: newQuestion.sliderConfig,
-        } : null,
-        skipCount: skipResult.newState.skipCount,
-        canSkip: skipResult.newState.skipCount < MAX_SKIP_COUNT,
-        remainingSkips: MAX_SKIP_COUNT - skipResult.newState.skipCount,
-      });
-    } catch (error: any) {
-      console.error('[Assessment V4 Skip] Error:', error);
-      res.status(500).json({ message: 'Failed to skip question', error: error.message });
-    }
-  });
 
   // Get assessment results
-  app.get('/api/assessment/v4/:sessionId/result', async (req: any, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      const session = await storage.getAssessmentSession(sessionId);
-      if (!session) {
-        return res.status(404).json({ message: 'Session not found' });
-      }
-      
-      if (session.phase !== 'completed') {
-        return res.status(400).json({ message: 'Assessment not yet completed' });
-      }
-      
-      res.json({
-        sessionId: session.id,
-        completedAt: session.completedAt,
-        result: session.finalResult,
-        traitConfidences: session.traitConfidences,
-        topArchetypes: session.topArchetypes,
-      });
-    } catch (error: any) {
-      console.error('[Assessment V4 Result] Error:', error);
-      res.status(500).json({ message: 'Failed to get result', error: error.message });
-    }
-  });
 
   // Link session to user after signup (called from onboarding)
-  app.post('/api/assessment/v4/:sessionId/link-user', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const { sessionId } = req.params;
-      const userId = req.user!.id;
-      
-      console.log('[Assessment V4 Link] Called with:', {
-        sessionId,
-        userId,
-      });
-      
-      const session = await storage.getAssessmentSession(sessionId);
-      if (!session) {
-        console.error('[Assessment V4 Link] Session not found:', sessionId);
-        return res.status(404).json({ message: 'Session not found' });
-      }
-      
-      // Update session with user ID
-      await storage.updateAssessmentSession(sessionId, {
-        userId,
-        phase: 'post_signup',
-      });
-      
-      // Import adaptive engine to get next question
-      const { 
-        initializeEngineState, 
-        processAnswer, 
-        selectNextQuestion,
-        shouldTerminate,
-        getClosingQuestionsRemaining,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
-      } = await import('@shared/personality');
-      
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
-      
-      // Reconstruct engine state from session answers
-      const answers = await storage.getAssessmentAnswers(sessionId);
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      // Replay answers to rebuild state
-      for (const answer of answers) {
-        const question = (await import('@shared/personality')).questionsV4.find(
-          q => q.id === answer.questionId
-        );
-        if (question) {
-          engineState = processAnswer(engineState, question, answer.selectedOption);
-        }
-      }
-      
-      // Get next question
-      const nextQuestion = selectNextQuestion(engineState);
-      
-      // Return success with next question data
-      const responseData = { 
-        success: true,
-        phase: 'post_signup',
-        nextQuestion: nextQuestion ? {
-          id: nextQuestion.id,
-          level: nextQuestion.level,
-          category: nextQuestion.category,
-          scenarioText: nextQuestion.scenarioText,
-          questionText: nextQuestion.questionText,
-          options: shuffleOptions(nextQuestion.options),
-          questionType: nextQuestion.questionType,
-          sliderConfig: nextQuestion.sliderConfig,
-        } : null,
-        progress: {
-          answered: engineState.answeredQuestionIds.size,
-          minQuestions: engineState.config.minQuestions,
-          softMaxQuestions: engineState.config.softMaxQuestions,
-          hardMaxQuestions: engineState.config.hardMaxQuestions,
-          estimatedRemaining: shouldTerminate(engineState)
-            ? getClosingQuestionsRemaining(engineState)
-            : Math.max(0, engineState.config.minQuestions - engineState.answeredQuestionIds.size) + getClosingQuestionsRemaining(engineState),
-        },
-        currentMatches: engineState.currentMatches.slice(0, 3),
-      };
-      
-      console.log('[Assessment V4 Link] Response:', {
-        success: true,
-        hasNextQuestion: !!nextQuestion,
-        nextQuestionId: nextQuestion?.id,
-        answered: engineState.answeredQuestionIds.size,
-      });
-      
-      res.json(responseData);
-    } catch (error: any) {
-      console.error('[Assessment V4 Link] Error:', error);
-      res.status(500).json({ message: 'Failed to link user', error: error.message });
-    }
-  });
 
   // Get anchor questions for pre-signup onboarding
-  app.get('/api/assessment/v4/anchor-questions', async (req: any, res) => {
-    try {
-      const { getAnchorQuestions } = await import('@shared/personality');
-      const anchors = getAnchorQuestions();
-      
-      res.json({
-        questions: anchors.map(q => ({
-          id: q.id,
-          level: q.level,
-          category: q.category,
-          scenarioText: q.scenarioText,
-          questionText: q.questionText,
-          options: shuffleOptions(q.options),
-        })),
-        count: anchors.length,
-      });
-    } catch (error: any) {
-      console.error('[Assessment V4 Anchors] Error:', error);
-      res.status(500).json({ message: 'Failed to get anchor questions', error: error.message });
-    }
-  });
 
   // Sync pre-signup answers after login - creates session and seeds L1 answers
-  app.post('/api/assessment/v4/presignup-sync', async (req: any, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        console.warn('[Presignup Sync] No userId in session - session may not be ready yet');
-        return res.status(401).json({ message: 'Unauthorized - must be logged in' });
-      }
-
-      const { preSignupAnswers } = req.body;
-      if (!preSignupAnswers || !Array.isArray(preSignupAnswers) || preSignupAnswers.length === 0) {
-        return res.status(400).json({ message: 'No pre-signup answers provided' });
-      }
-
-      console.log('[Presignup Sync] Syncing', preSignupAnswers.length, 'answers for user:', userId);
-
-      // Import adaptive engine
-      const { 
-        initializeEngineState, 
-        processAnswer,
-        questionsV4,
-        DEFAULT_ASSESSMENT_CONFIG,
-        V2_ASSESSMENT_CONFIG 
-      } = await import('@shared/personality');
-
-      // Use V2 config when ENABLE_MATCHER_V2 is set
-      const ENABLE_MATCHER_V2 = process.env.ENABLE_MATCHER_V2 === 'true';
-      const assessmentConfig = ENABLE_MATCHER_V2 ? V2_ASSESSMENT_CONFIG : DEFAULT_ASSESSMENT_CONFIG;
-
-      // Check if user already has an active session
-      let session = await storage.getAssessmentSessionByUser(userId);
-      
-      if (session) {
-        // Merge answers instead of skipping
-        const existingAnswers = await storage.getAssessmentAnswers(session.id);
-        const existingQuestionIds = new Set(existingAnswers.map(a => a.questionId));
-        
-        // Deduplicate incoming answers and filter out ones already in DB
-        const dedupedIncoming = new Map<string, typeof preSignupAnswers[0]>();
-        for (const ans of preSignupAnswers) {
-          dedupedIncoming.set(ans.questionId, ans);
-        }
-        
-        const newAnswers = Array.from(dedupedIncoming.values()).filter(ans => !existingQuestionIds.has(ans.questionId));
-        
-        if (newAnswers.length === 0) {
-          console.log('[Presignup Sync] No new answers to sync for session:', session.id);
-          return res.json({ 
-            sessionId: session.id, 
-            message: 'All answers already synced',
-            totalCount: existingAnswers.length,
-            syncedCount: 0
-          });
-        }
-
-        console.log('[Presignup Sync] Syncing', newAnswers.length, 'new answers to existing session:', session.id);
-        
-        // Reconstruct engine state for full session (existing + new) to update current matches
-        const allUniqueAnswers = [...existingAnswers.map(a => ({ questionId: a.questionId, selectedOption: a.selectedOption })), ...newAnswers];
-        let engineState = initializeEngineState(assessmentConfig);
-        
-        const { questionsV4 } = await import('@shared/personality');
-
-        // Save new answers and build engine state
-        for (const ans of newAnswers) {
-          const question = questionsV4.find(q => q.id === ans.questionId);
-          await storage.createAssessmentAnswer({
-            sessionId: session.id,
-            questionId: ans.questionId,
-            questionLevel: question?.level || 1,
-            selectedOption: ans.selectedOption,
-            traitScores: question?.options.find(o => o.value === ans.selectedOption)?.traitScores || {}
-          });
-        }
-
-        // Replay ALL answers to ensure trait scores and matches are correct
-        for (const ans of allUniqueAnswers) {
-          const question = questionsV4.find(q => q.id === ans.questionId);
-          if (question) {
-            engineState = processAnswer(engineState, question, ans.selectedOption);
-          }
-        }
-
-        const traitScoresObj: Record<string, number> = {};
-        const traitConfidencesObj: Record<string, number> = {};
-        for (const [trait, conf] of Object.entries(engineState.traitConfidences)) {
-          traitScoresObj[trait] = conf.score;
-          traitConfidencesObj[trait] = conf.confidence;
-        }
-
-        // Phase validation: Only mark anchor phase complete if we have 8 unique answers
-        const uniqueAnsweredIds = new Set(allUniqueAnswers.map(a => a.questionId));
-        const currentPhase = uniqueAnsweredIds.size >= 8 ? 'adaptive' : 'anchor';
-
-        await storage.updateAssessmentSession(session.id, {
-          phase: currentPhase,
-          traitScores: traitScoresObj,
-          traitConfidences: traitConfidencesObj,
-          topArchetypes: engineState.currentMatches.slice(0, 3).map(m => m.archetype),
-          answeredQuestionIds: Array.from(engineState.answeredQuestionIds),
-        });
-
-        return res.json({
-          sessionId: session.id,
-          syncedCount: newAnswers.length,
-          totalCount: engineState.answeredQuestionIds.size
-        });
-      } else {
-        // Create new session for logged-in user
-        session = await storage.createAssessmentSession({
-          userId,
-          phase: 'post_signup',
-          preSignupAnswers: preSignupAnswers,
-        });
-        console.log('[Presignup Sync] Created new session:', session.id);
-      }
-
-      // Initialize engine state and process pre-signup answers
-      let engineState = initializeEngineState(assessmentConfig);
-      
-      // Deduplicate answers - keep only latest answer per question
-      const dedupedAnswers = new Map<string, typeof preSignupAnswers[0]>();
-      for (const ans of preSignupAnswers) {
-        dedupedAnswers.set(ans.questionId, ans);
-      }
-      const uniqueAnswers = Array.from(dedupedAnswers.values());
-      
-      // Process and save each answer
-      for (const ans of uniqueAnswers) {
-        const question = questionsV4.find(q => q.id === ans.questionId);
-        if (question) {
-          engineState = processAnswer(engineState, question, ans.selectedOption);
-          
-          // Save answer to database
-          await storage.createAssessmentAnswer({
-            sessionId: session.id,
-            questionId: ans.questionId,
-            questionLevel: question.level,
-            selectedOption: ans.selectedOption,
-            traitScores: question.options.find(o => o.value === ans.selectedOption)?.traitScores || {},
-          });
-        }
-      }
-
-      // Update session with current state
-      const traitScoresObj: Record<string, number> = {};
-      const traitConfidencesObj: Record<string, number> = {};
-      for (const [trait, conf] of Object.entries(engineState.traitConfidences)) {
-        traitScoresObj[trait] = conf.score;
-        traitConfidencesObj[trait] = conf.confidence;
-      }
-
-      await storage.updateAssessmentSession(session.id, {
-        phase: 'post_signup',
-        currentQuestionIndex: uniqueAnswers.length,
-        traitScores: traitScoresObj,
-        traitConfidences: traitConfidencesObj,
-        topArchetypes: engineState.currentMatches.slice(0, 3).map(m => m.archetype),
-        answeredQuestionIds: Array.from(engineState.answeredQuestionIds),
-      });
-
-      console.log('[Presignup Sync] Synced', uniqueAnswers.length, 'answers to session:', session.id);
-
-      res.json({ 
-        sessionId: session.id, 
-        totalCount: uniqueAnswers.length,
-        syncedCount: uniqueAnswers.length,
-        message: 'Pre-signup answers synced successfully'
-      });
-    } catch (error: any) {
-      console.error('[Presignup Sync] Error:', error);
-      res.status(500).json({ message: 'Failed to sync pre-signup answers', error: error.message });
-    }
-  });
 
   // Helper function to shuffle options (prevent order bias)
   function shuffleOptions(options: any[]): any[] {
@@ -11776,126 +8890,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   });
 
   // ============ Share Card Data Endpoint ============
-  app.get('/api/personality-test/share-card-data', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.id || req.session?.userId;
-      
-      // Get user data for rankings
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      // Get assessment result
-      const session = await storage.getLatestCompletedAssessmentSessionByUser(userId);
-      let archetype: string;
-      let traitScores: Record<string, number>;
-
-      if (session) {
-        const finalResult = session.finalResult as any;
-        archetype = session.primaryArchetype || finalResult?.primaryArchetype || finalResult?.archetype;
-        // Use trait scores from finalResult (already normalized to 0-100 by V4 adaptive engine)
-        // Fallback to top-level traitScores for legacy sessions
-        traitScores = (finalResult?.traitScores || session.traitScores || {}) as Record<string, number>;
-      } else {
-        // Fallback to legacy role_results (already 0-100 scale)
-        const legacyResult = await storage.getRoleResult(userId);
-        if (!legacyResult) {
-          return res.status(404).json({ message: 'No assessment result found' });
-        }
-        archetype = legacyResult.primaryArchetype;
-        traitScores = {
-          A: legacyResult.affinityScore,
-          O: legacyResult.opennessScore,
-          C: legacyResult.conscientiousnessScore,
-          E: legacyResult.emotionalStabilityScore,
-          X: legacyResult.extraversionScore,
-          P: legacyResult.positivityScore,
-        };
-      }
-
-      // Validate archetype exists
-      if (!archetype) {
-        return res.status(400).json({ message: 'No archetype found in assessment result' });
-      }
-
-      // Check for user createdAt
-      if (!user.createdAt) {
-        return res.status(400).json({ message: 'User account missing creation date' });
-      }
-
-      // Calculate user rankings
-      const totalUserRank = await storage.calculateUserRank(user.createdAt);
-      const archetypeRank = await storage.calculateArchetypeRank(userId, archetype);
-
-      // Normalize trait scores to 0-100 scale
-      // V4 finalResult.traitScores are already 0-100 (normalized by adaptive engine)
-      // Top-level session.traitScores are also 0-100 (from engineState.traitConfidences)
-      // Legacy role_results are expected to be 0-100; normalization also defensively handles 0-1 inputs
-      const normalizeScore = (score: number | undefined): number => {
-        if (score === undefined || score === null) return 50;
-        // If score is a fractional value in (0, 1), treat as legacy 0-1 and convert to 0-100
-        if (score > 0 && score < 1) return Math.round(score * 100);
-        // Already in 0-100 range (including 0 and 1)
-        return Math.round(score);
-      };
-
-      // Get archetype primary color
-      const archetypePrimaryColors: Record<string, string> = {
-        "机智狐": "#FF6B6B",
-        "开心柯基": "#FFD93D",
-        "暖心熊": "#FFA07A",
-        "织网蛛": "#9B59B6",
-        "夸夸豚": "#FF69B4",
-        "太阳鸡": "#FFA500",
-        "淡定海豚": "#4FC3F7",
-        "沉思猫头鹰": "#8B4789",
-        "稳如龟": "#2E7D32",
-        "隐身猫": "#757575",
-        "定心大象": "#5C6BC0",
-        "灵感章鱼": "#AB47BC"
-      };
-
-      // Get default gradients for each archetype
-      const archetypeGradients: Record<string, string> = {
-        '开心柯基': 'from-yellow-500 via-orange-500 to-red-500',
-        '太阳鸡': 'from-amber-500 via-yellow-500 to-orange-500',
-        '夸夸豚': 'from-cyan-500 via-blue-500 to-indigo-500',
-        '机智狐': 'from-orange-500 via-red-500 to-pink-500',
-        '淡定海豚': 'from-blue-500 via-indigo-500 to-purple-500',
-        '织网蛛': 'from-purple-500 via-pink-500 to-fuchsia-500',
-        '暖心熊': 'from-rose-500 via-pink-500 to-red-500',
-        '灵感章鱼': 'from-violet-500 via-purple-500 to-indigo-500',
-        '沉思猫头鹰': 'from-slate-500 via-gray-500 to-zinc-500',
-        '定心大象': 'from-gray-500 via-slate-500 to-stone-500',
-        '稳如龟': 'from-green-500 via-emerald-500 to-teal-500',
-        '隐身猫': 'from-indigo-500 via-purple-500 to-violet-500',
-      };
-
-      res.json({
-        archetype,
-        gradient: archetypeGradients[archetype] || 'from-gray-500 to-gray-600',
-        primaryColor: archetypePrimaryColors[archetype] || '#9CA3AF',
-        illustrationUrl: `/assets/${archetype}_transparent.png`, // Placeholder - frontend will use actual imported images
-        rankings: {
-          totalUserRank,
-          archetypeRank,
-        },
-        // Trait scores are 0-100 from adaptive engine
-        traitScores: {
-          A: normalizeScore(traitScores.A),
-          O: normalizeScore(traitScores.O),
-          C: normalizeScore(traitScores.C),
-          E: normalizeScore(traitScores.E),
-          X: normalizeScore(traitScores.X),
-          P: normalizeScore(traitScores.P),
-        }
-      });
-    } catch (error: any) {
-      console.error('[Share Card Data] Error:', error);
-      res.status(500).json({ message: 'Failed to get share card data', error: error.message });
-    }
-  });
 
   // ============ Xiaoyue AI Analysis Endpoint ============
   app.post('/api/xiaoyue/analysis', async (req: any, res) => {
@@ -12299,32 +9293,6 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
   // ============ Pre-event Attendance (Blind Box) ============
 
   // User: set own pre-event attendance status
-  app.post('/api/blind-box-events/:eventId/pre-attendance', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.session.userId;
-      const { eventId } = req.params;
-      const { status, lateMinutes, absentReason } = req.body;
-
-      const allowed = ["pending", "confirmed", "late", "absent"];
-      if (!allowed.includes(status)) {
-        return res.status(400).json({ message: "Invalid status" });
-      }
-
-      // Upsert (insert or update) the pre-attendance record
-      await db
-        .insert(schema.blindBoxPreAttendance)
-        .values({ eventId, userId, status, lateMinutes: lateMinutes ?? null, absentReason: absentReason ?? null, updatedAt: new Date() })
-        .onConflictDoUpdate({
-          target: [schema.blindBoxPreAttendance.eventId, schema.blindBoxPreAttendance.userId],
-          set: { status, lateMinutes: lateMinutes ?? null, absentReason: absentReason ?? null, updatedAt: new Date() },
-        });
-
-      res.json({ success: true, status });
-    } catch (error) {
-      console.error("Error updating pre-attendance:", error);
-      res.status(500).json({ message: "Failed to update attendance status" });
-    }
-  });
 
   // Admin: get attendance summary for an event
   app.get('/api/admin/blind-box-events/:eventId/attendance-summary', requireAdmin, async (req: any, res) => {

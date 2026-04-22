@@ -8,6 +8,7 @@ import { logger } from "../../lib/logger";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { paymentService } from "../../paymentService";
 import { paymentsRepo } from "../../repositories/paymentsRepo";
+import { refundAttemptsRepo } from "../../repositories/refundAttemptsRepo";
 import { usersRepo } from "../../repositories/usersRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
@@ -891,11 +892,12 @@ export function registerPaymentRoutes(app: Express): void {
     try {
       const { paymentId } = req.params;
       const { reason } = req.body;
-      await paymentService.createRefund(paymentId, reason);
+      const adminId = getActingAdminId(req);
+      await paymentService.createRefund(paymentId, reason, adminId);
 
       logAdminAudit({
         action: 'PAYMENT_REFUND_INITIATED',
-        adminId: getActingAdminId(req),
+        adminId,
         adminRole: (req as any).adminRole,
         targetEntityType: 'payment',
         targetEntityId: paymentId,
@@ -908,6 +910,19 @@ export function registerPaymentRoutes(app: Express): void {
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({ message: "Failed to create refund" });
+    }
+  });
+
+  app.get("/api/admin/refund-attempts", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const reqLogger = logger.child({ request_id: req.requestId });
+    try {
+      const attempts = await refundAttemptsRepo.getAllWithPaymentDetails();
+      res.json(attempts);
+    } catch (error) {
+      reqLogger.error("Failed to fetch refund attempts", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ message: "Failed to fetch refund attempts" });
     }
   });
 }

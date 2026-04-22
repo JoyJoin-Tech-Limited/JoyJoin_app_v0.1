@@ -1,0 +1,100 @@
+skill: notification-system
+
+primary_ownership: >
+  JoyJoin in-app notification system: DB-backed notification records, WebSocket broadcast fallbacks,
+  admin broadcast/single-send endpoints, per-user unread counts by category, and mark-read semantics.
+
+use_when:
+  - adding or changing a notification trigger (event status, match, admin action)
+  - modifying the notifications table schema or notificationsRepo queries
+  - adding or changing notification REST endpoints
+  - changing notification category/type semantics or unread-count logic
+  - debugging why a user does not see a notification badge or count
+  - adding admin broadcast or single-send notification capabilities
+  - working on notification fallback from WebSocket to in-app unread counts
+
+do_not_use_when:
+  - task is about WebSocket connection lifecycle or auth
+  - task is about event pool matching logic
+  - task is about social icebreaker phase state
+  - task is about push notification vendor integration (APNs, FCM)
+  - task is about SMS or WeChat template message delivery
+
+strong_triggers:
+  - createNotification
+  - notificationsRepo
+  - eventBroadcast
+  - in-app notification
+  - admin notification
+  - broadcast notification
+  - add a notification
+  - send a notification
+  - notification badge
+  - notification counts
+  - unread count
+  - mark-read
+  - mark read
+  - notification stats
+  - getNotificationCounts
+  - NotificationCounts
+  - /api/notifications/counts
+  - /api/notifications/mark-read
+  - /api/admin/notifications/broadcast
+  - /api/admin/notifications/send
+  - system_alert
+  - event_reminder
+  - mutual_match
+  - isBroadcast
+  - sentBy
+  - relatedResourceId
+
+owned_files:
+  - apps/server/src/repositories/notificationsRepo.ts
+  - apps/server/src/eventBroadcast.ts
+  - apps/user-client/src/hooks/useNotificationCounts.ts
+  - apps/mini-program/src/hooks/useNotificationCounts.ts
+  - packages/shared/src/schema.ts
+  - packages/shared/src/api.ts
+
+owned_paths:
+  - /api/notifications/counts
+  - /api/notifications/mark-read
+  - /api/notifications
+  - /api/admin/notifications
+  - /api/admin/notifications/broadcast
+  - /api/admin/notifications/send
+  - /api/admin/notifications/:id/stats
+
+owned_symbols:
+  - notificationsRepo
+  - createNotification
+  - getNotificationCounts
+  - markNotificationsAsRead
+  - createBroadcastNotification
+  - getAdminNotifications
+  - getNotificationStats
+  - broadcastEventStatusChanged
+  - broadcastEventMatched
+  - broadcastAdminAction
+  - NotificationCounts
+  - InsertNotification
+  - useNotificationCounts
+  - useMarkNotificationsAsRead
+
+related_skills:
+  - skill: websocket-realtime
+    when: WebSocket connection lifecycle, auth, or room broadcasting
+  - skill: event-pool-and-matching-operations
+    when: event pool lifecycle and match-run operations
+  - skill: matching-domain
+    when: pair/group scoring and match explanation
+  - skill: social-icebreaker-domain
+    when: social icebreaker session state and phase changes
+  - skill: admin-audit-and-rbac-governance
+    when: admin role checks for broadcast/send endpoints
+  - skill: platform-coordination-protocol
+    when: notification changes affect both web and mini-program
+  - skill: server-domain-architecture
+    when: adding new HTTP routes or repository files
+  - skill: platform-observability-and-ops
+    when: adding structured logging or metrics around notification delivery

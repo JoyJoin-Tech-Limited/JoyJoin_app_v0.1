@@ -2,9 +2,12 @@
 import "dotenv/config";
 
 import express, { type Request } from "express";
+import cors from "cors";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
+import { startPoolCardCopyWorker } from "./ai/workers/poolCardCopyWorker";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
@@ -16,7 +19,14 @@ validateConfig({ exitOnFatal: false });
 
 const app = express();
 
-// ── Observability middleware (must be first) ───────────────────────────────
+// ── Security middleware ────────────────────────────────────────────────────
+app.use(helmet());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+}));
+
+// ── Observability middleware ───────────────────────────────────────────────
 // 1. Attach a unique correlation ID to every request.
 app.use(requestIdMiddleware);
 // 2. Collect Prometheus-style metrics for every request.
@@ -86,6 +96,9 @@ app.use((req, res, next) => {
       if (process.env.MINIMAX_API_KEY && process.env.MINIMAX_GROUP_ID) {
         warmTTSCache().catch(err => logger.warn('[startup] TTS cache warmup failed (non-fatal)', { error: String(err) }));
       }
+
+      // Start pool card AI copy worker (catch-up cron every 5 min)
+      startPoolCardCopyWorker(5);
     });
   } catch (error) {
     logger.error("Failed to start server", { error: String(error) });

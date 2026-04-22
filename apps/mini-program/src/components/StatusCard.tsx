@@ -1,4 +1,4 @@
-import { Text, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import type { ReactNode } from 'react'
 import Button, { type JoyButtonProps } from './Button'
 import Card from './Card'
@@ -27,6 +27,8 @@ interface StatusCardProps {
   className?: string
   icon?: string
   footer?: ReactNode
+  /** Optional hero illustration src (WebP/PNG). When provided, renders above the icon. */
+  heroSrc?: string
 }
 
 export default function StatusCard({
@@ -37,6 +39,7 @@ export default function StatusCard({
   className = '',
   icon,
   footer,
+  heroSrc,
 }: StatusCardProps) {
   const resolvedIcon =
     typeof icon === 'string' && icon.trim() !== ''
@@ -45,7 +48,16 @@ export default function StatusCard({
 
   return (
     <Card className={`status-card status-card--${tone}${className ? ` ${className}` : ''}`}>
-      <Text className='status-card__icon'>{resolvedIcon}</Text>
+      {heroSrc ? (
+        <Image
+          className='status-card__hero'
+          src={heroSrc}
+          mode='aspectFit'
+          lazyLoad
+        />
+      ) : (
+        <Text className='status-card__icon'>{resolvedIcon}</Text>
+      )}
       <Text className='status-card__title'>{title}</Text>
       {description ? <Text className='status-card__description'>{description}</Text> : null}
       {action ? (

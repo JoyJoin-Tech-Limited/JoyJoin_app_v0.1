@@ -79,6 +79,10 @@ Follow these steps in order:
 - Do CI guardrails still pass?
 - Are new or changed behaviours covered?
 - **Mini-program UI (`apps/mini-program`):** If the diff changes layout, spacing, or typography, confirm the author followed [`mini-program-frontend-excellence/references/pixel-precision.md`](../mini-program-frontend-excellence/references/pixel-precision.md): spec-exact values or 8rpx rhythm, and **WeChat DevTools** verification (or screenshots / written evidence if reviewers cannot run DevTools). **Block merge** on avoidable visual drift or missing verification when the change is user-visible.
+- **MCP-assisted review:**
+  - **GitHub MCP:** For PRs with CI concerns, use the **GitHub MCP server** (`github`) to check live workflow status, PR checks, and mergeability without leaving the review context.
+  - **Postgres MCP:** For PRs that change `schema.ts` or repository queries, use the **Postgres MCP server** (`postgres`) to verify the live database schema aligns with the code changes.
+  - **Playwright MCP:** For frontend PRs affecting critical user journeys, use the **Playwright MCP server** (`playwright`) to quickly validate navigation and interaction flows.
 
 **6. Provide constructive feedback and final verdict**
 - Group findings by severity.

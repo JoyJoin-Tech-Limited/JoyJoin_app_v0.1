@@ -41,16 +41,47 @@ strong_triggers:
   - make this feel premium
   - AnimatePresence
   - Framer Motion
+  - AchievementPopup
+  - AnalyzingAnimation
+  - FancyLineLoadingScreen
+  - XiaoyueChatBubble
+  - OnboardingLoadingShell
+  - hover-class
+  - Taro animation
+  - loading shell
+  - achievement reveal
+  - analyzing animation
+  - chat bubble animation
 
 owned_files:
   - apps/user-client/src/**
+  - apps/mini-program/src/components/AchievementPopup.tsx
+  - apps/mini-program/src/components/AchievementPopup.scss
+  - apps/mini-program/src/components/AnalyzingAnimation.tsx
+  - apps/mini-program/src/components/AnalyzingAnimation.scss
+  - apps/mini-program/src/components/FancyLineLoadingScreen.tsx
+  - apps/mini-program/src/components/FancyLineLoadingScreen.scss
+  - apps/mini-program/src/components/XiaoyueChatBubble.tsx
+  - apps/mini-program/src/components/XiaoyueChatBubble.scss
+  - apps/mini-program/src/components/OnboardingLoadingShell.tsx
+  - apps/mini-program/src/components/OnboardingLoadingShell.scss
 
-owned_paths: []
+owned_paths:
+  - /apps/mini-program/src/components/*Popup*
+  - /apps/mini-program/src/components/*Animation*
+  - /apps/mini-program/src/components/*Loading*
 
 owned_symbols:
   - motion
   - AnimatePresence
   - useReducedMotion
+  - AchievementPopup
+  - AnalyzingAnimation
+  - FancyLineLoadingScreen
+  - XiaoyueChatBubble
+  - OnboardingLoadingShell
+  - hoverClass
+  - animation
 
 related_skills:
   - skill: frontend-component-architecture
@@ -59,3 +90,5 @@ related_skills:
     when: motion uses or introduces transition tokens or CSS custom properties
   - skill: joyjoin-brand-guidelines
     when: animation direction must align with JoyJoin's brand motion personality
+  - skill: multi-agent-deliberation
+    when: cross-perspective review of premium interaction decisions

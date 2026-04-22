@@ -141,6 +141,12 @@ const STATIC_ROUTE_FALLBACKS = {
     kind: 'route-agent',
     transport: 'routing-text',
   },
+  'Harness Runtime Controller': {
+    label: 'Request Harness engineering deliberation',
+    actionText: 'run the full Harness Engineering deliberation pipeline before implementation',
+    kind: 'route-agent',
+    transport: 'routing-text',
+  },
 };
 
 const MODEL_HINTS = {
@@ -154,6 +160,7 @@ const MODEL_HINTS = {
   'Product Manager': 'GPT-5.4 xhigh',
   'Taro Mini-Program Frontend Engineer': 'GPT-5.4 xhigh',
   'Expert React Frontend Engineer': 'GPT-5.4 xhigh',
+  'Harness Runtime Controller': 'GPT-5.4 xhigh',
 };
 
 const TRACK_PRIORITY = new Map(
@@ -697,6 +704,56 @@ function applyRiskScore(candidate, track) {
   }
 }
 
+function applyHarnessRiskScore(candidate, track, trackChecks, promptText) {
+  if (candidate.agent !== 'Harness Runtime Controller') {
+    return;
+  }
+
+  const lowerPrompt = cleanString(promptText).toLowerCase();
+  const harnessTerms = ['harness', 'reliability', 'scalability', 'security review', 'observability gap', 'production harness', 'engineering quality gate', 'PGE pipeline', 'token circulation'];
+  if (harnessTerms.some((term) => lowerPrompt.includes(term))) {
+    boost(candidate, 20, 'Explicit Harness request detected in prompt.', 'harness-signal');
+    return;
+  }
+
+  const coreEnginePaths = ['personality/', 'poolMatchingService', 'payment-entitlement', 'matching-domain'];
+  const hasCoreEnginePath = track.changedFiles.some((file) =>
+    coreEnginePaths.some((pattern) => file.toLowerCase().includes(pattern.toLowerCase())),
+  );
+  if (hasCoreEnginePath) {
+    boost(candidate, 25, 'Changed files touch core engines (personality, matching, payments).', 'harness-signal', track.changedFiles);
+    return;
+  }
+
+  const authSecurityPaths = ['auth-session', 'admin-audit', 'rbac', 'safety-boundaries'];
+  const hasAuthSecurityPath = track.changedFiles.some((file) =>
+    authSecurityPaths.some((pattern) => file.toLowerCase().includes(pattern.toLowerCase())),
+  );
+  if (hasAuthSecurityPath) {
+    boost(candidate, 20, 'Changed files touch auth or security surfaces.', 'harness-signal', track.changedFiles);
+    return;
+  }
+
+  const hasPublicApiPath = track.changedFiles.some((file) =>
+    file.toLowerCase().includes('routes/domains/'),
+  );
+  if (hasPublicApiPath) {
+    boost(candidate, 15, 'Changed files include public API route surfaces.', 'harness-signal', track.changedFiles);
+    return;
+  }
+
+  const hasHighBlastRadius = track.changedFiles.length > 0
+    && track.changedFiles.some((file) => inferTrackId(file) !== track.trackId);
+  if (hasHighBlastRadius && track.changedFiles.length >= 2) {
+    boost(candidate, 15, 'Cross-track changes indicate high blast radius.', 'harness-signal', track.changedFiles);
+    return;
+  }
+
+  if (trackChecks.some((check) => check.status === 'failed' || check.status === 'blocked')) {
+    boost(candidate, 10, 'Active failures may benefit from structured Harness review.', 'harness-signal');
+  }
+}
+
 function applyKickoffPenalty(candidate, kickoff, recommendedNextAgents, trackChecks) {
   if (!['Researcher', 'Planner'].includes(candidate.agent)) {
     return;
@@ -956,6 +1013,7 @@ export function buildNextActionsArtifact({
         applyMomentumScore(candidate, trackSummaries);
         applyPromptIntentScore(candidate, promptText, track);
         applyRiskScore(candidate, track);
+        applyHarnessRiskScore(candidate, track, trackChecks, promptText);
         applyKickoffPenalty(candidate, kickoff, recommendedNextAgents, trackChecks);
         applyMemoryPenalty(candidate, lifecycle);
         applyPrerequisitePenalty(candidate, track, trackChecks, trackSummaries);

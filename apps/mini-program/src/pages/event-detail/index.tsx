@@ -1,37 +1,30 @@
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
+import { type BlindBoxEventDetail } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import './index.scss'
-
-interface EventDetail {
-  id: string
-  title?: string
-  dateTime?: string
-  location?: string
-  type?: string
-  status?: string
-  attendeeCount?: number
-  description?: string
-  [key: string]: unknown
-}
 
 export default function EventDetailPage() {
   const router = useRouter()
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
+  const { isExiting, navigateBack } = useJoyJoinNavigation()
   const supportQrSrc = '/assets/qr/customer-service-support.png'
+  const pageClass = `event-detail ${isExiting ? 'event-detail--exiting' : ''}`
 
-  const { data: event, isLoading, error } = useQuery<EventDetail>({
+  const { data: event, isLoading, error } = useQuery<BlindBoxEventDetail>({
     queryKey: ['mini-program', 'event-detail', eventId],
-    queryFn: () => apiRequest<EventDetail>({ path: `/api/blind-box-events/${encodeURIComponent(eventId)}` }),
+    queryFn: () => apiRequest<BlindBoxEventDetail>({ path: `/api/blind-box-events/${encodeURIComponent(eventId)}` }),
     enabled: !!eventId && !authLoading,
   })
 
   if (authLoading || isLoading) {
     return (
-      <View className='event-detail'>
+      <View className={pageClass}>
         <View className='event-detail__loading'>
           <Text className='event-detail__loading-text'>加载中…</Text>
         </View>
@@ -41,10 +34,16 @@ export default function EventDetailPage() {
 
   if (error || !event) {
     return (
-      <View className='event-detail'>
+      <View className={pageClass}>
         <View className='event-detail__error'>
+          <Image
+            className='event-detail__error-hero'
+            src='/assets/lovart/lovart-generic-error.webp'
+            mode='aspectFit'
+            lazyLoad
+          />
           <Text className='event-detail__error-text'>加载活动详情失败</Text>
-          <Button className='event-detail__retry-btn' onClick={() => Taro.navigateBack()}>
+          <Button className='event-detail__retry-btn' onClick={() => navigateBack()}>
             返回
           </Button>
         </View>
@@ -60,7 +59,7 @@ export default function EventDetailPage() {
   }
 
   return (
-    <ScrollView className='event-detail' scrollY enhanced showScrollbar={false}>
+    <ScrollView className={pageClass} scrollY enhanced showScrollbar={false}>
       <View className='event-detail__header'>
         <Text className='event-detail__title'>{event.title ?? '悦聚活动'}</Text>
         {event.type ? <Text className='event-detail__type-badge'>{event.type}</Text> : null}
@@ -108,6 +107,14 @@ export default function EventDetailPage() {
       </View>
 
       <View className='event-detail__actions'>
+        {event.status === 'started' || event.status === 'active' || event.status === 'ongoing' ? (
+          <Button
+            className='event-detail__icebreaker-btn'
+            onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/index?eventId=${event.id}` })}
+          >
+            进入破冰
+          </Button>
+        ) : null}
         <Button
           className='event-detail__feedback-btn'
           onClick={() => Taro.navigateTo({ url: `/pages/event-feedback/index?id=${event.id}` })}

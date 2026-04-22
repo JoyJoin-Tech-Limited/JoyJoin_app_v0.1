@@ -56,10 +56,10 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Mini-Program Parity Auditor` | Web versus mini-program parity audits and migration backlog creation | [`mini-program-parity-auditor.agent.md`](./mini-program-parity-auditor.agent.md) |
 | `Taro Mini-Program Frontend Engineer` | Direct Taro UI implementation and refinement in `apps/mini-program` with premium, brand-governed, native-quality execution | [`taro-mini-program-frontend-engineer.agent.md`](./taro-mini-program-frontend-engineer.agent.md) |
 | `Taro Migration Specialist` | Broad web-to-mini-program migration and parity restoration | [`taro-migration-specialist.agent.md`](./taro-migration-specialist.agent.md) |
-| `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend engineer.md`](./frontend%20engineer.md) |
+| `Expert React Frontend Engineer` | Browser-first React work in `apps/user-client` | [`frontend-engineer.agent.md`](./frontend-engineer.agent.md) |
 | `debug` | Bug and issue investigation, regressions, failing tests, and root-cause debugging | [`debug.agent.md`](./debug.agent.md) |
-| `Principal Software Engineer` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal SWE.md`](./principal%20SWE.md) |
-| `Prompt Engineer` | Prompt review, repo-resident prompt maintenance, safety-aware structure tightening, and example cleanup | [`prompt engineer.md`](./prompt%20engineer.md) |
+| `Principal Software Engineer` | Architecture review, tradeoff analysis, and senior implementation guidance | [`principal-swe.agent.md`](./principal-swe.agent.md) |
+| `Prompt Engineer` | Prompt review, repo-resident prompt maintenance, safety-aware structure tightening, and example cleanup | [`prompt-engineer.agent.md`](./prompt-engineer.agent.md) |
 | `Repo Memory Steward` | Semi-automated **candidate** notes (`memory:draft-candidate`, `memory:query`, `memory:validate`); does not promote without explicit human approval | [`repo-memory-steward.agent.md`](./repo-memory-steward.agent.md) |
 | `Workflow Governance Reviewer` | Proposal-only portfolio review, orchestration drift triage, reviewer-packet drafting, and reviewed memory-candidate drafts (not a bulk doc-sync substitute—see [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md)) | [`self-iteration.agent.md`](./self-iteration.agent.md) |
 | `Verifier` | Skeptical completion check after “done” claims — targeted tests/commands, verified vs claimed | [`verifier.agent.md`](./verifier.agent.md) |
@@ -69,6 +69,7 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Icebreaker Auction Phase Agent` | Virtual-coin `auction` phase: lots generation, bid/close-lot routes, advance guard, recap lines | [`icebreaker-auction-phase-agent.agent.md`](./icebreaker-auction-phase-agent.agent.md) |
 | `Lie Detective Icebreaker Agent` | `lie_detective` secrecy (`isLie`), votes/reveals, `social-lie-detective-v1` | [`lie-detective-icebreaker-agent.agent.md`](./lie-detective-icebreaker-agent.agent.md) |
 | `Personality Dice Icebreaker Agent` | `personality_dice` roster-sized challenges, `social-personality-dice-v1`, tone/safety | [`personality-dice-icebreaker-agent.agent.md`](./personality-dice-icebreaker-agent.agent.md) |
+| `Visual Designer` | Brand-aligned visual asset creation via Lovart AI Design Agent — mascot illustrations, UI mockups, marketing materials, icon sets | [`visual-designer.agent.md`](./visual-designer.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

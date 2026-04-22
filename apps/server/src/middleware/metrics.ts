@@ -77,6 +77,10 @@ const aiProductCallCounters = new Map<string, CounterEntry>();
 const aiProductLatencyHistograms = new Map<string, HistogramEntry>();
 /** Narrow counter: MiniMax (or primary) failed; secondary provider output was accepted. */
 const aiProviderRecoveryCounters = new Map<string, CounterEntry>();
+/** Pool card AI copy cache consumption: hit / miss on GET /api/event-pools */
+const poolCardCopyCacheCounters = new Map<string, CounterEntry>();
+/** Pool card backfill worker latency (catch-up cron) */
+const poolCardCopyBackfillLatencyHistograms = new Map<string, HistogramEntry>();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -356,6 +360,21 @@ export function recordAIProviderRecoveryMetric(params: { domain: string; feature
   });
 }
 
+/**
+ * Record a pool card AI copy cache lookup result on the list route.
+ * `result`: 'hit' when a live, non-expired headline was found; 'miss' otherwise.
+ */
+export function recordPoolCardCopyCache(result: 'hit' | 'miss'): void {
+  incCounter(poolCardCopyCacheCounters, { result });
+}
+
+/**
+ * Record the latency of a single backfill cron run (time to process all stale pools).
+ */
+export function recordPoolCardCopyBackfillLatency(latencyMs: number): void {
+  observeHistogram(poolCardCopyBackfillLatencyHistograms, {}, latencyMs);
+}
+
 export async function getMetricsText(): Promise<string> {
   await measureEventLoopDelay();
 
@@ -416,6 +435,16 @@ export async function getMetricsText(): Promise<string> {
       'AI calls where a secondary provider produced the accepted result after primary failure (e.g. DeepSeek after MiniMax).',
       aiProviderRecoveryCounters,
     ),
+    renderCounter(
+      'joyjoin_pool_card_copy_cache_total',
+      'Pool card AI copy cache lookups on list route (hit = live copy served, miss = no live copy).',
+      poolCardCopyCacheCounters,
+    ),
+    renderHistogram(
+      'joyjoin_pool_card_copy_backfill_latency_ms',
+      'Latency of pool card copy backfill worker cron run in milliseconds.',
+      poolCardCopyBackfillLatencyHistograms,
+    ),
     getMatchingMetricsText(),
   ];
 
@@ -455,6 +484,8 @@ export function _resetMetricsForTest(): void {
   aiProductCallCounters.clear();
   aiProductLatencyHistograms.clear();
   aiProviderRecoveryCounters.clear();
+  poolCardCopyCacheCounters.clear();
+  poolCardCopyBackfillLatencyHistograms.clear();
 }
 
 export function recordRuntimeLLMFallbackMetric(

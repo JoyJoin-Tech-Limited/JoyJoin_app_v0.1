@@ -5,6 +5,7 @@ import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { logInfo, logError } from '../../lib/logger'
+import { TOAST_DEFAULT_MS } from '../../lib/uiConstants'
 import './index.scss'
 
 const RATING_LABELS = ['😕', '🙁', '😐', '🙂', '🤩']
@@ -36,7 +37,7 @@ export default function EventFeedbackPage() {
         },
       })
       setSubmitted(true)
-      Taro.showToast({ title: '反馈已提交', icon: 'success', duration: 2000 })
+      Taro.showToast({ title: '反馈已提交', icon: 'success', duration: TOAST_DEFAULT_MS })
     } catch (err) {
       const message = err instanceof Error ? err.message : '提交失败，请重试'
       setError(message)

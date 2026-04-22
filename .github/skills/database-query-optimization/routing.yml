@@ -1,0 +1,83 @@
+skill: database-query-optimization
+
+primary_ownership: >
+  Drizzle ORM query patterns, index strategy, N+1 avoidance, batch loading,
+  and query-plan review for PostgreSQL in the JoyJoin server.
+
+use_when:
+  - investigating or fixing a slow API route, repository method, or Drizzle query
+  - adding a new query that reads from high-volume tables
+  - reviewing a PR that introduces loops over database calls or unbounded SELECT *
+  - choosing between inArray batch loading vs. repeated point lookups
+  - deciding whether a new column needs an index, composite index, or partial index
+  - working with transactions and choosing when to pass tx vs. use the global db
+  - interpreting request latency metrics (dbCount, dbMs, dbMax) from the per-request perf store
+  - reviewing joins, subqueries, or aggregate queries for efficiency
+
+do_not_use_when:
+  - task is purely about schema design, migrations, or backfills
+  - task is about choosing column types, constraints, or relations with no query performance angle
+  - task is only about adding a new route with trivial single-row lookups
+  - change is local seed data, fixtures, or test-only queries
+
+strong_triggers:
+  - slow query
+  - N+1
+  - nplusone
+  - optimize this query
+  - missing index
+  - batch load
+  - inArray
+  - preloadUserInterests
+  - db proxy
+  - query plan
+  - EXPLAIN
+  - SELECT *
+  - dbCount
+  - dbMs
+  - dbMax
+  - trackDbOp
+  - innerJoin
+  - leftJoin
+  - transaction scope
+  - tx DatabaseLike
+
+owned_files:
+  - apps/server/src/repositories/**
+  - apps/server/src/db.ts
+  - apps/server/src/db_proxy.ts
+  - apps/server/src/perf.ts
+  - packages/shared/src/schema.ts
+
+owned_paths:
+  - /api/metrics
+
+owned_symbols:
+  - db_proxy
+  - wrapDb
+  - trackDbOp
+  - perfStorage
+  - getPerfMetrics
+  - preloadUserInterests
+  - inArray
+  - DatabaseLike
+  - NeonDatabase
+  - eventPoolRegistrations
+  - eventAttendance
+  - eventPools
+  - users
+  - userInterests
+
+related_skills:
+  - skill: database-migration-safety
+    when: adding or altering indexes requires a safe rollout plan for live data
+  - skill: backend-models-standards
+    when: deciding column types, constraints, and initial index strategy for new tables
+  - skill: server-domain-architecture
+    when: deciding where to place new repository files and how to wire them into routes
+  - skill: reliability-and-state-integrity
+    when: query changes involve transactions, idempotency, or multi-step writes
+  - skill: performance-benchmark
+    when: measuring before/after query latency with repeatable baselines
+  - skill: platform-observability-and-ops
+    when: interpreting Prometheus metrics and adding structured query logs

@@ -238,7 +238,7 @@ Active domain modules in `routes/domains/`:
 | `assessment.ts` | Personality assessment endpoints |
 | `admin.ts` | Admin management API |
 | `analytics.ts` | Analytics and KPI endpoints |
-| `payments.ts` | WeChat Pay v3, browser H5 payment creation, coupon validation, and webhook verification |
+| `payments.ts` | WeChat Pay v3 JSAPI (primary, mini-program) + H5 (reference, web), coupon validation, and webhook verification |
 | `eventPools.ts` | Event pool discovery, registration, and `GET /api/event-pools/:poolId/stats` (`estimatedGroups`, archetype breakdown, historical group themes) |
 | `icebreaker.ts` | Mounts **`/api/social-icebreaker`** (Social Icebreaker router from `routes/socialIcebreaker.ts`) and **`/api/tts`** — not the legacy toolkit; legacy random topics live under monolithic `routes.ts` `/api/icebreakers/*` |
 | `icebreakerSessions.ts` | Icebreaker session discovery and access endpoints |

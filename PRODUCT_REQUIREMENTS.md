@@ -1,8 +1,9 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.4  
-**Last Updated:** April 1, 2026  
-**Platform:** WeChat H5 Mini-App  
+**Version:** 1.5  
+**Last Updated:** April 22, 2026  
+**Platform:** WeChat Mini Program (Taro) — launch-primary  
+**Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
 
 ---
@@ -277,7 +278,9 @@ Foster meaningful local connections through AI-powered matching that understands
 
 ### 1. User Onboarding & Registration
 
-**File Location:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx` (primary active entry point; `apps/user-client/src/pages/PersonalityTestPageV4.tsx` is a compatibility re-export), `apps/user-client/src/features/onboarding/active/pages/EssentialDataPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` (primary), `apps/mini-program/src/pages/login/index.tsx`
+
+**Web Reference:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
 
 #### 1.1 Authentication — WeChat-First (Current)
 
@@ -346,9 +349,11 @@ LandingPage → /personality-test (anonymous V4 test)
 
 ### 1.3 Personality Test System ⭐
 
-> **Note**: The active onboarding route uses the V4 adaptive assessment page at `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`. `apps/user-client/src/pages/PersonalityTestPageV4.tsx` is a compatibility re-export. V2 has been deprecated.
+> **Note**: The active onboarding route uses the V4 adaptive assessment page at `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` (mini-program) and `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx` (web reference). `apps/user-client/src/pages/PersonalityTestPageV4.tsx` is a compatibility re-export. V2 has been deprecated.
 
-**File Location:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` (test), `apps/mini-program/src/pages/onboarding/personality-test/results` (results)
+
+**Web Reference:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
 
 #### Architecture Overview
 
@@ -539,7 +544,9 @@ WHERE id = user_id;
 
 ### 1.4 Event Discovery & Blind Box System
 
-**File Location:** `apps/user-client/src/pages/DiscoverPage.tsx`, `apps/user-client/src/pages/BlindBoxEventDetailPage.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/discover/index.tsx`, `apps/mini-program/src/pages/event-detail/index.tsx`
+
+**Web Reference:** `apps/user-client/src/pages/DiscoverPage.tsx`, `apps/user-client/src/pages/BlindBoxEventDetailPage.tsx`
 
 > **Updated 2026-04-07** — the active blind-box system is pool-first, not payment-first. Discovery cards expose pool momentum, time + area, and trust framing; the join flow confirms pool entry first, while waiting / reveal states are owned by `MatchingStatusPage`.
 
@@ -632,7 +639,9 @@ User Actions:
 
 #### Two-Part Match Scoring System
 
-**Frontend Component:** `apps/user-client/src/components/MatchScoreDisplay.tsx`
+**Mini-Program Component:** `apps/mini-program/src/pages/matching-status/index.tsx`
+
+**Web Reference:** `apps/user-client/src/components/MatchScoreDisplay.tsx`
 
 **Group Chemistry Score (群体化学反应):**
 ```typescript
@@ -668,7 +677,9 @@ Visual:
 
 #### AttendeePreviewCard Component *(not part of the active blind-pool entry flow)*
 
-**File:** `apps/user-client/src/components/AttendeePreviewCard.tsx`
+**Mini-Program Component:** `apps/mini-program/src/pages/pool-group-detail/index.tsx`
+
+**Web Reference:** `apps/user-client/src/components/AttendeePreviewCard.tsx`
 
 ```typescript
 Status:
@@ -719,7 +730,9 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 
 ### 1.5 权益方案 & Payment System
 
-**File Location:** `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/blind-box-payment/index.tsx`
+
+**Web Reference:** `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`
 
 > **Note on terminology:** User-facing copy uses `权益` / `权益方案`. Internal technical names (`subscription`, `subscriptions` table) remain unchanged. See §Product Canon for the full compliance terminology table.
 
@@ -735,7 +748,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 
 **Service Files:**
 - `apps/server/src/routes/domains/payments.ts` — payment route handler (domain router)
-- `apps/server/src/paymentService.ts` — WeChat Pay v3 H5 integration, verified webhook handling, kill switch
+- `apps/server/src/paymentService.ts` — WeChat Pay v3 JSAPI (primary) + H5 (reference), verified webhook handling, kill switch
 
 > **Payment Kill Switch:** The server exposes a `paymentsEnabled` feature flag. When disabled (e.g., during incident mitigation or pre-launch hold), all payment creation requests are rejected with a clear error before any WeChat API call is made. This is the primary launch-safety lever for payment flows.
 
@@ -754,13 +767,11 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
    ↓
 4. Backend creates payment record (status: "pending")
    ↓
-5. Server calls WeChat Pay v3 H5 API `/v3/pay/transactions/h5`
+5. Server calls WeChat Pay v3 API:
+   - **Mini-Program (primary):** `POST /api/payments/miniprogram/create` → JSAPI (`/v3/pay/transactions/jsapi`) → returns `prepay_id` → client calls `Taro.requestPayment`
+   - **Web (reference):** `POST /api/payments/create` → H5 (`/v3/pay/transactions/h5`) → returns `h5_url` → browser redirect
    - Request is signed with `WECHATPAY2-SHA256-RSA2048` using the merchant RSA private key
    - The API v3 key is used for webhook resource decryption (AES-GCM), not HMAC request signing
-   - WeChat responds with:
-     {
-       h5_url
-     }
    ↓
 6. User completes payment in WeChat
    ↓
@@ -881,7 +892,9 @@ Response:
 
 ### 1.6 Chat System
 
-**File Location:** `apps/user-client/src/pages/EventCoordinationPage.tsx` (current), `apps/user-client/src/pages/ChatsPage.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/event-coordination/index.tsx`
+
+**Web Reference:** `apps/user-client/src/pages/EventCoordinationPage.tsx`
 
 #### Event Group Chat
 
@@ -1008,8 +1021,9 @@ CREATE TABLE chat_logs (
 
 ### 1.7 In-Event Social Experience (Social Icebreaker)
 
-**Route:** `/icebreaker/:sessionId`  
-**Component:** `IcebreakerSessionPage`  
+**Route:** `/icebreaker/:sessionId` (mini-program), `/icebreaker/:sessionId` (web reference)  
+**Canonical Component:** `apps/mini-program/src/pages/icebreaker-session/index.tsx`  
+**Web Reference:** `apps/user-client/src/pages/IcebreakerSessionPage.tsx` (if exists)  
 **Status:** ✅ Primary in-event flow
 
 The Social Icebreaker is the **core in-event facilitation tool** for matched JoyJoin groups. It replaces any standalone game browsers as the primary icebreaking experience.
@@ -1066,7 +1080,9 @@ Active server files:
 
 > **Note:** Previously numbered 1.7. Renumbered to 1.8 to accommodate the new §1.7 In-Event Social Experience section.
 
-**File Location:** `apps/user-client/src/pages/EventFeedbackFlow.tsx`, `apps/user-client/src/pages/DeepFeedbackFlow.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/event-feedback/index.tsx`
+
+**Web Reference:** `apps/user-client/src/pages/EventFeedbackFlow.tsx`, `apps/user-client/src/pages/DeepFeedbackFlow.tsx`
 
 #### Two-Tier Feedback Architecture
 
@@ -1086,7 +1102,9 @@ Appears immediately after event ends (status: "completed")
 
 **Step 2: Connection Radar (连接雷达图)**
 
-**Component:** `apps/user-client/src/components/feedback/ConnectionRadar.tsx`
+**Mini-Program Component:** `apps/mini-program/src/pages/connections/index.tsx`
+
+**Web Reference:** `apps/user-client/src/components/feedback/ConnectionRadar.tsx`
 
 4-dimensional assessment (0-10 scale):
 ```typescript
@@ -1107,7 +1125,9 @@ Appears immediately after event ends (status: "completed")
 
 **Step 3: Select Meaningful Connections**
 
-**Component:** `apps/user-client/src/components/feedback/SelectConnectionsStep.tsx`
+**Mini-Program Component:** `apps/mini-program/src/pages/event-feedback/index.tsx`
+
+**Web Reference:** `apps/user-client/src/components/feedback/SelectConnectionsStep.tsx`
 
 ```typescript
 // User selects attendees they connected with
@@ -1122,7 +1142,9 @@ Data Stored:
 
 **Step 4: Attendee Trait Tags (参与者印象标签)**
 
-**Component:** `apps/user-client/src/components/feedback/TraitTagsWall.tsx`
+**Mini-Program Component:** `apps/mini-program/src/pages/event-feedback/index.tsx`
+
+**Web Reference:** `apps/user-client/src/components/feedback/TraitTagsWall.tsx`
 
 For EACH selected connection:
 ```typescript
@@ -1260,7 +1282,9 @@ CREATE TABLE event_feedback (
 
 ### 1.8 User Profile Management
 
-**File Location:** `apps/user-client/src/pages/ProfilePage.tsx`, `apps/user-client/src/pages/Edit*.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/profile/index.tsx`, `apps/mini-program/src/pages/edit-profile/index.tsx`
+
+**Web Reference:** `apps/user-client/src/pages/ProfilePage.tsx`, `apps/user-client/src/pages/Edit*.tsx`
 
 #### Profile Sections
 
@@ -1321,7 +1345,9 @@ interface PrivacySettings {
 
 ### 1.9 Navigation & User Flow
 
-**File:** `apps/user-client/src/App.tsx`, `apps/user-client/src/components/BottomNav.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/app.ts` (app bootstrap + tab-bar config), `apps/mini-program/src/native-custom-tab-bar/` (custom tab bar)
+
+**Web Reference:** `apps/user-client/src/App.tsx`, `apps/user-client/src/components/BottomNav.tsx`
 
 #### Bottom Navigation Bar (5 Tabs)
 
@@ -1457,7 +1483,7 @@ This is **enrichment data**, not gating. Connections work without feedback; feed
 
 ### 2.1 Admin Dashboard
 
-**File:** `client/src/pages/admin/AdminDashboard.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminDashboard.tsx`
 
 #### Key Metrics (Top Cards)
 
@@ -1516,7 +1542,7 @@ Buttons:
 
 ### 2.2 User Management
 
-**File:** `client/src/pages/admin/AdminUsersPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminUsersPage.tsx`
 
 #### User List View
 
@@ -1585,7 +1611,7 @@ Actions Dropdown:
 
 ### 2.3 Subscription & Payment Management
 
-**File:** `client/src/pages/admin/AdminSubscriptionsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminSubscriptionsPage.tsx`
 
 #### Subscription Overview
 
@@ -1623,7 +1649,7 @@ Columns:
 
 #### Payment History
 
-**File:** `client/src/pages/admin/AdminFinancePage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminFinancePage.tsx`
 
 **Revenue Dashboard:**
 
@@ -1673,7 +1699,7 @@ Process:
 
 ### 2.4 Venue Management
 
-**File:** `client/src/pages/admin/AdminVenuesPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminVenuesPage.tsx`
 
 #### Venue Database
 
@@ -1848,7 +1874,7 @@ Process:
 
 ### 2.5 Event Template System
 
-**File:** `client/src/pages/admin/AdminEventTemplatesPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminEventTemplatesPage.tsx`
 
 #### Purpose
 
@@ -1952,7 +1978,7 @@ Flow:
 
 ### 2.6 Event Management
 
-**File:** `client/src/pages/admin/AdminEventsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminEventsPage.tsx`
 
 #### Event Lifecycle Management
 
@@ -2290,7 +2316,7 @@ Insights:
 
 ### 2.8 Content Management System
 
-**File:** `client/src/pages/admin/AdminContentPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminContentPage.tsx`
 
 #### Purpose
 
@@ -2405,7 +2431,7 @@ Auto-Archive:
 
 ### 2.9 Notification Push System
 
-**File:** `client/src/pages/admin/AdminNotificationsPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminNotificationsPage.tsx`
 
 #### Notification Types
 
@@ -2927,7 +2953,7 @@ Auto-Generated Insights (example format):
 
 ### 2.12 Feedback Management
 
-**File:** `client/src/pages/admin/AdminFeedbackPage.tsx`
+**File:** `apps/admin-client/src/pages/admin/AdminFeedbackPage.tsx`
 
 #### Interface
 
@@ -3015,7 +3041,11 @@ Charts:
 
 ### 2.13 Real-Time WebSocket Integration
 
-**File:** `apps/server/src/wsService.ts`, `apps/user-client/src/hooks/useWebSocket.ts`
+**Backend:** `apps/server/src/wsService.ts`
+
+**Mini-Program Client:** `apps/mini-program/src/lib/api.ts` (WebSocket integration via Taro)
+
+**Web Reference:** `apps/user-client/src/hooks/useWebSocket.ts`
 
 #### Architecture
 
@@ -3167,7 +3197,13 @@ export function useWebSocket() {
 
 ### 3.1 Technology Stack
 
-**Frontend:**
+**Mini-Program Frontend (Launch-Primary):**
+- Taro 4.2 + React 18 + TypeScript
+- Taro CLI (build tool)
+- Sass (styling)
+- WeChat-native APIs (`wx.login`, `Taro.requestPayment`, etc.)
+
+**Web Frontend (Reference / Sandbox Only):**
 - React 18 + TypeScript
 - Vite (build tool)
 - Wouter (routing)
@@ -3176,6 +3212,8 @@ export function useWebSocket() {
 - Tailwind CSS (styling)
 - Recharts (data visualization)
 - Framer Motion (animations)
+
+> **Platform Policy:** The WeChat Mini Program is the launch-primary and only shipping user-facing client. The web app (`apps/user-client`) exists as a development sandbox and parity reference. Cross-platform coordination rules are in `docs/PLATFORM_COORDINATION.md`.
 
 **Backend:**
 - Node.js + Express.js
@@ -3186,15 +3224,22 @@ export function useWebSocket() {
 - Express Session (authentication)
 
 **Authentication:**
-- WeChat OAuth2 (primary): Mini Program `wx.login()` + Official Account OAuth2 web flow
-- Phone number + SMS verification (legacy fallback)
+- WeChat Mini Program (primary): `Taro.login()` → `jscode2session` → `POST /api/auth/wechat/login`
+- WeChat Official Account OAuth2 web flow (browser fallback, reference-only)
+- Phone number + SMS verification (legacy fallback, dev-only)
 - PostgreSQL session store (7-day persistence)
 
+> **Note:** The canonical auth flow for launch is the mini-program `wx.login` path. The browser OAuth2 flow in `apps/user-client` is maintained for development reference and non-production environments only.
+
 **Payment:**
-- WeChat Pay v3 H5 integration — requests signed with `WECHATPAY2-SHA256-RSA2048`; API v3 key used for notification decryption/validation
+- WeChat Pay v3 JSAPI (primary, mini-program): `Taro.requestPayment` with `timeStamp`, `nonceStr`, `package`, `signType`, `paySign` — requests signed with `WECHATPAY2-SHA256-RSA2048`; API v3 key used for notification decryption/validation
+- WeChat Pay v3 H5 (secondary, browser reference): redirect-based payment flow for web sandbox
 - Verified webhook handling (v3 signature validation before any state change)
 - Idempotency handling for duplicate webhook delivery
 - Payment kill switch (`paymentsEnabled` flag) — disables payment creation without code deployment
+- Pending-order verification on mini-program app resume (`paymentVerificationStatus.ts`)
+
+> **Note:** The mini-program uses the native JSAPI flow (`POST /api/payments/miniprogram/create` → `Taro.requestPayment`). The H5 flow (`/api/payments/create` → redirect) is for the web reference surface only.
 
 **Real-Time:**
 - WebSocket connections
@@ -3733,8 +3778,8 @@ CREATE TABLE event_pool_groups (
 | Module | Status | Primary Files | Notes |
 |--------|--------|-------|-------|
 | **WeChat-First Onboarding** | ✅ Complete | `features/onboarding/active/`, `routes/domains/auth.ts` | Anonymous test → WeChat login → server nextStep |
-| **Personality Test V4** | ✅ Complete | `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `packages/shared/src/personality/` | 12 archetypes, server-configured question range (`minQuestions`–`hardMaxQuestions`) |
-| **Profile Review + AI Tagline** | ✅ Complete | `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`, `profileTaglineService.ts` | Reduced wait, skippable, AI tagline |
+| **Personality Test V4** | ✅ Complete | `apps/mini-program/src/pages/onboarding/personality-test/index.tsx`, `packages/shared/src/personality/` | 12 archetypes, server-configured question range (`minQuestions`–`hardMaxQuestions`) |
+| **Profile Review + AI Tagline** | ✅ Complete | `apps/mini-program/src/pages/onboarding/profile-review/index.tsx`, `profileTaglineService.ts` | Reduced wait, skippable, AI tagline |
 | **Limited Browse Mode** | ✅ Experiment | `FinalProfileReviewPage.tsx` | Scoped by feature flag `ENABLE_LIMITED_BROWSE_MODE` |
 | **Event Discovery** | ✅ Complete | `DiscoverPage.tsx`, `BlindBoxEventDetailPage.tsx` | Blind box system |
 | **Blind Pool Join Flow** | ✅ Complete | `JoinEventPoolSheet.tsx`, `components/event-pool-registration/BlindPoolTrustExplainer.tsx`, `PreJoinVibeBriefSheet.tsx`, `components/event-pool-registration/WhyThisFitsCard.tsx` | Trust explainer + vibe brief + why-fits |
@@ -3778,7 +3823,7 @@ CREATE TABLE event_pool_groups (
 
 **Payment Security:**
 - PCI DSS compliant (via WeChat Pay)
-- WeChat Pay v3 H5 API with `WECHATPAY2-SHA256-RSA2048` request signing and verified webhook decryption
+- WeChat Pay v3 JSAPI (primary) + H5 (reference) with `WECHATPAY2-SHA256-RSA2048` request signing and verified webhook decryption
 - Cryptographic webhook signature verification (v3 protocol) — requests that fail verification are rejected before any state change
 - Idempotency keys for duplicate prevention
 - Payment kill switch (`paymentsEnabled`) for launch-safety control

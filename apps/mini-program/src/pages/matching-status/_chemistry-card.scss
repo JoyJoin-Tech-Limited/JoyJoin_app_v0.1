@@ -1,0 +1,95 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+@mixin matching-status-chemistry-card {
+  // ── Chemistry Card ────────────────────────────────────────────
+  &__chemistry-card {
+    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-secondary, 0.1) 100%);
+    border: 2rpx solid rgba($color-secondary, 0.14);
+  }
+
+  &__chemistry-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+
+  &__chemistry-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10rpx;
+    padding: 12rpx 22rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.92);
+  }
+
+  &__chemistry-emoji {
+    font-size: $font-size-base;
+  }
+
+  &__chemistry-badge-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__chemistry-score {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  &__chemistry-title {
+    @include type-display-section-title;
+    display: block;
+    font-size: $font-size-lg;
+    color: $color-text-primary;
+  }
+
+  &__chemistry-copy,
+  &__chemistry-prompt {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
+  }
+
+  &__chemistry-copy {
+    margin-top: $spacing-sm;
+  }
+
+  &__chemistry-intro-angle {
+    display: block;
+    margin-top: 10rpx;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-primary-dark;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__chemistry-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__chemistry-pill {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.08);
+  }
+
+  &__chemistry-pill-text {
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__chemistry-prompt {
+    margin-top: $spacing-md;
+  }
+}

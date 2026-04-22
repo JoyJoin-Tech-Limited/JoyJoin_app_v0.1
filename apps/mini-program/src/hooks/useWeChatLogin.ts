@@ -9,6 +9,7 @@ import {
 import { seedMiniProgramAuthSession } from '../lib/authSession'
 import { navigateToMiniProgramNextStep } from '../lib/onboardingNavigation'
 import { logInfo, logError } from '../lib/logger'
+import { TOAST_FATAL_MS } from '../lib/uiConstants'
 
 /**
  * useWeChatLogin – Taro WeChat Mini Program login hook.
@@ -66,7 +67,7 @@ export function useWeChatLogin() {
       Taro.showToast({
         title: message,
         icon: 'none',
-        duration: 3000,
+        duration: TOAST_FATAL_MS,
       })
     } finally {
       loginLockRef.current = false

@@ -325,13 +325,13 @@ async function getL1FieldDropoffs(): Promise<L1FieldDropoff[]> {
         const [result] = await db
           .select({ count: count() })
           .from(users)
-          .where(sql`"${sql.raw(field)}" IS NOT NULL AND array_length("${sql.raw(field)}", 1) > 0`);
+          .where(sql`${sql.identifier(field)} IS NOT NULL AND array_length(${sql.identifier(field)}, 1) > 0`);
         filledCount = result?.count || 0;
       } else {
         const [result] = await db
           .select({ count: count() })
           .from(users)
-          .where(sql`"${sql.raw(field)}" IS NOT NULL AND "${sql.raw(field)}" != ''`);
+          .where(sql`${sql.identifier(field)} IS NOT NULL AND ${sql.identifier(field)} != ''`);
         filledCount = result?.count || 0;
       }
     } catch (e) {
@@ -376,13 +376,13 @@ async function getL2Engagements(): Promise<L2Engagement[]> {
         const [result] = await db
           .select({ count: count() })
           .from(users)
-          .where(sql`"${sql.raw(field)}" IS NOT NULL AND array_length("${sql.raw(field)}", 1) > 0`);
+          .where(sql`${sql.identifier(field)} IS NOT NULL AND array_length(${sql.identifier(field)}, 1) > 0`);
         filledCount = result?.count || 0;
       } else {
         const [result] = await db
           .select({ count: count() })
           .from(users)
-          .where(sql`"${sql.raw(field)}" IS NOT NULL AND "${sql.raw(field)}" != ''`);
+          .where(sql`${sql.identifier(field)} IS NOT NULL AND ${sql.identifier(field)} != ''`);
         filledCount = result?.count || 0;
       }
     } catch (e) {

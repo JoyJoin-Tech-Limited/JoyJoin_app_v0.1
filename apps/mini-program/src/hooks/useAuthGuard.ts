@@ -59,7 +59,14 @@ export function useAuthGuard(options?: {
       return
     }
 
-    if (isOnboardingRoute && auth.nextStep) {
+    if (isOnboardingRoute) {
+      // If nextStep is undefined, user has completed onboarding but is stranded
+      // on an onboarding page — redirect to discover
+      if (!auth.nextStep) {
+        Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
+        return
+      }
+
       const expectedRoute = nextStepToRoute(auth.nextStep)
       // Strip leading slash for comparison since currentRoute doesn't have one
       const expectedRouteBare = expectedRoute.replace(/^\//, '')

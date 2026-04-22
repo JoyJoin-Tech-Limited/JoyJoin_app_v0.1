@@ -20,10 +20,11 @@ Your job is to make schema evolution safe, reviewable, and compatible with live 
 ## Default workflow
 
 1. Classify the change: additive, rename, backfill, constraint cleanup, or contract change.
-2. Decide whether the work needs an explicit migration, a staged rollout, or both.
-3. Design the safest script or sequence, favoring idempotency and clear verification.
-4. Check how application code behaves during intermediate schema states.
-5. Validate or describe the migration test path and any rollback or abort conditions.
+2. **Postgres MCP:** Before planning, use the **Postgres MCP server** (`postgres`) to inspect the live database schema — table structures, existing indexes, constraints, row counts, and column types. Do not assume the local `schema.ts` is the ground truth for production.
+3. Decide whether the work needs an explicit migration, a staged rollout, or both.
+4. Design the safest script or sequence, favoring idempotency and clear verification.
+5. Check how application code behaves during intermediate schema states.
+6. Validate or describe the migration test path and any rollback or abort conditions.
 
 ## Output format
 

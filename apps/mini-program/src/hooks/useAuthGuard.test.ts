@@ -16,4 +16,12 @@ describe('useAuthGuard', () => {
       /if \(isOnboardingRoute && options\?\.suspendOnboardingRedirect\)\s*\{\s*return\s*\}[\s\S]*?navigateToMiniProgramNextStep/,
     )
   })
+
+  it('redirects to discover when nextStep is undefined on an onboarding route', () => {
+    const source = readFileSync(hookPath, 'utf8')
+
+    // Must check for undefined nextStep and redirect to discover
+    expect(source).toContain('if (!auth.nextStep)')
+    expect(source).toContain("Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })")
+  })
 })

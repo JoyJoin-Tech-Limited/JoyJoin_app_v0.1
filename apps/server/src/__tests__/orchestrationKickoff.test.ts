@@ -490,7 +490,7 @@ describe('orchestration supervisor routing boundaries', () => {
     const supervisor = manifest.agents.find((agent) => agent.name === 'Supervisor');
     const expertFrontendEngineer = manifest.agents.find((agent) => agent.name === 'Expert React Frontend Engineer');
     const supervisorSource = readRepoFile('.github/agents/supervisor.agent.md');
-    const expertFrontendEngineerSource = readRepoFile('.github/agents/frontend engineer.md');
+    const expertFrontendEngineerSource = readRepoFile('.github/agents/frontend-engineer.agent.md');
 
     expect(orchestration.portfolio_scope.orchestrated_agents).toEqual([
       'Supervisor',
@@ -542,14 +542,15 @@ describe('orchestration supervisor routing boundaries', () => {
       'Taro Migration Specialist',
       'Repo Memory Steward',
       'Workflow Governance Reviewer',
+      'Icebreaker Auction Phase Agent',
+      'Lie Detective Icebreaker Agent',
+      'Personality Dice Icebreaker Agent',
     ]);
     expect(supervisorSource).toContain('handoffs:');
     expect(supervisorSource).toContain('agent: "Researcher"');
     expect(supervisorSource).toContain('agent: "Planner"');
     expect(supervisorSource).toContain('agent: "Auto-Eval"');
-    expect(supervisorSource).toContain('agent: "Backend Engineer"');
     expect(supervisorSource).toContain('agent: "QA Agent"');
-    expect(supervisorSource).toContain('agent: "Expert React Frontend Engineer"');
     expect(expertFrontendEngineer?.tools).toEqual(['read', 'search', 'edit', 'execute']);
     expect(expertFrontendEngineer?.orchestrationPhase).toBe('support-audited');
     expect(expertFrontendEngineer?.toolingStatus).toBe('sufficient');
@@ -566,15 +567,10 @@ describe('orchestration supervisor routing boundaries', () => {
         expect.objectContaining({ from: 'Supervisor', to: 'Researcher' }),
         expect.objectContaining({ from: 'Supervisor', to: 'Planner' }),
         expect.objectContaining({ from: 'Supervisor', to: 'Auto-Eval', label: 'Route local quality gate' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Product Manager' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Backend Engineer' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'AI Engineer' }),
         expect.objectContaining({ from: 'Supervisor', to: 'QA Agent' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Launch Readiness Agent', label: 'Review launch readiness' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Mini-Program Parity Auditor' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Expert React Frontend Engineer' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Taro Mini-Program Frontend Engineer' }),
-        expect.objectContaining({ from: 'Supervisor', to: 'Taro Migration Specialist' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'debug' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Deliberation Moderator' }),
+        expect.objectContaining({ from: 'Supervisor', to: 'Harness Runtime Controller' }),
       ]),
     );
   });
@@ -604,7 +600,7 @@ describe('orchestration supervisor routing boundaries', () => {
     const debugAgent = manifest.agents.find((agent) => agent.name === 'debug');
     const principalAgent = manifest.agents.find((agent) => agent.name === 'Principal Software Engineer');
     const debugSource = readRepoFile('.github/agents/debug.agent.md');
-    const principalSource = readRepoFile('.github/agents/principal SWE.md');
+    const principalSource = readRepoFile('.github/agents/principal-swe.agent.md');
 
     expect(debugAgent).toMatchObject({
       tools: ['read', 'search', 'edit', 'execute'],
@@ -661,8 +657,8 @@ describe('orchestration supervisor routing boundaries', () => {
 
     const productAdvisor = manifest.agents.find((agent) => agent.name === 'SE: Product Manager');
     const promptEngineer = manifest.agents.find((agent) => agent.name === 'Prompt Engineer');
-    const productAdvisorSource = readRepoFile('.github/agents/PM advisor.md');
-    const promptEngineerSource = readRepoFile('.github/agents/prompt engineer.md');
+    const productAdvisorSource = readRepoFile('.github/agents/pm-advisor.agent.md');
+    const promptEngineerSource = readRepoFile('.github/agents/prompt-engineer.agent.md');
 
     expect(productAdvisor).toMatchObject({
       tools: ['read', 'search', 'edit'],
@@ -811,6 +807,7 @@ describe('orchestration supervisor routing boundaries', () => {
       'docs-sync',
       'testing-and-regression-guardrails',
       'skill-authoring-governance',
+      'process-docs',
     ]);
     expect(selfIterationSource).toContain('proposal-only');
     expect(selfIterationSource).toContain('DO NOT publish durable memory');

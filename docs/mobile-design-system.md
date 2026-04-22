@@ -5,11 +5,11 @@
 
 ## Overview
 
-This document describes the mobile-first design system implementation for JoyJoin, based on the Mobile UI Design Specification. The system is optimized for the browser-first mobile experience in `apps/user-client` and should be read alongside the active mini-program coordination docs rather than as a pre-mini-program planning artifact.
+This document describes the mobile-first design system implementation for JoyJoin, based on the Mobile UI Design Specification. The system is optimized for the web reference mobile experience in `apps/user-client` and should be read alongside the active mini-program coordination docs rather than as a pre-mini-program planning artifact.
 
 ## Platform Support
 
-- ✅ **Mobile Web (PWA)**: Primary design-system implementation (`apps/user-client`, React + Tailwind CSS)
+- ✅ **Mobile Web (PWA)**: Web reference design-system implementation (`apps/user-client`, React + Tailwind CSS)
 - 🟢 **Taro Mini Program**: Active sibling client (`apps/mini-program`) that shares design intent but requires explicit parity review
 - 📚 **Raw WeChat Reference**: Supplemental conversion guidance only in `docs/wechat-mini-program-reference.md`
 - 📱 **Native Mobile**: Future consideration (React Native)

@@ -1,0 +1,26 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+@mixin matching-status-error-state {
+  // ── Error State ───────────────────────────────────────────────
+  &__error {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-md;
+    min-height: 80vh;
+  }
+
+  &__error-icon {
+    font-size: 80rpx;
+  }
+
+  &__error-text {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__error-btn {
+    margin-top: $spacing-sm;
+  }
+}

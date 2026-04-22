@@ -352,7 +352,7 @@ export function MatchingStatusLiveOverlay({
       <View className='matching-status__overlay-backdrop' />
 
       {liveStage === 'match' ? (
-        <View className='matching-status__overlay-card'>
+        <View className='matching-status__overlay-card' key='match'>
           <Text className='matching-status__overlay-eyebrow'>小悦来报喜</Text>
           <Text className='matching-status__overlay-emoji'>{stageTemperature.emoji}</Text>
           <Text className='matching-status__overlay-title'>{stageTemperature.label}</Text>
@@ -364,7 +364,7 @@ export function MatchingStatusLiveOverlay({
       ) : null}
 
       {liveStage === 'members' && effectiveGroupDetails ? (
-        <View className='matching-status__overlay-card matching-status__overlay-card--members'>
+        <View className='matching-status__overlay-card matching-status__overlay-card--members' key='members'>
           <Text className='matching-status__overlay-eyebrow'>先看桌友</Text>
           <Text className='matching-status__overlay-title'>这一桌已经为你留好位置</Text>
           <Text className='matching-status__overlay-copy'>
@@ -412,7 +412,7 @@ export function MatchingStatusLiveOverlay({
       ) : null}
 
       {liveStage === 'theme' && persistedThemeSummary ? (
-        <View className='matching-status__overlay-card matching-status__overlay-card--theme'>
+        <View className='matching-status__overlay-card matching-status__overlay-card--theme' key='theme'>
           <Text className='matching-status__overlay-eyebrow'>今晚的桌面主题</Text>
           {persistedThemeSummary.emoji ? (
             <Text className='matching-status__overlay-emoji'>{persistedThemeSummary.emoji}</Text>

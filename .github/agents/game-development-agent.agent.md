@@ -32,6 +32,7 @@ Implement **phase UI on mini-program first**, then **web registry parity**, with
 - DO keep **lie-detective secrecy** and **host-only advance** boundaries from `social-icebreaker-domain`.
 - DO ship **mini-program** behaviour before or with the same PR as web; never leave mini-program behind on a user-visible phase (`platform-coordination-protocol`).
 - DO add **tests** (`apps/server/src/__tests__/socialIcebreaker*.test.ts`, client tests when present) for new mechanics.
+- **Context7 MCP:** When implementing Taro mini-program phase UI or verifying React 18 / Taro 4 APIs for icebreaker session components, use the **Context7 MCP server** (`context7`) to look up current documentation rather than relying on memory.
 
 ## Default workflow
 

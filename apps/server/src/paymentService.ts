@@ -4,6 +4,7 @@ import { getDirectMiniProgramAppIdConsistencyIssue } from "./lib/configValidatio
 import { eventCreditsRepo } from "./repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "./repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "./repositories/paymentsRepo";
+import { refundAttemptsRepo } from "./repositories/refundAttemptsRepo";
 import { usersRepo } from "./repositories/usersRepo";
 import { getLevelDiscount } from "@shared/gamification";
 
@@ -335,6 +336,17 @@ export class PaymentService {
     await paymentFulfillmentRepo.finalizeRefundedPayment({
       wechatOrderId,
     });
+
+    // Update the pending refund attempt to success
+    const pendingAttempt = await refundAttemptsRepo.findPendingByPaymentId(payment.id);
+    if (pendingAttempt) {
+      await refundAttemptsRepo.updateStatus(pendingAttempt.id, { status: "success" });
+    } else {
+      logger.warn("No pending refund attempt found for successful refund", {
+        payment_id: payment.id,
+        wechat_order_id: wechatOrderId,
+      });
+    }
   }
 
   /**
@@ -462,7 +474,7 @@ export class PaymentService {
   /**
    * Create refund for a payment
    */
-  async createRefund(paymentId: string, reason: string): Promise<void> {
+  async createRefund(paymentId: string, reason: string, initiatedBy?: string): Promise<void> {
     const payment = await paymentsRepo.getPaymentById(paymentId);
 
     if (!payment) {
@@ -480,25 +492,49 @@ export class PaymentService {
       }
     }
 
-    await this.wechatRequest({
-      method: "POST",
-      path: "/v3/refund/domestic/refunds",
-      body: {
-        out_trade_no: payment.wechatOrderId,
-        out_refund_no: `RF${Date.now()}${payment.id}`,
-        reason,
-        notify_url: this.getWechatPayConfig().notifyUrl,
-        amount: {
-          refund: payment.finalAmount,
-          total: payment.finalAmount,
-          currency: "CNY",
-        },
-      },
-    });
+    const wechatRefundId = `RF${Date.now()}${payment.id}`;
 
-    await paymentsRepo.updatePayment(payment.id, {
-      status: "refund_pending",
-    });
+    try {
+      await this.wechatRequest({
+        method: "POST",
+        path: "/v3/refund/domestic/refunds",
+        body: {
+          out_trade_no: payment.wechatOrderId,
+          out_refund_no: wechatRefundId,
+          reason,
+          notify_url: this.getWechatPayConfig().notifyUrl,
+          amount: {
+            refund: payment.finalAmount,
+            total: payment.finalAmount,
+            currency: "CNY",
+          },
+        },
+      });
+
+      await paymentsRepo.updatePayment(payment.id, {
+        status: "refund_pending",
+      });
+
+      await refundAttemptsRepo.create({
+        paymentId: payment.id,
+        status: "pending",
+        reason,
+        wechatRefundId,
+        amount: payment.finalAmount,
+        initiatedBy,
+      });
+    } catch (error) {
+      // Record failed refund attempt for audit trail
+      await refundAttemptsRepo.create({
+        paymentId: payment.id,
+        status: "failed",
+        reason,
+        wechatRefundId,
+        amount: payment.finalAmount,
+        initiatedBy,
+      });
+      throw error;
+    }
   }
 
   private async wechatRequest<T = any>(params: { method: WechatApiMethod; path: string; body?: Record<string, unknown> }): Promise<T> {

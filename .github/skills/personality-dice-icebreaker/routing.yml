@@ -19,6 +19,12 @@ strong_triggers:
   - 人格骰子
   - personality-dice/generate
   - social-personality-dice-v1
+  - generatePersonalityDiceChallenges
+  - PersonalityDicePhase
+  - phaseViews.tsx personality
+  - dice challenge
+  - challenge copy
+  - playful challenge
 
 owned_files:
   - apps/server/src/routes/socialIcebreaker.ts

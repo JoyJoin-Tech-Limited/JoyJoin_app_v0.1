@@ -19,13 +19,14 @@ You are the **Repo Memory Steward**, JoyJoin's automation-friendly lane for **ca
 ## Default workflow
 
 1. **`npm run memory:query -- "<keywords>"`** — check for duplicate or conflicting promoted notes.
-2. Choose **authoritative** `relatedPaths` and `sources` that **exist on disk** (validation fails otherwise).
-3. Build a JSON spec (see [`repo-memory/examples/draft-candidate.example.json`](../../repo-memory/examples/draft-candidate.example.json)) with a clear `id`, `title`, bullet **`body`**, tags, and trigger terms.
-4. Run **`npm run memory:draft-candidate -- repo-memory/examples/your-spec.json`** (or pipe JSON on stdin), **or** for **one-step draft + promote** (no separate `memory:promote`):  
+2. **Agent Memory MCP (complementary):** When you need to recall past session context about this repo that may not be in `repo-memory/`, query the **agentMemory MCP server** (`agentMemory`) as a complementary recall layer. This is advisory only—canonical durable memory remains `repo-memory/` after promotion.
+3. Choose **authoritative** `relatedPaths` and `sources` that **exist on disk** (validation fails otherwise).
+4. Build a JSON spec (see [`repo-memory/examples/draft-candidate.example.json`](../../repo-memory/examples/draft-candidate.example.json)) with a clear `id`, `title`, bullet **`body`**, tags, and trigger terms.
+5. Run **`npm run memory:draft-candidate -- repo-memory/examples/your-spec.json`** (or pipe JSON on stdin), **or** for **one-step draft + promote** (no separate `memory:promote`):  
    `JOYJOIN_MEMORY_AUTO_LAND=1 npm run memory:auto-land -- path/to/spec.json`  
    Use auto-land only when the user explicitly wants immediate promotion and accepts canonical memory impact.
-5. Run **`npm run memory:validate`** — must pass.
-6. Output a short **PR-ready summary**: what was captured, why it is durable, and whether it **supersedes** or **complements** existing promoted notes.
+6. Run **`npm run memory:validate`** — must pass.
+7. Output a short **PR-ready summary**: what was captured, why it is durable, and whether it **supersedes** or **complements** existing promoted notes.
 
 ## When to route elsewhere
 

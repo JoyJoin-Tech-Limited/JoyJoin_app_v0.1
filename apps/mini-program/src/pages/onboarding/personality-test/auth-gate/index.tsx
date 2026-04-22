@@ -8,6 +8,7 @@ import OnboardingLoadingShell from '../../../../components/OnboardingLoadingShel
 import { useAuth } from '../../../../hooks/useAuth'
 import { useWeChatLogin } from '../../../../hooks/useWeChatLogin'
 import { useOnboardingAnalytics } from '../../../../hooks/useOnboardingAnalytics'
+import { TOAST_FATAL_MS } from '../../../../lib/uiConstants'
 import {
   authenticateMiniProgramUserWithTest,
   getUserState,
@@ -135,7 +136,7 @@ export default function PersonalityTestAuthGatePage() {
       Taro.showToast({
         title: message,
         icon: 'none',
-        duration: 3000,
+        duration: TOAST_FATAL_MS,
       })
     } finally {
       setIsImportingLogin(false)

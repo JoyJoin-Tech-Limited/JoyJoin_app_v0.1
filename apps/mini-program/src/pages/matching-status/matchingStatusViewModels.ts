@@ -1,6 +1,7 @@
 import type { EventThemeVibe, PoolGroupSummary, PoolRegistrationSummary } from '@shared/api'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 import type { EventThemeTitleRevealedData } from '@shared/wsEvents'
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../../lib/uiConstants'
 
 export type LiveRevealStage = 'idle' | 'match' | 'members' | 'theme'
 
@@ -117,9 +118,9 @@ export interface ChemistryTokens {
   body: string
 }
 
-export const MATCHING_BG_SRC = '/assets/matching/matching-bg.png'
-export const MATCHING_WAITING_HERO_SRC = '/assets/matching/matching-waiting-hero.png'
-export const MATCHING_NO_MATCH_HERO_SRC = '/assets/matching/matching-no-match-hero.png'
+export const MATCHING_BG_SRC = '/assets/matching/matching-bg.webp'
+export const MATCHING_WAITING_HERO_SRC = '/assets/matching/matching-waiting-hero.webp'
+export const MATCHING_NO_MATCH_HERO_SRC = '/assets/matching/matching-no-match-hero.webp'
 
 const VENUE_UNLOCK_HOURS = 24
 
@@ -218,8 +219,8 @@ export function getCountdownState(dateTime?: string | null): { isExpired: boolea
     return { isExpired: true, label: '活动时间已到，当前这桌未能成局' }
   }
 
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const hours = Math.floor(diff / MS_PER_HOUR)
+  const minutes = Math.floor((diff % MS_PER_HOUR) / MS_PER_MINUTE)
 
   if (hours >= 24) {
     const days = Math.floor(hours / 24)
@@ -239,7 +240,7 @@ function getHoursUntilEvent(dateTime?: string | null): number | null {
   const targetTime = new Date(dateTime).getTime()
   if (Number.isNaN(targetTime)) return null
 
-  return (targetTime - Date.now()) / (1000 * 60 * 60)
+  return (targetTime - Date.now()) / MS_PER_HOUR
 }
 
 export function isVenueUnlocked(dateTime?: string | null): boolean {

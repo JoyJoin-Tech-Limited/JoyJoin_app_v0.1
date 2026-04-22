@@ -1,0 +1,57 @@
+@use '../styles/variables' as *;
+
+.segmented-progress {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8rpx;
+
+  &__segment {
+    flex: 1;
+    height: 12rpx;
+    background: $color-divider;
+    border-radius: 6rpx;
+    overflow: hidden;
+    position: relative;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+
+    &--filled {
+      background: $brand-gradient;
+      box-shadow: 0 2rpx 8rpx rgba(168, 107, 255, 0.3);
+    }
+
+    &--milestone {
+      box-shadow: 0 0 16rpx rgba(139, 92, 246, 0.5);
+    }
+  }
+
+  &__partial {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: $brand-gradient;
+    border-radius: 6rpx;
+    transition: width 0.3s ease;
+  }
+
+  // ─── Variant: minimal ──────────────────────────────────────────
+  &--minimal &__segment {
+    height: 8rpx;
+    border-radius: 4rpx;
+  }
+
+  &--minimal &__partial {
+    border-radius: 4rpx;
+  }
+
+  // ─── Variant: dots ─────────────────────────────────────────────
+  &--dots &__segment {
+    height: 16rpx;
+    border-radius: 50%;
+  }
+
+  &--dots &__partial {
+    border-radius: 50%;
+  }
+}

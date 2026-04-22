@@ -53,6 +53,10 @@ apps/server/src/
 - Do not add new database query logic directly to `storage.ts`
 - When migrating logic from `storage.ts`, extract to a repository first, then update `storage.ts` to delegate
 
+### MCP integration
+
+- **Postgres MCP:** When reviewing or adding a route that touches database schema, use the **Postgres MCP server** (`postgres`) to verify that the live database tables, columns, and indexes match the assumptions in the code. This is especially useful when reviewing PRs that change `schema.ts` or add new repository queries.
+
 ## storage.ts — compatibility facade
 
 - `storage.ts` is composed from `repositories/*` and exists for backward compatibility

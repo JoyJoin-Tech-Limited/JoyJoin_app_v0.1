@@ -1,0 +1,90 @@
+skill: semantic-matching-embeddings
+
+primary_ownership: >
+  Semantic matching and embedding pipeline: feature-flagged 7th pair-scoring dimension
+  (ENABLE_SEMANTIC_SIMILARITY), deterministic 64-dim feature-hash vectors, neural embedding
+  generation via DeepSeek, async user semantic profile cache, and dialogue insight storage.
+
+use_when:
+  - modifying semantic similarity scoring dimensions, weights, or vector construction
+  - working on the embedding client, model selection, or provider configuration
+  - adding or changing the async user semantic profile pipeline
+  - working on dialogue insight detection, storage, or user-linking logic
+  - debugging why semantic similarity scores look wrong or embeddings are degrading
+  - adding metrics, observability, or fallback behavior around embeddings
+
+do_not_use_when:
+  - task is about core 6D matching algorithm or group formation (use matching-domain)
+  - task is purely about event pool lifecycle or match-run operations (use event-pool-and-matching-operations)
+  - task is only about AI chat/completion routing (use llm-runtime-safety-and-integration)
+  - task is purely about feature flag rollout strategy (use feature-flags-launch-config)
+
+strong_triggers:
+  - matchingSemantic
+  - embeddingClient
+  - userSemanticProfileService
+  - dialogueEmbeddingsService
+  - semantic similarity
+  - semantic matching
+  - semantic profile
+  - user_semantic_profiles
+  - dialogue_embeddings
+  - ENABLE_SEMANTIC_SIMILARITY
+  - feature-hash vector
+  - cosine similarity
+  - embedding provider
+  - DeepSeek embedding
+  - text-embedding-3-small
+  - semanticSimilarity
+  - semantic pair score
+  - 7th dimension
+  - vector similarity
+  - profile document
+  - insight detection
+  - session linking
+
+owned_files:
+  - apps/server/src/matchingSemantic.ts
+  - apps/server/src/userSemanticProfileService.ts
+  - apps/server/src/embeddingClient.ts
+  - apps/server/src/dialogueEmbeddingsService.ts
+  - apps/server/src/matchingMetrics.ts
+  - apps/server/src/repositories/userSemanticProfilesRepo.ts
+  - apps/server/src/__tests__/userSemanticProfileService.test.ts
+  - apps/server/src/__tests__/semanticProfilePipelineBoundary.test.ts
+  - docs/ai-feature-flags.md
+  - docs/MATCHING_ALGORITHM_REFERENCE.md
+  - docs/LAUNCH_CONFIG.md
+
+owned_paths:
+  - /api/metrics
+
+owned_symbols:
+  - matchingSemantic
+  - embeddingClient
+  - userSemanticProfileService
+  - dialogueEmbeddingsService
+  - buildSemanticProfileCache
+  - calculateSemanticSimilarityScore
+  - calculateWeightedPairScore
+  - isSemanticSimilarityEnabled
+  - SemanticProfileCache
+  - EmbeddingResult
+  - queueSemanticProfileRecompute
+  - storeInsights
+  - linkSessionToUser
+  - linkByPhoneNumber
+
+related_skills:
+  - skill: matching-domain
+    when: the task changes core 6D scoring, group formation, or L1 hard constraints
+  - skill: llm-runtime-safety-and-integration
+    when: the task changes AI chat/completion routing, prompt versioning, or model routers
+  - skill: feature-flags-launch-config
+    when: the task is purely about rolling out ENABLE_SEMANTIC_SIMILARITY safely
+  - skill: platform-observability-and-ops
+    when: the task adds metrics, logging, or dashboards for embedding/matching telemetry
+  - skill: backend-models-standards
+    when: the task adds or modifies tables (user_semantic_profiles, dialogue_embeddings)
+  - skill: database-migration-safety
+    when: the task requires schema changes to vector-storage columns or indexes
