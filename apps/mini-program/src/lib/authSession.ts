@@ -15,6 +15,7 @@ export const AUTH_QUERY_KEY = ['mini-program', 'auth-user'] as const
 type SessionResetMode = 'soft' | 'hard'
 
 let loginRedirectQueued = false
+let authSessionActivated = false
 
 function getClient(client?: QueryClient): QueryClient {
   return client ?? queryClient
@@ -33,6 +34,8 @@ function writeAuthSession<TUser extends UserState>(
 ): void {
   const targetClient = getClient(client)
 
+  authSessionActivated = user !== null
+
   if (mode === 'hard') {
     targetClient.clear()
   } else if (user === null) {
@@ -43,7 +46,15 @@ function writeAuthSession<TUser extends UserState>(
 }
 
 export function bootstrapMiniProgramAuthSession(client?: QueryClient) {
+  if (!authSessionActivated) {
+    return Promise.resolve()
+  }
+
   return getClient(client).invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+}
+
+export function isMiniProgramAuthSessionActivated(): boolean {
+  return authSessionActivated
 }
 
 export function seedMiniProgramAuthSession<TUser extends UserState>(

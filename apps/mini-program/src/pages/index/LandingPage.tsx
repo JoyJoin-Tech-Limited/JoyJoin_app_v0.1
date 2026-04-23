@@ -2,26 +2,14 @@ import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState } from "react"
 import Button from "../../components/Button"
+import { MINI_PROGRAM_ROUTES } from "../../lib/onboardingRoutes"
 import { getXiaoyueExpressionAsset } from "../../lib/xiaoyueExpressions"
 import { runMiniProgramRouteTransition } from "../../lib/onboardingNavigation"
 import "./index.scss"
 
-type LandingHeroKey = "match" | "dinner" | "continue"
-
-const heroFallbackSources: Record<LandingHeroKey, string> = {
-  match: "/assets/match.webp",
-  dinner: "/assets/dinner.webp",
-  continue: "/assets/continue.webp",
-}
-
 export default function MiniProgramLandingPage() {
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
-  const [heroSources, setHeroSources] = useState<Record<LandingHeroKey, string>>({
-    match: "/assets/match.webp",
-    dinner: "/assets/dinner.webp",
-    continue: "/assets/continue.webp",
-  })
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
   const pageClassName = ["landing-page", isPageExiting ? "landing-page--exiting" : ""]
@@ -46,19 +34,6 @@ export default function MiniProgramLandingPage() {
     })()
   }
 
-  const handleHeroError = (key: LandingHeroKey) => {
-    setHeroSources((current) => {
-      if (current[key] === heroFallbackSources[key]) {
-        return current
-      }
-
-      return {
-        ...current,
-        [key]: heroFallbackSources[key],
-      }
-    })
-  }
-
   return (
     <View className={pageClassName}>
       <View className="content-zone">
@@ -74,10 +49,9 @@ export default function MiniProgramLandingPage() {
           <View className="card card-left">
             <View className="card-img-wrap">
               <Image
-                src={heroSources.match}
+                src="/assets/match.webp"
                 className="card-img"
                 mode="aspectFill"
-                onError={() => handleHeroError("match")}
               />
             </View>
             <View className="card-text">
@@ -88,10 +62,9 @@ export default function MiniProgramLandingPage() {
           <View className="card card-center">
             <View className="card-img-wrap">
               <Image
-                src={heroSources.dinner}
+                src="/assets/dinner.webp"
                 className="card-img"
                 mode="aspectFill"
-                onError={() => handleHeroError("dinner")}
               />
             </View>
             <View className="card-text">
@@ -102,10 +75,9 @@ export default function MiniProgramLandingPage() {
           <View className="card card-right">
             <View className="card-img-wrap">
               <Image
-                src={heroSources.continue}
+                src="/assets/continue.webp"
                 className="card-img"
                 mode="aspectFill"
-                onError={() => handleHeroError("continue")}
               />
             </View>
             <View className="card-text">
@@ -116,9 +88,9 @@ export default function MiniProgramLandingPage() {
 
         <View className="text-content">
           <Text className="headline">让对的相遇不再错过</Text>
-          <Text className="subtitle">找到你的氛围原型，遇见真正聊得来的人</Text>
+          <Text className="subtitle">通过氛围测试，找到你的氛围原型，遇见志同道合的ta</Text>
           <View className="badges">
-            {["氛围测试", "算法匹配", "4-6人小局"].map((label) => (
+            {["🧠 氛围测试", "🎯 算法匹配", "👥 4-6人局"].map((label) => (
               <View key={label} className="badge">
                 <Text>{label}</Text>
               </View>
@@ -142,7 +114,7 @@ export default function MiniProgramLandingPage() {
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           disabled={!hasAcceptedLegal}
-          onClick={() => navigateWithLegalGate("/pages/onboarding/personality-test/index")}
+          onClick={() => navigateWithLegalGate(MINI_PROGRAM_ROUTES.personalityTest)}
         >
           看看我会遇见谁
         </Button>
@@ -152,7 +124,7 @@ export default function MiniProgramLandingPage() {
           className={"landing-page__cta landing-page__cta--login" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
           disabled={!hasAcceptedLegal}
-          onClick={() => navigateWithLegalGate("/pages/login/index")}
+          onClick={() => navigateWithLegalGate(MINI_PROGRAM_ROUTES.login)}
         >
           已有账号？登录
         </Button>
@@ -170,9 +142,9 @@ export default function MiniProgramLandingPage() {
 
           <View className="landing-page__legal-text">
             <Text>我已阅读并同意</Text>
-            <Navigator url="/pages/terms/index" className="landing-page__legal-link">《用户协议》</Navigator>
+            <Navigator url={MINI_PROGRAM_ROUTES.terms} className="landing-page__legal-link">《用户协议》</Navigator>
             <Text>和</Text>
-            <Navigator url="/pages/terms/index?section=privacy" className="landing-page__legal-link">《隐私政策》</Navigator>
+            <Navigator url={`${MINI_PROGRAM_ROUTES.terms}?section=privacy`} className="landing-page__legal-link">《隐私政策》</Navigator>
           </View>
         </View>
 

@@ -11,8 +11,25 @@ function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
 }
 
 describe('deriveMiniProgramAuthState', () => {
-  // Guards against regression: foreground auth refresh still fails closed,
-  // but dependent queries can keep using the cached user metadata.
+  it('reports a blocking load while the initial auth bootstrap is pending', () => {
+    expect(
+      deriveMiniProgramAuthState({
+        user: undefined,
+        isLoading: true,
+        isFetching: true,
+      })
+    ).toEqual({
+      user: undefined,
+      isLoading: true,
+      isRefreshing: false,
+      isAuthenticated: false,
+      nextStep: undefined,
+    })
+  })
+
+  // Guards against regression: public pages should not fall back to a global
+  // loading state during foreground auth refresh, but guarded pages can still
+  // treat `isRefreshing` as fail-closed.
   it('preserves cached user metadata while auth is being refetched', () => {
     expect(
       deriveMiniProgramAuthState({
@@ -22,8 +39,9 @@ describe('deriveMiniProgramAuthState', () => {
       })
     ).toEqual({
       user: createAuthUser(),
-      isLoading: true,
-      isAuthenticated: false,
+      isLoading: false,
+      isRefreshing: true,
+      isAuthenticated: true,
       nextStep: 'discover',
     })
   })
@@ -40,6 +58,7 @@ describe('deriveMiniProgramAuthState', () => {
     ).toEqual({
       user,
       isLoading: false,
+      isRefreshing: false,
       isAuthenticated: true,
       nextStep: 'guide',
     })
@@ -55,6 +74,23 @@ describe('deriveMiniProgramAuthState', () => {
     ).toEqual({
       user: undefined,
       isLoading: false,
+      isRefreshing: false,
+      isAuthenticated: false,
+      nextStep: undefined,
+    })
+  })
+
+  it('returns a settled guest state during guest auth refreshes', () => {
+    expect(
+      deriveMiniProgramAuthState({
+        user: null,
+        isLoading: false,
+        isFetching: true,
+      })
+    ).toEqual({
+      user: undefined,
+      isLoading: false,
+      isRefreshing: true,
       isAuthenticated: false,
       nextStep: undefined,
     })

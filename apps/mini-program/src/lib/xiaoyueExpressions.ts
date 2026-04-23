@@ -1,3 +1,5 @@
+import Taro from '@tarojs/taro'
+
 /**
  * Canonical Xiaoyue expression ids and asset paths.
  *
@@ -6,7 +8,7 @@
  * - Regenerate from PNG masters with `scripts/optimize-xiaoyue-assets.mjs`.
  * - Brand accent reference for art: #8B5CF6. WeChat `Image` supports WebP on current base libraries.
  *
- * All 16 expression ids now have unique assets. Previously some shared assets (e.g. match-waiting + reveal).
+ * Some expression ids share an asset where the emotion overlaps (e.g. match-waiting + reveal anticipation).
  */
 
 export type XiaoyueExpressionId =
@@ -22,55 +24,75 @@ export type XiaoyueExpressionId =
   | 'paymentTrust'
   | 'optOutReassure'
   | 'neutralInformation'
-  // Personality test phase expressions (unique assets shipped)
-  | 'testCurious'
-  | 'testListening'
-  | 'testNod'
-  | 'testSurprised'
 
 /** Legacy three-state API (maps into {@link XiaoyueExpressionId}). */
 export type LegacyXiaoyueMood = 'normal' | 'excited' | 'pointing'
 
-const BASE = '/assets/personality/xiaoyue'
+const ROOT_BASE = '/assets/personality/xiaoyue'
+const ONBOARDING_BASE = '/pages/onboarding/assets/personality/xiaoyue'
+const EXTRAS_BASE = '/pages/extras/assets/personality/xiaoyue'
+const EXPERIENCE_BASE = '/pages/experience/assets/personality/xiaoyue'
 
-/** Semantic basenames — all 16 expressions, unique assets. */
-const ART = {
-  homeWelcome: `${BASE}/xiaoyue-home-welcome.webp`,
-  coachGuide: `${BASE}/xiaoyue-coach-guide.webp`,
-  loadingSystem: `${BASE}/xiaoyue-loading-system.webp`,
-  loadingReveal: `${BASE}/xiaoyue-loading-reveal.webp`,
-  matchWaiting: `${BASE}/xiaoyue-match-waiting.webp`,
-  matchSuccess: `${BASE}/xiaoyue-match-success.webp`,
-  actionSuccess: `${BASE}/xiaoyue-action-success.webp`,
-  actionFailure: `${BASE}/xiaoyue-action-failure.webp`,
-  thanksFeedback: `${BASE}/xiaoyue-thanks-feedback.webp`,
-  neutralInformation: `${BASE}/xiaoyue-neutral-information.webp`,
-  // Grid 2 — test-phase + utility expressions (all have unique assets)
-  testCurious: `${BASE}/xiaoyue-test-curious.webp`,
-  testListening: `${BASE}/xiaoyue-test-listening.webp`,
-  testNod: `${BASE}/xiaoyue-test-nod.webp`,
-  testSurprised: `${BASE}/xiaoyue-test-surprised.webp`,
-  optOutReassure: `${BASE}/xiaoyue-opt-out-reassure.webp`,
-  paymentTrust: `${BASE}/xiaoyue-payment-trust.webp`,
-} as const
+const ONBOARDING_EXPRESSION_IDS = new Set<XiaoyueExpressionId>([
+  'homeWelcome',
+  'matchWaiting',
+  'matchSuccess',
+  'loadingSystem',
+  'loadingReveal',
+  'coachGuide',
+])
 
-export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
-  homeWelcome: ART.homeWelcome,
-  coachGuide: ART.coachGuide,
-  loadingSystem: ART.loadingSystem,
-  loadingReveal: ART.loadingReveal,
-  matchWaiting: ART.matchWaiting,
-  matchSuccess: ART.matchSuccess,
-  actionSuccess: ART.actionSuccess,
-  actionFailure: ART.actionFailure,
-  thanksFeedback: ART.thanksFeedback,
-  neutralInformation: ART.neutralInformation,
-  testCurious: ART.testCurious,
-  testListening: ART.testListening,
-  testNod: ART.testNod,
-  testSurprised: ART.testSurprised,
-  optOutReassure: ART.optOutReassure,
-  paymentTrust: ART.paymentTrust,
+const EXTRAS_EXPRESSION_IDS = new Set<XiaoyueExpressionId>([
+  'thanksFeedback',
+])
+
+const EXPERIENCE_EXPRESSION_IDS = new Set<XiaoyueExpressionId>([
+  'matchWaiting',
+  'loadingReveal',
+  'optOutReassure',
+])
+
+/** Semantic basenames — nine shipped poses (开心欢迎 … 提醒通知). */
+const ART_BASENAME_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
+  homeWelcome: 'xiaoyue-home-welcome.webp',
+  matchWaiting: 'xiaoyue-match-waiting.webp',
+  matchSuccess: 'xiaoyue-match-success.webp',
+  loadingSystem: 'xiaoyue-thinking.webp',
+  loadingReveal: 'xiaoyue-match-waiting.webp',
+  actionSuccess: 'xiaoyue-action-success.webp',
+  actionFailure: 'xiaoyue-action-failure.webp',
+  thanksFeedback: 'xiaoyue-thanks-feedback.webp',
+  coachGuide: 'xiaoyue-cheer-encourage.webp',
+  paymentTrust: 'xiaoyue-reminder-notice.webp',
+  optOutReassure: 'xiaoyue-cheer-encourage.webp',
+  neutralInformation: 'xiaoyue-reminder-notice.webp',
+}
+
+export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = Object.fromEntries(
+  Object.entries(ART_BASENAME_BY_EXPRESSION).map(([id, basename]) => [id, `${ROOT_BASE}/${basename}`]),
+) as Record<XiaoyueExpressionId, string>
+
+function resolveCurrentRoute(): string {
+  const pages = Taro.getCurrentPages()
+  return pages[pages.length - 1]?.route ?? ''
+}
+
+function resolveBasePath(id: XiaoyueExpressionId): string {
+  const route = resolveCurrentRoute()
+
+  if (route.startsWith('pages/onboarding/') && ONBOARDING_EXPRESSION_IDS.has(id)) {
+    return ONBOARDING_BASE
+  }
+
+  if (route.startsWith('pages/extras/') && EXTRAS_EXPRESSION_IDS.has(id)) {
+    return EXTRAS_BASE
+  }
+
+  if (route.startsWith('pages/experience/') && EXPERIENCE_EXPRESSION_IDS.has(id)) {
+    return EXPERIENCE_BASE
+  }
+
+  return ROOT_BASE
 }
 
 export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpressionId> = {
@@ -85,23 +107,10 @@ export const PERSONALITY_TEST_XIAOYUE_EXPRESSION = {
   resultsCelebrate: 'matchSuccess',
   resultsCoach: 'coachGuide',
   resultsSlotFallback: 'matchWaiting',
-  networkHolding: 'loadingReveal',
-  errorState: 'actionFailure',
-} as const satisfies Record<string, XiaoyueExpressionId>
-
-/** Expression mapping for the testing-phase mascot questioner. */
-export const PERSONALITY_TEST_QUESTION_EXPRESSION = {
-  loading: 'loadingSystem',
-  choice: 'testCurious',
-  slider: 'testListening',
-  emoji_tap: 'homeWelcome',
-  acknowledged: 'testNod',
-  milestone: 'testSurprised',
-  error: 'actionFailure',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {
-  return XIAOYUE_ASSET_BY_EXPRESSION[id]
+  return `${resolveBasePath(id)}/${ART_BASENAME_BY_EXPRESSION[id]}`
 }
 
 export type XiaoyueMood = LegacyXiaoyueMood | XiaoyueExpressionId

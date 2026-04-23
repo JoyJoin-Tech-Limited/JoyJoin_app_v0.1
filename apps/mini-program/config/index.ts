@@ -4,17 +4,25 @@ import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 import { loadRepoRootEnvFile, resolveMiniProgramApiBaseUrl } from './apiBaseUrl'
 import devConfig from './dev'
 import prodConfig from './prod'
+import { createPruneWeappDistPlugin } from './pruneWeappDist'
 
 type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<'vite'>
 
 loadRepoRootEnvFile()
 
 const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()
+const SHOULD_PRUNE_WEAPP_DIST =
+  process.env.TARO_ENV === 'weapp'
+  || process.env.TARO_PLATFORM === 'weapp'
+  || process.env.npm_lifecycle_event?.includes('weapp')
 const MINI_PROGRAM_WECHAT_SUBSCRIBE_TMPL_IDS =
   process.env.TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS ?? ''
 /** WP4: optional build-time flag to show "实时 vs 缓存" for group analysis (beta/preview only; off in normal prod). */
 const MINI_PROGRAM_SHOW_GROUP_ANALYSIS_DEBUG =
   process.env.TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG ?? ''
+const MINI_PROGRAM_VITE_PLUGINS = SHOULD_PRUNE_WEAPP_DIST
+  ? [createPruneWeappDistPlugin(path.resolve(__dirname, '..', 'dist'))]
+  : []
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
@@ -45,8 +53,96 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     copy: {
       patterns: [
         {
-          from: 'src/assets',
-          to: 'dist/assets',
+          from: 'src/assets/box_logo_archetypes.png',
+          to: 'dist/assets/box_logo_archetypes.png',
+        },
+        {
+          from: 'src/assets/match.webp',
+          to: 'dist/assets/match.webp',
+        },
+        {
+          from: 'src/assets/dinner.webp',
+          to: 'dist/assets/dinner.webp',
+        },
+        {
+          from: 'src/assets/continue.webp',
+          to: 'dist/assets/continue.webp',
+        },
+        {
+          from: 'src/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf',
+          to: 'dist/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+          to: 'dist/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-action-success.webp',
+          to: 'dist/assets/personality/xiaoyue/xiaoyue-action-success.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-action-failure.webp',
+          to: 'dist/assets/personality/xiaoyue/xiaoyue-action-failure.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-reminder-notice.webp',
+          to: 'dist/assets/personality/xiaoyue/xiaoyue-reminder-notice.webp',
+        },
+        {
+          from: 'src/assets/promo/*.webp',
+          to: 'dist/assets/promo',
+        },
+        {
+          from: 'src/assets/personality/archetypes/*.webp',
+          to: 'dist/pages/onboarding/assets/personality/archetypes',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+          to: 'dist/pages/onboarding/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-match-waiting.webp',
+          to: 'dist/pages/onboarding/assets/personality/xiaoyue/xiaoyue-match-waiting.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-match-success.webp',
+          to: 'dist/pages/onboarding/assets/personality/xiaoyue/xiaoyue-match-success.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-thinking.webp',
+          to: 'dist/pages/onboarding/assets/personality/xiaoyue/xiaoyue-thinking.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-cheer-encourage.webp',
+          to: 'dist/pages/onboarding/assets/personality/xiaoyue/xiaoyue-cheer-encourage.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp',
+          to: 'dist/pages/extras/assets/personality/xiaoyue/xiaoyue-thanks-feedback.webp',
+        },
+        {
+          from: 'src/assets/empty-state/*.webp',
+          to: 'dist/pages/experience/assets/empty-state',
+        },
+        {
+          from: 'src/assets/matching/*.webp',
+          to: 'dist/pages/experience/assets/matching',
+        },
+        {
+          from: 'src/assets/qr/*.webp',
+          to: 'dist/pages/experience/assets/qr',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-match-waiting.webp',
+          to: 'dist/pages/experience/assets/personality/xiaoyue/xiaoyue-match-waiting.webp',
+        },
+        {
+          from: 'src/assets/personality/xiaoyue/xiaoyue-cheer-encourage.webp',
+          to: 'dist/pages/experience/assets/personality/xiaoyue/xiaoyue-cheer-encourage.webp',
+        },
+        {
+          from: 'src/assets/tab-icons',
+          to: 'dist/assets/tab-icons',
         },
         // Archetype PNG fallbacks for canvas drawImage live in the onboarding
         // subpackage to keep them out of the main package.
@@ -67,7 +163,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     framework: 'react',
     compiler: {
       type: 'vite',
-      vitePlugins: []
+      vitePlugins: MINI_PROGRAM_VITE_PLUGINS
     },
     alias: {
       '@': path.resolve(__dirname, '..', 'src'),
@@ -81,7 +177,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       },
       compiler: {
         type: 'vite',
-        vitePlugins: []
+        vitePlugins: MINI_PROGRAM_VITE_PLUGINS
       },
       postcss: {
         pxtransform: {

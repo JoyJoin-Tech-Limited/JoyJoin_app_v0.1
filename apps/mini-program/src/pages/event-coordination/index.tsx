@@ -2,7 +2,6 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { type JoinedEventSummary } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
@@ -11,7 +10,17 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import './index.scss'
 
-const supportQrSrc = '/assets/qr/customer-service-support.png'
+interface EventSummary {
+  id: string
+  title?: string
+  dateTime?: string
+  location?: string
+  status?: string
+  description?: string
+  [key: string]: unknown
+}
+
+const supportQrSrc = '/pages/experience/assets/qr/customer-service-support.webp'
 
 function formatEventDate(dateTime?: string): string {
   if (!dateTime) {
@@ -37,14 +46,14 @@ export default function EventCoordinationPage() {
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
 
-  const { data: joinedEvents = [], isLoading: eventsLoading } = useQuery<JoinedEventSummary[]>({
+  const { data: joinedEvents = [], isLoading: eventsLoading } = useQuery<EventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
-    queryFn: () => apiRequest<JoinedEventSummary[]>({ path: '/api/events/joined' }),
+    queryFn: () => apiRequest<EventSummary[]>({ path: '/api/events/joined' }),
     enabled: !authLoading,
   })
 
   const event = useMemo(
-    () => joinedEvents.find((item: JoinedEventSummary) => item.id === eventId) ?? null,
+    () => joinedEvents.find((item) => item.id === eventId) ?? null,
     [joinedEvents, eventId],
   )
 
@@ -62,7 +71,7 @@ export default function EventCoordinationPage() {
     }
 
     void Taro.navigateTo({
-      url: `/pages/event-detail/index?id=${encodeURIComponent(eventId)}`,
+      url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(eventId)}`,
     }).catch(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }))
   }
 

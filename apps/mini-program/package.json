@@ -15,6 +15,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "optimize:xiaoyue": "node scripts/optimize-xiaoyue-assets.mjs",
+    "optimize:archetypes": "node scripts/optimize-archetype-assets.mjs",
+    "optimize:runtime-assets": "node scripts/optimize-runtime-raster-assets.mjs",
     "check:xiaoyue-assets": "node scripts/check-xiaoyue-asset-size.mjs",
     "optimize:promo": "node scripts/optimize-promo-assets.mjs",
     "optimize:lovart": "node scripts/optimize-lovart-assets.mjs",
