@@ -18,26 +18,24 @@
   }
 
   &__success-emoji {
-    font-size: 96rpx;
+    font-size: 96rpx; // Decorative — not part of hierarchy
   }
 
   &__success-title {
-    @include type-display-page-title;
     display: block;
-    font-size: $font-size-xl;
-    color: $color-text-primary;
+    @include type-heading;
   }
 
   &__success-text {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
     line-height: 1.7;
   }
 
   &__success-notify-hint {
     display: block;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-text-muted;
     line-height: 1.6;
     max-width: 600rpx;
@@ -56,11 +54,11 @@
   }
 
   &__success-pill {
-    padding: 10rpx 22rpx;
+    padding: 10rprx 22rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.1);
     color: $color-primary-dark;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-semibold;
   }
 
@@ -71,7 +69,7 @@
 
   &__eyebrow {
     display: block;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.82);
     letter-spacing: 2rpx;
@@ -79,16 +77,14 @@
   }
 
   &__title {
-    @include type-display-page-title;
     display: block;
-    font-size: $font-size-2xl;
-    color: $color-text-primary;
+    @include type-title;
     margin-bottom: $spacing-sm;
   }
 
   &__description {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
     line-height: 1.7;
   }
@@ -113,13 +109,12 @@
   }
 
   &__info-label {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
   }
 
   &__info-value {
-    font-size: $font-size-base;
-    color: $color-text-primary;
+    @include type-body;
     font-weight: $font-weight-medium;
     text-align: right;
   }
@@ -145,7 +140,7 @@
 
   &__resume-kicker {
     display: block;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.84);
     margin-bottom: $spacing-xs;
@@ -153,16 +148,14 @@
 
   &__resume-title {
     display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    @include type-subheading;
     line-height: 1.5;
   }
 
   &__resume-copy {
     display: block;
     margin-top: $spacing-xs;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-text-secondary;
     line-height: 1.7;
   }
@@ -179,7 +172,7 @@
     border-radius: 999rpx;
     background: rgba($color-surface, 0.94);
     color: $color-primary-dark;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-semibold;
     box-shadow: 0 8rpx 22rpx rgba($color-primary, 0.08);
   }
@@ -212,7 +205,7 @@
     border-radius: 16rpx;
     text-align: center;
     line-height: 32rpx;
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-text-white;
     background: $color-primary;
@@ -224,8 +217,7 @@
   }
 
   &__step-text {
-    font-size: $font-size-xs;
-    color: $color-text-primary;
+    @include type-caption;
     font-weight: $font-weight-semibold;
     @include text-truncate;
   }
@@ -247,7 +239,7 @@
 
   &__section-kicker {
     display: block;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.82);
     margin-bottom: $spacing-xs;
@@ -255,9 +247,7 @@
 
   &__section-title {
     display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    @include type-subheading;
     line-height: 1.5;
     margin-bottom: $spacing-xs;
   }
@@ -266,23 +256,21 @@
   &__brief-promise,
   &__empty-text {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
     line-height: 1.7;
   }
 
   &__brief-loading {
     display: block;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-text-muted;
     margin-bottom: $spacing-sm;
   }
 
   &__brief-insight {
     display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
+    @include type-subheading;
     line-height: 1.6;
     margin-bottom: $spacing-sm;
   }
@@ -302,14 +290,13 @@
 
   &__reason-bullet {
     color: $color-primary;
-    font-size: $font-size-sm;
+    @include type-label;
     line-height: 1.6;
   }
 
   &__reason-text {
     flex: 1;
-    font-size: $font-size-base;
-    color: $color-text-primary;
+    @include type-body;
     line-height: 1.7;
   }
 
@@ -325,7 +312,7 @@
     border-radius: 999rpx;
     background: rgba($color-primary, 0.08);
     color: $color-primary-dark;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-semibold;
   }
 
@@ -375,28 +362,25 @@
   }
 
   &__choice-emoji {
-    font-size: 36rpx;
+    font-size: $font-size-lg; // Emoji icon — decorative
     line-height: 1;
   }
 
   &__choice-title {
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
     line-height: 1.5;
   }
 
   &__choice-desc {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+    @include type-caption;
     line-height: 1.6;
   }
 
   &__field-title {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
     margin-bottom: $spacing-sm;
   }
 
@@ -422,12 +406,12 @@
   }
 
   &__chip-emoji {
-    font-size: $font-size-sm;
+    font-size: $font-size-sm; // Icon — decorative
     line-height: 1;
   }
 
   &__chip-label {
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-text-primary;
     font-weight: $font-weight-medium;
   }
@@ -453,14 +437,14 @@
   }
 
   &__summary-label {
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-text-secondary;
   }
 
   &__summary-value {
     flex: 1;
     text-align: right;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-text-primary;
     font-weight: $font-weight-semibold;
     line-height: 1.6;
@@ -469,14 +453,14 @@
   &__helper {
     display: block;
     margin-top: $spacing-md;
-    font-size: $font-size-xs;
+    @include type-caption;
     color: $color-text-muted;
     line-height: 1.7;
   }
 
   &__error {
     display: block;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-error;
     text-align: center;
     margin-top: $spacing-sm;
@@ -527,10 +511,8 @@
   }
 
   &__empty-title {
-    @include type-display-section-title;
     display: block;
-    font-size: $font-size-xl;
-    color: $color-text-primary;
+    @include type-heading;
     margin-bottom: $spacing-sm;
   }
 

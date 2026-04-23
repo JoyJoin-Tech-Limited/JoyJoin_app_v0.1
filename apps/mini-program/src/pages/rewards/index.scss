@@ -40,6 +40,11 @@
     color: $color-text-secondary;
   }
 
+  &__coach {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
+  }
+
   &__stats {
     display: flex;
     gap: $spacing-md;

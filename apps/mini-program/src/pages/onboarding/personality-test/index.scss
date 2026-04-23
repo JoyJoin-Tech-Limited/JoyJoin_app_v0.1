@@ -38,39 +38,6 @@
     gap: $spacing-md;
     overflow-x: hidden;
     overflow-y: visible;
-    isolation: isolate;
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      border-radius: 999rpx;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    &::before {
-      width: 420rpx;
-      height: 420rpx;
-      top: 110rpx;
-      right: -120rpx;
-      background: rgba($color-primary, 0.14);
-      filter: blur(18rpx);
-    }
-
-    &::after {
-      width: 460rpx;
-      height: 460rpx;
-      left: -150rpx;
-      bottom: 180rpx;
-      background: rgba($color-secondary, 0.12);
-      filter: blur(22rpx);
-    }
-
-    > * {
-      position: relative;
-      z-index: 1;
-    }
   }
 
   &__stage {
@@ -101,7 +68,7 @@
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.94);
     color: $color-primary;
-    font-size: $font-size-sm;
+    @include type-label;
     font-weight: $font-weight-semibold;
     letter-spacing: 1rpx;
   }
@@ -113,7 +80,7 @@
 
   &__intro-title {
     display: block;
-    font-size: 30rpx;
+    font-size: 30rpx; // Intentional: between base (28) and md (32) for intro rhythm
     font-weight: $font-weight-semibold;
     color: $color-primary-dark;
     letter-spacing: 1rpx;
@@ -122,32 +89,25 @@
 
   &__intro-title--accent {
     margin-top: 6rpx;
-    font-size: 72rpx;
-    color: $color-text-primary;
+    font-size: 68rpx; // Intentional: slightly larger than 4XL (64) for accent impact
+    color: $color-primary;
     @include type-display-accent-line;
-    @include gradient-text;
   }
 
   &__intro-subtitle {
     display: block;
     max-width: 620rpx;
     margin-top: 20rpx;
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
     line-height: 1.68;
     overflow-wrap: anywhere;
   }
 
   &__intro-hero {
-    @include card;
+    @include card-premium;
     padding: 36rpx;
-    border: 2rpx solid rgba($color-primary, 0.1);
-    background: linear-gradient(
-      180deg,
-      rgba($color-surface, 0.98) 0%,
-      rgba($color-primary-light, 0.4) 100%
-    );
-    box-shadow: 0 18rpx 44rpx rgba($color-primary, 0.09);
+    background: $color-surface;
   }
 
   &__intro-hero-visual {
@@ -160,9 +120,9 @@
 
   &__intro-hero-halo {
     position: absolute;
-    inset: 24rpx 70rpx 44rpx;
+    inset: 32rpx 80rpx 52rpx;
     border-radius: 999rpx;
-    background: radial-gradient(circle, rgba($color-primary, 0.14) 0%, rgba($color-primary, 0) 72%);
+    background: rgba($color-primary, 0.04);
   }
 
   &__intro-bubble {
@@ -217,16 +177,25 @@
     display: block;
     position: relative;
     z-index: 1;
-    width: 300rpx;
-    height: 300rpx;
-    filter: drop-shadow(0 16rpx 28rpx rgba($color-primary, 0.14));
+    width: 280rpx;
+    height: 280rpx;
+  }
+
+  &__mascot--animated {
+    // Animated WebP plays automatically in WeChat Image component
+    // No additional CSS animation needed
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__mascot--animated {
+      // Fall back to static frame for users who prefer reduced motion
+      content: url('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp');
+    }
   }
 
   &__intro-trust {
-    @include card;
+    @include card-premium;
     padding: $spacing-lg;
-    border: 2rpx solid rgba($color-border, 0.92);
-    background: rgba($color-surface, 0.97);
   }
 
   &__intro-trust-title {
@@ -324,17 +293,11 @@
   }
 
   &__intro-tease {
-    @include card;
+    @include card-premium;
     position: relative;
     padding: $spacing-lg;
     padding-top: calc(#{$spacing-lg} + 6rpx);
-    border: 2rpx solid rgba($color-primary, 0.1);
-    background: linear-gradient(
-      180deg,
-      rgba($color-surface, 0.98) 0%,
-      rgba($color-primary-light, 0.32) 100%
-    );
-    box-shadow: 0 18rpx 48rpx rgba($color-primary, 0.07);
+    background: $color-surface;
 
     &::before {
       content: '';
@@ -344,7 +307,7 @@
       top: 0;
       height: 6rpx;
       border-radius: 0 0 8rpx 8rpx;
-      background: $brand-gradient;
+      background: $color-primary;
       opacity: 0.85;
     }
   }
@@ -412,10 +375,9 @@
 
   &__intro-tease-avatar-glow {
     position: absolute;
-    inset: 4rpx;
+    inset: 8rpx;
     border-radius: 999rpx;
-    opacity: 0.45;
-    filter: blur(20rpx);
+    opacity: 0.18;
     pointer-events: none;
   }
 
@@ -552,10 +514,8 @@
   }
 
   &__question-card {
-    @include card;
+    @include card-premium;
     padding: $spacing-lg;
-    background: rgba($color-surface, 0.94);
-    border: 2rpx solid rgba($color-primary, 0.08);
   }
 
   &__scenario {
@@ -647,9 +607,9 @@
   }
 
   &__emoji-option {
-    @include card;
+    @include card-premium;
     min-width: 0;
-    min-height: 220rpx;
+    min-height: 200rpx;
     padding: $spacing-md;
     display: flex;
     flex-direction: column;
@@ -657,7 +617,12 @@
     justify-content: center;
     gap: $spacing-sm;
     border: 2rpx solid transparent;
-    background: rgba($color-surface, 0.92);
+    background: $color-surface;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+
+    &:active {
+      transform: scale(0.97);
+    }
 
     &::after {
       border: none;
@@ -665,12 +630,13 @@
 
     &--active {
       border-color: $color-primary;
-      background: rgba($color-primary, 0.08);
+      background: rgba($color-primary, 0.04);
+      box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.08);
     }
   }
 
   &__emoji-option-emoji {
-    font-size: 56rpx;
+    font-size: 52rpx; // Decorative emoji — not part of hierarchy
     line-height: 1;
     flex-shrink: 0;
   }
@@ -701,14 +667,14 @@
 
   &__slider-pill {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10rpx;
     flex: 1;
     min-width: 0;
     max-width: 48%;
-    padding: 12rpx 18rpx;
+    padding: 14rpx 18rpx;
     border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
+    background: rgba($color-primary, 0.06);
 
     &--right {
       justify-content: flex-end;
@@ -717,7 +683,7 @@
   }
 
   &__slider-pill-emoji {
-    font-size: 28rpx;
+    font-size: $font-size-base; // Emoji icon — decorative
     line-height: 1;
     flex-shrink: 0;
   }
@@ -735,8 +701,7 @@
   &__slider-value {
     display: block;
     text-align: center;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
+    @include type-title;
     color: $color-primary-dark;
   }
 
@@ -749,6 +714,50 @@
     @include type-brand-cta-label;
     width: 100%;
     border: 0;
+  }
+
+    // ─── Mascot questioner layout (Duolingo-style) ───
+  &--mascot-layout {
+    @include page-clean-bg;
+    @include onboarding-page-exit-transition;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  &__preload-layer {
+    position: absolute;
+    left: -9999rpx;
+    top: -9999rpx;
+    width: 1rpx;
+    height: 1rpx;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__preload-image {
+    width: 1rpx;
+    height: 1rpx;
+  }
+
+  &__host-zone {
+    flex: 0 1 auto;
+    min-height: 0;
+    padding: $spacing-sm $container-padding $spacing-md;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__answer-zone {
+    flex: 1;
+    min-height: 0;
+    padding: 0 $container-padding $spacing-lg;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   @media (prefers-reduced-motion: reduce) {

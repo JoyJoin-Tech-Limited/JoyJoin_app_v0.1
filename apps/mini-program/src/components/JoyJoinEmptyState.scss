@@ -1,0 +1,72 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.joyjoin-empty-state {
+  @include flex-center;
+  flex-direction: column;
+  min-height: 60vh;
+  padding: $spacing-2xl $container-padding;
+  text-align: center;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    max-width: 560rpx;
+  }
+
+  &__mascot {
+    display: block;
+    width: 240rpx;
+    height: 240rpx;
+    margin-bottom: $spacing-sm;
+    animation: joyjoin-empty-mascot-entrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  &__title {
+    display: block;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.4;
+  }
+
+  &__subtitle {
+    display: block;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.55;
+  }
+
+  &__action {
+    margin-top: $spacing-sm;
+    min-width: 240rpx;
+  }
+
+  &__extra {
+    margin-top: $spacing-sm;
+    width: 100%;
+  }
+}
+
+@keyframes joyjoin-empty-mascot-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .joyjoin-empty-state__mascot {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}

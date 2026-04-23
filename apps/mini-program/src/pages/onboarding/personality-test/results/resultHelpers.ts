@@ -40,19 +40,89 @@ export const TRAIT_LABELS: Array<{ key: string; label: string }> = [
   { key: 'P', label: '快乐值' },
 ]
 
-export const SLOT_ANTICIPATION_MS = 900
-export const SLOT_SPIN_MS = 2800
-export const SLOT_NEAR_MISS_MS = 360
-export const SLOT_REVEAL_PAUSE_MS = 280
-export const SLOT_SPIN_INTERVAL_MS = 120
-export const SLOT_HOLD_INTERVAL_MS = 180
-export const SLOT_SLOW_STEP_DELAYS = [80, 130, 180, 230, 280, 330, 380, 430, 480, 530]
-export const RESULT_SLOW_NETWORK_MS = 3200
-export const FLOW_SAFETY_TIMEOUT_MS = 16000
-export const REVEAL_SILHOUETTE_MS = 520
-export const REVEAL_FILL_MS = 760
-export const REVEAL_SPARKLE_MS = 820
-export const RESULT_BRIDGE_MS = 1100
+/**
+ * Centralized animation timing profile.
+ * All timing constants are consolidated here for easy tuning and A/B testing.
+ * Override via env or query param: `?animationProfile=fast`
+ */
+export interface AnimationProfile {
+  slotAnticipationMs: number
+  slotSpinMs: number
+  slotSpinIntervalMs: number
+  slotHoldIntervalMs: number
+  slotSlowStepDelays: number[]
+  slotNearMissMs: number
+  slotNearMissProbability: number
+  slotRevealPauseMs: number
+  revealSilhouetteMs: number
+  revealFillMs: number
+  revealGlowMs: number
+  bridgeMs: number
+  slowNetworkMs: number
+  flowSafetyTimeoutMs: number
+}
+
+const DEFAULT_PROFILE: AnimationProfile = {
+  slotAnticipationMs: 900,
+  slotSpinMs: 2500,
+  slotSpinIntervalMs: 120,
+  slotHoldIntervalMs: 180,
+  slotSlowStepDelays: [80, 130, 180, 230, 280, 330, 380, 430, 480, 530],
+  slotNearMissMs: 360,
+  slotNearMissProbability: 0.3,
+  slotRevealPauseMs: 280,
+  revealSilhouetteMs: 520,
+  revealFillMs: 760,
+  revealGlowMs: 500,
+  bridgeMs: 300,
+  slowNetworkMs: 3200,
+  flowSafetyTimeoutMs: 16000,
+}
+
+const FAST_PROFILE: AnimationProfile = {
+  ...DEFAULT_PROFILE,
+  slotSpinMs: 1800,
+  revealSilhouetteMs: 350,
+  revealFillMs: 450,
+  revealGlowMs: 300,
+  bridgeMs: 150,
+}
+
+export function getAnimationProfile(): AnimationProfile {
+  if (typeof window !== 'undefined') {
+    const url = new URL(window.location.href)
+    const profileName = url.searchParams.get('animationProfile')
+    if (profileName === 'fast') return FAST_PROFILE
+  }
+  return DEFAULT_PROFILE
+}
+
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_ANTICIPATION_MS = DEFAULT_PROFILE.slotAnticipationMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_SPIN_MS = DEFAULT_PROFILE.slotSpinMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_NEAR_MISS_MS = DEFAULT_PROFILE.slotNearMissMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_REVEAL_PAUSE_MS = DEFAULT_PROFILE.slotRevealPauseMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_SPIN_INTERVAL_MS = DEFAULT_PROFILE.slotSpinIntervalMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_HOLD_INTERVAL_MS = DEFAULT_PROFILE.slotHoldIntervalMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const SLOT_SLOW_STEP_DELAYS = DEFAULT_PROFILE.slotSlowStepDelays
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const RESULT_SLOW_NETWORK_MS = DEFAULT_PROFILE.slowNetworkMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const FLOW_SAFETY_TIMEOUT_MS = DEFAULT_PROFILE.flowSafetyTimeoutMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const REVEAL_SILHOUETTE_MS = DEFAULT_PROFILE.revealSilhouetteMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const REVEAL_FILL_MS = DEFAULT_PROFILE.revealFillMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const REVEAL_SPARKLE_MS = DEFAULT_PROFILE.revealGlowMs
+/** @deprecated Use AnimationProfile via getAnimationProfile() */
+export const RESULT_BRIDGE_MS = DEFAULT_PROFILE.bridgeMs
 export const GENERIC_API_ERROR_PREFIX = 'Request failed with status'
 
 export function waitFor(ms: number): Promise<void> {
@@ -144,6 +214,20 @@ export function getConfidenceLabel(
 
   const normalized = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence
   return `匹配 ${Math.round(normalized)}%`
+}
+
+/**
+ * Deterministic near-miss based on sessionId hash.
+ * Replaces Math.random() for reproducibility and analytics.
+ * Probability capped at 30% to reduce casino-feel manipulation.
+ */
+export function shouldNearMiss(sessionId: string | undefined, probability = 0.3): boolean {
+  if (!sessionId) return false
+  let hash = 0
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = ((hash << 5) - hash + sessionId.charCodeAt(i)) | 0
+  }
+  return (Math.abs(hash) % 100) < Math.round(probability * 100)
 }
 
 export function buildResolvedResultState(

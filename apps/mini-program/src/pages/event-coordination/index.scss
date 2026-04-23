@@ -3,7 +3,7 @@
 
 .coordination-help {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fff5ec 0%, $color-bg 220rpx, $color-bg 100%);
+  background: $color-bg-gradient;
 
   &__hero {
     display: flex;
@@ -124,7 +124,7 @@
     height: 180rpx;
     flex-shrink: 0;
     border-radius: 24rpx;
-    background: #fffaf4;
+    background: $color-bg-tint-cream;
     padding: 12rpx;
     box-sizing: border-box;
   }

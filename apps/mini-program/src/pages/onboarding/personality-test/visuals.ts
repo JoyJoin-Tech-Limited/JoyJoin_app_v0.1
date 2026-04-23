@@ -11,22 +11,28 @@ export {
   getXiaoyueExpressionAsset,
   LEGACY_MOOD_TO_EXPRESSION,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
+  PERSONALITY_TEST_QUESTION_EXPRESSION,
   XIAOYUE_ASSET_BY_EXPRESSION,
 } from '../../../lib/xiaoyueExpressions'
 
-const ARCHETYPE_ASSET_MAP: Record<string, string> = {
-  开心柯基: '/assets/personality/archetypes/archetype-corgi.png',
-  太阳鸡: '/assets/personality/archetypes/archetype-rooster.png',
-  夸夸豚: '/assets/personality/archetypes/archetype-praise-dolphin.png',
-  机智狐: '/assets/personality/archetypes/archetype-fox.png',
-  淡定海豚: '/assets/personality/archetypes/archetype-calm-dolphin.png',
-  织网蛛: '/assets/personality/archetypes/archetype-spider.png',
-  暖心熊: '/assets/personality/archetypes/archetype-bear.png',
-  灵感章鱼: '/assets/personality/archetypes/archetype-octopus.png',
-  沉思猫头鹰: '/assets/personality/archetypes/archetype-owl.png',
-  定心大象: '/assets/personality/archetypes/archetype-elephant.png',
-  稳如龟: '/assets/personality/archetypes/archetype-turtle.png',
-  隐身猫: '/assets/personality/archetypes/archetype-cat.png',
+export interface ArchetypeAssetPaths {
+  webp: string
+  png: string
+}
+
+const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
+  开心柯基: { webp: '/assets/personality/archetypes/archetype-corgi.webp', png: '/pages/onboarding/assets/archetypes/archetype-corgi.png' },
+  太阳鸡: { webp: '/assets/personality/archetypes/archetype-rooster.webp', png: '/pages/onboarding/assets/archetypes/archetype-rooster.png' },
+  夸夸豚: { webp: '/assets/personality/archetypes/archetype-praise-dolphin.webp', png: '/pages/onboarding/assets/archetypes/archetype-praise-dolphin.png' },
+  机智狐: { webp: '/assets/personality/archetypes/archetype-fox.webp', png: '/pages/onboarding/assets/archetypes/archetype-fox.png' },
+  淡定海豚: { webp: '/assets/personality/archetypes/archetype-calm-dolphin.webp', png: '/pages/onboarding/assets/archetypes/archetype-calm-dolphin.png' },
+  织网蛛: { webp: '/assets/personality/archetypes/archetype-spider.webp', png: '/pages/onboarding/assets/archetypes/archetype-spider.png' },
+  暖心熊: { webp: '/assets/personality/archetypes/archetype-bear.webp', png: '/pages/onboarding/assets/archetypes/archetype-bear.png' },
+  灵感章鱼: { webp: '/assets/personality/archetypes/archetype-octopus.webp', png: '/pages/onboarding/assets/archetypes/archetype-octopus.png' },
+  沉思猫头鹰: { webp: '/assets/personality/archetypes/archetype-owl.webp', png: '/pages/onboarding/assets/archetypes/archetype-owl.png' },
+  定心大象: { webp: '/assets/personality/archetypes/archetype-elephant.webp', png: '/pages/onboarding/assets/archetypes/archetype-elephant.png' },
+  稳如龟: { webp: '/assets/personality/archetypes/archetype-turtle.webp', png: '/pages/onboarding/assets/archetypes/archetype-turtle.png' },
+  隐身猫: { webp: '/assets/personality/archetypes/archetype-cat.webp', png: '/pages/onboarding/assets/archetypes/archetype-cat.png' },
 }
 
 const ARCHETYPE_SUMMARIES: Record<string, string> = {
@@ -52,6 +58,7 @@ function withAlpha(archetype: string | null | undefined, alpha: number): string 
 export interface ArchetypeVisual {
   name: string
   asset: string
+  assetPng: string
   accent: string
   accentSoft: string
   accentBorder: string
@@ -79,7 +86,8 @@ export function getArchetypeVisual(archetype: string | null | undefined): Archet
 
   return {
     name: archetype ?? '神秘原型',
-    asset: archetype ? ARCHETYPE_ASSET_MAP[archetype] ?? '' : '',
+    asset: archetype ? ARCHETYPE_ASSET_MAP[archetype]?.webp ?? '' : '',
+    assetPng: archetype ? ARCHETYPE_ASSET_MAP[archetype]?.png ?? '' : '',
     accent,
     accentSoft: withAlpha(archetype, 0.12),
     accentBorder: withAlpha(archetype, 0.22),

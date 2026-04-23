@@ -12,10 +12,12 @@
  *                     legal text, helper text.  Feels native and
  *                     fast; no custom font needed here.
  *
- *   --font-cn-display AlibabaPuHuiTi-3 (Regular, TTF) with system
+ *   --font-cn-display AlimamaFangYuanTiVF-Thin (Variable, TTF) with system
  *                     fallback.  Used selectively for emotionally
  *                     charged headings, hero titles, branded Chinese
  *                     callouts, and milestone / success moments.
+ *                     Aligns with the mini-program brand face loaded via
+ *                     Taro.loadFontFace() in apps/mini-program/src/lib/brandFont.ts.
  *
  *   --font-en-brand   Quicksand (Variable, TTF) with rounded, warm,
  *                     youthful character.  Used for the "JoyJoin"
@@ -39,17 +41,17 @@
  *
  * FONT FILES PRESENT
  * ──────────────────
- *   AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular.ttf  ✓
+ *   Alimama/AlimamaFangYuanTiVF-Thin.ttf                ✓
  *   Quicksand/Quicksand-VariableFont_wght.ttf           ✓
  * ============================================================
  */
 
-/* ─── Chinese display: Alibaba PuHuiTi 3 (Regular) ──────── */
+/* ─── Chinese display: Alimama FangYuanTi VF (Thin master) ──────── */
 
 @font-face {
-  font-family: 'AlibabaPuHuiTi';
-  src: url('./AlibabaPuHuiTi-3/AlibabaPuHuiTi-3-55-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'AlimamaFangYuanTiVF';
+  src: url('./Alimama/AlimamaFangYuanTiVF-Thin.ttf') format('truetype');
+  font-weight: 100 900;
   font-style: normal;
   /* swap: body text is always readable while the custom font loads */
   font-display: swap;
@@ -88,11 +90,14 @@
  *   Do NOT use a custom display font here.
  *
  * font-cn-display  → font-family: var(--font-cn-display)
- *   AlibabaPuHuiTi-3 (self-hosted), falls back to system Chinese stack
+ *   AlimamaFangYuanTiVF (self-hosted), falls back to system Chinese stack
  *   and then generic system-ui / sans-serif.
  *   Use for: short high-impact Chinese display moments — hero headlines,
  *   branded tab labels, celebratory text, premium empty-state headlines,
  *   high-emotion primary CTAs.
+ *   NOTE: This aligns with the mini-program brand face loaded via
+ *   Taro.loadFontFace(). Both surfaces now share the same Chinese display
+ *   font for brand consistency.
  *
  * font-en-brand    → font-family: var(--font-en-brand)
  *   Quicksand (self-hosted when available), falls back to Outfit (loaded
@@ -111,10 +116,10 @@
   --font-ui: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
 
   /* ── Role 2: Chinese display (short high-impact emotional moments) ──── */
-  /* AlibabaPuHuiTi-3 is wired through the self-hosted @font-face above.
+  /* AlimamaFangYuanTiVF is wired through the self-hosted @font-face above.
      Falls back to system Chinese (PingFang SC, Microsoft YaHei), then
      system-ui / sans-serif if the self-hosted font fails to load. */
-  --font-cn-display: 'AlibabaPuHuiTi', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-cn-display: 'AlimamaFangYuanTiVF', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
 
   /* ── Role 3: English brand accent (JoyJoin identity moments only) ───── */
   /* Quicksand is already wired through the self-hosted @font-face above.

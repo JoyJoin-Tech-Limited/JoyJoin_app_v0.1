@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { MyConnection } from '@shared/api'
+import { getArchetypeHSL, formatHSL } from '@shared/archetypeColors'
 import { apiRequest } from '../../lib/api'
 import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
@@ -65,7 +66,10 @@ export default function ConnectionsPage() {
         ) : connections.length > 0 ? (
           connections.map((conn) => (
             <Card key={String(conn.id)} className='connections-page__card'>
-              <View className='connections-page__card-avatar'>
+              <View
+                className='connections-page__card-avatar'
+                style={conn.peerArchetype ? { background: formatHSL(getArchetypeHSL(conn.peerArchetype)) } : {}}
+              >
                 <Text className='connections-page__card-avatar-text'>
                   {getPeerInitial(conn.peerDisplayName)}
                 </Text>

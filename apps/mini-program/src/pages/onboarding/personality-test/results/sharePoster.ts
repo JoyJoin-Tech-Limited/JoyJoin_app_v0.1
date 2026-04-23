@@ -83,6 +83,7 @@ export interface PersonalitySharePosterInput {
   accentColor: string
   accentSoft: string
   archetypeAsset: string
+  archetypeAssetPng: string
   confidenceLabel?: string
   rarityLabel?: string
   skillAttribute: string
@@ -245,6 +246,11 @@ function drawBadge(ctx: Taro.CanvasContext, options: {
   ctx.restore()
 }
 
+/**
+ * Resolve image path with pre-flight validation.
+ * For canvas drawImage, we need a resolved local path.
+ * This validates the image can be loaded before attempting to draw.
+ */
 async function resolveImagePath(src: string): Promise<string> {
   if (!src) {
     return ''
@@ -252,10 +258,14 @@ async function resolveImagePath(src: string): Promise<string> {
 
   try {
     const imageInfo = await Taro.getImageInfo({ src })
-    return imageInfo.path || src
-  } catch {
-    return src
+    if (imageInfo.path) {
+      return imageInfo.path
+    }
+  } catch (err) {
+    // Pre-flight failed — image may not be available locally
+    console.warn('[sharePoster] getImageInfo failed for', src, err)
   }
+  return ''
 }
 
 /**
@@ -608,7 +618,9 @@ function drawSkillCard(
 export async function generatePersonalitySharePoster(
   input: PersonalitySharePosterInput,
 ): Promise<string> {
-  const archetypeImagePath = await resolveImagePath(input.archetypeAsset)
+  // Use PNG fallback for canvas drawImage (WebP compatibility uncertain in canvas context)
+  const canvasAsset = input.archetypeAssetPng || input.archetypeAsset
+  const archetypeImagePath = await resolveImagePath(canvasAsset)
 
   const ctx = Taro.createCanvasContext(PERSONALITY_SHARE_POSTER_CANVAS_ID)
   createCardBackground(ctx, input.accentColor)
@@ -801,9 +813,12 @@ export async function generatePersonalitySharePoster(
   drawAttributionWatermark(ctx, CARD_X, footerY + 56, CARD_WIDTH)
 
   // Determine export resolution based on device capability
-  // We use a higher multiplier for retina-sharp output, capped to avoid memory issues
-  const dpr = Taro.getSystemInfoSync().pixelRatio || 2
-  const exportMultiplier = Math.min(Math.max(dpr, 2), 3)
+  // Cap DPR at 2 for low-RAM devices to prevent OOM
+  const systemInfo = Taro.getSystemInfoSync()
+  const dpr = systemInfo.pixelRatio || 2
+  const ram = (systemInfo as { deviceMemory?: number }).deviceMemory || 4
+  const dprCap = ram < 3 ? 2 : 3
+  const exportMultiplier = Math.min(Math.max(dpr, 2), dprCap)
 
   return await new Promise<string>((resolve, reject) => {
     ctx.draw(false, async () => {
@@ -819,6 +834,15 @@ export async function generatePersonalitySharePoster(
           fileType: 'png',
           quality: 1,
         })
+        // Clean up temp file after a delay (allow share/save to complete first)
+        setTimeout(() => {
+          try {
+            const fs = Taro.getFileSystemManager()
+            fs.unlinkSync(output.tempFilePath)
+          } catch {
+            // Ignore cleanup errors
+          }
+        }, 60000)
         resolve(output.tempFilePath)
       } catch (error) {
         reject(error)

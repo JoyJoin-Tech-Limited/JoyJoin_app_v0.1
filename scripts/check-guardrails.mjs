@@ -100,6 +100,31 @@ for (const [scriptName, expectedCommand] of Object.entries(requiredRootScripts))
   }
 }
 
+// 3. Flag ad-hoc font-size literals in mini-program SCSS (must use $font-size-* tokens or type-* mixins).
+// Only checks files modified or untracked in the current working tree to avoid
+// blocking CI on legacy code. Existing hardcoded literals should be migrated over time.
+let modifiedFiles = [];
+try {
+  modifiedFiles = execFileSync('git', ['diff', '--name-only', '--cached', '--diff-filter=ACMRTUB', '-z'], { encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean);
+} catch {
+  // Ignore git errors (e.g., not in a git repo)
+}
+const hardcodedFontSizePattern = /font-size:\s*\d+rpx/;
+const decorativeCommentPattern = /\/\/\s*(Decorative|Intentional|Emoji|Icon)/i;
+for (const file of modifiedFiles) {
+  if (!file.startsWith('apps/mini-program/src/') || !file.endsWith('.scss')) continue;
+  if (file.endsWith('_variables.scss') || file.endsWith('_mixins.scss')) continue;
+  const content = fs.readFileSync(file, 'utf8');
+  const lines = content.split(/\r?\n/);
+  lines.forEach((line, index) => {
+    if (hardcodedFontSizePattern.test(line) && !decorativeCommentPattern.test(line)) {
+      violations.push(`Ad-hoc font-size literal found (use \$font-size-* token or type-* mixin): ${file}:${index + 1}`);
+    }
+  });
+}
+
 const secretKeyPattern = /^\s*(?:export\s+)?(DATABASE_URL|JWT_SECRET|SESSION_SECRET|WECHAT_SECRET|DEEPSEEK_API_KEY|ADMIN_CREATE_SECRET_KEY)\s*[:=]\s*["']?([^"'\s#]+)/i;
 const credentialUrlPattern = /postgres(?:ql)?:\/\/[^\s"']+:[^\s"']+@/i;
 

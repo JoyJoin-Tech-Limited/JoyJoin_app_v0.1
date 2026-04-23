@@ -1,12 +1,18 @@
 import Taro from '@tarojs/taro'
 
-export type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning'
+export type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'slotTick' | 'slotLand' | 'cardReveal'
 
-const HAPTIC_STYLES: Record<Exclude<HapticType, 'warning'>, 'light' | 'medium' | 'heavy'> = {
+const HAPTIC_STYLES: Record<Exclude<HapticType, 'warning' | 'slotTick' | 'slotLand' | 'cardReveal'>, 'light' | 'medium' | 'heavy'> = {
   light: 'light',
   medium: 'medium',
   heavy: 'heavy',
   success: 'heavy',
+}
+
+const SLOT_HAPTIC_MAP: Record<Extract<HapticType, 'slotTick' | 'slotLand' | 'cardReveal'>, { type: 'light' | 'medium' | 'heavy'; count: number }> = {
+  slotTick: { type: 'light', count: 1 },
+  slotLand: { type: 'medium', count: 1 },
+  cardReveal: { type: 'heavy', count: 2 },
 }
 
 function canVibrate(): boolean {
@@ -30,6 +36,15 @@ export function haptics(type: HapticType) {
       Taro.vibrateLong()
       return
     }
+
+    if (type === 'slotTick' || type === 'slotLand' || type === 'cardReveal') {
+      const config = SLOT_HAPTIC_MAP[type]
+      for (let i = 0; i < config.count; i++) {
+        Taro.vibrateShort({ type: config.type })
+      }
+      return
+    }
+
     const style = HAPTIC_STYLES[type]
     Taro.vibrateShort({ type: style })
   } catch {

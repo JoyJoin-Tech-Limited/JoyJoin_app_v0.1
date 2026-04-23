@@ -15,10 +15,16 @@ export interface XiaoyueChatBubbleProps {
   content: string
   /** Mascot pose/expression */
   pose?: XiaoyuePose
+  /** Direct expression override (takes precedence over pose) */
+  expressionId?: XiaoyueExpressionId
   /** Layout direction */
   horizontal?: boolean
+  /** Wide vertical layout: avatar stacked above full-width bubble */
+  wide?: boolean
   /** Whether to show pulsing ring glow */
   showGlow?: boolean
+  /** Whether the bubble is in a loading state (dims bubble, swaps avatar to thinking) */
+  isLoading?: boolean
   /** Stagger delay per sentence (ms) */
   staggerDelay?: number
   className?: string
@@ -37,27 +43,43 @@ export interface XiaoyueChatBubbleProps {
 export default function XiaoyueChatBubble({
   content,
   pose = 'casual',
+  expressionId: expressionIdProp,
   horizontal = true,
+  wide = false,
   showGlow = true,
+  isLoading = false,
   staggerDelay = 80,
   className = '',
 }: XiaoyueChatBubbleProps) {
-  const expressionId = POSE_TO_EXPRESSION[pose]
+  const resolvedExpressionId = isLoading
+    ? 'loadingSystem'
+    : expressionIdProp ?? POSE_TO_EXPRESSION[pose]
   const sentences = content.split(/[。.]/).filter((s) => s.trim().length > 0)
 
+  const layoutClass = wide
+    ? 'xiaoyue-chat-bubble--wide'
+    : horizontal
+      ? 'xiaoyue-chat-bubble--horizontal'
+      : 'xiaoyue-chat-bubble--vertical'
+
   return (
-    <View className={`xiaoyue-chat-bubble ${horizontal ? 'xiaoyue-chat-bubble--horizontal' : 'xiaoyue-chat-bubble--vertical'} ${className}`}>
+    <View className={`xiaoyue-chat-bubble ${layoutClass} ${className}`}>
       {/* Avatar with glow */}
-      <View className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''}`}>
+      <View
+        className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''} ${isLoading ? 'xiaoyue-chat-bubble__avatar-wrap--loading' : ''}`}
+      >
         <Image
           className='xiaoyue-chat-bubble__avatar'
           mode='aspectFit'
-          src={getXiaoyueExpressionAsset(expressionId)}
+          src={getXiaoyueExpressionAsset(resolvedExpressionId)}
+          onError={() => {
+            // Graceful degradation: avatar hides, bubble remains
+          }}
         />
       </View>
 
       {/* Bubble */}
-      <View className='xiaoyue-chat-bubble__bubble'>
+      <View className={`xiaoyue-chat-bubble__bubble ${isLoading ? 'xiaoyue-chat-bubble__bubble--loading' : ''}`}>
         {sentences.map((sentence, i) => (
           <Text
             key={i}

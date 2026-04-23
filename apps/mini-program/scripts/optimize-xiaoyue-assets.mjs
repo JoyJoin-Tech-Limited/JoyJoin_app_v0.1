@@ -33,14 +33,21 @@ const WEBP_EFFORT = 6
 /** Basenames matching ART keys in xiaoyueExpressions.ts (input .png → output .webp) */
 const MANIFEST = [
   'xiaoyue-home-welcome',
+  'xiaoyue-coach-guide',
+  'xiaoyue-loading-system',
+  'xiaoyue-loading-reveal',
   'xiaoyue-match-waiting',
   'xiaoyue-match-success',
-  'xiaoyue-thinking',
   'xiaoyue-action-success',
   'xiaoyue-action-failure',
   'xiaoyue-thanks-feedback',
-  'xiaoyue-cheer-encourage',
-  'xiaoyue-reminder-notice',
+  'xiaoyue-neutral-information',
+  'xiaoyue-test-curious',
+  'xiaoyue-test-listening',
+  'xiaoyue-test-nod',
+  'xiaoyue-test-surprised',
+  'xiaoyue-opt-out-reassure',
+  'xiaoyue-payment-trust',
 ]
 
 async function main() {

@@ -50,6 +50,16 @@ Pick ONE lane based on these simple tests:
 | **Harness** | Core engine changes (personality, matching, scoring), needs pre-validated quality, or user explicitly asked for Harness. | "Is this the brain of the product?" |
 | **Operational** | Validating, smoke-testing, release-checking, or reviewing a dirty worktree. | "Are we checking if it's safe to ship?" |
 
+### Completion Gate (all lanes)
+
+Every implementation task — regardless of lane — must run the **Harness Completion Gate** before claiming "done":
+
+```bash
+npm run harness:gate
+```
+
+This checks the 5 Harness pillars (Reliability, Scalability, Security, Observability, Maintainability) against changed code. **Do not declare a task complete until the gate passes.** Load the [`harness-completion-gate`](../harness-completion-gate/SKILL.md) skill for the full checklist.
+
 ## How to Parse the User's Goal
 
 1. **Find the verb** — build, fix, add, change, refactor, investigate, implement, optimize, audit, explore, remove, migrate, etc.

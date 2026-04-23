@@ -1,4 +1,4 @@
-import { Canvas, View } from '@tarojs/components'
+import { Canvas, Text, View } from '@tarojs/components'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
@@ -14,6 +14,7 @@ import {
   saveAnonymousAssessmentSession,
   type AnonymousAssessmentSessionSnapshot,
 } from '../../../../lib/anonymousOnboarding'
+import { getDegradationTier, type DegradationTier } from '../../../../lib/frameBudget'
 import { haptics } from '../../../../lib/haptics'
 import { logError, logInfo, logWarn } from '../../../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
@@ -33,24 +34,14 @@ import {
   buildResolvedResultState,
   buildShareLine,
   buildShareTitle,
-  FLOW_SAFETY_TIMEOUT_MS,
+  getAnimationProfile,
   getConfidenceLabel,
   getTraitEntries,
   getTopMatches,
   resolveResultErrorMessage,
-  RESULT_BRIDGE_MS,
-  RESULT_SLOW_NETWORK_MS,
-  REVEAL_FILL_MS,
-  REVEAL_SILHOUETTE_MS,
-  REVEAL_SPARKLE_MS,
-  SLOT_ANTICIPATION_MS,
-  SLOT_HOLD_INTERVAL_MS,
-  SLOT_NEAR_MISS_MS,
-  SLOT_REVEAL_PAUSE_MS,
-  SLOT_SLOW_STEP_DELAYS,
-  SLOT_SPIN_INTERVAL_MS,
-  SLOT_SPIN_MS,
+  shouldNearMiss,
   waitFor,
+  type AnimationProfile,
   type FlowStage,
   type ResolvedResultState,
   type RevealPhase,
@@ -93,11 +84,17 @@ export default function PersonalityTestResultsPage() {
   const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
   const [cardNickname, setCardNickname] = useState('')
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
+  const [showSkipAnimation, setShowSkipAnimation] = useState(false)
 
   const mountedRef = useRef(false)
   const runIdRef = useRef(0)
   const resultStateRef = useRef<ResolvedResultState | null>(initialResolvedResult)
   const didTrackCompletionRef = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const timeoutHandlesRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const degradationTierRef = useRef<DegradationTier>('full')
+
+  const profileRef = useRef<AnimationProfile>(getAnimationProfile())
 
   const analytics = useOnboardingAnalytics('personality-test-results', {
     enabled: !auth.isLoading,
@@ -114,6 +111,14 @@ export default function PersonalityTestResultsPage() {
     return () => {
       mountedRef.current = false
       runIdRef.current += 1
+      // Bulk-clear all pending timeouts
+      timeoutHandlesRef.current.forEach((handle) => clearTimeout(handle))
+      timeoutHandlesRef.current = []
+      // Abort any in-flight fetch
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
     }
   }, [])
 
@@ -227,6 +232,11 @@ export default function PersonalityTestResultsPage() {
 
     setIsFetchingResult(true)
 
+    // Create new AbortController for this fetch
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     try {
       const response = await apiRequest<{
         sessionId: string
@@ -235,6 +245,8 @@ export default function PersonalityTestResultsPage() {
         topArchetypes?: typeof topMatches
       }>({
         path: `/api/assessment/v4/${encodeURIComponent(latestSnapshot.sessionId)}/result`,
+        // @ts-expect-error - apiRequest may not expose signal yet; handled gracefully
+        signal: controller.signal,
       })
 
       if (!mountedRef.current || runId !== runIdRef.current) {
@@ -345,6 +357,7 @@ export default function PersonalityTestResultsPage() {
       setResultState(null)
     }
 
+    const profile = profileRef.current
     const fetchPromise = fetchResult(nextRunId, Boolean(options?.forceRefresh))
     let didFetchResolve = false
     let fetchedResult: ResolvedResultState | null = null
@@ -357,7 +370,15 @@ export default function PersonalityTestResultsPage() {
     setFlowStage('slot')
     setPhaseText('即将揭晓...')
 
-    await waitFor(SLOT_ANTICIPATION_MS)
+    // Show skip button for returning users after 1s
+    const skipTimeout = setTimeout(() => {
+      if (hasCompletedReplay && mountedRef.current) {
+        setShowSkipAnimation(true)
+      }
+    }, 1000)
+    timeoutHandlesRef.current.push(skipTimeout)
+
+    await waitFor(profile.slotAnticipationMs)
     if (!mountedRef.current || nextRunId !== runIdRef.current) {
       return
     }
@@ -365,12 +386,24 @@ export default function PersonalityTestResultsPage() {
     setSlotPhase('spinning')
     setPhaseText('命运转动中...')
 
-    const spinSteps = Math.max(1, Math.floor(SLOT_SPIN_MS / SLOT_SPIN_INTERVAL_MS))
+    // Measure frame budget during first half of spin for tiered degradation
+    const frameBudgetPromise = getDegradationTier()
+
+    const spinSteps = Math.max(1, Math.floor(profile.slotSpinMs / profile.slotSpinIntervalMs))
+    const budgetCheckStep = Math.floor(spinSteps * 0.5)
+
     for (let step = 0; step < spinSteps; step += 1) {
       setReelIndex((previous) => (previous + 1) % 12)
       setProgress(10 + ((step + 1) / spinSteps) * 50)
 
-      await waitFor(SLOT_SPIN_INTERVAL_MS)
+      // Check frame budget mid-spin
+      if (step === budgetCheckStep) {
+        const tier = await frameBudgetPromise
+        degradationTierRef.current = tier
+        logInfo('[PersonalityResults] Degradation tier', { tier })
+      }
+
+      await waitFor(profile.slotSpinIntervalMs)
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
       }
@@ -380,7 +413,7 @@ export default function PersonalityTestResultsPage() {
 
     while (!resolvedResult && !didFetchResolve) {
       const elapsed = Date.now() - flowStartedAt
-      const shouldShowSlowNetwork = elapsed >= RESULT_SLOW_NETWORK_MS
+      const shouldShowSlowNetwork = elapsed >= profile.slowNetworkMs
 
       setIsSlowNetwork(shouldShowSlowNetwork)
       setSlotPhase('holding')
@@ -388,12 +421,12 @@ export default function PersonalityTestResultsPage() {
       setProgress(68)
       setReelIndex((previous) => (previous + 1) % 12)
 
-      await waitFor(SLOT_HOLD_INTERVAL_MS)
+      await waitFor(profile.slotHoldIntervalMs)
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
       }
 
-      if (Date.now() - flowStartedAt >= FLOW_SAFETY_TIMEOUT_MS) {
+      if (Date.now() - flowStartedAt >= profile.flowSafetyTimeoutMs) {
         runIdRef.current += 1
         setIsFetchingResult(false)
         setFlowStage('error')
@@ -420,8 +453,8 @@ export default function PersonalityTestResultsPage() {
     const targetName = resolvedResult.result.primaryArchetype ?? '开心柯基'
     const targetIndex = ['开心柯基', '太阳鸡', '夸夸豚', '机智狐', '淡定海豚', '织网蛛', '暖心熊', '灵感章鱼', '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'].indexOf(targetName)
     const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
-    const approachPositions = SLOT_SLOW_STEP_DELAYS.map((_, index) => (
-      safeTargetIndex - SLOT_SLOW_STEP_DELAYS.length + index + 12
+    const approachPositions = profile.slotSlowStepDelays.map((_, index) => (
+      safeTargetIndex - profile.slotSlowStepDelays.length + index + 12
     ) % 12)
 
     setSlotPhase('slowing')
@@ -430,20 +463,22 @@ export default function PersonalityTestResultsPage() {
     for (let index = 0; index < approachPositions.length; index += 1) {
       setReelIndex(approachPositions[index] ?? safeTargetIndex)
       setProgress(60 + ((index + 1) / approachPositions.length) * 28)
-      await waitFor(SLOT_SLOW_STEP_DELAYS[index] ?? 180)
+      // Haptic tick on each slowing step
+      haptics('slotTick')
+      await waitFor(profile.slotSlowStepDelays[index] ?? 180)
 
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
       }
     }
 
-    const shouldNearMiss = !latestSnapshot.resultSequenceCompletedAt && Math.random() < 0.7
-    if (shouldNearMiss) {
+    const shouldDoNearMiss = shouldNearMiss(latestSnapshot.sessionId, profile.slotNearMissProbability)
+    if (shouldDoNearMiss) {
       setSlotPhase('nearMiss')
       setPhaseText('等等...')
       setReelIndex((safeTargetIndex + 1) % 12)
       setProgress(92)
-      await waitFor(SLOT_NEAR_MISS_MS)
+      await waitFor(profile.slotNearMissMs)
 
       if (!mountedRef.current || nextRunId !== runIdRef.current) {
         return
@@ -454,13 +489,29 @@ export default function PersonalityTestResultsPage() {
     setPhaseText('锁定成功')
     setProgress(100)
     setReelIndex(safeTargetIndex)
+    setShowSkipAnimation(false)
 
-    if (typeof Taro.vibrateShort === 'function') {
-      void Taro.vibrateShort().catch(() => undefined)
+    haptics('slotLand')
+
+    await waitFor(profile.slotRevealPauseMs)
+    if (!mountedRef.current || nextRunId !== runIdRef.current) {
+      return
     }
 
-    await waitFor(SLOT_REVEAL_PAUSE_MS)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
+    // Tiered degradation: skip effects if frame budget is constrained
+    const tier = degradationTierRef.current
+
+    if (tier === 'minimal' || tier === 'emergency') {
+      // Skip all reveal effects; jump straight to result
+      setFlowStage('result')
+      setPhaseText('')
+      setCompletionMode('animated')
+      analytics.stepCompleted({
+        completionMode: 'animated',
+        isAuthenticated: auth.isAuthenticated,
+        primaryArchetype: displayArchetypeName,
+        degradationTier: tier,
+      })
       return
     }
 
@@ -468,7 +519,7 @@ export default function PersonalityTestResultsPage() {
     setRevealPhase('silhouette')
     setPhaseText('先看轮廓...')
 
-    await waitFor(REVEAL_SILHOUETTE_MS)
+    await waitFor(profile.revealSilhouetteMs)
     if (!mountedRef.current || nextRunId !== runIdRef.current) {
       return
     }
@@ -476,25 +527,32 @@ export default function PersonalityTestResultsPage() {
     setRevealPhase('fill')
     setPhaseText('颜色回来了...')
 
-    await waitFor(REVEAL_FILL_MS)
+    await waitFor(profile.revealFillMs)
     if (!mountedRef.current || nextRunId !== runIdRef.current) {
       return
     }
 
-    setRevealPhase('sparkle')
-    setPhaseText('灵感点亮...')
+    // Reduced tier: skip glow/sparkle, go straight to result
+    if (tier !== 'reduced') {
+      setRevealPhase('sparkle')
+      setPhaseText('灵感点亮...')
+      haptics('cardReveal')
 
-    await waitFor(REVEAL_SPARKLE_MS)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
+      await waitFor(profile.revealGlowMs)
+      if (!mountedRef.current || nextRunId !== runIdRef.current) {
+        return
+      }
     }
 
-    setFlowStage('bridge')
-    setPhaseText('我在把这份结果装进一张更好分享的 JoyJoin 卡面。')
+    // Bridge: skip if fetch already resolved (no dead air)
+    if (!didFetchResolve) {
+      setFlowStage('bridge')
+      setPhaseText('我在把这份结果装进一张更好分享的 JoyJoin 卡面。')
 
-    await waitFor(RESULT_BRIDGE_MS)
-    if (!mountedRef.current || nextRunId !== runIdRef.current) {
-      return
+      await waitFor(profile.bridgeMs)
+      if (!mountedRef.current || nextRunId !== runIdRef.current) {
+        return
+      }
     }
 
     const currentSnapshot = readAnonymousAssessmentSession()
@@ -536,6 +594,20 @@ export default function PersonalityTestResultsPage() {
       void Taro.showToast({ title: '请手动返回重新测试', icon: 'none', duration: 2000 })
     })
   }, [analytics])
+
+  const handleSkipAnimation = useCallback(() => {
+    runIdRef.current += 1
+    setShowSkipAnimation(false)
+    const cached = resultStateRef.current
+    if (cached) {
+      setResultState(cached)
+      setFlowStage('result')
+      setProgress(100)
+      setPhaseText('')
+      setCompletionMode('replay')
+      analytics.interaction('skip_animation', { primaryArchetype: displayArchetypeName })
+    }
+  }, [analytics, displayArchetypeName])
 
   const handleContinue = useCallback(async () => {
     if (auth.isLoading) {
@@ -684,12 +756,13 @@ export default function PersonalityTestResultsPage() {
         accentColor,
         accentSoft,
         archetypeAsset: displayAsset,
+        archetypeAssetPng: visual.assetPng,
         confidenceLabel,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
             ? `稀有度 ${Math.round(visual.rarityPercentage)}%`
             : undefined,
-        skillAttribute: skillSet?.attribute ?? '✨ 气场',
+        skillAttribute: skillSet?.attribute ?? '气场',
         activeSkillTitle: skillSet?.activeSkill.name ?? '瞬间点亮全场',
         activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。',
         passiveSkillTitle: skillSet?.passiveSkill.name ?? '气场持续发光',
@@ -866,6 +939,11 @@ export default function PersonalityTestResultsPage() {
   return (
     <View className={`personality-results personality-results--${flowStage}`}>
       {content}
+      {showSkipAnimation && (
+        <View className='personality-results__skip-button' onClick={handleSkipAnimation}>
+          <Text className='personality-results__skip-text'>跳过动画</Text>
+        </View>
+      )}
       <Canvas canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID} className='personality-results__poster-canvas' />
     </View>
   )

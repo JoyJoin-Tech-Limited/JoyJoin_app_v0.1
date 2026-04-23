@@ -1,8 +1,7 @@
 import { Image, Input, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
-import { archetypeCompatibility } from '@shared/personality/archetypeCompatibility'
 import Button from '../../../../../components/Button'
 import Card from '../../../../../components/Card'
 import { COLOR_PRIMARY } from '../../../../../lib/uiConstants'
@@ -95,6 +94,7 @@ export default function FinalStage({
   const touchActiveRef = useRef(false)
   const touchStartRef = useRef({ x: 0, y: 0 })
   const cardRef = useRef<{ left: number; top: number; width: number; height: number } | null>(null)
+  const cardMeasuredRef = useRef(false)
 
   // Gyroscope-driven tilt (suppressed while touch is active)
   useEffect(() => {
@@ -125,6 +125,23 @@ export default function FinalStage({
     }
   }, [])
 
+  // Measure card position once on mount (and on window resize)
+  useEffect(() => {
+    const measure = () => {
+      const query = Taro.createSelectorQuery()
+      query.select('.personality-results__pokemon-card').boundingClientRect()
+      query.exec((res) => {
+        if (res?.[0]) {
+          cardRef.current = res[0]
+          cardMeasuredRef.current = true
+        }
+      })
+    }
+    // Delay slightly to ensure layout is settled
+    const timer = setTimeout(measure, 300)
+    return () => clearTimeout(timer)
+  }, [displayArchetypeName, selectedVariantIndex])
+
   // Touch-driven tilt with gyro suppression
   const handleTouchStart = useCallback((e: any) => {
     const touch = e.touches?.[0]
@@ -133,19 +150,34 @@ export default function FinalStage({
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
     setIsCardPressed(true)
 
-    // Measure card position once per touch start
-    const query = Taro.createSelectorQuery()
-    query.select('.personality-results__pokemon-card').boundingClientRect()
-    query.exec((res) => {
-      if (res?.[0]) {
-        cardRef.current = res[0]
-      }
-    })
+    // Lazy-measure if first touch and not yet measured
+    if (!cardMeasuredRef.current) {
+      const query = Taro.createSelectorQuery()
+      query.select('.personality-results__pokemon-card').boundingClientRect()
+      query.exec((res) => {
+        if (res?.[0]) {
+          cardRef.current = res[0]
+          cardMeasuredRef.current = true
+        }
+      })
+    }
   }, [])
 
   const handleTouchMove = useCallback((e: any) => {
     const touch = e.touches?.[0]
     if (!touch || !cardRef.current) return
+
+    // Detect primary scroll direction — if vertical, skip tilt and let ScrollView scroll
+    const start = touchStartRef.current
+    const moveDeltaX = Math.abs(touch.clientX - start.x)
+    const moveDeltaY = Math.abs(touch.clientY - start.y)
+    if (moveDeltaY > moveDeltaX * 1.5) {
+      // User is scrolling vertically — release tilt and let parent ScrollView handle it
+      touchActiveRef.current = false
+      setTouchTilt({ rotateX: 0, rotateY: 0 })
+      setIsCardPressed(false)
+      return
+    }
 
     const rect = cardRef.current
     const centerX = rect.left + rect.width / 2
@@ -206,15 +238,19 @@ export default function FinalStage({
   const currentIndex = getArchetypeIndex(displayArchetypeName)
   const allArchetypes = ARCHETYPE_CANONICAL_ORDER
 
-  // Build partner chemistry data for detail sheet
-  const partnerData = topMatches.slice(0, 3).map((match) => {
-    const chemistry = archetypeCompatibility[displayArchetypeName]?.[match.archetype]
-    return {
-      ...match,
-      chemistryLabel: chemistry?.label ?? '默契搭档',
-      chemistryColor: chemistry?.color ?? '#8B5CF6',
-    }
-  })
+  // Build partner data for detail sheet (memoized)
+  const partnerData = useMemo(() => {
+    return topMatches.slice(0, 3).map((match) => {
+      const score = Math.round(match.score)
+      const chemistryLabel = score >= 85 ? '灵魂拍档' : score >= 70 ? '默契搭档' : score >= 55 ? '互补组合' : '潜力搭档'
+      const chemistryColor = score >= 85 ? '#ef4444' : score >= 70 ? '#f97316' : score >= 55 ? '#8b5cf6' : '#64748b'
+      return {
+        ...match,
+        chemistryLabel,
+        chemistryColor,
+      }
+    })
+  }, [topMatches])
 
   return (
     <>
@@ -470,7 +506,7 @@ export default function FinalStage({
             })}
           </View>
           <Text className='personality-results__collect-hint'>
-            邀请朋友来测，一起解锁全部 12 张原型卡 ✨
+            邀请朋友来测，一起解锁全部 12 张原型卡
           </Text>
         </Card>
 

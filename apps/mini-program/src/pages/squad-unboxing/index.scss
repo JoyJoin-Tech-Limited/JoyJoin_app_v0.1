@@ -513,7 +513,7 @@
 
   &__member-card--current {
     border: 2rpx solid $color-primary;
-    background: linear-gradient(135deg, #fafafe 0%, #f5f0ff 100%);
+    background: linear-gradient(135deg, $color-bg-tint-purple 0%, $color-bg-tint-purple 100%);
   }
 
   &__member-top {
@@ -622,7 +622,7 @@
 
   &__info-card {
     padding: $spacing-lg;
-    background: linear-gradient(135deg, #fff7ed 0%, #fff1f2 100%);
+    background: linear-gradient(135deg, $color-bg-tint-warm 0%, $color-bg-tint-pink 100%);
   }
 
   &__info-copy {
@@ -671,7 +671,7 @@
 
   &__theme-card {
     padding: $spacing-lg;
-    background: linear-gradient(135deg, #fff5f7 0%, #f5f0ff 100%);
+    background: linear-gradient(135deg, $color-bg-tint-pink 0%, $color-bg-tint-purple 100%);
   }
 
   &__theme-header {

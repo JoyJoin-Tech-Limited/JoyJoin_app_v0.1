@@ -537,9 +537,13 @@ export default function EssentialDataPage() {
                         className={['essential-data__intent-card', selected ? 'essential-data__intent-card--selected' : ''].filter(Boolean).join(' ')}
                         onClick={() => toggleIntent(option.value)}
                       >
-                        <Text className='essential-data__intent-emoji'>{option.emoji}</Text>
                         <Text className='essential-data__intent-label'>{option.label}</Text>
                         <Text className='essential-data__intent-subtitle'>{option.subtitle}</Text>
+                        {selected && (
+                          <View className='essential-data__intent-check'>
+                            <Text className='essential-data__intent-check-icon'>✓</Text>
+                          </View>
+                        )}
                       </View>
                     )
                   })}

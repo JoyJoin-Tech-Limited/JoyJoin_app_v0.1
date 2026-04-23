@@ -8,6 +8,7 @@ import {
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from '../../visuals'
 import { getVisibleReelItems, type SlotPhase } from '../resultHelpers'
+import ArchetypeSpritesheet from '../components/ArchetypeSpritesheet'
 
 interface SlotStageProps {
   reelIndex: number
@@ -49,13 +50,9 @@ export default function SlotStage({ reelIndex, slotPhase, isSlowNetwork, progres
                   boxShadow: isActive ? `0 18rpx 48rpx ${itemVisual.accentGlow}` : 'none',
                 }}
               >
-                <Image
+                <ArchetypeSpritesheet
+                  archetype={archetype}
                   className='personality-results__slot-image'
-                  mode='aspectFit'
-                  src={
-                    itemVisual.asset ||
-                    getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsSlotFallback)
-                  }
                 />
                 <Text className='personality-results__slot-name'>{archetype}</Text>
               </View>

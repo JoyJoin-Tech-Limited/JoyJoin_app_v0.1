@@ -7,7 +7,7 @@
     @include card;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
-    background: linear-gradient(135deg, #FFF5F7 0%, #F5F0FF 100%);
+    background: linear-gradient(135deg, $color-bg-tint-pink 0%, $color-bg-tint-purple 100%);
   }
 
   &__theme-header {

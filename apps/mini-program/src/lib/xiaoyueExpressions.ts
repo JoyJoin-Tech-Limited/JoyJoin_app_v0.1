@@ -6,7 +6,7 @@
  * - Regenerate from PNG masters with `scripts/optimize-xiaoyue-assets.mjs`.
  * - Brand accent reference for art: #8B5CF6. WeChat `Image` supports WebP on current base libraries.
  *
- * Some expression ids share an asset where the emotion overlaps (e.g. match-waiting + reveal anticipation).
+ * All 16 expression ids now have unique assets. Previously some shared assets (e.g. match-waiting + reveal).
  */
 
 export type XiaoyueExpressionId =
@@ -22,38 +22,55 @@ export type XiaoyueExpressionId =
   | 'paymentTrust'
   | 'optOutReassure'
   | 'neutralInformation'
+  // Personality test phase expressions (unique assets shipped)
+  | 'testCurious'
+  | 'testListening'
+  | 'testNod'
+  | 'testSurprised'
 
 /** Legacy three-state API (maps into {@link XiaoyueExpressionId}). */
 export type LegacyXiaoyueMood = 'normal' | 'excited' | 'pointing'
 
 const BASE = '/assets/personality/xiaoyue'
 
-/** Semantic basenames — nine shipped poses (开心欢迎 … 提醒通知). */
+/** Semantic basenames — all 16 expressions, unique assets. */
 const ART = {
   homeWelcome: `${BASE}/xiaoyue-home-welcome.webp`,
+  coachGuide: `${BASE}/xiaoyue-coach-guide.webp`,
+  loadingSystem: `${BASE}/xiaoyue-loading-system.webp`,
+  loadingReveal: `${BASE}/xiaoyue-loading-reveal.webp`,
   matchWaiting: `${BASE}/xiaoyue-match-waiting.webp`,
   matchSuccess: `${BASE}/xiaoyue-match-success.webp`,
-  thinking: `${BASE}/xiaoyue-thinking.webp`,
   actionSuccess: `${BASE}/xiaoyue-action-success.webp`,
   actionFailure: `${BASE}/xiaoyue-action-failure.webp`,
   thanksFeedback: `${BASE}/xiaoyue-thanks-feedback.webp`,
-  cheerEncourage: `${BASE}/xiaoyue-cheer-encourage.webp`,
-  reminderNotice: `${BASE}/xiaoyue-reminder-notice.webp`,
+  neutralInformation: `${BASE}/xiaoyue-neutral-information.webp`,
+  // Grid 2 — test-phase + utility expressions (all have unique assets)
+  testCurious: `${BASE}/xiaoyue-test-curious.webp`,
+  testListening: `${BASE}/xiaoyue-test-listening.webp`,
+  testNod: `${BASE}/xiaoyue-test-nod.webp`,
+  testSurprised: `${BASE}/xiaoyue-test-surprised.webp`,
+  optOutReassure: `${BASE}/xiaoyue-opt-out-reassure.webp`,
+  paymentTrust: `${BASE}/xiaoyue-payment-trust.webp`,
 } as const
 
 export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
   homeWelcome: ART.homeWelcome,
+  coachGuide: ART.coachGuide,
+  loadingSystem: ART.loadingSystem,
+  loadingReveal: ART.loadingReveal,
   matchWaiting: ART.matchWaiting,
   matchSuccess: ART.matchSuccess,
-  loadingSystem: ART.thinking,
-  loadingReveal: ART.matchWaiting,
   actionSuccess: ART.actionSuccess,
   actionFailure: ART.actionFailure,
   thanksFeedback: ART.thanksFeedback,
-  coachGuide: ART.cheerEncourage,
-  paymentTrust: ART.reminderNotice,
-  optOutReassure: ART.cheerEncourage,
-  neutralInformation: ART.reminderNotice,
+  neutralInformation: ART.neutralInformation,
+  testCurious: ART.testCurious,
+  testListening: ART.testListening,
+  testNod: ART.testNod,
+  testSurprised: ART.testSurprised,
+  optOutReassure: ART.optOutReassure,
+  paymentTrust: ART.paymentTrust,
 }
 
 export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpressionId> = {
@@ -70,6 +87,17 @@ export const PERSONALITY_TEST_XIAOYUE_EXPRESSION = {
   resultsSlotFallback: 'matchWaiting',
   networkHolding: 'loadingReveal',
   errorState: 'actionFailure',
+} as const satisfies Record<string, XiaoyueExpressionId>
+
+/** Expression mapping for the testing-phase mascot questioner. */
+export const PERSONALITY_TEST_QUESTION_EXPRESSION = {
+  loading: 'loadingSystem',
+  choice: 'testCurious',
+  slider: 'testListening',
+  emoji_tap: 'homeWelcome',
+  acknowledged: 'testNod',
+  milestone: 'testSurprised',
+  error: 'actionFailure',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {

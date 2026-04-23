@@ -1,0 +1,45 @@
+@use '../../../styles/variables' as *;
+
+.mascot-question-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: 0 $container-padding;
+
+  &__eyebrow {
+    align-self: flex-start;
+    display: inline-flex;
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary-light, 0.85);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    line-height: 1.35;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  &__matches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    justify-content: center;
+  }
+
+  &__match-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    overflow-wrap: anywhere;
+  }
+}

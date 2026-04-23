@@ -22,7 +22,7 @@ import {
   calculateAge,
   getEducationDisplay
 } from "@/lib/userFieldMappings";
-import { archetypeAvatars, archetypeBgColors } from "@/lib/archetypeAvatars";
+import { archetypeBgColors } from "@/lib/archetypeAvatars";
 import { archetypeConfig } from "@/lib/archetypes";
 
 // Helper function to group messages by date
@@ -250,8 +250,8 @@ export default function EventCoordinationPage() {
               <span className="text-xs text-muted-foreground flex-shrink-0">参与者:</span>
               <div className="flex gap-2">
                 {participants.map((participant) => {
-                  const avatarImg = participant.archetype ? archetypeAvatars[participant.archetype] : null;
                   const bgColor = participant.archetype ? archetypeBgColors[participant.archetype] : 'bg-muted';
+                  const initial = (participant.displayName || participant.firstName || '?')[0];
                   
                   return (
                     <Tooltip key={participant.id}>
@@ -261,13 +261,9 @@ export default function EventCoordinationPage() {
                           className={`h-8 w-8 rounded-full ${bgColor || 'bg-muted'} flex items-center justify-center overflow-hidden hover-elevate active-elevate-2 transition-all cursor-pointer`}
                           data-testid={`badge-participant-${participant.id}`}
                         >
-                          {avatarImg ? (
-                            <img src={avatarImg} alt={participant.archetype || ''} className="w-full h-full object-contain p-0.5" />
-                          ) : (
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {(participant.displayName || participant.firstName || '?')[0]}
-                            </span>
-                          )}
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {initial}
+                          </span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -336,8 +332,8 @@ export default function EventCoordinationPage() {
                         {/* Messages */}
                         {group.messages.map((msg, idx) => {
                           const isOwnMessage = currentUser?.id === msg.userId;
-                          const avatarImg = msg.user.archetype ? archetypeAvatars[msg.user.archetype] : null;
                           const bgColor = msg.user.archetype ? archetypeBgColors[msg.user.archetype] : 'bg-muted';
+                          const initial = (msg.user.displayName || msg.user.firstName || '?')[0];
                           const archetypeData = msg.user.archetype && archetypeConfig[msg.user.archetype]
                             ? archetypeConfig[msg.user.archetype]
                             : { description: "独特个性" };
@@ -355,23 +351,17 @@ export default function EventCoordinationPage() {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div className={`h-10 w-10 flex-shrink-0 rounded-full ${bgColor || 'bg-muted'} flex items-center justify-center overflow-hidden cursor-pointer ring-2 ring-transparent hover:ring-primary/20 transition-all`}>
-                                      {avatarImg ? (
-                                        <img src={avatarImg} alt={msg.user.archetype || ''} className="w-full h-full object-contain p-0.5" />
-                                      ) : (
-                                        <span className="text-sm font-medium text-muted-foreground">
-                                          {(msg.user.displayName || msg.user.firstName || '?')[0]}
-                                        </span>
-                                      )}
+                                      <span className="text-sm font-medium text-muted-foreground">
+                                        {initial}
+                                      </span>
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="right" className="max-w-xs">
                                     <div className="space-y-2">
                                       <div className="flex items-center gap-2">
-                                        {avatarImg && (
-                                          <div className={`h-8 w-8 rounded-full ${bgColor} flex items-center justify-center overflow-hidden`}>
-                                            <img src={avatarImg} alt={msg.user.archetype || ''} className="w-full h-full object-contain p-0.5" />
-                                          </div>
-                                        )}
+                                        <div className={`h-8 w-8 rounded-full ${bgColor} flex items-center justify-center overflow-hidden`}>
+                                          <span className="text-sm font-medium text-muted-foreground">{initial}</span>
+                                        </div>
                                         <div>
                                           <p className="font-semibold">{msg.user.archetype}</p>
                                           <p className="text-xs text-muted-foreground">
@@ -551,10 +541,8 @@ export default function EventCoordinationPage() {
                   selectedParticipant.archetype && archetypeConfig[selectedParticipant.archetype]
                     ? archetypeConfig[selectedParticipant.archetype].bgColor
                     : "bg-muted"
-                } flex items-center justify-center text-4xl`}>
-                  {selectedParticipant.archetype && archetypeConfig[selectedParticipant.archetype]
-                    ? archetypeConfig[selectedParticipant.archetype].icon
-                    : "✨"}
+                } flex items-center justify-center text-2xl font-bold text-muted-foreground`}>
+                  {(selectedParticipant.displayName || selectedParticipant.firstName || '?')[0]}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">

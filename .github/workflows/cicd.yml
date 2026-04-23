@@ -134,9 +134,28 @@ jobs:
       - name: Run tests
         run: npm run test -w @joyjoin/server
 
+  harness-gate:
+    needs: [guardrails]
+    name: Harness Completion Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Harness 5-Pillar Gate
+        run: npm run harness:gate
+
   ai-test:
     name: AI Simulation Test
-    needs: [lint-user, lint-shared, lint-admin, lint-server, test-server]
+    needs: [lint-user, lint-shared, lint-admin, lint-server, test-server, harness-gate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -157,7 +176,7 @@ jobs:
 
   deploy:
     name: Production Deployment
-    needs: ai-test
+    needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
     steps:
       - name: SSH Remote Deployment

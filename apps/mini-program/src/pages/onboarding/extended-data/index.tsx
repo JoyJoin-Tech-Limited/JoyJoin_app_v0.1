@@ -30,12 +30,12 @@ import './index.scss'
 const MIN_INTERESTS = 3
 const MAX_INTERESTS = 10
 
-const CATEGORY_META: Record<MacroCategory, { emoji: string; description: string }> = {
-  food: { emoji: '🍜', description: '适合聊口味、探店和周末吃什么。' },
-  entertainment: { emoji: '🎮', description: '更偏玩乐、破冰和局里活跃氛围。' },
-  lifestyle: { emoji: '🌿', description: '更像你的生活节奏和线下习惯。' },
-  culture: { emoji: '🎭', description: '适合聊展览、演出、电影和内容审美。' },
-  social: { emoji: '👥', description: '适合延展成深入对话和长期共同话题。' },
+const CATEGORY_META: Record<MacroCategory, { dotColor: string; description: string }> = {
+  food: { dotColor: '#E8A87C', description: '适合聊口味、探店和周末吃什么。' },
+  entertainment: { dotColor: '#8FB8E8', description: '更偏玩乐、破冰和局里活跃氛围。' },
+  lifestyle: { dotColor: '#8FBFA3', description: '更像你的生活节奏和线下习惯。' },
+  culture: { dotColor: '#B8A8D8', description: '适合聊展览、演出、电影和内容审美。' },
+  social: { dotColor: '#E8A8A8', description: '适合延展成深入对话和长期共同话题。' },
 }
 
 const INTEREST_LEVEL_META: Array<{
@@ -320,8 +320,12 @@ export default function ExtendedDataPage() {
               const category = categoryId as MacroCategory
               return (
                 <View key={categoryId} className='extended-data__dominant-chip'>
+                  <View
+                    className='extended-data__dominant-chip-dot'
+                    style={{ backgroundColor: CATEGORY_META[category]?.dotColor || '#8B5CF6' }}
+                  />
                   <Text className='extended-data__dominant-chip-text'>
-                    {CATEGORY_META[category]?.emoji} {MACRO_CATEGORY_LABELS[category]}
+                    {MACRO_CATEGORY_LABELS[category]}
                   </Text>
                 </View>
               )
@@ -348,12 +352,13 @@ export default function ExtendedDataPage() {
               return (
                 <Card key={category} className='extended-data__category'>
                   <View className='extended-data__category-header'>
-                    <View>
+                    <View className='extended-data__category-title-wrap'>
+                      <View
+                        className='extended-data__category-dot'
+                        style={{ backgroundColor: CATEGORY_META[category]?.dotColor || '#8B5CF6' }}
+                      />
                       <Text className='extended-data__category-title'>
-                        {CATEGORY_META[category]?.emoji} {MACRO_CATEGORY_LABELS[category]}
-                      </Text>
-                      <Text className='extended-data__category-description'>
-                        {CATEGORY_META[category]?.description}
+                        {MACRO_CATEGORY_LABELS[category]}
                       </Text>
                     </View>
                     <Text className='extended-data__category-count'>{selectedInCategory} 已选</Text>

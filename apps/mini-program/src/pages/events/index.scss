@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  background: $color-bg-gradient;
 
   &__header {
     padding: $spacing-xl $container-padding $spacing-md;

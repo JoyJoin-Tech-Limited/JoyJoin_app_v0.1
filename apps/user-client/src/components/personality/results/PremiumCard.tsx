@@ -14,7 +14,7 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
@@ -97,7 +97,7 @@ export function PremiumCard({
   }, []);
 
   // ─── Materialization Animation ───
-  const materializationVariants = prefersReducedMotion
+  const materializationVariants: Variants = prefersReducedMotion
     ? { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.2 } } }
     : {
         hidden: { opacity: 0, scale: 0.85 },
@@ -112,8 +112,8 @@ export function PremiumCard({
         },
       };
 
-  const glowVariants = prefersReducedMotion
-    ? {}
+  const glowVariants: Variants = prefersReducedMotion
+    ? { hidden: {}, visible: {} }
     : {
         hidden: { opacity: 0 },
         visible: {
@@ -144,7 +144,7 @@ export function PremiumCard({
         className="relative w-full max-w-sm select-none"
         style={{
           perspective: '1200px',
-          touchAction: 'none',
+          touchAction: 'pan-y',
         }}
         variants={materializationVariants}
         initial="hidden"

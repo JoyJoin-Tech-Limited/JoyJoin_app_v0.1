@@ -11,7 +11,7 @@ import { logInfo, logWarn } from './logger'
  */
 export const BRAND_DISPLAY_FONT_FAMILY = 'AlimamaFangYuanTiVF'
 
-const BRAND_FONT_SOURCE_PATH = '/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.ttf'
+const BRAND_FONT_SOURCE_PATH = '/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2'
 
 /**
  * Must match `$font-en-brand` first family name in `styles/_variables.scss`.

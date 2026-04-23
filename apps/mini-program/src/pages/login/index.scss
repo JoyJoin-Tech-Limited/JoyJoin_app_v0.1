@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .login-page {
-  @include page-gradient-bg;
+  @include page-clean-bg;
   @include safe-area-bottom;
   display: flex;
   flex-direction: column;
@@ -10,6 +10,31 @@
   align-items: center;
   min-height: 100vh;
   padding: $container-padding;
+  position: relative;
+  overflow: hidden;
+
+  &__glow {
+    position: absolute;
+    width: 600rpx;
+    height: 600rpx;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 999rpx;
+    background: radial-gradient(circle 300rpx at center, rgba(139, 92, 246, 0.08), transparent);
+    pointer-events: none;
+  }
+
+  &__eyebrow {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    color: rgba($color-primary-dark, 0.78);
+    letter-spacing: 3rpx;
+    text-transform: uppercase;
+    margin-bottom: $spacing-lg;
+    position: relative;
+    z-index: 1;
+  }
 
   &__content {
     flex: 1;
@@ -21,6 +46,73 @@
     max-width: 680rpx;
     text-align: center;
     padding-bottom: $spacing-2xl;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__avatar-wrap {
+    position: relative;
+    width: 240rpx;
+    height: 240rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: $spacing-xl;
+  }
+
+  &__avatar-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 999rpx;
+    background: rgba(139, 92, 246, 0.06);
+    animation: login-ring-pulse 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  &__avatar-img {
+    position: relative;
+    z-index: 1;
+    width: 200rpx;
+    height: 200rpx;
+    display: block;
+    filter: drop-shadow(0 12rpx 24rpx rgba(139, 92, 246, 0.12));
+  }
+
+  &__float-orb {
+    position: absolute;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+    padding: 6rpx;
+    box-sizing: border-box;
+    z-index: 2;
+    animation: login-orb-float 3s ease-in-out infinite;
+
+    &--1 {
+      top: -8rpx;
+      right: 8rpx;
+      animation-delay: 0s;
+    }
+
+    &--2 {
+      bottom: 16rpx;
+      left: -4rpx;
+      animation-delay: 1s;
+    }
+
+    &--3 {
+      bottom: -4rpx;
+      right: 24rpx;
+      animation-delay: 2s;
+    }
+  }
+
+  &__headline {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    margin-bottom: $spacing-md;
   }
 
   &__title {
@@ -28,8 +120,9 @@
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     font-family: $font-brand;
-    color: $color-primary-dark;
-    margin-bottom: $spacing-sm;
+    color: $color-text-primary;
+    line-height: 1.2;
+    letter-spacing: -1rpx;
   }
 
   &__subtitle {
@@ -37,18 +130,19 @@
     font-size: $font-size-base;
     color: $color-text-secondary;
     line-height: 1.6;
-    max-width: 560rpx;
-  }
-
-  &__promo {
-    width: 100%;
-    margin-top: $spacing-lg;
+    max-width: 480rpx;
   }
 
   &__actions {
     width: 100%;
     max-width: 600rpx;
     padding-bottom: $spacing-xl;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    position: relative;
+    z-index: 1;
   }
 
   &__wechat-btn {
@@ -63,9 +157,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: $shadow-md;
+    box-shadow: 0 6rpx 20rpx rgba(7, 193, 96, 0.28);
+    transition: transform 0.12s ease, opacity 0.12s ease, box-shadow 0.12s ease;
 
     &:active {
+      transform: scale(0.98);
       opacity: 0.92;
     }
 
@@ -79,7 +175,41 @@
   }
 
   &__wechat-btn-hover {
-    opacity: 0.85;
+    opacity: 0.88;
+    transform: scale(0.98);
+  }
+
+  &__legal {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    text-align: center;
+    line-height: 1.5;
   }
 }
 
+@keyframes login-ring-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.6;
+  }
+}
+
+@keyframes login-orb-float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8rpx) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page__avatar-ring,
+  .login-page__float-orb {
+    animation: none;
+  }
+}

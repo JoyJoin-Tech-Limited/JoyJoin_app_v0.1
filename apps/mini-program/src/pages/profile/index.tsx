@@ -19,8 +19,33 @@ import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import { TOAST_FATAL_MS } from '../../lib/uiConstants'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
+import XiaoyueChatBubble from '../../components/XiaoyueChatBubble'
+import ArchetypeGlyph from '../../components/ArchetypeGlyph'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import './index.scss'
+
+function getArchetypeFamily(archetype: string): 'warm' | 'cool' | 'fire' | 'calm' {
+  switch (archetype) {
+    case '开心柯基':
+    case '太阳鸡':
+    case '夸夸豚':
+    case '暖心熊':
+      return 'warm'
+    case '机智狐':
+    case '隐身猫':
+      return 'fire'
+    case '淡定海豚':
+    case '织网蛛':
+    case '灵感章鱼':
+    case '沉思猫头鹰':
+      return 'cool'
+    case '定心大象':
+    case '稳如龟':
+      return 'calm'
+    default:
+      return 'warm'
+  }
+}
 
 export default function ProfilePage() {
   const { authLoading, authUser, renderGate } = useMiniPageGate()
@@ -103,8 +128,21 @@ export default function ProfilePage() {
         </View>
         <Text className='profile-page__name'>{displayName}</Text>
         {archetype ? (
-          <Text className='profile-page__archetype'>{archetype}</Text>
+          <View className='profile-page__archetype-row'>
+            <ArchetypeGlyph archetype={archetype} family={getArchetypeFamily(archetype)} size={28} />
+            <Text className='profile-page__archetype'>{archetype}</Text>
+          </View>
         ) : null}
+      </View>
+
+      {/* Xiaoyue coaching bubble */}
+      <View className='profile-page__coach'>
+        <XiaoyueChatBubble
+          content={`${displayName}，今天想探索点什么？`}
+          pose='casual'
+          horizontal
+          showGlow
+        />
       </View>
 
       {/* Quick stats */}

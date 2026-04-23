@@ -6,7 +6,7 @@
   @include page-shell-padding(40rpx, 32rpx, 48rpx);
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #fff7f2 0%, #f7f1ff 40%, #ffffff 100%);
+  background: linear-gradient(180deg, $color-bg-tint-warm 0%, $color-bg-tint-purple 40%, $color-surface 100%);
   display: flex;
   flex-direction: column;
   gap: 24rpx;
@@ -367,7 +367,7 @@
     @include type-brand-cta-label;
     min-height: max(96rpx, $cta-min-tap);
     border-radius: $button-radius;
-    background: linear-gradient(135deg, #07c160 0%, #15d16f 100%);
+    background: linear-gradient(135deg, $color-success 0%, #15D16F 100%);
     color: $color-text-white;
     font-size: $font-size-md;
     box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.35);
