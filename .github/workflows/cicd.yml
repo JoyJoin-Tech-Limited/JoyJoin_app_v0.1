@@ -179,22 +179,53 @@ jobs:
     needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
     steps:
+      # GitHub → server: map Repository secrets to `secrets.*` and Repository variables to `vars.*`.
+      # Add new keys here + in `envs` + in the sync loop below.
       - name: SSH Remote Deployment
         env:
+          # ── Required secrets (production API startup) ─────────────────────
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
           WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
+          # ── Optional secrets (sync only when set in GitHub) ──────────────
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_CREATE_SECRET_KEY: ${{ secrets.ADMIN_CREATE_SECRET_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          WECHAT_PAY_APP_ID: ${{ secrets.WECHAT_PAY_APP_ID }}
+          WECHAT_PAY_MCH_ID: ${{ secrets.WECHAT_PAY_MCH_ID }}
+          WECHAT_PAY_SERIAL_NO: ${{ secrets.WECHAT_PAY_SERIAL_NO }}
+          WECHAT_PAY_PRIVATE_KEY: ${{ secrets.WECHAT_PAY_PRIVATE_KEY }}
+          WECHAT_PAY_APIV3_KEY: ${{ secrets.WECHAT_PAY_APIV3_KEY }}
+          WECHAT_PAY_PLATFORM_CERT: ${{ secrets.WECHAT_PAY_PLATFORM_CERT }}
+          # ── Repository variables (non-secret / public config) ───────────
+          NODE_ENV: ${{ vars.NODE_ENV }}
+          PORT: ${{ vars.PORT }}
+          APP_URL: ${{ vars.APP_URL }}
+          COOKIE_DOMAIN: ${{ vars.COOKIE_DOMAIN }}
+          CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+          PAYMENTS_ENABLED: ${{ vars.PAYMENTS_ENABLED }}
+          MINIMAX_BASE_URL: ${{ vars.MINIMAX_BASE_URL }}
+          MINIMAX_MODEL: ${{ vars.MINIMAX_MODEL }}
+          MINIMAX_TIMEOUT_MS: ${{ vars.MINIMAX_TIMEOUT_MS }}
+          CREATIVE_AI_PROVIDER: ${{ vars.CREATIVE_AI_PROVIDER }}
+          CREATIVE_AI_TAGS_PROVIDER: ${{ vars.CREATIVE_AI_TAGS_PROVIDER }}
+          CREATIVE_AI_THEME_PROVIDER: ${{ vars.CREATIVE_AI_THEME_PROVIDER }}
+          CREATIVE_AI_TITLE_PROVIDER: ${{ vars.CREATIVE_AI_TITLE_PROVIDER }}
+          AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30m
-          envs: DATABASE_URL,WECHAT_APPID,WECHAT_SECRET
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS
           script: |
             set -euo pipefail
 
             : "${DATABASE_URL:?DATABASE_URL GitHub secret is required}"
+            : "${SESSION_SECRET:?SESSION_SECRET GitHub secret is required}"
             : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
             : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
 
@@ -262,24 +293,64 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
-            # --- 1.5) Sync required runtime env into deployment/.env.production ---
-            echo "🔐 Syncing required WeChat secrets into deployment/.env.production..."
+            # --- 1.5) Sync GitHub Actions secrets + variables → deployment/.env.production ---
+            echo "🔐 Syncing GitHub secrets/variables into deployment/.env.production..."
             ENV_FILE=~/JoyJoin/deployment/.env.production
             touch "$ENV_FILE"
 
+            # Remove one KEY= line and append KEY=value (safe for DATABASE_URL & special chars)
             upsert_env_var() {
               local key="$1"
               local value="$2"
-              if grep -q "^${key}=" "$ENV_FILE"; then
-                sed -i.bak "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+              local tmp
+              tmp=$(mktemp)
+              if [ -s "$ENV_FILE" ]; then
+                grep -v "^${key}=" "$ENV_FILE" > "$tmp" || true
               else
-                printf "%s=%s\n" "$key" "$value" >> "$ENV_FILE"
+                : > "$tmp"
               fi
+              mv "$tmp" "$ENV_FILE"
+              printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
             }
 
+            upsert_if_nonempty() {
+              local key="$1"
+              local value="${2-}"
+              [ -n "${value}" ] || return 0
+              upsert_env_var "$key" "$value"
+            }
+
+            upsert_env_var "DATABASE_URL" "$DATABASE_URL"
+            upsert_env_var "SESSION_SECRET" "$SESSION_SECRET"
             upsert_env_var "WECHAT_APPID" "$WECHAT_APPID"
             upsert_env_var "WECHAT_SECRET" "$WECHAT_SECRET"
-            rm -f "${ENV_FILE}.bak"
+
+            upsert_if_nonempty "DEEPSEEK_API_KEY" "$DEEPSEEK_API_KEY"
+            upsert_if_nonempty "JWT_SECRET" "$JWT_SECRET"
+            upsert_if_nonempty "ADMIN_CREATE_SECRET_KEY" "$ADMIN_CREATE_SECRET_KEY"
+            upsert_if_nonempty "MINIMAX_API_KEY" "$MINIMAX_API_KEY"
+            upsert_if_nonempty "WECHAT_PAY_APP_ID" "$WECHAT_PAY_APP_ID"
+            upsert_if_nonempty "WECHAT_PAY_MCH_ID" "$WECHAT_PAY_MCH_ID"
+            upsert_if_nonempty "WECHAT_PAY_SERIAL_NO" "$WECHAT_PAY_SERIAL_NO"
+            upsert_if_nonempty "WECHAT_PAY_PRIVATE_KEY" "$WECHAT_PAY_PRIVATE_KEY"
+            upsert_if_nonempty "WECHAT_PAY_APIV3_KEY" "$WECHAT_PAY_APIV3_KEY"
+            upsert_if_nonempty "WECHAT_PAY_PLATFORM_CERT" "$WECHAT_PAY_PLATFORM_CERT"
+
+            upsert_if_nonempty "NODE_ENV" "$NODE_ENV"
+            upsert_if_nonempty "PORT" "$PORT"
+            upsert_if_nonempty "APP_URL" "$APP_URL"
+            upsert_if_nonempty "COOKIE_DOMAIN" "$COOKIE_DOMAIN"
+            upsert_if_nonempty "CORS_ORIGINS" "$CORS_ORIGINS"
+            upsert_if_nonempty "PAYMENTS_ENABLED" "$PAYMENTS_ENABLED"
+            upsert_if_nonempty "MINIMAX_BASE_URL" "$MINIMAX_BASE_URL"
+            upsert_if_nonempty "MINIMAX_MODEL" "$MINIMAX_MODEL"
+            upsert_if_nonempty "MINIMAX_TIMEOUT_MS" "$MINIMAX_TIMEOUT_MS"
+            upsert_if_nonempty "CREATIVE_AI_PROVIDER" "$CREATIVE_AI_PROVIDER"
+            upsert_if_nonempty "CREATIVE_AI_TAGS_PROVIDER" "$CREATIVE_AI_TAGS_PROVIDER"
+            upsert_if_nonempty "CREATIVE_AI_THEME_PROVIDER" "$CREATIVE_AI_THEME_PROVIDER"
+            upsert_if_nonempty "CREATIVE_AI_TITLE_PROVIDER" "$CREATIVE_AI_TITLE_PROVIDER"
+            upsert_if_nonempty "AI_TIMEOUT_MS" "$AI_TIMEOUT_MS"
+
             chmod 600 "$ENV_FILE" || true
 
             # --- 2) Restart containers ---
