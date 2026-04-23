@@ -12,10 +12,11 @@ import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
  * and immediately redirect to the correct onboarding step.
  */
 export default function OnboardingEntryPage() {
-  const { isLoading, isAuthenticated, nextStep } = useAuth()
+  const { isLoading, isRefreshing, isAuthenticated, nextStep } = useAuth()
+  const isAuthPending = isLoading || isRefreshing
 
   useEffect(() => {
-    if (isLoading) return
+    if (isAuthPending) return
 
     if (!isAuthenticated) {
       Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
@@ -25,7 +26,7 @@ export default function OnboardingEntryPage() {
     // Redirect to the actual step the server says the user should be at
     const step = nextStep ?? 'personality-test'
     void navigateToMiniProgramNextStep(step, { mode: 'replace' })
-  }, [isLoading, isAuthenticated, nextStep])
+  }, [isAuthPending, isAuthenticated, nextStep])
 
   return (
     <OnboardingLoadingShell

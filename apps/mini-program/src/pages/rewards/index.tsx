@@ -15,6 +15,7 @@ import {
 } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -472,7 +473,7 @@ export default function RewardsPage() {
         <Card className='rewards-page__invite-card'>
           <Text className='rewards-page__invite-title'>想拿更多奖励？</Text>
           <Text className='rewards-page__invite-text'>邀请好友加入悦聚，奖励会直接累积到你的奖励账户里。</Text>
-          <Button className='rewards-page__invite-btn' onClick={() => Taro.navigateTo({ url: '/pages/invite/index' })}>
+          <Button className='rewards-page__invite-btn' onClick={() => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.invite })}>
             查看邀请进度
           </Button>
         </Card>

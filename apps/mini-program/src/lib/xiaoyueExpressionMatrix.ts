@@ -140,7 +140,7 @@ export const XIAOYUE_EXPRESSION_MATRIX: XiaoyueExpressionMatrixRow[] = [
   },
   {
     flow: '信息',
-    surface: 'pages/terms/index',
+    surface: 'pages/extras/terms/index',
     primaryTier: 'supplement',
     secondaryTag: 'legal.neutral',
     expressionId: 'neutralInformation',

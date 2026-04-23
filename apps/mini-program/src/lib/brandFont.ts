@@ -21,6 +21,10 @@ export const EN_BRAND_FONT_FAMILY = 'Quicksand'
 
 const EN_BRAND_FONT_SOURCE_PATH = '/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf'
 
+export interface LoadBrandFontsOptions {
+  includeDisplayFont?: boolean
+}
+
 /**
  * Loads the brand display face for mini-program and H5. On failure, CSS fallbacks
  * (`PingFang SC`, etc.) still apply via `$font-cn-display`.
@@ -74,8 +78,15 @@ export function loadEnglishBrandFont(): void {
     })
 }
 
-/** Loads Alimama (Chinese display) and Quicksand (English brand). Call once at app launch. */
-export function loadBrandFonts(): void {
-  loadBrandDisplayFont()
+/** Loads the supported brand fonts for the current runtime. Call once at app launch. */
+export function loadBrandFonts(options?: LoadBrandFontsOptions): void {
+  if (options?.includeDisplayFont !== false) {
+    loadBrandDisplayFont()
+  } else {
+    logInfo('Skipping brand display font load for this runtime', {
+      family: BRAND_DISPLAY_FONT_FAMILY,
+    })
+  }
+
   loadEnglishBrandFont()
 }

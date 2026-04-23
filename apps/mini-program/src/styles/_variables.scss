@@ -30,7 +30,8 @@ $color-error:          #EF4444;
 $font-ui:   -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
 $font-body: $font-ui;
 
-// Chinese display: Alimama (loaded via `loadBrandFonts` in app launch). Falls back if load fails.
+// Chinese display: H5 may load Alimama via `loadBrandFonts`. WeChat mini-program builds
+// use the fallback stack to stay within the main-package limit.
 $font-cn-display: 'AlimamaFangYuanTiVF', 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', system-ui,
   sans-serif;
 

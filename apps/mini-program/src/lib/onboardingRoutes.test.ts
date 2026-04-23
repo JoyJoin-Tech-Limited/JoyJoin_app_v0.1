@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT,
+  MINI_PROGRAM_EXTRAS_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT,
   MINI_PROGRAM_MAIN_PACKAGE_PAGES,
   MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
   MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -21,9 +25,9 @@ describe('mini-program onboarding routes', () => {
 
   it('retains the canonical events tab page and both legacy events aliases', () => {
     expect(MINI_PROGRAM_PAGES).toContain('pages/events/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/terms/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/event-detail/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/pool-registration/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/extras/terms/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/experience/event-detail/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/experience/pool-registration/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/my-events/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/journey/index')
   })
@@ -36,31 +40,57 @@ describe('mini-program onboarding routes', () => {
     expect(new Set(MINI_PROGRAM_PAGES).size).toBe(MINI_PROGRAM_PAGES.length)
   })
 
-  it('moves the onboarding chain into an ordinary subpackage registration', () => {
+  it('moves the onboarding and low-frequency utility flows into ordinary subpackage registrations', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/onboarding/onboarding/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/extras/terms/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/experience/event-detail/index')
     expect(MINI_PROGRAM_SUBPACKAGES).toEqual([
       {
         root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
       },
+      {
+        root: MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_EXTRAS_SUBPACKAGE_PAGES,
+      },
+      {
+        root: MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_PAGES,
+      },
     ])
   })
 
-  it('preloads the onboarding subpackage from the landing and login entry pages', () => {
+  it('preloads the onboarding, extras, and experience subpackages from their common entry pages', () => {
     expect(MINI_PROGRAM_PRELOAD_RULES).toEqual({
       'pages/index/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+        packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT, MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT],
       },
       'pages/login/index': {
         network: 'all',
         packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
       },
+      'pages/discover/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+      },
+      'pages/events/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+      },
+      'pages/connections/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+      },
+      'pages/profile/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT, MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+      },
     })
   })
 
   it('maps each server nextStep to the canonical mini-program route', () => {
-    expect(nextStepToMiniProgramRoute('onboarding')).toBe(MINI_PROGRAM_ROUTES.onboarding)
+    expect(nextStepToMiniProgramRoute('onboarding')).toBe(MINI_PROGRAM_ROUTES.personalityTest)
     expect(nextStepToMiniProgramRoute('personality-test')).toBe(MINI_PROGRAM_ROUTES.personalityTest)
     expect(nextStepToMiniProgramRoute('essential-data')).toBe(MINI_PROGRAM_ROUTES.essentialData)
     expect(nextStepToMiniProgramRoute('extended-data')).toBe(MINI_PROGRAM_ROUTES.extendedData)

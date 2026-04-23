@@ -4,6 +4,7 @@ import { apiRequest, type OnboardingStep } from '../lib/api'
 import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
+  isMiniProgramAuthSessionActivated,
   isUnauthorizedApiError,
 } from '../lib/authSession'
 import { deriveMiniProgramAuthState } from './authState'
@@ -15,6 +16,7 @@ export type AuthUser = AuthUserResponse
 export interface UseAuthResult {
   user: AuthUser | undefined
   isLoading: boolean
+  isRefreshing: boolean
   isAuthenticated: boolean
   nextStep: NextStepType | undefined
   refetch: () => Promise<unknown>
@@ -37,15 +39,17 @@ async function getAuthUser(): Promise<AuthUser | null> {
  *
  * Mirrors the web client's useAuth() contract:
  *   - Fetches GET /api/auth/user
- *   - Returns user, isLoading, isAuthenticated, nextStep
+ *   - Returns user, isLoading, isRefreshing, isAuthenticated, nextStep
  *   - Treats 401/403 as an unauthenticated state instead of a sticky error
- *   - Fails closed while an auth refresh is in flight so protected pages do not
- *     trust stale cached auth state on foreground resume
+ *   - Lets public pages distinguish the initial auth bootstrap from a later
+ *     foreground refresh while protected pages can still fail closed
  */
 export function useAuth(): UseAuthResult {
+  const authSessionActivated = isMiniProgramAuthSessionActivated()
   const { data: user, isLoading, isFetching, refetch } = useQuery<AuthUser | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: getAuthUser,
+    enabled: authSessionActivated,
     retry: (failureCount, error) => {
       if (isUnauthorizedApiError(error)) return false
       return failureCount < 2

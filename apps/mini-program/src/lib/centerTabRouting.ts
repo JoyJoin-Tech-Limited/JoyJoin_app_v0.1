@@ -8,8 +8,8 @@ import {
 } from '@joyjoin/shared/centerTabRouting'
 import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
 
-export const MINI_PROGRAM_CENTER_TAB_EMPTY_ROUTE = '/pages/center-tab-empty/index'
-export const MINI_PROGRAM_POOL_GROUP_DETAIL_ROUTE = '/pages/pool-group-detail/index'
+export const MINI_PROGRAM_CENTER_TAB_EMPTY_ROUTE = MINI_PROGRAM_ROUTES.centerTabEmpty
+export const MINI_PROGRAM_POOL_GROUP_DETAIL_ROUTE = MINI_PROGRAM_ROUTES.poolGroupDetail
 
 export interface MiniProgramCenterAction {
   kind: CenterTabDestination['kind']
@@ -48,7 +48,7 @@ export function mapCenterDestinationToMiniProgramAction(
       return {
         kind: destination.kind,
         navigation: 'navigateTo',
-        url: `/pages/event-detail/index?id=${encodeURIComponent(destination.eventId)}`,
+        url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(destination.eventId)}`,
       }
     case 'matched-pool-unlocked':
       return {
@@ -60,13 +60,13 @@ export function mapCenterDestinationToMiniProgramAction(
       return {
         kind: destination.kind,
         navigation: 'navigateTo',
-        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(destination.registrationId)}`,
+        url: `${MINI_PROGRAM_ROUTES.matchingStatus}?registrationId=${encodeURIComponent(destination.registrationId)}`,
       }
     case 'matched-pool-future':
       return {
         kind: destination.kind,
         navigation: 'navigateTo',
-        url: `/pages/squad-unboxing/index?groupId=${encodeURIComponent(destination.groupId)}`,
+        url: `${MINI_PROGRAM_ROUTES.squadUnboxing}?groupId=${encodeURIComponent(destination.groupId)}`,
       }
     default:
       return {

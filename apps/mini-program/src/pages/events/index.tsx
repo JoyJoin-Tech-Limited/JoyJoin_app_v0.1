@@ -7,6 +7,7 @@ import { apiRequest } from '../../lib/api'
 import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import Card from '../../components/Card'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { isLongListRowCount } from '../../lib/longListThreshold'
@@ -86,7 +87,7 @@ export default function EventsPage() {
   }
 
   const handleEventTap = (event: JoinedEventSummary) => {
-    Taro.navigateTo({ url: `/pages/event-detail/index?id=${event.id}` })
+    Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(event.id)}` })
   }
 
   return renderGate(

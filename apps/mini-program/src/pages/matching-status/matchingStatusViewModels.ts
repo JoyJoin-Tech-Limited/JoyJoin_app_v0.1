@@ -117,9 +117,9 @@ export interface ChemistryTokens {
   body: string
 }
 
-export const MATCHING_BG_SRC = '/assets/matching/matching-bg.png'
-export const MATCHING_WAITING_HERO_SRC = '/assets/matching/matching-waiting-hero.png'
-export const MATCHING_NO_MATCH_HERO_SRC = '/assets/matching/matching-no-match-hero.png'
+export const MATCHING_BG_SRC = '/pages/experience/assets/matching/matching-bg.webp'
+export const MATCHING_WAITING_HERO_SRC = '/pages/experience/assets/matching/matching-waiting-hero.webp'
+export const MATCHING_NO_MATCH_HERO_SRC = '/pages/experience/assets/matching/matching-no-match-hero.webp'
 
 const VENUE_UNLOCK_HOURS = 24
 

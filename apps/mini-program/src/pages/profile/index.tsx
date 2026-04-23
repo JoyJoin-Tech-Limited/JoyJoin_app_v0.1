@@ -123,7 +123,7 @@ export default function ProfilePage() {
       <View className='profile-page__section'>
         <View
           className='profile-page__action-row'
-          onClick={() => Taro.navigateTo({ url: '/pages/edit-profile/index' })}
+          onClick={() => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile })}
         >
           <Text className='profile-page__action-icon'>✏️</Text>
           <Text className='profile-page__action-text'>编辑资料</Text>
@@ -132,7 +132,7 @@ export default function ProfilePage() {
 
         <View
           className='profile-page__action-row'
-          onClick={() => Taro.navigateTo({ url: '/pages/rewards/index' })}
+          onClick={() => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.rewards })}
         >
           <Text className='profile-page__action-icon'>🏆</Text>
           <Text className='profile-page__action-text'>奖励福利</Text>
@@ -141,7 +141,7 @@ export default function ProfilePage() {
 
         <View
           className='profile-page__action-row'
-          onClick={() => Taro.navigateTo({ url: '/pages/invite/index' })}
+          onClick={() => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.invite })}
         >
           <Text className='profile-page__action-icon'>🤝</Text>
           <Text className='profile-page__action-text'>邀请好友</Text>
@@ -168,7 +168,7 @@ export default function ProfilePage() {
 
         <View
           className='profile-page__action-row'
-          onClick={() => Taro.navigateTo({ url: '/pages/terms/index' })}
+          onClick={() => Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.terms })}
         >
           <Text className='profile-page__action-icon'>📄</Text>
           <Text className='profile-page__action-text'>服务条款</Text>

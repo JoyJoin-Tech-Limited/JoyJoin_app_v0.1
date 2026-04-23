@@ -3,6 +3,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import './index.scss'
 
 interface EventDetail {
@@ -21,7 +22,7 @@ export default function EventDetailPage() {
   const router = useRouter()
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
-  const supportQrSrc = '/assets/qr/customer-service-support.png'
+  const supportQrSrc = '/pages/experience/assets/qr/customer-service-support.webp'
 
   const { data: event, isLoading, error } = useQuery<EventDetail>({
     queryKey: ['mini-program', 'event-detail', eventId],
@@ -110,7 +111,7 @@ export default function EventDetailPage() {
       <View className='event-detail__actions'>
         <Button
           className='event-detail__feedback-btn'
-          onClick={() => Taro.navigateTo({ url: `/pages/event-feedback/index?id=${event.id}` })}
+          onClick={() => Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.eventFeedback}?id=${encodeURIComponent(event.id)}` })}
         >
           提交反馈
         </Button>

@@ -1,11 +1,12 @@
 import Taro from '@tarojs/taro'
+import { MINI_PROGRAM_ROUTES } from './onboardingRoutes'
 
 /**
  * Canonical URL for the matched pool-group detail page (post-match journey).
  * Kept in `lib/` so navigation side effects stay separate from view-model pure helpers.
  */
 export function buildPoolGroupDetailUrl(groupId: string): string {
-  return `/pages/pool-group-detail/index?groupId=${encodeURIComponent(groupId)}`
+  return `${MINI_PROGRAM_ROUTES.poolGroupDetail}?groupId=${encodeURIComponent(groupId)}`
 }
 
 export function openPoolGroupDetail(groupId: string): void {
@@ -24,7 +25,7 @@ export function replaceWithPoolGroupDetail(groupId: string): void {
 }
 
 export function switchToEventsTab(): void {
-  Taro.switchTab({ url: '/pages/events/index' })
+  Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events })
 }
 
 /** Prefer stack back; fall back to Events tab when there is no history (e.g. cold open). */
@@ -33,5 +34,5 @@ export function navigateBackOrEventsTab(): void {
 }
 
 export function switchToDiscoverTab(): void {
-  Taro.switchTab({ url: '/pages/discover/index' })
+  Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
 }

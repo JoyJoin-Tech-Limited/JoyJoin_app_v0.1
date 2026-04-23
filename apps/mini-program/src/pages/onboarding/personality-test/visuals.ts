@@ -15,18 +15,18 @@ export {
 } from '../../../lib/xiaoyueExpressions'
 
 const ARCHETYPE_ASSET_MAP: Record<string, string> = {
-  开心柯基: '/assets/personality/archetypes/archetype-corgi.png',
-  太阳鸡: '/assets/personality/archetypes/archetype-rooster.png',
-  夸夸豚: '/assets/personality/archetypes/archetype-praise-dolphin.png',
-  机智狐: '/assets/personality/archetypes/archetype-fox.png',
-  淡定海豚: '/assets/personality/archetypes/archetype-calm-dolphin.png',
-  织网蛛: '/assets/personality/archetypes/archetype-spider.png',
-  暖心熊: '/assets/personality/archetypes/archetype-bear.png',
-  灵感章鱼: '/assets/personality/archetypes/archetype-octopus.png',
-  沉思猫头鹰: '/assets/personality/archetypes/archetype-owl.png',
-  定心大象: '/assets/personality/archetypes/archetype-elephant.png',
-  稳如龟: '/assets/personality/archetypes/archetype-turtle.png',
-  隐身猫: '/assets/personality/archetypes/archetype-cat.png',
+  开心柯基: '/pages/onboarding/assets/personality/archetypes/archetype-corgi.webp',
+  太阳鸡: '/pages/onboarding/assets/personality/archetypes/archetype-rooster.webp',
+  夸夸豚: '/pages/onboarding/assets/personality/archetypes/archetype-praise-dolphin.webp',
+  机智狐: '/pages/onboarding/assets/personality/archetypes/archetype-fox.webp',
+  淡定海豚: '/pages/onboarding/assets/personality/archetypes/archetype-calm-dolphin.webp',
+  织网蛛: '/pages/onboarding/assets/personality/archetypes/archetype-spider.webp',
+  暖心熊: '/pages/onboarding/assets/personality/archetypes/archetype-bear.webp',
+  灵感章鱼: '/pages/onboarding/assets/personality/archetypes/archetype-octopus.webp',
+  沉思猫头鹰: '/pages/onboarding/assets/personality/archetypes/archetype-owl.webp',
+  定心大象: '/pages/onboarding/assets/personality/archetypes/archetype-elephant.webp',
+  稳如龟: '/pages/onboarding/assets/personality/archetypes/archetype-turtle.webp',
+  隐身猫: '/pages/onboarding/assets/personality/archetypes/archetype-cat.webp',
 }
 
 const ARCHETYPE_SUMMARIES: Record<string, string> = {

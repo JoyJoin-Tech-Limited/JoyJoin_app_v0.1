@@ -20,7 +20,7 @@ interface EventSummary {
   [key: string]: unknown
 }
 
-const supportQrSrc = '/assets/qr/customer-service-support.png'
+const supportQrSrc = '/pages/experience/assets/qr/customer-service-support.webp'
 
 function formatEventDate(dateTime?: string): string {
   if (!dateTime) {
@@ -71,7 +71,7 @@ export default function EventCoordinationPage() {
     }
 
     void Taro.navigateTo({
-      url: `/pages/event-detail/index?id=${encodeURIComponent(eventId)}`,
+      url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(eventId)}`,
     }).catch(() => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }))
   }
 

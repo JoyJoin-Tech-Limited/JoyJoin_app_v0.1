@@ -20,6 +20,7 @@ import { logWarn } from '../../lib/logger'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
@@ -320,7 +321,7 @@ function AuthenticatedDiscover() {
   }, [])
 
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
-    Taro.navigateTo({ url: `/pages/pool-registration/index?id=${pool.id}` })
+    Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.poolRegistration}?id=${encodeURIComponent(pool.id)}` })
   }, [])
 
   const handleRefresh = useCallback(() => {
@@ -463,10 +464,11 @@ function AuthenticatedDiscover() {
 }
 
 export default function DiscoverPage() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, isRefreshing } = useAuth()
   const markAsRead = useMarkNotificationsAsRead()
   const hasMarkedRef = useRef(false)
   const shouldSyncUnauthenticatedDiscoverState = !isLoading && !isAuthenticated
+  const shouldBlockAuthenticatedRefresh = isAuthenticated && isRefreshing
 
   useCustomTabBarSync({
     selectedIndex: MINI_PROGRAM_TAB_INDEX.discover,
@@ -486,7 +488,7 @@ export default function DiscoverPage() {
     return () => clearTimeout(timer)
   }, [isAuthenticated, markAsRead])
 
-  if (isLoading) {
+  if (isLoading || shouldBlockAuthenticatedRefresh) {
     return <LoadingScreen />
   }
 

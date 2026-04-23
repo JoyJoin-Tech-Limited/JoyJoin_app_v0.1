@@ -41,9 +41,10 @@ export function useAuthGuard(options?: {
   suspendOnboardingRedirect?: boolean
 }) {
   const auth = useAuth()
+  const isGuardLoading = auth.isLoading || auth.isRefreshing
 
   useEffect(() => {
-    if (auth.isLoading) return
+    if (isGuardLoading) return
 
     if (!auth.isAuthenticated) {
       Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
@@ -74,7 +75,10 @@ export function useAuthGuard(options?: {
         void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'replace' })
       }
     }
-  }, [auth.isLoading, auth.isAuthenticated, auth.nextStep, options?.suspendOnboardingRedirect])
+  }, [auth.isAuthenticated, auth.nextStep, isGuardLoading, options?.suspendOnboardingRedirect])
 
-  return auth
+  return {
+    ...auth,
+    isLoading: isGuardLoading,
+  }
 }
