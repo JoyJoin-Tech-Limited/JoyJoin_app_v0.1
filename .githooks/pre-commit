@@ -33,5 +33,15 @@ if [ "${MINI_PROGRAM_MCP_VERIFY:-}" = "1" ]; then
   fi
 fi
 
+# --- Harness Completion Gate (opt-in) ---
+# Set HARNESS_PRE_COMMIT=1 to run the 5-pillar gate on every commit
+if [ "${HARNESS_PRE_COMMIT:-}" = "1" ]; then
+  echo "[pre-commit] Running Harness Completion Gate..."
+  node scripts/harness-completion-gate.mjs || {
+    echo "[pre-commit] Harness gate failed. Fix issues or commit with HARNESS_PRE_COMMIT=0"
+    exit 1
+  }
+fi
+
 # --- Orchestration validation ---
 node scripts/orchestration-supervisor.mjs git-hook pre-commit

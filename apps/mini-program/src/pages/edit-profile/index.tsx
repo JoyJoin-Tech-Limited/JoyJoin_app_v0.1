@@ -15,6 +15,7 @@ import { logInfo, logError } from '../../lib/logger'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/uiConstants'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
+import XiaoyueChatBubble from '../../components/XiaoyueChatBubble'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -233,6 +234,16 @@ export default function EditProfilePage() {
 
   return renderGate(
     <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
+      {/* Xiaoyue coaching bubble */}
+      <View className='edit-profile__coach'>
+        <XiaoyueChatBubble
+          content='随时更新你的资料，匹配会更精准哦。'
+          pose='pointing'
+          horizontal
+          showGlow
+        />
+      </View>
+
       {/* ── 基本信息 ── */}
       <View className='edit-profile__section'>
         <Text className='edit-profile__section-title'>基本信息</Text>

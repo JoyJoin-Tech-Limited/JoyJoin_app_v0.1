@@ -20,6 +20,7 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import StatusCard from '../../components/StatusCard'
+import XiaoyueChatBubble from '../../components/XiaoyueChatBubble'
 import './index.scss'
 
 const HISTORY_LIMIT = 6
@@ -286,6 +287,15 @@ export default function RewardsPage() {
         <Text className='rewards-page__hero-subtitle'>查看当前优惠券、成长值和近期奖励记录</Text>
       </View>
 
+      <View className='rewards-page__coach'>
+        <XiaoyueChatBubble
+          content='你积累的每一份成长，都会在这里发光。'
+          pose='casual'
+          horizontal
+          showGlow
+        />
+      </View>
+
       <View className='rewards-page__stats'>
         <Card className='rewards-page__stat'>
           <Text className='rewards-page__stat-value'>{couponsData.availableCount}</Text>
@@ -374,7 +384,7 @@ export default function RewardsPage() {
           <Card className='rewards-page__empty-card'>
             <Image
               className='rewards-page__empty-hero'
-              src='/assets/lovart/lovart-generic-empty.webp'
+              src='/assets/lovart/lovart-rewards-empty-20260423-v1.webp'
               mode='aspectFit'
               lazyLoad
             />
@@ -434,7 +444,7 @@ export default function RewardsPage() {
           <Card className='rewards-page__empty-card rewards-page__empty-card--compact'>
             <Image
               className='rewards-page__empty-hero rewards-page__empty-hero--compact'
-              src='/assets/lovart/lovart-generic-empty.webp'
+              src='/assets/lovart/lovart-rewards-shop-20260423-v1.webp'
               mode='aspectFit'
               lazyLoad
             />
@@ -478,7 +488,7 @@ export default function RewardsPage() {
           <Card className='rewards-page__empty-card rewards-page__empty-card--compact'>
             <Image
               className='rewards-page__empty-hero rewards-page__empty-hero--compact'
-              src='/assets/lovart/lovart-generic-empty.webp'
+              src='/assets/lovart/lovart-rewards-history-20260423-v1.webp'
               mode='aspectFit'
               lazyLoad
             />

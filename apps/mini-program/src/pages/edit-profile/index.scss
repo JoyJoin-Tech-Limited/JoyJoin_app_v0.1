@@ -5,6 +5,10 @@
   min-height: 100vh;
   background: $color-bg;
 
+  &__coach {
+    padding: $spacing-lg $container-padding 0;
+  }
+
   // ── Section ───────────────────────────────────────────────────
   &__section {
     padding: $spacing-lg $container-padding 0;

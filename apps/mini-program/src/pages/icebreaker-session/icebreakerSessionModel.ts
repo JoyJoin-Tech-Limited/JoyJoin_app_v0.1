@@ -3,7 +3,7 @@ import type {
   SocialIcebreakerPhase,
 } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
-import type { SessionParticipant, SessionPhase } from './PhaseViews'
+import type { SessionParticipant, SessionPhase } from './phaseViews'
 
 export interface IcebreakerSession extends SocialSessionState {
   id: string

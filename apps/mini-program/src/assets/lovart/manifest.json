@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "generatedAt": "2026-04-22T21:21:57+08:00",
+  "assets": {
+    "lovart-generic-empty": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 800, "height": 800 },
+      "outputSizes": { "webp": 0, "png": 0 }
+    },
+    "lovart-generic-error": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 800, "height": 800 },
+      "outputSizes": { "webp": 0, "png": 0 }
+    },
+    "lovart-profile-incomplete": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 800, "height": 800 },
+      "outputSizes": { "webp": 0, "png": 0 }
+    },
+    "lovart-test-incomplete": {
+      "sourceChecksum": "sha256:pending",
+      "outputDimensions": { "width": 800, "height": 800 },
+      "outputSizes": { "webp": 0, "png": 0 }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Xiaoyue Transparency Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 40px 20px;
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+    }
+    h1 { font-size: 20px; color: #333; }
+    .instruction { color: #666; font-size: 14px; text-align: center; max-width: 600px; line-height: 1.5; }
+    .pass { color: #16a34a; font-weight: bold; }
+    .fail { color: #dc2626; font-weight: bold; }
+    .row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .stage {
+      width: 280px;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      border: 3px solid #999;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage img {
+      width: 240px;
+      height: 240px;
+      object-fit: contain;
+    }
+    .label {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.75);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 10;
+    }
+    .checker { background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 20px 20px; }
+    .red { background: #ff3333; }
+    .blue { background: #3333ff; }
+    .green { background: #33aa33; }
+    .black { background: #111; }
+  </style>
+</head>
+<body>
+  <h1>🎭 Xiaoyue Transparency Test</h1>
+  <p class="instruction">
+    <span class="pass">Transparent</span> = Xiaoyue floats cleanly on the background.<br>
+    <span class="fail">Opaque</span> = White/light box visible around Xiaoyue.
+  </p>
+  <div class="row">
+    <div class="stage checker"><span class="label">Checkerboard</span><img src="xiaoyue-frame-verify.png" alt="Xiaoyue"></div>
+    <div class="stage red"><span class="label">Red</span><img src="xiaoyue-frame-verify.png" alt="Xiaoyue"></div>
+    <div class="stage blue"><span class="label">Blue</span><img src="xiaoyue-frame-verify.png" alt="Xiaoyue"></div>
+    <div class="stage green"><span class="label">Green</span><img src="xiaoyue-frame-verify.png" alt="Xiaoyue"></div>
+    <div class="stage black"><span class="label">Black</span><img src="xiaoyue-frame-verify.png" alt="Xiaoyue"></div>
+  </div>
+</body>
+</html>

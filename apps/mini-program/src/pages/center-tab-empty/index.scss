@@ -12,8 +12,8 @@
   );
   @include fixed-footer-reserve($spacing-xl + $button-height-sm + ($spacing-sm * 2), $spacing-md);
   background:
-    radial-gradient(circle at top, rgba(168, 107, 255, 0.16), transparent 42%),
-    linear-gradient(180deg, #fffdfd 0%, #fff4f8 52%, #fff8f1 100%);
+    radial-gradient(circle at top, rgba($color-primary, 0.16), transparent 42%),
+    linear-gradient(180deg, $color-surface 0%, $color-bg-tint-pink 52%, $color-bg-tint-warm 100%);
 
   &__content {
     display: flex;

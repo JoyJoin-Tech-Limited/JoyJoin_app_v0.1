@@ -12,7 +12,7 @@
 
 import { archetypeRegistry, type ArchetypeRecord, type ArchetypeDisplay } from './archetypeRegistry';
 import { getArchetypeSkills, type ArchetypeSkillSet } from './archetypeSkills';
-import { compatibilityMatrix } from './archetypeCompatibility';
+
 import { getArchetypeIndex, getArchetypeTypeNo } from './archetypeNames';
 import { getStyleSpectrum, getAllArchetypeScores, type StyleSpectrumResult } from './matcherV2';
 import type { TraitKey } from './types';

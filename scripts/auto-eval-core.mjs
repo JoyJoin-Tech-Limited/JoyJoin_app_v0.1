@@ -910,6 +910,87 @@ function runPerformanceModule(changedFiles) {
   });
 }
 
+function runHarnessModule(repoRoot, changedFiles, timeoutProfile) {
+  const key = 'harness-engineering';
+
+  const result = runCommand('node', ['scripts/harness-completion-gate.mjs', '--json'], {
+    cwd: repoRoot,
+    timeoutMs: timeoutProfile.guardrails + 5000,
+  });
+
+  if (result.error && result.status === null) {
+    return createModuleResult({
+      key,
+      name: 'Harness Engineering',
+      score: 0,
+      confidence: 0,
+      status: 'system-error',
+      findings: [
+        createFinding({
+          moduleKey: key,
+          severity: 'blocker',
+          message: `Harness gate infrastructure error: ${result.error}`,
+          evidence: result.commandLine,
+        }),
+      ],
+      evidence: [],
+      reason: 'Harness gate infrastructure error',
+    });
+  }
+
+  let gateResult;
+  try {
+    gateResult = JSON.parse(result.stdout);
+  } catch {
+    return createModuleResult({
+      key,
+      name: 'Harness Engineering',
+      score: 0,
+      confidence: 0,
+      status: 'system-error',
+      findings: [
+        createFinding({
+          moduleKey: key,
+          severity: 'blocker',
+          message: 'Unable to parse Harness gate output',
+          evidence: result.stdout.slice(0, 200),
+        }),
+      ],
+      evidence: [],
+      reason: 'Harness gate output parse error',
+    });
+  }
+
+  const findings = [];
+  for (const pillar of gateResult.pillars ?? []) {
+    for (const f of pillar.findings ?? []) {
+      findings.push(
+        createFinding({
+          moduleKey: key,
+          severity: f.severity === 'blocker' ? 'major' : f.severity === 'concern' ? 'minor' : 'info',
+          filePath: f.file,
+          line: f.line ?? 1,
+          message: `[${pillar.name}] ${f.message}`,
+        }),
+      );
+    }
+  }
+
+  const score = gateResult.overallScore ?? 0;
+  const status = gateResult.status === 'pass' ? 'pass' : 'fail';
+
+  return createModuleResult({
+    key,
+    name: 'Harness Engineering',
+    score,
+    confidence: 95,
+    status,
+    findings,
+    evidence: ['harness-completion-gate'],
+    reason: findings[0]?.message ?? 'Harness gate completed',
+  });
+}
+
 function summarizeChangedFiles(changedFiles) {
   const counts = {};
 
@@ -1148,7 +1229,25 @@ export function evaluateWorkspace(options = {}) {
   const performanceModule = runPerformanceModule(changedFiles);
   modules.push(performanceModule);
 
-  const status = performanceModule.status === 'pass' ? 'pass' : 'fail';
+  if (performanceModule.status !== 'pass') {
+    modules.push(skippedModule('harness-engineering', 'Harness Engineering', 'Skipped after earlier blocking module.'));
+    return buildResult({
+      repoRoot,
+      mode,
+      cleanWorktree: false,
+      fingerprint,
+      changedFiles,
+      modules,
+      status: 'fail',
+      reason: performanceModule.reason,
+      cacheHit,
+    });
+  }
+
+  const harnessModule = runHarnessModule(repoRoot, changedFiles, timeoutProfile);
+  modules.push(harnessModule);
+
+  const status = harnessModule.status === 'pass' ? 'pass' : 'fail';
   const result = buildResult({
     repoRoot,
     mode,

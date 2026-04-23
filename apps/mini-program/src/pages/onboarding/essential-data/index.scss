@@ -45,8 +45,7 @@
   }
 
   &__label {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
+    @include type-label;
     color: $color-text-secondary;
     line-height: 1.4;
   }
@@ -74,15 +73,20 @@
   &__picker {
     height: 96rpx;
     padding: 0 $spacing-md;
-    background: $color-bg;
+    background: $color-surface;
     border: 2rpx solid $color-border;
     border-radius: 24rpx;
     display: flex;
     align-items: center;
+    transition: border-color 0.2s ease;
+
+    &:active {
+      border-color: rgba($color-primary, 0.4);
+    }
   }
 
   &__picker-text {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-muted;
 
     &--filled {
@@ -91,7 +95,7 @@
   }
 
   &__hint {
-    font-size: $font-size-xs;
+    @include type-caption;
     color: $color-text-muted;
     line-height: 1.4;
   }
@@ -112,15 +116,15 @@
     align-items: center;
     justify-content: center;
     padding: $spacing-xs $spacing-md;
-    background: $color-bg;
+    background: $color-surface;
     border: 2rpx solid $color-border;
     border-radius: 48rpx;
     transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
     &--selected {
-      background: linear-gradient(135deg, rgba($color-primary, 0.1), rgba($color-secondary, 0.1));
+      background: rgba($color-primary, 0.08);
       border-color: $color-primary;
-      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.15);
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.10);
     }
 
     &--compact {
@@ -132,7 +136,7 @@
   }
 
   &__choice-chip-text {
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-medium;
     color: $color-text-primary;
   }
@@ -146,37 +150,55 @@
   &__intent-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 4rpx;
+    align-items: flex-start;
+    gap: 6rpx;
     padding: $spacing-md;
     background: $color-bg;
     border: 2rpx solid $color-border;
     border-radius: 24rpx;
     transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
 
     &--selected {
-      background: linear-gradient(135deg, rgba($color-primary, 0.1), rgba($color-secondary, 0.1));
+      background: rgba($color-primary, 0.06);
       border-color: $color-primary;
-      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.15);
+      box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.12);
     }
   }
 
-  &__intent-emoji {
-    font-size: $font-size-xl;
-  }
-
   &__intent-label {
-    font-size: $font-size-sm;
+    @include type-label;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
-    text-align: center;
+    text-align: left;
+    padding-right: 36rpx;
   }
 
   &__intent-subtitle {
-    font-size: $font-size-xs;
+    @include type-caption;
     color: $color-text-muted;
-    text-align: center;
-    line-height: 1.3;
+    text-align: left;
+    line-height: 1.4;
+  }
+
+  &__intent-check {
+    position: absolute;
+    top: 14rpx;
+    right: 14rpx;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__intent-check-icon {
+    font-size: $font-size-2xs;
+    color: $color-text-white;
+    font-weight: $font-weight-bold;
+    line-height: 1;
   }
 
   &__tray {
@@ -184,14 +206,13 @@
     padding: $spacing-md $container-padding;
     padding-bottom: max($spacing-md, constant(safe-area-inset-bottom));
     padding-bottom: max($spacing-md, env(safe-area-inset-bottom));
-    background: rgba($color-surface, 0.92);
-    backdrop-filter: blur(12rpx);
+    background: rgba($color-surface, 0.98);
     border-top: 2rpx solid $color-divider;
     @include safe-area-inline($container-padding);
   }
 
   &__error {
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-error;
     text-align: center;
     margin-bottom: $spacing-sm;

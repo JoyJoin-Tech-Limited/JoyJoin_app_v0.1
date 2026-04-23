@@ -5,8 +5,8 @@
   min-height: 100vh;
   @include page-shell-padding($spacing-lg, $container-padding, $spacing-xl);
   background:
-    radial-gradient(circle at top, rgba(139, 92, 246, 0.18), transparent 38%),
-    linear-gradient(180deg, #fafafa 0%, #fff4f8 54%, #fff9f3 100%);
+    radial-gradient(circle at top, rgba($color-primary, 0.18), transparent 38%),
+    linear-gradient(180deg, $color-bg 0%, $color-bg-tint-pink 54%, $color-bg-tint-cream 100%);
 
   &__header {
     text-align: center;

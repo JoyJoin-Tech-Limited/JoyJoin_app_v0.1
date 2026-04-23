@@ -17,9 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
+import { personalityResultAnalytics } from '@/lib/personalityResultAnalytics';
 import { invalidateUserDerivedQueries } from '@/lib/userStateInvalidation';
-import type { AuthUser } from '@/hooks/useAuth';
 import type { PersonalityResultViewModel } from '@joyjoin/shared/personality/resultViewModel';
 import { PremiumCard } from './PremiumCard';
 import PersonalityRadarChart from '@/components/PersonalityRadarChart';
@@ -77,21 +77,24 @@ export function ResultStage({ viewModel, onContinue, isContinuing }: ResultStage
   useEffect(() => {
     if (resultsViewedTrackedRef.current) return;
     resultsViewedTrackedRef.current = true;
-    // analytics can be hooked here
-  }, [viewModel.primaryArchetype]);
+    personalityResultAnalytics.track('personality_result_viewed', {
+      primaryArchetype: viewModel.primaryArchetype,
+      archetypeIndex: viewModel.archetypeIndex,
+      isDecisive: viewModel.isDecisive,
+      totalQuestions: viewModel.totalQuestions,
+      secondaryArchetype: viewModel.secondaryArchetype,
+    });
+  }, [viewModel.primaryArchetype, viewModel.archetypeIndex, viewModel.isDecisive, viewModel.totalQuestions, viewModel.secondaryArchetype]);
 
   // ─── Feedback Handler ───
   const handleFeedback = async (value: 'accurate' | 'partial' | 'inaccurate') => {
     if (feedbackSubmitted || isSubmittingFeedback) return;
     setIsSubmittingFeedback(true);
     try {
-      const res = await fetch('/api/assessment/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ archetype: viewModel.primaryArchetype, accuracy: value }),
+      await apiRequest('POST', '/api/assessment/feedback', {
+        archetype: viewModel.primaryArchetype,
+        accuracy: value,
       });
-      if (!res.ok) throw new Error('反馈提交失败');
       setFeedbackSubmitted(true);
     } catch (error: any) {
       toast({ title: '反馈提交失败', description: error.message, variant: 'destructive' });
@@ -229,7 +232,7 @@ export function ResultStage({ viewModel, onContinue, isContinuing }: ResultStage
               <CardContent className="space-y-3">
                 {viewModel.highCompatibilityPartners.map((chemistry, index) => (
                   <div
-                    key={chemistry.role}
+                    key={`${chemistry.role}-${index}`}
                     className="p-3 bg-muted/50 rounded-lg space-y-2"
                   >
                     <div className="flex items-center justify-between">

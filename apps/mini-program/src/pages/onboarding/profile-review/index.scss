@@ -19,7 +19,7 @@
     margin-bottom: $spacing-md;
     border-radius: $card-radius;
     border: 2rpx solid rgba($color-primary, 0.12);
-    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.84) 100%);
+    background: $color-surface;
   }
 
   &__prelude-eyebrow {
@@ -140,14 +140,12 @@
   }
 
   &__coach {
-    @include card;
+    @include card-premium;
     display: flex;
     align-items: center;
     gap: $spacing-md;
     padding: $spacing-md;
     margin-bottom: $spacing-md;
-    border: 2rpx solid rgba($color-primary, 0.14);
-    background: linear-gradient(135deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.8) 100%);
   }
 
   &__coach-avatar {
@@ -176,10 +174,9 @@
   }
 
   &__hero-card {
+    @include card-premium;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
-    background: linear-gradient(145deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.76) 100%);
-    border: 2rpx solid rgba($color-primary, 0.12);
   }
 
   &__hero-main {
@@ -194,8 +191,8 @@
     height: 156rpx;
     flex-shrink: 0;
     border-radius: 999rpx;
-    background: linear-gradient(145deg, rgba($color-secondary, 0.16) 0%, rgba($color-surface, 0.98) 100%);
-    box-shadow: 0 16rpx 30rpx rgba($color-primary, 0.16);
+    background: rgba($color-primary-light, 0.6);
+    box-shadow: 0 8rpx 20rpx rgba($color-primary, 0.10);
   }
 
   &__avatar-image {
@@ -254,24 +251,26 @@
   &__ai-tagline-wrap {
     display: flex;
     align-items: flex-start;
-    gap: 8rpx;
+    gap: 12rpx;
     margin-top: 10rpx;
     padding: 10rpx 16rpx;
-    background: linear-gradient(135deg, rgba($color-primary, 0.04), rgba($color-secondary, 0.04));
+    background: rgba($color-primary-light, 0.4);
     border-radius: 16rpx;
     border: 2rpx solid rgba($color-primary, 0.08);
   }
 
-  &__ai-tagline-sparkle {
-    font-size: $font-size-sm;
-    line-height: 1.4;
+  &__ai-tagline-accent {
+    width: 6rpx;
+    height: 6rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    margin-top: 14rpx;
     flex-shrink: 0;
   }
 
   &__ai-tagline {
     font-size: $font-size-xs;
-    font-style: italic;
-    color: rgba($color-text-secondary, 0.88);
+    color: rgba($color-text-secondary, 0.92);
     line-height: 1.55;
     overflow-wrap: anywhere;
   }
@@ -298,6 +297,7 @@
   }
 
   &__card {
+    @include card-premium;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
   }
@@ -385,7 +385,8 @@
     background: rgba($color-primary-light, 0.92);
 
     &--accent {
-      background: linear-gradient(145deg, rgba($color-secondary, 0.14) 0%, rgba($color-primary-light, 0.94) 100%);
+      background: rgba($color-secondary, 0.12);
+      border: 2rpx solid rgba($color-secondary, 0.18);
     }
   }
 
@@ -404,11 +405,11 @@
     min-width: 0;
     padding: $spacing-sm;
     border-radius: 24rpx;
-    background: linear-gradient(180deg, rgba($color-primary-light, 0.92) 0%, rgba($color-surface, 0.98) 100%);
+    background: rgba($color-primary-light, 0.5);
     text-align: center;
 
     &--skeleton {
-      background: rgba($color-primary-light, 0.7);
+      background: rgba($color-primary-light, 0.4);
     }
   }
 
@@ -488,11 +489,9 @@
   }
 
   &__cta {
-    @include card;
+    @include card-premium;
     padding: $spacing-lg;
     margin-top: $spacing-sm;
-    border: 2rpx solid rgba($color-primary, 0.12);
-    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.76) 100%);
     text-align: center;
   }
 

@@ -12,7 +12,7 @@
 
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnonymousPersonalityTestResults } from '@/hooks/useAnonymousPersonalityTestResults';
@@ -125,7 +125,7 @@ export default function PersonalityTestResultPage() {
   }
 
   // ─── Stage Content Map ───
-  const stageContent: Record<ResultFlowStage, React.ReactNode> = {
+  const stageContent = useMemo<Record<ResultFlowStage, React.ReactNode>>(() => ({
     loading: (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <FancyLineLoadingScreen loop visible />
@@ -171,7 +171,7 @@ export default function PersonalityTestResultPage() {
       />
     ),
     empty: <EmptyStage />,
-  };
+  }), [viewModel, handleSlotComplete, handleSkipSlot, handleUnlockComplete, handleRevealComplete, completeTestMutation, setStage]);
 
   return <ResultStageLoader stage={stage} children={stageContent} />;
 }

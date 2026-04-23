@@ -9,9 +9,9 @@ import "./index.scss"
 type LandingHeroKey = "match" | "dinner" | "continue"
 
 const heroFallbackSources: Record<LandingHeroKey, string> = {
-  match: "/assets/match.png",
-  dinner: "/assets/dinner.png",
-  continue: "/assets/continue.png",
+  match: "/assets/match.webp",
+  dinner: "/assets/dinner.webp",
+  continue: "/assets/continue.webp",
 }
 
 export default function MiniProgramLandingPage() {
@@ -116,9 +116,9 @@ export default function MiniProgramLandingPage() {
 
         <View className="text-content">
           <Text className="headline">让对的相遇不再错过</Text>
-          <Text className="subtitle">通过氛围测试，找到你的氛围原型，遇见志同道合的ta</Text>
+          <Text className="subtitle">找到你的氛围原型，遇见真正聊得来的人</Text>
           <View className="badges">
-            {["🧠 氛围测试", "🎯 算法匹配", "👥 4-6人局"].map((label) => (
+            {["氛围测试", "算法匹配", "4-6人小局"].map((label) => (
               <View key={label} className="badge">
                 <Text>{label}</Text>
               </View>

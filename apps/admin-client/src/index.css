@@ -86,7 +86,7 @@
      No self-hosted @font-face is loaded here; the admin dashboard
      prioritises density and performance over custom display fonts.
      font-ui          → system Chinese stack; default for all dense UI
-     font-cn-display  → system Chinese stack (no AlibabaPuHuiTi in admin);
+     font-cn-display  → system Chinese stack (no custom font in admin);
                         for branded headings / emotional moments
      font-en-brand    → Outfit (loaded via Google Fonts); for English
                         wordmark and brand accent surfaces             */

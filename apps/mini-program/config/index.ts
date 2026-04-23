@@ -48,6 +48,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets',
           to: 'dist/assets',
         },
+        // Archetype PNG fallbacks for canvas drawImage live in the onboarding
+        // subpackage to keep them out of the main package.
+        {
+          from: 'src/pages/onboarding/assets',
+          to: 'dist/pages/onboarding/assets',
+        },
         // Taro Vite runner does not auto-compile custom-tab-bar.
         // We ship it as a pre-built native WeChat component instead.
         {

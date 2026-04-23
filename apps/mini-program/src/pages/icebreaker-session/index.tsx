@@ -21,7 +21,7 @@ import {
   RecapPhaseView,
   type SessionPhase,
   WarmupPhaseView,
-} from './PhaseViews'
+} from './phaseViews'
 import { IcebreakerToolSelector } from './IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './MiniScriptConfigModal'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'

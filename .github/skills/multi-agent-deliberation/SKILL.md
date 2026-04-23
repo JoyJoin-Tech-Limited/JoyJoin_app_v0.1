@@ -23,7 +23,7 @@ description: >
 - UX-heavy features with Taro/WeChat runtime constraints
 - Architecture changes affecting core engines (matching, personality, payments)
 - High blast radius + novelty (new AI provider, new caching backend, new database)
-- Explicit user request: "deliberate this," "get multiple perspectives," "design review"
+- Explicit user request: "deliberate," "deliberation," "deliberate this," "get multiple perspectives," "design review"
 
 ## When NOT to use this skill
 
@@ -134,7 +134,7 @@ The **Supervisor** or **Planner** auto-routes to `Deliberation Moderator` when a
 | UX-heavy with Taro constraints | Path matches `apps/mini-program/src/` + new route or component |
 | Core engine change | Path matches `inference/`, `personality/`, `poolMatchingService.ts` |
 | High blast radius + novelty | File not in any existing track definition + >100 lines changed |
-| Explicit user request | Prompt contains "deliberate," "consensus," "multiple perspectives" |
+| Explicit user request | Prompt contains "deliberate," "deliberation," "consensus," "multiple perspectives" |
 
 **Anti-triggers** (never auto-route):
 - Single-file changes <50 lines

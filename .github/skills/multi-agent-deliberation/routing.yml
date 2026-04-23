@@ -18,6 +18,8 @@ do_not_use_when:
   - task is small (<50 lines, single file)
 
 strong_triggers:
+  - deliberate
+  - deliberation
   - deliberate this
   - multi-agent review
   - architecture consensus

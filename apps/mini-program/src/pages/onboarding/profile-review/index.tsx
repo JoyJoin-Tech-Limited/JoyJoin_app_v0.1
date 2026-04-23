@@ -295,12 +295,21 @@ export default function ProfileReviewPage() {
         ) : null}
 
         <View className={`profile-review__welcome-illustration ${getStageClassName(0)}`}>
-          <Image
-            className='profile-review__welcome-image'
-            src='../../assets/lovart/lovart-mascot-corgi-welcome-20260422-v1.webp'
-            mode='aspectFit'
-            lazyLoad
-          />
+          {visual?.asset ? (
+            <Image
+              className='profile-review__welcome-image'
+              src={visual.asset}
+              mode='aspectFit'
+              lazyLoad
+            />
+          ) : (
+            <Image
+              className='profile-review__welcome-image'
+              src={getXiaoyueAsset('homeWelcome')}
+              mode='aspectFit'
+              lazyLoad
+            />
+          )}
         </View>
 
         <View className={`profile-review__hero ${getStageClassName(1)}`}>
@@ -353,7 +362,7 @@ export default function ProfileReviewPage() {
               )}
               {aiInsightLine ? (
                 <View className='profile-review__ai-tagline-wrap'>
-                  <Text className='profile-review__ai-tagline-sparkle'>✨</Text>
+                  <View className='profile-review__ai-tagline-accent' />
                   <Text className='profile-review__ai-tagline'>{aiInsightLine}</Text>
                 </View>
               ) : null}

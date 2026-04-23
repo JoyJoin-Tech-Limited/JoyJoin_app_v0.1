@@ -3,7 +3,7 @@
 
 .profile-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  background: $color-bg-gradient;
 
   &__loading {
     @include flex-center;
@@ -11,7 +11,7 @@
   }
 
   &__loading-text {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
   }
 
@@ -34,24 +34,33 @@
   }
 
   &__avatar-text {
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
+    @include type-heading;
     color: $color-text-white;
   }
 
   &__name {
     display: block;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-black;
-    color: $color-text-primary;
+    @include type-heading;
     margin-bottom: $spacing-xs;
   }
 
   &__archetype {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-primary;
     font-weight: $font-weight-medium;
+  }
+
+  &__archetype-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  &__coach {
+    padding: 0 $container-padding;
+    margin-bottom: $spacing-lg;
   }
 
   // Stats
@@ -71,16 +80,13 @@
 
   &__stat-value {
     display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    @include type-subheading;
     margin-bottom: $spacing-xs;
   }
 
   &__stat-label {
     display: block;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
+    @include type-caption;
   }
 
   // Action rows
@@ -114,8 +120,7 @@
 
   &__action-text {
     flex: 1;
-    font-size: $font-size-base;
-    color: $color-text-primary;
+    @include type-body;
     font-weight: $font-weight-medium;
   }
 
@@ -136,7 +141,7 @@
     background: $color-surface;
     border: 2rpx solid $color-border;
     color: $color-error;
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-medium;
 
     &::after {
@@ -154,11 +159,11 @@
   }
 
   &__empty-emoji {
-    font-size: 64rpx;
+    font-size: 64rpx; // Decorative — not part of hierarchy
   }
 
   &__empty-text {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
   }
 
@@ -170,7 +175,7 @@
 
   &__login-btn-text {
     color: $color-text-white;
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-semibold;
   }
 

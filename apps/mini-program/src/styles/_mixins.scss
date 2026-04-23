@@ -13,6 +13,7 @@
   font-family: $font-cn-display;
 }
 
+// Legacy: use type-hero instead. Kept for backward compatibility.
 @mixin type-display-hero {
   @include font-cn-display;
   font-weight: $font-weight-black;
@@ -20,23 +21,28 @@
   line-height: 1.14;
 }
 
+// Legacy: use type-title instead. Kept for backward compatibility.
 @mixin type-display-page-title {
   @include font-cn-display;
   font-weight: $font-weight-black;
   line-height: 1.18;
 }
 
+// Legacy: use type-heading instead. Kept for backward compatibility.
 @mixin type-display-section-title {
   @include font-cn-display;
   font-weight: $font-weight-bold;
 }
 
+// Specialized: primary CTA button text. Combines type-heading size with CTA letter-spacing.
+// Use for main action buttons only; body text should use type-heading or type-body-emphasis.
 @mixin type-brand-cta-label {
   @include font-cn-display;
   font-weight: $font-weight-bold;
   letter-spacing: 0.5rpx;
 }
 
+// Legacy: use type-headline instead. Kept for backward compatibility.
 @mixin type-display-accent-line {
   @include font-cn-display;
   font-weight: $font-weight-black;
@@ -61,6 +67,94 @@
   @include font-en-brand;
   font-weight: $font-weight-semibold;
   letter-spacing: 0.02em;
+}
+
+// ─── Semantic Typography Hierarchy ───────────────────────────────
+// Each mixin binds: size + weight + font-family + line-height + color intent.
+// Use these instead of raw font-size + font-weight combinations.
+// See _variables.scss for the full tier mapping.
+//
+// Decorative sizes above 64rpx (emoji, game elements, celebration) may stay
+// hardcoded in component files — they are not part of this hierarchy.
+
+@mixin type-hero {
+  @include font-cn-display;
+  font-size: $font-size-4xl;
+  font-weight: $font-weight-black;
+  line-height: 1.14;
+  color: $color-text-primary;
+}
+
+@mixin type-headline {
+  @include font-cn-display;
+  font-size: $font-size-3xl;
+  font-weight: $font-weight-black;
+  line-height: 1.14;
+  color: $color-text-primary;
+}
+
+@mixin type-title {
+  @include font-cn-display;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  line-height: 1.18;
+  color: $color-text-primary;
+}
+
+@mixin type-heading {
+  @include font-cn-display;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+  color: $color-text-primary;
+}
+
+@mixin type-subheading {
+  font-family: $font-ui;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  line-height: 1.3;
+  color: $color-text-primary;
+}
+
+@mixin type-body-emphasis {
+  font-family: $font-ui;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  line-height: 1.5;
+  color: $color-text-primary;
+}
+
+@mixin type-body {
+  font-family: $font-ui;
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  line-height: 1.6;
+  color: $color-text-primary;
+}
+
+@mixin type-label {
+  font-family: $font-ui;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  line-height: 1.5;
+  color: $color-text-secondary;
+}
+
+@mixin type-caption {
+  font-family: $font-ui;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  line-height: 1.4;
+  color: $color-text-secondary;
+}
+
+@mixin type-micro {
+  font-family: $font-ui;
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-normal;
+  line-height: 1.3;
+  color: $color-text-muted;
 }
 
 // ─── Primary CTA pressed feedback (use with :active; pair with hoverClass in TSX where needed) ─
@@ -88,11 +182,37 @@
   @include cta-pressed-active;
 }
 
+/// Premium solid CTA — single brand color, no gradient, crisp shadow.
+/// Use when gradient feels too "decorated" or when the screen already has rich visuals.
+@mixin button-premium {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: max($button-height, $cta-min-tap);
+  height: $button-height;
+  border-radius: $button-radius;
+  background: $color-primary;
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 6rpx 20rpx rgba(139, 92, 246, 0.28);
+  @include cta-pressed-active;
+}
+
 // ─── Card ─────────────────────────────────────────────────────────
 @mixin card {
   background: $color-surface;
   border-radius: $card-radius;
   box-shadow: $shadow-card;
+}
+
+/// Premium card — warmer surface, tighter shadow, subtle border.
+/// Use for hero cards and profile cards where quality must be felt.
+@mixin card-premium {
+  background: $color-surface;
+  border-radius: $card-radius;
+  border: 2rpx solid rgba($color-border, 0.6);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
 }
 
 // ─── Page gradient background ─────────────────────────────────────
@@ -104,7 +224,21 @@
 
 @mixin page-gradient-bg {
   @include viewport-min-height;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  background: $color-bg-gradient;
+}
+
+/// Premium warm background — solid warm beige with subtle tonal shift.
+/// Use this for high-end screens that should feel intentional, not "AI-generic".
+@mixin page-warm-bg {
+  @include viewport-min-height;
+  background: linear-gradient(180deg, $color-bg-warm-from 0%, $color-bg-warm-mid 60%, $color-bg-warm-to 100%);
+}
+
+/// Ultra-clean surface background — near-white with a whisper of warmth.
+/// For screens where content (illustrations, cards) should be the sole focal point.
+@mixin page-clean-bg {
+  @include viewport-min-height;
+  background: $color-bg-clean;
 }
 
 /// Flex column shell: page fills window; clip overflow — put ScrollView only where lists/steps need it (zero-scroll policy).
@@ -308,4 +442,48 @@ $onboarding-stage-shift-ids: (
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+// ─── Micro-interactions ───────────────────────────────────────────
+// Standard tap feedback — subtle scale + opacity
+@mixin tap-feedback {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+
+  &:active {
+    transform: scale(0.97);
+    opacity: 0.92;
+  }
+}
+
+// Strong tap feedback — deeper scale + shadow drop
+@mixin tap-feedback-strong {
+  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease;
+
+  &:active {
+    transform: scale(0.95) translateY(2rpx);
+    opacity: 0.9;
+  }
+}
+
+// Card press feedback — scale only, no opacity loss (cards look better this way)
+@mixin card-press {
+  transition: transform 0.12s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// Chip/selectable press — scale + border-color transition
+@mixin chip-press {
+  transition: transform 0.1s ease, border-color 0.15s ease, background-color 0.15s ease;
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+// Celebrate on tap — strong feedback + optional haptic trigger class
+@mixin celebrate-on-tap {
+  @include tap-feedback-strong;
 }

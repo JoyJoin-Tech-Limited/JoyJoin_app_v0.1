@@ -32,6 +32,16 @@ description: >
 - Task is about animation, motion, or interaction polish (use `wow-elements`)
 - Task requires API integration or server-side logic (use `server-domain-architecture` or `ai-engineer`)
 
+### When to use Stitch instead of Lovart
+
+| Need | Use |
+|------|-----|
+| UI screen exploration, layout directions, rapid prototyping | **Stitch** (`stitch-design-workflow`) |
+| Brand illustrations, mascot artwork, marketing graphics | **Lovart** (this skill) |
+| Production pixel specs, component libraries | **Figma** |
+
+Stitch generates HTML/CSS screen mockups from text prompts. Lovart generates brand-aligned illustrations and marketing assets. They are complementary, not competing.
+
 ## Platform Overview — Lovart
 
 [Lovart](https://lovart.pro) is an AI Design Agent powered by Nano Banana Pro. It uses a conversational ChatCanvas workflow where you describe your design need in natural language, annotate or sketch on canvas, and iterate collaboratively.
@@ -71,19 +81,32 @@ Every Lovart brief must include these brand parameters. Do not omit them — the
 
 | Role | Visual feel | Lovart prompt guidance |
 |------|-------------|----------------------|
-| Chinese display | AlibabaPuHuiTi-3 — rounded, friendly, modern | *"Chinese text should feel rounded and friendly, like a contemporary sans-serif Chinese display font"* |
+| Chinese display | AlimamaFangYuanTiVF — rounded, friendly, modern, geometric | *"Chinese text should feel rounded and friendly, with a thin geometric sans-serif character"* |
 | English brand | Quicksand — soft, geometric, approachable | *"English text in soft geometric sans-serif, approachable and modern"* |
 | System UI | Clean, legible, functional | *"Body text clean and highly legible, no decorative serifs"* |
 
-### Mascots
+### Archetype mascot roster (canonical 12)
 
-| Mascot | Personality | Best used for |
-|--------|-------------|---------------|
-| Corgi (开心柯基) | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments, success states |
-| Koala | Calm, warm, thoughtful | Empty states, relaxation, trust moments, gentle guidance |
-| Turtle | Steady, reliable, patient | Loading states, persistence, step-by-step progress, reassurance |
+These 12 animals map to the personality system's canonical archetypes (`packages/shared/src/personality/prototypes.ts`). Use them for all product-facing illustrations, result screens, and brand assets.
 
-**Prompt instruction:** Specify mascot + personality + scene context. Example: *"The corgi mascot should be playful and energetic, mid-jump with a small gift box, expressing excitement."*
+| Archetype | Animal | Personality | Best used for |
+|-----------|--------|-------------|---------------|
+| 开心柯基 | **Corgi** | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments |
+| 太阳鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
+| 夸夸豚 | **Praise Dolphin** | Supportive, complimentary, warm | Social bonding, affirmation moments |
+| 机智狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
+| 淡定海豚 | **Calm Dolphin** | Steady, peaceful, balanced | Relaxation, mindfulness events |
+| 织网蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
+| 暖心熊 | **Bear** | Warm, strong, protective | Trust moments, group hugs, winter themes |
+| 灵感章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
+| 沉思猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
+| 定心大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
+| 稳如龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
+| 隐身猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
+
+**Not approved:** Koala and Hamster are **not** part of the canonical archetype system. Do not generate them without explicit Product approval.
+
+**Prompt instruction:** Specify archetype + animal + personality + scene context. Example: *"The corgi mascot (开心柯基) should be playful and energetic, mid-jump with a small gift box, expressing excitement."*
 
 ### Visual tone checklist
 
@@ -93,6 +116,35 @@ All Lovart output for JoyJoin should feel:
 - [ ] Rounded and soft (sharp edges only when intentionally modern)
 - [ ] Lively and breathable (not cramped or overloaded)
 - [ ] Minimal yet refined (premium without being corporate)
+
+### Illustration style vocabulary (插画风风格统一) — MANDATORY
+
+**Every Lovart brief MUST include the style lock below. No exceptions.** JoyJoin illustrations follow a locked **2D low-poly geometric illustration style** (插画风统一). Omitting these descriptors causes brand drift that Beta (UX Visionary) will veto.
+
+Inject these descriptors into **every** Lovart prompt that generates character art or mascot illustrations:
+
+- **Construction:** 2D digital illustration with low-poly / geometric faceted aesthetic — built from polygonal facets and triangular planes
+- **Textures:** Painterly, soft brushed feel within each polygonal facet — NOT flat vector or 3D render
+- **Outlines:** Minimal or none — let facet edges define form
+- **Gradients:** Soft color variation within individual facets, not global gradients
+- **Backgrounds:** Atmospheric textured washes with subtle grain/noise
+- **Characters:** Geometric polygonal bodies, large expressive glossy eyes, simplified features, warm expressions
+- **Composition:** Circular vignettes for character portraits, centered subjects, generous negative space
+- **Color treatment:** Natural warm palette (earth tones, pastels, muted colors); brand purple #8B5CF6 for key elements only
+
+**Style lock rules (画风统一) — MANDATORY CHECKLIST:**
+- [ ] Always 2D illustration — never 3D render or photorealism
+- [ ] Always low-poly geometric construction
+- [ ] Always painterly, textured rendering with soft brushed feel
+- [ ] Always soft gradients within polygonal facets
+- [ ] Always atmospheric textured backgrounds with grain
+- [ ] Always circular vignettes for character portraits
+- [ ] Always warm natural palette with controlled purple accent
+- [ ] Always specify exact JoyJoin hex codes (never "brand purple")
+
+**Do not:** use harsh contrasts, neon colors, pure black backgrounds, or photorealistic gloom.
+
+**Anti-generic test (反通用测试):** Before approving any Lovart output, ask: *"Could this exact illustration appear in a generic dating app without modification?"* If yes → iterate. If no → pass.
 
 Avoid in Lovart prompts: corporate blue gradients, harsh neon, photorealistic gloom, cluttered layouts, cold metallic textures.
 
@@ -106,11 +158,17 @@ Avoid in Lovart prompts: corporate blue gradients, harsh neon, photorealistic gl
 ```
 Goal: [Single sentence — what feeling or moment this illustration conveys]
 
-Character: [Mascot name] in [pose/action] expressing [emotion]
+Character: [Archetype animal] in [pose/action] expressing [emotion]
 Scene: [Setting/context — minimal background or specific location]
-Style: Soft-lined illustration, warm pastel tones, rounded shapes, minimal detail
+Style (插画风):
+- 2D digital illustration with low-poly / geometric faceted aesthetic
+- Painterly, textured rendering with soft brushed feel within each facet
+- Soft gradients within polygonal facets
+- Minimal or no outlines — facet edges define form
+- Atmospheric textured background with subtle grain/noise
+- Circular vignette composition for character portraits
 Brand colors: Vibrant Purple #8B5CF6 [as accent/highlight/background], Warm Coral #FF9B85 [as ...], Warm Beige #F5F1E8 [as ...]
-Typography feel: [If text included — rounded Chinese display, soft geometric English]
+Typography feel: [If text included — rounded Chinese display (AlimamaFangYuanTiVF feel), soft geometric English (Quicksand feel)]
 Mood: [warm/playful/calm/celebratory/etc.]
 Composition: [Centered / left-weighted / full-bleed / with breathing space]
 Export: PNG with transparency, [dimensions], [minimum resolution]
@@ -120,9 +178,15 @@ Export: PNG with transparency, [dimensions], [minimum resolution]
 ```
 Goal: A warm welcome illustration for the onboarding completion screen.
 
-Character: The corgi mascot sitting happily with a small open gift box, tail wagging.
+Character: The corgi mascot (开心柯基) sitting happily with a small open gift box, tail wagging.
 Scene: Soft warm-beige background with subtle confetti dots.
-Style: Soft-lined illustration, warm pastel tones, rounded shapes, minimal background detail.
+Style (插画风):
+- 2D digital illustration with low-poly geometric faceted aesthetic
+- Painterly, textured rendering with soft brushed feel
+- Soft gradients within polygonal facets
+- Minimal outlines
+- Atmospheric textured background with subtle grain
+- Circular vignette composition
 Brand colors: Vibrant Purple #8B5CF6 for the gift box ribbon, Warm Coral #FF9B85 for confetti accents, Warm Beige #F5F1E8 for background.
 Typography feel: No text in the illustration itself — text will be overlaid in UI.
 Mood: Celebratory, welcoming, warm.

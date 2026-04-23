@@ -7,18 +7,18 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #FAFAFA;
+  background: $color-bg-gradient;
 
   &__text {
-    font-size: 28rpx;
-    color: #6B7280;
+    @include type-body;
+    color: $color-text-secondary;
   }
 }
 
 // ─── Authenticated discover ─────────────────────────────────────
 .discover-auth {
   min-height: 100vh;
-  background: linear-gradient(180deg, #FAFAFA 0%, #FFF5F7 50%, #FFE4E1 100%);
+  background: $color-bg-gradient;
 
   // ── Sticky header ─────────────────────────────────────────────
   &__sticky-header {
@@ -78,8 +78,7 @@
   }
 
   &__action-label {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
+    @include type-label;
     color: $color-text-primary;
   }
 
@@ -141,9 +140,7 @@
 
   &__section-title {
     display: block;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
+    @include type-body-emphasis;
     margin-bottom: $spacing-md;
   }
 
@@ -340,9 +337,8 @@
     padding: 0 6rpx;
     border-radius: 999rpx;
     background: $color-divider;
-    font-size: 20rpx;
+    @include type-micro;
     font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
   }
 
   &__pool-match-badge {
@@ -352,7 +348,7 @@
     padding: 4rpx 12rpx;
     border-radius: 999rpx;
     background: rgba($color-primary, 0.1);
-    font-size: 20rpx;
+    @include type-micro;
     font-weight: $font-weight-semibold;
     color: $color-primary-dark;
     margin-left: auto;
@@ -368,9 +364,7 @@
 
   &__pool-location,
   &__pool-date {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.5;
+    @include type-label;
   }
 
   // ── Pool footer (progress + status) ───────────────────────────
@@ -399,16 +393,14 @@
 
   &__pool-signal-title {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-semibold;
-    color: $color-text-primary;
   }
 
   &__pool-signal-desc {
     display: block;
     margin-top: 6rpx;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+    @include type-caption;
     line-height: 1.6;
   }
 
@@ -480,8 +472,7 @@
   }
 
   &__progress-text {
-    font-size: $font-size-xs;
-    color: $color-text-muted;
+    @include type-caption;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -530,7 +521,7 @@
 
   &__pool-action {
     flex-shrink: 0;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-primary-dark;
     font-weight: $font-weight-bold;
   }
@@ -619,17 +610,16 @@
   }
 
   &__empty-emoji {
-    font-size: 64rpx;
+    font-size: 64rpx; // Decorative — not part of hierarchy
   }
 
   &__empty {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
   }
 
   &__empty-hint {
-    font-size: $font-size-sm;
-    color: $color-text-muted;
+    @include type-label;
   }
 
   // ── Bottom spacer ─────────────────────────────────────────────

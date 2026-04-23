@@ -96,7 +96,7 @@ JoyJoin uses a **three-role semantic typography system**. Every typographic deci
 | Role | Tailwind class | CSS variable | Font (when loaded) | Fallback |
 |------|---------------|--------------|-------------------|----------|
 | **UI** | `font-ui` | `var(--font-ui)` | System Chinese stack | PingFang SC → Microsoft YaHei → system-ui |
-| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlibabaPuHuiTi-3 | PingFang SC → Microsoft YaHei → system-ui → sans-serif |
+| **Chinese display** | `font-cn-display` | `var(--font-cn-display)` | AlimamaFangYuanTiVF | PingFang SC → Microsoft YaHei → system-ui → sans-serif |
 | **English brand** | `font-en-brand` | `var(--font-en-brand)` | Quicksand | Outfit → system-ui |
 
 The legacy `.font-brand` CSS class is an alias for `font-cn-display` and is kept for backward compatibility.
@@ -133,10 +133,10 @@ Use only for:
 
 ### Taro / WeChat Mini Program notes
 
-- Web client only: `apps/user-client/src/assets/fonts/fonts.css` self-hosts AlibabaPuHuiTi-3 via `@font-face` as the primary Chinese display font, with PingFang SC, Microsoft YaHei, `system-ui`, and `sans-serif` fallbacks.
-- Web client only: Outfit, loaded via Google Fonts, acts as the effective `font-en-brand` fallback.
-- WeChat Mini Program: do not assume the same setup is present there. This workspace currently relies on system fonts and does not bundle AlibabaPuHuiTi assets or `@font-face` usage.
-- If custom fonts are ever introduced in the mini program, host them on a CDN rather than bundling them inline, and avoid loading many font weights.
+- **Web client:** `apps/user-client/src/assets/fonts/fonts.css` self-hosts **AlimamaFangYuanTiVF-Thin** via `@font-face` as the primary Chinese display font, with PingFang SC, Microsoft YaHei, `system-ui`, and `sans-serif` fallbacks.
+- **WeChat Mini Program:** `apps/mini-program/src/lib/brandFont.ts` loads **AlimamaFangYuanTiVF-Thin** via `Taro.loadFontFace()` at app launch. The SCSS variable `$font-cn-display` references the same family name. This aligns the launch-primary surface with the web brand face.
+- **Admin client:** No custom font is loaded; admin surfaces use the system Chinese stack for `font-cn-display`.
+- Outfit, loaded via Google Fonts on the web client, acts as the effective `font-en-brand` fallback.
 - WeChat Mini Program / WebView: avoid `backdrop-filter` and `hover:` states.
 
 ### Key design rules
@@ -147,18 +147,50 @@ Use only for:
 
 ## Mascots & Illustration
 
-The three mascots express the brand personality:
+JoyJoin's visual identity is built around **12 archetype animals** that map to the personality system's canonical archetypes (`packages/shared/src/personality/prototypes.ts`). These are the product-facing mascot roster:
 
-- **Corgi** — warm, social, energetic
-- **Koala** — gentle, healing, empathetic
-- **Turtle** — steady, thoughtful, reliable
+| Archetype | Animal | Personality | Primary use |
+|-----------|--------|-------------|-------------|
+| 开心柯基 | **Corgi** | Warm, social, energetic | Celebration, onboarding welcome, action moments |
+| 太阳鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
+| 夸夸豚 | **Praise Dolphin** | Supportive, complimentary, warm | Social bonding, affirmation moments |
+| 机智狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
+| 淡定海豚 | **Calm Dolphin** | Steady, peaceful, balanced | Relaxation, mindfulness events |
+| 织网蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
+| 暖心熊 | **Bear** | Warm, strong, protective | Trust moments, group hugs, winter themes |
+| 灵感章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
+| 沉思猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
+| 定心大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
+| 稳如龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
+| 隐身猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
 
-Illustration style should be:
-- rounded
-- soft-lined
-- cute but tasteful
-- emotionally positive
-- never chaotic or childish
+**Not approved:** Koala and Hamster are **not** part of the canonical archetype system. Do not use them in product UI or canonical brand assets without explicit Product approval.
+
+### Illustration style (插画风)
+
+JoyJoin illustrations follow a consistent **2D low-poly geometric** style (插画风统一):
+
+- **Construction:** 2D digital illustration with low-poly / geometric faceted aesthetic — built from polygonal facets and triangular planes
+- **Textures:** Painterly, soft brushed feel within each polygonal facet — NOT flat vector or 3D render
+- **Outlines:** Minimal or none — let facet edges define form
+- **Gradients:** Soft color variation within individual facets, not global gradients
+- **Backgrounds:** Atmospheric textured washes with subtle grain/noise
+- **Characters:** Geometric polygonal bodies, large expressive glossy eyes, simplified features, warm expressions
+- **Composition:** Circular vignettes for character portraits, centered subjects, generous negative space
+- **Color treatment:** Natural warm palette (earth tones, pastels, muted colors); brand purple #8B5CF6 for key elements only
+
+**Style lock rules (画风统一):**
+- Always 2D illustration — never 3D render or photorealism
+- Always low-poly geometric construction
+- Always painterly, textured rendering with soft brushed feel
+- Always soft gradients within polygonal facets
+- Always atmospheric textured backgrounds with grain
+- Always circular vignettes for character portraits
+- Always warm natural palette with controlled purple accent
+
+**Do not:** use harsh contrasts, neon colors, pure black backgrounds, or photorealistic gloom.
+
+This vocabulary is for **asset generation** (see `lovart-design-workflow`). Frontend implementation follows the canonical color token system and typography roles.
 
 ## UI / Layout Guidance
 
@@ -207,7 +239,7 @@ JoyJoin screens should be unmistakably JoyJoin. Generic “AI-generated” aesth
 |----------------|---------------------|---------------------|
 | Purple gradient on plain white | Overused across every AI social product; no brand character | Warm Beige background, Vibrant Purple as a focused CTA accent |
 | Uniform card grid with no hierarchy | Flat, interchangeable | One card that leads the eye; spacing rhythm that guides the user |
-| `Inter` or `system-ui` on hero copy | Invisible, unmemorable | `font-cn-display` (AlibabaPuHuiTi) for the single emotional headline |
+| `Inter` or `system-ui` on hero copy | Invisible, unmemorable | `font-cn-display` (AlimamaFangYuanTiVF) for the single emotional headline |
 | Spring-bounce animations | Corporate delight, not warm delight | Soft ease-out, calm reveals ≤ 300ms |
 | Symmetrical centered layouts everywhere | No spatial identity | Breathing asymmetry; generous leading space above the key moment |
 | Mascots used as background decoration | Cheapens the illustration value | One mascot per screen, placed intentionally at the emotional peak |
@@ -235,6 +267,24 @@ Every JoyJoin design output should feel:
 **User says:** "Can I add a mascot to this empty-state screen?"
 **Apply this skill by:** Choosing the mascot whose personality fits the moment (e.g. Koala for a calm/empty state). Keep the illustration soft-lined, cute but tasteful, and ensure it does not clutter the layout.
 **Result:** Empty state feels emotionally welcoming without being noisy or childish.
+
+## Design Tooling
+
+JoyJoin's design-to-code pipeline uses three upstream tools, each with a distinct role:
+
+| Tool | Role | Output |
+|------|------|--------|
+| **Stitch** | Rapid UI screen exploration, layout prototyping, clickable multi-screen flows | HTML/CSS + Figma export |
+| **Lovart** | Brand illustrations, mascot artwork (插画风), marketing graphics, icon sets | PNG / SVG / MP4 assets |
+| **Figma** | Production design handoff, pixel specs, responsive breakpoints, component states | Engineering specs |
+
+**Workflow:** Stitch exploration → Figma refinement → Engineering implementation (React / Taro).
+
+**Rules:**
+- Stitch output is **exploratory reference only** — never production code
+- Lovart output is **asset-only** — never UI layout or component logic
+- Figma is the **production handoff surface** — engineering builds from Figma specs, not from Stitch or Lovart directly
+- All three tools are governed by this brand skill and `design-system-governance`
 
 ## Frontend Excellence Notes
 

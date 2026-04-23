@@ -308,7 +308,7 @@
         "platform-coordination-protocol",
         "performance-benchmark"
       ],
-      "toolingStatus": "enhanced"
+      "toolingStatus": "sufficient"
     },
     {
       "name": "Launch Readiness Agent",

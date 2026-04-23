@@ -93,7 +93,7 @@ Your job is to route work across the core specialists, reopen kickoff when disco
 - **Process discipline before lane selection:** Load the appropriate process skill before choosing a lane:
   - **Ambiguous / creative task** → load `process-brainstorming` for constraint-first ideation and 3-option evaluation
   - **Bug with unknown root cause** → load `process-systematic-debugging` for structured reproduce → isolate → hypothesize → verify
-  - **Ready to call "done"** → load `process-verification-gate` for Harness 5-pillar pre-ship checklist
+  - **Ready to call "done"** → load `harness-completion-gate` for Harness 5-pillar pre-ship checklist
   - **Deterministic logic or bug fix** → recommend `process-test-first` (red-green-refactor) to the implementation agent
   - **Refactoring without behavior change** → load `process-refactoring` for incremental, test-safe restructuring
   - **Doc update or creation** → load `process-docs` for audience-aware, synchronized documentation

@@ -28,11 +28,7 @@ export default function RevealStage({ displayArchetypeName, displayAsset, visual
           src={displayAsset}
         />
         <View className={`personality-results__reveal-scrim personality-results__reveal-scrim--${revealPhase}`} />
-        <View className={`personality-results__sparkle-field personality-results__sparkle-field--${revealPhase}`}>
-          {Array.from({ length: 7 }).map((_, index) => (
-            <Text key={String(index)} className={`personality-results__sparkle personality-results__sparkle--${index + 1}`}>✦</Text>
-          ))}
-        </View>
+        <View className={`personality-results__reveal-glow-overlay personality-results__reveal-glow-overlay--${revealPhase}`} />
       </View>
 
       <Text className='personality-results__reveal-label'>{displayArchetypeName}</Text>

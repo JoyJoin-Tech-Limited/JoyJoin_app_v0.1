@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #f6f3ff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, $color-bg-tint-purple 0%, $color-surface 100%);
 
   &__card {
     width: 100%;

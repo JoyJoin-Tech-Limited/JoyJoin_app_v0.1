@@ -29,15 +29,19 @@ relatedPaths:
   - apps/user-client/src/assets/fonts/fonts.css
   - apps/user-client/tailwind.config.ts
 sources:
-  - Lovart-generated brand prompt (user-submitted, 2026-04-22)
-  - .github/skills/joyjoin-brand-guidelines/SKILL.md (canonical)
-  - .github/skills/lovart-design-workflow/SKILL.md (canonical)
+  - .github/skills/joyjoin-brand-guidelines/SKILL.md
+  - .github/skills/lovart-design-workflow/SKILL.md
 confidence: high
 ---
 
 ## Summary
 
-A Lovart-generated brand prompt was submitted for analysis. It conflicts with the canonical skill system on **typography**, **color palette scope**, **mascot roster**, and **document purpose**. The prompt is a high-quality **image generation brief**, not a frontend implementation governance document. This note captures every divergence, the reconciliation path, and specific skill-patch recommendations.
+A Lovart-generated brand prompt was submitted for analysis. It conflicts with the canonical skill system on **typography**, **color palette scope**, **mascot roster**, and **document purpose**. The prompt is a high-quality **image generation brief**, not a frontend implementation governance document.
+
+**CRITICAL FINDINGS from Product Manager follow-up investigation:**
+1. **Live cross-platform font divergence:** The mini-program ALREADY ships `AlimamaFangYuanTiVF-Thin` via `Taro.loadFontFace()`. The web client still uses `AlibabaPuHuiTi-3`. The brand skill's claim that "mini-program uses system fonts only" is **factually incorrect**.
+2. **Product already has 12 archetype animals:** The personality system (`packages/shared/src/personality/prototypes.ts`) defines 12 canonical archetypes: 开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛, 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象, 稳如龟, 隐身猫. The brand skill's "3 core mascots" is out of sync with product reality.
+3. **Internal SCSS inconsistency:** The mini-program's `_variables.scss` archetype colors use `破壳小鸡` (Chick) and `奇趣浣熊` (Raccoon) for the last two slots, while `prototypes.ts` uses `稳如龟` (Turtle) and `隐身猫` (Cat). This is a live codebase drift.
 
 ## Divergence Matrix
 
@@ -57,21 +61,26 @@ A Lovart-generated brand prompt was submitted for analysis. It conflicts with th
 
 ## Analysis by Dimension
 
-### 1. Typography — CRITICAL CONFLICT
+### 1. Typography — LIVE CROSS-PLATFORM DIVERGENCE
 
-The Lovart prompt specifies **Alimama FangYuanTi VF-Thin** as the Chinese font. The canonical system specifies **AlibabaPuHuiTi-3**.
+**Discovery:** The mini-program ALREADY uses `AlimamaFangYuanTiVF-Thin`. The web client still uses `AlibabaPuHuiTi-3`. This is a **live inconsistency**, not a theoretical proposal.
 
-- **Current implementation:** `apps/user-client/src/assets/fonts/fonts.css` self-hosts AlibabaPuHuiTi-3 via `@font-face`. Tailwind config maps `font-cn-display` to this font.
-- **Mini-program reality:** No custom fonts are bundled. System fonts are used.
-- **Switching to FangYuanTi would require:**
-  1. Font file procurement and licensing verification
-  2. CDN hosting for mini-program (cannot bundle variable fonts inline)
-  3. Update `@font-face` declarations in `fonts.css`
-  4. Update `tailwind.config.ts` font stack
-  5. Design team sign-off on visual change
-  6. Regression testing across all `font-cn-display` surfaces
+| Platform | Actual Font | Skill Claim | Status |
+|----------|------------|-------------|--------|
+| Web (user-client) | AlibabaPuHuiTi-3 via `@font-face` | AlibabaPuHuiTi-3 | ✓ Correct |
+| Mini-program | AlimamaFangYuanTiVF-Thin via `Taro.loadFontFace()` | "System fonts only" | ✗ **FALSE** |
 
-**Recommendation:** Treat as a **product-level brand decision**, not a skill update. The skill should document the **currently implemented** font. If product approves a switch, update implementation first, then skills.
+**Files:**
+- Web: `apps/user-client/src/assets/fonts/fonts.css` (lines 48–56, 117)
+- Mini-program: `apps/mini-program/src/lib/brandFont.ts` (lines 8–48), `apps/mini-program/src/styles/_variables.scss` (lines 33–35)
+
+**Recommendation:** Unify to **AlimamaFangYuanTiVF-Thin everywhere**. Rationale:
+- The launch-primary client (mini-program) already uses it.
+- The font file is already in the repo.
+- Keeping two fonts for the same semantic role is architectural debt.
+- **Blocker:** Design sign-off + legibility QA on web at small sizes.
+
+**Skill update:** `joyjoin-brand-guidelines` must correct the false "system fonts only" claim. The skill should document the **actual** state: "Web uses AlibabaPuHuiTi-3; mini-program uses AlimamaFangYuanTiVF-Thin. Unification to FangYuanTi on web is pending design approval."
 
 ### 2. Color Palette — LOVART UNDER-SPECIFIES
 
@@ -84,26 +93,37 @@ The Lovart prompt's narrow palette, if used for UI mockups, would produce the ex
 
 **Recommendation:** The `lovart-design-workflow` skill already correctly injects all 8 colors. No change needed. If Lovart outputs drift toward purple-washed designs, the brief should explicitly reference secondary colors.
 
-### 3. Mascot Roster — ENRICHMENT OPPORTUNITY
+### 3. Mascot Roster — SKILL IS OUT OF SYNC WITH PRODUCT REALITY
 
-The Lovart prompt introduces 9 additional mascots beyond the canonical 3.
+**Discovery:** The product ALREADY has **12 canonical archetype animals** defined in `packages/shared/src/personality/prototypes.ts`:
 
-| Mascot | Status in Canonical Skill | Personality (from Lovart) |
-|--------|--------------------------|---------------------------|
-| Corgi | Core | Warm, social, energetic |
-| Koala | Core | Gentle, healing, empathetic |
-| Turtle | Core | Steady, thoughtful, reliable |
-| Fox | Extended (Lovart only) | Geometric, clever |
-| Owl | Extended (Lovart only) | Wise, nocturnal |
-| Elephant | Extended (Lovart only) | Strong, gentle giant |
-| Cat | Extended (Lovart only) | Independent, curious |
-| Dolphin | Extended (Lovart only) | Playful, aquatic |
-| Hamster | Extended (Lovart only) | Small, energetic |
-| Octopus | Extended (Lovart only) | Multi-tasking, creative |
-| Spider | Extended (Lovart only) | Intricate, web-weaving |
-| Chick | Extended (Lovart only) | Young, hopeful |
+| Archetype Name | Animal | English | In Lovart Prompt? |
+|---------------|--------|---------|-------------------|
+| 开心柯基 | Corgi | Corgi | ✓ |
+| 太阳鸡 | Rooster | Sun Chicken | ✗ (has "Chick" instead) |
+| 夸夸豚 | Dolphin (Praise) | Praise Dolphin | ✓ (as Dolphin) |
+| 机智狐 | Fox | Clever Fox | ✓ |
+| 淡定海豚 | Dolphin (Calm) | Calm Dolphin | ✓ (as Dolphin) |
+| 织网蛛 | Spider | Web-weaving Spider | ✓ |
+| 暖心熊 | Bear | Warm-heart Bear | ✗ (has "Koala" instead) |
+| 灵感章鱼 | Octopus | Inspiration Octopus | ✓ |
+| 沉思猫头鹰 | Owl | Contemplative Owl | ✓ |
+| 定心大象 | Elephant | Steady-heart Elephant | ✓ |
+| 稳如龟 | Turtle | Steady Turtle | ✓ |
+| 隐身猫 | Cat | Invisible Cat | ✓ |
 
-**Recommendation:** The extended roster may be intentional for **event themes, seasonal campaigns, or pool archetype illustrations**. Do NOT add to `joyjoin-brand-guidelines` until product confirms. Instead, enrich `lovart-design-workflow` with an "Extended Mascot Roster" subsection gated by a comment: *"Use only when product has approved extended characters for this campaign."*
+**Lovart prompt mismatches:**
+- **Koala** → Product uses **Bear** (暖心熊), not Koala.
+- **Hamster** → Not in any archetype.
+- **Chick** → Product uses Rooster (太阳鸡) and Turtle (稳如龟); the SCSS has 破壳小鸡 but prototypes has 稳如龟.
+- Two dolphins in archetypes (夸夸豚, 淡定海豚) — Lovart prompt lists only one "Dolphin".
+
+**Internal codebase inconsistency:** The mini-program's `_variables.scss` archetype colors use `破壳小鸡` (Chick) and `奇趣浣熊` (Raccoon) for the last two slots, while `prototypes.ts` uses `稳如龟` (Turtle) and `隐身猫` (Cat). This is live drift between SCSS and the canonical archetype definitions.
+
+**Recommendation:**
+1. **Align brand skill to 12 archetypes.** The archetype system is server-driven and user-facing; the brand system should reflect it.
+2. **Document Lovart-only animals (Koala, Hamster) as NOT APPROVED** in both skills.
+3. **Fix the SCSS vs. prototypes mismatch** — determine whether the canonical names are Turtle+Cat (prototypes) or Chick+Raccoon (SCSS), then align both files.
 
 ### 4. Illustration Style — LOVART-SPECIFIC ENRICHMENT
 
@@ -164,26 +184,31 @@ When requesting character illustrations or mascot artwork, use these descriptors
 **Note:** This vocabulary is for asset generation only. Frontend implementation follows the canonical color token system and typography roles defined in `joyjoin-brand-guidelines`.
 ```
 
-### Patch B: `lovart-design-workflow` — Extended mascot roster (gated)
+### Patch B: `lovart-design-workflow` — Archetype mascot roster (canonical 12)
 
-Add after the existing mascot table:
+Replace the existing 3-mascot table with the canonical 12 archetypes:
 
 ```markdown
-### Extended mascot roster (campaign use only)
+### Archetype mascot roster (canonical 12)
 
-Use these only when product has explicitly approved extended characters for a campaign, event theme, or seasonal pool.
+These 12 animals map to the personality system's archetype prototypes. Use them for all product-facing illustrations, result screens, and empty states.
 
-| Mascot | Personality | Suggested use |
-|--------|-------------|---------------|
-| Fox | Clever, adaptable | Strategy themes, autumn events |
-| Owl | Wise, calm | Evening gatherings, knowledge-sharing pools |
-| Elephant | Gentle, strong | Team-building, large-group themes |
-| Cat | Independent, curious | Solo-traveler themes, creative pools |
-| Dolphin | Playful, aquatic | Summer events, water-themed pools |
-| Hamster | Energetic, compact | Speed-dating, quick-match themes |
-| Octopus | Creative, multi-faceted | Arts & crafts, multi-activity events |
-| Spider | Intricate, connected | Networking, web-of-connections themes |
-| Chick | Young, hopeful | New-user onboarding, first-timer events |
+| Archetype | Animal | Personality | Best used for |
+|-----------|--------|-------------|---------------|
+| 开心柯基 | Corgi | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments |
+| 太阳鸡 | Rooster | Bright, confident, energetic | Morning events, leadership themes |
+| 夸夸豚 | Praise Dolphin | Supportive, complimentary, warm | Social bonding, affirmation moments |
+| 机智狐 | Fox | Clever, adaptable, strategic | Problem-solving, game nights |
+| 淡定海豚 | Calm Dolphin | Steady, peaceful, balanced | Relaxation, mindfulness events |
+| 织网蛛 | Spider | Intricate, connected, detailed | Networking, craft workshops |
+| 暖心熊 | Bear | Warm, strong, protective | Trust moments, group hugs, winter themes |
+| 灵感章鱼 | Octopus | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
+| 沉思猫头鹰 | Owl | Wise, contemplative, observant | Knowledge sharing, book clubs |
+| 定心大象 | Elephant | Steady, reliable, grounding | Team building, reassurance |
+| 稳如龟 | Turtle | Patient, persistent, thoughtful | Step-by-step progress, loading states |
+| 隐身猫 | Cat | Independent, curious, adaptable | Solo activities, creative exploration |
+
+**Not approved:** Koala and Hamster are NOT part of the canonical archetype system. Do not generate them without explicit Product approval.
 ```
 
 ### Patch C: `joyjoin-brand-guidelines` — NO PATCH (defend current state)
@@ -206,12 +231,16 @@ These skills are correctly scoped and do not need Lovart-specific content.
 
 Promote this candidate when:
 - **Patch A** (illustration style vocabulary) is merged into `lovart-design-workflow`
-- **Patch B** (extended mascot roster) is merged into `lovart-design-workflow`
-- OR product explicitly approves/rejects the font switch and mascot extension, and the skill system is updated to reflect the decision
+- **Patch B** (canonical 12-archetype mascot roster) is merged into `lovart-design-workflow`
+- `joyjoin-brand-guidelines` is updated to document the **actual** font state (AlibabaPuHuiTi-3 on web, AlimamaFangYuanTiVF-Thin on mini-program) and the **actual** mascot roster (12 archetypes)
+- The SCSS vs. prototypes archetype name mismatch (Chick+Raccoon vs. Turtle+Cat) is resolved
+- OR product explicitly approves/rejects the font unification and the skill system is updated to reflect the decision
 
 ## Risk If Ignored
 
-1. **Font drift:** A future agent or contributor sees the Lovart prompt and changes implementation to Alimama FangYuanTi without licensing/hosting checks, breaking the mini-program.
-2. **Color narrowing:** Lovart-generated mockups use only purple + beige, leading to purple-washed UI that violates the anti-generic guardrails.
-3. **Purpose confusion:** Frontend engineers use the Lovart prompt as implementation guidance, missing platform constraints, accessibility, and token discipline.
-4. **Mascot inflation:** Extended mascots appear in product UI without brand approval, diluting the core 3-character identity.
+1. **Font drift:** The web and mini-program already use different fonts for the same semantic role. Every new `font-cn-display` surface increases the unification cost.
+2. **Skill lies to agents:** `joyjoin-brand-guidelines` falsely claims "mini-program uses system fonts only." Future agents will make incorrect implementation decisions based on this falsehood.
+3. **Color narrowing:** Lovart-generated mockups use only purple + beige, leading to purple-washed UI that violates the anti-generic guardrails.
+4. **Purpose confusion:** Frontend engineers use the Lovart prompt as implementation guidance, missing platform constraints, accessibility, and token discipline.
+5. **Mascot inconsistency:** The brand skill documents 3 mascots while the product has 12 archetypes. This causes brand assets to mismatch user-facing archetype results.
+6. **SCSS/prototypes drift:** The archetype color names in `_variables.scss` do not match `prototypes.ts`. This could cause the wrong colors to appear for archetype results.
