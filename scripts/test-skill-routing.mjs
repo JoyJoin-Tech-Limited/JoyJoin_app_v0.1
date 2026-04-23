@@ -597,6 +597,11 @@ test('plain-language product confusion → pm-sin-mapper', () => {
   assertEqual(r.primary_skill, 'pm-sin-mapper');
 });
 
+test('plain-language onboarding confusion override → pm-sin-mapper', () => {
+  const r = routeSkill({ ask: 'Users are abandoning onboarding in week one. What feels unnecessary, and what should we simplify first?' });
+  assertEqual(r.primary_skill, 'pm-sin-mapper');
+});
+
 // ---- Monorepo workspace governance ----
 console.log('\nMonorepo workspace governance scenarios:');
 

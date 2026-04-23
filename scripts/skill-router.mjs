@@ -66,6 +66,56 @@ const OWNED_FILE_SCORE = 12;
 const OWNED_PATH_SCORE = 6;
 const OWNED_SYMBOL_SCORE = 7;
 const MIN_SYMBOL_LENGTH_FOR_SUBSTRING_MATCH = 3;
+const EXPLICIT_OVERRIDE_SIGNAL = 'explicit_override:plain_language_product_confusion:pm-sin-mapper';
+
+const PRODUCT_CONFUSION_PRODUCT_CUES = [
+  /\bdrop(?:ping)?\s*off\b/i,
+  /\bfunnel\b/i,
+  /\bsign[\s-]?up\b/i,
+  /\bonboarding\b/i,
+  /\bactivation\b/i,
+  /\bconversion\b/i,
+  /\bretention\b/i,
+  /\badoption\b/i,
+];
+
+const PRODUCT_CONFUSION_CLARITY_CUES = [
+  /\bconfus(?:e|ing|ion)\b/i,
+  /\bunclear\b/i,
+  /\bunnecessary\b/i,
+  /\bwhat should(?: we)? change first\b/i,
+  /\bwhat should(?: we)? simplify first\b/i,
+];
+
+const REALTIME_CUES = [
+  /\bwebsocket\b/i,
+  /\bsocket\b/i,
+  /\breal[-\s]?time\b/i,
+  /\blive updates?\b/i,
+  /\bpub\/sub\b/i,
+  /\bstream(?:ing)?\b/i,
+];
+
+/**
+ * Apply deterministic route overrides for historically ambiguous asks.
+ *
+ * @param {string} ask
+ * @returns {string | null}
+ */
+function detectPrimaryOverride(ask) {
+  if (REALTIME_CUES.some(pattern => pattern.test(ask))) {
+    return null;
+  }
+
+  const hasProductCue = PRODUCT_CONFUSION_PRODUCT_CUES.some(pattern => pattern.test(ask));
+  const hasClarityCue = PRODUCT_CONFUSION_CLARITY_CUES.some(pattern => pattern.test(ask));
+
+  if (hasProductCue && hasClarityCue) {
+    return 'pm-sin-mapper';
+  }
+
+  return null;
+}
 
 /**
  * Normalise text to lowercase for matching.
@@ -260,29 +310,45 @@ export function routeSkill({ ask, files = [], symbols = [], emitLog = false }) {
   }).sort((a, b) => b.score - a.score);
 
   const top = scores[0];
-  const second = scores[1];
+  const scoreBySkill = new Map(scores.map(s => [s.skill, s]));
+  const primaryOverride = detectPrimaryOverride(ask);
 
   // Primary skill (only if score > 0)
-  const primary_skill = top.score > 0 ? top.skill : null;
+  const primary_skill = primaryOverride ?? (top.score > 0 ? top.skill : null);
+  const primaryScore = primary_skill ? (scoreBySkill.get(primary_skill)?.score ?? 0) : 0;
+  const secondaryCandidate = scores.find(s => primary_skill !== null && s.skill !== primary_skill);
 
   // Secondary skill: include if score is meaningful and not far below primary
   const secondary_skills = [];
-  if (second && second.score > 0 && second.score >= top.score * 0.4 && top.skill !== second.skill) {
-    secondary_skills.push(second.skill);
+  if (
+    primary_skill &&
+    secondaryCandidate &&
+    secondaryCandidate.score > 0 &&
+    secondaryCandidate.score >= Math.max(1, primaryScore * 0.4)
+  ) {
+    secondary_skills.push(secondaryCandidate.skill);
   }
 
   // Confidence
-  const confidence = confidenceBand(top.score, second?.score ?? 0);
+  const confidence = confidenceBand(primaryScore, secondaryCandidate?.score ?? 0);
 
   // Clarification recommended when low confidence or very close scores
   const clarification_recommended =
     confidence === 'low' ||
-    (second && second.score > 0 && top.score > 0 && top.score - second.score < 5);
+    (
+      secondaryCandidate &&
+      secondaryCandidate.score > 0 &&
+      primaryScore > 0 &&
+      primaryScore - secondaryCandidate.score < 5
+    );
 
   // Matched signals (primary + secondary combined, deduplicated)
+  const primarySignals = primary_skill ? (scoreBySkill.get(primary_skill)?.signals ?? []) : [];
+  const secondarySignals = secondary_skills.length > 0 ? (secondaryCandidate?.signals ?? []) : [];
   const matched_signals = [
-    ...top.signals,
-    ...(secondary_skills.length > 0 ? second.signals : []),
+    ...primarySignals,
+    ...secondarySignals,
+    ...(primaryOverride ? [EXPLICIT_OVERRIDE_SIGNAL] : []),
   ].filter((v, i, a) => a.indexOf(v) === i);
 
   // Anti-legacy guard
