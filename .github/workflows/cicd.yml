@@ -182,17 +182,21 @@ jobs:
       - name: SSH Remote Deployment
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
+          WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30m
-          envs: DATABASE_URL
+          envs: DATABASE_URL,WECHAT_APPID,WECHAT_SECRET
           script: |
             set -euo pipefail
 
             : "${DATABASE_URL:?DATABASE_URL GitHub secret is required}"
+            : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
+            : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
 
             soft_cleanup() {
               echo "🧹 Soft cleanup (keep 7 days)..."
@@ -257,6 +261,26 @@ jobs:
             cd ~/JoyJoin
             git fetch --all
             git reset --hard origin/main
+
+            # --- 1.5) Sync required runtime env into deployment/.env.production ---
+            echo "🔐 Syncing required WeChat secrets into deployment/.env.production..."
+            ENV_FILE=~/JoyJoin/deployment/.env.production
+            touch "$ENV_FILE"
+
+            upsert_env_var() {
+              local key="$1"
+              local value="$2"
+              if grep -q "^${key}=" "$ENV_FILE"; then
+                sed -i.bak "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+              else
+                printf "%s=%s\n" "$key" "$value" >> "$ENV_FILE"
+              fi
+            }
+
+            upsert_env_var "WECHAT_APPID" "$WECHAT_APPID"
+            upsert_env_var "WECHAT_SECRET" "$WECHAT_SECRET"
+            rm -f "${ENV_FILE}.bak"
+            chmod 600 "$ENV_FILE" || true
 
             # --- 2) Restart containers ---
             echo "🐳 Removing stale joyjoin-api container if present..."

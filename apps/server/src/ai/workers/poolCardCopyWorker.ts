@@ -21,6 +21,29 @@ import { recordPoolCardCopyBackfillLatency } from '../../middleware/metrics';
 
 const PROMPT_VERSION = 'discover-card-v1';
 const HEADLINE_TTL_HOURS = 24;
+const POOL_AI_COPY_RELATION = 'public.pool_ai_copy';
+
+function isMissingRelationError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === '42P01';
+}
+
+function asBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 't' || normalized === 'true' || normalized === '1';
+  }
+  if (typeof value === 'number') return value === 1;
+  return false;
+}
+
+async function hasPoolAICopyRelation(): Promise<boolean> {
+  const relationCheck = await db.execute(`
+    SELECT to_regclass('${POOL_AI_COPY_RELATION}') IS NOT NULL AS exists
+  `);
+  const firstRow = (relationCheck.rows as Array<{ exists?: unknown }> | undefined)?.[0];
+  return asBoolean(firstRow?.exists);
+}
 
 // ─── Fallback templates ───────────────────────────────────────────
 
@@ -301,21 +324,52 @@ export async function generateAndSavePoolCardCopy(poolId: string): Promise<void>
 
 export async function backfillStalePoolCardCopy(): Promise<number> {
   const startedAt = Date.now();
-  const now = new Date();
+
+  try {
+    const relationExists = await hasPoolAICopyRelation();
+    if (!relationExists) {
+      console.warn(
+        `[poolCardCopyWorker] Skipping backfill because relation ${POOL_AI_COPY_RELATION} does not exist`
+      );
+      recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
+      return 0;
+    }
+  } catch (err) {
+    if (isMissingRelationError(err)) {
+      console.warn(
+        `[poolCardCopyWorker] Skipping backfill because relation ${POOL_AI_COPY_RELATION} is missing`
+      );
+      recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
+      return 0;
+    }
+    throw err;
+  }
 
   // Find active pools that either have no copy or have expired shadow copy
-  const stalePools = await db.execute(`
-    SELECT p.id
-    FROM event_pools p
-    WHERE p.status = 'active'
-      AND p.registration_deadline > NOW()
-      AND NOT EXISTS (
-        SELECT 1 FROM pool_ai_copy c
-        WHERE c.pool_id = p.id
-          AND c.expires_at > NOW()
-      )
-    LIMIT 10
-  `);
+  let stalePools;
+  try {
+    stalePools = await db.execute(`
+      SELECT p.id
+      FROM event_pools p
+      WHERE p.status = 'active'
+        AND p.registration_deadline > NOW()
+        AND NOT EXISTS (
+          SELECT 1 FROM pool_ai_copy c
+          WHERE c.pool_id = p.id
+            AND c.expires_at > NOW()
+        )
+      LIMIT 10
+    `);
+  } catch (err) {
+    if (isMissingRelationError(err)) {
+      console.warn(
+        `[poolCardCopyWorker] Skipping backfill because relation ${POOL_AI_COPY_RELATION} is missing`
+      );
+      recordPoolCardCopyBackfillLatency(Date.now() - startedAt);
+      return 0;
+    }
+    throw err;
+  }
 
   const poolIds = ((stalePools.rows as Array<{ id: string }>) ?? []).map((r: { id: string }) => r.id);
   let generated = 0;
