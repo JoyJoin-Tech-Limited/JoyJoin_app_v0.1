@@ -7,9 +7,10 @@ import MiniProgramLandingPage from './LandingPage'
 export default function Index() {
   const auth = useAuth()
   const hasRedirectedRef = useRef(false)
+  const isAuthPending = auth.isLoading || auth.isRefreshing
 
   useEffect(() => {
-    if (auth.isLoading || !auth.isAuthenticated || hasRedirectedRef.current) {
+    if (isAuthPending || !auth.isAuthenticated || hasRedirectedRef.current) {
       return
     }
 
@@ -17,7 +18,7 @@ export default function Index() {
     void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' }).catch(() => {
       hasRedirectedRef.current = false
     })
-  }, [auth.isAuthenticated, auth.isLoading, auth.nextStep])
+  }, [auth.isAuthenticated, auth.nextStep, isAuthPending])
 
   if (auth.isLoading || auth.isAuthenticated) {
     return <LoadingScreen />

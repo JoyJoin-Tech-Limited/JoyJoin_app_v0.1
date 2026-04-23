@@ -28,6 +28,7 @@ import {
   switchToDiscoverTab,
   switchToEventsTab,
 } from '../../lib/matchingNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import {
   AUTH_QUERY_KEY,
 } from '../../lib/authSession'
@@ -432,7 +433,7 @@ export function useMatchingStatusController({
   }, [])
 
   const handleRejoinPool = useCallback((poolId: string) => {
-    Taro.navigateTo({ url: `/pages/pool-registration/index?id=${poolId}` })
+    Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.poolRegistration}?id=${encodeURIComponent(poolId)}` })
   }, [])
 
   const invalidateRegistrationQuery = useCallback(() => {

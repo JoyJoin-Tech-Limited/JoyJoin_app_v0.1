@@ -15,6 +15,7 @@ import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { logError, logInfo } from '../../lib/logger'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/uiConstants'
 import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/matchingNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import {
   computeActionDockState,
   getSquadChemistryTokens,
@@ -83,7 +84,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       })
 
       if (response.blindBoxEventId) {
-        Taro.redirectTo({ url: `/pages/event-detail/index?id=${response.blindBoxEventId}` })
+        Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(response.blindBoxEventId)}` })
         return
       }
 

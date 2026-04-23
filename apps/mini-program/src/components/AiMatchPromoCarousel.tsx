@@ -1,7 +1,6 @@
 import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components'
-import { useCallback, useState } from 'react'
-import { SWIPER_INTERVAL_MS, SWIPER_TRANSITION_MS } from '../lib/uiConstants'
-import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
+import { useMemo, useState } from 'react'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import './AiMatchPromoCarousel.scss'
 
 interface AiMatchPromoCarouselProps {
@@ -13,51 +12,34 @@ const PROMO_SLIDES = [
   {
     title: 'AI 匹配：帮你算好遇见什么样的人',
     subtitle: '算好的人 · 用数据找到更合适的缘分',
-    imageSrc: '/assets/promo/banner-ai-match-calculated.png',
+    imageSrc: '/assets/promo/banner-ai-match-calculated.webp',
   },
   {
     title: 'AI 匹配：帮你遇见同频的人',
     subtitle: '同频的人 · 和你合拍的社交伙伴',
-    imageSrc: '/assets/promo/banner-ai-match-same-frequency.png',
+    imageSrc: '/assets/promo/banner-ai-match-same-frequency.webp',
   },
   {
     title: 'AI 匹配：帮你遇见懂你的人',
     subtitle: '懂你的人 · 更懂你的线下聚会',
-    imageSrc: '/assets/promo/banner-ai-match-understands-you.png',
+    imageSrc: '/assets/promo/banner-ai-match-understands-you.webp',
   },
 ] as const
-
-function webpFromPng(pngPath: string): string {
-  return pngPath.replace(/\.png$/i, '.webp')
-}
-
-function buildInitialResolvedSources(): Record<string, string> {
-  const next: Record<string, string> = {}
-  for (const slide of PROMO_SLIDES) {
-    next[slide.imageSrc] = webpFromPng(slide.imageSrc)
-  }
-  return next
-}
 
 export default function AiMatchPromoCarousel({
   className = '',
   compact = false,
 }: AiMatchPromoCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [resolvedSrcByPng, setResolvedSrcByPng] = useState(buildInitialResolvedSources)
-  const { shouldReduceMotion } = useMiniRevealMotion()
+  const prefersReducedMotion = usePrefersReducedMotion()
 
-  const handleImageError = useCallback((pngPath: string) => {
-    setResolvedSrcByPng((current) => {
-      if (current[pngPath] === pngPath) {
-        return current
-      }
-      return { ...current, [pngPath]: pngPath }
-    })
-  }, [])
+  const autoplayEnabled = !prefersReducedMotion
+  const transitionMs = prefersReducedMotion ? 0 : 420
 
-  const autoplayEnabled = !shouldReduceMotion
-  const transitionMs = shouldReduceMotion ? 0 : SWIPER_TRANSITION_MS
+  const swiperKey = useMemo(
+    () => `${autoplayEnabled ? 'auto' : 'still'}-${compact ? 'c' : 'full'}`,
+    [autoplayEnabled, compact],
+  )
 
   return (
     <View
@@ -68,26 +50,24 @@ export default function AiMatchPromoCarousel({
       ].filter(Boolean).join(' ')}
     >
       <Swiper
+        key={swiperKey}
         className='ai-match-promo-carousel__swiper'
         circular
         autoplay={autoplayEnabled}
-        interval={SWIPER_INTERVAL_MS}
+        interval={4200}
         duration={transitionMs}
         indicatorDots={false}
         onChange={(event) => setActiveIndex(event.detail.current)}
       >
         {PROMO_SLIDES.map((slide) => {
-          const imageSrc = resolvedSrcByPng[slide.imageSrc] ?? slide.imageSrc
-
           const imageBlock = (
             <View className='ai-match-promo-carousel__image-wrap'>
               <View className='ai-match-promo-carousel__glow' />
               <Image
                 className='ai-match-promo-carousel__image'
-                src={imageSrc}
+                src={slide.imageSrc}
                 mode='aspectFit'
                 lazyLoad
-                onError={() => handleImageError(slide.imageSrc)}
               />
             </View>
           )

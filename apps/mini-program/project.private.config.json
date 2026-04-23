@@ -1,6 +1,6 @@
 {
   "libVersion": "3.15.1",
-  "projectname": "%E6%82%A6%E8%81%9A%20JoyJoin_Test",
+  "projectname": "mini-program",
   "setting": {
     "urlCheck": false,
     "coverView": false,

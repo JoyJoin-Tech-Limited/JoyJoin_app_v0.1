@@ -13,6 +13,7 @@ export interface MiniProgramAuthStateInput<TUser extends MiniProgramAuthUser = M
 export interface DerivedMiniProgramAuthState<TUser extends MiniProgramAuthUser = MiniProgramAuthUser> {
   user: TUser | undefined
   isLoading: boolean
+  isRefreshing: boolean
   isAuthenticated: boolean
   nextStep: OnboardingStep | undefined
 }
@@ -21,13 +22,15 @@ export function deriveMiniProgramAuthState<TUser extends MiniProgramAuthUser>(
   input: MiniProgramAuthStateInput<TUser>
 ): DerivedMiniProgramAuthState<TUser> {
   const user = input.user ?? undefined
-  const isAuthPending = input.isLoading || input.isFetching
+  const isInitialLoad = input.isLoading
+  const isRefreshing = !isInitialLoad && input.isFetching
 
-  if (isAuthPending) {
+  if (isInitialLoad) {
     return {
       user,
       isLoading: true,
-      isAuthenticated: false,
+      isRefreshing: false,
+      isAuthenticated: !!user,
       nextStep: user?.nextStep ?? undefined,
     }
   }
@@ -35,6 +38,7 @@ export function deriveMiniProgramAuthState<TUser extends MiniProgramAuthUser>(
   return {
     user,
     isLoading: false,
+    isRefreshing,
     isAuthenticated: !!user,
     nextStep: user?.nextStep ?? undefined,
   }

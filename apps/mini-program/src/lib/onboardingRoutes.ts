@@ -16,19 +16,21 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   profile: 'pages/profile/index',
   login: 'pages/login/index',
   index: 'pages/index/index',
-  terms: 'pages/terms/index',
-  eventDetail: 'pages/event-detail/index',
-  eventFeedback: 'pages/event-feedback/index',
-  poolRegistration: 'pages/pool-registration/index',
+  terms: 'pages/extras/terms/index',
+  eventDetail: 'pages/experience/event-detail/index',
+  eventFeedback: 'pages/extras/event-feedback/index',
+  poolRegistration: 'pages/experience/pool-registration/index',
+  myEvents: 'pages/my-events/index',
+  journey: 'pages/journey/index',
   eventCoordination: 'pages/event-coordination/index',
-  matchingStatus: 'pages/matching-status/index',
-  squadUnboxing: 'pages/squad-unboxing/index',
-  poolGroupDetail: 'pages/pool-group-detail/index',
-  centerTabEmpty: 'pages/center-tab-empty/index',
-  icebreakerSession: 'pages/icebreaker-session/index',
-  editProfile: 'pages/edit-profile/index',
-  rewards: 'pages/rewards/index',
-  invite: 'pages/invite/index',
+  matchingStatus: 'pages/experience/matching-status/index',
+  squadUnboxing: 'pages/experience/squad-unboxing/index',
+  poolGroupDetail: 'pages/experience/pool-group-detail/index',
+  centerTabEmpty: 'pages/experience/center-tab-empty/index',
+  icebreakerSession: 'pages/experience/icebreaker-session/index',
+  editProfile: 'pages/extras/edit-profile/index',
+  rewards: 'pages/extras/rewards/index',
+  invite: 'pages/extras/invite/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -46,6 +48,13 @@ export const MINI_PROGRAM_ROUTES = {
   connections: `/${MINI_PROGRAM_PAGE_PATHS.connections}`,
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   login: `/${MINI_PROGRAM_PAGE_PATHS.login}`,
+  index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
+  terms: `/${MINI_PROGRAM_PAGE_PATHS.terms}`,
+  eventDetail: `/${MINI_PROGRAM_PAGE_PATHS.eventDetail}`,
+  eventFeedback: `/${MINI_PROGRAM_PAGE_PATHS.eventFeedback}`,
+  poolRegistration: `/${MINI_PROGRAM_PAGE_PATHS.poolRegistration}`,
+  myEvents: `/${MINI_PROGRAM_PAGE_PATHS.myEvents}`,
+  journey: `/${MINI_PROGRAM_PAGE_PATHS.journey}`,
   eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
@@ -58,6 +67,8 @@ export const MINI_PROGRAM_ROUTES = {
 } as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'pages/onboarding' as const
+export const MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT = 'pages/extras' as const
+export const MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT = 'pages/experience' as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
   'onboarding/index',
@@ -67,6 +78,24 @@ export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
   'essential-data/index',
   'extended-data/index',
   'profile-review/index',
+] as const
+
+export const MINI_PROGRAM_EXTRAS_SUBPACKAGE_PAGES = [
+  'terms/index',
+  'event-feedback/index',
+  'edit-profile/index',
+  'rewards/index',
+  'invite/index',
+] as const
+
+export const MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_PAGES = [
+  'center-tab-empty/index',
+  'event-detail/index',
+  'pool-registration/index',
+  'matching-status/index',
+  'squad-unboxing/index',
+  'pool-group-detail/index',
+  'icebreaker-session/index',
 ] as const
 
 export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
@@ -79,6 +108,24 @@ export const MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.profileReview,
 ] as const
 
+export const MINI_PROGRAM_EXTRAS_PACKAGE_PAGE_PATHS = [
+  MINI_PROGRAM_PAGE_PATHS.terms,
+  MINI_PROGRAM_PAGE_PATHS.eventFeedback,
+  MINI_PROGRAM_PAGE_PATHS.editProfile,
+  MINI_PROGRAM_PAGE_PATHS.rewards,
+  MINI_PROGRAM_PAGE_PATHS.invite,
+] as const
+
+export const MINI_PROGRAM_EXPERIENCE_PACKAGE_PAGE_PATHS = [
+  MINI_PROGRAM_PAGE_PATHS.centerTabEmpty,
+  MINI_PROGRAM_PAGE_PATHS.eventDetail,
+  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
+  MINI_PROGRAM_PAGE_PATHS.matchingStatus,
+  MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
+  MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
+  MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
+] as const
+
 export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.index,
   MINI_PROGRAM_PAGE_PATHS.discover,
@@ -88,24 +135,16 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,
   MINI_PROGRAM_PAGE_PATHS.login,
-  MINI_PROGRAM_PAGE_PATHS.terms,
-  MINI_PROGRAM_PAGE_PATHS.eventDetail,
-  MINI_PROGRAM_PAGE_PATHS.eventFeedback,
-  MINI_PROGRAM_PAGE_PATHS.poolRegistration,
+  MINI_PROGRAM_PAGE_PATHS.myEvents,
+  MINI_PROGRAM_PAGE_PATHS.journey,
   MINI_PROGRAM_PAGE_PATHS.eventCoordination,
-  MINI_PROGRAM_PAGE_PATHS.matchingStatus,
-  MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
-  MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
-  MINI_PROGRAM_PAGE_PATHS.centerTabEmpty,
-  MINI_PROGRAM_PAGE_PATHS.icebreakerSession,
-  MINI_PROGRAM_PAGE_PATHS.editProfile,
-  MINI_PROGRAM_PAGE_PATHS.rewards,
-  MINI_PROGRAM_PAGE_PATHS.invite,
 ] as const
 
 export const MINI_PROGRAM_PAGES = [
   ...MINI_PROGRAM_MAIN_PACKAGE_PAGES,
   ...MINI_PROGRAM_ONBOARDING_PACKAGE_PAGE_PATHS,
+  ...MINI_PROGRAM_EXTRAS_PACKAGE_PAGE_PATHS,
+  ...MINI_PROGRAM_EXPERIENCE_PACKAGE_PAGE_PATHS,
 ] as const
 
 export const MINI_PROGRAM_SUBPACKAGES = [
@@ -113,23 +152,52 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES,
   },
+  {
+    root: MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_EXTRAS_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_PAGES,
+  },
 ] as const
 
 export const MINI_PROGRAM_PRELOAD_RULES = {
   [MINI_PROGRAM_PAGE_PATHS.index]: {
     network: 'all',
-    packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+    packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT, MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT],
   },
   [MINI_PROGRAM_PAGE_PATHS.login]: {
     network: 'all',
     packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.discover]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.events]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.connections]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.profile]: {
+    network: 'all',
+    packages: [
+      MINI_PROGRAM_EXTRAS_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_EXPERIENCE_SUBPACKAGE_ROOT,
+    ],
   },
 } as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
   switch (step) {
     case 'onboarding':
-      return MINI_PROGRAM_ROUTES.onboarding
+      // Legacy fallback from the server. Mini-program should land on the first
+      // real onboarding step instead of looping through the entry hub page.
+      return MINI_PROGRAM_ROUTES.personalityTest
     case 'personality-test':
       return MINI_PROGRAM_ROUTES.personalityTest
     case 'essential-data':

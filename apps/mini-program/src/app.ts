@@ -13,7 +13,7 @@ import { loadBrandFonts } from './lib/brandFont'
 import './app.scss'
 
 function PendingOrderResumeBridge() {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, isRefreshing, user } = useAuth()
   const resumedOrderIdRef = useRef('')
 
   const maybeResumePendingOrder = useCallback(() => {
@@ -21,7 +21,7 @@ function PendingOrderResumeBridge() {
     const currentRoute = pages[pages.length - 1]?.route ?? ''
     const snapshot = getPendingOrderStorageSnapshot()
     const decision = decidePendingOrderAutoResume({
-      authResolved: !isLoading,
+      authResolved: !isLoading && !isRefreshing,
       isAuthenticated,
       currentRoute,
       currentUserId: user?.id,
@@ -69,7 +69,7 @@ function PendingOrderResumeBridge() {
         Taro.redirectTo({ url: resumeUrl })
       },
     })
-  }, [isAuthenticated, isLoading, user?.id])
+  }, [isAuthenticated, isLoading, isRefreshing, user?.id])
 
   useDidShow(() => {
     maybeResumePendingOrder()
@@ -85,7 +85,12 @@ function PendingOrderResumeBridge() {
 function App({ children }: PropsWithChildren<any>) {
   useLaunch(() => {
     logInfo('JoyJoin Mini Program launched')
-    loadBrandFonts()
+    loadBrandFonts({
+      // The full Alimama VF asset is too large for the WeChat main-package budget.
+      // Mini-program builds fall back to the system display stack while keeping
+      // the lightweight English brand face for numerals and short wordmarks.
+      includeDisplayFont: process.env.TARO_ENV !== 'weapp',
+    })
   })
 
   return createElement(
