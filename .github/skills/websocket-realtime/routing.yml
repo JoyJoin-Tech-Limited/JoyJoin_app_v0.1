@@ -16,6 +16,7 @@ do_not_use_when:
   - task is about social icebreaker phase logic (uses HTTP polling)
   - task is about matching algorithms
   - task is about general HTTP API design
+  - task is about product drop-off, user confusion, funnel diagnosis, or conversion without explicit WebSocket or realtime context
 
 strong_triggers:
   - WebSocket
@@ -38,8 +39,6 @@ strong_triggers:
   - wsService
   - eventBroadcast
   - RATE_LIMITED
-  - PING
-  - PONG
   - ICEBREAKER_CHECKIN
   - KING_GAME_JOIN
 
