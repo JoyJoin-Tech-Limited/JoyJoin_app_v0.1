@@ -127,6 +127,33 @@ function normalise(text) {
 }
 
 /**
+ * Escape regex special chars in a string.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Match strong triggers in ask text while avoiding substring false positives
+ * for short alphanumeric tokens (e.g., "ping" in "dropping").
+ *
+ * @param {string} text
+ * @param {string} trigger
+ * @returns {boolean}
+ */
+function askMatchesTrigger(text, trigger) {
+  if (!trigger) return false;
+  if (/^[a-z0-9]+$/.test(trigger) && trigger.length <= 4) {
+    const tokenPattern = new RegExp(`\\b${escapeRegExp(trigger)}\\b`, 'i');
+    return tokenPattern.test(text);
+  }
+  return text.includes(trigger);
+}
+
+/**
  * Match a symbol against a trigger without letting very short strings create
  * substring false positives.
  *
@@ -158,7 +185,7 @@ function scoreSkill(skill, normAsk, normFiles, normSymbols) {
   // Strong triggers (highest weight)
   for (const trigger of skill.strong_triggers) {
     const normTrigger = normalise(trigger);
-    if (normAsk.includes(normTrigger)) {
+    if (askMatchesTrigger(normAsk, normTrigger)) {
       score += STRONG_TRIGGER_SCORE;
       signals.push(`strong_trigger:ask:"${trigger}"`);
     }
@@ -218,7 +245,7 @@ function scoreSkill(skill, normAsk, normFiles, normSymbols) {
   // Owned symbols
   for (const sym of skill.owned_symbols) {
     const normSym = normalise(sym);
-    if (normAsk.includes(normSym) || normSymbols.some(s => normalise(s).includes(normSym))) {
+    if (askMatchesTrigger(normAsk, normSym) || normSymbols.some(s => symbolMatchesTrigger(normalise(s), normSym))) {
       score += OWNED_SYMBOL_SCORE;
       signals.push(`owned_symbol:"${sym}"`);
     }
