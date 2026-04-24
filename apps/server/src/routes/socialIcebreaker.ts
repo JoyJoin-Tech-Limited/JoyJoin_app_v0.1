@@ -22,7 +22,9 @@ import {
   generateRecapSummary,
   generatePersonalityDiceChallenges,
   generateAuctionLots,
+  generateXiaoyueSessionPack,
 } from '../socialIcebreakerAIService';
+import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
   cleanupPhaseStateForNextPhase,
@@ -45,7 +47,7 @@ import {
   getActiveParticipantCount,
   setLieTruths,
   getLieTruths,
-  getAllSessionLieTruths,
+  loadSessionLieTruths,
 } from '../lib/socialIcebreakerStore';
 import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
 import { logger } from '../lib/logger';
@@ -87,7 +89,11 @@ startSocialIcebreakerSweep();
  * explicit hook for future redactions.
  */
 function sanitizeStateForClient(state: SocialSessionState): SocialSessionState {
-  return { ...state };
+  const sanitized = { ...state };
+  // Host-only fields: strip from client-visible state
+  delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
+  delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
+  return sanitized;
 }
 
 async function buildClientState(state: SocialSessionState): Promise<SocialSessionState> {
@@ -441,7 +447,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 
     return res.json({ topics: topicResult.data, meta: topicResult.meta });
   } catch (error) {
-    console.error('[SocialIcebreaker] topics error:', error);
+    logger.error('[SocialIcebreaker] topics error:', { error });
     return res.status(500).json({ error: 'Failed to generate topics' });
   }
 });
@@ -613,6 +619,15 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
+  if (currentPhase === 'mini_script') {
+    if (!state.miniScriptFramework) {
+      return res.status(400).json({
+        error: 'MINI_SCRIPT_NOT_GENERATED',
+        message: '剧本尚未生成，请先配置风格与题材并生成剧本',
+      });
+    }
+  }
+
   const resolvedEnabledPhases = ensureSessionEnabledPhases(state);
   const effectiveNextPhase = getNextEligiblePhase(currentPhase, resolvedEnabledPhases, state.playerCount);
 
@@ -636,6 +651,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
       const challengeResult = await generateMicroChallenges({
         eventType: state.eventType || '活动',
         participantCount: state.playerCount,
+        seed: socialSessionId,
       });
       state.currentChallenge = challengeResult.data[0];
       state.currentChallengeMeta = challengeResult.meta;
@@ -745,6 +761,53 @@ router.post('/:socialSessionId/micro-challenge/complete', async (req: any, res) 
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/micro-challenge/generate
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can generate challenges' });
+  }
+
+  if (state.currentPhase !== 'micro_challenge') {
+    return res.status(400).json({ error: 'Not in micro_challenge phase' });
+  }
+
+  // Idempotent retry: if a challenge already exists, return it instead of regenerating
+  if (state.currentChallenge) {
+    const cachedMeta = state.currentChallengeMeta
+      ?? buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-micro-challenge-v1');
+    return res.json({ challenge: state.currentChallenge, meta: cachedMeta });
+  }
+
+  try {
+    const challengeResult = await generateMicroChallenges({
+      eventType: state.eventType || '活动',
+      participantCount: state.playerCount,
+      seed: socialSessionId,
+    });
+    state.currentChallenge = challengeResult.data[0];
+    state.currentChallengeMeta = challengeResult.meta;
+    state.challengeCompletedBy = [];
+    await updateSession(socialSessionId, state);
+
+    return res.json({ challenge: state.currentChallenge, meta: challengeResult.meta });
+  } catch (error) {
+    logger.error('[SocialIcebreaker] micro-challenge/generate error:', { error });
+    return res.status(500).json({ error: 'Failed to generate micro-challenge' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/lie-detective/generate
 // ---------------------------------------------------------------------------
 router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) => {
@@ -801,7 +864,7 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
 
     return res.json({ statements: sanitizedStatements, meta: statementResult.meta });
   } catch (error) {
-    console.error('[SocialIcebreaker] lie-detective/generate error:', error);
+    logger.error('[SocialIcebreaker] lie-detective/generate error:', { error });
     return res.status(500).json({ error: 'Failed to generate statements' });
   }
 });
@@ -1014,8 +1077,108 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
       state: await buildClientState(state),
     });
   } catch (error) {
-    console.error('[SocialIcebreaker] auction/generate-lots error:', error);
+    logger.error('[SocialIcebreaker] auction/generate-lots error:', { error });
     return res.status(500).json({ error: 'Failed to generate auction lots' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/xiaoyue/session-pack
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/xiaoyue/session-pack', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can generate a session pack' });
+  }
+
+  if (state.currentPhase !== 'warmup') {
+    return res.status(400).json({ error: 'Session pack can only be generated during warmup phase' });
+  }
+
+  if (state.xiaoyueSessionPack) {
+    const cachedMeta = {
+      ...(state.xiaoyueSessionPackMeta ??
+        buildCachedAIMeta(state.xiaoyueSessionPack.generatedAt, null, 'social-session-pack-v1')),
+      fromCache: true,
+    };
+    return res.json({
+      pack: state.xiaoyueSessionPack,
+      meta: cachedMeta,
+      state: await buildClientState(state),
+    });
+  }
+
+  try {
+    const roster = await listParticipants(socialSessionId);
+    const packResult = await generateXiaoyueSessionPack({
+      participants: roster.map((p) => ({
+        userId: p.userId,
+        displayName: p.displayName,
+      })),
+      eventType: state.eventType,
+      playerCount: Math.max(state.playerCount, roster.length || 1),
+    });
+
+    state.xiaoyueSessionPack = packResult.data;
+    state.xiaoyueSessionPackMeta = packResult.meta;
+    await updateSession(socialSessionId, state);
+
+    return res.json({
+      pack: packResult.data,
+      meta: packResult.meta,
+      state: await buildClientState(state),
+    });
+  } catch (error) {
+    logger.error('[SocialIcebreaker] xiaoyue/session-pack error:', { error });
+    return res.status(500).json({ error: 'Failed to generate session pack' });
+  }
+});
+
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/xiaoyue/adaptive-suggestion
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (state.hostUserId !== userId) {
+    return res.status(403).json({ error: 'Only the host can request adaptive suggestions' });
+  }
+
+  // Adaptive suggestions are meaningful only during active phases
+  if (state.currentPhase === 'recap') {
+    return res.status(400).json({ error: 'Adaptive suggestions are not available during recap' });
+  }
+
+  try {
+    const suggestion = generateXiaoyueAdaptiveSuggestion(state);
+    state.xiaoyueAdaptiveSuggestion = suggestion;
+    await updateSession(socialSessionId, state);
+
+    return res.json({
+      suggestion,
+      state: await buildClientState(state),
+    });
+  } catch (error) {
+    logger.error('[SocialIcebreaker] xiaoyue/adaptive-suggestion error:', { error });
+    return res.status(500).json({ error: 'Failed to generate adaptive suggestion' });
   }
 });
 
@@ -1186,7 +1349,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 
     return res.json({ challenges: challengeResult.data, meta: challengeResult.meta });
   } catch (error) {
-    console.error('[SocialIcebreaker] personality-dice/generate error:', error);
+    logger.error('[SocialIcebreaker] personality-dice/generate error:', { error });
     return res.status(500).json({ error: 'Failed to generate dice challenges' });
   }
 });
@@ -1248,7 +1411,7 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
   const medals: Medal[] = [];
 
   // Fetch lie truths from the separate server-only table for medal computation.
-  const sessionLieMap = await getAllSessionLieTruths(socialSessionId);
+  const sessionLieMap = await loadSessionLieTruths(socialSessionId);
 
   // 🕵️ 最佳侦探: most correct lie guesses
   if (sessionLieMap.size > 0 && (state.votes || []).length > 0) {
@@ -1328,6 +1491,7 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
 
     return res.json({ summary: summaryResult.data, meta: summaryResult.meta, medals, state: await buildClientState(state) });
   } catch (error) {
+    logger.error('[SocialIcebreaker] Failed to generate recap:', { error: String(error) });
     return res.status(500).json({ error: 'Failed to generate recap' });
   }
 });
@@ -1364,7 +1528,7 @@ router.post('/:socialSessionId/ai-feedback', async (req: any, res) => {
     });
     return res.json({ ok: true });
   } catch (error) {
-    console.error('[SocialIcebreaker] ai-feedback error:', error);
+    logger.error('[SocialIcebreaker] ai-feedback error:', { error });
     return res.status(500).json({ error: 'Failed to save feedback' });
   }
 });

@@ -8,12 +8,13 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/logger'
 import OnboardingLoadingShell from '../../components/OnboardingLoadingShell'
+import XiaoyueSessionShell from '../../components/XiaoyueSessionShell'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
   AuctionPhaseView,
   FallbackPhaseView,
-  getPhaseLabel,
+
   LieDetectivePhaseView,
   MicroChallengePhaseView,
   MiniScriptPhaseView,
@@ -62,6 +63,7 @@ export default function IcebreakerSessionPage() {
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [miniScriptModalOpen, setMiniScriptModalOpen] = useState(false)
   const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
+  const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const startAttemptRef = useRef<string | null>(null)
 
   const {
@@ -356,6 +358,18 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('auction-close', '/auction/close-lot', {})
   }, [performSocialAction])
 
+  const handleGenerateSessionPack = useCallback(() => {
+    void performSocialAction('xiaoyue-pack', '/xiaoyue/session-pack', {})
+  }, [performSocialAction])
+
+  const handleRequestAdaptiveSuggestion = useCallback(() => {
+    void performSocialAction('xiaoyue-suggest', '/xiaoyue/adaptive-suggestion', {})
+  }, [performSocialAction])
+
+  const handleDismissAdaptiveSuggestion = useCallback(() => {
+    setDismissedSuggestionAt(session?.xiaoyueAdaptiveSuggestion?.generatedAt ?? 'dismissed')
+  }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt])
+
   const handleGoBack = useCallback(() => {
     Taro.navigateBack({
       fail: () => Taro.switchTab({ url: '/pages/events/index' }),
@@ -439,25 +453,24 @@ export default function IcebreakerSessionPage() {
     )
   }
 
+  const adaptiveSuggestion =
+    session?.xiaoyueAdaptiveSuggestion &&
+    dismissedSuggestionAt !== session.xiaoyueAdaptiveSuggestion.generatedAt
+      ? session.xiaoyueAdaptiveSuggestion
+      : undefined
+
   const phaseHeader = (
-    <View className='icebreaker__header'>
-      <View className='icebreaker__phase-badge'>
-        <Text className='icebreaker__phase-label'>{getPhaseLabel(phase)}</Text>
-      </View>
-      {sessionDetails?.eventTitle ? (
-        <Text className='icebreaker__player-count'>{sessionDetails.eventTitle}</Text>
-      ) : null}
-      {playerCount > 0 && (
-        <Text className='icebreaker__player-count'>
-          👥 {playerCount} 人参与
-        </Text>
-      )}
-      {socialSessionQuery.isRefetching && (
-        <View className='icebreaker__offline-badge'>
-          <Text className='icebreaker__offline-text'>同步中…</Text>
-        </View>
-      )}
-    </View>
+    <XiaoyueSessionShell
+      phase={phase}
+      sessionPack={session?.xiaoyueSessionPack}
+      adaptiveSuggestion={adaptiveSuggestion}
+      playerCount={playerCount}
+      isHost={isHost}
+      isSyncing={socialSessionQuery.isRefetching}
+      eventTitle={sessionDetails?.eventTitle}
+      onRequestSuggestion={handleRequestAdaptiveSuggestion}
+      onDismissSuggestion={handleDismissAdaptiveSuggestion}
+    />
   )
 
   const hostControls =
@@ -510,12 +523,25 @@ export default function IcebreakerSessionPage() {
 
       <View className='icebreaker__phase-shell' key={phase}>
         {phase === 'waiting' && (
-          <WaitingPhase
-            playerCount={playerCount}
-            hostName={session?.hostDisplayName}
-            isHost={isHost}
-            onAdvance={handleAdvancePhase}
-          />
+          <>
+            <WaitingPhase
+              playerCount={playerCount}
+              hostName={session?.hostDisplayName}
+              isHost={isHost}
+              onAdvance={handleAdvancePhase}
+            />
+            {isHost && !session?.xiaoyueSessionPack && (
+              <Button
+                variant='secondary'
+                className='icebreaker__generate-pack-btn'
+                onClick={handleGenerateSessionPack}
+                disabled={pendingAction !== null}
+                loading={pendingAction === 'xiaoyue-pack'}
+              >
+                {pendingAction === 'xiaoyue-pack' ? '生成中…' : '生成小悦开场包'}
+              </Button>
+            )}
+          </>
         )}
 
         {phase === 'warmup' && session && (
