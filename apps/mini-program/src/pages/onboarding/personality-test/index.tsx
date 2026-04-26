@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { cdnAsset } from '../../../lib/cdnAssets'
 import Button from '../../../components/Button'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
 import Taro from '@tarojs/taro'
@@ -96,15 +97,15 @@ interface AssessmentAnswerResponse {
 
 const INTRO_ARCHETYPE_TEASERS = [
   {
-    archetype: '开心柯基',
+    archetype: 'corgi',
     vibeLine: '一进场，就把气氛带热。',
   },
   {
-    archetype: '机智狐',
+    archetype: 'fox',
     vibeLine: '普通话题，也能聊出火花。',
   },
   {
-    archetype: '暖心熊',
+    archetype: 'koala',
     vibeLine: '会让人慢慢放松下来。',
   },
 ] as const
@@ -436,7 +437,8 @@ export default function PersonalityTestPage() {
     sessionId,
   ])
 
-  if (auth.isLoading) {
+  const showLoadingShell = auth.isLoading && (auth.isAuthenticated || hasStoredIncompleteSession)
+  if (showLoadingShell) {
     return (
       <OnboardingLoadingShell
         stepLabel='Onboarding 1 / 4'
@@ -471,7 +473,7 @@ export default function PersonalityTestPage() {
                 <View className='personality-test__intro-hero-halo' />
                 <Image
                   className='personality-test__mascot personality-test__mascot--animated'
-                  src='/assets/personality/xiaoyue/xiaoyue-intro-animated.webp'
+                  src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp')}
                   mode='aspectFit'
                 />
               </View>

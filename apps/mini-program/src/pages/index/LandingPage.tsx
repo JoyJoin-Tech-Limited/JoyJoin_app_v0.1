@@ -64,7 +64,7 @@ export default function MiniProgramLandingPage() {
       <View className="content-zone">
         <View className="logo-container">
           <View className="logo-aura"></View>
-          <Image src="/assets/box_logo_archetypes.png" className="logo-img" mode="aspectFit" />
+          <Image src="/assets/box-logo.webp" className="logo-img" mode="aspectFit" />
         </View>
 
         <View className="hero-cards">
