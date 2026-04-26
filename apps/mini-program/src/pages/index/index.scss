@@ -1,6 +1,28 @@
 @use "../../styles/variables" as *;
 @use "../../styles/mixins" as *;
 
+@keyframes landing-entrance-20 {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes landing-entrance-18 {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18rpx, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .landing-page {
   @include page-clean-bg;
   @include onboarding-page-exit-transition(0.18s, -20rpx, 0.988);
@@ -11,7 +33,6 @@
 }
 
 .content-zone {
-  @include onboarding-stage(0s, 0.38s, 20rpx);
   flex: 1 0 auto;
   display: flex;
   flex-direction: column;
@@ -26,6 +47,8 @@
 }
 
 .logo-container {
+  animation: landing-entrance-20 0.40s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0s;
   display: flex;
   justify-content: center;
   position: relative;
@@ -51,6 +74,8 @@
 }
 
 .hero-cards {
+  animation: landing-entrance-20 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.10s;
   position: relative;
   width: 100%;
   max-width: 560rpx;
@@ -143,6 +168,8 @@
 }
 
 .text-content {
+  animation: landing-entrance-18 0.40s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.22s;
   width: 100%;
   text-align: center;
   display: flex;
@@ -211,7 +238,8 @@
 }
 
 .bottom-zone {
-  @include onboarding-stage(0.08s, 0.42s, 24rpx);
+  animation: landing-entrance-20 0.44s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.34s;
   flex: none;
   width: 100%;
   margin-top: auto;
