@@ -1,0 +1,28 @@
+skill: stitch-design-workflow
+primary_ownership: >
+  Brand-governed rapid UI design exploration using Google Stitch, preprocessing
+  prompts through JoyJoin brand constraints before generation. Stitch output is
+  exploratory only; production implementation follows existing design-system and
+  frontend skills.
+use_when:
+  - Exploring UI mockups rapidly before production implementation
+  - Generating brand-constrained design tokens for a new screen
+  - Rapid prototyping with Stitch based on text prompts
+do_not_use_when:
+  - Building production-ready frontend code (use design-system-governance instead)
+  - Implementing UI in code (use frontend-component-architecture)
+  - Final pixel-precision design delivery
+strong_triggers:
+  - Stitch design
+  - generate UI mockup
+  - Stitch screen
+  - design exploration
+  - rapid prototype with Stitch
+  - Stitch onboarding screen
+  - Stitch pool card
+owned_paths:
+  - /.github/skills/stitch-design-workflow/
+related_skills:
+  - joyjoin-brand-guidelines
+  - design-system-governance
+  - frontend-component-architecture

@@ -24,7 +24,7 @@ You have deep knowledge of:
 
 ## Subagent delegation protocol
 
-When spawning parity auditors or frontend engineers via the Agent tool, follow [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md):
+When spawning parity auditors or frontend engineers via the Agent tool, follow [`subagent-context-delegation`](../skills/subagent-context-delegation/SKILL.md):
 - Package a **context capsule** with the source file(s), migration target, known incompatibilities, and expected Taro-equivalent behavior.
 - Spawn auditors with **self-contained scopes** — one for DOM API audit, another for CSS/WXSS audit, another for navigation parity.
 - **Resume** only when continuing the same migration thread; otherwise spawn fresh to avoid context bleed.

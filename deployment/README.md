@@ -25,10 +25,10 @@ GitHub Actions
             ├─ joyjoin-admin   (管理后台静态站点, 127.0.0.1:3001)
             └─ joyjoin-api     (Node.js API, 127.0.0.1:5000)
 
-公网域名
-  ├─ yuejuapp.com / www.yuejuapp.com  -> Nginx -> joyjoin-user
-  ├─ admin.yuejuapp.com               -> Nginx -> joyjoin-admin
-  └─ api.yuejuapp.com                 -> Nginx -> joyjoin-api
+公网域名 (多域名 SAN 证书)
+  ├─ yuejuapp.com / www.yuejuapp.com / joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
+  ├─ admin.yuejuapp.com / admin.joyjoinapp.com                             -> Nginx -> joyjoin-admin
+  └─ api.yuejuapp.com / api.joyjoinapp.com                                 -> Nginx -> joyjoin-api
 
 数据库
   └─ DATABASE_URL -> 外部 PostgreSQL
@@ -110,22 +110,26 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 
 ## 域名与入口
 
-为当前自管服务器部署，确保以下 **A 记录** 都直接指向远程服务器公网 IP：
+为当前自管服务器部署（新服务器 IP: 1.12.243.104），确保以下 **A 记录** 都直接指向远程服务器公网 IP `1.12.243.104`：
 
 ```text
 yuejuapp.com
 www.yuejuapp.com
 admin.yuejuapp.com
 api.yuejuapp.com
+joyjoinapp.com
+www.joyjoinapp.com
+admin.joyjoinapp.com
+api.joyjoinapp.com
 ```
 
 `deployment/nginx/joyjoin.conf` 负责：
 
 - 自动 HTTPS
 - HTTP -> HTTPS 跳转
-- `yuejuapp.com / www.yuejuapp.com` 下的 `/api/*` 反代到 `joyjoin-api:5000`
-- 管理后台 `/api/*` 反代到 `joyjoin-api:5000`
-- `api.yuejuapp.com` 全量反代到 `joyjoin-api:5000`
+- `yuejuapp.com / joyjoinapp.com` 及 `www.*` 下的 `/api/*` 反代到 `joyjoin-api:5000`
+- `admin.*` 前缀反代到 `joyjoin-admin:3001`
+- `api.*` 前缀全量反代到 `joyjoin-api:5000`
 
 在执行部署前，宿主机必须已经具备以下可读证书文件，否则 `nginx -t`
 会失败：

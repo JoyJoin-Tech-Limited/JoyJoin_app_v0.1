@@ -1,0 +1,27 @@
+skill: mini-program-screenshot-workflow
+primary_ownership: >
+  Canonical workflow for capturing screenshots, previews, and visual verification
+  of the JoyJoin WeChat Mini Program (apps/mini-program). Documents what works,
+  what does not, and exact steps for each approach.
+use_when:
+  - Capturing screenshots of the WeChat Mini Program
+  - Visual verification of mini-program UI
+  - Pre-merge pixel-precision checks
+  - Documenting mini-program page state
+do_not_use_when:
+  - Web-based UI screenshots (unrelated surface)
+  - Production code implementation
+strong_triggers:
+  - screenshot mini-program
+  - mini-program preview
+  - capture UI
+  - show me the page
+  - visual check
+  - mini-program screenshot
+  - WeChat DevTools screenshot
+  - page preview
+owned_paths:
+  - /.github/skills/mini-program-screenshot-workflow/
+related_skills:
+  - mini-program-frontend-excellence
+  - platform-coordination-protocol

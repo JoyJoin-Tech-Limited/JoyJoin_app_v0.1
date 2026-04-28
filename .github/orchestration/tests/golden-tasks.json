@@ -1,0 +1,202 @@
+[
+  {
+    "id": "task-001",
+    "prompt": "add a refund button to the admin payment page",
+    "expectedLane": "direct",
+    "expectedAgent": "Backend Engineer",
+    "expectedSkills": ["payment-entitlement-authority", "auth-session-and-safety-boundaries", "server-domain-architecture"],
+    "expectedTier": 2,
+    "expectedSprintContract": true,
+    "description": "Bounded admin UI + API change with clear scope"
+  },
+  {
+    "id": "task-002",
+    "prompt": "the matching feels off lately, users are complaining about group quality",
+    "expectedLane": "kickoff",
+    "expectedAgent": "Researcher",
+    "expectedSkills": ["matching-domain", "first-principles-velocity"],
+    "expectedTier": 2,
+    "expectedSprintContract": false,
+    "description": "Vague complaint requiring investigation before any fix can be written"
+  },
+  {
+    "id": "task-003",
+    "prompt": "audit all admin routes for missing audit logging",
+    "expectedLane": "operational",
+    "expectedAgent": "QA Agent",
+    "expectedSkills": ["admin-audit-and-rbac-governance", "platform-observability-and-ops"],
+    "expectedTier": 2,
+    "expectedSprintContract": false,
+    "description": "Validation/review task — checking existing code, not building new"
+  },
+  {
+    "id": "task-004",
+    "prompt": "redo the personality system from 12 to 16 archetypes including the chemistry matrix",
+    "expectedLane": "deliberation",
+    "expectedAgent": "Deliberation Moderator",
+    "expectedSkills": ["personality-system", "backend-models-standards", "database-migration-safety", "first-principles-velocity"],
+    "expectedTier": 3,
+    "expectedSprintContract": true,
+    "description": "Cross-domain core engine change touching personality, matching, DB, all client surfaces"
+  },
+  {
+    "id": "task-005",
+    "prompt": "run the production Harness engineering review on the payment webhook handler",
+    "expectedLane": "harness",
+    "expectedAgent": "Harness Runtime Controller",
+    "expectedSkills": ["reliability-and-state-integrity", "payment-entitlement-authority", "platform-observability-and-ops"],
+    "expectedTier": 3,
+    "expectedSprintContract": true,
+    "description": "Explicit Harness request on core payment infrastructure"
+  },
+  {
+    "id": "task-006",
+    "prompt": "gate this route for admin only — only super_admin should access refunds",
+    "expectedLane": "direct",
+    "expectedAgent": "Backend Engineer",
+    "expectedSkills": ["auth-session-and-safety-boundaries", "admin-audit-and-rbac-governance", "server-domain-architecture"],
+    "expectedTier": 2,
+    "expectedSprintContract": true,
+    "description": "Bounded auth gating on a known route"
+  },
+  {
+    "id": "task-007",
+    "prompt": "add a loading spinner to the pool detail page",
+    "expectedLane": "direct",
+    "expectedAgent": "Frontend Engineer",
+    "expectedSkills": ["frontend-performance-and-loading", "frontend-component-architecture"],
+    "expectedTier": 1,
+    "expectedSprintContract": false,
+    "description": "Small UI polish, single component, under 50 lines"
+  },
+  {
+    "id": "task-008",
+    "prompt": "migrate the onboarding flow from web to mini-program",
+    "expectedLane": "kickoff",
+    "expectedAgent": "Taro Migration Specialist",
+    "expectedSkills": ["platform-coordination-protocol", "onboarding-state-architecture", "mini-program-frontend-excellence"],
+    "expectedTier": 2,
+    "expectedSprintContract": false,
+    "description": "Cross-platform migration — needs research first to scope the work"
+  },
+  {
+    "id": "task-009",
+    "prompt": "add semantic similarity as a matching dimension",
+    "expectedLane": "harness",
+    "expectedAgent": "Harness Runtime Controller",
+    "expectedSkills": ["semantic-matching-embeddings", "matching-domain", "feature-flags-launch-config", "llm-runtime-safety-and-integration"],
+    "expectedTier": 3,
+    "expectedSprintContract": true,
+    "description": "Core matching engine extension with LLM integration"
+  },
+  {
+    "id": "task-010",
+    "prompt": "create a new event pool for next Friday with 20-person capacity",
+    "expectedLane": "direct",
+    "expectedAgent": "Backend Engineer",
+    "expectedSkills": ["event-pool-and-matching-operations", "server-domain-architecture"],
+    "expectedTier": 2,
+    "expectedSprintContract": true,
+    "description": "Specific pool creation with known constraints"
+  },
+  {
+    "id": "task-011",
+    "prompt": "users are dropping off during onboarding and we don't know why",
+    "expectedLane": "kickoff",
+    "expectedAgent": "Researcher",
+    "expectedSkills": ["onboarding-state-architecture", "analytics-tracking", "frontend-hook-engine"],
+    "expectedTier": 2,
+    "expectedSprintContract": false,
+    "description": "Vague product problem — needs funnel analysis before any code"
+  },
+  {
+    "id": "task-012",
+    "prompt": "add WeChat Pay v3 integration for event pack purchases",
+    "expectedLane": "kickoff",
+    "expectedAgent": "Planner",
+    "expectedSkills": ["wechat-ecosystem-integration", "payment-entitlement-authority", "feature-flags-launch-config"],
+    "expectedTier": 3,
+    "expectedSprintContract": false,
+    "description": "Complex cross-domain feature spanning WeChat, payments, and feature flags"
+  },
+  {
+    "id": "task-013",
+    "prompt": "build an admin dashboard showing pool registration stats with Recharts",
+    "expectedLane": "direct",
+    "expectedAgent": "Backend Engineer",
+    "expectedSkills": ["admin-client-frontend", "event-pool-and-matching-operations", "server-domain-architecture"],
+    "expectedTier": 2,
+    "expectedSprintContract": true,
+    "description": "Admin dashboard — new API route + frontend chart component"
+  },
+  {
+    "id": "task-014",
+    "prompt": "the WebSocket broadcast is hitting rate limits during peak, we need to fix it",
+    "expectedLane": "kickoff",
+    "expectedAgent": "debug",
+    "expectedSkills": ["websocket-realtime", "caching-strategy", "platform-observability-and-ops"],
+    "expectedTier": 2,
+    "expectedSprintContract": false,
+    "description": "Production issue — needs investigation before fix"
+  },
+  {
+    "id": "task-015",
+    "prompt": "design the architecture for a new notification system",
+    "expectedLane": "deliberation",
+    "expectedAgent": "Deliberation Moderator",
+    "expectedSkills": ["notification-system", "websocket-realtime", "frontend-component-architecture", "platform-coordination-protocol"],
+    "expectedTier": 2,
+    "expectedSprintContract": true,
+    "description": "Cross-domain architecture design touching server, web, and mini-program"
+  },
+  {
+    "id": "task-016",
+    "prompt": "add a profanity filter to the user bio field",
+    "expectedLane": "direct",
+    "expectedAgent": "Backend Engineer",
+    "expectedSkills": ["content-safety-abuse-detection", "server-domain-architecture"],
+    "expectedTier": 2,
+    "expectedSprintContract": true,
+    "description": "Bounded content moderation feature on a known field"
+  },
+  {
+    "id": "task-017",
+    "prompt": "polish the icebreaker completion screen to feel more premium",
+    "expectedLane": "direct",
+    "expectedAgent": "Taro Mini-Program Frontend Engineer",
+    "expectedSkills": ["mini-program-frontend-excellence", "wow-elements", "social-icebreaker-domain"],
+    "expectedTier": 1,
+    "expectedSprintContract": false,
+    "description": "Mini-program UI polish on a known screen with clear success criteria"
+  },
+  {
+    "id": "task-018",
+    "prompt": "add automated venue assignment after pool matching completes",
+    "expectedLane": "kickoff",
+    "expectedAgent": "Planner",
+    "expectedSkills": ["venue-location-services", "event-pool-and-matching-operations", "reliability-and-state-integrity"],
+    "expectedTier": 2,
+    "expectedSprintContract": false,
+    "description": "Cross-domain server feature — needs planning before implementation"
+  },
+  {
+    "id": "task-019",
+    "prompt": "validate the release is ready for production rollout",
+    "expectedLane": "operational",
+    "expectedAgent": "Launch Readiness Agent",
+    "expectedSkills": ["feature-flags-launch-config", "platform-observability-and-ops", "testing-and-regression-guardrails"],
+    "expectedTier": 1,
+    "expectedSprintContract": false,
+    "description": "Release readiness review — operational lane"
+  },
+  {
+    "id": "task-020",
+    "prompt": "something's broken and I don't know what",
+    "expectedLane": "kickoff",
+    "expectedAgent": "debug",
+    "expectedSkills": ["first-principles-velocity", "platform-observability-and-ops"],
+    "expectedTier": 1,
+    "expectedSprintContract": false,
+    "description": "Extremely vague prompt — should trigger kickoff investigation"
+  }
+]

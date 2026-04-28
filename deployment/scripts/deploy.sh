@@ -81,6 +81,12 @@ if [[ ${#MISSING_TLS_FILES[@]} -gt 0 ]]; then
     printf '   - %s\n' "${MISSING_TLS_FILES[@]}"
     echo "   Provision the Let's Encrypt certificates on the deployment host before re-running deploy."
     echo "   Expected domains: yuejuapp.com, admin.yuejuapp.com, api.yuejuapp.com"
+    echo "                  + joyjoinapp.com, admin.joyjoinapp.com, api.joyjoinapp.com"
+    echo "   Cert renewal example:"
+    echo "     sudo certbot certonly --nginx"
+    echo "       -d yuejuapp.com -d www.yuejuapp.com -d joyjoinapp.com -d www.joyjoinapp.com"
+    echo "     sudo certbot certonly --nginx -d admin.yuejuapp.com -d admin.joyjoinapp.com"
+    echo "     sudo certbot certonly --nginx -d api.yuejuapp.com -d api.joyjoinapp.com"
     exit 1
 fi
 
@@ -158,7 +164,7 @@ for ((health_check_attempt=1; health_check_attempt<=MAX_HEALTH_CHECK_ATTEMPTS; h
 done
 
 echo "🌐 Step 4: Verify Nginx route /api/health..."
-if ! curl -fsS -H "Host: 129.226.61.77" "http://127.0.0.1/api/health" > /dev/null; then
+if ! curl -fsS -H "Host: yuejuapp.com" "http://127.0.0.1/api/health" > /dev/null; then
     echo "❌ Nginx route check failed at http://127.0.0.1/api/health"
     echo "📋 Debug info:"
     echo "📋 Socket listeners (80/443/5000):"
@@ -174,13 +180,13 @@ if ! curl -fsS -H "Host: 129.226.61.77" "http://127.0.0.1/api/health" > /dev/nul
     exit 1
 fi
 echo "✅ Nginx route response headers:"
-curl -sSI -H "Host: 129.226.61.77" "http://127.0.0.1/api/health" || true
+curl -sSI -H "Host: yuejuapp.com" "http://127.0.0.1/api/health" || true
 
 echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
-    echo "  User Portal:  https://yuejuapp.com"
-    echo "  Admin Portal: https://admin.yuejuapp.com"
-    echo "  API Server:   https://api.yuejuapp.com"
+    echo "  User Portal:  https://yuejuapp.com | https://joyjoinapp.com"
+    echo "  Admin Portal: https://admin.yuejuapp.com | https://admin.joyjoinapp.com"
+    echo "  API Server:   https://api.yuejuapp.com | https://api.joyjoinapp.com"
 else
     echo "  Staging uses the same self-managed flow, but requires staging-specific env and routing to be prepared first."
 fi
