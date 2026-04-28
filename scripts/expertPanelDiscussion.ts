@@ -52,7 +52,7 @@ const EXPERTS = [
 const CURRENT_SYSTEM = {
   questions: 12,
   dimensions: ['A(亲和力)', 'O(开放性)', 'C(责任心)', 'E(情绪稳定)', 'X(外向性)', 'P(积极性)'],
-  archetypes: ['开心柯基', '太阳鸡', '夸夸豚', '机智狐', '淡定海豚', '织网蛛', '暖心熊', '灵感章鱼', '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'],
+  archetypes: ['corgi', 'rooster', 'hamster_praise', 'fox', 'dolphin_calm', 'spider', 'koala', 'octopus', 'owl', 'elephant', 'turtle', 'cat'],
   currentFlow: "用户答题 → 每个答案映射到原型 → 累计最高分原型 → 使用该原型的固定6维分数显示雷达图",
   problems: [
     "所有同原型用户雷达图完全相同，无个体差异",
@@ -198,7 +198,7 @@ async function runExpertPanel() {
 
   const topic1Context = `
 现有系统问题：用户答题后，根据答案映射到12个原型，取最高分原型，然后直接使用该原型的预设分数作为雷达图。
-这导致所有"开心柯基"用户的雷达图都是：亲和90、开放80、责任65、情绪80、外向95、积极95。
+这导致所有"corgi"用户的雷达图都是：亲和90、开放80、责任65、情绪80、外向95、积极95。
 
 每道题的选项其实已经有6维特质分数（如 A:2, X:4, P:1），但这些分数没有被用于最终雷达图计算。
 
@@ -262,7 +262,7 @@ ${CURRENT_SYSTEM.traitMappingIssues.map(i => `- ${i.q}: 当前${i.current}，问
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   const topic4Context = `
-12原型动物系统是产品核心特色（开心柯基、太阳鸡等），用户喜欢这种有趣的呈现方式。
+12原型动物系统是产品核心特色（corgi、rooster等），用户喜欢这种有趣的呈现方式。
 
 但如果改用累加评分，每个用户的6维分数都不同，如何与原型系统结合？
 

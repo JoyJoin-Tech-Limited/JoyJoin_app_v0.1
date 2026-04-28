@@ -694,7 +694,7 @@ export default function BlindBoxPaymentPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-orange-950/20">
+    <div className="no-scroll-container relative bg-gradient-to-b from-purple-50 via-pink-50 to-orange-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-orange-950/20">
       {/* 背景装饰动画 - 更柔和的版本 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div

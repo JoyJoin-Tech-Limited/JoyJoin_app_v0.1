@@ -1,0 +1,22 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+.rating-face {
+  &__container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 16rpx;
+  }
+
+  &__item {
+    @include flex-center;
+    border-radius: 50%;
+    transition: transform 150ms ease-out, opacity 200ms ease-out;
+
+    &--selected {
+      // Glow ring handled inline for dynamic brand color
+    }
+  }
+}

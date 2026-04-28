@@ -19,10 +19,18 @@ import {
   socialIcebreakerParticipants,
   socialIcebreakerLieTruths,
 } from '@shared/schema';
+import { socialIcebreakerMiniscriptSecrets } from '@shared/schemaAnalytics';
 import type {
   SocialSessionParticipantSummary,
   SocialSessionState,
 } from '@shared/socialIcebreaker';
+import type {
+  MiniScriptClue,
+  MiniScriptSolution,
+  MiniScriptPlayerKnowledge,
+  MiniScriptRedHerring,
+  MiniScriptDeductionChain,
+} from '@shared/miniscriptStoryFramework';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -330,7 +338,7 @@ export async function getLieTruths(
  * Retrieve all lie-truth entries for a session (used in recap/medal computation).
  * Returns a Map of userId → statements with isLie.
  */
-export async function getAllSessionLieTruths(
+export async function loadSessionLieTruths(
   socialSessionId: string,
 ): Promise<Map<string, Array<{ index: number; text: string; isLie: boolean }>>> {
   const rows = await db
@@ -346,6 +354,52 @@ export async function getAllSessionLieTruths(
     result.set(row.userId, row.statementsJson);
   }
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// MiniScript secrets storage (server-only; never returned to clients)
+// ---------------------------------------------------------------------------
+
+export interface MiniScriptSecrets {
+  solution: MiniScriptSolution;
+  playerKnowledge: MiniScriptPlayerKnowledge[];
+  redHerrings: MiniScriptRedHerring[];
+  deductionChain: MiniScriptDeductionChain[];
+  allClues: MiniScriptClue[];
+}
+
+export async function setMiniScriptSecrets(
+  socialSessionId: string,
+  secrets: MiniScriptSecrets,
+): Promise<void> {
+  await db
+    .insert(socialIcebreakerMiniscriptSecrets)
+    .values({
+      socialSessionId,
+      secretsJson: JSON.stringify(secrets),
+      createdAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: socialIcebreakerMiniscriptSecrets.socialSessionId,
+      set: { secretsJson: JSON.stringify(secrets) },
+    });
+}
+
+export async function getMiniScriptSecrets(
+  socialSessionId: string,
+): Promise<MiniScriptSecrets | null> {
+  const rows = await db
+    .select({ secretsJson: socialIcebreakerMiniscriptSecrets.secretsJson })
+    .from(socialIcebreakerMiniscriptSecrets)
+    .where(eq(socialIcebreakerMiniscriptSecrets.socialSessionId, socialSessionId))
+    .limit(1);
+
+  if (!rows[0]?.secretsJson) return null;
+  try {
+    return JSON.parse(rows[0].secretsJson) as MiniScriptSecrets;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------

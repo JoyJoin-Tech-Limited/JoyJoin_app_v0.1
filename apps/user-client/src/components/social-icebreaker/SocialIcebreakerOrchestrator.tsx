@@ -363,7 +363,7 @@ export function SocialIcebreakerOrchestrator({
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" data-testid="social-icebreaker-orchestrator">
+    <div className="no-scroll-container" data-testid="social-icebreaker-orchestrator">
       {/* Non-blocking error banner for in-session action failures */}
       {error && (
         <div className="absolute top-0 inset-x-0 z-50 flex items-center justify-between gap-2 bg-destructive/90 text-destructive-foreground px-4 py-2 text-sm">

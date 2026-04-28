@@ -51,18 +51,18 @@ Anti-generic: This should feel like a premium game character portrait, not a sto
 
 | # | Archetype | Description | Accent Color | Expression |
 |---|-----------|-------------|--------------|------------|
-| 1 | 开心柯基 (Happy Corgi) | Playful, energetic, optimistic | Warm orange #D4845C | Big open smile, tongue slightly out, perky ears |
-| 2 | 太阳鸡 (Sun Rooster) | Bright, confident, energetic | Warm coral #FF9B85 | Head high, chest puffed, alert eyes |
-| 3 | 夸夸豚 (Praise Dolphin) | Supportive, complimentary, warm | Sky blue #A8C5DD | Gentle smile, heart-shaped blowhole spray |
-| 4 | 机智狐 (Clever Fox) | Clever, adaptable, strategic | Warm orange #D4845C | Winking one eye, knowing smirk, glasses |
-| 5 | 淡定海豚 (Calm Dolphin) | Steady, peaceful, balanced | Sky blue #5B9BD5 | Eyes closed in contentment, serene smile |
-| 6 | 织网蛛 (Weaver Spider) | Intricate, connected, detailed | Purple-gray #8B7FB0 | Multiple eyes gleaming, delicate web pattern in facets |
-| 7 | 暖心熊 (Warm Bear) | Warm, strong, protective | Warm brown #A0522D | Soft eyes, protective stance, gentle smile |
-| 8 | 灵感章鱼 (Inspiration Octopus) | Creative, multi-faceted, curious | Purple #8B5CF6 | One tentacle holding paintbrush, curious wide eyes |
-| 9 | 沉思猫头鹰 (Contemplation Owl) | Wise, contemplative, observant | Deep blue #4A6FA5 | Large forward eyes, book tucked under wing |
-| 10 | 定心大象 (Grounding Elephant) | Steady, reliable, grounding | Gray-blue #708090 | Steady gaze, large ears spread calm |
-| 11 | 稳如龟 (Steady Turtle) | Patient, persistent, thoughtful | Forest green #6B8E6B | Slow blink, wise old eyes, shell pattern visible |
-| 12 | 隐身猫 (Stealth Cat) | Independent, curious, adaptable | Soft gray #9CA3AF | One eye peeking from shadow, mysterious half-smile |
+| 1 | 气氛组柯基 (Happy Corgi) | Playful, energetic, optimistic | Warm orange #D4845C | Big open smile, tongue slightly out, perky ears |
+| 2 | 情绪稳定鸡 (Sun Rooster) | Bright, confident, energetic | Warm coral #FF9B85 | Head high, chest puffed, alert eyes |
+| 3 | 捧场王仓鼠 (Praise Dolphin) | Supportive, complimentary, warm | Sky blue #A8C5DD | Gentle smile, heart-shaped blowhole spray |
+| 4 | 探宝雷达狐 (Clever Fox) | Clever, adaptable, strategic | Warm orange #D4845C | Winking one eye, knowing smirk, glasses |
+| 5 | 读空气海豚 (Calm Dolphin) | Steady, peaceful, balanced | Sky blue #5B9BD5 | Eyes closed in contentment, serene smile |
+| 6 | 社交裁缝蛛 (Weaver Spider) | Intricate, connected, detailed | Purple-gray #8B7FB0 | Multiple eyes gleaming, delicate web pattern in facets |
+| 7 | 情绪树洞考拉 (Warm Bear) | Warm, strong, protective | Warm brown #A0522D | Soft eyes, protective stance, gentle smile |
+| 8 | 脑洞喷泉章鱼 (Inspiration Octopus) | Creative, multi-faceted, curious | Purple #8B5CF6 | One tentacle holding paintbrush, curious wide eyes |
+| 9 | 追问猫头鹰 (Contemplation Owl) | Wise, contemplative, observant | Deep blue #4A6FA5 | Large forward eyes, book tucked under wing |
+| 10 | 定海神针大象 (Grounding Elephant) | Steady, reliable, grounding | Gray-blue #708090 | Steady gaze, large ears spread calm |
+| 11 | 慢半拍龟 (Steady Turtle) | Patient, persistent, thoughtful | Forest green #6B8E6B | Slow blink, wise old eyes, shell pattern visible |
+| 12 | 静音模式猫 (Stealth Cat) | Independent, curious, adaptable | Soft gray #9CA3AF | One eye peeking from shadow, mysterious half-smile |
 
 **Export:** SVG + PNG 32×32, 64×64, 96×96
 

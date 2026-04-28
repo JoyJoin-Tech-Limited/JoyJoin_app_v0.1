@@ -12,7 +12,7 @@
  * - Full Effects: Detailed descriptions for reference/tooltips
  */
 
-import type { ArchetypeName } from './archetypeNames';
+import type { ArchetypeId } from './archetypeNames';
 
 export interface ArchetypeSkill {
   /** 技能名称 (e.g., "摇尾热场波") */
@@ -56,7 +56,7 @@ export interface ArchetypeSkillSet {
  * Keyed by archetype Chinese name
  */
 export const archetypeSkills = {
-  "开心柯基": {
+  "corgi": {
     attribute: "🔥 热情",
     cardTitle: "破冰点火官",
     activeSkill: {
@@ -79,7 +79,7 @@ export const archetypeSkills = {
     }
   },
 
-  "机智狐": {
+  "fox": {
     attribute: "🗺️ 探索",
     cardTitle: "秘境引路人",
     activeSkill: {
@@ -102,7 +102,7 @@ export const archetypeSkills = {
     }
   },
 
-  "暖心熊": {
+  "koala": {
     attribute: "🧸 共情",
     cardTitle: "故事编织师",
     activeSkill: {
@@ -125,7 +125,7 @@ export const archetypeSkills = {
     }
   },
 
-  "沉思猫头鹰": {
+  "owl": {
     attribute: "💡 洞察",
     cardTitle: "本质透视者",
     activeSkill: {
@@ -148,7 +148,7 @@ export const archetypeSkills = {
     }
   },
 
-  "织网蛛": {
+  "spider": {
     attribute: "🕸️ 连接",
     cardTitle: "人脉架构师",
     activeSkill: {
@@ -171,7 +171,7 @@ export const archetypeSkills = {
     }
   },
 
-  "淡定海豚": {
+  "dolphin_calm": {
     attribute: "🌊 调和",
     cardTitle: "情绪冲浪手",
     activeSkill: {
@@ -194,7 +194,7 @@ export const archetypeSkills = {
     }
   },
 
-  "夸夸豚": {
+  "hamster_praise": {
     attribute: "✨ 鼓舞",
     cardTitle: "闪光捕手",
     activeSkill: {
@@ -217,7 +217,7 @@ export const archetypeSkills = {
     }
   },
 
-  "太阳鸡": {
+  "rooster": {
     attribute: "☀️ 暖意",
     cardTitle: "小太阳发光体",
     activeSkill: {
@@ -240,7 +240,7 @@ export const archetypeSkills = {
     }
   },
 
-  "定心大象": {
+  "elephant": {
     attribute: "🐘 安定",
     cardTitle: "定心锚点",
     activeSkill: {
@@ -263,7 +263,7 @@ export const archetypeSkills = {
     }
   },
 
-  "稳如龟": {
+  "turtle": {
     attribute: "💎 真知",
     cardTitle: "真知炮台",
     activeSkill: {
@@ -286,7 +286,7 @@ export const archetypeSkills = {
     }
   },
 
-  "灵感章鱼": {
+  "octopus": {
     attribute: "🎨 灵感",
     cardTitle: "脑洞喷泉",
     activeSkill: {
@@ -309,7 +309,7 @@ export const archetypeSkills = {
     }
   },
 
-  "隐身猫": {
+  "cat": {
     attribute: "🌙 陪伴",
     cardTitle: "静默守护者",
     activeSkill: {
@@ -331,7 +331,7 @@ export const archetypeSkills = {
       icon: "🌙"
     }
   }
-} satisfies Record<ArchetypeName, ArchetypeSkillSet>;
+} satisfies Record<ArchetypeId, ArchetypeSkillSet>;
 
 /**
  * Get skill set for a specific archetype
@@ -339,7 +339,7 @@ export const archetypeSkills = {
  * @returns Skill set or undefined if archetype not found
  */
 export function getArchetypeSkills(archetype: string): ArchetypeSkillSet | undefined {
-  return Object.prototype.hasOwnProperty.call(archetypeSkills, archetype) ? archetypeSkills[archetype as ArchetypeName] : undefined;
+  return Object.prototype.hasOwnProperty.call(archetypeSkills, archetype) ? (archetypeSkills as Record<string, ArchetypeSkillSet>)[archetype] : undefined;
 }
 
 /**

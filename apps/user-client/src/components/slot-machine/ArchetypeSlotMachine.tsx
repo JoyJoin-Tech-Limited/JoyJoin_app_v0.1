@@ -189,7 +189,7 @@ function ArchetypeSlotMachineComponent({
   }, [start]);
 
   return (
-    <div className="h-screen overflow-hidden bg-background flex flex-col items-center justify-center p-4 relative">
+    <div className="no-scroll-container bg-background items-center justify-center p-4 relative">
       {/* Screen reader announcements */}
       <div aria-live="polite" role="status" className="sr-only">
         {state !== "landed"

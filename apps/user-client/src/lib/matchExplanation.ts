@@ -27,18 +27,18 @@ const explanationTemplates = {
 
 const archetypeQualities: Record<string, { zh: string, en: string }> = {
   // 12-Archetype Animal Social Vibe System
-  "开心柯基": { zh: "活力破冰", en: "energetic icebreaking" },
-  "太阳鸡": { zh: "温暖正能量", en: "warm positivity" },
-  "夸夸豚": { zh: "积极鼓励", en: "uplifting encouragement" },
-  "机智狐": { zh: "探索新鲜", en: "curious exploration" },
-  "淡定海豚": { zh: "平衡氛围", en: "balanced vibes" },
-  "织网蛛": { zh: "社交连接", en: "social networking" },
-  "暖心熊": { zh: "深度倾听", en: "empathetic listening" },
-  "灵感章鱼": { zh: "创意发散", en: "creative inspiration" },
-  "沉思猫头鹰": { zh: "深刻洞察", en: "thoughtful insight" },
-  "定心大象": { zh: "稳定支持", en: "grounding presence" },
-  "稳如龟": { zh: "深度观察", en: "keen observation" },
-  "隐身猫": { zh: "安静陪伴", en: "gentle presence" },
+  "corgi": { zh: "活力破冰", en: "energetic icebreaking" },
+  "rooster": { zh: "温暖正能量", en: "warm positivity" },
+  "hamster_praise": { zh: "积极鼓励", en: "uplifting encouragement" },
+  "fox": { zh: "探索新鲜", en: "curious exploration" },
+  "dolphin_calm": { zh: "平衡氛围", en: "balanced vibes" },
+  "spider": { zh: "社交连接", en: "social networking" },
+  "koala": { zh: "深度倾听", en: "empathetic listening" },
+  "octopus": { zh: "创意发散", en: "creative inspiration" },
+  "owl": { zh: "深刻洞察", en: "thoughtful insight" },
+  "elephant": { zh: "稳定支持", en: "grounding presence" },
+  "turtle": { zh: "深度观察", en: "keen observation" },
+  "cat": { zh: "安静陪伴", en: "gentle presence" },
 };
 
 function getRandomTemplate(templates: string[]): string {
@@ -102,8 +102,8 @@ export function generateMatchExplanation(attendees: AttendeeData[]): string {
     // Use shared interests template
     template = getRandomTemplate(explanationTemplates.sharedInterests);
     const interestsStr = commonInterests.join("、");
-    const archetype1 = topArchetypes[0] || "暖心熊";
-    const archetype2 = topArchetypes[1] || "开心柯基";
+    const archetype1 = topArchetypes[0] || "koala";
+    const archetype2 = topArchetypes[1] || "corgi";
     const quality1 = archetypeQualities[archetype1]?.zh || "独特视角";
     const quality2 = archetypeQualities[archetype2]?.zh || "活力氛围";
     

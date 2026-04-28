@@ -81,10 +81,10 @@ const categoryLabels = {
 type LocalGamePhase = 'setup' | 'playing' | 'commanding' | 'executing';
 
 const demoPlayers = [
-  { id: 'demo-player-1', name: '小明', archetype: '开心柯基' },
-  { id: 'demo-player-2', name: '小红', archetype: '灵感章鱼' },
-  { id: 'demo-player-3', name: '小刚', archetype: '太阳鸡' },
-  { id: 'demo-player-4', name: '小美', archetype: '暖心熊' },
+  { id: 'demo-player-1', name: '小明', archetype: 'corgi' },
+  { id: 'demo-player-2', name: '小红', archetype: 'octopus' },
+  { id: 'demo-player-3', name: '小刚', archetype: 'rooster' },
+  { id: 'demo-player-4', name: '小美', archetype: 'koala' },
 ];
 
 function MultiDeviceKingGame({
@@ -317,7 +317,7 @@ function MultiDeviceKingGame({
     playerCount: 1 + demoState.simulatedPlayers.length,
     requiredPlayers: participantCount,
     players: [
-      { userId, displayName, isReady: demoState.myIsReady, archetype: '暖心熊' },
+      { userId, displayName, isReady: demoState.myIsReady, archetype: 'koala' },
       ...demoState.simulatedPlayers.map(p => ({ userId: p.id, displayName: p.name, isReady: p.isReady, archetype: p.archetype })),
     ],
     readyCount: (demoState.myIsReady ? 1 : 0) + demoState.simulatedPlayers.filter(p => p.isReady).length,

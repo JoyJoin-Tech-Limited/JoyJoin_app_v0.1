@@ -1,0 +1,1140 @@
+{
+  "generated": "2026-04-27",
+  "_notes": {
+    "screenshots": "Add 'screenshot' field to any screen: 'screenshots/landing.png'. Images are loaded relative to the HTML file.",
+    "test_status": "Change from 'unknown' to 'passed', 'partial', or 'failing' to track test coverage.",
+    "min_role": "For admin screens only: 'viewer', 'operator', or 'super_admin'"
+  },
+  "apps": {
+    "mini-program": {
+      "name": "WeChat Mini Program",
+      "dir": "apps/mini-program",
+      "is_launch_primary": true,
+      "screens": [
+        {
+          "id": "mp-landing",
+          "name": "Landing Page",
+          "route": "/pages/index/index",
+          "file": "pages/index/index.tsx",
+          "description": "App entry — auth check redirect",
+          "feature_domain": "auth",
+          "subfeatures": ["auth-check redirect", "loading screen"],
+          "api_endpoints": ["GET /api/auth/user"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-discover",
+          "name": "Discover Feed",
+          "route": "/pages/discover/index",
+          "file": "pages/discover/index.tsx",
+          "description": "Main discovery feed showing event pools with filtering and registration status",
+          "feature_domain": "discovery",
+          "subfeatures": ["Personalized greeting", "Quick-action cards", "Pool card feed", "Location filter chips", "Pull-to-refresh", "Notifications read on mount"],
+          "api_endpoints": ["GET /api/event-pools", "GET /api/auth/user", "POST /api/notifications/mark-read"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-login",
+          "name": "Login",
+          "route": "/pages/login/index",
+          "file": "pages/login/index.tsx",
+          "description": "WeChat Mini Program login entry point",
+          "feature_domain": "auth",
+          "subfeatures": ["WeChat一键登录", "Xiaoyue mascot with orbs", "Legal consent", "Dev 666666 code"],
+          "api_endpoints": ["POST /api/auth/wechat/*", "POST /api/auth/phone/*"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-events",
+          "name": "My Events (足迹)",
+          "route": "/pages/events/index",
+          "file": "pages/events/index.tsx",
+          "description": "User's joined events split into upcoming/completed tabs",
+          "feature_domain": "events",
+          "subfeatures": ["Tab switcher: upcoming/completed", "Auto-switch if one tab empty", "Event cards", "Empty states"],
+          "api_endpoints": ["GET /api/my-events", "GET /api/events/joined"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-connections",
+          "name": "Connections (连接)",
+          "route": "/pages/connections/index",
+          "file": "pages/connections/index.tsx",
+          "description": "Shows user's social connections made through events",
+          "feature_domain": "social",
+          "subfeatures": ["Connection list", "Peer name/archetype/source event", "Empty state"],
+          "api_endpoints": ["GET /api/my-connections"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-profile",
+          "name": "Profile (我的)",
+          "route": "/pages/profile/index",
+          "file": "pages/profile/index.tsx",
+          "description": "Personal profile and account hub",
+          "feature_domain": "profile",
+          "subfeatures": ["Avatar + archetype head", "Stats display", "Action rows", "Logout", "Payment entry"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-personality-test",
+          "name": "Personality Test",
+          "route": "/pages/onboarding/personality-test/index",
+          "file": "pages/onboarding/personality-test/index.tsx",
+          "description": "V4 adaptive personality assessment (8-16 questions, 12 archetypes)",
+          "feature_domain": "personality",
+          "subfeatures": ["Adaptive questions", "Choice/slider/emoji_tap types", "Progress bar", "Xiaoyue mascot", "Anonymous storage"],
+          "api_endpoints": ["POST /api/assessment/v4/start", "POST /api/assessment/v4/:sessionId/answer", "POST /api/assessment/v4/:sessionId/skip"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-personality-results",
+          "name": "Personality Test Results",
+          "route": "/pages/onboarding/personality-test/results/index",
+          "file": "pages/onboarding/personality-test/results/index.tsx",
+          "description": "Archetype reveal with slot machine animation",
+          "feature_domain": "personality",
+          "subfeatures": ["Slot machine animation", "Archetype card reveal", "Trait breakdown", "Top 3 matches", "Share poster"],
+          "api_endpoints": ["GET /api/assessment/v4/:sessionId/result"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-essential-data",
+          "name": "Essential Profile Data",
+          "route": "/pages/onboarding/essential-data/index",
+          "file": "pages/onboarding/essential-data/index.tsx",
+          "description": "Multi-step essential profile data collection",
+          "feature_domain": "onboarding",
+          "subfeatures": ["5 steps: name, gender+birth, profession, location, social intent", "FormStepper", "Xiaoyue mascot"],
+          "api_endpoints": ["POST /api/profile/setup"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-extended-data",
+          "name": "Extended Profile (Interests)",
+          "route": "/pages/onboarding/extended-data/index",
+          "file": "pages/onboarding/extended-data/index.tsx",
+          "description": "Interest selection with 3-level system",
+          "feature_domain": "onboarding",
+          "subfeatures": ["5 categories", "3-level interest system", "Min 3 max 10", "Footer meter"],
+          "api_endpoints": ["POST /api/user/interests"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-profile-review",
+          "name": "Profile Review",
+          "route": "/pages/onboarding/profile-review/index",
+          "file": "pages/onboarding/profile-review/index.tsx",
+          "description": "Final onboarding review before entering discover",
+          "feature_domain": "onboarding",
+          "subfeatures": ["Archetype display", "Profile card summary", "Interest chips", "Confirm CTA"],
+          "api_endpoints": ["POST /api/auth/complete-onboarding"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-pool-registration",
+          "name": "Pool Registration",
+          "route": "/pages/pool-registration/index",
+          "file": "pages/pool-registration/index.tsx",
+          "description": "Multi-step registration form to join an event pool",
+          "feature_domain": "discovery",
+          "subfeatures": ["4-step form", "Budget/Intent/Details", "AI brief", "Payment handoff", "Stepper UI"],
+          "api_endpoints": ["POST /api/blind-box-events", "POST /api/payments/create"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-blind-box-payment",
+          "name": "Blind Box Payment",
+          "route": "/pages/blind-box-payment/index",
+          "file": "pages/blind-box-payment/index.tsx",
+          "description": "Payment page for membership/event credits",
+          "feature_domain": "payments",
+          "subfeatures": ["Multiple plans", "Coupon selection", "WeChat Pay", "Pending order resume"],
+          "api_endpoints": ["POST /api/payments/create", "POST /api/coupons/validate", "GET /api/subscription/status"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-payment-verification",
+          "name": "Payment Verification",
+          "route": "/pages/payment-verification/index",
+          "file": "pages/payment-verification/index.tsx",
+          "description": "Polls WeChat payment verification status",
+          "feature_domain": "payments",
+          "subfeatures": ["Polling status", "paid/pending/failed states", "Xiaoyue expression per status"],
+          "api_endpoints": ["GET /api/payments/:wechatOrderId/status"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-matching-status",
+          "name": "Matching Status",
+          "route": "/pages/matching-status/index",
+          "file": "pages/matching-status/index.tsx",
+          "description": "Real-time matching progress and results",
+          "feature_domain": "matching",
+          "subfeatures": ["Loading/error/not-found/cancelled/no-match/ready states", "Chemistry cards", "Viewer spotlight", "Cancel registration"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-squad-unboxing",
+          "name": "Squad Unboxing",
+          "route": "/pages/squad-unboxing/index",
+          "file": "pages/squad-unboxing/index.tsx",
+          "description": "Celebratory blind box unboxing revealing matched squad members",
+          "feature_domain": "matching",
+          "subfeatures": ["BlindBoxVisual animation", "Member grid", "4 analysis stages", "AI source hints"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId", "GET /api/blind-box-events/:eventId/match-explanations"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-pool-group-detail",
+          "name": "Pool Group Detail",
+          "route": "/pages/pool-group-detail/index",
+          "file": "pages/pool-group-detail/index.tsx",
+          "description": "Full detail view for a matched group",
+          "feature_domain": "matching",
+          "subfeatures": ["AI analysis card", "Venue info + map", "Member cards", "Poster generation", "Icebreaker CTA"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-event-detail",
+          "name": "Event Detail",
+          "route": "/pages/event-detail/index",
+          "file": "pages/event-detail/index.tsx",
+          "description": "Shows details for a specific confirmed event",
+          "feature_domain": "events",
+          "subfeatures": ["Title/badge/date/time/location", "CSR QR code", "Icebreaker enter CTA", "Feedback CTA"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-event-feedback",
+          "name": "Event Feedback",
+          "route": "/pages/event-feedback/index",
+          "file": "pages/event-feedback/index.tsx",
+          "description": "Multi-step feedback form for completed events",
+          "feature_domain": "events",
+          "subfeatures": ["4 steps: rating, connections, comment, revealed", "Mutual match detection", "WeChat ID sharing"],
+          "api_endpoints": ["POST /api/events/:eventId/feedback", "GET /api/events/:eventId/feedback"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-icebreaker-session",
+          "name": "Social Icebreaker Session",
+          "route": "/pages/icebreaker-session/index",
+          "file": "pages/icebreaker-session/index.tsx",
+          "description": "Multi-phase social icebreaker game for matched event groups",
+          "feature_domain": "icebreaker",
+          "subfeatures": ["7 phases: waiting/warmup/micro_challenge/lie_detective/auction/personality_dice/mini_script", "Host controls", "XiaoyueSessionShell", "Phase state machine"],
+          "api_endpoints": ["POST /api/social-icebreaker/start", "GET /api/social-icebreaker/:id", "POST /api/social-icebreaker/:id/advance"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-edit-profile",
+          "name": "Edit Profile",
+          "route": "/pages/edit-profile/index",
+          "file": "pages/edit-profile/index.tsx",
+          "description": "Edit basic info and interests",
+          "feature_domain": "profile",
+          "subfeatures": ["Nickname/gender/birth/city/hometown", "Interest tag grid"],
+          "api_endpoints": ["POST /api/profile/setup", "POST /api/user/interests"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-rewards",
+          "name": "Rewards (奖励)",
+          "route": "/pages/rewards/index",
+          "file": "pages/rewards/index.tsx",
+          "description": "Gamification & rewards hub with coupons, coins, XP",
+          "feature_domain": "gamification",
+          "subfeatures": ["Stats bar", "Level card + XP", "Coupon list", "Redeemable items", "Transaction history"],
+          "api_endpoints": ["GET /api/user/gamification", "GET /api/user/coupons", "POST /api/user/gamification/redeem"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-invite",
+          "name": "Invite Friends",
+          "route": "/pages/invite/index",
+          "file": "pages/invite/index.tsx",
+          "description": "Referral/invite page with code, stats, reward tiers",
+          "feature_domain": "social",
+          "subfeatures": ["Referral code + copy", "Invite stats", "Share actions", "Reward tiers"],
+          "api_endpoints": ["GET /api/referrals/stats"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-terms",
+          "name": "Terms & Privacy",
+          "route": "/pages/terms/index",
+          "file": "pages/terms/index.tsx",
+          "description": "Legal terms and privacy policy viewer",
+          "feature_domain": "legal",
+          "subfeatures": ["Scroll to privacy section"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-event-coordination",
+          "name": "Event Coordination",
+          "route": "/pages/event-coordination/index",
+          "file": "pages/event-coordination/index.tsx",
+          "description": "Event help/support page (replaced group chat)",
+          "feature_domain": "events",
+          "subfeatures": ["Service QR", "Tips", "Action buttons"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "mp-auth-gate",
+          "name": "Auth Gate",
+          "route": "/pages/onboarding/personality-test/auth-gate/index",
+          "file": "pages/onboarding/personality-test/auth-gate/index.tsx",
+          "description": "Login gate after anonymous personality test",
+          "feature_domain": "auth",
+          "subfeatures": ["Smart login with test import", "Generic WeChat login fallback"],
+          "api_endpoints": ["POST /api/auth/unified-onboarding"],
+          "test_status": "unknown"
+        }
+      ]
+    },
+    "user-client": {
+      "name": "Web User Client",
+      "dir": "apps/user-client",
+      "is_launch_primary": false,
+      "screens": [
+        {
+          "id": "web-landing",
+          "name": "Landing Page V2",
+          "route": "/",
+          "file": "src/pages/LandingPage.tsx",
+          "description": "Duolingo-style marketing splash for unauthenticated visitors",
+          "feature_domain": "auth",
+          "subfeatures": ["3-card stacked hero", "Gradient headline", "Primary CTA to personality test", "Legal footer"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-login",
+          "name": "Login Page",
+          "route": "/login",
+          "file": "src/pages/LoginPage.tsx",
+          "description": "Full marketing/login page with video hero and phone/WeChat login",
+          "feature_domain": "auth",
+          "subfeatures": ["Background video", "Social proof stats", "Phone + WeChat login", "Dev quick-login"],
+          "api_endpoints": ["POST /api/auth/phone/*", "POST /api/auth/wechat/*"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-personality-test",
+          "name": "Personality Test",
+          "route": "/personality-test",
+          "file": "src/features/onboarding/active/pages/PersonalityTestPage.tsx",
+          "description": "Anonymous V4 adaptive assessment (8-16 questions)",
+          "feature_domain": "personality",
+          "subfeatures": ["Adaptive questions", "Choice/slider/emoji_tap", "localStorage persistence", "Pre-signup flow"],
+          "api_endpoints": ["POST /api/assessment/v4/start", "POST /api/assessment/v4/:sessionId/answer"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-auth-gate",
+          "name": "Auth Gate",
+          "route": "/personality-test/auth-gate",
+          "file": "src/features/onboarding/active/pages/WeChatAuthGatePage.tsx",
+          "description": "Auth wall after completing personality test",
+          "feature_domain": "auth",
+          "subfeatures": ["Archetype glow colors", "WeChat login", "Dev bypass"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-personality-results",
+          "name": "Personality Test Results",
+          "route": "/personality-test/results",
+          "file": "src/pages/PersonalityTestResultPage.tsx",
+          "description": "Multi-stage reveal flow with slot machine animation",
+          "feature_domain": "personality",
+          "subfeatures": ["Slot machine", "Unlock overlay", "Full result report", "Analytics"],
+          "api_endpoints": ["GET /api/assessment/v4/:sessionId/result"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-essential-data",
+          "name": "Essential Data Setup",
+          "route": "/onboarding/setup",
+          "file": "src/features/onboarding/active/pages/EssentialDataPage.tsx",
+          "description": "Multi-step essential profile data collection",
+          "feature_domain": "onboarding",
+          "subfeatures": ["Display name, gender, birth, relationship, education, occupation, location, intent", "Sheet-based pickers", "3-tier industry selector"],
+          "api_endpoints": ["POST /api/profile/setup"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-extended-data",
+          "name": "Extended Data (Interests)",
+          "route": "/onboarding/extended",
+          "file": "src/features/onboarding/active/pages/ExtendedDataPage.tsx",
+          "description": "Interest selection via carousel UI",
+          "feature_domain": "onboarding",
+          "subfeatures": ["InterestCarousel", "Save + auto-navigate"],
+          "api_endpoints": ["POST /api/user/interests"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-profile-review",
+          "name": "Profile Review",
+          "route": "/onboarding/review",
+          "file": "src/features/onboarding/active/pages/FinalProfileReviewPage.tsx",
+          "description": "Magical profile reveal with spiral wave animation",
+          "feature_domain": "onboarding",
+          "subfeatures": ["Spiral wave animation", "ProfilePortraitCard", "Limited browse mode"],
+          "api_endpoints": ["POST /api/profile-review/complete"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-discover",
+          "name": "Discover Feed",
+          "route": "/discover",
+          "file": "src/pages/DiscoverPage.tsx",
+          "description": "Main landing after onboarding — event pool listing",
+          "feature_domain": "discovery",
+          "subfeatures": ["HeroWelcome", "JourneyProgressCard", "ProfileEnrichmentCard", "BlindBoxSection", "EventPoolDetailDrawer"],
+          "api_endpoints": ["GET /api/event-pools", "GET /api/auth/user"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-squad-unboxing",
+          "name": "Squad Unboxing Flow",
+          "route": "/squad-unboxing/:groupId",
+          "file": "src/pages/SquadUnboxingFlow.tsx",
+          "description": "Card-deck reveal of matched group members",
+          "feature_domain": "matching",
+          "subfeatures": ["CardDeckReveal flip animation", "Group analysis", "Chemistry predictions", "Accept/reject"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId", "GET /api/blind-box-events/:eventId/match-explanations"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-pool-group-detail",
+          "name": "Pool Group Detail",
+          "route": "/pool-groups/:groupId",
+          "file": "src/pages/PoolGroupDetailPage.tsx",
+          "description": "Post-match group detail page",
+          "feature_domain": "matching",
+          "subfeatures": ["PostMatchEventCard", "ArchetypeOrbit", "Group analysis", "Venue/date details"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-matching-status",
+          "name": "Matching Status",
+          "route": "/pool-matching/:registrationId",
+          "file": "src/pages/MatchingStatusPage.tsx",
+          "description": "Matching progress/waiting page",
+          "feature_domain": "matching",
+          "subfeatures": ["MatchingWaitingScreen", "Countdown timer", "MatchCelebrationOverlay", "NoMatchScreen"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-blind-box-payment",
+          "name": "Blind Box Payment",
+          "route": "/blindbox/payment",
+          "file": "src/pages/BlindBoxPaymentPage.tsx",
+          "description": "Full payment page with plan selection and WeChat Pay",
+          "feature_domain": "payments",
+          "subfeatures": ["3 pricing tabs", "Coupon display", "WeChat Pay QR", "Subscription comparison"],
+          "api_endpoints": ["POST /api/payments/create", "POST /api/coupons/validate", "GET /api/subscription/status"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-payment-confirmation",
+          "name": "Payment Confirmation",
+          "route": "/blindbox/confirmation",
+          "file": "src/pages/BlindBoxConfirmationPage.tsx",
+          "description": "Post-payment verification polling",
+          "feature_domain": "payments",
+          "subfeatures": ["Polling", "Success/error states", "Registration ID resolution"],
+          "api_endpoints": ["GET /api/payments/:wechatOrderId/status"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-event-detail",
+          "name": "Event Detail",
+          "route": "/blind-box-events/:eventId",
+          "file": "src/pages/BlindBoxEventDetailPage.tsx",
+          "description": "Detailed view of a matched event",
+          "feature_domain": "events",
+          "subfeatures": ["3-phase state (mystery/reveal/post-event)", "Countdown", "Venue info", "Icebreaker check-in"],
+          "api_endpoints": ["GET /api/blind-box-events/:eventId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-event-feedback",
+          "name": "Event Feedback Flow",
+          "route": "/events/:eventId/feedback",
+          "file": "src/pages/EventFeedbackFlow.tsx",
+          "description": "Multi-step feedback after an event",
+          "feature_domain": "events",
+          "subfeatures": ["8 steps", "Mutual match detection", "WeChat ID sharing"],
+          "api_endpoints": ["POST /api/events/:eventId/feedback"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-deep-feedback",
+          "name": "Deep Feedback Flow",
+          "route": "/events/:eventId/deep-feedback",
+          "file": "src/pages/DeepFeedbackFlow.tsx",
+          "description": "Extended advanced feedback after an event",
+          "feature_domain": "events",
+          "subfeatures": ["MatchPointValidation", "ConversationDynamics", "MatchingPreferences"],
+          "api_endpoints": ["POST /api/events/:eventId/feedback/deep"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-icebreaker-session",
+          "name": "Social Icebreaker Session",
+          "route": "/icebreaker/:sessionId",
+          "file": "src/pages/IcebreakerSessionPage.tsx",
+          "description": "Primary in-event icebreaker experience",
+          "feature_domain": "icebreaker",
+          "subfeatures": ["SocialIcebreakerOrchestrator", "PhaseTransition", "NumberPlateDisplay", "IcebreakerToolkit"],
+          "api_endpoints": ["POST /api/social-icebreaker/start", "GET /api/social-icebreaker/:id"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-icebreaker-game",
+          "name": "AI Card Icebreaker Game",
+          "route": "/icebreaker-game",
+          "file": "src/pages/IcebreakerGamePage.tsx",
+          "description": "Optional card-based icebreaker deep-dive game",
+          "feature_domain": "icebreaker",
+          "subfeatures": ["IcebreakerCardGame", "AI-generated cards", "Not default experience"],
+          "api_endpoints": ["POST /api/icebreaker/game/generate-cards", "GET /api/icebreaker/game/cards/:sessionId"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-my-events",
+          "name": "My Events",
+          "route": "/events",
+          "file": "src/pages/EventsPage.tsx",
+          "description": "User's registered/matched/completed events",
+          "feature_domain": "events",
+          "subfeatures": ["SlidingTabs", "Multiple card types", "MatchCelebrationOverlay", "WebSocket realtime"],
+          "api_endpoints": ["GET /api/my-events", "GET /api/events/joined"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-connections",
+          "name": "My Connections",
+          "route": "/connections",
+          "file": "src/pages/ConnectionsPage.tsx",
+          "description": "List of connections made through events",
+          "feature_domain": "social",
+          "subfeatures": ["Connection cards", "WeChat ID sharing", "Expandable history"],
+          "api_endpoints": ["GET /api/my-connections"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-event-coordination",
+          "name": "Event Coordination Chat",
+          "route": "/connections/:eventId",
+          "file": "src/pages/EventCoordinationPage.tsx",
+          "description": "Group chat for matched event groups",
+          "feature_domain": "social",
+          "subfeatures": ["WebSocket chat", "Member list", "Report dialog"],
+          "api_endpoints": ["GET /api/events/:eventId/messages", "POST /api/events/:eventId/messages"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-profile",
+          "name": "User Profile",
+          "route": "/profile",
+          "file": "src/pages/ProfilePage.tsx",
+          "description": "Full profile display with archetype card",
+          "feature_domain": "profile",
+          "subfeatures": ["SocialRoleCard", "PersonalityRadarChart", "Profile completion meter", "Mission list"],
+          "api_endpoints": ["GET /api/auth/user"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-rewards",
+          "name": "Rewards Shop",
+          "route": "/rewards",
+          "file": "src/pages/RewardsPage.tsx",
+          "description": "Coin-based reward system",
+          "feature_domain": "gamification",
+          "subfeatures": ["Coin balance", "Redeemable items", "Redemption history"],
+          "api_endpoints": ["GET /api/user/gamification", "GET /api/user/coupons"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-edit-profile",
+          "name": "Profile Edit Hub",
+          "route": "/profile/edit",
+          "file": "src/pages/EditProfilePage.tsx",
+          "description": "Menu of all editable profile sections",
+          "feature_domain": "profile",
+          "subfeatures": ["Profile completion %, section list"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-my-journey",
+          "name": "My Journey Timeline",
+          "route": "/my-journey",
+          "file": "src/pages/MyJourneyPage.tsx",
+          "description": "Timeline view of event history",
+          "feature_domain": "events",
+          "subfeatures": ["Vertical timeline", "Color-coded event nodes"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-invite",
+          "name": "Invite Page",
+          "route": "/invite",
+          "file": "src/pages/InvitePage.tsx",
+          "description": "Referral program page",
+          "feature_domain": "social",
+          "subfeatures": ["Referral code + copy", "Invite stats", "Reward tiers"],
+          "api_endpoints": ["GET /api/referrals/stats"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-invite-landing",
+          "name": "Invite Landing Router",
+          "route": "/invite/:code",
+          "file": "src/pages/InviteLandingRouter.tsx",
+          "description": "Routes invite codes to referral or event landing",
+          "feature_domain": "social",
+          "subfeatures": ["Referral or invitation routing"],
+          "api_endpoints": ["GET /api/referrals/check/:code"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-terms",
+          "name": "Terms & Privacy",
+          "route": "/terms",
+          "file": "src/pages/TermsPage.tsx",
+          "description": "Legal document viewer",
+          "feature_domain": "legal",
+          "subfeatures": ["Icon-per-section layout"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-faq",
+          "name": "FAQ",
+          "route": "/profile/faq",
+          "file": "src/pages/FAQPage.tsx",
+          "description": "Frequently asked questions",
+          "feature_domain": "legal",
+          "subfeatures": ["Collapsible FAQ", "Categorized sections"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-wallet",
+          "name": "Wallet / Coupons",
+          "route": "/profile/wallet",
+          "file": "src/pages/WalletPage.tsx",
+          "description": "User's coupons and tickets",
+          "feature_domain": "gamification",
+          "subfeatures": ["Tabbed coupon list", "Coupon types"],
+          "api_endpoints": ["GET /api/user/coupons"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "web-community-join",
+          "name": "Join Community",
+          "route": "/community/join",
+          "file": "src/pages/CommunityJoinPage.tsx",
+          "description": "WeChat group QR and community info",
+          "feature_domain": "social",
+          "subfeatures": ["WeChat QR", "Feature highlights"],
+          "api_endpoints": [],
+          "test_status": "unknown"
+        }
+      ]
+    },
+    "admin-client": {
+      "name": "Admin Portal",
+      "dir": "apps/admin-client",
+      "is_launch_primary": false,
+      "screens": [
+        {
+          "id": "admin-login",
+          "name": "Admin Login",
+          "route": "/admin/login",
+          "file": "src/pages/admin/AdminLoginPage.tsx",
+          "description": "Admin-specific login with username/password",
+          "feature_domain": "auth",
+          "subfeatures": ["Username/password form", "Shield-branded UI"],
+          "api_endpoints": ["POST /api/auth/admin-login"],
+          "test_status": "unknown"
+        },
+        {
+          "id": "admin-dashboard",
+          "name": "Dashboard",
+          "route": "/admin/dashboard",
+          "file": "src/pages/admin/AdminDashboard.tsx",
+          "description": "Central dashboard with core business metrics",
+          "feature_domain": "admin",
+          "subfeatures": ["6 stat cards", "Today's alerts", "Today's events", "Ops health scorecard", "Personality distribution", "City distribution", "Semantic matching metrics", "Gamification stats"],
+          "api_endpoints": ["GET /api/admin/stats", "GET /api/admin/ops-dashboard"],
+          "test_status": "unknown",
+          "min_role": "viewer"
+        },
+        {
+          "id": "admin-users",
+          "name": "User Management",
+          "route": "/admin/users",
+          "file": "src/pages/admin/AdminUsersPage.tsx",
+          "description": "Full user management with search, filter, profile views",
+          "feature_domain": "admin",
+          "subfeatures": ["User table", "Search/filter", "Profile completeness", "Detail sheet", "Ban/unban", "Export"],
+          "api_endpoints": ["GET /api/admin/users", "GET /api/admin/users/:id", "PATCH /api/admin/users/:id/ban"],
+          "test_status": "unknown",
+          "min_role": "viewer"
+        },
+        {
+          "id": "admin-event-pools",
+          "name": "Event Pools Management",
+          "route": "/admin/event-pools",
+          "file": "src/pages/admin/AdminEventPoolsPage.tsx",
+          "description": "Manage blind-box event pools",
+          "feature_domain": "admin",
+          "subfeatures": ["CRUD pools", "Link venue slots", "Set parameters", "View registrations", "Trigger matching"],
+          "api_endpoints": ["GET /api/admin/event-pools", "POST /api/admin/event-pools", "PATCH /api/admin/event-pools/:id", "POST /api/admin/event-pools/:id/match"],
+          "test_status": "unknown",
+          "min_role": "viewer"
+        },
+        {
+          "id": "admin-venues",
+          "name": "Venue Management",
+          "route": "/admin/venues",
+          "file": "src/pages/admin/AdminVenuesPage.tsx",
+          "description": "Manage physical venues and availability",
+          "feature_domain": "admin",
+          "subfeatures": ["CRUD venues", "AMap integration", "Time slots", "Clusters/districts", "Deals"],
+          "api_endpoints": ["GET /api/admin/venues", "POST /api/admin/venues", "PATCH /api/admin/venues/:id", "GET /api/admin/venues/:venueId/time-slots"],
+          "test_status": "unknown",
+          "min_role": "viewer"
+        },
+        {
+          "id": "admin-matching-lab",
+          "name": "Matching Lab",
+          "route": "/admin/matching",
+          "file": "src/pages/admin/AdminMatchingLabPage.tsx",
+          "description": "Interactive matching algorithm testing lab",
+          "feature_domain": "admin",
+          "subfeatures": ["Test-match users", "Weight sliders", "Scoring breakdown", "Manual simulation"],
+          "api_endpoints": ["GET /api/admin/matching/chemistry-calibration"],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-matching-config",
+          "name": "Matching Config",
+          "route": "/admin/matching-config",
+          "file": "src/pages/admin/AdminMatchingConfigPage.tsx",
+          "description": "Configure global matching algorithm parameters",
+          "feature_domain": "admin",
+          "subfeatures": ["Threshold settings", "Time decay", "Group size", "Scan interval", "Experimental reranking"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-matching-logs",
+          "name": "Matching Logs",
+          "route": "/admin/matching-logs",
+          "file": "src/pages/admin/AdminMatchingLogsPage.tsx",
+          "description": "History of matching algorithm runs",
+          "feature_domain": "admin",
+          "subfeatures": ["Filter by scan type/decision", "Temperature scores", "Pool context"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-feedback",
+          "name": "Feedback Management",
+          "route": "/admin/feedback",
+          "file": "src/pages/admin/AdminFeedbackPage.tsx",
+          "description": "View and analyze post-event feedback",
+          "feature_domain": "admin",
+          "subfeatures": ["Aggregated stats", "Radar charts", "Connection breakdown", "Drill-down records"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "operator"
+        },
+        {
+          "id": "admin-moderation",
+          "name": "Moderation",
+          "route": "/admin/moderation",
+          "file": "src/pages/admin/AdminModerationPage.tsx",
+          "description": "User reports and content moderation",
+          "feature_domain": "admin",
+          "subfeatures": ["Report queue", "Detail dialog", "Actions: dismiss/warn/ban", "Moderation stats"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "operator"
+        },
+        {
+          "id": "admin-interaction-logs",
+          "name": "Interaction Logs",
+          "route": "/admin/interaction-logs",
+          "file": "src/pages/admin/AdminInteractionLogsPage.tsx",
+          "description": "System interaction/event logs",
+          "feature_domain": "admin",
+          "subfeatures": ["Filter by event/user/severity/date", "Log detail modal", "Severity distribution"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-insights",
+          "name": "Data Insights",
+          "route": "/admin/insights",
+          "file": "src/pages/admin/AdminDataInsightsPage.tsx",
+          "description": "Business intelligence dashboards with Recharts",
+          "feature_domain": "admin",
+          "subfeatures": ["User growth trend", "Event trends", "Personality distribution pie", "Matching efficiency", "Retention analysis", "Funnel analysis"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-outcome-analytics",
+          "name": "Outcome Analytics",
+          "route": "/admin/outcome-analytics",
+          "file": "src/pages/admin/AdminOutcomeAnalyticsPage.tsx",
+          "description": "Event outcome metrics tracking",
+          "feature_domain": "admin",
+          "subfeatures": ["Readiness scores", "Cohort breakdown", "Target vs actual", "CSV export"],
+          "api_endpoints": ["GET /api/admin/outcome-analytics"],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-icebreaker-ai-feedback",
+          "name": "Icebreaker AI Feedback",
+          "route": "/admin/icebreaker-ai-feedback",
+          "file": "src/pages/admin/AdminIcebreakerAiFeedbackPage.tsx",
+          "description": "Monitor AI-generated icebreaker feedback quality",
+          "feature_domain": "admin",
+          "subfeatures": ["Feedback summary by day", "Phase-level breakdown", "Prompt version comparison", "Active sessions"],
+          "api_endpoints": ["GET /api/admin/icebreaker-ai-feedback/summary"],
+          "test_status": "unknown",
+          "min_role": "operator"
+        },
+        {
+          "id": "admin-content",
+          "name": "Content Management",
+          "route": "/admin/content",
+          "file": "src/pages/admin/AdminContentPage.tsx",
+          "description": "Manage platform content (announcements, FAQs, guidelines)",
+          "feature_domain": "admin",
+          "subfeatures": ["Tabbed content types", "Rich text editing", "Publish with notification"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-notifications",
+          "name": "Notification Push",
+          "route": "/admin/notifications",
+          "file": "src/pages/admin/AdminNotificationsPage.tsx",
+          "description": "Compose and send push notifications",
+          "feature_domain": "admin",
+          "subfeatures": ["Category/type selection", "All users or specific recipients", "History with read counts"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-events",
+          "name": "Event Management",
+          "route": "/admin/events",
+          "file": "src/pages/admin/AdminEventsPage.tsx",
+          "description": "Manage individual events",
+          "feature_domain": "admin",
+          "subfeatures": ["CRUD events", "Registration management", "Check-in management"],
+          "api_endpoints": ["GET /api/admin/events", "POST /api/admin/blind-box-events", "PATCH /api/admin/events/:id"],
+          "test_status": "unknown",
+          "min_role": "operator"
+        },
+        {
+          "id": "admin-subscriptions",
+          "name": "Subscription Management",
+          "route": "/admin/subscriptions",
+          "file": "src/pages/admin/AdminSubscriptionsPage.tsx",
+          "description": "Manage user subscriptions",
+          "feature_domain": "admin",
+          "subfeatures": ["Subscription list", "Create for user", "Status display"],
+          "api_endpoints": ["GET /api/admin/subscriptions", "POST /api/admin/subscriptions"],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-pricing",
+          "name": "Pricing Configuration",
+          "route": "/admin/pricing",
+          "file": "src/pages/admin/AdminPricingPage.tsx",
+          "description": "Configure subscription pricing plans",
+          "feature_domain": "admin",
+          "subfeatures": ["CRUD plans", "Active/featured toggles", "Sort order"],
+          "api_endpoints": ["GET /api/admin/pricing", "PATCH /api/admin/pricing/:id"],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-coupons",
+          "name": "Coupon Management",
+          "route": "/admin/coupons",
+          "file": "src/pages/admin/AdminCouponsPage.tsx",
+          "description": "Create and manage discount coupons",
+          "feature_domain": "admin",
+          "subfeatures": ["CRUD coupons", "Percentage/fixed discounts", "Usage tracking"],
+          "api_endpoints": ["GET /api/admin/coupons", "POST /api/admin/coupons", "PATCH /api/admin/coupons/:id"],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-finance",
+          "name": "Finance Overview",
+          "route": "/admin/finance",
+          "file": "src/pages/admin/AdminFinancePage.tsx",
+          "description": "Financial overview and transaction management",
+          "feature_domain": "admin",
+          "subfeatures": ["Revenue summary", "Payment transactions", "Refund processing", "Venue commissions"],
+          "api_endpoints": ["GET /api/admin/payments", "POST /api/admin/payments/:paymentId/refund"],
+          "test_status": "unknown",
+          "min_role": "operator"
+        },
+        {
+          "id": "admin-reports",
+          "name": "Report Management",
+          "route": "/admin/reports",
+          "file": "src/pages/admin/AdminReportsPage.tsx",
+          "description": "Handle chat message reports",
+          "feature_domain": "admin",
+          "subfeatures": ["Report queue", "Detail with message preview", "Actions: warn/ban/delete"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "operator"
+        },
+        {
+          "id": "admin-evolution",
+          "name": "Xiaoyue Evolution",
+          "route": "/admin/evolution",
+          "file": "src/pages/admin/AdminEvolutionPage.tsx",
+          "description": "AI/LLM behavioral tuning hub",
+          "feature_domain": "admin",
+          "subfeatures": ["Weights management", "Trigger monitoring", "Dialogue analysis", "AB testing"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-accounts",
+          "name": "Admin Accounts",
+          "route": "/admin/accounts",
+          "file": "src/pages/admin/AdminAccountsPage.tsx",
+          "description": "Manage admin user accounts",
+          "feature_domain": "admin",
+          "subfeatures": ["Admin table", "Create admin", "Role selection", "Activate/deactivate"],
+          "api_endpoints": [],
+          "test_status": "unknown",
+          "min_role": "super_admin"
+        },
+        {
+          "id": "admin-templates",
+          "name": "Event Templates",
+          "route": "/admin/templates",
+          "file": "src/pages/admin/AdminEventTemplatesPage.tsx",
+          "description": "Manage reusable event templates",
+          "feature_domain": "admin",
+          "subfeatures": ["CRUD templates", "Form with event params", "Active/inactive toggle"],
+          "api_endpoints": ["GET /api/admin/event-templates", "POST /api/admin/event-templates", "PATCH /api/admin/event-templates/:id"],
+          "test_status": "unknown",
+          "min_role": "operator"
+        }
+      ]
+    }
+  },
+  "api_domains": {
+    "auth": {
+      "name": "Authentication",
+      "endpoints": [
+        {"method": "POST", "path": "/api/auth/wechat/*", "description": "WeChat OAuth login", "access": "public"},
+        {"method": "POST", "path": "/api/auth/phone/*", "description": "Phone verification login", "access": "public"},
+        {"method": "POST", "path": "/api/auth/admin-login", "description": "Admin username/password login", "access": "public"},
+        {"method": "POST", "path": "/api/auth/quick-login", "description": "Simplified phone login (MVP)", "access": "public"},
+        {"method": "POST", "path": "/api/auth/presignup-cache", "description": "Cache assessment answers before signup", "access": "public"},
+        {"method": "POST", "path": "/api/auth/unified-onboarding", "description": "One-shot auth + profile + assessment", "access": "user"},
+        {"method": "GET", "path": "/api/auth/user", "description": "Get current user with nextStep", "access": "user"},
+        {"method": "POST", "path": "/api/auth/logout", "description": "Destroy session", "access": "user"}
+      ]
+    },
+    "personality": {
+      "name": "Personality Assessment",
+      "endpoints": [
+        {"method": "POST", "path": "/api/assessment/v4/start", "description": "Start/resume V4 adaptive session", "access": "public"},
+        {"method": "POST", "path": "/api/assessment/v4/:sessionId/answer", "description": "Submit answer, get next question", "access": "public"},
+        {"method": "POST", "path": "/api/assessment/v4/:sessionId/skip", "description": "Skip a question", "access": "public"},
+        {"method": "GET", "path": "/api/assessment/v4/:sessionId/result", "description": "Get completed assessment result", "access": "public"},
+        {"method": "POST", "path": "/api/assessment/v4/:sessionId/link-user", "description": "Link anonymous session to user", "access": "user"}
+      ]
+    },
+    "onboarding": {
+      "name": "Onboarding",
+      "endpoints": [
+        {"method": "POST", "path": "/api/profile/setup", "description": "Set initial essential profile data", "access": "user"},
+        {"method": "POST", "path": "/api/user/interests", "description": "Submit interest selections", "access": "user"},
+        {"method": "POST", "path": "/api/onboarding/checkpoint", "description": "Save onboarding step checkpoint", "access": "user"},
+        {"method": "POST", "path": "/api/profile-review/complete", "description": "Mark profile review complete", "access": "user"},
+        {"method": "POST", "path": "/api/auth/complete-onboarding", "description": "Complete onboarding flow", "access": "user"}
+      ]
+    },
+    "profile": {
+      "name": "Profile & User Settings",
+      "endpoints": [
+        {"method": "PATCH", "path": "/api/profile", "description": "Update full profile", "access": "user"},
+        {"method": "GET", "path": "/api/user/interests", "description": "Get user interest selections", "access": "user"},
+        {"method": "POST", "path": "/api/profile/update-industry", "description": "Update 3-tier industry", "access": "user"}
+      ]
+    },
+    "discovery": {
+      "name": "Event Pool Discovery",
+      "endpoints": [
+        {"method": "GET", "path": "/api/event-pools", "description": "List active event pools", "access": "user"},
+        {"method": "GET", "path": "/api/event-pools/:poolId/stats", "description": "Pool stats (registrations, archetype breakdown)", "access": "public"},
+        {"method": "POST", "path": "/api/blind-box-events", "description": "Create registration (join pool)", "access": "user"},
+        {"method": "GET", "path": "/api/banners", "description": "Active promotion banners", "access": "public"}
+      ]
+    },
+    "events": {
+      "name": "Events",
+      "endpoints": [
+        {"method": "GET", "path": "/api/my-events", "description": "Get user's events", "access": "user"},
+        {"method": "GET", "path": "/api/events/joined", "description": "Get joined events", "access": "user"},
+        {"method": "GET", "path": "/api/blind-box-events/:eventId", "description": "Get event details", "access": "user"},
+        {"method": "PATCH", "path": "/api/blind-box-events/:eventId", "description": "Update event preferences", "access": "user"},
+        {"method": "POST", "path": "/api/blind-box-events/:eventId/cancel", "description": "Cancel registration", "access": "user"}
+      ]
+    },
+    "feedback": {
+      "name": "Event Feedback",
+      "endpoints": [
+        {"method": "POST", "path": "/api/events/:eventId/feedback", "description": "Submit feedback", "access": "user"},
+        {"method": "GET", "path": "/api/events/:eventId/feedback", "description": "Get event feedback", "access": "user"},
+        {"method": "POST", "path": "/api/events/:eventId/feedback/deep", "description": "Submit deep feedback", "access": "user"},
+        {"method": "POST", "path": "/api/event-pools/:poolId/group-outcome", "description": "Submit group outcome", "access": "user"}
+      ]
+    },
+    "matching": {
+      "name": "Matching",
+      "endpoints": [
+        {"method": "GET", "path": "/api/blind-box-events/:eventId/match-explanations", "description": "AI match explanations", "access": "user"},
+        {"method": "POST", "path": "/api/admin/events/:id/match", "description": "Manual match trigger", "access": "admin"},
+        {"method": "POST", "path": "/api/admin/event-pools/:id/match", "description": "Trigger pool matching", "access": "admin"}
+      ]
+    },
+    "social": {
+      "name": "Connections & Social",
+      "endpoints": [
+        {"method": "GET", "path": "/api/my-connections", "description": "Get mutual connections", "access": "user"},
+        {"method": "PATCH", "path": "/api/connections/:connectionId/feedback", "description": "Update connection enrichment", "access": "user"}
+      ]
+    },
+    "icebreaker": {
+      "name": "Social Icebreaker",
+      "endpoints": [
+        {"method": "POST", "path": "/api/social-icebreaker/start", "description": "Start/join icebreaker session", "access": "user"},
+        {"method": "GET", "path": "/api/social-icebreaker/:socialSessionId", "description": "Get session state", "access": "user"},
+        {"method": "POST", "path": "/api/social-icebreaker/:socialSessionId/advance", "description": "Advance to next phase", "access": "user"},
+        {"method": "POST", "path": "/api/social-icebreaker/:socialSessionId/warmup/ready", "description": "Mark warmup ready", "access": "user"},
+        {"method": "POST", "path": "/api/social-icebreaker/:socialSessionId/lie-detective/vote", "description": "Vote in lie detective", "access": "user"},
+        {"method": "POST", "path": "/api/social-icebreaker/:socialSessionId/auction/bid", "description": "Place auction bid", "access": "user"},
+        {"method": "GET", "path": "/api/social-icebreaker/:socialSessionId/recap", "description": "Get session recap", "access": "user"}
+      ]
+    },
+    "payments": {
+      "name": "Payments & Subscriptions",
+      "endpoints": [
+        {"method": "GET", "path": "/api/subscription/status", "description": "Get subscription status", "access": "user"},
+        {"method": "POST", "path": "/api/payments/create", "description": "Create payment", "access": "user"},
+        {"method": "POST", "path": "/api/coupons/validate", "description": "Validate coupon code", "access": "user"},
+        {"method": "GET", "path": "/api/payments/:wechatOrderId/status", "description": "Check payment status", "access": "user"},
+        {"method": "POST", "path": "/api/webhooks/wechat-pay", "description": "WeChat Pay webhook handler", "access": "public"}
+      ]
+    },
+    "gamification": {
+      "name": "Gamification & Rewards",
+      "endpoints": [
+        {"method": "GET", "path": "/api/user/gamification", "description": "Get gamification info", "access": "user"},
+        {"method": "GET", "path": "/api/user/coupons", "description": "Get user's coupons", "access": "user"},
+        {"method": "POST", "path": "/api/user/gamification/redeem", "description": "Redeem coins for items", "access": "user"},
+        {"method": "GET", "path": "/api/user/gamification/redeemable-items", "description": "List redeemable shop items", "access": "user"},
+        {"method": "GET", "path": "/api/user/gamification/history", "description": "Get transaction history", "access": "user"}
+      ]
+    },
+    "referrals": {
+      "name": "Referrals & Invitations",
+      "endpoints": [
+        {"method": "GET", "path": "/api/referrals/stats", "description": "Get referral stats", "access": "user"},
+        {"method": "GET", "path": "/api/referrals/check/:code", "description": "Check if referral code exists", "access": "public"},
+        {"method": "GET", "path": "/api/referrals/:code", "description": "Get referral info for landing", "access": "public"},
+        {"method": "GET", "path": "/api/invitations/:code", "description": "Get invitation details", "access": "public"}
+      ]
+    },
+    "admin_core": {
+      "name": "Admin Core Dashboard",
+      "endpoints": [
+        {"method": "GET", "path": "/api/admin/stats", "description": "Full dashboard stats", "access": "admin"},
+        {"method": "GET", "path": "/api/admin/ops-dashboard", "description": "Operational dashboard", "access": "admin"}
+      ]
+    },
+    "admin_users": {
+      "name": "Admin User Management",
+      "endpoints": [
+        {"method": "GET", "path": "/api/admin/users", "description": "List users with filters", "access": "admin"},
+        {"method": "GET", "path": "/api/admin/users/:id", "description": "Get user details", "access": "admin"},
+        {"method": "PATCH", "path": "/api/admin/users/:id/ban", "description": "Ban user", "access": "admin"},
+        {"method": "PATCH", "path": "/api/admin/users/:id/unban", "description": "Unban user", "access": "admin"}
+      ]
+    },
+    "admin_events": {
+      "name": "Admin Event Management",
+      "endpoints": [
+        {"method": "GET", "path": "/api/admin/event-pools", "description": "List all pools", "access": "admin"},
+        {"method": "POST", "path": "/api/admin/event-pools", "description": "Create event pool", "access": "admin"},
+        {"method": "PATCH", "path": "/api/admin/event-pools/:id", "description": "Update pool", "access": "admin"},
+        {"method": "GET", "path": "/api/admin/event-pools/:id/registrations", "description": "List pool registrations", "access": "admin"},
+        {"method": "GET", "path": "/api/admin/events", "description": "List all events", "access": "admin"},
+        {"method": "POST", "path": "/api/admin/blind-box-events", "description": "Create blind box event", "access": "admin"}
+      ]
+    },
+    "admin_finance": {
+      "name": "Admin Finance & Coupons",
+      "endpoints": [
+        {"method": "GET", "path": "/api/admin/payments", "description": "List payments", "access": "admin"},
+        {"method": "POST", "path": "/api/admin/payments/:paymentId/refund", "description": "Initiate refund", "access": "admin"},
+        {"method": "GET", "path": "/api/admin/coupons", "description": "List coupons", "access": "admin"},
+        {"method": "POST", "path": "/api/admin/subscriptions", "description": "Create subscription", "access": "admin"}
+      ]
+    },
+    "health": {
+      "name": "Health & Metrics",
+      "endpoints": [
+        {"method": "GET", "path": "/api/health", "description": "Basic health check", "access": "public"},
+        {"method": "GET", "path": "/api/readyz", "description": "Readiness probe", "access": "public"},
+        {"method": "GET", "path": "/api/metrics", "description": "Prometheus metrics", "access": "internal"},
+        {"method": "GET", "path": "/api/public/stats", "description": "Public platform stats", "access": "public"}
+      ]
+    }
+  }
+}

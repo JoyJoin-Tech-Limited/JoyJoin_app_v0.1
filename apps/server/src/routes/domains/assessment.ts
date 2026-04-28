@@ -6,6 +6,7 @@ import { processTestV2, type AnswerV2 } from "../../personalityMatchingV2";
 import { isNotNull } from "drizzle-orm";
 import { registerUserSchema, users } from "@shared/schema";
 import type { ArchetypeName } from "../../archetypeConfig";
+import { logger } from "../../lib/logger";
 
 type Traits = {
   affinity: number;
@@ -17,18 +18,18 @@ type Traits = {
 };
 
 const roleTraits: Record<ArchetypeName, Traits> = {
-  "开心柯基": { affinity: 8, openness: 8, conscientiousness: 5, emotionalStability: 7, extraversion: 10, positivity: 10 },
-  "太阳鸡": { affinity: 9, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 7, positivity: 9 },
-  "夸夸豚": { affinity: 10, openness: 8, conscientiousness: 7, emotionalStability: 8, extraversion: 9, positivity: 10 },
-  "机智狐": { affinity: 7, openness: 10, conscientiousness: 6, emotionalStability: 8, extraversion: 8, positivity: 8 },
-  "淡定海豚": { affinity: 8, openness: 9, conscientiousness: 9, emotionalStability: 10, extraversion: 6, positivity: 8 },
-  "织网蛛": { affinity: 9, openness: 8, conscientiousness: 8, emotionalStability: 8, extraversion: 7, positivity: 7 },
-  "暖心熊": { affinity: 10, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 6, positivity: 9 },
-  "灵感章鱼": { affinity: 7, openness: 10, conscientiousness: 5, emotionalStability: 8, extraversion: 8, positivity: 8 },
-  "沉思猫头鹰": { affinity: 6, openness: 9, conscientiousness: 10, emotionalStability: 9, extraversion: 5, positivity: 7 },
-  "定心大象": { affinity: 8, openness: 7, conscientiousness: 10, emotionalStability: 10, extraversion: 6, positivity: 7 },
-  "稳如龟": { affinity: 7, openness: 8, conscientiousness: 9, emotionalStability: 9, extraversion: 4, positivity: 6 },
-  "隐身猫": { affinity: 6, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 4, positivity: 7 },
+  "corgi": { affinity: 8, openness: 8, conscientiousness: 5, emotionalStability: 7, extraversion: 10, positivity: 10 },
+  "rooster": { affinity: 9, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 7, positivity: 9 },
+  "hamster_praise": { affinity: 10, openness: 8, conscientiousness: 7, emotionalStability: 8, extraversion: 9, positivity: 10 },
+  "fox": { affinity: 7, openness: 10, conscientiousness: 6, emotionalStability: 8, extraversion: 8, positivity: 8 },
+  "dolphin_calm": { affinity: 8, openness: 9, conscientiousness: 9, emotionalStability: 10, extraversion: 6, positivity: 8 },
+  "spider": { affinity: 9, openness: 8, conscientiousness: 8, emotionalStability: 8, extraversion: 7, positivity: 7 },
+  "koala": { affinity: 10, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 6, positivity: 9 },
+  "octopus": { affinity: 7, openness: 10, conscientiousness: 5, emotionalStability: 8, extraversion: 8, positivity: 8 },
+  "owl": { affinity: 6, openness: 9, conscientiousness: 10, emotionalStability: 9, extraversion: 5, positivity: 7 },
+  "elephant": { affinity: 8, openness: 7, conscientiousness: 10, emotionalStability: 10, extraversion: 6, positivity: 7 },
+  "turtle": { affinity: 7, openness: 8, conscientiousness: 9, emotionalStability: 9, extraversion: 4, positivity: 6 },
+  "cat": { affinity: 6, openness: 7, conscientiousness: 8, emotionalStability: 9, extraversion: 4, positivity: 7 },
 };
 
 type Insights = {
@@ -38,118 +39,118 @@ type Insights = {
 };
 
 const roleInsights: Record<ArchetypeName, Insights> = {
-  "开心柯基": {
+  "corgi": {
     strengths: "活力四射，擅长快速破冰",
     challenges: "有时过于热情，可能忽略细节",
-    idealFriendTypes: ["暖心熊", "夸夸豚", "淡定海豚"],
+    idealFriendTypes: ["koala", "hamster_praise", "dolphin_calm"],
   },
-  "太阳鸡": {
+  "rooster": {
     strengths: "稳定温暖，给人安全感",
     challenges: "可能过于求稳，缺乏冒险精神",
-    idealFriendTypes: ["开心柯基", "定心大象", "淡定海豚"],
+    idealFriendTypes: ["corgi", "elephant", "dolphin_calm"],
   },
-  "夸夸豚": {
+  "hamster_praise": {
     strengths: "正向反馈专家，情绪价值满分",
     challenges: "可能过于迎合，表达过于单一",
-    idealFriendTypes: ["暖心熊", "开心柯基", "织网蛛"],
+    idealFriendTypes: ["koala", "corgi", "spider"],
   },
-  "机智狐": {
+  "fox": {
     strengths: "点子多，擅长发现新奇事物",
     challenges: "注意力容易分散，缺乏耐心",
-    idealFriendTypes: ["灵感章鱼", "织网蛛", "淡定海豚"],
+    idealFriendTypes: ["octopus", "spider", "dolphin_calm"],
   },
-  "淡定海豚": {
+  "dolphin_calm": {
     strengths: "情绪稳定，擅长调节气氛",
     challenges: "有时显得过于佛系，缺乏主见",
-    idealFriendTypes: ["定心大象", "太阳鸡", "织网蛛"],
+    idealFriendTypes: ["elephant", "rooster", "spider"],
   },
-  "织网蛛": {
+  "spider": {
     strengths: "连接者，能发现他人共同点",
     challenges: "可能过于关注关系网，忽略个人深度",
-    idealFriendTypes: ["机智狐", "淡定海豚", "暖心熊"],
+    idealFriendTypes: ["fox", "dolphin_calm", "koala"],
   },
-  "暖心熊": {
+  "koala": {
     strengths: "极佳的倾听者，共情力极强",
     challenges: "容易吸纳负面情绪，需要空间充电",
-    idealFriendTypes: ["沉思猫头鹰", "夸夸豚", "开心柯基"],
+    idealFriendTypes: ["owl", "hamster_praise", "corgi"],
   },
-  "灵感章鱼": {
+  "octopus": {
     strengths: "创意无限，思维跳跃广阔",
     challenges: "想法太多难以落地，可能让人跟不上",
-    idealFriendTypes: ["机智狐", "沉思猫头鹰", "稳如龟"],
+    idealFriendTypes: ["fox", "owl", "turtle"],
   },
-  "沉思猫头鹰": {
+  "owl": {
     strengths: "逻辑严密，提供深度洞察",
     challenges: "显得过于严肃，不擅长闲聊",
-    idealFriendTypes: ["稳如龟", "暖心熊", "定心大象"],
+    idealFriendTypes: ["turtle", "koala", "elephant"],
   },
-  "定心大象": {
+  "elephant": {
     strengths: "稳重可靠，是团队的定心丸",
     challenges: "节奏较慢，对变化反应略显迟钝",
-    idealFriendTypes: ["太阳鸡", "淡定海豚", "沉思猫头鹰"],
+    idealFriendTypes: ["rooster", "dolphin_calm", "owl"],
   },
-  "稳如龟": {
+  "turtle": {
     strengths: "看问题透彻，提供长远见解",
     challenges: "慢热，融入新群体需要时间",
-    idealFriendTypes: ["沉思猫头鹰", "定心大象", "隐身猫"],
+    idealFriendTypes: ["owl", "elephant", "cat"],
   },
-  "隐身猫": {
+  "cat": {
     strengths: "安静观察者，提供舒适陪伴",
     challenges: "存在感弱，不擅长主动发起社交",
-    idealFriendTypes: ["稳如龟", "定心大象", "暖心熊"],
+    idealFriendTypes: ["turtle", "elephant", "koala"],
   },
 };
 
 const roleMapping: Record<string, Record<string, string>> = {
-  "1": { "A": "开心柯基", "B": "淡定海豚", "C": "隐身猫", "D": "织网蛛" },
-  "2": { "A": "机智狐", "B": "夸夸豚", "C": "暖心熊", "D": "沉思猫头鹰" },
-  "3": { "A": "暖心熊", "B": "太阳鸡", "C": "隐身猫", "D": "淡定海豚" },
-  "4": { "A": "灵感章鱼", "B": "沉思猫头鹰", "C": "织网蛛", "D": "定心大象" },
-  "5": { "A": "开心柯基", "B": "淡定海豚", "C": "稳如龟", "D": "灵感章鱼" },
-  "6": { "A": "稳如龟", "B": "夸夸豚", "C": "暖心熊", "D": "定心大象" },
-  "7": { "A": "开心柯基", "B": "太阳鸡", "C": "机智狐", "D": "隐身猫" },
-  "8": { "A": "夸夸豚", "B": "沉思猫头鹰", "C": "织网蛛", "D": "稳如龟" },
-  "9": { "A": "开心柯基", "B": "太阳鸡", "C": "定心大象", "D": "隐身猫" },
-  "10": { "A": "太阳鸡", "B": "机智狐", "C": "灵感章鱼", "D": "定心大象" },
+  "1": { "A": "corgi", "B": "dolphin_calm", "C": "cat", "D": "spider" },
+  "2": { "A": "fox", "B": "hamster_praise", "C": "koala", "D": "owl" },
+  "3": { "A": "koala", "B": "rooster", "C": "cat", "D": "dolphin_calm" },
+  "4": { "A": "octopus", "B": "owl", "C": "spider", "D": "elephant" },
+  "5": { "A": "corgi", "B": "dolphin_calm", "C": "turtle", "D": "octopus" },
+  "6": { "A": "turtle", "B": "hamster_praise", "C": "koala", "D": "elephant" },
+  "7": { "A": "corgi", "B": "rooster", "C": "fox", "D": "cat" },
+  "8": { "A": "hamster_praise", "B": "owl", "C": "spider", "D": "turtle" },
+  "9": { "A": "corgi", "B": "rooster", "C": "elephant", "D": "cat" },
+  "10": { "A": "rooster", "B": "fox", "C": "octopus", "D": "elephant" },
 };
 
 const supplementaryRoleMapping: Record<string, Record<string, string>> = {
-  "101": { "A": "开心柯基", "B": "太阳鸡" },
-  "102": { "A": "开心柯基", "B": "太阳鸡" },
-  "103": { "A": "淡定海豚", "B": "织网蛛" },
-  "104": { "A": "淡定海豚", "B": "织网蛛" },
-  "105": { "A": "沉思猫头鹰", "B": "稳如龟" },
-  "106": { "A": "沉思猫头鹰", "B": "稳如龟" },
-  "107": { "A": "机智狐", "B": "灵感章鱼" },
-  "108": { "A": "机智狐", "B": "灵感章鱼" },
-  "109": { "A": "暖心熊", "B": "夸夸豚" },
-  "110": { "A": "暖心熊", "B": "夸夸豚" },
-  "111": { "A": "定心大象", "B": "淡定海豚" },
-  "112": { "A": "定心大象", "B": "淡定海豚" },
-  "113": { "A": "隐身猫", "B": "稳如龟" },
-  "114": { "A": "隐身猫", "B": "稳如龟" },
-  "115": { "A": "开心柯基", "B": "机智狐" },
-  "116": { "A": "太阳鸡", "B": "暖心熊" },
-  "117": { "A": "织网蛛", "B": "机智狐" },
-  "118": { "A": "灵感章鱼", "B": "沉思猫头鹰" },
-  "119": { "A": "定心大象", "B": "稳如龟" },
-  "120": { "A": "夸夸豚", "B": "太阳鸡" },
+  "101": { "A": "corgi", "B": "rooster" },
+  "102": { "A": "corgi", "B": "rooster" },
+  "103": { "A": "dolphin_calm", "B": "spider" },
+  "104": { "A": "dolphin_calm", "B": "spider" },
+  "105": { "A": "owl", "B": "turtle" },
+  "106": { "A": "owl", "B": "turtle" },
+  "107": { "A": "fox", "B": "octopus" },
+  "108": { "A": "fox", "B": "octopus" },
+  "109": { "A": "koala", "B": "hamster_praise" },
+  "110": { "A": "koala", "B": "hamster_praise" },
+  "111": { "A": "elephant", "B": "dolphin_calm" },
+  "112": { "A": "elephant", "B": "dolphin_calm" },
+  "113": { "A": "cat", "B": "turtle" },
+  "114": { "A": "cat", "B": "turtle" },
+  "115": { "A": "corgi", "B": "fox" },
+  "116": { "A": "rooster", "B": "koala" },
+  "117": { "A": "spider", "B": "fox" },
+  "118": { "A": "octopus", "B": "owl" },
+  "119": { "A": "elephant", "B": "turtle" },
+  "120": { "A": "hamster_praise", "B": "rooster" },
 };
 
 function calculateRoleScores(responses: Record<number, any>): Record<string, number> {
   const scores: Record<string, number> = {
-    "开心柯基": 0,
-    "太阳鸡": 0,
-    "夸夸豚": 0,
-    "机智狐": 0,
-    "淡定海豚": 0,
-    "织网蛛": 0,
-    "暖心熊": 0,
-    "灵感章鱼": 0,
-    "沉思猫头鹰": 0,
-    "定心大象": 0,
-    "稳如龟": 0,
-    "隐身猫": 0,
+    "corgi": 0,
+    "rooster": 0,
+    "hamster_praise": 0,
+    "fox": 0,
+    "dolphin_calm": 0,
+    "spider": 0,
+    "koala": 0,
+    "octopus": 0,
+    "owl": 0,
+    "elephant": 0,
+    "turtle": 0,
+    "cat": 0,
   };
 
   Object.entries(responses).forEach(([questionId, answer]) => {
@@ -166,18 +167,18 @@ function calculateRoleScores(responses: Record<number, any>): Record<string, num
 
 export function determineSubtype(primaryArchetype: string, responses: Record<number, any>): string {
   const subtypeMap: Record<string, string[]> = {
-    "开心柯基": ["活力型", "社交型", "冒险型"],
-    "太阳鸡": ["温暖型", "稳定型", "关怀型"],
-    "夸夸豚": ["鼓励型", "治愈型", "欢乐型"],
-    "机智狐": ["创意型", "智慧型", "探索型"],
-    "淡定海豚": ["平和型", "理性型", "包容型"],
-    "织网蛛": ["连接型", "协调型", "组织型"],
-    "暖心熊": ["照顾型", "倾听型", "支持型"],
-    "灵感章鱼": ["想象型", "艺术型", "自由型"],
-    "沉思猫头鹰": ["深度型", "分析型", "洞察型"],
-    "定心大象": ["稳重型", "可靠型", "领导型"],
-    "稳如龟": ["谨慎型", "耐心型", "思考型"],
-    "隐身猫": ["内敛型", "观察型", "陪伴型"],
+    "corgi": ["活力型", "社交型", "冒险型"],
+    "rooster": ["温暖型", "稳定型", "关怀型"],
+    "hamster_praise": ["鼓励型", "治愈型", "欢乐型"],
+    "fox": ["创意型", "智慧型", "探索型"],
+    "dolphin_calm": ["平和型", "理性型", "包容型"],
+    "spider": ["连接型", "协调型", "组织型"],
+    "koala": ["照顾型", "倾听型", "支持型"],
+    "octopus": ["想象型", "艺术型", "自由型"],
+    "owl": ["深度型", "分析型", "洞察型"],
+    "elephant": ["稳重型", "可靠型", "领导型"],
+    "turtle": ["谨慎型", "耐心型", "思考型"],
+    "cat": ["内敛型", "观察型", "陪伴型"],
   };
   return subtypeMap[primaryArchetype]?.[0] || "平衡型";
 }
@@ -190,7 +191,7 @@ function calculateTraitScores(primaryArchetype: string, secondaryArchetype: stri
   extraversionScore: number;
   positivityScore: number;
 } {
-  const primary = roleTraits[primaryArchetype as ArchetypeName] || roleTraits["淡定海豚"];
+  const primary = roleTraits[primaryArchetype as ArchetypeName] || roleTraits["dolphin_calm"];
   const secondary = secondaryArchetype ? roleTraits[secondaryArchetype as ArchetypeName] : null;
 
   if (!secondary) {
@@ -215,7 +216,7 @@ function calculateTraitScores(primaryArchetype: string, secondaryArchetype: stri
 }
 
 export function generateInsights(primaryArchetype: string, secondaryArchetype: string | null): Insights {
-  return roleInsights[primaryArchetype as ArchetypeName] || roleInsights["淡定海豚"];
+  return roleInsights[primaryArchetype as ArchetypeName] || roleInsights["dolphin_calm"];
 }
 
 export function registerAssessmentRoutes(app: Express): void {
@@ -223,24 +224,24 @@ export function registerAssessmentRoutes(app: Express): void {
   app.post('/api/user/register', isPhoneAuthenticated, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      console.log("[Backend] Received registration data:", req.body);
+      logger.info("[Backend] Received registration data:", req.body);
       const result = registerUserSchema.safeParse(req.body);
 
       if (!result.success) {
-        console.error("[Backend] Validation failed:", result.error);
+        logger.error("Validation failed", { error: String(result.error) });
         return res.status(400).json({ error: result.error });
       }
 
-      console.log("[Backend] Validated data:", result.data);
+      logger.info("[Backend] Validated data:", result.data);
       const user = await storage.registerUser(userId, result.data);
-      console.log("[Backend] User updated successfully:", { id: user.id, displayName: user.displayName, gender: user.gender, birthdate: user.birthdate });
+      logger.info("[Backend] User updated successfully:", { id: user.id, displayName: user.displayName, gender: user.gender, birthdate: user.birthdate });
 
       try {
         const { awardXPAndCoins } = await import('../../gamificationService');
         await awardXPAndCoins(userId, 'registration');
-        console.log(`[Gamification] Awarded registration XP to user ${userId}`);
+        logger.info(`[Gamification] Awarded registration XP to user ${userId}`);
       } catch (xpError) {
-        console.error("Error awarding registration XP:", xpError);
+        logger.error("Error awarding registration XP:", { error: xpError instanceof Error ? xpError.message : String(xpError) });
       }
 
       try {
@@ -249,28 +250,28 @@ export function registerAssessmentRoutes(app: Express): void {
         if (verifiedPhone) {
           const linkResult = await dialogueEmbeddingsService.linkByPhoneNumber(verifiedPhone, userId);
           if (linkResult.linked > 0) {
-            console.log(`[AI Evolution] Linked ${linkResult.linked} records by phone to user ${userId}`);
+            logger.info(`[AI Evolution] Linked ${linkResult.linked} records by phone to user ${userId}`);
           } else {
             const sessionId = req.session?.chatSessionId || req.body?.chatSessionId || req.sessionID;
             if (sessionId) {
               const sessionResult = await dialogueEmbeddingsService.linkSessionToUser(sessionId, userId);
-              console.log(`[AI Evolution] Fallback: Linked ${sessionResult.linked} records by sessionId to user ${userId}`);
+              logger.info(`[AI Evolution] Fallback: Linked ${sessionResult.linked} records by sessionId to user ${userId}`);
             }
           }
         } else {
           const sessionId = req.session?.chatSessionId || req.body?.chatSessionId || req.sessionID;
           if (sessionId) {
             const linkResult = await dialogueEmbeddingsService.linkSessionToUser(sessionId, userId);
-            console.log(`[AI Evolution] Linked ${linkResult.linked} records from session ${sessionId} to user ${userId}`);
+            logger.info(`[AI Evolution] Linked ${linkResult.linked} records from session ${sessionId} to user ${userId}`);
           }
         }
       } catch (linkError) {
-        console.error('[AI Evolution] Failed to link insights to user:', linkError);
+        logger.error('Failed to link insights to user', { error: linkError instanceof Error ? linkError.message : String(linkError) });
       }
 
       res.json(user);
     } catch (error: any) {
-      console.error("Error registering user:", error);
+      logger.error("Error registering user:", { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = error?.message || "Failed to register user";
       res.status(500).json({
         message: errorMessage,
@@ -327,7 +328,7 @@ export function registerAssessmentRoutes(app: Express): void {
         });
       }
     } catch (error) {
-      console.error("Error in preliminary scoring:", error);
+      logger.error("Error in preliminary scoring:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to calculate preliminary score" });
     }
   });
@@ -372,7 +373,7 @@ export function registerAssessmentRoutes(app: Express): void {
       await storage.markPersonalityTestComplete(userId);
       res.json(roleResult);
     } catch (error) {
-      console.error("Error submitting personality test:", error);
+      logger.error("Error submitting personality test:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to submit personality test" });
     }
   });
@@ -421,11 +422,11 @@ export function registerAssessmentRoutes(app: Express): void {
               couponId: welcomeCoupon.id,
               source: 'registration_complete',
             });
-            console.log(`[Registration] Awarded welcome coupon to user ${userId}`);
+            logger.info(`[Registration] Awarded welcome coupon to user ${userId}`);
           }
         }
       } catch (couponError) {
-        console.error("Error awarding welcome coupon:", couponError);
+        logger.error("Error awarding welcome coupon:", { error: couponError instanceof Error ? couponError.message : String(couponError) });
       }
 
       res.json({
@@ -438,7 +439,7 @@ export function registerAssessmentRoutes(app: Express): void {
         welcomeCouponAwarded: true,
       });
     } catch (error) {
-      console.error("Error submitting V2 personality test:", error);
+      logger.error("Error submitting V2 personality test:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to submit V2 personality test" });
     }
   });
@@ -449,7 +450,7 @@ export function registerAssessmentRoutes(app: Express): void {
       const coupons = await storage.getUserCoupons(userId);
       res.json({ count: coupons.length, coupons });
     } catch (error) {
-      console.error("Error fetching user coupons:", error);
+      logger.error("Error fetching user coupons:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch coupons" });
     }
   });
@@ -491,7 +492,7 @@ export function registerAssessmentRoutes(app: Express): void {
         urgentCount: expiringCoupons.filter((c: any) => c.isUrgent).length,
       });
     } catch (error) {
-      console.error("Error fetching expiring coupons:", error);
+      logger.error("Error fetching expiring coupons:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch expiring coupons" });
     }
   });
@@ -508,7 +509,7 @@ export function registerAssessmentRoutes(app: Express): void {
 
       res.json(info);
     } catch (error) {
-      console.error("Error fetching gamification info:", error);
+      logger.error("Error fetching gamification info:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch gamification info" });
     }
   });
@@ -521,7 +522,7 @@ export function registerAssessmentRoutes(app: Express): void {
       const history = await getUserTransactionHistory(userId, limit);
       res.json(history);
     } catch (error) {
-      console.error("Error fetching transaction history:", error);
+      logger.error("Error fetching transaction history:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch transaction history" });
     }
   });
@@ -587,7 +588,7 @@ export function registerAssessmentRoutes(app: Express): void {
             source: 'joy_coins_redemption',
           });
         } catch (couponError) {
-          console.error("Coupon creation failed, initiating refund:", couponError);
+          logger.error("Coupon creation failed, initiating refund:", { error: couponError instanceof Error ? couponError.message : String(couponError) });
 
           const refundResult = await refundCoins(userId, item.costCoins, `兑换失败退还 - ${item.nameCn}`);
 
@@ -599,7 +600,7 @@ export function registerAssessmentRoutes(app: Express): void {
             });
           }
 
-          console.error("Critical: Both coupon creation and refund failed:", refundResult.error);
+          logger.error("Critical: Both coupon creation and refund failed", { error: refundResult.error ?? 'unknown' });
           return res.status(500).json({
             message: "系统错误，请联系客服处理",
             coinsDeducted: item.costCoins,
@@ -613,7 +614,7 @@ export function registerAssessmentRoutes(app: Express): void {
         redeemedItem: item,
       });
     } catch (error) {
-      console.error("Error redeeming coins:", error);
+      logger.error("Error redeeming coins:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to redeem coins" });
     }
   });
@@ -623,7 +624,7 @@ export function registerAssessmentRoutes(app: Express): void {
       const { REDEEMABLE_ITEMS } = await import('@shared/gamification');
       res.json(REDEEMABLE_ITEMS);
     } catch (error) {
-      console.error("Error fetching redeemable items:", error);
+      logger.error("Error fetching redeemable items:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch redeemable items" });
     }
   });
@@ -633,7 +634,7 @@ export function registerAssessmentRoutes(app: Express): void {
       const { LEVELS } = await import('@shared/gamification');
       res.json(LEVELS);
     } catch (error) {
-      console.error("Error fetching levels:", error);
+      logger.error("Error fetching levels:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch levels" });
     }
   });
@@ -659,7 +660,7 @@ export function registerAssessmentRoutes(app: Express): void {
         hasDiscount: discountPercent > 0,
       });
     } catch (error) {
-      console.error("Error fetching level discount:", error);
+      logger.error("Error fetching level discount:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch level discount" });
     }
   });
@@ -675,7 +676,7 @@ export function registerAssessmentRoutes(app: Express): void {
 
       res.json(result);
     } catch (error) {
-      console.error("Error fetching test results:", error);
+      logger.error("Error fetching test results:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch test results" });
     }
   });
@@ -685,46 +686,46 @@ export function registerAssessmentRoutes(app: Express): void {
       const stats = await storage.getPersonalityDistribution();
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching personality stats:", error);
+      logger.error("Error fetching personality stats:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch personality stats" });
     }
   });
 
   app.get('/api/personality/role-distribution', isPhoneAuthenticated, async (_req: any, res) => {
     try {
-      const allUsers = await db.select({ primaryArchetype: users.primaryArchetype }).from(users).where(isNotNull(users.primaryArchetype));
+      const allUsers = await db.select({ primaryArchetype: users.primaryArchetype }).from(users).where(isNotNull(users.primaryArchetype)).limit(1000);
 
       if (allUsers.length === 0) {
         const defaultDistribution: Record<string, number> = {
-          '开心柯基': 8,
-          '太阳鸡': 9,
-          '夸夸豚': 8,
-          '机智狐': 9,
-          '淡定海豚': 8,
-          '织网蛛': 7,
-          '暖心熊': 9,
-          '灵感章鱼': 8,
-          '沉思猫头鹰': 7,
-          '定心大象': 6,
-          '稳如龟': 5,
-          '隐身猫': 6,
+          'corgi': 8,
+          'rooster': 9,
+          'hamster_praise': 8,
+          'fox': 9,
+          'dolphin_calm': 8,
+          'spider': 7,
+          'koala': 9,
+          'octopus': 8,
+          'owl': 7,
+          'elephant': 6,
+          'turtle': 5,
+          'cat': 6,
         };
         return res.json(defaultDistribution);
       }
 
       const distribution: Record<string, number> = {
-        '开心柯基': 0,
-        '太阳鸡': 0,
-        '夸夸豚': 0,
-        '机智狐': 0,
-        '淡定海豚': 0,
-        '织网蛛': 0,
-        '暖心熊': 0,
-        '灵感章鱼': 0,
-        '沉思猫头鹰': 0,
-        '定心大象': 0,
-        '稳如龟': 0,
-        '隐身猫': 0,
+        'corgi': 0,
+        'rooster': 0,
+        'hamster_praise': 0,
+        'fox': 0,
+        'dolphin_calm': 0,
+        'spider': 0,
+        'koala': 0,
+        'octopus': 0,
+        'owl': 0,
+        'elephant': 0,
+        'turtle': 0,
+        'cat': 0,
       };
 
       allUsers.forEach((user: any) => {
@@ -741,7 +742,7 @@ export function registerAssessmentRoutes(app: Express): void {
 
       res.json(percentages);
     } catch (error) {
-      console.error("Error fetching role distribution:", error);
+      logger.error("Error fetching role distribution:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch role distribution" });
     }
   });

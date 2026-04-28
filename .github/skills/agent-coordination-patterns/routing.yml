@@ -1,0 +1,41 @@
+skill: agent-coordination-patterns
+primary_ownership: >
+  Design patterns for multi-agent workflows: sequential pipelines, parallel swarms,
+  dependency graphs, fan-out/fan-in, convergence strategies, conflict resolution,
+  and workload partitioning.
+use_when:
+  - Planning how 2+ agents should collaborate on a single task
+  - Deciding parallel vs sequential execution
+  - Merging conflicting or divergent agent outputs
+  - Partitioning work across multiple agents
+  - Designing interdependent agent workflows
+  - Choosing between coordination and deliberation
+  - Resolving agent output conflicts
+do_not_use_when:
+  - Single-agent task (no coordination needed)
+  - Consensus-seeking through disagreement (use multi-agent-deliberation)
+  - Quality-gate deliberation (use harness-engineering-deliberation)
+  - Simple subagent delegation with no interdependencies (use subagent-context-delegation)
+strong_triggers:
+  - coordinate agents
+  - parallel agents
+  - agent workflow
+  - sequential pipeline
+  - fan out fan in
+  - merge agent outputs
+  - resolve conflicts
+  - partition work
+  - agent dependency
+  - multi-agent plan
+  - orchestration pattern
+  - load balance agents
+  - converge results
+  - spawn multiple agents
+  - agent collaboration
+owned_paths:
+  - /.github/skills/agent-coordination-patterns/
+related_skills:
+  - subagent-context-delegation
+  - multi-agent-deliberation
+  - first-principles-velocity
+  - orchestration-turn-reporting

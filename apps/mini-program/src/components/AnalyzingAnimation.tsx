@@ -1,6 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { useEffect, useState, useMemo } from 'react'
 import { ANALYZING_MIN_DURATION_MS, ANALYZING_SKIP_DELAY_MS } from '../lib/uiConstants'
+import JoyJoinIcon from './JoyJoinIcon'
 import './AnalyzingAnimation.scss'
 
 export interface AnalyzingAnimationProps {
@@ -67,7 +68,7 @@ export default function AnalyzingAnimation({
   if (shouldReduceMotion) {
     return (
       <View className='analyzing-animation analyzing-animation--reduced'>
-        <Text className='analyzing-animation__emoji'>✨</Text>
+        <JoyJoinIcon emoji='✨' size={48} className='analyzing-animation__emoji' />
         <Text className='analyzing-animation__label'>{label}</Text>
       </View>
     )

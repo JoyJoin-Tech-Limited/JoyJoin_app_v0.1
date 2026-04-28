@@ -71,18 +71,18 @@ interface StyleSpectrumProps {
 }
 
 const ARCHETYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  "开心柯基": { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-800 dark:text-amber-200", border: "border-amber-200 dark:border-amber-800" },
-  "太阳鸡": { bg: "bg-orange-50 dark:bg-orange-950/30", text: "text-orange-800 dark:text-orange-200", border: "border-orange-200 dark:border-orange-800" },
-  "夸夸豚": { bg: "bg-pink-50 dark:bg-pink-950/30", text: "text-pink-800 dark:text-pink-200", border: "border-pink-200 dark:border-pink-800" },
-  "机智狐": { bg: "bg-orange-50 dark:bg-orange-950/30", text: "text-orange-800 dark:text-orange-200", border: "border-orange-200 dark:border-orange-800" },
-  "淡定海豚": { bg: "bg-cyan-50 dark:bg-cyan-950/30", text: "text-cyan-800 dark:text-cyan-200", border: "border-cyan-200 dark:border-cyan-800" },
-  "织网蛛": { bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-800 dark:text-violet-200", border: "border-violet-200 dark:border-violet-800" },
-  "暖心熊": { bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-800 dark:text-rose-200", border: "border-rose-200 dark:border-rose-800" },
-  "灵感章鱼": { bg: "bg-purple-50 dark:bg-purple-950/30", text: "text-purple-800 dark:text-purple-200", border: "border-purple-200 dark:border-purple-800" },
-  "沉思猫头鹰": { bg: "bg-indigo-50 dark:bg-indigo-950/30", text: "text-indigo-800 dark:text-indigo-200", border: "border-indigo-200 dark:border-indigo-800" },
-  "定心大象": { bg: "bg-slate-50 dark:bg-slate-950/30", text: "text-slate-800 dark:text-slate-200", border: "border-slate-200 dark:border-slate-800" },
-  "稳如龟": { bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-800 dark:text-emerald-200", border: "border-emerald-200 dark:border-emerald-800" },
-  "隐身猫": { bg: "bg-gray-50 dark:bg-gray-950/30", text: "text-gray-800 dark:text-gray-200", border: "border-gray-200 dark:border-gray-800" }
+  "corgi": { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-800 dark:text-amber-200", border: "border-amber-200 dark:border-amber-800" },
+  "rooster": { bg: "bg-orange-50 dark:bg-orange-950/30", text: "text-orange-800 dark:text-orange-200", border: "border-orange-200 dark:border-orange-800" },
+  "hamster_praise": { bg: "bg-pink-50 dark:bg-pink-950/30", text: "text-pink-800 dark:text-pink-200", border: "border-pink-200 dark:border-pink-800" },
+  "fox": { bg: "bg-orange-50 dark:bg-orange-950/30", text: "text-orange-800 dark:text-orange-200", border: "border-orange-200 dark:border-orange-800" },
+  "dolphin_calm": { bg: "bg-cyan-50 dark:bg-cyan-950/30", text: "text-cyan-800 dark:text-cyan-200", border: "border-cyan-200 dark:border-cyan-800" },
+  "spider": { bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-800 dark:text-violet-200", border: "border-violet-200 dark:border-violet-800" },
+  "koala": { bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-800 dark:text-rose-200", border: "border-rose-200 dark:border-rose-800" },
+  "octopus": { bg: "bg-purple-50 dark:bg-purple-950/30", text: "text-purple-800 dark:text-purple-200", border: "border-purple-200 dark:border-purple-800" },
+  "owl": { bg: "bg-indigo-50 dark:bg-indigo-950/30", text: "text-indigo-800 dark:text-indigo-200", border: "border-indigo-200 dark:border-indigo-800" },
+  "elephant": { bg: "bg-slate-50 dark:bg-slate-950/30", text: "text-slate-800 dark:text-slate-200", border: "border-slate-200 dark:border-slate-800" },
+  "turtle": { bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-800 dark:text-emerald-200", border: "border-emerald-200 dark:border-emerald-800" },
+  "cat": { bg: "bg-gray-50 dark:bg-gray-950/30", text: "text-gray-800 dark:text-gray-200", border: "border-gray-200 dark:border-gray-800" }
 };
 
 const traitLabels: Record<string, string> = {

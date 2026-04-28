@@ -37,7 +37,7 @@ export interface ArchetypeAnimationConfig {
 }
 
 export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
-  '开心柯基': {
+  'corgi': {
     animationType: 'bounce_wiggle',
     duration: 0.8,
     entryDirection: 'bottom',
@@ -58,7 +58,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'bounce_happy',
   },
   
-  '太阳鸡': {
+  'rooster': {
     animationType: 'flap_radiate',
     duration: 0.8,
     entryDirection: 'top',
@@ -78,7 +78,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'radiate_warm',
   },
   
-  '夸夸豚': {
+  'hamster_praise': {
     animationType: 'leap_splash',
     duration: 0.9,
     entryDirection: 'bottom',
@@ -98,7 +98,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'splash_joy',
   },
   
-  '机智狐': {
+  'fox': {
     animationType: 'flash_wink',
     duration: 0.7,
     entryDirection: 'right',
@@ -119,7 +119,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'swift_appear',
   },
   
-  '淡定海豚': {
+  'dolphin_calm': {
     animationType: 'glide_ripple',
     duration: 1.0,
     entryDirection: 'left',
@@ -139,7 +139,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'calm_wave',
   },
   
-  '织网蛛': {
+  'spider': {
     animationType: 'descend_weave',
     duration: 0.9,
     entryDirection: 'top',
@@ -159,7 +159,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'weave_silk',
   },
   
-  '暖心熊': {
+  'koala': {
     animationType: 'step_embrace',
     duration: 1.0,
     entryDirection: 'center',
@@ -178,7 +178,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'warm_embrace',
   },
   
-  '灵感章鱼': {
+  'octopus': {
     animationType: 'wave_lightbulb',
     duration: 0.9,
     entryDirection: 'center',
@@ -198,7 +198,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'idea_pop',
   },
   
-  '沉思猫头鹰': {
+  'owl': {
     animationType: 'spread_feather',
     duration: 1.0,
     entryDirection: 'top',
@@ -218,7 +218,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'wise_land',
   },
   
-  '定心大象': {
+  'elephant': {
     animationType: 'march_trunk',
     duration: 1.0,
     entryDirection: 'bottom',
@@ -238,7 +238,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'steady_step',
   },
   
-  '稳如龟': {
+  'turtle': {
     animationType: 'peek_steady',
     duration: 1.0,
     entryDirection: 'bottom',
@@ -258,7 +258,7 @@ export const archetypeAnimations: Record<string, ArchetypeAnimationConfig> = {
     soundMarker: 'patient_emerge',
   },
   
-  '隐身猫': {
+  'cat': {
     animationType: 'shadow_emerge',
     duration: 0.9,
     entryDirection: 'shadow',

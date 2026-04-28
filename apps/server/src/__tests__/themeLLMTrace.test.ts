@@ -45,7 +45,7 @@ import { generateThemeWithLLM } from '../themeLLMService';
 
 describe('themeLLMService trace coverage', () => {
   const input: ThemeLLMInput = {
-    archetypeDynamics: '开心柯基×机智狐',
+    archetypeDynamics: 'corgi×fox',
     avgEnergy: 88,
     pattern: 'complementary',
     hometown: { city: '广州', count: 2 },
@@ -103,7 +103,7 @@ describe('themeLLMService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-llm-v1',
@@ -134,7 +134,7 @@ describe('themeLLMService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-llm-v1',
@@ -154,7 +154,7 @@ describe('themeLLMService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-llm-v1',

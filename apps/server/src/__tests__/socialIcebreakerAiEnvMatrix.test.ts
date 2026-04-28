@@ -43,7 +43,7 @@ describe('social icebreaker AI env matrix (degraded)', () => {
     process.env.DEEPSEEK_API_KEY = 'sk-ds-test';
     const sel = getClientForFunction('generateWarmupTopics');
     expect(sel.provider).toBe('deepseek');
-    expect(sel.model).toBe('deepseek-chat');
+    expect(sel.model).toBe('deepseek-v4-flash');
   });
 
   it('hybrid: no MiniMax key — micro-challenges still resolve to DeepSeek when key set', () => {

@@ -22,6 +22,13 @@ You have deep knowledge of:
 - Lifecycle mappings between browser apps and Mini Program pages, including React hooks, Taro page hooks, and native page visibility events
 - The differences between browser APIs and Taro or WeChat platform APIs
 
+## Subagent delegation protocol
+
+When spawning parity auditors or frontend engineers via the Agent tool, follow [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md):
+- Package a **context capsule** with the source file(s), migration target, known incompatibilities, and expected Taro-equivalent behavior.
+- Spawn auditors with **self-contained scopes** — one for DOM API audit, another for CSS/WXSS audit, another for navigation parity.
+- **Resume** only when continuing the same migration thread; otherwise spawn fresh to avoid context bleed.
+
 ## Constraints
 
 - DO NOT delete, move, or rewrite existing `apps/user-client` files as part of migration work unless the user explicitly requests synchronized changes there.

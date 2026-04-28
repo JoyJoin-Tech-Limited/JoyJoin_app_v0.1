@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { cdnAsset } from '../../lib/cdnAssets'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
@@ -11,23 +12,23 @@ import OnboardingLoadingShell from '../../components/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/XiaoyueSessionShell'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
+import JoyJoinIcon from '../../components/JoyJoinIcon'
 import {
   AuctionPhaseView,
   FallbackPhaseView,
-
   LieDetectivePhaseView,
   MicroChallengePhaseView,
-  MiniScriptPhaseView,
   PersonalityDicePhaseView,
   RecapPhaseView,
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
+import { MiniScriptPhaseView } from './MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './MiniScriptConfigModal'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
 import { PHASE_CONFIG } from '@shared/socialIcebreaker'
-import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
+import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -283,6 +284,26 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('warmup-next-topic', '/warmup/next-topic', {})
   }, [performSocialAction])
 
+  const handleAssignRoles = useCallback(() => {
+    void performSocialAction('miniscript-assign-roles', '/miniscript/assign-roles', {})
+  }, [performSocialAction])
+
+  const handleRevealAct = useCallback((targetAct: number) => {
+    void performSocialAction('miniscript-reveal-act', '/miniscript/reveal-act', { targetAct })
+  }, [performSocialAction])
+
+  const handleVote = useCallback((vote: MiniScriptVoteInput) => {
+    void performSocialAction('miniscript-vote', '/miniscript/vote', { vote })
+  }, [performSocialAction])
+
+  const handleRevealSolution = useCallback(() => {
+    void performSocialAction('miniscript-reveal-solution', '/miniscript/reveal-solution', {})
+  }, [performSocialAction])
+
+  const handleMiniScriptReady = useCallback((ready: boolean) => {
+    void performSocialAction('miniscript-ready', '/miniscript/ready', { ready })
+  }, [performSocialAction])
+
   const handleAdvancePhase = useCallback(() => {
     if (!session) {
       return
@@ -438,7 +459,7 @@ export default function IcebreakerSessionPage() {
         <View className='icebreaker__error'>
           <Image
             className='icebreaker__error-hero'
-            src='/assets/lovart/lovart-generic-error.webp'
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -482,7 +503,10 @@ export default function IcebreakerSessionPage() {
     phase !== 'mini_script' && (
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
-        <Text className='icebreaker__host-badge-text'>👑 你是主持人</Text>
+        <View className='icebreaker__host-badge-text'>
+          <JoyJoinIcon emoji='👑' size={24} />
+          <Text>你是主持人</Text>
+        </View>
       </View>
       <Button
         variant='primary'
@@ -616,12 +640,22 @@ export default function IcebreakerSessionPage() {
               <IcebreakerToolSelector onOpenMiniScript={() => setMiniScriptModalOpen(true)} />
             ) : null}
             <MiniScriptPhaseView
-              framework={session.miniScriptFramework}
-              phaseStartedAt={session.phaseStartedAt}
-              timeoutMinutes={PHASE_CONFIG.mini_script.timeoutMinutes}
+              session={session}
+              currentUserId={currentUserId}
               isHost={isHost}
+              playerCount={playerCount}
+              onAssignRoles={handleAssignRoles}
+              onRevealAct={handleRevealAct}
+              onVote={handleVote}
+              onRevealSolution={handleRevealSolution}
               onAdvance={handleAdvancePhase}
+              onReady={handleMiniScriptReady}
+              isAssigningRoles={pendingAction === 'miniscript-assign-roles'}
+              isRevealingAct={pendingAction === 'miniscript-reveal-act'}
+              isVoting={pendingAction === 'miniscript-vote'}
+              isRevealingSolution={pendingAction === 'miniscript-reveal-solution'}
               isAdvancing={pendingAction === 'advance'}
+              isSettingReady={pendingAction === 'miniscript-ready'}
             />
             <MiniScriptConfigModal
               open={miniScriptModalOpen}
@@ -685,7 +719,7 @@ function WaitingPhase({
   return (
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
-        <Text className='icebreaker__waiting-emoji'>⏳</Text>
+        <JoyJoinIcon emoji='⏳' size={80} className='icebreaker__waiting-emoji' />
         <Text className='icebreaker__waiting-title'>等待更多玩家加入…</Text>
         <Text className='icebreaker__waiting-count'>
           当前 {playerCount} 人已加入

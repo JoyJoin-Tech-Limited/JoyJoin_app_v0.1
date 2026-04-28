@@ -17,6 +17,7 @@ import type { ArchetypeCardVariant } from '../../archetypeVariants'
 
 interface FinalStageProps {
   displayArchetypeName: string
+  displayArchetypeId: string
   displayAsset: string
   visual: ArchetypeVisual
   summary: string
@@ -35,6 +36,7 @@ interface FinalStageProps {
   selectedVariantIndex?: number
   nickname?: string
   onGeneratePoster: () => void
+  onGenerateSquarePoster?: () => void
   onInviteFriend: () => void
   onNicknameChange?: (nickname: string) => void
   onVariantSelect?: (index: number) => void
@@ -59,6 +61,7 @@ function computeTiltFromAccelerometer(x: number, y: number): { rotateX: number; 
 
 export default function FinalStage({
   displayArchetypeName,
+  displayArchetypeId,
   displayAsset,
   visual,
   summary,
@@ -77,6 +80,7 @@ export default function FinalStage({
   selectedVariantIndex,
   nickname: controlledNickname,
   onGeneratePoster,
+  onGenerateSquarePoster,
   onInviteFriend,
   onNicknameChange,
   onVariantSelect,
@@ -235,7 +239,7 @@ export default function FinalStage({
   const cardGlow = activeVariant ? activeVariant.accentGlow : visual.accentGlow
 
   // Collect-them-all: all archetypes with current one unlocked
-  const currentIndex = getArchetypeIndex(displayArchetypeName)
+  const currentIndex = getArchetypeIndex(displayArchetypeId)
   const allArchetypes = ARCHETYPE_CANONICAL_ORDER
 
   // Build partner data for detail sheet (memoized)
@@ -264,8 +268,8 @@ export default function FinalStage({
           }}
         >
           <View className='personality-results__hero-copy'>
-            <Text className='personality-results__hero-eyebrow'>匿名结果已解锁</Text>
-            <Text className='personality-results__hero-title'>你的 JoyJoin 原型是</Text>
+            <Text className='personality-results__hero-eyebrow'>命定结果已揭晓</Text>
+            <Text className='personality-results__hero-title'>你的社交命格是</Text>
             <Text className='personality-results__hero-name'>{displayArchetypeName}</Text>
             <Text className='personality-results__hero-summary'>{summary}</Text>
 
@@ -289,7 +293,7 @@ export default function FinalStage({
         </View>
 
         <Card className='personality-results__section-card personality-results__stagger--2'>
-          <Text className='personality-results__section-label'>JoyJoin 卡面分享</Text>
+          <Text className='personality-results__section-label'>命格卡分享</Text>
           <View
             className={`personality-results__pokemon-card ${isTiltActive ? 'personality-results__pokemon-card--tilt' : ''} ${isCardPressed ? 'personality-results__pokemon-card--pressed' : ''}`}
             style={{
@@ -315,8 +319,8 @@ export default function FinalStage({
             </View>
 
             <View className='personality-results__pokemon-card-top'>
-              <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>JOYJOIN CARD</Text>
-              <Text className='personality-results__pokemon-chip'>{confidenceLabel || 'JoyJoin 结果卡'}</Text>
+              <Text className='personality-results__pokemon-chip personality-results__pokemon-chip--dark'>悦聚命格卡</Text>
+              <Text className='personality-results__pokemon-chip'>{confidenceLabel || '悦聚命格卡'}</Text>
             </View>
 
             <View className='personality-results__pokemon-card-hero'>
@@ -333,7 +337,7 @@ export default function FinalStage({
             {/* Rank badges */}
             {(typeof archetypeRank === 'number' && serialNumber) ? (
               <View className='personality-results__pokemon-rank-row'>
-                <Text className='personality-results__pokemon-rank-chip'>🎴 原型编号 No.{archetypeRank}</Text>
+                <Text className='personality-results__pokemon-rank-chip'>🎴 命格编号 No.{archetypeRank}</Text>
                 <Text className='personality-results__pokemon-rank-chip personality-results__pokemon-rank-chip--gold'>🏅 {serialNumber}</Text>
               </View>
             ) : null}
@@ -342,7 +346,7 @@ export default function FinalStage({
               <View className='personality-results__pokemon-match-row'>
                 {topMatches.slice(0, 3).map((match) => (
                   <Text key={match.archetype} className='personality-results__pokemon-match-chip'>
-                    {match.archetype} {Math.round(match.score)}%
+                    {match.archetype} 缘分{Math.round(match.score)}%
                   </Text>
                 ))}
               </View>
@@ -430,6 +434,11 @@ export default function FinalStage({
                     ? '再次分享卡片'
                     : '生成并分享卡片'}
               </Button>
+              {onGenerateSquarePoster ? (
+                <Button variant='secondary' onClick={() => { haptics('light'); onGenerateSquarePoster(); }}>
+                  分享到朋友圈
+                </Button>
+              ) : null}
               <Button variant='secondary' onClick={() => { haptics('light'); onInviteFriend(); }}>
                 {sharePosterPath ? '把海报发给朋友' : '邀请朋友也测一下'}
               </Button>
@@ -445,8 +454,8 @@ export default function FinalStage({
               src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
             />
             <View className='personality-results__coach-copy'>
-              <Text className='personality-results__section-label'>小悦的结论</Text>
-              <Text className='personality-results__coach-title'>这张卡为什么像你</Text>
+              <Text className='personality-results__section-label'>小悦的解读</Text>
+              <Text className='personality-results__coach-title'>这个命格为什么像你</Text>
               <Text className='personality-results__coach-text'>{summary}</Text>
               <Text className='personality-results__coach-text'>
                 {visual.hiddenStrength || '你的社交存在感不是靠用力营业，而是靠稳定地把气氛带到对的位置。'}
@@ -475,14 +484,14 @@ export default function FinalStage({
         {/* Collect-them-all teaser */}
         <Card className='personality-results__section-card personality-results__stagger--5'>
           <View className='personality-results__collect-header'>
-            <Text className='personality-results__section-label'>原型图鉴</Text>
+            <Text className='personality-results__section-label'>命格图鉴</Text>
             <Text className='personality-results__collect-count'>
               已解锁 {currentIndex ?? 0}/12
             </Text>
           </View>
           <View className='personality-results__collect-grid'>
             {allArchetypes.map((archetype, idx) => {
-              const isUnlocked = archetype === displayArchetypeName
+              const isUnlocked = archetype === displayArchetypeId
               const archetypeNum = idx + 1
               return (
                 <View
@@ -506,7 +515,7 @@ export default function FinalStage({
             })}
           </View>
           <Text className='personality-results__collect-hint'>
-            邀请朋友来测，一起解锁全部 12 张原型卡
+            邀请朋友来测，一起解锁全部 12 种命格 ✨
           </Text>
         </Card>
 
@@ -580,10 +589,10 @@ export default function FinalStage({
             {/* Quick actions in detail */}
             <View className='personality-results__detail-actions'>
               <Button onClick={() => { handleCloseDetail(); handleSharePress(); }}>
-                生成分享海报
+                生成命格海报
               </Button>
               <Button variant='secondary' onClick={() => { handleCloseDetail(); onInviteFriend(); }}>
-                邀请朋友测试
+                @朋友来测
               </Button>
             </View>
 

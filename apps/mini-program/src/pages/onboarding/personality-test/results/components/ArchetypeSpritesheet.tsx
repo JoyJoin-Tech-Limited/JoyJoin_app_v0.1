@@ -1,11 +1,11 @@
 import { View } from '@tarojs/components'
-import spritesheetManifest from '../../../../../assets/personality/archetypes/archetype-spritesheet.json'
+import spritesheetManifest from '../../../assets/archetypes/archetype-spritesheet.json'
 
-const SHEET_PATH = '/assets/personality/archetypes/archetype-spritesheet.webp'
+const SHEET_PATH = '/pages/onboarding/assets/archetypes/archetype-spritesheet.webp'
 
 type ArchetypeName =
-  | '开心柯基' | '太阳鸡' | '夸夸豚' | '机智狐' | '淡定海豚' | '织网蛛'
-  | '暖心熊' | '灵感章鱼' | '沉思猫头鹰' | '定心大象' | '稳如龟' | '隐身猫'
+  | 'corgi' | 'rooster' | 'hamster_praise' | 'fox' | 'dolphin_calm' | 'spider'
+  | 'koala' | 'octopus' | 'owl' | 'elephant' | 'turtle' | 'cat'
 
 interface ArchetypeSpritesheetProps {
   archetype: ArchetypeName | string

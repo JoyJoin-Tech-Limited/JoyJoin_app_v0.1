@@ -1,20 +1,16 @@
-import OpenAI from 'openai';
 import { topicCards, type TopicCard } from '@shared/topicCards';
 import { calculateAge } from '@shared/utils';
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
+import { logger } from './lib/logger';
 
 const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
 if (!deepseekApiKey) {
-  console.warn(
-    '[CardGen] DEEPSEEK_API_KEY environment variable is not set. ' +
-    'AI card generation will be disabled, falling back to curated cards only.'
+  logger.warn(
+    'DEEPSEEK_API_KEY environment variable is not set. AI card generation will be disabled, falling back to curated cards only.',
+    { component: 'CardGen' }
   );
 }
-
-const deepseekClient = deepseekApiKey ? new OpenAI({
-  apiKey: deepseekApiKey,
-  baseURL: 'https://api.deepseek.com',
-}) : null;
 
 export interface UserPersonalityData {
   // Six-dimension personality scores
@@ -79,14 +75,14 @@ const CARD_GENERATION_PROMPT = `你是"小悦"，JoyJoin的破冰卡牌生成助
 5. **简洁清晰**: 问题清晰，提示精炼（10字以内）
 
 ## 社交原型特点
-- 开心柯基/太阳鸡: 高能量，喜欢活跃话题和游戏
-- 暖心熊/温暖金毛: 善于倾听，喜欢温暖真诚的分享
-- 隐身猫/稳如龟: 内敛深度，适合小组讨论而非大型活动
-- 沉思猫头鹰: 喜欢深度思考和哲学话题
-- 灵感章鱼/机智狐: 创意型，喜欢脑洞和新奇话题
-- 织网蛛/淡定海豚: 社交达人，擅长破冰
-- 夸夸豚: 积极乐观，喜欢正能量话题
-- 定心大象: 稳重，适合结构化讨论
+- corgi/rooster: 高能量，喜欢活跃话题和游戏
+- koala/温暖金毛: 善于倾听，喜欢温暖真诚的分享
+- cat/turtle: 内敛深度，适合小组讨论而非大型活动
+- owl: 喜欢深度思考和哲学话题
+- octopus/fox: 创意型，喜欢脑洞和新奇话题
+- spider/dolphin_calm: 社交达人，擅长破冰
+- hamster_praise: 积极乐观，喜欢正能量话题
+- elephant: 稳重，适合结构化讨论
 
 ## 输出格式
 返回一个JSON对象：
@@ -118,13 +114,13 @@ export async function generateAICards(
   eventType?: string
 ): Promise<GeneratedCard[]> {
   // If no API key or no attendees, fall back to curated cards
-  if (!deepseekClient) {
-    console.log('[CardGen] DeepSeek client not initialized, using fallback cards');
+  if (!deepseekApiKey) {
+    logger.warn('[CardGen] DeepSeek API key not set, using fallback cards');
     return getFallbackCards(cardsCount, roundNumber);
   }
   
   if (attendees.length === 0) {
-    console.log('[CardGen] No attendees, using fallback cards');
+    logger.info('No attendees, using fallback cards', { component: 'CardGen' });
     return getFallbackCards(cardsCount, roundNumber);
   }
 
@@ -178,8 +174,8 @@ export async function generateAICards(
 请生成${cardsCount}张破冰卡牌（包含至少1张问题卡和1张投票卡）。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await getDeepseekClient().chat.completions.create({
+      model: getDeepseekModel('flash'),
       messages: [
         { role: 'system', content: CARD_GENERATION_PROMPT },
         { role: 'user', content: userPrompt }
@@ -191,7 +187,7 @@ export async function generateAICards(
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
-      console.log('[CardGen] No AI response, using fallback');
+      logger.info('No AI response, using fallback', { component: 'CardGen' });
       return getFallbackCards(cardsCount, roundNumber);
     }
 
@@ -199,11 +195,9 @@ export async function generateAICards(
     try {
       parsed = JSON.parse(content);
     } catch (parseError) {
-      console.error(
-        '[CardGen] Failed to parse AI JSON response. Falling back to curated cards. Raw content:',
-        content.substring(0, 200), // Log first 200 chars to avoid flooding logs
-        'Error:',
-        parseError
+      logger.error(
+        'Failed to parse AI JSON response. Falling back to curated cards.',
+        { component: 'CardGen', rawContent: content.substring(0, 200), error: parseError instanceof Error ? parseError.message : String(parseError) }
       );
       return getFallbackCards(cardsCount, roundNumber);
     }
@@ -227,14 +221,14 @@ export async function generateAICards(
     ).slice(0, cardsCount);
 
     if (validCards.length === 0) {
-      console.log('[CardGen] No valid cards from AI, using fallback');
+      logger.info('No valid cards from AI, using fallback', { component: 'CardGen' });
       return getFallbackCards(cardsCount, roundNumber);
     }
 
-    console.log(`[CardGen] Generated ${validCards.length} AI cards for round ${roundNumber}`);
+    logger.info('Generated AI cards', { component: 'CardGen', cardCount: validCards.length, roundNumber });
     return validCards;
   } catch (error) {
-    console.error('[CardGen] AI generation error:', error);
+    logger.error('AI generation error', { component: 'CardGen', error: error instanceof Error ? error.message : String(error) });
     return getFallbackCards(cardsCount, roundNumber);
   }
 }

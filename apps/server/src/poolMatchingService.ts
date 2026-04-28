@@ -17,6 +17,7 @@
  */
 
 import { db } from "./db";
+import { processInvitationRewards } from "./poolMatchingInvitationRewards";
 import { 
   eventPools, 
   eventPoolRegistrations, 
@@ -31,6 +32,7 @@ import {
   userCoupons
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { logger } from "./lib/logger";
 import { calculateAge } from "@shared/utils";
 import { wsService } from "./wsService";
 import type { PoolMatchedData } from "@shared/wsEvents";
@@ -192,7 +194,7 @@ function meetsHardConstraints(
       const userBudget = user.barBudgetRange || [];
       const hasOverlap = userBudget.some(b => pool.barBudgetRestrictions!.includes(b));
       if (!hasOverlap) {
-        console.log(`[Matching] User ${user.userId} filtered out: bar budget mismatch`);
+        logger.info(`[Matching] User ${user.userId} filtered out: bar budget mismatch`);
         return false;
       }
     }
@@ -202,7 +204,7 @@ function meetsHardConstraints(
       const userBudget = user.budgetRange || [];
       const hasOverlap = userBudget.some(b => pool.budgetRestrictions!.includes(b));
       if (!hasOverlap) {
-        console.log(`[Matching] User ${user.userId} filtered out: budget mismatch`);
+        logger.info(`[Matching] User ${user.userId} filtered out: budget mismatch`);
         return false;
       }
     }
@@ -1189,7 +1191,7 @@ export async function saveMatchResults(
     const memberUserIds = group.members.map(m => m.userId);
     try {
       const themeTitleResult = await generateEventThemeTitle(memberUserIds, poolId);
-      console.log(`[Pool Matching] Generated event theme title for group ${i + 1}: ${themeTitleResult.eventThemeTitle} - ${themeTitleResult.themeTagline} ${themeTitleResult.emoji}`);
+      logger.info(`[Pool Matching] Generated event theme title for group ${i + 1}: ${themeTitleResult.eventThemeTitle} - ${themeTitleResult.themeTagline} ${themeTitleResult.emoji}`);
       return {
         eventThemeTitle: themeTitleResult.eventThemeTitle,
         themeTagline: themeTitleResult.themeTagline,
@@ -1197,7 +1199,7 @@ export async function saveMatchResults(
         themeReasoning: themeTitleResult.reasoning,
       };
     } catch (error) {
-      console.error(`[Pool Matching] Failed to generate event theme title for group ${i + 1}:`, error);
+      logger.error(`[Pool Matching] Failed to generate event theme title for group ${i + 1}:`, { error: error instanceof Error ? error.message : String(error) });
       return {
         eventThemeTitle: null,
         themeTagline: null,
@@ -1289,7 +1291,7 @@ export async function saveMatchResults(
           });
         }
 
-        console.log(`[Pool Matching] Created event ${eventRecord.id} for group ${i + 1} with ${memberUserIds.length} attendees`);
+        logger.info(`[Pool Matching] Created event ${eventRecord.id} for group ${i + 1} with ${memberUserIds.length} attendees`);
 
         // Queue notification data for post-commit dispatch
         notificationQueue.push({
@@ -1333,6 +1335,7 @@ export async function saveMatchResults(
         );
     });
   } catch (error) {
+    logger.error(`[Pool Matching] Transaction failed for pool ${poolId}, resetting status`, { error: String(error) });
     // If the transaction failed, reset the pool status back to 'active' so it can be retried.
     // (If the guard CAS succeeded but the tx failed, status is still 'matching' — we reset it.)
     try {
@@ -1340,7 +1343,7 @@ export async function saveMatchResults(
         .set({ status: "active", updatedAt: new Date() })
         .where(eq(eventPools.id, poolId));
     } catch (resetErr) {
-      console.error(`[Pool Matching] ⚠️ Failed to reset pool status after transaction error:`, resetErr);
+      logger.error(`[Pool Matching] ⚠️ Failed to reset pool status after transaction error:`, { error: resetErr instanceof Error ? resetErr.message : String(resetErr) });
     }
     throw error;
   }
@@ -1355,26 +1358,26 @@ export async function saveMatchResults(
         timestamp: new Date().toISOString()
       });
     });
-    console.log(`[Pool Matching] Sent POOL_MATCHED notification to ${memberUserIds.length} users for group ${notificationData.groupNumber}`);
+    logger.info(`[Pool Matching] Sent POOL_MATCHED notification to ${memberUserIds.length} users for group ${notificationData.groupNumber}`);
   }
 
   // 1.5 Generate and save event themes (fire-and-forget)
   for (const { groupId, memberUserIds } of themeGenTasks) {
     generateAndSaveEventTheme(groupId, memberUserIds, poolId)
-      .then(() => console.log(`[Pool Matching] ✅ Generated event theme for group ${groupId}`))
-      .catch((err: unknown) => console.error(`[Pool Matching] ⚠️ Theme generation failed for group ${groupId}:`, err));
+      .then(() => logger.info(`[Pool Matching] ✅ Generated event theme for group ${groupId}`))
+      .catch((err: unknown) => logger.error(`[Pool Matching] ⚠️ Theme generation failed for group ${groupId}:`, { error: err instanceof Error ? err.message : String(err) }));
   }
 
   // 6. 发放邀请奖励优惠券 (Invitation Reward Coupons)
   try {
     await processInvitationRewards(poolId, groups);
-    console.log(`[Pool Matching] ✅ Invitation rewards processed for pool ${poolId}`);
+    logger.info(`[Pool Matching] ✅ Invitation rewards processed for pool ${poolId}`);
   } catch (error) {
-    console.error(`[Pool Matching] ⚠️ Failed to process invitation rewards for pool ${poolId}:`, error);
+    logger.error(`[Pool Matching] ⚠️ Failed to process invitation rewards for pool ${poolId}:`, { error: error instanceof Error ? error.message : String(error) });
   }
   
   // 7. 自动分配场地 (Automatic Venue Assignment)
-  console.log(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
+  logger.info(`[Pool Matching] ✅ ${groups.length} groups created, starting venue assignment...`);
   
   try {
     const venueAssignments = await assignVenuesToGroups(
@@ -1389,16 +1392,16 @@ export async function saveMatchResults(
     // Save venue assignments to database
     await saveVenueAssignments(poolId, venueAssignments);
     
-    console.log(`[Pool Matching] ✅ Venue assignment complete: ${venueAssignments.size}/${groups.length} groups assigned`);
+    logger.info(`[Pool Matching] ✅ Venue assignment complete: ${venueAssignments.size}/${groups.length} groups assigned`);
   } catch (error) {
-    console.error(`[Pool Matching] ⚠️ Venue assignment failed:`, error);
+    logger.error(`[Pool Matching] ⚠️ Venue assignment failed:`, { error: error instanceof Error ? error.message : String(error) });
     // Don't throw - matching already succeeded, venue assignment is best-effort
   }
 
   // 8. 异步生成活动主题标题并广播 (Async Event Theme Title Generation & Broadcast)
   setImmediate(() => {
     void (async () => {
-      console.log(`[Pool Matching] Starting async event theme title generation for ${groups.length} groups...`);
+      logger.info(`[Pool Matching] Starting async event theme title generation for ${groups.length} groups...`);
       
       try {
         const { generateAndAssignEventThemeTitle } = await import('./eventThemeTitleGenerator');
@@ -1444,104 +1447,15 @@ export async function saveMatchResults(
                 });
               });
               
-              console.log(`[Pool Matching] ✅ Event theme title revealed for group ${i + 1}: ${themeTitleResult.themeEmoji} ${themeTitleResult.eventThemeTitle}`);
+              logger.info(`[Pool Matching] ✅ Event theme title revealed for group ${i + 1}: ${themeTitleResult.themeEmoji} ${themeTitleResult.eventThemeTitle}`);
             }
           } catch (error) {
-            console.error(`[Pool Matching] ⚠️ Event theme title generation failed for group ${i + 1}:`, error);
+            logger.error(`[Pool Matching] ⚠️ Event theme title generation failed for group ${i + 1}:`, { error: error instanceof Error ? error.message : String(error) });
           }
         }
       } catch (error) {
-        console.error(`[Pool Matching] ⚠️ Async event theme title generation failed:`, error);
+        logger.error(`[Pool Matching] ⚠️ Async event theme title generation failed:`, { error: error instanceof Error ? error.message : String(error) });
       }
     })();
   });
-}
-
-/**
- * 处理邀请奖励：为成功匹配的邀请关系发放优惠券
- */
-async function processInvitationRewards(poolId: string, groups: MatchGroup[]): Promise<void> {
-  // 查找邀请奖励优惠券（管理员需要预先创建code为"INVITE_REWARD"的优惠券）
-  const [inviteRewardCoupon] = await db.select()
-    .from(coupons)
-    .where(eq(coupons.code, "INVITE_REWARD"))
-    .limit(1);
-  
-  if (!inviteRewardCoupon || !inviteRewardCoupon.isActive) {
-    console.log('[Invitation Reward] No active INVITE_REWARD coupon found, skipping rewards');
-    return;
-  }
-  
-  // 获取该pool的所有成功匹配的用户
-  const allMatchedUserIds = groups.flatMap(g => g.members.map(m => m.userId));
-  
-  // 查找所有涉及该pool的邀请使用记录
-  const poolRegistrations = await db.select()
-    .from(eventPoolRegistrations)
-    .where(eq(eventPoolRegistrations.poolId, poolId));
-  
-  const registrationIds = poolRegistrations.map((r: any) => r.id);
-  
-  if (registrationIds.length === 0) return;
-  
-  const inviteUses = await db.select()
-    .from(invitationUses)
-    .where(inArray(invitationUses.poolRegistrationId, registrationIds));
-  
-  // 对于每个邀请使用记录，检查是否成功匹配到同一局
-  for (const inviteUse of inviteUses) {
-    if (inviteUse.rewardIssued || !inviteUse.invitationId) continue;
-    
-    // D: Fix — invitationUses.invitationId is a FK to invitations.id (not invitations.code)
-    const [invitation] = await db.select()
-      .from(invitations)
-      .where(eq(invitations.id, inviteUse.invitationId))
-      .limit(1);
-    
-    if (!invitation) continue;
-    
-    const inviterId = invitation.inviterId;
-    const inviteeId = inviteUse.inviteeId;
-    
-    // 检查inviter和invitee是否都在匹配用户列表中
-    if (!allMatchedUserIds.includes(inviterId) || !allMatchedUserIds.includes(inviteeId)) {
-      continue;
-    }
-    
-    // 检查他们是否在同一个group中
-    let matchedTogether = false;
-    for (const group of groups) {
-      const groupUserIds = group.members.map(m => m.userId);
-      if (groupUserIds.includes(inviterId) && groupUserIds.includes(inviteeId)) {
-        matchedTogether = true;
-        break;
-      }
-    }
-    
-    if (matchedTogether) {
-      // 发放优惠券给邀请人
-      try {
-        await db.insert(userCoupons).values({
-          userId: inviterId,
-          couponId: inviteRewardCoupon.id,
-          source: "invitation_reward",
-          sourceId: invitation.id,
-          isUsed: false
-        });
-        
-        // 标记奖励已发放
-        await db.update(invitationUses)
-          .set({
-            matchedTogether: true,
-            rewardIssued: true,
-            matchedAt: new Date()
-          })
-          .where(eq(invitationUses.id, inviteUse.id));
-        
-        console.log(`[Invitation Reward] Issued coupon to user ${inviterId} for inviting ${inviteeId}`);
-      } catch (error) {
-        console.error(`[Invitation Reward] Failed to issue coupon:`, error);
-      }
-    }
-  }
 }

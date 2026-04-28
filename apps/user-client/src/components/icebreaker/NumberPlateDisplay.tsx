@@ -7,32 +7,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Sparkles, Users, Mic } from "lucide-react";
 
-import kaiXinKeJi from "@/assets/开心柯基_transparent_1.png";
-import jiZhiHu from "@/assets/机智狐_transparent_2.png";
-import nuanXinXiong from "@/assets/暖心熊_transparent_3.png";
-import zhiWangZhu from "@/assets/织网蛛_transparent_4.png";
-import kuaKuaTun from "@/assets/夸夸豚_transparent_5.png";
-import taiYangJi from "@/assets/太阳鸡_transparent_6.png";
-import danDingHaiTun from "@/assets/淡定海豚_transparent_7.png";
-import chenSiMaoTouYing from "@/assets/沉思猫头鹰_transparent_8.png";
-import wenRuGui from "@/assets/稳如龟_transparent_9.png";
-import yinShenMao from "@/assets/隐身猫_transparent_10.png";
-import dingXinDaXiang from "@/assets/定心大象_transparent_11.png";
-import lingGanZhangYu from "@/assets/灵感章鱼_transparent_12.png";
+import kaiXinKeJi from "@/assets/corgi_transparent_1.png";
+import jiZhiHu from "@/assets/fox_transparent_2.png";
+import nuanXinXiong from "@/assets/koala_transparent_3.png";
+import zhiWangZhu from "@/assets/spider_transparent_4.png";
+import kuaKuaTun from "@/assets/hamster_praise_transparent_5.png";
+import taiYangJi from "@/assets/rooster_transparent_6.png";
+import danDingHaiTun from "@/assets/dolphin_calm_transparent_7.png";
+import chenSiMaoTouYing from "@/assets/owl_transparent_8.png";
+import wenRuGui from "@/assets/turtle_transparent_9.png";
+import yinShenMao from "@/assets/cat_transparent_10.png";
+import dingXinDaXiang from "@/assets/elephant_transparent_11.png";
+import lingGanZhangYu from "@/assets/octopus_transparent_12.png";
+import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
 
 const ARCHETYPE_IMAGES: Record<string, string> = {
-  '开心柯基': kaiXinKeJi,
-  '机智狐': jiZhiHu,
-  '暖心熊': nuanXinXiong,
-  '织网蛛': zhiWangZhu,
-  '夸夸豚': kuaKuaTun,
-  '太阳鸡': taiYangJi,
-  '淡定海豚': danDingHaiTun,
-  '沉思猫头鹰': chenSiMaoTouYing,
-  '稳如龟': wenRuGui,
-  '隐身猫': yinShenMao,
-  '定心大象': dingXinDaXiang,
-  '灵感章鱼': lingGanZhangYu,
+  'corgi': kaiXinKeJi,
+  'fox': jiZhiHu,
+  'koala': nuanXinXiong,
+  'spider': zhiWangZhu,
+  'hamster_praise': kuaKuaTun,
+  'rooster': taiYangJi,
+  'dolphin_calm': danDingHaiTun,
+  'owl': chenSiMaoTouYing,
+  'turtle': wenRuGui,
+  'cat': yinShenMao,
+  'elephant': dingXinDaXiang,
+  'octopus': lingGanZhangYu,
 };
 
 const ARCHETYPES = Object.keys(ARCHETYPE_IMAGES);
@@ -53,16 +54,18 @@ function getArchetypeImage(archetype: string | null | undefined): string | null 
 
 function getArchetypeName(archetype: string | null | undefined): string {
   if (!archetype) return '';
+  const displayName = archetypeRegistry[archetype]?.name;
+  if (displayName) return displayName;
   if (ARCHETYPE_IMAGES[archetype]) {
     return archetype;
   }
   for (const key of ARCHETYPES) {
     if (archetype.includes(key) || key.includes(archetype)) {
-      return key;
+      return archetypeRegistry[key]?.name || key;
     }
   }
   const index = Math.abs(archetype.charCodeAt(0)) % ARCHETYPES.length;
-  return ARCHETYPES[index];
+  return archetypeRegistry[ARCHETYPES[index]]?.name || ARCHETYPES[index];
 }
 
 interface NumberAssignment {

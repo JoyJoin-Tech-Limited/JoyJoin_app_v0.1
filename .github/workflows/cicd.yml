@@ -39,6 +39,9 @@ jobs:
       - name: Run skill routing regression suite
         run: node scripts/test-skill-routing.mjs
 
+      - name: Verify migration journal sync
+        run: node scripts/verify-journal-sync.mjs
+
   lint-user:
     needs: [guardrails]
     name: Type Check User Client
@@ -293,6 +296,10 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
+            # Ensure host dependencies are fresh for CLI tools
+            echo "📦 Installing host dependencies..."
+            npm ci
+
             # --- 1.5) Sync GitHub Actions secrets + variables → deployment/.env.production ---
             echo "🔐 Syncing GitHub secrets/variables into deployment/.env.production..."
             ENV_FILE=~/JoyJoin/deployment/.env.production
@@ -389,39 +396,18 @@ jobs:
             # --- 3) DB Sync (same DATABASE_URL as API) ---
             echo "🗄️ Syncing database schema..."
             cd ~/JoyJoin
-            
-            # Run any pending migrations first
-            echo "   Running column rename migration (idempotent)..."
-            if node scripts/migrate-rename-role-to-archetype.js; then
-              echo "   ✅ Migration completed successfully"
-            else
-              EXIT_CODE=$?
-              echo "   ⚠️ Migration script returned exit code $EXIT_CODE"
-              # Exit codes: 0=success, 1=error that should fail deployment
-              # For now, treat all non-zero as warnings since migration is idempotent
-              # and may already be applied
-              if [ $EXIT_CODE -eq 1 ]; then
-                echo "   ⚠️ Migration may already be applied, continuing..."
-              else
-                echo "   ❌ Unexpected error, failing deployment"
-                exit $EXIT_CODE
-              fi
-            fi
-            
-            # Run assessment constraint fix migration
-            echo "   Running assessment answer constraint fix migration (idempotent)..."
-            if node scripts/migrate-fix-assessment-constraint.js; then
-              echo "   ✅ Assessment constraint migration completed successfully"
-            else
-              EXIT_CODE=$?
-              echo "   ❌ Assessment constraint migration failed with exit code $EXIT_CODE"
-              echo "   This is a critical error - the migration must succeed before deployment"
-              exit $EXIT_CODE
-            fi
-            
-            # Then sync schema with push
-            echo "   Running schema push..."
-            npx drizzle-kit push --config=apps/server/drizzle.config.cjs
+
+            # Verify journal integrity before running migrations
+            echo "   Verifying migration journal..."
+            node scripts/verify-journal-sync.mjs
+
+            # Run pending migrations via drizzle-kit migrate
+            echo "   Running database migrations..."
+            npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs
+
+            # Verify schema alignment after migration
+            echo "   Verifying schema alignment..."
+            node --env-file=.env scripts/verify-db-alignment.mjs
 
             # --- 4) Health checks ---
             echo "🏥 Verifying service status..."

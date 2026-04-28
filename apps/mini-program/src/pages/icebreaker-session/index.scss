@@ -145,6 +145,9 @@
   }
 
   &__host-badge-text {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
     font-size: $font-size-sm;
     color: #92400e;
     font-weight: $font-weight-semibold;
@@ -247,9 +250,14 @@
     opacity: 0.6;
   }
 
-  &__pulse-option-emoji,
-  &__mood-option-emoji {
+  &__pulse-option-emoji {
     font-size: 48rpx;
+  }
+
+  &__mood-option-emoji {
+    width: 48rpx;
+    height: 48rpx;
+    display: block;
   }
 
   &__pulse-option-label,
@@ -344,7 +352,9 @@
   }
 
   &__waiting-emoji {
-    font-size: 80rpx;
+    width: 80rpx;
+    height: 80rpx;
+    display: block;
   }
 
   &__waiting-title {
@@ -458,7 +468,9 @@
   }
 
   &__participant-host {
-    font-size: $font-size-xs;
+    width: 20rpx;
+    height: 20rpx;
+    display: block;
   }
 
   &__participant-check {
@@ -874,8 +886,11 @@
   }
 }
 
-// ─── 迷你剧本杀配置弹层（全屏覆盖，底部主按钮）──────────────────────
-.icebreaker-ms-modal {
+// ─── 迷你剧本杀配置弹层（沉浸式两阶段卡片选择器）──────────────────────
+// Design spec: 2×4 style grid → translateX slide → 2×2 genre grid
+// Zero-scroll viewport. Single-transform-per-element animations only.
+
+.ms-modal {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -893,13 +908,14 @@
     position: relative;
     z-index: 1;
     width: 100%;
-    max-height: 85vh;
+    height: 90vh;
+    max-height: 90vh;
     background: $color-surface;
-    border-radius: 24rpx 24rpx 0 0;
-    padding: $spacing-md $spacing-lg calc($spacing-lg + env(safe-area-inset-bottom));
+    border-radius: 32rpx 32rpx 0 0;
+    padding: $spacing-md $spacing-lg 0;
     display: flex;
     flex-direction: column;
-    gap: $spacing-sm;
+    overflow: hidden;
   }
 
   &__handle {
@@ -908,66 +924,417 @@
     height: 8rpx;
     border-radius: 999rpx;
     background: rgba($color-text-primary, 0.12);
-    margin-bottom: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    flex-shrink: 0;
+  }
+
+  &__header {
+    flex-shrink: 0;
+    margin-bottom: $spacing-sm;
   }
 
   &__title {
-    font-size: $font-size-lg;
+    @include type-heading;
+    color: $color-text-primary;
+  }
+
+  &__subtitle {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-top: 4rpx;
+  }
+
+  // Hero pill (Stage 2 continuity)
+  &__hero-pill {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    background: rgba($color-primary, 0.06);
+    border-radius: 999rpx;
+    border: 2rpx solid rgba($color-primary, 0.15);
+  }
+
+  &__hero-thumb {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__hero-emoji {
+    font-size: $font-size-xl;
+  }
+
+  &__hero-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__hero-label {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+  }
+
+  &__hero-hint {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__back-btn {
+    font-size: $font-size-sm;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    padding: 8rpx 16rpx;
+  }
+
+  &__content {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  &__footer {
+    flex-shrink: 0;
+    padding: $spacing-md 0 calc($spacing-lg + env(safe-area-inset-bottom));
+    border-top: 1rpx solid rgba($color-text-primary, 0.06);
+  }
+
+  &__cta {
+    width: 100%;
+  }
+
+  &__footer-hint {
+    display: block;
+    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    padding: 24rpx 0;
+  }
+}
+
+// ─── Stage Containers ─────────────────────────────────────────────────────────
+
+.ms-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+
+  &--style {
+    transform: translateX(0);
+    transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &--style.ms-stage--exited {
+    transform: translateX(-30%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &--genre {
+    transform: translateX(100%);
+    transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &--genre.ms-stage--active {
+    transform: translateX(0);
+  }
+}
+
+// ─── Grids ────────────────────────────────────────────────────────────────────
+
+.ms-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  padding: 8rpx 0;
+
+  &--style {
+    // 2×4 grid: 7 styles + 1 Surprise Me
+    .ms-card {
+      width: calc(50% - 10rpx);
+      aspect-ratio: 3 / 4;
+    }
+  }
+
+  &--genre {
+    // 2×2 grid: 4 genres
+    .ms-genre-card {
+      width: calc(50% - 10rpx);
+      aspect-ratio: 1 / 1;
+    }
+  }
+}
+
+// ─── Style Cards ──────────────────────────────────────────────────────────────
+
+.ms-card {
+  position: relative;
+  border-radius: 24rpx;
+  overflow: hidden;
+  cursor: pointer;
+  // Initial state for entrance animation
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 200ms ease;
+
+  // Staggered entrance — BEM modifiers for index 0..7
+  @for $i from 0 through 7 {
+    &--stagger-#{$i} {
+      opacity: 1;
+      transform: scale(1);
+      transition-delay: #{$i * 60}ms;
+    }
+  }
+
+  &--pressed {
+    transform: scale(0.96) !important;
+    transition-duration: 100ms;
+    transition-timing-function: ease-out;
+  }
+
+  &--shuffling {
+    animation: ms-shuffle-pulse 120ms ease-in-out;
+  }
+
+  &__bg {
+    position: absolute;
+    inset: 0;
+    transition: opacity 200ms ease;
+
+    &--faded {
+      opacity: 0;
+    }
+  }
+
+  &__thumb {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 200ms ease;
+
+    &--loaded {
+      opacity: 1;
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0) 55%);
+    pointer-events: none;
+  }
+
+  &__emoji {
+    position: absolute;
+    top: 16rpx;
+    left: 16rpx;
+    font-size: $font-size-xl;
+    line-height: 1;
+    z-index: 1;
+  }
+
+  &__label {
+    position: absolute;
+    bottom: 16rpx;
+    left: 16rpx;
+    right: 16rpx;
+    @include font-cn-display;
+    font-size: $font-size-md;
     font-weight: $font-weight-bold;
+    color: $color-text-white;
+    line-height: 1.2;
+    z-index: 1;
+  }
+
+  &__sublabel {
+    position: absolute;
+    bottom: 56rpx;
+    left: 16rpx;
+    font-size: $font-size-xs;
+    color: rgba(255, 255, 255, 0.75);
+    z-index: 1;
+  }
+
+  // Selection glow ring — child element, NOT box-shadow
+  &__glow {
+    position: absolute;
+    inset: -4rpx;
+    border-radius: 28rpx;
+    border: 4rpx solid $color-primary;
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+    transition:
+      opacity 200ms ease-out,
+      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &--selected &__glow {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ─── Genre Cards ──────────────────────────────────────────────────────────────
+
+.ms-genre-header {
+  margin-bottom: $spacing-sm;
+
+  &__title {
+    @include type-body-emphasis;
     color: $color-text-primary;
   }
 
   &__hint {
     font-size: $font-size-xs;
     color: $color-text-secondary;
-    line-height: 1.5;
+    margin-top: 4rpx;
+  }
+}
+
+.ms-genre-card {
+  position: relative;
+  border-radius: 24rpx;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 200ms ease;
+
+  &--pressed {
+    transform: scale(0.96);
+    transition-duration: 100ms;
   }
 
-  &__scroll {
-    flex: 1;
-    max-height: 52vh;
-    margin-top: $spacing-sm;
+  &--selected {
+    .ms-genre-card__glow {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
-  &__section {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    margin: $spacing-md 0 $spacing-sm;
+  &__bg {
+    position: absolute;
+    inset: 0;
   }
 
-  &__chips {
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 50%);
+    pointer-events: none;
+  }
+
+  &__emoji {
+    position: absolute;
+    top: 20rpx;
+    left: 20rpx;
+    font-size: $font-size-xl;
+    line-height: 1;
+    z-index: 1;
+  }
+
+  &__label {
+    position: absolute;
+    bottom: 20rpx;
+    left: 20rpx;
+    right: 20rpx;
+    @include font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    line-height: 1.2;
+    z-index: 1;
+  }
+
+  &__check {
+    position: absolute;
+    top: 16rpx;
+    right: 16rpx;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
     display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    animation: ms-check-pop 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  &__chip {
-    padding: 12rpx 22rpx;
-    border-radius: 999rpx;
-    background: rgba($color-text-primary, 0.05);
-    border: 2rpx solid transparent;
-  }
-
-  &__chip--on {
-    border-color: rgba($color-primary, 0.45);
-    background: rgba($color-primary, 0.1);
-  }
-
-  &__chip-text {
+  &__check-icon {
     font-size: $font-size-sm;
-    color: $color-text-primary;
+    color: $color-primary;
+    font-weight: $font-weight-bold;
   }
 
-  &__footer {
-    margin-top: $spacing-md;
-    padding-top: $spacing-sm;
-    border-top: 1rpx solid rgba($color-text-primary, 0.08);
+  &__glow {
+    position: absolute;
+    inset: -4rpx;
+    border-radius: 28rpx;
+    border: 4rpx solid;
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+    transition:
+      opacity 200ms ease-out,
+      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+// ─── Keyframes ────────────────────────────────────────────────────────────────
+
+@keyframes ms-shuffle-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ms-check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ─── Reduced Motion ───────────────────────────────────────────────────────────
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-card,
+  .ms-genre-card,
+  .ms-stage {
+    transition: none !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 
-  &__cta {
-    width: 100%;
+  .ms-card__glow,
+  .ms-genre-card__glow {
+    transition: none !important;
   }
 }
 
@@ -982,10 +1349,56 @@
   }
 }
 
+@keyframes ms-fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.icebreaker__ms-role--animate {
+  opacity: 0;
+  animation: ms-fade-slide-in 0.4s ease forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .icebreaker__phase-shell {
     animation: none;
     opacity: 1;
     transform: none;
   }
+}
+
+// ─── Xiaoyue Session Pack ────────────────────────────────────────────────────
+
+.icebreaker__generate-pack-btn {
+  margin: 24rpx 32rpx 0;
+}
+
+.icebreaker__skill-role-badge {
+  margin: 16rpx 32rpx;
+  padding: 16rpx 24rpx;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(255, 107, 157, 0.08));
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(139, 92, 246, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.icebreaker__skill-role-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #8B5CF6;
+  margin-bottom: 4rpx;
+}
+
+.icebreaker__skill-role-blurb {
+  font-size: 24rpx;
+  color: #6B7280;
+  line-height: 1.4;
 }

@@ -1,6 +1,6 @@
 {
   "name": "mini-program",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "JoyJoin",
   "templateInfo": {
@@ -23,6 +23,9 @@
     "check:archetype-assets": "node scripts/check-archetype-asset-size.mjs",
     "generate:spritesheet": "node scripts/generate-archetype-spritesheet.mjs",
     "check:package-size": "node scripts/check-package-size.mjs",
+    "upload:cdn-assets": "node scripts/upload-cdn-assets.mjs",
+    "upload:cdn-assets:dry-run": "node scripts/upload-cdn-assets.mjs --dry-run",
+    "clean:cdn-assets": "cd dist/assets && rm -rf personality/xiaoyue fonts qr lovart matching promo && rm -f icons/archetype/*grid*.png icons/archetype-glyphs/*grid*.png icons/phase-icons/reference-grid.png icons/rating-faces/'Rating Faces.png' icons/mood-icons/'Mood Icons grid.png' icons/info-labels/'Info Labels grid.png' && rm -rf miniscript && rm -f icons/archetype/archetype-*-head.png icons/archetype/archetype-*-head@2x.png icons/archetype-glyphs/archetype-*-glyph.png icons/archetype-glyphs/archetype-*-glyph@2x.png",
     "validate:lovart-manifest": "node scripts/validate-lovart-manifest.mjs",
     "build:weapp": "taro build --type weapp",
     "build:swan": "taro build --type swan",

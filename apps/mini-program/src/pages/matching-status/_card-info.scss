@@ -62,7 +62,9 @@
   }
 
   &__arrival-emoji {
-    font-size: $font-size-base;
+    width: 32rpx;
+    height: 32rpx;
+    display: block;
   }
 
   &__arrival-text {

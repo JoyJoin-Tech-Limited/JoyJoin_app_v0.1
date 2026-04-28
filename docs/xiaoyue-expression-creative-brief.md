@@ -10,7 +10,9 @@
 
 ## 1. Why a Full Set Revamp
 
-Our mascot Xiaoyue (小悦) currently has **9 unique art assets** serving **16 emotional states**. Seven states reuse the closest "close enough" asset. This worked for MVP, but breaks immersion in the personality test — where Xiaoyue acts as an "intentional host" guiding the user through introspective questions.
+> **Note for implementers:** Xiaoyue lives on **only as a visual mascot character** — loading animations, empty states, and personality-test decoration. The **conversational chat-based onboarding path is deprecated** and must not be revived. When you see "Xiaoyue" in code or docs, assume mascot/brand asset unless explicitly in `deepseekClientXiaoyue.ts` (legacy chat, enrichment mode only).
+
+Our mascot Xiaoyue (小悦) currently has **9 unique art assets** serving **16 emotional states**. Seven states reuse the closest "close enough" asset. This worked for MVP, but breaks immersion in the personality test — where Xiaoyue appears as a visual host beside introspective questions.
 
 The four test-phase fallbacks revealed the problem: a "cheerful encouragement" pose doesn't read as "curious inquiry." A "match success" celebration doesn't read as "surprised delight at a milestone." The user feels the mismatch even if they can't name it.
 

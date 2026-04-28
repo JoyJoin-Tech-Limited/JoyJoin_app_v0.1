@@ -1,23 +1,7 @@
-import OpenAI from 'openai';
 import { z } from 'zod';
 import { XIAOYUE_PERSONA, GENDER_NEUTRAL } from './prompts';
-
-let deepseekClient: OpenAI | null = null;
-
-function getDeepseekClient(): OpenAI {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY is not configured');
-  }
-
-  if (!deepseekClient) {
-    deepseekClient = new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: 'https://api.deepseek.com',
-    });
-  }
-
-  return deepseekClient;
-}
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
+import { logger } from './lib/logger';
 
 export interface ArchetypeAnalysisInput {
   archetype: string;
@@ -550,7 +534,7 @@ export async function generateXiaoyueAnalysis(
   const cached = analysisCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log('[XiaoyueAnalysis] Cache hit for:', input.archetype);
+    logger.info('[XiaoyueAnalysis] Cache hit', { archetype: input.archetype });
     return { ...cached.result, cached: true };
   }
 
@@ -559,7 +543,7 @@ export async function generateXiaoyueAnalysis(
 
   try {
     const response = await getDeepseekClient().chat.completions.create({
-      model: 'deepseek-chat',
+      model: getDeepseekModel('flash'),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -575,14 +559,14 @@ export async function generateXiaoyueAnalysis(
     );
 
     analysisCache.set(cacheKey, { result: parsedResult, timestamp: Date.now() });
-    console.log('[XiaoyueAnalysis] Generated for:', input.archetype);
+    logger.info('[XiaoyueAnalysis] Generated', { archetype: input.archetype });
 
     return { ...parsedResult, cached: false };
   } catch (error) {
     if (error instanceof Error && error.message.includes('DEEPSEEK_API_KEY')) {
-      console.warn('[XiaoyueAnalysis] DeepSeek disabled, using fallback copy because API key is missing');
+      logger.warn('[XiaoyueAnalysis] DeepSeek disabled, using fallback copy because API key is missing');
     }
-    console.error('[XiaoyueAnalysis] API error:', error);
+    logger.error('[XiaoyueAnalysis] API error', { error: error instanceof Error ? error.message : String(error) });
     return { ...buildFallbackAnalysisPayload(input), cached: false };
   }
 }
@@ -592,18 +576,18 @@ export async function prefetchAnalysisIfReady(
   confidence: number
 ): Promise<void> {
   if (confidence < 0.7) {
-    console.log('[XiaoyueAnalysis] Skipping prefetch, confidence too low:', confidence);
+    logger.info('[XiaoyueAnalysis] Skipping prefetch, confidence too low', { confidence });
     return;
   }
 
   const cacheKey = getCacheKey({ ...input, confidence });
   if (analysisCache.has(cacheKey)) {
-    console.log('[XiaoyueAnalysis] Already cached, skipping prefetch');
+    logger.info('[XiaoyueAnalysis] Already cached, skipping prefetch');
     return;
   }
 
-  console.log('[XiaoyueAnalysis] Starting background prefetch for:', input.archetype);
+  logger.info('[XiaoyueAnalysis] Starting background prefetch', { archetype: input.archetype });
   generateXiaoyueAnalysis({ ...input, confidence }).catch(err => {
-    console.error('[XiaoyueAnalysis] Background prefetch failed:', err);
+    logger.error('[XiaoyueAnalysis] Background prefetch failed', { error: err instanceof Error ? err.message : String(err) });
   });
 }

@@ -20,7 +20,7 @@ describe("adminOutcomeAnalyticsRepo", () => {
           eventType: "饭局",
           userId: "user-1",
           currentCity: "深圳",
-          archetype: "开心柯基",
+          archetype: "corgi",
           budgetRange: ["150-200"],
           preferredLanguages: ["中文（国语）"],
           eventIntent: ["交朋友"],
@@ -52,7 +52,7 @@ describe("adminOutcomeAnalyticsRepo", () => {
           eventType: "酒局",
           userId: "user-3",
           currentCity: "香港",
-          archetype: "机智狐",
+          archetype: "fox",
           budgetRange: ["200-300"],
           preferredLanguages: ["中文（粤语）"],
           eventIntent: ["放松心情"],
@@ -104,10 +104,10 @@ describe("adminOutcomeAnalyticsRepo", () => {
     expect(dashboard.overview.uniqueUsers).toBe(3);
     expect(dashboard.overview.poolCount).toBe(2);
     expect(dashboard.overview.cityCount).toBe(2);
-    expect(dashboard.coverage.archetypes).toEqual(["开心柯基", "未标注", "机智狐"]);
+    expect(dashboard.coverage.archetypes).toEqual(["corgi", "fox", "未标注"]);
 
     const shenzhenCohort = dashboard.cohorts.find(
-      (cohort) => cohort.key === "深圳__饭局__开心柯基",
+      (cohort) => cohort.key === "深圳__饭局__corgi",
     );
     expect(shenzhenCohort?.warningLevel).toBe("healthy");
     expect(shenzhenCohort?.feedbackCoverageRate).toBe(1);
@@ -159,7 +159,7 @@ describe("adminOutcomeAnalyticsRepo", () => {
           eventType: "饭局",
           userId: "user-1",
           currentCity: "深圳",
-          archetype: "开心柯基",
+          archetype: "corgi",
           budgetRange: ["150-200"],
           preferredLanguages: ["中文（国语）"],
           eventIntent: ["交朋友"],
@@ -175,7 +175,7 @@ describe("adminOutcomeAnalyticsRepo", () => {
           eventType: "酒局",
           userId: "user-2",
           currentCity: "香港",
-          archetype: "机智狐",
+          archetype: "fox",
           budgetRange: ["200-300"],
           preferredLanguages: ["中文（粤语）"],
           eventIntent: ["放松心情"],

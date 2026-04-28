@@ -16,6 +16,7 @@ import { matchIndustryFromText } from './industryOntology';
 import { asyncInferenceQueue, type AsyncInferenceStatus } from './asyncInferenceQueue';
 import { logAITrace } from '../lib/aiTraceLogger';
 import { applyRuntimeLLMFallbackPolicy, getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from './runtimeLLMFallback';
+import { getDeepseekModel } from '../ai/deepseekClient';
 import {
   buildShadowFallbackCandidates,
   getLLMFallbackInferenceMode,
@@ -158,13 +159,13 @@ export class InferenceEngine {
           llmResult = previousResult;
           llmCalled = true;
           usedPreviousAsyncResult = true;
-          console.log(`[InferenceEngine] 使用上一轮异步推断结果 (session: ${sessionId})`);
+          logger.info('使用上一轮异步推断结果', { component: 'InferenceEngine', sessionId });
         }
         
         // 触发本轮的异步推断（不等待），返回消息 ID
         const messageId = asyncInferenceQueue.triggerAsync(sessionId, userMessage, conversationHistory, currentState);
         asyncInferenceTriggered = true;
-        console.log(`[InferenceEngine] 触发异步推断 (session: ${sessionId}, messageId: ${messageId})`);
+        logger.info('触发异步推断', { component: 'InferenceEngine', sessionId, messageId });
       } else {
         // 同步模式：直接等待 LLM 结果
         llmCalled = true;
@@ -211,7 +212,7 @@ export class InferenceEngine {
           domain: 'profile_inference',
           feature: 'runtimeFieldFallback',
           provider: 'deepseek',
-          model: 'deepseek-chat',
+          model: getDeepseekModel('flash'),
           latencyMs: llmResult.latencyMs,
           success: evaluation.applied > 0,
           fallbackUsed: evaluation.attempted > 0,
@@ -390,9 +391,9 @@ export class InferenceEngine {
     }
     
     if (this.config.logLevel === 'debug') {
-      console.log('[InferenceEngine]', JSON.stringify(log, null, 2));
+      logger.info('InferenceEngine debug log', { component: 'InferenceEngine', log });
     } else if (this.config.logLevel === 'info' && result.inferred.length > 0) {
-      console.log(`[InferenceEngine] 推断 ${result.inferred.length} 个属性, 跳过 ${result.skipQuestions.length} 个问题`);
+      logger.info('推断完成', { component: 'InferenceEngine', inferredCount: result.inferred.length, skippedCount: result.skipQuestions.length });
     }
   }
   

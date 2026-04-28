@@ -332,17 +332,21 @@ export function recordAICallMetric(params: {
   fromCache: boolean;
   success: boolean;
   fallbackUsed: boolean;
+  model?: string;
 }): void {
   const outcome = params.fromCache
     ? 'cache'
     : params.success && !params.fallbackUsed
       ? 'live'
       : 'fallback';
-  const labels = {
+  const labels: Record<string, string> = {
     domain: params.domain,
     feature: params.feature,
     outcome,
   };
+  if (params.model) {
+    labels.model = params.model;
+  }
   incCounter(aiProductCallCounters, labels);
   observeHistogram(aiProductLatencyHistograms, labels, params.latencyMs);
 }

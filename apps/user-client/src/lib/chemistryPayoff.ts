@@ -118,18 +118,18 @@ export function findCommonInterests(
  * Used to build chemistry lines like "探索 × 松弛".
  */
 const ARCHETYPE_ENERGY: Record<string, string> = {
-  开心柯基: "活力",
-  机智狐: "创意",
-  暖心熊: "温暖",
-  织网蛛: "洞察",
-  夸夸豚: "热情",
-  太阳鸡: "阳光",
-  淡定海豚: "松弛",
-  沉思猫头鹰: "深度",
-  稳如龟: "稳重",
-  隐身猫: "神秘",
-  定心大象: "包容",
-  灵感章鱼: "探索",
+  corgi: "活力",
+  fox: "创意",
+  koala: "温暖",
+  spider: "洞察",
+  hamster_praise: "热情",
+  rooster: "阳光",
+  dolphin_calm: "松弛",
+  owl: "深度",
+  turtle: "稳重",
+  cat: "神秘",
+  elephant: "包容",
+  octopus: "探索",
 };
 
 /**

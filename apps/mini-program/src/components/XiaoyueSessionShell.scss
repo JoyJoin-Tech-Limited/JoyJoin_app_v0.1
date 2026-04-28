@@ -1,0 +1,104 @@
+@import '../styles/variables';
+
+.xiaoyue-session-shell {
+  padding: 24rpx 32rpx 16rpx;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, transparent 100%);
+}
+
+.xiaoyue-session-shell__hint {
+  margin-top: 12rpx;
+  margin-left: 32rpx;
+  padding: 12rpx 20rpx;
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 16rpx;
+  border-left: 4rpx solid $color-primary;
+}
+
+.xiaoyue-session-shell__hint-text {
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}
+
+.xiaoyue-session-shell__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  margin-left: 32rpx;
+}
+
+.xiaoyue-session-shell__meta-event {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: $color-text-primary;
+}
+
+.xiaoyue-session-shell__meta-players {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+}
+
+.xiaoyue-session-shell__meta-sync {
+  padding: 4rpx 12rpx;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 12rpx;
+}
+
+.xiaoyue-session-shell__meta-sync-text {
+  font-size: 20rpx;
+  color: $color-primary;
+}
+
+// ─── Adaptive Nudge ─────────────────────────────────────────────────────────
+
+.xiaoyue-session-shell__nudge {
+  margin-top: 16rpx;
+  margin-left: 32rpx;
+  padding: 16rpx 20rpx;
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 16rpx;
+  border-left: 4rpx solid #f59e0b;
+}
+
+.xiaoyue-session-shell__nudge-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+
+.xiaoyue-session-shell__nudge-hint {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.xiaoyue-session-shell__nudge-dismiss {
+  font-size: 22rpx;
+  color: $color-primary;
+  font-weight: 500;
+  padding: 4rpx 12rpx;
+  margin-left: 12rpx;
+  white-space: nowrap;
+}
+
+// ─── Host Ask Trigger ───────────────────────────────────────────────────────
+
+.xiaoyue-session-shell__ask {
+  margin-top: 16rpx;
+  margin-left: 32rpx;
+  display: flex;
+  align-items: center;
+}
+
+.xiaoyue-session-shell__ask-text {
+  font-size: 24rpx;
+  color: $color-primary;
+  font-weight: 500;
+  padding: 8rpx 16rpx;
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 24rpx;
+}

@@ -100,23 +100,23 @@ describe("chemistryPayoff", () => {
     });
 
     it("builds a label for known archetypes", () => {
-      const label = buildArchetypeChemistryLabel(["开心柯基", "沉思猫头鹰"]);
+      const label = buildArchetypeChemistryLabel(["corgi", "owl"]);
       expect(label).toBe("活力 × 深度");
     });
 
     it("deduplicates the same energy from multiple archetypes", () => {
       // Repeating the same archetype should not duplicate its energy label in the result.
-      const label = buildArchetypeChemistryLabel(["开心柯基", "开心柯基", "暖心熊"]);
+      const label = buildArchetypeChemistryLabel(["corgi", "corgi", "koala"]);
       expect(label).toBe("活力 × 温暖");
     });
 
     it("limits to 3 energies even with more archetypes", () => {
       const label = buildArchetypeChemistryLabel([
-        "开心柯基",
-        "机智狐",
-        "暖心熊",
-        "织网蛛",
-        "夸夸豚",
+        "corgi",
+        "fox",
+        "koala",
+        "spider",
+        "hamster_praise",
       ]);
       // At most 3 segments separated by " × "
       const parts = label!.split(" × ");
@@ -127,8 +127,8 @@ describe("chemistryPayoff", () => {
   describe("generateChemistryPayoff", () => {
     it("returns a valid payoff object with required fields", () => {
       const result = generateChemistryPayoff([
-        { archetype: "开心柯基", topInterests: ["travel_exploration"] },
-        { archetype: "暖心熊", topInterests: ["travel_exploration"] },
+        { archetype: "corgi", topInterests: ["travel_exploration"] },
+        { archetype: "koala", topInterests: ["travel_exploration"] },
       ]);
       expect(result.headline).toBeTruthy();
       expect(result.chemistryLine).toBeTruthy();
@@ -154,8 +154,8 @@ describe("chemistryPayoff", () => {
 
     it("falls back to archetype energy when no shared interests", () => {
       const result = generateChemistryPayoff([
-        { archetype: "沉思猫头鹰", topInterests: [] },
-        { archetype: "开心柯基", topInterests: [] },
+        { archetype: "owl", topInterests: [] },
+        { archetype: "corgi", topInterests: [] },
       ]);
       expect(result.chemistryLine).toBeTruthy();
     });
@@ -169,8 +169,8 @@ describe("chemistryPayoff", () => {
 
     it("is deterministic for the same group composition", () => {
       const members = [
-        { archetype: "机智狐", topInterests: ["travel_exploration"] },
-        { archetype: "淡定海豚", topInterests: ["travel_exploration"] },
+        { archetype: "fox", topInterests: ["travel_exploration"] },
+        { archetype: "dolphin_calm", topInterests: ["travel_exploration"] },
       ];
       const a = generateChemistryPayoff(members);
       const b = generateChemistryPayoff(members);
@@ -178,7 +178,7 @@ describe("chemistryPayoff", () => {
     });
 
     it("handles groups of different sizes (3–6 members)", () => {
-      const base = { archetype: "开心柯基", topInterests: [] };
+      const base = { archetype: "corgi", topInterests: [] };
       for (let size = 3; size <= 6; size++) {
         const result = generateChemistryPayoff(Array(size).fill(base));
         expect(result.headline).toBeTruthy();

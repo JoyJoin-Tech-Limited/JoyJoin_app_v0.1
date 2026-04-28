@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "grid": {
+    "cols": 3,
+    "rows": 4,
+    "cellSize": 68,
+    "thumbSize": 60,
+    "padding": 4
+  },
+  "sheet": {
+    "width": 204,
+    "height": 272
+  },
+  "mapping": {
+    "corgi": {
+      "x": 4,
+      "y": 4,
+      "width": 60,
+      "height": 60
+    },
+    "rooster": {
+      "x": 72,
+      "y": 4,
+      "width": 60,
+      "height": 60
+    },
+    "hamster_praise": {
+      "x": 140,
+      "y": 4,
+      "width": 60,
+      "height": 60
+    },
+    "fox": {
+      "x": 4,
+      "y": 72,
+      "width": 60,
+      "height": 60
+    },
+    "dolphin_calm": {
+      "x": 72,
+      "y": 72,
+      "width": 60,
+      "height": 60
+    },
+    "spider": {
+      "x": 140,
+      "y": 72,
+      "width": 60,
+      "height": 60
+    },
+    "koala": {
+      "x": 4,
+      "y": 140,
+      "width": 60,
+      "height": 60
+    },
+    "octopus": {
+      "x": 72,
+      "y": 140,
+      "width": 60,
+      "height": 60
+    },
+    "owl": {
+      "x": 140,
+      "y": 140,
+      "width": 60,
+      "height": 60
+    },
+    "elephant": {
+      "x": 4,
+      "y": 208,
+      "width": 60,
+      "height": 60
+    },
+    "turtle": {
+      "x": 72,
+      "y": 208,
+      "width": 60,
+      "height": 60
+    },
+    "cat": {
+      "x": 140,
+      "y": 208,
+      "width": 60,
+      "height": 60
+    }
+  }
+}

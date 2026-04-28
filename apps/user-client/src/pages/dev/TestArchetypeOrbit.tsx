@@ -9,12 +9,12 @@ export default function TestArchetypeOrbit() {
   const [showRevealOverlay, setShowRevealOverlay] = useState(false);
   
   const testArchetypes = [
-    "开心柯基",
-    "机智狐",
-    "暖心熊",
-    "织网蛛",
-    "夸夸豚",
-    "太阳鸡"
+    "corgi",
+    "fox",
+    "koala",
+    "spider",
+    "hamster_praise",
+    "rooster"
   ];
   
   return (

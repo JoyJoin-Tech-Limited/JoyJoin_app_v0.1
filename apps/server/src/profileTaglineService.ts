@@ -13,6 +13,7 @@
  */
 
 import { callSocialAI } from './ai/socialModelRouter';
+import { logger } from './lib/logger';
 import {
   buildLiveAIMeta,
   buildFallbackAIMeta,
@@ -31,18 +32,18 @@ const PROMPT_VERSION = 'profile-tagline-v1';
 // low-quality / unusable output.
 
 const ARCHETYPE_FALLBACK_LINES: Record<string, string> = {
-  '开心柯基':    '你的活力是天然的破冰利器，笑声能让陌生的房间变暖。',
-  '太阳鸡':      '你总能带动全场的情绪，最适合在人群中发光。',
-  '夸夸豚':      '你有一种让人觉得"被看见"的神奇能力。',
-  '机智狐':      '你的观察力让你在每段对话里都能找到最妙的切入点。',
-  '淡定海豚':    '你的平静是一种力量，能让紧张的气氛自然松弛下来。',
-  '织网蛛':      '你擅长把不同的人连在一起，是天然的社交纽带。',
-  '暖心熊':      '你的在场本身就让人有安全感，深聊从你这里开始最自然。',
-  '灵感章鱼':    '你的想象力能把普通的聊天变成一场创意碰撞。',
-  '沉思猫头鹰':  '你问的问题往往让对方第一次认真想这件事。',
-  '定心大象':    '你的从容感染力强，适合在节奏快的聚会里做稳场的那个人。',
-  '稳如龟':      '你的可靠感让初次见面的人也能放松下来。',
-  '隐身猫':      '你慢热但深情，最好的关系往往从你不经意的一句话开始。',
+  'corgi':    '你的活力是天然的破冰利器，笑声能让陌生的房间变暖。',
+  'rooster':      '你总能带动全场的情绪，最适合在人群中发光。',
+  'hamster_praise':      '你有一种让人觉得"被看见"的神奇能力。',
+  'fox':      '你的观察力让你在每段对话里都能找到最妙的切入点。',
+  'dolphin_calm':    '你的平静是一种力量，能让紧张的气氛自然松弛下来。',
+  'spider':      '你擅长把不同的人连在一起，是天然的社交纽带。',
+  'koala':      '你的在场本身就让人有安全感，深聊从你这里开始最自然。',
+  'octopus':    '你的想象力能把普通的聊天变成一场创意碰撞。',
+  'owl':  '你问的问题往往让对方第一次认真想这件事。',
+  'elephant':    '你的从容感染力强，适合在节奏快的聚会里做稳场的那个人。',
+  'turtle':      '你的可靠感让初次见面的人也能放松下来。',
+  'cat':      '你慢热但深情，最好的关系往往从你不经意的一句话开始。',
 };
 
 function getFallbackLine(archetype?: string): string {
@@ -75,7 +76,7 @@ const INTENT_LABELS: Record<string, string> = {
 };
 
 export interface ProfileTaglineInput {
-  /** Primary archetype name (Chinese), e.g. "机智狐" */
+  /** Primary archetype name (Chinese), e.g. "fox" */
   archetype?: string;
   /**
    * Raw categoryHeat record from user_interests (key = category slug, value = heat score).
@@ -174,8 +175,9 @@ export async function generateProfileTagline(
 
     // Basic quality check: must be non-empty and not absurdly long
     if (!raw || raw.length > 120) {
-      console.warn(
-        `[profileTagline] LLM output failed quality check (length=${raw.length}), using fallback`
+      logger.warn(
+        'LLM output failed quality check, using fallback',
+        { feature: 'profileTagline', rawLength: raw?.length }
       );
       const meta = buildFallbackAIMeta('low_quality_score', PROMPT_VERSION);
       logAITrace({
@@ -211,7 +213,7 @@ export async function generateProfileTagline(
       meta,
     };
   } catch (err) {
-    console.error('[profileTagline] LLM call failed, using fallback:', err);
+    logger.error('LLM call failed, using fallback', { feature: 'profileTagline', error: err instanceof Error ? err.message : String(err) });
     const meta = buildFallbackAIMeta('provider_error', PROMPT_VERSION);
     logAITrace({
       domain: 'onboarding',

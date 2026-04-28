@@ -116,6 +116,16 @@
   }
 }
 
+.onboarding-loading-shell--settled {
+  .onboarding-loading-shell__mascot,
+  .onboarding-loading-shell__dot,
+  .onboarding-loading-shell__line {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes onboarding-loading-breathe {
   0%,
   100% {

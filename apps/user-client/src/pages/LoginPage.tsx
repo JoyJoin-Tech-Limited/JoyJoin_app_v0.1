@@ -16,7 +16,7 @@ import {
   Shield, Quote, MapPin, CheckCircle2, ArrowRight,
   Flower2, Target, Sun, Play, Volume2, VolumeX, Loader2
 } from "lucide-react";
-import joyJoinLogo from "@/assets/box_logo_archetypes.png";
+import joyJoinLogo from "@/assets/box-logo.webp";
 import heroVideo from "@/assets/generated_videos/dusk_skyline_fades_to_cozy_dinner.mp4";
 import heroPoster from "@/assets/stock_images/shenzhen_city_roofto_e7cea581.jpg";
 
@@ -50,7 +50,7 @@ const TESTIMONIALS = [
     age: 28,
     city: "深圳",
     AvatarIcon: Flower2,
-    archetype: "暖心熊",
+    archetype: "koala",
     quote: "第一次参加就认识了几个聊得来的朋友，AI匹配真的很准！现在我们每周都约着一起打球。",
     rating: 5,
   },
@@ -60,7 +60,7 @@ const TESTIMONIALS = [
     age: 31,
     city: "香港",
     AvatarIcon: Target,
-    archetype: "机智狐",
+    archetype: "fox",
     quote: "作为社恐，小局的氛围让我很放松。4-6个人刚刚好，不会有那种大场合的压力。",
     rating: 5,
   },
@@ -70,7 +70,7 @@ const TESTIMONIALS = [
     age: 26,
     city: "深圳",
     AvatarIcon: Sun,
-    archetype: "开心柯基",
+    archetype: "corgi",
     quote: "来深圳三年终于找到一群志同道合的朋友了，悦聚的匹配算法真的懂我！",
     rating: 5,
   },

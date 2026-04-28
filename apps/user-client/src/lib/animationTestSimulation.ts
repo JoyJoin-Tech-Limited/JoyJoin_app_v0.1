@@ -25,7 +25,7 @@ export interface UserTestSession {
   };
 }
 
-const archetypes = ['開心柯基', '太陽雞', '夸夸豚', '機智狐', '淡定海豚', '織網蛛', '暖心熊', '靈感章魚', '沉思貓頭鷹', '定心大象', '穩如龜', '隱身貓'];
+const archetypes = ['開心柯基', '太陽雞', 'hamster_praise', '機智狐', 'dolphin_calm', '織網蛛', 'koala', '靈感章魚', '沉思貓頭鷹', 'elephant', '穩如龜', '隱身貓'];
 const browsers = ['Chrome', 'Safari', 'WeChat', 'Firefox', 'Samsung Browser'];
 const devices = ['mobile', 'tablet', 'desktop'] as const;
 

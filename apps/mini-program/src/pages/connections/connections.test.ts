@@ -80,7 +80,7 @@ describe('connections page helpers', () => {
       eventDate: '2026-04-22T10:00:00Z',
       peerId: 'peer-1',
       peerDisplayName: 'Test User',
-      peerArchetype: '开心柯基',
+      peerArchetype: 'corgi',
       peerWechatId: 'test_wechat_id',
       connectionReasons: ['兴趣相投'],
       nextStepPreference: '加微信',

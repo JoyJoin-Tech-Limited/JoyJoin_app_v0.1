@@ -1,6 +1,7 @@
 import { callSocialAI } from './ai/socialModelRouter';
 import { DISCUSSION_STYLE_LABELS } from '@shared/constants';
 import { logAITrace } from './lib/aiTraceLogger';
+import { logger } from './lib/logger';
 
 const CONVERSATION_TOPICS_PROMPT_VERSION = 'conversation-topics-v1';
 
@@ -44,10 +45,10 @@ const CONVERSATION_TOPICS_PROMPT = `你是"小悦"，JoyJoin平台的社交氛�
 4. **避免敏感**：避免政治、宗教、薪资等敏感话题
 
 ## 社交原型参考
-- 开心柯基/太阳鸡/夸夸豚：高能量，喜欢有趣话题
-- 暖心熊/温暖金毛：温和，喜欢温馨话题
-- 隐身猫/稳如龟：内敛，偏好深度话题
-- 灵感章鱼/机智狐：创意型，喜欢新奇话题
+- corgi/rooster/hamster_praise：高能量，喜欢有趣话题
+- koala/温暖金毛：温和，喜欢温馨话题
+- cat/turtle：内敛，偏好深度话题
+- octopus/fox：创意型，喜欢新奇话题
 
 ## 输出格式
 返回一个JSON对象：
@@ -206,7 +207,7 @@ ${eventType ? `活动类型：${eventType}` : ''}
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('Conversation topics generation error:', error);
+    logger.error('Conversation topics generation error', { operation: 'generateConversationTopics', error: error instanceof Error ? error.message : String(error) });
     logAITrace({
       domain: 'match_explanation',
       feature: 'generateConversationTopics',

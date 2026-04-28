@@ -42,7 +42,7 @@ Add the secret key to your `.env` file:
 
 ```bash
 # Development Tools Secret Key
-ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678
+ADMIN_CREATE_SECRET_KEY=$ADMIN_CREATE_SECRET_KEY
 ```
 
 ⚠️ **Important**: This key must be set for all tools to work. The tools will fail with a clear error if the key is missing.
@@ -88,11 +88,11 @@ Creates an admin account with full access to the admin panel. If the phone numbe
 - Bypasses personality test automatically
 - Hashes password with bcrypt
 - Updates existing users to admin
-- Sets default archetype (开心柯基)
+- Sets default archetype (气氛组柯基)
 
 **Example:**
 ```bash
-npm run admin:create +8613800138000 admin123 BYPASSSECRET12345678
+npm run admin:create +8613800138000 $ADMIN_PASSWORD $ADMIN_CREATE_SECRET_KEY
 ```
 
 **Output:**
@@ -152,7 +152,7 @@ $ npm run user:create
 🔧 JoyJoin User Account Creator
 ================================
 
-🔐 Enter secret key: BYPASSSECRET12345678
+🔐 Enter secret key: $ADMIN_CREATE_SECRET_KEY
 ✅ Secret key verified
 
 📞 Enter phone number (11 digits): 13900139000
@@ -160,18 +160,18 @@ $ npm run user:create
 👤 Enter display name: 测试用户
 
 🎭 Select archetype:
-  1. 开心柯基
-  2. 太阳鸡
-  3. 夸夸豚
-  4. 机智狐
-  5. 淡定海豚
-  6. 织网蛛
-  7. 暖心熊
-  8. 灵感章鱼
-  9. 沉思猫头鹰
-  10. 定心大象
-  11. 稳如龟
-  12. 隐身猫
+  1. 气氛组柯基
+  2. 情绪稳定鸡
+  3. 捧场王仓鼠
+  4. 探宝雷达狐
+  5. 读空气海豚
+  6. 社交裁缝蛛
+  7. 情绪树洞考拉
+  8. 脑洞喷泉章鱼
+  9. 追问猫头鹰
+  10. 定海神针大象
+  11. 慢半拍龟
+  12. 静音模式猫
 
 Enter number: 1
 
@@ -203,7 +203,7 @@ Enter number: 2
    User ID: clm9876543210
    Phone: +8613900139000
    Display Name: 测试用户
-   Archetype: 开心柯基
+   Archetype: 气氛组柯基
    Gender: 男性
    City: 深圳
    Age: 28
@@ -234,12 +234,12 @@ Bypasses the personality test requirement for an existing user. Sets a default a
 
 **Features:**
 - Works on existing users only
-- Sets default archetype (开心柯基) if needed
+- Sets default archetype (气氛组柯基) if needed
 - Marks personality test as complete
 
 **Example:**
 ```bash
-npm run user:bypass +8613900139000 BYPASSSECRET12345678
+npm run user:bypass +8613900139000 $ADMIN_CREATE_SECRET_KEY
 ```
 
 **Output:**
@@ -251,7 +251,7 @@ npm run user:bypass +8613900139000 BYPASSSECRET12345678
    User ID: clm9876543210
    Phone: +8613900139000
    Display Name: 测试用户
-   Archetype: 开心柯基
+   Archetype: 气氛组柯基
 
    User can now access the app without completing the personality test
 ```
@@ -321,18 +321,18 @@ window.dev.archetypes()
 🎭 JoyJoin 12 Archetypes:
 ========================
 
-1. 开心柯基
-2. 太阳鸡
-3. 夸夸豚
-4. 机智狐
-5. 淡定海豚
-6. 织网蛛
-7. 暖心熊
-8. 灵感章鱼
-9. 沉思猫头鹰
-10. 定心大象
-11. 稳如龟
-12. 隐身猫
+1. 气氛组柯基
+2. 情绪稳定鸡
+3. 捧场王仓鼠
+4. 探宝雷达狐
+5. 读空气海豚
+6. 社交裁缝蛛
+7. 情绪树洞考拉
+8. 脑洞喷泉章鱼
+9. 追问猫头鹰
+10. 定海神针大象
+11. 慢半拍龟
+12. 静音模式猫
 
 Use these names when creating accounts or selecting archetypes.
 ```
@@ -367,13 +367,13 @@ window.dev.createAdmin()
 =====================
 
 [Prompt] 🔐 Enter secret key:
-> BYPASSSECRET12345678
+> $ADMIN_CREATE_SECRET_KEY
 
 [Prompt] 📞 Enter phone number (e.g., +8613800138000):
 > +8613800138000
 
 [Prompt] 🔑 Enter password:
-> admin123
+> $ADMIN_PASSWORD
 
 ⏳ Creating admin account...
 
@@ -422,7 +422,7 @@ window.dev.createUser()
 ====================
 
 [Prompt] 🔐 Enter secret key:
-> BYPASSSECRET12345678
+> $ADMIN_CREATE_SECRET_KEY
 
 [Prompt] 📞 Enter phone number (e.g., +8613900139000):
 > +8613900139000
@@ -434,18 +434,18 @@ window.dev.createUser()
 > 测试用户
 
 🎭 Select archetype:
-  1. 开心柯基
-  2. 太阳鸡
-  3. 夸夸豚
-  4. 机智狐
-  5. 淡定海豚
-  6. 织网蛛
-  7. 暖心熊
-  8. 灵感章鱼
-  9. 沉思猫头鹰
-  10. 定心大象
-  11. 稳如龟
-  12. 隐身猫
+  1. 气氛组柯基
+  2. 情绪稳定鸡
+  3. 捧场王仓鼠
+  4. 探宝雷达狐
+  5. 读空气海豚
+  6. 社交裁缝蛛
+  7. 情绪树洞考拉
+  8. 脑洞喷泉章鱼
+  9. 追问猫头鹰
+  10. 定海神针大象
+  11. 慢半拍龟
+  12. 静音模式猫
 
 [Prompt] Enter number:
 > 1
@@ -483,7 +483,7 @@ window.dev.createUser()
    User ID: clm9876543210
    Phone: +8613900139000
    Display Name: 测试用户
-   Archetype: 开心柯基
+   Archetype: 气氛组柯基
 
    Login at: /login
    Use phone + verification code (demo: 666666)
@@ -518,12 +518,12 @@ window.dev.bypassTest()
 ========================
 
 [Prompt] 🔐 Enter secret key:
-> BYPASSSECRET12345678
+> $ADMIN_CREATE_SECRET_KEY
 
 ⏳ Bypassing personality test...
 
 ✅ Success! Personality test bypassed
-   Archetype: 开心柯基
+   Archetype: 气氛组柯基
 
    Redirecting to discover page...
 ```
@@ -548,8 +548,8 @@ All tools use these internal API endpoints. They can also be called directly via
 ```json
 {
   "phoneNumber": "+8613800138000",
-  "password": "admin123",
-  "secretKey": "BYPASSSECRET12345678"
+  "password": "$ADMIN_PASSWORD",
+  "secretKey": "$ADMIN_CREATE_SECRET_KEY"
 }
 ```
 
@@ -576,8 +576,8 @@ curl -X POST http://localhost:5001/api/dev/admin/create \
   -H "Content-Type: application/json" \
   -d '{
     "phoneNumber": "+8613800138000",
-    "password": "admin123",
-    "secretKey": "BYPASSSECRET12345678"
+    "password": "$ADMIN_PASSWORD",
+    "secretKey": "$ADMIN_CREATE_SECRET_KEY"
   }'
 ```
 
@@ -592,9 +592,9 @@ curl -X POST http://localhost:5001/api/dev/admin/create \
 {
   "phoneNumber": "+8613900139000",
   "password": "user123",
-  "secretKey": "BYPASSSECRET12345678",
+  "secretKey": "$ADMIN_CREATE_SECRET_KEY",
   "displayName": "测试用户",
-  "archetype": "开心柯基",
+  "archetype": "气氛组柯基",
   "gender": "男性",
   "city": "深圳",
   "age": "28",
@@ -611,7 +611,7 @@ curl -X POST http://localhost:5001/api/dev/admin/create \
   "userId": "clm9876543210",
   "phoneNumber": "+8613900139000",
   "displayName": "测试用户",
-  "archetype": "开心柯基"
+  "archetype": "气氛组柯基"
 }
 ```
 
@@ -622,9 +622,9 @@ curl -X POST http://localhost:5001/api/dev/user/create \
   -d '{
     "phoneNumber": "+8613900139000",
     "password": "user123",
-    "secretKey": "BYPASSSECRET12345678",
+    "secretKey": "$ADMIN_CREATE_SECRET_KEY",
     "displayName": "测试用户",
-    "archetype": "开心柯基",
+    "archetype": "气氛组柯基",
     "gender": "男性",
     "city": "深圳"
   }'
@@ -641,7 +641,7 @@ curl -X POST http://localhost:5001/api/dev/user/create \
 **Request Body:**
 ```json
 {
-  "secretKey": "BYPASSSECRET12345678"
+  "secretKey": "$ADMIN_CREATE_SECRET_KEY"
 }
 ```
 
@@ -650,7 +650,7 @@ curl -X POST http://localhost:5001/api/dev/user/create \
 {
   "success": true,
   "message": "Personality test bypassed successfully",
-  "archetype": "开心柯基"
+  "archetype": "气氛组柯基"
 }
 ```
 
@@ -660,7 +660,7 @@ curl -X POST http://localhost:5001/api/dev/personality-test/bypass \
   -H "Content-Type: application/json" \
   -H "Cookie: connect.sid=YOUR_SESSION_COOKIE" \
   -d '{
-    "secretKey": "BYPASSSECRET12345678"
+    "secretKey": "$ADMIN_CREATE_SECRET_KEY"
   }'
 ```
 
@@ -675,7 +675,7 @@ curl -X POST http://localhost:5001/api/dev/personality-test/bypass \
 **Solution:**
 ```bash
 # CLI method (fastest)
-npm run admin:create +8613800138000 admin123 BYPASSSECRET12345678
+npm run admin:create +8613800138000 $ADMIN_PASSWORD $ADMIN_CREATE_SECRET_KEY
 
 # Then login at /admin/login with phone + password
 ```
@@ -695,7 +695,7 @@ npm run user:create
 # Or write a bash script:
 for i in {1..5}; do
   phone="+861380013800$i"
-  npm run admin:create $phone "pass$i" BYPASSSECRET12345678
+  npm run admin:create $phone "pass$i" $ADMIN_CREATE_SECRET_KEY
 done
 ```
 
@@ -756,18 +756,18 @@ npm run user:create
 1. Test the secret key:
    ```javascript
    window.dev.checkSecretKey()
-   // Enter: BYPASSSECRET12345678
+   // Enter: $ADMIN_CREATE_SECRET_KEY
    ```
 
 2. Check server environment:
-   - Make sure `.env` file has: `ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678`
+   - Make sure `.env` file has: `ADMIN_CREATE_SECRET_KEY=$ADMIN_CREATE_SECRET_KEY`
    - Restart server after adding env variable
    - Check server logs for startup message about secret key
 
 3. Verify exact match:
    - Secret key is case-sensitive
    - No extra spaces
-   - Exact value: `BYPASSSECRET12345678`
+   - Exact value: `$ADMIN_CREATE_SECRET_KEY`
 
 4. For controlled staging or emergency production use:
   - Confirm whether the surface you need is actually allowed by `apps/server/src/auth/policy.ts`
@@ -783,7 +783,7 @@ npm run user:create
 **Solution:**
 ```bash
 # Add to .env file
-echo "ADMIN_CREATE_SECRET_KEY=BYPASSSECRET12345678" >> .env
+echo "ADMIN_CREATE_SECRET_KEY=$ADMIN_CREATE_SECRET_KEY" >> .env
 
 # Restart the server
 npm run dev
@@ -939,7 +939,7 @@ window.dev.bypassTest()
 
 ### Secret Key
 ```
-BYPASSSECRET12345678
+$ADMIN_CREATE_SECRET_KEY
 ```
 
 ### Demo Login Credentials

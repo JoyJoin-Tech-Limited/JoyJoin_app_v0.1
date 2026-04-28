@@ -20,18 +20,18 @@ describe('archetypeNames', () => {
 
     it('should contain all expected archetypes', () => {
       const expected = [
-        '开心柯基',
-        '太阳鸡',
-        '夸夸豚',
-        '机智狐',
-        '淡定海豚',
-        '织网蛛',
-        '暖心熊',
-        '灵感章鱼',
-        '沉思猫头鹰',
-        '定心大象',
-        '稳如龟',
-        '隐身猫',
+        'corgi',
+        'rooster',
+        'hamster_praise',
+        'fox',
+        'dolphin_calm',
+        'spider',
+        'koala',
+        'octopus',
+        'owl',
+        'elephant',
+        'turtle',
+        'cat',
       ];
       expect(ARCHETYPE_CANONICAL_ORDER).toEqual(expected);
     });
@@ -51,9 +51,9 @@ describe('archetypeNames', () => {
 
   describe('getArchetypeIndex', () => {
     it('should return 1-based index for valid archetypes', () => {
-      expect(getArchetypeIndex('开心柯基')).toBe(1);
-      expect(getArchetypeIndex('机智狐')).toBe(4);
-      expect(getArchetypeIndex('隐身猫')).toBe(12);
+      expect(getArchetypeIndex('corgi')).toBe(1);
+      expect(getArchetypeIndex('fox')).toBe(4);
+      expect(getArchetypeIndex('cat')).toBe(12);
     });
 
     it('should return null for invalid archetype', () => {
@@ -62,9 +62,9 @@ describe('archetypeNames', () => {
     });
 
     it('should be case-sensitive', () => {
-      expect(getArchetypeIndex('开心柯基')).toBe(1);
+      expect(getArchetypeIndex('corgi')).toBe(1);
       // Different characters should not match
-      expect(getArchetypeIndex('开心柯基 ')).toBeNull(); // with space
+      expect(getArchetypeIndex('corgi ')).toBeNull(); // with space
     });
   });
 
@@ -84,9 +84,9 @@ describe('archetypeNames', () => {
 
   describe('getArchetypeTypeNo', () => {
     it('should return formatted TYPE for valid archetypes', () => {
-      expect(getArchetypeTypeNo('开心柯基')).toBe('01/12');
-      expect(getArchetypeTypeNo('机智狐')).toBe('04/12');
-      expect(getArchetypeTypeNo('隐身猫')).toBe('12/12');
+      expect(getArchetypeTypeNo('corgi')).toBe('01/12');
+      expect(getArchetypeTypeNo('fox')).toBe('04/12');
+      expect(getArchetypeTypeNo('cat')).toBe('12/12');
     });
 
     it('should return "00/12" for invalid archetype', () => {

@@ -10,8 +10,8 @@ describe("matchingSemantic", () => {
   const similarUsers = [
     {
       userId: "u1",
-      archetype: "暖心熊",
-      secondaryArchetype: "机智狐",
+      archetype: "koala",
+      secondaryArchetype: "fox",
       workMode: "founder",
       educationLevel: "本科",
       industryNiche: "consumer-tech",
@@ -25,8 +25,8 @@ describe("matchingSemantic", () => {
     },
     {
       userId: "u2",
-      archetype: "暖心熊",
-      secondaryArchetype: "机智狐",
+      archetype: "koala",
+      secondaryArchetype: "fox",
       workMode: "founder",
       educationLevel: "本科",
       industryNiche: "consumer-tech",

@@ -1,5 +1,6 @@
 import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components'
 import { useCallback, useState } from 'react'
+import { cdnAsset } from '../lib/cdnAssets'
 import { SWIPER_INTERVAL_MS, SWIPER_TRANSITION_MS } from '../lib/uiConstants'
 import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
 import './AiMatchPromoCarousel.scss'
@@ -13,17 +14,17 @@ const PROMO_SLIDES = [
   {
     title: 'AI 匹配：帮你算好遇见什么样的人',
     subtitle: '算好的人 · 用数据找到更合适的缘分',
-    imageSrc: '/assets/promo/banner-ai-match-calculated.png',
+    imageSrc: cdnAsset('/assets/promo/banner-ai-match-calculated.png'),
   },
   {
     title: 'AI 匹配：帮你遇见同频的人',
     subtitle: '同频的人 · 和你合拍的社交伙伴',
-    imageSrc: '/assets/promo/banner-ai-match-same-frequency.png',
+    imageSrc: cdnAsset('/assets/promo/banner-ai-match-same-frequency.png'),
   },
   {
     title: 'AI 匹配：帮你遇见懂你的人',
     subtitle: '懂你的人 · 更懂你的线下聚会',
-    imageSrc: '/assets/promo/banner-ai-match-understands-you.png',
+    imageSrc: cdnAsset('/assets/promo/banner-ai-match-understands-you.png'),
   },
 ] as const
 

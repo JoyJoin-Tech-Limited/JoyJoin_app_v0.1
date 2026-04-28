@@ -330,7 +330,7 @@ With `updated_at` now carrying genuine signal value, Phase 2's latent user state
 
 ### 2.3 Archetype Trajectory Tracking & Smoothing
 
-**Problem:** Users who retake the personality test or whose archetype is reassigned experience a hard snap from one archetype to another. If a user shifted from 稳如龟 to 机智狐 two weeks ago, their chemistry scores abruptly change. This creates volatility.
+**Problem:** Users who retake the personality test or whose archetype is reassigned experience a hard snap from one archetype to another. If a user shifted from 慢半拍龟 to 探宝雷达狐 two weeks ago, their chemistry scores abruptly change. This creates volatility.
 
 **Proposal:** Track archetype transitions in a lightweight history log. When computing `calculateChemistryScore()`, blend the user's **current** and **previous** archetype using a time-decay weight.
 

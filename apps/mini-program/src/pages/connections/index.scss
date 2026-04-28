@@ -53,15 +53,10 @@
     width: 88rpx;
     height: 88rpx;
     border-radius: 44rpx;
-    background: $brand-gradient;
+    background: rgba($color-primary, 0.08);
     @include flex-center;
     flex-shrink: 0;
-  }
-
-  &__card-avatar-text {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
+    overflow: hidden;
   }
 
   &__card-info {

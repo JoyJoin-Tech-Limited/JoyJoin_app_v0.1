@@ -55,8 +55,8 @@ describe("avgArchetypeEnergy", () => {
   });
 
   it("returns the energyLevel for a single known archetype", () => {
-    // 开心柯基 has energyLevel 95 per archetypes.ts
-    const result = avgArchetypeEnergy(["开心柯基"]);
+    // corgi has energyLevel 95 per archetypes.ts
+    const result = avgArchetypeEnergy(["corgi"]);
     expect(result).toBe(95);
   });
 
@@ -65,8 +65,8 @@ describe("avgArchetypeEnergy", () => {
   });
 
   it("averages two archetypes correctly", () => {
-    // 开心柯基=95, 隐身猫=30 → avg = 62.5
-    const result = avgArchetypeEnergy(["开心柯基", "隐身猫"]);
+    // corgi=95, cat=30 → avg = 62.5
+    const result = avgArchetypeEnergy(["corgi", "cat"]);
     expect(result).toBeCloseTo(62.5);
   });
 });
@@ -83,7 +83,7 @@ describe("getPoolForecast — result shape", () => {
   it("returns no more than 3 lines", () => {
     const result = getPoolForecast({
       registrationCount: 3,
-      sampleArchetypes: ["开心柯基", "暖心熊", "机智狐", "定心大象"],
+      sampleArchetypes: ["corgi", "koala", "fox", "elephant"],
       eventType: "酒局",
     });
     expect(result.lines.length).toBeLessThanOrEqual(3);
@@ -128,7 +128,7 @@ describe("getPoolForecast — archetype supplement", () => {
   it("adds a diversity line for 3 unique archetypes", () => {
     const result = getPoolForecast({
       registrationCount: 2,
-      sampleArchetypes: ["开心柯基", "暖心熊", "机智狐"],
+      sampleArchetypes: ["corgi", "koala", "fox"],
     });
     // Second line should reference diversity
     expect(result.lines.length).toBeGreaterThanOrEqual(2);
@@ -138,7 +138,7 @@ describe("getPoolForecast — archetype supplement", () => {
   it("adds a high-diversity line for 4+ unique archetypes", () => {
     const result = getPoolForecast({
       registrationCount: 2,
-      sampleArchetypes: ["开心柯基", "暖心熊", "机智狐", "定心大象"],
+      sampleArchetypes: ["corgi", "koala", "fox", "elephant"],
     });
     expect(result.lines.length).toBeGreaterThanOrEqual(2);
     expect(result.lines[1]).toContain("性格");
@@ -148,7 +148,7 @@ describe("getPoolForecast — archetype supplement", () => {
     // Two of the same high-energy archetype: avg energy 95 → high energy line
     const result = getPoolForecast({
       registrationCount: 1,
-      sampleArchetypes: ["开心柯基", "开心柯基"],
+      sampleArchetypes: ["corgi", "corgi"],
     });
     expect(result.lines.length).toBeGreaterThanOrEqual(2);
     // High energy → should mention energy
@@ -203,8 +203,8 @@ describe("getPoolForecast — 酒局 flavour", () => {
 
 describe("getPoolForecast — determinism", () => {
   it("returns identical results for identical inputs", () => {
-    const inputA = { registrationCount: 3, sampleArchetypes: ["开心柯基"], minGroupSize: 4 };
-    const inputB = { registrationCount: 3, sampleArchetypes: ["开心柯基"], minGroupSize: 4 };
+    const inputA = { registrationCount: 3, sampleArchetypes: ["corgi"], minGroupSize: 4 };
+    const inputB = { registrationCount: 3, sampleArchetypes: ["corgi"], minGroupSize: 4 };
     expect(getPoolForecast(inputA)).toEqual(getPoolForecast(inputB));
   });
 
@@ -225,10 +225,10 @@ describe("getPoolForecast — determinism", () => {
 describe("getPoolForecast — pool language safety", () => {
   const scenarios: Array<{ registrationCount: number; sampleArchetypes: string[]; eventType?: "饭局" | "酒局"; minGroupSize?: number }> = [
     { registrationCount: 0, sampleArchetypes: [] },
-    { registrationCount: 1, sampleArchetypes: ["开心柯基"], eventType: "饭局" },
-    { registrationCount: 2, sampleArchetypes: ["暖心熊", "机智狐"] },
+    { registrationCount: 1, sampleArchetypes: ["corgi"], eventType: "饭局" },
+    { registrationCount: 2, sampleArchetypes: ["koala", "fox"] },
     { registrationCount: 3, sampleArchetypes: [], minGroupSize: 4 },
-    { registrationCount: 5, sampleArchetypes: ["太阳鸡", "淡定海豚", "织网蛛", "灵感章鱼"], eventType: "酒局" },
+    { registrationCount: 5, sampleArchetypes: ["rooster", "dolphin_calm", "spider", "octopus"], eventType: "酒局" },
   ];
 
   it.each(scenarios)(

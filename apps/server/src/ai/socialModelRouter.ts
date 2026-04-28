@@ -1,13 +1,18 @@
 /**
- * Social AI model router — Phase 2 hybrid rollout
+ * Social AI model router — Phase 2 hybrid rollout + DeepSeek V4 tier support
  *
  * Routes social-experience AI calls to MiniMax when configured, falling
  * back to DeepSeek for resilience.  All caller code should go through
  * `callSocialAI` or `getClientForFunction` instead of instantiating
  * provider clients directly.
  *
+ * DeepSeek V4 migration:
+ *   - Three model tiers: flash (default), flash-thinking, pro-thinking
+ *   - Deprecated `deepseek-chat` alias replaced with explicit `deepseek-v4-flash`
+ *   - Thinking mode is enabled via extra_body per DeepSeek API spec
+ *
  * Services routed through this file:
- *   - socialIcebreakerAIService.ts  (warmup topics, XiaoYue, recap, lie detective, miniscript framework — MiniMax-first; JSON paths fall back to DeepSeek json_object when needed)
+ *   - socialIcebreakerAIService.ts  (warmup topics, XiaoYue, recap, lie detective, miniscript framework)
  *   - matchExplanationService.ts    (pair explanations, icebreakers)
  *   - inference/hybridSemantic.ts   (semantic attribute analysis)
  *
@@ -17,26 +22,34 @@
  */
 
 import OpenAI from 'openai';
-import { getMinimaxModel, getMinimaxClient, MINIMAX_DEFAULT_MODEL, isMinimaxEnabled } from './minimaxClient';
+import {
+  type DeepSeekModelTier,
+  buildThinkingExtraBody,
+} from '@joyjoin/shared';
+import { getDeepseekClient, getDeepseekModel } from './deepseekClient';
+import {
+  getMinimaxModel,
+  getMinimaxClient,
+  MINIMAX_DEFAULT_MODEL,
+  isMinimaxEnabled,
+} from './minimaxClient';
+import { logger } from '../lib/logger';
+import { isProBudgetAvailable } from './deepseekBudgetTracker';
 
-const DEEPSEEK_MODEL = 'deepseek-chat';
+// ---------------------------------------------------------------------------
+// Model tier configuration
+// ---------------------------------------------------------------------------
 
-// DeepSeek client — lazy-initialized so the module can load safely even when
-// DEEPSEEK_API_KEY is not set (e.g. MiniMax-only envs).  The dummy key
-// follows the same pattern used by other services in this codebase.
-let _deepseekClient: OpenAI | null = null;
+/**
+ * Environment overrides for DeepSeek model selection.
+ */
+const ENABLE_PRO_MATCH_EXPLANATIONS =
+  process.env.ENABLE_PRO_MATCH_EXPLANATIONS === 'true';
 
-function getDeepseekClient(): OpenAI {
-  if (!_deepseekClient) {
-    _deepseekClient = new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
-      baseURL: 'https://api.deepseek.com',
-    });
-  }
-  return _deepseekClient;
-}
-
+// ---------------------------------------------------------------------------
 // Social functions routed through the explicit registry.
+// ---------------------------------------------------------------------------
+
 type SocialFunction =
   | 'generateWarmupTopics'
   | 'generateXiaoYueComment'
@@ -45,6 +58,7 @@ type SocialFunction =
   | 'generateMicroChallenges'
   | 'generatePersonalityDiceChallenges'
   | 'generateAuctionLots'
+  | 'generateXiaoyueSessionPack'
   | 'generateProfileTagline'
   | 'generateConversationTopics'
   | 'generateWelcomeMessage'
@@ -58,26 +72,69 @@ type SocialFunction =
 type SocialFunctionRoutingPolicy = {
   preferredProvider: 'minimax' | 'deepseek';
   forceProvider?: 'deepseek';
+  /** DeepSeek model tier when DeepSeek is selected. Default: 'flash' */
+  deepseekTier?: DeepSeekModelTier;
+  /**
+   * Override the default reasoning_effort for thinking tiers.
+   *   'high'  — standard reasoning depth (default, lower latency/cost)
+   *   'max'   — maximum reasoning depth for tasks where accuracy is
+   *             critical and latency/cost are acceptable trade-offs.
+   * When omitted, the tier default ('high') is used.
+   */
+  reasoningEffort?: 'high' | 'max';
 };
 
+/**
+ * Reasoning-effort assignment framework
+ *
+ * Tier 0 — Flash (no thinking): real-time chat, creative generation,
+ *   anything with rich fallbacks. Fastest, cheapest.
+ * Tier 1 — Flash-thinking + high: structured output, medium-stakes.
+ *   Default for thinking-tier features.
+ * Tier 2 — Flash-thinking + max: complex analysis, validation,
+ *   zero-tolerance accuracy. Higher latency/cost.
+ * Tier 3 — Pro-thinking + max: highest-stakes user-facing content.
+ *   Budget-gated.
+ */
 const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolicy> = {
-  generateWarmupTopics: { preferredProvider: 'minimax' },
-  generateXiaoYueComment: { preferredProvider: 'minimax' },
-  generateRecapSummary: { preferredProvider: 'minimax' },
-  generateLieDetectiveStatements: { preferredProvider: 'minimax' },
-  generateMicroChallenges: { preferredProvider: 'minimax' },
-  generatePersonalityDiceChallenges: { preferredProvider: 'minimax' },
-  generateAuctionLots: { preferredProvider: 'minimax' },
-  generateProfileTagline: { preferredProvider: 'minimax' },
-  generateConversationTopics: { preferredProvider: 'minimax' },
-  generateWelcomeMessage: { preferredProvider: 'minimax' },
-  generateClosingMessage: { preferredProvider: 'minimax' },
-  generatePairExplanation: { preferredProvider: 'minimax' },
-  generateIceBreakers: { preferredProvider: 'minimax' },
-  analyzeComplexSemantics: { preferredProvider: 'deepseek', forceProvider: 'deepseek' },
-  generateMiniScriptFramework: { preferredProvider: 'minimax' },
-  generatePoolCardHeadline: { preferredProvider: 'minimax' },
+  // ── Tier 0: Flash, no thinking — real-time / creative / fallback-rich ──
+  generateWarmupTopics: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateXiaoYueComment: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateRecapSummary: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateLieDetectiveStatements: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateMicroChallenges: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generatePersonalityDiceChallenges: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateAuctionLots: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateXiaoyueSessionPack: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateProfileTagline: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateConversationTopics: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateWelcomeMessage: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateClosingMessage: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateIceBreakers: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateMiniScriptFramework: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generatePoolCardHeadline: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+
+  // ── Tier 2: Flash-thinking + max — complex analysis, validation ──
+  analyzeComplexSemantics: {
+    preferredProvider: 'deepseek',
+    forceProvider: 'deepseek',
+    deepseekTier: 'flash-thinking',
+    reasoningEffort: 'max',
+  },
+
+  // ── Tier 3: Pro-thinking + max — highest-stakes, budget-gated ──
+  generatePairExplanation: {
+    preferredProvider: 'minimax',
+    deepseekTier: ENABLE_PRO_MATCH_EXPLANATIONS ? 'pro-thinking' : 'flash-thinking',
+    reasoningEffort: 'max',
+  },
 };
+
+/** Global fallback for reasoning_effort on all thinking-tier calls. */
+const DEFAULT_REASONING_EFFORT: 'high' | 'max' | undefined =
+  process.env.SOCIAL_DEFAULT_REASONING_EFFORT === 'max' ? 'max' :
+  process.env.SOCIAL_DEFAULT_REASONING_EFFORT === 'high' ? 'high' :
+  undefined;
 
 export type RoutedSocialFunction = Exclude<SocialFunction, 'analyzeComplexSemantics'>;
 
@@ -88,7 +145,7 @@ function resolveMode(): ProviderMode {
   if (!raw || raw === 'hybrid') return 'hybrid';
   if (raw === 'deepseek') return 'deepseek';
   if (raw === 'minimax') return 'minimax';
-  console.warn(`[socialAI] Unrecognized SOCIAL_AI_PROVIDER="${raw}", defaulting to hybrid`);
+  logger.warn('Unrecognized SOCIAL_AI_PROVIDER, defaulting to hybrid', { service: 'socialAI', envVar: 'SOCIAL_AI_PROVIDER', value: raw });
   return 'hybrid';
 }
 
@@ -96,6 +153,10 @@ export interface ClientSelection {
   client: OpenAI;
   model: string;
   provider: 'minimax' | 'deepseek';
+  /** DeepSeek thinking configuration to pass via extra_body */
+  thinkingExtraBody?: { thinking?: { type: 'enabled' }; reasoning_effort?: 'high' | 'max' };
+  /** The reasoning effort level that was resolved for this selection */
+  reasoningEffort?: 'high' | 'max';
 }
 
 /**
@@ -117,7 +178,7 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
         `[socialAI] ${fn} requires DeepSeek (response_format: json_object) but DEEPSEEK_API_KEY is not set`
       );
     }
-    return getDeepseekSelection();
+    return getDeepseekSelection(policy.deepseekTier, policy.reasoningEffort);
   }
 
   const mode = resolveMode();
@@ -126,13 +187,13 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
   const mmClient = getMinimaxClient();
 
   if (mode === 'deepseek') {
-    return getDeepseekSelection();
+    return getDeepseekSelection(policy.deepseekTier, policy.reasoningEffort);
   }
 
   if (mode === 'minimax') {
     if (!mmClient) {
-      console.warn('[socialAI] SOCIAL_AI_PROVIDER=minimax but MINIMAX_API_KEY is not set, falling back to deepseek');
-      return getDeepseekSelection();
+      logger.warn('MINIMAX_API_KEY is not set, falling back to deepseek', { service: 'socialAI', envVar: 'SOCIAL_AI_PROVIDER', value: 'minimax' });
+      return getDeepseekSelection(policy.deepseekTier, policy.reasoningEffort);
     }
     return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
   }
@@ -140,13 +201,13 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
   // hybrid mode (default)
   if (policy.preferredProvider === 'minimax') {
     if (!mmClient) {
-      console.warn(`[socialAI] ${fn}: MINIMAX_API_KEY is not set, falling back to deepseek`);
-      return getDeepseekSelection();
+      logger.warn('MINIMAX_API_KEY is not set, falling back to deepseek', { service: 'socialAI', function: fn });
+      return getDeepseekSelection(policy.deepseekTier, policy.reasoningEffort);
     }
     return { client: mmClient, model: getMinimaxModel(), provider: 'minimax' };
   }
 
-  return getDeepseekSelection();
+  return getDeepseekSelection(policy.deepseekTier, policy.reasoningEffort);
 }
 
 /**
@@ -154,8 +215,29 @@ export function getClientForFunction(fn: SocialFunction): ClientSelection {
  * Used by callers that need an explicit DeepSeek fallback path when their
  * primary provider (MiniMax) has already failed.
  */
-export function getDeepseekSelection(): ClientSelection {
-  return { client: getDeepseekClient(), model: DEEPSEEK_MODEL, provider: 'deepseek' };
+export function getDeepseekSelection(
+  tier: DeepSeekModelTier = 'flash',
+  reasoningEffort?: 'high' | 'max',
+): ClientSelection {
+  // Budget guard: downgrade pro-thinking to flash when daily Pro budget is exceeded
+  let effectiveTier = tier;
+  if (tier === 'pro-thinking' && !isProBudgetAvailable()) {
+    logger.warn(
+      'DeepSeek Pro daily budget exceeded — downgrading pro-thinking to flash',
+      { requestedTier: tier, downgradedTo: 'flash' },
+    );
+    effectiveTier = 'flash';
+  }
+
+  const resolvedEffort = reasoningEffort ?? DEFAULT_REASONING_EFFORT;
+
+  return {
+    client: getDeepseekClient(),
+    model: getDeepseekModel(effectiveTier),
+    provider: 'deepseek',
+    thinkingExtraBody: buildThinkingExtraBody(effectiveTier, resolvedEffort),
+    reasoningEffort: resolvedEffort,
+  };
 }
 
 export interface SocialAICallParams {
@@ -166,6 +248,12 @@ export interface SocialAICallParams {
   callerTag: string;
   /** Explicit routed social function key for function-level provider selection. */
   socialFunction?: RoutedSocialFunction;
+  /**
+   * Override the model name returned by the router.
+   * Used by benchmark/evaluation harnesses to test alternative models
+   * (e.g. minimax-m2.7-highspeed) without changing global env vars.
+   */
+  modelOverride?: string;
 }
 
 export interface SocialAICallResult {
@@ -174,6 +262,8 @@ export interface SocialAICallResult {
   model: string;
   latencyMs: number;
   fallbackUsed: boolean;
+  /** DeepSeek reasoning content when thinking mode is enabled */
+  reasoningContent?: string;
 }
 
 /**
@@ -204,29 +294,30 @@ export async function callSocialAI(
           model: MINIMAX_DEFAULT_MODEL,
           provider: 'minimax' as const,
         };
+    const modelName = params.modelOverride ?? minimaxSelection.model;
     const start = Date.now();
     try {
       const response = await minimaxSelection.client.chat.completions.create({
-        model: minimaxSelection.model,
+        model: modelName,
         messages,
         temperature,
         max_tokens,
       });
       const providerLatencyMs = Date.now() - start;
       const content = response.choices[0]?.message?.content ?? '';
-      console.log(`[socialAI] ${callerTag} provider=minimax latency=${providerLatencyMs}ms`);
+      logger.info('MiniMax call completed', { service: 'socialAI', callerTag, provider: 'minimax', latencyMs: providerLatencyMs });
       return {
         content,
         provider: 'minimax',
-        model: minimaxSelection.model,
+        model: modelName,
         latencyMs: Date.now() - overallStartedAt,
         fallbackUsed: false,
       };
     } catch (err) {
       const providerLatencyMs = Date.now() - start;
-      console.warn(
-        `[socialAI] ${callerTag} minimax failed after ${providerLatencyMs}ms, falling back to deepseek:`,
-        err
+      logger.warn(
+        'minimax failed, falling back to deepseek',
+        { service: 'socialAI', callerTag, provider: 'minimax', latencyMs: providerLatencyMs, error: err instanceof Error ? err.message : String(err) }
       );
     }
   }
@@ -240,21 +331,37 @@ export async function callSocialAI(
   const deepseekSelection = routedSelection?.provider === 'deepseek'
     ? routedSelection
     : getDeepseekSelection();
+  const modelName = params.modelOverride ?? deepseekSelection.model;
   const start = Date.now();
-  const response = await deepseekSelection.client.chat.completions.create({
-    model: deepseekSelection.model,
+
+  // Build request payload; merge thinking extra_body when applicable
+  const requestPayload: OpenAI.Chat.ChatCompletionCreateParams = {
+    model: modelName,
     messages,
     temperature,
     max_tokens,
-  });
+  };
+
+  if (deepseekSelection.thinkingExtraBody) {
+    // @ts-expect-error - DeepSeek-specific extension via extra_body
+    requestPayload.extra_body = deepseekSelection.thinkingExtraBody;
+  }
+
+  const response = await deepseekSelection.client.chat.completions.create(requestPayload);
   const providerLatencyMs = Date.now() - start;
-  const content = response.choices[0]?.message?.content ?? '';
-  console.log(`[socialAI] ${callerTag} provider=deepseek latency=${providerLatencyMs}ms`);
+  const message = response.choices[0]?.message;
+  const content = message?.content ?? '';
+  // DeepSeek thinking mode returns reasoning_content on the message object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reasoningContent = (message as any)?.reasoning_content ?? undefined;
+
+  logger.info('DeepSeek call completed', { service: 'socialAI', callerTag, provider: 'deepseek', model: modelName, latencyMs: providerLatencyMs });
   return {
     content,
     provider: 'deepseek',
-    model: deepseekSelection.model,
+    model: modelName,
     latencyMs: Date.now() - overallStartedAt,
     fallbackUsed: attemptedMinimax || preCallFallbackUsed,
+    reasoningContent: reasoningContent || undefined,
   };
 }

@@ -389,11 +389,11 @@ if (import.meta.env?.DEV) {
 // ========================================
 
 export const LOW_ENERGY_ARCHETYPES = [
-  '淡定海豚',
-  '定心大象', 
-  '稳如龟',
-  '隐身猫',
-  '沉思猫头鹰'
+  'dolphin_calm',
+  'elephant', 
+  'turtle',
+  'cat',
+  'owl'
 ];
 
 export const LOW_ENERGY_CALIBRATION_THRESHOLD = 0.03;
@@ -426,35 +426,35 @@ export const lowEnergyCalibrationQuestions: LowEnergyCalibrationQuestion[] = [
         text: "泡杯茶，翻翻待办清单，规划明天的事", 
         traitScores: { C: 2, E: 2, X: 0 },
         tag: "规划充电",
-        targetArchetype: "定心大象"
+        targetArchetype: "elephant"
       },
       { 
         value: "B", 
         text: "放空发呆，让思绪慢慢平静下来", 
         traitScores: { E: 3, C: 1, X: 0 },
         tag: "放空平静",
-        targetArchetype: "淡定海豚"
+        targetArchetype: "dolphin_calm"
       },
       { 
         value: "C", 
         text: "检查今天的任务完成情况，逐项打勾确认", 
         traitScores: { C: 3, E: 1, X: -1 },
         tag: "清单确认",
-        targetArchetype: "稳如龟"
+        targetArchetype: "turtle"
       },
       { 
         value: "D", 
         text: "窝在角落看书或追剧，不想被任何人打扰", 
         traitScores: { X: -3, C: 0, E: 1 },
         tag: "独处享受",
-        targetArchetype: "隐身猫"
+        targetArchetype: "cat"
       },
       { 
         value: "E", 
         text: "写日记或思考今天有趣的对话和想法", 
         traitScores: { O: 3, C: 1, E: 1, X: -1 },
         tag: "反思记录",
-        targetArchetype: "沉思猫头鹰"
+        targetArchetype: "owl"
       },
     ],
   },
@@ -470,35 +470,35 @@ export const lowEnergyCalibrationQuestions: LowEnergyCalibrationQuestion[] = [
         text: "立刻站出来安排：谁找蜡烛、谁查电闸", 
         traitScores: { C: 2, E: 2, X: 1 },
         tag: "组织协调",
-        targetArchetype: "定心大象"
+        targetArchetype: "elephant"
       },
       { 
         value: "B", 
         text: "轻声安慰身边的人，让大家别紧张", 
         traitScores: { E: 3, A: 2, X: 0 },
         tag: "情绪安抚",
-        targetArchetype: "淡定海豚"
+        targetArchetype: "dolphin_calm"
       },
       { 
         value: "C", 
         text: "先确认周围安全，提醒大家别乱动", 
         traitScores: { C: 3, E: 1, X: -1 },
         tag: "安全优先",
-        targetArchetype: "稳如龟"
+        targetArchetype: "turtle"
       },
       { 
         value: "D", 
         text: "安静待在原地，等别人处理就好", 
         traitScores: { X: -2, C: 0, E: 1 },
         tag: "静观其变",
-        targetArchetype: "隐身猫"
+        targetArchetype: "cat"
       },
       { 
         value: "E", 
         text: "好奇地分析可能的原因：跳闸？线路问题？", 
         traitScores: { O: 3, C: 1, X: -1 },
         tag: "分析原因",
-        targetArchetype: "沉思猫头鹰"
+        targetArchetype: "owl"
       },
     ],
   },
@@ -514,35 +514,35 @@ export const lowEnergyCalibrationQuestions: LowEnergyCalibrationQuestion[] = [
         text: "列一下明天的重点任务，心里有数就安心", 
         traitScores: { C: 2, E: 2, X: 0 },
         tag: "计划明天",
-        targetArchetype: "定心大象"
+        targetArchetype: "elephant"
       },
       { 
         value: "B", 
         text: "没什么特别的，放轻松就好，不多想", 
         traitScores: { E: 3, C: 1, X: 0 },
         tag: "放松入睡",
-        targetArchetype: "淡定海豚"
+        targetArchetype: "dolphin_calm"
       },
       { 
         value: "C", 
         text: "复盘今天有没有什么遗漏或失误", 
         traitScores: { C: 3, E: 1, X: -2 },
         tag: "检查复盘",
-        targetArchetype: "稳如龟"
+        targetArchetype: "turtle"
       },
       { 
         value: "D", 
         text: "静静回味独处时的舒适感，享受安静", 
         traitScores: { X: -3, E: 1, C: 0 },
         tag: "享受独处",
-        targetArchetype: "隐身猫"
+        targetArchetype: "cat"
       },
       { 
         value: "E", 
         text: "思考今天学到的新东西，有什么启发", 
         traitScores: { O: 3, C: 1, E: 1, X: -1 },
         tag: "思考启发",
-        targetArchetype: "沉思猫头鹰"
+        targetArchetype: "owl"
       },
     ],
   },

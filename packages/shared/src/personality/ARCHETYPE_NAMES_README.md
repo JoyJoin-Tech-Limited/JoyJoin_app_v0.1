@@ -32,18 +32,18 @@ import {
 
 ```typescript
 export const ARCHETYPE_CANONICAL_ORDER = [
-  "开心柯基",      // #01
-  "太阳鸡",        // #02
-  "夸夸豚",        // #03
-  "机智狐",        // #04
-  "淡定海豚",      // #05
-  "织网蛛",        // #06
-  "暖心熊",        // #07
-  "灵感章鱼",      // #08
-  "沉思猫头鹰",    // #09
-  "定心大象",      // #10
-  "稳如龟",        // #11
-  "隐身猫",        // #12
+  "气氛组柯基",      // #01
+  "情绪稳定鸡",        // #02
+  "捧场王仓鼠",        // #03
+  "探宝雷达狐",        // #04
+  "读空气海豚",      // #05
+  "社交裁缝蛛",        // #06
+  "情绪树洞考拉",        // #07
+  "脑洞喷泉章鱼",      // #08
+  "追问猫头鹰",    // #09
+  "定海神针大象",      // #10
+  "慢半拍龟",        // #11
+  "静音模式猫",        // #12
 ] as const;
 ```
 
@@ -73,9 +73,9 @@ Get the 1-based index of an archetype in the canonical order.
 
 **Examples:**
 ```typescript
-getArchetypeIndex("开心柯基") // returns 1
-getArchetypeIndex("机智狐")   // returns 4
-getArchetypeIndex("隐身猫")   // returns 12
+getArchetypeIndex("气氛组柯基") // returns 1
+getArchetypeIndex("探宝雷达狐")   // returns 4
+getArchetypeIndex("静音模式猫")   // returns 12
 getArchetypeIndex("不存在")   // returns null
 ```
 
@@ -108,8 +108,8 @@ Get formatted TYPE number directly from archetype name.
 
 **Examples:**
 ```typescript
-getArchetypeTypeNo("开心柯基") // returns "01/12"
-getArchetypeTypeNo("机智狐")   // returns "04/12"
+getArchetypeTypeNo("气氛组柯基") // returns "01/12"
+getArchetypeTypeNo("探宝雷达狐")   // returns "04/12"
 getArchetypeTypeNo("不存在")   // returns "00/12"
 ```
 
@@ -132,7 +132,7 @@ getArchetypeTypeNo("不存在")   // returns "00/12"
 
 ```typescript
 // Server had its own list
-export const ARCHETYPE_NAMES = ["开心柯基", "太阳鸡", ...];
+export const ARCHETYPE_NAMES = ["气氛组柯基", "情绪稳定鸡", ...];
 
 // User client had its own list
 export const ARCHETYPE_NAMES = Object.keys(CANONICAL_ARCHETYPES);

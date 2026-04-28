@@ -12,12 +12,12 @@ const deepseekClient = new OpenAI({
 
 // 12原型动物
 const ARCHETYPES = [
-  { id: '开心柯基', traits: ['乐观', '热情', '喜欢热闹'], socialRole: '气氛制造者' },
-  { id: '太阳鸡', traits: ['自信', '表达力强', '喜欢展示'], socialRole: '表演者' },
-  { id: '夸夸豚', traits: ['温暖', '善于夸赞', '情感丰富'], socialRole: '支持者' },
-  { id: '机智狐', traits: ['聪明', '灵活', '幽默'], socialRole: '策略家' },
-  { id: '淡定海豚', traits: ['冷静', '理性', '善于观察'], socialRole: '思考者' },
-  { id: '织网蛛', traits: ['细心', '善于规划', '注重细节'], socialRole: '组织者' },
+  { id: 'corgi', traits: ['乐观', '热情', '喜欢热闹'], socialRole: '气氛制造者' },
+  { id: 'rooster', traits: ['自信', '表达力强', '喜欢展示'], socialRole: '表演者' },
+  { id: 'hamster_praise', traits: ['温暖', '善于夸赞', '情感丰富'], socialRole: '支持者' },
+  { id: 'fox', traits: ['聪明', '灵活', '幽默'], socialRole: '策略家' },
+  { id: 'dolphin_calm', traits: ['冷静', '理性', '善于观察'], socialRole: '思考者' },
+  { id: 'spider', traits: ['细心', '善于规划', '注重细节'], socialRole: '组织者' },
   { id: '温柔羊', traits: ['温和', '体贴', '善解人意'], socialRole: '调解者' },
   { id: '独立猫', traits: ['独立', '有品味', '保持距离'], socialRole: '观察者' },
   { id: '探险鹰', traits: ['勇敢', '好奇', '追求刺激'], socialRole: '探索者' },
@@ -29,14 +29,14 @@ const ARCHETYPES = [
 // 10个代表性用户画像
 const TEST_PERSONAS = [
   { id: 'p1', name: '深圳白领女', city: '深圳', gender: '女性', age: 28, interests: ['美食', '旅行', '摄影'], style: 'normal', archetype: '社交蝴蝶' },
-  { id: 'p2', name: '香港金融男', city: '香港', gender: '男性', age: 32, interests: ['投资', '健身', '红酒'], style: 'formal', archetype: '机智狐' },
+  { id: 'p2', name: '香港金融男', city: '香港', gender: '男性', age: 32, interests: ['投资', '健身', '红酒'], style: 'formal', archetype: 'fox' },
   { id: 'p3', name: '极简回复用户', city: '广州', gender: '男性', age: 25, interests: ['游戏'], style: 'minimal', archetype: '独立猫' },
-  { id: 'p4', name: '健谈文艺女', city: '深圳', gender: '女性', age: 27, interests: ['诗歌', '话剧', '咖啡'], style: 'verbose', archetype: '夸夸豚' },
-  { id: 'p5', name: '隐私敏感用户', city: '不透露', gender: '不透露', age: 30, interests: ['隐私'], style: 'guarded', archetype: '淡定海豚' },
+  { id: 'p4', name: '健谈文艺女', city: '深圳', gender: '女性', age: 27, interests: ['诗歌', '话剧', '咖啡'], style: 'verbose', archetype: 'hamster_praise' },
+  { id: 'p5', name: '隐私敏感用户', city: '不透露', gender: '不透露', age: 30, interests: ['隐私'], style: 'guarded', archetype: 'dolphin_calm' },
   { id: 'p6', name: '粤语用户', city: '香港', gender: '女性', age: 26, interests: ['粤剧', '茶餐厅'], style: 'cantonese', archetype: '温柔羊' },
   { id: 'p7', name: '社恐内向', city: '深圳', gender: '男性', age: 24, interests: ['动漫', '宅'], style: 'shy', archetype: '智慧猫头鹰' },
   { id: 'p8', name: '创业者', city: '深圳', gender: '男性', age: 35, interests: ['创业', '投资', '人脉'], style: 'confident', archetype: '探险鹰' },
-  { id: 'p9', name: '边界测试', city: '🎉', gender: '???', age: 0, interests: [], style: 'edge', archetype: '开心柯基' },
+  { id: 'p9', name: '边界测试', city: '🎉', gender: '???', age: 0, interests: [], style: 'edge', archetype: 'corgi' },
   { id: 'p10', name: '完美配合', city: '广州', gender: '女性', age: 29, interests: ['阅读', '瑜伽', '烘焙'], style: 'perfect', archetype: '守护熊' },
 ];
 

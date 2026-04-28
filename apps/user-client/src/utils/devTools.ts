@@ -1,18 +1,18 @@
 // Development-only tools. These are loaded only for explicit local opt-in.
 
 const ARCHETYPES = [
-  '开心柯基',
-  '太阳鸡',
-  '夸夸豚',
-  '机智狐',
-  '淡定海豚',
-  '织网蛛',
-  '暖心熊',
-  '灵感章鱼',
-  '沉思猫头鹰',
-  '定心大象',
-  '稳如龟',
-  '隐身猫',
+  'corgi',
+  'rooster',
+  'hamster_praise',
+  'fox',
+  'dolphin_calm',
+  'spider',
+  'koala',
+  'octopus',
+  'owl',
+  'elephant',
+  'turtle',
+  'cat',
 ];
 
 const GENDERS = ['男性', '女性', '不透露'];

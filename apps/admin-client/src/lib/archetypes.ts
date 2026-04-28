@@ -17,7 +17,7 @@ export const archetypeConfig: Record<string, {
   coreContributions: string; // 核心贡献
 }> = {
   // 高能量区 (82-95)
-  "开心柯基": { 
+  "corgi": { 
     icon: "🐕", 
     color: "text-orange-600 dark:text-orange-400",
     bgColor: "bg-orange-100 dark:bg-orange-900/20",
@@ -30,7 +30,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "团队永动机，尾巴摇一摇，冷场焦虑全赶跑",
     coreContributions: "破冰启动，创造欢乐氛围"
   },
-  "太阳鸡": { 
+  "rooster": { 
     icon: "🐓", 
     color: "text-amber-600 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-900/20",
@@ -43,7 +43,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "人间小暖气，咯咯咯一笑，负面情绪全蒸发",
     coreContributions: "散发温暖能量，提升整体幸福感"
   },
-  "夸夸豚": { 
+  "hamster_praise": { 
     icon: "🐬", 
     color: "text-cyan-600 dark:text-cyan-400",
     bgColor: "bg-cyan-100 dark:bg-cyan-900/20",
@@ -56,7 +56,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "首席鼓掌官，小手拍一拍，你的魅力全打开",
     coreContributions: "提供积极反馈，增强团队信心"
   },
-  "机智狐": { 
+  "fox": { 
     icon: "🦊", 
     color: "text-red-600 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-900/20",
@@ -71,7 +71,7 @@ export const archetypeConfig: Record<string, {
   },
   
   // 中能量区 (68-75)
-  "淡定海豚": { 
+  "dolphin_calm": { 
     icon: "🐬", 
     color: "text-indigo-600 dark:text-indigo-400",
     bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
@@ -84,7 +84,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "气氛冲浪手，微笑露一露，尴尬紧张全冲走",
     coreContributions: "平衡群体氛围，化解潜在冲突"
   },
-  "织网蛛": { 
+  "spider": { 
     icon: "🕷️", 
     color: "text-purple-600 dark:text-purple-400",
     bgColor: "bg-purple-100 dark:bg-purple-900/20",
@@ -97,7 +97,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "社交黏合剂，网络织一织，陌生朋友变知己",
     coreContributions: "连接不同人群，构建社交网络"
   },
-  "暖心熊": { 
+  "koala": { 
     icon: "🐻", 
     color: "text-pink-600 dark:text-pink-400",
     bgColor: "bg-pink-100 dark:bg-pink-900/20",
@@ -110,7 +110,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "故事收藏家，怀抱暖一暖，心事烦恼全消散",
     coreContributions: "建立情感连接，营造深度交流"
   },
-  "灵感章鱼": { 
+  "octopus": { 
     icon: "🐙", 
     color: "text-violet-600 dark:text-violet-400",
     bgColor: "bg-violet-100 dark:bg-violet-900/20",
@@ -125,7 +125,7 @@ export const archetypeConfig: Record<string, {
   },
   
   // 低能量区 (52-55)
-  "沉思猫头鹰": { 
+  "owl": { 
     icon: "🦉", 
     color: "text-slate-600 dark:text-slate-400",
     bgColor: "bg-slate-100 dark:bg-slate-900/20",
@@ -138,7 +138,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "哲学带师，镜框推一推，聊天深度往上飞",
     coreContributions: "提升对话质量，激发深度思考"
   },
-  "定心大象": { 
+  "elephant": { 
     icon: "🐘", 
     color: "text-gray-600 dark:text-gray-400",
     bgColor: "bg-gray-100 dark:bg-gray-900/20",
@@ -153,7 +153,7 @@ export const archetypeConfig: Record<string, {
   },
   
   // 超低能量区 (30-38)
-  "稳如龟": { 
+  "turtle": { 
     icon: "🐢", 
     color: "text-emerald-600 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-900/20",
@@ -166,7 +166,7 @@ export const archetypeConfig: Record<string, {
     styleQuote: "人间观察家，脖子伸一伸，一语道破万事皆",
     coreContributions: "提供深度洞察，贡献独到见解"
   },
-  "隐身猫": { 
+  "cat": { 
     icon: "🐱", 
     color: "text-indigo-600 dark:text-indigo-400",
     bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
@@ -183,10 +183,10 @@ export const archetypeConfig: Record<string, {
 
 // 原型分类（按能量区分）
 export const archetypeCategories = {
-  highEnergy: ["开心柯基", "太阳鸡", "夸夸豚", "机智狐"],
-  mediumEnergy: ["淡定海豚", "织网蛛", "暖心熊", "灵感章鱼"],
-  lowEnergy: ["沉思猫头鹰", "定心大象"],
-  veryLowEnergy: ["稳如龟", "隐身猫"],
+  highEnergy: ["corgi", "rooster", "hamster_praise", "fox"],
+  mediumEnergy: ["dolphin_calm", "spider", "koala", "octopus"],
+  lowEnergy: ["owl", "elephant"],
+  veryLowEnergy: ["turtle", "cat"],
 };
 
 // 获取所有原型名称

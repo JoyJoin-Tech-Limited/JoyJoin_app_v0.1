@@ -41,7 +41,7 @@ describe("poolVibeUtils", () => {
     });
 
     it("still supports girls-night flavor when archetype data exists", () => {
-      expect(getFitHintFromArchetypes(["暖心熊"], "饭局", true)).toEqual({
+      expect(getFitHintFromArchetypes(["koala"], "饭局", true)).toEqual({
         icon: "💫",
         text: "Girl Gang 专属",
       });
@@ -50,7 +50,7 @@ describe("poolVibeUtils", () => {
 
   describe("deriveConnectionCues", () => {
     it("guarantees at least two cues when pool signals exist", () => {
-      const cues = deriveConnectionCues({ 暖心熊: 1 }, 0, 1);
+      const cues = deriveConnectionCues({ koala: 1 }, 0, 1);
 
       expect(cues).toHaveLength(2);
       expect(cues).toEqual([
@@ -61,7 +61,7 @@ describe("poolVibeUtils", () => {
 
     it("preserves richer cues when chemistry and diversity signals are present", () => {
       const cues = deriveConnectionCues(
-        { 开心柯基: 2, 暖心熊: 1, 定心大象: 1, 织网蛛: 1 },
+        { corgi: 2, koala: 1, elephant: 1, spider: 1 },
         82,
         5,
       );

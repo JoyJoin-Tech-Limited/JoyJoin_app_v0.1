@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { cdnAsset } from '../../lib/cdnAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -563,7 +564,7 @@ export default function PoolRegistrationPage() {
   ])
 
   if (authLoading || isLoading) {
-    return <LoadingScreen />
+    return <LoadingScreen message='正在加载报名信息…' />
   }
 
   if (!poolId || poolError || !pool) {
@@ -572,7 +573,7 @@ export default function PoolRegistrationPage() {
         <Card className='pool-reg__empty'>
           <Image
             className='pool-reg__empty-hero'
-            src='/assets/lovart/lovart-generic-error.webp'
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />

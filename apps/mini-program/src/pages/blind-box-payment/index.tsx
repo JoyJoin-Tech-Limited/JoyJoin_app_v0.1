@@ -1,5 +1,5 @@
 import { Button, View, Text, Image } from '@tarojs/components'
-import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import {
@@ -15,8 +15,6 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { logError, logWarn } from '../../lib/logger'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
-import { COLOR_DANGER } from '../../lib/uiConstants'
-import { usePaymentCoupon } from '../../hooks/usePaymentCoupon'
 import {
   buildPaymentVerificationUrl,
   type MiniProgramPaymentReturnContext,
@@ -41,9 +39,14 @@ import {
 } from '../../lib/paymentPageModel'
 import './index.scss'
 
+type CouponValidationResponse = {
+  valid: boolean
+  message?: string
+  discountAmount?: number
+  finalAmount?: number
+}
+
 const PENDING_ORDER_RESUME_MESSAGE = '支付结果待确认，请继续查询订单'
-const CENTS_PER_YUAN = 100
-const DANGER_COLOR = COLOR_DANGER
 
 function isPoolRegistrationReturnContext(
   context: MiniProgramPaymentReturnContext | null | undefined,
@@ -85,13 +88,8 @@ function requestMiniProgramPayment(paymentIntent: PaymentIntentResponse): Promis
   })
 }
 
-/**
- * Maps a WeChat payment error message to a user-friendly string.
- * @param errMsg - The raw error message from WeChat
- * @returns A user-friendly error string, or null if the user cancelled
- * @description Returns null for explicit cancellations so callers can exit
- *              quietly without showing an error toast.
- */
+// Returning null means the user explicitly cancelled the WeChat sheet, so the
+// caller should exit quietly without showing an error toast.
 function getFriendlyPaymentError(errMsg?: string): string | null {
   if (!errMsg) return '支付失败，请稍后重试'
 
@@ -116,8 +114,6 @@ function getFriendlyPaymentError(errMsg?: string): string | null {
 }
 
 export default function BlindBoxPaymentPage() {
-  const router = useRouter()
-  const returnTab = (router.params.returnTab as string | undefined) ?? 'profile'
   const { user, isLoading: authLoading } = useAuthGuard()
   const [selectedPlan, setSelectedPlan] = useState<MiniProgramPaymentPlanKey>('vip_monthly')
   const [plans, setPlans] = useState<Record<MiniProgramPaymentPlanKey, PricingPlan>>(
@@ -125,7 +121,12 @@ export default function BlindBoxPaymentPage() {
   )
   const [couponCount, setCouponCount] = useState(0)
   const [availableCoupons, setAvailableCoupons] = useState<UserCouponSummary[]>([])
-  const coupon = usePaymentCoupon(selectedPlan)
+  const [selectedCouponCode, setSelectedCouponCode] = useState('')
+  const [isCouponValid, setIsCouponValid] = useState(false)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [finalAmount, setFinalAmount] = useState<number | null>(null)
+  const [couponMessage, setCouponMessage] = useState('')
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
   const [pageError, setPageError] = useState('')
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [isCreatingIntent, setIsCreatingIntent] = useState(false)
@@ -291,13 +292,72 @@ export default function BlindBoxPaymentPage() {
   const amountSummary = useMemo(
     () => buildMiniProgramPaymentAmountSummary({
       plan: selectedPlanData,
-      discountAmount: coupon.discountAmount,
-      finalAmount: coupon.finalAmount,
-      hasSelectedCoupon: coupon.selectedCouponCode !== '',
+      discountAmount,
+      finalAmount,
+      hasSelectedCoupon: selectedCouponCode !== '',
     }),
-    [coupon.discountAmount, coupon.finalAmount, coupon.selectedCouponCode, selectedPlanData],
+    [discountAmount, finalAmount, selectedCouponCode, selectedPlanData],
   )
   const payableAmount = amountSummary.payableAmount
+
+  const validateSelectedCoupon = useCallback(async (planKey: MiniProgramPaymentPlanKey, couponCode: string) => {
+    const normalizedCouponCode = couponCode.trim()
+    if (!normalizedCouponCode) {
+      setIsCouponValid(false)
+      setDiscountAmount(0)
+      setFinalAmount(null)
+      setCouponMessage('')
+      return
+    }
+
+    setIsValidatingCoupon(true)
+    try {
+      const response = await apiRequest<CouponValidationResponse>({
+        path: '/api/coupons/validate',
+        method: 'POST',
+        data: {
+          paymentType: isEventPackPlanType(planKey) ? 'event_pack' : 'event_bundle',
+          code: normalizedCouponCode,
+          planId: planKey,
+          planType: planKey,
+          type: planKey,
+        },
+      })
+
+      if (!response.valid) {
+        setIsCouponValid(false)
+        setDiscountAmount(0)
+        setFinalAmount(null)
+        setCouponMessage(response.message || '当前套餐暂不可使用这张优惠券')
+        return
+      }
+
+      setIsCouponValid(true)
+      setDiscountAmount((response.discountAmount ?? 0) / 100)
+      setFinalAmount(typeof response.finalAmount === 'number' ? response.finalAmount / 100 : null)
+      setCouponMessage(response.message || '优惠券已应用')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '优惠券校验失败'
+      setIsCouponValid(false)
+      setDiscountAmount(0)
+      setFinalAmount(null)
+      setCouponMessage(message)
+    } finally {
+      setIsValidatingCoupon(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedCouponCode) {
+      setIsCouponValid(false)
+      setDiscountAmount(0)
+      setFinalAmount(null)
+      setCouponMessage('')
+      return
+    }
+
+    void validateSelectedCoupon(selectedPlan, selectedCouponCode)
+  }, [selectedCouponCode, selectedPlan, validateSelectedCoupon])
 
   const handleResumePendingOrder = useCallback(async () => {
     if (!pendingOrderToResume) {
@@ -314,13 +374,6 @@ export default function BlindBoxPaymentPage() {
     }
   }, [navigateToVerification, pendingOrderToResume])
 
-/**
- * Creates a payment intent and initiates the WeChat Pay flow.
- * @returns Promise that resolves when the payment flow completes or errors
- * @description Validates state, creates a payment intent, persists the pending
- *              order, calls Taro.requestPayment(), and routes to verification.
- * @sideEffects Sets creating state, persists order storage, navigates on success.
- */
   const handlePay = useCallback(async () => {
     if (isCreatingIntent || !user?.id || pendingOrderToResume || paymentsDisabled) {
       return
@@ -335,7 +388,7 @@ export default function BlindBoxPaymentPage() {
       const paymentIntent = await createMiniProgramPaymentIntent(apiRequest, {
         type: selectedPlan,
         planId: selectedPlan,
-        couponCode: coupon.isCouponValid ? coupon.selectedCouponCode : undefined,
+        couponCode: isCouponValid ? selectedCouponCode : undefined,
       })
 
       persistPendingOrder({
@@ -391,13 +444,13 @@ export default function BlindBoxPaymentPage() {
       setIsCreatingIntent(false)
     }
   }, [
-    coupon.isCouponValid,
+    isCouponValid,
     isCreatingIntent,
     navigateToVerification,
     paymentsDisabled,
     pendingOrderToResume,
     showResumeOnlyState,
-    coupon.selectedCouponCode,
+    selectedCouponCode,
     selectedPlan,
     user?.id,
     paymentReturnContext,
@@ -435,7 +488,7 @@ export default function BlindBoxPaymentPage() {
         <View className='payment-page__header'>
           <Button
             className='payment-page__back-button'
-            onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES[returnTab as keyof typeof MINI_PROGRAM_ROUTES] ?? MINI_PROGRAM_ROUTES.profile }) })}
+            onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile }) })}
           >
             返回
           </Button>
@@ -502,7 +555,7 @@ export default function BlindBoxPaymentPage() {
       <View className='payment-page__header'>
         <Button
           className='payment-page__back-button'
-          onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES[returnTab as keyof typeof MINI_PROGRAM_ROUTES] ?? MINI_PROGRAM_ROUTES.profile }) })}
+          onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile }) })}
         >
           返回
         </Button>
@@ -617,8 +670,8 @@ export default function BlindBoxPaymentPage() {
           <Text className='payment-page__summary-label'>优惠券</Text>
           <View className='payment-page__plans'>
             <Button
-              className={`payment-page__plan ${coupon.selectedCouponCode === '' ? 'payment-page__plan--selected' : ''}`}
-              onClick={() => coupon.setSelectedCouponCode('')}
+              className={`payment-page__plan ${selectedCouponCode === '' ? 'payment-page__plan--selected' : ''}`}
+              onClick={() => setSelectedCouponCode('')}
             >
               <View className='payment-page__plan-content'>
                 <View>
@@ -627,14 +680,14 @@ export default function BlindBoxPaymentPage() {
                 </View>
               </View>
             </Button>
-            {availableCoupons.map((couponItem) => {
-              const couponModel = buildMiniProgramPaymentCouponDisplayModel(couponItem)
+            {availableCoupons.map((coupon) => {
+              const couponModel = buildMiniProgramPaymentCouponDisplayModel(coupon)
 
               return (
                 <Button
                   key={couponModel.id}
-                  className={`payment-page__plan ${coupon.selectedCouponCode === couponModel.code ? 'payment-page__plan--selected' : ''}`}
-                  onClick={() => coupon.setSelectedCouponCode(couponModel.code)}
+                  className={`payment-page__plan ${selectedCouponCode === couponModel.code ? 'payment-page__plan--selected' : ''}`}
+                  onClick={() => setSelectedCouponCode(couponModel.code)}
                 >
                   <View className='payment-page__plan-content'>
                     <View>
@@ -646,9 +699,9 @@ export default function BlindBoxPaymentPage() {
               )
             })}
           </View>
-          {coupon.selectedCouponCode ? (
+          {selectedCouponCode ? (
             <Text className='payment-page__summary-note'>
-              {coupon.isValidatingCoupon ? '正在校验优惠券...' : coupon.couponMessage || '已选择优惠券'}
+              {isValidatingCoupon ? '正在校验优惠券...' : couponMessage || '已选择优惠券'}
             </Text>
           ) : null}
         </View>

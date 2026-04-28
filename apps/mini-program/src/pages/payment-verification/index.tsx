@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import JoyJoinLoadingScreen from '../../components/JoyJoinLoadingScreen'
 import { AUTH_QUERY_KEY } from '../../lib/authSession'
 import {
   isPoolRegistrationReturnContext,
@@ -118,12 +119,11 @@ export default function PaymentVerificationPage() {
 
   if (authLoading) {
     return (
-      <View className='verification-page'>
-        <View className='verification-page__card'>
-          <Text className='verification-page__title'>加载中</Text>
-          <Text className='verification-page__message'>正在校验登录状态…</Text>
-        </View>
-      </View>
+      <JoyJoinLoadingScreen
+        title='正在确认你的登录…'
+        subtitle='请稍等，小悦在核对订单权限'
+        showSkeleton={false}
+      />
     )
   }
 

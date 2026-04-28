@@ -93,12 +93,12 @@ interface EvaluationMetrics {
 
 // ============ 12原型动物定义 ============
 const ARCHETYPES = [
-  { id: '开心柯基', traits: ['乐观', '热情', '喜欢热闹'], socialRole: '气氛制造者' },
-  { id: '太阳鸡', traits: ['自信', '表达力强', '喜欢展示'], socialRole: '表演者' },
-  { id: '夸夸豚', traits: ['温暖', '善于夸赞', '情感丰富'], socialRole: '支持者' },
-  { id: '机智狐', traits: ['聪明', '灵活', '幽默'], socialRole: '策略家' },
-  { id: '淡定海豚', traits: ['冷静', '理性', '善于观察'], socialRole: '思考者' },
-  { id: '织网蛛', traits: ['细心', '善于规划', '注重细节'], socialRole: '组织者' },
+  { id: 'corgi', traits: ['乐观', '热情', '喜欢热闹'], socialRole: '气氛制造者' },
+  { id: 'rooster', traits: ['自信', '表达力强', '喜欢展示'], socialRole: '表演者' },
+  { id: 'hamster_praise', traits: ['温暖', '善于夸赞', '情感丰富'], socialRole: '支持者' },
+  { id: 'fox', traits: ['聪明', '灵活', '幽默'], socialRole: '策略家' },
+  { id: 'dolphin_calm', traits: ['冷静', '理性', '善于观察'], socialRole: '思考者' },
+  { id: 'spider', traits: ['细心', '善于规划', '注重细节'], socialRole: '组织者' },
   { id: '温柔羊', traits: ['温和', '体贴', '善解人意'], socialRole: '调解者' },
   { id: '独立猫', traits: ['独立', '有品味', '保持距离'], socialRole: '观察者' },
   { id: '探险鹰', traits: ['勇敢', '好奇', '追求刺激'], socialRole: '探索者' },

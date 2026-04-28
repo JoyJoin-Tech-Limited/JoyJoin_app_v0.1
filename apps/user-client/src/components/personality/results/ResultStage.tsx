@@ -394,11 +394,11 @@ export function ResultStage({ viewModel, onContinue, isContinuing }: ResultStage
                 } catch {}
                 setShareModalOpen(true);
               }}
-              aria-label={`下载你的${viewModel.primaryArchetype}原型海报`}
+              aria-label={`下载你的${viewModel.archetypeRecord?.name ?? viewModel.primaryArchetype}原型海报`}
             >
               <div className="flex items-center justify-center gap-3 w-full">
                 <ImageIcon className="w-6 h-6 animate-pulse" aria-hidden="true" />
-                <span>下载你的{viewModel.primaryArchetype}海报</span>
+                <span>下载你的{viewModel.archetypeRecord?.name ?? viewModel.primaryArchetype}海报</span>
                 <Badge variant="secondary" className="ml-2 bg-white/20 backdrop-blur-sm border-white/40 text-xs">
                   🖼️ 海报
                 </Badge>

@@ -109,6 +109,19 @@ export interface AIResponseMeta {
    * Omit when no model call was made (e.g. canned copy) or correlation is unavailable.
    */
   aiCorrelationId?: string;
+
+  /**
+   * AI Quality Gate scores (optional — populated when the quality judge ran).
+   * See apps/server/src/ai/aiQualityGate.ts for dimensions and thresholds.
+   */
+  qualityScores?: {
+    funEngagement: number;
+    brandAlignment: number;
+    appropriateness: number;
+    clarity: number;
+    passed: boolean;
+    action: 'pass' | 'refine' | 'discard';
+  };
 }
 
 // ─── Builder helpers ───────────────────────────────────────────────────────────

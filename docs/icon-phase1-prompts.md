@@ -24,18 +24,18 @@ Common spec:
 - 32×32px viewport, head/face only filling the frame
 - Warm natural palette with the specified accent color as primary facet color
 
-1. [开心柯基] Playful corgi face, warm orange #D4845C, big open smile with tongue slightly out, perky ears
-2. [太阳鸡] Bright rooster head with comb, warm coral #FF9B85, head high chest puffed, alert eyes
-3. [夸夸豚] Smiling dolphin with heart-shaped blowhole spray, sky blue #A8C5DD, gentle supportive expression
-4. [机智狐] Winking fox wearing small glasses, warm orange #D4845C, knowing smirk
-5. [淡定海豚] Serene dolphin with closed eyes, sky blue #5B9BD5, content peaceful expression
-6. [织网蛛] Geometric spider with multiple gleaming eyes, purple-gray #8B7FB0, intricate web pattern suggested in facets
-7. [暖心熊] Soft-eyed bear with gentle smile, warm brown #A0522D, protective warm expression
-8. [灵感章鱼] Creative octopus holding paintbrush with one tentacle, purple #8B5CF6, curious wide eyes
-9. [沉思猫头鹰] Wise owl with forward-facing large eyes, deep blue #4A6FA5, book tucked under wing
-10. [定心大象] Steady elephant with calm steady gaze, gray-blue #708090, large ears spread with calm
-11. [稳如龟] Patient turtle with shell pattern visible, forest green #6B8E6B, wise old eyes with slow blink expression
-12. [隐身猫] Mysterious cat peeking from shadow, soft gray #9CA3AF, one eye visible, mysterious half-smile
+1. [气氛组柯基] Playful corgi face, warm orange #D4845C, big open smile with tongue slightly out, perky ears
+2. [情绪稳定鸡] Bright rooster head with comb, warm coral #FF9B85, head high chest puffed, alert eyes
+3. [捧场王仓鼠] Smiling dolphin with heart-shaped blowhole spray, sky blue #A8C5DD, gentle supportive expression
+4. [探宝雷达狐] Winking fox wearing small glasses, warm orange #D4845C, knowing smirk
+5. [读空气海豚] Serene dolphin with closed eyes, sky blue #5B9BD5, content peaceful expression
+6. [社交裁缝蛛] Geometric spider with multiple gleaming eyes, purple-gray #8B7FB0, intricate web pattern suggested in facets
+7. [情绪树洞考拉] Soft-eyed bear with gentle smile, warm brown #A0522D, protective warm expression
+8. [脑洞喷泉章鱼] Creative octopus holding paintbrush with one tentacle, purple #8B5CF6, curious wide eyes
+9. [追问猫头鹰] Wise owl with forward-facing large eyes, deep blue #4A6FA5, book tucked under wing
+10. [定海神针大象] Steady elephant with calm steady gaze, gray-blue #708090, large ears spread with calm
+11. [慢半拍龟] Patient turtle with shell pattern visible, forest green #6B8E6B, wise old eyes with slow blink expression
+12. [静音模式猫] Mysterious cat peeking from shadow, soft gray #9CA3AF, one eye visible, mysterious half-smile
 
 Deliver: 12 PNGs with transparency, 32×32, 64×64, 96×96 variants.
 Grid: Display all 12 on a single reference sheet for style consistency review.

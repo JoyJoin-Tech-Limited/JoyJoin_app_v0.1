@@ -40,11 +40,6 @@
     color: $color-text-secondary;
   }
 
-  &__coach {
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
-  }
-
   &__stats {
     display: flex;
     gap: $spacing-md;
@@ -393,16 +388,10 @@
     }
   }
 
-  &__empty-hero {
+  &__empty-emoji {
     display: block;
-    width: 280rpx;
-    height: 210rpx;
-    margin: 0 auto $spacing-sm;
-
-    &--compact {
-      width: 200rpx;
-      height: 150rpx;
-    }
+    font-size: 72rpx;
+    margin-bottom: $spacing-sm;
   }
 
   &__empty-title {

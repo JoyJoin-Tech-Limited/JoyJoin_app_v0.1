@@ -1,5 +1,6 @@
 import { STALE_TIME_PROFILE_TAGLINE_MS, TOAST_FATAL_MS } from '../../../lib/uiConstants'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import ArchetypeHead from '../../../components/ArchetypeHead'
 import AnalyzingAnimation from '../../../components/AnalyzingAnimation'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { haptics } from '../../../lib/haptics'
@@ -27,11 +28,6 @@ import Card from '../../../components/Card'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
-
-function getInitial(value: string): string {
-  const trimmed = value.trim()
-  return trimmed !== '' ? trimmed.slice(0, 1) : '悦'
-}
 
 function getAgeLabel(user: Record<string, unknown> | undefined): string {
   if (!user) {
@@ -334,7 +330,7 @@ export default function ProfileReviewPage() {
               {visual?.asset ? (
                 <Image className='profile-review__avatar-image' src={visual.asset} mode='aspectFit' />
               ) : (
-                <Text className='profile-review__avatar-initial'>{getInitial(displayName)}</Text>
+                <ArchetypeHead archetype={archetype} size={100} fallbackText={displayName} />
               )}
             </View>
             <View className='profile-review__hero-copy'>

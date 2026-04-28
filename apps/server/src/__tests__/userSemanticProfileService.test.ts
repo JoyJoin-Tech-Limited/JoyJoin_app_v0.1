@@ -50,7 +50,7 @@ describe('userSemanticProfileService', () => {
     const document = buildSemanticProfileDocument(
       {
         bio: '喜欢把轻松聊天聊出层次感',
-        archetype: '机智狐',
+        archetype: 'fox',
         currentCity: '深圳',
         preferredLanguages: ['中文', 'English'],
         intent: ['make_friends'],
@@ -64,7 +64,7 @@ describe('userSemanticProfileService', () => {
     );
 
     expect(document).toContain('喜欢把轻松聊天聊出层次感');
-    expect(document).toContain('Archetype: 机智狐');
+    expect(document).toContain('Archetype: fox');
     expect(document).toContain('Current city: 深圳');
     expect(document).toContain('Top interests: 咖啡馆探店, 城市散步');
   });
@@ -87,7 +87,7 @@ describe('userSemanticProfileService', () => {
     getExistingMock.mockResolvedValue(null);
     embedMock.mockResolvedValue({
       vector: [0.1, 0.2, 0.3],
-      model: 'text-embedding-3-small',
+      model: 'deepseek-embedding',
       dimensions: 3,
       provider: 'deepseek',
     });
@@ -99,7 +99,7 @@ describe('userSemanticProfileService', () => {
       userId: 'user-1',
       status: 'ready',
       embedding: [0.1, 0.2, 0.3],
-      embeddingModel: 'text-embedding-3-small',
+      embeddingModel: 'deepseek-embedding',
       embeddingDimension: 3,
       lastError: null,
     }));

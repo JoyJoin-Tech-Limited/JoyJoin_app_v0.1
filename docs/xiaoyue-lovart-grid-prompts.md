@@ -54,7 +54,7 @@ Expression: Minimal, calm — not cold, just present. Head straight and level, N
 
 Brand colors: Vibrant Purple #8B5CF6 (hoodie), Warm Coral #FF9B85 (corgi fur highlights), Warm Beige #F5F1E8 (grid background)
 
-Anti-confusion: This is XIAOYUE the AI assistant — relaxed, street-smart, mature corgi in a weathered hoodie with sunglasses. NOT the playful energetic 开心柯基 archetype.
+Anti-confusion: This is XIAOYUE the AI assistant — relaxed, street-smart, mature corgi in a weathered hoodie with sunglasses. NOT the playful energetic 气氛组柯基 archetype.
 
 Export: Single PNG, 3000×3000px, each cell approximately 1000×1000px. We will crop into 9 individual expression files.
 ```
@@ -111,7 +111,7 @@ Expression: Same as matchSuccess but with an even bigger celebration — both pa
 
 Brand colors: Vibrant Purple #8B5CF6 (hoodie), Warm Coral #FF9B85 (corgi fur highlights), Warm Beige #F5F1E8 (grid background)
 
-Anti-confusion: This is XIAOYUE the AI assistant — relaxed, street-smart, mature corgi in a weathered hoodie with sunglasses. NOT the playful energetic 开心柯基 archetype.
+Anti-confusion: This is XIAOYUE the AI assistant — relaxed, street-smart, mature corgi in a weathered hoodie with sunglasses. NOT the playful energetic 气氛组柯基 archetype.
 
 Export: Single PNG, 3000×3000px, each cell approximately 1000×1000px. We will crop into individual expression files.
 ```

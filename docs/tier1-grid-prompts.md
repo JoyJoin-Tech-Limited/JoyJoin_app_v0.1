@@ -31,52 +31,52 @@ ROWS 1-3: ARCHETYPE HEAD ICONS (40×40px viewBox, scaled to 80px display)
 ═══════════════════════════════════════════════════════════════════
 
 Row 1:
-[1,1] 开心柯基 (Happy Corgi) — Warm orange #D4845C
+[1,1] 气氛组柯基 (Happy Corgi) — Warm orange #D4845C
   Head icon: Corgi face with perky triangular ears, tongue slightly out,
   big open smile. Playful, energetic expression. Circular frame.
 
-[1,2] 太阳鸡 (Sun Rooster) — Warm coral #FF9B85
+[1,2] 情绪稳定鸡 (Sun Rooster) — Warm coral #FF9B85
   Head icon: Rooster head with bright comb, alert eyes, proud neck.
   Confident, radiant expression. Circular frame.
 
-[1,3] 夸夸豚 (Praise Dolphin) — Sky blue #A8C5DD
+[1,3] 捧场王仓鼠 (Praise Dolphin) — Sky blue #A8C5DD
   Head icon: Dolphin face with curved forehead, gentle smile,
   heart-shaped tail hint. Supportive, warm expression. Circular frame.
 
-[1,4] 机智狐 (Clever Fox) — Warm orange #D4845C
+[1,4] 探宝雷达狐 (Clever Fox) — Warm orange #D4845C
   Head icon: Fox face with pointed ears, glasses frame, one winking eye.
   Clever, knowing expression. Circular frame.
 
-[1,5] 淡定海豚 (Calm Dolphin) — Sky blue #5B9BD5
+[1,5] 读空气海豚 (Calm Dolphin) — Sky blue #5B9BD5
   Head icon: Dolphin face with smooth forehead, closed peaceful eyes,
   serene smile. Calm, content expression. Circular frame.
 
-[1,6] 织网蛛 (Weaver Spider) — Purple-gray #8B7FB0
+[1,6] 社交裁缝蛛 (Weaver Spider) — Purple-gray #8B7FB0
   Head icon: Spider face with multiple small gleaming eyes,
   delicate leg silhouette. Intricate, watchful expression. Circular frame.
 
 Row 2:
-[2,1] 暖心熊 (Warm Bear) — Warm brown #A0522D
+[2,1] 情绪树洞考拉 (Warm Bear) — Warm brown #A0522D
   Head icon: Bear face with round ears, soft eyes, protective posture.
   Warm, strong expression. Circular frame.
 
-[2,2] 灵感章鱼 (Inspiration Octopus) — Purple #8B5CF6
+[2,2] 脑洞喷泉章鱼 (Inspiration Octopus) — Purple #8B5CF6
   Head icon: Octopus face with tentacle holding paintbrush,
   curious wide eyes. Creative, curious expression. Circular frame.
 
-[2,3] 沉思猫头鹰 (Contemplation Owl) — Deep blue #4A6FA5
+[2,3] 追问猫头鹰 (Contemplation Owl) — Deep blue #4A6FA5
   Head icon: Owl face with large forward eyes, feather tufts,
   book hint. Wise, contemplative expression. Circular frame.
 
-[2,4] 定心大象 (Grounding Elephant) — Gray-blue #708090
+[2,4] 定海神针大象 (Grounding Elephant) — Gray-blue #708090
   Head icon: Elephant face with trunk curve, large ear flaps,
   steady gaze. Grounded, steady expression. Circular frame.
 
-[2,5] 稳如龟 (Steady Turtle) — Forest green #6B8E6B
+[2,5] 慢半拍龟 (Steady Turtle) — Forest green #6B8E6B
   Head icon: Turtle face with shell dome pattern, patient old eyes,
   slow blink. Patient, timeless expression. Circular frame.
 
-[2,6] 隐身猫 (Stealth Cat) — Soft gray #9CA3AF
+[2,6] 静音模式猫 (Stealth Cat) — Soft gray #9CA3AF
   Head icon: Cat face with one eye peeking, mysterious half-smile,
   soft ears. Mysterious, subtle expression. Circular frame.
 
@@ -85,52 +85,52 @@ ROWS 4-6: ARCHETYPE MICRO GLYPHS (16×16px viewBox, scaled to 48px display)
 ═══════════════════════════════════════════════════════════════════
 
 Row 4:
-[4,1] 开心柯基 glyph — Warm orange #D4845C
+[4,1] 气氛组柯基 glyph — Warm orange #D4845C
   Simplified silhouette: round head + two triangular ear peaks.
   Monochrome filled shape. Recognizable as corgi even at tiny size.
 
-[4,2] 太阳鸡 glyph — Warm coral #FF9B85
+[4,2] 情绪稳定鸡 glyph — Warm coral #FF9B85
   Simplified silhouette: comb crest + beak profile.
   Monochrome filled shape. Recognizable as rooster.
 
-[4,3] 夸夸豚 glyph — Sky blue #A8C5DD
+[4,3] 捧场王仓鼠 glyph — Sky blue #A8C5DD
   Simplified silhouette: curved body + heart tail.
   Monochrome filled shape. Recognizable as dolphin.
 
-[4,4] 机智狐 glyph — Warm orange #D4845C
+[4,4] 探宝雷达狐 glyph — Warm orange #D4845C
   Simplified silhouette: pointed ears + diamond face.
   Monochrome filled shape. Recognizable as fox.
 
-[4,5] 淡定海豚 glyph — Sky blue #5B9BD5
+[4,5] 读空气海豚 glyph — Sky blue #5B9BD5
   Simplified silhouette: smooth curved forehead + smile.
   Monochrome filled shape. Recognizable as dolphin.
 
-[4,6] 织网蛛 glyph — Purple-gray #8B7FB0
+[4,6] 社交裁缝蛛 glyph — Purple-gray #8B7FB0
   Simplified silhouette: hexagon body + 4 visible legs.
   Monochrome filled shape. Recognizable as spider.
 
 Row 5:
-[5,1] 暖心熊 glyph — Warm brown #A0522D
+[5,1] 情绪树洞考拉 glyph — Warm brown #A0522D
   Simplified silhouette: round ears + broad snout.
   Monochrome filled shape. Recognizable as bear.
 
-[5,2] 灵感章鱼 glyph — Purple #8B5CF6
+[5,2] 脑洞喷泉章鱼 glyph — Purple #8B5CF6
   Simplified silhouette: star body + 3 tentacles.
   Monochrome filled shape. Recognizable as octopus.
 
-[5,3] 沉思猫头鹰 glyph — Deep blue #4A6FA5
+[5,3] 追问猫头鹰 glyph — Deep blue #4A6FA5
   Simplified silhouette: large eyes + ear tufts.
   Monochrome filled shape. Recognizable as owl.
 
-[5,4] 定心大象 glyph — Gray-blue #708090
+[5,4] 定海神针大象 glyph — Gray-blue #708090
   Simplified silhouette: trunk + large ear flap.
   Monochrome filled shape. Recognizable as elephant.
 
-[5,5] 稳如龟 glyph — Forest green #6B8E6B
+[5,5] 慢半拍龟 glyph — Forest green #6B8E6B
   Simplified silhouette: dome shell + small head.
   Monochrome filled shape. Recognizable as turtle.
 
-[5,6] 隐身猫 glyph — Soft gray #9CA3AF
+[5,6] 静音模式猫 glyph — Soft gray #9CA3AF
   Simplified silhouette: peeking eye + curved back.
   Monochrome filled shape. Recognizable as cat.
 
@@ -180,22 +180,22 @@ ARCHETYPE COLOR DATA:
 ═══════════════════════════════════════════════════════════════════
 
 Row 1:
-[1,1] 开心柯基:  Primary #D4845C, Light #FDBA74, Dark #9A3412, BG #FFF7ED, Surface #FED7AA
-[1,2] 太阳鸡:    Primary #FF9B85, Light #FDBA74, Dark #C2410C, BG #FFF7ED, Surface #FED7AA
-[1,3] 夸夸豚:    Primary #A8C5DD, Light #BFDBFE, Dark #1E40AF, BG #EFF6FF, Surface #DBEAFE
-[1,4] 机智狐:    Primary #D4845C, Light #FDBA74, Dark #9A3412, BG #FFF7ED, Surface #FED7AA
+[1,1] 气氛组柯基:  Primary #D4845C, Light #FDBA74, Dark #9A3412, BG #FFF7ED, Surface #FED7AA
+[1,2] 情绪稳定鸡:    Primary #FF9B85, Light #FDBA74, Dark #C2410C, BG #FFF7ED, Surface #FED7AA
+[1,3] 捧场王仓鼠:    Primary #A8C5DD, Light #BFDBFE, Dark #1E40AF, BG #EFF6FF, Surface #DBEAFE
+[1,4] 探宝雷达狐:    Primary #D4845C, Light #FDBA74, Dark #9A3412, BG #FFF7ED, Surface #FED7AA
 
 Row 2:
-[2,1] 淡定海豚:  Primary #5B9BD5, Light #93C5FD, Dark #1E3A8A, BG #EFF6FF, Surface #DBEAFE
-[2,2] 织网蛛:    Primary #8B7FB0, Light #C4B5FD, Dark #5B21B6, BG #F5F3FF, Surface #DDD6FE
-[2,3] 暖心熊:    Primary #A0522D, Light #FDBA74, Dark #7C2D12, BG #FFF7ED, Surface #FED7AA
-[2,4] 灵感章鱼:  Primary #8B5CF6, Light #C4B5FD, Dark #5B21B6, BG #F5F3FF, Surface #DDD6FE
+[2,1] 读空气海豚:  Primary #5B9BD5, Light #93C5FD, Dark #1E3A8A, BG #EFF6FF, Surface #DBEAFE
+[2,2] 社交裁缝蛛:    Primary #8B7FB0, Light #C4B5FD, Dark #5B21B6, BG #F5F3FF, Surface #DDD6FE
+[2,3] 情绪树洞考拉:    Primary #A0522D, Light #FDBA74, Dark #7C2D12, BG #FFF7ED, Surface #FED7AA
+[2,4] 脑洞喷泉章鱼:  Primary #8B5CF6, Light #C4B5FD, Dark #5B21B6, BG #F5F3FF, Surface #DDD6FE
 
 Row 3:
-[3,1] 沉思猫头鹰: Primary #4A6FA5, Light #93C5FD, Dark #1E3A8A, BG #EFF6FF, Surface #DBEAFE
-[3,2] 定心大象:  Primary #708090, Light #CBD5E1, Dark #334155, BG #F8FAFC, Surface #E2E8F0
-[3,3] 稳如龟:    Primary #6B8E6B, Light #86EFAC, Dark #14532D, BG #F0FDF4, Surface #BBF7D0
-[3,4] 隐身猫:    Primary #9CA3AF, Light #D1D5DB, Dark #374151, BG #F9FAFB, Surface #E5E7EB
+[3,1] 追问猫头鹰: Primary #4A6FA5, Light #93C5FD, Dark #1E3A8A, BG #EFF6FF, Surface #DBEAFE
+[3,2] 定海神针大象:  Primary #708090, Light #CBD5E1, Dark #334155, BG #F8FAFC, Surface #E2E8F0
+[3,3] 慢半拍龟:    Primary #6B8E6B, Light #86EFAC, Dark #14532D, BG #F0FDF4, Surface #BBF7D0
+[3,4] 静音模式猫:    Primary #9CA3AF, Light #D1D5DB, Dark #374151, BG #F9FAFB, Surface #E5E7EB
 
 ═══════════════════════════════════════════════════════════════════
 STYLE:

@@ -61,18 +61,18 @@ const expressionOptions = [
 
 // English name mapping for archetypes
 const archetypeEnglishNames: Record<string, string> = {
-  "机智狐": "Clever Fox",
-  "开心柯基": "Happy Corgi",
-  "暖心熊": "Warm Bear",
-  "织网蛛": "Weaver Spider",
-  "夸夸豚": "Cheerful Dolphin",
-  "太阳鸡": "Sunny Rooster",
-  "淡定海豚": "Calm Dolphin",
-  "沉思猫头鹰": "Thoughtful Owl",
-  "稳如龟": "Steady Turtle",
-  "隐身猫": "Mysterious Cat",
-  "定心大象": "Grounded Elephant",
-  "灵感章鱼": "Creative Octopus"
+  "fox": "Clever Fox",
+  "corgi": "Happy Corgi",
+  "koala": "Warm Bear",
+  "spider": "Weaver Spider",
+  "hamster_praise": "Cheerful Dolphin",
+  "rooster": "Sunny Rooster",
+  "dolphin_calm": "Calm Dolphin",
+  "owl": "Thoughtful Owl",
+  "turtle": "Steady Turtle",
+  "cat": "Mysterious Cat",
+  "elephant": "Grounded Elephant",
+  "octopus": "Creative Octopus"
 };
 
 export function ShareCardModal({ open, onOpenChange }: ShareCardModalProps) {

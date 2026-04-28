@@ -36,8 +36,19 @@ vi.mock('../ai/minimaxClient', () => ({
   MINIMAX_DEFAULT_MODEL: 'minimax-m2.7',
 }));
 
+vi.mock('../lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
+  },
+}));
+
 // Import AFTER the mocks are registered (vi.mock calls are hoisted by Vitest)
 import { getClientForFunction } from '../ai/socialModelRouter';
+import { logger } from '../lib/logger';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -51,10 +62,9 @@ function setEnv(overrides: Record<string, string | undefined>) {
   }
 }
 
-const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
 beforeEach(() => {
-  consoleSpy.mockClear();
+  vi.mocked(logger.warn).mockClear();
+  vi.mocked(logger.info).mockClear();
 });
 
 afterEach(() => {
@@ -88,7 +98,7 @@ describe('socialModelRouter', () => {
       for (const fn of fns) {
         const result = getClientForFunction(fn);
         expect(result.provider).toBe('deepseek');
-        expect(result.model).toBe('deepseek-chat');
+        expect(result.model).toBe('deepseek-v4-flash');
       }
     });
   });
@@ -120,8 +130,9 @@ describe('socialModelRouter', () => {
 
       const result = getClientForFunction('generateWarmupTopics');
       expect(result.provider).toBe('deepseek');
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('MINIMAX_API_KEY is not set')
+      expect(logger.warn).toHaveBeenCalledWith(
+        'MINIMAX_API_KEY is not set, falling back to deepseek',
+        expect.any(Object)
       );
     });
   });
@@ -174,11 +185,12 @@ describe('socialModelRouter', () => {
       ] as const;
 
       for (const fn of minimaxFns) {
-        consoleSpy.mockClear();
+        vi.mocked(logger.warn).mockClear();
         const result = getClientForFunction(fn);
         expect(result.provider, `${fn} should fall back to deepseek`).toBe('deepseek');
-        expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining('MINIMAX_API_KEY is not set')
+        expect(logger.warn).toHaveBeenCalledWith(
+          'MINIMAX_API_KEY is not set, falling back to deepseek',
+          expect.any(Object)
         );
       }
     });
@@ -190,8 +202,9 @@ describe('socialModelRouter', () => {
 
       getClientForFunction('generateWarmupTopics'); // triggers resolveMode()
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Unrecognized SOCIAL_AI_PROVIDER="hybridx"')
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Unrecognized SOCIAL_AI_PROVIDER, defaulting to hybrid',
+        expect.objectContaining({ value: 'hybridx' })
       );
     });
 
@@ -219,12 +232,12 @@ describe('socialModelRouter', () => {
       expect(result.model).toBe('minimax-m2.7');
     });
 
-    it('uses deepseek-chat model for DeepSeek functions', () => {
+    it('uses deepseek-v4-flash model for DeepSeek functions', () => {
       setEnv({});
 
       const result = getClientForFunction('generateMicroChallenges');
       expect(result.provider).toBe('deepseek');
-      expect(result.model).toBe('deepseek-chat');
+      expect(result.model).toBe('deepseek-v4-flash');
     });
   });
 });

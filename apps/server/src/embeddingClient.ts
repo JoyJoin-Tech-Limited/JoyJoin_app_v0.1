@@ -32,7 +32,7 @@ function getProviderConfig(): ProviderConfig {
 }
 
 function resolveEmbeddingModel(): string {
-  return process.env.EMBEDDING_MODEL?.trim() || 'text-embedding-3-small';
+  return process.env.EMBEDDING_MODEL?.trim() || 'deepseek-embedding';
 }
 
 export class EmbeddingClient {

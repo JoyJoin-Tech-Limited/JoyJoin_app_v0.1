@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 
-const POSTER_WIDTH = 750
-const POSTER_HEIGHT = 1200
+const POSTER_WIDTH = 1080
+const POSTER_HEIGHT = 1920
 const OUTER_MARGIN = 28
 const CARD_RADIUS = 40
 const CARD_X = OUTER_MARGIN
@@ -429,7 +429,7 @@ function drawAttributionWatermark(
   ctx.setFontSize(16)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText('JoyJoin · 悦聚 — 测测你的社交原型', x + width / 2, y)
+  ctx.fillText('悦聚 · 测测你的社交命格 · 找到同频的人', x + width / 2, y)
   ctx.restore()
 }
 
@@ -546,7 +546,7 @@ function drawRankBadges(
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText(`🎴 原型编号 No.${archetypeRank}`, leftBadgeX + leftBadgeWidth / 2, badgeY + badgeHeight / 2)
+  ctx.fillText(`🎴 命格编号 No.${archetypeRank}`, leftBadgeX + leftBadgeWidth / 2, badgeY + badgeHeight / 2)
   ctx.restore()
 
   // Serial number badge (right)
@@ -626,7 +626,7 @@ export async function generatePersonalitySharePoster(
   createCardBackground(ctx, input.accentColor)
 
   drawBadge(ctx, {
-    text: 'JOYJOIN TCG',
+    text: '悦聚 · 社交命盘',
     x: CARD_X + 36,
     y: CARD_Y + 40,
     width: 172,
@@ -635,7 +635,7 @@ export async function generatePersonalitySharePoster(
   })
 
   drawBadge(ctx, {
-    text: input.confidenceLabel ?? '匿名结果',
+    text: input.confidenceLabel ?? '命定结果',
     x: CARD_X + CARD_WIDTH - 184,
     y: CARD_Y + 40,
     width: 148,
@@ -800,7 +800,7 @@ export async function generatePersonalitySharePoster(
   // Footer text and attribution
   const footerY = holoStampY + 36 + 16
   drawTextBlock(ctx, {
-    text: '来 JoyJoin 测测你的社交原型，看看你会点亮哪一张卡。',
+    text: '来悦聚测测你的社交命格，看看缘分会带你去哪里 ✨',
     x: CARD_X + 52,
     y: footerY,
     maxCharsPerLine: 24,

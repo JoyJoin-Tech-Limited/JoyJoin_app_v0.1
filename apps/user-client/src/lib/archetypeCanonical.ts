@@ -9,18 +9,18 @@
  * This is the definitive ordering used throughout the application
  */
 export const ARCHETYPE_CANONICAL_ORDER = [
-  "开心柯基",      // 1
-  "太阳鸡",        // 2
-  "夸夸豚",        // 3
-  "机智狐",        // 4
-  "淡定海豚",      // 5
-  "织网蛛",        // 6
-  "暖心熊",        // 7
-  "灵感章鱼",      // 8
-  "沉思猫头鹰",    // 9
-  "定心大象",      // 10
-  "稳如龟",        // 11
-  "隐身猫",        // 12
+  "corgi",      // 1
+  "rooster",        // 2
+  "hamster_praise",        // 3
+  "fox",        // 4
+  "dolphin_calm",      // 5
+  "spider",        // 6
+  "koala",        // 7
+  "octopus",      // 8
+  "owl",    // 9
+  "elephant",      // 10
+  "turtle",        // 11
+  "cat",        // 12
 ] as const;
 
 /**

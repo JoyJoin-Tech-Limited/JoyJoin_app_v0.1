@@ -24,6 +24,7 @@ import { seedMiniProgramAuthSession } from '../../../../lib/authSession'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
 import { logError, logInfo } from '../../../../lib/logger'
+import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import './index.scss'
 
 function resolveLoginErrorMessage(error: unknown): string {
@@ -59,9 +60,10 @@ export default function PersonalityTestAuthGatePage() {
     sessionSnapshot,
     answers,
   })
+  const rawArchetype = sessionSnapshot?.result?.primaryArchetype
   const primaryArchetype =
-    typeof sessionSnapshot?.result?.primaryArchetype === 'string'
-      ? sessionSnapshot.result.primaryArchetype
+    typeof rawArchetype === 'string'
+      ? archetypeRegistry[rawArchetype]?.name ?? rawArchetype
       : '你的氛围原型'
   const isBusy = isImportingLogin || isGenericLoggingIn
   const analytics = useOnboardingAnalytics('personality-test-auth-gate', {

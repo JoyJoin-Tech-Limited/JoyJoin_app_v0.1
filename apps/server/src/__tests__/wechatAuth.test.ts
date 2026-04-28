@@ -85,9 +85,9 @@ vi.mock("../db", () => ({
 // ── @shared/personality/matcherV2 mock ─────────────────────────────────────
 vi.mock("@shared/personality/matcherV2", () => ({
   findBestMatchingArchetypesV2: vi.fn().mockReturnValue([
-    { archetype: "开心柯基", score: 85, confidence: 0.9 },
-    { archetype: "太阳鸡", score: 72, confidence: 0.7 },
-    { archetype: "夸夸豚", score: 60, confidence: 0.5 },
+    { archetype: "corgi", score: 85, confidence: 0.9 },
+    { archetype: "rooster", score: 72, confidence: 0.7 },
+    { archetype: "hamster_praise", score: 60, confidence: 0.5 },
   ]),
 }));
 

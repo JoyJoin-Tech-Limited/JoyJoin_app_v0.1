@@ -74,7 +74,10 @@
   }
 
   &__action-emoji {
-    font-size: $font-size-xl;
+    width: 40rpx;
+    height: 40rpx;
+    display: block;
+    margin-bottom: 8rpx;
   }
 
   &__action-label {
@@ -198,25 +201,25 @@
       animation: none;
     }
 
-    // ── Quantized accent families ──
+    // ── Quantized accent families (from archetypeColorTokens) ──
     &--accent-warm {
-      border-left: 4rpx solid #F59E0B;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#F59E0B, 0.06) 100%);
+      border-left: 4rpx solid #C79450;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#C79450, 0.06) 100%);
     }
 
     &--accent-cool {
-      border-left: 4rpx solid #06B6D4;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#06B6D4, 0.06) 100%);
+      border-left: 4rpx solid #C0A17B;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#C0A17B, 0.06) 100%);
     }
 
     &--accent-fire {
-      border-left: 4rpx solid #EF4444;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#EF4444, 0.06) 100%);
+      border-left: 4rpx solid #877B93;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#877B93, 0.06) 100%);
     }
 
     &--accent-calm {
-      border-left: 4rpx solid #8B5CF6;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#8B5CF6, 0.06) 100%);
+      border-left: 4rpx solid #8E8E88;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#8E8E88, 0.06) 100%);
     }
   }
 
@@ -313,7 +316,7 @@
     align-items: center;
     gap: $spacing-xs;
     margin-bottom: $spacing-sm;
-    min-height: 36rpx;
+    min-height: 40rpx;
   }
 
   &__pool-palette-label {
@@ -325,16 +328,16 @@
   &__pool-palette-glyphs {
     display: flex;
     align-items: center;
-    gap: 6rpx;
+    gap: 8rpx;
   }
 
   &__pool-palette-more {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28rpx;
-    height: 28rpx;
-    padding: 0 6rpx;
+    min-width: 32rpx;
+    height: 32rpx;
+    padding: 0 8rpx;
     border-radius: 999rpx;
     background: $color-divider;
     @include type-micro;
@@ -453,21 +456,21 @@
       background: $color-text-muted;
     }
 
-    // Family-driven accent colors (override when card has accent family)
+    // Family-driven accent colors (from archetypeColorTokens)
     .discover-auth__pool-card--accent-warm &--open {
-      background: #F59E0B;
+      background: #C79450;
     }
 
     .discover-auth__pool-card--accent-cool &--open {
-      background: #06B6D4;
+      background: #C0A17B;
     }
 
     .discover-auth__pool-card--accent-fire &--open {
-      background: #EF4444;
+      background: #877B93;
     }
 
     .discover-auth__pool-card--accent-calm &--open {
-      background: #8B5CF6;
+      background: #8E8E88;
     }
   }
 
@@ -634,20 +637,4 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-
-  &--warm {
-    color: #F59E0B;
-  }
-
-  &--cool {
-    color: #06B6D4;
-  }
-
-  &--fire {
-    color: #EF4444;
-  }
-
-  &--calm {
-    color: #8B5CF6;
-  }
 }

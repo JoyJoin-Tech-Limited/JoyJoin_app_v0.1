@@ -331,7 +331,7 @@ BRAND SYSTEM:
 
 DESIGN REQUIREMENTS:
 - Top: Profile header with avatar, display name, and archetype badge
-  (e.g., "开心柯基" with archetype color background)
+  (e.g., "气氛组柯基" with archetype color background)
 - Archetype card: small illustration of the user's archetype mascot,
   trait scores radar or tag cloud
 - Stats row: "参加活动 X 次" / "连接 Y 人" / "获得 Z 赞"
@@ -380,7 +380,7 @@ DESIGN REQUIREMENTS:
 - Header: "我的连接" with subtitle "活动后建立的联系"
 - Connection cards in vertical list, each card:
   - Archetype avatar (small mascot illustration, not text initial)
-  - Name + archetype label (e.g., "小明 · 开心柯基")
+  - Name + archetype label (e.g., "小明 · 气氛组柯基")
   - "来自：周五饭局" event tag
   - Chemistry score badge (e.g., "默契度 85%")
   - "复制微信号" action button

@@ -16,12 +16,12 @@ export default function CenterTabEmptyPage() {
         <View className='center-tab-empty__art'>
           <Image
             className='center-tab-empty__art-bg'
-            src='/assets/empty-state/center-empty-bg.webp'
+            src='/assets/empty-state/center-empty-bg.png'
             mode='aspectFill'
           />
           <Image
             className='center-tab-empty__art-illustration'
-            src='/assets/empty-state/center-empty-illustration.webp'
+            src='/assets/empty-state/center-empty-illustration.png'
             mode='aspectFit'
           />
         </View>

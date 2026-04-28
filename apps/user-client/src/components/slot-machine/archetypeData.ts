@@ -3,18 +3,18 @@
  */
 
 import { ARCHETYPE_CANONICAL_ORDER } from "@shared/personality/archetypeNames";
-import corgiImg from "@/assets/开心柯基_transparent_1.png";
-import foxImg from "@/assets/机智狐_transparent_2.png";
-import bearImg from "@/assets/暖心熊_transparent_3.png";
-import spiderImg from "@/assets/织网蛛_transparent_4.png";
-import pigImg from "@/assets/夸夸豚_transparent_5.png";
-import chickenImg from "@/assets/太阳鸡_transparent_6.png";
-import dolphinImg from "@/assets/淡定海豚_transparent_7.png";
-import owlImg from "@/assets/沉思猫头鹰_transparent_8.png";
-import turtleImg from "@/assets/稳如龟_transparent_9.png";
-import catImg from "@/assets/隐身猫_transparent_10.png";
-import elephantImg from "@/assets/定心大象_transparent_11.png";
-import octopusImg from "@/assets/灵感章鱼_transparent_12.png";
+import corgiImg from "@/assets/corgi_transparent_1.png";
+import foxImg from "@/assets/fox_transparent_2.png";
+import bearImg from "@/assets/koala_transparent_3.png";
+import spiderImg from "@/assets/spider_transparent_4.png";
+import pigImg from "@/assets/hamster_praise_transparent_5.png";
+import chickenImg from "@/assets/rooster_transparent_6.png";
+import dolphinImg from "@/assets/dolphin_calm_transparent_7.png";
+import owlImg from "@/assets/owl_transparent_8.png";
+import turtleImg from "@/assets/turtle_transparent_9.png";
+import catImg from "@/assets/cat_transparent_10.png";
+import elephantImg from "@/assets/elephant_transparent_11.png";
+import octopusImg from "@/assets/octopus_transparent_12.png";
 
 export interface ArchetypeInfo {
   id: string;
@@ -31,86 +31,86 @@ export interface ArchetypeInfo {
  * to ensure consistency with backend and prevent drift
  */
 const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
-  "开心柯基": {
+  "corgi": {
     id: "corgi",
-    name: "开心柯基",
+    name: "corgi",
     image: corgiImg,
     color: [43, 96, 56], // amber
     emoji: "🐕",
   },
-  "太阳鸡": {
+  "rooster": {
     id: "chicken",
-    name: "太阳鸡",
+    name: "rooster",
     image: chickenImg,
     color: [50, 90, 55], // yellow
     emoji: "🐔",
   },
-  "夸夸豚": {
+  "hamster_praise": {
     id: "pig",
-    name: "夸夸豚",
+    name: "hamster_praise",
     image: pigImg,
     color: [340, 75, 65], // pink
     emoji: "🐷",
   },
-  "机智狐": {
+  "fox": {
     id: "fox",
-    name: "机智狐",
+    name: "fox",
     image: foxImg,
     color: [25, 95, 53], // orange
     emoji: "🦊",
   },
-  "淡定海豚": {
+  "dolphin_calm": {
     id: "dolphin",
-    name: "淡定海豚",
+    name: "dolphin_calm",
     image: dolphinImg,
     color: [187, 85, 53], // cyan
     emoji: "🐬",
   },
-  "织网蛛": {
+  "spider": {
     id: "spider",
-    name: "织网蛛",
+    name: "spider",
     image: spiderImg,
     color: [220, 50, 45], // blue-gray
     emoji: "🕷️",
   },
-  "暖心熊": {
+  "koala": {
     id: "bear",
-    name: "暖心熊",
+    name: "koala",
     image: bearImg,
     color: [24, 80, 50], // warm brown
     emoji: "🐻",
   },
-  "灵感章鱼": {
+  "octopus": {
     id: "octopus",
-    name: "灵感章鱼",
+    name: "octopus",
     image: octopusImg,
     color: [271, 91, 65], // purple
     emoji: "🐙",
   },
-  "沉思猫头鹰": {
+  "owl": {
     id: "owl",
-    name: "沉思猫头鹰",
+    name: "owl",
     image: owlImg,
     color: [260, 50, 50], // deep purple
     emoji: "🦉",
   },
-  "定心大象": {
+  "elephant": {
     id: "elephant",
-    name: "定心大象",
+    name: "elephant",
     image: elephantImg,
     color: [200, 30, 55], // gray-blue
     emoji: "🐘",
   },
-  "稳如龟": {
+  "turtle": {
     id: "turtle",
-    name: "稳如龟",
+    name: "turtle",
     image: turtleImg,
     color: [150, 60, 45], // green
     emoji: "🐢",
   },
-  "隐身猫": {
+  "cat": {
     id: "cat",
-    name: "隐身猫",
+    name: "cat",
     image: catImg,
     color: [280, 40, 55], // muted purple
     emoji: "🐱",
@@ -139,7 +139,7 @@ export const ARCHETYPE_NAMES = [...ARCHETYPE_CANONICAL_ORDER];
 
 /** Get archetype info with fallback */
 export function getArchetypeInfo(name: string): ArchetypeInfo {
-  return ARCHETYPE_DATA[name] || ARCHETYPE_DATA["开心柯基"];
+  return ARCHETYPE_DATA[name] || ARCHETYPE_DATA["corgi"];
 }
 
 /** Get archetype color as CSS HSL string */

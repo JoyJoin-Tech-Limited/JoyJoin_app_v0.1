@@ -4,7 +4,7 @@
  * 优化目标:
  * 1. 降低原型间相似度（从30对>98%降至<5对）
  * 2. 提高匹配区分边际（从0.48%提升至>2%）
- * 3. 平衡原型分布（开心柯基从18.7%降至~10%）
+ * 3. 平衡原型分布（corgi从18.7%降至~10%）
  * 
  * 调整策略:
  * - 每个原型突出1-2个"极端"维度（接近100或接近30）
@@ -34,17 +34,17 @@ import type { TraitScores } from "./archetypeTraitScores";
  * 专家优化版原型向量 V6
  * 
  * V6核心改进（基于V3题目优化后的模拟结果）：
- * 1. 降低过热原型（夸夸豚17%→8%, 太阳鸡17%→8%, 织网蛛16%→8%）
+ * 1. 降低过热原型（hamster_praise17%→8%, rooster17%→8%, spider16%→8%）
  *    - 策略：增加极端维度要求，使匹配门槛更高
- * 2. 提升过冷原型（灵感章鱼1.4%→8%, 机智狐1.2%→8%, 沉思猫头鹰0.7%→8%）
+ * 2. 提升过冷原型（octopus1.4%→8%, fox1.2%→8%, owl0.7%→8%）
  *    - 策略：向量更接近中心，降低匹配门槛
- * 3. 保持稳定原型（隐身猫12%, 稳如龟7%, 暖心熊6%）
+ * 3. 保持稳定原型（cat12%, turtle7%, koala6%）
  */
 export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
   // ========== 高能量区（需提高匹配门槛）==========
   
-  // 开心柯基: V6.9提高匹配率（3.3%→8%）
-  "开心柯基": {
+  // corgi: V6.9提高匹配率（3.3%→8%）
+  "corgi": {
     affinity: 60,
     openness: 55,
     conscientiousness: 42,
@@ -53,8 +53,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 82,         // V6.9: 进一步降低门槛
   },
   
-  // 太阳鸡: V6.9降低门槛（3.9%→6%）
-  "太阳鸡": {
+  // rooster: V6.9降低门槛（3.9%→6%）
+  "rooster": {
     affinity: 82,
     openness: 35,
     conscientiousness: 92,  // V6.9: 略降低
@@ -63,8 +63,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 88,
   },
   
-  // 夸夸豚: V6.9提高匹配率（2.2%→8%）
-  "夸夸豚": {
+  // hamster_praise: V6.9提高匹配率（2.2%→8%）
+  "hamster_praise": {
     affinity: 88,           // V6.9: 降低门槛
     openness: 42,
     conscientiousness: 42,
@@ -73,8 +73,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 90,         // V6.9: 降低门槛
   },
   
-  // 机智狐: 中等门槛（V6.2平衡）
-  "机智狐": {
+  // fox: 中等门槛（V6.2平衡）
+  "fox": {
     affinity: 42,
     openness: 80,           // V6.2: 平衡
     conscientiousness: 45,
@@ -85,8 +85,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 中能量区 ==========
   
-  // 淡定海豚: V6.9区分策略 - 强调A/O，提高门槛
-  "淡定海豚": {
+  // dolphin_calm: V6.9区分策略 - 强调A/O，提高门槛
+  "dolphin_calm": {
     affinity: 78,           // V6.9: 更极端A
     openness: 62,           // V6.9: 更极端O
     conscientiousness: 85,
@@ -95,8 +95,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 72,
   },
   
-  // 织网蛛: V6.9提高门槛（降低17%→8%）
-  "织网蛛": {
+  // spider: V6.9提高门槛（降低17%→8%）
+  "spider": {
     affinity: 98,           // V6.9: 极致
     openness: 100,          // 保持极致
     conscientiousness: 42,  // V6.9: 降低
@@ -105,8 +105,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 48,
   },
   
-  // 暖心熊: V6.9降低门槛（3.3%→6%）
-  "暖心熊": {
+  // koala: V6.9降低门槛（3.3%→6%）
+  "koala": {
     affinity: 85,           // V6.9: 略降低
     openness: 48,
     conscientiousness: 55,
@@ -115,8 +115,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 82,
   },
   
-  // 灵感章鱼: V6.9适应O覆盖增加
-  "灵感章鱼": {
+  // octopus: V6.9适应O覆盖增加
+  "octopus": {
     affinity: 50,
     openness: 92,           // V6.9: 提高O门槛
     conscientiousness: 42,
@@ -127,8 +127,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 低能量区 (V6.7恢复) ==========
   
-  // 沉思猫头鹰: V6.9适应O覆盖增加
-  "沉思猫头鹰": {
+  // owl: V6.9适应O覆盖增加
+  "owl": {
     affinity: 44,
     openness: 85,           // V6.9: 提高O门槛
     conscientiousness: 72,
@@ -137,9 +137,9 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 48,
   },
   
-  // 定心大象: V6.9区分策略 - 强调C/X维度
-  "定心大象": {
-    affinity: 48,           // V6.9: 降低A（与淡定海豚区分）
+  // elephant: V6.9区分策略 - 强调C/X维度
+  "elephant": {
+    affinity: 48,           // V6.9: 降低A（与dolphin_calm区分）
     openness: 35,           // V6.9: 降低O
     conscientiousness: 95,  // V6.9: 极致C
     emotionalStability: 92,
@@ -149,8 +149,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
 
   // ========== 超低能量区 (V6.7恢复) ==========
   
-  // 稳如龟: V6.9提高门槛（降低14%→8%）
-  "稳如龟": {
+  // turtle: V6.9提高门槛（降低14%→8%）
+  "turtle": {
     affinity: 48,
     openness: 45,           // V6.9: 降低
     conscientiousness: 78,  // V6.9: 提高
@@ -159,8 +159,8 @@ export const archetypeTraitScoresOptimized: Record<string, TraitScores> = {
     positivity: 38,
   },
   
-  // 隐身猫: 提高门槛（V6.5调整）
-  "隐身猫": {
+  // cat: 提高门槛（V6.5调整）
+  "cat": {
     affinity: 45,
     openness: 38,           // V6.5: 更极端
     conscientiousness: 48,

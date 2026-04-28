@@ -1,12 +1,16 @@
-import { useMemo, useState } from 'react'
-import { View, Text, ScrollView } from '@tarojs/components'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { View, Text, Image } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
-import Button from '../../components/Button'
 import {
-  DEFAULT_MINI_SCRIPT_GENRES,
-  MINI_SCRIPT_GENRE_OPTIONS,
-  MINI_SCRIPT_STYLE_OPTIONS,
-} from './miniscriptLabels'
+  MINISCRIPT_CATALOG,
+  SURPRISE_ME_CARD,
+  getStyleGradient,
+  getGenreGradient,
+  type MiniscriptStyleCard,
+  type MiniscriptGenreCard,
+} from '@shared/miniscriptCatalog'
+import Button from '../../components/Button'
 
 export type MiniScriptConfigModalProps = {
   open: boolean
@@ -17,95 +21,334 @@ export type MiniScriptConfigModalProps = {
   onSubmit: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[] }) => void
 }
 
+type PickerStage = 'style' | 'genre'
+
+// Stagger delay per card index (ms) — Beta refined from 80ms to 60ms for tighter sequence
+const STAGGER_MS = 60
+const ENTRANCE_DURATION_MS = 300
+
 export function MiniScriptConfigModal({
   open,
   onClose,
   initialStyle = 'modern_urban',
-  initialGenres = DEFAULT_MINI_SCRIPT_GENRES,
+  initialGenres = [],
   isSubmitting,
   onSubmit,
 }: MiniScriptConfigModalProps) {
-  const [style, setStyle] = useState<MiniScriptStyle>(initialStyle)
-  const [genres, setGenres] = useState<MiniScriptGenre[]>(() => [...initialGenres])
+  const [stage, setStage] = useState<PickerStage>('style')
+  const [selectedStyle, setSelectedStyle] = useState<MiniScriptStyle | null>(null)
+  const [selectedGenres, setSelectedGenres] = useState<MiniScriptGenre[]>(() => [...initialGenres])
+  const [pressingKey, setPressingKey] = useState<string | null>(null)
+  const [isEntering, setIsEntering] = useState(false)
+  const [shuffleIndex, setShuffleIndex] = useState<number | null>(null)
+  const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set())
+  const shuffleTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const styleCardsRef = useRef<(MiniscriptStyleCard | typeof SURPRISE_ME_CARD)[]>([])
 
-  const genreSet = useMemo(() => new Set(genres), [genres])
+  // Build style cards: 7 styles + 1 Surprise Me
+  const styleCards = useMemo(() => {
+    const cards = [...MINISCRIPT_CATALOG.styles]
+    cards.push(SURPRISE_ME_CARD as unknown as MiniscriptStyleCard)
+    return cards
+  }, [])
+
+  const genreCards = useMemo(() => MINISCRIPT_CATALOG.genres, [])
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setStage('style')
+      setSelectedStyle(null)
+      setSelectedGenres([...initialGenres])
+      setPressingKey(null)
+      setShuffleIndex(null)
+      // Trigger staggered entrance after mount
+      requestAnimationFrame(() => {
+        setIsEntering(true)
+      })
+    } else {
+      setIsEntering(false)
+    }
+  }, [open, initialGenres])
+
+  // Cleanup shuffle timer
+  useEffect(() => {
+    return () => {
+      if (shuffleTimerRef.current) {
+        clearTimeout(shuffleTimerRef.current)
+      }
+    }
+  }, [])
+
+  const genreSet = useMemo(() => new Set(selectedGenres), [selectedGenres])
+
+  const handlePressStart = (key: string) => {
+    setPressingKey(key)
+  }
+
+  const handlePressEnd = () => {
+    setPressingKey(null)
+  }
+
+  const handleSelectStyle = (key: string) => {
+    if (key === SURPRISE_ME_CARD.key) {
+      // Shuffle animation: rapid highlight 3 times
+      let tick = 0
+      const maxTicks = 3
+      const styleCount = MINISCRIPT_CATALOG.styles.length
+
+      const runShuffle = () => {
+        const randomIdx = Math.floor(Math.random() * styleCount)
+        setShuffleIndex(randomIdx)
+        Taro.vibrateShort({ type: 'light' }).catch(() => {})
+        tick++
+        if (tick < maxTicks) {
+          shuffleTimerRef.current = setTimeout(runShuffle, 120)
+        } else {
+          // Final selection
+          shuffleTimerRef.current = setTimeout(() => {
+            const finalIdx = Math.floor(Math.random() * styleCount)
+            const finalStyle = MINISCRIPT_CATALOG.styles[finalIdx]!.key as MiniScriptStyle
+            setShuffleIndex(null)
+            setSelectedStyle(finalStyle)
+            setStage('genre')
+          }, 200)
+        }
+      }
+      runShuffle()
+      return
+    }
+
+    setSelectedStyle(key as MiniScriptStyle)
+    setStage('genre')
+  }
+
+  const handleToggleGenre = (key: MiniScriptGenre) => {
+    setSelectedGenres((current) => {
+      const next = new Set(current)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return Array.from(next)
+    })
+  }
+
+  const handleBackToStyle = () => {
+    setStage('style')
+    setSelectedGenres([...initialGenres])
+  }
+
+  const handleSubmit = () => {
+    if (!selectedStyle || selectedGenres.length === 0) {
+      return
+    }
+    onSubmit({ style: selectedStyle, genres: selectedGenres })
+  }
+
+  const selectedStyleCard = selectedStyle
+    ? MINISCRIPT_CATALOG.styles.find((s) => s.key === selectedStyle)
+    : null
 
   if (!open) {
     return null
   }
 
-  const toggleGenre = (value: MiniScriptGenre) => {
-    setGenres((current) => {
-      const next = new Set(current)
-      if (next.has(value)) {
-        next.delete(value)
-      } else {
-        next.add(value)
-      }
-      const arr = MINI_SCRIPT_GENRE_OPTIONS.map((g) => g.value).filter((g) => next.has(g))
-      return arr.length > 0 ? arr : current
-    })
+  const getCardModifier = (key: string, index: number) => {
+    const mods: string[] = []
+    if (isEntering) {
+      mods.push(`ms-card--stagger-${Math.min(index, 7)}`)
+    }
+    if (pressingKey === key) {
+      mods.push('ms-card--pressed')
+    }
+    if (shuffleIndex !== null && styleCards[shuffleIndex]?.key === key) {
+      mods.push('ms-card--shuffling')
+    }
+    return mods.join(' ')
   }
 
-  const handleSubmit = () => {
-    if (genres.length === 0) {
-      return
+  const getGenreModifier = (key: string) => {
+    const mods: string[] = []
+    if (pressingKey === key) {
+      mods.push('ms-genre-card--pressed')
     }
-    onSubmit({ style, genres })
+    if (genreSet.has(key as MiniScriptGenre)) {
+      mods.push('ms-genre-card--selected')
+    }
+    return mods.join(' ')
   }
 
   return (
-    <View className='icebreaker-ms-modal'>
-      <View className='icebreaker-ms-modal__backdrop' onClick={onClose} />
-      <View className='icebreaker-ms-modal__sheet'>
-        <View className='icebreaker-ms-modal__handle' />
-        <Text className='icebreaker-ms-modal__title'>迷你剧本杀</Text>
-        <Text className='icebreaker-ms-modal__hint'>选择风格与题材，生成你们的轻量剧本（低冲突、无暴力）。</Text>
+    <View className='ms-modal'>
+      <View className='ms-modal__backdrop' onClick={onClose} />
+      <View className='ms-modal__sheet'>
+        {/* Drag handle */}
+        <View className='ms-modal__handle' />
 
-        <ScrollView scrollY className='icebreaker-ms-modal__scroll' showScrollbar={false}>
-          <Text className='icebreaker-ms-modal__section'>风格（单选）</Text>
-          <View className='icebreaker-ms-modal__chips'>
-            {MINI_SCRIPT_STYLE_OPTIONS.map((option) => {
-              const selected = option.value === style
-              return (
-                <View
-                  key={option.value}
-                  className={`icebreaker-ms-modal__chip${selected ? ' icebreaker-ms-modal__chip--on' : ''}`}
-                  onClick={() => setStyle(option.value)}
-                >
-                  <Text className='icebreaker-ms-modal__chip-text'>{option.label}</Text>
-                </View>
-              )
-            })}
-          </View>
+        {/* Header */}
+        <View className='ms-modal__header'>
+          {stage === 'style' ? (
+            <>
+              <Text className='ms-modal__title'>选择剧本风格</Text>
+              <Text className='ms-modal__subtitle'>今晚，你们想走进哪个世界？</Text>
+            </>
+          ) : (
+            <View className='ms-modal__hero-pill'>
+              {selectedStyleCard && (
+                <>
+                  <View
+                    className='ms-modal__hero-thumb'
+                    style={{ background: getStyleGradient(selectedStyleCard) }}
+                  >
+                    <Text className='ms-modal__hero-emoji'>{selectedStyleCard.emoji}</Text>
+                  </View>
+                  <View className='ms-modal__hero-text'>
+                    <Text className='ms-modal__hero-label'>{selectedStyleCard.label}</Text>
+                    <Text className='ms-modal__hero-hint'>再选一种或多种题材</Text>
+                  </View>
+                </>
+              )}
+              <Text className='ms-modal__back-btn' onClick={handleBackToStyle}>
+                重选
+              </Text>
+            </View>
+          )}
+        </View>
 
-          <Text className='icebreaker-ms-modal__section'>题材（多选）</Text>
-          <View className='icebreaker-ms-modal__chips'>
-            {MINI_SCRIPT_GENRE_OPTIONS.map((option) => {
-              const selected = genreSet.has(option.value)
-              return (
-                <View
-                  key={option.value}
-                  className={`icebreaker-ms-modal__chip${selected ? ' icebreaker-ms-modal__chip--on' : ''}`}
-                  onClick={() => toggleGenre(option.value)}
-                >
-                  <Text className='icebreaker-ms-modal__chip-text'>{option.label}</Text>
-                </View>
-              )
-            })}
-          </View>
-        </ScrollView>
-
-        <View className='icebreaker-ms-modal__footer'>
-          <Button
-            variant='primary'
-            className='icebreaker-ms-modal__cta'
-            loading={isSubmitting}
-            disabled={isSubmitting}
-            onClick={handleSubmit}
+        {/* Content */}
+        <View className='ms-modal__content'>
+          {/* Stage 1: Style Grid */}
+          <View
+            className={`ms-stage ms-stage--style${stage === 'genre' ? ' ms-stage--exited' : ''}`}
           >
-            生成我们的剧本
-          </Button>
+            <View className='ms-grid ms-grid--style'>
+              {styleCards.map((card, index) => {
+                const isSurprise = card.key === SURPRISE_ME_CARD.key
+                const gradient = isSurprise
+                  ? `linear-gradient(135deg, ${SURPRISE_ME_CARD.gradientFrom}, ${SURPRISE_ME_CARD.gradientTo})`
+                  : getStyleGradient(card as MiniscriptStyleCard)
+                const emoji = isSurprise ? SURPRISE_ME_CARD.emoji : (card as MiniscriptStyleCard).emoji
+                const label = isSurprise ? SURPRISE_ME_CARD.label : card.label
+                const mod = getCardModifier(card.key, index)
+
+                const thumbLoaded = loadedThumbs.has(card.key)
+                const thumbPath = !isSurprise ? (card as MiniscriptStyleCard).thumbnailPath : undefined
+
+                return (
+                  <View
+                    key={card.key}
+                    className={`ms-card ${mod}`}
+                    onTouchStart={() => handlePressStart(card.key)}
+                    onTouchEnd={() => {
+                      handlePressEnd()
+                      handleSelectStyle(card.key)
+                    }}
+                    onTouchCancel={handlePressEnd}
+                  >
+                    {/* Gradient background — fades out when thumbnail loads */}
+                    <View
+                      className={`ms-card__bg${thumbLoaded ? ' ms-card__bg--faded' : ''}`}
+                      style={{ background: gradient }}
+                    />
+                    {/* Thumbnail image — fades in when loaded */}
+                    {thumbPath && (
+                      <Image
+                        className={`ms-card__thumb${thumbLoaded ? ' ms-card__thumb--loaded' : ''}`}
+                        src={thumbPath}
+                        mode='aspectFill'
+                        lazyLoad
+                        onLoad={() => {
+                          setLoadedThumbs((prev) => new Set(prev).add(card.key))
+                        }}
+                      />
+                    )}
+                    {/* Dark gradient overlay for text readability */}
+                    <View className='ms-card__overlay' />
+                    {/* Emoji */}
+                    <Text className='ms-card__emoji'>{emoji}</Text>
+                    {/* Label */}
+                    <Text className='ms-card__label'>{label}</Text>
+                    {/* Surprise Me subtitle */}
+                    {isSurprise && (
+                      <Text className='ms-card__sublabel'>{SURPRISE_ME_CARD.subtitle}</Text>
+                    )}
+                    {/* Selection glow ring (child element, not box-shadow) */}
+                    <View className='ms-card__glow' />
+                  </View>
+                )
+              })}
+            </View>
+          </View>
+
+          {/* Stage 2: Genre Grid */}
+          <View
+            className={`ms-stage ms-stage--genre${stage === 'genre' ? ' ms-stage--active' : ''}`}
+          >
+            <View className='ms-genre-header'>
+              <Text className='ms-genre-header__title'>选择题材</Text>
+              <Text className='ms-genre-header__hint'>可多选，为剧本注入情绪基调</Text>
+            </View>
+            <View className='ms-grid ms-grid--genre'>
+              {genreCards.map((card) => {
+                const gradient = getGenreGradient(card)
+                const mod = getGenreModifier(card.key)
+                const isSelected = genreSet.has(card.key as MiniScriptGenre)
+
+                return (
+                  <View
+                    key={card.key}
+                    className={`ms-genre-card ${mod}`}
+                    onTouchStart={() => handlePressStart(card.key)}
+                    onTouchEnd={() => {
+                      handlePressEnd()
+                      handleToggleGenre(card.key as MiniScriptGenre)
+                    }}
+                    onTouchCancel={handlePressEnd}
+                  >
+                    <View
+                      className='ms-genre-card__bg'
+                      style={{ background: gradient }}
+                    />
+                    <View className='ms-genre-card__overlay' />
+                    <Text className='ms-genre-card__emoji'>{card.emoji}</Text>
+                    <Text className='ms-genre-card__label'>{card.label}</Text>
+                    {/* Checkmark for selected state */}
+                    {isSelected && (
+                      <View className='ms-genre-card__check'>
+                        <Text className='ms-genre-card__check-icon'>✓</Text>
+                      </View>
+                    )}
+                    {/* Glow ring */}
+                    <View
+                      className='ms-genre-card__glow'
+                      style={{ borderColor: card.accentColor }}
+                    />
+                  </View>
+                )
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Footer CTA */}
+        <View className='ms-modal__footer'>
+          {stage === 'genre' ? (
+            <Button
+              variant='primary'
+              className='ms-modal__cta'
+              loading={isSubmitting}
+              disabled={isSubmitting || selectedGenres.length === 0}
+              onClick={handleSubmit}
+            >
+              {selectedGenres.length > 0
+                ? `生成剧本（${selectedGenres.length}种题材）`
+                : '请至少选择一种题材'}
+            </Button>
+          ) : (
+            <Text className='ms-modal__footer-hint'>先选择一种风格，再挑选题材</Text>
+          )}
         </View>
       </View>
     </View>

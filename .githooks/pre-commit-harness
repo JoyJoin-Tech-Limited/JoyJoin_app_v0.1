@@ -1,0 +1,56 @@
+#!/bin/bash
+# pre-commit-harness — Git pre-commit hook for harness contract enforcement
+#
+# Install:
+#   cp .githooks/pre-commit-harness .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# This hook checks if any staged changes touch files that require a Sprint Contract,
+# and blocks the commit if no accepted contract exists.
+
+set -e
+
+# Get staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$$STAGED_FILES" ]; then
+  exit 0
+fi
+
+# Convert to comma-separated for the script
+FILES_CSV=$(echo "$STAGED_FILES" | tr '\n' ',' | sed 's/,$//')
+
+# Run tier detection on staged files
+echo "🔍 Harness: Checking staged changes for contract requirements..."
+
+TIER_OUTPUT=$(node scripts/select-harness-tier.mjs --files="$FILES_CSV" 2>/dev/null || echo '{"tier":1}')
+TIER=$(echo "$TIER_OUTPUT" | node -e "const d=require('fs').readFileSync(0,'utf-8'); try{console.log(JSON.parse(d).tier)}catch{console.log(1)}")
+
+if [ "$TIER" -ge 2 ]; then
+  echo "⚠️  Tier $TIER detected for staged changes."
+  echo ""
+  echo "Files:"
+  echo "$STAGED_FILES" | sed 's/^/  - /'
+  echo ""
+
+  # Check if there's an accepted contract
+  GATE_OUTPUT=$(node scripts/harness-contract-gate.mjs 2>/dev/null || echo '{"ok":true}')
+  GATE_OK=$(echo "$GATE_OUTPUT" | node -e "const d=require('fs').readFileSync(0,'utf-8'); try{console.log(JSON.parse(d).ok?'true':'false')}catch{console.log('true')}")
+
+  if [ "$GATE_OK" != "true" ]; then
+    echo "❌ COMMIT BLOCKED: Sprint Contract required but not accepted."
+    echo ""
+    echo "To proceed:"
+    echo "  1. Generate a contract:"
+    echo "     node scripts/generate-sprint-contract.mjs --task-id=<id> --goal='<description>' --files=$FILES_CSV"
+    echo "  2. Negotiate and accept the contract"
+    echo "  3. Re-run this commit"
+    echo ""
+    echo "To bypass (not recommended): git commit --no-verify"
+    exit 1
+  fi
+
+  echo "✅ Contract accepted — commit allowed."
+fi
+
+exit 0

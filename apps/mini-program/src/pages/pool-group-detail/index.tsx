@@ -1,6 +1,8 @@
-import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
+import { cdnAsset } from '../../lib/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
+import { useState, useCallback } from 'react'
 import {
   getPoolGroupAnalysis,
   getPoolGroupDetails,
@@ -11,18 +13,19 @@ import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import ArchetypeHead from '../../components/ArchetypeHead'
 import Button from '../../components/Button'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/uiConstants'
 import { formatDateTime } from '../../lib/groupDisplay'
+import {
+  generateGroupRevealPoster,
+  GROUP_REVEAL_CANVAS_ID,
+} from '../../lib/momentsPosterFactory'
 import './index.scss'
 
 function getMemberName(member: PoolGroupMemberSummary) {
   return member.displayName || '匿名'
-}
-
-function getInitial(name: string) {
-  return name.charAt(0).toUpperCase()
 }
 
 function getCountdown(dateTime?: string | null) {
@@ -52,6 +55,8 @@ export default function PoolGroupDetailPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
+  const [posterPath, setPosterPath] = useState('')
+  const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
 
   const {
     data: poolGroup,
@@ -71,8 +76,35 @@ export default function PoolGroupDetailPage() {
     retry: 1,
   })
 
+  const handleShareGroupPoster = useCallback(async () => {
+    if (!poolGroup || isGeneratingPoster) return
+    setIsGeneratingPoster(true)
+    try {
+      const { group, pool, members } = poolGroup
+      const path = await generateGroupRevealPoster({
+        poolTitle: pool.title || '悦聚盲盒活动',
+        groupNumber: group.groupNumber ?? undefined,
+        eventType: pool.eventType || '悦聚活动',
+        venueName: group.venueName || undefined,
+        dateTimeText: formatDateTime(group.finalDateTime ?? pool.dateTime),
+        members: members.map((m) => ({
+          displayName: getMemberName(m),
+          archetype: m.archetype || undefined,
+        })),
+        matchScore: group.matchScore ?? undefined,
+      })
+      setPosterPath(path)
+      await Taro.showShareImageMenu({ path })
+    } catch (err) {
+      console.error('[PoolGroupDetail] poster generation failed:', err)
+      Taro.showToast({ title: '海报生成失败，请重试', icon: 'none', duration: TOAST_SHORT_MS })
+    } finally {
+      setIsGeneratingPoster(false)
+    }
+  }, [poolGroup, isGeneratingPoster])
+
   if (authLoading || isLoading) {
-    return <LoadingScreen message='加载小队详情…' />
+    return <LoadingScreen message='正在揭晓小队阵容…' />
   }
 
   if (error || !poolGroup) {
@@ -80,7 +112,7 @@ export default function PoolGroupDetailPage() {
       <View className='pool-group-detail__error'>
         <Image
           className='pool-group-detail__error-hero'
-          src='/assets/lovart/lovart-generic-error.webp'
+          src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
           mode='aspectFit'
           lazyLoad
         />
@@ -233,7 +265,11 @@ export default function PoolGroupDetailPage() {
                 }
               >
                 <View className='pool-group-detail__member-avatar'>
-                  <Text>{getInitial(name)}</Text>
+                  <ArchetypeHead
+                    archetype={member.archetype}
+                    size={72}
+                    fallbackText={name}
+                  />
                 </View>
 
                 <View className='pool-group-detail__member-content'>
@@ -299,10 +335,24 @@ export default function PoolGroupDetailPage() {
         <Button onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/index?eventId=${poolGroup.pool?.id ?? ''}` })}>
           开始破冰
         </Button>
+        <Button
+          variant='secondary'
+          onClick={handleShareGroupPoster}
+          disabled={isGeneratingPoster}
+        >
+          {isGeneratingPoster ? '生成海报中…' : '分享小分队海报'}
+        </Button>
         <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
           返回活动
         </Button>
       </View>
+
+      {/* Hidden canvas for group reveal poster generation */}
+      <Canvas
+        canvasId={GROUP_REVEAL_CANVAS_ID}
+        className='pool-group-detail__hidden-canvas'
+        style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '750px', height: '1000px' }}
+      />
 
       <View className='pool-group-detail__spacer' />
     </ScrollView>

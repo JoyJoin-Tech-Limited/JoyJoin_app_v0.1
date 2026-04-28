@@ -47,6 +47,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/assets',
           to: 'dist/assets',
+
         },
         // Archetype PNG fallbacks for canvas drawImage live in the onboarding
         // subpackage to keep them out of the main package.

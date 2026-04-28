@@ -15,7 +15,8 @@
     .squad-unboxing__analysis-card,
     .squad-unboxing__pair-card,
     .squad-unboxing__topic-chip,
-    .squad-unboxing__skeleton {
+    .squad-unboxing__skeleton,
+    .squad-unboxing__blind-box-card--shaking {
       animation: none !important;
     }
 
@@ -148,6 +149,7 @@
 
   &__blind-box-card--shaking {
     background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-secondary, 0.18) 100%);
+    animation: blind-box-shake 0.3s ease-in-out infinite;
   }
 
   &__reveal-mascot {
@@ -537,13 +539,7 @@
 
   &__member-avatar--placeholder {
     @include flex-center;
-    background: $brand-gradient;
-  }
-
-  &__member-avatar-initial {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
+    background: rgba($color-primary, 0.08);
   }
 
   &__member-badge {
@@ -785,7 +781,9 @@
   }
 
   &__chemistry-emoji {
-    font-size: $font-size-base;
+    width: 28rpx;
+    height: 28rpx;
+    display: block;
   }
 
   &__chemistry-title {
@@ -1079,5 +1077,19 @@
 
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes blind-box-shake {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-2deg);
+  }
+
+  75% {
+    transform: rotate(2deg);
   }
 }

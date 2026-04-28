@@ -2,33 +2,33 @@ import { useEffect, useState } from "react";
 import joyJoinLogo from "@/assets/JoyJoinapp_logo_chi_ZhanKuQingKeHuangYouTi.png";
 
 // Import archetype PNG assets
-import 开心柯基 from "@/assets/开心柯基_transparent_1.png";
-import 机智狐 from "@/assets/机智狐_transparent_2.png";
-import 暖心熊 from "@/assets/暖心熊_transparent_3.png";
-import 织网蛛 from "@/assets/织网蛛_transparent_4.png";
-import 夸夸豚 from "@/assets/夸夸豚_transparent_5.png";
-import 太阳鸡 from "@/assets/太阳鸡_transparent_6.png";
-import 淡定海豚 from "@/assets/淡定海豚_transparent_7.png";
-import 沉思猫头鹰 from "@/assets/沉思猫头鹰_transparent_8.png";
-import 稳如龟 from "@/assets/稳如龟_transparent_9.png";
-import 隐身猫 from "@/assets/隐身猫_transparent_10.png";
-import 定心大象 from "@/assets/定心大象_transparent_11.png";
-import 灵感章鱼 from "@/assets/灵感章鱼_transparent_12.png";
+import corgi from "@/assets/corgi_transparent_1.png";
+import fox from "@/assets/fox_transparent_2.png";
+import koala from "@/assets/koala_transparent_3.png";
+import spider from "@/assets/spider_transparent_4.png";
+import hamster_praise from "@/assets/hamster_praise_transparent_5.png";
+import rooster from "@/assets/rooster_transparent_6.png";
+import dolphin_calm from "@/assets/dolphin_calm_transparent_7.png";
+import owl from "@/assets/owl_transparent_8.png";
+import turtle from "@/assets/turtle_transparent_9.png";
+import cat from "@/assets/cat_transparent_10.png";
+import elephant from "@/assets/elephant_transparent_11.png";
+import octopus from "@/assets/octopus_transparent_12.png";
 
 // Archetype name to asset path mapping (12 archetypes)
 const ARCHETYPE_ASSETS: Record<string, string> = {
-  "开心柯基": 开心柯基,
-  "机智狐": 机智狐,
-  "暖心熊": 暖心熊,
-  "织网蛛": 织网蛛,
-  "夸夸豚": 夸夸豚,
-  "太阳鸡": 太阳鸡,
-  "淡定海豚": 淡定海豚,
-  "沉思猫头鹰": 沉思猫头鹰,
-  "稳如龟": 稳如龟,
-  "隐身猫": 隐身猫,
-  "定心大象": 定心大象,
-  "灵感章鱼": 灵感章鱼,
+  "corgi": corgi,
+  "fox": fox,
+  "koala": koala,
+  "spider": spider,
+  "hamster_praise": hamster_praise,
+  "rooster": rooster,
+  "dolphin_calm": dolphin_calm,
+  "owl": owl,
+  "turtle": turtle,
+  "cat": cat,
+  "elephant": elephant,
+  "octopus": octopus,
 };
 
 // Get archetype asset path with fallback

@@ -28,7 +28,7 @@ export default function InvitePage() {
   })
 
   if (authLoading || isLoading) {
-    return <LoadingScreen />
+    return <LoadingScreen message='正在加载邀请信息…' />
   }
 
   const referralCode = stats?.referralCode || (user as any)?.referralCode || '—'

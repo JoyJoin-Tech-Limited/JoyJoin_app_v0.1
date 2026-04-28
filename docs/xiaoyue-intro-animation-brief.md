@@ -154,7 +154,7 @@ Since you mentioned cropping later, here are natural edit points within the 5s m
 - **Long rest periods** — the character should feel like they're "breathing," not performing
 
 ### ❌ Don't
-- **No bouncing** — this is not the 开心柯基 archetype; Xiaoyue doesn't bounce
+- **No bouncing** — this is not the 气氛组柯基 archetype; Xiaoyue doesn't bounce
 - **No rapid looping** — 5s minimum loop length; the calm rest is the point
 - **No mouth opening wide** — keep mouth movements minimal (closed-mouth smile)
 - **No background changes** — transparent background only, halo handled by CSS
@@ -169,7 +169,7 @@ Goal: Create a 5.0-second looping animation of Xiaoyue, an anthropomorphic corgi
 
 Character: Welsh Corgi Pembroke, standing on two legs, young adult (25-30 human vibe). Wearing a lightly weathered purple hoodie (#8B5CF6) with sunglasses hanging from collar, vintage leather watch, silver chain. Street-smart veteran personality — relaxed, slightly knowing, never cutesy or hyperactive.
 
-CRITICAL: Distinct from playful 开心柯基 archetype. Xiaoyue is CHILL, not bouncy.
+CRITICAL: Distinct from playful 气氛组柯基 archetype. Xiaoyue is CHILL, not bouncy.
 
 Animation — "Curious Invitation Loop" (5.0 seconds):
 1. NEUTRAL (0.0s): relaxed stance, lazy half-smile, subtle breathing

@@ -29,8 +29,13 @@
 +─────────────────────────────────────────────────────────────────+
 
 > ⚠️ **LEGACY PATH (do not use as primary CTA):**
-> [IcebreakerToolkit] — pre-event game browser, 13 curated games
-> (retained for backward compatibility only)
+> [IcebreakerToolkit] — pre-event game browser, 13 curated games from `packages/shared/src/icebreakerGames.ts`
+> (retained for backward compatibility only; **deprecated 2026-04-27**)
+>
+> ⚠️ **DEPRECATED — `icebreakerGames.ts`:**
+> The 13 static party games in `packages/shared/src/icebreakerGames.ts` are **not** connected to the
+> Social Icebreaker phase system. They power the legacy `IcebreakerToolkit` UI only.
+> New mechanics must ship as `SocialIcebreakerPhase` values, not as entries in this catalog.
 
 > ✅ **REMOVED — IcebreakerCardsSheet:**
 > Pre-event topic preview sheet (GET /api/icebreakers/curated/:eventId) has been deleted.
@@ -102,7 +107,7 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 | `lie_detective` | 🕵️ | 侦探 | 25 min | 3 | Per-player AI statements, group votes on which is the lie |
 | `auction` | 🎪 | 拍卖 | 30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks) |
 | `personality_dice` | 🎲 | 骰子 | 15 min | 2 | AI-generated archetype dares |
-| `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | Feature-flagged collaborative script |
+| `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | **Full Social Icebreaker phase.** Host-picked style/genre, multi-act collaborative mystery with role assignments, clue reveals, and group voting. Feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`). Not a side game — executes within the phase-ordered session flow. |
 | `recap` | ✨ | 回顾 | 5 min | 1 | AI-generated session summary |
 
 ### Session Lifecycle
@@ -495,7 +500,7 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 | `.github/skills/game-design-icebreaker-compilation/SKILL.md` | Game Design compile skill + modular safety/mechanics/handoff references |
 | `.github/agents/game-design-agent.agent.md` | Game Design Agent (plan compilation handoff) |
 | `.github/agents/game-development-agent.agent.md` | Game Development Agent (registry + server implementation) |
-| `shared/icebreakerGames.ts` | 13 curated game definitions for IcebreakerToolkit |
+| `packages/shared/src/icebreakerGames.ts` | **DEPRECATED** — 13 static games for legacy `IcebreakerToolkit`. Not part of Social Icebreaker. Do not extend. |
 | `apps/user-client/src/components/icebreaker/IcebreakerToolkit.tsx` | Pre-event game browser (user-facing) |
 | `apps/admin-client/src/components/icebreaker/IcebreakerToolkit.tsx` | Pre-event game browser (admin-facing) |
 | `apps/user-client/src/components/icebreaker/IcebreakerCardGame.tsx` | In-session AI card game component |

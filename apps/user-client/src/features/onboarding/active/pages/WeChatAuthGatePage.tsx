@@ -39,18 +39,18 @@ const PRESIGNUP_ANSWERS_KEY = "joyjoin_v4_presignup_answers";
  * use inline styles with a hardcoded hex lookup instead.
  */
 const archetypeGlowHex: Record<string, string> = {
-  '开心柯基': '#F59E0B',
-  '太阳鸡': '#F59E0B',
-  '夸夸豚': '#06B6D4',
-  '机智狐': '#F97316',
-  '淡定海豚': '#3B82F6',
-  '织网蛛': '#A855F7',
-  '暖心熊': '#F43F5E',
-  '灵感章鱼': '#8B5CF6',
-  '沉思猫头鹰': '#64748B',
-  '定心大象': '#6B7280',
-  '稳如龟': '#10B981',
-  '隐身猫': '#6366F1',
+  'corgi': '#F59E0B',
+  'rooster': '#F59E0B',
+  'hamster_praise': '#06B6D4',
+  'fox': '#F97316',
+  'dolphin_calm': '#3B82F6',
+  'spider': '#A855F7',
+  'koala': '#F43F5E',
+  'octopus': '#8B5CF6',
+  'owl': '#64748B',
+  'elephant': '#6B7280',
+  'turtle': '#10B981',
+  'cat': '#6366F1',
 };
 
 const DEFAULT_GLOW_COLOR = '#A855F7';
@@ -105,7 +105,7 @@ export default function WeChatAuthGatePage() {
   // While redirecting authenticated users, show nothing
   if (isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] dark:bg-[#111111] flex items-center justify-center">
+      <div className="no-scroll-container bg-[#FAFAF8] dark:bg-[#111111] items-center justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
       </div>
     );
@@ -234,7 +234,7 @@ export default function WeChatAuthGatePage() {
       )}
 
       <div
-        className="relative h-screen w-full overflow-hidden bg-[#FAFAF8] dark:bg-[#111111] flex flex-col items-center justify-center px-6"
+        className="no-scroll-container relative w-full bg-[#FAFAF8] dark:bg-[#111111] items-center justify-center px-6"
         style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* ── Avatar hero block ─────────────────────────────────────────── */}

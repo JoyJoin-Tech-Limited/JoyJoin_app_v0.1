@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 
+import { cdnAsset } from './cdnAssets'
 import { logInfo, logWarn } from './logger'
 
 /**
@@ -11,7 +12,7 @@ import { logInfo, logWarn } from './logger'
  */
 export const BRAND_DISPLAY_FONT_FAMILY = 'AlimamaFangYuanTiVF'
 
-const BRAND_FONT_SOURCE_PATH = '/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2'
+const BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2')
 
 /**
  * Must match `$font-en-brand` first family name in `styles/_variables.scss`.
@@ -19,7 +20,7 @@ const BRAND_FONT_SOURCE_PATH = '/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.w
  */
 export const EN_BRAND_FONT_FAMILY = 'Quicksand'
 
-const EN_BRAND_FONT_SOURCE_PATH = '/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf'
+const EN_BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.ttf')
 
 /**
  * Loads the brand display face for mini-program and H5. On failure, CSS fallbacks

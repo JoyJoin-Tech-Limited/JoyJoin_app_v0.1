@@ -31,7 +31,7 @@ describe('EmbeddingClient', () => {
     process.env.DEEPSEEK_API_KEY = 'sk-deepseek-test';
     embeddingsCreateMock.mockResolvedValue({
       data: [{ embedding: [0.1, 0.2] }],
-      model: 'text-embedding-3-small',
+      model: 'deepseek-embedding',
     });
 
     const { EmbeddingClient } = await import('../embeddingClient');
@@ -56,7 +56,7 @@ describe('EmbeddingClient', () => {
     process.env.EMBEDDING_MAX_RETRIES = '1';
     embeddingsCreateMock.mockResolvedValue({
       data: [{ embedding: [0.1, 0.2] }],
-      model: 'text-embedding-3-small',
+      model: 'deepseek-embedding',
     });
 
     const { EmbeddingClient } = await import('../embeddingClient');

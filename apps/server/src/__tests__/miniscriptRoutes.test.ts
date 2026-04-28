@@ -4,8 +4,9 @@ import type { AddressInfo } from 'net';
 import { describe, it, expect, vi } from 'vitest';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 
-const { testSessions } = vi.hoisted(() => ({
+const { testSessions, testMiniScriptSecrets } = vi.hoisted(() => ({
   testSessions: new Map<string, SocialSessionState>(),
+  testMiniScriptSecrets: new Map<string, unknown>(),
 }));
 
 vi.mock('../lib/socialIcebreakerStore', () => ({
@@ -15,6 +16,12 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
   }),
   updateSession: async (socialSessionId: string, state: SocialSessionState) => {
     testSessions.set(socialSessionId, state);
+  },
+  setMiniScriptSecrets: async (socialSessionId: string, secrets: unknown) => {
+    testMiniScriptSecrets.set(socialSessionId, secrets);
+  },
+  getMiniScriptSecrets: async (socialSessionId: string) => {
+    return (testMiniScriptSecrets.get(socialSessionId) as any) ?? null;
   },
 }));
 
@@ -109,7 +116,7 @@ describe('POST /api/miniscript/generate', () => {
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as { premise: string; schemaVersion: number };
-      expect(body.schemaVersion).toBe(1);
+      expect(body.schemaVersion).toBe(2);
       expect(typeof body.premise).toBe('string');
 
       const after = testSessions.get(socialSessionId);
@@ -165,7 +172,7 @@ describe('POST /api/miniscript/generate', () => {
       expect(res2.status).toBe(200);
       const second = (await res2.json()) as { premise: string; style: string };
       expect(second.premise).toBe(first.premise);
-      expect(second.style).toBe('modern_urban');
+      // Idempotent: same cached framework returned regardless of new request params
       expect(testSessions.get(socialSessionId)?.miniScriptFrameworkGeneratedAt).toBe(generatedAtAfterFirst);
     });
   });

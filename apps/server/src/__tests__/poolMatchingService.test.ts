@@ -133,8 +133,8 @@ vi.mock('../services/eventThemeTitleGenerator', () => ({
   }),
 }));
 vi.mock('../archetypeChemistry', () => ({
-  chemistryMatrix: { '暖心熊': { '暖心熊': 90 } },
-  ARCHETYPE_ENERGY: { '暖心熊': 60 },
+  chemistryMatrix: { 'koala': { 'koala': 90 } },
+  ARCHETYPE_ENERGY: { 'koala': 60 },
 }));
 vi.mock('../archetypeChemistryCalibration', () => ({
   getArchetypePairCalibrationMap: vi.fn().mockResolvedValue(new Map()),

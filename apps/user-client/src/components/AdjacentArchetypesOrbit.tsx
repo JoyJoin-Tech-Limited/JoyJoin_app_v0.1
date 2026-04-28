@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { archetypeAvatars } from "@/lib/archetypeAdapter";
+import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
 
 interface AdjacentStyle {
   archetype: string;
@@ -19,18 +20,18 @@ interface AdjacentArchetypesOrbitProps {
 }
 
 const ARCHETYPE_COLORS: Record<string, string> = {
-  "开心柯基": "border-amber-300 bg-amber-50",
-  "太阳鸡": "border-orange-300 bg-orange-50",
-  "夸夸豚": "border-pink-300 bg-pink-50",
-  "机智狐": "border-orange-300 bg-orange-50",
-  "淡定海豚": "border-cyan-300 bg-cyan-50",
-  "织网蛛": "border-violet-300 bg-violet-50",
-  "暖心熊": "border-rose-300 bg-rose-50",
-  "灵感章鱼": "border-purple-300 bg-purple-50",
-  "沉思猫头鹰": "border-indigo-300 bg-indigo-50",
-  "定心大象": "border-slate-300 bg-slate-50",
-  "稳如龟": "border-emerald-300 bg-emerald-50",
-  "隐身猫": "border-gray-300 bg-gray-50"
+  "corgi": "border-amber-300 bg-amber-50",
+  "rooster": "border-orange-300 bg-orange-50",
+  "hamster_praise": "border-pink-300 bg-pink-50",
+  "fox": "border-orange-300 bg-orange-50",
+  "dolphin_calm": "border-cyan-300 bg-cyan-50",
+  "spider": "border-violet-300 bg-violet-50",
+  "koala": "border-rose-300 bg-rose-50",
+  "octopus": "border-purple-300 bg-purple-50",
+  "owl": "border-indigo-300 bg-indigo-50",
+  "elephant": "border-slate-300 bg-slate-50",
+  "turtle": "border-emerald-300 bg-emerald-50",
+  "cat": "border-gray-300 bg-gray-50"
 };
 
 export default function AdjacentArchetypesOrbit({
@@ -84,14 +85,14 @@ export default function AdjacentArchetypesOrbit({
             >
               <img 
                 src={archetypeAvatars[primaryArchetype]} 
-                alt={primaryArchetype}
+                alt={archetypeRegistry[primaryArchetype]?.name ?? primaryArchetype}
                 className="w-20 h-20 object-contain"
                 data-testid="img-orbit-primary"
               />
             </div>
             <div className="text-center mt-2">
               <Badge variant="secondary" className="text-xs font-medium px-3 py-1 shadow-sm">
-                {primaryArchetype}
+                {archetypeRegistry[primaryArchetype]?.name ?? primaryArchetype}
               </Badge>
             </div>
           </motion.div>

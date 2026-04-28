@@ -17,18 +17,18 @@ interface GroupSummaryCardProps {
 }
 
 const ARCHETYPE_ICONS: Record<string, LucideIcon> = {
-  "开心柯基": Zap,
-  "太阳鸡": Sun,
-  "夸夸豚": Sparkles,
-  "机智狐": Search,
-  "淡定海豚": Waves,
-  "织网蛛": Users,
-  "暖心熊": Heart,
-  "灵感章鱼": Lightbulb,
-  "沉思猫头鹰": Brain,
-  "定心大象": Anchor,
-  "稳如龟": Shield,
-  "隐身猫": Eye,
+  "corgi": Zap,
+  "rooster": Sun,
+  "hamster_praise": Sparkles,
+  "fox": Search,
+  "dolphin_calm": Waves,
+  "spider": Users,
+  "koala": Heart,
+  "octopus": Lightbulb,
+  "owl": Brain,
+  "elephant": Anchor,
+  "turtle": Shield,
+  "cat": Eye,
 };
 
 const INSIGHT_ICONS: Record<string, LucideIcon> = {
@@ -56,18 +56,18 @@ export default function GroupSummaryCard({ attendees }: GroupSummaryCardProps) {
 
   const archetypeChartData = archetypeDistribution.map(item => {
     const archetypeColors: Record<string, string> = {
-      "开心柯基": "#f97316",      // orange-600
-      "太阳鸡": "#f59e0b",        // amber-600
-      "夸夸豚": "#06b6d4",        // cyan-600
-      "机智狐": "#ea580c",        // orange-700
-      "淡定海豚": "#4f46e5",      // indigo-600
-      "织网蛛": "#a855f7",        // purple-600
-      "暖心熊": "#ec4899",        // pink-600
-      "灵感章鱼": "#8b5cf6",      // violet-600
-      "沉思猫头鹰": "#64748b",    // slate-600
-      "定心大象": "#6b7280",      // gray-600
-      "稳如龟": "#10b981",        // emerald-600
-      "隐身猫": "#6366f1",        // indigo-500
+      "corgi": "#f97316",      // orange-600
+      "rooster": "#f59e0b",        // amber-600
+      "hamster_praise": "#06b6d4",        // cyan-600
+      "fox": "#ea580c",        // orange-700
+      "dolphin_calm": "#4f46e5",      // indigo-600
+      "spider": "#a855f7",        // purple-600
+      "koala": "#ec4899",        // pink-600
+      "octopus": "#8b5cf6",      // violet-600
+      "owl": "#64748b",    // slate-600
+      "elephant": "#6b7280",      // gray-600
+      "turtle": "#10b981",        // emerald-600
+      "cat": "#6366f1",        // indigo-500
     };
 
     const IconComponent = ARCHETYPE_ICONS[item.archetype] || Sparkles;

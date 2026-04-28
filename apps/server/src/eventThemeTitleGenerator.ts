@@ -21,17 +21,14 @@ import { eq, inArray } from 'drizzle-orm';
 import type { MatchGroup } from './poolMatchingService';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
 import { getEventThemeTitleProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logAITrace } from './lib/aiTraceLogger';
+import { logger } from './lib/logger';
 
 // Validate API keys at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
-  console.warn('⚠️ Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Event theme title generation will use fallback mode.');
+  logger.warn('Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Event theme title generation will use fallback mode.');
 }
-
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
-  baseURL: 'https://api.deepseek.com',
-});
 
 /**
  * Returns the active AI client and model for event theme title generation based on provider routing.
@@ -44,10 +41,10 @@ function getEventThemeTitleAIClient(): { client: OpenAI; model: string; provider
     if (minimaxClient) {
       return { client: minimaxClient, model: MINIMAX_MODEL, provider: 'minimax' };
     }
-    console.warn('[EventThemeTitleGen] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
+    logger.warn('MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek', { component: 'EventThemeTitleGen' });
   }
 
-  return { client: deepseekClient, model: 'deepseek-chat', provider: 'deepseek' };
+  return { client: getDeepseekClient(), model: getDeepseekModel('flash'), provider: 'deepseek' };
 }
 
 const AI_TIMEOUT_MS = parseInt(
@@ -117,12 +114,12 @@ export async function generateAndAssignEventThemeTitle(
   eventType: string
 ): Promise<EventThemeTitleResult | null> {
   if (!ENABLE_EVENT_THEME_TITLE_GENERATION) {
-    console.log('[EventThemeTitleGen] Feature disabled, skipping');
+    logger.info('Feature disabled, skipping', { component: 'EventThemeTitleGen' });
     return null;
   }
 
   const startTime = Date.now();
-  console.log(`[EventThemeTitleGen] Generating for group ${groupId}...`);
+  logger.info('Generating event theme title', { component: 'EventThemeTitleGen', groupId });
 
   try {
     // Fetch member details
@@ -165,8 +162,8 @@ export async function generateAndAssignEventThemeTitle(
         if (result && validateEventThemeTitleResult(result)) {
           result.themeHighlights = sanitizeThemeHighlights(result.themeHighlights);
           const duration = Date.now() - startTime;
-          console.log(`[EventThemeTitleGen] provider=${aiSelection.provider} latency=${duration}ms success=true`);
-          console.log(`[EventThemeTitleGen] ✅ ${result.themeEmoji} ${result.eventThemeTitle}`);
+          logger.info('Event theme title generated', { component: 'EventThemeTitleGen', provider: aiSelection.provider, latencyMs: duration });
+          logger.info('Event theme title result', { component: 'EventThemeTitleGen', emoji: result.themeEmoji, title: result.eventThemeTitle });
           logAITrace({
             domain: 'theme_generation',
             feature: 'generateEventThemeTitle',
@@ -179,17 +176,7 @@ export async function generateAndAssignEventThemeTitle(
             promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
           });
           
-          // Save to database (FIXED: aligning with actual schema field names)
-          await db.update(eventPoolGroups)
-            .set({
-              theme: result.eventThemeTitle,
-              subtitle: result.themeTagline,
-              themeEmoji: result.themeEmoji,
-              themeHighlights: result.themeHighlights,
-              vibe: result.themeVibe,
-              updatedAt: new Date()
-            })
-            .where(eq(eventPoolGroups.id, groupId));
+          await saveGroupTheme(groupId, result);
 
           trackAIUsage({
             groupId,
@@ -199,7 +186,7 @@ export async function generateAndAssignEventThemeTitle(
 
           return result;
         } else {
-          console.warn('[AI] Validation failed, using fallback');
+          logger.warn('Validation failed, using fallback', { component: 'EventThemeTitleGen' });
           fallbackErrorCode = 'validation_failed';
           trackAIUsage({
             groupId,
@@ -210,7 +197,7 @@ export async function generateAndAssignEventThemeTitle(
         }
       } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`[AI] Event theme title generation failed after ${duration}ms:`, error);
+        logger.error('Event theme title generation failed', { component: 'EventThemeTitleGen', durationMs: duration, error: error instanceof Error ? error.message : String(error) });
         fallbackErrorCode = 'llm_error';
         
         trackAIUsage({
@@ -239,26 +226,35 @@ export async function generateAndAssignEventThemeTitle(
       promptVersion: EVENT_THEME_TITLE_PROMPT_VERSION,
       errorCode: fallbackErrorCode,
     });
-    console.log(`[EventThemeTitleGen] 🔄 Fallback used: ${result.themeEmoji} ${result.eventThemeTitle}`);
+    logger.info('Fallback used for event theme title', { component: 'EventThemeTitleGen', emoji: result.themeEmoji, title: result.eventThemeTitle });
 
-    // Save to database (FIXED: aligning with actual schema field names)
-    await db.update(eventPoolGroups)
-      .set({
-        theme: result.eventThemeTitle,
-        subtitle: result.themeTagline,
-        themeEmoji: result.themeEmoji,
-        themeHighlights: result.themeHighlights,
-        vibe: result.themeVibe,
-        updatedAt: new Date()
-      })
-      .where(eq(eventPoolGroups.id, groupId));
+    await saveGroupTheme(groupId, result);
 
     return result;
 
   } catch (error) {
-    console.error('[EventThemeTitleGen] Critical error:', error);
+    logger.error('Critical error in event theme title generation', { component: 'EventThemeTitleGen', error: error instanceof Error ? error.message : String(error) });
     return null;
   }
+}
+
+/**
+ * Persist generated theme metadata to the group's database row.
+ */
+async function saveGroupTheme(
+  groupId: string,
+  result: EventThemeTitleResult,
+): Promise<void> {
+  await db.update(eventPoolGroups)
+    .set({
+      theme: result.eventThemeTitle,
+      subtitle: result.themeTagline,
+      themeEmoji: result.themeEmoji,
+      themeHighlights: result.themeHighlights,
+      vibe: result.themeVibe,
+      updatedAt: new Date(),
+    })
+    .where(eq(eventPoolGroups.id, groupId));
 }
 
 /**
@@ -318,7 +314,7 @@ async function generateEventThemeTitleWithAI(
     clearTimeout(timeoutId);
     
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn('[EventThemeTitleGen] Request timeout after', AI_TIMEOUT_MS, 'ms');
+      logger.warn('Request timeout', { component: 'EventThemeTitleGen', timeoutMs: AI_TIMEOUT_MS });
     }
     
     throw error;
@@ -362,12 +358,12 @@ function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
 
   // Structure validation
   if (!result.eventThemeTitle || result.eventThemeTitle.length < 2 || result.eventThemeTitle.length > 20) {
-    console.warn('[AI] Invalid event theme title length:', result.eventThemeTitle);
+    logger.warn('Invalid event theme title length', { component: 'EventThemeTitleGen', title: result.eventThemeTitle });
     return false;
   }
 
   if (!result.themeTagline || result.themeTagline.length > 20) {
-    console.warn('[AI] Invalid tagline length');
+    logger.warn('Invalid tagline length', { component: 'EventThemeTitleGen' });
     return false;
   }
 
@@ -376,18 +372,18 @@ function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
   // raw string.length here because many single emojis use multiple UTF-16
   // code units (e.g. skin tones, ZWJ sequences).
   if (!emoji || !isSingleGrapheme(emoji)) {
-    console.warn('[AI] Invalid emoji:', result.themeEmoji);
+    logger.warn('Invalid emoji', { component: 'EventThemeTitleGen', emoji: result.themeEmoji });
     return false;
   }
 
   if (themeHighlights.length === 0) {
-    console.warn('[AI] Invalid highlights');
+    logger.warn('Invalid highlights', { component: 'EventThemeTitleGen' });
     return false;
   }
 
   const validVibes = ['playful', 'professional', 'creative', 'adventurous'];
   if (!validVibes.includes(result.themeVibe)) {
-    console.warn('[AI] Invalid vibe:', result.themeVibe);
+    logger.warn('Invalid vibe', { component: 'EventThemeTitleGen', vibe: result.themeVibe });
     return false;
   }
 
@@ -400,7 +396,7 @@ function validateEventThemeTitleResult(result: EventThemeTitleResult): boolean {
 
   for (const keyword of NORMALIZED_BLOCKED_KEYWORDS) {
     if (textToCheck.includes(keyword)) {
-      console.warn('[AI] Blocked content detected:', keyword);
+      logger.warn('Blocked content detected', { component: 'EventThemeTitleGen', keyword });
       return false;
     }
   }
@@ -490,8 +486,8 @@ function trackAIUsage(metrics: AIUsageMetrics): void {
   const { groupId, success, latencyMs, errorMessage } = metrics;
   
   if (success) {
-    console.log(`[AI Usage] Group ${groupId}: SUCCESS in ${latencyMs}ms`);
+    logger.info('AI usage tracked', { component: 'AIUsage', groupId, latencyMs, success: true });
   } else {
-    console.log(`[AI Usage] Group ${groupId}: FAILED in ${latencyMs}ms - ${errorMessage}`);
+    logger.info('AI usage tracked', { component: 'AIUsage', groupId, latencyMs, success: false, errorMessage });
   }
 }

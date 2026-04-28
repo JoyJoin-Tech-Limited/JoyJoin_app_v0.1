@@ -125,6 +125,12 @@ export interface AICallTrace {
    * Examples: 'llm_error', 'parse_error', 'evaluator_rejection', 'timeout'
    */
   errorCode?: string;
+
+  /**
+   * Number of reasoning tokens produced when DeepSeek thinking mode
+   * is enabled. Server-side telemetry only — never expose to clients.
+   */
+  reasoningTokens?: number;
 }
 
 /**
@@ -154,6 +160,7 @@ export function logAITrace(
     fromCache: fields.fromCache,
     promptVersion: fields.promptVersion,
     errorCode: fields.errorCode,
+    reasoningTokens: fields.reasoningTokens,
   };
 
   // Strip undefined keys for compact output
@@ -171,6 +178,7 @@ export function logAITrace(
       fromCache: fields.fromCache,
       success: fields.success,
       fallbackUsed: fields.fallbackUsed,
+      model: fields.model,
     });
   } catch {
     // Never fail the request path if metrics registry errors

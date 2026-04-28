@@ -17,6 +17,14 @@ vi.mock("../storage", () => ({
   },
 }));
 
+vi.mock("../lib/adminAuditLogger", () => ({
+  logAdminAudit: vi.fn(),
+}));
+
+vi.mock("../db", () => ({
+  db: {},
+}));
+
 const { storage } = await import("../storage");
 const { registerAdminAuthRoutes, requireAdmin, requireSuperAdmin } = await import("../adminAuth");
 const adminAuditLogger = await import("../lib/adminAuditLogger");

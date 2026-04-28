@@ -109,17 +109,15 @@
     animation: matching-overlay-rise 0.45s ease both;
   }
 
-  &__overlay-member-initial {
+  &__overlay-member-avatar {
     width: 60rpx;
     height: 60rpx;
     border-radius: 50%;
-    background: $brand-gradient;
-    color: $color-text-white;
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
+    background: rgba($color-primary, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   &__overlay-member-name {

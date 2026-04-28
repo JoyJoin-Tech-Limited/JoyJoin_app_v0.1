@@ -15,7 +15,8 @@ const storeCtx = vi.hoisted(() => {
     Map<string, { userId: string; displayName: string; joinedAt: number; lastSeenAt: number }>
   >();
   const lieTruthsStore = new Map<string, Map<string, unknown[]>>();
-  return { sessions, participants, lieTruthsStore };
+  const miniscriptSecretsStore = new Map<string, unknown>();
+  return { sessions, participants, lieTruthsStore, miniscriptSecretsStore };
 });
 
 vi.mock('../lib/socialIcebreakerStore', () => {
@@ -91,10 +92,16 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     },
     getLieTruths: async (socialSessionId: string, userId: string) =>
       lieTruthsStore.get(socialSessionId)?.get(userId) ?? null,
-    getAllSessionLieTruths: async (socialSessionId: string) => {
+    loadSessionLieTruths: async (socialSessionId: string) => {
       const m = lieTruthsStore.get(socialSessionId);
       if (!m) return new Map();
       return new Map(m.entries());
+    },
+    setMiniScriptSecrets: async (socialSessionId: string, secrets: unknown) => {
+      storeCtx.miniscriptSecretsStore.set(socialSessionId, secrets);
+    },
+    getMiniScriptSecrets: async (socialSessionId: string) => {
+      return (storeCtx.miniscriptSecretsStore.get(socialSessionId) as any) ?? null;
     },
     sweepExpiredSessions: async () => {},
   };
@@ -113,7 +120,7 @@ vi.mock('../socialIcebreakerAIService', async (importOriginal) => {
         fromCache: false,
         provider: 'deepseek',
         fallbackUsed: false,
-        promptVersion: 'social-warmup-topics-v1',
+        promptVersion: 'social-warmup-topics-v2',
       },
     }),
     generateMicroChallenges: vi.fn().mockResolvedValue({
@@ -125,7 +132,7 @@ vi.mock('../socialIcebreakerAIService', async (importOriginal) => {
         fromCache: false,
         provider: 'deepseek',
         fallbackUsed: false,
-        promptVersion: 'social-micro-challenges-v1',
+        promptVersion: 'social-micro-challenges-v2',
       },
     }),
     generateLieDetectiveStatements: vi.fn().mockImplementation(async ({ displayName }: { displayName: string }) => ({
@@ -276,7 +283,7 @@ describe('MiniScript generate + social poll', () => {
       });
       expect(genRes.status).toBe(200);
       const genBody = (await genRes.json()) as { premise: string; schemaVersion: number };
-      expect(genBody.schemaVersion).toBe(1);
+      expect(genBody.schemaVersion).toBe(2);
 
       const pollRes = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
         headers: { cookie },
@@ -284,7 +291,7 @@ describe('MiniScript generate + social poll', () => {
       expect(pollRes.status).toBe(200);
       const pollBody = (await pollRes.json()) as SocialSessionState;
       expect(pollBody.miniScriptFramework?.premise).toBe(genBody.premise);
-      expect(pollBody.miniScriptFramework?.schemaVersion).toBe(1);
+      expect(pollBody.miniScriptFramework?.schemaVersion).toBe(2);
     });
   });
 });

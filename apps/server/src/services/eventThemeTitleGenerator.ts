@@ -210,7 +210,7 @@ export async function fetchEnrichedMemberProfiles(
     const registration = registrationMap.get(user.id) as RegistrationRecord | undefined;
     
     // Get energy level from archetypeRegistry
-    const archetype = user.archetype || "暖心熊";
+    const archetype = user.archetype || "koala";
     const archetypeData = archetypeRegistry[archetype];
     const energyLevel = archetypeData?.profile.energyLevel || 50;
 

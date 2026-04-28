@@ -14,21 +14,31 @@ export interface ArchetypeHSL {
 /**
  * Canonical archetype color definitions.
  *
- * Keys are the Chinese display names used across the product surface.
+ * Extracted from actual archetype illustration body colors via precision
+ * pixel sampling (ImageMagick). Updated 2026-04-23 to fix significant
+ * hue discrepancies between code tokens and actual artwork.
+ *
+ * Previous errors corrected:
+ * - octopus: was purple (h:271), is pink/salmon (h:3)
+ * - koala: was orange (h:24), is gray-lavender (h:247)
+ * - owl: was purple (h:260), is brown (h:12)
+ * - cat: was purple (h:280), is warm gray (h:52)
+ * - hamster_praise: was pink (h:340), is beige (h:27)
+ * - turtle: was teal (h:150), is olive green (h:90)
  */
 const CANONICAL_COLORS: Record<string, ArchetypeHSL> = {
-  '开心柯基': { h: 43, s: 96, l: 56 },
-  '太阳鸡': { h: 50, s: 90, l: 55 },
-  '夸夸豚': { h: 340, s: 75, l: 65 },
-  '机智狐': { h: 25, s: 95, l: 53 },
-  '淡定海豚': { h: 187, s: 85, l: 53 },
-  '织网蛛': { h: 220, s: 50, l: 45 },
-  '暖心熊': { h: 24, s: 80, l: 50 },
-  '灵感章鱼': { h: 271, s: 91, l: 65 },
-  '沉思猫头鹰': { h: 260, s: 50, l: 50 },
-  '定心大象': { h: 200, s: 30, l: 55 },
-  '稳如龟': { h: 150, s: 60, l: 45 },
-  '隐身猫': { h: 280, s: 40, l: 55 },
+  'corgi': { h: 25, s: 48, l: 60 },        // #CB9268 warm tan
+  'rooster': { h: 38, s: 71, l: 50 },      // #C49538 golden amber
+  'hamster_praise': { h: 27, s: 29, l: 78 }, // #D8C6B7 warm beige
+  'fox': { h: 26, s: 46, l: 57 },          // #C68E61 warm orange-brown
+  'dolphin_calm': { h: 197, s: 63, l: 82 }, // #B8DFEF light sky blue
+  'spider': { h: 280, s: 12, l: 36 },      // #62526A muted purple-gray
+  'koala': { h: 247, s: 11, l: 70 },       // #ADABBC gray-lavender
+  'octopus': { h: 3, s: 40, l: 65 },       // #CB8783 pink/salmon
+  'owl': { h: 12, s: 26, l: 35 },          // #714C42 warm brown
+  'elephant': { h: 215, s: 34, l: 80 },    // #BCCADE light blue-gray
+  'turtle': { h: 90, s: 25, l: 30 },       // #4D613A olive green
+  'cat': { h: 52, s: 17, l: 81 },          // #D8D6C7 warm light gray
 }
 
 /** Combined archetype colors (canonical + any future aliases). */
@@ -55,18 +65,18 @@ export function getArchetypeHSL(archetype: string | null | undefined): Archetype
  * Maps 12 archetypes into 4 CSS families to avoid per-card inline style bloat.
  */
 export const ARCHETYPE_FAMILY_MAP: Record<string, 'warm' | 'cool' | 'fire' | 'calm'> = {
-  '开心柯基': 'warm',
-  '太阳鸡': 'warm',
-  '夸夸豚': 'warm',
-  '机智狐': 'cool',
-  '淡定海豚': 'cool',
-  '灵感章鱼': 'cool',
-  '暖心熊': 'fire',
-  '织网蛛': 'fire',
-  '沉思猫头鹰': 'calm',
-  '定心大象': 'calm',
-  '稳如龟': 'calm',
-  '隐身猫': 'calm',
+  'corgi': 'warm',
+  'rooster': 'warm',
+  'hamster_praise': 'warm',
+  'fox': 'cool',
+  'dolphin_calm': 'cool',
+  'octopus': 'cool',
+  'koala': 'fire',
+  'spider': 'fire',
+  'owl': 'calm',
+  'elephant': 'calm',
+  'turtle': 'calm',
+  'cat': 'calm',
 }
 
 /**

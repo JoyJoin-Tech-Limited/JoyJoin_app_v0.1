@@ -11,6 +11,7 @@ import { SECONDARY_QUESTION_MAP } from "@shared/personality/secondaryQuestionMap
 import { canUseMockWechatAuth, isDebugAuthLoggingEnabled } from "./auth/policy";
 import { sanitizeAuthUser } from "./auth/sanitizeAuthUser";
 import { storage } from "./storage";
+import { logger } from "./lib/logger";
 
 /**
  * Minimum number of answers with a valid questionId + selectedOption that must
@@ -116,7 +117,7 @@ export async function getWechatOpenId(
     } catch {
       bodyText = undefined;
     }
-    console.error("[WeChat Auth] jscode2session HTTP error:", {
+    logger.error("[WeChat Auth] jscode2session HTTP error", {
       status: wechatRes.status,
       statusText: wechatRes.statusText,
       bodySnippet: bodyText?.slice(0, MAX_ERROR_BODY_LOG_LENGTH),
@@ -147,7 +148,7 @@ export async function getWechatOpenId(
       errmsg?: string;
     };
   } catch (err) {
-    console.error("[WeChat Auth] Failed to parse jscode2session JSON response:", err);
+    logger.error("[WeChat Auth] Failed to parse jscode2session JSON response", { error: err instanceof Error ? err.message : String(err) });
     throw Object.assign(
       new Error("WeChat authentication failed: invalid JSON response"),
       { code: "WECHAT_AUTH_FAILED" }
@@ -155,7 +156,7 @@ export async function getWechatOpenId(
   }
 
   if (wechatData.errcode) {
-    console.error("[WeChat Auth] jscode2session error:", wechatData);
+    logger.error("[WeChat Auth] jscode2session error", { wechatData });
     throw Object.assign(
       new Error(wechatData.errmsg || "WeChat authentication failed"),
       { code: "WECHAT_AUTH_FAILED" }
@@ -244,7 +245,7 @@ export async function getWechatOAuthOpenId(
     } catch {
       bodyText = undefined;
     }
-    console.error("[WeChat Auth] OAuth2 access_token HTTP error:", {
+    logger.error("[WeChat Auth] OAuth2 access_token HTTP error", {
       status: wechatRes.status,
       statusText: wechatRes.statusText,
       bodySnippet: bodyText?.slice(0, MAX_ERROR_BODY_LOG_LENGTH),
@@ -272,7 +273,7 @@ export async function getWechatOAuthOpenId(
       errmsg?: string;
     };
   } catch (err) {
-    console.error("[WeChat Auth] Failed to parse OAuth2 access_token JSON response:", err);
+    logger.error("[WeChat Auth] Failed to parse OAuth2 access_token JSON response", { error: err instanceof Error ? err.message : String(err) });
     throw Object.assign(
       new Error("WeChat OAuth2 authentication failed: invalid JSON response"),
       { code: "WECHAT_AUTH_FAILED" }
@@ -280,7 +281,7 @@ export async function getWechatOAuthOpenId(
   }
 
   if (oauthData.errcode) {
-    console.error("[WeChat Auth] OAuth2 access_token error:", oauthData);
+    logger.error("[WeChat Auth] OAuth2 access_token error", { oauthData });
     throw Object.assign(
       new Error(oauthData.errmsg || "WeChat OAuth2 authentication failed"),
       { code: "WECHAT_AUTH_FAILED" }
@@ -314,14 +315,14 @@ export async function findOrCreateWechatUser(
       wechatOpenId: openid,
       ...(session_key ? { wechatSessionKey: session_key } : {}),
     });
-    console.log(`[WeChat Auth] Created new user via WeChat: ${newUser.id}`);
+    logger.info("[WeChat Auth] Created new user via WeChat", { userId: newUser.id });
     return { user: newUser, isNewUser: true };
   }
 
   if (session_key) {
     await usersRepo.updateUser(existingUser.id, { wechatSessionKey: session_key });
   }
-  console.log(`[WeChat Auth] Updated session for existing user: ${existingUser.id}`);
+  logger.info("[WeChat Auth] Updated session for existing user", { userId: existingUser.id });
   const updated = await usersRepo.getUserById(existingUser.id);
   return { user: updated ?? existingUser, isNewUser: false };
 }
@@ -353,8 +354,9 @@ export async function processTestAnswers(
     )
     .limit(1);
   if (existingSession) {
-    console.log(
-      `[WeChat Auth] Skipping duplicate processTestAnswers for user ${userId}: completed session ${existingSession.id} already exists`
+    logger.info(
+      "[WeChat Auth] Skipping duplicate processTestAnswers",
+      { userId, sessionId: existingSession.id }
     );
     return;
   }
@@ -372,8 +374,9 @@ export async function processTestAnswers(
     );
   });
   if (!hasValidScoredAnswer) {
-    console.warn(
-      `[WeChat Auth] Rejecting testAnswers for user ${userId}: no answer carries a non-zero trait score`
+    logger.warn(
+      "[WeChat Auth] Rejecting testAnswers: no answer carries a non-zero trait score",
+      { userId }
     );
     throw Object.assign(
       new Error("Invalid test answers: payload contains no scored answers"),
@@ -381,8 +384,9 @@ export async function processTestAnswers(
     );
   }
 
-  console.log(
-    `[WeChat Auth] Processing ${testAnswers.length} test answers for user ${userId}`
+  logger.info(
+    "[WeChat Auth] Processing test answers",
+    { count: testAnswers.length, userId }
   );
 
   const traitScores: Record<string, number> = {
@@ -392,8 +396,9 @@ export async function processTestAnswers(
   for (let i = 0; i < testAnswers.length; i++) {
     const answer = testAnswers[i] as any;
     if (!answer || typeof answer !== "object") {
-      console.warn(
-        `[WeChat Auth] Skipping invalid test answer at index ${i} for user ${userId}`
+      logger.warn(
+        "[WeChat Auth] Skipping invalid test answer",
+        { index: i, userId }
       );
       continue;
     }
@@ -410,9 +415,9 @@ export async function processTestAnswers(
         });
       }
     } catch (err) {
-      console.error(
-        `[WeChat Auth] Failed to process test answer at index ${i} for user ${userId}:`,
-        err
+      logger.error(
+        "[WeChat Auth] Failed to process test answer",
+        { index: i, userId, error: err instanceof Error ? err.message : String(err) }
       );
     }
   }
@@ -443,8 +448,8 @@ export async function processTestAnswers(
     3
   );
 
-  const primaryArchetype = matchResults[0]?.archetype ?? "开心柯基";
-  const secondaryArchetype = matchResults[1]?.archetype ?? "太阳鸡";
+  const primaryArchetype = matchResults[0]?.archetype ?? "corgi";
+  const secondaryArchetype = matchResults[1]?.archetype ?? "rooster";
 
   const HIGH_CONFIDENCE_THRESHOLD = 0.8;
   const DECISIVE_SCORE_DIFFERENCE_THRESHOLD = 10;
@@ -539,8 +544,9 @@ export async function processTestAnswers(
       .where(eq(users.id, userId));
   });
 
-  console.log(
-    `[WeChat Auth] Saved personality test results for user ${userId}: ${primaryArchetype}`
+  logger.info(
+    "[WeChat Auth] Saved personality test results",
+    { userId, primaryArchetype }
   );
 }
 
@@ -565,7 +571,7 @@ export function setupWechatAuth(app: Express) {
 
     const appid = process.env.WECHAT_APPID;
     if (!appid && process.env.NODE_ENV !== "development") {
-      console.error("[WeChat OAuth] Missing WECHAT_APPID");
+      logger.error("[WeChat OAuth] Missing WECHAT_APPID");
       return res.redirect(`${appUrl}/?wechat_oauth_error=config_error`);
     }
 
@@ -576,7 +582,7 @@ export function setupWechatAuth(app: Express) {
     // whether this is the development shortcut or the real WeChat OAuth path.
     req.session.save((err: any) => {
       if (err) {
-        console.error("[WeChat OAuth] Session save error (start):", err);
+        logger.error("[WeChat OAuth] Session save error (start)", { error: err instanceof Error ? err.message : String(err) });
         return res.redirect(`${appUrl}/?wechat_oauth_error=session_error`);
       }
 
@@ -612,7 +618,7 @@ export function setupWechatAuth(app: Express) {
         `&state=${encodeURIComponent(state)}` +
         `#wechat_redirect`;
 
-      console.log("[WeChat OAuth] Redirecting to WeChat OA OAuth2 consent page");
+      logger.info("[WeChat OAuth] Redirecting to WeChat OA OAuth2 consent page");
       res.redirect(oauthUrl);
     });
   });
@@ -632,7 +638,7 @@ export function setupWechatAuth(app: Express) {
     // CSRF state validation
     const savedState = req.session.oauthState as string | undefined;
     if (!state || !savedState || state !== savedState) {
-      console.warn("[WeChat OAuth] Invalid or missing state in callback", {
+      logger.warn("[WeChat OAuth] Invalid or missing state in callback", {
         received: state,
         expected: savedState,
       });
@@ -641,7 +647,7 @@ export function setupWechatAuth(app: Express) {
     delete req.session.oauthState;
 
     if (!code) {
-      console.warn("[WeChat OAuth] No code received in callback");
+      logger.warn("[WeChat OAuth] No code received in callback");
       return res.redirect(`${appUrl}/?wechat_oauth_error=no_code`);
     }
 
@@ -652,13 +658,13 @@ export function setupWechatAuth(app: Express) {
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
       await regenerateAuthenticatedWechatSession(req, fullUser.id);
 
-      console.log(`[WeChat OAuth] Callback login success; userId=${fullUser.id} isNewUser=${isNewUser}`);
+      logger.info("[WeChat OAuth] Callback login success", { userId: fullUser.id, isNewUser });
 
       // Let the frontend's AuthenticatedRouter drive navigation via nextStep.
       res.redirect(appUrl);
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };
-      console.error("[WeChat OAuth] Callback error:", {
+      logger.error("[WeChat OAuth] Callback error", {
         message: err?.message,
         code: err?.code,
         stack: err?.stack,
@@ -717,10 +723,10 @@ export function setupWechatAuth(app: Express) {
         if (safeAnonSessionId && typeof safeAnonSessionId === "string") {
           try {
             await storage.clearPreSignupData(safeAnonSessionId);
-            console.log(`[WeChat Auth] Claimed presignup cache for user ${user.id}`);
+            logger.info("[WeChat Auth] Claimed presignup cache", { userId: user.id });
           } catch (cacheErr) {
             // Non-fatal — log but don't fail the auth request
-            console.warn(`[WeChat Auth] Failed to clear presignup cache for user ${user.id}:`, cacheErr);
+            logger.warn("[WeChat Auth] Failed to clear presignup cache", { userId: user.id, error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr) });
           }
         }
       }
@@ -729,7 +735,7 @@ export function setupWechatAuth(app: Express) {
       const fullUser = (await usersRepo.getUserById(user.id)) ?? user;
 
       if (isDebugAuthLoggingEnabled()) {
-        console.log("[WeChat Auth] before session regeneration", {
+        logger.info("[WeChat Auth] before session regeneration", {
           userId: fullUser.id,
         });
       }
@@ -737,12 +743,12 @@ export function setupWechatAuth(app: Express) {
       await regenerateAuthenticatedWechatSession(req, fullUser.id);
 
       if (isDebugAuthLoggingEnabled()) {
-        console.log("[WeChat Auth] after session regeneration", {
+        logger.info("[WeChat Auth] after session regeneration", {
           userId: fullUser.id,
         });
       }
 
-      console.log("[WeChat Auth] Session regenerated successfully", { userId: fullUser.id });
+      logger.info("[WeChat Auth] Session regenerated successfully", { userId: fullUser.id });
 
       res.json({
         success: true,
@@ -751,7 +757,7 @@ export function setupWechatAuth(app: Express) {
       });
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };
-      console.error("[WeChat Auth] Error during WeChat login-with-test:", {
+      logger.error("[WeChat Auth] Error during WeChat login-with-test", {
         message: err?.message,
         code: err?.code,
         name: err?.name,
@@ -813,7 +819,7 @@ export function setupWechatAuth(app: Express) {
       });
     } catch (error) {
       const err = error as Error & { code?: string; status?: number };
-      console.error("[WeChat Auth] Error during WeChat login:", {
+      logger.error("[WeChat Auth] Error during WeChat login", {
         message: err?.message,
         code: err?.code,
         name: err?.name,

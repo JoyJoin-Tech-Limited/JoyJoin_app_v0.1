@@ -35,8 +35,19 @@ vi.mock('openai', () => ({
   },
 }));
 
+vi.mock('../../lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })),
+  },
+}));
+
 import { callSocialAI, getClientForFunction } from '../socialModelRouter';
 import { isMinimaxEnabled, getMinimaxClient } from '../minimaxClient';
+import { logger } from '../../lib/logger';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -156,6 +167,21 @@ describe('callSocialAI', () => {
       await expect(callSocialAI(baseParams)).rejects.toThrow('DEEPSEEK_API_KEY');
       expect(mockDeepseekCreate).not.toHaveBeenCalled();
     });
+
+    it('respects modelOverride when MiniMax is enabled', async () => {
+      mockMinimaxCreate.mockResolvedValue(minimaxResponse('overridden'));
+
+      const result = await callSocialAI({
+        ...baseParams,
+        modelOverride: 'minimax-m2.7-highspeed',
+      });
+
+      expect(result.content).toBe('overridden');
+      expect(result.model).toBe('minimax-m2.7-highspeed');
+      expect(mockMinimaxCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'minimax-m2.7-highspeed' })
+      );
+    });
   });
 
   // ── 2. MiniMax disabled ───────────────────────────────────────────────────
@@ -190,42 +216,42 @@ describe('callSocialAI', () => {
     it('logs provider=minimax and callerTag on MiniMax success', async () => {
       vi.mocked(isMinimaxEnabled).mockReturnValue(true);
       mockMinimaxCreate.mockResolvedValue(minimaxResponse('ok'));
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      vi.mocked(logger.info).mockClear();
 
       await callSocialAI({ ...baseParams, callerTag: 'myFunc' });
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('provider=minimax'));
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('myFunc'));
-      expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/latency=\d+ms/));
-      logSpy.mockRestore();
+      expect(logger.info).toHaveBeenCalledWith(
+        'MiniMax call completed',
+        expect.objectContaining({ provider: 'minimax', callerTag: 'myFunc' })
+      );
     });
 
     it('logs provider=deepseek and callerTag on DeepSeek path', async () => {
       vi.mocked(isMinimaxEnabled).mockReturnValue(false);
       mockDeepseekCreate.mockResolvedValue(deepseekResponse('ok'));
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      vi.mocked(logger.info).mockClear();
 
       await callSocialAI({ ...baseParams, callerTag: 'anotherFunc' });
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('provider=deepseek'));
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('anotherFunc'));
-      logSpy.mockRestore();
+      expect(logger.info).toHaveBeenCalledWith(
+        'DeepSeek call completed',
+        expect.objectContaining({ provider: 'deepseek', callerTag: 'anotherFunc' })
+      );
     });
 
     it('logs a warning before falling back to DeepSeek', async () => {
       vi.mocked(isMinimaxEnabled).mockReturnValue(true);
       mockMinimaxCreate.mockRejectedValue(new Error('network error'));
       mockDeepseekCreate.mockResolvedValue(deepseekResponse('fallback'));
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      vi.spyOn(console, 'log').mockImplementation(() => {});
+      vi.mocked(logger.warn).mockClear();
+      vi.mocked(logger.info).mockClear();
 
       await callSocialAI(baseParams);
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('minimax failed'),
-        expect.any(Error)
+      expect(logger.warn).toHaveBeenCalledWith(
+        'minimax failed, falling back to deepseek',
+        expect.objectContaining({ provider: 'minimax' })
       );
-      warnSpy.mockRestore();
     });
   });
 });
@@ -266,7 +292,7 @@ describe('getClientForFunction', () => {
     it('routes analyzeComplexSemantics to deepseek even when MiniMax is available', () => {
       const sel = getClientForFunction('analyzeComplexSemantics');
       expect(sel.provider).toBe('deepseek');
-      expect(sel.model).toBe('deepseek-chat');
+      expect(sel.model).toBe('deepseek-v4-flash');
     });
 
     it('falls back to deepseek for generatePairExplanation when MiniMax is not configured', () => {

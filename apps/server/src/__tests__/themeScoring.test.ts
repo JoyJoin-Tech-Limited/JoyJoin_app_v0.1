@@ -20,7 +20,7 @@ describe('themeScoringService', () => {
       const members: MemberProfile[] = [
         {
           userId: '1',
-          archetype: '开心柯基',
+          archetype: 'corgi',
           secondaryArchetype: null,
           gender: '女性',
           birthYear: '1995',
@@ -31,7 +31,7 @@ describe('themeScoringService', () => {
         },
         {
           userId: '2',
-          archetype: '开心柯基',
+          archetype: 'corgi',
           secondaryArchetype: null,
           gender: '男性',
           birthYear: '1993',
@@ -46,16 +46,16 @@ describe('themeScoringService', () => {
       
       expect(dimensions.archetype).toBeDefined();
       expect(dimensions.archetype?.pattern).toBe('homogeneous');
-      expect(dimensions.archetype?.primaryArchetypes).toContain('开心柯基');
+      expect(dimensions.archetype?.primaryArchetypes).toContain('corgi');
       expect(dimensions.archetype?.avgEnergy).toBeGreaterThan(90); // Corgi is high energy
-      expect(dimensions.archetype?.dynamics).toContain('开心柯基的快乐派对');
+      expect(dimensions.archetype?.dynamics).toContain('corgi的快乐派对');
     });
     
     it('should extract archetype dimensions from complementary group', () => {
       const members: MemberProfile[] = [
-        { userId: '1', archetype: '开心柯基', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
-        { userId: '2', archetype: '机智狐', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
-        { userId: '3', archetype: '暖心熊', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '1', archetype: 'corgi', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '2', archetype: 'fox', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '3', archetype: 'koala', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
       ];
       
       const dimensions = extractDimensions(members);
@@ -66,11 +66,11 @@ describe('themeScoringService', () => {
     
     it('should extract archetype dimensions from diverse group', () => {
       const members: MemberProfile[] = [
-        { userId: '1', archetype: '开心柯基', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
-        { userId: '2', archetype: '太阳鸡', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
-        { userId: '3', archetype: '机智狐', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
-        { userId: '4', archetype: '暖心熊', secondaryArchetype: null, gender: '男性', birthYear: '1992', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
-        { userId: '5', archetype: '隐身猫', secondaryArchetype: null, gender: '女性', birthYear: '1996', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '1', archetype: 'corgi', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '2', archetype: 'rooster', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '3', archetype: 'fox', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '4', archetype: 'koala', secondaryArchetype: null, gender: '男性', birthYear: '1992', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
+        { userId: '5', archetype: 'cat', secondaryArchetype: null, gender: '女性', birthYear: '1996', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: null },
       ];
       
       const dimensions = extractDimensions(members);
@@ -83,7 +83,7 @@ describe('themeScoringService', () => {
       const members: MemberProfile[] = [
         {
           userId: '1',
-          archetype: '开心柯基',
+          archetype: 'corgi',
           secondaryArchetype: null,
           gender: '女性',
           birthYear: '1995',
@@ -99,7 +99,7 @@ describe('themeScoringService', () => {
         },
         {
           userId: '2',
-          archetype: '机智狐',
+          archetype: 'fox',
           secondaryArchetype: null,
           gender: '男性',
           birthYear: '1993',
@@ -123,9 +123,9 @@ describe('themeScoringService', () => {
     
     it('should extract hometown when at least 2 people share it', () => {
       const members: MemberProfile[] = [
-        { userId: '1', archetype: '开心柯基', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: '广州', currentCity: '广州', intent: null },
-        { userId: '2', archetype: '机智狐', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: '广州', currentCity: '广州', intent: null },
-        { userId: '3', archetype: '暖心熊', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: '深圳', currentCity: '广州', intent: null },
+        { userId: '1', archetype: 'corgi', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: '广州', currentCity: '广州', intent: null },
+        { userId: '2', archetype: 'fox', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: '广州', currentCity: '广州', intent: null },
+        { userId: '3', archetype: 'koala', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: '深圳', currentCity: '广州', intent: null },
       ];
       
       const dimensions = extractDimensions(members);
@@ -137,8 +137,8 @@ describe('themeScoringService', () => {
     
     it('should not extract hometown when only 1 person has it', () => {
       const members: MemberProfile[] = [
-        { userId: '1', archetype: '开心柯基', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: '广州', currentCity: '广州', intent: null },
-        { userId: '2', archetype: '机智狐', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: '深圳', currentCity: '广州', intent: null },
+        { userId: '1', archetype: 'corgi', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: '广州', currentCity: '广州', intent: null },
+        { userId: '2', archetype: 'fox', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: '深圳', currentCity: '广州', intent: null },
       ];
       
       const dimensions = extractDimensions(members);
@@ -148,9 +148,9 @@ describe('themeScoringService', () => {
     
     it('should extract dominant intent', () => {
       const members: MemberProfile[] = [
-        { userId: '1', archetype: '开心柯基', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: ['拓展人脉'] },
-        { userId: '2', archetype: '机智狐', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: ['拓展人脉', '结识朋友'] },
-        { userId: '3', archetype: '暖心熊', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: ['结识朋友'] },
+        { userId: '1', archetype: 'corgi', secondaryArchetype: null, gender: '女性', birthYear: '1995', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: ['拓展人脉'] },
+        { userId: '2', archetype: 'fox', secondaryArchetype: null, gender: '男性', birthYear: '1993', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: ['拓展人脉', '结识朋友'] },
+        { userId: '3', archetype: 'koala', secondaryArchetype: null, gender: '女性', birthYear: '1994', industryNicheLabel: null, hometownRegionCity: null, currentCity: '广州', intent: ['结识朋友'] },
       ];
       
       const dimensions = extractDimensions(members);
@@ -166,11 +166,11 @@ describe('themeScoringService', () => {
       const dimensions = {
         archetype: {
           pattern: 'complementary' as const,
-          primaryArchetypes: ['开心柯基', '机智狐'],
+          primaryArchetypes: ['corgi', 'fox'],
           secondaryArchetypes: [],
           avgEnergy: 88,
           energyDistribution: { high: 2, medium: 0, low: 0 },
-          dynamics: '开心柯基×机智狐',
+          dynamics: 'corgi×fox',
         },
       };
       
@@ -204,11 +204,11 @@ describe('themeScoringService', () => {
       const dimensions = {
         archetype: {
           pattern: 'complementary' as const,
-          primaryArchetypes: ['开心柯基'],
+          primaryArchetypes: ['corgi'],
           secondaryArchetypes: [],
           avgEnergy: 95,
           energyDistribution: { high: 2, medium: 0, low: 0 },
-          dynamics: '开心柯基',
+          dynamics: 'corgi',
         },
         interests: {
           commonInterests: [{ name: '咖啡', count: 2, avgHeat: 25 }],
@@ -237,11 +237,11 @@ describe('themeScoringService', () => {
       const dimensions = {
         archetype: {
           pattern: 'complementary' as const,
-          primaryArchetypes: ['开心柯基'],
+          primaryArchetypes: ['corgi'],
           secondaryArchetypes: [],
           avgEnergy: 95,
           energyDistribution: { high: 2, medium: 0, low: 0 },
-          dynamics: '开心柯基',
+          dynamics: 'corgi',
         },
         interests: {
           commonInterests: [{ name: '咖啡', count: 2, avgHeat: 25 }],

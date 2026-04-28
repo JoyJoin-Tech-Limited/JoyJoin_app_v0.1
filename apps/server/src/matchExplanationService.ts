@@ -1,3 +1,6 @@
+// Cache persistence functions below use single UPDATE statements and are independent.
+// No multi-statement transaction boundary is required for these best-effort writes.
+
 /**
  * Match Explanation Service (桌友分析生成服务)
  * 
@@ -13,6 +16,8 @@
  */
 
 import { getClientForFunction, getDeepseekSelection } from './ai/socialModelRouter';
+import { recordProUsage } from './ai/deepseekBudgetTracker';
+import { DEEPSEEK_V4_PRO } from '@joyjoin/shared';
 import { chemistryMatrix } from './archetypeChemistry';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
@@ -22,6 +27,7 @@ import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry 
 import type { AIProvider } from '@shared/types/aiMeta';
 import { getInterestById } from '@shared/interests';
 import { logAITrace } from './lib/aiTraceLogger';
+import { logger } from './lib/logger';
 
 // ============ 配置常量 ============
 
@@ -52,7 +58,7 @@ async function withRetry<T>(
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      console.warn(`[MatchExplanation] Attempt ${attempt + 1} failed:`, (error as Error).message);
+      logger.warn(`[MatchExplanation] Attempt ${attempt + 1} failed:`, { error: (error as Error).message });
       
       if (attempt < maxRetries) {
         const delay = baseDelayMs * Math.pow(2, attempt);
@@ -302,20 +308,20 @@ async function loadCachedPairExplanations(
       
       // Validate roster hasn't changed
       if (cached.memberHash !== currentHash) {
-        console.log(`[MatchExplanation] Cache invalidated for group ${groupId}: roster changed`);
+        logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: roster changed`);
         return null;
       }
       
       // Validate pair count matches
       if (cached.pairCount !== expectedPairCount) {
-        console.log(`[MatchExplanation] Cache invalidated for group ${groupId}: pair count mismatch`);
+        logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: pair count mismatch`);
         return null;
       }
       
       // Check if cache is still valid
       const generatedTime = new Date(cached.generatedAt).getTime();
       if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
-        console.log(`[MatchExplanation] Cache expired for group ${groupId}`);
+        logger.info(`[MatchExplanation] Cache expired for group ${groupId}`);
         return null;
       }
       
@@ -331,13 +337,13 @@ async function loadCachedPairExplanations(
     
     // Handle legacy cache format (without memberHash) - invalidate and regenerate
     if (Array.isArray(rawCache) && rawCache.length > 0) {
-      console.log(`[MatchExplanation] Legacy cache format detected for group ${groupId}, invalidating`);
+      logger.info(`[MatchExplanation] Legacy cache format detected for group ${groupId}, invalidating`);
       return null;
     }
     
     return null;
   } catch (error) {
-    console.warn('[MatchExplanation] Error loading cache:', error);
+    logger.warn('[MatchExplanation] Error loading cache:', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -369,9 +375,9 @@ async function savePairExplanationsCache(
       })
       .where(eq(eventPoolGroups.id, groupId));
     
-    console.log(`[MatchExplanation] Saved ${explanations.length} pair explanations to cache for group ${groupId}`);
+    logger.info(`[MatchExplanation] Saved ${explanations.length} pair explanations to cache for group ${groupId}`);
   } catch (error) {
-    console.warn('[MatchExplanation] Error saving cache:', error);
+    logger.warn('[MatchExplanation] Error saving cache:', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -399,20 +405,20 @@ async function loadCachedIceBreakers(
       
       // Validate roster hasn't changed
       if (cached.memberHash !== currentHash) {
-        console.log(`[IceBreakers] Cache invalidated for group ${groupId}: roster changed`);
+        logger.info(`[IceBreakers] Cache invalidated for group ${groupId}: roster changed`);
         return null;
       }
       
       // Validate event type matches
       if (cached.eventType !== eventType) {
-        console.log(`[IceBreakers] Cache invalidated for group ${groupId}: event type changed`);
+        logger.info(`[IceBreakers] Cache invalidated for group ${groupId}: event type changed`);
         return null;
       }
       
       // Check if cache is still valid
       const generatedTime = new Date(cached.generatedAt).getTime();
       if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
-        console.log(`[IceBreakers] Cache expired for group ${groupId}`);
+        logger.info(`[IceBreakers] Cache expired for group ${groupId}`);
         return null;
       }
       
@@ -428,13 +434,13 @@ async function loadCachedIceBreakers(
     
     // Handle legacy cache format - invalidate and regenerate
     if (rawCache && typeof rawCache === 'object' && 'topics' in rawCache) {
-      console.log(`[IceBreakers] Legacy cache format detected for group ${groupId}, invalidating`);
+      logger.info(`[IceBreakers] Legacy cache format detected for group ${groupId}, invalidating`);
       return null;
     }
     
     return null;
   } catch (error) {
-    console.warn('[IceBreakers] Error loading cache:', error);
+    logger.warn('[IceBreakers] Error loading cache:', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -467,27 +473,27 @@ async function saveIceBreakersCache(
       })
       .where(eq(eventPoolGroups.id, groupId));
     
-    console.log(`[IceBreakers] Saved ${topics.length} ice breakers to cache for group ${groupId}`);
+    logger.info(`[IceBreakers] Saved ${topics.length} ice breakers to cache for group ${groupId}`);
   } catch (error) {
-    console.warn('[IceBreakers] Error saving cache:', error);
+    logger.warn('[IceBreakers] Error saving cache:', { error: error instanceof Error ? error.message : String(error) });
   }
 }
 
 // ============ 原型中文名映射 ============
 
 const archetypeNames: Record<string, string> = {
-  "开心柯基": "开心柯基",
-  "太阳鸡": "太阳鸡",
-  "夸夸豚": "夸夸豚",
-  "机智狐": "机智狐",
-  "淡定海豚": "淡定海豚",
-  "织网蛛": "织网蛛",
-  "暖心熊": "暖心熊",
-  "灵感章鱼": "灵感章鱼",
-  "沉思猫头鹰": "沉思猫头鹰",
-  "定心大象": "定心大象",
-  "稳如龟": "稳如龟",
-  "隐身猫": "隐身猫",
+  "corgi": "corgi",
+  "rooster": "rooster",
+  "hamster_praise": "hamster_praise",
+  "fox": "fox",
+  "dolphin_calm": "dolphin_calm",
+  "spider": "spider",
+  "koala": "koala",
+  "octopus": "octopus",
+  "owl": "owl",
+  "elephant": "elephant",
+  "turtle": "turtle",
+  "cat": "cat",
 };
 
 // ============ 辅助函数 ============
@@ -496,8 +502,8 @@ const archetypeNames: Record<string, string> = {
  * 获取两个原型之间的化学反应分数
  */
 function getChemistryScore(archetype1: string | null, archetype2: string | null): number {
-  const a1 = archetype1 || "暖心熊";
-  const a2 = archetype2 || "暖心熊";
+  const a1 = archetype1 || "koala";
+  const a2 = archetype2 || "koala";
   return (chemistryMatrix as any)[a1]?.[a2] || 50;
 }
 
@@ -726,8 +732,15 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         temperature: 0.7,
       });
     });
+    if (response.model === DEEPSEEK_V4_PRO && response.usage) {
+      recordProUsage({
+        inputTokens: response.usage.prompt_tokens ?? 0,
+        outputTokens: response.usage.completion_tokens ?? 0,
+        feature: 'generatePairExplanation',
+      });
+    }
     const latencyMs = Date.now() - t0;
-    console.log(`[MatchExplanation] generatePairExplanation provider=${provider} latency=${latencyMs}ms`);
+    logger.info(`[MatchExplanation] generatePairExplanation provider=${provider} latency=${latencyMs}ms`);
     logAITrace({
       domain: 'match_explanation',
       feature: 'generatePairExplanation',
@@ -758,7 +771,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
     };
   } catch (primaryError) {
     if (provider === 'minimax') {
-      console.warn(`[MatchExplanation] generatePairExplanation minimax failed after retries, trying deepseek fallback:`, primaryError);
+      logger.warn(`[MatchExplanation] generatePairExplanation minimax failed after retries, trying deepseek fallback:`, { error: primaryError instanceof Error ? primaryError.message : String(primaryError) });
       const { client: fbClient, model: fbModel } = getDeepseekSelection();
       try {
         // Single attempt only — the primary path already exhausted its retries
@@ -768,8 +781,15 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
           max_tokens: 280,
           temperature: 0.7,
         });
+        if (fbResponse.model === DEEPSEEK_V4_PRO && fbResponse.usage) {
+          recordProUsage({
+            inputTokens: fbResponse.usage.prompt_tokens ?? 0,
+            outputTokens: fbResponse.usage.completion_tokens ?? 0,
+            feature: 'generatePairExplanation_fallback',
+          });
+        }
         const latencyMs = Date.now() - t0;
-        console.log(`[MatchExplanation] generatePairExplanation provider=deepseek (fallback) latency=${latencyMs}ms`);
+        logger.info(`[MatchExplanation] generatePairExplanation provider=deepseek (fallback) latency=${latencyMs}ms`);
         logAITrace({
           domain: 'match_explanation',
           feature: 'generatePairExplanation',
@@ -797,7 +817,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
           promptVersion: PAIR_EXPLANATION_PROMPT_VERSION,
         };
       } catch (fallbackError) {
-        console.error('[MatchExplanation] Error generating explanation after deepseek fallback:', fallbackError);
+        logger.error('[MatchExplanation] Error generating explanation after deepseek fallback:', { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) });
         logAITrace({
           domain: 'match_explanation',
           feature: 'generatePairExplanation',
@@ -812,7 +832,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         });
       }
     } else {
-      console.error('[MatchExplanation] Error generating explanation after retries:', primaryError);
+      logger.error('[MatchExplanation] Error generating explanation after retries:', { error: primaryError instanceof Error ? primaryError.message : String(primaryError) });
       logAITrace({
         domain: 'match_explanation',
         feature: 'generatePairExplanation',
@@ -933,7 +953,7 @@ export async function generateGroupAnalysis(
     ]);
     
     if (cachedExplanations && cachedIceBreakers) {
-      console.log(`[MatchExplanation] Using cached data for group ${groupId}`);
+      logger.info(`[MatchExplanation] Using cached data for group ${groupId}`);
       pairExplanations = cachedExplanations.explanations;
       cacheGeneratedAt = cachedExplanations.generatedAt;
       iceBreakers = cachedIceBreakers.topics;
@@ -969,14 +989,14 @@ export async function generateGroupAnalysis(
         fallbackUsed: pairExplanationResult.fallbackUsed,
         promptVersion: pairExplanationResult.promptVersion,
       }).catch((err) => {
-        console.error('[MatchExplanation] Failed to save pair explanations cache:', err);
+        logger.error('[MatchExplanation] Failed to save pair explanations cache:', { error: err instanceof Error ? err.message : String(err) });
       });
       saveIceBreakersCache(groupId, members, eventType, iceBreakers, {
         provider: iceBreakerResult.providerUsed,
         fallbackUsed: iceBreakerResult.fallbackUsed,
         promptVersion: iceBreakerResult.promptVersion,
       }).catch((err) => {
-        console.error('[MatchExplanation] Failed to save ice breakers cache:', err);
+        logger.error('[MatchExplanation] Failed to save ice breakers cache:', { error: err instanceof Error ? err.message : String(err) });
       });
     }
   } else {
@@ -1050,10 +1070,10 @@ export async function generateGroupAnalysis(
 // ============ 主题标签生成 ============
 
 /** Archetype clusters used for theme tag derivation */
-const ENERGETIC_ARCHETYPES = new Set(['开心柯基', '太阳鸡', '夸夸豚']);
-const ANALYTICAL_ARCHETYPES = new Set(['机智狐', '沉思猫头鹰', '灵感章鱼']);
-const WARM_ARCHETYPES = new Set(['暖心熊', '定心大象']);
-const QUIET_ARCHETYPES = new Set(['稳如龟', '隐身猫']);
+const ENERGETIC_ARCHETYPES = new Set(['corgi', 'rooster', 'hamster_praise']);
+const ANALYTICAL_ARCHETYPES = new Set(['fox', 'owl', 'octopus']);
+const WARM_ARCHETYPES = new Set(['koala', 'elephant']);
+const QUIET_ARCHETYPES = new Set(['turtle', 'cat']);
 
 type GroupThemeBucket = 'exploration' | 'food' | 'music' | 'culture' | null;
 
@@ -1197,10 +1217,10 @@ function generateGroupDynamics(
 ): string {
   const archetypes = members.map(m => m.archetype).filter(Boolean);
   const hasEnergizers = archetypes.some(a => 
-    ['开心柯基', '太阳鸡', '夸夸豚'].includes(a as string)
+    ['corgi', 'rooster', 'hamster_praise'].includes(a as string)
   );
   const hasListeners = archetypes.some(a => 
-    ['暖心熊', '沉思猫头鹰', '隐身猫'].includes(a as string)
+    ['koala', 'owl', 'cat'].includes(a as string)
   );
   
   if (avgChemistry >= 80 && hasEnergizers) {
@@ -1292,7 +1312,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
       });
     });
     const latencyMs = Date.now() - t0;
-    console.log(`[IceBreakers] generateIceBreakers provider=${provider} latency=${latencyMs}ms`);
+    logger.info(`[IceBreakers] generateIceBreakers provider=${provider} latency=${latencyMs}ms`);
     logAITrace({
       domain: 'match_explanation',
       feature: 'generateIceBreakers',
@@ -1322,7 +1342,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
     }
   } catch (primaryError) {
     if (provider === 'minimax') {
-      console.warn(`[IceBreakers] generateIceBreakers minimax failed after retries, trying deepseek fallback:`, primaryError);
+      logger.warn(`[IceBreakers] generateIceBreakers minimax failed after retries, trying deepseek fallback:`, { error: primaryError instanceof Error ? primaryError.message : String(primaryError) });
       const { client: fbClient, model: fbModel } = getDeepseekSelection();
       try {
         // Single attempt only — the primary path already exhausted its retries
@@ -1333,7 +1353,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           temperature: 0.8,
         });
         const latencyMs = Date.now() - t0;
-        console.log(`[IceBreakers] generateIceBreakers provider=deepseek (fallback) latency=${latencyMs}ms`);
+        logger.info(`[IceBreakers] generateIceBreakers provider=deepseek (fallback) latency=${latencyMs}ms`);
         logAITrace({
           domain: 'match_explanation',
           feature: 'generateIceBreakers',
@@ -1360,7 +1380,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
           };
         }
       } catch (fallbackError) {
-        console.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', fallbackError);
+        logger.error('[IceBreakers] Error generating ice-breakers after deepseek fallback:', { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) });
         logAITrace({
           domain: 'match_explanation',
           feature: 'generateIceBreakers',
@@ -1375,7 +1395,7 @@ ${sharedSignals.length > 0 ? `兴趣偏好信号（成员自填）: ${sharedSign
         });
       }
     } else {
-      console.error('[IceBreakers] Error generating ice-breakers after retries:', primaryError);
+      logger.error('[IceBreakers] Error generating ice-breakers after retries:', { error: primaryError instanceof Error ? primaryError.message : String(primaryError) });
       logAITrace({
         domain: 'match_explanation',
         feature: 'generateIceBreakers',

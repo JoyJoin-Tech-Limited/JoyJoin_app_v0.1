@@ -18,7 +18,7 @@ export default function CenterTabEmptyStatePage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
+    <div className="no-scroll-container relative bg-white">
       <img
         src={purpleGradientBg}
         alt=""

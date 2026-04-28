@@ -64,8 +64,8 @@ describe("archetypeChemistryCalibration", () => {
   it("loads only persisted calibration stats on the non-refresh path", async () => {
     listArchetypePairFeedbackStatsMock.mockResolvedValueOnce([
       {
-        archetypeA: "开心柯基",
-        archetypeB: "太阳鸡",
+        archetypeA: "corgi",
+        archetypeB: "rooster",
         baseScore: 88,
         sampleCount: 12,
         avgMeetAgain: "0.750",
@@ -87,8 +87,8 @@ describe("archetypeChemistryCalibration", () => {
   it("refreshes persisted stats only on the explicit refresh path", async () => {
     aggregateArchetypePairFeedbackRowsMock.mockResolvedValueOnce([
       {
-        archetypeA: "开心柯基",
-        archetypeB: "太阳鸡",
+        archetypeA: "corgi",
+        archetypeB: "rooster",
         sampleCount: CHEMISTRY_CALIBRATION_MIN_SAMPLES,
         avgMeetAgain: 0.75,
         avgAtmosphere: 4,
@@ -96,8 +96,8 @@ describe("archetypeChemistryCalibration", () => {
     ]);
     upsertArchetypePairFeedbackStatsMock.mockResolvedValueOnce([
       {
-        archetypeA: "开心柯基",
-        archetypeB: "太阳鸡",
+        archetypeA: "corgi",
+        archetypeB: "rooster",
         baseScore: 88,
         sampleCount: CHEMISTRY_CALIBRATION_MIN_SAMPLES,
         avgMeetAgain: "0.750",

@@ -44,7 +44,7 @@ import { generateSocialTags } from '../tagGenerationService';
 
 describe('tagGenerationService trace coverage', () => {
   const input = {
-    archetype: '开心柯基',
+    archetype: 'corgi',
     profession: {
       occupationId: 'designer',
     },
@@ -89,7 +89,7 @@ describe('tagGenerationService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'social-tags-v1',
@@ -106,14 +106,14 @@ describe('tagGenerationService trace coverage', () => {
             tags: [
               {
                 descriptor: '镜头漫游者',
-                archetypeNickname: '开心柯基',
-                fullTag: '镜头漫游者·开心柯基',
+                archetypeNickname: 'corgi',
+                fullTag: '镜头漫游者·corgi',
                 reasoning: '把摄影热爱带进社交里',
               },
               {
                 descriptor: '政治观察员',
-                archetypeNickname: '开心柯基',
-                fullTag: '政治观察员·开心柯基',
+                archetypeNickname: 'corgi',
+                fullTag: '政治观察员·corgi',
                 reasoning: '这条会被黑名单过滤',
               },
             ],
@@ -129,7 +129,7 @@ describe('tagGenerationService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: true,
         fallbackUsed: true,
         promptVersion: 'social-tags-v1',
@@ -147,7 +147,7 @@ describe('tagGenerationService trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'social-tags-v1',

@@ -34,8 +34,8 @@ export function useDynamicAccent(): DynamicAccentContextValue {
  * accent as React state.  Consumers obtain the colour via `useDynamicAccent()`
  * and apply it through inline styles or computed classNames.
  *
- * SCSS variables in `_variables.scss` cover the default static colours; this
- * provider only activates when the user has a confident archetype result.
+ * Colours are sourced from `@shared/archetypeColors` (single source of truth);
+ * this provider only activates when the user has a confident archetype result.
  */
 export function DynamicAccentProvider({ children }: PropsWithChildren) {
   const [currentAccent, setCurrentAccent] = useState<ArchetypeHSL>(DEFAULT_ACCENT)
