@@ -59,14 +59,14 @@ echo "🚀 Deploying JoyJoin via self-managed Docker Compose + Nginx ($ENVIRONME
 echo "📦 Repo root: $REPO_ROOT"
 echo "🗄️  Database target: external PostgreSQL from $ENV_FILE"
 
-REQUIRED_TLS_FILES=(
-    "/etc/letsencrypt/live/yuejuapp.com/fullchain.pem"
-    "/etc/letsencrypt/live/yuejuapp.com/privkey.pem"
-    "/etc/letsencrypt/live/admin.yuejuapp.com/fullchain.pem"
-    "/etc/letsencrypt/live/admin.yuejuapp.com/privkey.pem"
-    "/etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem"
-    "/etc/letsencrypt/live/api.yuejuapp.com/privkey.pem"
-)
+    REQUIRED_TLS_FILES=(
+        "/etc/letsencrypt/live/joyjoinapp.com/fullchain.pem"
+        "/etc/letsencrypt/live/joyjoinapp.com/privkey.pem"
+        "/etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem"
+        "/etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem"
+        "/etc/letsencrypt/live/api.joyjoinapp.com/fullchain.pem"
+        "/etc/letsencrypt/live/api.joyjoinapp.com/privkey.pem"
+    )
 
 echo "🔐 Step 0: Verify host TLS certificate files..."
 MISSING_TLS_FILES=()

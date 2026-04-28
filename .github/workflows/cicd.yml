@@ -369,16 +369,13 @@ jobs:
 
             echo "🌐 Syncing and reloading host Nginx config..."
             REQUIRED_TLS_FILES=(
-              /etc/letsencrypt/live/yuejuapp.com/fullchain.pem
-              /etc/letsencrypt/live/yuejuapp.com/privkey.pem
-              /etc/letsencrypt/live/admin.yuejuapp.com/fullchain.pem
-              /etc/letsencrypt/live/admin.yuejuapp.com/privkey.pem
-              /etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem
-              /etc/letsencrypt/live/api.yuejuapp.com/privkey.pem
+              /etc/letsencrypt/live/joyjoinapp.com/fullchain.pem
+              /etc/letsencrypt/live/joyjoinapp.com/privkey.pem
+              /etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
+              /etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
+              /etc/letsencrypt/live/api.joyjoinapp.com/fullchain.pem
+              /etc/letsencrypt/live/api.joyjoinapp.com/privkey.pem
             )
-            # Note: The certs above use SAN to also cover joyjoinapp.com / www.joyjoinapp.com
-            #       (admin|api).joyjoinapp.com respectively. Regenerate certs after DNS
-            #       is updated: sudo certbot certonly --nginx -d <domain> -d <new-domain>
             missing_tls=0
             for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
               if ! sudo test -r "$tls_file"; then
