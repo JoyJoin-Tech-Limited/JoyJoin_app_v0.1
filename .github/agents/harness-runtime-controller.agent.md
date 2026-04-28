@@ -33,12 +33,12 @@ You do **not** implement code. You manage the runtime, enforce protocol boundari
 
 ## Subagent delegation protocol
 
-When spawning delegates via the Agent tool, follow [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md):
+When spawning delegates via the Agent tool, follow [`subagent-context-delegation`](../skills/subagent-context-delegation/SKILL.md):
 - Each delegate receives a **context capsule** with the full task scope, constraints, and what phase they are entering.
 - Delegates are spawned **in isolation** — their prompts must be self-contained; they do not see each other's outputs until the protocol explicitly requires it.
 - Use **resume** only when a delegate returns for a subsequent phase (e.g., Phase 3 → Phase 4); otherwise spawn fresh to maintain isolation.
 - Keep the HRC parent session lean by summarizing delegate outputs into compact JSON before persisting.
-- When designing multi-agent workflows beyond the standard PGE/Council/Consensus, follow [`agent-coordination-patterns`](../../.github/skills/agent-coordination-patterns/SKILL.md) for pipeline design, convergence, and conflict resolution.
+- When designing multi-agent workflows beyond the standard PGE/Council/Consensus, follow [`agent-coordination-patterns`](../skills/agent-coordination-patterns/SKILL.md) for pipeline design, convergence, and conflict resolution.
 
 ## Constraints
 

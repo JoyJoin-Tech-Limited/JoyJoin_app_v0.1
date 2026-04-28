@@ -22,12 +22,12 @@ Your job is to orchestrate a structured 5-phase deliberation when a task is high
 
 ## Subagent delegation protocol
 
-When spawning delegates via the Agent tool, follow [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md):
+When spawning delegates via the Agent tool, follow [`subagent-context-delegation`](../skills/subagent-context-delegation/SKILL.md):
 - Each delegate receives a **context capsule** with the full task scope, constraints, and what phase they are entering.
 - Delegates are spawned **in isolation** — their prompts must be self-contained; they do not see each other's outputs until the protocol explicitly requires it.
 - Use **resume** only when a delegate returns for a subsequent phase (e.g., Roundtable → Consensus); otherwise spawn fresh to maintain isolation.
 - Keep the Moderator parent session lean by summarizing delegate proposals into compact JSON before persisting.
-- When the task requires coordination beyond the 5-phase deliberation protocol (e.g., parallel exploration before deliberation, or merging outputs from multiple deliberation rounds), follow [`agent-coordination-patterns`](../../.github/skills/agent-coordination-patterns/SKILL.md).
+- When the task requires coordination beyond the 5-phase deliberation protocol (e.g., parallel exploration before deliberation, or merging outputs from multiple deliberation rounds), follow [`agent-coordination-patterns`](../skills/agent-coordination-patterns/SKILL.md).
 
 ## Constraints
 

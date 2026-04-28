@@ -1,0 +1,29 @@
+skill: harness-completion-gate
+primary_ownership: >
+  Mandatory 5-pillar Harness Engineering Framework verification gate
+  (Reliability, Scalability, Security, Observability, Maintainability)
+  run at the end of every implementation task before sign-off.
+use_when:
+  - Finishing an implementation task
+  - Verifying code changes before marking complete
+  - Running pre-ship quality checks
+  - Evaluating engineering quality against Harness framework
+do_not_use_when:
+  - Task is purely research or planning (no code changes)
+  - Pre-implementation phase (use sprint-contract evaluation instead)
+strong_triggers:
+  - harness gate
+  - completion check
+  - ready to call done
+  - verify against harness
+  - 5-pillar review
+  - pre-ship checklist
+  - process-verification-gate
+owned_paths:
+  - /.github/skills/harness-completion-gate/
+related_skills:
+  - code-review
+  - reliability-and-state-integrity
+  - platform-observability-and-ops
+  - auth-session-and-safety-boundaries
+  - frontend-performance-and-loading

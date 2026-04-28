@@ -25,7 +25,7 @@ You are expert in Taro 4, React 18 authoring for WeChat Mini Programs, page regi
 
 ## Subagent delegation protocol
 
-When spawning parity auditors or React frontend engineers via the Agent tool, follow [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md):
+When spawning parity auditors or React frontend engineers via the Agent tool, follow [`subagent-context-delegation`](../skills/subagent-context-delegation/SKILL.md):
 - Package a **context capsule** with the specific screen/component, current implementation state, and what the subagent should verify or build.
 - Spawn parity auditors with **self-contained, non-overlapping scopes** (e.g., one checks UI fidelity, another checks API contract parity).
 - **Resume** auditors only when continuing the same verification thread; otherwise spawn fresh.
@@ -69,7 +69,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 3. If `action: PAUSE_FOR_CONTRACT` → STOP. Do not edit files. Generate or negotiate a Sprint Contract first.
 4. If `action: PROCEED` → continue with implementation.
 
-**Reference:** [`harness-session-guard`](../../.github/skills/harness-session-guard/SKILL.md)
+**Reference:** [`harness-session-guard`](../skills/harness-session-guard/SKILL.md)
 
 ## Platform Decision Rules
 

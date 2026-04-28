@@ -376,6 +376,9 @@ jobs:
               /etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem
               /etc/letsencrypt/live/api.yuejuapp.com/privkey.pem
             )
+            # Note: The certs above use SAN to also cover joyjoinapp.com / www.joyjoinapp.com
+            #       (admin|api).joyjoinapp.com respectively. Regenerate certs after DNS
+            #       is updated: sudo certbot certonly --nginx -d <domain> -d <new-domain>
             missing_tls=0
             for tls_file in "${REQUIRED_TLS_FILES[@]}"; do
               if ! sudo test -r "$tls_file"; then
@@ -418,7 +421,7 @@ jobs:
               || (echo "❌ API failed on 5000" && docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && docker logs joyjoin-api --tail 120 && exit 1)
 
             echo "   Checking Nginx-routed health endpoint..."
-            if ! curl -s --retry 5 --retry-delay 3 -H "Host: 129.226.61.77" http://127.0.0.1/api/health > /dev/null; then
+            if ! curl -s --retry 5 --retry-delay 3 -H "Host: yuejuapp.com" http://127.0.0.1/api/health > /dev/null; then
               echo "❌ Nginx route check failed: http://127.0.0.1/api/health"
               echo "📋 Socket listeners (80/443/5000):"
               ss -ltnp | rg ':80|:443|:5000' || true
@@ -433,7 +436,7 @@ jobs:
               exit 1
             fi
             echo "   Nginx route response headers:"
-            curl -sSI -H "Host: 129.226.61.77" http://127.0.0.1/api/health || true
+            curl -sSI -H "Host: yuejuapp.com" http://127.0.0.1/api/health || true
 
             # --- 5) Post-deploy cleanup ---
             soft_cleanup
