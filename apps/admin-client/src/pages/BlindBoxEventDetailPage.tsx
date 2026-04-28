@@ -364,7 +364,7 @@ export default function BlindBoxEventDetailPage() {
           eventId={eventId}
           eventTitle={animationStatus?.eventTitle || event?.eventType || "活动"}
           eventType={animationStatus?.eventType || "饭局"}
-          userArchetype={user.primaryArchetype || "开心柯基"}
+          userArchetype={user.primaryArchetype || "corgi"}
           userName={user.displayName || "用户"}
           participants={animationStatus?.participants || []}
           onComplete={handleAnimationComplete}

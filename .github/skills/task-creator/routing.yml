@@ -1,0 +1,39 @@
+skill: task-creator
+primary_ownership: >
+  Entry-point skill for all implementation work. Structures user intent into
+  actionable task metadata, auto-classifies harness tier, and determines Sprint
+  Contract requirements before any implementation begins.
+use_when:
+  - User says "build", "fix", "add", "change", "refactor", "implement", "optimize", "audit", or "explore"
+  - Task scope is unclear and needs decomposition
+  - Before routing to any implementation specialist
+  - Need to determine if a Sprint Contract is required
+  - Supervisor needs to classify a task before routing
+do_not_use_when:
+  - Pure question or explanation (no code changes)
+  - Documentation-only updates with no code changes
+  - Running tests or commands without modifications
+  - Already have an approved plan with explicit next agent
+strong_triggers:
+  - build this
+  - fix this
+  - add this
+  - change this
+  - refactor this
+  - implement this
+  - optimize this
+  - audit this
+  - explore this
+  - new feature
+  - task breakdown
+  - scope this
+  - harness tier
+  - sprint contract
+  - task-creator
+  - classify this task
+owned_paths:
+  - /.github/skills/task-creator/
+related_skills:
+  - harness-session-guard
+  - first-principles-velocity
+  - lane-selection-governance

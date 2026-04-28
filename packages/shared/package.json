@@ -14,6 +14,8 @@
     "./gamification": "./src/gamification.ts",
     "./wsEvents": "./src/wsEvents.ts",
     "./icebreakerGames": "./src/icebreakerGames.ts",
+    "./microChallengeTemplates": "./src/microChallengeTemplates.ts",
+    "./socialIcebreaker": "./src/socialIcebreaker.ts",
     "./occupations": "./src/occupations.ts",
     "./topicCards": "./src/topicCards.ts",
     "./atmospherePrediction": "./src/atmospherePrediction.ts",
@@ -35,7 +37,12 @@
     "./ui/responsiveSpacer": "./src/ui/ResponsiveSpacer.tsx",
     "./archetypeColors": "./src/archetypeColors.ts",
     "./achievements": "./src/achievements.ts",
-    "./legal/joyjoinTermsZh": "./src/legal/joyjoinTermsZh.ts"
+    "./legal/joyjoinTermsZh": "./src/legal/joyjoinTermsZh.ts",
+    "./miniscriptStoryFramework": "./src/miniscriptStoryFramework.ts",
+    "./miniscriptCatalog": "./src/miniscriptCatalog.ts",
+    "./miniscriptGameModes": "./src/miniscriptGameModes.ts",
+    "./schemaAnalytics": "./src/schemaAnalytics.ts",
+    "./iconSystem": "./src/iconSystem/index.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

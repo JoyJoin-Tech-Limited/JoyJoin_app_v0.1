@@ -38,9 +38,9 @@ export interface TrainingDataset {
 }
 
 const PERSISTENT_PAIRS = [
-  ['太阳鸡', '淡定海豚'],
-  ['沉思猫头鹰', '稳如龟'],
-  ['淡定海豚', '暖心熊'],
+  ['rooster', 'dolphin_calm'],
+  ['owl', 'turtle'],
+  ['dolphin_calm', 'koala'],
 ];
 
 export class TrainingDataCollector {

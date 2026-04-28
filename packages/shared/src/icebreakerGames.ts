@@ -1,3 +1,22 @@
+/**
+ * ⚠️ DEPRECATED — Legacy static game catalog for the pre-event IcebreakerToolkit.
+ *
+ * This file and its exports are retained ONLY for backward compatibility with the
+ * legacy `IcebreakerToolkit` components (user-client + admin-client) and the
+ * `/api/icebreaker/recommend-game` endpoint. They are NOT part of the active
+ * Social Icebreaker phase system.
+ *
+ * Canonical in-event icebreaking lives in:
+ *   - `packages/shared/src/socialIcebreaker.ts` — phase types, state, config
+ *   - `apps/server/src/routes/socialIcebreaker.ts` — session API
+ *   - `apps/mini-program/src/pages/icebreaker-session/` — primary UX
+ *
+ * Do NOT add new games here. New mechanics ship as Social Icebreaker phases
+ * (see `SocialIcebreakerPhase` in `socialIcebreaker.ts`) behind feature flags.
+ *
+ * @deprecated since 2026-04-27. Scheduled for removal once IcebreakerToolkit UI
+ * surfaces are fully replaced by Social Icebreaker session flows.
+ */
 export interface IcebreakerGame {
   id: string;
   name: string;

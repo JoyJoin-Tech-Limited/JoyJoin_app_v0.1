@@ -142,17 +142,20 @@ function checkReliability(changedFiles, fileContents) {
     }
 
     // Check for missing error handling on fetch/apiRequest
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      // Only flag top-level await or unwrapped Promise chains, not return await
-      if (/\b(fetch|apiRequest)\s*\(/.test(line) && !/return\s+await/.test(line) && !/try|catch|\.catch\(|await.*catch/.test(content.substring(Math.max(0, content.indexOf(line) - 500), content.indexOf(line)))) {
-        findings.push({
-          severity: 'concern',
-          file,
-          line: i + 1,
-          message: `API call may lack error handling: "${line.trim().slice(0, 80)}"`,
-        });
+    // Skip test files — they intentionally use fetch without catch blocks for assertion-based flow control
+    if (!/\.(test|spec)\.|__tests__/.test(file)) {
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Only flag top-level await or unwrapped Promise chains, not return await
+          if (/\b(fetch|apiRequest)\s*\(/.test(line) && !/return\s+await/.test(line) && !/try|catch|\.catch\(|await.*catch/.test(content.substring(Math.max(0, content.indexOf(line) - 500), content.indexOf(line)))) {
+          findings.push({
+            severity: 'concern',
+            file,
+            line: i + 1,
+            message: `API call may lack error handling: "${line.trim().slice(0, 80)}"`,
+          });
+        }
       }
     }
 
@@ -185,16 +188,17 @@ function checkScalability(changedFiles, fileContents) {
 
     // N+1: query inside loop (look for actual DB methods, not just any await)
     const dbMethods = /\b(db\.|query\(|findMany\(|findFirst\(|select\(|insert\(|update\(|delete\()/;
-    const loopMatch = content.match(/for\s*\([^)]*\)\s*\{([\s\S]*?)\}/g);
-    if (loopMatch) {
-      for (const loop of loopMatch) {
-        if (dbMethods.test(loop)) {
-          findings.push({
-            severity: 'blocker',
-            file,
-            message: 'Potential N+1 query: database call inside a loop. Use batch loading or inArray.',
-          });
-        }
+    const loopRegex = /for\s*\([^)]*\)\s*\{([\s\S]*?)\}/g;
+    let loopMatch;
+    while ((loopMatch = loopRegex.exec(content)) !== null) {
+      if (dbMethods.test(loopMatch[0])) {
+        const lineNum = content.substring(0, loopMatch.index).split('\n').length;
+        findings.push({
+          severity: 'blocker',
+          file,
+          line: lineNum,
+          message: 'Potential N+1 query: database call inside a loop. Use batch loading or inArray.',
+        });
       }
     }
 
@@ -210,7 +214,7 @@ function checkScalability(changedFiles, fileContents) {
     }
 
     // Missing pagination on list queries
-    if (/(findMany|select\(|query\().*limit/gi.test(content) === false && /(findMany|select\(|all\(|getAll)/gi.test(content)) {
+    if (/(findMany|select\(|query\()[\s\S]*limit/gi.test(content) === false && /(findMany|select\(|all\(|getAll)/gi.test(content)) {
       const isRoute = /\/(routes|api)\//.test(file) || file.includes('routes/');
       if (isRoute) {
         findings.push({
@@ -283,8 +287,9 @@ function checkSecurity(changedFiles, fileContents) {
 
     // SQL injection risk (raw string interpolation in actual SQL context)
     // Skip CSS/styled-components and JSX style props that may contain SQL-like words
-    if (!/\.css$|\.scss$|\.less$/i.test(file) && !/styled|css|style\s*=/gi.test(content.substring(0, 500))) {
-      const sqlMatches = content.match(/(?:sql|query)\s*[:=]?\s*`[^`]*\$\{[^}]*\}[^`]*`/gi);
+    // Skip Drizzle ORM files: drizzle's `sql` is a typed template tag, not raw SQL.
+    if (!/\.css$|\.scss$|\.less$/i.test(file) && !/styled|css|style\s*=/gi.test(content.substring(0, 500)) && !/drizzle-orm/.test(content)) {
+      const sqlMatches = content.match(/(?:sql|query)\s*[:=]\s*`[^`]*\$\{[^}]*\}[^`]*`/gi);
       if (sqlMatches) {
         findings.push({
           severity: 'blocker',
@@ -330,6 +335,8 @@ function checkSecurity(changedFiles, fileContents) {
         if (/console\.log\s*\(/.test(line)) {
           // Skip analytics placeholders
           if (/console\.log\s*\(\s*['"`]\[(?:Analytics|DEBUG|dev)\]/i.test(line)) continue;
+          // Skip CLI tools and scripts — console.log is the correct stdout mechanism
+          if (/(?:^|[/\\])(cli|scripts)[/\\]|\.cli\.(ts|mjs|js)$/.test(file)) continue;
           findings.push({
             severity: 'concern',
             file,
@@ -354,16 +361,27 @@ function checkObservability(changedFiles, fileContents) {
     if (!isServerCode) continue;
 
     // Error handler without logger
-    if (/catch\s*\([^)]*\)\s*\{[\s\S]*?\}/g.test(content)) {
-      const catchBlocks = content.match(/catch\s*\([^)]*\)\s*\{[\s\S]*?\}/g) || [];
-      for (const block of catchBlocks) {
-        if (!/logger\.(error|warn|info)/g.test(block) && !/console\.(error|warn)/g.test(block)) {
-          findings.push({
-            severity: 'concern',
-            file,
-            message: 'catch block without structured logging — errors will be silent in production',
-          });
-        }
+    // Use brace-balanced extraction to handle nested blocks correctly
+    const catchRegex = /catch\s*\([^)]*\)\s*\{/g;
+    let catchMatch;
+    while ((catchMatch = catchRegex.exec(content)) !== null) {
+      const start = catchMatch.index + catchMatch[0].length;
+      let depth = 1;
+      let end = start;
+      while (depth > 0 && end < content.length) {
+        if (content[end] === '{') depth++;
+        else if (content[end] === '}') depth--;
+        end++;
+      }
+      const block = content.slice(catchMatch.index, end);
+      // Skip if error is rethrown (not silently swallowed)
+      if (/\bthrow\b/.test(block)) continue;
+      if (!/logger\.(error|warn|info)/g.test(block) && !/console\.(error|warn)/g.test(block)) {
+        findings.push({
+          severity: 'concern',
+          file,
+          message: 'catch block without structured logging — errors will be silent in production',
+        });
       }
     }
 

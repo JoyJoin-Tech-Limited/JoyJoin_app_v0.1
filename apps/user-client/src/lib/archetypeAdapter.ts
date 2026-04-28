@@ -6,18 +6,18 @@
  * with the frontend's bundled PNG assets (which require Vite imports).
  */
 
-import corgiImg from "@/assets/开心柯基_transparent_1.png";
-import roosterImg from "@/assets/太阳鸡_transparent_6.png";
-import pigletImg from "@/assets/夸夸豚_transparent_5.png";
-import foxImg from "@/assets/机智狐_transparent_2.png";
-import dolphinImg from "@/assets/淡定海豚_transparent_7.png";
-import spiderImg from "@/assets/织网蛛_transparent_4.png";
-import bearImg from "@/assets/暖心熊_transparent_3.png";
-import octopusImg from "@/assets/灵感章鱼_transparent_12.png";
-import owlImg from "@/assets/沉思猫头鹰_transparent_8.png";
-import elephantImg from "@/assets/定心大象_transparent_11.png";
-import turtleImg from "@/assets/稳如龟_transparent_9.png";
-import catImg from "@/assets/隐身猫_transparent_10.png";
+import corgiImg from "@/assets/corgi_transparent_1.png";
+import roosterImg from "@/assets/rooster_transparent_6.png";
+import pigletImg from "@/assets/hamster_praise_transparent_5.png";
+import foxImg from "@/assets/fox_transparent_2.png";
+import dolphinImg from "@/assets/dolphin_calm_transparent_7.png";
+import spiderImg from "@/assets/spider_transparent_4.png";
+import bearImg from "@/assets/koala_transparent_3.png";
+import octopusImg from "@/assets/octopus_transparent_12.png";
+import owlImg from "@/assets/owl_transparent_8.png";
+import elephantImg from "@/assets/elephant_transparent_11.png";
+import turtleImg from "@/assets/turtle_transparent_9.png";
+import catImg from "@/assets/cat_transparent_10.png";
 
 import { archetypeRegistry, type ArchetypeRecord } from "@shared/personality/archetypeRegistry";
 

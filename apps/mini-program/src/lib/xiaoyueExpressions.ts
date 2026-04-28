@@ -9,6 +9,8 @@
  * All 16 expression ids now have unique assets. Previously some shared assets (e.g. match-waiting + reveal).
  */
 
+import { cdnAsset } from './cdnAssets'
+
 export type XiaoyueExpressionId =
   | 'homeWelcome'
   | 'matchWaiting'
@@ -31,7 +33,7 @@ export type XiaoyueExpressionId =
 /** Legacy three-state API (maps into {@link XiaoyueExpressionId}). */
 export type LegacyXiaoyueMood = 'normal' | 'excited' | 'pointing'
 
-const BASE = '/assets/personality/xiaoyue'
+const BASE = cdnAsset('/assets/personality/xiaoyue')
 
 /** Semantic basenames — all 16 expressions, unique assets. */
 const ART = {
@@ -98,6 +100,20 @@ export const PERSONALITY_TEST_QUESTION_EXPRESSION = {
   acknowledged: 'testNod',
   milestone: 'testSurprised',
   error: 'actionFailure',
+} as const satisfies Record<string, XiaoyueExpressionId>
+
+/** Expression mapping for the social icebreaker session host shell.
+ *  These reuse existing assets until dedicated icebreaker expressions are commissioned. */
+export const ICEBREAKER_XIAOYUE_EXPRESSION = {
+  waiting: 'homeWelcome',
+  warmup: 'coachGuide',
+  micro_challenge: 'matchSuccess',
+  lie_detective: 'testCurious',
+  auction: 'matchSuccess',
+  personality_dice: 'testSurprised',
+  mini_script: 'coachGuide',
+  recap: 'thanksFeedback',
+  ended: 'thanksFeedback',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {

@@ -5,7 +5,7 @@ import './LoadingScreen.scss'
 /**
  * Standard full-page loading state (user-client FancyLine + optional status line).
  */
-export default function LoadingScreen({ message = '加载中…' }: { message?: string }) {
+export default function LoadingScreen({ message = '小悦正在赶来…' }: { message?: string }) {
   return (
     <FancyLineLoadingScreen
       loop

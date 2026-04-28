@@ -103,7 +103,7 @@ describe('archetypeSkills', () => {
 
   describe('getArchetypeSkills', () => {
     it('should return skill set for valid archetype', () => {
-      const corgiSkills = getArchetypeSkills('开心柯基');
+      const corgiSkills = getArchetypeSkills('corgi');
       expect(corgiSkills).toBeDefined();
       expect(corgiSkills?.attribute).toBe('🔥 热情');
       expect(corgiSkills?.cardTitle).toBe('破冰点火官');
@@ -159,24 +159,24 @@ describe('archetypeSkills', () => {
   });
 
   describe('Specific archetype validations', () => {
-    it('should have correct skills for 开心柯基', () => {
-      const skills = archetypeSkills['开心柯基'];
+    it('should have correct skills for corgi', () => {
+      const skills = archetypeSkills['corgi'];
       expect(skills.attribute).toBe('🔥 热情');
       expect(skills.cardTitle).toBe('破冰点火官');
       expect(skills.activeSkill.energyCost).toBe(2);
       expect(skills.activeSkill.energyType).toBe('🔥');
     });
 
-    it('should have correct skills for 机智狐', () => {
-      const skills = archetypeSkills['机智狐'];
+    it('should have correct skills for fox', () => {
+      const skills = archetypeSkills['fox'];
       expect(skills.attribute).toBe('🗺️ 探索');
       expect(skills.cardTitle).toBe('秘境引路人');
       expect(skills.activeSkill.energyCost).toBe(1);
       expect(skills.activeSkill.energyType).toBe('🗺️');
     });
 
-    it('should have correct skills for 稳如龟 (highest energy cost)', () => {
-      const skills = archetypeSkills['稳如龟'];
+    it('should have correct skills for turtle (highest energy cost)', () => {
+      const skills = archetypeSkills['turtle'];
       expect(skills.attribute).toBe('💎 真知');
       expect(skills.cardTitle).toBe('真知炮台');
       expect(skills.activeSkill.energyCost).toBe(3);

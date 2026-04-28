@@ -19,11 +19,11 @@ import type { IcebreakerGame } from "@shared/icebreakerGames";
 type DemoPhase = 'checkin' | 'number_assign' | 'icebreaker' | 'ended';
 
 const DEMO_PARTICIPANTS = [
-  { userId: 'demo-1', displayName: '小明', archetype: '开心柯基', interests: ['旅行', '摄影', '美食'] },
-  { userId: 'demo-2', displayName: '小红', archetype: '灵感章鱼', interests: ['音乐', '绘画', '阅读'] },
-  { userId: 'demo-3', displayName: '小华', archetype: '沉思猫头鹰', interests: ['科技', '游戏', '电影'] },
-  { userId: 'demo-4', displayName: '小李', archetype: '太阳鸡', interests: ['运动', '健身', '户外'] },
-  { userId: 'demo-you', displayName: '你', archetype: '暖心熊', interests: ['咖啡', '阅读', '旅行'] },
+  { userId: 'demo-1', displayName: '小明', archetype: 'corgi', interests: ['旅行', '摄影', '美食'] },
+  { userId: 'demo-2', displayName: '小红', archetype: 'octopus', interests: ['音乐', '绘画', '阅读'] },
+  { userId: 'demo-3', displayName: '小华', archetype: 'owl', interests: ['科技', '游戏', '电影'] },
+  { userId: 'demo-4', displayName: '小李', archetype: 'rooster', interests: ['运动', '健身', '户外'] },
+  { userId: 'demo-you', displayName: '你', archetype: 'koala', interests: ['咖啡', '阅读', '旅行'] },
 ];
 
 export default function IcebreakerDemoPage() {

@@ -1,10 +1,26 @@
 import { Router } from 'express';
-import { migrateLegacySocialIcebreakerPhases, type SocialSessionState } from '@shared/socialIcebreaker';
-import { miniScriptGenerateRequestSchema } from '@shared/miniscriptStoryFramework';
-import { getSessionWithExpiry, updateSession } from '../../lib/socialIcebreakerStore';
+import { z } from 'zod';
+import {
+  migrateLegacySocialIcebreakerPhases,
+  type SocialSessionState,
+  type MiniScriptPlayerRuntimeView,
+} from '@shared/socialIcebreaker';
+import {
+  miniScriptGenerateRequestSchema,
+  miniScriptVoteSchema,
+  type MiniScriptStoryFramework,
+  type MiniScriptStoryFrameworkPublic,
+} from '@shared/miniscriptStoryFramework';
+import {
+  getSessionWithExpiry,
+  updateSession,
+  setMiniScriptSecrets,
+  getMiniScriptSecrets,
+  listParticipants,
+} from '../../lib/socialIcebreakerStore';
 import { requireAuthenticatedUserId } from '../../lib/requestAuth';
 import { generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
-import { MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION } from '../../socialIcebreakerAIService';
+import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
 import { buildCachedAIMeta } from '@shared/types/aiMeta';
 import { ensureSessionEnabledPhases } from '../../socialIcebreakerPhaseConfig';
 import { logger } from '../../lib/logger';
@@ -15,6 +31,38 @@ const router = Router();
 function hydrateMiniScriptState(state: SocialSessionState): SocialSessionState {
   return { ...state };
 }
+
+/** Extract server-only secrets from a full v2 framework. */
+function extractSecrets(framework: MiniScriptStoryFramework) {
+  return {
+    solution: framework.solution,
+    playerKnowledge: framework.playerKnowledge,
+    redHerrings: framework.redHerrings ?? [],
+    deductionChain: framework.deductionChain ?? [],
+    allClues: framework.clues,
+  };
+}
+
+/** Strip secrets from a full framework, producing a public-safe version. */
+function stripFrameworkSecrets(
+  framework: MiniScriptStoryFramework,
+): MiniScriptStoryFrameworkPublic {
+  return {
+    schemaVersion: framework.schemaVersion,
+    style: framework.style,
+    genres: framework.genres,
+    gameModeConfig: framework.gameModeConfig,
+    premise: framework.premise,
+    characters: framework.characters.map((c) => {
+      const { secret: _secret, ...pub } = c;
+      return pub;
+    }),
+    act_flow: framework.act_flow,
+    ending: framework.ending,
+  };
+}
+
+// ─── POST /generate ──────────────────────────────────────────────────────────
 
 router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
@@ -63,14 +111,14 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
     });
   }
 
-  /** Idempotent: avoid duplicate LLM cost and overwriting a host-approved framework (Slice B / plan). */
+  /** Idempotent: avoid duplicate LLM cost and overwriting a host-approved framework. */
   if (session.miniScriptFramework) {
     const generatedAt = session.miniScriptFrameworkGeneratedAt
       ? new Date(session.miniScriptFrameworkGeneratedAt).toISOString()
       : new Date().toISOString();
     return res.json({
       ...session.miniScriptFramework,
-      meta: buildCachedAIMeta(generatedAt, null, MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION),
+      meta: buildCachedAIMeta(generatedAt, null, MINISCRIPT_GENERATION_PROMPT_VERSION),
     });
   }
 
@@ -81,17 +129,371 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
       genres,
     });
 
-    session.miniScriptFramework = framework;
+    // Slice 4: extract and persist secrets BEFORE storing framework on session state
+    const secrets = extractSecrets(framework);
+    await setMiniScriptSecrets(socialSessionId, secrets);
+
+    // Store public-safe framework only
+    const publicFramework = stripFrameworkSecrets(framework);
+    session.miniScriptFramework = publicFramework;
     session.miniScriptFrameworkGeneratedAt = Date.now();
     session.miniScriptFrameworkGeneratedByUserId = userId;
 
     await updateSession(socialSessionId, session);
 
-    return res.json({ ...framework, meta: aiResponseMeta });
+    return res.json({ ...publicFramework, meta: aiResponseMeta });
   } catch (error) {
     logger.error('[miniscript] generate failed', { error, socialSessionId });
     return res.status(500).json({ error: 'GENERATION_FAILED' });
   }
+});
+
+// ─── POST /assign-roles ──────────────────────────────────────────────────────
+
+const assignRolesBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+});
+
+router.post('/assign-roles', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = assignRolesBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (userId !== state.hostUserId) {
+    return res.status(403).json({ error: 'HOST_ONLY' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  if (!state.miniScriptFramework) {
+    return res.status(400).json({ error: 'FRAMEWORK_NOT_GENERATED' });
+  }
+
+  // Idempotent: if roles already assigned, return current state
+  if (state.miniScriptRoleAssignments && Object.keys(state.miniScriptRoleAssignments).length > 0) {
+    return res.json({
+      roleAssignments: state.miniScriptRoleAssignments,
+      playerRuntimeViews: state.miniScriptPlayerRuntimeViews,
+      currentAct: state.miniScriptCurrentAct ?? 0,
+    });
+  }
+
+  // Fetch secrets to build runtime views
+  const secrets = await getMiniScriptSecrets(socialSessionId);
+  if (!secrets) {
+    logger.error('[miniscript] secrets missing for assign-roles', { socialSessionId });
+    return res.status(500).json({ error: 'SECRETS_NOT_FOUND' });
+  }
+
+  // Round-robin role assignment by join order (participants array is sorted by joinedAt)
+  const participants = await listParticipants(socialSessionId);
+  const characterCount = state.miniScriptFramework.characters.length;
+
+  const roleAssignments: Record<string, number> = {};
+  participants.forEach((p, idx) => {
+    roleAssignments[p.userId] = idx % characterCount;
+  });
+
+  // Build player runtime views
+  const playerRuntimeViews: Record<string, MiniScriptPlayerRuntimeView> = {};
+  for (const [userIdKey, slotIndex] of Object.entries(roleAssignments)) {
+    const character = state.miniScriptFramework.characters[slotIndex];
+    const knowledge = secrets.playerKnowledge.find((k) => k.slotIndex === slotIndex);
+    playerRuntimeViews[userIdKey] = {
+      slotIndex,
+      roleLabel: character.roleLabel,
+      sinHook: character.sinHook,
+      alibi: character.alibi,
+      secretAgenda: knowledge?.secretAgenda ?? '',
+    };
+  }
+
+  state.miniScriptRoleAssignments = roleAssignments;
+  state.miniScriptPlayerRuntimeViews = playerRuntimeViews;
+  state.miniScriptCurrentAct = 0;
+  state.miniScriptRevealedClueIds = [];
+  state.miniScriptVotes = [];
+  state.miniScriptSolutionRevealed = false;
+
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] roles assigned', {
+    socialSessionId,
+    userId,
+    action: 'assign-roles',
+    playerCount: participants.length,
+  });
+
+  return res.json({
+    roleAssignments,
+    playerRuntimeViews,
+    currentAct: 0,
+  });
+});
+
+// ─── POST /reveal-act ────────────────────────────────────────────────────────
+
+const revealActBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+  targetAct: z.number().int().min(1).max(5),
+});
+
+router.post('/reveal-act', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = revealActBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, targetAct } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (userId !== state.hostUserId) {
+    return res.status(403).json({ error: 'HOST_ONLY' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  if (!state.miniScriptFramework) {
+    return res.status(400).json({ error: 'FRAMEWORK_NOT_GENERATED' });
+  }
+
+  const currentAct = state.miniScriptCurrentAct ?? 0;
+
+  // Idempotent: already at target act
+  if (currentAct === targetAct) {
+    return res.json({
+      currentAct: targetAct,
+      revealedClueIds: state.miniScriptRevealedClueIds ?? [],
+    });
+  }
+
+  if (targetAct !== currentAct + 1) {
+    return res.status(400).json({
+      error: 'INVALID_ACT_SEQUENCE',
+      message: `只能依次解锁幕次：当前 ${currentAct}，请求 ${targetAct}`,
+    });
+  }
+
+  const secrets = await getMiniScriptSecrets(socialSessionId);
+  if (!secrets) {
+    return res.status(500).json({ error: 'SECRETS_NOT_FOUND' });
+  }
+
+  const newlyRevealedClues = secrets.allClues.filter((c) => c.revealedInAct === targetAct);
+  const newlyRevealedIds = newlyRevealedClues.map((c) => c.clueId);
+
+  state.miniScriptRevealedClueIds = [
+    ...(state.miniScriptRevealedClueIds ?? []),
+    ...newlyRevealedIds,
+  ];
+  state.miniScriptRevealedClues = [
+    ...(state.miniScriptRevealedClues ?? []),
+    ...newlyRevealedClues.map((c) => ({ clueId: c.clueId, text: c.text })),
+  ];
+  // Compute deduction hints: chain steps where all fromClues are now revealed
+  const revealedClueIdSet = new Set(state.miniScriptRevealedClueIds ?? []);
+  const deductionHints = (secrets.deductionChain ?? [])
+    .filter((step) => step.fromClues.every((cid) => revealedClueIdSet.has(cid)))
+    .map((step) => ({ stepNumber: step.stepNumber, conclusion: step.conclusion }));
+  state.miniScriptDeductionHints = deductionHints;
+
+  state.miniScriptCurrentAct = targetAct;
+
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] act revealed', {
+    socialSessionId,
+    userId,
+    action: 'reveal-act',
+    targetAct,
+    newClues: newlyRevealedIds.length,
+    deductionHints: deductionHints.length,
+  });
+
+  return res.json({
+    currentAct: targetAct,
+    revealedClueIds: state.miniScriptRevealedClueIds,
+    deductionHints,
+  });
+});
+
+// ─── POST /vote ──────────────────────────────────────────────────────────────
+
+const voteBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+  vote: miniScriptVoteSchema,
+});
+
+router.post('/vote', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = voteBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, vote } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  if (!state.miniScriptRoleAssignments || state.miniScriptRoleAssignments[userId] === undefined) {
+    return res.status(400).json({ error: 'NO_ROLE_ASSIGNED' });
+  }
+
+  const votes = state.miniScriptVotes ?? [];
+  const existingIdx = votes.findIndex((v) => v.userId === userId);
+  const voteEntry = {
+    userId,
+    who: vote.who,
+    what: vote.what,
+    why: vote.why,
+    votedAt: Date.now(),
+  };
+
+  if (existingIdx >= 0) {
+    votes[existingIdx] = voteEntry;
+  } else {
+    votes.push(voteEntry);
+  }
+
+  state.miniScriptVotes = votes;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ ok: true, vote: voteEntry });
+});
+
+// ─── POST /reveal-solution ───────────────────────────────────────────────────
+
+const revealSolutionBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+});
+
+router.post('/reveal-solution', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = revealSolutionBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (userId !== state.hostUserId) {
+    return res.status(403).json({ error: 'HOST_ONLY' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  // Idempotent: return cached solution if already revealed
+  const secrets = await getMiniScriptSecrets(socialSessionId);
+  if (!secrets) {
+    return res.status(500).json({ error: 'SECRETS_NOT_FOUND' });
+  }
+
+  if (!state.miniScriptSolutionRevealed) {
+    state.miniScriptSolutionRevealed = true;
+    await updateSession(socialSessionId, state);
+
+    logger.info('[miniscript] solution revealed', {
+      socialSessionId,
+      userId,
+      action: 'reveal-solution',
+    });
+  }
+
+  return res.json({
+    solution: secrets.solution,
+    revealed: true,
+  });
+});
+
+// ─── POST /ready ─────────────────────────────────────────────────────────────
+
+const readyBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+  ready: z.boolean(),
+});
+
+router.post('/ready', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = readyBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, ready } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  if (!state.miniScriptRoleAssignments || state.miniScriptRoleAssignments[userId] === undefined) {
+    return res.status(400).json({ error: 'NO_ROLE_ASSIGNED' });
+  }
+
+  const readyMap = { ...(state.miniScriptPlayerReady ?? {}) };
+  readyMap[userId] = ready;
+  state.miniScriptPlayerReady = readyMap;
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] player ready toggled', {
+    socialSessionId,
+    userId,
+    ready,
+    readyCount: Object.values(readyMap).filter(Boolean).length,
+  });
+
+  return res.json({ ok: true, readyMap });
 });
 
 export default router;

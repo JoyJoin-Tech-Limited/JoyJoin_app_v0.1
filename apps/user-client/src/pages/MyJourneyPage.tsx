@@ -27,18 +27,18 @@ const eventTypeNodeTheme = (iconName: string | null | undefined): { gradient: st
 
 // Archetype → hex background color for header gradient
 const archetypeBgColorToHex: Record<string, string> = {
-  '开心柯基': '#ffedd5',
-  '太阳鸡': '#fef3c7',
-  '夸夸豚': '#cffafe',
-  '机智狐': '#ffedd5',
-  '淡定海豚': '#dbeafe',
-  '织网蛛': '#f3e8ff',
-  '暖心熊': '#ffe4e6',
-  '灵感章鱼': '#ede9fe',
-  '沉思猫头鹰': '#f1f5f9',
-  '定心大象': '#f9fafb',
-  '稳如龟': '#d1fae5',
-  '隐身猫': '#e0e7ff',
+  'corgi': '#ffedd5',
+  'rooster': '#fef3c7',
+  'hamster_praise': '#cffafe',
+  'fox': '#ffedd5',
+  'dolphin_calm': '#dbeafe',
+  'spider': '#f3e8ff',
+  'koala': '#ffe4e6',
+  'octopus': '#ede9fe',
+  'owl': '#f1f5f9',
+  'elephant': '#f9fafb',
+  'turtle': '#d1fae5',
+  'cat': '#e0e7ff',
 };
 
 /**

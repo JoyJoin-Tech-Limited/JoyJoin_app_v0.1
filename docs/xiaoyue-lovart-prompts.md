@@ -1,6 +1,6 @@
 # Xiaoyue Expression Assets — Lovart Prompts (All 16)
 
-> **Updated:** Xiaoyue is now a **corgi** (unified across mini-program + web). Low-poly 2D illustration style (插画风). Visually distinct from the 开心柯基 archetype.
+> **Updated:** Xiaoyue is now a **corgi** (unified across mini-program + web). Low-poly 2D illustration style (插画风). Visually distinct from the 气氛组柯基 archetype.
 >
 > Paste each block directly into Lovart ChatCanvas. Generate one at a time for best results, or request a "style reference sheet" first to lock the character model.
 
@@ -21,8 +21,8 @@ Goal: Establish the canonical Xiaoyue character model for a 16-expression set. T
 
 Character: Xiaoyue (小悦), a Welsh Corgi Pembroke AI assistant — anthropomorphic, standing on two legs, young adult vibe (25–30 human equivalent). "Street-smart veteran" personality — relaxed, reliable, slightly knowing, never cutesy or corporate.
 
-CRITICAL — Distinct from 开心柯基 archetype:
-- 开心柯基 (user archetype) = playful, energetic, bouncing puppy, pure joy
+CRITICAL — Distinct from 气氛组柯基 archetype:
+- 气氛组柯基 (user archetype) = playful, energetic, bouncing puppy, pure joy
 - Xiaoyue (AI assistant) = relaxed, worldly, chill, "seen it all" — mature corgi energy
 
 Base appearance:
@@ -595,11 +595,11 @@ After you deliver the PNGs, we run `npm run optimize:xiaoyue` to generate the We
 
 ---
 
-## 🐶 Xiaoyue vs. 开心柯基 — Visual Distinction Guide
+## 🐶 Xiaoyue vs. 气氛组柯基 — Visual Distinction Guide
 
 Since both are corgis, here is the **anti-confusion spec** to give Lovart:
 
-| Attribute | Xiaoyue (AI Assistant) | 开心柯基 (User Archetype) |
+| Attribute | Xiaoyue (AI Assistant) | 气氛组柯基 (User Archetype) |
 |-----------|----------------------|--------------------------|
 | **Vibe** | Street-smart veteran, chill, "seen it all" | Playful puppy, energetic, pure joy |
 | **Clothing** | Purple hoodie + sunglasses + watch + necklace | Usually naked or simple, no accessories |

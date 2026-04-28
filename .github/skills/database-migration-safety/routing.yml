@@ -31,8 +31,9 @@ strong_triggers:
 owned_files:
   - packages/shared/src/schema.ts
   - apps/server/migrations/**
-  - scripts/migrate-fix-assessment-constraint.js
-  - scripts/migrate-rename-role-to-archetype.js
+  - scripts/verify-db-alignment.mjs
+  - scripts/verify-journal-sync.mjs
+  - scripts/rebuild-journal.mjs
 
 owned_paths: []
 

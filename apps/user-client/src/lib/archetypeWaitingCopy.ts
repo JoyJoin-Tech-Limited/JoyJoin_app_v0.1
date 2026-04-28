@@ -6,10 +6,10 @@
  * 4 copy clusters rather than 12 individual variants.
  *
  * Cluster mapping (based on energyLevel in archetypes.ts):
- *   HIGH_ENERGY  (energyLevel ≥ 85): 开心柯基, 太阳鸡, 夸夸豚
- *   CONNECTOR    (energyLevel 70-84): 机智狐, 淡定海豚, 织网蛛
- *   WARMTH       (energyLevel 55-69): 暖心熊, 灵感章鱼
- *   STEADY       (energyLevel <  55): 沉思猫头鹰, 定心大象, 稳如龟, 隐身猫
+ *   HIGH_ENERGY  (energyLevel ≥ 85): corgi, rooster, hamster_praise
+ *   CONNECTOR    (energyLevel 70-84): fox, dolphin_calm, spider
+ *   WARMTH       (energyLevel 55-69): koala, octopus
+ *   STEADY       (energyLevel <  55): owl, elephant, turtle, cat
  *
  * Falls back to the generic copy exported as `GENERIC_ARCHETYPE_WAITING_COPY`.
  */
@@ -24,18 +24,18 @@ export interface ArchetypeWaitingCopy {
 type ArchetypeCopyCluster = "high_energy" | "connector" | "warmth" | "steady";
 
 const ARCHETYPE_CLUSTER_MAP: Record<string, ArchetypeCopyCluster> = {
-  开心柯基: "high_energy",
-  太阳鸡:   "high_energy",
-  夸夸豚:   "high_energy",
-  机智狐:   "connector",
-  淡定海豚: "connector",
-  织网蛛:   "connector",
-  暖心熊:   "warmth",
-  灵感章鱼: "warmth",
-  沉思猫头鹰: "steady",
-  定心大象: "steady",
-  稳如龟:   "steady",
-  隐身猫:   "steady",
+  corgi: "high_energy",
+  rooster:   "high_energy",
+  hamster_praise:   "high_energy",
+  fox:   "connector",
+  dolphin_calm: "connector",
+  spider:   "connector",
+  koala:   "warmth",
+  octopus: "warmth",
+  owl: "steady",
+  elephant: "steady",
+  turtle:   "steady",
+  cat:   "steady",
 };
 
 const CLUSTER_COPY: Record<ArchetypeCopyCluster, ArchetypeWaitingCopy> = {

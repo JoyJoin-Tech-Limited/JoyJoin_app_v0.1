@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { cdnAsset } from '../../lib/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -11,7 +12,7 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import './index.scss'
 
-const supportQrSrc = '/assets/qr/customer-service-support.png'
+const supportQrSrc = cdnAsset('/assets/qr/customer-service-support.png')
 
 function formatEventDate(dateTime?: string): string {
   if (!dateTime) {
@@ -71,7 +72,7 @@ export default function EventCoordinationPage() {
   }
 
   if (authLoading || eventsLoading) {
-    return <LoadingScreen message='加载活动帮助…' />
+    return <LoadingScreen message='正在读取活动指南…' />
   }
 
   return (

@@ -1,7 +1,8 @@
-import { Image, Text, View } from '@tarojs/components'
+import { Text, View, Image } from '@tarojs/components'
 import type { ReactNode } from 'react'
 import Button, { type JoyButtonProps } from './Button'
 import Card from './Card'
+import JoyJoinIcon from './JoyJoinIcon'
 import './StatusCard.scss'
 
 const DEFAULT_STATUS_CARD_ICONS = {
@@ -26,9 +27,8 @@ interface StatusCardProps {
   action?: StatusCardAction
   className?: string
   icon?: string
-  footer?: ReactNode
-  /** Optional hero illustration src (WebP/PNG). When provided, renders above the icon. */
   heroSrc?: string
+  footer?: ReactNode
 }
 
 export default function StatusCard({
@@ -38,8 +38,8 @@ export default function StatusCard({
   action,
   className = '',
   icon,
-  footer,
   heroSrc,
+  footer,
 }: StatusCardProps) {
   const resolvedIcon =
     typeof icon === 'string' && icon.trim() !== ''
@@ -49,14 +49,9 @@ export default function StatusCard({
   return (
     <Card className={`status-card status-card--${tone}${className ? ` ${className}` : ''}`}>
       {heroSrc ? (
-        <Image
-          className='status-card__hero'
-          src={heroSrc}
-          mode='aspectFit'
-          lazyLoad
-        />
+        <Image className='status-card__hero' src={heroSrc} mode='aspectFit' />
       ) : (
-        <Text className='status-card__icon'>{resolvedIcon}</Text>
+        <JoyJoinIcon emoji={resolvedIcon} size={48} className='status-card__icon' />
       )}
       <Text className='status-card__title'>{title}</Text>
       {description ? <Text className='status-card__description'>{description}</Text> : null}

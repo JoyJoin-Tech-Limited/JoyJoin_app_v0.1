@@ -3,14 +3,12 @@
  * 模拟10位AI专家对小悦进行多维度评分
  */
 
-import OpenAI from 'openai';
 import { TEST_SCENARIOS, getRandomScenarios as getScenarios } from './scenarios';
 import type { EvaluationMetrics, SimulatedScenario } from './types';
+import { getDeepseekClient, getDeepseekModel } from '../ai/deepseekClient';
+import { logger } from "../lib/logger";
 
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+
 
 // ============ 10位AI专家人设 ============
 
@@ -330,8 +328,8 @@ ${d.criteria.map(c => `- ${c}`).join('\n')}
 请根据你的专业背景和评分风格，给出严谨、专业的评估。评分要有区分度，不要全部给高分。`;
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await getDeepseekClient().chat.completions.create({
+      model: getDeepseekModel('flash'),
       messages: [
         { role: 'system', content: '你是一位严谨的AI专家评审，擅长对AI系统进行专业评估。' },
         { role: 'user', content: prompt }
@@ -376,7 +374,7 @@ ${d.criteria.map(c => `- ${c}`).join('\n')}
       };
     }
   } catch (error) {
-    console.error(`Expert ${expert.id} evaluation failed:`, error);
+    logger.error(`Expert ${expert.id} evaluation failed:`, { error: error instanceof Error ? error.message : String(error) });
   }
   
   return {
@@ -405,7 +403,7 @@ export async function runExpertEvaluation(
   metrics: EvaluationMetrics,
   sampleScenarios: SimulatedScenario[] = TEST_SCENARIOS.slice(0, 10)
 ): Promise<ExpertEvaluationReport> {
-  console.log('[ExpertEval] 开始10位AI专家评估...');
+  logger.info('[ExpertEval] 开始10位AI专家评估...');
   
   const systemDescription = `
 小悦智能推断引擎是一个为社交注册场景设计的对话辅助系统。核心功能包括：
@@ -425,7 +423,7 @@ export async function runExpertEvaluation(
   const expertScores: ExpertScore[] = [];
   
   for (const expert of EXPERT_PERSONAS) {
-    console.log(`[ExpertEval] ${expert.name}(${expert.title}) 评估中...`);
+    logger.info(`[ExpertEval] ${expert.name}(${expert.title}) 评估中...`);
     const score = await simulateExpertEvaluation(expert, systemDescription, sampleScenarios, metrics);
     expertScores.push(score);
   }
@@ -485,7 +483,7 @@ export async function runExpertEvaluation(
     prioritizedRecommendations: countOccurrences(allRecommendations).slice(0, 5)
   };
   
-  console.log(`[ExpertEval] 评估完成！综合评分：${overallScore.toFixed(2)}，评级：${grade}`);
+  logger.info(`[ExpertEval] 评估完成！综合评分：${overallScore.toFixed(2)}，评级：${grade}`);
   
   return report;
 }

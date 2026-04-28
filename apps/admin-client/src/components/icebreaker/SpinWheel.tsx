@@ -32,11 +32,11 @@ const defaultColors = [
 ];
 
 const defaultParticipants: Participant[] = [
-  { id: '1', name: '小明', archetype: '开心柯基' },
-  { id: '2', name: '小红', archetype: '灵感章鱼' },
-  { id: '3', name: '小华', archetype: '沉思猫头鹰' },
-  { id: '4', name: '小丽', archetype: '太阳鸡' },
-  { id: '5', name: '小强', archetype: '暖心熊' },
+  { id: '1', name: '小明', archetype: 'corgi' },
+  { id: '2', name: '小红', archetype: 'octopus' },
+  { id: '3', name: '小华', archetype: 'owl' },
+  { id: '4', name: '小丽', archetype: 'rooster' },
+  { id: '5', name: '小强', archetype: 'koala' },
 ];
 
 export function SpinWheel({

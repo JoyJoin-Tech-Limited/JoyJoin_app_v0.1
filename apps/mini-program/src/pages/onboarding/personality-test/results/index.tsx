@@ -31,6 +31,11 @@ import {
   type PersonalitySharePosterInput,
 } from './sharePoster'
 import {
+  generatePersonalitySquarePoster,
+  PERSONALITY_SQUARE_CANVAS_ID,
+  type PersonalitySquarePosterInput,
+} from '../../../../lib/momentsPosterFactory'
+import {
   buildResolvedResultState,
   buildShareLine,
   buildShareTitle,
@@ -79,7 +84,9 @@ export default function PersonalityTestResultsPage() {
       : 0,
   )
   const [sharePosterPath, setSharePosterPath] = useState('')
+  const [squarePosterPath, setSquarePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
+  const [isGeneratingSquarePoster, setIsGeneratingSquarePoster] = useState(false)
   const [generationPhase, setGenerationPhase] = useState('')
   const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
   const [cardNickname, setCardNickname] = useState('')
@@ -137,7 +144,9 @@ export default function PersonalityTestResultsPage() {
     ?? sessionSnapshot?.result?.primaryArchetype
     ?? topMatches[0]?.archetype
     ?? null
-  const displayArchetypeName = displayArchetype ?? '神秘原型'
+  const displayArchetypeName = displayArchetype
+    ? archetypeRegistry[displayArchetype]?.name ?? displayArchetype
+    : '神秘原型'
   const visual = useMemo(() => getArchetypeVisual(displayArchetype), [displayArchetype])
   const summary = useMemo(() => visual.summary, [visual.summary])
   const traitEntries = useMemo(() => getTraitEntries(resultState?.result ?? sessionSnapshot?.result), [resultState, sessionSnapshot])
@@ -450,8 +459,8 @@ export default function PersonalityTestResultsPage() {
       return
     }
 
-    const targetName = resolvedResult.result.primaryArchetype ?? '开心柯基'
-    const targetIndex = ['开心柯基', '太阳鸡', '夸夸豚', '机智狐', '淡定海豚', '织网蛛', '暖心熊', '灵感章鱼', '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'].indexOf(targetName)
+    const targetName = resolvedResult.result.primaryArchetype ?? 'corgi'
+    const targetIndex = ['corgi', 'rooster', 'hamster_praise', 'fox', 'dolphin_calm', 'spider', 'koala', 'octopus', 'owl', 'elephant', 'turtle', 'cat'].indexOf(targetName)
     const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
     const approachPositions = profile.slotSlowStepDelays.map((_, index) => (
       safeTargetIndex - profile.slotSlowStepDelays.length + index + 12
@@ -823,6 +832,36 @@ export default function PersonalityTestResultsPage() {
     visual,
   ])
 
+  const handleGenerateSquarePoster = useCallback(async () => {
+    if (isGeneratingSquarePoster || !displayArchetype) return
+    setIsGeneratingSquarePoster(true)
+    try {
+      const input: PersonalitySquarePosterInput = {
+        archetype: displayArchetypeName,
+        tagline: visual.tagline || visual.description || summary,
+        rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 50,
+        archetypeAsset: displayAsset,
+        archetypeAssetPng: visual.assetPng,
+      }
+      const path = await generatePersonalitySquarePoster(input)
+      setSquarePosterPath(path)
+      const taroWithShareImageMenu = Taro as typeof Taro & {
+        showShareImageMenu?: (options: { path: string }) => Promise<unknown>
+      }
+      if (typeof taroWithShareImageMenu.showShareImageMenu === 'function') {
+        await taroWithShareImageMenu.showShareImageMenu({ path })
+      } else {
+        await Taro.previewImage({ current: path, urls: [path] })
+      }
+      analytics.interaction('share_square_poster', { primaryArchetype: displayArchetypeName })
+    } catch (err) {
+      console.error('[PersonalityResults] square poster generation failed:', err)
+      void Taro.showToast({ title: '海报生成失败，请重试', icon: 'none', duration: 2500 })
+    } finally {
+      setIsGeneratingSquarePoster(false)
+    }
+  }, [analytics, displayArchetype, displayArchetypeName, displayAsset, isGeneratingSquarePoster, summary, visual])
+
   const content = useMemo(() => {
     switch (flowStage) {
       case 'empty':
@@ -868,6 +907,7 @@ export default function PersonalityTestResultsPage() {
         return (
           <FinalStage
             displayArchetypeName={displayArchetypeName}
+            displayArchetypeId={displayArchetype ?? ''}
             displayAsset={displayAsset}
             visual={visual}
             summary={summary}
@@ -886,6 +926,7 @@ export default function PersonalityTestResultsPage() {
             selectedVariantIndex={selectedVariantIndex}
             nickname={cardNickname}
             onGeneratePoster={handleGeneratePoster}
+            onGenerateSquarePoster={handleGenerateSquarePoster}
             onInviteFriend={handleInviteFriend}
             onNicknameChange={setCardNickname}
             onVariantSelect={setSelectedVariantIndex}
@@ -930,6 +971,7 @@ export default function PersonalityTestResultsPage() {
     selectedVariantIndex,
     cardNickname,
     handleGeneratePoster,
+    handleGenerateSquarePoster,
     handleInviteFriend,
     continueButtonLabel,
     handleContinue,
@@ -945,6 +987,11 @@ export default function PersonalityTestResultsPage() {
         </View>
       )}
       <Canvas canvasId={PERSONALITY_SHARE_POSTER_CANVAS_ID} className='personality-results__poster-canvas' />
+      <Canvas
+        canvasId={PERSONALITY_SQUARE_CANVAS_ID}
+        className='personality-results__poster-canvas'
+        style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '750px', height: '750px' }}
+      />
     </View>
   )
 }

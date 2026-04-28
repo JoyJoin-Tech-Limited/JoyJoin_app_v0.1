@@ -74,8 +74,8 @@ describe('eventThemeTitleGenerator trace coverage', () => {
     getMiniMaxClientMock.mockReturnValue(null);
     selectWhereMock
       .mockResolvedValueOnce([
-        { id: 'user-1', archetype: '开心柯基' },
-        { id: 'user-2', archetype: '机智狐' },
+        { id: 'user-1', archetype: 'corgi' },
+        { id: 'user-2', archetype: 'fox' },
       ])
       .mockResolvedValueOnce([
         {
@@ -164,7 +164,7 @@ describe('eventThemeTitleGenerator trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-title-v1',
@@ -182,7 +182,7 @@ describe('eventThemeTitleGenerator trace coverage', () => {
     expect(logAITraceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'event-theme-title-v1',

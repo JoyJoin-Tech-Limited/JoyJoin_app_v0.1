@@ -138,6 +138,16 @@
   }
 }
 
+.joyjoin-loading-screen--settled {
+  .joyjoin-loading-screen__mascot,
+  .joyjoin-loading-screen__dot,
+  .joyjoin-loading-screen__skeleton-line {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .joyjoin-loading-screen {
     &__mascot,

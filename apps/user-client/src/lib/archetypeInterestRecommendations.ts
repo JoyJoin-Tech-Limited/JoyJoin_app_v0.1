@@ -14,8 +14,8 @@
 import type { ArchetypeName } from '@shared/personality/archetypeNames';
 
 export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
-  // 开心柯基 – High-energy social spark (X:95, P:85)
-  "开心柯基": [
+  // corgi – High-energy social spark (X:95, P:85)
+  "corgi": [
     "culture_standup",    // 🎤 脱口秀 – natural performer
     "culture_memes",      // 😂 玩梗 – loves banter and viral humour
     "lifestyle_sports",   // 🏀 运动 – high-energy outlet
@@ -23,8 +23,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "culture_live",       // 🎸 看 Live – group energy highs
   ],
 
-  // 太阳鸡 – Warm, stable positivity (P:92, E:88)
-  "太阳鸡": [
+  // rooster – Warm, stable positivity (P:92, E:88)
+  "rooster": [
     "lifestyle_travel",     // ✈️ 去旅行 – always up for adventure
     "lifestyle_coffee",     // ☕ 咖啡 – casual social anchor
     "culture_music",        // 🎵 音乐 – emotional resonance
@@ -32,8 +32,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "lifestyle_photography", // 📸 摄影 – capturing joyful moments
   ],
 
-  // 夸夸豚 – Empathic affirmer (A:95, P:88)
-  "夸夸豚": [
+  // hamster_praise – Empathic affirmer (A:95, P:88)
+  "hamster_praise": [
     "career_networking",       // 🤝 人脉与合作 – people-first
     "philosophy_meaning",      // 🌟 聊人生 – deep personal sharing
     "philosophy_relationships", // 💔 人际与亲密关系 – relationship depth
@@ -41,8 +41,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "culture_music",           // 🎵 音乐 – emotional connection
   ],
 
-  // 机智狐 – Curious explorer (O:92, X:78)
-  "机智狐": [
+  // fox – Curious explorer (O:92, X:78)
+  "fox": [
     "city_hidden_gems", // 🗺️ 探店 – discovery mindset
     "city_walk",        // 🌉 City Walk – urban curiosity
     "lifestyle_food",   // 🍜 吃喝探索 – sensory novelty
@@ -50,8 +50,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "tech_ai",          // 🤖 AI 应用 – cutting-edge fascination
   ],
 
-  // 淡定海豚 – EQ mediator (E:85, A:70)
-  "淡定海豚": [
+  // dolphin_calm – EQ mediator (E:85, A:70)
+  "dolphin_calm": [
     "lifestyle_coffee",  // ☕ 咖啡 – calm social ritual
     "culture_books",     // 📚 阅读 – thoughtful solo time
     "philosophy_growth", // 🧘 自我成长 – inner focus
@@ -59,8 +59,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "lifestyle_outdoor", // ⛰️ 户外 – restorative nature
   ],
 
-  // 织网蛛 – Connector and planner (C:85, A:70)
-  "织网蛛": [
+  // spider – Connector and planner (C:85, A:70)
+  "spider": [
     "career_networking", // 🤝 人脉与合作 – relationship architecture
     "career_business",   // 💡 商业思维 – strategic perspective
     "career_promotion",  // 🎯 职业成长 – structured ambition
@@ -68,8 +68,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "city_exhibition",   // 🖼️ 看展 – cultural curation
   ],
 
-  // 暖心熊 – Deep listener (A:90, E:80)
-  "暖心熊": [
+  // koala – Deep listener (A:90, E:80)
+  "koala": [
     "philosophy_meaning",      // 🌟 聊人生 – genuine life stories
     "philosophy_relationships", // 💔 人际与亲密关系 – emotional depth
     "culture_books",           // 📚 阅读 – empathy through stories
@@ -77,8 +77,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "lifestyle_wine",          // 🍷 小酌 – intimate slow evenings
   ],
 
-  // 灵感章鱼 – Creative divergent thinker (O:95, C:28)
-  "灵感章鱼": [
+  // octopus – Creative divergent thinker (O:95, C:28)
+  "octopus": [
     "tech_ai",          // 🤖 AI 应用 – imaginative tech use
     "culture_games",    // 🎮 玩游戏 – immersive worlds
     "tech_vr_ar",       // 🥽 VR / AR – boundary-pushing experiences
@@ -86,8 +86,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "culture_movies",   // 🎬 影视内容 – narrative obsession
   ],
 
-  // 沉思猫头鹰 – Deep analytical thinker (O:88, C:80)
-  "沉思猫头鹰": [
+  // owl – Deep analytical thinker (O:88, C:80)
+  "owl": [
     "culture_books",           // 📚 阅读 – intellectual depth
     "philosophy_cognition",    // 🔍 认知升级 – structured learning
     "philosophy_social_issues", // ⚖️ 社会与价值观 – principled debate
@@ -95,8 +95,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "city_architecture",       // 🏛️ 建筑美学 – structural aesthetics
   ],
 
-  // 定心大象 – Stable, grounding anchor (C:90, E:86)
-  "定心大象": [
+  // elephant – Stable, grounding anchor (C:90, E:86)
+  "elephant": [
     "philosophy_growth",    // 🧘 自我成长 – deliberate development
     "philosophy_meditation", // 📿 冥想与正念 – centred presence
     "city_parks",           // 🍃 逛公园 – grounded leisure
@@ -104,8 +104,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "career_promotion",     // 🎯 职业成长 – long-game ambition
   ],
 
-  // 稳如龟 – Patient deep observer (C:90, X:28)
-  "稳如龟": [
+  // turtle – Patient deep observer (C:90, X:28)
+  "turtle": [
     "culture_books",         // 📚 阅读 – sustained concentration
     "philosophy_cognition",  // 🔍 认知升级 – methodical insight
     "lifestyle_coffee",      // ☕ 咖啡 – quiet solo ritual
@@ -113,8 +113,8 @@ export const ARCHETYPE_INTEREST_RECOMMENDATIONS = {
     "philosophy_meditation", // 📿 冥想与正念 – inner stillness
   ],
 
-  // 隐身猫 – Quiet, selective companion (X:22, O:72)
-  "隐身猫": [
+  // cat – Quiet, selective companion (X:22, O:72)
+  "cat": [
     "lifestyle_pets",        // 🐱 吸猫撸狗 – low-key comfort
     "culture_games",         // 🎮 玩游戏 – solo or small-group worlds
     "culture_books",         // 📚 阅读 – introspective alone time
@@ -133,7 +133,7 @@ export function isRecommendedForArchetype(
 ): boolean {
   if (!archetypeId) return false;
   const recommendations: readonly string[] | undefined =
-    ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName];
+    ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as keyof typeof ARCHETYPE_INTEREST_RECOMMENDATIONS];
   if (!recommendations) return false;
   return recommendations.includes(topicId);
 }
@@ -146,7 +146,7 @@ export function getRecommendedTopics(archetypeId: string | undefined | null): st
   if (!archetypeId) return [];
 
   const recommendations: readonly string[] | undefined =
-    ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as ArchetypeName];
+    ARCHETYPE_INTEREST_RECOMMENDATIONS[archetypeId as keyof typeof ARCHETYPE_INTEREST_RECOMMENDATIONS];
 
   return recommendations ? [...recommendations] : [];
 }

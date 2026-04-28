@@ -8,8 +8,9 @@ import type {
   SocialTopicPromptStyle,
   SocialTopicSafety,
   AuctionLot,
+  XiaoyueSessionPack,
 } from '@shared/socialIcebreaker';
-import { auctionLotsLlmPayloadSchema } from '@shared/socialIcebreaker';
+import { auctionLotsLlmPayloadSchema, parseXiaoyueSessionPack } from '@shared/socialIcebreaker';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import {
   buildFallbackAIMeta,
@@ -19,24 +20,37 @@ import {
 import { extractJsonPayloadForParse } from './ai/extractLlmJson';
 import { getClientForFunction, getDeepseekSelection } from './ai/socialModelRouter';
 import { createAiCorrelationId, logAITrace } from './lib/aiTraceLogger';
+import {
+  buildWarmupTopicsPrompt,
+  buildMicroChallengesPrompt,
+  buildLieDetectivePrompt,
+  buildXiaoYueCommentPrompt,
+  buildRecapSummaryPrompt,
+  buildPersonalityDicePrompt,
+  buildAuctionLotsPrompt,
+  buildMiniScriptFrameworkUserMessage,
+  buildXiaoyueSessionPackPrompt,
+  MINISCRIPT_FRAMEWORK_SYSTEM,
+  WARMUP_TOPICS_PROMPT_VERSION,
+  MICRO_CHALLENGES_PROMPT_VERSION,
+  LIE_DETECTIVE_PROMPT_VERSION,
+  RECAP_SUMMARY_PROMPT_VERSION,
+  PERSONALITY_DICE_PROMPT_VERSION,
+  AUCTION_LOTS_PROMPT_VERSION,
+  MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION,
+  SESSION_PACK_PROMPT_VERSION,
+  XIAOYUE_COMMENT_PROMPT_VERSION,
+} from './ai/socialIcebreakerPrompts';
+import { selectMicroChallenges } from '@joyjoin/shared';
+import { logger } from "./lib/logger";
 
 type AIServiceResult<T> = {
   data: T;
   meta: AIResponseMeta;
 };
 
-/** Prompt version for LLM-backed XiaoYue lines when no canned copy matches. */
-export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v1';
-
-const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v1';
-const MICRO_CHALLENGES_PROMPT_VERSION = 'social-micro-challenges-v1';
-const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
-const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v2';
-const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v1';
-const AUCTION_LOTS_PROMPT_VERSION = 'social-auction-lots-v1';
-
-/** Prompt version for POST /api/miniscript/generate LLM path (orchestrator logs AITrace). */
-export const MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION = 'social-miniscript-framework-v1';
+/** Re-export for downstream consumers that previously imported from this file. */
+export { XIAOYUE_COMMENT_PROMPT_VERSION, MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION };
 
 function normalizeTopicDepthLevel(value: unknown): SocialTopicDepthLevel {
   if (value === 3) return 3;
@@ -75,114 +89,114 @@ function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: Atmosph
 
 const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
   { id: 'w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜', category: '生活趣事', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w2', question: '如果能把今天的一件事重来，你会改变什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w3', question: '你手机里现在最奇怪的一张照片是什么？', mood: 'funny', emoji: '📱', category: '轻松破冰', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w4', question: '最近让你觉得"世界真小"的一次巧合？', mood: 'life', emoji: '🌍', category: '偶遇故事', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w5', question: '如果你的性格是一道菜，你是什么菜？', mood: 'funny', emoji: '🍽️', category: '自我比喻', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w6', question: '你最近一次真正放松是什么时候？在哪里？', mood: 'relaxed', emoji: '😌', category: '舒适感', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w7', question: '如果明天不用工作，你最想做什么？', mood: 'relaxed', emoji: '🌟', category: '理想日常', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w8', question: '你最想和谁（活着或已故）共进一顿晚餐？', mood: 'emotional', emoji: '💫', category: '重要关系', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w9', question: '最近让你感动到的一个小细节是什么？', mood: 'emotional', emoji: '🥹', category: '感动瞬间', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w10', question: '你觉得自己哪个优点是被低估的？', mood: 'life', emoji: '💡', category: '自我认知', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w11', question: '描述一下你的理想周末是什么样的？', mood: 'relaxed', emoji: '☀️', category: '理想节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w12', question: '如果你能突然精通一门技能，你想要什么技能？', mood: 'funny', emoji: '🎯', category: '愿望清单', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w13', question: '最近让你哈哈大笑的是什么？', mood: 'funny', emoji: '😂', category: '快乐来源', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w14', question: '你小时候最想成为什么职业？现在还想吗？', mood: 'life', emoji: '👶', category: '成长轨迹', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w15', question: '如果你能给5年前的自己一句话，你会说什么？', mood: 'emotional', emoji: '⏰', category: '自我回望', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w16', question: '最近尝试过什么新事物，结果怎么样？', mood: 'life', emoji: '🚀', category: '新鲜体验', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w17', question: '你的"精神充电"方式是什么？', mood: 'relaxed', emoji: '🔋', category: '恢复能量', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w18', question: '有什么事情看起来很难但实际上很容易？', mood: 'funny', emoji: '🤔', category: '反差观察', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w19', question: '什么样的环境让你感到最舒适？', mood: 'relaxed', emoji: '🏡', category: '舒适空间', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
-  { id: 'w20', question: '你最想去但还没去过的地方是哪里？为什么？', mood: 'emotional', emoji: '✈️', category: '向往之地', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w21', question: '今晚来这里，你最期待的是什么？', mood: 'relaxed', emoji: '🎉', category: '现场期待', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w22', question: '用三个词描述你今天的心情？', mood: 'life', emoji: '💭', category: '情绪快照', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w23', question: '你有什么"奇怪"的生活习惯不好意思承认的？', mood: 'funny', emoji: '🙈', category: '可爱怪癖', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  { id: 'w24', question: '最近有没有什么让你改变看法的经历？', mood: 'emotional', emoji: '🌱', category: '观点变化', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
-  { id: 'w25', question: '如果你的生活是一部电影，现在是哪个章节？', mood: 'life', emoji: '🎬', category: '人生叙事', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w2', question: '如果今天能重来一件事，你会改什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w3', question: '手机里现在最奇怪的一张照片，敢不敢给大家看看？', mood: 'funny', emoji: '📱', category: '轻松破冰', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w4', question: '最近有没有那种"世界真小"的巧合？', mood: 'life', emoji: '🌍', category: '偶遇故事', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w5', question: '你的性格要是道菜，你是什么菜？', mood: 'funny', emoji: '🍽️', category: '自我比喻', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w6', question: '最近一次真正放松是在哪儿？干嘛呢？', mood: 'relaxed', emoji: '😌', category: '舒适感', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w7', question: '明天要是突然不用上班，第一件事做什么？', mood: 'relaxed', emoji: '🌟', category: '理想日常', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w8', question: '最想和谁（活着或已故）吃一顿饭？', mood: 'emotional', emoji: '💫', category: '重要关系', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w9', question: '最近有没有一个瞬间，让你突然心里一暖？', mood: 'emotional', emoji: '🥹', category: '感动瞬间', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w10', question: '你觉得自己哪个优点，其实被身边人低估了？', mood: 'life', emoji: '💡', category: '自我认知', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w11', question: '描述一下你理想的周末，越具体越好', mood: 'relaxed', emoji: '☀️', category: '理想节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w12', question: '如果能瞬间学会一门技能，你想拿捏什么？', mood: 'funny', emoji: '🎯', category: '愿望清单', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w13', question: '最近有什么让你笑到停不下来的事？', mood: 'funny', emoji: '😂', category: '快乐来源', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w14', question: '小时候最想当什么？现在还这么想吗？', mood: 'life', emoji: '👶', category: '成长轨迹', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w15', question: '给五年前的自己留句话，你会说什么？', mood: 'emotional', emoji: '⏰', category: '自我回望', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w16', question: '最近尝试了什么新鲜事物，结果真香还是踩雷？', mood: 'life', emoji: '🚀', category: '新鲜体验', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w17', question: '你一般怎么给自己"充电"？', mood: 'relaxed', emoji: '🔋', category: '恢复能量', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w18', question: '有什么事看起来很难，其实上手发现也就那样？', mood: 'funny', emoji: '🤔', category: '反差观察', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w19', question: '什么样的环境让你瞬间放松下来？', mood: 'relaxed', emoji: '🏡', category: '舒适空间', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
+  { id: 'w20', question: '最想去但还没去的地方是哪儿？为什么一直想去？', mood: 'emotional', emoji: '✈️', category: '向往之地', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w21', question: '今晚来这儿，你最期待发生什么？', mood: 'relaxed', emoji: '🎉', category: '现场期待', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w22', question: '用三个词形容下今天的心情呗', mood: 'life', emoji: '💭', category: '情绪快照', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  { id: 'w23', question: '有什么生活习惯，说出来别人会觉得"你也这样？"', mood: 'funny', emoji: '🙈', category: '可爱怪癖', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  { id: 'w24', question: '最近有没有一件事，让你突然改变了想法？', mood: 'emotional', emoji: '🌱', category: '观点变化', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w25', question: '如果人生是部电影，你现在演到哪个章节了？', mood: 'life', emoji: '🎬', category: '人生叙事', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
 ];
 
 const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
   {
     id: 'c1',
     title: '找3个共同点',
-    description: '在座所有人找出3个共同的爱好或经历',
+    description: '在座的各位，找出3个你们共有的爱好或经历，越 unexpected 越好',
     durationSeconds: 180,
-    completionCTA: '找到了！',
+    completionCTA: '拿捏了！',
     visualHint: '🔍🤝',
   },
   {
     id: 'c2',
-    title: '用3个词形容彼此',
-    description: '每人用3个词形容坐在自己右边的人',
+    title: '用3个词形容右边的人',
+    description: '每人用3个词形容坐在自己右边的人，不准说"挺好的"',
     durationSeconds: 120,
-    completionCTA: '说完了！',
+    completionCTA: '说完收工！',
     visualHint: '💬🌟',
   },
   {
     id: 'c3',
-    title: '组队想出最离谱的创业点子',
-    description: '大家一起想出一个绝对不会成功的创业想法',
+    title: '整一个离谱创业点子',
+    description: '来，大家一起整一个绝对不会成功的创业idea，脑洞越大越好',
     durationSeconds: 150,
-    completionCTA: '想到了！',
+    completionCTA: '这项目我投了！',
     visualHint: '🚀💡',
   },
   {
     id: 'c4',
     title: '哼歌猜曲',
-    description: '每人哼一首歌，其他人猜歌名，猜对了换下一首',
+    description: '每人哼一段歌，其他人猜，跑调也没事反而更好猜',
     durationSeconds: 120,
-    completionCTA: '猜完了！',
+    completionCTA: '这波绝了！',
     visualHint: '🎵🎤',
   },
   {
     id: 'c5',
-    title: '最快自我介绍',
-    description: '每人用30秒介绍自己最不为人知的一面',
+    title: '30秒不为人知',
+    description: '每人30秒，说一个在场没人知道的事，越小众越好',
     durationSeconds: 180,
-    completionCTA: '介绍完了！',
+    completionCTA: '原来你是这样的！',
     visualHint: '⚡👤',
   },
   {
     id: 'c6',
     title: '心灵感应挑战',
-    description: '两人背对背同时说出同一个数字，全组尝试心灵感应',
+    description: '两人背对背同时说同一个数字，看看你们有没有默契',
     durationSeconds: 90,
-    completionCTA: '挑战完成！',
+    completionCTA: '这都能中？',
     visualHint: '🧠✨',
   },
   {
     id: 'c7',
-    title: '排列组合游戏',
-    description: '所有人按照生日月份从小到大排成一排，不能说话只能用手势',
+    title: '生日排序',
+    description: '所有人按生日月份排成一排，不能说话只能比划，整起来',
     durationSeconds: 120,
-    completionCTA: '排好了！',
+    completionCTA: '排对了！',
     visualHint: '🎯👥',
   },
   {
     id: 'c8',
-    title: '集体讲故事',
-    description: '每人说一句话，接力完成一个完整故事，结尾必须出乎意料',
+    title: '接力编故事',
+    description: '每人接一句话，编个完整故事，结尾必须让人意想不到',
     durationSeconds: 180,
-    completionCTA: '故事完成！',
+    completionCTA: '编剧实锤！',
     visualHint: '📖🎭',
   },
 ];
 
 const FALLBACK_LIE_DETECTIVE_STATEMENTS: LieDetectiveStatement[][] = [
   [
-    { index: 1, text: '我曾经在凌晨3点独自爬过一座山', isLie: false },
-    { index: 2, text: '我会说5种语言', isLie: true },
-    { index: 3, text: '我的第一份工作是在便利店打工', isLie: false },
+    { index: 1, text: '我曾在凌晨三点一个人爬过一座山，就是觉得想去了', isLie: false },
+    { index: 2, text: '我会说五种语言，虽然都不是很流利', isLie: true },
+    { index: 3, text: '我的第一份工作是在便利店上夜班', isLie: false },
   ],
   [
-    { index: 1, text: '我曾经在电视上出现过', isLie: true },
-    { index: 2, text: '我养过一只龟，养了10年', isLie: false },
-    { index: 3, text: '我大学时是系里的长跑冠军', isLie: false },
+    { index: 1, text: '我上过电视，虽然只有一个背影镜头', isLie: true },
+    { index: 2, text: '我养过一只龟，养了整整十年，比有些恋爱还长', isLie: false },
+    { index: 3, text: '我大学时是系里长跑第一名，虽然系里只有三个男生', isLie: false },
   ],
   [
-    { index: 1, text: '我曾经在飞机上遇到过名人', isLie: false },
-    { index: 2, text: '我做过职业厨师', isLie: true },
-    { index: 3, text: '我第一次坐飞机是25岁之后', isLie: false },
+    { index: 1, text: '我在飞机上遇到过一位演员，还聊了两句', isLie: false },
+    { index: 2, text: '我曾经做过一段时间职业厨师，主要是切配', isLie: true },
+    { index: 3, text: '我第一次坐飞机是二十五岁以后，之前一直坐高铁', isLie: false },
   ],
 ];
 
@@ -195,29 +209,10 @@ export async function generateWarmupTopics(params: {
   avoidTopics?: string[];
 }): Promise<AIServiceResult<SocialTopic[]>> {
   const aiCorrelationId = createAiCorrelationId();
-  const moodMap: Record<AtmosphereMood, string> = {
-    relaxed: '轻松',
-    funny: '搞笑',
-    life: '生活',
-    emotional: '情感',
-  };
-
   const { client, model, provider } = getClientForFunction('generateWarmupTopics');
   const t0 = Date.now();
   try {
-    const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成5个${moodMap[params.mood]}类型的破冰话题。
-    
-要求：
-- 话题深度要形成曲线：至少2个 Level 1 轻松开场、2个 Level 2 体验分享、1个 Level 3 温和反思
-- 话题要轻松有趣，适合初次见面
-- 每个话题一句话，不超过30字
-- 不要过于严肃或私人
-${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join('、')}` : ''}
-
-请以JSON格式返回，格式如下：
-[{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}]
-
-直接返回JSON数组，不要其他内容。`;
+    const prompt = buildWarmupTopicsPrompt(params);
 
     const response = await client.chat.completions.create({
       model,
@@ -236,7 +231,7 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
       const latencyMs = Date.now() - t0;
-      console.log(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms`);
+      logger.info(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       return {
@@ -245,13 +240,13 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
       };
     }
     const latencyMs = Date.now() - t0;
-    console.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
+    logger.warn(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
     const meta = buildFallbackAIMeta('parse_error', WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: getFallbackTopics(params.mood), meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: getFallbackTopics(params.mood), meta };
@@ -271,26 +266,70 @@ function getFallbackTopics(mood: AtmosphereMood): SocialTopic[] {
   return shuffled.slice(0, 5).map((topic, index) => normalizeSocialTopic(topic, mood, index));
 }
 
+function isMicroChallengeLlmEnabled(): boolean {
+  const v = process.env.SOCIAL_MICRO_CHALLENGE_LLM_ENABLED;
+  if (v === undefined || v === '') return true; // default: AI enabled for backward compat
+  return v.toLowerCase() === 'true';
+}
+
+function buildSelectorMeta(): AIResponseMeta {
+  return {
+    generatedAt: new Date().toISOString(),
+    fromCache: false,
+    provider: null,
+    fallbackUsed: false,
+    promptVersion: 'selector-v1',
+  };
+}
+
+function inferSceneFromEventType(eventType: string): 'dinner' | 'bar' | 'both' {
+  const t = eventType.toLowerCase();
+  if (t.includes('酒') || t.includes('bar') || t.includes('pub')) return 'bar';
+  if (t.includes('饭') || t.includes('餐') || t.includes('dinner') || t.includes('lunch')) return 'dinner';
+  return 'both';
+}
+
 export async function generateMicroChallenges(params: {
   eventType: string;
   participantCount: number;
   completedChallengeIds?: string[];
+  /** Deterministic seed for template selector (e.g. session ID). */
+  seed?: string;
 }): Promise<AIServiceResult<MicroChallenge[]>> {
   const aiCorrelationId = createAiCorrelationId();
+
+  // 1. Always build the deterministic selector baseline
+  const selectorSeed = params.seed ?? `default-${params.participantCount}-${params.eventType}`;
+  const selectorResult = selectMicroChallenges({
+    participantCount: params.participantCount,
+    completedIds: params.completedChallengeIds,
+    seed: selectorSeed,
+    scene: inferSceneFromEventType(params.eventType),
+    count: 3,
+  });
+
+  // 2. If AI is disabled, return selector result immediately
+  if (!isMicroChallengeLlmEnabled()) {
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generateMicroChallenges',
+      provider: null,
+      model: 'selector-v1',
+      latencyMs: 0,
+      success: true,
+      fallbackUsed: false,
+      fromCache: false,
+      promptVersion: 'selector-v1',
+    });
+    return { data: selectorResult, meta: buildSelectorMeta() };
+  }
+
+  // 3. AI path (backward-compatible primary)
   const { client, model, provider } = getClientForFunction('generateMicroChallenges');
   const t0 = Date.now();
   try {
-    const prompt = `你是社交破冰专家小悦。请为一个${params.eventType}活动（${params.participantCount}人）生成3个有趣的微挑战。
-
-要求：
-- 挑战要简单易执行，2-5分钟内可完成
-- 适合在餐桌/酒桌旁进行，不需要太多空间
-- 有趣且能促进互动
-
-请以JSON格式返回：
-[{"id":"ai_c1","title":"挑战名称","description":"详细描述","durationSeconds":120,"completionCTA":"完成按钮文字","visualHint":"2-3个相关emoji"}]
-
-直接返回JSON数组，不要其他内容。`;
+    const prompt = buildMicroChallengesPrompt(params);
 
     const response = await client.chat.completions.create({
       model,
@@ -303,7 +342,7 @@ export async function generateMicroChallenges(params: {
     if (!content) {
       const meta = buildFallbackAIMeta('empty_response', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: getFallbackChallenges(params.completedChallengeIds), meta };
+      return { data: selectorResult, meta };
     }
 
     let parsed: unknown;
@@ -311,37 +350,30 @@ export async function generateMicroChallenges(params: {
       parsed = JSON.parse(extractJsonPayloadForParse(content));
     } catch {
       const latencyMs = Date.now() - t0;
-      console.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`);
+      logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using selector fallback`);
       const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-      return { data: getFallbackChallenges(params.completedChallengeIds), meta };
+      return { data: selectorResult, meta };
     }
     if (Array.isArray(parsed) && parsed.length > 0) {
       const latencyMs = Date.now() - t0;
-      console.log(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms`);
+      logger.info(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       return { data: parsed.slice(0, 3), meta };
     }
     const latencyMs = Date.now() - t0;
-    console.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
+    logger.warn(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape, using selector fallback`);
     const meta = buildFallbackAIMeta('parse_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackChallenges(params.completedChallengeIds), meta };
+    return { data: selectorResult, meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
-    return { data: getFallbackChallenges(params.completedChallengeIds), meta };
+    return { data: selectorResult, meta };
   }
-}
-
-function getFallbackChallenges(completedIds?: string[]): MicroChallenge[] {
-  const available = FALLBACK_MICRO_CHALLENGES.filter(
-    c => !completedIds?.includes(c.id)
-  );
-  return [...available].sort(() => Math.random() - 0.5).slice(0, 3);
 }
 
 export async function generateLieDetectiveStatements(params: {
@@ -354,26 +386,7 @@ export async function generateLieDetectiveStatements(params: {
   const { client, model, provider } = getClientForFunction('generateLieDetectiveStatements');
   const t0 = Date.now();
   try {
-    const context = [
-      params.archetype ? `性格类型：${params.archetype}` : '',
-      params.interests?.length ? `兴趣爱好：${params.interests.slice(0, 3).join('、')}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const prompt = `你是社交破冰专家小悦。请为"${params.displayName}"生成"两真一假"游戏的3个陈述句。
-${context ? `关于这个人的信息：\n${context}` : ''}
-
-要求：
-- 3个陈述中，2个是可能为真的，1个是假的
-- 陈述要有趣且令人难以判断真假
-- 每句不超过20字
-- 要有一定的个人特色
-
-请以JSON格式返回，并标注哪个是假的：
-[{"index":1,"text":"陈述文本","isLie":false},{"index":2,"text":"陈述文本","isLie":true},{"index":3,"text":"陈述文本","isLie":false}]
-
-直接返回JSON数组，确保只有一个isLie为true。`;
+    const prompt = buildLieDetectivePrompt(params);
 
     const response = await client.chat.completions.create({
       model,
@@ -396,19 +409,19 @@ ${context ? `关于这个人的信息：\n${context}` : ''}
       parsed.filter((s: LieDetectiveStatement) => s.isLie).length === 1
     ) {
       const latencyMs = Date.now() - t0;
-      console.log(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${latencyMs}ms`);
+      logger.info(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatements', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       return { data: parsed, meta };
     }
     const latencyMs = Date.now() - t0;
-    console.warn(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${latencyMs}ms: invalid response shape (expected 3 items with exactly 1 lie), using fallback`);
+    logger.warn(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${latencyMs}ms: invalid response shape (expected 3 items with exactly 1 lie), using fallback`);
     const meta = buildFallbackAIMeta('parse_error', LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatements', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: getRandomFallbackStatements(), meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generateLieDetectiveStatements error provider=${provider} latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generateLieDetectiveStatements error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatements', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: getRandomFallbackStatements(), meta };
@@ -427,22 +440,22 @@ export async function generateXiaoYueComment(params: {
 }): Promise<AIServiceResult<string>> {
   const defaultComments: Record<string, Record<string, string>> = {
     warmup: {
-      phase_start: '欢迎来到今晚的破冰时间！先从轻松的话题暖暖场吧 🌅',
-      topic_refresh: '换个话题，继续聊！这个更有趣～ ✨',
-      mood_change: '好主意，切换心情！新话题来了 🎯',
+      phase_start: '来，先随便聊聊，不用紧张 🌅',
+      topic_refresh: '换个话题，这个更有意思～ ✨',
+      mood_change: '行，换换口味，新话题来了 🎯',
     },
     micro_challenge: {
-      phase_start: '热身完毕！接下来是微挑战环节，大家准备好了吗？⚡',
-      timer_warning: '加油！时间不多了 ⚡',
-      challenge_complete: '太棒了！大家都完成了！🎉',
+      phase_start: '热身差不多了，来点小挑战？⚡',
+      timer_warning: '时间不多啦，抓紧 ⚡',
+      challenge_complete: '可以啊，大家都完成了 🎉',
     },
     lie_detective: {
-      phase_start: '侦探们，仔细听每一句话，找出谎言！🕵️',
-      vote_reveal: '揭晓时刻到了！谁是最佳说谎者？😏',
-      generating: '小悦正在为大家准备谎言游戏内容...',
+      phase_start: '侦探时间，仔细听，找出那个假的 🕵️',
+      vote_reveal: '揭晓了，谁最会编？😏',
+      generating: '正在准备谎言游戏，稍等...',
     },
     recap: {
-      phase_start: '今晚的破冰之旅圆满结束！✨',
+      phase_start: '今晚这局差不多到这儿啦 ✨',
     },
   };
 
@@ -461,12 +474,7 @@ export async function generateXiaoYueComment(params: {
   const { client, model, provider } = getClientForFunction('generateXiaoYueComment');
   const t0 = Date.now();
   try {
-    const prompt = `你是社交破冰助手小悦。请为以下场景生成一句简短的主持评语（20-30字）：
-- 当前阶段：${params.phase}
-- 触发事件：${params.event}
-${params.context ? `- 上下文：${params.context}` : ''}
-
-要求：温暖有趣，有主持人的活力，可以加emoji。直接返回评语文本，不要其他内容。`;
+    const prompt = buildXiaoYueCommentPrompt(params);
 
     const response = await client.chat.completions.create({
       model,
@@ -477,7 +485,7 @@ ${params.context ? `- 上下文：${params.context}` : ''}
 
     const content = response.choices[0]?.message?.content?.trim();
     const latencyMs = Date.now() - t0;
-    console.log(`[SocialIcebreakerAI] generateXiaoYueComment provider=${provider} latency=${latencyMs}ms`);
+    logger.info(`[SocialIcebreakerAI] generateXiaoYueComment provider=${provider} latency=${latencyMs}ms`);
     if (content) {
       const meta = buildLiveAIMeta(provider, XIAOYUE_COMMENT_PROMPT_VERSION, aiCorrelationId);
       logAITrace({
@@ -511,7 +519,7 @@ ${params.context ? `- 上下文：${params.context}` : ''}
     return { data: '继续加油，破冰进行中！✨', meta: metaFb };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generateXiaoYueComment error provider=${provider} latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generateXiaoYueComment error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const metaFb = buildFallbackAIMeta('llm_error', XIAOYUE_COMMENT_PROMPT_VERSION, aiCorrelationId);
     logAITrace({
       traceId: aiCorrelationId,
@@ -594,19 +602,19 @@ ${auctionBlock}
     const parsed = JSON.parse(content);
     if (parsed.headline && parsed.moments && parsed.closingLine) {
       const latencyMs = Date.now() - t0;
-      console.log(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms`);
+      logger.info(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       return { data: parsed, meta };
     }
     const latencyMs = Date.now() - t0;
-    console.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
+    logger.warn(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
     const meta = buildFallbackAIMeta('parse_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: getDefaultRecap(params), meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generateRecapSummary error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: getDefaultRecap(params), meta };
@@ -622,15 +630,185 @@ function getDefaultRecap(params: {
 }): { headline: string; moments: string[]; closingLine: string } {
   const names = params.participants.map(p => p.displayName);
   return {
-    headline: `${params.durationMinutes}分钟的精彩破冰！`,
+    headline: `${params.durationMinutes}分钟，这局有点东西`,
     moments: [
-      `聊了${params.topicsDiscussed.length}个有趣话题`,
-      `完成了${params.challengesCompleted}个微挑战`,
-      `发现了${params.commonGroundCount}个共同点`,
-      `${names.length}个人的新奇缘分`,
+      `聊了${params.topicsDiscussed.length}个话题，有几个还挺深的`,
+      `完成了${params.challengesCompleted}个挑战，没人掉链子`,
+      `发现了${params.commonGroundCount}个共同点，缘分啊`,
+      `${names.length}个人，从陌生到能聊到一块`,
     ],
-    closingLine: `感谢${names.slice(0, 2).join('和')}${names.length > 2 ? '等' : ''}大家的参与！期待下次再见 🌟`,
+    closingLine: `这局算你们赢，下次继续 ${names.length > 2 ? '（特别是' + names.slice(0, 2).join('和') + '）' : ''}🌟`,
   };
+}
+
+
+// ─── Xiaoyue Session Pack ─────────────────────────────────────────────────────
+
+const FALLBACK_SESSION_PACK: XiaoyueSessionPack = {
+  generatedAt: new Date().toISOString(),
+  opener: '来了来了，先放松，这局不会尬，我保证。',
+  phaseCoaching: {
+    warmup: { toneLine: '先随便聊聊，不用急着交心', hostHint: '没人开口？你先抛个自己的糗事呗' },
+    micro_challenge: { toneLine: '来点小挑战，两分钟的事', energyRescue: '别急，慢慢玩，时间够的' },
+    lie_detective: { toneLine: '仔细听，找出那个编的', hostHint: '大胆猜，错了也没人记仇' },
+    auction: { toneLine: '虚拟拍卖，脑洞越大越好', energyRescue: '没人出价？自己夸自己也算' },
+    personality_dice: { toneLine: '人格骰子，看看敢不敢接', hostHint: '先从简单的来，别一上来就hard模式' },
+    mini_script: { toneLine: '迷你剧本杀，今晚重头戏', hostHint: '提醒一下，记住自己的秘密和任务' },
+    recap: { toneLine: '差不多了，回顾一下今晚' },
+  },
+  backupPrompts: [
+    '大家突然安静了？试试轮流说一件今天的小事，多小都行。',
+    '来个快速二选一：海边还是山里？火锅还是烧烤？',
+    '有人还没怎么说话？直接点名，问TA一个简单的问题。',
+  ],
+  recapFraming: {
+    open: '今晚这局，挺有意思的',
+    highlightTemplate: '我印象最深的是',
+    close: '这局算你们赢，下次继续',
+  },
+  playerSkillRoles: [],
+};
+
+function isSessionPackEnabled(): boolean {
+  const v = process.env.SOCIAL_XIAOYUE_SESSION_PACK_ENABLED;
+  if (v === undefined || v === '') return true;
+  return v.toLowerCase() === 'true';
+}
+
+export async function generateXiaoyueSessionPack(params: {
+  participants: Array<{ userId: string; displayName: string; archetype?: string }>;
+  eventType?: string;
+  playerCount: number;
+}): Promise<AIServiceResult<XiaoyueSessionPack>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const t0 = Date.now();
+
+  if (!isSessionPackEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generateXiaoyueSessionPack',
+      provider: 'deepseek',
+      model: 'n/a',
+      latencyMs: Date.now() - t0,
+      success: true,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
+    return { data: FALLBACK_SESSION_PACK, meta };
+  }
+
+  const { client, model, provider } = getClientForFunction('generateXiaoyueSessionPack');
+  try {
+    const prompt = buildXiaoyueSessionPackPrompt({
+      participantCount: params.playerCount,
+      eventType: params.eventType,
+      participants: params.participants,
+    });
+
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 800,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) {
+      const meta = buildFallbackAIMeta('empty_response', SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({
+        traceId: aiCorrelationId,
+        domain: 'icebreaker',
+        feature: 'generateXiaoyueSessionPack',
+        provider,
+        model,
+        latencyMs: Date.now() - t0,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+        errorCode: meta.evaluatorRejectionReason,
+      });
+      return { data: FALLBACK_SESSION_PACK, meta };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJsonPayloadForParse(content));
+    } catch {
+      const meta = buildFallbackAIMeta('parse_error', SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({
+        traceId: aiCorrelationId,
+        domain: 'icebreaker',
+        feature: 'generateXiaoyueSessionPack',
+        provider,
+        model,
+        latencyMs: Date.now() - t0,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+        errorCode: meta.evaluatorRejectionReason,
+      });
+      return { data: FALLBACK_SESSION_PACK, meta };
+    }
+
+    try {
+      const validated = parseXiaoyueSessionPack(parsed);
+      const latencyMs = Date.now() - t0;
+      const meta = buildLiveAIMeta(provider, SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({
+        traceId: aiCorrelationId,
+        domain: 'icebreaker',
+        feature: 'generateXiaoyueSessionPack',
+        provider,
+        model,
+        latencyMs,
+        success: true,
+        fallbackUsed: false,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+      });
+      return { data: validated as XiaoyueSessionPack, meta };
+    } catch {
+      const meta = buildFallbackAIMeta('parse_error', SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({
+        traceId: aiCorrelationId,
+        domain: 'icebreaker',
+        feature: 'generateXiaoyueSessionPack',
+        provider,
+        model,
+        latencyMs: Date.now() - t0,
+        success: false,
+        fallbackUsed: true,
+        fromCache: false,
+        promptVersion: meta.promptVersion,
+        errorCode: meta.evaluatorRejectionReason,
+      });
+      return { data: FALLBACK_SESSION_PACK, meta };
+    }
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    logger.error(`[SocialIcebreakerAI] generateXiaoyueSessionPack error latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
+    const meta = buildFallbackAIMeta('llm_error', SESSION_PACK_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generateXiaoyueSessionPack',
+      provider,
+      model,
+      latencyMs,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
+    return { data: FALLBACK_SESSION_PACK, meta };
+  }
 }
 
 // ─── Personality Dice ─────────────────────────────────────────────────────────
@@ -638,12 +816,12 @@ function getDefaultRecap(params: {
 type DominantTrait = 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
 
 const DICE_CURATED: Record<DominantTrait, Omit<PersonalityDiceChallenge, 'userId' | 'displayName' | 'archetype' | 'dominantTrait'>> = {
-  X: { challengeTitle: '快速印象官', challengeBody: '用3个词描述在座每个人，不能重复！', challengeEmoji: '🎤', difficulty: 'easy' },
-  A: { challengeTitle: '温暖传递者', challengeBody: '找出今晚你感受到最多温暖的人，当面告诉他为什么', challengeEmoji: '🤗', difficulty: 'medium' },
-  O: { challengeTitle: '奇异探险家', challengeBody: '分享一件你最近做过的、大多数人不会做的事', challengeEmoji: '🌟', difficulty: 'medium' },
-  C: { challengeTitle: '严苛评委', challengeBody: '你来当评委：给今晚的破冰打分，并说出最值得改进的一点', challengeEmoji: '📋', difficulty: 'hard' },
-  E: { challengeTitle: '误解澄清者', challengeBody: '有没有一件事，你觉得大家可能误解你了？说出来', challengeEmoji: '💭', difficulty: 'medium' },
-  P: { challengeTitle: '阳光分享者', challengeBody: '说一件今晚让你开心的小事，越具体越好', challengeEmoji: '☀️', difficulty: 'easy' },
+  X: { challengeTitle: '第一印象王', challengeBody: '用3个词形容在座每个人，不准重复，不准说"挺好的"', challengeEmoji: '🎤', difficulty: 'easy' },
+  A: { challengeTitle: '温暖派送员', challengeBody: '找出今晚让你感觉最舒服的人，当面告诉他为什么', challengeEmoji: '🤗', difficulty: 'medium' },
+  O: { challengeTitle: '奇葩体验家', challengeBody: '分享一件你最近做的、大部分人不会做的事', challengeEmoji: '🌟', difficulty: 'medium' },
+  C: { challengeTitle: '毒舌评委', challengeBody: '给今晚这局打个分，再说一个最想吐槽的点', challengeEmoji: '📋', difficulty: 'hard' },
+  E: { challengeTitle: '误解粉碎机', challengeBody: '有没有一件事，你觉得大家一直误会你了？现在说清楚', challengeEmoji: '💭', difficulty: 'medium' },
+  P: { challengeTitle: '快乐播报员', challengeBody: '说一件今晚让你开心的小事，越具体越好', challengeEmoji: '☀️', difficulty: 'easy' },
 };
 
 function getDominantTrait(traitScores?: Record<string, number>): DominantTrait {
@@ -684,22 +862,13 @@ export async function generatePersonalityDiceChallenges(participants: Array<{
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallenges');
   const t0 = Date.now();
   try {
-    const participantList = participants.map(p => ({
+    const participantList = participants.map((p) => ({
       displayName: p.displayName,
       archetype: p.archetype || '未知',
       dominantTrait: getDominantTrait(p.traitScores),
     }));
 
-    const prompt = `你是社交破冰专家小悦。请为以下参与者各生成一个个性化挑战：
-
-${JSON.stringify(participantList, null, 2)}
-
-每个挑战要基于该人的人格特质(dominantTrait)，要有趣且适合当场执行（1-2分钟内）。
-
-请以JSON数组返回（顺序与输入一致）：
-[{"challengeTitle":"挑战名称","challengeBody":"挑战说明（20字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard"}]
-
-直接返回JSON数组，不要其他内容。`;
+    const prompt = buildPersonalityDicePrompt({ participants: participantList });
 
     const response = await client.chat.completions.create({
       model,
@@ -720,14 +889,14 @@ ${JSON.stringify(participantList, null, 2)}
       parsed = JSON.parse(extractJsonPayloadForParse(content));
     } catch {
       const latencyMs = Date.now() - t0;
-      console.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`);
+      logger.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`);
       const meta = buildFallbackAIMeta('parse_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
       return { data: fallbacks, meta };
     }
     if (Array.isArray(parsed) && parsed.length === participants.length) {
       const latencyMs = Date.now() - t0;
-      console.log(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms`);
+      logger.info(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       return { data: participants.map((p, i) => ({
@@ -742,13 +911,13 @@ ${JSON.stringify(participantList, null, 2)}
       })), meta };
     }
     const latencyMs = Date.now() - t0;
-    console.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape (expected ${participants.length} items), using fallback`);
+    logger.warn(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms: invalid response shape (expected ${participants.length} items), using fallback`);
     const meta = buildFallbackAIMeta('parse_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: fallbacks, meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generatePersonalityDiceChallenges error provider=${provider} latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generatePersonalityDiceChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: fallbacks, meta };
@@ -756,9 +925,9 @@ ${JSON.stringify(participantList, null, 2)}
 }
 
 const FALLBACK_AUCTION_LOTS: AuctionLot[] = [
-  { id: 'lot_fb_1', title: '分享一次无伤大雅的社死瞬间', teaser: '越轻松越好' },
-  { id: 'lot_fb_2', title: '用三句话编一个离谱旅行故事', teaser: '现场即兴' },
-  { id: 'lot_fb_3', title: '爆料一个今晚之前没人知道的小习惯', teaser: '放心说完就翻篇' },
+  { id: 'lot_fb_1', title: '分享一个无伤大雅的社死瞬间', teaser: '越离谱越好，反正大家都不认识' },
+  { id: 'lot_fb_2', title: '用三句话编一个离谱旅行故事', teaser: '现场即兴，瞎编也行' },
+  { id: 'lot_fb_3', title: '爆料一个今晚之前没人知道的小习惯', teaser: '说完就翻篇，不截图' },
 ];
 
 function isAuctionLlmEnabled(): boolean {
@@ -802,15 +971,7 @@ export async function generateAuctionLots(params: {
 
   const { client, model, provider } = getClientForFunction('generateAuctionLots');
   try {
-    const eventLabel = params.eventType ? `「${params.eventType}」` : '';
-    const prompt =
-      `你是社交破冰主持人小悦。为一场线下小局（约${params.participantCount}人）设计${eventLabel}虚拟脑洞拍卖的竞拍条目。\n\n` +
-      '规则：\n' +
-      '- 全部是轻松、低压力的分享或小表演类条目，不要涉及金钱、酒精、恋爱隐私、政治、宗教、身体伤害。\n' +
-      '- 每个条目要能在几分钟内完成。\n' +
-      '- 生成 3 到 5 条竞拍品。\n\n' +
-      '请以 JSON 对象返回（仅此对象，不要 markdown）：\n' +
-      '{"lots":[{"id":"lot_1","title":"竞拍标题（≤20字）","teaser":"一句话说明（≤40字，可选）"}]}';
+    const prompt = buildAuctionLotsPrompt(params);
 
     const response = await client.chat.completions.create({
       model,
@@ -895,7 +1056,7 @@ export async function generateAuctionLots(params: {
     return { data: normalizeAuctionLots(validated.data.lots), meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    console.error(`[SocialIcebreakerAI] generateAuctionLots error latency=${latencyMs}ms:`, error);
+    logger.error(`[SocialIcebreakerAI] generateAuctionLots error latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     const meta = buildFallbackAIMeta('llm_error', AUCTION_LOTS_PROMPT_VERSION, aiCorrelationId);
     logAITrace({
       traceId: aiCorrelationId,
@@ -932,28 +1093,7 @@ export type MiniScriptFrameworkModelFetchResult =
       latencyMs: number;
     };
 
-const MINISCRIPT_FRAMEWORK_SYSTEM =
-  'You are JoyJoin MiniScript story framework writer. Reply with one JSON object only (no markdown). ' +
-  'Rules: light social mystery, low conflict, no graphic violence, no hate, no real-person names. ' +
-  'All narrative strings in Chinese.';
 
-function buildMiniScriptFrameworkUserMessage(params: {
-  playerCount: number;
-  style: MiniScriptStyle;
-  genres: MiniScriptGenre[];
-}): string {
-  return (
-    `Host-locked parameters (must match exactly in output):\n` +
-    `- playerCount: ${params.playerCount} — output exactly ${params.playerCount} characters.\n` +
-    `- style: "${params.style}"\n` +
-    `- genres: ${JSON.stringify(params.genres)}\n\n` +
-    'JSON shape: { "schemaVersion": 1, "style", "genres", "premise", "characters", "act_flow", "ending" }.\n' +
-    'characters: ordered slotIndex 0..n-1; roleLabel, sinHook, alibi, secret (playful, not cruel).\n' +
-    'act_flow: 2–4 acts with actNumber, title, beats (short strings).\n' +
-    'ending: resolutionSummary, confessionMechanic.\n\n' +
-    'Strict: reply with a single JSON object only — no markdown fences, no commentary before or after.'
-  );
-}
 
 type ClientSelection = ReturnType<typeof getClientForFunction>;
 
@@ -1008,7 +1148,7 @@ async function fetchMiniScriptFrameworkOnce(params: {
         latencyMs,
       };
     }
-    console.error('[SocialIcebreakerAI] fetchMiniScriptFrameworkModelJson attempt failed:', error);
+    logger.error('fetchMiniScriptFrameworkModelJson attempt failed', { error: error instanceof Error ? error.message : String(error) });
     return { ok: false, reason: 'llm_error', provider, model, latencyMs };
   }
 }

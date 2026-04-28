@@ -9,7 +9,7 @@ import type { ThemeLLMInput } from '@shared/types/eventTheme';
 
 describe('themeLLMService - validation', () => {
   const mockInput: ThemeLLMInput = {
-    archetypeDynamics: '开心柯基×机智狐',
+    archetypeDynamics: 'corgi×fox',
     avgEnergy: 88,
     pattern: 'complementary',
     energyProfile: {
@@ -132,9 +132,9 @@ describe('themeLLMService - validation', () => {
     
     it('should pass for all 12 archetype names', () => {
       const archetypeNames = [
-        '开心柯基', '太阳鸡', '夸夸豚', '机智狐',
-        '淡定海豚', '织网蛛', '暖心熊', '灵感章鱼',
-        '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'
+        'corgi', 'rooster', 'hamster_praise', 'fox',
+        'dolphin_calm', 'spider', 'koala', 'octopus',
+        'owl', 'elephant', 'turtle', 'cat'
       ];
       
       for (const archetype of archetypeNames) {
@@ -185,7 +185,7 @@ describe('themeLLMService - validation', () => {
       
       const lowEnergyInput = {
         ...mockInput,
-        archetypeDynamics: '沉思猫头鹰×隐身猫',
+        archetypeDynamics: 'owl×cat',
         avgEnergy: 45, // Low energy!
       };
       
@@ -366,7 +366,7 @@ describe('themeLLMService - validation', () => {
       };
       
       const input: ThemeLLMInput = {
-        archetypeDynamics: '沉思猫头鹰×定心大象',
+        archetypeDynamics: 'owl×elephant',
         avgEnergy: 44,
         pattern: 'complementary',
         interest: { name: '阅读', count: 4, avgHeat: 25 },

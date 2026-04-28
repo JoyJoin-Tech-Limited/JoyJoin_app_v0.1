@@ -5,16 +5,13 @@
  * 集成模块化prompt和RAG检索
  */
 
-import OpenAI from 'openai';
 import type { InferredAttribute, UserAttributeMap, ConflictInfo } from './types';
 import { getReasoningModules } from '../prompts';
 import { generateRAGContext } from './industryOntology';
-
-// 使用DeepSeek API
-const client = new OpenAI({
-  baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY || ''
-});
+import { getDeepseekClient, getDeepseekModel } from '../ai/deepseekClient';
+import { buildThinkingExtraBody } from '@joyjoin/shared';
+import { logger } from '../lib/logger';
+import { isProBudgetAvailable, recordProUsage } from '../ai/deepseekBudgetTracker';
 
 // 遥测日志
 interface TelemetryLog {
@@ -186,17 +183,33 @@ export class LLMReasoner {
       const ragContext = this.getRAGContext(userMessage, conversationHistory);
       const prompt = this.buildPrompt(userMessage, conversationHistory, currentState, ragContext);
       
-      // 调用LLM
-      const response = await client.chat.completions.create({
-        model: 'deepseek-chat',
+      // 调用LLM (Pro-thinking for complex inference, budget-gated)
+      const tier = isProBudgetAvailable() ? ('pro-thinking' as const) : ('flash' as const);
+      const requestPayload = {
+        model: getDeepseekModel(tier),
         messages: [
-          { role: 'system', content: prompt }
+          { role: 'system' as const, content: prompt }
         ],
-        temperature: 0.3,  // 低温度，更确定性的输出
+        temperature: 0.3,
         max_tokens: 1000,
-        response_format: { type: 'json_object' }
-      });
-      
+        response_format: { type: 'json_object' as const },
+      };
+      const thinkingExtraBody = buildThinkingExtraBody(tier);
+      if (thinkingExtraBody) {
+        // @ts-expect-error - DeepSeek-specific thinking extension
+        requestPayload.extra_body = thinkingExtraBody;
+      }
+      const response = await getDeepseekClient().chat.completions.create(requestPayload);
+
+      // Record Pro usage for budget tracking
+      if (tier === 'pro-thinking' && response.usage) {
+        recordProUsage({
+          inputTokens: response.usage.prompt_tokens ?? 0,
+          outputTokens: response.usage.completion_tokens ?? 0,
+          feature: 'llmReasoner',
+        });
+      }
+
       const content = response.choices[0]?.message?.content;
       if (!content) {
         throw new Error('LLM返回空内容');
@@ -229,7 +242,7 @@ export class LLMReasoner {
       const latencyMs = Date.now() - startTime;
       const errorMsg = error instanceof Error ? error.message : '未知错误';
       
-      console.error('LLM推理错误:', error);
+      logger.error('LLM推理错误', { operation: 'llm_infer', error: error instanceof Error ? error.message : String(error) });
       
       // 记录遥测
       logTelemetry({
@@ -271,7 +284,7 @@ export class LLMReasoner {
       const ragContext = generateRAGContext(userMessages);
       return ragContext || null;
     } catch (e) {
-      console.warn('RAG上下文生成失败:', e);
+      logger.warn('RAG上下文生成失败', { operation: 'rag_context', error: e instanceof Error ? e.message : String(e) });
       return null;
     }
   }
@@ -344,7 +357,7 @@ export class LLMReasoner {
         confirmQuestions: data.confirmQuestions || []
       };
     } catch (e) {
-      console.error('解析LLM响应失败:', e, content);
+      logger.error('解析LLM响应失败', { operation: 'parse_llm_response', error: e instanceof Error ? e.message : String(e), contentPreview: content?.slice(0, 200) });
       return {
         extracted: {},
         inferred: [],

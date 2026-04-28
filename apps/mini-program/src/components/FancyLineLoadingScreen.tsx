@@ -48,7 +48,7 @@ export function FancyLineLoadingScreen({
       <View className='fancy-line-loading-screen__inner'>
         <Image
           className='fancy-line-loading-screen__logo'
-          src='/assets/box_logo_archetypes.png'
+          src='/assets/box-logo.webp'
           mode='aspectFit'
           ariaLabel='悦聚 JoyJoin'
         />

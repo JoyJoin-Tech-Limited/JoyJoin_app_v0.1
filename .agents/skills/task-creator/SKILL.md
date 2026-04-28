@@ -23,6 +23,12 @@ Always produce exactly this structure:
 - Sibling platform review needed? [yes / no / not sure]
   - (If yes: flag which surfaces — mini-program, admin, or both. Web is reference-only, not a launch target.)
 - Upstream plan: [link or "none"]
+- **Harness tier:** [1 / 2 / 3 / not sure yet]
+  - Tier 1 = small, bounded, ≤50 lines, 1 workspace
+  - Tier 2 = new route, multi-file, auth, stateful op, migration, UI flow
+  - Tier 3 = core engine, payment, >5 core files, architectural boundary
+- **Sprint Contract required?** [yes / no]
+  - Yes for Tier 2+ tasks. No for Tier 1.
 
 **Ripple effect (举一反三):**
 [Look one step beyond the immediate fix. What adjacent areas, similar patterns, or related flows should we also polish while we're here? Examples: "The same broken pattern exists on 3 other screens," "This API change should also update the admin dashboard," "We should apply this same interaction pattern to the onboarding flow." If nothing obvious, say "No obvious ripples — fix is localized."]

@@ -264,7 +264,7 @@ if (distToTarget > stepsRemaining + 1) {
 │    🎉 你是 🎉           │
 │                         │
 │   🐕                    │ ← Emoji (scale pulse)
-│   开心柯基               │ ← Name (letter by letter)
+│   气氛组柯基               │ ← Name (letter by letter)
 │                         │
 │ ⭐ 匹配度 92%           │ ← Confidence badge
 └─────────────────────────┘

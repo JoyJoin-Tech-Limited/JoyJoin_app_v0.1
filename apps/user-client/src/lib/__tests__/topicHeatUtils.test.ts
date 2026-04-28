@@ -28,7 +28,7 @@ describe("topicHeatUtils", () => {
   it("falls back to archetype topic hints when fewer than three themes are available", () => {
     const cues = deriveTopicCues(
       [{ themeTitle: "城市夜游", themeEmoji: "🌃" }],
-      { 沉思猫头鹰: 2 },
+      { owl: 2 },
     );
 
     expect(cues).toEqual([
@@ -39,11 +39,11 @@ describe("topicHeatUtils", () => {
   });
 
   it("falls back to archetype traits when explicit topic hints are unavailable", () => {
-    const originalHints = ARCHETYPE_TOPIC_HINTS["沉思猫头鹰"];
-    ARCHETYPE_TOPIC_HINTS["沉思猫头鹰"] = [];
+    const originalHints = ARCHETYPE_TOPIC_HINTS["owl"];
+    ARCHETYPE_TOPIC_HINTS["owl"] = [];
 
     try {
-      const cues = deriveTopicCues([], { 沉思猫头鹰: 1 });
+      const cues = deriveTopicCues([], { owl: 1 });
 
       expect(cues).toEqual([
         { emoji: "💡", text: "逻辑性强" },
@@ -51,7 +51,7 @@ describe("topicHeatUtils", () => {
         { emoji: "💡", text: "追求真理" },
       ]);
     } finally {
-      ARCHETYPE_TOPIC_HINTS["沉思猫头鹰"] = originalHints;
+      ARCHETYPE_TOPIC_HINTS["owl"] = originalHints;
     }
   });
 

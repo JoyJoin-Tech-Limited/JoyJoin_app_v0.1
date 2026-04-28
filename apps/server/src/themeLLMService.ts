@@ -15,21 +15,16 @@ import type {
 import { getEnergyLabel, getEnergyEmoji } from './themeScoringService';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
 import { getThemeLLMProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logAITrace } from './lib/aiTraceLogger';
+import { logger } from "./lib/logger";
 
 const THEME_LLM_PROMPT_VERSION = 'event-theme-llm-v1';
 
 // Validate API keys at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
-  console.warn('[ThemeLLM] Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Theme generation will use fallback mode.');
+  logger.warn('[ThemeLLM] Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Theme generation will use fallback mode.');
 }
-
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
-  baseURL: 'https://api.deepseek.com',
-  timeout: 10000, // 10 second timeout to prevent hanging
-  maxRetries: 2,  // Max 2 retries on network errors
-});
 
 /**
  * Returns the active AI client and model for theme generation based on provider routing.
@@ -42,10 +37,10 @@ function getThemeAIClient(): { client: OpenAI; model: string; provider: AIProvid
     if (minimaxClient) {
       return { client: minimaxClient, model: MINIMAX_MODEL, provider: 'minimax' };
     }
-    console.warn('[ThemeLLM] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
+    logger.warn('[ThemeLLM] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
   }
 
-  return { client: deepseekClient, model: 'deepseek-chat', provider: 'deepseek' };
+  return { client: getDeepseekClient(), model: getDeepseekModel('flash'), provider: 'deepseek' };
 }
 
 /**
@@ -73,9 +68,9 @@ const SYSTEM_PROMPT = `你生成JoyJoin的盲盒主题 (mystery box themes) 活�
 # 原型使用 (关键)
 
 JoyJoin的12个原型 (必须在主题中使用):
-- 高能量 (80-95): 开心柯基、太阳鸡、夸夸豚、机智狐
-- 中能量 (60-79): 淡定海豚、织网蛛、暖心熊、灵感章鱼
-- 低能量 (30-59): 沉思猫头鹰、定心大象、稳如龟、隐身猫
+- 高能量 (80-95): corgi、rooster、hamster_praise、fox
+- 中能量 (60-79): dolphin_calm、spider、koala、octopus
+- 低能量 (30-59): owl、elephant、turtle、cat
 
 模式类型:
 - 同质型: "柯基的快乐派对" (全是同一个原型)
@@ -86,7 +81,7 @@ JoyJoin的12个原型 (必须在主题中使用):
 
 # 好的模式 (必须遵循)
 
-✅ "高能充电站：柯基×太阳鸡的周末探险"
+✅ "高能充电站：柯基×rooster的周末探险"
    主题: 原型 + 能量 + 活动
    副标题: "广州老乡的咖啡派对"
 
@@ -216,14 +211,14 @@ export function validateTheme(
   
   // CHECK 3: Archetype presence (CRITICAL)
   const ARCHETYPE_NAMES = [
-    '开心柯基', '太阳鸡', '夸夸豚', '机智狐',
-    '淡定海豚', '织网蛛', '暖心熊', '灵感章鱼',
-    '沉思猫头鹰', '定心大象', '稳如龟', '隐身猫'
+    'corgi', 'rooster', 'hamster_praise', 'fox',
+    'dolphin_calm', 'spider', 'koala', 'octopus',
+    'owl', 'elephant', 'turtle', 'cat'
   ];
   
   // Short aliases for archetypes (used in themes)
   const ARCHETYPE_ALIASES = [
-    '柯基', '太阳鸡', '豚', '狐狸', '狐',
+    '柯基', 'rooster', '豚', '狐狸', '狐',
     '海豚', '蛛', '熊', '章鱼',
     '猫头鹰', '大象', '龟', '猫'
   ];
@@ -312,7 +307,7 @@ export async function generateThemeWithLLM(
 
   // Check if any AI key is available for the resolved provider
   if (!isProviderAvailable(provider)) {
-    console.warn('[ThemeLLM] No AI provider configured, using fallback');
+    logger.warn('[ThemeLLM] No AI provider configured, using fallback');
     logAITrace({
       domain: 'theme_generation',
       feature: 'generateThemeLLM',
@@ -336,7 +331,7 @@ export async function generateThemeWithLLM(
     try {
       const userPrompt = buildUserPrompt(input);
       
-      console.log(`[ThemeLLM] provider=${provider} attempt=${attempt} - Generating theme...`);
+      logger.info(`[ThemeLLM] provider=${provider} attempt=${attempt} - Generating theme...`);
       const startTime = Date.now();
       
       const response = await client.chat.completions.create({
@@ -353,7 +348,7 @@ export async function generateThemeWithLLM(
       const durationMs = Date.now() - startTime;
       const content = response.choices[0]?.message?.content;
       if (!content) {
-        console.warn(`[ThemeLLM] provider=${provider} attempt=${attempt} - No content in response (${durationMs}ms)`);
+        logger.warn(`[ThemeLLM] provider=${provider} attempt=${attempt} - No content in response (${durationMs}ms)`);
         if (attempt === maxAttempts) {
           logAITrace({
             domain: 'theme_generation',
@@ -383,7 +378,7 @@ export async function generateThemeWithLLM(
       const validation = validateTheme(parsed, input);
       
       if (validation.valid) {
-        console.log(`[ThemeLLM] provider=${provider} attempt=${attempt} latency=${durationMs}ms success=true`);
+        logger.info(`[ThemeLLM] provider=${provider} attempt=${attempt} latency=${durationMs}ms success=true`);
         logAITrace({
           domain: 'theme_generation',
           feature: 'generateThemeLLM',
@@ -413,7 +408,7 @@ export async function generateThemeWithLLM(
           validationErrors: validation.warnings,
         };
       } else {
-        console.warn(`[ThemeLLM] provider=${provider} attempt=${attempt} - Validation failed:`, validation.errors);
+        logger.warn('Validation failed', { provider, attempt, errors: validation.errors });
         
         if (attempt === maxAttempts) {
           // Last attempt failed, use fallback
@@ -441,7 +436,7 @@ export async function generateThemeWithLLM(
         // (could add validation feedback to prompt here)
       }
     } catch (error) {
-      console.error(`[ThemeLLM] provider=${provider} attempt=${attempt} - Error:`, error);
+      logger.error(`[ThemeLLM] provider=${provider} attempt=${attempt} - Error:`, { error: error instanceof Error ? error.message : String(error) });
       
       if (attempt === maxAttempts) {
         logAITrace({

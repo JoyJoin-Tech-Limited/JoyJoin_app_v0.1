@@ -1,12 +1,8 @@
 import OpenAI from 'openai';
 import { callSocialAI } from './ai/socialModelRouter';
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logAITrace } from './lib/aiTraceLogger';
-
-// DeepSeek client retained for non-social functions (e.g. recommendGameForParticipants)
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+import { logger } from './lib/logger';
 
 export interface ParticipantInfo {
   displayName: string;
@@ -26,13 +22,13 @@ const WELCOME_PROMPT = `你是"小悦"，JoyJoin平台的破冰助手。你需�
 4. 简洁口语化：像朋友说话一样自然
 
 ## 社交原型简介
-- 开心柯基/太阳鸡/夸夸豚：高能量、活跃气氛
-- 暖心熊/温暖金毛：温暖、善于倾听
-- 隐身猫/稳如龟：内敛、深度交流
-- 沉思猫头鹰：深度思考者
-- 灵感章鱼/机智狐：创意型、好奇心强
-- 织网蛛/淡定海豚：社交达人
-- 定心大象：稳重可靠
+- corgi/rooster/hamster_praise：高能量、活跃气氛
+- koala/温暖金毛：温暖、善于倾听
+- cat/turtle：内敛、深度交流
+- owl：深度思考者
+- octopus/fox：创意型、好奇心强
+- spider/dolphin_calm：社交达人
+- elephant：稳重可靠
 
 ## 输出要求
 直接输出欢迎语文本，不要有任何格式标记或额外解释。`;
@@ -130,7 +126,7 @@ ${eventTitle ? `活动：${eventTitle}` : ''}
     });
     return message;
   } catch (error) {
-    console.error('AI welcome message error:', error);
+    logger.error('AI welcome message error', { error: error instanceof Error ? error.message : String(error) });
     logAITrace({
       domain: 'icebreaker',
       feature: 'generateWelcomeMessage',
@@ -219,7 +215,7 @@ ${gamesPlayed?.length ? `玩过的游戏：${gamesPlayed.slice(0, 3).join('、')
     });
     return message;
   } catch (error) {
-    console.error('AI closing message error:', error);
+    logger.error('AI closing message error', { error: error instanceof Error ? error.message : String(error) });
     logAITrace({
       domain: 'icebreaker',
       feature: 'generateClosingMessage',
@@ -238,10 +234,10 @@ ${gamesPlayed?.length ? `玩过的游戏：${gamesPlayed.slice(0, 3).join('、')
 function getDefaultWelcome(participants: ParticipantInfo[]): string {
   const count = participants.length;
   const hasHighEnergy = participants.some(p => 
-    ['开心柯基', '太阳鸡', '夸夸豚'].some(a => p.archetype?.includes(a))
+    ['corgi', 'rooster', 'hamster_praise'].some(a => p.archetype?.includes(a))
   );
   const hasWarm = participants.some(p => 
-    ['暖心熊', '温暖金毛'].some(a => p.archetype?.includes(a))
+    ['koala', '温暖金毛'].some(a => p.archetype?.includes(a))
   );
 
   if (hasHighEnergy) {
@@ -268,16 +264,16 @@ export async function generateQuickWelcome(
   archetypes: string[]
 ): Promise<string> {
   const hasHighEnergy = archetypes.some(a => 
-    ['开心柯基', '太阳鸡', '夸夸豚'].some(t => a.includes(t))
+    ['corgi', 'rooster', 'hamster_praise'].some(t => a.includes(t))
   );
   const hasCreative = archetypes.some(a => 
-    ['灵感章鱼', '机智狐'].some(t => a.includes(t))
+    ['octopus', 'fox'].some(t => a.includes(t))
   );
   const hasDeep = archetypes.some(a => 
-    ['沉思猫头鹰', '稳如龟', '隐身猫'].some(t => a.includes(t))
+    ['owl', 'turtle', 'cat'].some(t => a.includes(t))
   );
   const hasWarm = archetypes.some(a => 
-    ['暖心熊', '温暖金毛'].some(t => a.includes(t))
+    ['koala', '温暖金毛'].some(t => a.includes(t))
   );
 
   if (hasHighEnergy && hasCreative) {
@@ -308,13 +304,13 @@ const GAME_RECOMMENDATION_PROMPT = `你是"小悦"，JoyJoin平台的智能破�
 {GAMES_LIST}
 
 ## 社交原型特点
-- 开心柯基/太阳鸡/夸夸豚：高能量、活跃气氛、喜欢热闹互动
-- 暖心熊：温暖、善于倾听、喜欢深度交流
-- 隐身猫/稳如龟：内敛、偏好安静、适合低压力游戏
-- 沉思猫头鹰：深度思考者、喜欢有意义的话题
-- 灵感章鱼/机智狐：创意型、好奇心强、喜欢脑洞游戏
-- 织网蛛/淡定海豚：社交达人、适应力强
-- 定心大象：稳重可靠、适合引导型游戏
+- corgi/rooster/hamster_praise：高能量、活跃气氛、喜欢热闹互动
+- koala：温暖、善于倾听、喜欢深度交流
+- cat/turtle：内敛、偏好安静、适合低压力游戏
+- owl：深度思考者、喜欢有意义的话题
+- octopus/fox：创意型、好奇心强、喜欢脑洞游戏
+- spider/dolphin_calm：社交达人、适应力强
+- elephant：稳重可靠、适合引导型游戏
 
 ## 推荐原则
 1. 人数匹配：游戏的minPlayers和maxPlayers要覆盖当前参与人数
@@ -387,8 +383,8 @@ export async function recommendGameForParticipants(
   const systemPrompt = GAME_RECOMMENDATION_PROMPT.replace('{GAMES_LIST}', gamesListStr);
 
   try {
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await getDeepseekClient().chat.completions.create({
+      model: getDeepseekModel('flash'),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -413,11 +409,11 @@ export async function recommendGameForParticipants(
           }
         }
       } catch (parseError) {
-        console.error('Failed to parse AI game recommendation:', parseError);
+        logger.error('Failed to parse AI game recommendation', { error: parseError instanceof Error ? parseError.message : String(parseError) });
       }
     }
   } catch (error) {
-    console.error('AI game recommendation error:', error);
+    logger.error('AI game recommendation error', { error: error instanceof Error ? error.message : String(error) });
   }
 
   const fallbackGame = eligibleGames[Math.floor(Math.random() * eligibleGames.length)];
@@ -430,10 +426,10 @@ export async function recommendGameForParticipants(
 
 function getDefaultGameReason(game: GameInfo, count: number, archetypes: string[]): string {
   const hasHighEnergy = archetypes.some(a => 
-    ['开心柯基', '太阳鸡', '夸夸豚'].some(t => a.includes(t))
+    ['corgi', 'rooster', 'hamster_praise'].some(t => a.includes(t))
   );
   const hasCreative = archetypes.some(a => 
-    ['灵感章鱼', '机智狐'].some(t => a.includes(t))
+    ['octopus', 'fox'].some(t => a.includes(t))
   );
   
   if (game.category === 'quick') {

@@ -177,7 +177,7 @@ class InMemoryStore {
     return this.lieTruths.get(`${socialSessionId}::${userId}`)?.statements ?? null;
   }
 
-  getAllSessionLieTruths(
+  loadSessionLieTruths(
     socialSessionId: string,
   ): Map<string, Array<{ index: number; text: string; isLie: boolean }>> {
     const result = new Map<string, Array<{ index: number; text: string; isLie: boolean }>>();
@@ -425,7 +425,7 @@ describe('InMemoryStore – server-only lie truth secrecy', () => {
     expect(store.getLieTruths('social_sess-1', 'user-99')).toBeNull();
   });
 
-  it('getAllSessionLieTruths returns truth data for all players in the session', () => {
+  it('loadSessionLieTruths returns truth data for all players in the session', () => {
     store.setLieTruths('social_sess-1', 'user-1', [
       { index: 1, text: 'A', isLie: false },
       { index: 2, text: 'B', isLie: true },
@@ -435,7 +435,7 @@ describe('InMemoryStore – server-only lie truth secrecy', () => {
       { index: 2, text: 'Y', isLie: false },
     ]);
 
-    const all = store.getAllSessionLieTruths('social_sess-1');
+    const all = store.loadSessionLieTruths('social_sess-1');
     expect(all.size).toBe(2);
     expect(all.get('user-1')!.find(s => s.isLie)?.index).toBe(2);
     expect(all.get('user-2')!.find(s => s.isLie)?.index).toBe(1);

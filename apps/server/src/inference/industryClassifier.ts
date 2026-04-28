@@ -15,6 +15,8 @@ import { OCCUPATIONS } from "@shared/occupations";
 import { ensureReasoning } from "./reasoningGenerator";
 import { inferNicheFromContext } from "./nicheInferenceEngine";
 import { applySemanticFallback } from "@shared/semanticFallback";
+import { getDeepseekModel } from "../ai/deepseekClient";
+import { logger } from "../lib/logger";
 
 // Confidence thresholds for classification tiers
 const CONFIDENCE_THRESHOLDS = {
@@ -285,7 +287,7 @@ async function matchViaAI(userInput: string): Promise<IndustryClassificationResu
     
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      console.error("DEEPSEEK_API_KEY not configured");
+      logger.error("DEEPSEEK_API_KEY not configured");
       return null;
     }
     
@@ -318,7 +320,7 @@ ${categoryList}
 注意：所有label必须使用简体中文，confidence反映确定性。`;
     
     const response = await (openai.chat.completions.create as any)({
-      model: "deepseek-chat",
+      model: getDeepseekModel('flash'),
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.3,
@@ -366,7 +368,7 @@ ${categoryList}
     // Ensure reasoning is always present
     return ensureReasoning(result, userInput);
   } catch (error) {
-    console.error("AI classification error:", error);
+    logger.error("AI classification error:", { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -392,7 +394,7 @@ async function normalizeUserInput(rawText: string): Promise<string> {
 输出: `;
     
     const response = await openai.chat.completions.create({
-      model: "deepseek-chat",
+      model: getDeepseekModel('flash'),
       messages: [{ role: "user", content: prompt }],
       temperature: 0.1,
       max_tokens: 50,
@@ -401,6 +403,7 @@ async function normalizeUserInput(rawText: string): Promise<string> {
     const normalized = response.choices[0]?.message?.content?.trim();
     return normalized || rawText;
   } catch (error) {
+    logger.error("[IndustryClassifier] normalizeUserInput error:", { error: error instanceof Error ? error.message : String(error) });
     return rawText;
   }
 }
@@ -540,7 +543,7 @@ async function generateSemanticDescription(userInput: string): Promise<string> {
 输出（仅一句话）：`;
   
   const response = await openai.chat.completions.create({
-    model: "deepseek-chat",
+    model: getDeepseekModel('flash'),
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 50,
@@ -624,7 +627,7 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
   }
   
   // 🆕 Don't guess randomly - generate AI semantic description
-  console.log(`[Fallback] Unable to classify "${userInput}", generating AI semantic description...`);
+  logger.info(`[Fallback] Unable to classify "${userInput}", generating AI semantic description...`);
   
   try {
     const aiDescription = await generateSemanticDescription(userInput);
@@ -644,7 +647,7 @@ async function intelligentFallback(userInput: string, startTime: number): Promis
       normalizedInput: aiDescription,  // 🆕 AI semantic description
     };
   } catch (error) {
-    console.error('[Fallback] AI description generation failed:', error);
+    logger.error('[Fallback] AI description generation failed:', { error: error instanceof Error ? error.message : String(error) });
     
     // AI failed too, return basic unclassified state
     const unknownCategory = INDUSTRY_TAXONOMY.find(c => c.id === "other") || INDUSTRY_TAXONOMY.find(c => c.id === DEFAULT_FALLBACK_CATEGORY_ID) || INDUSTRY_TAXONOMY[0];
@@ -678,7 +681,7 @@ async function matchViaAIWithLockedCategory(
     
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      console.error("DEEPSEEK_API_KEY not configured");
+      logger.error("DEEPSEEK_API_KEY not configured");
       return null;
     }
     
@@ -689,7 +692,7 @@ async function matchViaAIWithLockedCategory(
     
     const lockedCategory = findCategoryById(lockedCategoryId);
     if (!lockedCategory) {
-      console.error(`Locked category ${lockedCategoryId} not found`);
+      logger.error(`Locked category ${lockedCategoryId} not found`);
       return null;
     }
     
@@ -722,7 +725,7 @@ ${availableOptions}
 3. confidence反映确定性，locked category场景下应+0.1`;
     
     const response = await (openai.chat.completions.create as any)({
-      model: "deepseek-chat",
+      model: getDeepseekModel('flash'),
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.3,
@@ -736,7 +739,7 @@ ${availableOptions}
     try {
       aiResult = JSON.parse(content);
     } catch (parseError) {
-      console.error("Failed to parse AI industry classification JSON:", parseError);
+      logger.error("Failed to parse AI industry classification JSON:", { error: parseError instanceof Error ? parseError.message : String(parseError) });
       return null;
     }
     
@@ -775,7 +778,7 @@ ${availableOptions}
     // Ensure reasoning is always present
     return ensureReasoning(result, userInput);
   } catch (error) {
-    console.error("AI classification with locked category error:", error);
+    logger.error("AI classification with locked category error:", { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -798,14 +801,14 @@ export async function classifyIndustryWithContext(
   const cacheKey = generateCacheKey(description, context);
   const cachedResult = getCachedClassification(cacheKey);
   if (cachedResult) {
-    console.log(`[Cache HIT] ${cacheKey}`);
+    logger.info(`[Cache HIT] ${cacheKey}`);
     return {
       ...cachedResult,
       processingTimeMs: Date.now() - startTime,
     } as IndustryClassificationResult;
   }
   
-  console.log(`[Cache MISS] ${cacheKey}`);
+  logger.info(`[Cache MISS] ${cacheKey}`);
   
   // Strategy 1: If occupationId provided, use seedMappings
   if (context?.occupationId) {
@@ -946,7 +949,7 @@ export async function classifyIndustry(
   try {
     aiResult = await matchViaAI(cleanInput);
   } catch (error) {
-    console.error("AI classification error:", error);
+    logger.error("AI classification error:", { error: error instanceof Error ? error.message : String(error) });
   }
   
   // 🆕 Decision point: Should we ask user to confirm?

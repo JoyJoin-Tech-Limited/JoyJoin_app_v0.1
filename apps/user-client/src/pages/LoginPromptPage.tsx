@@ -43,7 +43,7 @@ export default function LoginPromptPage() {
     }
   }, [assessmentResult, userData]);
 
-  const displayArchetype = archetype || "开心柯基";
+  const displayArchetype = archetype || "corgi";
   const archetypeAvatar = archetypeAvatars[displayArchetype];
   const archetypeGradient = getArchetypeGradient(displayArchetype);
 

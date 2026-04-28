@@ -1,9 +1,12 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import type { PoolGroupDetailsResponse } from '@shared/api'
 import type { GroupAnalysisResponse, PairExplanation } from '@shared/types/groupAnalysis'
+import ArchetypeHead from '../../components/ArchetypeHead'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
+import JoyJoinIcon from '../../components/JoyJoinIcon'
+import ChemistryBadge from '../../components/ChemistryBadge'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import {
   getVibeLabel,
@@ -58,7 +61,7 @@ export function MatchingStatusPendingSection({
     <>
       {newMemberJoined ? (
         <View className='matching-status__arrival-toast'>
-          <Text className='matching-status__arrival-emoji'>✨</Text>
+          <JoyJoinIcon emoji='✨' size={32} className='matching-status__arrival-emoji' />
           <Text className='matching-status__arrival-text'>
             {newMemberArchetype ? `${newMemberArchetype} 刚刚入座了` : '刚有新朋友加入这桌'}
           </Text>
@@ -125,7 +128,7 @@ export function MatchingStatusPendingSection({
 
           {newMemberJoined ? (
             <View className='matching-status__waiting-seat-burst'>
-              <Text className='matching-status__waiting-seat-burst-emoji'>✨</Text>
+              <JoyJoinIcon emoji='✨' size={32} className='matching-status__waiting-seat-burst-emoji' />
               <Text className='matching-status__waiting-seat-burst-text'>
                 {newMemberArchetype ? `${newMemberArchetype} 刚入座` : '这桌刚多了一位新朋友'}
               </Text>
@@ -210,9 +213,13 @@ export function MatchingStatusDetailSections({
 
                 return (
                   <View key={member.userId} className='matching-status__member-chip'>
-                    <Text className='matching-status__member-initial'>
-                      {(member.displayName ?? '神').slice(0, 1)}
-                    </Text>
+                    <View className='matching-status__member-avatar'>
+                      <ArchetypeHead
+                        archetype={member.archetype}
+                        size={56}
+                        fallbackText={member.displayName ?? undefined}
+                      />
+                    </View>
                     <Text className='matching-status__member-name'>
                       {member.displayName ?? '神秘嘉宾'}
                     </Text>
@@ -220,8 +227,6 @@ export function MatchingStatusDetailSections({
                       <Text className='matching-status__member-signal'>
                         {pairSummary.connectionPoints[0]}
                       </Text>
-                    ) : member.archetype ? (
-                      <Text className='matching-status__member-archetype'>{member.archetype}</Text>
                     ) : null}
                   </View>
                 )
@@ -235,7 +240,11 @@ export function MatchingStatusDetailSections({
         <Card className='matching-status__chemistry-card'>
           <View className='matching-status__chemistry-top'>
             <View className='matching-status__chemistry-badge'>
-              <Text className='matching-status__chemistry-emoji'>{chemistryTokens.emoji}</Text>
+              <ChemistryBadge
+                chemistry={({ '🔥': 'fire', '✨': 'warm', '🌱': 'cold', '💬': 'mild' } as Record<string, 'fire' | 'warm' | 'cold' | 'mild'>)[chemistryTokens.emoji] ?? 'mild'}
+                size={32}
+                className='matching-status__chemistry-emoji'
+              />
               <Text className='matching-status__chemistry-badge-text'>{chemistryTokens.label}</Text>
             </View>
             {viewerSpotlight ? (
@@ -383,9 +392,13 @@ export function MatchingStatusLiveOverlay({
                   className='matching-status__overlay-member-card'
                   style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
                 >
-                  <Text className='matching-status__overlay-member-initial'>
-                    {(member.displayName ?? '神').slice(0, 1)}
-                  </Text>
+                  <View className='matching-status__overlay-member-avatar'>
+                    <ArchetypeHead
+                      archetype={member.archetype}
+                      size={52}
+                      fallbackText={member.displayName ?? undefined}
+                    />
+                  </View>
                   <Text className='matching-status__overlay-member-name'>
                     {member.displayName ?? '神秘嘉宾'}
                   </Text>
@@ -397,8 +410,6 @@ export function MatchingStatusLiveOverlay({
                     <Text className='matching-status__overlay-member-note'>
                       默契度 {pairSummary.chemistryScore}
                     </Text>
-                  ) : member.archetype ? (
-                    <Text className='matching-status__overlay-member-note'>{member.archetype}</Text>
                   ) : null}
                 </View>
               )

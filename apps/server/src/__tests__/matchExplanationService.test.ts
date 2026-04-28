@@ -34,7 +34,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     provider: 'deepseek',
   }),
   getDeepseekSelection: vi.fn().mockReturnValue({
@@ -47,7 +47,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         },
       },
     },
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     provider: 'deepseek',
   }),
 }));
@@ -83,7 +83,7 @@ describe('matchExplanationService', () => {
           },
         },
       } as any,
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       provider: 'deepseek',
     });
     vi.mocked(getDeepseekSelection).mockReturnValue({
@@ -94,7 +94,7 @@ describe('matchExplanationService', () => {
           },
         },
       } as any,
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       provider: 'deepseek',
     });
   });
@@ -106,8 +106,8 @@ describe('matchExplanationService', () => {
   const mockMember1: MatchMember = {
     userId: 'user-1',
     displayName: '小明',
-    archetype: '开心柯基',
-    secondaryArchetype: '太阳鸡',
+    archetype: 'corgi',
+    secondaryArchetype: 'rooster',
     interestsTop: ['美食', '旅游', '摄影'],
     industry: '互联网',
     hometown: '深圳',
@@ -122,8 +122,8 @@ describe('matchExplanationService', () => {
   const mockMember2: MatchMember = {
     userId: 'user-2',
     displayName: '小红',
-    archetype: '暖心熊',
-    secondaryArchetype: '淡定海豚',
+    archetype: 'koala',
+    secondaryArchetype: 'dolphin_calm',
     interestsTop: ['美食', '健身', '读书'],
     industry: '互联网',
     hometown: '深圳',
@@ -138,7 +138,7 @@ describe('matchExplanationService', () => {
   const mockMember3: MatchMember = {
     userId: 'user-3',
     displayName: '小华',
-    archetype: '机智狐',
+    archetype: 'fox',
     interestsTop: ['电影', '音乐'],
     industry: '金融',
     hometown: '北京',
@@ -146,7 +146,7 @@ describe('matchExplanationService', () => {
 
   describe('getChemistryScore', () => {
     it('should return chemistry score for valid archetypes', () => {
-      const score = matchExplanationService.getChemistryScore('开心柯基', '暖心熊');
+      const score = matchExplanationService.getChemistryScore('corgi', 'koala');
       expect(score).toBeGreaterThan(0);
       expect(score).toBeLessThanOrEqual(100);
     });
@@ -157,7 +157,7 @@ describe('matchExplanationService', () => {
     });
 
     it('should return default score for unknown archetypes', () => {
-      const score = matchExplanationService.getChemistryScore('未知原型', '暖心熊');
+      const score = matchExplanationService.getChemistryScore('未知原型', 'koala');
       expect(typeof score).toBe('number');
     });
   });
@@ -226,17 +226,17 @@ describe('matchExplanationService', () => {
       const sameArchetypeMember: MatchMember = {
         userId: 'user-same',
         displayName: '小克',
-        archetype: '开心柯基',
+        archetype: 'corgi',
       };
       const points = matchExplanationService.findConnectionPoints(mockMember1, sameArchetypeMember);
-      expect(points.some(p => p.includes('同款人格') && p.includes('开心柯基'))).toBe(true);
+      expect(points.some(p => p.includes('同款人格') && p.includes('corgi'))).toBe(true);
     });
 
     it('should find deep interest overlap when ≥3 high-heat interests match', () => {
       const memberA: MatchMember = {
         userId: 'user-a',
         displayName: '甲',
-        archetype: '开心柯基',
+        archetype: 'corgi',
         interestsWithHeat: [
           { topicId: 'topic1', heatLevel: 2 },
           { topicId: 'topic2', heatLevel: 3 },
@@ -247,7 +247,7 @@ describe('matchExplanationService', () => {
       const memberB: MatchMember = {
         userId: 'user-b',
         displayName: '乙',
-        archetype: '暖心熊',
+        archetype: 'koala',
         interestsWithHeat: [
           { topicId: 'topic1', heatLevel: 3 },
           { topicId: 'topic2', heatLevel: 2 },
@@ -263,7 +263,7 @@ describe('matchExplanationService', () => {
       const memberA: MatchMember = {
         userId: 'user-a',
         displayName: '甲',
-        archetype: '开心柯基',
+        archetype: 'corgi',
         interestsWithHeat: [
           { topicId: 'topic1', heatLevel: 2 },
           { topicId: 'topic2', heatLevel: 2 },
@@ -272,7 +272,7 @@ describe('matchExplanationService', () => {
       const memberB: MatchMember = {
         userId: 'user-b',
         displayName: '乙',
-        archetype: '暖心熊',
+        archetype: 'koala',
         interestsWithHeat: [
           { topicId: 'topic1', heatLevel: 2 },
           { topicId: 'topic2', heatLevel: 2 },
@@ -286,7 +286,7 @@ describe('matchExplanationService', () => {
       const memberA: MatchMember = {
         userId: 'user-a',
         displayName: '甲',
-        archetype: '开心柯基',
+        archetype: 'corgi',
         interestSignals: [
           {
             interestKey: 'hotpot',
@@ -300,7 +300,7 @@ describe('matchExplanationService', () => {
       const memberB: MatchMember = {
         userId: 'user-b',
         displayName: '乙',
-        archetype: '暖心熊',
+        archetype: 'koala',
         interestSignals: [
           {
             interestKey: 'hotpot',
@@ -320,7 +320,7 @@ describe('matchExplanationService', () => {
       const memberA: MatchMember = {
         userId: 'user-a',
         displayName: '甲',
-        archetype: '开心柯基',
+        archetype: 'corgi',
         interestSignals: [
           {
             interestKey: 'anime',
@@ -334,7 +334,7 @@ describe('matchExplanationService', () => {
       const memberB: MatchMember = {
         userId: 'user-b',
         displayName: '乙',
-        archetype: '暖心熊',
+        archetype: 'koala',
         interestSignals: [
           {
             interestKey: 'anime',
@@ -588,7 +588,7 @@ describe('matchExplanationService', () => {
       });
       vi.mocked(getClientForFunction).mockImplementation((fnName: string) => ({
         client: { chat: { completions: { create: fnName === 'generateIceBreakers' ? multiLineCreate : singleLineCreate } } } as any,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         provider: 'deepseek',
       } as any));
 
@@ -624,7 +624,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         provider: 'deepseek',
       } as any);
 
@@ -666,7 +666,7 @@ describe('matchExplanationService', () => {
             },
           },
         } as any,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         provider: 'deepseek',
       } as any);
 

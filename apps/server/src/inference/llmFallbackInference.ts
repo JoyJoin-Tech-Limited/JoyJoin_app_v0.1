@@ -20,11 +20,12 @@ import OpenAI from 'openai';
 import { logger } from '../lib/logger';
 import { logAITrace } from '../lib/aiTraceLogger';
 import { recordLLMFallbackInferenceMetric } from '../middleware/metrics';
+import { getDeepseekModel } from '../ai/deepseekClient';
 
 const SHADOW_ONLY_MODE = 'shadow';
 const MAX_SHADOW_FALLBACK_DIMENSIONS = 2;
 const DEEPSEEK_PROVIDER = 'deepseek';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+const DEEPSEEK_MODEL = getDeepseekModel('flash');
 const ESTIMATED_COST_PER_1K_TOKENS_USD = 0.0014;
 const DEFAULT_SHADOW_TIMEOUT_MS = 1500;
 
@@ -169,6 +170,7 @@ export function parseInferenceResponse(responseText: string): LLMInferenceResult
       reasoning: parsed.reasoning
     };
   } catch (error) {
+    logger.error('LLM fallback inference parse error', { error: error instanceof Error ? error.message : String(error) });
     return { success: false, insights: [], confidence: 0, errorCode: 'parse_error' };
   }
 }
@@ -414,6 +416,7 @@ export async function runShadowLLMFallbackInference(params: {
       try {
         result = await withShadowTimeout(executeInference(request), timeoutMs);
       } catch (error) {
+        logger.error('LLM fallback inference shadow error', { error: error instanceof Error ? error.message : String(error) });
         result = {
           success: false,
           insights: [],

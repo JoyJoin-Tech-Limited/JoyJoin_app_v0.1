@@ -37,18 +37,18 @@ export interface TopicHeatThemeTitle {
  * archetypeConfig.traits (see third-tier fallback below).
  */
 export const ARCHETYPE_TOPIC_HINTS: Record<string, Array<{ emoji: string; text: string }>> = {
-  "开心柯基":  [{ emoji: "😂", text: "轻松搞笑" }, { emoji: "🎉", text: "破冰活动" }],
-  "太阳鸡":    [{ emoji: "☀️", text: "正能量分享" }, { emoji: "💛", text: "暖心故事" }],
-  "夸夸豚":    [{ emoji: "🎯", text: "真心话" }, { emoji: "💬", text: "深度聊天" }],
-  "机智狐":    [{ emoji: "🗺️", text: "城市探索" }, { emoji: "🔍", text: "隐藏好物" }],
-  "淡定海豚":  [{ emoji: "🧘", text: "慢生活" }, { emoji: "🌊", text: "随性聊聊" }],
-  "织网蛛":    [{ emoji: "🕸️", text: "人脉连接" }, { emoji: "🤝", text: "社交网络" }],
-  "暖心熊":    [{ emoji: "🫶", text: "温暖陪伴" }, { emoji: "🏡", text: "生活近况" }],
-  "灵感章鱼":  [{ emoji: "🎨", text: "创意碰撞" }, { emoji: "💡", text: "灵感发散" }],
-  "沉思猫头鹰":[{ emoji: "📖", text: "深度观察" }, { emoji: "🔭", text: "思维碰撞" }],
-  "定心大象":  [{ emoji: "🧭", text: "人生方向" }, { emoji: "🌿", text: "稳定成长" }],
-  "稳如龟":    [{ emoji: "🍵", text: "慢慢发现" }, { emoji: "🌱", text: "真实自我" }],
-  "隐身猫":    [{ emoji: "🌙", text: "安静共鸣" }, { emoji: "📚", text: "小众兴趣" }],
+  "corgi":  [{ emoji: "😂", text: "轻松搞笑" }, { emoji: "🎉", text: "破冰活动" }],
+  "rooster":    [{ emoji: "☀️", text: "正能量分享" }, { emoji: "💛", text: "暖心故事" }],
+  "hamster_praise":    [{ emoji: "🎯", text: "真心话" }, { emoji: "💬", text: "深度聊天" }],
+  "fox":    [{ emoji: "🗺️", text: "城市探索" }, { emoji: "🔍", text: "隐藏好物" }],
+  "dolphin_calm":  [{ emoji: "🧘", text: "慢生活" }, { emoji: "🌊", text: "随性聊聊" }],
+  "spider":    [{ emoji: "🕸️", text: "人脉连接" }, { emoji: "🤝", text: "社交网络" }],
+  "koala":    [{ emoji: "🫶", text: "温暖陪伴" }, { emoji: "🏡", text: "生活近况" }],
+  "octopus":  [{ emoji: "🎨", text: "创意碰撞" }, { emoji: "💡", text: "灵感发散" }],
+  "owl":[{ emoji: "📖", text: "深度观察" }, { emoji: "🔭", text: "思维碰撞" }],
+  "elephant":  [{ emoji: "🧭", text: "人生方向" }, { emoji: "🌿", text: "稳定成长" }],
+  "turtle":    [{ emoji: "🍵", text: "慢慢发现" }, { emoji: "🌱", text: "真实自我" }],
+  "cat":    [{ emoji: "🌙", text: "安静共鸣" }, { emoji: "📚", text: "小众兴趣" }],
 };
 
 /** Fallback topics used when neither theme nor archetype data is available. */

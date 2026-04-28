@@ -60,7 +60,7 @@ interface EventTheme {
 ### Good Patterns ✅
 
 ```
-"高能充电站：柯基×太阳鸡的周末探险"
+"高能充电站：柯基×情绪稳定鸡的周末探险"
   └─ Archetype + energy + activity
 
 "沉思者花园：猫头鹰的深夜书房"
@@ -130,18 +130,18 @@ finalScore = weight × (mysteryValue × 0.6 + groundingValue × 0.4)
 
 | Archetype | Energy | Category |
 |-----------|--------|----------|
-| 开心柯基 | 95 | 🔥 Very High |
-| 太阳鸡 | 90 | 🔥 Very High |
-| 夸夸豚 | 85 | 🔥 High |
-| 机智狐 | 82 | 🔥 High |
-| 淡定海豚 | 75 | 🌡️ Medium |
-| 织网蛛 | 72 | 🌡️ Medium |
-| 暖心熊 | 70 | 🌡️ Medium |
-| 灵感章鱼 | 68 | 🌡️ Medium |
-| 沉思猫头鹰 | 55 | 🌙 Low |
-| 定心大象 | 52 | 🌙 Low |
-| 稳如龟 | 38 | ❄️ Very Low |
-| 隐身猫 | 30 | ❄️ Very Low |
+| 气氛组柯基 | 95 | 🔥 Very High |
+| 情绪稳定鸡 | 90 | 🔥 Very High |
+| 捧场王仓鼠 | 85 | 🔥 High |
+| 探宝雷达狐 | 82 | 🔥 High |
+| 读空气海豚 | 75 | 🌡️ Medium |
+| 社交裁缝蛛 | 72 | 🌡️ Medium |
+| 情绪树洞考拉 | 70 | 🌡️ Medium |
+| 脑洞喷泉章鱼 | 68 | 🌡️ Medium |
+| 追问猫头鹰 | 55 | 🌙 Low |
+| 定海神针大象 | 52 | 🌙 Low |
+| 慢半拍龟 | 38 | ❄️ Very Low |
+| 静音模式猫 | 30 | ❄️ Very Low |
 
 ## 🔧 Configuration
 
@@ -230,9 +230,9 @@ const maxAttempts = 3;  // Default: 3 attempts before fallback
 **Input:**
 ```typescript
 Members: 4 people
-- 2x 开心柯基 (energy: 95)
-- 1x 机智狐 (energy: 82)
-- 1x 暖心熊 (energy: 70)
+- 2x 气氛组柯基 (energy: 95)
+- 1x 探宝雷达狐 (energy: 82)
+- 1x 情绪树洞考拉 (energy: 70)
 avgEnergy: 86
 Hometown: 3 from 广州
 Interest: 4 love 咖啡 (heat=25)
@@ -254,7 +254,7 @@ Intent: 4 want 拓展人脉
 **Input:**
 ```typescript
 Members: 4 people
-- 4x 沉思猫头鹰 (energy: 55)
+- 4x 追问猫头鹰 (energy: 55)
 avgEnergy: 55
 Interest: 4 love 阅读 (heat=25)
 Intent: 4 want 结识朋友

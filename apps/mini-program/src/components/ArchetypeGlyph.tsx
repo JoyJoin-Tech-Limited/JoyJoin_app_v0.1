@@ -1,78 +1,55 @@
-import { View } from '@tarojs/components'
+import { View, Image } from '@tarojs/components'
 
 /**
- * ArchetypeGlyph — minimal inline SVG icons for the 12 JoyJoin archetypes.
+ * ArchetypeGlyph — proprietary micro glyph icons for the 12 JoyJoin archetypes.
  *
- * Each glyph is a simple geometric shape (~16×16 viewBox) designed to be
- * recognizable at 4–6px scale. Fill color is driven by the parent CSS
- * family class (warm / cool / fire / calm).
+ * Replaces abstract geometric shapes with actual character silhouettes
+ * derived from the existing full-body illustrations. Each glyph is a
+ * monochrome filled shape at 16×16 viewBox, recognizable at ~16rpx scale.
  *
- * Taro/WeChat safe: only basic SVG shapes (circle, rect, ellipse, polygon, path).
+ * Assets live in: assets/icons/archetype-glyphs/
+ * Naming: archetype-{key}-glyph{@2x|@3x}.png
+ *
+ * Taro/WeChat safe: uses <Image> with local asset paths.
  */
 
 export type ArchetypeFamily = 'warm' | 'cool' | 'fire' | 'calm'
 
 interface ArchetypeGlyphProps {
   archetype: string
-  family: ArchetypeFamily
+  family?: ArchetypeFamily
   size?: number // rpx
 }
 
-const GLYPH_SIZE = 16 // viewBox size
-
-const SHAPE_MAP: Record<string, JSX.Element> = {
-  '开心柯基': (
-    <circle cx='8' cy='8' r='6' />
-  ),
-  '太阳鸡': (
-    <polygon points='8,1 9.8,5.7 15,6.2 11,9.8 12.2,15 8,12 3.8,15 5,9.8 1,6.2 6.2,5.7' />
-  ),
-  '夸夸豚': (
-    <path d='M8 14.5C8 14.5 2.5 10.5 2.5 6.5C2.5 4 4.5 2 7 2C7.8 2 8.5 2.3 9 2.7C9.5 2.3 10.2 2 11 2C13.5 2 15.5 4 15.5 6.5C15.5 10.5 10 14.5 8 14.5Z' />
-  ),
-  '机智狐': (
-    <polygon points='8,1 15,8 8,15 1,8' />
-  ),
-  '淡定海豚': (
-    <ellipse cx='8' cy='8' rx='7' ry='4.5' />
-  ),
-  '织网蛛': (
-    <polygon points='8,1 14,4.5 14,11.5 8,15 2,11.5 2,4.5' />
-  ),
-  '暖心熊': (
-    <rect x='2' y='2' width='12' height='12' rx='3' />
-  ),
-  '灵感章鱼': (
-    <path d='M9 1L5 8H9L7 15L13 7H9L11 1H9Z' />
-  ),
-  '沉思猫头鹰': (
-    <path d='M2 8C2 4.5 4.5 2 8 2C8 2 6 4 6 8C6 12 8 14 8 14C4.5 14 2 11.5 2 8Z' />
-  ),
-  '定心大象': (
-    <rect x='2' y='2' width='12' height='12' />
-  ),
-  '稳如龟': (
-    <path d='M8 1C11 1 14 3 14 7C14 11 11 15 8 15C5 15 2 11 2 7C2 3 5 1 8 1Z' />
-  ),
-  '隐身猫': (
-    <ellipse cx='8' cy='8' rx='7' ry='4' transform='rotate(-30 8 8)' />
-  ),
+const GLYPH_PATHS: Record<string, string> = {
+  'corgi': '/assets/icons/archetype-glyphs/archetype-corgi-glyph@3x.png',
+  'rooster': '/assets/icons/archetype-glyphs/archetype-rooster-glyph@3x.png',
+  'hamster_praise': '/assets/icons/archetype-glyphs/archetype-hamster_praise-glyph@3x.png',
+  'fox': '/assets/icons/archetype-glyphs/archetype-fox-glyph@3x.png',
+  'dolphin_calm': '/assets/icons/archetype-glyphs/archetype-dolphin_calm-glyph@3x.png',
+  'spider': '/assets/icons/archetype-glyphs/archetype-spider-glyph@3x.png',
+  'koala': '/assets/icons/archetype-glyphs/archetype-koala-glyph@3x.png',
+  'octopus': '/assets/icons/archetype-glyphs/archetype-octopus-glyph@3x.png',
+  'owl': '/assets/icons/archetype-glyphs/archetype-owl-glyph@3x.png',
+  'elephant': '/assets/icons/archetype-glyphs/archetype-elephant-glyph@3x.png',
+  'turtle': '/assets/icons/archetype-glyphs/archetype-turtle-glyph@3x.png',
+  'cat': '/assets/icons/archetype-glyphs/archetype-cat-glyph@3x.png',
 }
 
-export default function ArchetypeGlyph({ archetype, family, size = 16 }: ArchetypeGlyphProps) {
-  const shape = SHAPE_MAP[archetype] ?? SHAPE_MAP['开心柯基']
+const FALLBACK_PATH = '/assets/icons/archetype-glyphs/archetype-corgi-glyph@3x.png'
+
+export default function ArchetypeGlyph({ archetype, size = 16 }: ArchetypeGlyphProps) {
+  const src = GLYPH_PATHS[archetype] ?? FALLBACK_PATH
   const sizeStr = `${size}rpx`
 
   return (
-    <View className={`archetype-glyph archetype-glyph--${family}`}>
-      <svg
-        width={sizeStr}
-        height={sizeStr}
-        viewBox={`0 0 ${GLYPH_SIZE} ${GLYPH_SIZE}`}
-        fill='currentColor'
-      >
-        {shape}
-      </svg>
+    <View className='archetype-glyph'>
+      <Image
+        src={src}
+        mode='aspectFit'
+        style={{ width: sizeStr, height: sizeStr }}
+        lazyLoad={false}
+      />
     </View>
   )
 }

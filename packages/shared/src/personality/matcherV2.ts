@@ -76,63 +76,63 @@ export const PROTOTYPE_SOUL_TRAITS: Record<string, {
   avoid: Partial<Record<TraitKey, number>>;
 }> = {
   // Reduced weights for Manhattan distance: primary 1.6-1.8, secondary 1.2-1.3, avoid 0.6-0.8
-  "定心大象": {
+  "elephant": {
     primary: { E: 1.8 },
     secondary: { C: 1.3, A: 1.2 },
     avoid: { X: 0.7, O: 0.7 }
   },
-  "织网蛛": {
+  "spider": {
     primary: { C: 1.8 },
     secondary: { E: 1.3, A: 1.2 },
     avoid: { P: 0.7, X: 0.8 }
   },
-  "太阳鸡": {
+  "rooster": {
     primary: { P: 1.8 },
     secondary: { E: 1.3, C: 1.2, X: 1.2 },
     avoid: { O: 0.6 }
   },
-  "夸夸豚": {
+  "hamster_praise": {
     primary: { A: 1.7, X: 1.6 },
     secondary: { P: 1.3 },
     avoid: { C: 0.7, O: 0.8 }
   },
-  "机智狐": {
+  "fox": {
     primary: { O: 1.8 },
     secondary: { X: 1.3, P: 1.2 },
     avoid: { A: 0.7, C: 0.7 }
   },
-  "暖心熊": {
+  "koala": {
     primary: { A: 1.8 },
     secondary: { E: 1.3, P: 1.2 },
     // V2.3 FIX: X avoid weight lowered to 0.4 for stronger penalty on high-X users
     avoid: { O: 0.7, X: 0.4 }
   },
-  "稳如龟": {
+  "turtle": {
     primary: { E: 1.8, C: 1.7 },
     secondary: { A: 1.2 },
     avoid: { X: 0.6, O: 0.6, P: 0.7 }
   },
-  "开心柯基": {
+  "corgi": {
     primary: { X: 1.7, P: 1.6 },
     secondary: { A: 1.3, E: 1.2 },
     avoid: { C: 0.8, O: 0.8 }
   },
-  "沉思猫头鹰": {
+  "owl": {
     primary: { O: 1.8 },
     secondary: { C: 1.3, E: 1.2 },
     avoid: { X: 0.6, A: 0.7, P: 0.7 }
   },
-  "淡定海豚": {
+  "dolphin_calm": {
     primary: { E: 1.7, O: 1.5 },
     secondary: { A: 1.2 },
     avoid: { X: 0.7, P: 0.6 }
   },
-  "隐身猫": {
+  "cat": {
     primary: { E: 1.6 },
     secondary: { O: 1.2 },
     avoid: { X: 0.6, A: 0.6 }
   },
-  "灵感章鱼": {
+  "octopus": {
     primary: { O: 1.8 },
     secondary: { P: 1.3, X: 1.2 },
     avoid: { C: 0.6, E: 0.8 }
@@ -149,22 +149,22 @@ export const PROTOTYPE_SOUL_TRAITS: Record<string, {
  * 实际分数范围约55-80，原阈值基于理想化的85+分数，需降低10-15点
  */
 export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, number>) => number> = {
-  "太阳鸡": (t) => {
-    // P是太阳鸡的灵魂 - 实际P分布: 61-74-88
+  "rooster": (t) => {
+    // P是rooster的灵魂 - 实际P分布: 61-74-88
     // 降低阈值：85→75, 80→70
     if (t.P >= 78) return 1.25;
     if (t.P >= 72) return 1.1;
     if (t.P < 60) return 0.5;
     return 1.0;
   },
-  "淡定海豚": (t) => {
-    // 淡定海豚: 高E + 低X + 适中P（实际X分布: 33-42-70）
-    if (t.P >= 78) return 0.5; // 高P更像太阳鸡
+  "dolphin_calm": (t) => {
+    // dolphin_calm: 高E + 低X + 适中P（实际X分布: 33-42-70）
+    if (t.P >= 78) return 0.5; // 高P更像rooster
     if (t.E >= 75 && t.X < 55 && t.P < 65) return 1.25; // 强化低X信号
     if (t.E >= 72 && t.P < 68) return 1.1;
     return 1.0;
   },
-  "沉思猫头鹰": (t) => {
+  "owl": (t) => {
     // 猫头鹰核心: 高O + 低X - 实际O分布: 65-75-83
     if (t.O >= 75 && t.X < 45) return 1.35;
     if (t.O >= 70) return 1.15;
@@ -172,29 +172,29 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
     if (t.X > 55) return 0.6;
     return 1.0;
   },
-  "稳如龟": (t) => {
+  "turtle": (t) => {
     // 龟核心: 高E+C + 低X + 低O - 实际O分布: 45-53-65
     if (t.O > 72) return 0.4; // 高O更像猫头鹰
     if (t.O > 68) return 0.6;
     if (t.X < 38 && t.O < 60) return 1.3;
     return 1.0;
   },
-  "机智狐": (t) => t.O >= 75 ? 1.15 : (t.O < 60 ? 0.5 : 1.0),
-  "灵感章鱼": (t) => {
+  "fox": (t) => t.O >= 75 ? 1.15 : (t.O < 60 ? 0.5 : 1.0),
+  "octopus": (t) => {
     // 实际O分布: 83-89-95, C分布: 40-50-60
     if (t.O >= 82 && t.C < 60) return 1.2;
     if (t.C > 65) return 0.7;
     return 1.0;
   },
-  "隐身猫": (t) => {
+  "cat": (t) => {
     // 实际X分布: 25-28-32
     if (t.X < 35 && t.A < 60) return 1.2;
     if (t.X > 50) return 0.5;
     return 1.0;
   },
-  "暖心熊": (t) => {
-    // V2.3 FIX: HARD VETO for high-X users - 暖心熊 has X:48
-    // High-X users (X >= 65) should NEVER match 暖心熊
+  "koala": (t) => {
+    // V2.3 FIX: HARD VETO for high-X users - koala has X:48
+    // High-X users (X >= 65) should NEVER match koala
     if (t.X >= 75) return 0.15; // Near-VETO for very high-X users
     if (t.X >= 70) return 0.25; // Severe penalty
     if (t.X >= 65) return 0.35; // Strong penalty
@@ -204,14 +204,14 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
     if (t.A < 65) return 0.6;
     return 1.0;
   },
-  "夸夸豚": (t) => {
+  "hamster_praise": (t) => {
     // 实际A分布: 65-74-88, X分布: 73-83-88
     if (t.A >= 72 && t.X >= 78) return 1.2;
     if (t.A >= 68 && t.X >= 72) return 1.1;
     return 1.0;
   },
-  "开心柯基": (t) => {
-    // V2.3 FIX: Lower thresholds - 开心柯基 X:95, P:85
+  "corgi": (t) => {
+    // V2.3 FIX: Lower thresholds - corgi X:95, P:85
     // Users with high X should match even if P is moderate
     if (t.X >= 75 && t.P >= 70) return 1.3; // Strong match for high-X + good-P
     if (t.X >= 70 && t.P >= 65) return 1.2; // Good match
@@ -220,278 +220,19 @@ export const ARCHETYPE_VETO_RULES: Record<string, (traits: Record<TraitKey, numb
     if (t.X < 55) return 0.6; // Penalty for low-X users
     return 1.0;
   },
-  "定心大象": (t) => {
+  "elephant": (t) => {
     // 实际E分布: 76-79-81, P分布: 35-35-55 (很低!)
-    // 区分于稳如龟：大象有更高A和P
+    // 区分于turtle：大象有更高A和P
     if (t.E >= 76 && t.A >= 70 && t.P >= 40) return 1.25;
     if (t.E >= 75) return 1.1;
     if (t.E < 72) return 0.6;
     return 1.0;
   },
-  "织网蛛": (t) => t.C >= 73 ? 1.1 : (t.C < 60 ? 0.6 : 1.0)
+  "spider": (t) => t.C >= 73 ? 1.1 : (t.C < 60 ? 0.6 : 1.0)
 };
 
-/**
- * 混淆对门控规则 - 针对已知的高混淆原型对
- * 当用户特质明确属于某一原型时，大幅抑制竞争原型的分数
- */
-/**
- * V2.2 校准版：根据实际分数分布调整门控阈值
- */
-export const CONFUSION_PAIR_GATES: Array<{
-  trueArchetype: string;
-  rivalArchetype: string;
-  gate: (t: Record<TraitKey, number>) => number;
-}> = [
-  {
-    // 太阳鸡 vs 淡定海豚: 实际P分布 太阳鸡74 vs 海豚55
-    trueArchetype: "太阳鸡",
-    rivalArchetype: "淡定海豚",
-    gate: (t) => {
-      if (t.P >= 78) return 0.2;
-      if (t.P >= 72) return 0.4;
-      if (t.P >= 68) return 0.6;
-      return 1.0;
-    }
-  },
-  {
-    // 淡定海豚 vs 太阳鸡: P<65的用户明显是淡定海豚
-    trueArchetype: "淡定海豚",
-    rivalArchetype: "太阳鸡",
-    gate: (t) => {
-      if (t.P < 58 && t.X < 55) return 0.25; // 低P+低X强信号
-      if (t.P < 62) return 0.4;
-      if (t.P < 68) return 0.6;
-      return 1.0;
-    }
-  },
-  {
-    // 沉思猫头鹰 vs 稳如龟: 实际O分布 猫头鹰75 vs 龟53
-    trueArchetype: "沉思猫头鹰",
-    rivalArchetype: "稳如龟",
-    gate: (t) => {
-      if (t.O >= 75 && t.X < 45) return 0.15;
-      if (t.O >= 72) return 0.35;
-      if (t.O >= 68) return 0.55;
-      return 1.0;
-    }
-  },
-  {
-    // 稳如龟 vs 沉思猫头鹰: O<60的用户明显是龟
-    trueArchetype: "稳如龟",
-    rivalArchetype: "沉思猫头鹰",
-    gate: (t) => {
-      if (t.O < 58) return 0.3;
-      if (t.O < 65) return 0.5;
-      return 1.0;
-    }
-  },
-  {
-    // 隐身猫 vs 稳如龟: 实际X分布 隐身猫28 vs 龟32
-    trueArchetype: "隐身猫",
-    rivalArchetype: "稳如龟",
-    gate: (t) => {
-      if (t.X < 30 && t.A < 60) return 0.3;
-      if (t.X < 35) return 0.6;
-      return 1.0;
-    }
-  },
-  {
-    // 机智狐 vs 开心柯基: 实际O分布 狐狸82 vs 柯基80
-    trueArchetype: "机智狐",
-    rivalArchetype: "开心柯基",
-    gate: (t) => {
-      if (t.O >= 78 && t.X < 75) return 0.5;
-      if (t.O >= 75) return 0.7;
-      return 1.0;
-    }
-  },
-  {
-    // 开心柯基 vs 太阳鸡: 柯基X更高(84 vs 74)，P接近
-    trueArchetype: "开心柯基",
-    rivalArchetype: "太阳鸡",
-    gate: (t) => {
-      if (t.X >= 82 && t.P >= 80) return 0.4; // 超高X+P是柯基
-      if (t.X >= 80) return 0.6;
-      return 1.0;
-    }
-  },
-  {
-    // 太阳鸡 vs 开心柯基: 太阳鸡A更高(84 vs 56)
-    trueArchetype: "太阳鸡",
-    rivalArchetype: "开心柯基",
-    gate: (t) => {
-      if (t.A >= 78 && t.X < 82) return 0.4;
-      if (t.A >= 72) return 0.6;
-      return 1.0;
-    }
-  },
-  {
-    // 定心大象 vs 稳如龟: 大象A更高(74 vs 60)
-    trueArchetype: "定心大象",
-    rivalArchetype: "稳如龟",
-    gate: (t) => {
-      if (t.A >= 72 && t.P >= 38) return 0.4;
-      if (t.A >= 68) return 0.6;
-      return 1.0;
-    }
-  },
-  {
-    // 夸夸豚 vs 太阳鸡: 夸夸豚X更高(83 vs 74)
-    trueArchetype: "夸夸豚",
-    rivalArchetype: "开心柯基",
-    gate: (t) => {
-      if (t.A >= 85) return 0.5;
-      if (t.A >= 80) return 0.7;
-      return 1.0;
-    }
-  },
-  {
-    // 织网蛛(C=88) vs 淡定海豚(C=70): 高C用户更可能是蜘蛛
-    trueArchetype: "织网蛛",
-    rivalArchetype: "淡定海豚",
-    gate: (t) => {
-      if (t.C >= 82) return 0.5;
-      if (t.C >= 78) return 0.7;
-      return 1.0;
-    }
-  },
-  {
-    // V2.3 FIX: 开心柯基 vs 暖心熊 - 高X用户应该匹配柯基而非暖心熊
-    // 开心柯基 X:95, 暖心熊 X:48 - 这是核心区分特质
-    trueArchetype: "开心柯基",
-    rivalArchetype: "暖心熊",
-    gate: (t) => {
-      if (t.X >= 70) return 0.3; // High-X strongly favors 柯基
-      if (t.X >= 65) return 0.5;
-      if (t.X >= 60) return 0.7;
-      return 1.0;
-    }
-  },
-  {
-    // V2.3 FIX: 暖心熊 vs 开心柯基 - 低X用户应该匹配暖心熊
-    // 暖心熊 X:48, 开心柯基 X:95
-    trueArchetype: "暖心熊",
-    rivalArchetype: "开心柯基",
-    gate: (t) => {
-      if (t.X < 50) return 0.3; // Low-X strongly favors 暖心熊
-      if (t.X < 55) return 0.5;
-      if (t.X < 60) return 0.7;
-      return 1.0;
-    }
-  }
-];
-
-/**
- * 计算logistic形式的特质匹配分数
- * 使距离差异平滑地映射到0-1范围
- */
-function logisticTraitScore(diff: number, steepness: number = 0.08): number {
-  return 1 / (1 + Math.exp(steepness * diff));
-}
-
-/**
- * Phase 1: 签名特质阈值 - 用于预过滤候选原型
- * 返回一个分数乘数：1.0=保留, <1.0=降权/排除
- */
-export const SIGNATURE_THRESHOLDS: Record<string, (t: Record<TraitKey, number>) => number> = {
-  "太阳鸡": (t) => {
-    // 太阳鸡的灵魂是P=92
-    if (t.P >= 85) return 1.35;
-    if (t.P >= 80) return 1.15;
-    if (t.P >= 75) return 1.0;
-    if (t.P >= 70) return 0.7;
-    return 0.45;
-  },
-  "淡定海豚": (t) => {
-    // 淡定海豚P=68, E=85 - 高P用户不应匹配海豚
-    if (t.P >= 85) return 0.35;
-    if (t.P >= 80) return 0.55;
-    if (t.P < 75 && t.E >= 78) return 1.25;
-    return 1.0;
-  },
-  "沉思猫头鹰": (t) => {
-    // 猫头鹰O=88, X=40 - 高O低X是标志
-    if (t.O >= 82 && t.X < 50) return 1.45;
-    if (t.O >= 78 && t.X < 55) return 1.25;
-    if (t.O >= 75) return 1.1;
-    if (t.O < 72) return 0.5;
-    return 1.0;
-  },
-  "稳如龟": (t) => {
-    // 龟O=65 - 高O用户更像猫头鹰
-    if (t.O >= 80) return 0.35;
-    if (t.O >= 75) return 0.55;
-    if (t.O < 70 && t.E >= 80) return 1.35;
-    if (t.O < 72) return 1.15;
-    return 1.0;
-  },
-  "隐身猫": (t) => {
-    // 隐身猫X=25, A=40 - 极低社交
-    if (t.X < 32 && t.A < 50) return 1.4;
-    if (t.X < 38) return 1.1;
-    if (t.X >= 55) return 0.4;
-    return 1.0;
-  },
-  "暖心熊": (t) => {
-    // V2.3 FIX: HARD VETO for high-X users - 暖心熊 A=90, X=48
-    // This is a critical gate: X is the differentiator between 暖心熊 and 开心柯基
-    if (t.X >= 75) return 0.1; // Near-VETO for very high-X users
-    if (t.X >= 70) return 0.2; // Severe penalty
-    if (t.X >= 65) return 0.3; // Strong penalty
-    if (t.X >= 60) return 0.45; // Moderate penalty
-    // Only apply A bonus if X is appropriate (low-X users)
-    if (t.A >= 85 && t.X < 55) return 1.4; // High A + low X = strong match
-    if (t.A >= 80 && t.X < 58) return 1.2;
-    if (t.A >= 75) return 1.0;
-    if (t.A < 72) return 0.6;
-    return 1.0;
-  },
-  "机智狐": (t) => {
-    // 机智狐O=85 - 高开放性
-    if (t.O >= 82) return 1.3;
-    if (t.O >= 78) return 1.15;
-    if (t.O < 70) return 0.5;
-    return 1.0;
-  },
-  "灵感章鱼": (t) => {
-    // 章鱼O=90, C=38 - 高开放低条理
-    if (t.O >= 85 && t.C < 50) return 1.4;
-    if (t.O >= 80) return 1.15;
-    if (t.C >= 70) return 0.5;
-    return 1.0;
-  },
-  "夸夸豚": (t) => {
-    // 夸夸豚A=90, X=85 - 高亲和高社交
-    if (t.A >= 85 && t.X >= 80) return 1.4;
-    if (t.A >= 82) return 1.1;
-    return 1.0;
-  },
-  "开心柯基": (t) => {
-    // V2.3 FIX: 柯基X=95, P=85 - 高社交高正能量
-    // Lower thresholds to capture more high-X users
-    if (t.X >= 75 && t.P >= 65) return 1.4; // High X + moderate P = strong match
-    if (t.X >= 70 && t.P >= 60) return 1.3;
-    if (t.X >= 65) return 1.15; // Moderate boost for extroverts
-    if (t.X >= 60) return 1.05;
-    if (t.X < 55) return 0.5; // Penalty for low-X users
-    return 1.0;
-  },
-  "定心大象": (t) => {
-    // 大象E=92 - 极高稳定性
-    if (t.E >= 88) return 1.3;
-    if (t.E >= 82) return 1.1;
-    if (t.E < 75) return 0.5;
-    return 1.0;
-  },
-  "织网蛛": (t) => {
-    // 蜘蛛C=88 - 高条理性
-    if (t.C >= 85) return 1.25;
-    if (t.C >= 78) return 1.1;
-    if (t.C < 68) return 0.6;
-    return 1.0;
-  }
-};
+import { CONFUSION_PAIR_GATES, SIGNATURE_THRESHOLDS } from './matcherV2Gates';
+export { CONFUSION_PAIR_GATES, SIGNATURE_THRESHOLDS } from './matcherV2Gates';
 
 export interface MatchScoreDetails {
   baseSimilarity: number;
@@ -938,13 +679,13 @@ export class PrototypeMatcher {
     
     // Apply pair-specific hard-coded classifiers
     switch (pair) {
-      case '太阳鸡,淡定海豚':
+      case 'rooster,dolphin_calm':
         this.classifySunnyChickenVsDolphin(userTraits, results, top1, top2);
         break;
-      case '沉思猫头鹰,稳如龟':
+      case 'owl,turtle':
         this.classifyOwlVsTurtle(userTraits, results, top1, top2);
         break;
-      case '暖心熊,淡定海豚':
+      case 'koala,dolphin_calm':
         this.classifyBearVsDolphin(userTraits, results, top1, top2);
         break;
     }
@@ -974,8 +715,8 @@ export class PrototypeMatcher {
   }
 
   /**
-   * 太阳鸡 vs 淡定海豚: P is the key differentiator
-   * 太阳鸡 P=92/X=85, 淡定海豚 P=68/X=55
+   * rooster vs dolphin_calm: P is the key differentiator
+   * rooster P=92/X=85, dolphin_calm P=68/X=55
    * Uses gradual scoring based on trait distance
    */
   private classifySunnyChickenVsDolphin(
@@ -984,13 +725,13 @@ export class PrototypeMatcher {
     top1: { archetype: string; details: MatchScoreDetails },
     top2: { archetype: string; details: MatchScoreDetails }
   ): void {
-    const sunnyChicken = results.find(r => r.archetype === '太阳鸡');
-    const dolphin = results.find(r => r.archetype === '淡定海豚');
+    const sunnyChicken = results.find(r => r.archetype === 'rooster');
+    const dolphin = results.find(r => r.archetype === 'dolphin_calm');
     if (!sunnyChicken || !dolphin) return;
     
-    // Primary trait: P (太阳鸡=92, 淡定海豚=68)
+    // Primary trait: P (rooster=92, dolphin_calm=68)
     const pBonus = this.calculateGradualBonus(t.P, 92, 68, 5);
-    // Secondary trait: X (太阳鸡=85, 淡定海豚=55)
+    // Secondary trait: X (rooster=85, dolphin_calm=55)
     const xBonus = this.calculateGradualBonus(t.X, 85, 55, 3);
     
     // Combined bonus: primary has more weight
@@ -1011,8 +752,8 @@ export class PrototypeMatcher {
   }
   
   /**
-   * 沉思猫头鹰 vs 稳如龟: O is the key differentiator
-   * 猫头鹰 O=88/X=40/E=75, 稳如龟 O=65/X=30/E=85
+   * owl vs turtle: O is the key differentiator
+   * 猫头鹰 O=88/X=40/E=75, turtle O=65/X=30/E=85
    * Uses gradual scoring based on trait distance
    */
   private classifyOwlVsTurtle(
@@ -1021,8 +762,8 @@ export class PrototypeMatcher {
     top1: { archetype: string; details: MatchScoreDetails },
     top2: { archetype: string; details: MatchScoreDetails }
   ): void {
-    const owl = results.find(r => r.archetype === '沉思猫头鹰');
-    const turtle = results.find(r => r.archetype === '稳如龟');
+    const owl = results.find(r => r.archetype === 'owl');
+    const turtle = results.find(r => r.archetype === 'turtle');
     if (!owl || !turtle) return;
     
     // Primary trait: O (猫头鹰=88, 龟=65)
@@ -1047,8 +788,8 @@ export class PrototypeMatcher {
   }
   
   /**
-   * 暖心熊 vs 淡定海豚: A is the key differentiator
-   * 暖心熊 A=88/E=80, 淡定海豚 A=70/E=75
+   * koala vs dolphin_calm: A is the key differentiator
+   * koala A=88/E=80, dolphin_calm A=70/E=75
    * Uses gradual scoring based on trait distance
    */
   private classifyBearVsDolphin(
@@ -1057,13 +798,13 @@ export class PrototypeMatcher {
     top1: { archetype: string; details: MatchScoreDetails },
     top2: { archetype: string; details: MatchScoreDetails }
   ): void {
-    const bear = results.find(r => r.archetype === '暖心熊');
-    const dolphin = results.find(r => r.archetype === '淡定海豚');
+    const bear = results.find(r => r.archetype === 'koala');
+    const dolphin = results.find(r => r.archetype === 'dolphin_calm');
     if (!bear || !dolphin) return;
     
-    // Primary trait: A (暖心熊=88, 淡定海豚=70)
+    // Primary trait: A (koala=88, dolphin_calm=70)
     const aBonus = this.calculateGradualBonus(t.A, 88, 70, 5);
-    // Secondary trait: E (暖心熊=80, 淡定海豚=75) - bear slightly higher
+    // Secondary trait: E (koala=80, dolphin_calm=75) - bear slightly higher
     const eBonus = this.calculateGradualBonus(t.E, 80, 75, 2);
     
     // Combined bonus
@@ -1548,33 +1289,33 @@ export interface StyleSpectrumResult {
 }
 
 const ARCHETYPE_EMOJI: Record<string, string> = {
-  "开心柯基": "🐕",
-  "太阳鸡": "🐔",
-  "夸夸豚": "🐷",
-  "机智狐": "🦊",
-  "淡定海豚": "🐬",
-  "织网蛛": "🕷️",
-  "暖心熊": "🐻",
-  "灵感章鱼": "🐙",
-  "沉思猫头鹰": "🦉",
-  "定心大象": "🐘",
-  "稳如龟": "🐢",
-  "隐身猫": "🐱"
+  "corgi": "🐕",
+  "rooster": "🐔",
+  "hamster_praise": "🐷",
+  "fox": "🦊",
+  "dolphin_calm": "🐬",
+  "spider": "🕷️",
+  "koala": "🐻",
+  "octopus": "🐙",
+  "owl": "🦉",
+  "elephant": "🐘",
+  "turtle": "🐢",
+  "cat": "🐱"
 };
 
 const ARCHETYPE_TAGLINE: Record<string, string> = {
-  "开心柯基": "快乐感染者，派对灵魂",
-  "太阳鸡": "积极阳光，热情洋溢",
-  "夸夸豚": "暖场达人，社交催化剂",
-  "机智狐": "灵动聪慧，观察敏锐",
-  "淡定海豚": "从容不迫，温和可靠",
-  "织网蛛": "细心周到，默默付出",
-  "暖心熊": "温暖陪伴，善解人意",
-  "灵感章鱼": "创意无限，思维跳跃",
-  "沉思猫头鹰": "深度思考，洞察本质",
-  "定心大象": "稳重可靠，值得信赖",
-  "稳如龟": "踏实内敛，专注当下",
-  "隐身猫": "独立自在，享受独处"
+  "corgi": "快乐感染者，派对灵魂",
+  "rooster": "积极阳光，热情洋溢",
+  "hamster_praise": "暖场达人，社交催化剂",
+  "fox": "灵动聪慧，观察敏锐",
+  "dolphin_calm": "从容不迫，温和可靠",
+  "spider": "细心周到，默默付出",
+  "koala": "温暖陪伴，善解人意",
+  "octopus": "创意无限，思维跳跃",
+  "owl": "深度思考，洞察本质",
+  "elephant": "稳重可靠，值得信赖",
+  "turtle": "踏实内敛，专注当下",
+  "cat": "独立自在，享受独处"
 };
 
 /**

@@ -25,8 +25,8 @@ describe('useAnonymousPersonalityTestResults', () => {
     const mockResult = {
       sessionId: 'test-session-123',
       result: {
-        primaryArchetype: '开心柯基',
-        secondaryArchetype: '太阳鸡',
+        primaryArchetype: 'corgi',
+        secondaryArchetype: 'rooster',
         archetypeConfidence: 0.85,
         traitScores: {
           A: 0.75,
@@ -45,8 +45,8 @@ describe('useAnonymousPersonalityTestResults', () => {
           P: 0.9,
         },
         topMatches: [
-          { archetype: '开心柯基', score: 0.85, confidence: 0.95 },
-          { archetype: '太阳鸡', score: 0.78, confidence: 0.85 },
+          { archetype: 'corgi', score: 0.85, confidence: 0.95 },
+          { archetype: 'rooster', score: 0.78, confidence: 0.85 },
         ],
         totalQuestionsAnswered: 12,
         wasExtended: false,
@@ -62,7 +62,7 @@ describe('useAnonymousPersonalityTestResults', () => {
     expect(stored).toBeTruthy();
     
     const parsed = JSON.parse(stored!);
-    expect(parsed.result.primaryArchetype).toBe('开心柯基');
+    expect(parsed.result.primaryArchetype).toBe('corgi');
     expect(parsed.result.traitScores.X).toBe(0.90);
   });
 

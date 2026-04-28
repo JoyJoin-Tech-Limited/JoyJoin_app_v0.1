@@ -236,14 +236,12 @@
     width: 84rpx;
     height: 84rpx;
     border-radius: 9999rpx;
-    background: rgba(139, 92, 246, 0.12);
-    color: $color-primary-dark;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
+    background: rgba($color-primary, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   &__member-content {

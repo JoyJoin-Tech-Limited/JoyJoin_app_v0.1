@@ -1,0 +1,39 @@
+skill: harness-session-guard
+primary_ownership: >
+  Automatic harness tier detection and contract gating at the start of every
+  implementation task. Auto-runs classification from natural language + proposed
+  files to determine if Sprint Contract is required.
+use_when:
+  - Starting any implementation task that involves code changes
+  - Creating new files or refactoring existing code
+  - Adding routes, components, pages, or features
+  - Database schema or migration work
+  - Cross-workspace changes
+  - Need to classify task tier (1, 2, or 3)
+do_not_use_when:
+  - Questions and explanations only
+  - Documentation-only updates with no code changes
+  - Reading or debugging without modifications
+  - Running tests or commands
+strong_triggers:
+  - add a
+  - implement
+  - build
+  - create
+  - fix
+  - refactor
+  - update
+  - new route
+  - new component
+  - migration
+  - schema change
+  - harness classification
+  - tier detection
+  - pause for contract
+  - harness-auto-trigger
+owned_paths:
+  - /.github/skills/harness-session-guard/
+related_skills:
+  - task-creator
+  - sprint-contract
+  - harness-completion-gate

@@ -23,11 +23,11 @@ export interface QuestionOption {
 export type QuestionLevel = 1 | 2 | 3;
 
 export type CohortType = 
-  | 'creative_explorer'    // 灵感章鱼, 机智狐, 沉思猫头鹰 (high O + mid X)
-  | 'quiet_anchor'         // 隐身猫, 稳如龟, 定心大象 (low X + high C)
-  | 'social_catalyst'      // 开心柯基, 太阳鸡, 夸夸豚 (high X + high P)
-  | 'steady_harmonizer'    // 暖心熊, 淡定海豚, 织网蛛 (high A + mid-high E)
-  | 'reflective_stabilizer' // 沉思猫头鹰, 稳如龟 (high C + differentiated O/E)
+  | 'creative_explorer'    // octopus, fox, owl (high O + mid X)
+  | 'quiet_anchor'         // cat, turtle, elephant (low X + high C)
+  | 'social_catalyst'      // corgi, rooster, hamster_praise (high X + high P)
+  | 'steady_harmonizer'    // koala, dolphin_calm, spider (high A + mid-high E)
+  | 'reflective_stabilizer' // owl, turtle (high C + differentiated O/E)
   | 'universal';           // Works for all cohorts
 
 export interface SliderConfig {
@@ -165,12 +165,12 @@ export interface ConfusableArchetypePair {
 }
 
 export const CONFUSABLE_ARCHETYPE_PAIRS: ConfusableArchetypePair[] = [
-  { archetypes: ['夸夸豚', '淡定海豚'], differentiatingTraits: ['X', 'E'], requiredConfidence: 0.82 },
-  { archetypes: ['机智狐', '灵感章鱼'], differentiatingTraits: ['X', 'C'], requiredConfidence: 0.82 },
-  { archetypes: ['暖心熊', '定心大象'], differentiatingTraits: ['O', 'X'], requiredConfidence: 0.82 },
-  { archetypes: ['沉思猫头鹰', '稳如龟'], differentiatingTraits: ['O', 'A'], requiredConfidence: 0.82 },
-  { archetypes: ['开心柯基', '太阳鸡'], differentiatingTraits: ['O', 'C'], requiredConfidence: 0.82 },
-  { archetypes: ['稳如龟', '隐身猫'], differentiatingTraits: ['O', 'C'], requiredConfidence: 0.82 },
+  { archetypes: ['hamster_praise', 'dolphin_calm'], differentiatingTraits: ['X', 'E'], requiredConfidence: 0.82 },
+  { archetypes: ['fox', 'octopus'], differentiatingTraits: ['X', 'C'], requiredConfidence: 0.82 },
+  { archetypes: ['koala', 'elephant'], differentiatingTraits: ['O', 'X'], requiredConfidence: 0.82 },
+  { archetypes: ['owl', 'turtle'], differentiatingTraits: ['O', 'A'], requiredConfidence: 0.82 },
+  { archetypes: ['corgi', 'rooster'], differentiatingTraits: ['O', 'C'], requiredConfidence: 0.82 },
+  { archetypes: ['turtle', 'cat'], differentiatingTraits: ['O', 'C'], requiredConfidence: 0.82 },
 ];
 
 export interface ValidityCheckPair {

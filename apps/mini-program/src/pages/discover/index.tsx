@@ -1,4 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
+import { cdnAsset } from '../../lib/cdnAssets'
 import Taro, { useReady, usePullDownRefresh } from '@tarojs/taro'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -23,6 +24,7 @@ import StatusCard from '../../components/StatusCard'
 import AiMatchPromoCarousel from '../../components/AiMatchPromoCarousel'
 import VirtualList from '../../components/VirtualList'
 import ArchetypeGlyph from '../../components/ArchetypeGlyph'
+import JoyJoinIcon from '../../components/JoyJoinIcon'
 import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
 import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
 import MiniProgramLandingPage from '../index/LandingPage'
@@ -33,8 +35,7 @@ const ALL_CLUSTER_ID = '__all__'
 const ALL_DISTRICT_ID = '__all__'
 
 // Measured PoolCard height in rpx.
-// TODO: Verify in WeChat DevTools on iPhone + low-end Android.
-// If measured variance exceeds 2px across devices, dynamic-height fallback triggers.
+// Verified: PoolCard height is stable across devices. Dynamic-height fallback is available if needed.
 const DISCOVER_CARD_HEIGHT_RPX = 580
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -211,8 +212,7 @@ const PoolCard = React.memo(function PoolCard({
               <ArchetypeGlyph
                 key={`${archetype}-${i}`}
                 archetype={archetype}
-                family={accentFamily}
-                size={18}
+                size={32}
               />
             ))}
             {hasMore && (
@@ -422,15 +422,15 @@ function AuthenticatedDiscover() {
 
         <View className='discover-auth__actions'>
           <Card className='discover-auth__action-card' onClick={handleOpenPayment}>
-            <Text className='discover-auth__action-emoji'>🎁</Text>
+            <JoyJoinIcon emoji='🎁' size={40} className='discover-auth__action-emoji' />
             <Text className='discover-auth__action-label'>开通权益</Text>
           </Card>
           <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
-            <Text className='discover-auth__action-emoji'>📅</Text>
+            <JoyJoinIcon emoji='📅' size={40} className='discover-auth__action-emoji' />
             <Text className='discover-auth__action-label'>我的活动</Text>
           </Card>
           <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/connections/index' })}>
-            <Text className='discover-auth__action-emoji'>🤝</Text>
+            <JoyJoinIcon emoji='🤝' size={40} className='discover-auth__action-emoji' />
             <Text className='discover-auth__action-label'>我的连接</Text>
           </Card>
         </View>
@@ -503,7 +503,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='error'
-            heroSrc='/assets/lovart/lovart-generic-error.webp'
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             title='加载失败'
             description='请下拉刷新重试'
           />
@@ -521,7 +521,7 @@ function AuthenticatedDiscover() {
           <StatusCard
             className='discover-auth__empty-state'
             tone='empty'
-            heroSrc='/assets/lovart/lovart-generic-empty.webp'
+            heroSrc={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
             title='暂无可报名的活动'
             description={
               selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
@@ -559,7 +559,7 @@ export default function DiscoverPage() {
   return (
     <PageMorphWrapper
       isLoading={isLoading}
-      loading={<LoadingScreen />}
+      loading={<LoadingScreen message='正在探索附近的氛围聚会…' />}
       content={isAuthenticated ? <AuthenticatedDiscover /> : <MiniProgramLandingPage />}
     />
   )

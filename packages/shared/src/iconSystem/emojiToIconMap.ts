@@ -74,9 +74,9 @@ export const MOOD_ICON_MAP: Record<string, IconMapping> = {
 
 export const CHEMISTRY_BADGE_MAP: Record<string, IconMapping> = {
   '🔥': { assetKey: 'chem-fire', tier: 'chemistry', size: 32, fallbackEmoji: '🔥', tint: '#C79450' },
+  '✨': { assetKey: 'chem-warm', tier: 'chemistry', size: 32, fallbackEmoji: '✨', tint: '#E4C76B' },
   '🌱': { assetKey: 'chem-sprout', tier: 'chemistry', size: 32, fallbackEmoji: '🌱', tint: '#8E8E88' },
   '💬': { assetKey: 'chem-chat', tier: 'chemistry', size: 32, fallbackEmoji: '💬', tint: '#C0A17B' },
-  // ✨ (warm chemistry) reuses mood-relaxed asset — same sparkle icon
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -89,8 +89,7 @@ export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
   '🕵️': { assetKey: 'phase-detective', tier: 'phase', size: 80, fallbackEmoji: '🕵️' },
   '🎲': { assetKey: 'phase-dice', tier: 'phase', size: 80, fallbackEmoji: '🎲' },
   '🎪': { assetKey: 'phase-auction', tier: 'phase', size: 80, fallbackEmoji: '🎪' },
-  '🎭': { assetKey: 'phase-theater', tier: 'phase', size: 80, fallbackEmoji: '🎭' },
-  // ✨ (recap phase) reuses mood-relaxed asset
+  '🎭': { assetKey: 'phase-script', tier: 'phase', size: 80, fallbackEmoji: '🎭' },
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -149,7 +148,7 @@ export function getIconAssetPath(
     semantic: 'info-labels',
     mood: 'mood-icons',
     chemistry: 'chemistry-badges',
-    phase: 'phase-emblems',
+    phase: 'phase-icons',
     status: 'status-icons',
   }
   const folder = folderMap[tier]

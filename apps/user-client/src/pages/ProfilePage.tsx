@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
 import { getArchetypeImage } from "@/lib/archetypeImages";
+import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
 import { getTopCompatibleArchetypes } from "@/lib/archetypeCompatibility";
 import { getMatchesWithDescriptions } from "@/lib/archetypeCompatibilityDescriptions";
 import xiaoyueAvatar from "@/assets/Xiao_Yue_Avatar-04.png";
@@ -196,8 +197,8 @@ export default function ProfilePage() {
   };
 
   const getArchetypeAvatar = () => {
-    const archetype = user?.primaryArchetype || user?.archetype || "开心柯基";
-    const defaultConfig = archetypeConfig["开心柯基"];
+    const archetype = user?.primaryArchetype || user?.archetype || "corgi";
+    const defaultConfig = archetypeConfig["corgi"];
     const config = archetypeConfig[archetype] || defaultConfig;
     return { icon: config.icon, bgColor: config.bgColor, color: config.color };
   };
@@ -282,7 +283,7 @@ export default function ProfilePage() {
                         user?.primaryArchetype
                     )!
                   }
-                  alt={`你的原型：${personalityResults?.primaryArchetype || user?.primaryArchetype || "未知"}`}
+                  alt={`你的原型：${(personalityResults?.primaryArchetype ? archetypeRegistry[personalityResults.primaryArchetype]?.name : undefined) || (user?.primaryArchetype ? archetypeRegistry[user.primaryArchetype]?.name : undefined) || "未知"}`}
                   className="w-full h-full object-contain bg-purple-900/40"
                 />
               ) : (
@@ -672,7 +673,7 @@ export default function ProfilePage() {
                               personalityResults.primaryArchetype
                             )!
                           }
-                          alt={personalityResults.primaryArchetype}
+                          alt={archetypeRegistry[personalityResults.primaryArchetype]?.name ?? personalityResults.primaryArchetype}
                           className="w-full h-full object-contain"
                         />
                       ) : (

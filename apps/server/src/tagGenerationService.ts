@@ -16,19 +16,16 @@ import OpenAI from 'openai';
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry';
 import { getMiniMaxClient, MINIMAX_MODEL } from './ai/minimaxClient';
 import { getTagGenerationProvider, isProviderAvailable, type AIProvider } from './ai/creativeModelRouter';
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logAITrace } from './lib/aiTraceLogger';
+import { logger } from "./lib/logger";
 
 const TAG_GENERATION_PROMPT_VERSION = 'social-tags-v1';
 
 // Validate API key at module initialization
 if (!process.env.DEEPSEEK_API_KEY && !process.env.MINIMAX_API_KEY) {
-  console.warn('[TagGeneration] Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Tag generation will use fallback mode.');
+  logger.warn('[TagGeneration] Neither DEEPSEEK_API_KEY nor MINIMAX_API_KEY is set. Tag generation will use fallback mode.');
 }
-
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key-for-fallback',
-  baseURL: 'https://api.deepseek.com',
-});
 
 /**
  * Returns the active AI client and model for tag generation based on provider routing.
@@ -42,10 +39,10 @@ function getTagAIClient(): { client: OpenAI; model: string; provider: AIProvider
       return { client: minimaxClient, model: MINIMAX_MODEL, provider: 'minimax' };
     }
     // MiniMax not configured — fall through to DeepSeek
-    console.warn('[TagGeneration] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
+    logger.warn('[TagGeneration] MiniMax provider selected but MINIMAX_API_KEY not set, falling back to DeepSeek');
   }
 
-  return { client: deepseekClient, model: 'deepseek-chat', provider: 'deepseek' };
+  return { client: getDeepseekClient(), model: getDeepseekModel('flash'), provider: 'deepseek' };
 }
 
 export interface TagGenerationInput {
@@ -102,7 +99,7 @@ export async function generateSocialTags(input: TagGenerationInput): Promise<Tag
 
   // Check if the effective AI provider is available
   if (!isProviderAvailable(provider)) {
-    console.warn('[TagGeneration] No AI provider configured, using fallback tags');
+    logger.warn('[TagGeneration] No AI provider configured, using fallback tags');
     logAITrace({
       domain: 'creative_identity',
       feature: 'generateSocialTags',
@@ -120,7 +117,7 @@ export async function generateSocialTags(input: TagGenerationInput): Promise<Tag
   // Get archetype info
   const archetypeData = archetypeRegistry[input.archetype];
   if (!archetypeData) {
-    console.warn(`[TagGeneration] Unknown archetype: ${input.archetype}, using fallback`);
+    logger.warn(`[TagGeneration] Unknown archetype: ${input.archetype}, using fallback`);
     logAITrace({
       domain: 'creative_identity',
       feature: 'generateSocialTags',
@@ -200,7 +197,7 @@ ${JSON.stringify(userProfile, null, 2)}
     const content = response.choices[0]?.message?.content;
 
     if (!content) {
-      console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (empty response), using fallback`);
+      logger.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (empty response), using fallback`);
       logAITrace({
         domain: 'creative_identity',
         feature: 'generateSocialTags',
@@ -221,7 +218,7 @@ ${JSON.stringify(userProfile, null, 2)}
     try {
       parsed = JSON.parse(content);
     } catch (parseError) {
-      console.error(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (parse error):`, parseError);
+      logger.error(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (parse error):`, { error: parseError instanceof Error ? parseError.message : String(parseError) });
       logAITrace({
         domain: 'creative_identity',
         feature: 'generateSocialTags',
@@ -243,7 +240,7 @@ ${JSON.stringify(userProfile, null, 2)}
     const validTags = tags.filter(validateTag);
     
     if (validTags.length === 0) {
-      console.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (all tags failed validation), using fallback`);
+      logger.warn(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=false (all tags failed validation), using fallback`);
       logAITrace({
         domain: 'creative_identity',
         feature: 'generateSocialTags',
@@ -266,7 +263,7 @@ ${JSON.stringify(userProfile, null, 2)}
       const existingTags = new Set(validTags.map(t => t.fullTag));
       const uniqueFallbackTags = fallbackTags.filter(t => !existingTags.has(t.fullTag));
       const combinedTags = [...validTags, ...uniqueFallbackTags.slice(0, 2 - validTags.length)];
-      console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=partial (supplemented with fallback)`);
+      logger.info(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=partial (supplemented with fallback)`);
       logAITrace({
         domain: 'creative_identity',
         feature: 'generateSocialTags',
@@ -282,7 +279,7 @@ ${JSON.stringify(userProfile, null, 2)}
       return { tags: combinedTags, isFallback: true };
     }
 
-    console.log(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
+    logger.info(`[TagGeneration] provider=${provider} latency=${durationMs}ms success=true`);
     logAITrace({
       domain: 'creative_identity',
       feature: 'generateSocialTags',
@@ -298,7 +295,7 @@ ${JSON.stringify(userProfile, null, 2)}
     return { tags: validTags.slice(0, 3), isFallback: false };
   } catch (error) {
     const durationMs = Date.now() - startTime;
-    console.error(`[TagGeneration] provider=${provider} error after ${durationMs}ms:`, error);
+    logger.error(`[TagGeneration] provider=${provider} error after ${durationMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
     logAITrace({
       domain: 'creative_identity',
       feature: 'generateSocialTags',

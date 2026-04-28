@@ -139,7 +139,9 @@
       ],
       "skills": [
         "orchestration-turn-reporting",
-        "first-principles-velocity"
+        "first-principles-velocity",
+        "subagent-context-delegation",
+        "agent-coordination-patterns"
       ],
       "toolingStatus": "enhanced"
     },
@@ -202,7 +204,9 @@
         "orchestration-turn-reporting",
         "first-principles-velocity",
         "monorepo-workspace-governance",
-        "docs-sync"
+        "docs-sync",
+        "subagent-context-delegation",
+        "agent-coordination-patterns"
       ],
       "toolingStatus": "sufficient"
     },
@@ -489,7 +493,8 @@
         "wow-elements",
         "platform-coordination-protocol",
         "performance-benchmark",
-        "frontend-performance-and-loading"
+        "frontend-performance-and-loading",
+        "subagent-context-delegation"
       ],
       "toolingStatus": "enhanced"
     },
@@ -780,7 +785,8 @@
         "first-principles-velocity",
         "platform-coordination-protocol",
         "frontend-component-architecture",
-        "design-system-governance"
+        "design-system-governance",
+        "subagent-context-delegation"
       ],
       "toolingStatus": "sufficient"
     },
@@ -862,7 +868,9 @@
         "api-contract-versioning",
         "feature-flags-launch-config",
         "performance-benchmark",
-        "matching-domain"
+        "matching-domain",
+        "subagent-context-delegation",
+        "agent-coordination-patterns"
       ],
       "toolingStatus": "sufficient"
     },
@@ -899,7 +907,9 @@
         "server-domain-architecture",
         "mini-program-frontend-excellence",
         "testing-and-regression-guardrails",
-        "platform-coordination-protocol"
+        "platform-coordination-protocol",
+        "subagent-context-delegation",
+        "agent-coordination-patterns"
       ],
       "toolingStatus": "sufficient"
     },

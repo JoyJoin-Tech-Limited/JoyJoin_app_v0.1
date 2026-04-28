@@ -394,6 +394,18 @@
     },
     {
       "from": "Backend Engineer",
+      "to": "Verifier",
+      "label": "Propose Sprint Contract draft",
+      "prompt": "Review this Sprint Contract for testability, edge-case coverage, Harness pillar gaps, and verification-method feasibility. Return ACK with specific changes or REJECT with concrete feedback. Max 2 cycles."
+    },
+    {
+      "from": "Backend Engineer",
+      "to": "QA Agent",
+      "label": "Sprint complete — evaluate",
+      "prompt": "The Sprint Contract has been implemented. Run the verification method, grade each acceptance criterion PASS/PARTIAL/FAIL with hard thresholds, and write verdict JSON. Any FAIL on a required criterion → REJECT."
+    },
+    {
+      "from": "Backend Engineer",
       "to": "QA Agent",
       "label": "Request QA verification",
       "prompt": "Turn the implemented backend scope into a concrete verification checklist or execution summary."
@@ -406,6 +418,18 @@
     },
     {
       "from": "AI Engineer",
+      "to": "Verifier",
+      "label": "Propose Sprint Contract draft",
+      "prompt": "Review this Sprint Contract for testability, edge-case coverage, Harness pillar gaps, and verification-method feasibility. Return ACK with specific changes or REJECT with concrete feedback. Max 2 cycles."
+    },
+    {
+      "from": "AI Engineer",
+      "to": "QA Agent",
+      "label": "Sprint complete — evaluate",
+      "prompt": "The Sprint Contract has been implemented. Run the verification method, grade each acceptance criterion PASS/PARTIAL/FAIL with hard thresholds, and write verdict JSON. Any FAIL on a required criterion → REJECT."
+    },
+    {
+      "from": "AI Engineer",
       "to": "QA Agent",
       "label": "Verify AI-backed change",
       "prompt": "Focus verification on fallback behavior, runtime traces, and deterministic authority boundaries around the AI path."
@@ -415,6 +439,42 @@
       "to": "Launch Readiness Agent",
       "label": "Assess AI launch risk",
       "prompt": "Review whether the AI-backed change is operationally ready for rollout, including observability and fallback behavior."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Backend Engineer",
+      "label": "Sprint failed — return to generator",
+      "prompt": "Use the Sprint Contract feedback JSON to fix the identified issues. Re-run self-evaluation and resubmit for Sprint Evaluation. Max 3 iterations total."
+    },
+    {
+      "from": "QA Agent",
+      "to": "AI Engineer",
+      "label": "Sprint failed — return to generator",
+      "prompt": "Use the Sprint Contract feedback JSON to fix the identified issues. Re-run self-evaluation and resubmit for Sprint Evaluation. Max 3 iterations total."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Expert React Frontend Engineer",
+      "label": "Sprint failed — return to generator",
+      "prompt": "Use the Sprint Contract feedback JSON to fix the identified issues. Re-run self-evaluation and resubmit for Sprint Evaluation. Max 3 iterations total."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Taro Mini-Program Frontend Engineer",
+      "label": "Sprint failed — return to generator",
+      "prompt": "Use the Sprint Contract feedback JSON to fix the identified issues. Re-run self-evaluation and resubmit for Sprint Evaluation. Max 3 iterations total."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Auto-Eval",
+      "label": "Sprint accepted — run dirty-worktree gate",
+      "prompt": "Run the deterministic dirty-worktree quality gate and confirm no new lint, type, or guardrail failures were introduced."
+    },
+    {
+      "from": "QA Agent",
+      "to": "Verifier",
+      "label": "Tier 3 — skeptical post-claim verification",
+      "prompt": "QA Agent has accepted the sprint. Run a narrow, skeptical spot-check: confirm files exist, claims are evidenced, and no hidden gaps remain. Do not repeat QA Agent's full evaluation."
     },
     {
       "from": "QA Agent",
@@ -471,10 +531,40 @@
       "prompt": "Use the Harness Runtime Controller when the task requires pre-validation against the 5 Harness pillars (reliability, scalability, security, observability, maintainability), touches core engines, or the user explicitly requests a production harness. Provide task scope, affected workspaces, and recommended mode (pge-council, council-only, token-ring)."
     },
     {
+      "from": "Supervisor",
+      "to": "Backend Engineer",
+      "label": "Route backend with Sprint Contract (Tier 2)",
+      "prompt": "Auto-trigger classified this as Tier 2. A Sprint Contract is required. The contract may be pre-generated at .git/.orchestration/sprints/sprint-contract.{taskId}.md. If not, the engineer generates it first. Include harness context: tier=2, contractRequired=true, maxEvaluatorIterations=3."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Taro Mini-Program Frontend Engineer",
+      "label": "Route mini-program with Sprint Contract (Tier 2)",
+      "prompt": "Auto-trigger classified this as Tier 2. A Sprint Contract is required. The contract may be pre-generated at .git/.orchestration/sprints/sprint-contract.{taskId}.md. If not, the engineer generates it first. Include harness context: tier=2, contractRequired=true, maxEvaluatorIterations=3."
+    },
+    {
+      "from": "Supervisor",
+      "to": "Expert React Frontend Engineer",
+      "label": "Route web frontend with Sprint Contract (Tier 2)",
+      "prompt": "Auto-trigger classified this as Tier 2. A Sprint Contract is required. The contract may be pre-generated at .git/.orchestration/sprints/sprint-contract.{taskId}.md. If not, the engineer generates it first. Include harness context: tier=2, contractRequired=true, maxEvaluatorIterations=3."
+    },
+    {
+      "from": "Supervisor",
+      "to": "AI Engineer",
+      "label": "Route AI with Sprint Contract (Tier 2)",
+      "prompt": "Auto-trigger classified this as Tier 2. A Sprint Contract is required. The contract may be pre-generated at .git/.orchestration/sprints/sprint-contract.{taskId}.md. If not, the engineer generates it first. Include harness context: tier=2, contractRequired=true, maxEvaluatorIterations=3."
+    },
+    {
       "from": "Planner",
       "to": "Harness Runtime Controller",
       "label": "Harness before execution",
       "prompt": "Use the Harness Runtime Controller to run the full PGE → Council → Consensus pipeline before finalizing the execution plan."
+    },
+    {
+      "from": "Harness Runtime Controller",
+      "to": "QA Agent",
+      "label": "Locked Sprint Contract ready — stand by for evaluation",
+      "prompt": "The Harness consensus plan includes a locked Sprint Contract. Review it for operational feasibility, then stand by to evaluate the implementation against it after the engineer completes work."
     },
     {
       "from": "Harness Runtime Controller",
@@ -499,6 +589,84 @@
       "to": "Deliberation Moderator",
       "label": "Escalate unresolved dissent",
       "prompt": "A Harness deliberation reached unresolved dissent or veto override. Use general deliberation to resolve the remaining disagreement."
+    },
+    {
+      "from": "Expert React Frontend Engineer",
+      "to": "Verifier",
+      "label": "Propose Sprint Contract draft",
+      "prompt": "Review this Sprint Contract for testability, edge-case coverage, Harness pillar gaps, and verification-method feasibility. Return ACK with specific changes or REJECT with concrete feedback. Max 2 cycles."
+    },
+    {
+      "from": "Expert React Frontend Engineer",
+      "to": "QA Agent",
+      "label": "Sprint complete — evaluate",
+      "prompt": "The Sprint Contract has been implemented. Run the verification method, grade each acceptance criterion PASS/PARTIAL/FAIL with hard thresholds, and write verdict JSON. Any FAIL on a required criterion → REJECT."
+    },
+    {
+      "from": "Taro Mini-Program Frontend Engineer",
+      "to": "Verifier",
+      "label": "Propose Sprint Contract draft",
+      "prompt": "Review this Sprint Contract for testability, edge-case coverage, Harness pillar gaps, and verification-method feasibility. Return ACK with specific changes or REJECT with concrete feedback. Max 2 cycles."
+    },
+    {
+      "from": "Taro Mini-Program Frontend Engineer",
+      "to": "QA Agent",
+      "label": "Sprint complete — evaluate",
+      "prompt": "The Sprint Contract has been implemented. Run the verification method, grade each acceptance criterion PASS/PARTIAL/FAIL with hard thresholds, and write verdict JSON. Any FAIL on a required criterion → REJECT."
+    },
+    {
+      "from": "Verifier",
+      "to": "Backend Engineer",
+      "label": "Contract needs revision",
+      "prompt": "Revise the Sprint Contract per Verifier feedback, update the Negotiation Log, and resubmit."
+    },
+    {
+      "from": "Verifier",
+      "to": "AI Engineer",
+      "label": "Contract needs revision",
+      "prompt": "Revise the Sprint Contract per Verifier feedback, update the Negotiation Log, and resubmit."
+    },
+    {
+      "from": "Verifier",
+      "to": "Expert React Frontend Engineer",
+      "label": "Contract needs revision",
+      "prompt": "Revise the Sprint Contract per Verifier feedback, update the Negotiation Log, and resubmit."
+    },
+    {
+      "from": "Verifier",
+      "to": "Taro Mini-Program Frontend Engineer",
+      "label": "Contract needs revision",
+      "prompt": "Revise the Sprint Contract per Verifier feedback, update the Negotiation Log, and resubmit."
+    },
+    {
+      "from": "Verifier",
+      "to": "Backend Engineer",
+      "label": "Contract accepted — implement",
+      "prompt": "Contract is locked. Proceed with implementation against the accepted Sprint Contract. Run self-evaluation before handoff."
+    },
+    {
+      "from": "Verifier",
+      "to": "AI Engineer",
+      "label": "Contract accepted — implement",
+      "prompt": "Contract is locked. Proceed with implementation against the accepted Sprint Contract. Run self-evaluation before handoff."
+    },
+    {
+      "from": "Verifier",
+      "to": "Expert React Frontend Engineer",
+      "label": "Contract accepted — implement",
+      "prompt": "Contract is locked. Proceed with implementation against the accepted Sprint Contract. Run self-evaluation before handoff."
+    },
+    {
+      "from": "Verifier",
+      "to": "Taro Mini-Program Frontend Engineer",
+      "label": "Contract accepted — implement",
+      "prompt": "Contract is locked. Proceed with implementation against the accepted Sprint Contract. Run self-evaluation before handoff."
+    },
+    {
+      "from": "Verifier",
+      "to": "Supervisor",
+      "label": "Contract rejected twice — escalate",
+      "prompt": "The Sprint Contract was rejected by Verifier after max negotiation cycles. Route back to the implementing engineer with specific feedback, or escalate to Planner for scope clarification."
     },
     {
       "from": "Visual Designer",

@@ -19,6 +19,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
 import type { ArchetypeSkillSet } from '@joyjoin/shared/personality/archetypeSkills';
+import { archetypeRegistry } from '@shared/personality/archetypeRegistry';
 
 interface PremiumCardProps {
   archetypeName: string;
@@ -206,7 +207,7 @@ export function PremiumCard({
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
-                    alt={archetypeName}
+                    alt={archetypeRegistry[archetypeName]?.name ?? archetypeName}
                     className="w-full h-full rounded-xl object-cover bg-background"
                     loading="eager"
                   />
@@ -221,7 +222,7 @@ export function PremiumCard({
             {/* Name + Nickname + Tagline */}
             <div className="text-center space-y-1">
               <h1 className="font-cn-display text-3xl font-bold text-foreground">
-                {archetypeName}
+                {archetypeRegistry[archetypeName]?.name ?? archetypeName}
               </h1>
               {nickname && (
                 <p className="text-sm font-medium text-primary">{nickname}</p>

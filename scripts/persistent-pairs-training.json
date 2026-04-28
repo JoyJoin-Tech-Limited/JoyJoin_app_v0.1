@@ -10,19 +10,19 @@
       "P": 96.82511627394345
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9036211180346603
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8625631458127446
     },
     "scoreGap": 0.04105797222191565,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -36,19 +36,19 @@
       "P": 70.09937554620961
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.7173144660384775
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.6993340724325419
     },
     "scoreGap": 0.01798039360593562,
-    "trueArchetype": "灵感章鱼",
+    "trueArchetype": "octopus",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -62,19 +62,19 @@
       "P": 67.81831937147058
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9093235299417637
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.838754845034029
     },
     "scoreGap": 0.07056868490773471,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -88,19 +88,19 @@
       "P": 95.56038039492724
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8813033745682343
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8106150305154428
     },
     "scoreGap": 0.07068834405279145,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -114,19 +114,19 @@
       "P": 90.58217689721812
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8001111419924674
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7653371212426927
     },
     "scoreGap": 0.03477402074977465,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -140,19 +140,19 @@
       "P": 45.85636678569935
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.847393024769872
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8402780193238542
     },
     "scoreGap": 0.007115005446017841,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -166,19 +166,19 @@
       "P": 99.385563878957
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8615964033864887
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8151276716818394
     },
     "scoreGap": 0.04646873170464927,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -192,19 +192,19 @@
       "P": 42.004870525648535
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.923405831379493
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8358862183321177
     },
     "scoreGap": 0.08751961304737521,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -218,19 +218,19 @@
       "P": 82.49318664449127
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.745790987134165
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.723996779406874
     },
     "scoreGap": 0.021794207727291015,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -244,19 +244,19 @@
       "P": 82.8756246544368
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8633739897872054
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8313451914576864
     },
     "scoreGap": 0.03202879832951899,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -270,19 +270,19 @@
       "P": 51.555327789575514
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8446509306969194
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8379300562514238
     },
     "scoreGap": 0.006720874445495628,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -296,19 +296,19 @@
       "P": 58.29238910340817
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8394454056161027
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8213631865736766
     },
     "scoreGap": 0.01808221904242613,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -322,19 +322,19 @@
       "P": 46.76195945400023
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.855932114766838
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.855623947815282
     },
     "scoreGap": 0.00030816695155599927,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -348,19 +348,19 @@
       "P": 56.3766025571081
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8758137599320189
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8085145784487324
     },
     "scoreGap": 0.06729918148328651,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -374,19 +374,19 @@
       "P": 52.211802209017534
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8563956051430799
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8453678199367574
     },
     "scoreGap": 0.011027785206322527,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -400,19 +400,19 @@
       "P": 64.6777886648592
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8978019352216274
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8927101537371261
     },
     "scoreGap": 0.00509178148450129,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -426,19 +426,19 @@
       "P": 68.28921604524305
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.817791328417114
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7970221686981556
     },
     "scoreGap": 0.02076915971895843,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -452,19 +452,19 @@
       "P": 83.12470870251252
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8545505051381905
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8063221460488806
     },
     "scoreGap": 0.04822835908930989,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -478,19 +478,19 @@
       "P": 59.40988558674739
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8579514949822499
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8563956051430799
     },
     "scoreGap": 0.0015558898391699882,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -504,19 +504,19 @@
       "P": 86.55917976688755
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8322700583278784
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7544167939147485
     },
     "scoreGap": 0.0778532644131299,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -530,19 +530,19 @@
       "P": 43.625998572862116
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8695307613947938
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7929036724398791
     },
     "scoreGap": 0.07662708895491466,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -556,19 +556,19 @@
       "P": 70.56657480583324
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.879077619018553
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8242476489804791
     },
     "scoreGap": 0.05482997003807388,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -582,19 +582,19 @@
       "P": 44.90197823082862
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8588932634098885
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.79408739718026
     },
     "scoreGap": 0.06480586622962847,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -608,19 +608,19 @@
       "P": 72.94816816972917
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8886447127433995
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8619178988186135
     },
     "scoreGap": 0.02672681392478604,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -634,19 +634,19 @@
       "P": 41.490560781970785
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.9133333333333333
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8317409404783471
     },
     "scoreGap": 0.0815923928549862,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -660,19 +660,19 @@
       "P": 41.25161977131937
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8880476291750222
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7956038704432548
     },
     "scoreGap": 0.09244375873176747,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -686,19 +686,19 @@
       "P": 58.63878965541343
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.9059550934688941
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8204945064288498
     },
     "scoreGap": 0.08546058704004433,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -712,19 +712,19 @@
       "P": 63.84032786356725
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8322700583278784
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7544167939147485
     },
     "scoreGap": 0.0778532644131299,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -738,19 +738,19 @@
       "P": 84.68347560979673
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8320052910886113
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7830514653963603
     },
     "scoreGap": 0.04895382569225104,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -764,19 +764,19 @@
       "P": 79.14429717494951
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8752780871075353
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8710728026279085
     },
     "scoreGap": 0.0042052844796267586,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -790,19 +790,19 @@
       "P": 62.54541394861162
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8368368233263944
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8136908185002384
     },
     "scoreGap": 0.02314600482615603,
-    "trueArchetype": "织网蛛",
+    "trueArchetype": "spider",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -816,19 +816,19 @@
       "P": 65.94344591122518
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8332000532907093
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7827443901759956
     },
     "scoreGap": 0.05045566311471372,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -842,19 +842,19 @@
       "P": 57.41447702353505
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8479766099867816
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8223611654070103
     },
     "scoreGap": 0.025615444579771274,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -868,19 +868,19 @@
       "P": 76.1117371000019
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.9120606269448472
     },
     "top2": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8221111458116489
     },
     "scoreGap": 0.08994948113319834,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|太阳鸡",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|rooster",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -894,19 +894,19 @@
       "P": 72.39837478903023
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8633739897872054
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8369730765248335
     },
     "scoreGap": 0.026400913262371817,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -920,19 +920,19 @@
       "P": 53.348476775219794
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8171825439893055
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8060928057033468
     },
     "scoreGap": 0.011089738285958606,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -946,19 +946,19 @@
       "P": 51.295264087393825
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.9047809542860953
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8107324057789548
     },
     "scoreGap": 0.0940485485071405,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -972,19 +972,19 @@
       "P": 58.67569687136572
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8991150269971896
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8816784043380077
     },
     "scoreGap": 0.01743662265918189,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -998,19 +998,19 @@
       "P": 63.06304235491855
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8418158597639377
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8352105720758897
     },
     "scoreGap": 0.006605287688048023,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1024,19 +1024,19 @@
       "P": 54.647432905710765
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8123833696070628
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7590758533387647
     },
     "scoreGap": 0.053307516268298105,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1050,19 +1050,19 @@
       "P": 62.81569730880473
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8847225568947295
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8192607771769872
     },
     "scoreGap": 0.06546177971774225,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1076,19 +1076,19 @@
       "P": 63.72387898515625
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8314770045364728
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.804836251089274
     },
     "scoreGap": 0.02664075344719874,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1102,19 +1102,19 @@
       "P": 97.62182437352908
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8100292420163333
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8051781440506339
     },
     "scoreGap": 0.00485109796569938,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1128,19 +1128,19 @@
       "P": 40.90407180443847
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.9239883049933908
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.841956405451604
     },
     "scoreGap": 0.0820318995417868,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1154,19 +1154,19 @@
       "P": 48.80127121556483
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.9081063416527319
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8179133295500312
     },
     "scoreGap": 0.0901930121027007,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1180,19 +1180,19 @@
       "P": 43.16823995454681
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8680067341785112
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8340013386934836
     },
     "scoreGap": 0.03400539548502757,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1206,19 +1206,19 @@
       "P": 56.307939290761986
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8588932634098885
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.79408739718026
     },
     "scoreGap": 0.06480586622962847,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1232,19 +1232,19 @@
       "P": 93.79481606648598
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8129765314785928
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7508235787862566
     },
     "scoreGap": 0.06215295269233623,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1258,19 +1258,19 @@
       "P": 42.81986799807391
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8506309566506128
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8300326828802405
     },
     "scoreGap": 0.020598273770372377,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1284,19 +1284,19 @@
       "P": 59.80889971070959
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8412549213361246
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8141685351364486
     },
     "scoreGap": 0.02708638619967596,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1310,19 +1310,19 @@
       "P": 74.14487585357021
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9040833695337456
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8423787944328415
     },
     "scoreGap": 0.0617045751009041,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1336,19 +1336,19 @@
       "P": 61.46019326282569
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8767117199406205
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8067816433841408
     },
     "scoreGap": 0.06993007655647965,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1362,19 +1362,19 @@
       "P": 62.495520763281874
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.934340947988026
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8390307137646715
     },
     "scoreGap": 0.0953102342233545,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1388,19 +1388,19 @@
       "P": 75.68271310398109
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8777979814678443
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8653399341551723
     },
     "scoreGap": 0.012458047312671972,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1414,19 +1414,19 @@
       "P": 62.4808573319128
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8635367367302752
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.813214323651708
     },
     "scoreGap": 0.05032241307856722,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1440,19 +1440,19 @@
       "P": 45.48114644502069
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.9061916848035314
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8680067341785112
     },
     "scoreGap": 0.03818495062502025,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1466,19 +1466,19 @@
       "P": 56.808158921202384
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8515262836578661
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8026846855073502
     },
     "scoreGap": 0.04884159815051592,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1492,19 +1492,19 @@
       "P": 64.79368830910201
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9066666666666666
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8258991352373254
     },
     "scoreGap": 0.08076753142934123,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1518,19 +1518,19 @@
       "P": 43.54441995950608
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8870595043593505
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8232390188858286
     },
     "scoreGap": 0.06382048547352193,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1544,19 +1544,19 @@
       "P": 49.023644180535946
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8604770030902911
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8369730765248335
     },
     "scoreGap": 0.023503926565457522,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1570,19 +1570,19 @@
       "P": 52.784099932207056
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8313451914576864
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8109673749498957
     },
     "scoreGap": 0.02037781650779069,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1596,19 +1596,19 @@
       "P": 82.48956452961633
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.867502620570988
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8115560796652991
     },
     "scoreGap": 0.05594654090568896,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1622,19 +1622,19 @@
       "P": 50.15330902214209
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.83467204309817
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7814187158565999
     },
     "scoreGap": 0.05325332724157006,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1648,19 +1648,19 @@
       "P": 94.70440344870772
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8321376225064777
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8140489909202486
     },
     "scoreGap": 0.018088631586229087,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1674,19 +1674,19 @@
       "P": 63.50542762765782
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8184021537083168
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7541454811388564
     },
     "scoreGap": 0.06425667256946044,
-    "trueArchetype": "织网蛛",
+    "trueArchetype": "spider",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1700,19 +1700,19 @@
       "P": 41.0626509029599
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8302943725152285
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8004449393720565
     },
     "scoreGap": 0.02984943314317201,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1726,19 +1726,19 @@
       "P": 50.213791121929134
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8348065107551484
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7468421660526996
     },
     "scoreGap": 0.08796434470244885,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1752,19 +1752,19 @@
       "P": 35.83687694942577
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8522765346255977
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7712837760212208
     },
     "scoreGap": 0.08099275860437694,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1778,19 +1778,19 @@
       "P": 55.64656317022861
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8173041385860704
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7604634103570442
     },
     "scoreGap": 0.056840728229026194,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1804,19 +1804,19 @@
       "P": 51.56393086064077
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8948017744129366
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8064369181205604
     },
     "scoreGap": 0.08836485629237623,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1830,19 +1830,19 @@
       "P": 72.09481406464542
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.857171431429143
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8187696370790909
     },
     "scoreGap": 0.03840179435005209,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1856,19 +1856,19 @@
       "P": 43.56257926339981
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8302943725152285
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7735294966471595
     },
     "scoreGap": 0.056764875868069,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1882,19 +1882,19 @@
       "P": 54.3613904437985
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8503337045290423
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7930110040498664
     },
     "scoreGap": 0.05732270047917598,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1908,19 +1908,19 @@
       "P": 41.434065368156
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8481228566680731
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8257715420617069
     },
     "scoreGap": 0.02235131460636619,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1934,19 +1934,19 @@
       "P": 38.07334338341445
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8693605470515638
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7784900303221847
     },
     "scoreGap": 0.09087051672937918,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -1960,19 +1960,19 @@
       "P": 83.40170545455254
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8316089207957988
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8292500203351241
     },
     "scoreGap": 0.002358900460674773,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -1986,19 +1986,19 @@
       "P": 73.31350275823756
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8997780241441806
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8666666666666667
     },
     "scoreGap": 0.033111357477513925,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2012,19 +2012,19 @@
       "P": 97.91178351078298
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8238687358183613
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7519856634968229
     },
     "scoreGap": 0.07188307232153834,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2038,19 +2038,19 @@
       "P": 49.2471216031953
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8525777040833601
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8390307137646715
     },
     "scoreGap": 0.013546990318688557,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2064,19 +2064,19 @@
       "P": 74.81508153731046
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.898237749850175
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.82074227120335
     },
     "scoreGap": 0.07749547864682504,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2090,19 +2090,19 @@
       "P": 55.653117820001434
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8282120169769983
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8188922972372517
     },
     "scoreGap": 0.009319719739746657,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2116,19 +2116,19 @@
       "P": 61.76093654282935
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.796148201981058
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7545978357425872
     },
     "scoreGap": 0.04155036623847075,
-    "trueArchetype": "织网蛛",
+    "trueArchetype": "spider",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2142,19 +2142,19 @@
       "P": 45.57206004503606
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8870595043593505
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7933333333333333
     },
     "scoreGap": 0.09372617102601721,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2168,19 +2168,19 @@
       "P": 69.27881627711646
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9088347044588178
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8134524189382237
     },
     "scoreGap": 0.09538228552059402,
-    "trueArchetype": "织网蛛",
+    "trueArchetype": "spider",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2194,19 +2194,19 @@
       "P": 56.584686338216066
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8641896747502442
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8273088820401517
     },
     "scoreGap": 0.03688079271009248,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2220,19 +2220,19 @@
       "P": 90.01450736471112
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8643534003374946
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8246273808271213
     },
     "scoreGap": 0.039726019510373356,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2246,19 +2246,19 @@
       "P": 48.03391900055212
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8527285197708365
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7756986154498571
     },
     "scoreGap": 0.07702990432097945,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2272,19 +2272,19 @@
       "P": 51.96838271961566
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8503337045290423
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7930110040498664
     },
     "scoreGap": 0.05732270047917598,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2298,19 +2298,19 @@
       "P": 58.24370192086832
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8551629267839971
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8006677814969859
     },
     "scoreGap": 0.05449514528701116,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2324,19 +2324,19 @@
       "P": 66.12724460053522
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8320052910886113
     },
     "top2": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8286005315709007
     },
     "scoreGap": 0.003404759517710576,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|太阳鸡",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|rooster",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2350,19 +2350,19 @@
       "P": 49.615708955106584
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8329338121847778
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8164546680275173
     },
     "scoreGap": 0.016479144157260484,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2376,19 +2376,19 @@
       "P": 66.08053915293047
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8888444533297796
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.823364782673443
     },
     "scoreGap": 0.06547967065633653,
-    "trueArchetype": "织网蛛",
+    "trueArchetype": "spider",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2402,19 +2402,19 @@
       "P": 44.84700199386743
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8453678199367574
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.807011802318265
     },
     "scoreGap": 0.03835601761849239,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2428,19 +2428,19 @@
       "P": 67.6404470526147
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8756349459588157
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8425198425197638
     },
     "scoreGap": 0.033115103439051996,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2454,19 +2454,19 @@
       "P": 63.75996040184951
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8761721625266219
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8101462551213581
     },
     "scoreGap": 0.06602590740526382,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2480,19 +2480,19 @@
       "P": 49.8350745333733
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.9020204102886729
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8326679946931849
     },
     "scoreGap": 0.06935241559548799,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2506,19 +2506,19 @@
       "P": 94.23238591835705
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.858421596122698
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8092121597166109
     },
     "scoreGap": 0.049209436406087104,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2532,19 +2532,19 @@
       "P": 62.42957399862415
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8686818959760519
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8159710167754366
     },
     "scoreGap": 0.052710879200615346,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2558,19 +2558,19 @@
       "P": 74.53328555321012
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8886447127433995
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8540928758117381
     },
     "scoreGap": 0.03455183693166142,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2584,19 +2584,19 @@
       "P": 79.12190259214076
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8151276716818394
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8001111419924674
     },
     "scoreGap": 0.01501652968937206,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2610,19 +2610,19 @@
       "P": 68.72148580242056
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.817791328417114
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7970221686981556
     },
     "scoreGap": 0.02076915971895843,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2636,19 +2636,19 @@
       "P": 76.8542073483663
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8276953602223989
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7879203503921751
     },
     "scoreGap": 0.03977500983022375,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2662,19 +2662,19 @@
       "P": 72.82498070548401
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8776162683287612
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8609556425692386
     },
     "scoreGap": 0.01666062575952254,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2688,19 +2688,19 @@
       "P": 57.691576260770475
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7857312176001574
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7612067374857024
     },
     "scoreGap": 0.02452448011445496,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2714,19 +2714,19 @@
       "P": 43.232821158726644
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8187696370790909
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7628877434162835
     },
     "scoreGap": 0.05588189366280738,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2740,19 +2740,19 @@
       "P": 78.40727732313127
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8665001040366614
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8071269847801409
     },
     "scoreGap": 0.05937311925652056,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2766,19 +2766,19 @@
       "P": 75.09649323636114
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.7173144660384775
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.6993340724325419
     },
     "scoreGap": 0.01798039360593562,
-    "trueArchetype": "灵感章鱼",
+    "trueArchetype": "octopus",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2792,19 +2792,19 @@
       "P": 90.5782982493889
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8479766099867816
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8086306654079023
     },
     "scoreGap": 0.0393459445788793,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2818,19 +2818,19 @@
       "P": 52.79603919596839
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8341352626050036
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7983402205032777
     },
     "scoreGap": 0.035795042101725905,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -2844,19 +2844,19 @@
       "P": 65.33374142656604
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8978019352216274
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8429437468081367
     },
     "scoreGap": 0.05485818841349077,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2870,19 +2870,19 @@
       "P": 98.0498368171943
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.7918334000533868
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7918334000533868
     },
     "scoreGap": 0,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2896,19 +2896,19 @@
       "P": 70.18196538548307
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8313451914576864
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8159710167754366
     },
     "scoreGap": 0.015374174682249775,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2922,19 +2922,19 @@
       "P": 63.61741513453043
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8216121578632046
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7864584349593737
     },
     "scoreGap": 0.0351537229038309,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2948,19 +2948,19 @@
       "P": 83.10761687310502
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.883380962103094
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8345376847201219
     },
     "scoreGap": 0.04884327738297212,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -2974,19 +2974,19 @@
       "P": 95.15120175313693
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.845655507962797
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8258991352373254
     },
     "scoreGap": 0.019756372725471594,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3000,19 +3000,19 @@
       "P": 45.129023765826176
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8941699475574164
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8164546680275173
     },
     "scoreGap": 0.0777152795298991,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3026,19 +3026,19 @@
       "P": 40.614959075980835
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8238687358183613
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7898148963942073
     },
     "scoreGap": 0.034053839424153964,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3052,19 +3052,19 @@
       "P": 69.14660353988832
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9059550934688941
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8212388309627744
     },
     "scoreGap": 0.08471626250611974,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3078,19 +3078,19 @@
       "P": 92.9758187675701
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8129765314785928
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7508235787862566
     },
     "scoreGap": 0.06215295269233623,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3104,19 +3104,19 @@
       "P": 54.56300944088507
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8565504347243332
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8469567962233467
     },
     "scoreGap": 0.00959363850098649,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3130,19 +3130,19 @@
       "P": 72.68028705160239
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8404172106188557
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8134524189382237
     },
     "scoreGap": 0.026964791680631928,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3156,19 +3156,19 @@
       "P": 100
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.894380136548301
     },
     "top2": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.834941087958134
     },
     "scoreGap": 0.05943904859016691,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "淡定海豚|太阳鸡",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|rooster",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3182,19 +3182,19 @@
       "P": 72.61903770625683
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8830004748347717
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.795821428918486
     },
     "scoreGap": 0.08717904591628578,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3208,19 +3208,19 @@
       "P": 68.54950570917417
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.817791328417114
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7970221686981556
     },
     "scoreGap": 0.02076915971895843,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3234,19 +3234,19 @@
       "P": 85.44497176732602
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.7863543952138391
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7540551100573771
     },
     "scoreGap": 0.032299285156461965,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3260,19 +3260,19 @@
       "P": 82.3623029226543
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8680067341785112
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8186470598835274
     },
     "scoreGap": 0.04935967429498378,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3286,19 +3286,19 @@
       "P": 66.75376166924302
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8601588202439798
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8563956051430799
     },
     "scoreGap": 0.0037632151008999415,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3312,19 +3312,19 @@
       "P": 56.51965774037117
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8348065107551484
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7875016339932103
     },
     "scoreGap": 0.047304876761938175,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3338,19 +3338,19 @@
       "P": 54.17416759151828
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8256440422583731
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7587071857219485
     },
     "scoreGap": 0.06693685653642456,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3364,19 +3364,19 @@
       "P": 52.234514926603175
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8239949495674121
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7876062357056801
     },
     "scoreGap": 0.036388713861732036,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3390,19 +3390,19 @@
       "P": 70.14230223306986
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.9266666666666666
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8360216816500154
     },
     "scoreGap": 0.09064498501665119,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3416,19 +3416,19 @@
       "P": 77.92594366723311
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8479766099867816
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8119101869377883
     },
     "scoreGap": 0.036066423048993324,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3442,19 +3442,19 @@
       "P": 52.41799536812322
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.845799553250395
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8180354124805842
     },
     "scoreGap": 0.02776414076981082,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3468,19 +3468,19 @@
       "P": 57.957121548232216
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8868629150101524
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8770727405694282
     },
     "scoreGap": 0.009790174440724164,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3494,19 +3494,19 @@
       "P": 49.813842519579666
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8077039319752539
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7598148862046423
     },
     "scoreGap": 0.047889045770611594,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3520,19 +3520,19 @@
       "P": 70.71129859988395
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8324025988003129
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7852132840855065
     },
     "scoreGap": 0.04718931471480636,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3546,19 +3546,19 @@
       "P": 79.30045635759049
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9093235299417637
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8498889300106973
     },
     "scoreGap": 0.05943459993106637,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3572,19 +3572,19 @@
       "P": 71.71475943734814
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8151276716818394
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8001111419924674
     },
     "scoreGap": 0.01501652968937206,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3598,19 +3598,19 @@
       "P": 67.73369071596636
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8648457671152447
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8293802147724036
     },
     "scoreGap": 0.0354655523428411,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3624,19 +3624,19 @@
       "P": 47.63858142976537
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.855623947815282
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8180354124805842
     },
     "scoreGap": 0.03758853533469775,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3650,19 +3650,19 @@
       "P": 51.793187051283795
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8446509306969194
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8379300562514238
     },
     "scoreGap": 0.006720874445495628,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3676,19 +3676,19 @@
       "P": 93.33494455737993
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8680067341785112
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8166969722017664
     },
     "scoreGap": 0.05130976197674475,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3702,19 +3702,19 @@
       "P": 72.93841682006311
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8969358344417313
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.845799553250395
     },
     "scoreGap": 0.051136281191336286,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3728,19 +3728,19 @@
       "P": 54.62010915376104
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.83467204309817
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8032486058216839
     },
     "scoreGap": 0.03142343727648611,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3754,19 +3754,19 @@
       "P": 47.70458303829042
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8377929991920474
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8081667390674911
     },
     "scoreGap": 0.02962626012455627,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3780,19 +3780,19 @@
       "P": 60.43446035310942
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8375192319072808
     },
     "top2": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8011142147976493
     },
     "scoreGap": 0.03640501710963151,
-    "trueArchetype": "织网蛛",
+    "trueArchetype": "spider",
     "isCorrect": false,
     "isSimilarMatch": false,
-    "confusionPairOrdered": "淡定海豚|太阳鸡",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|rooster",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3806,19 +3806,19 @@
       "P": 46.08844309855872
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8880476291750222
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7956038704432548
     },
     "scoreGap": 0.09244375873176747,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3832,19 +3832,19 @@
       "P": 74.06893589184087
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8216121578632046
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7864584349593737
     },
     "scoreGap": 0.0351537229038309,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3858,19 +3858,19 @@
       "P": 47.842323832279135
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.888246302571732
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8125018518609969
     },
     "scoreGap": 0.0757444507107351,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3884,19 +3884,19 @@
       "P": 63.0125689946945
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8854962397512156
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.855623947815282
     },
     "scoreGap": 0.02987229193593366,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3910,19 +3910,19 @@
       "P": 43.922352693195094
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.828730232284465
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8243741350357401
     },
     "scoreGap": 0.004356097248724877,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3936,19 +3936,19 @@
       "P": 38.86095259968514
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8661676006674351
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.795060984680808
     },
     "scoreGap": 0.07110661598662715,
-    "trueArchetype": "稳如龟",
+    "trueArchetype": "turtle",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -3962,19 +3962,19 @@
       "P": 95.5259432277998
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8596828988010055
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8066666666666666
     },
     "scoreGap": 0.053016232134338814,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -3988,19 +3988,19 @@
       "P": 57.79460447622113
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8302943725152285
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8040408205773457
     },
     "scoreGap": 0.026253551937882813,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4014,19 +4014,19 @@
       "P": 50.91973638946549
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.7867708587770736
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7398291159854953
     },
     "scoreGap": 0.04694174279157837,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4040,19 +4040,19 @@
       "P": 56.945710918470176
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8635367367302752
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.799223728714992
     },
     "scoreGap": 0.06431300801528317,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4066,19 +4066,19 @@
       "P": 72.58743173992117
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8685127805112265
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8525777040833601
     },
     "scoreGap": 0.0159350764278664,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4092,19 +4092,19 @@
       "P": 49.67658945727705
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8521261799145411
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8119101869377883
     },
     "scoreGap": 0.040215992976752823,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4118,19 +4118,19 @@
       "P": 65.64167824258553
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.817791328417114
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7970221686981556
     },
     "scoreGap": 0.02076915971895843,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4144,19 +4144,19 @@
       "P": 65.8471081996954
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8415351423466038
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.7793947718963428
     },
     "scoreGap": 0.062140370450260995,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4170,19 +4170,19 @@
       "P": 85.331150311832
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8633739897872054
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8313451914576864
     },
     "scoreGap": 0.03202879832951899,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4196,19 +4196,19 @@
       "P": 71.8226783191046
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8533333333333333
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8394454056161027
     },
     "scoreGap": 0.013887927717230575,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4222,19 +4222,19 @@
       "P": 42.78448402044499
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.855623947815282
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8180354124805842
     },
     "scoreGap": 0.03758853533469775,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4248,19 +4248,19 @@
       "P": 58.498634382133744
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8714179898534273
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8236165792623606
     },
     "scoreGap": 0.047801410591066684,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4274,19 +4274,19 @@
       "P": 50.120258045469505
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.9059550934688941
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8204945064288498
     },
     "scoreGap": 0.08546058704004433,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4300,19 +4300,19 @@
       "P": 73.46804121832479
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9011173535053911
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8506309566506128
     },
     "scoreGap": 0.05048639685477829,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4326,19 +4326,19 @@
       "P": 77.8890498859016
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.8151276716818394
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8001111419924674
     },
     "scoreGap": 0.01501652968937206,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4352,19 +4352,19 @@
       "P": 44.92061924705809
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8340013386934836
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8181575773735219
     },
     "scoreGap": 0.01584376131996168,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4378,19 +4378,19 @@
       "P": 98.90958793167187
     },
     "top1": {
-      "archetype": "太阳鸡",
+      "archetype": "rooster",
       "score": 0.8758137599320189
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.8127390412641582
     },
     "scoreGap": 0.06307471866786074,
-    "trueArchetype": "太阳鸡",
+    "trueArchetype": "rooster",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "太阳鸡|淡定海豚",
-    "confusionPairSorted": "太阳鸡,淡定海豚",
+    "confusionPairOrdered": "rooster|dolphin_calm",
+    "confusionPairSorted": "rooster,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4404,19 +4404,19 @@
       "P": 49.00669826217052
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8261546025279294
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7887602730966019
     },
     "scoreGap": 0.03739432943132748,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4430,19 +4430,19 @@
       "P": 53.888451919551095
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8004449393720565
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.780708210621353
     },
     "scoreGap": 0.019736728750703536,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4456,19 +4456,19 @@
       "P": 54.50080498638617
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.9133333333333333
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8317409404783471
     },
     "scoreGap": 0.0815923928549862,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4482,19 +4482,19 @@
       "P": 74.41338450777728
     },
     "top1": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.9105572809000084
     },
     "top2": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.88
     },
     "scoreGap": 0.03055728090000842,
-    "trueArchetype": "淡定海豚",
+    "trueArchetype": "dolphin_calm",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "暖心熊|淡定海豚",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "koala|dolphin_calm",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4508,19 +4508,19 @@
       "P": 49.74509685286484
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8317409404783471
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.7785903745944585
     },
     "scoreGap": 0.05315056588388867,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4534,19 +4534,19 @@
       "P": 57.194358444822015
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8918848350651543
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8851087470692394
     },
     "scoreGap": 0.006776087995914892,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4560,19 +4560,19 @@
       "P": 74.63556284703462
     },
     "top1": {
-      "archetype": "淡定海豚",
+      "archetype": "dolphin_calm",
       "score": 0.9180786284837033
     },
     "top2": {
-      "archetype": "暖心熊",
+      "archetype": "koala",
       "score": 0.86
     },
     "scoreGap": 0.058078628483703265,
-    "trueArchetype": "暖心熊",
+    "trueArchetype": "koala",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "淡定海豚|暖心熊",
-    "confusionPairSorted": "暖心熊,淡定海豚",
+    "confusionPairOrdered": "dolphin_calm|koala",
+    "confusionPairSorted": "koala,dolphin_calm",
     "isPersistentConfusionPair": true
   },
   {
@@ -4586,19 +4586,19 @@
       "P": 57.675246053015
     },
     "top1": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8587358659972194
     },
     "top2": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8492979392605692
     },
     "scoreGap": 0.009437926736650226,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": false,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "稳如龟|沉思猫头鹰",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "turtle|owl",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4612,19 +4612,19 @@
       "P": 57.69836782794805
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8650102884578894
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8422378724506769
     },
     "scoreGap": 0.02277241600721247,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4638,19 +4638,19 @@
       "P": 50.22629425924322
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.8515262836578661
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8077039319752539
     },
     "scoreGap": 0.04382235168261217,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   },
   {
@@ -4664,19 +4664,19 @@
       "P": 59.36079313167835
     },
     "top1": {
-      "archetype": "沉思猫头鹰",
+      "archetype": "owl",
       "score": 0.855623947815282
     },
     "top2": {
-      "archetype": "稳如龟",
+      "archetype": "turtle",
       "score": 0.8180354124805842
     },
     "scoreGap": 0.03758853533469775,
-    "trueArchetype": "沉思猫头鹰",
+    "trueArchetype": "owl",
     "isCorrect": true,
     "isSimilarMatch": true,
-    "confusionPairOrdered": "沉思猫头鹰|稳如龟",
-    "confusionPairSorted": "沉思猫头鹰,稳如龟",
+    "confusionPairOrdered": "owl|turtle",
+    "confusionPairSorted": "owl,turtle",
     "isPersistentConfusionPair": true
   }
 ]

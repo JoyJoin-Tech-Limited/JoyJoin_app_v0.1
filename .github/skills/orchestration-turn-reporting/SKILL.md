@@ -176,9 +176,34 @@ Every summary JSON object should include:
       "agents": ["Backend Engineer"],
       "skills": ["server-domain-architecture", "orchestration-turn-reporting"]
     }
-  ]
+  ],
+  "harness": {
+    "tier": 2,
+    "sprintContractId": "sprint_20260423_abc123",
+    "contractStatus": "accepted",
+    "qaIterations": 1,
+    "verdict": "PASS",
+    "pillarScores": {
+      "reliability": 4,
+      "scalability": 3,
+      "security": 5,
+      "observability": 4,
+      "maintainability": 4
+    }
+  }
 }
 ```
+
+**Harness metadata fields** (include when task uses the Harness Engineering Framework):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `harness.tier` | `1 \| 2 \| 3` | Harness tier for this task |
+| `harness.sprintContractId` | `string` | ID of the active Sprint Contract |
+| `harness.contractStatus` | `"draft" \| "proposed" \| "accepted" \| "rejected"` | Current contract state |
+| `harness.qaIterations` | `number` | Number of QA evaluation cycles |
+| `harness.verdict` | `"PASS" \| "FAIL" \| "CONCERN" \| null` | Final or current Sprint Evaluation verdict |
+| `harness.pillarScores` | `object` | Per-pillar scores (1–5) from scorecard |
 
 Supervisor-only additions (also include `turnStatus` when recording):
 
@@ -209,7 +234,21 @@ Supervisor-only additions (also include `turnStatus` when recording):
       "agents": ["Backend Engineer"],
       "skills": ["server-domain-architecture"]
     }
-  ]
+  ],
+  "harness": {
+    "tier": 2,
+    "sprintContractId": "sprint_20260423_abc123",
+    "contractStatus": "accepted",
+    "qaIterations": 1,
+    "verdict": "PASS",
+    "pillarScores": {
+      "reliability": 4,
+      "scalability": 3,
+      "security": 5,
+      "observability": 4,
+      "maintainability": 4
+    }
+  }
 }
 ```
 

@@ -67,30 +67,30 @@ The current production system uses 12 archetypes. All archetype names are define
 
 | # | Archetype | Icon | Energy | Trait Profile | Description |
 |---|-----------|------|--------|--------------|-------------|
-| 1 | 开心柯基 (Happy Corgi) | 🐕 | 95 | X=95, P=85, O=65, A=60, E=60, C=50 | High-energy socializer, natural icebreaker |
-| 2 | 太阳鸡 (Sun Chicken) | 🐓 | 90 | P=92, E=88, C=78, X=78, A=70, O=55 | Optimistic motivator, spreads positivity |
-| 3 | 夸夸豚 (Praise Dolphin) | 🐬 | 85 | A=95, P=88, X=82, E=65, O=62, C=50 | Warmhearted encourager, builds people up |
-| 4 | 机智狐 (Clever Fox) | 🦊 | 82 | O=92, X=78, P=58, E=60, C=50, A=40 | Creative problem-solver, quick thinker |
-| 5 | 淡定海豚 (Calm Dolphin) | 🐬 | 75 | E=85, C=70, A=70, O=65, X=65, P=68 | Balanced mediator, stays composed |
-| 6 | 织网蛛 (Weaver Spider) | 🕷️ | 72 | C=85, O=70, A=70, E=65, X=60, P=60 | Detail-oriented planner, builds systems |
-| 7 | 暖心熊 (Warm Bear) | 🐻 | 70 | A=90, E=80, P=70, C=65, O=60, X=48 | Empathetic supporter, nurtures others |
-| 8 | 灵感章鱼 (Inspiration Octopus) | 🐙 | 68 | O=95, P=70, E=55, X=52, A=50, C=28 | Innovative ideator, connects dots |
-| 9 | 沉思猫头鹰 (Contemplative Owl) | 🦉 | 55 | O=88, C=80, E=75, A=45, P=50, X=40 | Analytical thinker, seeks understanding |
-| 10 | 定心大象 (Grounded Elephant) | 🐘 | 52 | C=90, E=86, A=70, P=60, O=50, X=40 | Stable anchor, provides structure |
-| 11 | 稳如龟 (Steady Turtle) | 🐢 | 38 | E=85, C=80, O=65, A=45, P=45, X=30 | Reliable introvert, consistent presence |
-| 12 | 隐身猫 (Invisible Cat) | 🐱 | 30 | E=80, C=50, A=50, O=45, P=45, X=20 | Reserved observer, values solitude |
+| 1 | 气氛组柯基 (Happy Corgi) | 🐕 | 95 | X=95, P=85, O=65, A=60, E=60, C=50 | High-energy socializer, natural icebreaker |
+| 2 | 情绪稳定鸡 (Sun Chicken) | 🐓 | 90 | P=92, E=88, C=78, X=78, A=70, O=55 | Optimistic motivator, spreads positivity |
+| 3 | 捧场王仓鼠 (Praise Dolphin) | 🐬 | 85 | A=95, P=88, X=82, E=65, O=62, C=50 | Warmhearted encourager, builds people up |
+| 4 | 探宝雷达狐 (Clever Fox) | 🦊 | 82 | O=92, X=78, P=58, E=60, C=50, A=40 | Creative problem-solver, quick thinker |
+| 5 | 读空气海豚 (Calm Dolphin) | 🐬 | 75 | E=85, C=70, A=70, O=65, X=65, P=68 | Balanced mediator, stays composed |
+| 6 | 社交裁缝蛛 (Weaver Spider) | 🕷️ | 72 | C=85, O=70, A=70, E=65, X=60, P=60 | Detail-oriented planner, builds systems |
+| 7 | 情绪树洞考拉 (Warm Bear) | 🐻 | 70 | A=90, E=80, P=70, C=65, O=60, X=48 | Empathetic supporter, nurtures others |
+| 8 | 脑洞喷泉章鱼 (Inspiration Octopus) | 🐙 | 68 | O=95, P=70, E=55, X=52, A=50, C=28 | Innovative ideator, connects dots |
+| 9 | 追问猫头鹰 (Contemplative Owl) | 🦉 | 55 | O=88, C=80, E=75, A=45, P=50, X=40 | Analytical thinker, seeks understanding |
+| 10 | 定海神针大象 (Grounded Elephant) | 🐘 | 52 | C=90, E=86, A=70, P=60, O=50, X=40 | Stable anchor, provides structure |
+| 11 | 慢半拍龟 (Steady Turtle) | 🐢 | 38 | E=85, C=80, O=65, A=45, P=45, X=30 | Reliable introvert, consistent presence |
+| 12 | 静音模式猫 (Invisible Cat) | 🐱 | 30 | E=80, C=50, A=50, O=45, P=45, X=20 | Reserved observer, values solitude |
 
 **Canonical Order:**
 The archetypes are numbered 1-12 in the order above. This ordering is used for:
-- TYPE numbers in share cards (e.g., #01/12 for 开心柯基)
+- TYPE numbers in share cards (e.g., #01/12 for 气氛组柯基)
 - Slot machine animation sequence
 - Backend archetype configuration
 - Any feature requiring consistent enumeration
 
 **Energy Levels:**
-- **High Energy (75-100)**: 开心柯基 (95), 太阳鸡 (90), 夸夸豚 (85), 机智狐 (82), 淡定海豚 (75)
-- **Medium Energy (50-74)**: 织网蛛 (72), 暖心熊 (70), 灵感章鱼 (68), 沉思猫头鹰 (55), 定心大象 (52)
-- **Low Energy (0-49)**: 稳如龟 (38), 隐身猫 (30)
+- **High Energy (75-100)**: 气氛组柯基 (95), 情绪稳定鸡 (90), 捧场王仓鼠 (85), 探宝雷达狐 (82), 读空气海豚 (75)
+- **Medium Energy (50-74)**: 社交裁缝蛛 (72), 情绪树洞考拉 (70), 脑洞喷泉章鱼 (68), 追问猫头鹰 (55), 定海神针大象 (52)
+- **Low Energy (0-49)**: 慢半拍龟 (38), 静音模式猫 (30)
 
 ---
 
@@ -100,38 +100,38 @@ The system measures 6 core personality traits, each scored on a 0-100 scale:
 
 ### A - Affinity/Agreeableness (亲和力)
 - **Definition**: Warmth, empathy, cooperation, concern for others
-- **High A (80+)**: 夸夸豚 (95), 暖心熊 (90)
-- **Low A (40-)**: 机智狐 (40), 沉思猫头鹰 (45), 稳如龟 (45)
+- **High A (80+)**: 捧场王仓鼠 (95), 情绪树洞考拉 (90)
+- **Low A (40-)**: 探宝雷达狐 (40), 追问猫头鹰 (45), 慢半拍龟 (45)
 - **Key Questions**: Response to emotional moments, conflict handling, encouragement style
 
 ### C - Conscientiousness (责任心)
 - **Definition**: Organization, planning, discipline, reliability
-- **High C (80+)**: 定心大象 (90), 织网蛛 (85), 沉思猫头鹰 (80), 稳如龟 (80)
-- **Low C (40-)**: 灵感章鱼 (28)
+- **High C (80+)**: 定海神针大象 (90), 社交裁缝蛛 (85), 追问猫头鹰 (80), 慢半拍龟 (80)
+- **Low C (40-)**: 脑洞喷泉章鱼 (28)
 - **Key Questions**: Planning vs spontaneity, attention to detail, follow-through
 
 ### E - Emotional Stability (情绪稳定性)
 - **Definition**: Calmness, resilience, low reactivity, composure under stress
-- **High E (80+)**: 太阳鸡 (88), 定心大象 (86), 淡定海豚 (85), 稳如龟 (85), 暖心熊 (80), 隐身猫 (80)
-- **Low E (60-)**: 灵感章鱼 (55)
+- **High E (80+)**: 情绪稳定鸡 (88), 定海神针大象 (86), 读空气海豚 (85), 慢半拍龟 (85), 情绪树洞考拉 (80), 静音模式猫 (80)
+- **Low E (60-)**: 脑洞喷泉章鱼 (55)
 - **Key Questions**: Stress response, emotional regulation, adaptability
 
 ### O - Openness (开放性)
 - **Definition**: Creativity, curiosity, abstract thinking, novelty-seeking
-- **High O (80+)**: 灵感章鱼 (95), 机智狐 (92), 沉思猫头鹰 (88)
-- **Low O (50-)**: 定心大象 (50), 隐身猫 (45)
+- **High O (80+)**: 脑洞喷泉章鱼 (95), 探宝雷达狐 (92), 追问猫头鹰 (88)
+- **Low O (50-)**: 定海神针大象 (50), 静音模式猫 (45)
 - **Key Questions**: Approach to new ideas, intellectual curiosity, imaginative thinking
 
 ### X - Extraversion (外向性)
 - **Definition**: Social energy, outgoingness, stimulation-seeking, gregariousness
-- **High X (80+)**: 开心柯基 (95), 夸夸豚 (82), 太阳鸡 (78), 机智狐 (78)
-- **Low X (40-)**: 定心大象 (40), 沉思猫头鹰 (40), 稳如龟 (30), 隐身猫 (20)
+- **High X (80+)**: 气氛组柯基 (95), 捧场王仓鼠 (82), 情绪稳定鸡 (78), 探宝雷达狐 (78)
+- **Low X (40-)**: 定海神针大象 (40), 追问猫头鹰 (40), 慢半拍龟 (30), 静音模式猫 (20)
 - **Key Questions**: Social initiation, energy sources (people vs alone), party behavior
 
 ### P - Positivity (积极性)
 - **Definition**: Optimism, enthusiasm, cheerfulness, positive outlook
-- **High P (80+)**: 太阳鸡 (92), 夸夸豚 (88), 开心柯基 (85)
-- **Low P (50-)**: 隐身猫 (45), 稳如龟 (45), 沉思猫头鹰 (50)
+- **High P (80+)**: 情绪稳定鸡 (92), 捧场王仓鼠 (88), 气氛组柯基 (85)
+- **Low P (50-)**: 静音模式猫 (45), 慢半拍龟 (45), 追问猫头鹰 (50)
 - **Key Questions**: Outlook on challenges, enthusiasm level, future orientation
 
 **Trait Scoring:**
@@ -226,11 +226,11 @@ D. 纠结但最终参加聚会
 - High precision (±4 to ±5 scores on key traits)
 
 **Known Confusion Pairs:**
-1. **太阳鸡 vs 淡定海豚**: P gap (92 vs 68) - differentiate on optimism/enthusiasm
-2. **沉思猫头鹰 vs 稳如龟**: O gap (88 vs 65) - differentiate on intellectual curiosity
-3. **淡定海豚 vs 暖心熊**: A gap (70 vs 90) - differentiate on warmth/nurturing
-4. **开心柯基 vs 太阳鸡**: Similar high X+P, differentiate on structure vs spontaneity
-5. **机智狐 vs 灵感章鱼**: Both high O, differentiate on social energy (X: 78 vs 52)
+1. **情绪稳定鸡 vs 读空气海豚**: P gap (92 vs 68) - differentiate on optimism/enthusiasm
+2. **追问猫头鹰 vs 慢半拍龟**: O gap (88 vs 65) - differentiate on intellectual curiosity
+3. **读空气海豚 vs 情绪树洞考拉**: A gap (70 vs 90) - differentiate on warmth/nurturing
+4. **气氛组柯基 vs 情绪稳定鸡**: Similar high X+P, differentiate on structure vs spontaneity
+5. **探宝雷达狐 vs 脑洞喷泉章鱼**: Both high O, differentiate on social energy (X: 78 vs 52)
 
 **Example Disambiguation Question (Q48):**
 ```
@@ -239,16 +239,16 @@ D. 纠结但最终参加聚会
 你更可能的反应是？
 
 A. 兴奋参与，提出新颖理论和假设
-   → { O: 5, X: 2, C: -2 }  // 灵感章鱼
+   → { O: 5, X: 2, C: -2 }  // 脑洞喷泉章鱼
 
 B. 系统分析，寻找逻辑和证据
-   → { O: 4, C: 4, X: -1 }  // 沉思猫头鹰
+   → { O: 4, C: 4, X: -1 }  // 追问猫头鹰
 
 C. 感兴趣但不深入，更关注实际应用
-   → { O: 1, C: 2, P: 2 }   // 淡定海豚
+   → { O: 1, C: 2, P: 2 }   // 读空气海豚
 
 D. 礼貌倾听，但心里想着其他事
-   → { O: -3, E: 2, X: -1 } // 稳如龟
+   → { O: -3, E: 2, X: -1 } // 慢半拍龟
 ```
 
 ### Interactive Closing Questions (Q_PLAYFUL_SLIDER + Q_PLAYFUL_EMOJI)
@@ -416,7 +416,7 @@ The active `PersonalityTestPage` keeps the back button visible. Back navigation 
 The V2 Matcher uses weighted Manhattan distance with asymmetric penalties to match user trait profiles to archetype prototypes. It addresses key issues from V1:
 
 - **Soul Trait Weighting**: Primary/secondary/avoid traits have different weights
-- **Asymmetric Penalties**: Heavily penalize "avoid" trait violations (e.g., high X → not 暖心熊)
+- **Asymmetric Penalties**: Heavily penalize "avoid" trait violations (e.g., high X → not 情绪树洞考拉)
 - **VETO Filters**: Hard constraints for extreme mismatches
 - **Confidence Scoring**: High gap between top-2 = decisive match
 
@@ -479,7 +479,7 @@ Each archetype has 3 categories of traits:
 | **Secondary** | 1.2-1.3 | Supporting traits (medium importance) |
 | **Avoid** | 0.4-0.8 | Traits to minimize (low weight = divergence OK in this direction) |
 
-**Example: 暖心熊 (Warm Bear)**
+**Example: 情绪树洞考拉 (Warm Bear)**
 ```typescript
 {
   primary: { A: 1.8 },           // Must have high Affinity
@@ -488,14 +488,14 @@ Each archetype has 3 categories of traits:
 }
 ```
 
-If a user has **high X (e.g., raw ≈ 90, z ≈ +2.67)** while 暖心熊 prototype has **X ≈ 48 (z ≈ -0.13)**:
+If a user has **high X (e.g., raw ≈ 90, z ≈ +2.67)** while 情绪树洞考拉 prototype has **X ≈ 48 (z ≈ -0.13)**:
 - Z-gap: userZ[X] − archetypeZ[X] ≈ 2.8σ
 - Weight: 0.4 (avoid trait)
 - Distance contribution (in the main matcher): 2.8 × 0.4 ≈ 1.12
 - **Plus** asymmetric penalty (same formula as below):  
   λ × (gap − threshold)² = 2.0 × (2.8 − 0.5)² ≈ 10.6
 
-Result: High-X users are **strongly penalized** from matching to 暖心熊, via a moderate base distance plus a sizable asymmetric penalty in Z‑score space.
+Result: High-X users are **strongly penalized** from matching to 情绪树洞考拉, via a moderate base distance plus a sizable asymmetric penalty in Z‑score space.
 
 ### Asymmetric Penalty
 
@@ -522,27 +522,27 @@ function calculateAsymmetricPenalty(
 ```
 
 **Example:**
-- 暖心熊 has X=48 (avoid trait)
+- 情绪树洞考拉 has X=48 (avoid trait)
 - User has X=90
 - Z-scores: User = (90-50)/15 = 2.67σ, Archetype = (48-50)/15 = -0.13σ
 - Gap = 2.67 - (-0.13) = 2.8σ
 - Penalty = 2.0 × (2.8 - 0.5)² = 2.0 × 5.29 = **10.58**
 
-This large penalty effectively **vetoes** high-X users from matching to 暖心熊.
+This large penalty effectively **vetoes** high-X users from matching to 情绪树洞考拉.
 
 ### VETO Filters
 
 Hard constraints that disqualify extreme mismatches:
 
 ```typescript
-// Example: 开心柯基 VETO
+// Example: 气氛组柯基 VETO
 {
   minX: 75,  // Must have X ≥ 75
   minP: 70,  // Must have P ≥ 70
   maxE: 70   // Cannot have E > 70 (too stable/introverted)
 }
 
-// Example: 隐身猫 VETO
+// Example: 静音模式猫 VETO
 {
   maxX: 40,  // Cannot have X > 40 (too extraverted)
   minE: 70   // Must have E ≥ 70 (emotionally stable)
@@ -738,7 +738,7 @@ CREATE INDEX idx_assessment_answers_session ON assessment_answers(session_id);
 
 ```sql
 -- Current V4 fields
-primary_archetype TEXT, -- '开心柯基', '太阳鸡', etc.
+primary_archetype TEXT, -- '气氛组柯基', '情绪稳定鸡', etc.
 has_completed_personality_test BOOLEAN DEFAULT false,
 active_assessment_session_id TEXT REFERENCES assessment_sessions(id),
 
@@ -849,7 +849,7 @@ positivity_score INTEGER
 **Response:**
 ```typescript
 {
-  primaryArchetype: string; // '开心柯基', '太阳鸡', etc.
+  primaryArchetype: string; // '气氛组柯基', '情绪稳定鸡', etc.
   secondaryArchetype: string;
   confidence: number; // 0-1
   isDecisive: boolean;
@@ -918,16 +918,16 @@ positivity_score INTEGER
 
 2. **V2 Matcher - Extreme Cases**
    ```typescript
-   test('High X user does NOT match to 隐身猫', () => {
+   test('High X user does NOT match to 静音模式猫', () => {
      const userTraits = { A: 50, C: 50, E: 50, O: 50, X: 95, P: 50 };
      const result = matchArchetype(userTraits);
-     expect(result.primaryArchetype).not.toBe('隐身猫');
+     expect(result.primaryArchetype).not.toBe('静音模式猫');
    });
    
-   test('Low X user does NOT match to 开心柯基', () => {
+   test('Low X user does NOT match to 气氛组柯基', () => {
      const userTraits = { A: 50, C: 50, E: 50, O: 50, X: 20, P: 50 };
      const result = matchArchetype(userTraits);
-     expect(result.primaryArchetype).not.toBe('开心柯基');
+     expect(result.primaryArchetype).not.toBe('气氛组柯基');
    });
    ```
 
@@ -1032,7 +1032,7 @@ for (const pair of confusionPairs) {
 - [ ] Back button rewinds through answered-question history and only exits to landing at the start
 - [ ] Radar chart displays all 6 traits (ACOEXP)
 - [ ] Archetype icons match canonical list (🐕, 🐓, etc.)
-- [ ] Results show correct archetype name (开心柯基, not 火花塞)
+- [ ] Results show correct archetype name (气氛组柯基, not 火花塞)
 - [ ] Decisive match badge shows when confidence ≥ 70%
 - [ ] Question flow adapts according to the active config and confidence thresholds (including the fixed 2-question closing sequence)
 - [ ] No references to deprecated archetypes (火花塞, 探索者, etc.)
@@ -1056,11 +1056,11 @@ for (const pair of confusionPairs) {
 
 | Archetype 1 | Archetype 2 | Score | Reason |
 |-------------|-------------|-------|--------|
-| 开心柯基 | 太阳鸡 | 95 | Both high X+P, energy synergy |
-| 开心柯基 | 隐身猫 | 45 | X gap too large (95 vs 20) |
-| 暖心熊 | 定心大象 | 88 | High A+E, stability match |
-| 机智狐 | 灵感章鱼 | 92 | Both high O, creative synergy |
-| 沉思猫头鹰 | 稳如龟 | 60 | Both introverted, but O gap |
+| 气氛组柯基 | 情绪稳定鸡 | 95 | Both high X+P, energy synergy |
+| 气氛组柯基 | 静音模式猫 | 45 | X gap too large (95 vs 20) |
+| 情绪树洞考拉 | 定海神针大象 | 88 | High A+E, stability match |
+| 探宝雷达狐 | 脑洞喷泉章鱼 | 92 | Both high O, creative synergy |
+| 追问猫头鹰 | 慢半拍龟 | 60 | Both introverted, but O gap |
 
 (Full matrix: See `packages/shared/src/personality/archetypeChemistry.ts`)
 

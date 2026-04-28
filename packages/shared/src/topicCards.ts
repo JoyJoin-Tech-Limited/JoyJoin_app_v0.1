@@ -102,7 +102,7 @@ export const energyBasedTopics: Record<string, TopicCard[]> = {
     },
   ],
 
-  // 创意碰撞组（灵感型角色较多）- 为灵感章鱼、机智狐等创意型用户扩展
+  // 创意碰撞组（灵感型角色较多）- 为脑洞喷泉章鱼、探宝雷达狐等创意型用户扩展
   creative_spark: [
     {
       question: "如果可以发明一样东西解决日常困扰，你想发明什么？",
@@ -170,7 +170,7 @@ export const energyBasedTopics: Record<string, TopicCard[]> = {
 // 特定角色组合的专属话题（针对典型配对）
 export const archetypePairTopics: Record<string, TopicCard[]> = {
   // 高能量 + 低能量 组合
-  "开心柯基_隐身猫": [
+  "气氛组柯基_静音模式猫": [
     {
       question: "你们各自最享受的独处方式是什么？有没有觉得独处和社交都很重要？",
       category: "生活平衡",
@@ -184,7 +184,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "开心柯基_沉思猫头鹰": [
+  "气氛组柯基_追问猫头鹰": [
     {
       question: "热闹和安静，你们更需要哪个来充电？为什么？",
       category: "能量来源",
@@ -198,7 +198,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "开心柯基_稳如龟": [
+  "气氛组柯基_慢半拍龟": [
     {
       question: "遇到困难时，你是先行动还是先观察？",
       category: "处事风格",
@@ -206,7 +206,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "太阳鸡_隐身猫": [
+  "情绪稳定鸡_静音模式猫": [
     {
       question: "你们觉得'被关注'是开心还是有压力？",
       category: "社交心理",
@@ -216,7 +216,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
   ],
   
   // 暖系 + 深度 组合
-  "暖心熊_沉思猫头鹰": [
+  "情绪树洞考拉_追问猫头鹰": [
     {
       question: "你们觉得'被理解'是什么感觉？怎样的对话让你觉得被真正听到了？",
       category: "情感连接",
@@ -230,7 +230,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "太阳鸡_稳如龟": [
+  "情绪稳定鸡_慢半拍龟": [
     {
       question: "乐观和冷静，你们觉得哪个更重要？还是要看情况？",
       category: "处世态度",
@@ -238,7 +238,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "夸夸豚_沉思猫头鹰": [
+  "捧场王仓鼠_追问猫头鹰": [
     {
       question: "你更喜欢被鼓励还是被分析？面对问题时需要什么样的支持？",
       category: "沟通偏好",
@@ -246,7 +246,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "暖心熊_隐身猫": [
+  "情绪树洞考拉_静音模式猫": [
     {
       question: "你们觉得'舒适的沉默'存在吗？什么样的关系才能拥有？",
       category: "亲密关系",
@@ -256,7 +256,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
   ],
 
   // 社交型 + 内向型 组合
-  "织网蛛_隐身猫": [
+  "社交裁缝蛛_静音模式猫": [
     {
       question: "你们觉得'高质量的社交'是什么样的？人多好还是人少好？",
       category: "社交偏好",
@@ -270,7 +270,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "织网蛛_稳如龟": [
+  "社交裁缝蛛_慢半拍龟": [
     {
       question: "你们觉得社交圈广好还是精好？为什么？",
       category: "社交策略",
@@ -280,7 +280,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
   ],
   
   // 创意型组合
-  "机智狐_灵感章鱼": [
+  "探宝雷达狐_脑洞喷泉章鱼": [
     {
       question: "最近发现的最有意思的事物是什么？分享一个'冷门但好玩'的东西",
       category: "新奇发现",
@@ -294,7 +294,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "灵感章鱼_沉思猫头鹰": [
+  "脑洞喷泉章鱼_追问猫头鹰": [
     {
       question: "你觉得'有趣'和'有深度'冲突吗？怎样兼顾？",
       category: "思维方式",
@@ -309,8 +309,8 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
     },
   ],
   
-  // 灵感章鱼的更多组合 - 创意型用户满意度提升
-  "灵感章鱼_温暖金毛": [
+  // 脑洞喷泉章鱼的更多组合 - 创意型用户满意度提升
+  "脑洞喷泉章鱼_温暖金毛": [
     {
       question: "你有没有一个'很温暖但也很脑洞'的想法？",
       category: "温暖创意",
@@ -318,7 +318,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "灵感章鱼_开心柯基": [
+  "脑洞喷泉章鱼_气氛组柯基": [
     {
       question: "如果你们一起策划一个派对，会是什么风格？",
       category: "创意活动",
@@ -332,7 +332,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "灵感章鱼_隐身猫": [
+  "脑洞喷泉章鱼_静音模式猫": [
     {
       question: "你们各自最'奇怪'但很享受的爱好是什么？",
       category: "小众爱好",
@@ -340,7 +340,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "灵感章鱼_淡定海豚": [
+  "脑洞喷泉章鱼_读空气海豚": [
     {
       question: "创意很疯狂的时候，你们怎么判断'这个靠谱'还是'想太多'？",
       category: "创意判断",
@@ -348,7 +348,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "灵感章鱼_夸夸豚": [
+  "脑洞喷泉章鱼_捧场王仓鼠": [
     {
       question: "你们觉得'被鼓励'对创意有多重要？",
       category: "创意支持",
@@ -356,7 +356,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "机智狐_开心柯基": [
+  "探宝雷达狐_气氛组柯基": [
     {
       question: "你们最近的'新发现'是什么？可以是任何让你惊喜的事",
       category: "生活发现",
@@ -371,8 +371,8 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
     },
   ],
   
-  // 机智狐的更多组合 - 探索型用户满意度提升
-  "机智狐_隐身猫": [
+  // 探宝雷达狐的更多组合 - 探索型用户满意度提升
+  "探宝雷达狐_静音模式猫": [
     {
       question: "你们各自'悄悄研究'的领域是什么？有什么冷门发现？",
       category: "隐藏兴趣",
@@ -380,7 +380,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "机智狐_沉思猫头鹰": [
+  "探宝雷达狐_追问猫头鹰": [
     {
       question: "你们怎么判断一个新想法值不值得深入研究？",
       category: "探索方法",
@@ -388,7 +388,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "机智狐_温暖金毛": [
+  "探宝雷达狐_温暖金毛": [
     {
       question: "你们觉得'冒险精神'和'安全感'怎么平衡？",
       category: "生活平衡",
@@ -398,7 +398,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
   ],
   
   // 同类型高能量组合
-  "开心柯基_太阳鸡": [
+  "气氛组柯基_情绪稳定鸡": [
     {
       question: "你们是天生乐观还是后天修炼的？有没有'强颜欢笑'的时候？",
       category: "真实自我",
@@ -412,7 +412,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "开心柯基_夸夸豚": [
+  "气氛组柯基_捧场王仓鼠": [
     {
       question: "你们是怎么保持积极心态的？有什么秘诀？",
       category: "心态管理",
@@ -420,7 +420,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "太阳鸡_夸夸豚": [
+  "情绪稳定鸡_捧场王仓鼠": [
     {
       question: "你们觉得鼓励别人时，什么样的话最有力量？",
       category: "鼓励艺术",
@@ -430,7 +430,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
   ],
   
   // 同类型低能量组合
-  "隐身猫_稳如龟": [
+  "静音模式猫_慢半拍龟": [
     {
       question: "你们享受'安静的陪伴'吗？不说话也能很舒服那种？",
       category: "陪伴方式",
@@ -444,7 +444,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "沉思猫头鹰_稳如龟": [
+  "追问猫头鹰_慢半拍龟": [
     {
       question: "你们平时会思考一些'大问题'吗？比如人生意义之类的",
       category: "深度思考",
@@ -452,7 +452,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "deep",
     },
   ],
-  "隐身猫_沉思猫头鹰": [
+  "静音模式猫_追问猫头鹰": [
     {
       question: "你们更喜欢一对一深聊还是群聊？为什么？",
       category: "社交偏好",
@@ -462,7 +462,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
   ],
   
   // 平衡型组合
-  "淡定海豚_织网蛛": [
+  "读空气海豚_社交裁缝蛛": [
     {
       question: "你们在社交场合通常扮演什么角色？调节气氛还是串联大家？",
       category: "社交角色",
@@ -470,7 +470,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "easy",
     },
   ],
-  "淡定海豚_暖心熊": [
+  "读空气海豚_情绪树洞考拉": [
     {
       question: "遇到朋友情绪低落时，你们会怎么做？",
       category: "情感支持",
@@ -478,7 +478,7 @@ export const archetypePairTopics: Record<string, TopicCard[]> = {
       difficulty: "medium",
     },
   ],
-  "定心大象_暖心熊": [
+  "定海神针大象_情绪树洞考拉": [
     {
       question: "你们觉得什么样的人让你有安全感？",
       category: "信任关系",

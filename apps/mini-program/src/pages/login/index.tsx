@@ -5,7 +5,7 @@ import { getArchetypeVisual } from '../onboarding/personality-test/visuals'
 import './index.scss'
 
 // Featured archetypes that orbit the avatar — unmistakably JoyJoin
-const FLOATING_ARCHETYPES = ['开心柯基', '机智狐', '暖心熊']
+const FLOATING_ARCHETYPES = ['corgi', 'fox', 'koala']
 
 /**
  * LoginPage — WeChat Mini Program login entry point.

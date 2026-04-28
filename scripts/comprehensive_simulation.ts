@@ -21,18 +21,18 @@ const ALL_TRAITS: TraitKey[] = ['A', 'C', 'E', 'O', 'X', 'P'];
 
 // 相似原型定义（用于计算相似匹配率）
 const SIMILAR_ARCHETYPES: Record<string, string[]> = {
-  "开心柯基": ["太阳鸡", "夸夸豚"],
-  "太阳鸡": ["开心柯基", "淡定海豚", "夸夸豚"],
-  "夸夸豚": ["太阳鸡", "暖心熊", "开心柯基"],
-  "机智狐": ["灵感章鱼", "沉思猫头鹰"],
-  "淡定海豚": ["暖心熊", "太阳鸡", "定心大象"],
-  "织网蛛": ["稳如龟", "定心大象"],
-  "暖心熊": ["淡定海豚", "夸夸豚", "定心大象"],
-  "稳如龟": ["定心大象", "织网蛛", "沉思猫头鹰"],
-  "灵感章鱼": ["机智狐", "沉思猫头鹰"],
-  "沉思猫头鹰": ["稳如龟", "灵感章鱼", "隐身猫"],
-  "隐身猫": ["沉思猫头鹰", "淡定海豚"],
-  "定心大象": ["稳如龟", "暖心熊", "织网蛛"]
+  "corgi": ["rooster", "hamster_praise"],
+  "rooster": ["corgi", "dolphin_calm", "hamster_praise"],
+  "hamster_praise": ["rooster", "koala", "corgi"],
+  "fox": ["octopus", "owl"],
+  "dolphin_calm": ["koala", "rooster", "elephant"],
+  "spider": ["turtle", "elephant"],
+  "koala": ["dolphin_calm", "hamster_praise", "elephant"],
+  "turtle": ["elephant", "spider", "owl"],
+  "octopus": ["fox", "owl"],
+  "owl": ["turtle", "octopus", "cat"],
+  "cat": ["owl", "dolphin_calm"],
+  "elephant": ["turtle", "koala", "spider"]
 };
 
 interface SimulationResult {

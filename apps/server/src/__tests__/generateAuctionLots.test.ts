@@ -15,6 +15,6 @@ describe('generateAuctionLots', () => {
       title: expect.any(String),
     });
     expect(result.meta.fallbackUsed).toBe(true);
-    expect(result.meta.promptVersion).toBe('social-auction-lots-v1');
+    expect(result.meta.promptVersion).toBe('social-auction-lots-v2');
   });
 });

@@ -76,7 +76,8 @@
   }
 
   &--reduced &__emoji {
-    font-size: 120rpx;
+    width: 120rpx;
+    height: 120rpx;
     margin-bottom: $spacing-md;
   }
 }

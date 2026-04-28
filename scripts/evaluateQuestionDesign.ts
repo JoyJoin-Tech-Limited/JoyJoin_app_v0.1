@@ -165,18 +165,18 @@ const QUESTIONS = [
 
 // ============ 12原型预设分数 ============
 const ARCHETYPE_SCORES = {
-  "开心柯基": { affinity: 90, openness: 80, conscientiousness: 65, emotionalStability: 80, extraversion: 95, positivity: 95 },
-  "太阳鸡": { affinity: 90, openness: 70, conscientiousness: 80, emotionalStability: 95, extraversion: 85, positivity: 95 },
-  "夸夸豚": { affinity: 95, openness: 75, conscientiousness: 70, emotionalStability: 85, extraversion: 85, positivity: 95 },
-  "机智狐": { affinity: 70, openness: 95, conscientiousness: 65, emotionalStability: 75, extraversion: 85, positivity: 80 },
-  "淡定海豚": { affinity: 85, openness: 80, conscientiousness: 85, emotionalStability: 90, extraversion: 70, positivity: 85 },
-  "织网蛛": { affinity: 90, openness: 85, conscientiousness: 85, emotionalStability: 80, extraversion: 70, positivity: 75 },
-  "暖心熊": { affinity: 95, openness: 75, conscientiousness: 80, emotionalStability: 90, extraversion: 65, positivity: 85 },
-  "灵感章鱼": { affinity: 65, openness: 95, conscientiousness: 60, emotionalStability: 65, extraversion: 70, positivity: 80 },
-  "沉思猫头鹰": { affinity: 60, openness: 90, conscientiousness: 90, emotionalStability: 85, extraversion: 50, positivity: 65 },
-  "定心大象": { affinity: 85, openness: 65, conscientiousness: 95, emotionalStability: 95, extraversion: 45, positivity: 75 },
-  "稳如龟": { affinity: 55, openness: 80, conscientiousness: 90, emotionalStability: 90, extraversion: 35, positivity: 60 },
-  "隐身猫": { affinity: 60, openness: 55, conscientiousness: 70, emotionalStability: 85, extraversion: 30, positivity: 65 },
+  "corgi": { affinity: 90, openness: 80, conscientiousness: 65, emotionalStability: 80, extraversion: 95, positivity: 95 },
+  "rooster": { affinity: 90, openness: 70, conscientiousness: 80, emotionalStability: 95, extraversion: 85, positivity: 95 },
+  "hamster_praise": { affinity: 95, openness: 75, conscientiousness: 70, emotionalStability: 85, extraversion: 85, positivity: 95 },
+  "fox": { affinity: 70, openness: 95, conscientiousness: 65, emotionalStability: 75, extraversion: 85, positivity: 80 },
+  "dolphin_calm": { affinity: 85, openness: 80, conscientiousness: 85, emotionalStability: 90, extraversion: 70, positivity: 85 },
+  "spider": { affinity: 90, openness: 85, conscientiousness: 85, emotionalStability: 80, extraversion: 70, positivity: 75 },
+  "koala": { affinity: 95, openness: 75, conscientiousness: 80, emotionalStability: 90, extraversion: 65, positivity: 85 },
+  "octopus": { affinity: 65, openness: 95, conscientiousness: 60, emotionalStability: 65, extraversion: 70, positivity: 80 },
+  "owl": { affinity: 60, openness: 90, conscientiousness: 90, emotionalStability: 85, extraversion: 50, positivity: 65 },
+  "elephant": { affinity: 85, openness: 65, conscientiousness: 95, emotionalStability: 95, extraversion: 45, positivity: 75 },
+  "turtle": { affinity: 55, openness: 80, conscientiousness: 90, emotionalStability: 90, extraversion: 35, positivity: 60 },
+  "cat": { affinity: 60, openness: 55, conscientiousness: 70, emotionalStability: 85, extraversion: 30, positivity: 65 },
 };
 
 // ============ 6维特质定义 ============

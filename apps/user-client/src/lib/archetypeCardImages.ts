@@ -5,18 +5,18 @@
 
 // Map simplified Chinese (used in code) to traditional Chinese (used in file names)
 const archetypeNameMap: Record<string, string> = {
-  "机智狐": "機智狐",
-  "开心柯基": "開心柯基",
-  "暖心熊": "暖心熊",
-  "织网蛛": "織網蛛",
-  "夸夸豚": "誇誇豚",
-  "太阳鸡": "太陽雞",
-  "淡定海豚": "淡定海豚",
-  "沉思猫头鹰": "沉思貓頭鷹",
-  "稳如龟": "穩如龜",
-  "隐身猫": "隱身貓",
-  "定心大象": "定心大象",
-  "灵感章鱼": "靈感章魚"
+  "fox": "機智狐",
+  "corgi": "開心柯基",
+  "koala": "koala",
+  "spider": "織網蛛",
+  "hamster_praise": "誇誇豚",
+  "rooster": "太陽雞",
+  "dolphin_calm": "dolphin_calm",
+  "owl": "沉思貓頭鷹",
+  "turtle": "穩如龜",
+  "cat": "隱身貓",
+  "elephant": "elephant",
+  "octopus": "靈感章魚"
 };
 
 // Map expression IDs to file name suffixes
@@ -29,7 +29,7 @@ const expressionFileMap: Record<string, string> = {
 
 /**
  * Get the card image path for a given archetype and expression
- * @param archetype - Archetype name in simplified Chinese (e.g., "机智狐")
+ * @param archetype - Archetype name in simplified Chinese (e.g., "fox")
  * @param expression - Expression ID (e.g., "starry", "hearts", "shy", "shocked")
  * @returns Full path to the card image
  */

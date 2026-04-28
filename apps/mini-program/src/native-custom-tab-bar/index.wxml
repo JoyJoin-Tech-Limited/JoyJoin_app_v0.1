@@ -10,7 +10,7 @@
         <cover-view class="joy-custom-tab-bar__center-button">
           <cover-image
             class="joy-custom-tab-bar__center-logo"
-            src="../assets/box_logo_archetypes.png"
+            src="../assets/box-logo.webp"
           />
           <cover-view wx:if="{{center.showBadge}}" class="joy-custom-tab-bar__center-badge"></cover-view>
         </cover-view>

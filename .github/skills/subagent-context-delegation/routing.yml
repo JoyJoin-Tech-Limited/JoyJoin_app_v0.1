@@ -1,0 +1,35 @@
+skill: subagent-context-delegation
+primary_ownership: >
+  Patterns for packaging context into subagent prompts, launching parallel explore
+  swarms, resuming existing agents, and keeping parent session context lean.
+use_when:
+  - Delegating work to Agent tool calls
+  - Parent context is large and needs offloading
+  - Launching multiple research tasks in parallel
+  - Continuing work in a previously created subagent
+  - Subagent returns "not enough context" or repeats parent's work
+do_not_use_when:
+  - Working entirely within the parent session without delegation
+  - The task is a single file read or single-line fix (no subagent needed)
+  - Using Claude Code or another IDE's native multi-agent features
+strong_triggers:
+  - launch a subagent
+  - delegate to explore
+  - resume this agent
+  - context too long
+  - parallel research
+  - subagent needs more context
+  - fork subagent workaround
+  - keep parent context lean
+  - batch explore agents
+  - Agent tool
+  - subagent_type
+  - run_in_background
+  - agent_id
+  - resume parameter
+owned_paths:
+  - /.github/skills/subagent-context-delegation/
+related_skills:
+  - first-principles-velocity
+  - task-creator
+  - orchestration-turn-reporting

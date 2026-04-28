@@ -1,5 +1,6 @@
-import OpenAI from 'openai';
 import type { TopicCard } from '@shared/topicCards';
+import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
+import { logger } from './lib/logger';
 import { 
   getExpandedRecommendedTopics, 
   getRecommendedTopics,
@@ -7,10 +8,7 @@ import {
   energyBasedTopics 
 } from '@shared/topicCards';
 
-const deepseekClient = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
-});
+
 
 export interface ParticipantProfile {
   displayName: string;
@@ -39,13 +37,13 @@ const TOPIC_RECOMMENDATION_PROMPT = `你是"小悦"，JoyJoin平台的社交氛�
 5. **避免敏感**：考虑用户不想聊的话题
 
 ## 社交原型简介
-- 开心柯基/太阳鸡/夸夸豚：高能量、外向、善于活跃气氛
-- 暖心熊/温暖金毛：温暖、善于倾听、营造舒适氛围
-- 隐身猫/稳如龟：低能量、内敛、偏好深度交流
-- 沉思猫头鹰：深度思考者、喜欢有意义的对话
-- 灵感章鱼/机智狐：创意型、好奇心强、喜欢新奇话题
-- 织网蛛/淡定海豚：社交达人、善于串联人脉
-- 定心大象：稳重可靠、给人安全感
+- corgi/rooster/hamster_praise：高能量、外向、善于活跃气氛
+- koala/温暖金毛：温暖、善于倾听、营造舒适氛围
+- cat/turtle：低能量、内敛、偏好深度交流
+- owl：深度思考者、喜欢有意义的对话
+- octopus/fox：创意型、好奇心强、喜欢新奇话题
+- spider/dolphin_calm：社交达人、善于串联人脉
+- elephant：稳重可靠、给人安全感
 
 ## 输出格式
 返回一个JSON数组，每个元素包含：
@@ -95,8 +93,8 @@ ${candidateTopics.map((t, i) => `${i}. [${t.category}] ${t.question} (难度: ${
 
 请从以上话题中选择${topicCount}个最合适的话题，并生成推荐理由。`;
 
-    const response = await deepseekClient.chat.completions.create({
-      model: 'deepseek-chat',
+    const response = await getDeepseekClient().chat.completions.create({
+      model: getDeepseekModel('flash'),
       messages: [
         { role: 'system', content: TOPIC_RECOMMENDATION_PROMPT },
         { role: 'user', content: userPrompt }
@@ -144,16 +142,16 @@ ${candidateTopics.map((t, i) => `${i}. [${t.category}] ${t.question} (难度: ${
 
     return results;
   } catch (error) {
-    console.error('AI topic recommendation error:', error);
+    logger.error('AI topic recommendation error', { error: error instanceof Error ? error.message : String(error) });
     return getFallbackRecommendations(candidateTopics, archetypes, topicCount);
   }
 }
 
 function getDefaultReason(topic: TopicCard, archetypes: string[]): string {
-  const hasCreative = archetypes.some(a => ['灵感章鱼', '机智狐'].includes(a));
-  const hasDeep = archetypes.some(a => ['沉思猫头鹰', '稳如龟'].includes(a));
-  const hasEnergetic = archetypes.some(a => ['开心柯基', '太阳鸡', '夸夸豚'].includes(a));
-  const hasWarm = archetypes.some(a => ['暖心熊', '温暖金毛'].includes(a));
+  const hasCreative = archetypes.some(a => ['octopus', 'fox'].includes(a));
+  const hasDeep = archetypes.some(a => ['owl', 'turtle'].includes(a));
+  const hasEnergetic = archetypes.some(a => ['corgi', 'rooster', 'hamster_praise'].includes(a));
+  const hasWarm = archetypes.some(a => ['koala', '温暖金毛'].includes(a));
 
   if (topic.difficulty === 'easy') {
     if (hasEnergetic) return '轻松有趣，活跃气氛刚刚好～';

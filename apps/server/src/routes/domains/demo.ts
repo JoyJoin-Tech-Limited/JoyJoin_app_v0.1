@@ -7,7 +7,17 @@ import { storage } from "../../storage";
 import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { eventAttendance, eventPoolRegistrations, eventPools, chatMessages, blindBoxEvents, events, users, venues, venueDeals } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import { logger } from "../../lib/logger";
 
+const seedPoolRegistrationsSchema = z.object({
+  poolId: z.string().min(1),
+  count: z.number().int().min(1).max(20).optional(),
+  budgetTier: z.string().optional(),
+});
+
+// Demo seed endpoints perform a series of independent INSERTs per route.
+// These are idempotent / best-effort seed operations, not transactional business flows.
 export function registerDemoRoutes(app: Express): void {
   app.post('/api/demo/seed-events', isPhoneAuthenticated, async (req: any, res) => {
     try {
@@ -17,12 +27,12 @@ export function registerDemoRoutes(app: Express): void {
       const { eq } = await import("drizzle-orm");
       
       // Check if user already has demo events
-      const existingEvents = await db.select().from(blindBoxEvents).where(eq(blindBoxEvents.userId, userId));
+      const existingEvents = await db.select().from(blindBoxEvents).where(eq(blindBoxEvents.userId, userId)).limit(100);
       const hasMatchedDemo = existingEvents.some((e: any) => e.status === 'matched' && e.restaurantName?.includes('Sushi'));
       const hasCompletedDemo = existingEvents.some((e: any) => e.status === 'completed' && e.restaurantName?.includes('Tap House'));
       
       if (hasMatchedDemo && hasCompletedDemo) {
-        console.log("✅ Demo events already exist for user:", userId);
+        logger.info("✅ Demo events already exist for user:", { value: userId });
         return res.json({ message: "Demo events already exist" });
       }
       
@@ -55,7 +65,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-1", 
             displayName: "小美", 
-            archetype: "夸夸豚", 
+            archetype: "hamster_praise", 
             topInterests: ["美食", "旅行", "艺术"], 
             age: 27, 
             birthdate: "1998-05-15", 
@@ -75,7 +85,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-2", 
             displayName: "阿强", 
-            archetype: "机智狐", 
+            archetype: "fox", 
             topInterests: ["美食", "摄影", "旅行"], 
             age: 30, 
             birthdate: "1995-03-20", 
@@ -95,7 +105,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-3", 
             displayName: "Lisa", 
-            archetype: "织网蛛", 
+            archetype: "spider", 
             topInterests: ["美食", "艺术", "音乐"], 
             age: 28, 
             birthdate: "1997-07-10", 
@@ -115,7 +125,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-4", 
             displayName: "David", 
-            archetype: "灵感章鱼", 
+            archetype: "octopus", 
             topInterests: ["美食", "音乐", "电影"], 
             age: 32, 
             birthdate: "1993-11-05", 
@@ -165,7 +175,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-5", 
             displayName: "Sarah", 
-            archetype: "太阳鸡", 
+            archetype: "rooster", 
             topInterests: ["音乐", "社交", "美食"], 
             age: 29, 
             birthdate: "1996-04-12", 
@@ -185,7 +195,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-6", 
             displayName: "Alex", 
-            archetype: "开心柯基", 
+            archetype: "corgi", 
             topInterests: ["创业", "科技", "阅读"], 
             age: 31, 
             birthdate: "1994-09-08", 
@@ -205,7 +215,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-7", 
             displayName: "小红", 
-            archetype: "暖心熊", 
+            archetype: "koala", 
             topInterests: ["旅行", "摄影", "美食"], 
             age: 28, 
             birthdate: "1997-02-18", 
@@ -225,7 +235,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-8", 
             displayName: "Tom", 
-            archetype: "机智狐", 
+            archetype: "fox", 
             topInterests: ["音乐", "电影", "旅行"], 
             age: 30, 
             birthdate: "1995-07-22", 
@@ -245,7 +255,7 @@ export function registerDemoRoutes(app: Express): void {
           { 
             userId: "demo-9", 
             displayName: "Emma", 
-            archetype: "织网蛛", 
+            archetype: "spider", 
             topInterests: ["艺术", "文化", "咖啡"], 
             age: 27, 
             birthdate: "1998-01-30", 
@@ -266,7 +276,7 @@ export function registerDemoRoutes(app: Express): void {
         matchExplanation: "这是一场创意人的深夜聚会！精酿啤酒配上有趣的灵魂，大家都喜欢分享故事和创意想法。"
       }).returning();
       
-      console.log("✅ Demo events created:", { matched: matchedEvent[0].id, completed: completedEvent[0].id });
+      logger.info("✅ Demo events created:", { matched: matchedEvent[0].id, completed: completedEvent[0].id });
       
       res.json({ 
         message: "Demo events created successfully",
@@ -276,7 +286,7 @@ export function registerDemoRoutes(app: Express): void {
         }
       });
     } catch (error) {
-      console.error("Error seeding demo events:", error);
+      logger.error("Error seeding demo events:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to seed demo events" });
     }
   });
@@ -284,16 +294,15 @@ export function registerDemoRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       if (!userId) {
-        console.error("[DemoSeedPoolRegistrations] No userId in session");
+        logger.error("[DemoSeedPoolRegistrations] No userId in session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const { poolId, count, budgetTier } = req.body || {};
-
-      if (!poolId) {
-        console.warn("[DemoSeedPoolRegistrations] missing poolId");
-        return res.status(400).json({ message: "poolId is required" });
+      const parseResult = seedPoolRegistrationsSchema.safeParse(req.body || {});
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.issues });
       }
+      const { poolId, count, budgetTier } = parseResult.data;
 
       // 确认这个池子存在
       const [pool] = await db
@@ -302,7 +311,7 @@ export function registerDemoRoutes(app: Express): void {
         .where(eq(eventPools.id, poolId));
 
       if (!pool) {
-        console.warn("[DemoSeedPoolRegistrations] pool not found:", poolId);
+        logger.warn("Pool not found", { feature: 'DemoSeedPoolRegistrations', poolId });
         return res.status(404).json({ message: "Pool not found" });
       }
 
@@ -357,7 +366,7 @@ export function registerDemoRoutes(app: Express): void {
         })
         .where(eq(eventPools.id, poolId));
 
-      console.log("[DemoSeedPoolRegistrations] inserted registrations:", {
+      logger.info("[DemoSeedPoolRegistrations] inserted registrations:", {
         poolId,
         requestedByUserId: userId,
         count: inserted.length,
@@ -369,7 +378,7 @@ export function registerDemoRoutes(app: Express): void {
         insertedCount: inserted.length,
       });
     } catch (error: any) {
-      console.error("[DemoSeedPoolRegistrations] Error seeding registrations:", error);
+      logger.error("[DemoSeedPoolRegistrations] Error seeding registrations:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({
         message: "Failed to seed pool registrations",
         error: error?.message || String(error),
@@ -380,7 +389,7 @@ export function registerDemoRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       if (!userId) {
-        console.error("[DemoChristmasPool] No userId in session");
+        logger.error("[DemoChristmasPool] No userId in session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
@@ -399,7 +408,7 @@ export function registerDemoRoutes(app: Express): void {
       );
       
       if (hasChristmasPool) {
-        console.log("✅ Christmas pool already exists for user:", userId);
+        logger.info("✅ Christmas pool already exists for user:", { value: userId });
         return res.json({ 
           message: "Christmas pool already exists",
           poolExists: true 
@@ -425,7 +434,7 @@ export function registerDemoRoutes(app: Express): void {
         currentParticipants: 1, // Just the creator
       }).returning();
 
-      console.log("✅ Demo Christmas pool created:", created[0].id);
+      logger.info("✅ Demo Christmas pool created:", created[0].id);
       
       res.json({
         message: "Christmas pool created successfully",
@@ -434,7 +443,7 @@ export function registerDemoRoutes(app: Express): void {
         instructions: "你现在可以体验报名流程。系统将自动为你匹配其他参加者，生成完整的匹配桌。"
       });
     } catch (error) {
-      console.error("[DemoChristmasPool] Error creating pool:", error);
+      logger.error("[DemoChristmasPool] Error creating pool:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ 
         message: "Failed to create Christmas pool",
         error: error instanceof Error ? error.message : String(error)
@@ -487,7 +496,7 @@ export function registerDemoRoutes(app: Express): void {
         isActive: true,
       }).returning();
       
-      console.log("✅ Demo venue created:", venue.id, venue.name);
+      logger.info("Demo venue created", { feature: 'DemoSeed', venueId: venue.id, venueName: venue.name });
       
       // Create 20% off exclusive deal
       const [deal] = await db.insert(venueDeals).values({
@@ -508,7 +517,7 @@ export function registerDemoRoutes(app: Express): void {
         isActive: true,
       }).returning();
       
-      console.log("✅ Demo deal created:", deal.id, deal.title);
+      logger.info("Demo deal created", { feature: 'DemoSeed', dealId: deal.id, dealTitle: deal.title });
       
       res.json({
         message: "Homebar venue and deal created successfully",
@@ -517,7 +526,7 @@ export function registerDemoRoutes(app: Express): void {
         instructions: "场地和优惠已创建成功，可在活动详情页查看"
       });
     } catch (error) {
-      console.error("[DemoHomebarVenue] Error creating venue:", error);
+      logger.error("[DemoHomebarVenue] Error creating venue:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ 
         message: "Failed to create Homebar venue",
         error: error instanceof Error ? error.message : String(error)
@@ -531,12 +540,12 @@ export function registerDemoRoutes(app: Express): void {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      console.log(`[SEED-DEMO] Starting demo data creation for user: ${userId}`);
+      logger.info(`[SEED-DEMO] Starting demo data creation for user: ${userId}`);
 
       // Create demo users with different archetypes and complete profiles
       const [demoUser1] = await db.insert(users).values({
         displayName: '小明',
-        archetype: '开心柯基',
+        archetype: 'corgi',
         hasCompletedProfileSetup: true,
         hasCompletedPersonalityTest: true,
         hasCompletedInterestsTopics: true,
@@ -554,7 +563,7 @@ export function registerDemoRoutes(app: Express): void {
 
       const [demoUser2] = await db.insert(users).values({
         displayName: '小红',
-        archetype: '织网蛛',
+        archetype: 'spider',
         hasCompletedProfileSetup: true,
         hasCompletedPersonalityTest: true,
         hasCompletedInterestsTopics: true,
@@ -572,7 +581,7 @@ export function registerDemoRoutes(app: Express): void {
 
       const [demoUser3] = await db.insert(users).values({
         displayName: '阿杰',
-        archetype: '机智狐',
+        archetype: 'fox',
         hasCompletedProfileSetup: true,
         hasCompletedPersonalityTest: true,
         hasCompletedInterestsTopics: true,
@@ -714,7 +723,7 @@ export function registerDemoRoutes(app: Express): void {
         { eventId: event3.id, userId: demoUser3.id, status: 'confirmed' },
       ]);
 
-      console.log(`[SEED-DEMO] Demo data creation completed successfully for user: ${userId}`);
+      logger.info(`[SEED-DEMO] Demo data creation completed successfully for user: ${userId}`);
       res.json({ 
         success: true, 
         message: 'Demo chat data created',
@@ -725,7 +734,7 @@ export function registerDemoRoutes(app: Express): void {
         ],
       });
     } catch (error) {
-      console.error("[SEED-DEMO] Error creating demo chat data:", error);
+      logger.error("[SEED-DEMO] Error creating demo chat data:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to create demo chat data", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });

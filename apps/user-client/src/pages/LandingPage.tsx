@@ -17,7 +17,8 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
-import logoImage from "@/assets/box_logo_archetypes.png";
+import { ResponsiveSpacer } from "@shared/ui/ResponsiveSpacer";
+import logoImage from "@/assets/joyjoin-logo.png";
 import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.webp";
 import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.webp";
 import continueImg from "@/assets/landing screen/动物延续 compressed.webp";
@@ -49,7 +50,7 @@ export default function LandingPage() {
 
   return (
     <main
-      className="h-screen overflow-hidden flex flex-col items-center"
+      className="no-scroll-container items-center"
       style={{
         backgroundImage:
           "linear-gradient(180deg, #FFF0E8 0%, #F5E6FF 35%, #EDE4FF 55%, #F8F4FF 80%, #FFFBF9 100%)," +
@@ -59,9 +60,9 @@ export default function LandingPage() {
         backgroundBlendMode: "normal, screen, screen, screen",
       }}
     >
-      {/* Content zone — flex-1 but overflow-hidden so it never scrolls */}
+      {/* Content zone — natural height, clipped if viewport is too short */}
       <div
-        className="flex-1 min-h-0 overflow-hidden flex flex-col items-center w-full max-w-sm mx-auto px-5"
+        className="flex-shrink-0 overflow-hidden flex flex-col items-center w-full max-w-sm mx-auto px-5"
         style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top))" }}
       >
         {/* Logo */}
@@ -199,7 +200,10 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Sticky bottom CTA zone — in document flow so it never overlaps */}
+      {/* Responsive gap — collapses on short viewports so CTA stays visible */}
+      <ResponsiveSpacer height={48} collapseBelow={700} className="w-full" />
+
+      {/* Bottom CTA zone — in document flow so it never overlaps */}
       <section
         className="flex-none w-full max-w-sm mx-auto px-5 space-y-3"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))", paddingTop: "0.75rem" }}

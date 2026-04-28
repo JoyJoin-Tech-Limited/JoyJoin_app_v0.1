@@ -32,7 +32,7 @@ Same as 01-landing-page.md.
 ### Hero Section
 - **Archetype banner:** full-width card with archetype color as background gradient
   - Archetype mascot illustration (left, 120rpx)
-  - Archetype name: "开心柯基" — 36rpx, bold, white
+  - Archetype name: "气氛组柯基" — 36rpx, bold, white
   - Trait tags: "气氛担当 · 乐观 · 热心" — small pills
   - "社交 passport" feel
 - **Avatar + Name row:**
@@ -82,7 +82,7 @@ BRAND SYSTEM:
 - Style: 插画风 low-poly, personal and celebratory
 
 DESIGN REQUIREMENTS:
-- Top: Archetype banner card with archetype color gradient background, mascot illustration, archetype name "开心柯基", trait tags as pills
+- Top: Archetype banner card with archetype color gradient background, mascot illustration, archetype name "气氛组柯基", trait tags as pills
 - Avatar + name row: circular avatar with gradient border, display name, archetype glyph + name pill
 - Stats row: 3 cards — "参加活动 5 场" (trophy), "连接 12 人" (people), "获赞 28 次" (heart)
 - Menu cards (not plain list):

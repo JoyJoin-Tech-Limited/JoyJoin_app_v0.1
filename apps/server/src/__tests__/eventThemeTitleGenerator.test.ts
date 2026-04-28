@@ -24,8 +24,8 @@ const mockMembers: EnrichedMemberProfile[] = [
     workMode: 'employed',
     hometownRegionCity: '北京',
     currentCity: '深圳',
-    archetype: '开心柯基',
-    secondaryArchetype: '机智狐',
+    archetype: 'corgi',
+    secondaryArchetype: 'fox',
     energyLevel: 95,
     intent: '扩展社交圈',
     topInterests: [
@@ -52,8 +52,8 @@ const mockMembers: EnrichedMemberProfile[] = [
     workMode: 'employed',
     hometownRegionCity: '上海',
     currentCity: '深圳',
-    archetype: '织网蛛',
-    secondaryArchetype: '淡定海豚',
+    archetype: 'spider',
+    secondaryArchetype: 'dolphin_calm',
     energyLevel: 72,
     intent: '结识同行',
     topInterests: [
@@ -80,8 +80,8 @@ const mockMembers: EnrichedMemberProfile[] = [
     workMode: 'employed',
     hometownRegionCity: '广州',
     currentCity: '深圳',
-    archetype: '沉思猫头鹰',
-    secondaryArchetype: '暖心熊',
+    archetype: 'owl',
+    secondaryArchetype: 'koala',
     energyLevel: 55,
     intent: '深度交流',
     topInterests: [
@@ -247,7 +247,7 @@ describe('Team Name Generator - Data Provenance', () => {
   it('should have energy level from archetypeRegistry', () => {
     const profile = mockMembers[0];
     
-    // Energy level should match archetypeRegistry for 开心柯基
+    // Energy level should match archetypeRegistry for corgi
     expect(profile.energyLevel).toBe(95);
   });
 

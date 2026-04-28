@@ -121,7 +121,7 @@ const EVENT_THEME_WEIGHTS = {
 **From `users` table:**
 ```typescript
 {
-  archetype: string,              // e.g., "开心柯基"
+  archetype: string,              // e.g., "气氛组柯基"
   secondaryArchetype: string,
   gender: string,
   birthYear: string,              // For age calculation
@@ -148,9 +148,9 @@ SELECT * FROM user_interests WHERE heat >= 10
 **From `archetypeRegistry`:**
 ```typescript
 archetypeRegistry[archetype].profile.energyLevel
-// 开心柯基: 95
-// 太阳鸡: 90
-// 隐身猫: 30
+// 气氛组柯基: 95
+// 情绪稳定鸡: 90
+// 静音模式猫: 30
 ```
 
 #### ❌ Never Use (Deprecated/Not Collected):
@@ -203,10 +203,10 @@ barThemes            // Filter only
 **Input Data:**
 ```typescript
 const members = [
-  { archetype: "开心柯基", energy: 95, hometown: "广州", interests: ["咖啡": heat=25] },
-  { archetype: "机智狐", energy: 82, hometown: "广州", interests: ["咖啡": heat=25] },
-  { archetype: "暖心熊", energy: 70, hometown: "深圳", interests: ["咖啡": heat=10] },
-  { archetype: "淡定海豚", energy: 75, hometown: "广州", interests: ["咖啡": heat=25] }
+  { archetype: "气氛组柯基", energy: 95, hometown: "广州", interests: ["咖啡": heat=25] },
+  { archetype: "探宝雷达狐", energy: 82, hometown: "广州", interests: ["咖啡": heat=25] },
+  { archetype: "情绪树洞考拉", energy: 70, hometown: "深圳", interests: ["咖啡": heat=10] },
+  { archetype: "读空气海豚", energy: 75, hometown: "广州", interests: ["咖啡": heat=25] }
 ];
 // avgEnergy: 81
 // intent: "拓展人脉" (4 people)
@@ -237,10 +237,10 @@ const members = [
 **Input Data:**
 ```typescript
 const members = [
-  { archetype: "沉思猫头鹰", energy: 55, interests: ["阅读": heat=25, "哲学": heat=10] },
-  { archetype: "定心大象", energy: 52, interests: ["阅读": heat=25, "商业": heat=10] },
-  { archetype: "稳如龟", energy: 38, interests: ["阅读": heat=10, "心理学": heat=25] },
-  { archetype: "隐身猫", energy: 30, interests: ["阅读": heat=25, "艺术": heat=10] }
+  { archetype: "追问猫头鹰", energy: 55, interests: ["阅读": heat=25, "哲学": heat=10] },
+  { archetype: "定海神针大象", energy: 52, interests: ["阅读": heat=25, "商业": heat=10] },
+  { archetype: "慢半拍龟", energy: 38, interests: ["阅读": heat=10, "心理学": heat=25] },
+  { archetype: "静音模式猫", energy: 30, interests: ["阅读": heat=25, "艺术": heat=10] }
 ];
 // avgEnergy: 44
 // intent: "结识朋友" (4 people)

@@ -14,7 +14,7 @@ export interface TraitScores {
 
 export const archetypeTraitScores: Record<string, TraitScores> = {
   // 高能量区 (82-95)
-  "开心柯基": {
+  "corgi": {
     affinity: 90,
     openness: 80,
     conscientiousness: 65,
@@ -22,7 +22,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 95,
     positivity: 95,
   },
-  "太阳鸡": {
+  "rooster": {
     affinity: 90,
     openness: 70,
     conscientiousness: 80,
@@ -30,7 +30,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 85,
     positivity: 95,
   },
-  "夸夸豚": {
+  "hamster_praise": {
     affinity: 95,
     openness: 75,
     conscientiousness: 70,
@@ -38,7 +38,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 85,
     positivity: 95,
   },
-  "机智狐": {
+  "fox": {
     affinity: 70,
     openness: 95,
     conscientiousness: 65,
@@ -48,7 +48,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
   },
   
   // 中能量区 (68-75)
-  "淡定海豚": {
+  "dolphin_calm": {
     affinity: 85,
     openness: 80,
     conscientiousness: 85,
@@ -56,7 +56,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 70,
     positivity: 85,
   },
-  "织网蛛": {
+  "spider": {
     affinity: 90,
     openness: 85,
     conscientiousness: 85,
@@ -64,7 +64,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 70,
     positivity: 75,
   },
-  "暖心熊": {
+  "koala": {
     affinity: 95,
     openness: 75,
     conscientiousness: 80,
@@ -72,7 +72,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 65,
     positivity: 85,
   },
-  "灵感章鱼": {
+  "octopus": {
     affinity: 65,
     openness: 95,
     conscientiousness: 60,
@@ -82,7 +82,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
   },
   
   // 低能量区 (52-55)
-  "沉思猫头鹰": {
+  "owl": {
     affinity: 60,
     openness: 90,
     conscientiousness: 90,
@@ -90,7 +90,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 50,
     positivity: 65,
   },
-  "定心大象": {
+  "elephant": {
     affinity: 85,
     openness: 65,
     conscientiousness: 95,
@@ -100,7 +100,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
   },
   
   // 超低能量区 (30-38)
-  "稳如龟": {
+  "turtle": {
     affinity: 55,
     openness: 80,
     conscientiousness: 90,
@@ -108,7 +108,7 @@ export const archetypeTraitScores: Record<string, TraitScores> = {
     extraversion: 35,
     positivity: 60,
   },
-  "隐身猫": {
+  "cat": {
     affinity: 60,
     openness: 55,
     conscientiousness: 70,

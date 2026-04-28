@@ -12,7 +12,7 @@ import {
   type SocialIcebreakerPhase,
   type SocialSessionState,
 } from '@shared/socialIcebreaker'
-import type { MiniScriptStoryFramework } from '@shared/miniscriptStoryFramework'
+import type { MiniScriptStoryFrameworkPublic } from '@shared/miniscriptStoryFramework'
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { buildSocialPath } from './icebreakerSessionModel'
@@ -199,7 +199,7 @@ export function WarmupPhaseView({
                 {p.displayName ?? '匿名'}
               </Text>
               {p.isHost && (
-                <Text className='icebreaker__participant-host'>👑</Text>
+                <JoyJoinIcon emoji='👑' size={20} className='icebreaker__participant-host' />
               )}
               {readyUserIds.includes(p.userId) && (
                 <Text className='icebreaker__participant-check'>✅</Text>
@@ -676,108 +676,6 @@ export function PersonalityDicePhaseView({
           <Text className='icebreaker__helper-text'>等待 {currentChallenge?.displayName ?? '当前玩家'} 完成挑战…</Text>
         ) : null}
       </View>
-    </View>
-  )
-}
-
-export function MiniScriptPhaseView({
-  framework,
-  phaseStartedAt,
-  timeoutMinutes,
-  isHost,
-  onAdvance,
-  isAdvancing,
-}: {
-  framework: MiniScriptStoryFramework | null | undefined
-  phaseStartedAt: number
-  timeoutMinutes: number
-  isHost: boolean
-  onAdvance: () => void
-  isAdvancing: boolean
-}) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  const endMs = phaseStartedAt + timeoutMinutes * 60 * 1000
-  const remainSec = Math.max(0, Math.ceil((endMs - now) / 1000))
-  const mm = Math.floor(remainSec / 60)
-  const ss = remainSec % 60
-
-  if (!framework) {
-    return (
-      <View className='icebreaker__challenge'>
-        <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={48} /></View>
-          <Text className='icebreaker__challenge-title'>剧本尚未生成</Text>
-          <Text className='icebreaker__challenge-desc'>
-            {isHost ? '点击上方「迷你剧本杀」配置风格与题材，生成你们的剧本。' : '请等待主持人生成剧本…'}
-          </Text>
-        </Card>
-      </View>
-    )
-  }
-
-  return (
-    <View className='icebreaker__challenge'>
-      <Card className='icebreaker__challenge-card'>
-        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={48} /></View>
-        <Text className='icebreaker__challenge-title'>迷你剧本杀</Text>
-        <Text className='icebreaker__challenge-meta'>
-          剩余时间 {String(mm).padStart(2, '0')}:{String(ss).padStart(2, '0')}
-        </Text>
-        <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
-      </Card>
-
-      <Card className='icebreaker__challenge-card'>
-        <Text className='icebreaker__challenge-title'>角色与「小麻烦」钩子</Text>
-        {framework.characters.map((character) => (
-          <View key={character.slotIndex} className='icebreaker__ms-role'>
-            <Text className='icebreaker__ms-role-title'>{character.roleLabel}</Text>
-            <Text className='icebreaker__ms-role-line'>钩子：{character.sinHook}</Text>
-            <Text className='icebreaker__ms-role-line'>表面：{character.alibi}</Text>
-            <Text className='icebreaker__ms-role-line'>秘密：{character.secret}</Text>
-          </View>
-        ))}
-      </Card>
-
-      <Card className='icebreaker__challenge-card'>
-        <Text className='icebreaker__challenge-title'>流程节拍</Text>
-        {framework.act_flow.map((act) => (
-          <View key={act.actNumber} className='icebreaker__ms-act'>
-            <Text className='icebreaker__ms-act-title'>
-              第{act.actNumber}幕 · {act.title}
-            </Text>
-            {act.beats.map((beat, index) => (
-              <Text key={index} className='icebreaker__ms-role-line'>
-                · {beat}
-              </Text>
-            ))}
-          </View>
-        ))}
-      </Card>
-
-      <Card className='icebreaker__challenge-card'>
-        <Text className='icebreaker__challenge-title'>结局机制</Text>
-        <Text className='icebreaker__challenge-desc'>{framework.ending.resolutionSummary}</Text>
-        <Text className='icebreaker__challenge-desc'>{framework.ending.confessionMechanic}</Text>
-      </Card>
-
-      {isHost ? (
-        <Button
-          variant='secondary'
-          className='icebreaker__action-btn'
-          onClick={onAdvance}
-          disabled={isAdvancing}
-          loading={isAdvancing}
-        >
-          {isAdvancing ? '切换中…' : '进入回顾'}
-        </Button>
-      ) : (
-        <Text className='icebreaker__helper-text'>跟随剧本节奏游玩，结束由主持人推进。</Text>
-      )}
     </View>
   )
 }

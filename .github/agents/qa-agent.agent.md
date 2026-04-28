@@ -5,6 +5,12 @@ tools: [read, search, execute]
 argument-hint: "Describe the feature or change, affected flows, current risks, environments available, whether you need a checklist, test plan, or execution summary, and any upstream implementation context."
 agents: []
 handoffs:
+  - label: "Sprint failed — return to generator"
+    agent: "Supervisor"
+    prompt: "The Sprint Evaluation found blocking issues. Route back to the implementing engineer with the specific feedback JSON so they can fix and resubmit."
+  - label: "Sprint accepted — run dirty-worktree gate"
+    agent: "Auto-Eval"
+    prompt: "The Sprint Contract has been implemented and evaluated. Run the deterministic dirty-worktree quality gate and confirm no new lint, type, or guardrail failures were introduced."
   - label: "Escalate release blockers"
     agent: "Launch Readiness Agent"
     prompt: "Summarize the verification status, residual risks, and blockers that matter for launch readiness."
@@ -34,6 +40,21 @@ Your job is to turn changes into concrete verification work: smoke coverage, reg
 6. Produce a concrete verification checklist or run summary.
 7. Call out blockers, missing harnesses, and residual risk precisely.
 8. End with a clear status: verified, partially verified, or not verified, and the next escalation path when the work is not yet ready.
+
+## Sprint Evaluation mode
+
+When evaluating an **implemented Sprint Contract** (post-implementation):
+
+1. Read the Sprint Contract from `.git/.orchestration/sprints/sprint-contract.{taskId}.md`.
+2. Run the contract's **verification method** (tests, Playwright, API calls, etc.).
+3. Grade each acceptance criterion:
+   - **PASS** — criterion is fully met with evidence.
+   - **PARTIAL** — criterion is mostly met but has a minor gap (only acceptable if contract explicitly labels it `partial_allowed`).
+   - **FAIL** — criterion is not met or has a significant gap.
+4. Apply **hard thresholds:** Any FAIL on a required criterion → **VERDICT: REJECT**.
+5. Write feedback JSON to `.git/.orchestration/sprints/sprint-{id}-feedback.json` if rejected, or verdict JSON to `.git/.orchestration/sprints/sprint-{id}-verdict.json` if accepted.
+6. On re-evaluation, only re-check **previously failed criteria** — do not re-run the full suite unless the contract changed.
+7. Max 3 evaluation iterations per sprint. If still failing after 3, escalate to Supervisor.
 
 ## Output format
 

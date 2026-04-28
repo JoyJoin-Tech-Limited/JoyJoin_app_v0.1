@@ -80,6 +80,28 @@ This produces a JSON report and exits:
 - `1` = one or more pillars failed (blocking issues found)
 - `2` = concerns found (non-blocking, but must be documented)
 
+## Sprint Contract Awareness
+
+If an active Sprint Contract exists at `.git/.orchestration/sprints/sprint-contract.{taskId}.md`, the gate script reads it and cross-checks the diff against the contract's pillar criteria. Findings are tagged with contract criterion IDs:
+
+```json
+{
+  "harnessVerdict": {
+    "reliability": "pass",
+    "scalability": "pass"
+  },
+  "contractFindings": [
+    { "criterionId": "REL-01", "status": "pass", "message": "..." },
+    { "criterionId": "SEC-02", "status": "fail", "message": "..." }
+  ]
+}
+```
+
+Run contract-aware evaluation:
+```bash
+node scripts/evaluate-sprint-contract.mjs --contract=.git/.orchestration/sprints/sprint-contract.<taskId>.md
+```
+
 ## Integration with auto-eval
 
 The Harness gate is also available as an auto-eval module:

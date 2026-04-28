@@ -18,12 +18,12 @@ import { generateConversationTopics } from '../conversationTopicsService';
 const participants = [
   {
     displayName: '阿晴',
-    archetype: '机智狐',
+    archetype: 'fox',
     interests: ['美食', '摄影'],
   },
   {
     displayName: '小周',
-    archetype: '开心柯基',
+    archetype: 'corgi',
     interests: ['美食', '旅行'],
   },
 ];
@@ -79,7 +79,7 @@ describe('conversationTopicsService', () => {
     callSocialAIMock.mockResolvedValue({
       content: 'not-json',
       provider: 'deepseek',
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       latencyMs: 18,
       fallbackUsed: true,
     });
@@ -91,7 +91,7 @@ describe('conversationTopicsService', () => {
         domain: 'match_explanation',
         feature: 'generateConversationTopics',
         provider: 'deepseek',
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         success: false,
         fallbackUsed: true,
         promptVersion: 'conversation-topics-v1',

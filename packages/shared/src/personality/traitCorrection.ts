@@ -157,18 +157,18 @@ export function applyTraitCorrections(
  * 原型特定匹配阈值
  */
 export const ARCHETYPE_MATCH_THRESHOLDS: Record<string, number> = {
-  '开心柯基': 0.75,   // Lowered from implicit 0.80
-  '机智狐': 0.78,     // Lowered from implicit 0.82
-  '灵感章鱼': 0.78,   // Added for difficult-to-match archetype
-  '织网蛛': 0.80,     // Slightly lowered
-  '太阳鸡': 0.82,
-  '夸夸豚': 0.82,
-  '淡定海豚': 0.82,
-  '暖心熊': 0.82,
-  '沉思猫头鹰': 0.85,
-  '定心大象': 0.83,
-  '稳如龟': 0.85,
-  '隐身猫': 0.85,
+  'corgi': 0.75,   // Lowered from implicit 0.80
+  'fox': 0.78,     // Lowered from implicit 0.82
+  'octopus': 0.78,   // Added for difficult-to-match archetype
+  'spider': 0.80,     // Slightly lowered
+  'rooster': 0.82,
+  'hamster_praise': 0.82,
+  'dolphin_calm': 0.82,
+  'koala': 0.82,
+  'owl': 0.85,
+  'elephant': 0.83,
+  'turtle': 0.85,
+  'cat': 0.85,
 };
 
 /**

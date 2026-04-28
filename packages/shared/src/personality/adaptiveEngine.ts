@@ -114,9 +114,9 @@ export function resetInstrumentation(): void {
  * Format: [archetype1, archetype2] - order doesn't matter
  */
 export const PERSISTENT_CONFUSION_PAIRS: [string, string][] = [
-  ['太阳鸡', '淡定海豚'],       // P gap: 92 vs 68
-  ['沉思猫头鹰', '稳如龟'],     // O gap: 88 vs 65
-  ['淡定海豚', '暖心熊'],       // A gap: 70 vs 88
+  ['rooster', 'dolphin_calm'],       // P gap: 92 vs 68
+  ['owl', 'turtle'],     // O gap: 88 vs 65
+  ['dolphin_calm', 'koala'],       // A gap: 70 vs 88
 ];
 
 /**
@@ -295,15 +295,15 @@ export function detectCohort(normalizedTraits: Record<TraitKey, number>): Cohort
   const socialSignal = X + P - O; // Positive = social tendency
   
   // Quiet Anchor: Low extraversion with structured approach (check early)
-  // Targets: 隐身猫 (X:20), 稳如龟 (X:30), 定心大象 (X:40)
+  // Targets: cat (X:20), turtle (X:30), elephant (X:40)
   if (X <= 45 && C >= 55) {
     return 'quiet_anchor';
   }
   
   // Use differential to determine creative vs social priority
-  // 灵感章鱼 (O:95, X:60) → creativeSignal = +35
-  // 开心柯基 (O:65, X:95, P:90) → creativeSignal = -30, socialSignal = +120
-  // 夸夸豚 (O:50, X:75, P:95) → creativeSignal = -25, socialSignal = +120
+  // octopus (O:95, X:60) → creativeSignal = +35
+  // corgi (O:65, X:95, P:90) → creativeSignal = -30, socialSignal = +120
+  // hamster_praise (O:50, X:75, P:95) → creativeSignal = -25, socialSignal = +120
   
   if (creativeSignal >= 10) {
     // Strong creative signal - O dominates X
@@ -325,7 +325,7 @@ export function detectCohort(normalizedTraits: Record<TraitKey, number>): Cohort
   }
   
   // Steady Harmonizer: High affinity, emotionally balanced
-  // Targets: 暖心熊 (A:90), 淡定海豚 (A:65, E:75), 织网蛛 (A:75)
+  // Targets: koala (A:90), dolphin_calm (A:65, E:75), spider (A:75)
   if (A >= 60 && E >= 55) {
     return 'steady_harmonizer';
   }
@@ -685,9 +685,9 @@ function getPersistentPairDifferentiatingTraits(pair: [string, string]): TraitKe
   
   // Map of pairs to their key differentiating traits
   const traitMap: Record<string, TraitKey[]> = {
-    '太阳鸡,淡定海豚': ['P', 'X'],      // P: 92 vs 68, X: 85 vs 55
-    '沉思猫头鹰,稳如龟': ['O', 'X'],     // O: 88 vs 65, X: 40 vs 30
-    '暖心熊,淡定海豚': ['A', 'P'],       // A: 88 vs 70, P: 75 vs 68
+    'rooster,dolphin_calm': ['P', 'X'],      // P: 92 vs 68, X: 85 vs 55
+    'owl,turtle': ['O', 'X'],     // O: 88 vs 65, X: 40 vs 30
+    'koala,dolphin_calm': ['A', 'P'],       // A: 88 vs 70, P: 75 vs 68
   };
   
   const key = [a, b].sort().join(',');
@@ -890,7 +890,7 @@ export function getPreSignupPreview(state: EngineState): {
   }
   
   return {
-    previewArchetype: topMatch?.archetype || '开心柯基',
+    previewArchetype: topMatch?.archetype || 'corgi',
     confidence: topMatch?.confidence || 0,
     traitProfile,
   };
@@ -972,7 +972,7 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
     const matches = findBestMatchingArchetypes(normalizedTraits, 2);
     
     return {
-      primaryArchetype: matches[0]?.archetype || '开心柯基',
+      primaryArchetype: matches[0]?.archetype || 'corgi',
       secondaryArchetype: matches[1]?.archetype,
       traitScores: normalizedTraits,
       confidences,
@@ -986,7 +986,7 @@ export function getFinalResult(state: EngineState, userSecondaryData?: UserSecon
   const decisiveCheck = prototypeMatcher.isDecisiveMatch(matches);
   
   return {
-    primaryArchetype: matches[0]?.archetype || '开心柯基',
+    primaryArchetype: matches[0]?.archetype || 'corgi',
     secondaryArchetype: matches[1]?.archetype,
     traitScores: normalizedTraits,
     confidences,

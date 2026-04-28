@@ -7,11 +7,9 @@ import type {
   LieDetectiveVote,
   PulseCheckResult,
   LieDetectiveReveal,
-  SocialSessionParticipantSummary,
 } from '@shared/socialIcebreaker';
 import {
   getNextEligiblePhase,
-  migrateLegacySocialIcebreakerPhases,
   AUCTION_STARTING_COINS,
 } from '@shared/socialIcebreaker';
 import {
@@ -53,183 +51,32 @@ import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
 import { logger } from '../lib/logger';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
+import {
+  isUniqueConstraintError,
+  sanitizeStateForClient,
+  buildClientState,
+  hydrateDerivedState,
+  getUniqueUserCount,
+  hasAllRosterParticipantsResponded,
+  getMicroChallengeDeadlineMs,
+  recapDisplayNameByUserId,
+  buildLieDetectiveRecapHighlights,
+  buildPersonalityDiceRecapLines,
+  buildMiniScriptRecapLine,
+  buildAuctionRecapLines,
+  buildRecapParticipants,
+  incrementCommonGround,
+  getCurrentLieDetectivePlayer,
+  resolveSession,
+  isHostAuthorized,
+} from './socialIcebreakerHelpers';
 
 const router = Router();
-
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    (
-      (('code' in error) && (error as { code?: unknown }).code === '23505') ||
-      (('cause' in error) &&
-        typeof (error as { cause?: unknown }).cause === 'object' &&
-        (error as { cause?: { code?: unknown } }).cause?.code === '23505') ||
-      (('message' in error) &&
-        typeof (error as { message?: unknown }).message === 'string' &&
-        (error as { message: string }).message.includes('unique constraint'))
-    )
-  );
-}
 
 // ============ TTL / CLEANUP ============
 // Sweep expired sessions from the DB every 5 minutes. Fail open if the store
 // is unavailable so the route module does not take down the server process.
 startSocialIcebreakerSweep();
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Sanitize state before sending to client.
- *
- * Lie-detective truth data (isLie) is stored in a separate DB table and never
- * included in stateJson, so there is nothing to strip here.  Kept as an
- * explicit hook for future redactions.
- */
-function sanitizeStateForClient(state: SocialSessionState): SocialSessionState {
-  const sanitized = { ...state };
-  // Host-only fields: strip from client-visible state
-  delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
-  delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
-  return sanitized;
-}
-
-async function buildClientState(state: SocialSessionState): Promise<SocialSessionState> {
-  const joinedParticipants = await listParticipants(state.socialSessionId);
-  return sanitizeStateForClient({
-    ...state,
-    joinedParticipants,
-  });
-}
-
-function hydrateDerivedState(state: SocialSessionState): SocialSessionState {
-  migrateLegacySocialIcebreakerPhases(state);
-  if (state.commonGroundCount === undefined) {
-    state.commonGroundCount = 0;
-  }
-  if (!Array.isArray(state.warmupReadyUserIds)) {
-    state.warmupReadyUserIds = [];
-  }
-  if (!Array.isArray(state.lieDetectiveCompletedUserIds)) {
-    state.lieDetectiveCompletedUserIds = [];
-  }
-  return state;
-}
-
-function getUniqueUserCount(userIds?: string[]): number {
-  return new Set(userIds || []).size;
-}
-
-function hasAllRosterParticipantsResponded(userIds: string[] | undefined, playerCount: number): boolean {
-  return getUniqueUserCount(userIds) >= playerCount;
-}
-
-function getMicroChallengeDeadlineMs(state: SocialSessionState): number | null {
-  if (!state.currentChallenge?.durationSeconds) return null;
-  return state.phaseStartedAt + state.currentChallenge.durationSeconds * 1000;
-}
-
-function recapDisplayNameByUserId(
-  roster: SocialSessionParticipantSummary[],
-  state: SocialSessionState,
-  userId: string,
-): string {
-  const fromRoster = roster.find((p) => p.userId === userId)?.displayName;
-  if (fromRoster) return fromRoster;
-  if (userId === state.hostUserId) return state.hostDisplayName;
-  const fromLie = state.lieDetectivePlayers?.find((p) => p.userId === userId)?.displayName;
-  return fromLie || '某位参与者';
-}
-
-function buildLieDetectiveRecapHighlights(
-  state: SocialSessionState,
-  roster: SocialSessionParticipantSummary[],
-  sessionLieMap: Map<string, Array<{ index: number; text: string; isLie: boolean }>>,
-): string[] {
-  const highlights: string[] = [];
-  for (const vote of state.votes || []) {
-    const stmts = sessionLieMap.get(vote.targetUserId);
-    const lieStmt = stmts?.find((s) => s.isLie);
-    if (!lieStmt || vote.guessedStatementIndex !== lieStmt.index) continue;
-    const voterName = recapDisplayNameByUserId(roster, state, vote.voterId);
-    const targetName = recapDisplayNameByUserId(roster, state, vote.targetUserId);
-    highlights.push(`${voterName}猜对了${targetName}的谎言`);
-  }
-  return highlights.slice(0, 8);
-}
-
-function buildPersonalityDiceRecapLines(state: SocialSessionState): string[] {
-  const challenges = state.personalityDiceChallenges || [];
-  return challenges.slice(0, 6).map((c) => {
-    const title = c.challengeTitle.length > 48 ? `${c.challengeTitle.slice(0, 47)}…` : c.challengeTitle;
-    return `${c.displayName}：${title}`;
-  });
-}
-
-function buildMiniScriptRecapLine(state: SocialSessionState): string | undefined {
-  const premise = state.miniScriptFramework?.premise?.trim();
-  if (!premise) return undefined;
-  return premise.length > 220 ? `${premise.slice(0, 219)}…` : premise;
-}
-
-function buildAuctionRecapLines(state: SocialSessionState): string[] {
-  const lines = state.auctionRecapLines;
-  if (!Array.isArray(lines) || lines.length === 0) return [];
-  return lines.map((l) => (l.length > 120 ? `${l.slice(0, 119)}…` : l)).slice(0, 8);
-}
-
-function buildRecapParticipants(
-  roster: SocialSessionParticipantSummary[],
-  state: SocialSessionState,
-): Array<{ displayName: string; archetype?: string }> {
-  if (roster.length > 0) {
-    return roster.map((p) => ({ displayName: p.displayName }));
-  }
-  const out: Array<{ displayName: string; archetype?: string }> = [];
-  const seen = new Set<string>();
-  if (state.hostDisplayName) {
-    out.push({ displayName: state.hostDisplayName });
-    seen.add(state.hostUserId);
-  }
-  for (const pl of state.lieDetectivePlayers || []) {
-    if (!seen.has(pl.userId)) {
-      out.push({ displayName: pl.displayName });
-      seen.add(pl.userId);
-    }
-  }
-  return out.length > 0 ? out : [{ displayName: '参与者' }];
-}
-
-function incrementCommonGround(state: SocialSessionState): void {
-  state.commonGroundCount = Math.max(0, state.commonGroundCount || 0) + 1;
-}
-
-function getCurrentLieDetectivePlayer(state: SocialSessionState): LieDetectivePlayer | null {
-  const currentIndex = state.currentLieDetectivePlayerIndex ?? 0;
-  return state.lieDetectivePlayers?.[currentIndex] ?? null;
-}
-
-/**
- * Look up a session and write structured errors for missing vs expired.
- * Returns the state on success, or null after sending the HTTP response.
- */
-async function resolveSession(
-  socialSessionId: string,
-  res: any,
-): Promise<SocialSessionState | null> {
-  const { state, expired } = await getSessionWithExpiry(socialSessionId);
-  if (!state) {
-    if (expired) {
-      res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
-    } else {
-      res.status(404).json({ error: 'Social session not found' });
-    }
-    return null;
-  }
-  return hydrateDerivedState({ ...state });
-}
 
 // ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/start
@@ -282,7 +129,7 @@ router.post('/start', async (req: any, res) => {
       hostUserId: state.hostUserId,
       hostDisplayName: state.hostDisplayName,
       currentPhase: state.currentPhase,
-      state: await buildClientState(state),
+      state: await buildClientState(state, userId),
     });
   }
 
@@ -305,6 +152,7 @@ router.post('/start', async (req: any, res) => {
     commonGroundCount: 0,
     warmupReadyUserIds: [],
     lieDetectiveCompletedUserIds: [],
+    autoAdvanceEnabled: true,
   };
 
   try {
@@ -375,7 +223,7 @@ router.get('/:socialSessionId', async (req: any, res) => {
     state.activePlayerCount = activeCount;
   }
 
-  return res.json(await buildClientState(state));
+  return res.json(await buildClientState(state, userId));
 });
 
 // ---------------------------------------------------------------------------
@@ -426,7 +274,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can change topics' });
   }
 
@@ -509,7 +357,7 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can move to the next topic' });
   }
 
@@ -540,7 +388,7 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
     currentTopicIndex: state.currentTopicIndex,
     currentTopic: state.warmupTopics?.[state.currentTopicIndex] ?? null,
     commonGroundCount: state.commonGroundCount ?? 0,
-    state: await buildClientState(state),
+    state: await buildClientState(state, userId),
   });
 });
 
@@ -559,7 +407,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can advance phases' });
   }
 
@@ -620,11 +468,25 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   if (currentPhase === 'mini_script') {
+    // Must have framework
     if (!state.miniScriptFramework) {
       return res.status(400).json({
         error: 'MINI_SCRIPT_NOT_GENERATED',
         message: '剧本尚未生成，请先配置风格与题材并生成剧本',
       });
+    }
+    // Must have assigned roles
+    if (!state.miniScriptRoleAssignments || Object.keys(state.miniScriptRoleAssignments).length < state.playerCount) {
+      return res.status(400).json({ error: 'Roles not assigned' });
+    }
+    // Must have revealed all acts
+    const totalActs = state.miniScriptFramework.act_flow.length;
+    if ((state.miniScriptCurrentAct ?? 0) < totalActs) {
+      return res.status(400).json({ error: 'Not all acts revealed' });
+    }
+    // Must have solution revealed
+    if (!state.miniScriptSolutionRevealed) {
+      return res.status(400).json({ error: 'Solution not revealed' });
     }
   }
 
@@ -685,7 +547,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     xiaoYueComment: xyResult.data,
     xiaoYueCommentMeta: xyResult.meta,
     meta,
-    state: await buildClientState(state),
+    state: await buildClientState(state, userId),
   });
 });
 
@@ -774,7 +636,7 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can generate challenges' });
   }
 
@@ -977,7 +839,7 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can advance lie-detective turns' });
   }
 
@@ -1007,7 +869,7 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
   return res.json({
     currentLieDetectivePlayerIndex: state.currentLieDetectivePlayerIndex,
     currentPlayer: getCurrentLieDetectivePlayer(state),
-    state: await buildClientState(state),
+    state: await buildClientState(state, userId),
   });
 });
 
@@ -1025,7 +887,7 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can generate auction lots' });
   }
 
@@ -1042,7 +904,7 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
       meta: cachedMeta,
       balances: state.auctionBalances,
       currentLotIndex: state.auctionCurrentLotIndex ?? 0,
-      state: await buildClientState(state),
+      state: await buildClientState(state, userId),
     });
   }
 
@@ -1074,7 +936,7 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
       meta: lotResult.meta,
       balances: state.auctionBalances,
       currentLotIndex: 0,
-      state: await buildClientState(state),
+      state: await buildClientState(state, userId),
     });
   } catch (error) {
     logger.error('[SocialIcebreaker] auction/generate-lots error:', { error });
@@ -1096,7 +958,7 @@ router.post('/:socialSessionId/xiaoyue/session-pack', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can generate a session pack' });
   }
 
@@ -1113,7 +975,7 @@ router.post('/:socialSessionId/xiaoyue/session-pack', async (req: any, res) => {
     return res.json({
       pack: state.xiaoyueSessionPack,
       meta: cachedMeta,
-      state: await buildClientState(state),
+      state: await buildClientState(state, userId),
     });
   }
 
@@ -1135,7 +997,7 @@ router.post('/:socialSessionId/xiaoyue/session-pack', async (req: any, res) => {
     return res.json({
       pack: packResult.data,
       meta: packResult.meta,
-      state: await buildClientState(state),
+      state: await buildClientState(state, userId),
     });
   } catch (error) {
     logger.error('[SocialIcebreaker] xiaoyue/session-pack error:', { error });
@@ -1158,7 +1020,7 @@ router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: any, re
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can request adaptive suggestions' });
   }
 
@@ -1174,7 +1036,7 @@ router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: any, re
 
     return res.json({
       suggestion,
-      state: await buildClientState(state),
+      state: await buildClientState(state, userId),
     });
   } catch (error) {
     logger.error('[SocialIcebreaker] xiaoyue/adaptive-suggestion error:', { error });
@@ -1239,7 +1101,7 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
   return res.json({
     highBid: state.auctionHighBid,
     balances: state.auctionBalances,
-    state: await buildClientState(state),
+    state: await buildClientState(state, userId),
   });
 });
 
@@ -1257,7 +1119,7 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can close an auction lot' });
   }
 
@@ -1303,7 +1165,7 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
     currentLotIndex: state.auctionCurrentLotIndex ?? 0,
     allLotsClosed: state.auctionAllLotsClosed ?? false,
     recapLines: state.auctionRecapLines,
-    state: await buildClientState(state),
+    state: await buildClientState(state, userId),
   });
 });
 
@@ -1324,7 +1186,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (state.hostUserId !== userId) {
+  if (!isHostAuthorized(state, userId)) {
     return res.status(403).json({ error: 'Only the host can generate dice challenges' });
   }
 

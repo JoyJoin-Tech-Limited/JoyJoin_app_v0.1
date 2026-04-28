@@ -13,62 +13,62 @@ interface SocialRoleCardProps {
 }
 
 const roleConfig: Record<string, { IconComponent: LucideIcon; color: string; bgGradient: string }> = {
-  '开心柯基': {
+  'corgi': {
     IconComponent: Zap,
     color: 'from-yellow-400 to-orange-500',
     bgGradient: 'bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30'
   },
-  '太阳鸡': {
+  'rooster': {
     IconComponent: Sun,
     color: 'from-amber-400 to-yellow-500',
     bgGradient: 'bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30'
   },
-  '夸夸豚': {
+  'hamster_praise': {
     IconComponent: Sparkles,
     color: 'from-cyan-400 to-blue-500',
     bgGradient: 'bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950/30 dark:to-blue-950/30'
   },
-  '机智狐': {
+  'fox': {
     IconComponent: Search,
     color: 'from-orange-400 to-red-500',
     bgGradient: 'bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30'
   },
-  '淡定海豚': {
+  'dolphin_calm': {
     IconComponent: Waves,
     color: 'from-blue-400 to-indigo-500',
     bgGradient: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30'
   },
-  '织网蛛': {
+  'spider': {
     IconComponent: Users,
     color: 'from-purple-400 to-pink-500',
     bgGradient: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30'
   },
-  '暖心熊': {
+  'koala': {
     IconComponent: Heart,
     color: 'from-rose-400 to-pink-500',
     bgGradient: 'bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30'
   },
-  '灵感章鱼': {
+  'octopus': {
     IconComponent: Lightbulb,
     color: 'from-violet-400 to-purple-500',
     bgGradient: 'bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30'
   },
-  '沉思猫头鹰': {
+  'owl': {
     IconComponent: Brain,
     color: 'from-slate-400 to-gray-500',
     bgGradient: 'bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-950/30 dark:to-gray-950/30'
   },
-  '定心大象': {
+  'elephant': {
     IconComponent: Anchor,
     color: 'from-gray-400 to-slate-500',
     bgGradient: 'bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950/30 dark:to-slate-950/30'
   },
-  '稳如龟': {
+  'turtle': {
     IconComponent: Shield,
     color: 'from-green-400 to-emerald-500',
     bgGradient: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30'
   },
-  '隐身猫': {
+  'cat': {
     IconComponent: Eye,
     color: 'from-indigo-400 to-purple-500',
     bgGradient: 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30'
@@ -81,7 +81,7 @@ export default function SocialRoleCard({
   primaryArchetypeScore,
   secondaryArchetypeScore
 }: SocialRoleCardProps) {
-  const primaryConfig = roleConfig[primaryArchetype] || roleConfig['暖心熊'];
+  const primaryConfig = roleConfig[primaryArchetype] || roleConfig['koala'];
   const secondaryConfig = secondaryArchetype ? roleConfig[secondaryArchetype] : null;
   const primaryArchetypeConfig = archetypeConfig[primaryArchetype];
   const secondaryArchetypeConfig = secondaryArchetype ? archetypeConfig[secondaryArchetype] : null;

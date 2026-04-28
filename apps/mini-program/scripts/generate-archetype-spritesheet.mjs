@@ -31,11 +31,11 @@ const ROWS = 4
 const MANIFEST = [
   'archetype-corgi',
   'archetype-rooster',
-  'archetype-praise-dolphin',
+  'archetype-hamster_praise',
   'archetype-fox',
-  'archetype-calm-dolphin',
+  'archetype-dolphin_calm',
   'archetype-spider',
-  'archetype-bear',
+  'archetype-koala',
   'archetype-octopus',
   'archetype-owl',
   'archetype-elephant',
@@ -44,18 +44,18 @@ const MANIFEST = [
 ]
 
 const ARCHETYPE_ORDER = [
-  '开心柯基',
-  '太阳鸡',
-  '夸夸豚',
-  '机智狐',
-  '淡定海豚',
-  '织网蛛',
-  '暖心熊',
-  '灵感章鱼',
-  '沉思猫头鹰',
-  '定心大象',
-  '稳如龟',
-  '隐身猫',
+  'corgi',
+  'rooster',
+  'hamster_praise',
+  'fox',
+  'dolphin_calm',
+  'spider',
+  'koala',
+  'octopus',
+  'owl',
+  'elephant',
+  'turtle',
+  'cat',
 ]
 
 async function main() {

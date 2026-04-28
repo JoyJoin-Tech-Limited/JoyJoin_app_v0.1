@@ -6,22 +6,13 @@
   background: $color-bg-gradient;
   padding: $container-padding;
 
-  &__loading {
-    @include flex-center;
-    min-height: 80vh;
-  }
-
-  &__loading-text {
-    font-size: $font-size-base;
-    color: $color-text-secondary;
-  }
-
   &__success {
     @include flex-center;
     flex-direction: column;
     gap: $spacing-md;
     min-height: 80vh;
     text-align: center;
+    padding-top: $spacing-xl;
   }
 
   &__success-mascot {
@@ -50,6 +41,70 @@
     border: 0;
   }
 
+  // ─── Matches reveal ───────────────────────────────────────────────────────
+  &__matches {
+    width: 100%;
+    padding: 0 $spacing-md;
+  }
+
+  &__match-card {
+    margin-bottom: $spacing-md;
+    padding: $spacing-lg;
+  }
+
+  &__match-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__match-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    text-align: left;
+  }
+
+  &__match-name {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__match-wechat {
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid $color-border;
+  }
+
+  &__match-wechat-label {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__match-wechat-id {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    font-family: monospace;
+  }
+
+  &__match-wechat-hint {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__match-no-wechat {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+
+  // ─── Header ───────────────────────────────────────────────────────────────
   &__header {
     padding-top: $spacing-xl;
     margin-bottom: $spacing-xl;
@@ -69,6 +124,7 @@
     color: $color-text-secondary;
   }
 
+  // ─── Card ──────────────────────────────────────────────────────────────────
   &__card {
     @include card;
     padding: $spacing-lg;
@@ -80,34 +136,81 @@
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__card-hint {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
     margin-bottom: $spacing-md;
   }
 
+  // ─── Rating ───────────────────────────────────────────────────────────────
   &__rating {
     display: flex;
-    justify-content: space-around;
-    gap: $spacing-sm;
+    justify-content: center;
+    padding: $spacing-sm 0;
   }
 
-  &__rating-item {
-    width: 80rpx;
-    height: 80rpx;
-    border-radius: 40rpx;
+  // ─── Participant grid ─────────────────────────────────────────────────────
+  &__participant-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $spacing-md;
+  }
+
+  &__participant-item {
     @include flex-center;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    border-radius: $card-radius-sm;
     border: 2rpx solid $color-border;
-    transition: all 0.2s;
+    background: $color-bg;
+    position: relative;
+    transition: all 0.2s ease;
 
     &--selected {
       border-color: $color-primary;
-      background: $color-primary-light;
-      transform: scale(1.15);
+      background: rgba($color-primary, 0.05);
+    }
+
+    &:active {
+      opacity: 0.7;
     }
   }
 
-  &__rating-emoji {
-    font-size: $font-size-xl;
+  &__participant-name {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
+  &__participant-check {
+    position: absolute;
+    top: 8rpx;
+    right: 8rpx;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    color: #fff;
+    font-size: 20rpx;
+    @include flex-center;
+  }
+
+  &__empty-participants {
+    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+    padding: $spacing-lg 0;
+  }
+
+  // ─── Textarea ─────────────────────────────────────────────────────────────
   &__textarea {
     width: 100%;
     min-height: 200rpx;
@@ -128,6 +231,7 @@
     margin-top: $spacing-md;
   }
 
+  // ─── Footer ───────────────────────────────────────────────────────────────
   &__footer {
     margin-top: $spacing-xl;
   }

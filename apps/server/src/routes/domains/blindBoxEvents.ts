@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { z } from "zod";
 import { isPhoneAuthenticated } from "../../phoneAuth";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { storage } from "../../storage";
@@ -7,6 +8,45 @@ import { eventPoolRegistrations, eventPools, users, userInterests, blindBoxEvent
 import * as schema from "@shared/schema";
 import { eq, and, sql, gt } from "drizzle-orm";
 import { broadcastAttendanceStatusUpdated, broadcastPoolRegistrationAdded } from "../../eventBroadcast";
+import { logger } from "../../lib/logger";
+
+const patchPreferencesSchema = z.object({
+  budget: z.array(z.string()).optional(),
+  acceptNearby: z.boolean().optional(),
+  selectedLanguages: z.array(z.string()).optional(),
+  selectedTasteIntensity: z.array(z.string()).optional(),
+  selectedCuisines: z.array(z.string()).optional(),
+});
+
+const attendanceStatusSchema = z.object({
+  status: z.enum(["confirmed", "late", "absent"]),
+  estimatedLateMinutes: z.number().optional(),
+  absentReason: z.string().optional(),
+});
+
+const preAttendanceSchema = z.object({
+  status: z.enum(["pending", "confirmed", "late", "absent"]),
+  lateMinutes: z.number().optional(),
+  absentReason: z.string().optional(),
+});
+
+const createBlindBoxSchema = z.object({
+  city: z.string().optional(),
+  district: z.string().optional(),
+  eventType: z.string().optional(),
+  budgetTier: z.union([z.string(), z.array(z.string())]).optional(),
+  selectedLanguages: z.array(z.string()).optional(),
+  selectedTasteIntensity: z.array(z.string()).optional(),
+  selectedCuisines: z.array(z.string()).optional(),
+  eventIntent: z.array(z.string()).optional(),
+  dietaryRestrictions: z.array(z.string()).optional(),
+  poolId: z.string(),
+  area: z.string().optional(),
+  budget: z.array(z.string()).optional(),
+  acceptNearby: z.boolean().optional(),
+  inviteFriends: z.boolean().optional(),
+  friendsCount: z.number().optional(),
+});
 
 function getUserDisplayName(user: any): string {
   return user?.displayName || user?.display_name || user?.firstName || 'Unknown';
@@ -31,7 +71,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       
       res.json(event);
     } catch (error) {
-      console.error("Error fetching blind box event:", error);
+      logger.error("Error fetching blind box event:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch blind box event" });
     }
   });
@@ -39,8 +79,12 @@ export function registerBlindBoxEventRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
-      const { budget, acceptNearby, selectedLanguages, selectedTasteIntensity, selectedCuisines } = req.body;
-      
+      const parseResult = patchPreferencesSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.format() });
+      }
+      const { budget, acceptNearby, selectedLanguages, selectedTasteIntensity, selectedCuisines } = parseResult.data;
+
       const event = await storage.updateBlindBoxEventPreferences(eventId, userId, {
         budget,
         acceptNearby,
@@ -51,13 +95,13 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       
       res.json(event);
     } catch (error) {
-      console.error("Error updating blind box event:", error);
+      logger.error("Error updating blind box event:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update blind box event" });
     }
   });
   app.post('/api/blind-box-events/:eventId/cancel', isPhoneAuthenticated, async (req: any, res) => {
     try {
-      console.log("[BlindBoxCancel] route hit, raw request:", {
+      logger.info("[BlindBoxCancel] route hit, raw request:", {
         method: req.method,
         originalUrl: req.originalUrl,
         params: req.params,
@@ -69,7 +113,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const { eventId } = req.params;
 
-      console.log("[BlindBoxCancel] incoming cancel request:", {
+      logger.info("[BlindBoxCancel] incoming cancel request:", {
         userId,
         eventId,
       });
@@ -78,14 +122,14 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       try {
         const legacyResult = await storage.cancelBlindBoxEvent(eventId, userId);
         if (legacyResult) {
-          console.log("[BlindBoxCancel] legacy cancelBlindBoxEvent succeeded:", {
+          logger.info("[BlindBoxCancel] legacy cancelBlindBoxEvent succeeded:", {
             eventId,
             userId,
           });
           return res.json(legacyResult);
         }
       } catch (legacyErr) {
-        console.warn("[BlindBoxCancel] legacy cancelBlindBoxEvent failed or not applicable:", legacyErr);
+        logger.warn("[BlindBoxCancel] legacy cancelBlindBoxEvent failed or not applicable:", { error: legacyErr instanceof Error ? legacyErr.message : String(legacyErr) });
       }
 
       // 2) 新逻辑优先：把 eventId 当作报名记录 id（event_pool_registrations.id）来删除
@@ -101,12 +145,12 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         .returning();
 
       if (deletedRegistrations.length > 0) {
-        console.log("[BlindBoxCancel] cancelled by registrationId:", {
+        logger.info("[BlindBoxCancel] cancelled by registrationId:", {
           userId,
           registrationId: eventId,
           count: deletedRegistrations.length,
         });
-        console.log("[BlindBoxCancel] response (by registrationId):", {
+        logger.info("[BlindBoxCancel] response (by registrationId):", {
           userId,
           cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
         });
@@ -142,7 +186,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         .returning();
 
       if (deletedRegistrations.length === 0) {
-        console.warn("[BlindBoxCancel] no registration found to cancel:", {
+        logger.warn("[BlindBoxCancel] no registration found to cancel:", {
           userId,
           eventId,
         });
@@ -151,12 +195,12 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         });
       }
 
-      console.log("[BlindBoxCancel] cancelled by poolId:", {
+      logger.info("[BlindBoxCancel] cancelled by poolId:", {
         userId,
         poolId: eventId,
         count: deletedRegistrations.length,
       });
-      console.log("[BlindBoxCancel] response (by poolId):", {
+      logger.info("[BlindBoxCancel] response (by poolId):", {
         userId,
         cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
       });
@@ -179,7 +223,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
       });
     } catch (error) {
-      console.error("[BlindBoxCancel] Error canceling blind box event / pool registration:", error);
+      logger.error("[BlindBoxCancel] Error canceling blind box event / pool registration:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to cancel blind box event" });
     }
   });
@@ -193,7 +237,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       }
       res.json(status);
     } catch (error) {
-      console.error("[AttendanceStatus] Error fetching status:", error);
+      logger.error("[AttendanceStatus] Error fetching status:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch attendance status" });
     }
   });
@@ -201,7 +245,11 @@ export function registerBlindBoxEventRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
-      const { status, estimatedLateMinutes, absentReason } = req.body;
+      const parseResult = attendanceStatusSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.format() });
+      }
+      const { status, estimatedLateMinutes, absentReason } = parseResult.data;
 
       // Only allow user-settable statuses (not 'pending')
       const validStatuses = ['confirmed', 'late', 'absent'] as const;
@@ -259,7 +307,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
 
       res.json({ success: true });
     } catch (error) {
-      console.error("[AttendanceStatus] Error updating status:", error);
+      logger.error("[AttendanceStatus] Error updating status:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update attendance status" });
     }
   });
@@ -280,7 +328,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       const summary = await storage.getEventAttendanceSummary(eventId);
       res.json(summary);
     } catch (error) {
-      console.error("[AttendanceStatus] Error fetching attendance summary:", error);
+      logger.error("[AttendanceStatus] Error fetching attendance summary:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch attendance summary" });
     }
   });
@@ -294,7 +342,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         {
           userId: "demo1",
           displayName: "Alex",
-          archetype: "机智狐",
+          archetype: "fox",
           topInterests: ["film_entertainment", "travel_exploration", "photography"],
           age: 29,
           birthdate: "1996-03-15",
@@ -314,7 +362,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         {
           userId: "demo2",
           displayName: "小明",
-          archetype: "暖心熊",
+          archetype: "koala",
           topInterests: ["food_dining", "music_concerts", "travel_exploration"],
           age: 27,
           birthdate: "1998-07-20",
@@ -354,7 +402,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         {
           userId: "demo4",
           displayName: "李华",
-          archetype: "太阳鸡",
+          archetype: "rooster",
           topInterests: ["fitness_health", "travel_exploration", "outdoor_activities"],
           age: 28,
           birthdate: "1997-09-25",
@@ -373,7 +421,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         }
       ];
       
-      const demoExplanation = "这桌聚集了对电影、旅行充满热情的朋友。我们平衡了机智狐的探索新鲜与暖心熊的深度倾听，确保对话既热烈又有深度。";
+      const demoExplanation = "这桌聚集了对电影、旅行充满热情的朋友。我们平衡了fox的探索新鲜与koala的深度倾听，确保对话既热烈又有深度。";
       
       const event = await storage.setBlindBoxEventMatchData(eventId, userId, {
         matchedAttendees: demoMatchedAttendees,
@@ -382,7 +430,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       
       res.json(event);
     } catch (error) {
-      console.error("Error setting demo match data:", error);
+      logger.error("Error setting demo match data:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to set demo match data" });
     }
   });
@@ -421,6 +469,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       const memberIds = matchedAttendees.map((a: any) => a.userId);
       const members = await db.query.users.findMany({
         where: sql`${users.id} = ANY(${memberIds})`,
+        limit: 50,
       });
 
       const { matchExplanationService } = await import('../../matchExplanationService');
@@ -428,6 +477,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       // Load user interests (with heat levels) for deep interest overlap detection
       const memberInterestsRows = await db.query.userInterests.findMany({
         where: sql`${userInterests.userId} = ANY(${memberIds})`,
+        limit: 50,
       }) as Array<{
         userId: string;
         selections: Array<{ topicId: string; level?: number | null }> | null;
@@ -483,7 +533,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         },
       });
     } catch (error: any) {
-      console.error('[Match Explanations] Error:', error);
+      logger.error('[Match Explanations] Error:', error);
       res.status(500).json({ message: 'Failed to generate match explanations', error: error.message });
     }
   });
@@ -491,12 +541,11 @@ export function registerBlindBoxEventRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
-      const { status, lateMinutes, absentReason } = req.body;
-
-      const allowed = ["pending", "confirmed", "late", "absent"];
-      if (!allowed.includes(status)) {
-        return res.status(400).json({ message: "Invalid status" });
+      const parseResult = preAttendanceSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.format() });
       }
+      const { status, lateMinutes, absentReason } = parseResult.data;
 
       // Upsert (insert or update) the pre-attendance record
       await db
@@ -509,7 +558,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
 
       res.json({ success: true, status });
     } catch (error) {
-      console.error("Error updating pre-attendance:", error);
+      logger.error("Error updating pre-attendance:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update attendance status" });
     }
   });
@@ -518,7 +567,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       if (!userId) {
-        console.error("[BlindBoxPayment] No userId in session");
+        logger.error("[BlindBoxPayment] No userId in session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
@@ -528,14 +577,16 @@ export function registerBlindBoxEventRoutes(app: Express): void {
           .select()
           .from(users)
           .where(eq(users.id, userId));
-        console.log("[BlindBoxPayment] current user from DB:", usersResult);
+        logger.info("[BlindBoxPayment] current user from DB:", { value: usersResult });
       } catch (userErr) {
-        console.warn("[BlindBoxPayment] failed to load user for debug:", userErr);
+        logger.warn("[BlindBoxPayment] failed to load user for debug:", { error: userErr instanceof Error ? userErr.message : String(userErr) });
       }
 
-      // 支付页 / 发现页传过来的盲盒报名数据（兼容老字段）
+      const parseResult = createBlindBoxSchema.safeParse(req.body || {});
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.format() });
+      }
       const {
-        // 新版字段
         city,
         district,
         eventType,
@@ -546,15 +597,14 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         eventIntent,
         dietaryRestrictions,
         poolId,
-        // 兼容旧版字段
         area,
         budget,
         acceptNearby,
         inviteFriends,
         friendsCount,
-      } = req.body || {};
+      } = parseResult.data;
 
-      console.log("[BlindBoxPayment] incoming payload:", {
+      logger.info("[BlindBoxPayment] incoming payload:", {
         userId,
         city,
         district,
@@ -575,7 +625,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
 
       // ✅ 必须显式指定 poolId（这个池子是 admin 在后台创好的）
       if (!poolId) {
-        console.warn("[BlindBoxPayment] missing poolId in request");
+        logger.warn("[BlindBoxPayment] missing poolId in request");
         return res.status(400).json({
           message: "缺少必填字段：poolId",
         });
@@ -594,7 +644,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       }
 
       if (budgetRange.length === 0) {
-        console.warn("[BlindBoxPayment] missing budget info");
+        logger.warn("[BlindBoxPayment] missing budget info");
         return res.status(400).json({
           message: "参数不完整：需要 budgetTier 或 budget",
         });
@@ -614,7 +664,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         );
 
       if (!poolsById || poolsById.length === 0) {
-        console.warn("[BlindBoxPayment] pool not found or not active / expired:", poolId);
+        logger.warn("Pool not found or not active / expired", { feature: 'BlindBoxPayment', poolId });
         return res.status(404).json({
           message: "指定的活动池不存在或已关闭报名",
         });
@@ -622,7 +672,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
 
       const pool = poolsById[0];
 
-      console.log("[BlindBoxPayment] final chosen pool for registration:", {
+      logger.info("[BlindBoxPayment] final chosen pool for registration:", {
         id: pool.id,
         title: pool.title,
         city: pool.city,
@@ -641,7 +691,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         );
 
       if (existingRegistrations.length > 0) {
-        console.warn("[BlindBoxPayment] user already registered for this pool:", {
+        logger.warn("[BlindBoxPayment] user already registered for this pool:", {
           userId,
           poolId: pool.id,
         });
@@ -662,14 +712,14 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
       };
 
-      console.log("[BlindBoxPayment] creating eventPoolRegistration with data:", registrationData);
+      logger.info("[BlindBoxPayment] creating eventPoolRegistration with data:", { value: registrationData });
 
       const [registration] = await db
         .insert(eventPoolRegistrations)
         .values(registrationData)
         .returning();
 
-      console.log("[BlindBoxPayment] created eventPoolRegistration:", registration);
+      logger.info("[BlindBoxPayment] created eventPoolRegistration:", { value: registration });
 
       // ✅ 更新活动池的 totalRegistrations 计数
       const [updatedPool] = await db
@@ -681,7 +731,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         .where(eq(eventPools.id, pool.id))
         .returning();
 
-      console.log("[BlindBoxPayment] updated eventPool after registration:", updatedPool);
+      logger.info("[BlindBoxPayment] updated eventPool after registration:", { value: updatedPool });
 
       broadcastPoolRegistrationAdded(
         pool.id,
@@ -697,7 +747,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         pool: updatedPool || pool,
       });
     } catch (error: any) {
-      console.error("[BlindBoxPayment] Failed to create pool registration:", error);
+      logger.error("[BlindBoxPayment] Failed to create pool registration:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({
         message: "Failed to create blind box registration",
         error: error?.message || String(error),

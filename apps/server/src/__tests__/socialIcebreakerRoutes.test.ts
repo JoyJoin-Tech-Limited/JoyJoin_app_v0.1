@@ -76,7 +76,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     },
     getLieTruths: async (socialSessionId: string, userId: string) =>
       lieTruthsStore.get(socialSessionId)?.get(userId) ?? null,
-    getAllSessionLieTruths: async (socialSessionId: string) => {
+    loadSessionLieTruths: async (socialSessionId: string) => {
       const m = lieTruthsStore.get(socialSessionId);
       if (!m) return new Map();
       return new Map(m.entries());
@@ -96,7 +96,7 @@ vi.mock('../socialIcebreakerAIService', () => ({
       fromCache: false,
       provider: 'deepseek',
       fallbackUsed: false,
-      promptVersion: 'social-warmup-topics-v1',
+      promptVersion: 'social-warmup-topics-v2',
     },
   }),
   generateMicroChallenges: vi.fn().mockResolvedValue({
@@ -108,7 +108,7 @@ vi.mock('../socialIcebreakerAIService', () => ({
       fromCache: false,
       provider: 'deepseek',
       fallbackUsed: false,
-      promptVersion: 'social-micro-challenges-v1',
+      promptVersion: 'social-micro-challenges-v2',
     },
   }),
   generateLieDetectiveStatements: vi.fn().mockImplementation(async ({ displayName }) => {
@@ -177,6 +177,33 @@ vi.mock('../socialIcebreakerAIService', () => ({
       provider: 'deepseek',
       fallbackUsed: true,
       promptVersion: 'social-auction-lots-v1',
+    },
+  }),
+  generateXiaoyueSessionPack: vi.fn().mockResolvedValue({
+    data: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      opener: '欢迎来到今晚的破冰时间，我是小悦。',
+      phaseCoaching: {
+        warmup: { toneLine: '先从轻松的话题暖暖场吧', hostHint: '如果没人开口，你可以先分享' },
+        micro_challenge: { toneLine: '热身完毕，来个轻松的小挑战' },
+        lie_detective: { toneLine: '侦探时间，仔细听每一句话' },
+        auction: { toneLine: '虚拟拍卖开始，脑洞越大越好' },
+        personality_dice: { toneLine: '人格骰子环节，看看大家敢不敢接招' },
+        mini_script: { toneLine: '迷你剧本杀，今晚的高光时刻' },
+        recap: { toneLine: '时间过得真快，来回顾一下今晚' },
+      },
+      backupPrompts: ['救场话术1', '救场话术2', '救场话术3'],
+      recapFraming: { open: '回顾开场', highlightTemplate: '亮点模板', close: '结束语' },
+      playerSkillRoles: [
+        { userId: 'u1', displayName: 'User1', roleLabel: 'Connector', roleBlurb: '连接者' },
+      ],
+    },
+    meta: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      fromCache: false,
+      provider: 'deepseek',
+      fallbackUsed: false,
+      promptVersion: 'social-session-pack-v2',
     },
   }),
 }));
@@ -309,7 +336,7 @@ describe('social icebreaker routes', () => {
         provider: 'deepseek',
         fromCache: false,
         fallbackUsed: false,
-        promptVersion: 'social-warmup-topics-v1',
+        promptVersion: 'social-warmup-topics-v2',
       });
     });
   });
@@ -823,6 +850,233 @@ describe('social icebreaker routes', () => {
 
       expect(response.status).toBe(403);
       await expect(response.json()).resolves.toMatchObject({ message: 'Forbidden' });
+    });
+  });
+
+  describe('POST /xiaoyue/session-pack', () => {
+    it('returns session pack when host requests it during warmup', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'pack-host');
+        const sessionId = `session-pack-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+        const packResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/session-pack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+        const packBody = await packResponse.json() as any;
+
+        expect(packResponse.status).toBe(200);
+        expect(packBody.pack).toMatchObject({
+          opener: expect.any(String),
+          phaseCoaching: expect.any(Object),
+          backupPrompts: expect.any(Array),
+          recapFraming: expect.any(Object),
+          playerSkillRoles: expect.any(Array),
+        });
+        expect(packBody.meta.promptVersion).toBe('social-session-pack-v2');
+        expect(packBody.state.xiaoyueSessionPack).toBeDefined();
+      });
+    });
+
+    it('returns cached pack on second call without invoking LLM again', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'pack-host-cache');
+        const sessionId = `session-pack-cache-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+        const firstResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/session-pack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+        const firstBody = await firstResponse.json() as any;
+        expect(firstResponse.status).toBe(200);
+
+        const secondResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/session-pack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+        const secondBody = await secondResponse.json() as any;
+
+        expect(secondResponse.status).toBe(200);
+        expect(secondBody.pack.opener).toBe(firstBody.pack.opener);
+        expect(secondBody.meta.fromCache).toBe(true);
+      });
+    });
+
+    it('allows non-host users to generate session pack when auto-advance is enabled', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'pack-host-403');
+        const guestCookie = await login(baseUrl, 'pack-guest-403');
+        const sessionId = `session-pack-auto-${Date.now()}`;
+
+        await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const guestStart = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Guest' }),
+        });
+        const { socialSessionId } = await guestStart.json() as { socialSessionId: string };
+
+        const packResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/session-pack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+        });
+
+        expect(packResponse.status).toBe(200);
+      });
+    });
+
+    it('rejects session pack generation outside warmup phase', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'pack-host-phase');
+        const guestCookie = await login(baseUrl, 'pack-guest-phase');
+        const sessionId = `session-pack-phase-${Date.now()}`;
+
+        await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const guestStart = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Guest' }),
+        });
+        const { socialSessionId } = await guestStart.json() as { socialSessionId: string };
+
+        // Advance to micro_challenge
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ mood: 'relaxed' }),
+        });
+        for (const cookie of [hostCookie, guestCookie]) {
+          await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie },
+            body: JSON.stringify({ ready: true }),
+          });
+        }
+        await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ currentPhase: 'warmup' }),
+        });
+
+        const packResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/session-pack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+
+        expect(packResponse.status).toBe(400);
+      });
+    });
+  });
+
+  describe('POST /xiaoyue/adaptive-suggestion', () => {
+    it('returns adaptive suggestion for host during active phase', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'adapt-host');
+        const sessionId = `adapt-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/adaptive-suggestion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body.suggestion).toMatchObject({
+          type: expect.any(String),
+          message: expect.any(String),
+          actionableHint: expect.any(String),
+          basedOnSignals: expect.any(Object),
+          generatedAt: expect.any(String),
+        });
+        // Host-only fields are stripped from client-visible state
+        expect(body.state.xiaoyueAdaptiveSuggestion).toBeUndefined();
+      });
+    });
+
+    it('allows non-host users to request adaptive suggestions when auto-advance is enabled', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'adapt-host-403');
+        const guestCookie = await login(baseUrl, 'adapt-guest-403');
+        const sessionId = `adapt-auto-${Date.now()}`;
+
+        await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const guestStart = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Guest' }),
+        });
+        const { socialSessionId } = await guestStart.json() as { socialSessionId: string };
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/adaptive-suggestion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+        });
+
+        expect(response.status).toBe(200);
+      });
+    });
+
+    it('sanitizes host-only suggestion from client-visible state', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'adapt-state');
+        const sessionId = `adapt-state-${Date.now()}`;
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+        // Generate suggestion
+        const suggestResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/xiaoyue/adaptive-suggestion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+        expect(suggestResponse.status).toBe(200);
+
+        // Poll state and verify host-only fields are stripped
+        const stateResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}`, {
+          headers: { cookie: hostCookie },
+        });
+        const stateBody = await stateResponse.json() as any;
+
+        expect(stateBody.xiaoyueAdaptiveSuggestion).toBeUndefined();
+        expect(stateBody.xiaoyueSessionPackMeta).toBeUndefined();
+      });
     });
   });
 });

@@ -289,7 +289,7 @@ export default function FinalProfileReviewPage() {
                     {archetypeAvatarUrl ? (
                       <AvatarImage
                         src={archetypeAvatarUrl}
-                        alt={archetypeName || "头像"}
+                        alt={archetypeNickname || "头像"}
                         className="object-contain p-1"
                       />
                     ) : (

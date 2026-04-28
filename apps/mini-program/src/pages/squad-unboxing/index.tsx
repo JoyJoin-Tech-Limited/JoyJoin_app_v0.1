@@ -1,7 +1,10 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { cdnAsset } from '../../lib/cdnAssets'
 import { useRouter } from '@tarojs/taro'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
+import ArchetypeHead from '../../components/ArchetypeHead'
+import ChemistryBadge from '../../components/ChemistryBadge'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
@@ -9,7 +12,6 @@ import Button from '../../components/Button'
 import { BlindBoxVisual } from './BlindBoxVisual'
 import {
   formatDateTime,
-  getInitial,
   getMemberName,
   getVibeLabel,
 } from './squadUnboxingViewModels'
@@ -64,7 +66,7 @@ export default function SquadUnboxingPage() {
         <View className='squad-unboxing__error'>
           <Image
             className='squad-unboxing__error-hero'
-            src='/assets/lovart/lovart-generic-error.webp'
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -202,9 +204,11 @@ export default function SquadUnboxingPage() {
                       <View className='squad-unboxing__member-top'>
                         <View className='squad-unboxing__member-avatar-wrap'>
                           <View className='squad-unboxing__member-avatar squad-unboxing__member-avatar--placeholder'>
-                            <Text className='squad-unboxing__member-avatar-initial'>
-                              {getInitial(name)}
-                            </Text>
+                            <ArchetypeHead
+                              archetype={member.archetype}
+                              size={72}
+                              fallbackText={name}
+                            />
                           </View>
                           {isCurrentUser ? (
                             <View className='squad-unboxing__member-badge'>
@@ -215,9 +219,7 @@ export default function SquadUnboxingPage() {
 
                         <View className='squad-unboxing__member-copy'>
                           <Text className='squad-unboxing__member-name'>{name}</Text>
-                          {member.archetype ? (
-                            <Text className='squad-unboxing__member-archetype'>{member.archetype}</Text>
-                          ) : null}
+
                           {member.ageLabel || industryLabel ? (
                             <Text className='squad-unboxing__member-meta'>
                               {[member.ageLabel, industryLabel].filter(Boolean).join(' · ')}
@@ -321,7 +323,11 @@ export default function SquadUnboxingPage() {
                     ) : (
                       <>
                         <View className={`squad-unboxing__chemistry-chip ${chemistryTokens.chipClassName}`}>
-                          <Text className='squad-unboxing__chemistry-emoji'>{chemistryTokens.emoji}</Text>
+                          <ChemistryBadge
+                            chemistry={({ '🔥': 'fire', '✨': 'warm', '🌱': 'cold', '💬': 'mild', '💫': 'mild' } as Record<string, 'fire' | 'warm' | 'cold' | 'mild'>)[chemistryTokens.emoji] ?? 'mild'}
+                            size={28}
+                            className='squad-unboxing__chemistry-emoji'
+                          />
                           <Text className='squad-unboxing__chemistry-title'>{chemistryTokens.title}</Text>
                         </View>
                         <Text className='squad-unboxing__analysis-text'>{chemistryTokens.description}</Text>

@@ -65,18 +65,18 @@ Anti-generic: Must be recognizable as [ANIMAL] even at 40px. Not abstract.
 
 | # | Archetype | Accent Color | Distinctive Features | Expression |
 |---|-----------|--------------|---------------------|------------|
-| 1 | 开心柯基 | Warm orange #D4845C | Perky triangular ears, tongue out, big smile | Playful, energetic |
-| 2 | 太阳鸡 | Warm coral #FF9B85 | Bright comb, alert eyes, proud neck | Confident, radiant |
-| 3 | 夸夸豚 | Sky blue #A8C5DD | Curved body, heart-shaped tail, gentle smile | Supportive, warm |
-| 4 | 机智狐 | Warm orange #D4845C | Pointed ears, glasses frame, winking eye | Clever, knowing |
-| 5 | 淡定海豚 | Sky blue #5B9BD5 | Smooth forehead, closed peaceful eyes, serene smile | Calm, content |
-| 6 | 织网蛛 | Purple-gray #8B7FB0 | Multiple small eyes, delicate leg silhouette | Intricate, watchful |
-| 7 | 暖心熊 | Warm brown #A0522D | Round ears, soft eyes, protective posture | Warm, strong |
-| 8 | 灵感章鱼 | Purple #8B5CF6 | Tentacle holding brush, curious wide eyes | Creative, curious |
-| 9 | 沉思猫头鹰 | Deep blue #4A6FA5 | Large forward eyes, feather tufts, book hint | Wise, contemplative |
-| 10 | 定心大象 | Gray-blue #708090 | Trunk curve, large ear flaps, steady gaze | Grounded, steady |
-| 11 | 稳如龟 | Forest green #6B8E6B | Shell dome pattern, patient old eyes, slow blink | Patient, timeless |
-| 12 | 隐身猫 | Soft gray #9CA3AF | One eye peeking, mysterious half-smile, soft ears | Mysterious, subtle |
+| 1 | 气氛组柯基 | Warm orange #D4845C | Perky triangular ears, tongue out, big smile | Playful, energetic |
+| 2 | 情绪稳定鸡 | Warm coral #FF9B85 | Bright comb, alert eyes, proud neck | Confident, radiant |
+| 3 | 捧场王仓鼠 | Sky blue #A8C5DD | Curved body, heart-shaped tail, gentle smile | Supportive, warm |
+| 4 | 探宝雷达狐 | Warm orange #D4845C | Pointed ears, glasses frame, winking eye | Clever, knowing |
+| 5 | 读空气海豚 | Sky blue #5B9BD5 | Smooth forehead, closed peaceful eyes, serene smile | Calm, content |
+| 6 | 社交裁缝蛛 | Purple-gray #8B7FB0 | Multiple small eyes, delicate leg silhouette | Intricate, watchful |
+| 7 | 情绪树洞考拉 | Warm brown #A0522D | Round ears, soft eyes, protective posture | Warm, strong |
+| 8 | 脑洞喷泉章鱼 | Purple #8B5CF6 | Tentacle holding brush, curious wide eyes | Creative, curious |
+| 9 | 追问猫头鹰 | Deep blue #4A6FA5 | Large forward eyes, feather tufts, book hint | Wise, contemplative |
+| 10 | 定海神针大象 | Gray-blue #708090 | Trunk curve, large ear flaps, steady gaze | Grounded, steady |
+| 11 | 慢半拍龟 | Forest green #6B8E6B | Shell dome pattern, patient old eyes, slow blink | Patient, timeless |
+| 12 | 静音模式猫 | Soft gray #9CA3AF | One eye peeking, mysterious half-smile, soft ears | Mysterious, subtle |
 
 **Export:** SVG source + PNG 40×40, 80×80, 120×120 (1×/2×/3×)
 
@@ -95,18 +95,18 @@ Anti-generic: Must be recognizable as [ANIMAL] even at 40px. Not abstract.
 
 | # | Archetype | Key Silhouette Features |
 |---|-----------|------------------------|
-| 1 | 开心柯基 | Round head + two triangular ear peaks |
-| 2 | 太阳鸡 | Comb crest + beak profile |
-| 3 | 夸夸豚 | Curved body + heart tail |
-| 4 | 机智狐 | Pointed ears + diamond face |
-| 5 | 淡定海豚 | Smooth curved forehead + smile |
-| 6 | 织网蛛 | Hexagon body + 4 visible legs |
-| 7 | 暖心熊 | Round ears + broad snout |
-| 8 | 灵感章鱼 | Star body + 3 tentacles |
-| 9 | 沉思猫头鹰 | Large eyes + ear tufts |
-| 10 | 定心大象 | Trunk + large ear flap |
-| 11 | 稳如龟 | Dome shell + small head |
-| 12 | 隐身猫 | Peeking eye + curved back |
+| 1 | 气氛组柯基 | Round head + two triangular ear peaks |
+| 2 | 情绪稳定鸡 | Comb crest + beak profile |
+| 3 | 捧场王仓鼠 | Curved body + heart tail |
+| 4 | 探宝雷达狐 | Pointed ears + diamond face |
+| 5 | 读空气海豚 | Smooth curved forehead + smile |
+| 6 | 社交裁缝蛛 | Hexagon body + 4 visible legs |
+| 7 | 情绪树洞考拉 | Round ears + broad snout |
+| 8 | 脑洞喷泉章鱼 | Star body + 3 tentacles |
+| 9 | 追问猫头鹰 | Large eyes + ear tufts |
+| 10 | 定海神针大象 | Trunk + large ear flap |
+| 11 | 慢半拍龟 | Dome shell + small head |
+| 12 | 静音模式猫 | Peeking eye + curved back |
 
 **Export:** SVG source + PNG 16×16, 32×32, 48×48
 
@@ -117,18 +117,18 @@ Anti-generic: Must be recognizable as [ANIMAL] even at 40px. Not abstract.
 Each archetype gets a 5-color palette for theming:
 
 ```
-开心柯基:  { primary: '#D4845C', light: '#FDBA74', dark: '#9A3412', bg: '#FFF7ED', surface: '#FED7AA' }
-太阳鸡:    { primary: '#FF9B85', light: '#FDBA74', dark: '#C2410C', bg: '#FFF7ED', surface: '#FED7AA' }
-夸夸豚:    { primary: '#A8C5DD', light: '#BFDBFE', dark: '#1E40AF', bg: '#EFF6FF', surface: '#DBEAFE' }
-机智狐:    { primary: '#D4845C', light: '#FDBA74', dark: '#9A3412', bg: '#FFF7ED', surface: '#FED7AA' }
-淡定海豚:  { primary: '#5B9BD5', light: '#93C5FD', dark: '#1E3A8A', bg: '#EFF6FF', surface: '#DBEAFE' }
-织网蛛:    { primary: '#8B7FB0', light: '#C4B5FD', dark: '#5B21B6', bg: '#F5F3FF', surface: '#DDD6FE' }
-暖心熊:    { primary: '#A0522D', light: '#FDBA74', dark: '#7C2D12', bg: '#FFF7ED', surface: '#FED7AA' }
-灵感章鱼:  { primary: '#8B5CF6', light: '#C4B5FD', dark: '#5B21B6', bg: '#F5F3FF', surface: '#DDD6FE' }
-沉思猫头鹰: { primary: '#4A6FA5', light: '#93C5FD', dark: '#1E3A8A', bg: '#EFF6FF', surface: '#DBEAFE' }
-定心大象:  { primary: '#708090', light: '#CBD5E1', dark: '#334155', bg: '#F8FAFC', surface: '#E2E8F0' }
-稳如龟:    { primary: '#6B8E6B', light: '#86EFAC', dark: '#14532D', bg: '#F0FDF4', surface: '#BBF7D0' }
-隐身猫:    { primary: '#9CA3AF', light: '#D1D5DB', dark: '#374151', bg: '#F9FAFB', surface: '#E5E7EB' }
+气氛组柯基:  { primary: '#D4845C', light: '#FDBA74', dark: '#9A3412', bg: '#FFF7ED', surface: '#FED7AA' }
+情绪稳定鸡:    { primary: '#FF9B85', light: '#FDBA74', dark: '#C2410C', bg: '#FFF7ED', surface: '#FED7AA' }
+捧场王仓鼠:    { primary: '#A8C5DD', light: '#BFDBFE', dark: '#1E40AF', bg: '#EFF6FF', surface: '#DBEAFE' }
+探宝雷达狐:    { primary: '#D4845C', light: '#FDBA74', dark: '#9A3412', bg: '#FFF7ED', surface: '#FED7AA' }
+读空气海豚:  { primary: '#5B9BD5', light: '#93C5FD', dark: '#1E3A8A', bg: '#EFF6FF', surface: '#DBEAFE' }
+社交裁缝蛛:    { primary: '#8B7FB0', light: '#C4B5FD', dark: '#5B21B6', bg: '#F5F3FF', surface: '#DDD6FE' }
+情绪树洞考拉:    { primary: '#A0522D', light: '#FDBA74', dark: '#7C2D12', bg: '#FFF7ED', surface: '#FED7AA' }
+脑洞喷泉章鱼:  { primary: '#8B5CF6', light: '#C4B5FD', dark: '#5B21B6', bg: '#F5F3FF', surface: '#DDD6FE' }
+追问猫头鹰: { primary: '#4A6FA5', light: '#93C5FD', dark: '#1E3A8A', bg: '#EFF6FF', surface: '#DBEAFE' }
+定海神针大象:  { primary: '#708090', light: '#CBD5E1', dark: '#334155', bg: '#F8FAFC', surface: '#E2E8F0' }
+慢半拍龟:    { primary: '#6B8E6B', light: '#86EFAC', dark: '#14532D', bg: '#F0FDF4', surface: '#BBF7D0' }
+静音模式猫:    { primary: '#9CA3AF', light: '#D1D5DB', dark: '#374151', bg: '#F9FAFB', surface: '#E5E7EB' }
 ```
 
 **Deliverable:** Color reference sheet (12 palettes × 5 colors)
@@ -338,49 +338,49 @@ Replace CSS rotating border with Xiaoyue `xiaoyue-loading-system` expression + p
 
 | Archetype | Pose/Expression |
 |-----------|----------------|
-| 开心柯基 | Head tilt, paw on chin, curious "where is everyone?" |
-| 太阳鸡 | Looking around brightly, confused but optimistic |
-| 机智狐 | Adjusting glasses, analyzing the empty space |
-| 淡定海豚 | Eyes closed, meditating, "it's fine, they'll come" |
-| 织网蛛 | Weaving a small web, patient, "I'll wait" |
-| 暖心熊 | Arms open, welcoming, "come join me" |
-| 灵感章鱼 | Tentacles sketching in air, "I'll create something" |
-| 沉思猫头鹰 | Chin on wing, thoughtful, "interesting... nobody here" |
-| 定心大象 | Standing steady, calm, "no rush, I'm here" |
-| 稳如龟 | Slow blink, patient, "I've got time" |
-| 隐身猫 | Peeking from behind invisible wall, "I'm here... kind of" |
+| 气氛组柯基 | Head tilt, paw on chin, curious "where is everyone?" |
+| 情绪稳定鸡 | Looking around brightly, confused but optimistic |
+| 探宝雷达狐 | Adjusting glasses, analyzing the empty space |
+| 读空气海豚 | Eyes closed, meditating, "it's fine, they'll come" |
+| 社交裁缝蛛 | Weaving a small web, patient, "I'll wait" |
+| 情绪树洞考拉 | Arms open, welcoming, "come join me" |
+| 脑洞喷泉章鱼 | Tentacles sketching in air, "I'll create something" |
+| 追问猫头鹰 | Chin on wing, thoughtful, "interesting... nobody here" |
+| 定海神针大象 | Standing steady, calm, "no rush, I'm here" |
+| 慢半拍龟 | Slow blink, patient, "I've got time" |
+| 静音模式猫 | Peeking from behind invisible wall, "I'm here... kind of" |
 
 ### State: Error
 
 | Archetype | Pose/Expression |
 |-----------|----------------|
-| 开心柯基 | Paws up, surprised, "oops!" |
-| 太阳鸡 | Ruffled feathers, confused, "what happened?" |
-| 机智狐 | Glasses askew, quick fix, "let me think..." |
-| 淡定海豚 | Gentle shrug, "no big deal, try again" |
-| 织网蛛 | Web slightly torn, repairing, "I'll fix this" |
-| 暖心熊 | Gentle pat, "don't worry, we'll sort it out" |
-| 灵感章鱼 | Ink splatter, creative recovery, "accidental art!" |
-| 沉思猫头鹰 | Adjusting glasses, analyzing error, "fascinating..." |
-| 定心大象 | Steady stance, grounding gesture, "stay calm" |
-| 稳如龟 | Shell slightly cracked (metaphor), "this too shall pass" |
-| 隐身猫 | Half-visible, "error? I didn't see anything" |
+| 气氛组柯基 | Paws up, surprised, "oops!" |
+| 情绪稳定鸡 | Ruffled feathers, confused, "what happened?" |
+| 探宝雷达狐 | Glasses askew, quick fix, "let me think..." |
+| 读空气海豚 | Gentle shrug, "no big deal, try again" |
+| 社交裁缝蛛 | Web slightly torn, repairing, "I'll fix this" |
+| 情绪树洞考拉 | Gentle pat, "don't worry, we'll sort it out" |
+| 脑洞喷泉章鱼 | Ink splatter, creative recovery, "accidental art!" |
+| 追问猫头鹰 | Adjusting glasses, analyzing error, "fascinating..." |
+| 定海神针大象 | Steady stance, grounding gesture, "stay calm" |
+| 慢半拍龟 | Shell slightly cracked (metaphor), "this too shall pass" |
+| 静音模式猫 | Half-visible, "error? I didn't see anything" |
 
 ### State: Loading
 
 | Archetype | Pose/Expression |
 |-----------|----------------|
-| 开心柯基 | Tail wag, excited bounce, "coming soon!" |
-| 太阳鸡 | Pacing in small circle, warm glow, "almost ready!" |
-| 机智狐 | Tapping foot, calculating, "processing..." |
-| 淡定海豚 | Floating calmly, gentle bob, "taking its time" |
-| 织网蛛 | Spinning web in spiral, "weaving something" |
-| 暖心熊 | Gentle rock, patient, "worth the wait" |
-| 灵感章鱼 | Multiple tentacles working, "creating magic" |
-| 沉思猫头鹰 | Page turning, studying, "gathering wisdom" |
-| 定心大象 | Slow nod, steady, "building something solid" |
-| 稳如龟 | Slow walk, determined, "getting there" |
-| 隐身猫 | Fading in/out, "loading... can you see me?" |
+| 气氛组柯基 | Tail wag, excited bounce, "coming soon!" |
+| 情绪稳定鸡 | Pacing in small circle, warm glow, "almost ready!" |
+| 探宝雷达狐 | Tapping foot, calculating, "processing..." |
+| 读空气海豚 | Floating calmly, gentle bob, "taking its time" |
+| 社交裁缝蛛 | Spinning web in spiral, "weaving something" |
+| 情绪树洞考拉 | Gentle rock, patient, "worth the wait" |
+| 脑洞喷泉章鱼 | Multiple tentacles working, "creating magic" |
+| 追问猫头鹰 | Page turning, studying, "gathering wisdom" |
+| 定海神针大象 | Slow nod, steady, "building something solid" |
+| 慢半拍龟 | Slow walk, determined, "getting there" |
+| 静音模式猫 | Fading in/out, "loading... can you see me?" |
 
 **Export:** PNG/WebP 200×200, 400×400, transparent background
 
@@ -394,18 +394,18 @@ Each archetype gets a unique share card layout for personality test results.
 
 | Archetype | Background | Layout | Typography | Accent Elements |
 |-----------|-----------|--------|------------|-----------------|
-| 开心柯基 | Warm orange gradient, scattered paw prints | Diagonal split, playful asymmetry | Rounded, bold | Bone icon, tennis ball pattern |
-| 太阳鸡 | Radiating sunburst, golden rays | Centered hero, radiating outward | Bright, confident | Sun icon, feather accents |
-| 夸夸豚 | Soft blue waves, heart bubbles | Flowing curves, gentle rhythm | Soft, rounded | Heart splash, wave lines |
-| 机智狐 | Teal geometric grid, maze paths | Sharp angles, strategic layout | Clean, modern | Glasses icon, puzzle pieces |
-| 淡定海豚 | Smooth blue gradients, ripple circles | Horizontal flow, calm spacing | Elegant, thin | Water ripple, bubble accents |
-| 织网蛛 | Dark purple web, node network | Intricate border, connected dots | Technical, precise | Web corner, thread lines |
-| 暖心熊 | Warm brown gradient, soft circles | Embracing layout, centered warmth | Friendly, soft | Honey drop, heart accents |
-| 灵感章鱼 | Purple paint splatter, color bursts | Asymmetrical, creative chaos | Expressive, varied | Paintbrush, color swatches |
-| 沉思猫头鹰 | Deep blue night sky, stars | Structured, book-like columns | Scholarly, serif-like | Moon, book stack, stars |
-| 定心大象 | Gray mountain layers, stable grid | Grounded, heavy bottom weight | Strong, stable | Mountain peak, stone texture |
-| 稳如龟 | Green spiral, ancient patterns | Slow spiral flow, timeless | Classic, patient | Shell pattern, spiral accents |
-| 隐身猫 | Gray shadow gradients, soft edges | Mysterious, partially hidden | Subtle, elusive | Shadow shapes, peeking eye |
+| 气氛组柯基 | Warm orange gradient, scattered paw prints | Diagonal split, playful asymmetry | Rounded, bold | Bone icon, tennis ball pattern |
+| 情绪稳定鸡 | Radiating sunburst, golden rays | Centered hero, radiating outward | Bright, confident | Sun icon, feather accents |
+| 捧场王仓鼠 | Soft blue waves, heart bubbles | Flowing curves, gentle rhythm | Soft, rounded | Heart splash, wave lines |
+| 探宝雷达狐 | Teal geometric grid, maze paths | Sharp angles, strategic layout | Clean, modern | Glasses icon, puzzle pieces |
+| 读空气海豚 | Smooth blue gradients, ripple circles | Horizontal flow, calm spacing | Elegant, thin | Water ripple, bubble accents |
+| 社交裁缝蛛 | Dark purple web, node network | Intricate border, connected dots | Technical, precise | Web corner, thread lines |
+| 情绪树洞考拉 | Warm brown gradient, soft circles | Embracing layout, centered warmth | Friendly, soft | Honey drop, heart accents |
+| 脑洞喷泉章鱼 | Purple paint splatter, color bursts | Asymmetrical, creative chaos | Expressive, varied | Paintbrush, color swatches |
+| 追问猫头鹰 | Deep blue night sky, stars | Structured, book-like columns | Scholarly, serif-like | Moon, book stack, stars |
+| 定海神针大象 | Gray mountain layers, stable grid | Grounded, heavy bottom weight | Strong, stable | Mountain peak, stone texture |
+| 慢半拍龟 | Green spiral, ancient patterns | Slow spiral flow, timeless | Classic, patient | Shell pattern, spiral accents |
+| 静音模式猫 | Gray shadow gradients, soft edges | Mysterious, partially hidden | Subtle, elusive | Shadow shapes, peeking eye |
 
 **Export:** PNG/WebP 1080×1920 (vertical share card), transparent overlays
 
@@ -428,7 +428,7 @@ For each archetype, generate 15 variations of the same pattern language with dif
 - Rotation angles
 - Scale variations
 
-**Example: 开心柯基 pattern variations**
+**Example: 气氛组柯基 pattern variations**
 1. Sparse paw prints, small scale, warm orange
 2. Dense paw prints, large scale, coral accents
 3. Scattered with tennis ball trajectories

@@ -254,7 +254,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         choices: [{ message: { content: 'Test explanation' } }],
       }) } },
     },
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     provider: 'deepseek',
   }),
   getDeepseekSelection: vi.fn().mockReturnValue({
@@ -263,7 +263,7 @@ vi.mock('../ai/socialModelRouter', () => ({
         choices: [{ message: { content: 'Test explanation' } }],
       }) } },
     },
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     provider: 'deepseek',
   }),
 }));
@@ -276,7 +276,7 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const memberA: MatchMember = {
       userId: 'ua',
       displayName: '甲',
-      archetype: '开心柯基',
+      archetype: 'corgi',
       interestSignals: [
         {
           interestKey: 'food',
@@ -290,7 +290,7 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const memberB: MatchMember = {
       userId: 'ub',
       displayName: '乙',
-      archetype: '暖心熊',
+      archetype: 'koala',
       interestSignals: [
         {
           interestKey: 'food',
@@ -312,7 +312,7 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const memberA: MatchMember = {
       userId: 'ua',
       displayName: '甲',
-      archetype: '开心柯基',
+      archetype: 'corgi',
       interestSignals: [
         {
           interestKey: 'gaming',
@@ -326,7 +326,7 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const memberB: MatchMember = {
       userId: 'ub',
       displayName: '乙',
-      archetype: '暖心熊',
+      archetype: 'koala',
       interestSignals: [
         {
           interestKey: 'gaming',
@@ -349,13 +349,13 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const memberA: MatchMember = {
       userId: 'ua',
       displayName: '甲',
-      archetype: '开心柯基',
+      archetype: 'corgi',
       hometown: '上海',
     };
     const memberB: MatchMember = {
       userId: 'ub',
       displayName: '乙',
-      archetype: '暖心熊',
+      archetype: 'koala',
       hometown: '上海',
     };
 

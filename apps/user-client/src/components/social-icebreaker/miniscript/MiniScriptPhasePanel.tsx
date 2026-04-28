@@ -92,7 +92,6 @@ export function MiniScriptPhasePanel({
                 <p className="font-semibold text-foreground">{c.roleLabel}</p>
                 <p className="text-muted-foreground text-xs">钩子：{c.sinHook}</p>
                 <p className="text-muted-foreground text-xs">表面：{c.alibi}</p>
-                <p className="text-muted-foreground text-xs">秘密：{c.secret}</p>
               </div>
             ))}
           </div>

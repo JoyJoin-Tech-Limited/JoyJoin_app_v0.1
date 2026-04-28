@@ -299,7 +299,9 @@
   }
 
   &__waiting-seat-burst-emoji {
-    font-size: 22rpx;
+    width: 22rpx;
+    height: 22rpx;
+    display: block;
   }
 
   &__waiting-seat-burst-text {
@@ -447,17 +449,15 @@
     background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
   }
 
-  &__member-initial {
+  &__member-avatar {
     width: 64rpx;
     height: 64rpx;
     border-radius: 50%;
-    background: $brand-gradient;
-    color: $color-text-white;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
+    background: rgba($color-primary, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   &__member-name {

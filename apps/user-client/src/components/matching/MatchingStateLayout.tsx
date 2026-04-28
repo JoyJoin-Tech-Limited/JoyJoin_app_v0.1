@@ -73,7 +73,7 @@ export default function MatchingStateLayout({
   className,
 }: MatchingStateLayoutProps) {
   return (
-    <div className={cn("relative min-h-screen overflow-hidden", className)}>
+    <div className={cn("no-scroll-container relative", className)}>
       {/* ── Shared background ── */}
       <img
         src={matchingBg}

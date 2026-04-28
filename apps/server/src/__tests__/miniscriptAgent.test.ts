@@ -1,13 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
-  fetchMock: vi.fn(),
   traceMock: vi.fn(),
+  metricsMock: vi.fn(),
+  validateMock: vi.fn(),
 }));
 
-vi.mock('../socialIcebreakerAIService', () => ({
-  MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION: 'social-miniscript-framework-v1',
-  fetchMiniScriptFrameworkModelJson: hoisted.fetchMock,
+// Mock AI router
+vi.mock('../ai/socialModelRouter', () => ({
+  getClientForFunction: vi.fn(() => ({
+    client: {
+      chat: {
+        completions: {
+          create: vi.fn(),
+        },
+      },
+    },
+    model: 'deepseek-v4-flash',
+    provider: 'deepseek',
+  })),
+  getDeepseekSelection: vi.fn(() => ({
+    client: {
+      chat: {
+        completions: {
+          create: vi.fn(),
+        },
+      },
+    },
+    model: 'deepseek-v4-flash',
+    provider: 'deepseek',
+  })),
+}));
+
+// Mock validator
+vi.mock('../lib/miniscriptValidator', () => ({
+  validateMiniScriptFramework: hoisted.validateMock,
 }));
 
 vi.mock('../lib/aiTraceLogger', () => ({
@@ -15,10 +42,23 @@ vi.mock('../lib/aiTraceLogger', () => ({
   createAiCorrelationId: () => '00000000-0000-4000-8000-000000000001',
 }));
 
-const validLlmPayload = {
-  schemaVersion: 1,
+vi.mock('../middleware/metrics', () => ({
+  recordAIProviderRecoveryMetric: (opts: unknown) => hoisted.metricsMock(opts),
+}));
+
+const validV2Payload = {
+  schemaVersion: 2,
   style: 'modern_urban',
   genres: ['absurd_comedy'],
+  gameModeConfig: {
+    clueCountRange: [2, 4],
+    hasRedHerrings: true,
+    hasHiddenAgendas: false,
+    votingStyle: 'none',
+    winCondition: 'laugh_track',
+    targetPlayMinutes: 10,
+    difficulty: 'easy',
+  },
   premise: '测试前提：温和、低冲突的聚会小误会。',
   characters: [0, 1, 2, 3].map((slotIndex) => ({
     slotIndex,
@@ -35,202 +75,249 @@ const validLlmPayload = {
     resolutionSummary: '误会解开，温柔收尾。',
     confessionMechanic: '每人一句话认领小秘密。',
   },
+  clues: [
+    { clueId: 'c1', text: '线索1', revealedInAct: 1 },
+    { clueId: 'c2', text: '线索2', revealedInAct: 2 },
+  ],
+  solution: { who: '角色1', what: '误会', why: '太害羞' },
+  playerKnowledge: [0, 1, 2, 3].map((slotIndex) => ({
+    slotIndex,
+    knownFacts: ['fact1'],
+    secretAgenda: 'secret',
+    truthfulAlibi: 'alibi',
+  })),
 };
 
-describe('generateMiniScriptFramework orchestrator', () => {
+describe('generateMiniScriptFramework orchestrator (v2)', () => {
   beforeEach(() => {
-    hoisted.fetchMock.mockReset();
     hoisted.traceMock.mockReset();
+    hoisted.metricsMock.mockReset();
+    hoisted.validateMock.mockReset();
     delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+    delete process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED;
   });
 
   afterEach(() => {
     delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+    delete process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED;
   });
 
-  it('uses stub when LLM env disabled (no model call)', async () => {
+  it('uses catalog fallback when LLM env disabled (no model call)', async () => {
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
     const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: 4,
       style: 'modern_urban',
       genres: ['light_reasoning'],
     });
-    expect(hoisted.fetchMock).not.toHaveBeenCalled();
     expect(meta.llmAccepted).toBe(false);
-    expect(meta.fallbackUsed).toBe(false);
-    expect(framework.schemaVersion).toBe(1);
+    expect(meta.fallbackUsed).toBe(true);
+    expect(meta.catalogUsed).toBe(true);
+    expect(framework.schemaVersion).toBe(2);
     expect(framework.characters).toHaveLength(4);
+    expect(framework.clues).toBeDefined();
+    expect(framework.solution).toBeDefined();
     expect(hoisted.traceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         domain: 'miniscript',
         feature: 'generateMiniScriptFramework',
         provider: null,
-        success: false,
-        fallbackUsed: false,
+        success: true,
+        fallbackUsed: true,
         errorCode: 'llm_disabled',
-        promptVersion: 'social-miniscript-framework-v1',
       }),
     );
   });
 
-  it('accepts valid model JSON when LLM enabled (DeepSeek recovery after MiniMax)', async () => {
+  it('accepts valid model JSON + validation when both enabled', async () => {
     process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
-    hoisted.fetchMock.mockResolvedValue({
-      ok: true,
-      data: validLlmPayload,
-      provider: 'deepseek',
-      model: 'deepseek-chat',
-      latencyMs: 10,
-      deepSeekRecoveryUsed: true,
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'true';
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(validV2Payload) } }],
     });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    hoisted.validateMock.mockResolvedValue({
+      valid: true,
+      result: { valid: true, score: 85, issues: [], fixable: false, summary: 'Good' },
+      meta: { score: 85, valid: true, fixable: false, issueCount: 0 } as any,
+    });
+
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
     const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: 4,
       style: 'ancient_chinese',
       genres: ['romance'],
     });
+
     expect(meta.llmAccepted).toBe(true);
     expect(meta.fallbackUsed).toBe(false);
-    expect(meta.providerRecoveryUsed).toBe(true);
+    expect(meta.validationUsed).toBe(true);
+    expect(meta.validationScore).toBe(85);
+    expect(meta.catalogUsed).toBe(false);
     expect(framework.style).toBe('ancient_chinese');
     expect(framework.genres).toEqual(['romance']);
-    expect(framework.premise).toBe(validLlmPayload.premise);
+    expect(framework.schemaVersion).toBe(2);
     expect(hoisted.traceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
-        fallbackUsed: true,
+        fallbackUsed: false,
         provider: 'deepseek',
       }),
     );
   });
 
-  it('accepts valid model JSON when LLM enabled (primary MiniMax, no recovery)', async () => {
+  it('falls back to catalog when validation fails', async () => {
     process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
-    hoisted.fetchMock.mockResolvedValue({
-      ok: true,
-      data: validLlmPayload,
-      provider: 'minimax',
-      model: 'minimax-m2.7',
-      latencyMs: 10,
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'true';
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(validV2Payload) } }],
     });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    hoisted.validateMock.mockResolvedValue({
+      valid: false,
+      result: { valid: false, score: 45, issues: [{ severity: 'critical', field: 'clues', message: 'bad', suggestion: 'fix' }], fixable: false, summary: 'Bad' },
+      meta: { score: 45, valid: false, fixable: false, issueCount: 1 } as any,
+    });
+
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    // Use exact catalog match: modern_urban + light_reasoning
     const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: 4,
-      style: 'ancient_chinese',
-      genres: ['romance'],
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
     });
+
     expect(meta.llmAccepted).toBe(true);
-    expect(meta.providerRecoveryUsed).toBeFalsy();
-    expect(framework.style).toBe('ancient_chinese');
-    expect(hoisted.traceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: true,
-        fallbackUsed: false,
-        provider: 'minimax',
-      }),
-    );
-  });
-
-  it('falls back to stub when model layer reports timeout', async () => {
-    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
-    hoisted.fetchMock.mockResolvedValue({
-      ok: false,
-      reason: 'timeout',
-      provider: 'deepseek',
-      model: 'deepseek-chat',
-      latencyMs: 32_001,
-    });
-    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
-    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
-      playerCount: 4,
-      style: 'future_tech',
-      genres: ['light_reasoning'],
-    });
     expect(meta.fallbackUsed).toBe(true);
-    expect(framework.style).toBe('future_tech');
-    expect(hoisted.traceMock).toHaveBeenCalledWith(
-      expect.objectContaining({ errorCode: 'timeout', fallbackUsed: true }),
-    );
+    expect(meta.validationUsed).toBe(true);
+    expect(meta.catalogUsed).toBe(true);
+    expect(framework.style).toBe('modern_urban');
+    expect(framework.schemaVersion).toBe(2);
   });
 
-  it('falls back to stub on model empty / parse failure', async () => {
+  it('skips validation when disabled, accepts generation directly', async () => {
     process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
-    hoisted.fetchMock.mockResolvedValue({
-      ok: false,
-      reason: 'parse_error',
-      provider: 'deepseek',
-      model: 'deepseek-chat',
-      latencyMs: 5,
-    });
-    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
-    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
-      playerCount: 4,
-      style: 'xianxia',
-      genres: ['light_reasoning'],
-    });
-    expect(meta.llmAccepted).toBe(false);
-    expect(meta.fallbackUsed).toBe(true);
-    expect(framework.style).toBe('xianxia');
-    expect(framework.characters).toHaveLength(4);
-    expect(hoisted.traceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-        fallbackUsed: true,
-        errorCode: 'parse_error',
-      }),
-    );
-  });
+    // SOCIAL_MINISCRIPT_VALIDATION_ENABLED not set → defaults to false when LLM enabled but env missing? Actually it defaults to isMiniscriptLlmEnabled()
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
 
-  it('falls back when model JSON fails Zod', async () => {
-    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
-    hoisted.fetchMock.mockResolvedValue({
-      ok: true,
-      data: { invalid: true },
-      provider: 'deepseek',
-      model: 'deepseek-chat',
-      latencyMs: 3,
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(validV2Payload) } }],
     });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
     const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: 4,
       style: 'medieval',
       genres: ['thriller_mystery'],
     });
+
+    expect(meta.llmAccepted).toBe(true);
+    expect(meta.validationUsed).toBe(false);
+    expect(meta.catalogUsed).toBe(false);
+    expect(framework.schemaVersion).toBe(2);
+    expect(hoisted.validateMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to catalog when model returns empty response', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: '' } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    // Use exact catalog match: modern_urban + light_reasoning
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
+    });
+
     expect(meta.llmAccepted).toBe(false);
     expect(meta.fallbackUsed).toBe(true);
-    expect(framework.style).toBe('medieval');
-    expect(framework.characters).toHaveLength(4);
-    expect(hoisted.traceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        errorCode: 'schema_error',
-        fallbackUsed: true,
-      }),
-    );
+    expect(meta.catalogUsed).toBe(true);
+    expect(framework.style).toBe('modern_urban');
+    expect(framework.schemaVersion).toBe(2);
   });
 
   it('falls back when character count mismatches playerCount (host authority)', async () => {
     process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
-    const fiveChars = [0, 1, 2, 3, 4].map((slotIndex) => ({
-      slotIndex,
-      roleLabel: `角色${slotIndex + 1}`,
-      sinHook: '一点无伤大雅的小别扭。',
-      alibi: '只记得模糊细节。',
-      secret: '一句没说出口的谢谢。',
-    }));
-    hoisted.fetchMock.mockResolvedValue({
-      ok: true,
-      data: { ...validLlmPayload, characters: fiveChars },
-      provider: 'deepseek',
-      model: 'deepseek-chat',
-      latencyMs: 3,
+
+    const badPayload = {
+      ...validV2Payload,
+      characters: [0, 1, 2, 3, 4].map((slotIndex) => ({
+        slotIndex,
+        roleLabel: `角色${slotIndex + 1}`,
+        sinHook: '一点无伤大雅的小别扭。',
+        alibi: '只记得模糊细节。',
+        secret: '一句没说出口的谢谢。',
+      })),
+    };
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(badPayload) } }],
     });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
     const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
       playerCount: 4,
       style: 'modern_urban',
       genres: ['absurd_comedy'],
     });
+
     expect(meta.fallbackUsed).toBe(true);
+    expect(meta.catalogUsed).toBe(true);
     expect(framework.characters).toHaveLength(4);
+    expect(framework.schemaVersion).toBe(2);
+  });
+
+  it('produces v2 stub with clues and solution when everything fails', async () => {
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    // Use exact catalog match: republican_era + thriller_mystery (has 4 chars)
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'republican_era',
+      genres: ['thriller_mystery'],
+    });
+
+    expect(meta.llmAccepted).toBe(false);
+    expect(meta.fallbackUsed).toBe(true);
+    expect(framework.schemaVersion).toBe(2);
+    expect(framework.characters).toHaveLength(4);
+    expect(framework.clues.length).toBeGreaterThanOrEqual(2);
+    expect(framework.solution).toBeDefined();
+    expect(framework.playerKnowledge).toHaveLength(4);
+    expect(framework.gameModeConfig).toBeDefined();
   });
 });

@@ -2,7 +2,11 @@ export * from './schema';
 export * from './constants';
 export * from './utils';
 export * from './gamification';
+// DEPRECATED — legacy static game catalog for IcebreakerToolkit only.
+// See docs/icebreaker-system.md §2 and packages/shared/src/icebreakerGames.ts
+// for full deprecation notice. Do not use for new Social Icebreaker phases.
 export * from './icebreakerGames';
+export * from './microChallengeTemplates';
 export * from './icebreakerRunPlan';
 export * from './topicCards';
 export * from './wsEvents';
@@ -42,10 +46,17 @@ export * from './types/groupAnalysis';
 export * from './eventDetail';
 export * from './groupAnalysis';
 export * from './api';
+export * from './iconSystem';
 export * from './onboarding';
 export * from './archetypeColors';
+export * from './archetypeColorTokens';
 export * from './achievements';
 export * from './hongKongTime';
 export * from './centerTabRouting';
 export * from './legal/joyjoinTermsZh';
 
+export * from './miniscriptCatalog';
+export * from './miniscriptStoryFramework';
+export * from './miniscriptGameModes';
+export * from './schemaAnalytics';
+export * from './aiModels';

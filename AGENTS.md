@@ -121,11 +121,21 @@ npm run check:full       # Guardrails + lint + tests + build
 ### Database
 
 ```bash
-npm run db:push          # Sync Drizzle schema to DB (safe; prefer non-destructive answers)
-npm run db:generate      # Generate migration SQL files
-npm run db:migrate       # Run pending migrations
+npm run db:push          # Sync Drizzle schema to DB (local dev only; safe mode)
+npm run db:generate      # Generate migration SQL files from schema changes
+npm run db:migrate       # Run pending migrations (production & CI)
+npm run db:verify        # Verify schema.ts matches live DB (CI gate)
+npm run db:journal-check # Ensure all .sql migrations are in _journal.json
+npm run db:rebuild-journal # Rebuild _journal.json from migration files
+npm run db:status        # Run journal-check + verify
 npm run db:studio        # Open Drizzle Studio GUI
 ```
+
+**Migration discipline:**
+- Local dev: Use `db:push` to quickly sync schema changes.
+- Before committing: Run `db:generate` to create a proper migration file, then `db:rebuild-journal` to register it.
+- Production/CI: Only `db:migrate` is used. `db:push` is banned in production.
+- CI gate: `db:verify` runs after every deploy to ensure repo and DB are aligned.
 
 ### Testing
 
@@ -274,6 +284,7 @@ On every push to `main`:
 - `GET /api/auth/user` returns `nextStep`, `profileEssentialComplete`, `profileExtendedComplete`.
 - The client never computes its own onboarding position.
 - Active onboarding steps after WeChat login: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`.
+- **Xiaoyue chat-based onboarding is deprecated.** Xiaoyue lives on only as a mascot character (visual expressions, loading animations, empty states). Do not implement or reference conversational chat as a core onboarding path.
 
 ### Personality system
 - Current system: **12 archetypes**, V4 adaptive assessment (8–16 questions), ACOEXP 6-trait model.
@@ -423,6 +434,35 @@ Kimi Code auto-triggers skills from `.agents/skills/` based on `name` + `descrip
 | Sync docs after changes | `docs-sync` |
 
 Full index: `.github/skills/README.md`
+
+### Harness Engineering Framework (Implementation Phase)
+
+JoyJoin uses a **3-tier Harness** to embed quality engineering into the implementation flow, inspired by Anthropic's harness design for long-running agents.
+
+**The core pattern:** Before coding on Tier 2+ tasks, the Implementer (Generator) and Verifier negotiate a **Sprint Contract** — a file-based artifact that defines what "done" looks like with testable criteria and hard thresholds. QA Agent evaluates the implementation against this contract. Any criterion miss fails the sprint.
+
+| Tier | Cost | When | Flow |
+|------|------|------|------|
+| **Tier 1** | ~$0 (baseline) | Small fixes, ≤50 lines, 1 workspace | Implement → `npm run harness:gate` + Auto-Eval |
+| **Tier 2** | ~$0.50–$2 (1.3–1.7×) | New routes, multi-file, auth, stateful ops | Sprint Contract draft → Verifier review → implement → QA Agent Sprint Evaluation (hard thresholds) |
+| **Tier 3** | ~$10–$25 (5–10×) | Core engine, payment, major refactor | Harness Runtime Controller deliberation (PGE → Council → Consensus) → locked contract → implement → QA Agent + Verifier |
+
+**Sprint Contract:** Stored at `.git/.orchestration/sprints/sprint-contract.{taskId}.md`. Contains goal, acceptance criteria, Harness pillar criteria, out-of-scope, verification method, and negotiation log.
+
+**Scripts:**
+- `node scripts/select-harness-tier.mjs` — deterministic tier router
+- `node scripts/evaluate-sprint-contract.mjs --contract=<path>` — contract vs. diff validation
+- `node scripts/evaluate-api-drift.mjs` — Zod schema / route handler drift detection
+- `node scripts/harness-full.mjs --contract=<path>` — Tier 3 orchestrator
+
+**Agent behavior changes:**
+- Implementing engineers write Sprint Contracts before editing files on Tier 2+ tasks.
+- Verifier gains a "Contract Evaluator" mode for reviewing draft contracts.
+- QA Agent gains a "Sprint Evaluation" mode for grading implemented contracts.
+
+Full spec: `docs/proposals/harness-consensus-plan.md`
+
+---
 
 ### Turn Reporting
 

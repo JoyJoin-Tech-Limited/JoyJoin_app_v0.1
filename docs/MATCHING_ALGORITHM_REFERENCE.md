@@ -80,18 +80,18 @@ All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment. To
 
 | Archetype | Emoji | Energy Level | Core Traits |
 |-----------|-------|-------------|-------------|
-| 开心柯基 | 🐕 | Very High | High X + High A |
-| 太阳鸡 | 🐔 | Very High | High X + High P |
-| 夸夸豚 | 🐬 | High | High A + High O |
-| 机智狐 | 🦊 | High | High O + High C |
-| 淡定海豚 | 🐬 | Medium | Balanced, High E |
-| 织网蛛 | 🕷 | Medium | High C + High O |
-| 暖心熊 | 🐻 | Medium-Low | High A + High E |
-| 灵感章鱼 | 🐙 | Medium | High O, creative burst |
-| 沉思猫头鹰 | 🦉 | Low-Medium | High C + High O, introspective |
-| 定心大象 | 🐘 | Low-Medium | High A + High E, stabilizer |
-| 稳如龟 | 🐢 | Low | High P + High E |
-| 隐身猫 | 🐱 | Very Low | Low X, quiet companion |
+| 气氛组柯基 | 🐕 | Very High | High X + High A |
+| 情绪稳定鸡 | 🐔 | Very High | High X + High P |
+| 捧场王仓鼠 | 🐬 | High | High A + High O |
+| 探宝雷达狐 | 🦊 | High | High O + High C |
+| 读空气海豚 | 🐬 | Medium | Balanced, High E |
+| 社交裁缝蛛 | 🕷 | Medium | High C + High O |
+| 情绪树洞考拉 | 🐻 | Medium-Low | High A + High E |
+| 脑洞喷泉章鱼 | 🐙 | Medium | High O, creative burst |
+| 追问猫头鹰 | 🦉 | Low-Medium | High C + High O, introspective |
+| 定海神针大象 | 🐘 | Low-Medium | High A + High E, stabilizer |
+| 慢半拍龟 | 🐢 | Low | High P + High E |
+| 静音模式猫 | 🐱 | Very Low | Low X, quiet companion |
 
 ### 2.3 MatcherV2 Algorithm (v2.4-opposite-pole)
 
@@ -121,7 +121,7 @@ logisticTraitScore(diff, steepness = 0.08) = 1 / (1 + exp(steepness × diff))
 
 #### Step 3 — Asymmetric Avoid-Trait Penalty (V2.3)
 
-For traits flagged as `avoid` in `PROTOTYPE_SOUL_TRAITS`, violations are penalised more harshly to prevent cross-pole mismatches (e.g. very high X should block 隐身猫).
+For traits flagged as `avoid` in `PROTOTYPE_SOUL_TRAITS`, violations are penalised more harshly to prevent cross-pole mismatches (e.g. very high X should block 静音模式猫).
 
 ```typescript
 asymmetricPenaltyFactor = calculateAsymmetricPenalty(userTraits, prototype)
@@ -170,7 +170,7 @@ Applied after scoring all 12 archetypes:
 
 | Phase | Rule Type | Description |
 |-------|-----------|-------------|
-| 0 | Opposite-pole conflict gate | Disqualifies archetypes that are a qualitative mismatch (e.g. max-extraversion user → block 隐身猫) |
+| 0 | Opposite-pole conflict gate | Disqualifies archetypes that are a qualitative mismatch (e.g. max-extraversion user → block 静音模式猫) |
 | 1 | Signature thresholds | Trait-based pre-filter bonuses/penalties |
 | 2 | Archetype veto rules + confusion pair gates | Hard-caps via `ARCHETYPE_VETO_RULES` map |
 
@@ -443,9 +443,9 @@ Two equally-weighted components:
 
 ```typescript
 // Energy lookup (from ARCHETYPE_ENERGY in archetypeChemistry.ts):
-// 开心柯基: 95, 太阳鸡: 90, 夸夸豚: 85, 机智狐: 82,
-// 淡定海豚: 75, 织网蛛: 72, 暖心熊: 70, 灵感章鱼: 68,
-// 沉思猫头鹰: 55, 定心大象: 52, 稳如龟: 38, 隐身猫: 30
+// 气氛组柯基: 95, 情绪稳定鸡: 90, 捧场王仓鼠: 85, 探宝雷达狐: 82,
+// 读空气海豚: 75, 社交裁缝蛛: 72, 情绪树洞考拉: 70, 脑洞喷泉章鱼: 68,
+// 追问猫头鹰: 55, 定海神针大象: 52, 慢半拍龟: 38, 静音模式猫: 30
 
 avgScore     = avgEnergy in [50,70] ? 100 : max(0, 100 − |avgEnergy − nearest boundary| × 2)
 harmonyPenalty = max(0, stdDev − 20)   // no penalty for natural spread (stdDev ≤ 20)
@@ -454,9 +454,9 @@ energyBalance = round((avgScore + harmonyScore) / 2)
 ```
 
 **Why this matters:**
-- All-high-energy groups (4× 开心柯基/太阳鸡): exhausting, loud, everyone talking at once
-- All-low-energy groups (4× 稳如龟/隐身猫): awkward silences, low engagement
-- Ideal mix: 1–2 energisers (开心柯基/太阳鸡) + 2–3 mid-range + 1 anchor (定心大象/稳如龟)
+- All-high-energy groups (4× 气氛组柯基/情绪稳定鸡): exhausting, loud, everyone talking at once
+- All-low-energy groups (4× 慢半拍龟/静音模式猫): awkward silences, low engagement
+- Ideal mix: 1–2 energisers (气氛组柯基/情绪稳定鸡) + 2–3 mid-range + 1 anchor (定海神针大象/慢半拍龟)
 
 > **DB note:** Stored in `event_pool_groups.energy_balance` (integer column). The TypeScript interface field `communicationBalance` maps to this column — the name is a legacy alias from a prior renaming.
 
@@ -544,18 +544,18 @@ Final pair score = `(matrix[a][b] + matrix[b][a]) / 2`
 
 | Archetype | Energy | Band |
 |-----------|--------|------|
-| 开心柯基 | 95 | Very High |
-| 太阳鸡 | 90 | Very High |
-| 夸夸豚 | 85 | High |
-| 机智狐 | 82 | High |
-| 淡定海豚 | 75 | Medium-High |
-| 织网蛛 | 72 | Medium-High |
-| 暖心熊 | 70 | Medium |
-| 灵感章鱼 | 68 | Medium |
-| 沉思猫头鹰 | 55 | Low-Medium |
-| 定心大象 | 52 | Low-Medium |
-| 稳如龟 | 38 | Low |
-| 隐身猫 | 30 | Very Low |
+| 气氛组柯基 | 95 | Very High |
+| 情绪稳定鸡 | 90 | Very High |
+| 捧场王仓鼠 | 85 | High |
+| 探宝雷达狐 | 82 | High |
+| 读空气海豚 | 75 | Medium-High |
+| 社交裁缝蛛 | 72 | Medium-High |
+| 情绪树洞考拉 | 70 | Medium |
+| 脑洞喷泉章鱼 | 68 | Medium |
+| 追问猫头鹰 | 55 | Low-Medium |
+| 定海神针大象 | 52 | Low-Medium |
+| 慢半拍龟 | 38 | Low |
+| 静音模式猫 | 30 | Very Low |
 
 Ideal group mean energy: **50–70** (balanced, energised but not chaotic).  
 Default fallback when archetype is missing: **60** (mid-range neutral).

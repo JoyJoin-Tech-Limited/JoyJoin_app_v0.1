@@ -11,6 +11,7 @@ import type { NeonDatabase } from "drizzle-orm/neon-serverless";
 import { queueSemanticProfileRecompute } from "../../userSemanticProfileService";
 import { normalizeProfileInterests, getInterestById, validateTelemetry } from "@shared/interests";
 import { updateProfileSchema, updatePersonalitySchema, updateFullProfileSchema } from "@shared/schema";
+import { logger } from "../../lib/logger";
 
 const interestSelectionSchema = z.object({
   topicId: z.string(),
@@ -112,7 +113,7 @@ export function registerProfileRoutes(app: Express): void {
         connectionsMade,
       });
     } catch (error) {
-      console.error("Error fetching profile stats:", error);
+      logger.error("Error fetching profile stats:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch profile stats" });
     }
   });
@@ -131,7 +132,7 @@ export function registerProfileRoutes(app: Express): void {
       
       res.json(user);
     } catch (error) {
-      console.error("Error updating profile:", error);
+      logger.error("Error updating profile:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
@@ -153,7 +154,7 @@ export function registerProfileRoutes(app: Express): void {
 
       // Log warnings for observability
       if (normalized.warnings.length > 0) {
-        console.log(`[InterestsTopics] Normalization warnings for user ${userId}:`, normalized.warnings);
+        logger.info('Normalization warnings', { userId, warnings: normalized.warnings });
       }
 
       const normalizedData = {
@@ -167,7 +168,7 @@ export function registerProfileRoutes(app: Express): void {
       
       res.json(user);
     } catch (error) {
-      console.error("Error updating interests and topics:", error);
+      logger.error("Error updating interests and topics:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update interests and topics" });
     }
   });
@@ -184,7 +185,7 @@ export function registerProfileRoutes(app: Express): void {
       // Validate using Zod schema
       const validationResult = userInterestsDataSchema.safeParse(interests);
       if (!validationResult.success) {
-        console.error("[InterestsAPI] Validation failed:", validationResult.error.issues);
+        logger.error('Validation failed', { issues: validationResult.error.issues });
         return res.status(400).json({ 
           error: "Invalid interests data structure",
           details: process.env.NODE_ENV === 'development' ? validationResult.error.issues : undefined
@@ -261,7 +262,7 @@ export function registerProfileRoutes(app: Express): void {
         },
       });
     } catch (error) {
-      console.error("Error saving user interests:", error);
+      logger.error("Error saving user interests:", { error: error instanceof Error ? error.message : String(error) });
       const errorMessage = process.env.NODE_ENV === 'development' && error instanceof Error 
         ? error.message 
         : "Failed to save interests";
@@ -284,7 +285,7 @@ export function registerProfileRoutes(app: Express): void {
 
       res.json(result[0]);
     } catch (error) {
-      console.error("Error fetching user interests:", error);
+      logger.error("Error fetching user interests:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch interests" });
     }
   });
@@ -309,7 +310,7 @@ export function registerProfileRoutes(app: Express): void {
 
       res.json(result[0]);
     } catch (error) {
-      console.error("Error fetching interest summary:", error);
+      logger.error("Error fetching interest summary:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch interest summary" });
     }
   });
@@ -369,7 +370,7 @@ export function registerProfileRoutes(app: Express): void {
 
       res.json({ success: true, boostedCount });
     } catch (error) {
-      console.error("Error applying interest nudge:", error);
+      logger.error("Error applying interest nudge:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to apply interest nudge" });
     }
   });
@@ -399,11 +400,11 @@ export function registerProfileRoutes(app: Express): void {
       });
 
       // Instrumentation: log completion for opt-in rate metrics
-      console.info(`[InterestSignalBoost] completed userId=${userId} interestKey=${result.data.interestKey} style=${result.data.discussionStyle} depth=${result.data.conversationDepth} derivedEnthusiasm=${enthusiasmLevel}`);
+      logger.info(`[InterestSignalBoost] completed userId=${userId} interestKey=${result.data.interestKey} style=${result.data.discussionStyle} depth=${result.data.conversationDepth} derivedEnthusiasm=${enthusiasmLevel}`);
 
       res.json({ success: true, data: signal });
     } catch (error) {
-      console.error("Error upserting interest signal:", error);
+      logger.error("Error upserting interest signal:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to save interest signal" });
     }
   });
@@ -413,7 +414,7 @@ export function registerProfileRoutes(app: Express): void {
       const signals = await storage.getUserInterestSignals(userId);
       res.json({ signals });
     } catch (error) {
-      console.error("Error fetching interest signals:", error);
+      logger.error("Error fetching interest signals:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to fetch interest signals" });
     }
   });
@@ -430,7 +431,7 @@ export function registerProfileRoutes(app: Express): void {
       
       res.json(user);
     } catch (error) {
-      console.error("Error updating personality:", error);
+      logger.error("Error updating personality:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update personality" });
     }
   });
@@ -440,7 +441,7 @@ export function registerProfileRoutes(app: Express): void {
       const result = updateFullProfileSchema.safeParse(req.body);
       
       if (!result.success) {
-        console.error(`[Profile PATCH] Validation failed for user ${userId}:`, JSON.stringify(result.error.issues, null, 2));
+        logger.error('Validation failed', { userId, issues: result.error.issues });
         return res.status(400).json({ error: result.error });
       }
 
@@ -509,7 +510,7 @@ export function registerProfileRoutes(app: Express): void {
       //   });
       //   // Log warnings for observability
       //   if (normalized.warnings.length > 0) {
-      //     console.log(`[Profile] Interest normalization warnings for user ${userId}:`, normalized.warnings);
+      // logger.info(`[Profile] Interest normalization warnings for user ${userId}:`, normalized.warnings);
       //   }
       //   profileData.interestsTop = normalized.interestsTop.length > 0 ? normalized.interestsTop : undefined;
       //   profileData.primaryInterests = normalized.primaryInterests.length > 0 ? normalized.primaryInterests : undefined;
@@ -520,7 +521,7 @@ export function registerProfileRoutes(app: Express): void {
       if (profileData.interestsTelemetry) {
         const telemetryResult = validateTelemetry(profileData.interestsTelemetry);
         if (!telemetryResult.valid) {
-          console.log(`[Profile] Invalid telemetry for user ${userId}:`, telemetryResult.errors);
+          logger.info('Invalid telemetry', { userId, errors: telemetryResult.errors });
           // Log and truncate oversized/invalid telemetry rather than reject
           profileData.interestsTelemetry = telemetryResult.data ?? undefined;
         } else {
@@ -544,7 +545,7 @@ export function registerProfileRoutes(app: Express): void {
         res.json(user);
       }
     } catch (error) {
-      console.error("Error updating full profile:", error);
+      logger.error("Error updating full profile:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
@@ -595,7 +596,7 @@ export function registerProfileRoutes(app: Express): void {
       
       res.json({ success: true, industry: fullPath });
     } catch (error: any) {
-      console.error("Update industry error:", error);
+      logger.error("Update industry error:", { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ error: "Update failed", message: error.message });
     }
   });
@@ -665,34 +666,34 @@ export function registerProfileRoutes(app: Express): void {
 
       // Get archetype primary color
       const archetypePrimaryColors: Record<string, string> = {
-        "机智狐": "#FF6B6B",
-        "开心柯基": "#FFD93D",
-        "暖心熊": "#FFA07A",
-        "织网蛛": "#9B59B6",
-        "夸夸豚": "#FF69B4",
-        "太阳鸡": "#FFA500",
-        "淡定海豚": "#4FC3F7",
-        "沉思猫头鹰": "#8B4789",
-        "稳如龟": "#2E7D32",
-        "隐身猫": "#757575",
-        "定心大象": "#5C6BC0",
-        "灵感章鱼": "#AB47BC"
+        "fox": "#FF6B6B",
+        "corgi": "#FFD93D",
+        "koala": "#FFA07A",
+        "spider": "#9B59B6",
+        "hamster_praise": "#FF69B4",
+        "rooster": "#FFA500",
+        "dolphin_calm": "#4FC3F7",
+        "owl": "#8B4789",
+        "turtle": "#2E7D32",
+        "cat": "#757575",
+        "elephant": "#5C6BC0",
+        "octopus": "#AB47BC"
       };
 
       // Get default gradients for each archetype
       const archetypeGradients: Record<string, string> = {
-        '开心柯基': 'from-yellow-500 via-orange-500 to-red-500',
-        '太阳鸡': 'from-amber-500 via-yellow-500 to-orange-500',
-        '夸夸豚': 'from-cyan-500 via-blue-500 to-indigo-500',
-        '机智狐': 'from-orange-500 via-red-500 to-pink-500',
-        '淡定海豚': 'from-blue-500 via-indigo-500 to-purple-500',
-        '织网蛛': 'from-purple-500 via-pink-500 to-fuchsia-500',
-        '暖心熊': 'from-rose-500 via-pink-500 to-red-500',
-        '灵感章鱼': 'from-violet-500 via-purple-500 to-indigo-500',
-        '沉思猫头鹰': 'from-slate-500 via-gray-500 to-zinc-500',
-        '定心大象': 'from-gray-500 via-slate-500 to-stone-500',
-        '稳如龟': 'from-green-500 via-emerald-500 to-teal-500',
-        '隐身猫': 'from-indigo-500 via-purple-500 to-violet-500',
+        'corgi': 'from-yellow-500 via-orange-500 to-red-500',
+        'rooster': 'from-amber-500 via-yellow-500 to-orange-500',
+        'hamster_praise': 'from-cyan-500 via-blue-500 to-indigo-500',
+        'fox': 'from-orange-500 via-red-500 to-pink-500',
+        'dolphin_calm': 'from-blue-500 via-indigo-500 to-purple-500',
+        'spider': 'from-purple-500 via-pink-500 to-fuchsia-500',
+        'koala': 'from-rose-500 via-pink-500 to-red-500',
+        'octopus': 'from-violet-500 via-purple-500 to-indigo-500',
+        'owl': 'from-slate-500 via-gray-500 to-zinc-500',
+        'elephant': 'from-gray-500 via-slate-500 to-stone-500',
+        'turtle': 'from-green-500 via-emerald-500 to-teal-500',
+        'cat': 'from-indigo-500 via-purple-500 to-violet-500',
       };
 
       res.json({
@@ -715,7 +716,7 @@ export function registerProfileRoutes(app: Express): void {
         }
       });
     } catch (error: any) {
-      console.error('[Share Card Data] Error:', error);
+      logger.error('[Share Card Data] Error:', error);
       res.status(500).json({ message: 'Failed to get share card data', error: error.message });
     }
   });

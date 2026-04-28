@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -133,12 +133,7 @@ export default function EventsPage() {
           ))
         ) : (
           <Card className='events-page__empty-state'>
-            <Image
-              className='events-page__empty-hero'
-              src='/assets/lovart/lovart-generic-empty.webp'
-              mode='aspectFit'
-              lazyLoad
-            />
+            <Text className='events-page__empty-emoji'>✨</Text>
             <Text className='events-page__empty-text'>
               {resolvedActiveTab === 'upcoming' ? '暂无待参加的活动' : '暂无已完成的活动'}
             </Text>

@@ -530,7 +530,7 @@ export default function PersonalityTestPage() {
 
   if (isLoading && !currentQuestion && !isComplete) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex flex-col">
+      <div className="no-scroll-container bg-background">
         {/* Sticky header skeleton - matches real OnboardingProgress */}
         <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
           <div className="flex items-center gap-3">
@@ -576,7 +576,7 @@ export default function PersonalityTestPage() {
   // Don't render anything if complete - redirect happens in useEffect
   if (isComplete) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
+      <div className="no-scroll-container bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">正在生成结果...</p>
@@ -589,7 +589,7 @@ export default function PersonalityTestPage() {
 
   if (error && !isLoading && !currentQuestion) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
+      <div className="no-scroll-container bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4 px-6 text-center">
           <p className="text-muted-foreground">加载题目失败，请检查网络后重试</p>
           <Button
@@ -613,7 +613,7 @@ export default function PersonalityTestPage() {
 
   if (!currentQuestion) {
     return (
-      <div className="h-screen overflow-hidden bg-background flex items-center justify-center">
+      <div className="no-scroll-container bg-background items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">准备题目中...</p>
@@ -634,7 +634,7 @@ export default function PersonalityTestPage() {
   const historyDisplayCurrent = isViewingHistory && historyViewIndex !== null ? (historyViewIndex + 1) : displayCurrent;
 
   return (
-    <div className="h-screen overflow-hidden bg-background flex flex-col">
+    <div className="no-scroll-container bg-background">
       {/* Transition Overlay - auto-dismissing Apple-style modal at question 8 milestone */}
       <TransitionOverlay
         isVisible={showMilestoneReward}

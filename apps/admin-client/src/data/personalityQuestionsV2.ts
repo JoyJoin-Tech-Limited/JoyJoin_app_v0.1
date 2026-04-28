@@ -116,7 +116,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "E", 
         text: "「听起来不错，等确认好信息后我再决定去不去」", 
-        traitScores: { C: 2, E: 1, X: -1 },  // V3新增：定心大象路径
+        traitScores: { C: 2, E: 1, X: -1 },  // V3新增：elephant路径
         tag: "谨慎确认"
       },
     ],
@@ -144,13 +144,13 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "C", 
         text: "默默递纸巾，全程不说话，用眼神表达理解", 
-        traitScores: { A: 2, C: 2, E: 2, P: 0 },  // V3优化：稳如龟路径
+        traitScores: { A: 2, C: 2, E: 2, P: 0 },  // V3优化：turtle路径
         tag: "无声陪伴"
       },
       { 
         value: "D", 
         text: "等情绪稳定后，巧妙引入轻松话题转移注意力", 
-        traitScores: { E: 3, X: -1, P: -1 },  // V3优化：稳如龟路径，移除X正分
+        traitScores: { E: 3, X: -1, P: -1 },  // V3优化：turtle路径，移除X正分
         tag: "氛围调控"
       },
     ],
@@ -178,7 +178,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "C", 
         text: "「嗯...让我想想」边想边组织语言，斟酌后才开口", 
-        traitScores: { C: 3, E: 2, X: -1, P: 0 },  // V3优化：沉思猫头鹰路径
+        traitScores: { C: 3, E: 2, X: -1, P: 0 },  // V3优化：owl路径
         tag: "稳健思考"
       },
       { 
@@ -190,7 +190,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "E", 
         text: "心里有想法，但想回去记录下来好好研究一下", 
-        traitScores: { O: 1, C: 2, E: 1, X: -1 },  // V3新增：沉思猫头鹰路径
+        traitScores: { O: 1, C: 2, E: 1, X: -1 },  // V3新增：owl路径
         tag: "深度研究"
       },
     ],
@@ -332,7 +332,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "B", 
         text: "认真听ta讲完，追问细节和ta的感受", 
-        traitScores: { A: 2, C: 2, E: 1, P: 0 },  // V3优化：暖心熊路径
+        traitScores: { A: 2, C: 2, E: 1, P: 0 },  // V3优化：koala路径
         tag: "专注倾听"
       },
       { 
@@ -344,7 +344,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "默默听着，觉得电影这种东西看缘分", 
-        traitScores: { E: 3, X: -2, P: -1 },  // V3优化：稳如龟/隐身猫路径
+        traitScores: { E: 3, X: -2, P: -1 },  // V3优化：turtle/cat路径
         tag: "随缘佛系"
       },
     ],
@@ -378,7 +378,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "「终于...」瘫在沙发上不想动，社交电量归零", 
-        traitScores: { E: 3, X: -3, P: -2 },  // V3优化：稳如龟/隐身猫路径
+        traitScores: { E: 3, X: -3, P: -2 },  // V3优化：turtle/cat路径
         tag: "彻底耗尽"
       },
       { 
@@ -424,7 +424,7 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "E", 
         text: "「踏实可靠型朋友，虽然话不多但很值得信赖！」", 
-        traitScores: { C: 3, E: 2, X: -1 },  // V3新增：定心大象路径
+        traitScores: { C: 3, E: 2, X: -1 },  // V3新增：elephant路径
         tag: "沉稳可信"
       },
     ],
@@ -458,13 +458,13 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "「我在旁边看你们玩也挺好的」保持距离", 
-        traitScores: { C: 2, E: 1, X: -1 },  // V3优化：隐身猫路径
+        traitScores: { C: 2, E: 1, X: -1 },  // V3优化：cat路径
         tag: "旁观为主"
       },
       { 
         value: "E", 
         text: "「让我先收集一下资料再决定要不要参与」", 
-        traitScores: { O: 1, C: 3, E: 1, X: -1 },  // V3新增：沉思猫头鹰路径
+        traitScores: { O: 1, C: 3, E: 1, X: -1 },  // V3新增：owl路径
         tag: "资料收集"
       },
     ],
@@ -498,13 +498,13 @@ export const personalityQuestionsV2: QuestionV2[] = [
       { 
         value: "D", 
         text: "「有点可惜...不过也没办法」接受现实", 
-        traitScores: { C: 2, E: 3, X: -2, P: -1 },  // V3优化：稳如龟/隐身猫路径
+        traitScores: { C: 2, E: 3, X: -2, P: -1 },  // V3优化：turtle/cat路径
         tag: "接受调整"
       },
       { 
         value: "E", 
         text: "「没关系，我来重新规划一下方案」", 
-        traitScores: { C: 3, E: 2 },  // V3新增：定心大象路径
+        traitScores: { C: 3, E: 2 },  // V3新增：elephant路径
         tag: "计划适应"
       },
     ],

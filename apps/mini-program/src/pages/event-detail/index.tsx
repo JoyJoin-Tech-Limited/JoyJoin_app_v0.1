@@ -1,11 +1,14 @@
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
+import { cdnAsset } from '../../lib/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { type BlindBoxEventDetail } from '@shared/api'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import JoyJoinIcon from '../../components/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import JoyJoinLoadingScreen from '../../components/JoyJoinLoadingScreen'
 import './index.scss'
 
 export default function EventDetailPage() {
@@ -13,7 +16,7 @@ export default function EventDetailPage() {
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
   const { isExiting, navigateBack } = useJoyJoinNavigation()
-  const supportQrSrc = '/assets/qr/customer-service-support.png'
+  const supportQrSrc = cdnAsset('/assets/qr/customer-service-support.png')
   const pageClass = `event-detail ${isExiting ? 'event-detail--exiting' : ''}`
 
   const { data: event, isLoading, error } = useQuery<BlindBoxEventDetail>({
@@ -24,11 +27,10 @@ export default function EventDetailPage() {
 
   if (authLoading || isLoading) {
     return (
-      <View className={pageClass}>
-        <View className='event-detail__loading'>
-          <Text className='event-detail__loading-text'>加载中…</Text>
-        </View>
-      </View>
+      <JoyJoinLoadingScreen
+        title='活动详情加载中…'
+        subtitle='小悦在帮你读取这场活动的信息'
+      />
     )
   }
 
@@ -38,7 +40,7 @@ export default function EventDetailPage() {
         <View className='event-detail__error'>
           <Image
             className='event-detail__error-hero'
-            src='/assets/lovart/lovart-generic-error.webp'
+            src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
             mode='aspectFit'
             lazyLoad
           />
@@ -67,18 +69,18 @@ export default function EventDetailPage() {
 
       <View className='event-detail__card'>
         <View className='event-detail__info-row'>
-          <Text className='event-detail__info-label'>📅 时间</Text>
+          <View className='event-detail__info-label'><JoyJoinIcon emoji='📅' size={24} /><Text>时间</Text></View>
           <Text className='event-detail__info-value'>{event.dateTime ?? '时间待定'}</Text>
         </View>
         {event.location ? (
           <View className='event-detail__info-row'>
-            <Text className='event-detail__info-label'>📍 地点</Text>
+            <View className='event-detail__info-label'><JoyJoinIcon emoji='📍' size={24} /><Text>地点</Text></View>
             <Text className='event-detail__info-value'>{event.location}</Text>
           </View>
         ) : null}
         {event.attendeeCount ? (
           <View className='event-detail__info-row'>
-            <Text className='event-detail__info-label'>👥 人数</Text>
+            <View className='event-detail__info-label'><JoyJoinIcon emoji='👥' size={24} /><Text>人数</Text></View>
             <Text className='event-detail__info-value'>{event.attendeeCount} 人</Text>
           </View>
         ) : null}

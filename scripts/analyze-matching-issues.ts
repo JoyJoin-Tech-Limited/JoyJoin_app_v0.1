@@ -20,40 +20,40 @@ const simulationResults = {
   similarMatchRate: 64,
   
   stableArchetypes: [
-    { name: "太阳鸡", hitRate: 100, avgConfidence: 75.8 },
-    { name: "夸夸豚", hitRate: 100, avgConfidence: 68.7 },
-    { name: "淡定海豚", hitRate: 100, avgConfidence: 63.8 },
-    { name: "暖心熊", hitRate: 80, avgConfidence: 69.4 },
-    { name: "定心大象", hitRate: 100, avgConfidence: 74.0 },
-    { name: "沉思猫头鹰", hitRate: 100, avgConfidence: 71.6 },
+    { name: "rooster", hitRate: 100, avgConfidence: 75.8 },
+    { name: "hamster_praise", hitRate: 100, avgConfidence: 68.7 },
+    { name: "dolphin_calm", hitRate: 100, avgConfidence: 63.8 },
+    { name: "koala", hitRate: 80, avgConfidence: 69.4 },
+    { name: "elephant", hitRate: 100, avgConfidence: 74.0 },
+    { name: "owl", hitRate: 100, avgConfidence: 71.6 },
   ],
   
   problematicArchetypes: [
     { 
-      name: "开心柯基", 
+      name: "corgi", 
       hitRate: 0, 
-      misclassifiedAs: "夸夸豚",
+      misclassifiedAs: "hamster_praise",
       targetProfile: { A: 72, C: 48, E: 62, O: 67, X: 96, P: 92 },
       measuredBias: { A: +23, C: +12, E: +3, O: +33, X: +4, P: +8 }
     },
     { 
-      name: "机智狐", 
+      name: "fox", 
       hitRate: 0, 
-      misclassifiedAs: "开心柯基",
+      misclassifiedAs: "corgi",
       targetProfile: { A: 53, C: 52, E: 58, O: 92, X: 82, P: 63 },
       measuredBias: { A: +32, C: +8, E: +17, O: +8, X: +18, P: +37 }
     },
     { 
-      name: "织网蛛", 
+      name: "spider", 
       hitRate: 20, 
-      misclassifiedAs: "暖心熊/淡定海豚",
+      misclassifiedAs: "koala/dolphin_calm",
       targetProfile: { A: 82, C: 72, E: 63, O: 68, X: 58, P: 62 },
       measuredBias: { A: +18, C: +28, E: +32, O: +27, X: +12, P: +28 }
     },
     { 
-      name: "灵感章鱼", 
+      name: "octopus", 
       hitRate: 0, 
-      misclassifiedAs: "沉思猫头鹰",
+      misclassifiedAs: "owl",
       targetProfile: { A: 48, C: 43, E: 57, O: 97, X: 58, P: 67 },
       measuredBias: { A: +17, C: +32, E: +8, O: +3, X: -18, P: +13 }
     },

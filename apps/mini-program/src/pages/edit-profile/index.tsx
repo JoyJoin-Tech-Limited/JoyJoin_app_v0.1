@@ -12,10 +12,8 @@ import { apiRequest } from '../../lib/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
 import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { logInfo, logError } from '../../lib/logger'
-import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/uiConstants'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
-import XiaoyueChatBubble from '../../components/XiaoyueChatBubble'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -207,14 +205,14 @@ export default function EditProfilePage() {
       // Invalidate auth cache so profile page refreshes
       invalidateAuth()
 
-      Taro.showToast({ title: '保存成功', icon: 'success', duration: TOAST_DEFAULT_MS })
+      Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 })
       setTimeout(() => {
         Taro.navigateBack({ fail: () => Taro.switchTab({ url: '/pages/profile/index' }) })
       }, 1000)
     } catch (err) {
       const msg = err instanceof Error ? err.message : '保存失败'
       logError('[EditProfile] Save failed', { message: msg })
-      Taro.showToast({ title: msg, icon: 'none', duration: TOAST_FATAL_MS })
+      Taro.showToast({ title: msg, icon: 'none', duration: 3000 })
     } finally {
       setIsSaving(false)
     }
@@ -234,16 +232,6 @@ export default function EditProfilePage() {
 
   return renderGate(
     <ScrollView className='edit-profile' scrollY enhanced showScrollbar={false}>
-      {/* Xiaoyue coaching bubble */}
-      <View className='edit-profile__coach'>
-        <XiaoyueChatBubble
-          content='随时更新你的资料，匹配会更精准哦。'
-          pose='pointing'
-          horizontal
-          showGlow
-        />
-      </View>
-
       {/* ── 基本信息 ── */}
       <View className='edit-profile__section'>
         <Text className='edit-profile__section-title'>基本信息</Text>

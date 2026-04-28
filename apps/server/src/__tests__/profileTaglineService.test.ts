@@ -35,7 +35,7 @@ describe('profileTaglineService', () => {
     });
 
     const result = await generateProfileTagline({
-      archetype: '机智狐',
+      archetype: 'fox',
       categoryHeat: { philosophy: 18, culture: 12 },
       intentKeys: ['make_friends', 'expand_network'],
     });
@@ -63,7 +63,7 @@ describe('profileTaglineService', () => {
     });
 
     const result = await generateProfileTagline({
-      archetype: '暖心熊',
+      archetype: 'koala',
       categoryHeat: { lifestyle: 9 },
       intentKeys: ['make_friends'],
     });
@@ -80,7 +80,7 @@ describe('profileTaglineService', () => {
     callSocialAIMock.mockRejectedValue(new Error('provider down'));
 
     const result = await generateProfileTagline({
-      archetype: '隐身猫',
+      archetype: 'cat',
       categoryHeat: { city: 7 },
       intentKeys: ['flexible'],
     });

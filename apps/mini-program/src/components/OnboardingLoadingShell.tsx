@@ -1,4 +1,5 @@
 import { View, Text, Image } from '@tarojs/components'
+import { useState, useEffect } from 'react'
 import type { XiaoyueExpressionId } from '../lib/xiaoyueExpressions'
 import { getXiaoyueExpressionAsset } from '../lib/xiaoyueExpressions'
 import Card from './Card'
@@ -20,8 +21,17 @@ export default function OnboardingLoadingShell({
   hint = '小悦正在把这一页铺好，马上就能继续。',
   xiaoyueExpression = 'loadingSystem',
 }: OnboardingLoadingShellProps) {
+  const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))
+  const [settled, setSettled] = useState(false)
+
+  // A4: settle animations after 6s
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 6000)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
-    <View className='onboarding-loading-shell'>
+    <View className={`onboarding-loading-shell ${settled ? 'onboarding-loading-shell--settled' : ''}`}>
       <View className='onboarding-loading-shell__content'>
         <Text className='onboarding-loading-shell__eyebrow'>{stepLabel}</Text>
         <Text className='onboarding-loading-shell__title'>{title}</Text>
@@ -31,7 +41,8 @@ export default function OnboardingLoadingShell({
           <Image
             className='onboarding-loading-shell__mascot'
             mode='aspectFit'
-            src={getXiaoyueExpressionAsset(xiaoyueExpression)}
+            src={imgSrc}
+            onError={() => setImgSrc('/assets/personality/xiaoyue/xiaoyue-loading-system.webp')}
           />
           <View className='onboarding-loading-shell__orbit'>
             {[1, 2, 3].map((item) => (

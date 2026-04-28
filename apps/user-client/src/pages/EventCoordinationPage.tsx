@@ -24,6 +24,7 @@ import {
 } from "@/lib/userFieldMappings";
 import { archetypeBgColors } from "@/lib/archetypeAvatars";
 import { archetypeConfig } from "@/lib/archetypes";
+import { archetypeRegistry } from "@shared/personality/archetypeRegistry";
 
 // Helper function to group messages by date
 function groupMessagesByDate(messages: Array<ChatMessage & { user: User }>) {
@@ -363,7 +364,7 @@ export default function EventCoordinationPage() {
                                           <span className="text-sm font-medium text-muted-foreground">{initial}</span>
                                         </div>
                                         <div>
-                                          <p className="font-semibold">{msg.user.archetype}</p>
+                                          <p className="font-semibold">{msg.user.archetype ? archetypeRegistry[msg.user.archetype]?.name ?? msg.user.archetype : ''}</p>
                                           <p className="text-xs text-muted-foreground">
                                             {msg.user.displayName || "用户"}
                                           </p>
