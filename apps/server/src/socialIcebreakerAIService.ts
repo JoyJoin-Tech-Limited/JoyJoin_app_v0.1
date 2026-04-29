@@ -30,6 +30,7 @@ import {
   buildAuctionLotsPrompt,
   buildMiniScriptFrameworkUserMessage,
   buildXiaoyueSessionPackPrompt,
+  buildQuipBattlePrompt,
   MINISCRIPT_FRAMEWORK_SYSTEM,
   WARMUP_TOPICS_PROMPT_VERSION,
   MICRO_CHALLENGES_PROMPT_VERSION,
@@ -42,7 +43,10 @@ import {
   XIAOYUE_COMMENT_PROMPT_VERSION,
 } from './ai/socialIcebreakerPrompts';
 import { selectMicroChallenges } from '@joyjoin/shared';
+import { getRandomQuipBattlePrompts, type QuipBattlePrompt } from '@shared/quipBattle';
 import { logger } from "./lib/logger";
+import { evaluateContent, formatQualityMetrics } from './ai/aiQualityGate';
+import type { JudgeFeatureType } from './ai/qualityJudgePrompts';
 
 type AIServiceResult<T> = {
   data: T;
@@ -51,6 +55,42 @@ type AIServiceResult<T> = {
 
 /** Re-export for downstream consumers that previously imported from this file. */
 export { XIAOYUE_COMMENT_PROMPT_VERSION, MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION };
+
+// ─── Quality Gate Integration (fire-and-forget telemetry) ────────────────────
+
+function fireAndForgetQualityGate(
+  content: string,
+  featureType: JudgeFeatureType,
+  traceId: string,
+  phase?: string,
+  eventType?: string,
+) {
+  // Don't block the response — evaluate async and log metrics to AITrace
+  evaluateContent(content, {
+    featureType,
+    phase,
+    eventType,
+    contentLanguage: 'zh',
+  }).then((result) => {
+    if (result) {
+      logAITrace({
+        traceId,
+        domain: 'icebreaker',
+        feature: `${featureType}_quality_gate`,
+        provider: 'deepseek',
+        model: 'deepseek-v4-flash',
+        latencyMs: 0,
+        success: result.action !== 'discard',
+        fallbackUsed: false,
+        fromCache: false,
+        promptVersion: 'judge-v2',
+        extra: formatQualityMetrics(featureType, result),
+      });
+    }
+  }).catch(() => {
+    // Silently ignore judge failures — don't fail the user request
+  });
+}
 
 function normalizeTopicDepthLevel(value: unknown): SocialTopicDepthLevel {
   if (value === 3) return 3;
@@ -234,6 +274,7 @@ export async function generateWarmupTopics(params: {
       logger.info(`[SocialIcebreakerAI] generateWarmupTopics provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, WARMUP_TOPICS_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'warmup', params.eventType);
       return {
         data: parsed.slice(0, 5).map((topic, index) => normalizeSocialTopic(topic, params.mood, index)),
         meta,
@@ -360,6 +401,7 @@ export async function generateMicroChallenges(params: {
       logger.info(`[SocialIcebreakerAI] generateMicroChallenges provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_micro_challenge', aiCorrelationId, 'micro_challenge', params.eventType);
       return { data: parsed.slice(0, 3), meta };
     }
     const latencyMs = Date.now() - t0;
@@ -412,6 +454,7 @@ export async function generateLieDetectiveStatements(params: {
       logger.info(`[SocialIcebreakerAI] generateLieDetectiveStatements provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, LIE_DETECTIVE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatements', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_lie_detective', aiCorrelationId, 'lie_detective');
       return { data: parsed, meta };
     }
     const latencyMs = Date.now() - t0;
@@ -605,6 +648,7 @@ ${auctionBlock}
       logger.info(`[SocialIcebreakerAI] generateRecapSummary provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_recap', aiCorrelationId, 'recap');
       return { data: parsed, meta };
     }
     const latencyMs = Date.now() - t0;
@@ -654,6 +698,9 @@ const FALLBACK_SESSION_PACK: XiaoyueSessionPack = {
     auction: { toneLine: '虚拟拍卖，脑洞越大越好', energyRescue: '没人出价？自己夸自己也算' },
     personality_dice: { toneLine: '人格骰子，看看敢不敢接', hostHint: '先从简单的来，别一上来就hard模式' },
     mini_script: { toneLine: '迷你剧本杀，今晚重头戏', hostHint: '提醒一下，记住自己的秘密和任务' },
+    quip_battle: { toneLine: '填空造句，秀出你的脑洞', hostHint: '越无厘头越好，没有标准答案' },
+    undercover_word: { toneLine: '谁是卧底，仔细观察', hostHint: '描述别太明显，也别太模糊' },
+    group_mirror: { toneLine: '匿名投票，看看大家眼中的你', hostHint: '轻松投，没有对错' },
     recap: { toneLine: '差不多了，回顾一下今晚' },
   },
   backupPrompts: [
@@ -813,16 +860,9 @@ export async function generateXiaoyueSessionPack(params: {
 
 // ─── Personality Dice ─────────────────────────────────────────────────────────
 
-type DominantTrait = 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
+import { getDaresForArchetype } from '@shared/personalityDiceDares';
 
-const DICE_CURATED: Record<DominantTrait, Omit<PersonalityDiceChallenge, 'userId' | 'displayName' | 'archetype' | 'dominantTrait'>> = {
-  X: { challengeTitle: '第一印象王', challengeBody: '用3个词形容在座每个人，不准重复，不准说"挺好的"', challengeEmoji: '🎤', difficulty: 'easy' },
-  A: { challengeTitle: '温暖派送员', challengeBody: '找出今晚让你感觉最舒服的人，当面告诉他为什么', challengeEmoji: '🤗', difficulty: 'medium' },
-  O: { challengeTitle: '奇葩体验家', challengeBody: '分享一件你最近做的、大部分人不会做的事', challengeEmoji: '🌟', difficulty: 'medium' },
-  C: { challengeTitle: '毒舌评委', challengeBody: '给今晚这局打个分，再说一个最想吐槽的点', challengeEmoji: '📋', difficulty: 'hard' },
-  E: { challengeTitle: '误解粉碎机', challengeBody: '有没有一件事，你觉得大家一直误会你了？现在说清楚', challengeEmoji: '💭', difficulty: 'medium' },
-  P: { challengeTitle: '快乐播报员', challengeBody: '说一件今晚让你开心的小事，越具体越好', challengeEmoji: '☀️', difficulty: 'easy' },
-};
+type DominantTrait = 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
 
 function getDominantTrait(traitScores?: Record<string, number>): DominantTrait {
   if (!traitScores) return 'P';
@@ -839,6 +879,27 @@ function getDominantTrait(traitScores?: Record<string, number>): DominantTrait {
   return best;
 }
 
+/** Build archetype-specific fallback using the v2 curated dare bank. */
+function buildArchetypeFallback(
+  p: { userId: string; displayName: string; archetype?: string; traitScores?: Record<string, number> },
+): PersonalityDiceChallenge {
+  const trait = getDominantTrait(p.traitScores);
+  const dares = getDaresForArchetype(p.archetype || 'corgi');
+  const dare = dares[Math.floor(Math.random() * dares.length)];
+  return {
+    userId: p.userId,
+    displayName: p.displayName,
+    archetype: p.archetype,
+    dominantTrait: trait,
+    challengeTitle: dare.title,
+    challengeBody: dare.body,
+    challengeEmoji: dare.emoji,
+    difficulty: dare.difficulty === 'easy' ? 'easy' : dare.difficulty === 'medium' ? 'medium' : 'hard',
+    passLine: dare.passLine,
+    passConsequence: dare.passConsequence,
+  };
+}
+
 export async function generatePersonalityDiceChallenges(participants: Array<{
   userId: string;
   displayName: string;
@@ -846,18 +907,8 @@ export async function generatePersonalityDiceChallenges(participants: Array<{
   traitScores?: Record<string, number>;
 }>): Promise<AIServiceResult<PersonalityDiceChallenge[]>> {
   const aiCorrelationId = createAiCorrelationId();
-  // Build curated fallbacks first
-  const fallbacks: PersonalityDiceChallenge[] = participants.map(p => {
-    const trait = getDominantTrait(p.traitScores);
-    const curated = DICE_CURATED[trait];
-    return {
-      userId: p.userId,
-      displayName: p.displayName,
-      archetype: p.archetype,
-      dominantTrait: trait,
-      ...curated,
-    };
-  });
+  // Build archetype-aware v2 fallbacks first
+  const fallbacks: PersonalityDiceChallenge[] = participants.map(p => buildArchetypeFallback(p));
 
   const { client, model, provider } = getClientForFunction('generatePersonalityDiceChallenges');
   const t0 = Date.now();
@@ -899,6 +950,7 @@ export async function generatePersonalityDiceChallenges(participants: Array<{
       logger.info(`[SocialIcebreakerAI] generatePersonalityDiceChallenges provider=${provider} latency=${latencyMs}ms`);
       const meta = buildLiveAIMeta(provider, PERSONALITY_DICE_PROMPT_VERSION, aiCorrelationId);
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generatePersonalityDiceChallenges', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_personality_dice', aiCorrelationId, 'personality_dice');
       return { data: participants.map((p, i) => ({
         userId: p.userId,
         displayName: p.displayName,
@@ -1053,6 +1105,7 @@ export async function generateAuctionLots(params: {
       fromCache: false,
       promptVersion: meta.promptVersion,
     });
+    fireAndForgetQualityGate(content, 'icebreaker_auction', aiCorrelationId, 'auction', params.eventType);
     return { data: normalizeAuctionLots(validated.data.lots), meta };
   } catch (error) {
     const latencyMs = Date.now() - t0;
@@ -1196,4 +1249,78 @@ export async function fetchMiniScriptFrameworkModelJson(params: {
   }
 
   return primary;
+}
+
+// ─── Quip Battle ─────────────────────────────────────────────────────────────
+
+export const QUIP_BATTLE_PROMPT_VERSION = 'social-quip-battle-v1';
+
+export async function generateQuipBattlePrompts(params: {
+  eventType: string;
+  participantCount: number;
+  participants: Array<{ displayName: string; archetype?: string }>;
+}): Promise<AIServiceResult<QuipBattlePrompt[]>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const { client, model, provider } = getClientForFunction('generateQuipBattlePrompts');
+  const t0 = Date.now();
+
+  // Always build fallback first
+  const fallbackPrompts = getRandomQuipBattlePrompts(3);
+
+  try {
+    const prompt = buildQuipBattlePrompt(params);
+
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.9,
+      max_tokens: 400,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) {
+      const meta = buildFallbackAIMeta('empty_response', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { data: fallbackPrompts, meta };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJsonPayloadForParse(content));
+    } catch {
+      const latencyMs = Date.now() - t0;
+      logger.warn(`[SocialIcebreakerAI] generateQuipBattlePrompts provider=${provider} latency=${latencyMs}ms: JSON parse failed, using fallback`);
+      const meta = buildFallbackAIMeta('parse_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { data: fallbackPrompts, meta };
+    }
+
+    if (Array.isArray(parsed) && parsed.length >= 3) {
+      const latencyMs = Date.now() - t0;
+      logger.info(`[SocialIcebreakerAI] generateQuipBattlePrompts provider=${provider} latency=${latencyMs}ms`);
+      const meta = buildLiveAIMeta(provider, QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'quip_battle', params.eventType);
+      return {
+        data: parsed.slice(0, 3).map((p: QuipBattlePrompt, i: number) => ({
+          id: p.id || `qb_${i + 1}`,
+          promptText: p.promptText || fallbackPrompts[i].promptText,
+          category: p.category || fallbackPrompts[i].category,
+        })),
+        meta,
+      };
+    }
+
+    const latencyMs = Date.now() - t0;
+    logger.warn(`[SocialIcebreakerAI] generateQuipBattlePrompts provider=${provider} latency=${latencyMs}ms: invalid response shape, using fallback`);
+    const meta = buildFallbackAIMeta('parse_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallbackPrompts, meta };
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    logger.error(`[SocialIcebreakerAI] generateQuipBattlePrompts error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
+    const meta = buildFallbackAIMeta('llm_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallbackPrompts, meta };
+  }
 }

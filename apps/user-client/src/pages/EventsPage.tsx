@@ -244,7 +244,7 @@ export default function EventsPage() {
 
   if (isLoading || isLoadingPoolRegistrations) {
     return (
-      <div className="min-h-screen bg-background pb-16 flex flex-col">
+      <div className="min-h-[100dvh] bg-background pb-16 flex flex-col">
         <MobileHeader title="活动" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -259,7 +259,7 @@ export default function EventsPage() {
 
   if (isEventsError || isPoolRegistrationsError) {
     return (
-      <div className="min-h-screen bg-background pb-16 flex flex-col">
+      <div className="min-h-[100dvh] bg-background pb-16 flex flex-col">
         <MobileHeader title="活动" />
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="max-w-sm w-full border border-dashed rounded-2xl bg-muted/20 p-6 text-center space-y-4">
@@ -294,7 +294,7 @@ export default function EventsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-[100dvh] bg-background pb-16">
       <MobileHeader title="活动" />
       
       <div className="py-4 space-y-4">

@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .coordination-help {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $color-bg-gradient;
 
   &__hero {

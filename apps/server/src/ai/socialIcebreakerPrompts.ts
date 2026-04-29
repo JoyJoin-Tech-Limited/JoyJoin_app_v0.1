@@ -212,20 +212,37 @@ export function buildPersonalityDicePrompt(params: {
 
 ${JSON.stringify(participantList, null, 2)}
 
+核心规则（Archetype-Aware v2）：
+- 每个人的挑战必须结合ta的archetype（原型）特征，让ta感到"这说的就是我"
+- 参考原型风格：
+  * 气氛组柯基 → 热场、破冰、带动气氛类挑战
+  * 情绪稳定鸡 → 温暖、鼓励、正面能量类挑战
+  * 捧场王仓鼠 → 夸奖、鼓励、发现别人优点类挑战
+  * 探宝雷达狐 → 观察、推理、发现细节类挑战
+  * 读空气海豚 → 感知气氛、调节节奏、平衡类挑战
+  * 社交裁缝蛛 → 连接他人、发现关系、织网类挑战
+  * 情绪树洞考拉 → 倾听、分享、温柔互动类挑战
+  * 脑洞喷泉章鱼 → 创意、无厘头、脑洞类挑战
+  * 追问猫头鹰 → 深度提问、观察、思考类挑战
+  * 定海神针大象 → 稳定、记忆、可靠类挑战
+  * 慢半拍龟 → 慢节奏、深度、反思类挑战
+  * 静音模式猫 → 优雅、观察、低调互动类挑战
+
 语气要求（活人感）：
 - challengeTitle像朋友起的绰号或玩笑，不要太正经
 - challengeBody像当面提出来的小捉弄，带语气词（"来，给大家表演一下...""敢不敢试试..."）
-- 可以结合该人特质调侃，但要善意不冒犯
+- 可以结合该人特质和原型调侃，但要善意不冒犯
 - 当代网络用语每人最多用1个（如：拿捏、整活、绝了、真香）
 - 禁止："请该同学完成以下任务"等课堂/团建腔
 
 内容要求：
-- 基于该人的人格特质(dominantTrait)
+- 基于该人的人格原型(archetype)和主导特质(dominantTrait)
 - 适合当场执行（1-2分钟内）
 - 有趣但不尴尬，不搞惩罚
+- 每个人都要有不同的挑战，不能重复
 
 请以JSON数组返回（顺序与输入一致）：
-[{"challengeTitle":"挑战名称","challengeBody":"挑战说明（20字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard"}]
+[{"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard"}]
 
 直接返回JSON数组，不要其他内容。`;
 }
@@ -322,4 +339,35 @@ export function buildXiaoyueSessionPackPrompt(params: {
     '  ]\n' +
     '}'
   );
+}
+
+// ─── Quip Battle Prompts ─────────────────────────────────────────────────────
+
+export function buildQuipBattlePrompt(params: {
+  participantCount: number;
+  eventType?: string;
+  participants: Array<{ displayName: string; archetype?: string }>;
+}): string {
+  const eventLabel = params.eventType ? `「${params.eventType}」` : '线下小局';
+  const participantList = params.participants
+    .map((p) => `${p.displayName}${p.archetype ? `（${p.archetype}）` : ''}`)
+    .join('、');
+
+  return `你是JoyJoin的社交喜剧编剧。为一场${eventLabel}（${params.participantCount}人）生成3个"机智对决"填空题。
+
+参与者：${participantList}
+
+要求：
+- 每个题目是一个带空格的句子，玩家填入搞笑答案
+- 题目要结合中国人的日常语境（工作、社交、外卖、租房、相亲等）
+- 题目要有"留白感"——空格处可以填很多不同的东西，越开放越好
+- 语气像朋友聚会时的随口吐槽，不要像考试题
+- 禁止使用敏感话题（政治、宗教、种族、性、疾病）
+- 当代网络用语每题最多1个
+- 每个题目15-30字，空格用"_____"表示
+
+请以JSON数组返回：
+[{"id":"qb_1","promptText":"如果_____有段位，你已经是王者了","category":"自嘲"},{"id":"qb_2","promptText":"...","category":"..."},{"id":"qb_3","promptText":"...","category":"..."}]
+
+直接返回JSON，不要其他内容。`;
 }

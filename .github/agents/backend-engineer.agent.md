@@ -2,6 +2,7 @@
 name: "Backend Engineer"
 description: "Use when adding or refactoring server-side routes, domain services, repositories, admin APIs, payment or event-pool endpoints, validation, middleware, or backend tests in apps/server. Trigger phrases: add a new API endpoint, implement a server route, add admin API, refactor storage.ts logic, set up RBAC on this route."
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: "Describe the backend workflow, route or domain files involved, auth or RBAC requirements, persistence needs, validation rules, test expectations, and any upstream product or orchestration context."
 agents: []
 handoffs:
@@ -32,13 +33,13 @@ Your default success criterion is a backend change that fits the repo's domain l
 ## Skill loading protocol
 
 Load skills explicitly based on the backend domain:
-- **New API route or service** → [`server-domain-architecture`](../../.github/skills/server-domain-architecture/SKILL.md)
-- **Auth, session, or webhook** → [`auth-session-and-safety-boundaries`](../../.github/skills/auth-session-and-safety-boundaries/SKILL.md)
-- **Payment or entitlement** → [`payment-entitlement-authority`](../../.github/skills/payment-entitlement-authority/SKILL.md)
-- **Database model or migration** → [`backend-models-standards`](../../.github/skills/backend-models-standards/SKILL.md) + [`database-migration-safety`](../../.github/skills/database-migration-safety/SKILL.md)
-- **Matching or personality engine** → [`matching-domain`](../../.github/skills/matching-domain/SKILL.md) + [`personality-system`](../../.github/skills/personality-system/SKILL.md)
-- **State machine or multi-step writes** → [`reliability-and-state-integrity`](../../.github/skills/reliability-and-state-integrity/SKILL.md)
-- **Bug fix or deterministic logic** → [`process-test-first`](../../.github/skills/process-test-first/SKILL.md)
+- **New API route or service** → [`server-domain-architecture`](../skills/server-domain-architecture/SKILL.md)
+- **Auth, session, or webhook** → [`auth-session-and-safety-boundaries`](../skills/auth-session-and-safety-boundaries/SKILL.md)
+- **Payment or entitlement** → [`payment-entitlement-authority`](../skills/payment-entitlement-authority/SKILL.md)
+- **Database model or migration** → [`backend-models-standards`](../skills/backend-models-standards/SKILL.md) + [`database-migration-safety`](../skills/database-migration-safety/SKILL.md)
+- **Matching or personality engine** → [`matching-domain`](../skills/matching-domain/SKILL.md) + [`personality-system`](../skills/personality-system/SKILL.md)
+- **State machine or multi-step writes** → [`reliability-and-state-integrity`](../skills/reliability-and-state-integrity/SKILL.md)
+- **Bug fix or deterministic logic** → [`process-test-first`](../skills/process-test-first/SKILL.md)
 
 ## Constraints
 
@@ -66,7 +67,7 @@ Load skills explicitly based on the backend domain:
 3. If `action: PAUSE_FOR_CONTRACT` → STOP. Do not edit files. Generate or negotiate a Sprint Contract first.
 4. If `action: PROCEED` → continue to Phase 1.
 
-**Reference:** [`harness-session-guard`](../../.github/skills/harness-session-guard/SKILL.md)
+**Reference:** [`harness-session-guard`](../skills/harness-session-guard/SKILL.md)
 
 ### Phase 1: Domain analysis
 

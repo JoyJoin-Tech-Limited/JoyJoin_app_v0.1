@@ -1,0 +1,25 @@
+skill: grill-me
+primary_ownership: >
+  Relentless one-question-at-a-time plan stress-test that walks every branch
+  of a decision tree with recommended answers.
+use_when:
+  - user says "grill me" about a plan or design
+  - user asks to stress-test, interrogate, or rigorously review a plan
+  - user wants every assumption challenged before execution begins
+do_not_use_when:
+  - no plan exists yet; scope is still ambiguous
+  - user wants open-ended brainstorming instead of structured interrogation
+  - task is a full kickoff discovery (use Researcher → Planner)
+strong_triggers:
+  - grill me
+  - stress-test my plan
+  - interview me about this design
+  - grill this plan
+  - interrogate this plan
+related_skills:
+  - skill: process-brainstorming
+    when: when the user wants divergent ideation instead of structured interrogation
+  - skill: task-creator
+    when: when the plan needs formal mission structuring and harness tier classification
+  - skill: lane-selection-governance
+    when: when deciding whether this plan needs HRC, DM, Kickoff, or Direct delivery

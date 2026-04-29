@@ -88,7 +88,7 @@ export default function ProfileSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       <div className="flex-1 container mx-auto px-4 py-6 max-w-md">
         <motion.div
           className="space-y-6 flex flex-col items-center"

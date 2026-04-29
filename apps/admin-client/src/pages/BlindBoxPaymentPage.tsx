@@ -464,7 +464,7 @@ export default function BlindBoxPaymentPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
+    <div className="min-h-[100dvh] relative overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400">
       {/* 背景装饰动画 */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
@@ -502,7 +502,7 @@ export default function BlindBoxPaymentPage() {
         <X className="h-6 w-6 text-white" />
       </button>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col min-h-[100dvh]">
         {/* 顶部动画标题 */}
         <div className="flex-1 flex items-center justify-center px-6 pt-16 pb-8">
           <motion.div

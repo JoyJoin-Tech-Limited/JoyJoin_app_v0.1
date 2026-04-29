@@ -657,7 +657,7 @@ export default function BlindBoxPaymentPage() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
         <Loader className="h-10 w-10 text-purple-500 animate-spin mb-4" />
         <p className="text-gray-600 dark:text-gray-400">正在加载支付信息…</p>
       </div>
@@ -667,7 +667,7 @@ export default function BlindBoxPaymentPage() {
   // Payment kill switch: only show maintenance after auth has resolved
   if (isAuthenticated && !paymentsEnabled) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-b from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 text-center">
         <button
           onClick={() => setLocation(closeDestination)}
           className="absolute top-4 right-4 bg-white/80 rounded-full p-2 shadow-md"
@@ -686,7 +686,7 @@ export default function BlindBoxPaymentPage() {
 
   if (isEntitlementResumeMode && !registrationReturnContext) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-emerald-50 to-sky-50 dark:from-emerald-950/20 dark:to-sky-950/20 p-6 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-b from-emerald-50 to-sky-50 dark:from-emerald-950/20 dark:to-sky-950/20 p-6 text-center">
         <Loader className="mb-4 h-10 w-10 animate-spin text-emerald-500" />
         <p className="text-gray-600 dark:text-gray-400">正在恢复刚才的报名进度…</p>
       </div>
@@ -733,7 +733,7 @@ export default function BlindBoxPaymentPage() {
         <X className="h-6 w-6 text-gray-700 dark:text-gray-300" />
       </button>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col min-h-[100dvh]">
         {/* 顶部动画标题 - 紧凑版本 */}
         <div className="flex-none flex items-center justify-center px-6 pt-12 pb-6">
           <motion.div

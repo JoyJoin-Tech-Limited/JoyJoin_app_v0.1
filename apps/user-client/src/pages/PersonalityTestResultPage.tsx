@@ -110,7 +110,7 @@ export default function PersonalityTestResultPage() {
   // ─── Loading State ───
   if (stage === 'loading') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4">
         <FancyLineLoadingScreen loop visible />
         <p className="text-lg text-muted-foreground animate-pulse">
           正在生成您的测试结果...
@@ -127,7 +127,7 @@ export default function PersonalityTestResultPage() {
   // ─── Stage Content Map ───
   const stageContent = useMemo<Record<ResultFlowStage, React.ReactNode>>(() => ({
     loading: (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4">
         <FancyLineLoadingScreen loop visible />
         <p className="text-lg text-muted-foreground animate-pulse">
           正在生成您的测试结果...

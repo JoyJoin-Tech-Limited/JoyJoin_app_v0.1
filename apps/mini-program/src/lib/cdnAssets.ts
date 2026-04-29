@@ -5,7 +5,7 @@
  * assets from CDN instead of bundling them into the WeChat package.
  *
  * Example:
- *   TARO_APP_CDN_BASE_URL=https://cdn.yuejuapp.com
+ *   TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static
  *
  * When unset, assets fall back to local paths (dev / self-hosted builds).
  */

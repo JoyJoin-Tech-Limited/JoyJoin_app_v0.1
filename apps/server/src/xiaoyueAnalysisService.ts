@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { XIAOYUE_PERSONA, GENDER_NEUTRAL } from './prompts';
+import { XIAOYUE_PERSONA, GENDER_NEUTRAL, XIAOYUE_PERSONA_PROMPT_VERSION } from './prompts';
 import { getDeepseekClient, getDeepseekModel } from './ai/deepseekClient';
 import { logger } from './lib/logger';
 
@@ -377,7 +377,7 @@ function getCacheKey(input: ArchetypeAnalysisInput): string {
     .slice(0, 2)
     .map((item) => `${item.archetype}:${Math.round(item.score)}`)
     .join('|');
-  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}`;
+  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}_v${XIAOYUE_PERSONA_PROMPT_VERSION}`;
 }
 
 function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
@@ -479,7 +479,7 @@ function extractJsonPayload(content: string): string {
 function buildFallbackAnalysisPayload(input: ArchetypeAnalysisInput): Omit<XiaoyueAnalysisResult, 'cached'> {
   const snapshot = deriveSocialSnapshot(input);
   const openingByBand: Record<ConfidenceBand, string> = {
-    high: `你身上这股${input.archetype}的劲儿挺明确，进到人群里会自然带出自己的节奏。`,
+    high: `你身上这股${input.archetype}的感觉挺明确，进到人群里会自然带出自己的节奏。`,
     medium: `你这次更像${input.archetype}这一挂，和人相处时会慢慢显出自己的节奏。`,
     low: `你身上像是站在两种社交节奏的交界处，这次更偏向${input.archetype}这边。`,
   };

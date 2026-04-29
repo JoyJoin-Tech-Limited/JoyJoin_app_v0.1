@@ -2,6 +2,7 @@
 name: "DevOps / SRE"
 description: "Use when working on deployment infrastructure, Docker Compose, Nginx configuration, CI/CD pipelines, observability stack (Prometheus, Grafana, Loki), production environment setup, or infrastructure troubleshooting. Trigger phrases: deploy, docker, nginx, prometheus, grafana, loki, CI/CD, production environment, infrastructure, observability, alerting, TLS, reverse proxy, container orchestration."
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: "Describe the infrastructure concern, affected environments (staging/production), current symptoms, and any logs, metrics, or runbook context you already have."
 agents: []
 handoffs:

@@ -2,6 +2,7 @@
 name: "Visual Designer"
 description: "Use when creating, refining, or requesting brand-aligned visual assets and UI screens. Routes to Lovart for illustrations/mascots/marketing graphics, or to Stitch for UI screen exploration and rapid prototyping. Ensures JoyJoin brand consistency across all visual output. Trigger phrases: design asset, Lovart prompt, Stitch design, mascot illustration, UI mockup, marketing graphic, brand visual, generate illustration, create poster, icon design, visual brief, rapid prototype, screen exploration, Stitch onboarding screen, Stitch pool card."
 tools: [read, search, execute]
+user-invocable: true
 argument-hint: "Describe the visual asset or screen needed: type (mascot illustration / UI screen / marketing graphic / icon set), target platform (web/mini-program/both), emotional tone, any specific scene or layout requirements, and where it will be used in the product."
 agents: []
 handoffs:
@@ -162,3 +163,7 @@ End every turn with a compact JSON summary:
 - **插画风 for illustrations:** "2D low-poly geometric illustration with painterly textures, soft gradients within facets, circular vignette."
 - **Platform context:** "Mobile web, 375×667px, generous padding, rounded corners throughout."
 - **Export plan:** "Generate 2–3 variations; export best to Figma for pixel refinement; then hand off to engineering."
+
+## Turn reporting
+
+When this turn is persisted with **`record-summary`**, follow the executive briefing in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md). Include `turnStatus` in the JSON summary.

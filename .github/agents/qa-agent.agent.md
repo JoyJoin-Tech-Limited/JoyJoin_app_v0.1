@@ -2,6 +2,7 @@
 name: "QA Agent"
 description: "Use when planning or running validation for risky changes, smoke-testing user journeys, identifying test gaps, or turning a feature change into a concrete verification checklist. Trigger phrases: test this feature, QA pass, smoke test, regression checklist, what should we verify."
 tools: [read, search, execute]
+user-invocable: true
 argument-hint: "Describe the feature or change, affected flows, current risks, environments available, whether you need a checklist, test plan, or execution summary, and any upstream implementation context."
 agents: []
 handoffs:

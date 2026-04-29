@@ -2,10 +2,10 @@
 @use '../../styles/mixins' as *;
 
 .payment-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   @include page-shell-padding(40rpx, 32rpx, 48rpx);
   position: relative;
-  overflow: hidden;
+  overflow: hidden; // design-audit:fixed — ScrollView now handles scrolling, but keep for backdrop containment
   background: linear-gradient(180deg, $color-bg-tint-warm 0%, $color-bg-tint-purple 40%, $color-surface 100%);
   display: flex;
   flex-direction: column;

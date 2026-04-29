@@ -235,7 +235,7 @@ export default function ProfilePage() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen pb-20 bg-epic-gradient">
+    <div className="min-h-[100dvh] pb-20 bg-epic-gradient">
       {/* ── Top navigation bar ── */}
       <MobileHeader title="我的" showSettings={true} />
 

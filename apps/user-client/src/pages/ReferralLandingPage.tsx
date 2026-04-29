@@ -25,7 +25,7 @@ export default function ReferralLandingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-accent/10">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-background to-accent/10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -33,7 +33,7 @@ export default function ReferralLandingPage() {
 
   if (error || !referral) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-accent/10">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-background to-accent/10">
         <Card className="max-w-md w-full">
           <CardHeader>
             <h2 className="text-xl font-semibold text-center">邀请码无效</h2>
@@ -63,7 +63,7 @@ export default function ReferralLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 p-4">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-background to-primary/5 p-4">
       <div className="max-w-md mx-auto pt-8 space-y-6">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-2">

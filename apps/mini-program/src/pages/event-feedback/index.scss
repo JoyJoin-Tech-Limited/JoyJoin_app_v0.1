@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .event-feedback {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $color-bg-gradient;
   padding: $container-padding;
 
@@ -198,7 +198,7 @@
     height: 32rpx;
     border-radius: 50%;
     background: $color-primary;
-    color: #fff;
+    color: $color-surface;
     font-size: 20rpx;
     @include flex-center;
   }

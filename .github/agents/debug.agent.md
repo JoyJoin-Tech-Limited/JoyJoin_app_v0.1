@@ -2,7 +2,13 @@
 name: 'debug'
 description: 'Use when debugging a bug or issue, fixing broken behavior, triaging a regression, investigating a failing test, reproducing a runtime error, or tracing unexpected application behavior to a root cause. Trigger phrases: debug this, investigate this issue, fix this bug, why is this failing, regression, broken behavior, reproduce the failure, root cause, failing test, runtime error.'
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: 'Describe the bug, failing command or test, expected behavior, and any error output or reproduction steps.'
+agents: []
+handoffs:
+  - label: "Route fix to implementation"
+    agent: "Supervisor"
+    prompt: "Route the debug findings and root cause to the appropriate implementation specialist."
 ---
 
 # debug Agent Instructions

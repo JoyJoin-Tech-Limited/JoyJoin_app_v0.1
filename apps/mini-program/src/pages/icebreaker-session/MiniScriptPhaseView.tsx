@@ -258,8 +258,8 @@ export function MiniScriptPhaseView({
               <Text className='icebreaker__ms-role-line icebreaker__ms-role--animate' style={{ animationDelay: '240ms' }}>表面：{myRole.alibi}</Text>
               {myRole.secretAgenda ? (
                 <View className='icebreaker__ms-role--animate' style={{ marginTop: '12rpx', paddingTop: '12rpx', borderTop: '1px dashed rgba(0,0,0,0.1)', animationDelay: '320ms' }}>
-                  <Text style={{ fontSize: '26rpx', color: '#e67e22', fontWeight: 500 }}>你的秘密</Text>
-                  <Text className='icebreaker__ms-role-line' style={{ color: '#e67e22' }}>{myRole.secretAgenda}</Text>
+                  <Text className='icebreaker__ms-secret-label'>你的秘密</Text>
+                  <Text className='icebreaker__ms-role-line icebreaker__ms-secret-text'>{myRole.secretAgenda}</Text>
                 </View>
               ) : null}
             </View>
@@ -335,17 +335,7 @@ export function MiniScriptPhaseView({
                   线索 {idx + 1}：{clue.text}
                 </Text>
                 {isNew && (
-                  <Text
-                    style={{
-                      fontSize: '20rpx',
-                      color: '#fff',
-                      background: '#8B5CF6',
-                      padding: '2rpx 10rpx',
-                      borderRadius: '8rpx',
-                      marginLeft: '8rpx',
-                      display: 'inline-block',
-                    }}
-                  >
+                  <Text className='icebreaker__ms-new-clue-badge'>
                     🔍 新线索
                   </Text>
                 )}
@@ -385,8 +375,8 @@ export function MiniScriptPhaseView({
               <Text className='icebreaker__ms-role-line'>表面：{myRole.alibi}</Text>
               {myRole.secretAgenda ? (
                 <View style={{ marginTop: '8rpx', paddingTop: '8rpx', borderTop: '1px dashed rgba(0,0,0,0.08)' }}>
-                  <Text style={{ fontSize: '24rpx', color: '#e67e22', fontWeight: 500 }}>你的秘密</Text>
-                  <Text className='icebreaker__ms-role-line' style={{ color: '#e67e22' }}>{myRole.secretAgenda}</Text>
+                  <Text className='icebreaker__ms-secret-label'>你的秘密</Text>
+                  <Text className='icebreaker__ms-role-line icebreaker__ms-secret-text'>{myRole.secretAgenda}</Text>
                 </View>
               ) : null}
             </View>

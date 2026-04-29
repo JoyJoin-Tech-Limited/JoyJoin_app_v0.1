@@ -2,7 +2,16 @@
 name: "Prompt Engineer"
 description: "Use when analyzing or rewriting prompts, improving system prompts, maintaining repo-resident prompt files, adding better examples, or tightening prompt structure for more reliable model behavior without exposing hidden chain-of-thought. Trigger phrases: improve this prompt, rewrite the system prompt, fix prompt structure, add better prompt examples, tune prompt behavior."
 tools: [read, search, edit]
+user-invocable: true
 argument-hint: "Paste the prompt or instruction set you want improved, plus any goals, constraints, or desired output format."
+agents: []
+handoffs:
+  - label: "Route prompt changes to AI Engineer"
+    agent: "AI Engineer"
+    prompt: "Integrate the improved prompt into the appropriate runtime path, respecting prompt versioning and fallback behavior."
+  - label: "Route to supervisor"
+    agent: "Supervisor"
+    prompt: "Route the prompt improvement work to the appropriate downstream specialist."
 ---
 
 # Prompt Engineer

@@ -42,7 +42,7 @@
 
 .personality-results {
   @include page-gradient-bg;
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   overflow: hidden;
 
@@ -60,7 +60,7 @@
     @include flex-center;
     @include overlay-padding($spacing-xl, $container-padding, $spacing-xl);
 
-    min-height: 100vh;
+    min-height: 100dvh;
     flex-direction: column;
     text-align: center;
     gap: $spacing-md;
@@ -94,7 +94,7 @@
   &__immersive-shell {
     @include overlay-padding($spacing-lg, $container-padding, $spacing-xl);
 
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -107,7 +107,6 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.86);
     letter-spacing: 4rpx;
-    text-transform: uppercase;
     margin-bottom: $spacing-sm;
   }
 
@@ -527,7 +526,7 @@
   }
 
   &__scroll {
-    height: 100vh;
+    height: 100dvh;
     box-sizing: border-box;
     padding: $spacing-lg 0 $spacing-2xl;
     @include safe-area-bottom-padding(padding-bottom, $spacing-2xl);
@@ -559,7 +558,6 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.84);
     letter-spacing: 2rpx;
-    text-transform: uppercase;
     margin-bottom: 10rpx;
   }
 
@@ -637,7 +635,6 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.78);
     letter-spacing: 2rpx;
-    text-transform: uppercase;
     margin-bottom: $spacing-sm;
   }
 
@@ -862,7 +859,6 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.78);
     letter-spacing: 2rpx;
-    text-transform: uppercase;
     margin-bottom: 8rpx;
   }
 
@@ -892,7 +888,6 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.78);
     letter-spacing: 2rpx;
-    text-transform: uppercase;
     margin-bottom: 8rpx;
   }
 
@@ -923,7 +918,7 @@
   &__pokemon-variant-swatch-label {
     font-size: 20rpx;
     font-weight: $font-weight-bold;
-    color: #ffffff;
+    color: $color-text-white;
     text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
     background: rgba(0, 0, 0, 0.25);
     padding: 4rpx 10rpx;
@@ -1169,7 +1164,7 @@
   &__pokemon-tap-hint-text {
     font-size: 22rpx;
     font-weight: $font-weight-semibold;
-    color: #ffffff;
+    color: $color-text-white;
     white-space: nowrap;
   }
 
@@ -1249,7 +1244,6 @@
     font-weight: $font-weight-bold;
     color: rgba($color-primary-dark, 0.78);
     letter-spacing: 2rpx;
-    text-transform: uppercase;
     margin-bottom: $spacing-sm;
   }
 

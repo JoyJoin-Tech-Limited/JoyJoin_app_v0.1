@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $color-bg-gradient;
 
   &__text {
@@ -17,7 +17,7 @@
 
 // ─── Authenticated discover ─────────────────────────────────────
 .discover-auth {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $color-bg-gradient;
 
   // ── Sticky header ─────────────────────────────────────────────
@@ -203,23 +203,23 @@
 
     // ── Quantized accent families (from archetypeColorTokens) ──
     &--accent-warm {
-      border-left: 4rpx solid #C79450;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#C79450, 0.06) 100%);
+      border-left: 4rpx solid $color-archetype-warm;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-warm, 0.06) 100%);
     }
 
     &--accent-cool {
-      border-left: 4rpx solid #C0A17B;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#C0A17B, 0.06) 100%);
+      border-left: 4rpx solid $color-archetype-cool;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-cool, 0.06) 100%);
     }
 
     &--accent-fire {
-      border-left: 4rpx solid #877B93;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#877B93, 0.06) 100%);
+      border-left: 4rpx solid $color-archetype-fire;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-fire, 0.06) 100%);
     }
 
     &--accent-calm {
-      border-left: 4rpx solid #8E8E88;
-      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba(#8E8E88, 0.06) 100%);
+      border-left: 4rpx solid $color-archetype-calm;
+      background: linear-gradient(155deg, rgba($color-surface, 0.98) 0%, rgba($color-archetype-calm, 0.06) 100%);
     }
   }
 
@@ -458,19 +458,19 @@
 
     // Family-driven accent colors (from archetypeColorTokens)
     .discover-auth__pool-card--accent-warm &--open {
-      background: #C79450;
+      background: $color-archetype-warm;
     }
 
     .discover-auth__pool-card--accent-cool &--open {
-      background: #C0A17B;
+      background: $color-archetype-cool;
     }
 
     .discover-auth__pool-card--accent-fire &--open {
-      background: #877B93;
+      background: $color-archetype-fire;
     }
 
     .discover-auth__pool-card--accent-calm &--open {
-      background: #8E8E88;
+      background: $color-archetype-calm;
     }
   }
 
@@ -632,6 +632,24 @@
 }
 
 // ── Archetype Glyph (global, used inside PoolCard) ──────────────
+// ── Reduced motion respect ──────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .discover-auth__pool-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .discover-auth__live-pulse {
+    animation: none;
+  }
+
+  .discover-auth__skeleton-shimmer {
+    animation: none;
+    background: $color-divider;
+  }
+}
+
 .archetype-glyph {
   display: inline-flex;
   align-items: center;

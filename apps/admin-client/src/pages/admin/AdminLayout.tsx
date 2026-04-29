@@ -40,7 +40,7 @@ export default function AdminLayout() {
   return (
     <AdminGuard>
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full">
+      <div className="flex min-h-[100dvh] w-full">
         <AdminSidebar />
         <div className="flex flex-1 flex-col">
           <header className="flex items-center justify-between border-b px-6 py-3">

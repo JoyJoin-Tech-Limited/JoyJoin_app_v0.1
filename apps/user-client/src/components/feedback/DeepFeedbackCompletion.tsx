@@ -9,7 +9,7 @@ interface DeepFeedbackCompletionProps {
 
 export default function DeepFeedbackCompletion({ onDone }: DeepFeedbackCompletionProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

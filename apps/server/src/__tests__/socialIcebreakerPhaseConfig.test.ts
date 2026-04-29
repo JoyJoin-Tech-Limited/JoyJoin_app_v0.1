@@ -57,9 +57,70 @@ describe('social icebreaker phase configuration', () => {
   });
 
   it('skips ineligible phases and continues to the next enabled phase', () => {
-    expect(
-      getNextEligiblePhase('micro_challenge', DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES, 2),
-    ).toBe('personality_dice');
+    const result = getNextEligiblePhase(
+      'micro_challenge',
+      DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      2,
+    );
+    expect(result).toBe('lie_detective');
+  });
+
+  it('respects run plans when state is passed', () => {
+    const state: SocialSessionState = {
+      socialSessionId: 'social_test',
+      icebreakerSessionId: 'test',
+      currentPhase: 'warmup',
+      hostUserId: 'host',
+      hostDisplayName: 'Host',
+      playerCount: 4,
+      phaseStartedAt: Date.now(),
+      sessionStartedAt: Date.now(),
+      completedPhases: [],
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      runPlan: {
+        version: 2,
+        segments: [
+          { phase: 'warmup', allocatedMinutes: 8, energyWeight: 1 },
+          { phase: 'micro_challenge', allocatedMinutes: 8, energyWeight: 2 },
+          { phase: 'mini_script', allocatedMinutes: 25, energyWeight: 3 },
+          { phase: 'recap', allocatedMinutes: 5, energyWeight: 1 },
+        ],
+        totalMinutes: 46,
+        compiledAt: new Date().toISOString(),
+        compilerId: 'test',
+      },
+    };
+    // With a run plan, lie_detective is skipped because it's not in the plan
+    const result = getNextEligiblePhase('micro_challenge', state);
+    expect(result).toBe('mini_script');
+  });
+
+  it('skips phases in run plan that need more players', () => {
+    const state: SocialSessionState = {
+      socialSessionId: 'social_test',
+      icebreakerSessionId: 'test',
+      currentPhase: 'warmup',
+      hostUserId: 'host',
+      hostDisplayName: 'Host',
+      playerCount: 2, // less than mini_script minPlayers (4)
+      phaseStartedAt: Date.now(),
+      sessionStartedAt: Date.now(),
+      completedPhases: [],
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      runPlan: {
+        version: 2,
+        segments: [
+          { phase: 'warmup', allocatedMinutes: 8, energyWeight: 1 },
+          { phase: 'mini_script', allocatedMinutes: 25, energyWeight: 3 },
+          { phase: 'recap', allocatedMinutes: 5, energyWeight: 1 },
+        ],
+        totalMinutes: 38,
+        compiledAt: new Date().toISOString(),
+        compilerId: 'test',
+      },
+    };
+    const result = getNextEligiblePhase('warmup', state);
+    expect(result).toBe('recap'); // mini_script skipped due to player count
   });
 
   it('cleans transient phase state while preserving recap inputs', () => {

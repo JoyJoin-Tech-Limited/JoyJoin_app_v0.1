@@ -67,7 +67,8 @@ type SocialFunction =
   | 'generateIceBreakers'           // matchExplanationService — MiniMax preferred (warm narrative copy)
   | 'analyzeComplexSemantics'      // hybridSemantic — DeepSeek default (structured JSON inference)
   | 'generateMiniScriptFramework' // MiniScript story framework JSON (MiniMax-first; DeepSeek json_object fallback)
-  | 'generatePoolCardHeadline';    // pool card AI headline — MiniMax preferred (warm creative copy)
+  | 'generatePoolCardHeadline'    // pool card AI headline — MiniMax preferred (warm creative copy)
+  | 'generateQuipBattlePrompts';   // quip battle prompts — creative fill-in-the-blank (flash, fallback-rich)
 
 type SocialFunctionRoutingPolicy = {
   preferredProvider: 'minimax' | 'deepseek';
@@ -113,6 +114,7 @@ const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolic
   generateIceBreakers: { preferredProvider: 'minimax', deepseekTier: 'flash' },
   generateMiniScriptFramework: { preferredProvider: 'minimax', deepseekTier: 'flash' },
   generatePoolCardHeadline: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateQuipBattlePrompts: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
 
   // ── Tier 2: Flash-thinking + max — complex analysis, validation ──
   analyzeComplexSemantics: {

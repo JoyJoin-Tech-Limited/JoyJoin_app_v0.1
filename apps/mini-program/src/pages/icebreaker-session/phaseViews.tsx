@@ -17,8 +17,12 @@ import { useEffect, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { buildSocialPath } from './icebreakerSessionModel'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import MomentCardView from './MomentCardView'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
+
+// Re-export expansion phase views
+export { default as QuipBattlePhaseView } from './QuipBattlePhaseView'
 
 export interface SessionParticipant {
   userId: string
@@ -69,6 +73,9 @@ const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
   personality_dice: '🎲',
   auction: '🎪',
   mini_script: '🎭',
+  quip_battle: '',
+  undercover_word: '',
+  group_mirror: '',
   recap: '✨',
   ended: '',
 }
@@ -1034,9 +1041,69 @@ export function RecapPhaseView({
         </Card>
       )}
 
+      {socialSessionId && (
+        <MomentCardCTA socialSessionId={socialSessionId} />
+      )}
+
       <Button variant='primary' className='icebreaker__recap-leave-btn' onClick={onLeave}>
         返回活动
       </Button>
     </View>
   )
+}
+// Append MomentCardCTA component
+
+// ---------------------------------------------------------------------------
+// Moment Card CTA (embedded in RecapPhaseView)
+// ---------------------------------------------------------------------------
+
+function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
+  const [showCard, setShowCard] = useState(false);
+  const [payload, setPayload] = useState<any>(null);
+
+  const handleOpen = async () => {
+    try {
+      const res = await apiRequest<any>({
+        path: buildSocialPath(socialSessionId, '/moment-card'),
+      });
+      if (res?.payload) {
+        setPayload(res.payload);
+        setShowCard(true);
+      }
+    } catch {
+      // Silently fail — Moment Card is a bonus, not a blocker
+    }
+  };
+
+  return (
+    <>
+      <Card
+        className='icebreaker__recap-section'
+        style={{ backgroundColor: '#1a1a2e', borderColor: '#ffd700' }}
+      >
+        <View style={{ display: 'flex', alignItems: 'center', gap: '16rpx' }}>
+          <View style={{ width: '40rpx', height: '40rpx', borderRadius: '20rpx', backgroundColor: '#ffd700' }} />
+          <View style={{ flex: 1 }}>
+            <Text className='icebreaker__recap-section-title' style={{ color: '#ffd700' }}>
+              生成专属回忆卡
+            </Text>
+            <Text className='icebreaker__recap-item' style={{ color: '#aaaaaa' }}>
+              保存今晚的专属记忆，分享给朋友
+            </Text>
+          </View>
+          <Button variant='primary' onClick={handleOpen}>
+            生成
+          </Button>
+        </View>
+      </Card>
+
+      {payload && (
+        <MomentCardView
+          payload={payload}
+          visible={showCard}
+          onClose={() => setShowCard(false)}
+        />
+      )}
+    </>
+  );
 }

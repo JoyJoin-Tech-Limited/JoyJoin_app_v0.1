@@ -2,12 +2,12 @@
 @use '../../styles/mixins' as *;
 
 .profile-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $color-bg-gradient;
 
   &__loading {
     @include flex-center;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   &__loading-text {
@@ -150,7 +150,7 @@
     @include flex-center;
     flex-direction: column;
     gap: $spacing-sm;
-    min-height: 100vh;
+    min-height: 100dvh;
     text-align: center;
   }
 

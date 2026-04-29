@@ -148,7 +148,7 @@ export default function EventFeedbackFlow() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">加载中...</p>
@@ -159,7 +159,7 @@ export default function EventFeedbackFlow() {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-muted-foreground">活动不存在</p>
@@ -174,7 +174,7 @@ export default function EventFeedbackFlow() {
 
   if (existingFeedback && currentStep !== "completion") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <Card>
           <CardContent className="p-6 text-center space-y-4">
             <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />

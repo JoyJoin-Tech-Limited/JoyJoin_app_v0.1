@@ -147,7 +147,7 @@ export function ResultStage({ viewModel, onContinue, isContinuing }: ResultStage
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       {/* ─ Hero: Premium Card ─ */}
       <PremiumCard
         archetypeName={viewModel.primaryArchetype}

@@ -17,8 +17,6 @@ Strong PR review checks both local code quality and system-level engineering qua
 
 This skill implements the **Harness Engineering Framework** as the mandatory review lens. Every PR review must evaluate the change against Harness pillars — not just whether the code is functionally correct.
 
----
-
 ## When to use this skill
 
 Use when asked to:
@@ -31,8 +29,6 @@ Use when asked to:
 - "evaluate against Harness framework"
 
 This skill applies to all PR reviews and code audit requests in this repository.
-
----
 
 ## Review scope
 
@@ -50,8 +46,6 @@ Every review must consider:
 | **Observability / auditability** | Is the change visible through logs, metrics, tracing, or audit records? |
 | **Architecture fit** | Does it place code in the right layer and respect domain boundaries? |
 
----
-
 ## Sequential review workflow
 
 Follow these steps in order:
@@ -62,7 +56,7 @@ Follow these steps in order:
 
 **2. Identify impacted domains and load relevant skills**
 - Determine which areas of the codebase are affected.
-- Load the relevant repo skills from `.github/skills/` for those domains (see Related skills/docs below).
+- Load the relevant repo skills from `.github/skills/` for those domains.
 
 **3. Review correctness and code quality**
 - Verify the change does what it claims.
@@ -78,69 +72,40 @@ Follow these steps in order:
 - Are tests present and adequate for the regression/invariant risk introduced?
 - Do CI guardrails still pass?
 - Are new or changed behaviours covered?
-- **Mini-program UI (`apps/mini-program`):** If the diff changes layout, spacing, or typography, confirm the author followed [`mini-program-frontend-excellence/references/pixel-precision.md`](../mini-program-frontend-excellence/references/pixel-precision.md): spec-exact values or 8rpx rhythm, and **WeChat DevTools** verification (or screenshots / written evidence if reviewers cannot run DevTools). **Block merge** on avoidable visual drift or missing verification when the change is user-visible.
-- **MCP-assisted review:**
-  - **GitHub MCP:** For PRs with CI concerns, use the **GitHub MCP server** (`github`) to check live workflow status, PR checks, and mergeability without leaving the review context.
-  - **Postgres MCP:** For PRs that change `schema.ts` or repository queries, use the **Postgres MCP server** (`postgres`) to verify the live database schema aligns with the code changes.
-  - **Playwright MCP:** For frontend PRs affecting critical user journeys, use the **Playwright MCP server** (`playwright`) to quickly validate navigation and interaction flows.
 
-**6. Provide constructive feedback and final verdict**
-- Group findings by severity.
-- Use the standard verdict format at the end of this skill.
+## Harness pillar evaluation (mandatory)
 
----
-
-## Harness Engineering Framework evaluation
-
-This section is **mandatory** for every review. Evaluate each pillar explicitly.
+For each pillar, ask the questions below and record a verdict: **Pass**, **Concern**, or **Fail**.
 
 ### Reliability
-- Does the change introduce partial-failure risk (e.g., side effects before a commit)?
-- Are retries, timeouts, and failure modes handled?
-- Does it maintain atomicity for multi-step operations?
-- Does it respect idempotency where needed?
+- Are failure paths handled? (timeouts, retries, partial failures, degraded modes)
+- Is the change idempotent where it needs to be?
+- Are transactions or atomic operations used for multi-step writes?
+- Could this change introduce a new single point of failure?
 
 ### Scalability
-- Does the change perform correctly under high concurrency?
-- Are there N+1 queries, unbounded loops, or missing pagination?
-- Does it introduce lock contention or single-threaded bottlenecks?
-- Does it scale with data size, user count, or request volume?
+- Does it add queries inside loops or unbounded scans?
+- Are new endpoints protected by rate limiting or resource caps?
+- Does it scale with user count, data size, or concurrency?
+- Are caches used appropriately?
 
 ### Security
-- Does it weaken authentication or authorization gates?
-- Does it violate fail-closed defaults?
-- Does it expose sensitive data in logs, responses, or error messages?
-- Does it handle secret/credential material correctly?
-- Are trust boundaries (user vs admin, internal vs external) respected?
+- Are auth checks present and fail-closed?
+- Are permissions checked at the right layer?
+- Are inputs validated and sanitized?
+- Are secrets or credentials exposed in code, logs, or error messages?
 
 ### Observability
-- Are errors, warnings, and key decisions logged with structured fields?
-- Are new operations traceable via request IDs or correlation headers?
-- Are new failure paths observable through metrics or alerts?
-- Are audit-worthy actions (auth, data mutation, payment events) recorded?
+- Are new code paths instrumented with logs or metrics?
+- Can failures be diagnosed from logs alone?
+- Are request IDs or trace contexts propagated?
+- Is there a metric or alert that would catch a regression?
 
 ### Maintainability / Architecture fit
-- Is code placed in the correct layer (route, domain, repository, shared)?
-- Does it respect existing domain boundaries from the repo's skills?
-- Is the abstraction level appropriate — not too thin, not too deep?
-- Does it drift from established patterns without justification?
-
----
-
-## Mandatory review checklist
-
-Work through these explicitly before submitting your verdict:
-
-- [ ] Does this change degrade reliability or introduce partial-failure risk?
-- [ ] Is the change observable through logs, metrics, tracing, or audit records where needed?
-- [ ] Does the design scale appropriately with traffic, data size, or concurrency?
-- [ ] Does it weaken auth, permissions, trust boundaries, or secret handling?
-- [ ] Does it preserve maintainable architecture and correct code placement?
-- [ ] Are tests adequate for the regression/invariant risk?
-- [ ] Are CI guardrails still passing?
-- [ ] **Mini-program UI only:** Pixel discipline and DevTools / evidence requirements satisfied per `pixel-precision.md` (when applicable)
-
----
+- Is the code placed in the right domain/layer?
+- Does it follow repo conventions and skill guidance?
+- Is it easy to test and change?
+- Does it introduce unnecessary coupling or duplication?
 
 ## Review focus and PR smells
 
@@ -162,69 +127,19 @@ Flag these patterns for closer inspection:
 - **Mini-program UI PR** — start with this skill, then load `mini-program-frontend-excellence` (especially `references/pixel-precision.md`) and `design-system-governance`; **block** avoidable spec drift, missing 8rpx rhythm when unspecced, or absent WeChat DevTools / screenshot evidence for user-visible layout changes.
 - **Onboarding routing PR** — start with this skill, then load `onboarding-state-architecture`; confirm server-owned `nextStep` remains the authority and that tests cover fallback/loop regressions.
 
----
-
 ## Reviewer guidelines
 
 - **Be constructive and specific.** Name the line, explain why it is risky, and suggest a concrete fix.
 - **Explain the risk, not just the rule.** "This can cause a double-charge on retry" is more useful than "missing idempotency".
 - **Prefer high-signal comments.** Skip stylistic nitpicks unless they affect readability significantly.
-- **Connect findings to docs.** When possible, reference the relevant repo skill or source-of-truth doc (e.g., "see `reliability-and-state-integrity` skill").
-- **Calibrate severity.** Distinguish blocking issues (must fix before merge) from suggestions (can follow up).
+- **Connect findings to docs.** When possible, reference the relevant repo skill or source-of-truth doc.
+- **Calibrate severity.** Distinguish blocking issues from suggestions.
 - **Prefer questions over commands.** “What happens if `items` is empty?” lands better than “This will fail if the list is empty.”
-- **Use collaborative language.** “Would it make sense to extract this?” invites discussion; “You must change this” closes it.
+- **Use collaborative language.** “Would it make sense to extract this?” invites discussion.
 - **Acknowledge good work.** A brief note on a well-designed section costs nothing and builds reviewer trust.
 - **PR size.** If the diff is above ~400 meaningful lines, ask the author to split it before deep review.
 
-### Severity labels
-
-Use inline labels to make priority explicit and reduce author guesswork:
-
-| Label | Meaning |
-|-------|---------|
-| `[blocking]` | Must fix before merge. Correctness, security, or reliability risk. |
-| `[concern]` | Should fix or discuss. Non-trivial risk that can be addressed in a follow-up with agreement. |
-| `[nit]` | Minor style or clarity point. Not blocking. Author can ignore with a short note. |
-| `[suggestion]` | Alternative approach worth considering. No action required. |
-| `[praise]` | Something done well. Acknowledge it explicitly. |
-
-What to review manually versus leave to tooling:
-- **Review manually:** logic correctness, edge cases, security, scalability, architecture fit, test coverage intent.
-- **Leave to tooling:** code formatting, import ordering, simple linting violations, spelling in non-user-facing identifiers.
-
----
-
-## Author-facing summary (optional)
-
-When the author or team wants a **stakeholder-readable** one-pager outside the GitHub comment thread (chat, standup, or async handoff), you may use the same narrative shape as the orchestration **executive briefing** in [`orchestration-turn-reporting`](../orchestration-turn-reporting/SKILL.md): one-line header, **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line**. For PR threads, the structured **Final verdict format** below remains the default.
-
----
-
-## Final verdict format
-
-End every review with this summary shape:
-
-```
-## Review verdict
-
-**Key findings:**
-- [finding 1 — severity: blocking / concern / minor]
-- [finding 2 — severity: ...]
-
-**Requested changes / recommendations:**
-- [specific, actionable request]
-- [specific, actionable request]
-
-**Test / validation note:**
-[Are tests adequate? What coverage is missing or required?]
-
-**Harness pillar verdicts:**
-- reliability: Pass / Concern / Fail
-- scalability: Pass / Concern / Fail
-- security: Pass / Concern / Fail
-- observability: Pass / Concern / Fail
-- maintainability / architecture fit: Pass / Concern / Fail
-```
+See [`references/reviewer-guide.md`](./references/reviewer-guide.md) for severity labels, author-facing summary format, and final verdict template.
 
 ## Troubleshooting
 
@@ -235,8 +150,6 @@ Common review pitfalls to watch for:
 - **Code is safe for one user but unsafe under concurrency** — single-user correctness does not imply concurrent safety; check for race conditions, missing transactions, and shared mutable state.
 - **Feature works but weakens fail-closed security behaviour** — a feature that "works" by relaxing an auth or permission check introduces risk even if no test fails.
 - **Change adds hidden operational burden** — a change may be deployable today but introduce unmaintainable complexity, missing runbook coverage, or invisible failure modes.
-
----
 
 ## Related skills / docs
 

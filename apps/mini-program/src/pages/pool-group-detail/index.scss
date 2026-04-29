@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .pool-group-detail {
-  min-height: 100vh;
+  min-height: 100dvh;
   @include page-shell-padding($spacing-lg, $container-padding, $spacing-xl);
   background:
     radial-gradient(circle at top, rgba($color-primary, 0.18), transparent 38%),
@@ -316,7 +316,7 @@
   }
 
   &__error {
-    min-height: 100vh;
+    min-height: 100dvh;
     @include page-shell-padding($spacing-2xl, $container-padding, $spacing-2xl);
     display: flex;
     flex-direction: column;

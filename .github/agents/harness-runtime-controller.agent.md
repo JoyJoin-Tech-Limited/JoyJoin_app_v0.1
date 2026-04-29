@@ -2,6 +2,7 @@
 name: "Harness Runtime Controller"
 description: "Use when a task requires the full Harness Engineering deliberation pipeline: PGE iterative refinement, Council Mode with Harness-pillar delegates, Consensus Synthesis, and optional Token Circulation for emergent consensus. Orchestrates a governed multi-agent chamber that operates entirely before user-facing output. Trigger phrases: harness this, run harness deliberation, production harness, PGE pipeline, harness engineering review, token circulation, reliability scalability security review, full harness chamber, engineering quality gate."
 tools: [read, search, agent]
+user-invocable: true
 argument-hint: "Describe the task scope, affected workspaces/domains, why Harness deliberation is warranted, and which mode to use: pge-council (default), council-only, or token-ring."
 agents: ["Principal Software Engineer", "Backend Engineer", "Verifier", "Launch Readiness Agent", "debug", "AI Engineer", "QA Agent", "Database Schema & Migration Auditor"]
 handoffs:

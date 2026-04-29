@@ -2,6 +2,7 @@
 name: "AI Engineer"
 description: "Use when adding or reviewing runtime AI features, provider routing, prompt metadata, fallback behavior, AI trace logging, or safety boundaries around LLM-backed services in apps/server. Trigger phrases: add an LLM call, promptVersion, AITrace, shadow mode, fallbackUsed, provider routing."
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: "Describe the AI-backed feature, server files involved, provider or routing requirements, fallback expectations, validation needs, and any upstream product or orchestration context."
 agents: []
 handoffs:

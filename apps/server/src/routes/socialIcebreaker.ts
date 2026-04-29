@@ -21,6 +21,7 @@ import {
   generatePersonalityDiceChallenges,
   generateAuctionLots,
   generateXiaoyueSessionPack,
+  generateQuipBattlePrompts,
 } from '../socialIcebreakerAIService';
 import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
@@ -29,6 +30,7 @@ import {
   ensureSessionEnabledPhases,
   getServerEnabledPhases,
 } from '../socialIcebreakerPhaseConfig';
+import { DEFAULT_STANDARD_RUN_PLAN } from '@shared/phaseRegistry';
 import { socialIcebreakerAiFeedbackRepo } from '../repositories/socialIcebreakerAiFeedbackRepo';
 import { submitSocialIcebreakerAiFeedbackSchema } from '@shared/schema';
 import {
@@ -46,8 +48,13 @@ import {
   setLieTruths,
   getLieTruths,
   loadSessionLieTruths,
+  savePulseCheck,
+  getPhaseRatings,
+  logMomentCardInteraction,
+  getMomentCardStats,
 } from '../lib/socialIcebreakerStore';
 import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
+import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { logger } from '../lib/logger';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
@@ -153,6 +160,7 @@ router.post('/start', async (req: any, res) => {
     warmupReadyUserIds: [],
     lieDetectiveCompletedUserIds: [],
     autoAdvanceEnabled: true,
+    runPlan: DEFAULT_STANDARD_RUN_PLAN,
   };
 
   try {
@@ -490,8 +498,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  const resolvedEnabledPhases = ensureSessionEnabledPhases(state);
-  const effectiveNextPhase = getNextEligiblePhase(currentPhase, resolvedEnabledPhases, state.playerCount);
+  const effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
 
   if (!state.completedPhases.includes(currentPhase)) {
     state.completedPhases = [...(state.completedPhases || []), currentPhase];
@@ -557,7 +564,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
-  const { vibe } = req.body as { vibe: number };
+  const { vibe, phase } = req.body as { vibe: number; phase?: string };
 
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -569,6 +576,7 @@ router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  // Persist to session state (existing behavior)
   const pulseChecks = state.pulseChecks || [];
   const existingIdx = pulseChecks.findIndex((p: PulseCheckResult) => p.userId === userId);
   const vibeValue = vibe as 1 | 2 | 3;
@@ -580,6 +588,12 @@ router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
   state.pulseChecks = pulseChecks;
   await updateSession(socialSessionId, state);
 
+  // Persist to DB for analytics (new v2 instrumentation)
+  const phaseName = phase || state.currentPhase || 'unknown';
+  await savePulseCheck(socialSessionId, userId, phaseName, vibe).catch(() => {
+    // Fire-and-forget: don't fail the user request if DB write fails
+  });
+
   const voteCount = pulseChecks.length;
   const averageVibe = pulseChecks.reduce((sum: number, p: PulseCheckResult) => sum + p.vibe, 0) / voteCount;
 
@@ -588,6 +602,32 @@ router.post('/:socialSessionId/pulse-check', async (req: any, res) => {
     averageVibe: Math.round(averageVibe * 10) / 10,
     allVoted: voteCount >= state.playerCount,
   });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/moment-card-event
+// ---------------------------------------------------------------------------
+
+router.post('/:socialSessionId/moment-card-event', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { action, deviceInfo } = req.body as { action: string; deviceInfo?: Record<string, unknown> };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (!action || !['save', 'share', 'qr_scan'].includes(action)) {
+    return res.status(400).json({ error: 'action must be save, share, or qr_scan' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  await logMomentCardInteraction(socialSessionId, userId, action, deviceInfo).catch(() => {
+    // Fire-and-forget telemetry
+  });
+
+  return res.json({ success: true });
 });
 
 // ---------------------------------------------------------------------------
@@ -1254,6 +1294,183 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/quip-battle/generate
+// ---------------------------------------------------------------------------
+
+router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const roster = await listParticipants(socialSessionId);
+  const participantList = roster.map((p) => ({
+    displayName: p.displayName,
+    archetype: p.archetype,
+  }));
+
+  try {
+    const result = await generateQuipBattlePrompts({
+      eventType: state.eventType || '活动',
+      participantCount: roster.length,
+      participants: participantList,
+    });
+
+    state.quipBattlePrompts = result.data;
+    state.quipBattlePromptsMeta = result.meta;
+    await updateSession(socialSessionId, state);
+
+    return res.json({ prompts: result.data, meta: result.meta });
+  } catch (error) {
+    logger.error('[SocialIcebreaker] generateQuipBattlePrompts error:', { error: String(error) });
+    return res.status(500).json({ error: 'Failed to generate quip battle prompts' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/quip-battle/submit
+// ---------------------------------------------------------------------------
+
+router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { answers } = req.body as { answers: Array<{ promptId: string; answerText: string }> };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (!answers || !Array.isArray(answers) || answers.length === 0) {
+    return res.status(400).json({ error: 'answers array required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const participant = await getParticipant(socialSessionId, userId);
+  const displayName = participant?.displayName || '匿名';
+
+  const existingAnswers = state.quipBattleAnswers || [];
+  const newAnswers = answers.map((a) => ({
+    userId,
+    displayName,
+    promptId: a.promptId,
+    answerText: a.answerText.slice(0, 100),
+  }));
+
+  state.quipBattleAnswers = [...existingAnswers, ...newAnswers];
+
+  const submittedUserIds = state.quipBattleSubmittedUserIds || [];
+  if (!submittedUserIds.includes(userId)) {
+    submittedUserIds.push(userId);
+    state.quipBattleSubmittedUserIds = submittedUserIds;
+  }
+
+  await updateSession(socialSessionId, state);
+
+  return res.json({ submitted: true, totalAnswers: state.quipBattleAnswers.length });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/quip-battle/vote
+// ---------------------------------------------------------------------------
+
+router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { votes } = req.body as { votes: Array<{ answerId: string; promptId: string }> };
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (!votes || !Array.isArray(votes)) {
+    return res.status(400).json({ error: 'votes array required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const existingVotes = state.quipBattleVotes || [];
+  const newVotes = votes.map((v) => ({
+    voterId: userId,
+    answerId: v.answerId,
+    promptId: v.promptId,
+  }));
+
+  // Filter out duplicate votes by same voter for same prompt
+  const voteKey = (v: any) => `${v.voterId}::${v.promptId}`;
+  const voteMap = new Map<string, any>();
+  for (const v of [...existingVotes, ...newVotes]) {
+    voteMap.set(voteKey(v), v);
+  }
+  state.quipBattleVotes = Array.from(voteMap.values());
+
+  const votedUserIds = state.quipBattleVotedUserIds || [];
+  if (!votedUserIds.includes(userId)) {
+    votedUserIds.push(userId);
+    state.quipBattleVotedUserIds = votedUserIds;
+  }
+
+  await updateSession(socialSessionId, state);
+
+  return res.json({ voted: true, totalVotes: state.quipBattleVotes.length });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/social-icebreaker/:socialSessionId/quip-battle/results
+// ---------------------------------------------------------------------------
+
+router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const prompts = state.quipBattlePrompts || [];
+  const answers = state.quipBattleAnswers || [];
+  const votes = state.quipBattleVotes || [];
+
+  // Compute results per prompt
+  const results = prompts.map((prompt: any) => {
+    const promptAnswers = answers.filter((a: any) => a.promptId === prompt.id);
+    const promptVotes = votes.filter((v: any) => v.promptId === prompt.id);
+
+    // Count votes per answer
+    const voteCounts: Record<string, number> = {};
+    for (const v of promptVotes) {
+      voteCounts[v.answerId] = (voteCounts[v.answerId] || 0) + 1;
+    }
+
+    // Find winner
+    let winnerUserId = '';
+    let winnerDisplayName = '';
+    let maxVotes = 0;
+    for (const [answerId, count] of Object.entries(voteCounts)) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        const answer = promptAnswers.find((a: any) => `${a.userId}::${a.promptId}` === answerId);
+        winnerUserId = answer?.userId || '';
+        winnerDisplayName = answer?.displayName || '';
+      }
+    }
+
+    return {
+      promptId: prompt.id,
+      promptText: prompt.promptText,
+      answers: promptAnswers,
+      winnerUserId,
+      winnerDisplayName,
+      voteCount: maxVotes,
+    };
+  });
+
+  state.quipBattleResults = results;
+  state.quipBattleRevealed = true;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ results, allVoted: (state.quipBattleVotedUserIds || []).length >= (state.playerCount || 1) });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/social-icebreaker/:socialSessionId/recap
 // ---------------------------------------------------------------------------
 router.get('/:socialSessionId/recap', async (req: any, res) => {
@@ -1356,6 +1573,27 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     logger.error('[SocialIcebreaker] Failed to generate recap:', { error: String(error) });
     return res.status(500).json({ error: 'Failed to generate recap' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/social-icebreaker/:socialSessionId/moment-card
+// ---------------------------------------------------------------------------
+
+router.get('/:socialSessionId/moment-card', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const roster = await listParticipants(socialSessionId);
+
+  // Reuse recap medals if available, or build minimal set
+  const medals: Array<{ emoji: string; title: string; recipientDisplayName: string; description: string }> = [];
+
+  // Build payload
+  const payload = buildMomentCardPayload(state, roster, undefined, medals);
+
+  return res.json({ payload });
 });
 
 // ---------------------------------------------------------------------------

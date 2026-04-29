@@ -248,7 +248,7 @@ export default function InterestsTopicsPage() {
   const similarUsersCount = Math.floor(150 + selectedInterests.length * 30 + (primaryInterests.length * 50));
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       <RegistrationProgress 
         currentStage="interests" 
         currentStep={step}

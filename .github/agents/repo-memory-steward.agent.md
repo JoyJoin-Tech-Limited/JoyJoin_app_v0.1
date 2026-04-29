@@ -4,6 +4,13 @@ description: "Use when you want durable repo knowledge captured semi-automatical
 tools: [read, search, edit, execute]
 argument-hint: "Describe the lesson, constraint, or recurring truth to capture; list authoritative file paths that exist in the repo; say whether to draft a new candidate or update an existing note."
 agents: ["Workflow Governance Reviewer", "Supervisor"]
+handoffs:
+  - label: "Route validated candidate for review"
+    agent: "Workflow Governance Reviewer"
+    prompt: "Review the memory candidate draft for correctness, deduplication, and alignment with existing promoted memory."
+  - label: "Route to supervisor"
+    agent: "Supervisor"
+    prompt: "Route the validated memory candidate to the appropriate governance lane for promotion consideration."
 user-invocable: true
 ---
 

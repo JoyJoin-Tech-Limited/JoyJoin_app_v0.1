@@ -100,6 +100,103 @@ When Stitch generates screens with illustrations, inject these style descriptors
 - **Composition:** Circular vignettes for portraits, centered subjects, generous negative space
 - **Color treatment:** Natural warm palette; brand purple #8B5CF6 for key elements only
 
+## Configurable Design Dials
+
+Adapt the visual direction without rewriting the entire prompt. Set these dials at the top of every Stitch brief. Defaults are recommended starting points — adjust based on the screen's emotional job.
+
+### The Three Dials
+
+| Dial | Range | Default | What it controls |
+|------|-------|---------|------------------|
+| **DESIGN_VARIANCE** | 1–10 | 5 | Layout experimentation and symmetry breaking |
+| **MOTION_INTENSITY** | 1–10 | 4 | Animation depth and micro-interaction ambition |
+| **VISUAL_DENSITY** | 1–10 | 5 | Information per viewport and spacing tightness |
+
+### DESIGN_VARIANCE — Layout experimentation
+
+**1–3 (Predictable / Safe)**
+- Centered layouts, symmetrical grids, equal padding
+- Safe for: onboarding first steps, auth flows, legal screens, payment forms
+- Prompt injection: *"Centered, symmetrical layout with generous breathing room. Avoid experimental compositions."*
+
+**4–7 (Offset / Dynamic)**
+- Overlapping elements, varied image aspect ratios, left-aligned headers over centered data
+- Safe for: event discovery, personality results, profile screens
+- Prompt injection: *"Asymmetric offsets — left-aligned headline over centered content, overlapping mascot illustration with text, varied card sizes."*
+
+**8–10 (Experimental / Editorial)**
+- Masonry grids, fractional CSS Grid units, massive empty zones, broken grids
+- Safe for: marketing landing pages, campaign heroes, editorial content
+- Prompt injection: *"Editorial layout — broken grid, massive whitespace zones, asymmetric composition, overlapping layers."*
+
+### MOTION_INTENSITY — Animation depth
+
+**1–3 (Static / Tactile only)**
+- No automatic animations. Hover/active states only.
+- Safe for: settings panels, data tables, admin dashboards, forms
+- Prompt injection: *"Static design — no animated elements. Focus on clean states and tactile press feedback only."*
+
+**4–7 (Fluid / Polished)**
+- Smooth CSS transitions (200–300ms), subtle fade-ins, staggered list reveals
+- Safe for: card lists, navigation, tab switches, modal entrances
+- Prompt injection: *"Fluid motion — gentle fade-up entrances, smooth 250ms transitions between states, staggered list choreography."*
+
+**8–10 (Cinematic / Choreographed)**
+- Scroll-triggered reveals, parallax, complex entrance sequences
+- Safe for: onboarding heroes, personality reveal, celebratory moments
+- Prompt injection: *"Cinematic motion — scroll-triggered reveals, layered parallax, dramatic entrance choreography."*
+
+### VISUAL_DENSITY — Information per viewport
+
+**1–3 (Art Gallery / Airy)**
+- Lots of whitespace, huge section gaps, minimal elements per screen
+- Safe for: empty states, welcome screens, premium moments, first impressions
+- Prompt injection: *"Art gallery spacing — massive whitespace, single focal point per viewport, everything feels expensive and unhurried."*
+
+**4–7 (Daily App / Balanced)**
+- Standard spacing for functional screens, readable information hierarchy
+- Safe for: discovery feeds, event lists, profile views, settings
+- Prompt injection: *"Balanced app density — comfortable padding, clear hierarchy, readable without feeling sparse or cramped."*
+
+**8–10 (Cockpit / Dense)**
+- Tiny paddings, data-rich, 1px separators, packed information
+- Safe for: admin dashboards, analytics, data tables, advanced settings
+- Prompt injection: *"Data-dense cockpit — minimal padding, 1px separators, information-rich, every pixel carries data."*
+
+### Dial defaults by screen type
+
+| Screen type | DESIGN_VARIANCE | MOTION_INTENSITY | VISUAL_DENSITY | Rationale |
+|-------------|-----------------|------------------|----------------|-----------|
+| Onboarding welcome | 6 | 7 | 3 | Editorial first impression, cinematic reveal, airy |
+| Onboarding form | 2 | 3 | 5 | Predictable, static, balanced |
+| Event discovery | 5 | 4 | 5 | Offset cards, fluid lists, balanced |
+| Pool card | 4 | 3 | 6 | Consistent card rhythm, static, readable |
+| Personality results | 7 | 8 | 3 | Asymmetric hero, cinematic reveal, gallery spacing |
+| Profile view | 4 | 3 | 5 | Structured, static, balanced |
+| Empty / loading | 5 | 5 | 2 | Centered mascot, gentle motion, very airy |
+| Admin dashboard | 3 | 2 | 8 | Predictable grid, static, data-dense |
+| Payment / checkout | 2 | 3 | 5 | Centered, static, balanced |
+
+### How to inject dials into a prompt
+
+After the screen-type template, append the dial paragraph:
+
+```
+Design direction dials (set these explicitly):
+- Layout variance: [DESIGN_VARIANCE description from table above]
+- Motion depth: [MOTION_INTENSITY description from table above]
+- Visual density: [VISUAL_DENSITY description from table above]
+```
+
+**Example for personality results screen (variance 7, motion 8, density 3):**
+
+```
+Design direction dials:
+- Layout variance: Editorial layout — broken grid, massive whitespace zones, asymmetric composition with the personality card as a dominant focal point.
+- Motion depth: Cinematic motion — scroll-triggered reveals, layered parallax, dramatic entrance choreography for the archetype reveal moment.
+- Visual density: Art gallery spacing — massive whitespace, single focal point per viewport, everything feels expensive and unhurried.
+```
+
 ## Screen-Type Prompt Templates
 
 ### 1. Onboarding / Welcome Screen
@@ -220,6 +317,11 @@ Every Stitch design task routed through this skill should produce a brief:
 - Dimensions: [375×667 / other]
 - Mood: [warm / playful / premium / calm]
 
+## Design Dials
+- DESIGN_VARIANCE: [1–10] — [predictable / offset / experimental]
+- MOTION_INTENSITY: [1–10] — [static / fluid / cinematic]
+- VISUAL_DENSITY: [1–10] — [airy / balanced / dense]
+
 ## Prompt Draft
 [Paste the Stitch-ready conversational prompt here]
 
@@ -256,6 +358,7 @@ Every Stitch design task routed through this skill should produce a brief:
 - [ ] Archetype mascot is from the canonical 12 (not Koala or Hamster)
 - [ ] Illustration style vocabulary (插画风) injected for screens with artwork
 - [ ] Platform context (mobile web / mini-program) stated
+- [ ] Design dials set explicitly (DESIGN_VARIANCE, MOTION_INTENSITY, VISUAL_DENSITY) with rationale
 - [ ] Prompt is conversational, not mechanical — suitable for Stitch's AI
 - [ ] Export plan includes Figma for production-ready screens
 - [ ] Handoff target workspace (user-client / mini-program) is identified

@@ -242,7 +242,7 @@ export function SocialIcebreakerOrchestrator({
 
   if (isStarting || (isLoading && !state)) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <p className="text-muted-foreground text-sm">小悦正在准备破冰环节...</p>
       </div>
@@ -251,7 +251,7 @@ export function SocialIcebreakerOrchestrator({
 
   if (sessionExpired) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] gap-4 px-6 text-center">
         <p className="text-xl">⏰</p>
         <p className="font-semibold text-foreground">破冰会话已过期</p>
         <p className="text-sm text-muted-foreground">本次活动的破冰时间已结束，感谢参与！</p>
@@ -268,7 +268,7 @@ export function SocialIcebreakerOrchestrator({
   if (!state) {
     const isExpired = error?.kind === 'session_missing';
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 px-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] gap-6 px-6 text-center">
         <AlertCircle className="w-10 h-10 text-destructive" />
         <p className="text-foreground font-medium">
           {error?.message || '无法加载破冰会话'}

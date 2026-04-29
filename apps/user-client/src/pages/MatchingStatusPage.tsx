@@ -420,7 +420,7 @@ export default function MatchingStatusPage() {
 
   if (isRegistrationLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">正在加载……</p>
@@ -431,7 +431,7 @@ export default function MatchingStatusPage() {
 
   if (isRegistrationError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-6">
         <Card className="max-w-md w-full">
           <CardContent className="p-6 text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-destructive/10 mx-auto flex items-center justify-center">
@@ -455,7 +455,7 @@ export default function MatchingStatusPage() {
 
   if (!registration) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-6">
         <Card className="max-w-md w-full">
           <CardContent className="p-6 text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
@@ -480,7 +480,7 @@ export default function MatchingStatusPage() {
   // Check for special states
   if (registration.poolStatus === "cancelled") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-6">
         <Card className="max-w-md w-full">
           <CardContent className="p-6 text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-destructive/10 mx-auto flex items-center justify-center">
@@ -574,7 +574,7 @@ export default function MatchingStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 safe-area-bottom">
+    <div className="min-h-[100dvh] bg-background pb-20 safe-area-bottom">
       {/* Ambient glow effects */}
       <div 
         className="fixed top-0 left-0 w-[300px] h-[300px] pointer-events-none"

@@ -112,6 +112,9 @@ export const ICEBREAKER_XIAOYUE_EXPRESSION = {
   auction: 'matchSuccess',
   personality_dice: 'testSurprised',
   mini_script: 'coachGuide',
+  quip_battle: 'testSurprised',
+  undercover_word: 'testCurious',
+  group_mirror: 'matchSuccess',
   recap: 'thanksFeedback',
   ended: 'thanksFeedback',
 } as const satisfies Record<string, XiaoyueExpressionId>

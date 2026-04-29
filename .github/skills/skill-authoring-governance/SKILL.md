@@ -42,7 +42,37 @@ Core principles: **consistency, clarity, triggerability, progressive disclosure,
 | Troubleshooting | Common failure modes with concrete fixes |
 | Review checklist | Short checklist for verifying correct application of the skill |
 | References | Relative paths only |
-| Progressive disclosure | `SKILL.md` stays concise; depth moves to `references/` |
+| Progressive disclosure | `SKILL.md` stays concise; depth moves to `references/`. Hard limit: 100 lines. |
+
+### Description discipline
+
+The `description` field is **the only thing your agent sees** when deciding which skill to load.
+It is surfaced in the system prompt alongside all other installed skills.
+
+**Goal:** Give the agent just enough info to know:
+1. What capability this skill provides
+2. When/why to trigger it (specific keywords, contexts, file types)
+
+**Format:** max 1024 chars; first sentence = what it does; second sentence = "Use when [triggers]".
+
+**Good example:**
+```
+Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when user mentions PDFs, forms, or document extraction.
+```
+
+**Bad example:**
+```
+Helps with documents.
+```
+
+### When to add scripts
+
+Add utility scripts when:
+- The operation is deterministic (validation, formatting, code generation)
+- The same code would be generated repeatedly
+- Errors need explicit handling
+
+Scripts save tokens and improve reliability versus generated code.
 
 ---
 
@@ -50,12 +80,25 @@ Core principles: **consistency, clarity, triggerability, progressive disclosure,
 
 Follow this order for any skill task:
 
-1. **Identify request type** — new skill, update to existing, audit, normalization, or PR review
-2. **Verify structure and frontmatter** — folder name, `SKILL.md` exists, no `README.md`, frontmatter fields correct
-3. **Verify content quality** — use cases present, guidance is actionable, no padding
-4. **Verify patterns and methodology** — sequential workflow or other appropriate pattern is used and explained
-5. **Verify validation material** — examples exist, troubleshooting section present, review checklist present
-6. **Produce output** — new files, patch recommendations, or audit findings (see Output modes below)
+1. **Gather requirements** — ask the user (or yourself) about:
+   - What task or domain does the skill cover?
+   - What specific use cases should it handle?
+   - Does it need executable scripts or just instructions?
+   - Any reference materials to include?
+2. **Draft the skill** — create:
+   - `SKILL.md` with correct frontmatter and concise instructions
+   - `references/` directory if content exceeds 100 lines or has distinct domains
+   - `scripts/` directory if deterministic operations are needed
+3. **Review with user** — present the draft and ask:
+   - Does this cover your use cases?
+   - Anything missing or unclear?
+   - Should any section be more or less detailed?
+4. **Identify request type** — new skill, update to existing, audit, normalization, or PR review
+5. **Verify structure and frontmatter** — folder name, `SKILL.md` exists, no `README.md`, frontmatter fields correct
+6. **Verify content quality** — use cases present, guidance is actionable, no padding
+7. **Verify patterns and methodology** — sequential workflow or other appropriate pattern is used and explained
+8. **Verify validation material** — examples exist, troubleshooting section present, review checklist present
+9. **Produce output** — new files, patch recommendations, or audit findings (see Output modes below)
 
 ---
 
@@ -109,12 +152,13 @@ Produce: inline comments or a review summary noting which checklist items pass o
 | `name` uses Title Case or spaces | Use kebab-case matching the folder name |
 | `description` explains what a skill covers but not when to use it | Add explicit use cases and trigger phrases |
 | No trigger phrases in `description` | Add 3–5 short phrases that naturally precede loading the skill |
-| `SKILL.md` is too long (becomes a handbook) | Move detailed reference material to `references/` |
+| `SKILL.md` is too long (becomes a handbook) | Move detailed reference material to `references/`. Hard rule: if `SKILL.md` exceeds 100 lines, excess must live in `references/`. |
 | No examples | Add `## Quick examples` and/or `references/examples.md` |
 | No troubleshooting section | Add `## Troubleshooting` with 3–5 common issues |
 | No review checklist | Add `## Review checklist` with 4–8 actionable items |
 | References use absolute or broken paths | Use relative paths from the skill folder root |
 | Generic advice instead of operational guidance | Replace with concrete steps, file paths, and patterns |
+| No deterministic utility scripts for repeatable operations | Add `scripts/` helper when the same code would be generated repeatedly or errors need explicit handling |
 | Code-review skill lacks Harness framework evaluation | Add per-pillar checklist and compliance verdict section |
 
 ## Troubleshooting
@@ -135,9 +179,9 @@ Tie findings back to the checklist in [`references/checklist.md`](./references/c
 Before merging a skill PR, verify:
 
 - [ ] `name` is kebab-case and matches the folder name
-- [ ] `description` is under 1024 chars, includes trigger phrases, explains both what and when
+- [ ] `description` is under 1024 chars, includes trigger phrases, explains both what and when, and follows the description-first discipline
 - [ ] No `README.md` inside the skill folder
-- [ ] `SKILL.md` is concise — detailed material is in `references/` if needed
+- [ ] `SKILL.md` is concise — detailed material is in `references/` if needed; hard limit 100 lines
 - [ ] "When to use this skill" section is present with concrete use cases
 - [ ] At least one quick example is included
 - [ ] Troubleshooting section is present

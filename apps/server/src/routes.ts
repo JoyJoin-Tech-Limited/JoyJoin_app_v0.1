@@ -2709,54 +2709,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI-powered game recommendation (小悦推荐)
-  app.post('/api/icebreaker/recommend-game', isPhoneAuthenticated, async (req: any, res) => {
-    try {
-      const { participants, scene, excludeGameIds } = req.body;
-      
-      if (!participants || !Array.isArray(participants) || participants.length === 0) {
-        return res.status(400).json({ message: "participants array with at least one participant is required" });
-      }
-      
-      if (scene && !['dinner', 'bar', 'both'].includes(scene)) {
-        return res.status(400).json({ message: "scene must be 'dinner', 'bar', or 'both'" });
-      }
-      
-      const { icebreakerGames } = await import('@shared/icebreakerGames');
-      const { recommendGameForParticipants } = await import('./icebreakerAIService');
-      
-      let games = icebreakerGames.map(g => ({
-        id: g.id,
-        name: g.name,
-        scene: g.scene,
-        category: g.category,
-        difficulty: g.difficulty,
-        minPlayers: g.minPlayers,
-        maxPlayers: g.maxPlayers,
-        description: g.description
-      }));
-      
-      if (excludeGameIds && Array.isArray(excludeGameIds) && excludeGameIds.length > 0) {
-        games = games.filter(g => !excludeGameIds.includes(g.id));
-      }
-      
-      if (games.length === 0) {
-        return res.status(400).json({ message: "All games have been excluded, no more recommendations available" });
-      }
-      
-      const recommendation = await recommendGameForParticipants(participants, games, scene);
-      
-      if (!recommendation || !recommendation.gameId || !recommendation.gameName) {
-        return res.status(500).json({ message: "Failed to generate valid recommendation" });
-      }
-      
-      res.json(recommendation);
-    } catch (error) {
-      console.error("Error recommending game:", error);
-      res.status(500).json({ message: "Failed to recommend game" });
-    }
-  });
-
   // ============ In-Event Icebreaker Card Game Endpoints ============
   
   // Helper function to verify user is authorized to access session

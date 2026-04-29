@@ -267,7 +267,7 @@ export default function BlindBoxEventDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">加载中...</p>
@@ -278,7 +278,7 @@ export default function BlindBoxEventDetailPage() {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <div className="text-center py-12">
           <p className="text-muted-foreground">活动不存在</p>
         </div>
@@ -374,7 +374,7 @@ export default function BlindBoxEventDetailPage() {
         />
       )}
       
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-[100dvh] bg-background pb-20">
         {/* Header */}
         <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
           <div className="flex items-center h-14 px-4">

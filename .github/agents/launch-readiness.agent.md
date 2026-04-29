@@ -2,6 +2,7 @@
 name: "Launch Readiness Agent"
 description: "Use when evaluating go-no-go readiness for release, consolidating launch risks, checking environment and workflow readiness, or summarizing what still blocks a beta or production push. Trigger phrases: launch readiness, go/no-go, release blocker, beta sign-off, preflight check."
 tools: [read, search, execute]
+user-invocable: true
 argument-hint: "Describe the launch scope, target environment, affected workflows, current concerns, whether you need a blocker review, risk summary, or go-no-go checklist, and any upstream QA or implementation context."
 agents: []
 handoffs:

@@ -192,7 +192,7 @@ export default function EventsPage() {
 
   if (isLoading || isLoadingPoolRegistrations) {
     return (
-      <div className="min-h-screen bg-background pb-16">
+      <div className="min-h-[100dvh] bg-background pb-16">
         <MobileHeader title="活动" />
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-4">
@@ -212,7 +212,7 @@ export default function EventsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-[100dvh] bg-background pb-16">
       <MobileHeader title="活动" />
       
       <div className="py-4 space-y-4">

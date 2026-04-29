@@ -48,7 +48,7 @@ export default function PoolGroupDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-4">
             <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -61,7 +61,7 @@ export default function PoolGroupDetailPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <div className="text-center py-12">
           <p className="text-muted-foreground">小组不存在</p>
         </div>
@@ -113,7 +113,7 @@ export default function PoolGroupDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-[100dvh] bg-background pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center h-14 px-4">

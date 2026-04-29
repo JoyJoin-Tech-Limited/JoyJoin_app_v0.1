@@ -9,7 +9,8 @@ import { getRuntimeLLMFallbackConfig, getRuntimeLLMFallbackStats } from "../../i
 import { registerAdminMatchingShadowRoutes } from "./adminMatchingShadow";
 import { adminOutcomeAnalyticsRepo } from "../../repositories/adminOutcomeAnalyticsRepo";
 import { socialIcebreakerAiFeedbackRepo } from "../../repositories/socialIcebreakerAiFeedbackRepo";
-import { queryAdminAuditLogs } from "../../repositories/adminAuditLogsRepo";  
+import { queryAdminAuditLogs } from "../../repositories/adminAuditLogsRepo";
+import { getPhaseRatings, getMomentCardStats } from "../../lib/socialIcebreakerStore";  
 
 export function registerAdminRoutes(app: Express): void {
   registerAdminAuthRoutes(app);
@@ -82,6 +83,28 @@ export function registerAdminRoutes(app: Express): void {
     } catch (error) {
       console.error("[AdminIcebreakerAiFeedback] summary failed:", error);
       res.status(500).json({ message: "Failed to load icebreaker AI feedback summary" });
+    }
+  });
+
+  app.get("/api/admin/icebreaker-analytics/summary", requireAdmin, async (req, res) => {
+    try {
+      const { socialSessionId } = req.query;
+      if (typeof socialSessionId !== "string") {
+        return res.status(400).json({ message: "socialSessionId query param required" });
+      }
+      const [phaseRatings, momentCardStats] = await Promise.all([
+        getPhaseRatings(socialSessionId),
+        getMomentCardStats(socialSessionId),
+      ]);
+      res.json({
+        socialSessionId,
+        phaseRatings,
+        momentCardStats,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("[AdminIcebreakerAnalytics] summary failed:", error);
+      res.status(500).json({ message: "Failed to load icebreaker analytics" });
     }
   });
 

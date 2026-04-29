@@ -61,7 +61,7 @@ export default function PersonalityTestResultPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <div className="text-lg text-muted-foreground">正在加载您的结果...</div>
         </div>
@@ -71,7 +71,7 @@ export default function PersonalityTestResultPage() {
 
   if (!result) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <div className="text-lg text-muted-foreground">未找到测试结果</div>
           <Button
@@ -286,7 +286,7 @@ export default function PersonalityTestResultPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       {/* Countdown Animation */}
       <AnimatePresence>
         {showCountdown && result && <CountdownReveal />}
@@ -296,7 +296,7 @@ export default function PersonalityTestResultPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="relative min-h-[70vh] md:min-h-screen flex flex-col items-center justify-center px-4 py-6 md:p-6 overflow-hidden"
+        className="relative min-h-[70vh] md:min-h-[100dvh] flex flex-col items-center justify-center px-4 py-6 md:p-6 overflow-hidden"
       >
         {/* Gradient Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10`} />

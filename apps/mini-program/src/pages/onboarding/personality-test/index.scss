@@ -26,7 +26,7 @@
 
   &__intro-scroll {
     flex: 1;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   &__intro-shell {
@@ -722,7 +722,7 @@
     @include onboarding-page-exit-transition;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100dvh;
     height: 100dvh;
     overflow: hidden;
   }

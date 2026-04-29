@@ -79,7 +79,7 @@ export default function ConnectionsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#fafaf8] pb-16 flex flex-col">
+      <div className="min-h-[100dvh] bg-[#fafaf8] pb-16 flex flex-col">
         <MobileHeader title="连接" />
         <div className="flex-1 flex items-center justify-center">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -92,7 +92,7 @@ export default function ConnectionsPage() {
   const hasConnections = myConnections.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#fafaf8] pb-20 flex flex-col">
+    <div className="min-h-[100dvh] bg-[#fafaf8] pb-20 flex flex-col">
       <MobileHeader title="连接" />
 
       {!hasConnections ? (

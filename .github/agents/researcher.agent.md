@@ -30,10 +30,10 @@ On **every** research turn, apply [`.github/skills/first-principles-velocity/SKI
 ## Skill loading protocol
 
 Load skills explicitly based on the research domain:
-- **Cross-workspace or platform questions** → [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md)
-- **Documentation refresh or doc alignment** → [`docs-sync`](../../.github/skills/docs-sync/SKILL.md)
-- **Architecture or placement questions** → [`server-domain-architecture`](../../.github/skills/server-domain-architecture/SKILL.md) or [`frontend-component-architecture`](../../.github/skills/frontend-component-architecture/SKILL.md)
-- **Monorepo boundaries** → [`monorepo-workspace-governance`](../../.github/skills/monorepo-workspace-governance/SKILL.md)
+- **Cross-workspace or platform questions** → [`platform-coordination-protocol`](../skills/platform-coordination-protocol/SKILL.md)
+- **Documentation refresh or doc alignment** → [`docs-sync`](../skills/docs-sync/SKILL.md)
+- **Architecture or placement questions** → [`server-domain-architecture`](../skills/server-domain-architecture/SKILL.md) or [`frontend-component-architecture`](../skills/frontend-component-architecture/SKILL.md)
+- **Monorepo boundaries** → [`monorepo-workspace-governance`](../skills/monorepo-workspace-governance/SKILL.md)
 
 ## Default workflow
 

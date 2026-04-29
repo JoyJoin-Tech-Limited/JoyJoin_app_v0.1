@@ -57,6 +57,56 @@ export function resolveRepoRoot(startDir = process.cwd()) {
   return result.stdout.trim();
 }
 
+export function detectDuplicateYamlKeys(content, description = MANIFEST_RELATIVE_PATH) {
+  const errors = [];
+  const lines = content.split(/\r?\n/);
+  const blockStack = [];
+  const keyRegistry = new Map();
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    if (line.trim() === '' || line.trim().startsWith('#')) {
+      continue;
+    }
+
+    const indent = line.search(/\S/);
+    const trimmed = line.trim();
+
+    while (blockStack.length > 0 && indent <= blockStack[blockStack.length - 1].indent) {
+      const closed = blockStack.pop();
+      keyRegistry.delete(closed.key);
+    }
+
+    const keyMatch = trimmed.match(/^"([^"]+)"\s*:/);
+    if (!keyMatch) {
+      continue;
+    }
+
+    const key = keyMatch[1];
+    const fullKey = blockStack.length > 0
+      ? `${[...blockStack.map((b) => b.key), key].join('.')}`
+      : key;
+
+    if (keyRegistry.has(fullKey)) {
+      const prev = keyRegistry.get(fullKey);
+      errors.push(
+        `${description} line ${lineIndex + 1}: duplicate key "${fullKey}" (first seen at line ${prev.line + 1}). Remove or rename one of the duplicate keys.`,
+      );
+    } else {
+      keyRegistry.set(fullKey, { line: lineIndex });
+    }
+
+    const isBlockOpen = trimmed.endsWith('{') || trimmed.endsWith('[');
+    if (isBlockOpen) {
+      blockStack.push({ key: fullKey, indent });
+    } else {
+      blockStack.push({ key: fullKey, indent });
+    }
+  }
+
+  return errors;
+}
+
 export function readJsonCompatibleYaml(content, description = MANIFEST_RELATIVE_PATH) {
   try {
     return JSON.parse(content);

@@ -565,17 +565,21 @@ body {
 
   /* Dynamic viewport height for iOS Safari */
   .min-h-dvh {
+    /* design-audit:intentional — fallback for browsers without dvh support */
     min-height: 100vh; /* Fallback */
     min-height: 100dvh;
   }
 
   .h-dvh {
+    /* design-audit:intentional — fallback for browsers without dvh support */
     height: 100vh; /* Fallback */
     height: 100dvh;
   }
   
-  /* Override h-screen to use dvh for mobile compatibility */
+  /* design-audit:intentional — override h-screen to use dvh for mobile compatibility */
+  /* design-audit:intentional — this selector intentionally contains h-screen */
   .h-screen {
+    /* design-audit:intentional — fallback for browsers without dvh support */
     height: 100vh; /* Fallback */
     height: 100dvh;
   }
@@ -593,6 +597,7 @@ body {
   .mobile-page {
     display: flex;
     flex-direction: column;
+    /* design-audit:intentional — fallback for browsers without dvh support */
     height: 100vh; /* Fallback for older browsers */
     height: 100dvh; /* Modern browsers - dynamic viewport accounting for browser UI */
     overflow: hidden; /* Prevent page-level scrolling */

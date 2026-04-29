@@ -4,6 +4,10 @@ description: "Use when repeated agent, skill, orchestration, hook, prompt, or re
 tools: [read, search, edit, execute]
 argument-hint: "Describe the repeated workflow issue, affected agent, skill, orchestration, hook, prompt, or repo-memory surfaces, the evidence already gathered, and whether you need a reviewer packet, draft change set, or validation summary."
 agents: []
+handoffs:
+  - label: "Route proposal to supervisor"
+    agent: "Supervisor"
+    prompt: "Route the workflow governance review proposal for planning and implementation routing."
 user-invocable: true
 ---
 

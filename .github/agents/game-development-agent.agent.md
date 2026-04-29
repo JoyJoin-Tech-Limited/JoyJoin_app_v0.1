@@ -2,6 +2,7 @@
 name: "Game Development Agent"
 description: "Use when binding IcebreakerRunPlan segments to shipped Social Icebreaker phase templates: implement on WeChat mini-program (Taro) first (icebreaker-session phaseViews), then web registry parity, plus server advance support, flags, and tests. Trigger phrases: phase registry, new icebreaker phase, TemplateMatcher follow-up, socialIcebreakerPhaseRegistry, icebreaker-session mini-program, novel icebreaker mechanic behind flag."
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: "Link the handoff from Game Design Agent: plan JSON or path, NoveltyFlag status, and whether scope is user-client only, server only, or full stack."
 agents: []
 handoffs:

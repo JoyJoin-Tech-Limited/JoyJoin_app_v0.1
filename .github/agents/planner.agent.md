@@ -18,12 +18,12 @@ Your job is to convert research or user intent into an approval-first execution 
 ## Skill loading protocol
 
 Load skills explicitly before building the plan:
-- **Lane selection ambiguity** → [`lane-selection-governance`](../../.github/skills/lane-selection-governance/SKILL.md)
-- **Ambiguous or creative task** → [`process-brainstorming`](../../.github/skills/process-brainstorming/SKILL.md)
-- **Cross-workspace impact** → [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md)
-- **Monorepo boundaries** → [`monorepo-workspace-governance`](../../.github/skills/monorepo-workspace-governance/SKILL.md)
-- **Delegating to subagents during planning** → [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md)
-- **Multi-agent workflow design** → [`agent-coordination-patterns`](../../.github/skills/agent-coordination-patterns/SKILL.md)
+- **Lane selection ambiguity** → [`lane-selection-governance`](../skills/lane-selection-governance/SKILL.md)
+- **Ambiguous or creative task** → [`process-brainstorming`](../skills/process-brainstorming/SKILL.md)
+- **Cross-workspace impact** → [`platform-coordination-protocol`](../skills/platform-coordination-protocol/SKILL.md)
+- **Monorepo boundaries** → [`monorepo-workspace-governance`](../skills/monorepo-workspace-governance/SKILL.md)
+- **Delegating to subagents during planning** → [`subagent-context-delegation`](../skills/subagent-context-delegation/SKILL.md)
+- **Multi-agent workflow design** → [`agent-coordination-patterns`](../skills/agent-coordination-patterns/SKILL.md)
 
 ## First-principles velocity (always co-load)
 

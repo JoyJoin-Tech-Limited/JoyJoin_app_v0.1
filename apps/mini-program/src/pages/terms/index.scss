@@ -2,7 +2,7 @@
 @use "../../styles/mixins" as *;
 
 .terms-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: $color-bg;
   padding: $container-padding;
   padding-bottom: 80rpx;

@@ -2,7 +2,13 @@
 name: 'Principal Software Engineer'
 description: 'Use when you need principal-level software engineering guidance, architecture tradeoff analysis, implementation review, or pragmatic plans for complex technical changes. Trigger phrases: architecture review, senior engineering guidance, tradeoff analysis, implementation risk.'
 tools: [read, search, execute]
+user-invocable: true
 argument-hint: 'Describe the decision, code area, architecture change, or implementation risk that needs senior guidance.'
+agents: []
+handoffs:
+  - label: "Route architecture guidance to implementation"
+    agent: "Supervisor"
+    prompt: "Route the principal-level architecture guidance to the appropriate implementation specialist."
 ---
 # Principal Software Engineer Instructions
 

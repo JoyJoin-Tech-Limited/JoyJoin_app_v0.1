@@ -17,7 +17,7 @@ export function RevealStage({ viewModel, onComplete }: RevealStageProps) {
   const gradient = record?.displayTokens.gradientKey ?? 'from-purple-500 to-pink-500';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background">
       <PremiumCard
         archetypeName={viewModel.primaryArchetype}
         nickname={record?.narrative.nickname ?? ''}

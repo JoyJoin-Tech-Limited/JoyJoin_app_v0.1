@@ -90,7 +90,7 @@ const FAST_PROFILE: AnimationProfile = {
 
 export function getAnimationProfile(): AnimationProfile {
   if (typeof window !== 'undefined') {
-    const url = new URL(window.location.href)
+    const url = new URL(window.location.href) // design-audit:intentional — web sandbox only; mini-program skips this branch
     const profileName = url.searchParams.get('animationProfile')
     if (profileName === 'fast') return FAST_PROFILE
   }

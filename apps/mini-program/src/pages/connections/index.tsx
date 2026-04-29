@@ -1,7 +1,9 @@
 import { View, Text, ScrollView } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
@@ -52,7 +54,28 @@ export default function ConnectionsPage() {
           </View>
         ) : connections.length > 0 ? (
           connections.map((conn) => (
-            <Card key={String(conn.id)} className='connections-page__card'>
+            <Card
+              key={String(conn.id)}
+              className='connections-page__card'
+              onClick={() => {
+                const actions: string[] = []
+                if (conn.wechatId) actions.push(`微信号：${conn.wechatId}`)
+                if (conn.peerArchetype) {
+                  const archetypeName = ARCHETYPE_BY_ID[conn.peerArchetype]?.nameCn
+                  if (archetypeName) actions.push(`原型：${archetypeName}`)
+                }
+                if (conn.wechatId) actions.push('复制微信号')
+                if (actions.length === 0) return
+                Taro.showActionSheet({
+                  itemList: actions,
+                  success: (res) => {
+                    if (actions[res.tapIndex] === '复制微信号' && conn.wechatId) {
+                      Taro.setClipboardData({ data: conn.wechatId })
+                    }
+                  },
+                })
+              }}
+            >
               <View className='connections-page__card-avatar'>
                 <ArchetypeHead
                   archetype={conn.peerArchetype}
@@ -62,6 +85,11 @@ export default function ConnectionsPage() {
               </View>
               <View className='connections-page__card-info'>
                 <Text className='connections-page__card-name'>{conn.peerName ?? '悦聚好友'}</Text>
+                {conn.peerArchetype ? (
+                  <Text className='connections-page__card-archetype'>
+                    {ARCHETYPE_BY_ID[conn.peerArchetype]?.nameCn || conn.peerArchetype}
+                  </Text>
+                ) : null}
                 {conn.eventTitle ? (
                   <Text className='connections-page__card-event'>来自：{conn.eventTitle}</Text>
                 ) : null}
@@ -70,7 +98,7 @@ export default function ConnectionsPage() {
           ))
         ) : (
           <Card className='connections-page__empty-state'>
-            <Text className='connections-page__empty-emoji'>✨</Text>
+            <Text className='connections-page__empty-icon'>🤝</Text>
             <Text className='connections-page__empty-text'>还没有建立连接</Text>
             <Text className='connections-page__empty-hint'>参加活动后即可与活动伙伴建立连接</Text>
           </Card>

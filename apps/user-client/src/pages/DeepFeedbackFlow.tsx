@@ -148,7 +148,7 @@ export default function DeepFeedbackFlow() {
 
   if (eventLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">加载中...</p>

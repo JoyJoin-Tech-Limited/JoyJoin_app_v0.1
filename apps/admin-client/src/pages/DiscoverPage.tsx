@@ -168,7 +168,7 @@ export default function DiscoverPage() {
     .filter((event): event is NonNullable<typeof event> => event !== null);
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-[100dvh] bg-background pb-16">
       <MobileHeader showLogo={true} />
       
       <div className="space-y-4">

@@ -1,4 +1,4 @@
-import { Button, View, Text, Image } from '@tarojs/components'
+import { Button, View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
@@ -480,7 +480,7 @@ export default function BlindBoxPaymentPage() {
 
   if (paymentsDisabled) {
     return (
-      <View className='payment-page'>
+      <ScrollView className='payment-page' scrollY enhanced showScrollbar={false}>
         <View className='payment-page__backdrop'>
           <View className='payment-page__orb payment-page__orb--left' />
           <View className='payment-page__orb payment-page__orb--right' />
@@ -541,12 +541,12 @@ export default function BlindBoxPaymentPage() {
             </Button>
           ) : null}
         </View>
-      </View>
+      </ScrollView>
     )
   }
 
   return (
-    <View className='payment-page'>
+    <ScrollView className='payment-page' scrollY enhanced showScrollbar={false}>
       <View className='payment-page__backdrop'>
         <View className='payment-page__orb payment-page__orb--left' />
         <View className='payment-page__orb payment-page__orb--right' />
@@ -731,6 +731,6 @@ export default function BlindBoxPaymentPage() {
         </Button>
         <Text className='payment-page__hint'>{payHint}</Text>
       </View>
-    </View>
+    </ScrollView>
   )
 }

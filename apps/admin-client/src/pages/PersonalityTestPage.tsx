@@ -761,7 +761,7 @@ export default function PersonalityTestPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       <AnimatePresence>{showIntro && !showResumePrompt && <IntroScreen />}</AnimatePresence>
       <AnimatePresence>{showResumePrompt && <ResumePrompt />}</AnimatePresence>
       <AnimatePresence>{showBlindBox && <BlindBoxReveal />}</AnimatePresence>

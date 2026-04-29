@@ -152,7 +152,7 @@ export default function ProfilePage() {
   const archetypeDetails = getArchetypeDetails();
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-[100dvh] bg-background pb-16">
       <MobileHeader 
         title="我的" 
         showSettings={true}

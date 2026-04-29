@@ -2,7 +2,16 @@
 description: "Use when working on JoyJoin web reference frontend tasks in apps/user-client, React 18 plus Vite UI implementation, Wouter routes, TanStack Query pages, polishing motion, loading states, empty states, onboarding moments, or visual hierarchy, reviewing the web reference implementation during an apps/mini-program update, or deciding whether a change stays web-only versus needs Taro, parity, or sibling-platform review. Note: apps/mini-program is the launch-primary client; apps/user-client is a development sandbox and parity reference only. Trigger phrases: web UI polish, polish the interaction, improve micro-interactions, make this feel premium, add delight here, loading state delight, empty state polish, motion design."
 name: "Expert React Frontend Engineer"
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: "Describe the page, route, component, or interaction in apps/user-client, plus any platform-coordination concerns."
+agents: []
+handoffs:
+  - label: "Route for mini-program parity"
+    agent: "Taro Mini-Program Frontend Engineer"
+    prompt: "Use the web reference implementation as product intent source to implement or align the Taro mini-program surface."
+  - label: "Route to supervisor"
+    agent: "Supervisor"
+    prompt: "Route the completed web reference work to the appropriate downstream specialist."
 ---
 
 # Expert React Frontend Engineer

@@ -109,7 +109,7 @@ export default function FeedbackCompletion({ onDone, onDeepFeedback, mutualMatch
   const hasMutualMatches = mutualMatches && mutualMatches.length > 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

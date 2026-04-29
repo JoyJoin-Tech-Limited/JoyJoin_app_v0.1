@@ -9,7 +9,7 @@
   // Error modifier — centre the error block vertically
   &--error {
     @include flex-center;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   &__phase-shell {
@@ -1401,4 +1401,26 @@
   font-size: 24rpx;
   color: #6B7280;
   line-height: 1.4;
+}
+
+// ─── Mini-script secret agenda ───────────────────────────────────────────────
+
+.icebreaker__ms-secret-label {
+  font-size: 26rpx;
+  color: $color-semantic-secret;
+  font-weight: 500;
+}
+
+.icebreaker__ms-secret-text {
+  color: $color-semantic-secret;
+}
+
+.icebreaker__ms-new-clue-badge {
+  font-size: 20rpx;
+  color: $color-text-white;
+  background: #8B5CF6;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  margin-left: 8rpx;
+  display: inline-block;
 }

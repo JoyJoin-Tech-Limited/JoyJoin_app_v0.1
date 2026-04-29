@@ -57,7 +57,7 @@ export default function LoginPromptPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-white flex flex-col">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-purple-50 via-pink-50 to-white flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

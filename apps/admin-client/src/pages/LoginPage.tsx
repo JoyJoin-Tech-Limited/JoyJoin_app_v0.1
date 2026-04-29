@@ -315,7 +315,7 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       {/* Section 1: Hero with Video Background */}
       <section 
         className="relative min-h-[70vh] flex items-center justify-center overflow-hidden"

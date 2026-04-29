@@ -3,12 +3,12 @@
 
 .personality-auth-gate {
   @include page-gradient-bg;
-  min-height: 100vh;
+  min-height: 100dvh;
   padding: $spacing-lg $container-padding $spacing-2xl;
 
   &__empty {
     @include flex-center;
-    min-height: 100vh;
+    min-height: 100dvh;
     flex-direction: column;
     text-align: center;
     gap: $spacing-md;

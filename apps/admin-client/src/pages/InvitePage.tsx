@@ -98,7 +98,7 @@ export default function InvitePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-accent/10">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-background to-accent/10">
       <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b">
         <div className="flex items-center h-14 px-4 gap-3">
           <Link href="/discover">

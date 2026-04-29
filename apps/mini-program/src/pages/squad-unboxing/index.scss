@@ -3,7 +3,7 @@
 
 .squad-unboxing {
   @include page-gradient-bg;
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
 
   &--reduce-motion {
@@ -40,7 +40,7 @@
   }
 
   &__scroll {
-    min-height: 100vh;
+    min-height: 100dvh;
     box-sizing: border-box;
     padding: 0 $container-padding;
     @include safe-area-inline($container-padding);

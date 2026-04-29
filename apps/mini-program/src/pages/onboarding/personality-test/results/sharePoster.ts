@@ -25,7 +25,7 @@ const PALETTE = {
   cardInnerBorder: 'rgba(255, 255, 255, 0.95)',
   shadowPurple: 'rgba(91, 53, 178, 0.14)',
   shadowOrange: 'rgba(255, 177, 87, 0.25)',
-  white: '#ffffff',
+  white: '#ffffff', // design-audit:intentional — canvas rendering requires exact hex values
   heroGlowEnd: '#ffcf7d',
   heroImageShell: '#fff7ee',
   heroImageBorder: 'rgba(255, 255, 255, 0.85)',
