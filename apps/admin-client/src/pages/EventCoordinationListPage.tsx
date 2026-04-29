@@ -71,7 +71,7 @@ export default function EventCoordinationListPage() {
 
   if (isLoadingEvents) {
     return (
-      <div className="min-h-screen bg-background pb-16 flex flex-col">
+      <div className="min-h-[100dvh] bg-background pb-16 flex flex-col">
         <MobileHeader title="活动连接" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -87,7 +87,7 @@ export default function EventCoordinationListPage() {
   const hasGroupChats = joinedEvents && joinedEvents.length > 0;
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-[100dvh] bg-background pb-16">
       <MobileHeader title="活动连接" />
 
       {!hasGroupChats ? (

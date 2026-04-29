@@ -3,7 +3,7 @@
 
 .pool-reg {
   @include page-gradient-bg;
-  min-height: 100vh;
+  min-height: 100dvh;
   box-sizing: border-box;
   padding: 0 $container-padding $spacing-2xl;
   padding-bottom: calc(#{$spacing-2xl} + constant(safe-area-inset-bottom));

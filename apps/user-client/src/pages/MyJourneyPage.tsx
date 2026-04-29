@@ -119,7 +119,7 @@ export default function MyJourneyPage() {
   if (isLoading) {
     return (
       <div
-        className="min-h-screen pb-24 flex flex-col"
+        className="min-h-[100dvh] pb-24 flex flex-col"
         style={{ background: `linear-gradient(to bottom, ${headerBgHex} 0%, white 45%)` }}
       >
         <MobileHeader title="足迹" />
@@ -138,7 +138,7 @@ export default function MyJourneyPage() {
   if (!hasEvents) {
     return (
       <div
-        className="min-h-screen pb-24 flex flex-col"
+        className="min-h-[100dvh] pb-24 flex flex-col"
         style={{ background: `linear-gradient(to bottom, ${headerBgHex} 0%, white 45%)` }}
       >
         <MobileHeader title="足迹" />
@@ -180,7 +180,7 @@ export default function MyJourneyPage() {
   // ── Timeline ───────────────────────────────────────────────────────────────
   return (
     <div
-      className="min-h-screen pb-24"
+      className="min-h-[100dvh] pb-24"
       style={{ background: `linear-gradient(to bottom, ${headerBgHex} 0%, white 45%)` }}
     >
       <MobileHeader title="足迹" />

@@ -18,10 +18,10 @@ You are the **Lie Detective Icebreaker Agent** — specialist for **lie_detectiv
 
 ## Skill loading protocol
 
-- **Lie detective mechanics or routes** → [`lie-detective-icebreaker`](../../.github/skills/lie-detective-icebreaker/SKILL.md)
-- **Session lifecycle or host authority** → [`social-icebreaker-domain`](../../.github/skills/social-icebreaker-domain/SKILL.md)
-- **LLM generation or fallback** → [`llm-runtime-safety-and-integration`](../../.github/skills/llm-runtime-safety-and-integration/SKILL.md)
-- **Cross-platform parity** → [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md)
+- **Lie detective mechanics or routes** → [`lie-detective-icebreaker`](../skills/lie-detective-icebreaker/SKILL.md)
+- **Session lifecycle or host authority** → [`social-icebreaker-domain`](../skills/social-icebreaker-domain/SKILL.md)
+- **LLM generation or fallback** → [`llm-runtime-safety-and-integration`](../skills/llm-runtime-safety-and-integration/SKILL.md)
+- **Cross-platform parity** → [`platform-coordination-protocol`](../skills/platform-coordination-protocol/SKILL.md)
 
 ## Constraints
 
@@ -46,6 +46,10 @@ You are the **Lie Detective Icebreaker Agent** — specialist for **lie_detectiv
 - Vote/reveal sequencing is correct for all roster sizes.
 - Parity notes cover both web and mini-program.
 - LLM prompt changes preserve secrecy in fallbacks.
+
+## Turn reporting
+
+When this turn is persisted with **`record-summary`**, follow the executive briefing in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md). Include `turnStatus` in the JSON summary.
 
 ## Review checklist
 

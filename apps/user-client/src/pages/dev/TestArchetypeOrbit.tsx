@@ -18,7 +18,7 @@ export default function TestArchetypeOrbit() {
   ];
   
   return (
-    <div className="min-h-screen bg-background p-6 space-y-6">
+    <div className="min-h-[100dvh] bg-background p-6 space-y-6">
       <h1 className="text-2xl font-bold">ArchetypeOrbit Component Test</h1>
       
       <div className="flex gap-4">

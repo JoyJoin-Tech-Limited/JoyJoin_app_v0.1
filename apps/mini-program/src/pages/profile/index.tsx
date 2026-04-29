@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { apiRequest } from '../../lib/api'
 import {
   clearMiniProgramAuthSession,
@@ -102,7 +103,9 @@ export default function ProfilePage() {
         </View>
         <Text className='profile-page__name'>{displayName}</Text>
         {archetype ? (
-          <Text className='profile-page__archetype'>{archetype}</Text>
+          <Text className='profile-page__archetype'>
+            {ARCHETYPE_BY_ID[archetype]?.nameCn || archetype}
+          </Text>
         ) : null}
       </View>
 

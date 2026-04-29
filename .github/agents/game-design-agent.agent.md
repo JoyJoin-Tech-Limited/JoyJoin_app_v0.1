@@ -2,6 +2,7 @@
 name: "Game Design Agent"
 description: "Use when compiling or curating post-match, pre-event Social Icebreaker run plans (IcebreakerRunPlan), psychological safety scoring, energy arc sequencing, cohort personalization, and dev-ready handoff artifacts. Trigger phrases: compile icebreaker plan, Game Design Agent, run plan JSON, PressureGauge, FlowCurator, post-match icebreaker, minimal peer pressure flow."
 tools: [read, search, edit]
+user-invocable: true
 argument-hint: "Provide pool/group context, target cohort size, event window, and any theme or match metadata. Say whether output is repo docs only or sample JSON for a worker."
 agents: []
 handoffs:

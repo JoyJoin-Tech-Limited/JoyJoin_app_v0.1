@@ -219,8 +219,7 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
 
   // If scheduled time has passed, execute the advance
   if (Date.now() >= state.autoAdvanceScheduledAt) {
-    const enabledPhases = state.enabledPhases ?? ['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'mini_script', 'recap'];
-    const nextPhase = getNextEligiblePhase(state.currentPhase, enabledPhases, state.playerCount);
+    const nextPhase = getNextEligiblePhase(state.currentPhase, state);
     if (nextPhase && nextPhase !== state.currentPhase) {
       state.completedPhases = [...(state.completedPhases || []), state.currentPhase];
       state.currentPhase = nextPhase;

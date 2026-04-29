@@ -1,6 +1,6 @@
 import { View, Text, Button, Textarea, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -27,7 +27,7 @@ interface MutualMatch {
   wechatContactId: string | null
 }
 
-type FeedbackStep = 'rating' | 'connections' | 'comment' | 'submitting' | 'revealed'
+type FeedbackStep = 'rating' | 'connections' | 'comment' | 'revealed'
 
 export default function EventFeedbackPage() {
   const router = useRouter()
@@ -91,6 +91,9 @@ export default function EventFeedbackPage() {
       data: wechatId,
       success: () => {
         Taro.showToast({ title: '微信号已复制', icon: 'success', duration: TOAST_DEFAULT_MS })
+      },
+      fail: () => {
+        Taro.showToast({ title: '复制失败，请手动复制', icon: 'none', duration: TOAST_DEFAULT_MS })
       },
     })
   }, [])
@@ -243,6 +246,17 @@ export default function EventFeedbackPage() {
   }
 
   // ─── Comment step ──────────────────────────────────────────────────────────
+  if (step !== 'comment') {
+    // Defensive: unknown step state
+    return (
+      <JoyJoinLoadingScreen
+        title='页面加载中…'
+        subtitle='小悦正在准备'
+        showSkeleton={false}
+      />
+    )
+  }
+
   return (
     <View className='event-feedback'>
       <View className='event-feedback__header'>

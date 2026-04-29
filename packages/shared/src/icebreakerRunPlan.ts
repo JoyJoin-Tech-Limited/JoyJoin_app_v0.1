@@ -50,10 +50,12 @@ export const icebreakerRunPlanSchema = z.object({
     .strict(),
 });
 
-export type IcebreakerRunPlan = z.infer<typeof icebreakerRunPlanSchema>;
-export type RunPlanSegment = z.infer<typeof runPlanSegmentSchema>;
-export type ParticipationMode = z.infer<typeof participationModeSchema>;
+// Note: Canonical types (IcebreakerRunPlan, ParticipationMode) now live in phaseModule.ts.
+// This file retains the v1 Zod schemas for backward-compatible parsing of legacy stored data.
+import type { IcebreakerRunPlan } from './phaseModule';
 
 export function parseIcebreakerRunPlan(input: unknown): IcebreakerRunPlan {
-  return icebreakerRunPlanSchema.parse(input);
+  // v1 schema parse; cast to v2 type (v1 is a subset of v2 fields)
+  const parsed = icebreakerRunPlanSchema.parse(input);
+  return parsed as unknown as IcebreakerRunPlan;
 }

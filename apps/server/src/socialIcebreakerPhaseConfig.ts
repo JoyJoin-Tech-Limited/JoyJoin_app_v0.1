@@ -1,5 +1,8 @@
 import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker';
 import { DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES } from '@shared/socialIcebreaker';
+import { getPhaseModule } from '@shared/phaseRegistry';
+import { getNextPhaseFromPlan } from '@shared/phaseModule';
+import type { IcebreakerRunPlan } from '@shared/phaseModule';
 
 function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
@@ -41,6 +44,68 @@ export function ensureSessionEnabledPhases(state: SocialSessionState): SocialIce
   const enabledPhases = state.enabledPhases?.length ? state.enabledPhases : getServerEnabledPhases();
   state.enabledPhases = enabledPhases;
   return enabledPhases;
+}
+
+/**
+ * Get the list of phases to use for navigation.
+ *
+ * Priority:
+ * 1. If a run plan exists, use its segments
+ * 2. Fall back to server-enabled phases
+ */
+export function getEffectivePhaseList(state: SocialSessionState): SocialIcebreakerPhase[] {
+  if (state.runPlan?.segments?.length) {
+    return state.runPlan.segments.map((s) => s.phase);
+  }
+  return ensureSessionEnabledPhases(state);
+}
+
+/**
+ * Get the next phase, respecting run plans if present.
+ *
+ * If a run plan exists, uses the plan's segment order.
+ * Otherwise falls back to the legacy `enabledPhases` / `PHASE_ORDER` logic.
+ */
+export function getNextPhase(
+  current: SocialIcebreakerPhase,
+  state: SocialSessionState,
+): SocialIcebreakerPhase {
+  // Run plan takes priority
+  if (state.runPlan?.segments?.length) {
+    const next = getNextPhaseFromPlan(current, state.runPlan);
+    if (next) return next;
+    return 'recap'; // always end at recap
+  }
+
+  // Legacy fallback
+  const enabledPhases = ensureSessionEnabledPhases(state);
+  const idx = enabledPhases.indexOf(current);
+  if (idx === -1 || idx === enabledPhases.length - 1) return 'recap';
+  return enabledPhases[idx + 1];
+}
+
+/**
+ * Get the next eligible phase, skipping phases that don't meet min player requirements.
+ *
+ * Respects run plans if present.
+ */
+export function getNextEligiblePhase(
+  current: SocialIcebreakerPhase,
+  state: SocialSessionState,
+): SocialIcebreakerPhase {
+  let candidate: SocialIcebreakerPhase = getNextPhase(current, state);
+  const visited = new Set<SocialIcebreakerPhase>();
+
+  while (candidate !== 'recap' && !visited.has(candidate)) {
+    visited.add(candidate);
+    const module = getPhaseModule(candidate);
+    if (state.playerCount >= module.minPlayers) {
+      return candidate;
+    }
+    candidate = getNextPhase(candidate, state);
+  }
+
+  return 'recap';
 }
 
 export function cleanupPhaseStateForNextPhase(

@@ -131,6 +131,12 @@ export interface AICallTrace {
    * is enabled. Server-side telemetry only — never expose to clients.
    */
   reasoningTokens?: number;
+
+  /**
+   * Arbitrary extra metadata for domain-specific telemetry extensions.
+   * Example: quality-gate scores, embedding dimensions, cache hit details.
+   */
+  extra?: Record<string, unknown>;
 }
 
 /**

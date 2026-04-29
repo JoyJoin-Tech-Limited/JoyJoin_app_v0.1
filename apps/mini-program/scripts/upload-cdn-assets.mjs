@@ -13,7 +13,7 @@
  *   node scripts/upload-cdn-assets.mjs --dry-run
  *
  *   # Upload via rsync (default)
- *   CDN_BACKEND=rsync CDN_RSYNC_HOST=your-server.com CDN_RSYNC_PATH=/var/www/cdn \
+ *   CDN_BACKEND=rsync CDN_RSYNC_HOST=1.12.243.104 CDN_RSYNC_PATH=/var/www/cdn \
  *     node scripts/upload-cdn-assets.mjs
  *
  *   # Upload via S3
@@ -23,7 +23,7 @@
  *
  * Environment variables:
  *   CDN_BACKEND          — rsync | s3 | oss | cos  (default: rsync)
- *   CDN_BASE_URL         — e.g. https://cdn.yuejuapp.com
+ *   CDN_BASE_URL         — e.g. https://joyjoinapp.com/static
  *   CDN_RSYNC_HOST       — SSH host for rsync
  *   CDN_RSYNC_USER       — SSH user (default: current user)
  *   CDN_RSYNC_PATH       — Remote directory path (default: /var/www/cdn)

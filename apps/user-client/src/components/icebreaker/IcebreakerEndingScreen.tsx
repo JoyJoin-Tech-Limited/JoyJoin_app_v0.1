@@ -192,7 +192,7 @@ export function IcebreakerEndingScreen({
         ))}
       </div>
 
-      <div className="relative z-10 flex flex-col h-screen">
+      <div className="relative z-10 flex flex-col min-h-[100dvh]">
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6 pb-48">
         <div className="flex flex-col items-center p-6 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(236, 72, 153, 0.9) 50%, rgba(251, 146, 60, 0.9) 100%)' }}>

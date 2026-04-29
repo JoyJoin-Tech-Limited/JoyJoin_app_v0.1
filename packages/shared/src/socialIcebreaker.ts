@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { AIResponseMeta } from './types/aiMeta';
 import type { MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput } from './miniscriptStoryFramework';
 export type { MiniScriptStoryFrameworkPublic } from './miniscriptStoryFramework';
+import type { IcebreakerRunPlan } from './phaseModule';
 
 export type SocialIcebreakerPhase =
   | 'warmup'
@@ -11,6 +12,9 @@ export type SocialIcebreakerPhase =
   | 'lie_detective'
   | 'auction'
   | 'personality_dice'
+  | 'quip_battle'
+  | 'undercover_word'
+  | 'group_mirror'
   | 'mini_script'
   | 'recap';
 
@@ -67,11 +71,16 @@ export interface PersonalityDiceChallenge {
   challengeBody: string;
   challengeEmoji: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  /** Graceful opt-out text */
+  passLine?: string;
+  /** Funny consequence for passing */
+  passConsequence?: string;
 }
 
 export interface SocialSessionParticipantSummary {
   userId: string;
   displayName: string;
+  archetype?: string;
   joinedAt?: string;
   lastSeenAt?: string;
   isActive?: boolean;
@@ -265,6 +274,8 @@ export interface SocialSessionState {
   completedPhases: SocialIcebreakerPhase[];
   eventType?: string;
   enabledPhases?: SocialIcebreakerPhase[];
+  /** Compiled run plan from Game Design Agent; if present, session follows this instead of hardcoded PHASE_ORDER. */
+  runPlan?: IcebreakerRunPlan;
   /** When true, Xiaoyue auto-hosts: any participant can trigger actions, and phases auto-advance based on adaptive signals. */
   autoAdvanceEnabled?: boolean;
   /** Timestamp (ms) when auto-advance should trigger. Set when adaptive engine signals advance_ready. */
@@ -302,6 +313,22 @@ export interface SocialSessionState {
   auctionAllLotsClosed?: boolean;
   /** Server-written one-liners for recap LLM (bounded strings). */
   auctionRecapLines?: string[];
+  // Quip Battle phase data
+  quipBattlePrompts?: Array<{ id: string; promptText: string; category: string }>;
+  quipBattlePromptsMeta?: AIResponseMeta;
+  quipBattleAnswers?: Array<{ userId: string; displayName: string; promptId: string; answerText: string }>;
+  quipBattleVotes?: Array<{ voterId: string; answerId: string; promptId: string }>;
+  quipBattleSubmittedUserIds?: string[];
+  quipBattleVotedUserIds?: string[];
+  quipBattleRevealed?: boolean;
+  quipBattleResults?: Array<{
+    promptId: string;
+    promptText: string;
+    answers: Array<{ userId: string; displayName: string; promptId: string; answerText: string }>;
+    winnerUserId: string;
+    winnerDisplayName: string;
+    voteCount: number;
+  }>;
   // Recap data
   recapData?: {
     topicsDiscussed: string[];
@@ -398,6 +425,39 @@ export const PHASE_CONFIG = {
     timeoutMinutes: 45,
     minPlayersRequired: 4,
   },
+  quip_battle: {
+    emoji: '',
+    name: '机智对决',
+    nameEn: 'Quip Battle',
+    gradient: 'from-yellow-400 to-orange-500',
+    bgGradient: 'from-yellow-50 via-orange-50 to-amber-50',
+    darkBgGradient: 'from-yellow-950 via-orange-950 to-zinc-900',
+    pillColor: 'bg-yellow-100/80 text-yellow-700',
+    timeoutMinutes: 15,
+    minPlayersRequired: 2,
+  },
+  undercover_word: {
+    emoji: '',
+    name: '谁是卧底',
+    nameEn: 'Undercover Word',
+    gradient: 'from-red-500 to-rose-600',
+    bgGradient: 'from-red-50 via-rose-50 to-pink-50',
+    darkBgGradient: 'from-red-950 via-rose-950 to-zinc-900',
+    pillColor: 'bg-red-100/80 text-red-700',
+    timeoutMinutes: 20,
+    minPlayersRequired: 3,
+  },
+  group_mirror: {
+    emoji: '',
+    name: '群像镜像',
+    nameEn: 'Group Mirror',
+    gradient: 'from-teal-400 to-cyan-500',
+    bgGradient: 'from-teal-50 via-cyan-50 to-sky-50',
+    darkBgGradient: 'from-teal-950 via-cyan-950 to-zinc-900',
+    pillColor: 'bg-teal-100/80 text-teal-700',
+    timeoutMinutes: 12,
+    minPlayersRequired: 2,
+  },
   recap: {
     emoji: '✨',
     name: '回顾',
@@ -437,11 +497,52 @@ export function getNextPhase(
   return enabledPhases[idx + 1];
 }
 
+/**
+ * Get the next eligible phase, skipping phases that don't meet min player requirements.
+ *
+ * Backward-compatible overload: accepts either (current, enabledPhases, playerCount)
+ * or (current, state) where state may contain a runPlan.
+ */
 export function getNextEligiblePhase(
   current: SocialIcebreakerPhase,
   enabledPhases: SocialIcebreakerPhase[],
   playerCount: number
+): SocialIcebreakerPhase;
+export function getNextEligiblePhase(
+  current: SocialIcebreakerPhase,
+  state: SocialSessionState
+): SocialIcebreakerPhase;
+export function getNextEligiblePhase(
+  current: SocialIcebreakerPhase,
+  second: SocialIcebreakerPhase[] | SocialSessionState,
+  third?: number
 ): SocialIcebreakerPhase {
+  // Determine which overload was used
+  const isLegacyCall = Array.isArray(second);
+  const enabledPhases: SocialIcebreakerPhase[] = isLegacyCall
+    ? second
+    : (second.enabledPhases || DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES);
+  const playerCount: number = isLegacyCall && typeof third === 'number'
+    ? third
+    : (!isLegacyCall ? second.playerCount : 0);
+
+  // If state was passed and has a run plan, use the plan's segment order
+  if (!isLegacyCall && second.runPlan?.segments?.length) {
+    const planPhases = second.runPlan.segments.map((s) => s.phase);
+    let candidate = getNextPhase(current, planPhases);
+    const visited = new Set<SocialIcebreakerPhase>();
+
+    while (candidate !== 'recap' && !visited.has(candidate)) {
+      visited.add(candidate);
+      if (playerCount >= PHASE_CONFIG[candidate].minPlayersRequired) {
+        return candidate;
+      }
+      candidate = getNextPhase(candidate, planPhases);
+    }
+    return 'recap';
+  }
+
+  // Legacy logic
   let candidate = getNextPhase(current, enabledPhases);
 
   while (candidate !== 'recap') {

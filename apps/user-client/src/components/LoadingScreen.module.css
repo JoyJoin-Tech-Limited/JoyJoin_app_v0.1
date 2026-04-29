@@ -8,7 +8,7 @@
 }
 
 .wrapper {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: radial-gradient(circle at 20% 20%, rgba(162, 89, 198, 0.15), transparent 30%),
     radial-gradient(circle at 80% 80%, rgba(162, 89, 198, 0.18), transparent 32%),
     #0f0a1f;

@@ -203,6 +203,69 @@ export const SOCIAL_ICEBREAKER_PHASE_REGISTRY: Record<
       </motion.div>
     ),
   },
+  quip_battle: {
+    motionKey: 'quip_battle',
+    render: (p) => (
+      <motion.div key="quip_battle" className="h-full flex items-center justify-center" {...fadeMotionProps()}>
+        <div className="text-center p-8">
+          <div className="text-4xl mb-4">😂</div>
+          <h3 className="text-lg font-semibold mb-2">机智对决</h3>
+          <p className="text-muted-foreground text-sm mb-4">填空造句，秀出你的脑洞</p>
+          <p className="text-xs text-muted-foreground">请在微信小程序中体验此环节</p>
+          {p.isHost && (
+            <button
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+              onClick={p.onAdvancePhase}
+            >
+              跳过此环节
+            </button>
+          )}
+        </div>
+      </motion.div>
+    ),
+  },
+  undercover_word: {
+    motionKey: 'undercover_word',
+    render: (p) => (
+      <motion.div key="undercover_word" className="h-full flex items-center justify-center" {...fadeMotionProps()}>
+        <div className="text-center p-8">
+          <div className="text-4xl mb-4">🕵️</div>
+          <h3 className="text-lg font-semibold mb-2">谁是卧底</h3>
+          <p className="text-muted-foreground text-sm mb-4">找出那个拿到不同词的人</p>
+          <p className="text-xs text-muted-foreground">请在微信小程序中体验此环节</p>
+          {p.isHost && (
+            <button
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+              onClick={p.onAdvancePhase}
+            >
+              跳过此环节
+            </button>
+          )}
+        </div>
+      </motion.div>
+    ),
+  },
+  group_mirror: {
+    motionKey: 'group_mirror',
+    render: (p) => (
+      <motion.div key="group_mirror" className="h-full flex items-center justify-center" {...fadeMotionProps()}>
+        <div className="text-center p-8">
+          <div className="text-4xl mb-4">🪞</div>
+          <h3 className="text-lg font-semibold mb-2">群像镜像</h3>
+          <p className="text-muted-foreground text-sm mb-4">匿名投票，看看大家眼中的你</p>
+          <p className="text-xs text-muted-foreground">请在微信小程序中体验此环节</p>
+          {p.isHost && (
+            <button
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
+              onClick={p.onAdvancePhase}
+            >
+              跳过此环节
+            </button>
+          )}
+        </div>
+      </motion.div>
+    ),
+  },
   recap: {
     motionKey: 'recap',
     render: (p) => (

@@ -38,7 +38,7 @@ export default function InvitationLandingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-accent/10">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-background to-accent/10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -46,7 +46,7 @@ export default function InvitationLandingPage() {
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-accent/10">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-background to-accent/10">
         <Card className="max-w-md w-full">
           <CardHeader>
             <h2 className="text-xl font-semibold text-center">邀请已失效</h2>
@@ -84,7 +84,7 @@ export default function InvitationLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-accent/10 p-4">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-background to-accent/10 p-4">
       <div className="max-w-2xl mx-auto pt-8 space-y-6">
         {/* Hero Section */}
         <div className="text-center space-y-3">

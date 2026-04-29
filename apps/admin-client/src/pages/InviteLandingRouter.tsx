@@ -18,7 +18,7 @@ export default function InviteLandingRouter() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-accent/10">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-background to-accent/10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -26,7 +26,7 @@ export default function InviteLandingRouter() {
 
   if (isError) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-accent/10">
+      <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-background to-accent/10">
         <Card className="max-w-md w-full">
           <CardHeader>
             <div className="flex items-center gap-2 justify-center">

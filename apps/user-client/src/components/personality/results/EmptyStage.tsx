@@ -10,7 +10,7 @@ export function EmptyStage() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 gap-4">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 gap-4">
       <SearchX className="w-12 h-12 text-muted-foreground" />
       <div className="text-center space-y-2">
         <h2 className="text-lg font-semibold">未找到测试结果</h2>

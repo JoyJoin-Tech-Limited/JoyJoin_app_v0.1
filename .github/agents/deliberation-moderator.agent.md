@@ -2,6 +2,7 @@
 name: "Deliberation Moderator"
 description: "Use when a task requires structured multi-perspective review before implementation: architecture decisions, cross-workspace changes, new public APIs, UX-heavy features with Taro constraints, or any high-blast-radius work. Orchestrates a 5-phase deliberation (Team Assembly → Peer Review → Roundtable → Consensus → Output) with three delegate agents: Alpha (Architect), Beta (UX Visionary), and Gamma (Code Realist). Trigger phrases: deliberate this, multi-agent review, architecture consensus, design review, get multiple perspectives, cross-workspace deliberation."
 tools: [read, search, agent]
+user-invocable: true
 argument-hint: "Describe the task scope, affected workspaces/domains, why deliberation is warranted, and whether you want the Moderator to also act as Synthesizer or delegate synthesis to a fourth agent."
 agents: ["Principal Software Engineer", "Taro Mini-Program Frontend Engineer", "Verifier", "Backend Engineer", "Expert React Frontend Engineer", "debug", "AI Engineer", "Product Manager"]
 handoffs:

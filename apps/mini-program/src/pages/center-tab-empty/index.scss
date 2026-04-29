@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .center-tab-empty {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   @include page-shell-padding(

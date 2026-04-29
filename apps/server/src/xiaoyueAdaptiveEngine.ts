@@ -104,8 +104,8 @@ const SUGGESTION_TEMPLATES: Record<XiaoyueAdaptiveSuggestionType, SuggestionTemp
     { type: 'keep_light', message: '氛围偏冷，不要急着深入，先暖暖场', actionableHint: '来个简单的小游戏或投票' },
   ],
   rescue_quiet: [
-    { type: 'rescue_quiet', message: '有几位朋友还没参与，直接邀请TA试试吧', actionableHint: '点名邀请一位还没发言的人' },
-    { type: 'rescue_quiet', message: '注意到有人一直沉默，给TA一个简单的问题', actionableHint: '问一个只需要回答"是/否"的问题' },
+    { type: 'rescue_quiet', message: '有几位朋友还没参与，温柔地邀请TA试试吧，不勉强', actionableHint: '点名邀请一位还没发言的人，但给足退路' },
+    { type: 'rescue_quiet', message: '注意到有人一直沉默，给TA一个不用想太多的问题', actionableHint: '问一个只需要回答"是/否"的问题' },
   ],
   energy_boost: [
     { type: 'energy_boost', message: '活跃度有点低，来个轻松的小互动提提神', actionableHint: '发起一个快速投票或表情包大战' },

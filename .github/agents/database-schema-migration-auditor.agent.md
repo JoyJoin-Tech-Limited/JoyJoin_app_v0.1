@@ -2,8 +2,13 @@
 name: "Database Schema & Migration Auditor"
 description: "Use when planning or reviewing schema changes, migration scripts, backfills, column renames, constraint tightening, or rollout and rollback safety for packages/shared/src/schema.ts and migration scripts. Trigger phrases: add a new table, plan a migration, rename a column safely, backfill data, db:push vs migration."
 tools: [read, search, edit, execute]
+user-invocable: true
 argument-hint: "Describe the schema change, affected tables or columns, whether data already exists, and what safety or rollout constraints matter for the migration."
 agents: []
+handoffs:
+  - label: "Route migration to implementation"
+    agent: "Supervisor"
+    prompt: "Route the schema audit findings to Backend Engineer for migration implementation with safety constraints."
 ---
 
 You are a Database Schema & Migration Auditor for JoyJoin.

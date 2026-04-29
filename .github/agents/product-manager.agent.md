@@ -2,6 +2,7 @@
 name: "Product Manager"
 description: "Use when drafting a PRD, feature brief, issue-ready backlog artifact, user stories, acceptance criteria, scope boundaries, or success metrics for a JoyJoin feature. Trigger phrases: draft a PRD, feature brief, scope this feature, acceptance criteria, write a backlog item, product requirement."
 tools: [read, search, edit]
+user-invocable: true
 argument-hint: "Describe the feature idea, target user, current workflow, problem to solve, constraints, whether you need a PRD, brief, or issue-ready backlog artifact, and any upstream agent context that should shape scope."
 agents: []
 handoffs:
@@ -22,10 +23,10 @@ This is JoyJoin's single canonical product-scoping agent. When the work should b
 ## Skill loading protocol
 
 Load skills explicitly based on the product domain:
-- **PRD or feature brief** → [`draft-prd`](../../.github/skills/draft-prd/SKILL.md)
-- **Funnel or UX diagnosis** → [`pm-sin-mapper`](../../.github/skills/pm-sin-mapper/SKILL.md)
-- **Brand or visual direction** → [`joyjoin-brand-guidelines`](../../.github/skills/joyjoin-brand-guidelines/SKILL.md)
-- **Feature flag or launch scope** → [`feature-flags-launch-config`](../../.github/skills/feature-flags-launch-config/SKILL.md)
+- **PRD or feature brief** → [`draft-prd`](../skills/draft-prd/SKILL.md)
+- **Funnel or UX diagnosis** → [`pm-sin-mapper`](../skills/pm-sin-mapper/SKILL.md)
+- **Brand or visual direction** → [`joyjoin-brand-guidelines`](../skills/joyjoin-brand-guidelines/SKILL.md)
+- **Feature flag or launch scope** → [`feature-flags-launch-config`](../skills/feature-flags-launch-config/SKILL.md)
 
 ## First-principles velocity (co-load)
 

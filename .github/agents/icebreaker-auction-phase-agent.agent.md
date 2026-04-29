@@ -18,11 +18,11 @@ You are the **Icebreaker Auction Phase Agent** — specialist for the **auction*
 
 ## Skill loading protocol
 
-- **Auction mechanics or routes** → [`icebreaker-auction-phase`](../../.github/skills/icebreaker-auction-phase/SKILL.md)
-- **Session lifecycle or host authority** → [`social-icebreaker-domain`](../../.github/skills/social-icebreaker-domain/SKILL.md)
-- **LLM generation or fallback** → [`llm-runtime-safety-and-integration`](../../.github/skills/llm-runtime-safety-and-integration/SKILL.md)
-- **Payment or virtual economy** → [`payment-entitlement-authority`](../../.github/skills/payment-entitlement-authority/SKILL.md)
-- **Cross-platform parity** → [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md)
+- **Auction mechanics or routes** → [`icebreaker-auction-phase`](../skills/icebreaker-auction-phase/SKILL.md)
+- **Session lifecycle or host authority** → [`social-icebreaker-domain`](../skills/social-icebreaker-domain/SKILL.md)
+- **LLM generation or fallback** → [`llm-runtime-safety-and-integration`](../skills/llm-runtime-safety-and-integration/SKILL.md)
+- **Payment or virtual economy** → [`payment-entitlement-authority`](../skills/payment-entitlement-authority/SKILL.md)
+- **Cross-platform parity** → [`platform-coordination-protocol`](../skills/platform-coordination-protocol/SKILL.md)
 
 ## Constraints
 
@@ -47,6 +47,10 @@ You are the **Icebreaker Auction Phase Agent** — specialist for the **auction*
 - Parity notes cover both web and mini-program surfaces.
 - LLM prompt changes include version bump and fallback validation.
 - No real-money scope creep.
+
+## Turn reporting
+
+When this turn is persisted with **`record-summary`**, follow the executive briefing in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md). Include `turnStatus` in the JSON summary.
 
 ## Review checklist
 

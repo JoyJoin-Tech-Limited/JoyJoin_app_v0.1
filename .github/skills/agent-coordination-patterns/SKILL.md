@@ -15,8 +15,6 @@ description: >-
 
 Multi-agent work is not just "spawn many agents and hope." This skill provides explicit patterns for designing agent workflows that converge on a balanced, coherent result.
 
----
-
 ## When to use this skill
 
 - Planning how **2+ agents** should collaborate on a single task or feature
@@ -32,142 +30,26 @@ Multi-agent work is not just "spawn many agents and hope." This skill provides e
 - Quality-gate deliberation (use [`harness-engineering-deliberation`](../../.github/skills/harness-engineering-deliberation/SKILL.md))
 - Simple subagent delegation with no interdependencies (use [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md))
 
----
-
 ## Pattern catalog
 
-### Pattern 1: Sequential Pipeline (A → B → C)
+See [`references/pattern-catalog.md`](./references/pattern-catalog.md) for detailed descriptions of all 7 patterns:
 
-Agents run one after another. Each receives the previous agent's output as its input.
+| Pattern | Structure | Best for |
+|---------|-----------|----------|
+| **Sequential Pipeline** | A → B → C | Steps with natural ordering and genuine dependencies |
+| **Parallel Swarm** | A + B + C → Merge | Independent sub-tasks with combinable outputs |
+| **Dependency Graph** | A → B+C → D | Mixed sequential/parallel with explicit blocking |
+| **Fan-Out / Fan-In** | Explore → Converge | Broad exploration before synthesis |
+| **Convergence** | Build → Review → Refine | Quality-critical tasks needing iterative polish |
+| **Conflict Resolution** | Re-scope → Re-sequence → Authority → Deliberation → Human | Incompatible outputs from parallel agents |
+| **Workload Partitioning** | By domain / file / layer / phase / concern | Dividing work without collision |
 
-```
-Researcher → Planner → Backend Engineer → QA Agent
-```
-
-**Use when:** Each step genuinely depends on the previous step's output. The pipeline has natural ordering.
-
-**Rules:**
-- Pass a **context capsule** summarizing all prior outputs, not the raw full output.
-- If an agent fails, the pipeline stops. Decide: retry, reroute, or abort.
-- Keep each capsule under 400 words. If the accumulated context exceeds this, extract a fresh summary before the next handoff.
-
-**Anti-pattern:** Don't pipeline when steps are independent — that's sequential waste.
-
----
-
-### Pattern 2: Parallel Swarm (A + B + C → Merge)
-
-Agents run simultaneously. Their outputs are merged into a single coherent result.
-
-```
-Explore(auth) + Explore(payments) + Explore(DB schema) → Merge → Unified plan
-```
-
-**Use when:** The sub-tasks are independent and their outputs can be combined.
-
-**Rules:**
-- Each agent gets a **non-overlapping, self-contained scope**.
-- Use `run_in_background=true` for truly independent tasks.
-- The merge step is **mandatory** — never leave parallel outputs unmerged.
-- Merge strategies: union (concatenate), intersection (find common ground), synthesis (create new unified view), or voting (majority wins for discrete choices).
-
-**Anti-pattern:** Parallel agents with overlapping scopes produce conflicting duplicates.
-
----
-
-### Pattern 3: Dependency Graph (A → B+C → D)
-
-A mix of sequential and parallel: some agents block others, some run concurrently.
-
-```
-Researcher → [Backend Engineer + Frontend Engineer] → QA Agent
-```
-
-**Use when:** There are clear dependencies but also parallelizable branches.
-
-**Rules:**
-- Draw the graph explicitly before spawning. Label each edge as "blocks" or "independent."
-- The merge node (before D) must receive **synthesized output**, not raw dumps from B and C.
-- If B and C produce conflicting implementations, the merge node resolves before D proceeds.
-
-**Anti-pattern:** Implicit dependencies where B assumes C finished but they ran in parallel.
-
----
-
-### Pattern 4: Fan-Out / Fan-In
-
-One agent fans work out to many, then a single agent fans results back in.
-
-```
-Supervisor → [Agent 1] [Agent 2] [Agent 3] ... [Agent N] → Synthesizer
-```
-
-**Use when:** The task decomposes into many similar sub-tasks (e.g., audit N files, review N routes).
-
-**Rules:**
-- The fan-out agent defines the **uniform template** each worker receives.
-- Cap at **5 parallel agents** to avoid context overload in the fan-in step.
-- The fan-in agent (Synthesizer) must have the **merge strategy** defined in its prompt.
-
----
-
-### Pattern 5: Convergence (Merging N Outputs)
-
-How to combine outputs from multiple agents into one coherent result.
-
-| Strategy | When to use | Example |
-|----------|-------------|---------|
-| **Union** | Outputs are additive, no overlap | Combine file lists from 3 explore agents |
-| **Intersection** | Find common ground | 3 agents propose solutions; keep only elements all agree on |
-| **Synthesis** | Create a new unified view | Merge backend + frontend + UX proposals into one architecture doc |
-| **Voting** | Discrete choice, need decision | 3 agents vote on approach A vs B; majority wins |
-| **Weighted** | Some agents are domain authorities | Backend Engineer's API opinion weights 2× over generalist |
-| **Escalation** | Deadlock or high stakes | Route to human or Deliberation Moderator |
-
-**Rules:**
-- Always declare the merge strategy **before** spawning agents.
-- If agents disagree fundamentally, don't force-merge — escalate to [`multi-agent-deliberation`](../../.github/skills/multi-agent-deliberation/SKILL.md).
-
----
-
-### Pattern 6: Conflict Resolution
-
-When parallel agents produce incompatible outputs.
-
-**Detection signals:**
-- Same file recommended for incompatible changes
-- Opposite architectural recommendations
-- One agent's output violates another's constraints
-
-**Resolution ladder:**
-1. **Re-scope** — clarify boundaries and respawn with narrower scope
-2. **Re-sequence** — make the conflict sequential (A proposes, B critiques)
-3. **Authority rule** — domain-owner agent wins (e.g., backend decision → Backend Engineer)
-4. **Deliberation** — escalate to Deliberation Moderator for structured consensus
-5. **Human decision** — present both options with trade-offs, ask user
-
-**Rule:** Never silently pick one agent's output without documenting why.
-
----
-
-### Pattern 7: Workload Partitioning
-
-How to divide work so agents don't collide.
-
-| Partition Strategy | Use When | Example |
-|-------------------|----------|---------|
-| **By domain** | Clear workspace boundaries | Backend Engineer owns `apps/server/`, Frontend Engineer owns `apps/mini-program/` |
-| **By file** | Non-overlapping file sets | Agent A edits `routes/auth.ts`, Agent B edits `routes/payments.ts` |
-| **By layer** | Vertical slice ownership | Agent A owns API + DB, Agent B owns UI, Agent C owns tests |
-| **By phase** | Temporal separation | Research → Design → Implement → Verify |
-| **By concern** | Cross-cutting but separable | One agent handles correctness, another handles performance, another handles security |
-
-**Rules:**
-- Every partition must have a **single owner** — no shared ownership.
-- Define **handoff contracts** — what format Agent A delivers to Agent B.
-- If partitions aren't clean, prefer **sequential** over parallel.
-
----
+**Key rules across all patterns:**
+- Each agent gets a **non-overlapping scope** or explicit dependency ordering.
+- Merge strategy is **declared before spawning** parallel agents.
+- Context capsules stay **under 400 words** per agent.
+- Parent session stays lean — outputs summarized before merging.
+- Never leave parallel outputs unmerged.
 
 ## Coordination vs Deliberation: Decision Matrix
 
@@ -181,11 +63,9 @@ How to divide work so agents don't collide.
 | Need fast parallel exploration of options | ✅ | ❌ |
 | One agent's output violates another's constraints | ⚠️ Try coordination first | ✅ If coordination fails |
 
----
-
 ## Quick Examples
 
-### Example: Build a feature across server + mini-program
+### Build a feature across server + mini-program
 
 ```
 # Step 1: Sequential — Planner defines contract
@@ -198,7 +78,7 @@ Planner → "Design API contract and mini-program screen contract"
 QA Agent → "Verify API + screen integration against contract"
 ```
 
-### Example: Audit codebase for auth gaps
+### Audit codebase for auth gaps
 
 ```
 # Fan-out
@@ -211,7 +91,7 @@ Supervisor → 3 Explore agents:
 Synthesizer → "Merge findings into prioritized fix list, deduplicate, flag high-risk gaps"
 ```
 
-### Example: Conflicting architecture proposals
+### Conflicting architecture proposals
 
 ```
 # Parallel exploration
@@ -222,8 +102,6 @@ Backend Engineer → "Propose caching strategy B (in-memory with TTL)"
 # Resolution: Re-sequence → Backend Engineer proposes, Verifier critiques
 # Or: Escalate → Deliberation Moderator with Alpha=scalability, Gamma=edge-cases
 ```
-
----
 
 ## Troubleshooting
 
@@ -236,8 +114,6 @@ Backend Engineer → "Propose caching strategy B (in-memory with TTL)"
 | Parent context explodes | Raw outputs accumulated | Summarize each agent output to ≤3 lines before merge |
 | Agents duplicate work | Ambiguous partition boundaries | Redraw partition map; add explicit "you own X, not Y" |
 
----
-
 ## Review checklist
 
 - [ ] The coordination pattern is explicitly chosen (pipeline / swarm / graph / fan-out)
@@ -248,8 +124,6 @@ Backend Engineer → "Propose caching strategy B (in-memory with TTL)"
 - [ ] Conflict resolution ladder is known before conflicts arise
 - [ ] Coordination vs deliberation distinction is clear for the task at hand
 - [ ] If 5+ agents needed, hierarchical fan-in is used instead of single merge
-
----
 
 ## Related skills
 

@@ -75,7 +75,7 @@ function MutualMatchCard({ match }: { match: MutualMatch }) {
 
 export default function FeedbackCompletion({ onDone, onDeepFeedback, mutualMatches }: FeedbackCompletionProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

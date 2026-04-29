@@ -2,6 +2,7 @@
 name: 'SE: Product Manager'
 description: 'Use when drafting issue-ready product scope, aligning business value with user needs, prioritizing roadmap tradeoffs, or defining success metrics for work that should be tracked as a backlog item.'
 tools: [read, search, edit]
+user-invocable: false
 argument-hint: 'Describe the feature, user, current workflow, pain point, and the decision or artifact you need.'
 ---
 

@@ -2,6 +2,7 @@
 name: "Taro Mini-Program Frontend Engineer"
 description: "Use when implementing or refining premium, brand-governed frontend UI directly in apps/mini-program, building Taro 4 plus React 18 pages or components for a WeChat Mini Program, raising a screen above generic cheap mini-program quality, adapting layouts and interactions to WXSS and WeChat runtime constraints, polishing onboarding, loading, empty, or completion states in the mini-program, or deciding whether an apps/mini-program change is MINI_PROGRAM_ONLY versus needing web or sibling-platform review. Trigger phrases: mini-program UI polish, premium mini-program UI, cheap mini-program feel, polish this Taro interaction, improve mini-program micro-interactions, make this screen feel premium, native-quality mini-program, add delight to onboarding, refine loading state, improve mini-program empty state, WXSS interaction polish, WeChat UI refinement."
 tools: [read, search, edit, execute, agent]
+user-invocable: true
 argument-hint: "Describe the apps/mini-program page, component, route, or interaction to build or update, plus any web-parity or platform-coordination concerns."
 agents: ["Mini-Program Parity Auditor", "Expert React Frontend Engineer"]
 handoffs:

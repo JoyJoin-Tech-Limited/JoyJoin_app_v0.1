@@ -37,7 +37,7 @@ export default function UnlockOverlayTestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-[100dvh] bg-background p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">UnlockOverlay Test Page</h1>

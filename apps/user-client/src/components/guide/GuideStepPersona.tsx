@@ -185,7 +185,7 @@ export function GuideStepPersona({
       };
   
   return (
-    <div className={cn("min-h-screen bg-background pb-24", className)}>
+    <div className={cn("min-h-[100dvh] bg-background pb-24", className)}>
       {/* Social Tag Banner */}
       <motion.div
         custom={0}

@@ -13,7 +13,7 @@ interface SlotStageProps extends StageProps {
 
 export function SlotStage({ finalArchetype, isDecisive, onComplete, onSkip }: SlotStageProps) {
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center">
+    <div className="relative min-h-[100dvh] flex flex-col items-center justify-center">
       <ArchetypeSlotMachine
         finalArchetype={finalArchetype}
         confidence={isDecisive ? 0.9 : undefined}

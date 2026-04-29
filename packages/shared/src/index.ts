@@ -2,11 +2,13 @@ export * from './schema';
 export * from './constants';
 export * from './utils';
 export * from './gamification';
-// DEPRECATED — legacy static game catalog for IcebreakerToolkit only.
-// See docs/icebreaker-system.md §2 and packages/shared/src/icebreakerGames.ts
-// for full deprecation notice. Do not use for new Social Icebreaker phases.
-export * from './icebreakerGames';
+export * from './phaseModule';
+export * from './phaseRegistry';
+// Note: IcebreakerRunPlan is also re-exported from socialIcebreaker.ts for backward compatibility
+
 export * from './microChallengeTemplates';
+export * from './personalityDiceDares';
+export * from './quipBattle';
 export * from './icebreakerRunPlan';
 export * from './topicCards';
 export * from './wsEvents';

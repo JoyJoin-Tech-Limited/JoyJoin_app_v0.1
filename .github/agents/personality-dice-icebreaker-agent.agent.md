@@ -18,11 +18,11 @@ You are the **Personality Dice Icebreaker Agent** — specialist for **personali
 
 ## Skill loading protocol
 
-- **Personality dice mechanics or routes** → [`personality-dice-icebreaker`](../../.github/skills/personality-dice-icebreaker/SKILL.md)
-- **Session lifecycle or host authority** → [`social-icebreaker-domain`](../../.github/skills/social-icebreaker-domain/SKILL.md)
-- **LLM generation or fallback** → [`llm-runtime-safety-and-integration`](../../.github/skills/llm-runtime-safety-and-integration/SKILL.md)
-- **Personality system or archetypes** → [`personality-system`](../../.github/skills/personality-system/SKILL.md)
-- **Cross-platform parity** → [`platform-coordination-protocol`](../../.github/skills/platform-coordination-protocol/SKILL.md)
+- **Personality dice mechanics or routes** → [`personality-dice-icebreaker`](../skills/personality-dice-icebreaker/SKILL.md)
+- **Session lifecycle or host authority** → [`social-icebreaker-domain`](../skills/social-icebreaker-domain/SKILL.md)
+- **LLM generation or fallback** → [`llm-runtime-safety-and-integration`](../skills/llm-runtime-safety-and-integration/SKILL.md)
+- **Personality system or archetypes** → [`personality-system`](../skills/personality-system/SKILL.md)
+- **Cross-platform parity** → [`platform-coordination-protocol`](../skills/platform-coordination-protocol/SKILL.md)
 
 ## Constraints
 
@@ -47,6 +47,10 @@ You are the **Personality Dice Icebreaker Agent** — specialist for **personali
 - Host-only generate and per-player complete semantics are preserved.
 - Parity notes cover both web and mini-program.
 - LLM prompt changes include version bump and fallback validation.
+
+## Turn reporting
+
+When this turn is persisted with **`record-summary`**, follow the executive briefing in [`../skills/orchestration-turn-reporting/SKILL.md`](../skills/orchestration-turn-reporting/SKILL.md). Include `turnStatus` in the JSON summary.
 
 ## Review checklist
 

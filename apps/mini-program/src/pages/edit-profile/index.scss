@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .edit-profile {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: $color-bg;
 
   &__coach {

@@ -209,7 +209,7 @@ export default function FinalProfileReviewPage() {
   const archetypeIcon: string = archetypeName ? (archetypeConfig[archetypeName]?.icon || "✨") : "✨";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-white">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-purple-50 via-pink-50 to-white">
       <AnimatePresence mode="wait">
         {phase === "analyzing" ? (
           <motion.div
@@ -266,7 +266,7 @@ export default function FinalProfileReviewPage() {
         ) : (
           <motion.div
             key="complete"
-            className="min-h-screen py-8 pb-24"
+            className="min-h-[100dvh] py-8 pb-24"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ 

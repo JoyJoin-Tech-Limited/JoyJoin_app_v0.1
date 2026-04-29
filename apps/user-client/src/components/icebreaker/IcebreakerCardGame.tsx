@@ -357,7 +357,7 @@ export default function IcebreakerCardGame({
       {/* Background Particles */}
       <div className="absolute inset-0 bg-gradient-to-t from-purple-300/20 to-fuchsia-300/10 pointer-events-none" />
 
-      <div className="relative z-10 min-h-screen flex flex-col p-4">
+      <div className="relative z-10 min-h-[100dvh] flex flex-col p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

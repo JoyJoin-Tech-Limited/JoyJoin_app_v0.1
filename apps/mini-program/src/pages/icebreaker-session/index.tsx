@@ -19,6 +19,7 @@ import {
   LieDetectivePhaseView,
   MicroChallengePhaseView,
   PersonalityDicePhaseView,
+  QuipBattlePhaseView,
   RecapPhaseView,
   type SessionPhase,
   WarmupPhaseView,
@@ -678,6 +679,21 @@ export default function IcebreakerSessionPage() {
             onComplete={handleCompleteDiceChallenge}
             isGenerating={pendingAction === 'dice-generate'}
             isCompleting={pendingAction === 'dice-complete'}
+          />
+        )}
+
+        {phase === 'quip_battle' && session && (
+          <QuipBattlePhaseView
+            socialSessionId={socialSessionId || ''}
+            isHost={isHost}
+            prompts={session.quipBattlePrompts ?? []}
+            answers={session.quipBattleAnswers ?? []}
+            results={session.quipBattleResults ?? []}
+            revealed={session.quipBattleRevealed ?? false}
+            submittedUserIds={session.quipBattleSubmittedUserIds ?? []}
+            votedUserIds={session.quipBattleVotedUserIds ?? []}
+            userId={currentUserId}
+            playerCount={playerCount}
           />
         )}
 

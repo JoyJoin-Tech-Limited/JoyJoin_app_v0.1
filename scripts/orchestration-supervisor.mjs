@@ -25,6 +25,7 @@ import {
   appendOrchestrationLog,
   buildToolingAuditSummary,
   collectChangedFiles,
+  detectDuplicateYamlKeys,
   loadKnownSkillNames,
   loadOrchestrationManifest,
   loadRuntimeContext,
@@ -855,6 +856,27 @@ function deriveSessionId(existingSessionId) {
   return cleanString(existingSessionId) || randomUUID();
 }
 
+export function normalizeModeState(value) {
+  if (
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    ['normal', 'caveman', 'grill-me'].includes(value.communication)
+  ) {
+    return {
+      communication: value.communication,
+      activeSinceTurn: Number.isInteger(value.activeSinceTurn) ? value.activeSinceTurn : 0,
+      triggeredBy: ['user', 'agent', 'system'].includes(value.triggeredBy) ? value.triggeredBy : 'system',
+    };
+  }
+
+  return {
+    communication: 'normal',
+    activeSinceTurn: 0,
+    triggeredBy: 'system',
+  };
+}
+
 function trimToWindow(entries, focusWindowTurns) {
   return entries.slice(-focusWindowTurns);
 }
@@ -1035,6 +1057,10 @@ export function recordTurnSummary(repoRoot, payload) {
     };
   }
 
+  const nextMode = payload.mode && typeof payload.mode === 'object' && !Array.isArray(payload.mode)
+    ? normalizeModeState({ ...existingContext.mode, ...payload.mode })
+    : normalizeModeState(existingContext.mode);
+
   const nextContext = {
     ...existingContext,
     event: 'record-summary',
@@ -1043,6 +1069,7 @@ export function recordTurnSummary(repoRoot, payload) {
     artifactPaths: buildTurnSummaryArtifacts(existingContext.artifactPaths),
     upstreamAgent: summary.agentName,
     turnSummaryState: nextTurnSummaryState,
+    mode: nextMode,
     lastUpdatedAt: summary.recordedAt,
   };
 
@@ -1093,6 +1120,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
   });
   const sessionId = deriveSessionId(existingContext.sessionId);
   const turnSummaryState = normalizeTurnSummaryState(existingContext.turnSummaryState);
+  const mode = normalizeModeState(existingContext.mode);
 
   return {
     ...existingContext,
@@ -1130,6 +1158,7 @@ function buildHookContext(repoRoot, eventName, payload, manifest) {
       ['Auto-Eval', 'Supervisor'],
     kickoff: existingContext.kickoff ?? null,
     turnSummaryState,
+    mode,
     memoryContext,
     lastUpdatedAt: now,
   };
@@ -1294,6 +1323,17 @@ function validateReferencedFiles(repoRoot, manifest, validationErrors) {
 }
 
 function runValidate(repoRoot) {
+  const manifestPath = path.join(repoRoot, MANIFEST_RELATIVE_PATH);
+  const rawYaml = fs.readFileSync(manifestPath, 'utf8');
+  const duplicateKeyErrors = detectDuplicateYamlKeys(rawYaml, MANIFEST_RELATIVE_PATH);
+  if (duplicateKeyErrors.length > 0) {
+    outputText('Orchestration validation failed — duplicate key(s) detected:');
+    for (const error of duplicateKeyErrors) {
+      outputText(`- ${error}`);
+    }
+    process.exit(1);
+  }
+
   const manifest = loadOrchestrationManifest(repoRoot);
   const validation = validateOrchestrationManifest(manifest, {
     knownSkillNames: loadKnownSkillNames(repoRoot),
@@ -1341,6 +1381,7 @@ function runCopilotHook(repoRoot, eventName) {
       kickoff: createDefaultKickoffState(kickoffConfig),
       recommendedNextAgents: kickoffConfig.entry_agents ?? ['Researcher', 'Planner'],
       turnSummaryState: createDefaultTurnSummaryState(),
+      mode: normalizeModeState(context.mode),
       memoryContext: buildMemoryContext({
         changedFiles: context.changedFiles ?? [],
         memoryConfig,

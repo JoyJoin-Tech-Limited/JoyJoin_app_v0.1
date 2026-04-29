@@ -86,7 +86,7 @@ const communityBenefits = [
 export default function CommunityJoinPage() {
   const [serviceAdded, setServiceAdded] = useState(false);
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-[100dvh] bg-background pb-20">
       {/* ── Header ── */}
       <MobileHeader
         title="加入社群"

@@ -240,7 +240,7 @@ export default function WalletPage() {
   const availableCount = COUPONS.filter((c) => c.status === "可使用").length;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-[100dvh] bg-background pb-20">
       {/* ── Header ── */}
       <MobileHeader title="专属福利柜" />
 

@@ -25,7 +25,7 @@ export default function CenterTabEmptyStatePage() {
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       />
 
-      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pb-[calc(env(safe-area-inset-bottom,0px)+104px)] pt-12">
+      <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-6 pb-[calc(env(safe-area-inset-bottom,0px)+104px)] pt-12">
         <div className="w-full max-w-[320px]">
           <img
             src={giftBoxIllustration}

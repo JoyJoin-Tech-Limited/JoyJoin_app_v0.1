@@ -41,7 +41,7 @@ export function ResultStageLoader({ stage, children }: ResultStageLoaderProps) {
       <motion.div
         key={stage}
         {...stageTransition}
-        className="min-h-screen"
+        className="min-h-[100dvh]"
       >
         {content}
       </motion.div>

@@ -10,7 +10,7 @@ export default function SocialIcebreakerRecapPage() {
 
   if (!sessionId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <p className="text-muted-foreground">无效的会话ID</p>
       </div>
     );

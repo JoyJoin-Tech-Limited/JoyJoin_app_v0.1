@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 .invite-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   @include page-gradient-bg;
 
   &__hero {

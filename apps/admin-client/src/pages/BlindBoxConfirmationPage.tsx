@@ -197,8 +197,8 @@ export default function BlindBoxConfirmationPage() {
   }, [bootstrap]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_35%),linear-gradient(180deg,_rgba(240,253,250,1)_0%,_rgba(239,246,255,1)_45%,_rgba(250,245,255,1)_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.2),_transparent_35%),linear-gradient(180deg,_rgba(6,10,18,1)_0%,_rgba(10,16,28,1)_45%,_rgba(18,12,30,1)_100%)]">
-      <div className="mx-auto flex min-h-screen max-w-2xl items-center px-4 py-8">
+    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_35%),linear-gradient(180deg,_rgba(240,253,250,1)_0%,_rgba(239,246,255,1)_45%,_rgba(250,245,255,1)_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.2),_transparent_35%),linear-gradient(180deg,_rgba(6,10,18,1)_0%,_rgba(10,16,28,1)_45%,_rgba(18,12,30,1)_100%)]">
+      <div className="mx-auto flex min-h-[100dvh] max-w-2xl items-center px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
