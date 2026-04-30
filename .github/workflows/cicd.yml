@@ -217,6 +217,8 @@ jobs:
           CREATIVE_AI_THEME_PROVIDER: ${{ vars.CREATIVE_AI_THEME_PROVIDER }}
           CREATIVE_AI_TITLE_PROVIDER: ${{ vars.CREATIVE_AI_TITLE_PROVIDER }}
           AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS }}
+          PROJECT_DIR: ${{ vars.PROJECT_DIR }}
+          REPO_URL: ${{ vars.REPO_URL }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -224,7 +226,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           command_timeout: 30m
-          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,PROJECT_DIR,REPO_URL
           script: |
             set -euo pipefail
 
@@ -232,6 +234,8 @@ jobs:
             : "${SESSION_SECRET:?SESSION_SECRET GitHub secret is required}"
             : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
             : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
+            PROJECT_DIR="${PROJECT_DIR:-$HOME/JoyJoin}"
+            REPO_URL="${REPO_URL:-https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1.git}"
 
             soft_cleanup() {
               echo "🧹 Soft cleanup (keep 7 days)..."
@@ -293,7 +297,17 @@ jobs:
 
             # --- 1) Code Sync ---
             echo "📥 Syncing code..."
-            cd ~/JoyJoin
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+              echo "📦 Repository not found at $PROJECT_DIR, cloning from $REPO_URL ..."
+              mkdir -p "$(dirname "$PROJECT_DIR")"
+              if [ -d "$PROJECT_DIR" ] && [ -n "$(ls -A "$PROJECT_DIR" 2>/dev/null || true)" ]; then
+                echo "❌ $PROJECT_DIR exists but is not a git repo. Please set vars.PROJECT_DIR correctly."
+                exit 1
+              fi
+              rm -rf "$PROJECT_DIR"
+              git clone "$REPO_URL" "$PROJECT_DIR"
+            fi
+            cd "$PROJECT_DIR"
             git fetch --all
             git reset --hard origin/main
 
@@ -303,7 +317,7 @@ jobs:
 
             # --- 1.5) Sync GitHub Actions secrets + variables → deployment/.env.production ---
             echo "🔐 Syncing GitHub secrets/variables into deployment/.env.production..."
-            ENV_FILE=~/JoyJoin/deployment/.env.production
+            ENV_FILE="$PROJECT_DIR/deployment/.env.production"
             touch "$ENV_FILE"
 
             # Remove one KEY= line and append KEY=value (safe for DATABASE_URL & special chars)
@@ -365,7 +379,7 @@ jobs:
             echo "🐳 Removing stale joyjoin-api container if present..."
             docker rm -f joyjoin-api || true
             echo "🐳 Restarting containers..."
-            cd ~/JoyJoin/deployment
+            cd "$PROJECT_DIR/deployment"
             retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
 
             echo "🌐 Syncing and reloading host Nginx config..."
@@ -388,7 +402,7 @@ jobs:
               echo "❌ Aborting deploy before nginx reload. Provision the Let's Encrypt certificates on the host first."
               exit 1
             fi
-            sudo cp ~/JoyJoin/deployment/nginx/joyjoin.conf /etc/nginx/conf.d/joyjoin.conf
+            sudo cp "$PROJECT_DIR/deployment/nginx/joyjoin.conf" /etc/nginx/conf.d/joyjoin.conf
             sudo nginx -t
             sudo systemctl reload nginx
             echo "🔎 Active Nginx joyjoin.conf markers..."
@@ -396,7 +410,7 @@ jobs:
 
             # --- 3) DB Sync (same DATABASE_URL as API) ---
             echo "🗄️ Syncing database schema..."
-            cd ~/JoyJoin
+            cd "$PROJECT_DIR"
 
             # Verify journal integrity before running migrations
             echo "   Verifying migration journal..."
