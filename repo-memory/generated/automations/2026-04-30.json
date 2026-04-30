@@ -1,0 +1,40 @@
+{
+  "id": "auto-debug-2026-04-30",
+  "title": "Auto-Debug Report 2026-04-30",
+  "status": "candidate",
+  "owner": "auto-debug",
+  "lastValidatedAt": "2026-04-30T22:34:58.371Z",
+  "tags": [
+    "auto-debug",
+    "error-ignored-in-catch",
+    "missing-optional-chaining",
+    "Missing implementation"
+  ],
+  "triggerTerms": [
+    "bug",
+    "auto-debug"
+  ],
+  "relatedPaths": [
+    ".github/workflows/cicd.yml",
+    "apps/server/src/routes/domains/aiServices.ts",
+    "apps/server/src/routes/domains/matchingAdmin.ts",
+    "apps/server/src/routes/domains/userEventPools.ts",
+    "apps/server/src/routes/domains/xiaoyue.ts",
+    "apps/server/src/repositories/legacyStorageRepo.ts"
+  ],
+  "sources": [
+    "scripts/auto-debug.mjs"
+  ],
+  "confidence": "medium",
+  "summary": {
+    "totalFindings": 15,
+    "criticalCount": 0,
+    "highCount": 1,
+    "scanRange": "last 5 commits",
+    "topCategories": [
+      "error-ignored-in-catch",
+      "missing-optional-chaining",
+      "Missing implementation"
+    ]
+  }
+}

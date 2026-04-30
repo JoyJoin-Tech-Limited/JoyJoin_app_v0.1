@@ -31,7 +31,15 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const VERSION = '2026-05-01.v1';
+// LLM enhancement
+import { callDeepSeek, llmQuery } from './automation-llm.mjs';
+
+// repo-memory integration
+import {
+  resolveRepoPath,
+} from './memory-lib.mjs';
+
+const VERSION = '2026-05-01.v2';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +61,8 @@ const flags = {
   wecom: false,
   verbose: false,
   branch: 'auto-debug', /** @type {string} */
+  noLlm: false,
+  memory: false,
 };
 
 for (let i = 0; i < args.length; i++) {
@@ -62,6 +72,8 @@ for (let i = 0; i < args.length; i++) {
   else if (args[i] === '--wecom') flags.wecom = true;
   else if (args[i] === '--verbose') flags.verbose = true;
   else if (args[i] === '--branch' && i + 1 < args.length) flags.branch = args[++i];
+  else if (args[i] === '--no-llm') flags.noLlm = true;
+  else if (args[i] === '--memory') flags.memory = true;
 }
 
 // ─── Git helpers ─────────────────────────────────────────────────────────────
@@ -621,6 +633,241 @@ function getRemediation(patternName) {
   return remediations[patternName] || 'Review and fix the identified issue';
 }
 
+// ─── LLM-enhanced analysis ───────────────────────────────────────────────────
+
+/**
+ * Use DeepSeek to analyze suspicious code snippets for deeper validation.
+ * Sends regex-flagged findings to LLM for false-positive reduction and
+ * natural-language explanation.  Also scans the full diff for patterns
+ * the regex engine might miss.
+ *
+ * @param {string} diffContent
+ * @param {Finding[]} regexFindings
+ * @returns {Promise<{llmValidated: Finding[], llmNew: Finding[]}>}
+ */
+async function analyzeWithLLM(diffContent, regexFindings) {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    if (flags.verbose) console.log('[llm] DEEPSEEK_API_KEY not set — skipping LLM analysis');
+    return { llmValidated: [], llmNew: [] };
+  }
+
+  console.log('\n🤖 Running LLM-enhanced analysis (flash-thinking, high reasoning)...');
+  const startTime = Date.now();
+
+  // ── Phase 1: Validate regex findings ──
+  /** @type {Finding[]} */
+  const llmValidated = [];
+  const criticalFindings = regexFindings.filter(f =>
+    f.severity === 'CRITICAL' || f.severity === 'HIGH'
+  );
+
+  // Only send TOP findings to LLM to stay within token/time budget
+  const findingsToValidate = criticalFindings.slice(0, 5);
+
+  if (findingsToValidate.length > 0) {
+    const systemPrompt = `你是一个专业的 TypeScript/Node.js 代码安全审计专家。
+你的任务是验证以下 Bug 发现是否真实。
+对每个发现，给出：
+1. 是否真实漏洞 (true/false)
+2. 如果你认为 category 不太对，给出更准确的分类
+3. 简短的确认说明
+
+只输出事实，不要泛泛而谈。`;
+
+    const userPrompt = `验证以下代码分析发现的 Bug 是否真实：
+
+${findingsToValidate.map((f, i) => `
+## 发现 ${i + 1}: [${f.severity}] ${f.category}
+文件: ${f.locations[0].file}:${f.locations[0].line}
+代码: \`\`\`
+${f.locations[0].snippet}
+\`\`\`
+描述: ${f.message}
+上下文: ${f.context || 'N/A'}
+`).join('\n')}
+
+对每个发现，以 JSON 格式回复：
+[
+  {"index": 0, "real": true/false, "actualCategory": "...", "note": "..."}
+]`;
+
+    const result = await callDeepSeek({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      tier: 'flash-thinking',
+      reasoningEffort: 'high',
+      temperature: 0.2,
+      maxTokens: 2048,
+      callerTag: 'auto-debug-validate',
+    });
+
+    if (result.ok) {
+      try {
+        // Try to parse JSON from response
+        const jsonMatch = result.content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const validation = JSON.parse(jsonMatch[0]);
+          for (const v of validation) {
+            if (v.index >= 0 && v.index < findingsToValidate.length) {
+              if (v.real) {
+                const original = findingsToValidate[v.index];
+                llmValidated.push({
+                  ...original,
+                  context: `${original.context || original.message}\n[LLM confirmed] ${v.note || ''}`,
+                });
+              } else if (flags.verbose) {
+                console.log(`  [llm] Rejected false positive: ${findingsToValidate[v.index].category} at ${findingsToValidate[v.index].locations[0].file}:${findingsToValidate[v.index].locations[0].line} — ${v.note}`);
+              }
+            }
+          }
+        }
+      } catch (parseErr) {
+        if (flags.verbose) console.log(`[llm] Failed to parse validation response: ${parseErr}`);
+      }
+    }
+  }
+
+  // ── Phase 2: LLM scans diff for new bugs ──
+  /** @type {Finding[]} */
+  const llmNew = [];
+
+  // Extract the most interesting/modified files (max 5, max 300 lines context)
+  const fileDiffs = parseDiffByFile(diffContent);
+  const sourceFiles = fileDiffs.filter(f =>
+    f.file.endsWith('.ts') || f.file.endsWith('.tsx') || f.file.endsWith('.js') || f.file.endsWith('.mjs')
+  );
+  const topFiles = sourceFiles
+    .sort((a, b) => b.addedLines.length - a.addedLines.length)
+    .slice(0, 5);
+
+  if (topFiles.length > 0) {
+    const systemPrompt = `你是一个资深代码审计专家。审查以下 git diff 中的 changed files。
+
+你的任务：找出可能导致数据丢失、崩溃、安全漏洞或重大用户问题的 BUG。
+
+重点关注：
+1. Null/undefined dereference（无 ?. 保护）
+2. Missing await 导致 Promise 被吞掉
+3. SQL injection（字符串拼接查询）
+4. Auth bypass（admin 路由无权限检查）
+5. Race condition（共享可变状态 + 异步操作）
+6. 内存泄漏（连接未关闭）
+7. 逻辑错误（条件判断反了、边界条件遗漏）
+
+要求：
+- 只报告 HIGH 及以上严重级别的问题
+- 必须能描述具体的触发场景
+- 如果没找到严重问题，回复 "NO_CRITICAL_BUGS_FOUND"
+- 用中文回复发现`;
+
+    const userPrompt = `请审查以下 ${topFiles.length} 个文件的变更内容：
+
+${topFiles.map((f, i) => `
+=== 文件 ${i + 1}: ${f.file} ===
+\`\`\`diff
+${f.addedLines.slice(0, 150).join('\n')}
+${f.addedLines.length > 150 ? '\n... (truncated)' : ''}
+\`\`\`
+`).join('\n')}
+
+对每个发现的 Bug，按以下 JSON 格式输出：
+[
+  {"file": "路径", "line": 行号, "severity": "CRITICAL"|"HIGH", "category": "bug类型", "message": "问题描述", "remediation": "修复建议", "triggerScenario": "触发场景"}
+]`;
+
+    const result = await callDeepSeek({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      tier: 'flash-thinking',
+      reasoningEffort: 'high',
+      temperature: 0.2,
+      maxTokens: 4096,
+      callerTag: 'auto-debug-scan',
+    });
+
+    if (result.ok && !result.content.includes('NO_CRITICAL_BUGS_FOUND')) {
+      try {
+        const jsonMatch = result.content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const llmFindings = JSON.parse(jsonMatch[0]);
+          for (const lf of llmFindings) {
+            if (lf.file && lf.severity && lf.message) {
+              llmNew.push({
+                severity: lf.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+                category: lf.category || 'llm-detected',
+                message: lf.message,
+                remediation: lf.remediation || 'Review and fix the identified issue',
+                context: `[AI-detected] ${lf.triggerScenario || ''}`,
+                locations: [{
+                  file: lf.file,
+                  line: lf.line || 0,
+                  snippet: lf.message,
+                }],
+              });
+            }
+          }
+        }
+      } catch (parseErr) {
+        if (flags.verbose) console.log(`[llm] Failed to parse scan response: ${parseErr}`);
+      }
+    }
+  }
+
+  const elapsed = Date.now() - startTime;
+  console.log(`   LLM analysis completed in ${(elapsed / 1000).toFixed(1)}s`);
+  console.log(`   Regex findings validated: ${llmValidated.length}`);
+  console.log(`   New LLM-discovered bugs: ${llmNew.length}`);
+
+  return { llmValidated, llmNew };
+}
+
+// ─── Memory tracking (repo-memory integration) ──────────────────────────────
+
+const MEMORY_AUTO_DIR = 'repo-memory/generated/automations';
+
+/**
+ * Write auto-debug findings to repo-memory for cross-run tracking
+ * @param {Finding[]} findings
+ */
+function writeMemoryRecord(findings) {
+  try {
+    const dir = resolveRepoPath(MEMORY_AUTO_DIR);
+    fs.mkdirSync(dir, { recursive: true });
+
+    const date = new Date().toISOString().split('T')[0];
+    const record = {
+      id: `auto-debug-${date}`,
+      title: `Auto-Debug Report ${date}`,
+      status: 'candidate',
+      owner: 'auto-debug',
+      lastValidatedAt: new Date().toISOString(),
+      tags: ['auto-debug', ...new Set(findings.map(f => f.category))],
+      triggerTerms: ['bug', 'auto-debug'],
+      relatedPaths: [...new Set(findings.map(f => f.locations[0].file))],
+      sources: ['scripts/auto-debug.mjs'],
+      confidence: findings.length > 0 ? 'medium' : 'low',
+      summary: {
+        totalFindings: findings.length,
+        criticalCount: findings.filter(f => f.severity === 'CRITICAL').length,
+        highCount: findings.filter(f => f.severity === 'HIGH').length,
+        scanRange: flags.range || `last ${flags.commits} commits`,
+        topCategories: [...new Set(findings.map(f => f.category))].slice(0, 5),
+      },
+    };
+
+    const filePath = path.join(dir, `${date}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(record, null, 2));
+    if (flags.verbose) console.log(`   [memory] Wrote ${filePath}`);
+  } catch (err) {
+    if (flags.verbose) console.error(`   [memory] Write failed: ${err}`);
+  }
+}
+
 // ─── PR creation ─────────────────────────────────────────────────────────────
 
 /**
@@ -887,31 +1134,61 @@ async function main() {
     }
   }
 
-  // 4. Analyze diff for bug patterns
+  // 4. Analyze diff for bug patterns (regex engine)
   console.log('\n🔬 Analyzing code changes for bug patterns...');
   const findings = analyzeDiff(diffContent, changedFiles);
 
-  // 5. Filter to critical/high severity
-  const criticalFindings = findings.filter(f =>
+  // 5. LLM-enhanced analysis
+  /** @type {Finding[]} */
+  let llmValidated = [];
+  /** @type {Finding[]} */
+  let llmNew = [];
+  if (!flags.noLlm && (findings.length > 0 || changedFiles.length > 0)) {
+    const llmResult = await analyzeWithLLM(diffContent, findings);
+    llmValidated = llmResult.llmValidated;
+    llmNew = llmResult.llmNew;
+  }
+
+  // Merge findings: use LLM-validated ones (replace regex), add LLM-new ones
+  const mergedFindings = [
+    // Keep regex findings that were NOT sent for LLM validation
+    ...findings.filter(f =>
+      f.severity !== 'CRITICAL' && f.severity !== 'HIGH'
+    ),
+    // Keep LLM-validated findings
+    ...llmValidated,
+    // Add LLM-discovered findings
+    ...llmNew,
+  ];
+
+  // 6. Write to repo-memory
+  if (mergedFindings.length > 0) {
+    try { writeMemoryRecord(mergedFindings); } catch {}
+  }
+
+  // 7. Filter to critical/high severity
+  const criticalFindings = mergedFindings.filter(f =>
     f.severity === 'CRITICAL' || f.severity === 'HIGH'
   );
 
-  // 6. Report findings
-  if (findings.length === 0) {
+  // 9. Report findings
+  if (mergedFindings.length === 0) {
     console.log('\n✅ No potential bugs detected.');
   } else {
-    console.log(`\n📊 Found ${findings.length} potential issue(s):`);
+    console.log(`\n📊 Found ${mergedFindings.length} potential issue(s):`);
+    console.log(`   (Regex: ${findings.length} | LLM-validated: ${llmValidated.length} | LLM-discovered: ${llmNew.length})`);
 
     for (const sev of ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']) {
-      const items = findings.filter(f => f.severity === sev);
+      const items = mergedFindings.filter(f => f.severity === sev);
       if (items.length === 0) continue;
 
       const icon = sev === 'CRITICAL' ? '🔴' : sev === 'HIGH' ? '🟠' : sev === 'MEDIUM' ? '🟡' : '⚪';
       console.log(`\n${icon} ${sev} Severity (${items.length})`);
 
       for (const item of items.slice(0, 5)) {
-        console.log(`   - ${item.category}: ${item.message}`);
-        console.log(`     ${item.locations[0].file}:${item.locations[0].line}`);
+        console.log(`   - [${item.category}] ${item.message}`);
+        const isLlm = item.context?.startsWith('[AI-detected]');
+        console.log(`     ${isLlm ? '🤖' : ''} ${item.locations[0].file}:${item.locations[0].line}`);
         console.log(`     Fix: ${item.remediation}`);
       }
       if (items.length > 5) {
@@ -920,7 +1197,7 @@ async function main() {
     }
   }
 
-  // 7. Create PR if requested and critical bugs found
+  // 10. Create PR if requested and critical bugs found
   let prCreated = false;
   if (flags.pr && criticalFindings.length > 0) {
     console.log('\n📝 Creating bug-finding PR...');
@@ -932,18 +1209,18 @@ async function main() {
     }
   } else if (flags.pr && criticalFindings.length === 0) {
     console.log('\n✅ No critical bugs found — skipping PR creation.');
-    console.log('   (This is the expected outcome most runs.)');
+    console.log('   (This is the expected outcome most days.)');
   }
 
-  // 8. WeCom notification
+  // 11. WeCom notification
   if (flags.wecom) {
     console.log('\n📱 Sending WeCom notification...');
-    await sendWeComNotification(findings);
+    await sendWeComNotification(mergedFindings);
   }
 
-  // 9. Summary
+  // 12. Summary
   console.log('\n' + '='.repeat(50));
-  console.log(`Summary: ${findings.length} findings (${criticalFindings.length} critical/high)`);
+  console.log(`Summary: ${mergedFindings.length} findings (${criticalFindings.length} critical/high)`);
   if (gateFailures.length > 0) {
     console.log(`Quality gates: ${gateFailures.length} failed ⚠️`);
   }
