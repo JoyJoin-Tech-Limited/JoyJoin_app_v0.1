@@ -11,6 +11,8 @@ AI-powered background automations that analyze code, find bugs, update documenta
 | **Auto-Debug** | Daily 04:00 UTC | `scripts/auto-debug.mjs` | `.github/workflows/auto-debug.yml` |
 | **Auto-Docs** | Daily 05:00 UTC | `scripts/auto-docs.mjs` | `.github/workflows/auto-docs.yml` |
 | **Auto-Digest** | Daily 06:00 UTC | `scripts/auto-digest.mjs` | `.github/workflows/auto-digest.yml` |
+| **Auto-Test** | Daily 07:00 UTC | `scripts/auto-test.mjs` | `.github/workflows/auto-test.yml` |
+| **Auto-CI-Fix** | On CI failure | `scripts/auto-ci-fix.mjs` | `.github/workflows/auto-ci-fix.yml` |
 | **WeCom Trigger** | On demand | — | `.github/workflows/wecom-trigger.yml` |
 
 Each automation:

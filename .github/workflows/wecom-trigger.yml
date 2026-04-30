@@ -50,6 +50,8 @@ on:
           - auto-debug
           - auto-docs
           - auto-digest
+          - auto-test
+          - auto-ci-fix
       commits:
         description: 'Commits to analyze (for auto-debug/auto-docs)'
         required: false
@@ -141,6 +143,30 @@ jobs:
             --ref ${{ github.ref_name }} \
             ${{ inputs.hours && format('--field hours={0}', inputs.hours) || '' }} \
             ${{ inputs.range && format('--field since={0}', inputs.range) || '' }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Dispatch to auto-test
+        id: dispatch-test
+        if: steps.determine-action.outputs.action == 'auto-test'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-test workflow..."
+          gh workflow run auto-test.yml \
+            --ref ${{ github.ref_name }} \
+            ${{ inputs.commits && format('--field commits={0}', inputs.commits) || '' }} \
+            ${{ inputs.create_pr != 'false' && '--field create_pr=true' || '--field create_pr=false' }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Dispatch to auto-ci-fix
+        id: dispatch-ci-fix
+        if: steps.determine-action.outputs.action == 'auto-ci-fix'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-ci-fix workflow..."
+          gh workflow run auto-ci-fix.yml \
+            --ref ${{ github.ref_name }} \
             ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
 
       - name: Log dispatch result
