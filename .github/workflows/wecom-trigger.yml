@@ -42,13 +42,14 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Automation to trigger (auto-debug, auto-docs)'
+        description: 'Automation to trigger'
         required: true
         default: 'auto-debug'
         type: choice
         options:
           - auto-debug
           - auto-docs
+          - auto-digest
       commits:
         description: 'Commits to analyze (for auto-debug/auto-docs)'
         required: false
@@ -127,6 +128,19 @@ jobs:
             ${{ inputs.range && format('--field range={0}', inputs.range) || '' }} \
             ${{ inputs.scan_all == 'true' && '--field scan_all=true' || '' }} \
             ${{ inputs.create_pr != 'false' && '--field create_pr=true' || '--field create_pr=false' }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Dispatch to auto-digest
+        id: dispatch-digest
+        if: steps.determine-action.outputs.action == 'auto-digest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-digest workflow..."
+          gh workflow run auto-digest.yml \
+            --ref ${{ github.ref_name }} \
+            ${{ inputs.hours && format('--field hours={0}', inputs.hours) || '' }} \
+            ${{ inputs.range && format('--field since={0}', inputs.range) || '' }} \
             ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
 
       - name: Log dispatch result
