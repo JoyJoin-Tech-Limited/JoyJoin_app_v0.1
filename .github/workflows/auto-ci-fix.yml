@@ -1,0 +1,92 @@
+# Auto-CI-Fix — CI Failure Autofix Automation
+#
+# Monitors CI pipeline failures, deduplicates against other agents,
+# investigates root cause, and creates fix PRs.
+#
+# Triggered by:
+#   - workflow_run: when CI/CD pipeline fails (cicd.yml)
+#   - workflow_dispatch: manual trigger
+#
+# Secrets:
+#   WECOM_BOT_KEY          – WeCom notifications
+#   DEEPSEEK_API_KEY       – for LLM root cause analysis
+
+name: Auto-CI-Fix
+
+on:
+  workflow_run:
+    workflows: ['JoyJoin Production Pipeline']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'CI run ID to investigate'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Preview only'
+        required: false
+        default: 'false'
+        type: boolean
+      notify_wecom:
+        description: 'WeCom notification'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-ci-fix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci-fix:
+    name: CI Failure Investigation
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run auto-ci-fix
+        id: fix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CI_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS=""
+
+          if [ "${{ inputs.dry_run || 'false' }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          else
+            ARGS="$ARGS --pr"
+          fi
+
+          if [ "${{ inputs.notify_wecom || 'true' }}" = "true" ] && [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+            ARGS="$ARGS --wecom"
+          fi
+
+          ARGS="$ARGS --verbose"
+          node scripts/auto-ci-fix.mjs $ARGS
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
