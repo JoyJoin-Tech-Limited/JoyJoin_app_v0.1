@@ -219,6 +219,7 @@ jobs:
           AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS }}
           PROJECT_DIR: ${{ vars.PROJECT_DIR }}
           REPO_URL: ${{ vars.REPO_URL }}
+          GIT_AUTH_TOKEN: ${{ github.token }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -226,7 +227,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           command_timeout: 30m
-          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,PROJECT_DIR,REPO_URL
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,PROJECT_DIR,REPO_URL,GIT_AUTH_TOKEN
           script: |
             set -euo pipefail
 
@@ -236,6 +237,7 @@ jobs:
             : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
             PROJECT_DIR="${PROJECT_DIR:-$HOME/JoyJoin}"
             REPO_URL="${REPO_URL:-https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1.git}"
+            : "${GIT_AUTH_TOKEN:?GIT_AUTH_TOKEN is required for bootstrap clone}"
 
             soft_cleanup() {
               echo "🧹 Soft cleanup (keep 7 days)..."
@@ -305,7 +307,12 @@ jobs:
                 exit 1
               fi
               rm -rf "$PROJECT_DIR"
-              git clone "$REPO_URL" "$PROJECT_DIR"
+              AUTH_REPO_URL="$REPO_URL"
+              if [[ "$REPO_URL" =~ ^https://github\.com/ ]]; then
+                AUTH_REPO_URL="${REPO_URL/https:\/\/github.com\//https:\/\/x-access-token:${GIT_AUTH_TOKEN}@github.com\/}"
+              fi
+              git clone "$AUTH_REPO_URL" "$PROJECT_DIR"
+              unset AUTH_REPO_URL
             fi
             cd "$PROJECT_DIR"
             git fetch --all
