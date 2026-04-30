@@ -1,6 +1,48 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-04-30
+> Compact instructions for AI coding agents. Last updated: 2026-05-01
+
+---
+
+## 0. Before You Code — Mandatory Context Checklist
+
+> **Do these steps before editing a single file.** Most implementation errors come from skipping unknown constraints, not from coding mistakes.
+
+### Step 1: Load the domain skill
+
+Use the `skill` tool to load the skill that owns the boundary you're touching. These are the highest-regression areas — missing the wrong skill here is the #1 cause of rework:
+
+| Area you're modifying | Skill to load (mandatory) |
+|----------------------|--------------------------|
+| Server routes, endpoints, middleware | `server-domain-architecture` |
+| Matching scores, pair weighting, group formation | `matching-domain` |
+| Payment creation, verification, refunds, webhooks | `payment-entitlement-authority` |
+| Onboarding flow, `nextStep` logic, completion signals | `onboarding-state-architecture` |
+| Social Icebreaker phases, sessions, state machine | `social-icebreaker-domain` |
+| Any AI/LLM call in production code | `llm-runtime-safety-and-integration` |
+| Admin routes, RBAC, audit logging | `admin-audit-and-rbac-governance` |
+| Changes touching both mini-program and web | `platform-coordination-protocol` |
+| Any user-facing UI (web or mini-program) | `joyjoin-brand-guidelines` |
+| Database schema changes, migrations | `database-migration-safety` |
+| New feature flag, kill switch, rollout config | `feature-flags-launch-config` |
+
+> Other skills are available. If your task doesn't match this table, describe the task and ask which skill applies.
+
+### Step 2: Read the canonical doc
+
+Each skill's body or `Related docs` section links to the authoritative documentation for that domain. Follow those links. If a skill has no doc references, it is self-contained.
+
+### Step 3: Pre-implementation checklist
+
+- ☐ Relevant skill loaded and read
+- ☐ Skill's constraints understood (invariants, placement rules, naming conventions)
+- ☐ No legacy identifiers in your planned approach (re-check §1 below)
+- ☐ Cross-platform impact assessed (mini-program + web via `platform-coordination-protocol`)
+
+### Step 4: After implementation
+
+- ☐ Run `harness-completion-gate` skill to verify 5-pillar compliance
+- ☐ Run `docs-sync` skill if docs need updating for the changes
 
 ---
 
@@ -119,7 +161,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 (AI-fabricated 3 statements) remains default. Design: `docs/proposals/spot-the-bot-game-design.md`.
 
-**Boost plan:** Planned 10-week roadmap to raise all 10 phases to composite 8.0+ using shared Reveal Engine, Gesture Kit, Context Injector, and Optimistic Sync. (Design doc pending — see `docs/unified-icebreaker-system.md` §11 for implementation sequence.)
+**Boost plan:** `docs/unified-icebreaker-system.md` §11 defines the 10-week roadmap to raise all 10 phases to composite 8.0+ using shared Reveal Engine, Gesture Kit, Context Injector, and Optimistic Sync. Full plan: `.git/.orchestration/plans/boost-all-games-to-8.md`.
 
 **Mini-program is launch-primary:** `apps/mini-program` is the primary client; web (`apps/user-client`) is sandbox. Cross-surface rules: `docs/PLATFORM_COORDINATION.md`.
 
@@ -148,12 +190,19 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 ## 9. Automations (CI Background Agents)
 
-Two scheduled GitHub Actions workflows run daily to analyze code autonomously:
+Five scheduled/event-driven GitHub Actions workflows run autonomously:
 
-- **`auto-debug.yml`** (daily 04:00 UTC) — scans recent commits for high-severity bugs (null derefs, missing auth, SQL injection, race conditions). Opens PRs with findings. Notifies via WeCom.
-- **`auto-docs.yml`** (daily 05:00 UTC) — identifies documentation gaps from recent changes. Generates/updates README files. Opens PRs.
+| Workflow | Schedule | Purpose |
+|----------|----------|---------|
+| **`auto-debug.yml`** | Daily 04:00 UTC | Bug scanning — regex engine (11 patterns) + DeepSeek Flash LLM validation. Opens fix PRs. |
+| **`auto-docs.yml`** | Daily 05:00 UTC | Doc gap detection across 14 mapped source areas. LLM generates READMEs. Opens doc PRs. |
+| **`auto-digest.yml`** | Daily 06:00 UTC | Engineering digest — clusters last 24h commits/PRs into themes via LLM. WeCom only. |
+| **`auto-test.yml`** | Daily 07:00 UTC | Test coverage — finds untested production code, generates tests via LLM, validates with vitest. Opens test PRs. |
+| **`auto-ci-fix.yml`** | On CI failure | CI autofix — deduplicates via lock files, investigates root cause with LLM, skips flaky tests or reports. |
 
-Trigger on demand: `gh workflow run auto-debug.yml` or via the **WeCom Automation Trigger** workflow.
+All notify via WeCom when actionable findings are discovered.
+
+Trigger on demand: `gh workflow run <workflow-name>.yml` or via the **WeCom Automation Trigger** workflow.
 
 Full reference: `docs/automations/README.md`
 
@@ -161,11 +210,13 @@ Full reference: `docs/automations/README.md`
 
 ## 10. Documentation Map
 
+> **Start here:** §0 above lists which skill to load for each common task. This map covers the full doc inventory.
+
 - `README.md` — quick start, env setup
 - `DEVELOPER_QUICK_REFERENCE.md` — canonical engineering guardrails, active vs legacy
 - `PRODUCT_REQUIREMENTS.md` — product canon, terminology
 - `docs/README.md` — architecture docs index
-- `docs/automations/README.md` — CI automation system (auto-debug, auto-docs, WeCom)
+- `docs/automations/README.md` — CI automation system (auto-debug, auto-docs, auto-digest, auto-test, auto-ci-fix, WeCom)
 - `apps/server/src/README.md` — server domain ownership
 - `packages/shared/src/README.md` — shared package boundaries
 - `.agents/skills/` — **OpenCode auto-discovered** skill tree (mirrors `.github/skills/`; kept in sync manually)
