@@ -24,6 +24,7 @@ COPY apps/server ./apps/server
 # Build the server
 WORKDIR /app/apps/server
 RUN npm run build
+RUN npm prune --omit=dev
 
 # Production image
 FROM node:20-alpine AS runner
@@ -33,19 +34,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Install native dependencies for bcrypt
-RUN apk add --no-cache make gcc g++ python3
-
-# Copy package files
+# Copy package files and pruned production dependencies
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder /app/apps/server/package.json ./apps/server/
-
-# Install production dependencies only
-RUN npm ci --omit=dev
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built server files
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
+COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 
 # Copy shared package (needed at runtime)
 COPY --from=builder /app/packages/shared ./packages/shared
