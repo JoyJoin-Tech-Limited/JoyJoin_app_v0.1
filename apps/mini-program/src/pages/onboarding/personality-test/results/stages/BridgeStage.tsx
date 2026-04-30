@@ -1,4 +1,5 @@
 import { Image, Text, View } from '@tarojs/components'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import Card from '../../../../../components/Card'
 import {
   getXiaoyueExpressionAsset,
@@ -31,7 +32,7 @@ export default function BridgeStage({ displayArchetypeName, confidenceLabel, pha
         </View>
 
         <View className='personality-results__bridge-copy'>
-          <Text className='personality-results__bridge-title'>小悦正在替你装裱这张卡</Text>
+          <Text className='personality-results__bridge-title'>{`${DEFAULT_MASCOT_DISPLAY_NAME}正在替你装裱这张卡`}</Text>
           <Text className='personality-results__bridge-text'>
             {phaseText || `我已经把 ${displayArchetypeName} 的气场关键词、分享语和后续提示收进同一张卡里，马上展开给你。`}
           </Text>

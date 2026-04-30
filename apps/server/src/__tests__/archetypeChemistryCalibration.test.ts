@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { compatibilityMatrix } from "@shared/personality/archetypeCompatibility";
+import { chemistryMatrix } from "../archetypeChemistry";
 
 const {
   aggregateArchetypePairFeedbackRowsMock,
@@ -114,5 +116,27 @@ describe("archetypeChemistryCalibration", () => {
     expect(aggregateArchetypePairFeedbackRowsMock).toHaveBeenCalledTimes(1);
     expect(upsertArchetypePairFeedbackStatsMock).toHaveBeenCalledTimes(1);
     expect(Array.from(calibrationMap.values())[0]?.empiricalScore).toBe(75);
+  });
+
+  it("shared compatibilityMatrix and server chemistryMatrix are identical for all 144 ordered pairs", () => {
+    const archetypes = Object.keys(compatibilityMatrix);
+    expect(archetypes.length).toBe(12);
+
+    let mismatchCount = 0;
+    const mismatches: string[] = [];
+
+    for (const arch1 of archetypes) {
+      for (const arch2 of archetypes) {
+        const sharedScore = compatibilityMatrix[arch1]?.[arch2];
+        const serverScore = chemistryMatrix[arch1]?.[arch2];
+        if (sharedScore !== serverScore) {
+          mismatchCount++;
+          mismatches.push(`${arch1}-${arch2}: shared=${sharedScore} server=${serverScore}`);
+        }
+      }
+    }
+
+    expect(mismatchCount).toBe(0);
+    expect(mismatches).toEqual([]);
   });
 });

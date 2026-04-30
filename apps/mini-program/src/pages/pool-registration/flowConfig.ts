@@ -6,7 +6,7 @@ export type PoolEventType = '饭局' | '酒局'
 export interface FlowOption {
   value: string
   label: string
-  emoji: string
+  emoji?: string
   description?: string
 }
 
@@ -15,60 +15,59 @@ export type BriefContent = Pick<PreJoinVibeBrief, 'insight' | 'matchingPromise' 
 export const INTENT_FLOW_OPTIONS: FlowOption[] = INTENT_OPTIONS.map((option) => ({
   value: option.value,
   label: option.label,
-  emoji: option.emoji,
   description: option.subtitle,
 }))
 
 export const LANGUAGE_OPTIONS: FlowOption[] = [
-  { value: '粤语', label: '粤语', emoji: '🇭🇰', description: '更容易拉近距离' },
-  { value: '普通话', label: '普通话', emoji: '🇨🇳', description: '默认开聊更自然' },
-  { value: '英语', label: 'English', emoji: '🇬🇧', description: '适合双语或国际化局' },
+  { value: '粤语', label: '粤语', description: '更容易拉近距离' },
+  { value: '普通话', label: '普通话', description: '默认开聊更自然' },
+  { value: '英语', label: 'English', description: '适合双语或国际化局' },
 ]
 
 export const DINNER_BUDGET_OPTIONS: FlowOption[] = [
-  { value: '150以下', label: '150以下', emoji: '💰', description: '轻松吃顿舒服的' },
-  { value: '150-200', label: '150-200', emoji: '💎', description: '平衡预算和体验' },
-  { value: '200-300', label: '200-300', emoji: '✨', description: '更精致一点的饭局' },
-  { value: '300-500', label: '300-500', emoji: '🌟', description: '把这次吃得更讲究' },
+  { value: '150以下', label: '150以下', description: '轻松吃顿舒服的' },
+  { value: '150-200', label: '150-200', description: '平衡预算和体验' },
+  { value: '200-300', label: '200-300', description: '更精致一点的饭局' },
+  { value: '300-500', label: '300-500', description: '把这次吃得更讲究' },
 ]
 
 export const DRINKS_BUDGET_OPTIONS: FlowOption[] = [
-  { value: '80以下', label: '80以下', emoji: '🍺', description: '轻松小酌就好' },
-  { value: '80-150', label: '80-150', emoji: '🍸', description: '更偏精品调酒或氛围' },
+  { value: '80以下', label: '80以下', description: '轻松小酌就好' },
+  { value: '80-150', label: '80-150', description: '更偏精品调酒或氛围' },
 ]
 
 export const CUISINE_OPTIONS: FlowOption[] = [
-  { value: '粤菜', label: '粤菜', emoji: '🥘' },
-  { value: '川菜', label: '川菜', emoji: '🌶️' },
-  { value: '日料', label: '日料', emoji: '🍱' },
-  { value: '西餐', label: '西餐', emoji: '🍝' },
-  { value: '火锅', label: '火锅', emoji: '🍲' },
-  { value: '烧烤', label: '烧烤', emoji: '🍖' },
+  { value: '粤菜', label: '粤菜' },
+  { value: '川菜', label: '川菜' },
+  { value: '日料', label: '日料' },
+  { value: '西餐', label: '西餐' },
+  { value: '火锅', label: '火锅' },
+  { value: '烧烤', label: '烧烤' },
 ]
 
 export const DIETARY_OPTIONS: FlowOption[] = [
-  { value: 'none', label: '无限制', emoji: '✅' },
-  { value: 'vegetarian', label: '素食', emoji: '🥗' },
-  { value: 'halal', label: '清真', emoji: '☪️' },
-  { value: 'seafood_allergy', label: '海鲜过敏', emoji: '🚫🦐' },
+  { value: 'none', label: '无限制' },
+  { value: 'vegetarian', label: '素食' },
+  { value: 'halal', label: '清真' },
+  { value: 'seafood_allergy', label: '海鲜过敏' },
 ]
 
 export const TASTE_INTENSITY_OPTIONS: FlowOption[] = [
-  { value: 'mild', label: '清淡', emoji: '🌿', description: '想先吃得舒服一点' },
-  { value: 'medium', label: '适中', emoji: '😋', description: '不挑，跟着局走' },
-  { value: 'heavy', label: '重口味', emoji: '🔥', description: '想要更浓一点的味道' },
+  { value: 'mild', label: '清淡', description: '想先吃得舒服一点' },
+  { value: 'medium', label: '适中', description: '不挑，跟着局走' },
+  { value: 'heavy', label: '重口味', description: '想要更浓一点的味道' },
 ]
 
 export const BAR_THEME_OPTIONS: FlowOption[] = [
-  { value: '精酿', label: '精酿', emoji: '🍻', description: '偏啤酒和轻松聊天' },
-  { value: '清吧', label: '清吧', emoji: '🕯️', description: '更安静，更适合慢聊' },
-  { value: '私密调酒', label: '私密调酒', emoji: '🍹', description: '更注重调酒和氛围' },
+  { value: '精酿', label: '精酿', description: '偏啤酒和轻松聊天' },
+  { value: '清吧', label: '清吧', description: '更安静，更适合慢聊' },
+  { value: '私密调酒', label: '私密调酒', description: '更注重调酒和氛围' },
 ]
 
 export const ALCOHOL_COMFORT_OPTIONS: FlowOption[] = [
-  { value: '可以喝酒', label: '可以喝酒', emoji: '🍷', description: '小酌也没问题' },
-  { value: '微醺就好', label: '微醺就好', emoji: '😌', description: '想放松，但不过量' },
-  { value: '无酒精', label: '无酒精', emoji: '🥤', description: '我更想喝软饮' },
+  { value: '可以喝酒', label: '可以喝酒', description: '小酌也没问题' },
+  { value: '微醺就好', label: '微醺就好', description: '想放松，但不过量' },
+  { value: '无酒精', label: '无酒精', description: '我更想喝软饮' },
 ]
 
 export function resolvePoolEventType(rawValue?: string | null): PoolEventType {

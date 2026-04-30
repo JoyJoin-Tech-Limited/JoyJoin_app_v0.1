@@ -1,22 +1,35 @@
 import { motion } from "framer-motion";
+import type { ConnectionPointWithRarity } from "@shared/types/groupAnalysis";
+import { mapRarityToEnergyRingProps } from "@shared/ui/connectionPointCompat";
 
 interface EnergyRingProps {
-  percentage: number;
-  qualityTier: 'common' | 'rare' | 'epic';
+  percentage?: number;
+  qualityTier?: 'common' | 'rare' | 'epic';
   visualBoost?: number;
+  connectionPointsWithRarity?: ConnectionPointWithRarity[]; // ← NEW optional prop
   size?: number;
   strokeWidth?: number;
   children?: React.ReactNode;
 }
 
 export default function EnergyRing({
-  percentage,
-  qualityTier,
-  visualBoost = 0,
+  percentage: propPercentage,
+  qualityTier: propQualityTier,
+  visualBoost: propVisualBoost,
+  connectionPointsWithRarity,
   size = 120,
   strokeWidth = 8,
   children,
 }: EnergyRingProps) {
+  // If server data provided, use it; otherwise fall back to existing props
+  const { percentage, qualityTier, visualBoost } = connectionPointsWithRarity
+    ? mapRarityToEnergyRingProps(connectionPointsWithRarity)
+    : {
+        percentage: propPercentage ?? 0,
+        qualityTier: propQualityTier ?? 'common',
+        visualBoost: propVisualBoost ?? 0,
+      };
+
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   

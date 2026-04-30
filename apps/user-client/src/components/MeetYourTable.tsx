@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import GroupSummaryCard from "./GroupSummaryCard";
 import UserConnectionCard from "./UserConnectionCard";
 import AttendeeProfileSheet from "./AttendeeProfileSheet";
-import { generateSparkPredictions, normalizeInterestName, type AttendeeData, type UserContext } from "@/lib/attendeeAnalytics";
+import { normalizeInterestName, type AttendeeData, type UserContext } from "@/lib/attendeeAnalytics";
 
 interface MeetYourTableProps {
   attendees: AttendeeData[];
@@ -57,7 +57,7 @@ export default function MeetYourTable({
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {attendees.map((attendee) => {
-            const sparkPredictions = generateSparkPredictions(currentUser, attendee);
+            const sparkPredictions: { text: string; rarity: 'common' | 'rare' | 'epic' }[] = [];
             
             const connectionTags = sparkPredictions.map((prediction) => {
               let icon = "✨";

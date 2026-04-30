@@ -111,6 +111,58 @@ export interface AuctionHighBid {
   amount: number;
 }
 
+// ─── Undercover Word (谁是卧底) ────────────────────────────────────────────
+
+export interface UndercoverWordPair {
+  civilianWord: string;
+  undercoverWord: string;
+  category: string;
+}
+
+export interface UndercoverWordRound {
+  roundNumber: number;
+  descriptions: Array<{ userId: string; displayName: string; text: string }>;
+}
+
+export interface UndercoverWordVote {
+  voterId: string;
+  targetUserId: string;
+}
+
+export interface UndercoverWordResult {
+  undercoverUserId: string;
+  undercoverDisplayName: string;
+  civilianWord: string;
+  undercoverWord: string;
+  voteCounts: Record<string, number>;
+  caught: boolean;
+}
+
+// ─── Group Mirror (群像镜像) ───────────────────────────────────────────────
+
+export interface GroupMirrorQuestion {
+  id: string;
+  questionText: string;
+  category: 'perception' | 'memory' | 'prediction';
+}
+
+export interface GroupMirrorAnswer {
+  userId: string;
+  displayName: string;
+  questionId: string;
+  targetUserId: string; // who they think the question is about / best fits
+  reasonText?: string;
+}
+
+export interface GroupMirrorResult {
+  questionId: string;
+  questionText: string;
+  topTargetUserId: string;
+  topTargetDisplayName: string;
+  voteCount: number;
+  totalVotes: number;
+}
+
 /** Temporary in-session skill-role label assigned by Xiaoyue Session Pack. */
 export interface XiaoyuePlayerSkillRole {
   userId: string;
@@ -239,6 +291,19 @@ export function parseXiaoyueSessionPack(input: unknown): XiaoyueSessionPackPaylo
   return xiaoyueSessionPackSchema.parse(input);
 }
 
+export interface RecapSummary {
+  headline: string;
+  closingLine: string;
+  moments: string[];
+}
+
+export interface Medal {
+  emoji: string;
+  title: string;
+  recipientDisplayName: string;
+  description: string;
+}
+
 export interface MiniScriptPlayerRuntimeView {
   slotIndex: number;
   roleLabel: string;
@@ -329,12 +394,36 @@ export interface SocialSessionState {
     winnerDisplayName: string;
     voteCount: number;
   }>;
+  // Undercover Word phase data
+  undercoverWordPair?: UndercoverWordPair;
+  undercoverWordPairMeta?: AIResponseMeta;
+  undercoverUserId?: string;
+  undercoverWordRounds?: UndercoverWordRound[];
+  undercoverWordCurrentRound?: number;
+  undercoverWordVotes?: UndercoverWordVote[];
+  undercoverWordVotedUserIds?: string[];
+  undercoverWordRevealed?: boolean;
+  undercoverWordResults?: UndercoverWordResult;
+  // Group Mirror phase data
+  groupMirrorQuestions?: GroupMirrorQuestion[];
+  groupMirrorQuestionsMeta?: AIResponseMeta;
+  groupMirrorAnswers?: GroupMirrorAnswer[];
+  groupMirrorVotes?: GroupMirrorAnswer[]; // re-use answer shape for votes
+  groupMirrorSubmittedUserIds?: string[];
+  groupMirrorRevealed?: boolean;
+  groupMirrorResults?: GroupMirrorResult[];
   // Recap data
   recapData?: {
     topicsDiscussed: string[];
     challengesCompleted: number;
     lieDetectiveWinner?: string;
     funMoments: string[];
+  };
+  /** Cached AI-generated recap summary and medals when session enters recap phase. */
+  recapSnapshot?: {
+    recapSummary?: RecapSummary;
+    medals?: Medal[];
+    meta?: AIResponseMeta;
   };
   /** 迷你剧本杀 — generated story framework (JSON), host-only mutation via POST /api/miniscript/generate */
   miniScriptFramework?: MiniScriptStoryFrameworkPublic;
@@ -360,7 +449,7 @@ export interface SocialSessionState {
 // Phase config
 export const PHASE_CONFIG = {
   warmup: {
-    emoji: '🌅',
+    emoji: '',
     name: '热身',
     nameEn: 'Warmup',
     gradient: 'from-amber-400 to-orange-400',
@@ -371,7 +460,7 @@ export const PHASE_CONFIG = {
     minPlayersRequired: 2,
   },
   micro_challenge: {
-    emoji: '⚡',
+    emoji: '',
     name: '挑战',
     nameEn: 'Challenge',
     gradient: 'from-cyan-400 to-blue-500',
@@ -382,7 +471,7 @@ export const PHASE_CONFIG = {
     minPlayersRequired: 2,
   },
   lie_detective: {
-    emoji: '🕵️',
+    emoji: '',
     name: '侦探',
     nameEn: 'Lie Detective',
     gradient: 'from-purple-500 to-violet-600',
@@ -393,7 +482,7 @@ export const PHASE_CONFIG = {
     minPlayersRequired: 3,
   },
   auction: {
-    emoji: '🎪',
+    emoji: '',
     name: '拍卖',
     nameEn: 'Auction',
     gradient: 'from-amber-500 to-orange-600',
@@ -404,7 +493,7 @@ export const PHASE_CONFIG = {
     minPlayersRequired: 3,
   },
   personality_dice: {
-    emoji: '🎲',
+    emoji: '',
     name: '骰子',
     nameEn: 'Personality Dice',
     gradient: 'from-pink-500 to-fuchsia-600',
@@ -415,7 +504,7 @@ export const PHASE_CONFIG = {
     minPlayersRequired: 2,
   },
   mini_script: {
-    emoji: '🎭',
+    emoji: '',
     name: '迷你剧本杀',
     nameEn: 'Mini Script',
     gradient: 'from-indigo-500 to-slate-700',
@@ -459,7 +548,7 @@ export const PHASE_CONFIG = {
     minPlayersRequired: 2,
   },
   recap: {
-    emoji: '✨',
+    emoji: '',
     name: '回顾',
     nameEn: 'Recap',
     gradient: 'from-violet-500 to-purple-600',

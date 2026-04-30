@@ -5,7 +5,7 @@
 **User says:** "Explore a warm onboarding welcome screen for new users after personality test completion."
 
 **Apply this skill by:**
-1. Selecting the archetype mascot (Corgi — 开心柯基 — for celebration)
+1. Selecting the archetype mascot (Corgi — 气氛组柯基 — for celebration)
 2. Injecting brand colors and illustration style
 3. Using the onboarding prompt template
 
@@ -14,7 +14,7 @@
 Generate a warm mobile onboarding welcome screen for a social gathering app.
 
 Layout:
-- Top half: A joyful corgi mascot (开心柯基) in circular vignette, sitting with a small open gift box, tail wagging. Low-poly geometric illustration style with painterly textures.
+- Top half: A joyful corgi mascot (气氛组柯基) in circular vignette, sitting with a small open gift box, tail wagging. Low-poly geometric illustration style with painterly textures.
 - Middle: Large headline "欢迎加入悦聚" in thin rounded geometric Chinese display font. Subheadline: "你的专属社交旅程即将开始" in clean legible sans-serif.
 - Bottom: Primary CTA button "去发现活动" with rounded corners (24px radius), Vibrant Purple #8B5CF6 background, white text.
 
@@ -90,7 +90,7 @@ Platform: Mobile web, 375×667px.
 **User says:** "Create an empty state when a user has no upcoming events."
 
 **Apply this skill by:**
-1. Selecting the Koala replacement — Bear (暖心熊) for warm/empty feeling
+1. Selecting the Koala replacement — Bear (情绪树洞考拉) for warm/empty feeling
 2. Using the empty-state template
 3. Injecting illustration style vocabulary
 
@@ -99,7 +99,7 @@ Platform: Mobile web, 375×667px.
 Generate a warm empty state screen for a social events app.
 
 Layout:
-- Center: A calm bear mascot (暖心熊) in circular vignette, holding a small empty calendar or tea cup. Low-poly geometric illustration with painterly textures.
+- Center: A calm bear mascot (情绪树洞考拉) in circular vignette, holding a small empty calendar or tea cup. Low-poly geometric illustration with painterly textures.
 - Below illustration: Headline "还没有活动安排" in thin rounded Chinese display font
 - Sub-copy: "去发现有趣的聚会吧" in clean legible sans-serif, Medium Gray #9CA3AF
 - Bottom: CTA button "去发现活动" with Vibrant Purple #8B5CF6 background, rounded corners

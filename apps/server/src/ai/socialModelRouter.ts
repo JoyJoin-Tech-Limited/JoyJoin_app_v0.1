@@ -68,7 +68,9 @@ type SocialFunction =
   | 'analyzeComplexSemantics'      // hybridSemantic — DeepSeek default (structured JSON inference)
   | 'generateMiniScriptFramework' // MiniScript story framework JSON (MiniMax-first; DeepSeek json_object fallback)
   | 'generatePoolCardHeadline'    // pool card AI headline — MiniMax preferred (warm creative copy)
-  | 'generateQuipBattlePrompts';   // quip battle prompts — creative fill-in-the-blank (flash, fallback-rich)
+  | 'generateQuipBattlePrompts'   // quip battle prompts — creative fill-in-the-blank (flash, fallback-rich)
+  | 'generateUndercoverWordPair'   // undercover word pair generation
+  | 'generateGroupMirrorQuestions'; // group mirror question generation
 
 type SocialFunctionRoutingPolicy = {
   preferredProvider: 'minimax' | 'deepseek';
@@ -115,6 +117,8 @@ const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolic
   generateMiniScriptFramework: { preferredProvider: 'minimax', deepseekTier: 'flash' },
   generatePoolCardHeadline: { preferredProvider: 'minimax', deepseekTier: 'flash' },
   generateQuipBattlePrompts: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateUndercoverWordPair: { preferredProvider: 'minimax', deepseekTier: 'flash' },
+  generateGroupMirrorQuestions: { preferredProvider: 'minimax', deepseekTier: 'flash' },
 
   // ── Tier 2: Flash-thinking + max — complex analysis, validation ──
   analyzeComplexSemantics: {

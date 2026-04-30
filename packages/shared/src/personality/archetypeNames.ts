@@ -33,7 +33,7 @@ export interface ArchetypeDefinition {
  * Canonical archetype definitions (12 archetypes)
  * DO NOT modify the order or IDs without careful consideration of all dependent systems
  */
-export const ARCHETYPE_DEFINITIONS: ArchetypeDefinition[] = [
+export const ARCHETYPE_DEFINITIONS = [
   { id: 'corgi', nameCn: '气氛组柯基', assetKey: 'corgi', order: 1 },      // #01  High X+P, energy 95
   { id: 'rooster', nameCn: '情绪稳定鸡', assetKey: 'rooster', order: 2 },     // #02  High E+P+C, energy 90
   { id: 'hamster_praise', nameCn: '捧场王仓鼠', assetKey: 'hamster_praise', order: 3 }, // #03  High A+P, was dolphin_praise
@@ -46,7 +46,7 @@ export const ARCHETYPE_DEFINITIONS: ArchetypeDefinition[] = [
   { id: 'elephant', nameCn: '定海神针大象', assetKey: 'elephant', order: 10 },  // #10  High C+E, low X+O, energy 52
   { id: 'turtle', nameCn: '慢半拍龟', assetKey: 'turtle', order: 11 },      // #11  High C+E, very low X, energy 38
   { id: 'cat', nameCn: '静音模式猫', assetKey: 'cat', order: 12 },        // #12  Low X+A+P, energy 30
-]
+] satisfies ArchetypeDefinition[]
 
 /**
  * Canonical ordering as ID array (for consumers that only need IDs)

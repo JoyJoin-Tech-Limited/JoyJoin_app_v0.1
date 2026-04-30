@@ -23,6 +23,7 @@ import {
   navigateToMiniProgramNextStep,
   runMiniProgramRouteTransition,
 } from '../../../lib/onboardingNavigation'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { logInfo, logError } from '../../../lib/logger'
 import {
   getArchetypeVisual,
@@ -442,7 +443,7 @@ export default function PersonalityTestPage() {
     return (
       <OnboardingLoadingShell
         stepLabel='Onboarding 1 / 4'
-        title='小悦在准备你的氛围测试入口'
+        title={`${DEFAULT_MASCOT_DISPLAY_NAME}在准备你的氛围测试入口`}
         subtitle='先把登录进度和本机记录对齐好，接着就带你进入这张聚会气场卡。'
         hint='如果你上次答到一半，我会把那份进度顺着接回来。'
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.introHero}
@@ -587,7 +588,7 @@ export default function PersonalityTestPage() {
     return (
       <OnboardingLoadingShell
         stepLabel='JoyJoin 氛围原型'
-        title='小悦在收束你的结果卡'
+        title={`${DEFAULT_MASCOT_DISPLAY_NAME}在收束你的结果卡`}
         subtitle='把刚才的回答翻成更像你的 JoyJoin 气场卡，马上就会正式揭晓。'
         hint='我会把轮廓、关键词和后面的分享卡一起整理好。'
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing}

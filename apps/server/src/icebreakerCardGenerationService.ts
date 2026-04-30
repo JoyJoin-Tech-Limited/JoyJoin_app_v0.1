@@ -57,7 +57,7 @@ export interface GeneratedCard {
   unlockCondition?: string;
 }
 
-const CARD_GENERATION_PROMPT = `你是"小悦"，JoyJoin的破冰卡牌生成助手。你需要为一个活动生成个性化的破冰卡牌。
+const CARD_GENERATION_PROMPT = `你是"悦仔"，JoyJoin的破冰卡牌生成助手。你需要为一个活动生成个性化的破冰卡牌。
 
 ## 卡牌类型
 1. **问题卡 (question)**: 引发有趣对话的问题

@@ -1,6 +1,6 @@
 # JoyJoin Matching Algorithm Reference
 
-> **Status:** Living document — last updated 2026-04-19  
+> **Status:** Living document — last updated 2026-04-29  
 > **Scope:** Covers all three matching layers: (1) Personality archetype assignment, (2) Pair compatibility scoring, (3) Group formation.
 
 ---
@@ -72,7 +72,7 @@ User completes personality quiz
 | `E` | 情绪稳定性 (Emotional Stability) | Calm, resilience under pressure |
 | `O` | 开放性 (Openness) | Curiosity, creativity, novelty-seeking |
 | `X` | 外向性 (Extraversion) | Sociability, energy, talkativeness |
-| `P` | 耐心 (Patience) | Tolerance, deliberateness, steady pace |
+| `P` | 正能量 (Positivity) | Tolerance, deliberateness, steady pace |
 
 All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment. Total question count is config-driven: the active standard-question range comes from `AssessmentConfig`, and 2 interactive closing questions are then appended before scoring final secondary signals.
 
@@ -82,11 +82,11 @@ All traits are scored on a **0–100 scale** from the V4 Adaptive Assessment. To
 |-----------|-------|-------------|-------------|
 | 气氛组柯基 | 🐕 | Very High | High X + High A |
 | 情绪稳定鸡 | 🐔 | Very High | High X + High P |
-| 捧场王仓鼠 | 🐬 | High | High A + High O |
+| 捧场王仓鼠 | 🐹 | High | High A + High O |
 | 探宝雷达狐 | 🦊 | High | High O + High C |
 | 读空气海豚 | 🐬 | Medium | Balanced, High E |
 | 社交裁缝蛛 | 🕷 | Medium | High C + High O |
-| 情绪树洞考拉 | 🐻 | Medium-Low | High A + High E |
+| 情绪树洞考拉 | 🐨 | Medium-Low | High A + High E |
 | 脑洞喷泉章鱼 | 🐙 | Medium | High O, creative burst |
 | 追问猫头鹰 | 🦉 | Low-Medium | High C + High O, introspective |
 | 定海神针大象 | 🐘 | Low-Medium | High A + High E, stabilizer |
@@ -224,6 +224,13 @@ pairScore =
   preference          × 0.05 +
   language            × 0.04 +
   semanticSimilarity  × 0.06;
+
+// Adaptive weights rollout (ENABLE_ADAPTIVE_WEIGHTS=true)
+// When the adaptive weights flag is enabled, Thompson Sampling fetches live
+// bandit weights once per matching run and passes them to pair scoring.
+// Custom weights override the hardcoded defaults above; normalization ensures
+// the total still sums to 1.0. See §3.3.
+
 ```
 
 `semanticSimilarity` is a bounded, cached semantic-profile score built from existing deterministic
@@ -400,6 +407,37 @@ Maximum score shift from enabling: ≤3.9 points (6% weight × 65-point semantic
 - Prometheus endpoint `GET /api/metrics` → `joyjoin_matching_semantic_similarity_score` histogram
   and `joyjoin_matching_semantic_pair_score_delta` histogram
 
+### 3.3 Adaptive Weights (Feature-Flagged Thompson Sampling)
+
+> Active only when `ENABLE_ADAPTIVE_WEIGHTS=true`. Disabled path uses static weights from §3.1.
+
+**File:** `apps/server/src/matchingSemantic.ts`, `apps/server/src/matchingWeightsService.ts`
+
+**Purpose:** Uses Thompson Sampling (Beta-distribution bandit) to dynamically adjust pair-scoring dimension weights based on post-event outcome data. Weights are bounded to move no more than 3% per update cycle.
+
+**How it works:**
+
+1. `matchingWeightsService.getActiveWeights()` returns the latest bandit-selected weights (cached, 60s TTL).
+2. `matchEventPool()` fetches these weights once per matching run when the flag is ON.
+3. `calculateWeightedPairScore()` accepts an optional `customWeights` parameter; when present, it overrides hardcoded defaults.
+4. Weights are consumed in percentage form (e.g., `chemistryWeight: 28`) and normalized to decimals at runtime.
+5. If weight fetch fails, the system falls back to hardcoded defaults without crashing.
+
+**Weight key format (supports both naming conventions for backward compatibility):**
+
+| Key (long) | Key (short) | Default |
+|---|---|---|
+| `chemistryWeight` | `chemistry` | 28 |
+| `interestWeight` | `interest` | 28 |
+| `socialAffinityWeight` | `socialAffinity` | 20 |
+| `backgroundDiversityWeight` | `backgroundDiversity` | 15 |
+| `preferenceWeight` | `preference` | 5 |
+| `languageWeight` | `language` | 4 |
+
+**Cache key:** Pair score caches include `|adaptive` segment only when custom weights are active, preserving backward compatibility with pre-populated caches.
+
+**Rollback:** Set `ENABLE_ADAPTIVE_WEIGHTS=false`, restart server. No DB migration required.
+
 ---
 
 ## 4. Layer 3 — Group Formation Algorithm
@@ -505,6 +543,29 @@ interface MatchGroup {
   temperatureLevel: string;     // Qualitative label from overallScore
 }
 ```
+
+### 4.5 Redistribution Pass (Adaptive Weights Only)
+
+> Executed only when `ENABLE_ADAPTIVE_WEIGHTS=true` and custom weights were successfully fetched.
+
+After the greedy formation completes, some users may remain unmatched (stranded). The redistribution pass attempts to place them in three phases:
+
+**Phase 1 — Fill existing groups:**
+- Collect stranded users (not assigned to any group).
+- For each stranded user, score against all existing groups with `members.length < maxGroupSize`.
+- Place into the best-fitting group if average pair score ≥ 50.
+- Recalculate group stats after each placement.
+
+**Phase 2 — Form remainder groups:**
+- If remaining stranded users ≥ `minGroupSize`, form new group(s) from them using the same greedy logic.
+- Only commit if the new group meets the `minGroupSize` threshold.
+
+**Phase 3 — Absorb singleton overflow:**
+- If stranded users < `minGroupSize` (i.e., 1–3 users left), find the best-fitting existing group.
+- Allow one member overflow (up to `maxGroupSize + 1`) to absorb the stranded user(s).
+- This prevents leaving users unmatched while keeping group sizes reasonable.
+
+**Rationale:** The adaptive-weights path can produce different group boundaries than the static-weight path, sometimes leaving high-quality users stranded. The redistribution pass is a safety net — it does not lower the quality threshold (min score 50) but allows flexible group sizing to capture good matches that the initial greedy pass missed.
 
 ---
 
@@ -729,6 +790,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | `apps/server/src/personalityMatchingV2.ts` | V8 hybrid (Euclidean + cosine) scoring utilities |
 | `apps/admin-client/src/pages/admin/AdminMatchingLabPage.tsx` | Admin UI for testing matching weights |
 | `apps/admin-client/src/pages/PoolGroupDetailPage.tsx` | Group result visualization |
+| `docs/architecture/connection-points-system.md` | Unified architecture doc for 契合点系统 (connection points + spark predictions) |
 
 ---
 
@@ -736,7 +798,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 
 | Term | Definition |
 |------|------------|
-| **Pair score** | 6- or 7-dimensional compatibility score (0–100) between two users. 6D is the default; 7D is enabled when `ENABLE_SEMANTIC_SIMILARITY=true`. |
+| **Pair score** | 6- or 7-dimensional compatibility score (0–100) between two users. 6D is the default; 7D is enabled when `ENABLE_SEMANTIC_SIMILARITY=true`. Adaptive weights (Thompson Sampling) further customize dimension weights when `ENABLE_ADAPTIVE_WEIGHTS=true`. |
 | **Chemistry score** | Archetype-to-archetype compatibility from the 12×12 matrix; may be adjusted by bounded empirical calibration (±2 pts) |
 | **Social affinity** | Same-frequency resonance signals (life stage + education + hometown) |
 | **Background diversity** | Rewards different industry & gender within a pair |

@@ -151,7 +151,7 @@ export const users = pgTable("users", {
   
   // Personality data (Step 3 - Vibe Vector)
   vibeVector: jsonb("vibe_vector"), // {energy, conversation_style, initiative, novelty, humor} scored 0-1
-  archetype: varchar("archetype"), // 12个社交氛围原型: 开心柯基, 太阳鸡, 夸夸豚, 机智狐, 淡定海豚, 织网蛛, 暖心熊, 灵感章鱼, 沉思猫头鹰, 定心大象, 稳如龟, 隐身猫
+  archetype: varchar("archetype"), // 12个社交氛围原型: 气氛组柯基, 情绪稳定鸡, 捧场王仓鼠, 探宝雷达狐, 读空气海豚, 社交裁缝蛛, 情绪树洞考拉, 脑洞喷泉章鱼, 追问猫头鹰, 定海神针大象, 慢半拍龟, 静音模式猫
   debateComfort: integer("debate_comfort"), // DEPRECATED: 1-7 scale - not collected in onboarding, kept for legacy data
   needsPersonalityRetake: boolean("needs_personality_retake").default(false), // 是否需要重新测评（系统升级后）
   
@@ -1028,7 +1028,7 @@ export const roleResults = pgTable("role_results", {
   roleSubtype: varchar("role_subtype"), // Subtype based on answer patterns
   
   // Role score breakdown
-  roleScores: jsonb("role_scores").notNull(), // {开心柯基: 18, 太阳鸡: 15, 暖心熊: 12, ...}
+  roleScores: jsonb("role_scores").notNull(), // {气氛组柯基: 18, 情绪稳定鸡: 15, 情绪树洞考拉: 12, ...}
   
   // Six-dimensional trait scores (0-10 scale)
   affinityScore: integer("affinity_score").notNull(), // 亲和力
@@ -1124,10 +1124,19 @@ export const insertTestResponseSchema = createInsertSchema(testResponses).omit({
   createdAt: true,
 });
 
+// Archetype ID validation (12 canonical machine IDs)
+export const archetypeIdSchema = z.enum([
+  'corgi', 'rooster', 'hamster_praise', 'fox', 'dolphin_calm',
+  'spider', 'koala', 'octopus', 'owl', 'elephant', 'turtle', 'cat'
+]);
+
 // Role result schema
 export const insertRoleResultSchema = createInsertSchema(roleResults).omit({
   id: true,
   createdAt: true,
+}).extend({
+  primaryArchetype: archetypeIdSchema,
+  secondaryArchetype: archetypeIdSchema.optional().nullable(),
 });
 
 // ============ ADMIN PORTAL TABLES ============
@@ -3181,6 +3190,8 @@ export const insertAssessmentSessionSchema = createInsertSchema(assessmentSessio
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  primaryArchetype: archetypeIdSchema.optional().nullable(),
 });
 
 export const insertAssessmentAnswerSchema = createInsertSchema(assessmentAnswers).omit({

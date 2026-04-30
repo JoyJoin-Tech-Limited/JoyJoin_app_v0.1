@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import { apiRequest } from '../../lib/api';
 import { buildSocialPath } from './icebreakerSessionModel';
+import { CelebrationOverlay } from './CelebrationOverlay';
 
 interface QuipBattlePrompt {
   id: string;
@@ -38,6 +39,7 @@ interface QuipBattlePhaseViewProps {
   votedUserIds?: string[];
   userId?: string;
   playerCount?: number;
+  onRefresh?: () => void;
 }
 
 export default function QuipBattlePhaseView({
@@ -51,20 +53,47 @@ export default function QuipBattlePhaseView({
   votedUserIds = [],
   userId,
   playerCount = 1,
+  onRefresh,
 }: QuipBattlePhaseViewProps) {
   const [answerMap, setAnswerMap] = useState<Record<string, string>>({});
   const [voteMap, setVoteMap] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [voting, setVoting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [showChampion, setShowChampion] = useState(false);
 
   const hasSubmitted = userId ? submittedUserIds.includes(userId) : false;
   const hasVoted = userId ? votedUserIds.includes(userId) : false;
   const allSubmitted = submittedUserIds.length >= playerCount;
   const allVoted = votedUserIds.length >= playerCount;
 
+  const championResult = revealed && results.length > 0 ? results[0] : null;
+
+  useEffect(() => {
+    if (revealed && championResult) {
+      setShowChampion(true);
+    }
+  }, [revealed, championResult]);
+
   const handleAnswerChange = (promptId: string, text: string) => {
     setAnswerMap((prev) => ({ ...prev, [promptId]: text.slice(0, 100) }));
+  };
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setError('');
+    try {
+      await apiRequest({
+        path: buildSocialPath(socialSessionId, '/quip-battle/generate'),
+        method: 'POST',
+      });
+      onRefresh?.();
+    } catch {
+      setError('生成题目失败');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -86,8 +115,7 @@ export default function QuipBattlePhaseView({
         method: 'POST',
         data: { answers: answersToSubmit },
       });
-      // Trigger parent refresh
-      window.location.reload();
+      onRefresh?.();
     } catch {
       setError('提交失败，请重试');
     } finally {
@@ -114,7 +142,7 @@ export default function QuipBattlePhaseView({
         method: 'POST',
         data: { votes: votesToSubmit },
       });
-      window.location.reload();
+      onRefresh?.();
     } catch {
       setError('投票失败，请重试');
     } finally {
@@ -128,7 +156,7 @@ export default function QuipBattlePhaseView({
         path: buildSocialPath(socialSessionId, '/quip-battle/results'),
         method: 'GET',
       });
-      window.location.reload();
+      onRefresh?.();
     } catch {
       setError('揭晓失败，请重试');
     }
@@ -144,17 +172,9 @@ export default function QuipBattlePhaseView({
         {prompts.length === 0 && isHost && (
           <Button
             variant='primary'
-            onClick={async () => {
-              try {
-                await apiRequest({
-                  path: buildSocialPath(socialSessionId, '/quip-battle/generate'),
-                  method: 'POST',
-                });
-                window.location.reload();
-              } catch {
-                setError('生成题目失败');
-              }
-            }}
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            loading={isGenerating}
           >
             生成题目
           </Button>
@@ -241,7 +261,7 @@ export default function QuipBattlePhaseView({
           已提交 {submittedUserIds.length}/{playerCount}
         </Text>
         {isHost && (
-          <Button variant='secondary' onClick={() => window.location.reload()}>
+          <Button variant='secondary' onClick={onRefresh}>
             刷新状态
           </Button>
         )}
@@ -249,7 +269,7 @@ export default function QuipBattlePhaseView({
     );
   }
 
-  if (hasVoted && !allVoted && !revealed) {
+  if (hasVoted && !revealed) {
     return (
       <View className='icebreaker__phase'>
         <Text className='icebreaker__phase-title'>等待投票</Text>
@@ -269,6 +289,14 @@ export default function QuipBattlePhaseView({
   if (revealed && results.length > 0) {
     return (
       <View className='icebreaker__phase'>
+        <CelebrationOverlay
+          visible={showChampion}
+          frameKey='quip_champion'
+          title='本轮冠军'
+          subtitle={championResult ? `${championResult.winnerDisplayName} · ${championResult.voteCount} 票` : undefined}
+          autoDismissMs={3000}
+          onDismiss={() => setShowChampion(false)}
+        />
         <Text className='icebreaker__phase-title'>揭晓时刻</Text>
         <Text className='icebreaker__phase-subtitle'>看看谁的脑洞最大</Text>
 
@@ -306,22 +334,14 @@ export default function QuipBattlePhaseView({
   // Fallback
   return (
     <View className='icebreaker__phase'>
-      <Text className='icebreaker__phase-title'>😂 机智对决</Text>
+      <Text className='icebreaker__phase-title'>机智对决</Text>
       <Text className='icebreaker__phase-subtitle'>准备开始...</Text>
       {isHost && prompts.length === 0 && (
         <Button
           variant='primary'
-          onClick={async () => {
-            try {
-              await apiRequest({
-                path: buildSocialPath(socialSessionId, '/quip-battle/generate'),
-                method: 'POST',
-              });
-              window.location.reload();
-            } catch {
-              setError('生成题目失败');
-            }
-          }}
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          loading={isGenerating}
         >
           生成题目
         </Button>

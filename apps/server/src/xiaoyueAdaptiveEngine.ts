@@ -113,7 +113,7 @@ const SUGGESTION_TEMPLATES: Record<XiaoyueAdaptiveSuggestionType, SuggestionTemp
   ],
   keep_going: [
     { type: 'keep_going', message: '节奏不错，继续保持这个势头', actionableHint: '按当前节奏进行，适时观察' },
-    { type: 'keep_going', message: '一切顺利，小悦觉得你们今晚状态很好', actionableHint: '继续保持，准备好再推进' },
+    { type: 'keep_going', message: '一切顺利，悦仔觉得你们今晚状态很好', actionableHint: '继续保持，准备好再推进' },
   ],
 };
 

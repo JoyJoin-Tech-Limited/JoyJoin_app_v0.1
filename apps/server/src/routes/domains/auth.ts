@@ -9,6 +9,26 @@ import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import { eq } from "drizzle-orm";
 import type { AuthUserResponse } from "@shared/api";
 import { assessmentAnswers, assessmentSessions, users, type User } from "@shared/schema";
+import { buildMascotConfigFromEnv } from "@shared/mascotConfig";
+import type { TierDisplayFlags } from "@shared/socialIcebreakerTierManifest";
+
+// Module-level cached mascot config (env vars are immutable after startup)
+const mascotConfig = buildMascotConfigFromEnv({
+  MASCOT_DISPLAY_NAME: process.env.MASCOT_DISPLAY_NAME,
+  MASCOT_BACKSTORY_ENABLED: process.env.MASCOT_BACKSTORY_ENABLED,
+  MASCOT_ORIGIN_LORE_ENABLED: process.env.MASCOT_ORIGIN_LORE_ENABLED,
+});
+
+const VALID_GLOW_VARIANTS: TierDisplayFlags['glowVariant'][] = ['default', 'tipsy', 'kill'];
+const resolvedGlowVariant = VALID_GLOW_VARIANTS.includes(process.env.SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT as TierDisplayFlags['glowVariant'])
+  ? (process.env.SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT as TierDisplayFlags['glowVariant'])
+  : 'default';
+
+logger.info('Mascot config resolved', {
+  displayName: mascotConfig.displayName,
+  backstoryEnabled: !!mascotConfig.backstory,
+  glowVariant: resolvedGlowVariant,
+});
 
 export function registerAuthRoutes(app: Express): void {
   // Apply rate limiting to auth endpoints before registering auth routes
@@ -563,6 +583,10 @@ export function registerAuthRoutes(app: Express): void {
         nextStep = stepOrder[nextStepIndex];
       }
 
+      const tierDisplayFlags: TierDisplayFlags = {
+        glowVariant: resolvedGlowVariant,
+      };
+
       const authUserResponse: AuthUserResponse = {
         ...sanitizeAuthUser(user),
         nextStep,
@@ -570,11 +594,14 @@ export function registerAuthRoutes(app: Express): void {
         profileExtendedComplete,
         activeAssessmentSessionId,
         paymentsEnabled: (process.env.PAYMENTS_ENABLED ?? "false").toLowerCase() === "true",
+        mascotDisplayName: mascotConfig.displayName,
+        mascotBackstory: mascotConfig.backstory,
+        tierDisplayFlags,
       };
 
       res.json(authUserResponse);
     } catch (error) {
-      console.error("Error fetching user:", error);
+      logger.error("Error fetching user:", { error });
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });

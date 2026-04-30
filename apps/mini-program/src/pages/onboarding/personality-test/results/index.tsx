@@ -16,6 +16,7 @@ import {
 } from '../../../../lib/anonymousOnboarding'
 import { getDegradationTier, type DegradationTier } from '../../../../lib/frameBudget'
 import { haptics } from '../../../../lib/haptics'
+import { getMascotDisplayName } from '../../../../lib/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/logger'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
@@ -26,6 +27,7 @@ import {
 } from '../visuals'
 import { getArchetypeCardVariants } from '../archetypeVariants'
 import {
+  ARCHETYPE_ENGLISH_NAMES,
   generatePersonalitySharePoster,
   PERSONALITY_SHARE_POSTER_CANVAS_ID,
   type PersonalitySharePosterInput,
@@ -92,6 +94,15 @@ export default function PersonalityTestResultsPage() {
   const [cardNickname, setCardNickname] = useState('')
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [showSkipAnimation, setShowSkipAnimation] = useState(false)
+
+  // Invalidate stale poster when user changes card personalization
+  useEffect(() => {
+    if (sharePosterPath) {
+      setSharePosterPath('')
+      setSquarePosterPath('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantIndex, cardNickname])
 
   const mountedRef = useRef(false)
   const runIdRef = useRef(0)
@@ -696,7 +707,7 @@ export default function PersonalityTestResultsPage() {
         })
         analytics.interaction('share_save_failed', { error, primaryArchetype: displayArchetypeName })
         void Taro.showToast({
-          title: '小悦没能把卡片存进相册，可能需要你授权一下~',
+          title: `${getMascotDisplayName(auth.user)}没能把卡片存进相册，可能需要你授权一下~`,
           icon: 'none',
           duration: 2500,
         })
@@ -780,6 +791,8 @@ export default function PersonalityTestResultsPage() {
           archetype: match.archetype,
           score: Number(match.score) || 0,
         })),
+        traitEntries: traitEntries.map(({ label, value }) => ({ label, value })),
+        englishName: ARCHETYPE_ENGLISH_NAMES[displayArchetype ?? ''] ?? displayArchetypeName,
         energyLevel,
         archetypeRank,
         serialNumber,
@@ -838,10 +851,26 @@ export default function PersonalityTestResultsPage() {
     try {
       const input: PersonalitySquarePosterInput = {
         archetype: displayArchetypeName,
+        englishName: ARCHETYPE_ENGLISH_NAMES[displayArchetype ?? ''] ?? displayArchetypeName,
         tagline: visual.tagline || visual.description || summary,
+        shareLine,
         rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 50,
         archetypeAsset: displayAsset,
         archetypeAssetPng: visual.assetPng,
+        traitEntries: traitEntries
+          .slice()
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 3)
+          .map(({ label, value }) => ({ label, value })),
+        energyLevel,
+        skillSet: skillSet
+          ? {
+              activeSkill: { name: skillSet.activeSkill.name },
+              passiveSkill: { name: skillSet.passiveSkill.name },
+            }
+          : undefined,
+        archetypeRank,
+        serialNumber,
       }
       const path = await generatePersonalitySquarePoster(input)
       setSquarePosterPath(path)
@@ -860,7 +889,7 @@ export default function PersonalityTestResultsPage() {
     } finally {
       setIsGeneratingSquarePoster(false)
     }
-  }, [analytics, displayArchetype, displayArchetypeName, displayAsset, isGeneratingSquarePoster, summary, visual])
+  }, [analytics, archetypeRank, displayArchetype, displayArchetypeName, displayAsset, energyLevel, isGeneratingSquarePoster, serialNumber, shareLine, skillSet, summary, traitEntries, visual])
 
   const content = useMemo(() => {
     switch (flowStage) {

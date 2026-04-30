@@ -29,11 +29,14 @@
     "./personality/archetypeNames": "./src/personality/archetypeNames.ts",
     "./personality/resultViewModel": "./src/personality/resultViewModel.ts",
     "./personality/archetypeSkills": "./src/personality/archetypeSkills.ts",
+    "./personality/canvasPalette": "./src/personality/canvasPalette.ts",
     "./types/groupAnalysis": "./src/types/groupAnalysis.ts",
     "./types/aiMeta": "./src/types/aiMeta.ts",
     "./ai/onboarding": "./src/ai/onboarding.ts",
     "./ui/button": "./src/ui/Button.tsx",
     "./ui/buttonVariants": "./src/ui/buttonVariants.ts",
+    "./ui/categoryColors": "./src/ui/categoryColors.ts",
+    "./ui/connectionPointCompat": "./src/ui/connectionPointCompat.ts",
     "./ui/responsiveSpacer": "./src/ui/ResponsiveSpacer.tsx",
     "./archetypeColors": "./src/archetypeColors.ts",
     "./achievements": "./src/achievements.ts",
@@ -65,6 +68,6 @@
     "build": "npm run typecheck",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "npm run typecheck",
-    "test": "node -e \"console.log('No tests for @joyjoin/shared')\""
+    "test": "vitest run"
   }
 }

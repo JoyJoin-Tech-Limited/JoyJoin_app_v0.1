@@ -28,6 +28,7 @@ export const miniScriptGenerateRequestSchema = z.object({
   playerCount: z.number().int().min(4).max(6),
   style: z.enum(MINI_SCRIPT_STYLES),
   genres: z.array(z.enum(MINI_SCRIPT_GENRES)).min(1).max(8),
+  lite: z.boolean().optional().default(false),
 });
 
 export type MiniScriptGenerateRequest = z.infer<typeof miniScriptGenerateRequestSchema>;

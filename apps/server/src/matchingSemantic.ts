@@ -160,6 +160,10 @@ export function isSemanticSimilarityEnabled(): boolean {
   return process.env.ENABLE_SEMANTIC_SIMILARITY === "true";
 }
 
+export function isAdaptiveWeightsEnabled(): boolean {
+  return process.env.ENABLE_ADAPTIVE_WEIGHTS === "true";
+}
+
 export function buildSemanticProfileCache(
   users: SemanticProfileUser[],
   interestsByUserId: Map<string, SemanticInterestProfile>,
@@ -223,6 +227,19 @@ export function calculateSemanticSimilarityScore(
   );
 }
 
+export interface AdaptivePairScoreWeights {
+  chemistry: number;
+  interest: number;
+  socialAffinity: number;
+  backgroundDiversity: number;
+  preference: number;
+  language: number;
+}
+
+export type RuntimeMatchingWeights =
+  | AdaptivePairScoreWeights
+  | { chemistryWeight: number; interestWeight: number; socialAffinityWeight: number; backgroundDiversityWeight: number; preferenceWeight: number; languageWeight: number };
+
 export function calculateWeightedPairScore(
   dimensions: {
     chemistry: number;
@@ -234,10 +251,34 @@ export function calculateWeightedPairScore(
     semanticSimilarity?: number;
   },
   enableSemanticSimilarity = isSemanticSimilarityEnabled(),
+  customWeights?: RuntimeMatchingWeights,
 ): number {
-  const weights = enableSemanticSimilarity
-    ? SEMANTIC_PAIR_SCORE_WEIGHTS
-    : LEGACY_PAIR_SCORE_WEIGHTS;
+  let weights: PairScoreWeights;
+  if (customWeights) {
+    // Support both naming conventions: chemistry / chemistryWeight.
+    // Missing keys fall back to the corresponding default so a partial
+    // custom-weights object does not silently zero out a dimension.
+    const getWeight = (
+      short: keyof AdaptivePairScoreWeights,
+      long: `${typeof short}Weight`,
+      defaultValue: number,
+    ): number => {
+      const value = (customWeights as any)[long] ?? (customWeights as any)[short];
+      return typeof value === 'number' ? value / 100 : defaultValue;
+    };
+    weights = {
+      chemistry: getWeight('chemistry', 'chemistryWeight', LEGACY_PAIR_SCORE_WEIGHTS.chemistry),
+      interest: getWeight('interest', 'interestWeight', LEGACY_PAIR_SCORE_WEIGHTS.interest),
+      socialAffinity: getWeight('socialAffinity', 'socialAffinityWeight', LEGACY_PAIR_SCORE_WEIGHTS.socialAffinity),
+      backgroundDiversity: getWeight('backgroundDiversity', 'backgroundDiversityWeight', LEGACY_PAIR_SCORE_WEIGHTS.backgroundDiversity),
+      preference: getWeight('preference', 'preferenceWeight', LEGACY_PAIR_SCORE_WEIGHTS.preference),
+      language: getWeight('language', 'languageWeight', LEGACY_PAIR_SCORE_WEIGHTS.language),
+    };
+  } else {
+    weights = enableSemanticSimilarity
+      ? SEMANTIC_PAIR_SCORE_WEIGHTS
+      : LEGACY_PAIR_SCORE_WEIGHTS;
+  }
 
   const total =
     dimensions.chemistry * weights.chemistry +
@@ -246,7 +287,7 @@ export function calculateWeightedPairScore(
     dimensions.backgroundDiversity * weights.backgroundDiversity +
     dimensions.preference * weights.preference +
     dimensions.language * weights.language +
-    (enableSemanticSimilarity
+    (enableSemanticSimilarity && !customWeights
       ? (dimensions.semanticSimilarity ?? 50) * (weights.semanticSimilarity ?? 0)
       : 0);
 

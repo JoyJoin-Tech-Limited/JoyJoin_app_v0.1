@@ -18,7 +18,7 @@ Each screen is scored across 5 pillars on a 0–10 scale. The overall grade is t
 |-------|--------------|
 | Color discipline | Uses only the 8 core colors with exact hex codes; no ad-hoc colors |
 | Typography roles | `font-cn-display` only on short emotional bursts; `font-ui` for body/dense UI; `font-en-brand` for English identity only |
-| Mascot usage | Uses canonical 12 archetypes only; no Koala/Hamster; one mascot per screen, placed intentionally |
+| Mascot usage | Uses canonical 12 archetypes only; one mascot per screen, placed intentionally |
 | Anti-generic aesthetics | No purple-gradient-on-white, no symmetrical filler layouts, no decorative mascot wallpaper, no system font on hero copy |
 | Illustration style | If illustrations present: 插画风 low-poly geometric, painterly textures, circular vignettes, warm palette |
 

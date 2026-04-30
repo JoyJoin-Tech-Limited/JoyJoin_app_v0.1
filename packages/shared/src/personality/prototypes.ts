@@ -1,9 +1,15 @@
 /**
  * V4 Adaptive Assessment - Archetype Prototype Definitions
  * 12原型特质矩阵定义
+ * 
+ * Phase 2 Deduplication: traitProfile, energyLevel, secondaryDifferentiators,
+ * confusableWith, and uniqueSignalTraits are now sourced from archetypeRegistry.ts
+ * (the single source of truth). This file retains display metadata (icon),
+ * archetypeDescriptions, and calculation functions.
  */
 
 import { TraitKey } from './types';
+import { archetypeRegistry } from './archetypeRegistry';
 
 export interface ArchetypePrototype {
   id: string;
@@ -21,188 +27,38 @@ export interface ArchetypePrototype {
   uniqueSignalTraits: TraitKey[];
 }
 
-export const archetypePrototypes: Record<string, ArchetypePrototype> = {
-  "corgi": {
-    id: "corgi",
-    name: "corgi",
-    icon: "🐕",
-    energyLevel: 95,
-    traitProfile: { A: 60, C: 50, E: 60, O: 65, X: 95, P: 85 },
-    secondaryDifferentiators: {
-      motivationDirection: 'external',
-      conflictPosture: 'approach',
-      riskTolerance: 'high',
-      statusOrientation: 'leader'
-    },
-    confusableWith: ["rooster"],
-    uniqueSignalTraits: ["P", "A", "X"]
-  },
-  "rooster": {
-    id: "rooster",
-    name: "rooster",
-    icon: "🐓",
-    energyLevel: 90,
-    traitProfile: { A: 70, C: 78, E: 88, O: 55, X: 78, P: 92 },
-    secondaryDifferentiators: {
-      motivationDirection: 'external',
-      conflictPosture: 'mediate',
-      riskTolerance: 'medium',
-      statusOrientation: 'supporter'
-    },
-    confusableWith: ["corgi", "hamster_praise"],
-    uniqueSignalTraits: ["P", "X", "E"]
-  },
-  "hamster_praise": {
-    id: "dolphin_praise",
-    name: "hamster_praise",
-    icon: "🐬",
-    energyLevel: 85,
-    traitProfile: { A: 95, C: 50, E: 65, O: 62, X: 82, P: 88 },
-    secondaryDifferentiators: {
-      motivationDirection: 'external',
-      conflictPosture: 'mediate',
-      riskTolerance: 'medium',
-      statusOrientation: 'supporter'
-    },
-    confusableWith: ["dolphin_calm", "rooster"],
-    uniqueSignalTraits: ["A", "X", "P"]
-  },
-  "fox": {
-    id: "fox",
-    name: "fox",
-    icon: "🦊",
-    energyLevel: 82,
-    traitProfile: { A: 40, C: 50, E: 60, O: 92, X: 78, P: 58 },
-    secondaryDifferentiators: {
-      motivationDirection: 'external',
-      conflictPosture: 'approach',
-      riskTolerance: 'high',
-      statusOrientation: 'independent'
-    },
-    confusableWith: ["octopus"],
-    uniqueSignalTraits: ["O", "X", "P"]
-  },
-  "dolphin_calm": {
-    id: "dolphin_calm",
-    name: "dolphin_calm",
-    icon: "🐬",
-    energyLevel: 75,
-    traitProfile: { A: 70, C: 70, E: 85, O: 65, X: 65, P: 68 },
-    secondaryDifferentiators: {
-      motivationDirection: 'balanced',
-      conflictPosture: 'mediate',
-      riskTolerance: 'medium',
-      statusOrientation: 'supporter'
-    },
-    confusableWith: ["hamster_praise", "koala"],
-    uniqueSignalTraits: ["E", "O", "A"]
-  },
-  "spider": {
-    id: "spider",
-    name: "spider",
-    icon: "🕷️",
-    energyLevel: 72,
-    traitProfile: { A: 70, C: 85, E: 65, O: 70, X: 60, P: 60 },
-    secondaryDifferentiators: {
-      motivationDirection: 'balanced',
-      conflictPosture: 'mediate',
-      riskTolerance: 'medium',
-      statusOrientation: 'independent'
-    },
-    confusableWith: ["koala"],
-    uniqueSignalTraits: ["C", "E", "A"]
-  },
-  "koala": {
-    id: "bear",
-    name: "koala",
-    icon: "🐻",
-    energyLevel: 70,
-    traitProfile: { A: 90, C: 65, E: 80, O: 60, X: 48, P: 70 },
-    secondaryDifferentiators: {
-      motivationDirection: 'internal',
-      conflictPosture: 'avoid',
-      riskTolerance: 'low',
-      statusOrientation: 'supporter'
-    },
-    confusableWith: ["elephant", "spider"],
-    uniqueSignalTraits: ["A", "E", "P"]
-  },
-  "octopus": {
-    id: "octopus",
-    name: "octopus",
-    icon: "🐙",
-    energyLevel: 68,
-    traitProfile: { A: 50, C: 28, E: 55, O: 95, X: 52, P: 70 },
-    secondaryDifferentiators: {
-      motivationDirection: 'internal',
-      conflictPosture: 'avoid',
-      riskTolerance: 'high',
-      statusOrientation: 'independent'
-    },
-    confusableWith: ["fox", "owl"],
-    uniqueSignalTraits: ["O", "P", "X"]
-  },
-  "owl": {
-    id: "owl",
-    name: "owl",
-    icon: "🦉",
-    energyLevel: 55,
-    traitProfile: { A: 45, C: 80, E: 75, O: 88, X: 40, P: 50 },
-    secondaryDifferentiators: {
-      motivationDirection: 'internal',
-      conflictPosture: 'avoid',
-      riskTolerance: 'low',
-      statusOrientation: 'independent'
-    },
-    confusableWith: ["turtle", "octopus"],
-    uniqueSignalTraits: ["O", "C", "E"]
-  },
-  "elephant": {
-    id: "elephant",
-    name: "elephant",
-    icon: "🐘",
-    energyLevel: 52,
-    traitProfile: { A: 70, C: 90, E: 86, O: 50, X: 40, P: 60 },
-    secondaryDifferentiators: {
-      motivationDirection: 'internal',
-      conflictPosture: 'avoid',
-      riskTolerance: 'low',
-      statusOrientation: 'supporter'
-    },
-    confusableWith: ["koala", "turtle"],
-    uniqueSignalTraits: ["E", "C", "A"]
-  },
-  "turtle": {
-    id: "turtle",
-    name: "turtle",
-    icon: "🐢",
-    energyLevel: 38,
-    traitProfile: { A: 45, C: 80, E: 85, O: 65, X: 30, P: 45 },
-    secondaryDifferentiators: {
-      motivationDirection: 'internal',
-      conflictPosture: 'avoid',
-      riskTolerance: 'low',
-      statusOrientation: 'independent'
-    },
-    confusableWith: ["owl", "cat"],
-    uniqueSignalTraits: ["E", "C", "A"]
-  },
-  "cat": {
-    id: "cat",
-    name: "cat",
-    icon: "🐱",
-    energyLevel: 30,
-    traitProfile: { A: 50, C: 50, E: 80, O: 45, X: 20, P: 45 },
-    secondaryDifferentiators: {
-      motivationDirection: 'internal',
-      conflictPosture: 'avoid',
-      riskTolerance: 'low',
-      statusOrientation: 'independent'
-    },
-    confusableWith: ["turtle"],
-    uniqueSignalTraits: ["E", "O"]
-  }
+const ARCHETYPE_ICONS: Record<string, string> = {
+  corgi: "🐕",
+  rooster: "🐓",
+  hamster_praise: "🐹",
+  fox: "🦊",
+  dolphin_calm: "🐬",
+  spider: "🕷️",
+  koala: "🐨",
+  octopus: "🐙",
+  owl: "🦉",
+  elephant: "🐘",
+  turtle: "🐢",
+  cat: "🐱"
 };
+
+/**
+ * Build archetypePrototypes from archetypeRegistry (single source of truth)
+ * plus local display metadata (icon).
+ */
+export const archetypePrototypes: Record<string, ArchetypePrototype> = {};
+for (const [id, record] of Object.entries(archetypeRegistry)) {
+  archetypePrototypes[id] = {
+    id: record.id,
+    name: id,
+    icon: ARCHETYPE_ICONS[id] || "🎭",
+    energyLevel: record.profile.energyLevel,
+    traitProfile: record.profile.traitProfile,
+    secondaryDifferentiators: record.profile.secondaryDifferentiators,
+    confusableWith: record.profile.confusableWith as string[],
+    uniqueSignalTraits: record.profile.uniqueSignalTraits,
+  };
+}
 
 export function normalizeTraitScore(rawScore: number): number {
   // Scale factor: average option trait scores are in [-3, +3] range

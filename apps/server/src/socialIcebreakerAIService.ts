@@ -31,6 +31,8 @@ import {
   buildMiniScriptFrameworkUserMessage,
   buildXiaoyueSessionPackPrompt,
   buildQuipBattlePrompt,
+  buildUndercoverWordPrompt,
+  buildGroupMirrorPrompt,
   MINISCRIPT_FRAMEWORK_SYSTEM,
   WARMUP_TOPICS_PROMPT_VERSION,
   MICRO_CHALLENGES_PROMPT_VERSION,
@@ -41,9 +43,13 @@ import {
   MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION,
   SESSION_PACK_PROMPT_VERSION,
   XIAOYUE_COMMENT_PROMPT_VERSION,
+  UNDERCOVER_WORD_PROMPT_VERSION,
+  GROUP_MIRROR_PROMPT_VERSION,
 } from './ai/socialIcebreakerPrompts';
 import { selectMicroChallenges } from '@joyjoin/shared';
 import { getRandomQuipBattlePrompts, type QuipBattlePrompt } from '@shared/quipBattle';
+import { getFallbackUndercoverPair, type UndercoverWordPair } from '@shared/undercoverWord';
+import { getFallbackGroupMirrorQuestions, type GroupMirrorQuestion } from '@shared/groupMirror';
 import { logger } from "./lib/logger";
 import { evaluateContent, formatQualityMetrics } from './ai/aiQualityGate';
 import type { JudgeFeatureType } from './ai/qualityJudgePrompts';
@@ -607,7 +613,7 @@ export async function generateRecapSummary(params: {
     const auctionBlock =
       params.auctionRecapLines?.length ? `拍卖环节：${params.auctionRecapLines.join('；')}` : '';
 
-    const prompt = `你是社交破冰助手小悦。请为今晚的活动生成一个温馨的总结：
+    const prompt = `你是社交破冰助手悦仔。请为今晚的活动生成一个温馨的总结：
 
 参与者：${params.participants.map(p => p.displayName).join('、')}
 讨论话题数：${params.topicsDiscussed.length}
@@ -1322,5 +1328,133 @@ export async function generateQuipBattlePrompts(params: {
     const meta = buildFallbackAIMeta('llm_error', QUIP_BATTLE_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateQuipBattlePrompts', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return { data: fallbackPrompts, meta };
+  }
+}
+
+// ─── Undercover Word ─────────────────────────────────────────────────────────
+
+export async function generateUndercoverWordPair(params: {
+  eventType?: string;
+  participantCount: number;
+}): Promise<AIServiceResult<UndercoverWordPair>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const { client, model, provider } = getClientForFunction('generateUndercoverWordPair');
+  const t0 = Date.now();
+
+  const fallback = getFallbackUndercoverPair();
+
+  try {
+    const prompt = buildUndercoverWordPrompt(params);
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+      max_tokens: 200,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) {
+      const meta = buildFallbackAIMeta('empty_response', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { data: fallback, meta };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJsonPayloadForParse(content));
+    } catch {
+      const meta = buildFallbackAIMeta('parse_error', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { data: fallback, meta };
+    }
+
+    const pair = parsed as Record<string, unknown>;
+    if (pair.civilianWord && pair.undercoverWord && pair.category) {
+      const meta = buildLiveAIMeta(provider, UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'undercover_word', params.eventType);
+      return {
+        data: {
+          civilianWord: String(pair.civilianWord),
+          undercoverWord: String(pair.undercoverWord),
+          category: String(pair.category),
+        },
+        meta,
+      };
+    }
+
+    const meta = buildFallbackAIMeta('parse_error', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallback, meta };
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    logger.error(`[SocialIcebreakerAI] generateUndercoverWordPair error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
+    const meta = buildFallbackAIMeta('llm_error', UNDERCOVER_WORD_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateUndercoverWordPair', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallback, meta };
+  }
+}
+
+// ─── Group Mirror ────────────────────────────────────────────────────────────
+
+export async function generateGroupMirrorQuestions(params: {
+  eventType?: string;
+  participantCount: number;
+  participantNames: string[];
+}): Promise<AIServiceResult<GroupMirrorQuestion[]>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const { client, model, provider } = getClientForFunction('generateGroupMirrorQuestions');
+  const t0 = Date.now();
+
+  const fallback = getFallbackGroupMirrorQuestions(5);
+
+  try {
+    const prompt = buildGroupMirrorPrompt(params);
+    const response = await client.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.85,
+      max_tokens: 600,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) {
+      const meta = buildFallbackAIMeta('empty_response', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { data: fallback, meta };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJsonPayloadForParse(content));
+    } catch {
+      const meta = buildFallbackAIMeta('parse_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+      return { data: fallback, meta };
+    }
+
+    if (Array.isArray(parsed) && parsed.length >= 3) {
+      const meta = buildLiveAIMeta(provider, GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+      logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
+      fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'group_mirror', params.eventType);
+      return {
+        data: parsed.slice(0, 5).map((q: GroupMirrorQuestion, i: number) => ({
+          id: q.id || `gm_${i + 1}`,
+          questionText: q.questionText || fallback[i]?.questionText || '谁最有趣？',
+          category: q.category || 'perception',
+        })),
+        meta,
+      };
+    }
+
+    const meta = buildFallbackAIMeta('parse_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallback, meta };
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    logger.error(`[SocialIcebreakerAI] generateGroupMirrorQuestions error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
+    const meta = buildFallbackAIMeta('llm_error', GROUP_MIRROR_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateGroupMirrorQuestions', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return { data: fallback, meta };
   }
 }

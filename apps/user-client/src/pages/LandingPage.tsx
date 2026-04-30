@@ -18,7 +18,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useWeChatLogin } from "@/hooks/useWeChatLogin";
 import { ResponsiveSpacer } from "@shared/ui/ResponsiveSpacer";
-import logoImage from "@/assets/joyjoin-logo.png";
+import logoImage from "@/assets/joyjoin-logo.webp";
 import matchCardImg from "@/assets/landing screen/匹配卡片 compressed.webp";
 import dinnerImg from "@/assets/landing screen/动物聚餐 compressed.webp";
 import continueImg from "@/assets/landing screen/动物延续 compressed.webp";

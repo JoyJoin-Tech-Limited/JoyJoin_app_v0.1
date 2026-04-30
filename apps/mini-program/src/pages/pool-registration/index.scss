@@ -17,8 +17,22 @@
     text-align: center;
   }
 
-  &__success-emoji {
-    font-size: 96rpx; // Decorative — not part of hierarchy
+  &__success-celebration {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #07C160 0%, #2ECC71 50%, #07C160 100%);
+    box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.35);
+    margin: 0 auto;
+
+    &::after {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 60%);
+    }
   }
 
   &__success-title {

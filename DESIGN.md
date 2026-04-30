@@ -132,11 +132,11 @@ These animals map to the personality system's 12 archetypes.
 |-----------|--------|-------------|------------|
 | 开心柯基 | Corgi | Playful, energetic, optimistic | Warm gold |
 | 太阳鸡 | Rooster | Bright, confident, energetic | Sunny yellow |
-| 夸夸豚 | Praise Dolphin | Supportive, complimentary, warm | Pink |
+| 捧场王仓鼠 | Supportive Hamster | Supportive, complimentary, warm | Pink |
 | 机智狐 | Fox | Clever, adaptable, strategic | Orange |
-| 淡定海豚 | Calm Dolphin | Steady, peaceful, balanced | Cyan |
+| 读空气海豚 | Perceptive Dolphin | Steady, perceptive, balanced | Cyan |
 | 织网蛛 | Spider | Intricate, connected, detailed | Purple |
-| 暖心熊 | Bear | Warm, strong, protective | Rose |
+| 情绪树洞考拉 | Warm Koala | Warm, empathetic, protective | Rose |
 | 灵感章鱼 | Octopus | Creative, multi-faceted, curious | Lavender |
 | 沉思猫头鹰 | Owl | Wise, contemplative, observant | Blue |
 | 定心大象 | Elephant | Steady, reliable, grounding | Slate |

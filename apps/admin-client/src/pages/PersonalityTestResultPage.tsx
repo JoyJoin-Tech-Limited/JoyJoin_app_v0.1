@@ -11,7 +11,7 @@ import { queryClient } from '@/lib/queryClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { archetypeGradients, archetypeAvatars } from '@/lib/archetypeAvatars';
 import { archetypeConfig } from '@/lib/archetypes';
-import { getTopCompatibleArchetypes, getCompatibilityCategory } from '@/lib/archetypeCompatibility';
+import { getTopCompatibleArchetypes, getCompatibilityCategory } from '@shared/personality/archetypeCompatibility';
 import { useState, useEffect } from 'react';
 
 export default function PersonalityTestResultPage() {

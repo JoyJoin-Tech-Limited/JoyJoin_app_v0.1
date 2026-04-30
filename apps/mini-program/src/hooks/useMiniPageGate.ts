@@ -1,5 +1,6 @@
 import { createElement, useCallback, type ReactElement } from 'react'
 import LoadingScreen from '../components/LoadingScreen'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useAuthGuard } from './useAuthGuard'
 import { useLoadingOrchestrator } from './useLoadingOrchestrator'
 import type { AuthUser } from './useAuth'
@@ -21,7 +22,7 @@ export function useMiniPageGate(
   const { shouldShow } = useLoadingOrchestrator(authLoading)
 
   const renderGate = useCallback(
-    (content: ReactElement, loadingMessage = '小悦正在赶来…'): ReactElement => {
+    (content: ReactElement, loadingMessage = `${DEFAULT_MASCOT_DISPLAY_NAME}正在赶来…`): ReactElement => {
       if (shouldShow) {
         return createElement(LoadingScreen, { message: loadingMessage })
       }

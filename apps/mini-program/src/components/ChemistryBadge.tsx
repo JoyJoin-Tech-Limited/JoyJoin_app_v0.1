@@ -34,20 +34,20 @@ export default function ChemistryBadge({
     mild: 'chem-chat',
   }
 
-  const emojiMap: Record<string, string> = {
-    fire: '🔥',
-    warm: '✨',
-    cold: '🌱',
-    mild: '💬',
+  const labelMap: Record<string, string> = {
+    fire: '高能',
+    warm: '暖场',
+    cold: '慢热',
+    mild: '自然',
   }
 
   const assetKey = assetMap[chemistry]
-  const fallbackEmoji = emojiMap[chemistry]
+  const fallbackLabel = labelMap[chemistry] ?? '匹配'
 
   if (hasError) {
     return (
-      <Text className={className} style={{ fontSize: sizeStr, lineHeight: sizeStr }}>
-        {fallbackEmoji}
+      <Text className={className} style={{ fontSize: sizeStr, lineHeight: sizeStr, fontWeight: 700 }}>
+        {fallbackLabel}
       </Text>
     )
   }
@@ -59,7 +59,7 @@ export default function ChemistryBadge({
   } catch {
     return (
       <Text className={className} style={{ fontSize: sizeStr, lineHeight: sizeStr }}>
-        {fallbackEmoji}
+        {fallbackLabel}
       </Text>
     )
   }

@@ -22,6 +22,7 @@ import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api'
 import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
+import { getMascotDisplayName } from '../../../lib/mascotDisplay'
 import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
@@ -206,7 +207,7 @@ export default function ProfileReviewPage() {
 
   const coachCopy =
     topInterestLabels.length > 0
-      ? '进入发现后，小悦会优先参考这些高热兴趣，为你推荐更像你的活动和搭子。'
+      ? `进入发现后，${getMascotDisplayName(user)}会优先参考这些高热兴趣，为你推荐更像你的活动和搭子。`
       : '进入发现后，你现在确认好的资料就会先帮你筛出更合适的活动。'
 
   const aiInsightLine =
@@ -271,7 +272,7 @@ export default function ProfileReviewPage() {
     return (
       <OnboardingLoadingShell
         stepLabel='Onboarding 4 / 4'
-        title='小悦在翻开你的入场卡'
+        title={`${getMascotDisplayName(user)}在翻开你的入场卡`}
         subtitle='最后这一页准备好后，你就可以去发现第一场适合你的局。'
       />
     )
@@ -283,7 +284,7 @@ export default function ProfileReviewPage() {
         {!isRevealReady ? (
           <AnalyzingAnimation
             label='正在生成你的专属画像'
-            subtitle='小悦正在分析你的性格密码...'
+            subtitle={`${getMascotDisplayName(user)}正在分析你的性格密码...`}
             minDuration={1200}
             onComplete={() => setIsRevealReady(true)}
             shouldReduceMotion={shouldReduceMotion}
@@ -319,7 +320,7 @@ export default function ProfileReviewPage() {
         <View className={`profile-review__coach ${getStageClassName(2)}`}>
           <Image className='profile-review__coach-avatar' src={getXiaoyueAsset('pointing')} mode='aspectFit' />
           <View className='profile-review__coach-copy'>
-            <Text className='profile-review__coach-title'>小悦提示</Text>
+            <Text className='profile-review__coach-title'>{`${getMascotDisplayName(user)}提示`}</Text>
             <Text className='profile-review__coach-text'>{coachCopy}</Text>
           </View>
         </View>

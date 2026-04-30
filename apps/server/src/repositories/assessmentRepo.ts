@@ -30,25 +30,27 @@ export const assessmentRepo: AssessmentRepository = {
   },
 
   async saveRoleResult(userId: string, result: InsertRoleResult): Promise<RoleResult> {
-    await db
-      .update(users)
-      .set({
-        primaryArchetype: result.primaryArchetype,
-        secondaryArchetype: result.secondaryArchetype,
-        roleSubtype: result.roleSubtype,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
+    return db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+      await tx
+        .update(users)
+        .set({
+          primaryArchetype: result.primaryArchetype,
+          secondaryArchetype: result.secondaryArchetype,
+          roleSubtype: result.roleSubtype,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
 
-    const [roleResult] = await db
-      .insert(roleResults)
-      .values({
-        ...result,
-        userId,
-      })
-      .returning();
+      const [roleResult] = await tx
+        .insert(roleResults)
+        .values({
+          ...result,
+          userId,
+        })
+        .returning();
 
-    return roleResult;
+      return roleResult;
+    });
   },
 
   async getRoleResult(userId: string): Promise<RoleResult | undefined> {

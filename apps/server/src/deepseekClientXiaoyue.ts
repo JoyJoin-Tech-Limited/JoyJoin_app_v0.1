@@ -198,7 +198,7 @@ function generateEnrichmentOpening(context: EnrichmentContext): string {
   const greetings = [
     `嘿～${name}${genderAddress}，又见面啦！想跟你多聊几句～`,
     `哟～${name}回来啦！上次聊得不过瘾，今天继续？`,
-    `诶${name}～我是小悦呀！来补充点资料，让匹配更精准～`,
+    `诶${name}～我是悦仔呀！来补充点资料，让匹配更精准～`,
   ];
 
   let opening = greetings[Math.floor(Math.random() * greetings.length)];
@@ -1029,7 +1029,7 @@ export async function continueXiaoyueChatWithInference(
     };
   } catch (error) {
     logger.error("DeepSeek API error:", { error: error instanceof Error ? error.message : String(error) });
-    throw new Error("小悦暂时有点忙，请稍后再试～");
+    throw new Error("悦仔暂时有点忙，请稍后再试～");
   }
 }
 
@@ -1372,7 +1372,7 @@ ${context}
     const errorTime = Date.now();
     logger.error(`[PERF] API错误，耗时: ${errorTime - t0_functionStart}ms`);
     logger.error("DeepSeek streaming API error:", { error: error instanceof Error ? error.message : String(error) });
-    yield { type: "error", content: "小悦暂时有点忙，请稍后再试～" };
+    yield { type: "error", content: "悦仔暂时有点忙，请稍后再试～" };
   }
 }
 

@@ -8,7 +8,7 @@
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "npm run typecheck",
-    "test": "node -e \"console.log('No tests for @joyjoin/user-client')\"",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -23,6 +23,7 @@ import {
 import { seedMiniProgramAuthSession } from '../../../../lib/authSession'
 import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
 import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { logError, logInfo } from '../../../../lib/logger'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import './index.scss'
@@ -149,7 +150,7 @@ export default function PersonalityTestAuthGatePage() {
     return (
       <OnboardingLoadingShell
         stepLabel='保存匿名结果'
-        title='小悦在确认你的登录状态'
+        title={`${DEFAULT_MASCOT_DISPLAY_NAME}在确认你的登录状态`}
         subtitle='先检查微信会话和这台设备上的答题记录，确认好后再把结果稳稳接到正式账号里。'
         hint='这一步不会丢掉刚才的测试结果，只是在做继续前的核对。'
         xiaoyueExpression='loadingSystem'

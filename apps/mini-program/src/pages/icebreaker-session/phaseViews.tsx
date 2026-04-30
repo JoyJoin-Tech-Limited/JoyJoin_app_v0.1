@@ -1,5 +1,7 @@
 import { View, Text, Input, Image } from '@tarojs/components'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import JoyJoinIcon from '../../components/JoyJoinIcon'
+import ArchetypeGlyph from '../../components/ArchetypeGlyph'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
 import {
@@ -13,16 +15,19 @@ import {
   type SocialSessionState,
 } from '@shared/socialIcebreaker'
 import type { MiniScriptStoryFrameworkPublic } from '@shared/miniscriptStoryFramework'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
 import { buildSocialPath } from './icebreakerSessionModel'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import MomentCardView from './MomentCardView'
+import { CelebrationOverlay } from './CelebrationOverlay'
 
 export type SessionPhase = 'waiting' | SocialIcebreakerPhase | 'ended'
 
 // Re-export expansion phase views
 export { default as QuipBattlePhaseView } from './QuipBattlePhaseView'
+export { default as UndercoverWordPhaseView } from './UndercoverWordPhaseView'
+export { default as GroupMirrorPhaseView } from './GroupMirrorPhaseView'
 
 export interface SessionParticipant {
   userId: string
@@ -33,11 +38,11 @@ export interface SessionParticipant {
   isActive?: boolean
 }
 
-const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; emoji: string; label: string }> = [
-  { mood: 'funny', emoji: '😂', label: '搞笑' },
-  { mood: 'life', emoji: '☕', label: '生活' },
-  { mood: 'relaxed', emoji: '✨', label: '轻松' },
-  { mood: 'emotional', emoji: '💫', label: '情感' },
+const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: string }> = [
+  { mood: 'funny', label: '搞笑', asset: require('../../assets/icons/mood-icons/mood-funny.png') },
+  { mood: 'life', label: '生活', asset: require('../../assets/icons/mood-icons/mood-life.png') },
+  { mood: 'relaxed', label: '轻松', asset: require('../../assets/icons/mood-icons/mood-relaxed.png') },
+  { mood: 'emotional', label: '情感', asset: require('../../assets/icons/mood-icons/mood-emotional.png') },
 ]
 
 export function getPhaseLabel(phase: SessionPhase): string {
@@ -54,6 +59,12 @@ export function getPhaseLabel(phase: SessionPhase): string {
       return '人格骰子'
     case 'auction':
       return '拍卖'
+    case 'quip_battle':
+      return '机智对决'
+    case 'undercover_word':
+      return '谁是卧底'
+    case 'group_mirror':
+      return '群像镜像'
     case 'mini_script':
       return '迷你剧本杀'
     case 'recap':
@@ -67,45 +78,66 @@ export function getPhaseLabel(phase: SessionPhase): string {
 
 const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
   waiting: '',
-  warmup: '🌅',
-  micro_challenge: '⚡',
-  lie_detective: '🕵️',
-  personality_dice: '🎲',
-  auction: '🎪',
-  mini_script: '🎭',
+  warmup: '',
+  micro_challenge: '',
+  lie_detective: '',
+  personality_dice: '',
+  auction: '',
+  mini_script: '',
   quip_battle: '',
   undercover_word: '',
   group_mirror: '',
-  recap: '✨',
+  recap: '',
   ended: '',
 }
 
-/** Render a phase header icon (proprietary asset with emoji fallback) */
-function PhaseHeaderIcon({ phase, size = 40 }: { phase: SessionPhase; size?: number }) {
-  const emoji = PHASE_EMOJI_MAP[phase]
-  if (!emoji) return null
+/** Render a phase icon (Lovart 240px source, Taro downscales)
+ *
+ * Source assets are 240×240px PNG with transparent background.
+ * Recommended display sizes:
+ *   - 40–48rpx: inline / list / header (default)
+ *   - 80rpx:  phase card header
+ *   - 120rpx: hero / modal / loading
+ *   - 240rpx: full-screen feature (e.g., phase intro)
+ */
+export function PhaseHeaderIcon({
+  phase,
+  size = 48,
+  className,
+}: {
+  phase: SessionPhase
+  size?: number
+  className?: string
+}) {
   const sizeStr = `${size}rpx`
-  // Static require mapping so Taro can resolve assets at build time
+  // Canonical filename mapping — WebP primary (~90% smaller than PNG)
+  // Fallback to PNG if WebP unsupported (WeChat base lib < 2.9.0, extremely rare)
   const srcMap: Record<string, string> = {
-    warmup: require('../../assets/icons/phase-icons/phase-warmup.png'),
-    micro_challenge: require('../../assets/icons/phase-icons/phase-challenge.png'),
-    lie_detective: require('../../assets/icons/phase-icons/phase-detective.png'),
-    personality_dice: require('../../assets/icons/phase-icons/phase-dice.png'),
-    auction: require('../../assets/icons/phase-icons/phase-auction.png'),
-    mini_script: require('../../assets/icons/phase-icons/phase-script.png'),
-    recap: require('../../assets/icons/phase-icons/phase-recap.png'),
+    warmup: require('../../assets/icons/phase-icons/phase-warmup.webp'),
+    micro_challenge: require('../../assets/icons/phase-icons/phase-micro-challenge.webp'),
+    lie_detective: require('../../assets/icons/phase-icons/phase-lie-detective.webp'),
+    personality_dice: require('../../assets/icons/phase-icons/phase-personality-dice.webp'),
+    auction: require('../../assets/icons/phase-icons/phase-auction.webp'),
+    quip_battle: require('../../assets/icons/phase-icons/phase-quip-battle.webp'),
+    undercover_word: require('../../assets/icons/phase-icons/phase-undercover-word.webp'),
+    group_mirror: require('../../assets/icons/phase-icons/phase-group-mirror.webp'),
+    mini_script: require('../../assets/icons/phase-icons/phase-mini-script.webp'),
+    recap: require('../../assets/icons/phase-icons/phase-recap.webp'),
   }
   const src = srcMap[phase]
   if (src) {
     return (
       <Image
         src={src}
+        mode='aspectFit'
+        className={className}
         style={{ width: sizeStr, height: sizeStr, verticalAlign: 'middle' }}
         lazyLoad
       />
     )
   }
-  return <Text style={{ fontSize: sizeStr }}>{emoji}</Text>
+  // Zero-emoji policy: render nothing if asset missing
+  return null
 }
 
 export function getMoodLabel(mood?: AtmosphereMood | null): string {
@@ -162,7 +194,7 @@ export function WarmupPhaseView({
       {currentTopic ? (
         <Card className='icebreaker__warmup-card'>
           <View className='icebreaker__warmup-emoji'>
-            <JoyJoinIcon emoji={currentTopic.emoji ?? '🌅'} size={48} />
+            <JoyJoinIcon emoji={currentTopic.emoji ?? ''} size={48} />
           </View>
           <Text className='icebreaker__warmup-question'>
             {currentTopic.question}
@@ -176,7 +208,7 @@ export function WarmupPhaseView({
         </Card>
       ) : (
         <Card className='icebreaker__warmup-card'>
-          <View className='icebreaker__warmup-emoji'><PhaseHeaderIcon phase="warmup" size={48} /></View>
+          <View className='icebreaker__warmup-emoji'><PhaseHeaderIcon phase="warmup" size={80} /></View>
           <Text className='icebreaker__warmup-question'>
             热身话题准备中…
           </Text>
@@ -185,7 +217,7 @@ export function WarmupPhaseView({
 
       <View className='icebreaker__warmup-status'>
         <Text className='icebreaker__warmup-ready-count'>
-          ✅ {readyUserIds.length} / {participants.length} 人已准备
+          {readyUserIds.length} / {participants.length} 人已准备
         </Text>
         {isReady && (
           <Text className='icebreaker__warmup-ready-badge'>你已准备</Text>
@@ -205,11 +237,19 @@ export function WarmupPhaseView({
               <Text className='icebreaker__participant-name'>
                 {p.displayName ?? '匿名'}
               </Text>
+              {p.archetype && (
+                <ArchetypeGlyph archetype={p.archetype} size={16} />
+              )}
               {p.isHost && (
-                <JoyJoinIcon emoji='👑' size={20} className='icebreaker__participant-host' />
+                <Image
+                  src={require('../../assets/icons/status-icons/status-crown.png')}
+                  style={{ width: '20rpx', height: '20rpx', marginLeft: '4rpx' }}
+                  lazyLoad
+                  className='icebreaker__participant-host'
+                />
               )}
               {readyUserIds.includes(p.userId) && (
-                <Text className='icebreaker__participant-check'>✅</Text>
+                <Text className='icebreaker__participant-check'>已加入</Text>
               )}
             </View>
           ))}
@@ -235,13 +275,18 @@ export function WarmupPhaseView({
                       }
                     }}
                   >
-                    <JoyJoinIcon emoji={option.emoji} size={48} className='icebreaker__mood-option-emoji' />
+                    <Image
+                      src={option.asset}
+                      style={{ width: '48rpx', height: '48rpx' }}
+                      lazyLoad
+                      className='icebreaker__mood-option-emoji'
+                    />
                     <Text className='icebreaker__mood-option-label'>{option.label}</Text>
                   </View>
                 ))}
               </View>
               <Text className='icebreaker__helper-text'>
-                {isGeneratingTopics ? '小悦正在根据你选的氛围出题…' : '先选一个氛围，小悦会生成这一轮的热身题目。'}
+                {isGeneratingTopics ? `${DEFAULT_MASCOT_DISPLAY_NAME}正在根据你选的氛围出题…` : `先选一个氛围，${DEFAULT_MASCOT_DISPLAY_NAME}会生成这一轮的热身题目。`}
               </Text>
             </>
           ) : (
@@ -310,18 +355,18 @@ export function MicroChallengePhaseView({
     <View className='icebreaker__challenge'>
       {challenge ? (
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="micro_challenge" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="micro_challenge" size={80} /></View>
           <Text className='icebreaker__challenge-title'>{challenge.title}</Text>
           <Text className='icebreaker__challenge-desc'>{challenge.description}</Text>
           {challenge.visualHint && (
-            <Text className='icebreaker__challenge-hint'>💡 {challenge.visualHint}</Text>
+            <Text className='icebreaker__challenge-hint'>提示：{challenge.visualHint}</Text>
           )}
           <View className='icebreaker__challenge-meta'>
             <Text className='icebreaker__challenge-duration'>
               ⏱ {challenge.durationSeconds}秒
             </Text>
             <Text className='icebreaker__challenge-completed'>
-              ✅ {completedBy.length} 人已完成
+              {completedBy.length} 人已完成
             </Text>
           </View>
           {hasCompleted && (
@@ -334,7 +379,7 @@ export function MicroChallengePhaseView({
         </Card>
       ) : (
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="micro_challenge" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="micro_challenge" size={80} /></View>
           <Text className='icebreaker__challenge-title'>挑战准备中…</Text>
         </Card>
       )}
@@ -405,7 +450,7 @@ export function LieDetectivePhaseView({
     return (
       <View className='icebreaker__detective'>
         <Card className='icebreaker__detective-card'>
-          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={48} /></View>
+          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={80} /></View>
           <Text className='icebreaker__detective-waiting'>
             等待所有玩家提交陈述…
           </Text>
@@ -437,7 +482,7 @@ export function LieDetectivePhaseView({
     return (
       <View className='icebreaker__detective'>
         <Card className='icebreaker__detective-card'>
-          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={48} /></View>
+          <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={80} /></View>
           <Text className='icebreaker__detective-waiting'>等待侦探回合开启…</Text>
         </Card>
       </View>
@@ -447,7 +492,7 @@ export function LieDetectivePhaseView({
   return (
     <View className='icebreaker__detective'>
       <Card className='icebreaker__detective-card'>
-        <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={48} /></View>
+        <View className='icebreaker__detective-emoji'><PhaseHeaderIcon phase="lie_detective" size={80} /></View>
         <Text className='icebreaker__detective-player'>
           {currentPlayer.displayName} 的回合
         </Text>
@@ -512,13 +557,13 @@ export function LieDetectivePhaseView({
       {!isOwnTurn && (
         <View className='icebreaker__detective-status'>
           {hasVoted && !isRevealed && (
-            <Text className='icebreaker__detective-voted'>✅ 已提交猜测，再次点击可修改答案</Text>
+            <Text className='icebreaker__detective-voted'>已提交猜测，再次点击可修改答案</Text>
           )}
           {isRevealed && hasVoted && reveal?.lieIndex === myVoteIndex && (
-            <Text className='icebreaker__detective-correct'>🎉 猜对了！</Text>
+            <Text className='icebreaker__detective-correct'>猜对了！</Text>
           )}
           {isRevealed && hasVoted && reveal?.lieIndex !== myVoteIndex && (
-            <Text className='icebreaker__detective-wrong'>😅 猜错了</Text>
+            <Text className='icebreaker__detective-wrong'>猜错了</Text>
           )}
         </View>
       )}
@@ -591,12 +636,29 @@ export function PersonalityDicePhaseView({
   const allCompleted = challenges.length > 0 && completedBy.length >= challenges.length
   const isMyChallenge = currentChallenge?.userId === currentUserId
   const hasCompleted = completedBy.includes(currentUserId)
+  const [showReveal, setShowReveal] = useState(false)
+  const prevChallengesLenRef = useRef(0)
+
+  useEffect(() => {
+    if (challenges.length > 0 && prevChallengesLenRef.current === 0) {
+      setShowReveal(true)
+    }
+    prevChallengesLenRef.current = challenges.length
+  }, [challenges.length])
 
   if (challenges.length === 0) {
     return (
       <View className='icebreaker__challenge'>
+        <CelebrationOverlay
+          visible={showReveal}
+          frameKey='dice_reveal'
+          title='人格骰子已掷出'
+          subtitle='看看命运为你准备了什么挑战'
+          autoDismissMs={2500}
+          onDismiss={() => setShowReveal(false)}
+        />
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="personality_dice" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="personality_dice" size={80} /></View>
           <Text className='icebreaker__challenge-title'>人格骰子</Text>
           <Text className='icebreaker__challenge-desc'>
             掷出命运骰子，为每位玩家生成一个专属挑战。
@@ -626,7 +688,7 @@ export function PersonalityDicePhaseView({
     return (
       <View className='icebreaker__challenge'>
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="personality_dice" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="personality_dice" size={80} /></View>
           <Text className='icebreaker__challenge-title'>人格骰子完成</Text>
           <Text className='icebreaker__challenge-desc'>
             {participants.length} 位玩家都完成了自己的专属挑战。
@@ -639,9 +701,17 @@ export function PersonalityDicePhaseView({
 
   return (
     <View className='icebreaker__challenge'>
+      <CelebrationOverlay
+        visible={showReveal}
+        frameKey='dice_reveal'
+        title='人格骰子已掷出'
+        subtitle={`${currentChallenge?.displayName ?? ''} 的挑战已揭晓`}
+        autoDismissMs={2500}
+        onDismiss={() => setShowReveal(false)}
+      />
       <Card className='icebreaker__challenge-card'>
         <View className='icebreaker__challenge-emoji'>
-          <JoyJoinIcon emoji={currentChallenge?.challengeEmoji ?? '🎲'} size={48} />
+          <PhaseHeaderIcon phase="personality_dice" size={48} />
         </View>
         <Text className='icebreaker__challenge-title'>
           {currentChallenge?.displayName ?? '玩家'} 的挑战
@@ -657,7 +727,7 @@ export function PersonalityDicePhaseView({
             {currentPlayerIndex + 1} / {challenges.length}
           </Text>
           <Text className='icebreaker__challenge-completed'>
-            ✅ {completedBy.length} 人已完成
+            {completedBy.length} 人已完成
           </Text>
         </View>
       </Card>
@@ -713,18 +783,33 @@ export function AuctionPhaseView({
   isClosingLot: boolean
 }) {
   const [bidText, setBidText] = useState('10')
+  const [bidError, setBidError] = useState('')
+  const [showSold, setShowSold] = useState(false)
   const lots = session.auctionLots ?? []
   const idx = session.auctionCurrentLotIndex ?? 0
   const currentLot = lots[idx]
   const high = session.auctionHighBid
   const balance = session.auctionBalances?.[currentUserId] ?? 0
   const allClosed = session.auctionAllLotsClosed ?? false
+  const prevAllClosedRef = useRef(false)
+
+  useEffect(() => {
+    setBidText('10')
+    setBidError('')
+  }, [idx])
+
+  useEffect(() => {
+    if (allClosed && !prevAllClosedRef.current) {
+      setShowSold(true)
+    }
+    prevAllClosedRef.current = allClosed
+  }, [allClosed])
 
   if (lots.length === 0) {
     return (
       <View className='icebreaker__challenge'>
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={80} /></View>
           <Text className='icebreaker__challenge-title'>脑洞拍卖会</Text>
           <Text className='icebreaker__challenge-desc'>
             虚拟币竞拍，仅供娱乐。主持人生成竞拍条目后，大家按轮出价。
@@ -750,8 +835,16 @@ export function AuctionPhaseView({
   if (allClosed) {
     return (
       <View className='icebreaker__challenge'>
+        <CelebrationOverlay
+          visible={showSold}
+          frameKey='auction_sold'
+          title='拍卖圆满结束'
+          subtitle='所有竞拍条目均已成交'
+          autoDismissMs={3000}
+          onDismiss={() => setShowSold(false)}
+        />
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={80} /></View>
           <Text className='icebreaker__challenge-title'>拍卖结束</Text>
           <Text className='icebreaker__challenge-desc'>全部竞拍已完成。</Text>
         </Card>
@@ -775,7 +868,7 @@ export function AuctionPhaseView({
   return (
     <View className='icebreaker__challenge'>
       <Card className='icebreaker__challenge-card'>
-        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={48} /></View>
+        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={80} /></View>
         <Text className='icebreaker__challenge-title'>第 {idx + 1} / {lots.length} 标</Text>
         <Text className='icebreaker__challenge-desc'>{currentLot?.title ?? ''}</Text>
         {currentLot?.teaser ? (
@@ -798,12 +891,26 @@ export function AuctionPhaseView({
             value={bidText}
             onInput={(e) => setBidText(e.detail.value)}
           />
+          {bidError ? <Text className='icebreaker__error'>{bidError}</Text> : null}
           <Button
             variant='primary'
             className='icebreaker__action-btn'
             onClick={() => {
               const n = Number.parseInt(bidText, 10)
-              if (Number.isFinite(n)) onPlaceBid(n)
+              if (!Number.isFinite(n) || n <= 0) {
+                setBidError('出价须为正整数')
+                return
+              }
+              if (high && n <= high.amount) {
+                setBidError(`出价须高于当前最高 ${high.amount} 币`)
+                return
+              }
+              if (n > balance) {
+                setBidError(`余额不足，当前余额 ${balance} 币`)
+                return
+              }
+              setBidError('')
+              onPlaceBid(n)
             }}
             disabled={isPlacingBid}
             loading={isPlacingBid}
@@ -948,7 +1055,7 @@ export function RecapPhaseView({
   return (
     <View className='icebreaker__recap'>
       <Card className='icebreaker__recap-card'>
-        <View className='icebreaker__recap-emoji'><PhaseHeaderIcon phase="recap" size={48} /></View>
+        <View className='icebreaker__recap-emoji'><PhaseHeaderIcon phase="recap" size={120} /></View>
         <Text className='icebreaker__recap-title'>破冰回顾</Text>
         {summary?.headline ? (
           <Text className='icebreaker__recap-subtitle'>{summary.headline}</Text>
@@ -969,7 +1076,7 @@ export function RecapPhaseView({
         <View className='icebreaker__recap-details'>
           {medals.length > 0 && (
             <Card className='icebreaker__recap-section'>
-              <Text className='icebreaker__recap-section-title'>🏅 今晚奖项</Text>
+              <Text className='icebreaker__recap-section-title'>今晚奖项</Text>
               {medals.map((medal) => (
                 <Text key={`${medal.title}-${medal.recipientDisplayName}`} className='icebreaker__recap-item'>
                   {medal.emoji} {medal.title} · {medal.recipientDisplayName} · {medal.description}
@@ -981,7 +1088,7 @@ export function RecapPhaseView({
           {recapData?.topicsDiscussed.length ? (
             <Card className='icebreaker__recap-section'>
               <Text className='icebreaker__recap-section-title'>
-                💬 讨论话题
+                讨论话题
               </Text>
               {recapData.topicsDiscussed.map((topic, i) => (
                 <Text key={i} className='icebreaker__recap-item'>
@@ -1010,7 +1117,7 @@ export function RecapPhaseView({
                 <Text>最佳侦探</Text>
               </View>
               <Text className='icebreaker__recap-stat'>
-                🏆 {recapData.lieDetectiveWinner}
+                {recapData.lieDetectiveWinner}
               </Text>
             </Card>
           ) : null}
@@ -1018,7 +1125,7 @@ export function RecapPhaseView({
           {recapMoments.length > 0 && (
             <Card className='icebreaker__recap-section'>
               <Text className='icebreaker__recap-section-title'>
-                😂 精彩瞬间
+                精彩瞬间
               </Text>
               {recapMoments.map((moment, i) => (
                 <Text key={i} className='icebreaker__recap-item'>
@@ -1036,7 +1143,7 @@ export function RecapPhaseView({
             感谢参与今晚的破冰！
           </Text>
           <Text className='icebreaker__recap-item'>
-            希望你和新朋友们建立了更深的连接 🎉
+            希望你和新朋友们建立了更深的连接
           </Text>
         </Card>
       )}

@@ -359,9 +359,9 @@ export function registerAssessmentRoutes(app: Express): void {
       await storage.saveTestResponses(userId, responses);
       const roleResult = await storage.saveRoleResult(userId, {
         userId,
-        primaryArchetype,
+        primaryArchetype: primaryArchetype as any,
         primaryArchetypeScore,
-        secondaryArchetype,
+        secondaryArchetype: secondaryArchetype as any,
         secondaryArchetypeScore,
         roleSubtype,
         roleScores,
@@ -393,9 +393,9 @@ export function registerAssessmentRoutes(app: Express): void {
       await storage.saveTestResponses(userId, responses);
       const roleResult = await storage.saveRoleResult(userId, {
         userId,
-        primaryArchetype,
+        primaryArchetype: primaryArchetype as any,
         primaryArchetypeScore: matchResult.primaryMatchScore,
-        secondaryArchetype,
+        secondaryArchetype: secondaryArchetype as any,
         secondaryArchetypeScore: secondaryArchetype ? matchResult.secondaryMatchScore : 0,
         roleSubtype,
         roleScores: {},

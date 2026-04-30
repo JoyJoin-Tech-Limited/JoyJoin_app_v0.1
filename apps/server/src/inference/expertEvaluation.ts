@@ -406,7 +406,7 @@ export async function runExpertEvaluation(
   logger.info('[ExpertEval] 开始10位AI专家评估...');
   
   const systemDescription = `
-小悦智能推断引擎是一个为社交注册场景设计的对话辅助系统。核心功能包括：
+悦仔智能推断引擎是一个为社交注册场景设计的对话辅助系统。核心功能包括：
 
 1. **智能推断**：从用户对话中自动提取和推断用户属性（如职业、人生阶段、婚姻状况等）
 2. **重复问题避免**：通过跟踪已知信息，避免重复询问用户已经提供或可推断的信息
@@ -477,7 +477,7 @@ export async function runExpertEvaluation(
     aggregatedScores,
     overallScore: parseFloat(overallScore.toFixed(2)),
     grade,
-    summary: `经过10位AI专家的综合评估，小悦智能推断引擎获得${overallScore.toFixed(2)}分（满分10分），评级为${grade}。`,
+    summary: `经过10位AI专家的综合评估，悦仔智能推断引擎获得${overallScore.toFixed(2)}分（满分10分），评级为${grade}。`,
     topStrengths: countOccurrences(allStrengths).slice(0, 5),
     topWeaknesses: countOccurrences(allWeaknesses).slice(0, 5),
     prioritizedRecommendations: countOccurrences(allRecommendations).slice(0, 5)
@@ -492,7 +492,7 @@ export async function runExpertEvaluation(
 
 export function generateExpertReportMarkdown(report: ExpertEvaluationReport): string {
   const lines: string[] = [
-    '# 小悦智能推断引擎 - 专家评估报告',
+    '# 悦仔智能推断引擎 - 专家评估报告',
     '',
     `**评估时间**: ${report.timestamp.toISOString()}`,
     `**系统版本**: ${report.systemVersion}`,
@@ -588,8 +588,8 @@ export interface EvaluationQuestionnaire {
 export function generateEvaluationQuestionnaire(): EvaluationQuestionnaire {
   return {
     version: '1.0',
-    title: '小悦智能推断引擎 - 专家评估问卷',
-    introduction: '感谢您参与小悦智能推断引擎的专家评估。本问卷旨在收集您对系统各方面能力的专业评价，预计需要15-20分钟完成。您的反馈将帮助我们持续改进系统。',
+    title: '悦仔智能推断引擎 - 专家评估问卷',
+    introduction: '感谢您参与悦仔智能推断引擎的专家评估。本问卷旨在收集您对系统各方面能力的专业评价，预计需要15-20分钟完成。您的反馈将帮助我们持续改进系统。',
     sections: EVALUATION_DIMENSIONS.map(dim => ({
       id: dim.id,
       title: dim.name,

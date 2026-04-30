@@ -8,6 +8,7 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { logInfo, logError } from '../../lib/logger'
+import { getMascotDisplayName } from '../../lib/mascotDisplay'
 import OnboardingLoadingShell from '../../components/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/XiaoyueSessionShell'
 import Card from '../../components/Card'
@@ -20,10 +21,13 @@ import {
   MicroChallengePhaseView,
   PersonalityDicePhaseView,
   QuipBattlePhaseView,
+  UndercoverWordPhaseView,
+  GroupMirrorPhaseView,
   RecapPhaseView,
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
+import { PhaseIntroOverlay } from './PhaseIntroOverlay'
 import { MiniScriptPhaseView } from './MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './MiniScriptConfigModal'
@@ -66,7 +70,9 @@ export default function IcebreakerSessionPage() {
   const [miniScriptModalOpen, setMiniScriptModalOpen] = useState(false)
   const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
+  const [showPhaseIntro, setShowPhaseIntro] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
+  const prevPhaseRef = useRef<SessionPhase>('waiting')
 
   const {
     data: eventSession,
@@ -199,6 +205,18 @@ export default function IcebreakerSessionPage() {
   }, [socialSessionQuery.data, bootstrapState])
 
   const phase: SessionPhase = session?.phase ?? 'waiting'
+
+  // Phase intro overlay: trigger when entering a playable phase (not initial load)
+  // TODO(P2-follow-up): Extract into useSessionPhase() hook to reduce God-component size
+  useEffect(() => {
+    const prev = prevPhaseRef.current
+    const skipPhases: SessionPhase[] = ['waiting', 'ended']
+    const isRealTransition = prev !== phase && !skipPhases.includes(phase) && prev !== 'waiting'
+    if (isRealTransition) {
+      setShowPhaseIntro(true)
+    }
+    prevPhaseRef.current = phase
+  }, [phase])
   const hostUserId = session?.hostUserId ?? ''
   const isHost = !!currentUserId && currentUserId === hostUserId
   const participants = session
@@ -399,7 +417,7 @@ export default function IcebreakerSessionPage() {
   }, [])
 
   const submitMiniScriptGenerate = useCallback(
-    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[] }) => {
+    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => {
       if (!socialSessionId || !session) {
         return
       }
@@ -414,6 +432,7 @@ export default function IcebreakerSessionPage() {
             playerCount: session.playerCount,
             style: payload.style,
             genres: payload.genres,
+            lite: payload.lite,
           },
         })
         await socialSessionQuery.refetch()
@@ -447,7 +466,7 @@ export default function IcebreakerSessionPage() {
       <OnboardingLoadingShell
         stepLabel='同桌游戏'
         title='正在加入破冰会话'
-        subtitle='小悦正在对齐活动与同桌状态，马上就能开始。'
+        subtitle={`${getMascotDisplayName(user)}正在对齐活动与同桌状态，马上就能开始。`}
         hint='若网络稍慢，多等几秒不会错过开场。'
         xiaoyueExpression='loadingSystem'
       />
@@ -505,7 +524,11 @@ export default function IcebreakerSessionPage() {
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
         <View className='icebreaker__host-badge-text'>
-          <JoyJoinIcon emoji='👑' size={24} />
+          <Image
+            src={require('../../assets/icons/status-icons/status-crown.png')}
+            style={{ width: '24rpx', height: '24rpx' }}
+            lazyLoad
+          />
           <Text>你是主持人</Text>
         </View>
       </View>
@@ -546,6 +569,8 @@ export default function IcebreakerSessionPage() {
     <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false}>
       {phaseHeader}
 
+      <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
+
       <View className='icebreaker__phase-shell' key={phase}>
         {phase === 'waiting' && (
           <>
@@ -563,7 +588,7 @@ export default function IcebreakerSessionPage() {
                 disabled={pendingAction !== null}
                 loading={pendingAction === 'xiaoyue-pack'}
               >
-                {pendingAction === 'xiaoyue-pack' ? '生成中…' : '生成小悦开场包'}
+                {pendingAction === 'xiaoyue-pack' ? '生成中…' : `生成${getMascotDisplayName(user)}开场包`}
               </Button>
             )}
           </>
@@ -694,6 +719,40 @@ export default function IcebreakerSessionPage() {
             votedUserIds={session.quipBattleVotedUserIds ?? []}
             userId={currentUserId}
             playerCount={playerCount}
+            onRefresh={() => socialSessionQuery.refetch()}
+          />
+        )}
+
+        {phase === 'undercover_word' && session && (
+          <UndercoverWordPhaseView
+            socialSessionId={socialSessionId || ''}
+            isHost={isHost}
+            userId={currentUserId}
+            pair={session.undercoverWordPair ?? null}
+            undercoverUserId={session.undercoverUserId}
+            rounds={session.undercoverWordRounds ?? []}
+            currentRound={session.undercoverWordCurrentRound ?? 0}
+            votes={session.undercoverWordVotes ?? []}
+            votedUserIds={session.undercoverWordVotedUserIds ?? []}
+            revealed={session.undercoverWordRevealed ?? false}
+            results={session.undercoverWordResults ?? null}
+            playerCount={playerCount}
+            participants={participants}
+          />
+        )}
+
+        {phase === 'group_mirror' && session && (
+          <GroupMirrorPhaseView
+            socialSessionId={socialSessionId || ''}
+            isHost={isHost}
+            userId={currentUserId}
+            questions={session.groupMirrorQuestions ?? []}
+            answers={session.groupMirrorAnswers ?? []}
+            submittedUserIds={session.groupMirrorSubmittedUserIds ?? []}
+            revealed={session.groupMirrorRevealed ?? false}
+            results={session.groupMirrorResults ?? []}
+            playerCount={playerCount}
+            participants={participants}
           />
         )}
 
@@ -735,7 +794,12 @@ function WaitingPhase({
   return (
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>
-        <JoyJoinIcon emoji='⏳' size={80} className='icebreaker__waiting-emoji' />
+        <Image
+          src={require('../../assets/icons/status-icons/status-waiting.png')}
+          style={{ width: '80rpx', height: '80rpx' }}
+          lazyLoad
+          className='icebreaker__waiting-emoji'
+        />
         <Text className='icebreaker__waiting-title'>等待更多玩家加入…</Text>
         <Text className='icebreaker__waiting-count'>
           当前 {playerCount} 人已加入

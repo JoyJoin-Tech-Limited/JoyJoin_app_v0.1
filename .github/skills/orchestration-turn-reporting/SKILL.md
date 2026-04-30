@@ -96,6 +96,26 @@ See [`references/schema-examples.md`](./references/schema-examples.md) for:
 
 See [`references/utilization-and-mapping.md`](./references/utilization-and-mapping.md) for utilization ledger format and briefing-to-JSON mapping.
 
+### Mode persistence (optional)
+
+Turn summaries may include a `mode` object to update the session's communication mode:
+
+```json
+{
+  "mode": {
+    "communication": "caveman",
+    "activeSinceTurn": 5,
+    "triggeredBy": "user"
+  }
+}
+```
+
+- `communication`: `"normal"` | `"caveman"` | `"grill-me"`
+- `activeSinceTurn`: integer turn count when mode was activated
+- `triggeredBy`: `"user"` | `"agent"` | `"system"`
+
+The recorder merges `mode` into the session context. If omitted, the existing mode is preserved.
+
 ## Workflow
 
 See [`references/workflow.md`](./references/workflow.md) for step-by-step agent-turn and supervisor-turn workflows.

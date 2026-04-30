@@ -32,6 +32,13 @@
     { "localPath": "assets/matching/matching-waiting-hero.webp", "cdnPath": "assets/matching/matching-waiting-hero.webp" },
     { "localPath": "assets/promo/banner-ai-match-calculated.webp", "cdnPath": "assets/promo/banner-ai-match-calculated.webp" },
     { "localPath": "assets/promo/banner-ai-match-same-frequency.webp", "cdnPath": "assets/promo/banner-ai-match-same-frequency.webp" },
-    { "localPath": "assets/promo/banner-ai-match-understands-you.webp", "cdnPath": "assets/promo/banner-ai-match-understands-you.webp" }
+    { "localPath": "assets/promo/banner-ai-match-understands-you.webp", "cdnPath": "assets/promo/banner-ai-match-understands-you.webp" },
+    { "localPath": "assets/miniscript/ancient-chinese-hero.webp", "cdnPath": "assets/miniscript/ancient-chinese-hero.webp" },
+    { "localPath": "assets/miniscript/future-tech-hero.webp", "cdnPath": "assets/miniscript/future-tech-hero.webp" },
+    { "localPath": "assets/miniscript/medieval-hero.webp", "cdnPath": "assets/miniscript/medieval-hero.webp" },
+    { "localPath": "assets/miniscript/modern-urban-hero.webp", "cdnPath": "assets/miniscript/modern-urban-hero.webp" },
+    { "localPath": "assets/miniscript/republican-era-hero.webp", "cdnPath": "assets/miniscript/republican-era-hero.webp" },
+    { "localPath": "assets/miniscript/western-court-hero.webp", "cdnPath": "assets/miniscript/western-court-hero.webp" },
+    { "localPath": "assets/miniscript/xianxia-hero.webp", "cdnPath": "assets/miniscript/xianxia-hero.webp" }
   ]
 }

@@ -120,7 +120,7 @@ export async function fetchEnrichedMemberProfiles(
     return [];
   }
 
-  const [{ db }, { users, userInterests, eventPoolRegistrations }, { and, eq, inArray }] = await Promise.all([
+  const [{ db }, { users, userInterests, eventPoolRegistrations }, { and, eq, inArray, sql }] = await Promise.all([
     import('../db'),
     import('@shared/schema'),
     import('drizzle-orm'),
@@ -143,7 +143,7 @@ export async function fetchEnrichedMemberProfiles(
       workMode: users.workMode,
       hometownRegionCity: users.hometownRegionCity,
       currentCity: users.currentCity,
-      archetype: users.archetype,
+      archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, 'koala')`,
       secondaryArchetype: users.secondaryArchetype,
       intent: users.intent,
     })

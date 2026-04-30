@@ -125,6 +125,27 @@ for (const file of modifiedFiles) {
   });
 }
 
+// 4. Emoji commit blocker for mini-program TS/TSX.
+// Inline emoji in UI text must be replaced with JoyJoinIcon proprietary icons or CSS/text.
+// Lines that intentionally pass emoji to the icon system (emoji=, icon=, fallbackEmoji) are allowed.
+const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+const allowedEmojiContextPattern = /emoji\s*=\s*['"]|icon\s*=\s*['"]|fallbackEmoji/;
+const allowedEmojiFiles = new Set([
+  'packages/shared/src/iconSystem/emojiToIconMap.ts',
+  'packages/shared/src/constants.ts',
+]);
+for (const file of modifiedFiles) {
+  if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
+  if (allowedEmojiFiles.has(file)) continue;
+  const content = fs.readFileSync(file, 'utf8');
+  const lines = content.split(/\r?\n/);
+  lines.forEach((line, index) => {
+    if (emojiPattern.test(line) && !allowedEmojiContextPattern.test(line)) {
+      violations.push(`Inline emoji found (use JoyJoinIcon or CSS/text instead): ${file}:${index + 1}`);
+    }
+  });
+}
+
 const secretKeyPattern = /^\s*(?:export\s+)?(DATABASE_URL|JWT_SECRET|SESSION_SECRET|WECHAT_SECRET|DEEPSEEK_API_KEY|ADMIN_CREATE_SECRET_KEY)\s*[:=]\s*["']?([^"'\s#]+)/i;
 const credentialUrlPattern = /postgres(?:ql)?:\/\/[^\s"']+:[^\s"']+@/i;
 
@@ -181,4 +202,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('Guardrails passed: no tracked env files, obvious secrets, banned legacy onboarding identifiers, legacy shared/ imports, or cross-app source imports were found.');
+console.log('Guardrails passed: no tracked env files, obvious secrets, banned legacy onboarding identifiers, legacy shared/ imports, cross-app source imports, or inline emojis were found.');

@@ -15,7 +15,7 @@ import { forwardRef, useState, useEffect } from "react";
 import type { ShareCardVariant } from "@/lib/archetypeShareVariants";
 import TraitBarsCompact from "./TraitBarsCompact";
 import { archetypeConfig } from "@/lib/archetypes";
-import logoFull from "@/assets/joyjoin-logo.png";
+import logoFull from "@/assets/joyjoin-logo.webp";
 import { getCardImagePath, hasCardImage } from "@/lib/archetypeCardImages";
 import { haptics } from "@/lib/haptics";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";

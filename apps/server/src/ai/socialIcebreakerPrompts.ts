@@ -103,7 +103,7 @@ export function buildLieDetectivePrompt(params: {
     .filter(Boolean)
     .join('\n');
 
-  return `你是社交破冰专家小悦。请为"${params.displayName}"生成"两真一假"游戏的3个陈述句。
+  return `你是社交破冰专家悦仔。请为"${params.displayName}"生成"两真一假"游戏的3个陈述句。
 ${context ? `关于这个人的信息：\n${context}` : ''}
 
 要求：
@@ -309,7 +309,7 @@ export function buildXiaoyueSessionPackPrompt(params: {
     .join('\n');
 
   return (
-    `你是社交破冰主持人小悦。为一场${eventLabel}（约${params.participantCount}人）生成一份开场会话包。\n\n` +
+    `你是社交破冰主持人悦仔。为一场${eventLabel}（约${params.participantCount}人）生成一份开场会话包。\n\n` +
     `参与者：\n${participantList}\n\n` +
     '要求：\n' +
     '- 语气松弛、有故事感，像一位靠谱的街头老狐狸，不要客服腔\n' +
@@ -369,5 +369,71 @@ export function buildQuipBattlePrompt(params: {
 请以JSON数组返回：
 [{"id":"qb_1","promptText":"如果_____有段位，你已经是王者了","category":"自嘲"},{"id":"qb_2","promptText":"...","category":"..."},{"id":"qb_3","promptText":"...","category":"..."}]
 
+直接返回JSON，不要其他内容。`;
+}
+
+// ─── Undercover Word Prompts ─────────────────────────────────────────────────
+
+export const UNDERCOVER_WORD_PROMPT_VERSION = 'social-undercover-word-v1';
+
+export function buildUndercoverWordPrompt(params: {
+  participantCount: number;
+  eventType?: string;
+}): string {
+  const eventLabel = params.eventType ? `「${params.eventType}」` : '线下聚会';
+
+  return `你是JoyJoin的社交游戏设计师。为一场${eventLabel}（${params.participantCount}人）设计一组"谁是卧底"词对。
+
+游戏规则：
+- 大部分玩家（平民）拿到同一个词A
+- 1名玩家（卧底）拿到词B
+- 两个词要在同一类别下、语义相近但又有明显区别
+- 玩家通过描述自己的词来推理谁是卧底，卧底要尽量隐藏自己
+
+要求：
+- 词对必须是中文日常词汇（2-4个字）
+- 平民词和卧底词要在同一类别（如饮品、美食、交通、社交App等）
+- 两个词要有一定相似度，让卧底有机会浑水摸鱼
+- 但又不能太像，否则游戏无法推进
+- 禁止使用敏感话题（政治、宗教、种族、性、疾病、地域歧视）
+- 优先选择年轻人熟悉的日常词汇
+
+请以JSON返回：
+{"civilianWord":"奶茶","undercoverWord":"咖啡","category":"饮品"}
+
+直接返回JSON，不要其他内容。`;
+}
+
+// ─── Group Mirror Prompts ────────────────────────────────────────────────────
+
+export const GROUP_MIRROR_PROMPT_VERSION = 'social-group-mirror-v1';
+
+export function buildGroupMirrorPrompt(params: {
+  participantCount: number;
+  eventType?: string;
+  participantNames: string[];
+}): string {
+  const eventLabel = params.eventType ? `「${params.eventType}」` : '线下聚会';
+  const names = params.participantNames.join('、');
+
+  return `你是JoyJoin的社交观察家。为一场${eventLabel}（${params.participantCount}人，参与者：${names}）生成5个"群像镜像"问题。
+
+游戏规则：
+- 每个问题都是关于在场某人的趣味观察/猜测
+- 大家匿名投票选出"最符合这个问题描述的人"
+- 最后揭晓投票结果，形成"群像镜像"
+
+要求：
+- 问题要轻松、无攻击性，不能有冒犯性
+- 问题要有"画面感"，让人能立刻想到某位朋友
+- 问题类型覆盖：观察（谁最像...）、预测（谁最可能...）、记忆（谁给人的第一印象最...）
+- 每个问题20-40字
+- 禁止使用敏感话题（政治、宗教、种族、性、疾病、外貌攻击、收入）
+- 语气像朋友间的好奇打量，不要像心理测试
+
+请以JSON数组返回：
+[{"id":"gm_1","questionText":"谁最有可能在聚会后请大家吃夜宵？","category":"perception"},{"id":"gm_2","questionText":"...","category":"..."}]
+
+category只能是 perception / memory / prediction 之一。
 直接返回JSON，不要其他内容。`;
 }

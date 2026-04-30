@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import {
   archetypeDescriptions,
-  generateSparkPredictions,
   normalizeInterestName,
   type AttendeeData,
 } from "@/lib/attendeeAnalytics";
@@ -92,30 +91,7 @@ export default function AttendeePreviewCard({
     ? archetypeDescriptions[attendee.archetype] || ""
     : "";
 
-  const sparkPredictions = generateSparkPredictions(
-    {
-      userInterests,
-      userTopicsHappy,
-      userTopicsAvoid,
-      userDebateComfort,
-      userEducationLevel,
-      userIndustry,
-      userAge,
-      userGender,
-      userRelationshipStatus,
-      userChildren,
-      userStudyLocale,
-      userOverseasRegions,
-      userSeniority,
-      userFieldOfStudy,
-      userHometownCountry,
-      userHometownRegionCity,
-      userHometownAffinityOptin,
-      userArchetype,
-      userLanguages,
-    },
-    attendee
-  );
+  const sparkPredictions: { text: string; rarity: 'common' | 'rare' | 'epic' }[] = [];
 
   const connectionPointsCount = sparkPredictions.length;
 

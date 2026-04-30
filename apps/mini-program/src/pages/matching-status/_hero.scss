@@ -82,8 +82,39 @@
     margin-bottom: 10rpx;
   }
 
-  &__status-emoji {
-    font-size: 96rpx;
+  &__status-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    margin-bottom: $spacing-sm;
+
+    &--matched {
+      background: #07C160;
+      box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.4);
+    }
+
+    &--completed {
+      background: #2563EB;
+      box-shadow: 0 0 12rpx rgba(37, 99, 235, 0.4);
+    }
+
+    &--pending {
+      background: #F59E0B;
+      box-shadow: 0 0 12rpx rgba(245, 158, 11, 0.4);
+      animation: matching-status-pulse 2s ease-in-out infinite;
+    }
+  }
+
+  @keyframes matching-status-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.6;
+      transform: scale(1.15);
+    }
   }
 
   &__status-title {

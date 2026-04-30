@@ -1,4 +1,5 @@
 import { Image, Text, View } from '@tarojs/components'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useMemo } from 'react'
 import Card from '../../../../../components/Card'
 import { COLOR_PRIMARY } from '../../../../../lib/uiConstants'
@@ -80,7 +81,7 @@ export default function SlotStage({ reelIndex, slotPhase, isSlowNetwork, progres
             src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.networkHolding)}
           />
           <View className='personality-results__network-copy'>
-            <Text className='personality-results__network-title'>小悦还在等最后一条同步</Text>
+            <Text className='personality-results__network-title'>{`${DEFAULT_MASCOT_DISPLAY_NAME}还在等最后一条同步`}</Text>
             <Text className='personality-results__network-text'>
               网络有点慢也没关系，动画会继续转到结果真正到位为止。
             </Text>

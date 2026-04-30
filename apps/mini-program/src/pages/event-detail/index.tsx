@@ -8,6 +8,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinIcon from '../../components/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import JoyJoinLoadingScreen from '../../components/JoyJoinLoadingScreen'
 import './index.scss'
 
@@ -29,7 +30,7 @@ export default function EventDetailPage() {
     return (
       <JoyJoinLoadingScreen
         title='活动详情加载中…'
-        subtitle='小悦在帮你读取这场活动的信息'
+        subtitle={`${DEFAULT_MASCOT_DISPLAY_NAME}在帮你读取这场活动的信息`}
       />
     )
   }

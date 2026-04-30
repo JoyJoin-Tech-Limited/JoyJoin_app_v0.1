@@ -31,7 +31,7 @@ import {
   coupons,
   userCoupons
 } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
 import { calculateAge } from "@shared/utils";
 import { wsService } from "./wsService";
@@ -51,9 +51,11 @@ import {
   calculateSemanticSimilarityScore,
   calculateWeightedPairScore,
   isSemanticSimilarityEnabled,
+  isAdaptiveWeightsEnabled,
   type SemanticProfileCache,
 } from "./matchingSemantic";
 import { observeSemanticSimilarityMetrics } from "./matchingMetrics";
+import { matchingWeightsService, type MatchingWeights } from "./matchingWeightsService";
 
 
 
@@ -222,18 +224,26 @@ function calculateChemistryScore(
   user2: UserWithProfile,
   chemistryCalibrationMap?: ChemistryCalibrationMap,
 ): number {
-  const primary1 = (user1.archetype || "暖心熊") as ArchetypeName;
-  const primary2 = (user2.archetype || "暖心熊") as ArchetypeName;
-  const secondary1 = (user1.secondaryArchetype || "暖心熊") as ArchetypeName;
-  const secondary2 = (user2.secondaryArchetype || "暖心熊") as ArchetypeName;
-  
+  const primary1 = (user1.archetype || "koala") as ArchetypeName;
+  const primary2 = (user2.archetype || "koala") as ArchetypeName;
+  const secondary1 = (user1.secondaryArchetype || "koala") as ArchetypeName;
+  const secondary2 = (user2.secondaryArchetype || "koala") as ArchetypeName;
+
   // 主角色化学反应（70%权重）
-  const primaryChemistry = getCalibratedChemistryScore(primary1, primary2, chemistryCalibrationMap) * 0.70;
-  
+  const primaryChemistryRaw = getCalibratedChemistryScore(primary1, primary2, chemistryCalibrationMap);
+  const primaryChemistry = primaryChemistryRaw * 0.70;
+
   // 次要角色交叉加成（各15%权重，共30%）
-  const crossChemistry1 = getCalibratedChemistryScore(primary1, secondary2, chemistryCalibrationMap) * 0.15;
-  const crossChemistry2 = getCalibratedChemistryScore(secondary1, primary2, chemistryCalibrationMap) * 0.15;
-  
+  const crossChemistry1Raw = getCalibratedChemistryScore(primary1, secondary2, chemistryCalibrationMap);
+  const crossChemistry2Raw = getCalibratedChemistryScore(secondary1, primary2, chemistryCalibrationMap);
+  const crossChemistry1 = crossChemistry1Raw * 0.15;
+  const crossChemistry2 = crossChemistry2Raw * 0.15;
+
+  // Temporary debug log for Phase 0 verification (OBS-01)
+  if (primaryChemistryRaw === 50) {
+    logger.warn(`[ChemistryDebug] Primary chemistry defaulted to 50 for pair: ${primary1} × ${primary2}`);
+  }
+
   return Math.round(primaryChemistry + crossChemistry1 + crossChemistry2);
 }
 
@@ -669,12 +679,13 @@ async function calculatePairScore(
   semanticProfileCache?: SemanticProfileCache,
   semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
   chemistryCalibrationMap?: ChemistryCalibrationMap,
+  customWeights?: MatchingWeights,
 ): Promise<number> {
   // Use a sorted key so (A,B) and (B,A) map to the same cache entry
   const sortedUserIds = user1.userId < user2.userId
     ? `${user1.userId}|${user2.userId}`
     : `${user2.userId}|${user1.userId}`;
-  const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}|${sortedUserIds}`;
+  const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}${customWeights ? "|adaptive" : ""}|${sortedUserIds}`;
   if (pairScoreCache?.has(cacheKey)) {
     return pairScoreCache.get(cacheKey)!;
   }
@@ -703,9 +714,9 @@ async function calculatePairScore(
     semanticSimilarity,
   };
   const legacyScore = calculateWeightedPairScore(dimensions, false);
-  const result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled);
+  const result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled, customWeights);
 
-  if (semanticSimilarityEnabled && typeof semanticSimilarity === "number") {
+  if (semanticSimilarityEnabled && typeof semanticSimilarity === "number" && !customWeights) {
     observeSemanticSimilarityMetrics(semanticSimilarity, result - legacyScore);
   }
 
@@ -724,6 +735,7 @@ async function calculateGroupPairScore(
   semanticProfileCache?: SemanticProfileCache,
   semanticSimilarityEnabled = isSemanticSimilarityEnabled(),
   chemistryCalibrationMap?: ChemistryCalibrationMap,
+  customWeights?: MatchingWeights,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -740,6 +752,7 @@ async function calculateGroupPairScore(
         semanticProfileCache,
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
+        customWeights,
       );
       pairCount++;
     }
@@ -888,12 +901,14 @@ export async function runGreedyPoolMatchingCore(
   semanticSimilarityEnabled: boolean,
   chemistryCalibrationMap: ChemistryCalibrationMap | undefined,
   invitationPairs: Array<{ inviterId: string; inviteeId: string }>,
+  customWeights?: MatchingWeights,
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
   const used = new Set<string>();
   const targetGroupSize = pool.maxGroupSize || 6;
   const minGroupSize = pool.minGroupSize || 4;
+  const maxGroupSize = pool.maxGroupSize || 6;
 
   // 计算所有可能的配对分数，并为邀请关系加权
   const pairScores: { user1: UserWithProfile; user2: UserWithProfile; score: number; isInvited: boolean }[] = [];
@@ -909,6 +924,7 @@ export async function runGreedyPoolMatchingCore(
         semanticProfileCache,
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
+        customWeights,
       );
 
       // Check if this pair has an invitation relationship
@@ -962,6 +978,7 @@ export async function runGreedyPoolMatchingCore(
             semanticProfileCache,
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
+            customWeights,
           );
         }
         const avgScore = totalScore / groupMembers.length;
@@ -989,6 +1006,7 @@ export async function runGreedyPoolMatchingCore(
         semanticProfileCache,
         semanticSimilarityEnabled,
         chemistryCalibrationMap,
+        customWeights,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
@@ -1018,6 +1036,175 @@ export async function runGreedyPoolMatchingCore(
     // 达到目标组数就停止
     if (groups.length >= (pool.targetGroups || 1)) {
       break;
+    }
+  }
+
+  // H4: Redistribution pass for stranded users (behind adaptive-weights flag)
+  // Only run when adaptive weights are enabled — this is an experimental
+  // quality-of-life improvement that needs real-world calibration.
+  if (customWeights) {
+    const strandedUsers = eligibleUsers.filter(u => !used.has(u.userId));
+
+    if (strandedUsers.length > 0) {
+      logger.info(`[Pool Matching] Redistribution pass: ${strandedUsers.length} stranded users`);
+
+      // Phase 1: Try to place each stranded user into the best existing group
+      // that has room (below maxGroupSize).
+      for (const stranded of strandedUsers) {
+        let bestGroup: MatchGroup | null = null;
+        let bestScore = -1;
+
+        for (const group of groups) {
+          if (group.members.length >= maxGroupSize) continue;
+
+          let totalScore = 0;
+          for (const member of group.members) {
+            totalScore += await calculatePairScore(
+              stranded,
+              member,
+              interestsCache,
+              pairScoreCache,
+              semanticProfileCache,
+              semanticSimilarityEnabled,
+              chemistryCalibrationMap,
+              customWeights,
+            );
+          }
+          const avgScore = totalScore / group.members.length;
+
+          if (avgScore > bestScore) {
+            bestScore = avgScore;
+            bestGroup = group;
+          }
+        }
+
+        if (bestGroup && bestScore >= 50) {
+          bestGroup.members.push(stranded);
+          used.add(stranded.userId);
+          // Recalculate group stats
+          bestGroup.avgPairScore = await calculateGroupPairScore(
+            bestGroup.members,
+            interestsCache,
+            pairScoreCache,
+            semanticProfileCache,
+            semanticSimilarityEnabled,
+            chemistryCalibrationMap,
+            customWeights,
+          );
+          bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
+          bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members);
+          bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
+          bestGroup.overallScore = Math.round(
+            (bestGroup.avgPairScore * 0.6) +
+            (bestGroup.diversityScore * 0.25) +
+            (bestGroup.communicationBalance * 0.15)
+          );
+          bestGroup.temperatureLevel = getTemperatureLevel(bestGroup.overallScore);
+          bestGroup.explanation = generateGroupExplanation(bestGroup);
+        }
+      }
+
+      // Phase 2: If there are still stranded users, try to form a new group
+      // from the remainders (only if enough to meet minGroupSize).
+      let stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
+      if (stillStranded.length >= minGroupSize) {
+        const avgPairScore = await calculateGroupPairScore(
+          stillStranded,
+          interestsCache,
+          pairScoreCache,
+          semanticProfileCache,
+          semanticSimilarityEnabled,
+          chemistryCalibrationMap,
+          customWeights,
+        );
+        const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
+        const diversity = calculateGroupDiversity(stillStranded);
+        const communicationBalance = calculateEnergyBalance(stillStranded);
+        const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
+        const temperatureLevel = getTemperatureLevel(overall);
+
+        const newGroup: MatchGroup = {
+          members: stillStranded,
+          avgPairScore,
+          avgChemistryScore,
+          diversityScore: diversity,
+          communicationBalance,
+          overallScore: overall,
+          temperatureLevel,
+          explanation: "",
+        };
+        newGroup.explanation = generateGroupExplanation(newGroup);
+        groups.push(newGroup);
+        stillStranded.forEach(u => used.add(u.userId));
+        logger.info(`[Pool Matching] Formed remainder group with ${stillStranded.length} users`);
+      }
+
+      // Phase 3: Absorption — if stranded users remain after Phase 1+2,
+      // allow any existing group to exceed maxGroupSize by 1 (soft overflow)
+      // so long as the candidate scores ≥ 50 with the group. Each group may
+      // absorb at most one extra member because the skip condition becomes
+      // active once length > maxGroupSize. This is gated by adaptive weights
+      // for safe calibration.
+      stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
+      if (stillStranded.length > 0 && stillStranded.length < minGroupSize) {
+        for (const stranded of stillStranded) {
+          let bestGroup: MatchGroup | null = null;
+          let bestScore = -1;
+
+          for (const group of groups) {
+            if (group.members.length > maxGroupSize) continue;
+
+            let totalScore = 0;
+            for (const member of group.members) {
+              totalScore += await calculatePairScore(
+                stranded,
+                member,
+                interestsCache,
+                pairScoreCache,
+                semanticProfileCache,
+                semanticSimilarityEnabled,
+                chemistryCalibrationMap,
+                customWeights,
+              );
+            }
+            const avgScore = totalScore / group.members.length;
+
+            if (avgScore > bestScore) {
+              bestScore = avgScore;
+              bestGroup = group;
+            }
+          }
+
+          if (bestGroup && bestScore >= 50) {
+            bestGroup.members.push(stranded);
+            used.add(stranded.userId);
+            bestGroup.avgPairScore = await calculateGroupPairScore(
+              bestGroup.members,
+              interestsCache,
+              pairScoreCache,
+              semanticProfileCache,
+              semanticSimilarityEnabled,
+              chemistryCalibrationMap,
+              customWeights,
+            );
+            bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
+            bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members);
+            bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
+            bestGroup.overallScore = Math.round(
+              (bestGroup.avgPairScore * 0.6) +
+              (bestGroup.diversityScore * 0.25) +
+              (bestGroup.communicationBalance * 0.15)
+            );
+            bestGroup.temperatureLevel = getTemperatureLevel(bestGroup.overallScore);
+            bestGroup.explanation = generateGroupExplanation(bestGroup);
+          }
+        }
+      }
+
+      stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
+      if (stillStranded.length > 0) {
+        logger.info(`[Pool Matching] ${stillStranded.length} users remain unmatched after redistribution`);
+      }
     }
   }
 
@@ -1059,7 +1246,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       industryNicheLabel: users.industryNicheLabel,
       industryCategoryLabel: users.industryCategoryLabel,
       educationLevel: users.educationLevel,
-      archetype: users.archetype,
+      archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, 'koala')`,
       secondaryArchetype: users.secondaryArchetype,
       workMode: users.workMode,  // 人生阶段 for matching
       hometown: users.hometownRegionCity,
@@ -1133,6 +1320,21 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     }
   }
 
+  // H3: Fetch adaptive weights when Thompson Sampling is enabled.
+  // Weights are fetched once per matching run (not per pair) and cached
+  // for the duration via matchingWeightsService's internal 60s TTL.
+  const adaptiveWeightsEnabled = isAdaptiveWeightsEnabled();
+  let customWeights: MatchingWeights | undefined;
+  if (adaptiveWeightsEnabled) {
+    try {
+      customWeights = await matchingWeightsService.getActiveWeights();
+      logger.info(`[Pool Matching] Using adaptive weights:`, customWeights);
+    } catch (error) {
+      logger.error(`[Pool Matching] Failed to fetch adaptive weights, falling back to defaults:`, { error: error instanceof Error ? error.message : String(error) });
+      customWeights = undefined;
+    }
+  }
+
   return runGreedyPoolMatchingCore(
     eligibleUsers,
     pool,
@@ -1142,6 +1344,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     semanticSimilarityEnabled,
     chemistryCalibrationMap,
     invitationPairs,
+    customWeights,
   );
 }
 

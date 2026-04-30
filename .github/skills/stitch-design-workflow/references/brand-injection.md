@@ -29,20 +29,20 @@ Every Stitch prompt must include these parameters. Do not omit them.
 
 | Archetype | Animal | Personality | Best used for |
 |-----------|--------|-------------|---------------|
-| 开心柯基 | **Corgi** | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments |
-| 太阳鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
-| 夸夸豚 | **Praise Dolphin** | Supportive, complimentary, warm | Social bonding, affirmation moments |
-| 机智狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
-| 淡定海豚 | **Calm Dolphin** | Steady, peaceful, balanced | Relaxation, mindfulness events |
-| 织网蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
-| 暖心熊 | **Bear** | Warm, strong, protective | Trust moments, group hugs, winter themes |
-| 灵感章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
-| 沉思猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
-| 定心大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
-| 稳如龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
-| 隐身猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
+| 气氛组柯基 | **Corgi** | Playful, energetic, optimistic | Celebration, onboarding welcome, action moments |
+| 情绪稳定鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
+| 捧场王仓鼠 | **Hamster** | Supportive, complimentary, warm | Social bonding, affirmation moments |
+| 探宝雷达狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
+| 读空气海豚 | **Perceptive Dolphin** | Steady, peaceful, balanced | Relaxation, mindfulness events |
+| 社交裁缝蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
+| 情绪树洞考拉 | **Bear** | Warm, strong, protective | Trust moments, group hugs, winter themes |
+| 脑洞喷泉章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
+| 追问猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
+| 定海神针大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
+| 慢半拍龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
+| 静音模式猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
 
-**Not approved:** Koala and Hamster are **not** part of the canonical archetype system.
+All 12 archetypes above are canonical. Legacy names (e.g., 暖心熊 → 情绪树洞考拉, 夸夸豚 → 捧场王仓鼠) are resolved via `ARCHETYPE_LEGACY_NAME_MAP` in `archetypeNames.ts`.
 
 **Prompt instruction:** Specify archetype + animal + personality + scene context.
 

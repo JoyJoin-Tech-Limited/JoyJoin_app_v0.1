@@ -586,18 +586,18 @@ JoyJoin uses 12 unique Chinese social archetypes based on the ACOEXP 6-trait mod
 
 | Archetype | Nickname | Key Traits | Energy |
 |-----------|----------|------------|--------|
-| **开心柯基** | 摇尾点火官 | X:95, P:85 | 95 (Very High) |
-| **太阳鸡** | 咯咯小太阳 | P:92, E:88 | 90 (Very High) |
-| **夸夸豚** | 彩虹播撒机 | A:85, P:88 | 88 (High) |
-| **机智狐** | 场域操控师 | O:82, X:75 | 78 (High) |
-| **灵感章鱼** | 创意万花筒 | O:95, A:68 | 65 (Medium) |
-| **暖心熊** | 温柔守护者 | A:92, E:85 | 55 (Medium) |
-| **淡定海豚** | 和谐调频员 | E:90, A:75 | 52 (Medium) |
-| **织网蛛** | 人脉编织机 | C:80, A:72 | 48 (Medium) |
-| **沉思猫头鹰** | 智慧瞭望塔 | O:88, C:82 | 42 (Low) |
-| **定心大象** | 沉稳压舱石 | E:92, C:85 | 38 (Low) |
-| **隐身猫** | 安静观察者 | E:78, C:72 | 28 (Very Low) |
-| **稳如龟** | 踏实推进器 | C:88, E:85 | 25 (Very Low) |
+| **气氛组柯基** | 摇尾点火官 | X:95, P:85 | 95 (Very High) |
+| **情绪稳定鸡** | 咯咯小太阳 | P:92, E:88 | 90 (Very High) |
+| **捧场王仓鼠** | 彩虹播撒机 | A:85, P:88 | 88 (High) |
+| **探宝雷达狐** | 场域操控师 | O:82, X:75 | 78 (High) |
+| **脑洞喷泉章鱼** | 创意万花筒 | O:95, A:68 | 65 (Medium) |
+| **情绪树洞考拉** | 温柔守护者 | A:92, E:85 | 55 (Medium) |
+| **读空气海豚** | 和谐调频员 | E:90, A:75 | 52 (Medium) |
+| **社交裁缝蛛** | 人脉编织机 | C:80, A:72 | 48 (Medium) |
+| **追问猫头鹰** | 智慧瞭望塔 | O:88, C:82 | 42 (Low) |
+| **定海神针大象** | 沉稳压舱石 | E:92, C:85 | 38 (Low) |
+| **静音模式猫** | 安静观察者 | E:78, C:72 | 28 (Very Low) |
+| **慢半拍龟** | 踏实推进器 | C:88, E:85 | 25 (Very Low) |
 
 ### Cohort Categories
 
@@ -605,11 +605,11 @@ Archetypes are grouped into cohorts for question targeting:
 
 ```typescript
 type CohortType = 
-  | 'creative_explorer'     // 灵感章鱼, 机智狐, 沉思猫头鹰 (high O)
-  | 'quiet_anchor'          // 隐身猫, 稳如龟, 定心大象 (low X + high C)
-  | 'social_catalyst'       // 开心柯基, 太阳鸡, 夸夸豚 (high X + high P)
-  | 'steady_harmonizer'     // 暖心熊, 淡定海豚, 织网蛛 (high A + mid-high E)
-  | 'reflective_stabilizer' // 沉思猫头鹰, 稳如龟 (high C + differentiated O/E)
+  | 'creative_explorer'     // 脑洞喷泉章鱼, 探宝雷达狐, 追问猫头鹰 (high O)
+  | 'quiet_anchor'          // 静音模式猫, 慢半拍龟, 定海神针大象 (low X + high C)
+  | 'social_catalyst'       // 气氛组柯基, 情绪稳定鸡, 捧场王仓鼠 (high X + high P)
+  | 'steady_harmonizer'     // 情绪树洞考拉, 读空气海豚, 社交裁缝蛛 (high A + mid-high E)
+  | 'reflective_stabilizer' // 追问猫头鹰, 慢半拍龟 (high C + differentiated O/E)
   | 'universal';            // Works for all cohorts
 ```
 
@@ -647,8 +647,8 @@ finalScore = (
 Critical trait thresholds that can disqualify an archetype:
 
 ```typescript
-// Example VETO rules for 暖心熊
-"暖心熊": (traits) => {
+// Example VETO rules for 情绪树洞考拉
+"情绪树洞考拉": (traits) => {
   if (traits.A < 65) return { vetoed: true, reason: "A<65: 亲和力过低" };
   if (traits.X > 75) return { vetoed: true, reason: "X>75: 外向性过高" };
   return { vetoed: false };
@@ -662,8 +662,8 @@ Handle confusable archetype pairs:
 ```typescript
 const DISAMBIGUATION_RULES = [
   {
-    trueArchetype: "沉思猫头鹰",
-    rivalArchetype: "稳如龟",
+    trueArchetype: "追问猫头鹰",
+    rivalArchetype: "慢半拍龟",
     condition: (t) => t.O >= 70,  // High openness → Owl
     bonusMultiplier: 1.15
   },
@@ -772,7 +772,7 @@ if (user[trait] > prototype[trait] && trait in avoid_traits):
   penalty = λ × (gap - threshold)²  // λ=2.0, threshold=0.5σ
 
 // 5. VETO filters (disqualify extreme mismatches)
-// Example: User with X=95 → cannot be 隐身猫 (X=20)
+// Example: User with X=95 → cannot be 静音模式猫 (X=20)
 
 // 6. Gaussian similarity conversion
 similarity = exp(-distance² / (2σ²))  // σ=1.2

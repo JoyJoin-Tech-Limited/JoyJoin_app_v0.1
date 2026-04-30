@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { useEffect, useState, useMemo } from 'react'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ANALYZING_MIN_DURATION_MS, ANALYZING_SKIP_DELAY_MS } from '../lib/uiConstants'
 import JoyJoinIcon from './JoyJoinIcon'
 import './AnalyzingAnimation.scss'
@@ -32,7 +33,7 @@ export interface AnalyzingAnimationProps {
  */
 export default function AnalyzingAnimation({
   label = '正在生成你的专属画像',
-  subtitle = '小悦正在分析你的性格密码...',
+  subtitle = `${DEFAULT_MASCOT_DISPLAY_NAME}正在分析你的性格密码...`,
   minDuration = ANALYZING_MIN_DURATION_MS,
   onComplete,
   shouldReduceMotion = false,

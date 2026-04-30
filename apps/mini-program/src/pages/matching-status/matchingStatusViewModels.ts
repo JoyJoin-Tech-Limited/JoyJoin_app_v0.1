@@ -1,3 +1,4 @@
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { EventThemeVibe, PoolGroupSummary, PoolRegistrationSummary } from '@shared/api'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 import type { EventThemeTitleRevealedData } from '@shared/wsEvents'
@@ -107,14 +108,16 @@ export interface WaitingSeatViewModel {
   layoutClassName: string
 }
 
+export type ChemistryType = 'fire' | 'warm' | 'cold' | 'mild'
+
 export interface TemperatureCopy {
-  emoji: string
+  iconRef: ChemistryType
   label: string
   body: string
 }
 
 export interface ChemistryTokens {
-  emoji: string
+  iconRef: ChemistryType
   label: string
   body: string
 }
@@ -253,26 +256,26 @@ export function getTemperatureCopy(level?: string | null): TemperatureCopy {
   switch (level) {
     case 'fire':
       return {
-        emoji: '🔥',
+        iconRef: 'fire',
         label: '高能锁定',
         body: '这一桌的化学反应已经拉满，先把桌友和今晚的主题慢慢揭晓给你。',
       }
     case 'warm':
       return {
-        emoji: '✨',
+        iconRef: 'warm',
         label: '暖场成桌',
-        body: '小悦已经把这桌气氛很对的人凑齐了，接下来开始揭晓你的同桌。',
+        body: `${DEFAULT_MASCOT_DISPLAY_NAME}已经把这桌气氛很对的人凑齐了，接下来开始揭晓你的同桌。`,
       }
     case 'cold':
       return {
-        emoji: '🌱',
+        iconRef: 'cold',
         label: '稳稳落桌',
         body: '这桌会是慢热但耐聊的组合，先看看今晚会和谁坐在一起。',
       }
     case 'mild':
     default:
       return {
-        emoji: '💬',
+        iconRef: 'mild',
         label: '成桌啦',
         body: '小队已经锁定，桌友卡片和今晚的主题会按顺序为你揭晓。',
       }
@@ -289,7 +292,7 @@ export function getWaitingStateCopy(stats?: PoolFillStats | null): WaitingStateC
     return {
       badge: '即将揭晓',
       headline: '这一桌已经齐了',
-      subtext: '桌友已聚齐，小悦正在完成最后的成桌确认。',
+      subtext: `${DEFAULT_MASCOT_DISPLAY_NAME}正在完成最后的成桌确认。`,
       nextStepHint: '聚齐 → 成桌 → 揭晓',
     }
   }
@@ -298,7 +301,7 @@ export function getWaitingStateCopy(stats?: PoolFillStats | null): WaitingStateC
     return {
       badge: '开始成桌',
       headline: '已经到成桌门槛了',
-      subtext: `已有 ${currentFill} 位候选就位，小悦正在优先给这桌找最对味的一组。`,
+      subtext: `已有 ${currentFill} 位候选就位，${DEFAULT_MASCOT_DISPLAY_NAME}正在优先给这桌找最对味的一组。`,
       nextStepHint: '系统会先从这桌开始完成配对',
     }
   }
@@ -320,33 +323,33 @@ export function getChemistryTokens(
   switch (chemistry) {
     case 'fire':
       return {
-        emoji: '🔥',
+        iconRef: 'fire',
         label: '高能化学反应',
         body: '这一桌的聊天温度已经被点燃，通常会很快进入状态。',
       }
     case 'warm':
       return {
-        emoji: '✨',
+        iconRef: 'warm',
         label: '暖场很稳',
         body: '这桌的同频感很自然，适合一边吃一边慢慢聊开。',
       }
     case 'cold':
       return {
-        emoji: '🌱',
+        iconRef: 'cold',
         label: '慢热耐聊',
         body: '这桌是越聊越有意思的类型，破冰后更容易进入正题。',
       }
     case 'mild':
       return {
-        emoji: '💬',
+        iconRef: 'mild',
         label: '刚刚好',
         body: '这桌的风格平衡又自然，浅聊和深聊都容易接得住。',
       }
     default:
       return {
-        emoji: '💫',
+        iconRef: 'mild',
         label: roundedScore !== null ? `默契度 ${roundedScore}%` : '今晚有戏',
-        body: '小悦已经把这桌锁定，接下来看看你会先和谁聊开。',
+        body: `${DEFAULT_MASCOT_DISPLAY_NAME}已经把这桌锁定，接下来看看你会先和谁聊开。`,
       }
   }
 }

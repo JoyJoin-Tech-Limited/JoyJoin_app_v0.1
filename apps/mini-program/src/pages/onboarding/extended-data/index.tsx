@@ -18,8 +18,10 @@ import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api'
 import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
+import { CATEGORY_COLORS } from '@shared/ui/categoryColors'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
@@ -31,11 +33,11 @@ const MIN_INTERESTS = 3
 const MAX_INTERESTS = 10
 
 const CATEGORY_META: Record<MacroCategory, { dotColor: string; description: string }> = {
-  food: { dotColor: '#E8A87C', description: '适合聊口味、探店和周末吃什么。' },
-  entertainment: { dotColor: '#8FB8E8', description: '更偏玩乐、破冰和局里活跃氛围。' },
-  lifestyle: { dotColor: '#8FBFA3', description: '更像你的生活节奏和线下习惯。' },
-  culture: { dotColor: '#B8A8D8', description: '适合聊展览、演出、电影和内容审美。' },
-  social: { dotColor: '#E8A8A8', description: '适合延展成深入对话和长期共同话题。' },
+  food: { dotColor: CATEGORY_COLORS.food, description: '适合聊口味、探店和周末吃什么。' },
+  entertainment: { dotColor: CATEGORY_COLORS.entertainment, description: '更偏玩乐、破冰和局里活跃氛围。' },
+  lifestyle: { dotColor: CATEGORY_COLORS.lifestyle, description: '更像你的生活节奏和线下习惯。' },
+  culture: { dotColor: CATEGORY_COLORS.culture, description: '适合聊展览、演出、电影和内容审美。' },
+  social: { dotColor: CATEGORY_COLORS.social, description: '适合延展成深入对话和长期共同话题。' },
 }
 
 const INTEREST_LEVEL_META: Array<{
@@ -246,7 +248,7 @@ export default function ExtendedDataPage() {
     return (
       <OnboardingLoadingShell
         stepLabel='Onboarding 3 / 4'
-        title='小悦在点亮你的兴趣热度'
+        title={`${DEFAULT_MASCOT_DISPLAY_NAME}在点亮你的兴趣热度`}
         subtitle='把这一步准备好后，资料预览就会更有你的味道。'
       />
     )
@@ -269,7 +271,7 @@ export default function ExtendedDataPage() {
           mode='aspectFit'
         />
         <View className='extended-data__coach-copy'>
-          <Text className='extended-data__coach-title'>小悦提示</Text>
+          <Text className='extended-data__coach-title'>{`${DEFAULT_MASCOT_DISPLAY_NAME}提示`}</Text>
           <Text className='extended-data__coach-text'>{coachCopy}</Text>
         </View>
       </View>
@@ -322,7 +324,7 @@ export default function ExtendedDataPage() {
                 <View key={categoryId} className='extended-data__dominant-chip'>
                   <View
                     className='extended-data__dominant-chip-dot'
-                    style={{ backgroundColor: CATEGORY_META[category]?.dotColor || '#8B5CF6' }}
+                    style={{ backgroundColor: CATEGORY_META[category]?.dotColor || CATEGORY_COLORS.food }}
                   />
                   <Text className='extended-data__dominant-chip-text'>
                     {MACRO_CATEGORY_LABELS[category]}
@@ -355,7 +357,7 @@ export default function ExtendedDataPage() {
                     <View className='extended-data__category-title-wrap'>
                       <View
                         className='extended-data__category-dot'
-                        style={{ backgroundColor: CATEGORY_META[category]?.dotColor || '#8B5CF6' }}
+                        style={{ backgroundColor: CATEGORY_META[category]?.dotColor || CATEGORY_COLORS.food }}
                       />
                       <Text className='extended-data__category-title'>
                         {MACRO_CATEGORY_LABELS[category]}

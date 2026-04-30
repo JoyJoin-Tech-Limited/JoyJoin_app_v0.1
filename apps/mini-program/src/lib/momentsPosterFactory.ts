@@ -29,6 +29,11 @@ const PALETTE = {
   borderLight: 'rgba(139,92,246,0.12)',
   memberBg: 'rgba(255,255,255,0.85)',
   footerText: '#6d5f80',
+  traitTrack: 'rgba(139,92,246,0.08)',
+  activeSkillBg: '#fff5f1',
+  activeSkillText: '#c45e2e',
+  passiveSkillBg: '#f4f0ff',
+  passiveSkillText: '#6b3fc7',
 } as const
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -243,16 +248,270 @@ function exportCanvas(
   })
 }
 
+// ─── Square Poster compact helpers ───────────────────────────────────────────
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(Math.round(value), 100))
+}
+
+function createMetallicGold(
+  ctx: Taro.CanvasContext,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): Taro.CanvasGradient {
+  const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
+  gradient.addColorStop(0, '#bf953f')
+  gradient.addColorStop(0.25, '#fcf6ba')
+  gradient.addColorStop(0.5, '#b38728')
+  gradient.addColorStop(0.75, '#fbf5b7')
+  gradient.addColorStop(1, '#aa771c')
+  return gradient
+}
+
+function drawCompactTraitBars(
+  ctx: Taro.CanvasContext,
+  x: number,
+  y: number,
+  width: number,
+  traitEntries: { label: string; value: number }[],
+  accentColor: string,
+): number {
+  const entries = traitEntries.slice(0, 3)
+  const rowHeight = 18
+  const trackHeight = 8
+  const trackRadius = 4
+  const labelWidth = 52
+  const valueWidth = 28
+  const barX = x + labelWidth + 6
+  const barMaxWidth = Math.max(4, width - labelWidth - valueWidth - 16)
+
+  entries.forEach((entry, index) => {
+    const rowY = y + index * rowHeight
+
+    // Label
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textMuted)
+    ctx.setFontSize(14)
+    ctx.setTextAlign('left')
+    ctx.setTextBaseline('middle')
+    ctx.fillText(entry.label, x, rowY + trackHeight / 2)
+    ctx.restore()
+
+    // Value
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textLight)
+    ctx.setFontSize(14)
+    ctx.setTextAlign('right')
+    ctx.setTextBaseline('middle')
+    ctx.fillText(String(entry.value), x + width, rowY + trackHeight / 2)
+    ctx.restore()
+
+    // Track
+    fillRoundedRect(ctx, barX, rowY, barMaxWidth, trackHeight, trackRadius, PALETTE.traitTrack)
+
+    // Fill with accent gradient
+    const fillWidth = Math.max(4, barMaxWidth * (clampPercent(entry.value) / 100))
+    const fillGradient = ctx.createLinearGradient(barX, rowY, barX + fillWidth, rowY)
+    fillGradient.addColorStop(0, accentColor)
+    fillGradient.addColorStop(1, `${accentColor}99`)
+    fillRoundedRect(ctx, barX, rowY, fillWidth, trackHeight, trackRadius, fillGradient)
+  })
+
+  return entries.length * rowHeight
+}
+
+function drawCompactEnergyBar(
+  ctx: Taro.CanvasContext,
+  x: number,
+  y: number,
+  width: number,
+  energyLevel: number,
+): number {
+  const label = '能量'
+  const trackHeight = 10
+  const trackRadius = 5
+  const labelWidth = 66
+  const valueWidth = 32
+  const barX = x + labelWidth + 4
+  const barMaxWidth = Math.max(4, width - labelWidth - valueWidth - 10)
+
+  // Label
+  ctx.save()
+  ctx.setFillStyle(PALETTE.textMuted)
+  ctx.setFontSize(14)
+  ctx.setTextAlign('left')
+  ctx.setTextBaseline('top')
+  ctx.fillText(label, x, y)
+  ctx.restore()
+
+  // Value
+  ctx.save()
+  ctx.setFillStyle(PALETTE.textLight)
+  ctx.setFontSize(14)
+  ctx.setTextAlign('right')
+  ctx.setTextBaseline('top')
+  ctx.fillText(`${clampPercent(energyLevel)}%`, x + width, y)
+  ctx.restore()
+
+  // Track
+  const barY = y + 20
+  fillRoundedRect(ctx, barX, barY, barMaxWidth, trackHeight, trackRadius, PALETTE.traitTrack)
+
+  // Fill — gradient from yellow to orange to red
+  const fillWidth = Math.max(4, barMaxWidth * (clampPercent(energyLevel) / 100))
+  const energyGradient = ctx.createLinearGradient(barX, barY, barX + fillWidth, barY)
+  energyGradient.addColorStop(0, '#fbbf24')
+  energyGradient.addColorStop(0.5, '#f97316')
+  energyGradient.addColorStop(1, '#ef4444')
+  fillRoundedRect(ctx, barX, barY, fillWidth, trackHeight, trackRadius, energyGradient)
+
+  return 30
+}
+
+function drawSkillBadges(
+  ctx: Taro.CanvasContext,
+  x: number,
+  y: number,
+  width: number,
+  skillSet: { activeSkill: { name: string }; passiveSkill: { name: string } },
+): number {
+  const badgeHeight = 24
+  const badgeRadius = 12
+  const gap = 10
+
+  // Measure texts to size badges
+  ctx.save()
+  ctx.setFontSize(13)
+
+  const activeText = skillSet.activeSkill.name || '主动技'
+  const passiveText = skillSet.passiveSkill.name || '被动技'
+
+  const activeTextWidth = ctx.measureText(activeText).width
+  const passiveTextWidth = ctx.measureText(passiveText).width
+  ctx.restore()
+
+  const activeBadgeWidth = Math.round(activeTextWidth + 18)
+  const passiveBadgeWidth = Math.round(passiveTextWidth + 18)
+  const totalWidth = activeBadgeWidth + gap + passiveBadgeWidth
+  const startX = x + (width - totalWidth) / 2
+
+  // Active badge — warm peach
+  fillRoundedRect(ctx, startX, y, activeBadgeWidth, badgeHeight, badgeRadius, PALETTE.activeSkillBg)
+  ctx.save()
+  ctx.setFillStyle(PALETTE.activeSkillText)
+  ctx.setFontSize(13)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('middle')
+  ctx.fillText(activeText, startX + activeBadgeWidth / 2, y + badgeHeight / 2)
+  ctx.restore()
+
+  // Passive badge — cool lavender
+  const passiveX = startX + activeBadgeWidth + gap
+  fillRoundedRect(ctx, passiveX, y, passiveBadgeWidth, badgeHeight, badgeRadius, PALETTE.passiveSkillBg)
+  ctx.save()
+  ctx.setFillStyle(PALETTE.passiveSkillText)
+  ctx.setFontSize(13)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('middle')
+  ctx.fillText(passiveText, passiveX + passiveBadgeWidth / 2, y + badgeHeight / 2)
+  ctx.restore()
+
+  return badgeHeight
+}
+
+function drawRankSerialChip(
+  ctx: Taro.CanvasContext,
+  x: number,
+  y: number,
+  width: number,
+  archetypeRank: number,
+  serialNumber: string,
+): number {
+  const badgeHeight = 24
+  const badgeRadius = 12
+
+  const parts: string[] = []
+  if (typeof archetypeRank === 'number' && archetypeRank > 0) {
+    parts.push(`No.${archetypeRank}`)
+  }
+  if (serialNumber) {
+    parts.push(serialNumber)
+  }
+  if (parts.length === 0) return 0
+
+  const text = parts.join(' · ')
+  ctx.save()
+  ctx.setFontSize(13)
+  const textWidth = ctx.measureText(text).width
+  ctx.restore()
+
+  const badgeWidth = Math.round(Math.min(textWidth + 22, width))
+  const badgeX = x + (width - badgeWidth) / 2
+
+  fillRoundedRect(ctx, badgeX, y, badgeWidth, badgeHeight, badgeRadius, 'rgba(255,255,255,0.92)')
+  strokeRoundedRect(ctx, badgeX, y, badgeWidth, badgeHeight, badgeRadius, 'rgba(139,92,246,0.15)', 1)
+
+  ctx.save()
+  ctx.setFillStyle(PALETTE.textMuted)
+  ctx.setFontSize(13)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('middle')
+  ctx.fillText(text, badgeX + badgeWidth / 2, y + badgeHeight / 2)
+  ctx.restore()
+
+  return badgeHeight
+}
+
+function drawHoloStamp(
+  ctx: Taro.CanvasContext,
+  centerX: number,
+  y: number,
+): number {
+  const barWidth = 220
+  const barHeight = 26
+  const barX = centerX - barWidth / 2
+
+  const goldGrad = createMetallicGold(ctx, barX, y, barX + barWidth, y + barHeight)
+  fillRoundedRect(ctx, barX, y, barWidth, barHeight, barHeight / 2, goldGrad)
+
+  ctx.save()
+  ctx.setFillStyle('#4a2e00')
+  ctx.setFontSize(14)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('middle')
+  ctx.fillText('★ HOLOGRAPHIC ★', centerX, y + barHeight / 2)
+  ctx.restore()
+
+  return barHeight
+}
+
 // ─── Square Personality Poster (1:1 for WeChat Moments) ──────────────────────
 
 export const PERSONALITY_SQUARE_CANVAS_ID = 'personality-square-poster-canvas'
 
+export interface PersonalitySquarePosterTraitEntry {
+  label: string
+  value: number
+}
+
 export interface PersonalitySquarePosterInput {
   archetype: string
+  englishName?: string
   tagline: string
+  shareLine?: string
   rarityPercentage: number
   archetypeAsset: string
   archetypeAssetPng?: string
+  traitEntries?: PersonalitySquarePosterTraitEntry[]
+  energyLevel?: number
+  skillSet?: {
+    activeSkill: { name: string }
+    passiveSkill: { name: string }
+  }
+  archetypeRank?: number
+  serialNumber?: string
 }
 
 export async function generatePersonalitySquarePoster(
@@ -262,6 +521,7 @@ export async function generatePersonalitySquarePoster(
   const ctx = Taro.createCanvasContext(canvasId)
   const S = SQUARE_SIZE
   const M = 40
+  const accentColor = getArchetypeColorHex(input.archetype)
 
   // Background gradient
   const bgGrad = ctx.createLinearGradient(0, 0, S, S)
@@ -278,21 +538,32 @@ export async function generatePersonalitySquarePoster(
   strokeRoundedRect(ctx, M, M, cardW, cardH, 36, PALETTE.borderGold, 4)
 
   // Top badge
-  drawBadge(ctx, '悦聚 · 社交命盘', M + 28, M + 28, 180, 40, 20, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
+  drawBadge(ctx, '悦聚 · 社交命盘', M + 28, M + 20, 170, 34, 17, PALETTE.badgeDarkFill, PALETTE.badgeDarkText)
 
   // Archetype name (large, centered)
   ctx.save()
   ctx.setFillStyle(PALETTE.textDark)
-  ctx.setFontSize(56)
+  ctx.setFontSize(48)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText(input.archetype, S / 2, M + 110)
+  ctx.fillText(input.archetype, S / 2, M + 72)
   ctx.restore()
 
-  // Hero image (circular, 200px)
-  const imgSize = 200
+  // English archetype name (small, centered)
+  if (input.englishName) {
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textLight)
+    ctx.setFontSize(20)
+    ctx.setTextAlign('center')
+    ctx.setTextBaseline('top')
+    ctx.fillText(input.englishName, S / 2, M + 120)
+    ctx.restore()
+  }
+
+  // Hero image (circular, 160px)
+  const imgSize = 160
   const imgX = (S - imgSize) / 2
-  const imgY = M + 180
+  const imgY = M + 148
   const imgPath = await resolveImagePath(input.archetypeAssetPng || input.archetypeAsset)
 
   fillRoundedRect(ctx, imgX - 6, imgY - 6, imgSize + 12, imgSize + 12, imgSize / 2 + 6, 'rgba(139,92,246,0.08)')
@@ -307,7 +578,7 @@ export async function generatePersonalitySquarePoster(
     fillRoundedRect(ctx, imgX, imgY, imgSize, imgSize, imgSize / 2, color)
     ctx.save()
     ctx.setFillStyle('#fff')
-    ctx.setFontSize(80)
+    ctx.setFontSize(72)
     ctx.setTextAlign('center')
     ctx.setTextBaseline('middle')
     ctx.fillText(input.archetype.slice(0, 1), S / 2, imgY + imgSize / 2)
@@ -315,31 +586,84 @@ export async function generatePersonalitySquarePoster(
   }
 
   // Tagline
-  drawTextBlock(ctx, {
+  const taglineY = imgY + imgSize + 14
+  const taglineHeight = drawTextBlock(ctx, {
     text: input.tagline,
     x: S / 2,
-    y: imgY + imgSize + 24,
+    y: taglineY,
     maxChars: 16,
     maxLines: 2,
-    lineHeight: 36,
-    fontSize: 26,
+    lineHeight: 28,
+    fontSize: 22,
     color: PALETTE.textSecondary,
     align: 'center',
   })
 
-  // Rarity badge
+  // Layout remaining elements in the space between tagline and bottom CTA
+  const contentX = M + 32
+  const contentW = cardW - 64
+  let cursorY = taglineY + taglineHeight + 12
+
+  // 3 compact trait bars
+  if (input.traitEntries && input.traitEntries.length > 0) {
+    const traitHeight = drawCompactTraitBars(ctx, contentX, cursorY, contentW, input.traitEntries, accentColor)
+    cursorY += traitHeight + 4
+  }
+
+  // Energy bar
+  if (typeof input.energyLevel === 'number') {
+    const energyHeight = drawCompactEnergyBar(ctx, contentX, cursorY, contentW, input.energyLevel)
+    cursorY += energyHeight + 4
+  }
+
+  // Skill badges
+  if (input.skillSet) {
+    const skillHeight = drawSkillBadges(ctx, contentX, cursorY, contentW, input.skillSet)
+    cursorY += skillHeight + 4
+  }
+
+  // Rank + serial chip
+  if ((typeof input.archetypeRank === 'number' && input.archetypeRank > 0) || input.serialNumber) {
+    const rankHeight = drawRankSerialChip(ctx, contentX, cursorY, contentW, input.archetypeRank ?? 0, input.serialNumber ?? '')
+    if (rankHeight > 0) {
+      cursorY += rankHeight + 4
+    }
+  }
+
+  // Holographic stamp
+  const holoHeight = drawHoloStamp(ctx, S / 2, cursorY)
+  cursorY += holoHeight + 4
+
+  // Share line
+  if (input.shareLine) {
+    const shareHeight = drawTextBlock(ctx, {
+      text: input.shareLine,
+      x: S / 2,
+      y: cursorY,
+      maxChars: 22,
+      maxLines: 1,
+      lineHeight: 22,
+      fontSize: 16,
+      color: PALETTE.textLight,
+      align: 'center',
+    })
+    cursorY += shareHeight + 4
+  }
+
+  // Rarity badge — keep a safe margin from bottom CTA
   const rarityText = `缘分稀有度 ${Math.round(input.rarityPercentage)}%`
-  drawBadge(ctx, rarityText, S / 2 - 130, imgY + imgSize + 100, 260, 44, 22, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
+  const rarityY = Math.min(cursorY, S - M - 100)
+  drawBadge(ctx, rarityText, S / 2 - 120, rarityY, 240, 32, 16, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
 
   // Bottom CTA
   drawTextBlock(ctx, {
     text: '来 JoyJoin 测测你的社交命格',
     x: S / 2,
-    y: S - M - 80,
+    y: S - M - 56,
     maxChars: 20,
     maxLines: 1,
-    lineHeight: 30,
-    fontSize: 22,
+    lineHeight: 26,
+    fontSize: 20,
     color: PALETTE.footerText,
     align: 'center',
   })
@@ -350,7 +674,7 @@ export async function generatePersonalitySquarePoster(
   ctx.setFontSize(16)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('top')
-  ctx.fillText('悦聚 · 找到同频的人', S / 2, S - M - 44)
+  ctx.fillText('悦聚 · 找到同频的人', S / 2, S - M - 28)
   ctx.restore()
 
   return exportCanvas(ctx, canvasId, S, S)

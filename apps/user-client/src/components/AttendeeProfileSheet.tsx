@@ -2,7 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sparkles, Briefcase } from "lucide-react";
-import { generateSparkPredictions, type AttendeeData, type UserContext } from "@/lib/attendeeAnalytics";
+import { type AttendeeData, type UserContext } from "@/lib/attendeeAnalytics";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 import { getInterestLabel } from "@shared/interests";
 
@@ -27,8 +27,7 @@ export default function AttendeeProfileSheet({
   open,
   onOpenChange,
 }: AttendeeProfileSheetProps) {
-  const sparks = generateSparkPredictions(currentUser, attendee)
-    .sort((a, b) => (rarityOrder[a.rarity] ?? 2) - (rarityOrder[b.rarity] ?? 2));
+  const sparks: { text: string; rarity: 'common' | 'rare' | 'epic' }[] = [];
 
   const archetypeImage = attendee.archetype ? getArchetypeImage(attendee.archetype) : null;
 

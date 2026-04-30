@@ -1,12 +1,13 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect, useMemo } from 'react'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../lib/xiaoyueExpressions'
 import { getRandomWhisper } from '../lib/loadingWhispers'
 import { logInfo } from '../lib/logger'
 import './JoyJoinLoadingScreen.scss'
 
 interface JoyJoinLoadingScreenProps {
-  /** Primary status message (e.g. "小悦正在赶来…") */
+  /** Primary status message (e.g. "悦仔正在赶来…") */
   title?: string
   /** Secondary hint (e.g. "正在为你匹配最合适的活动") */
   subtitle?: string
@@ -36,7 +37,7 @@ interface JoyJoinLoadingScreenProps {
  * - Archetype-aware whisper copy (B2)
  */
 export default function JoyJoinLoadingScreen({
-  title = '小悦正在赶来…',
+  title = `${DEFAULT_MASCOT_DISPLAY_NAME}正在赶来…`,
   subtitle,
   xiaoyueExpression = 'loadingSystem',
   showSkeleton = true,

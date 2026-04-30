@@ -39,7 +39,7 @@ Row 1:
   Head icon: Rooster head with bright comb, alert eyes, proud neck.
   Confident, radiant expression. Circular frame.
 
-[1,3] 捧场王仓鼠 (Praise Dolphin) — Sky blue #A8C5DD
+[1,3] 捧场王仓鼠 (Hamster) — Sky blue #A8C5DD
   Head icon: Dolphin face with curved forehead, gentle smile,
   heart-shaped tail hint. Supportive, warm expression. Circular frame.
 
@@ -47,7 +47,7 @@ Row 1:
   Head icon: Fox face with pointed ears, glasses frame, one winking eye.
   Clever, knowing expression. Circular frame.
 
-[1,5] 读空气海豚 (Calm Dolphin) — Sky blue #5B9BD5
+[1,5] 读空气海豚 (Dolphin) — Sky blue #5B9BD5
   Head icon: Dolphin face with smooth forehead, closed peaceful eyes,
   serene smile. Calm, content expression. Circular frame.
 
@@ -56,7 +56,7 @@ Row 1:
   delicate leg silhouette. Intricate, watchful expression. Circular frame.
 
 Row 2:
-[2,1] 情绪树洞考拉 (Warm Bear) — Warm brown #A0522D
+[2,1] 情绪树洞考拉 (Koala) — Warm brown #A0522D
   Head icon: Bear face with round ears, soft eyes, protective posture.
   Warm, strong expression. Circular frame.
 

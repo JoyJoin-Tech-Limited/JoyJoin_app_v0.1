@@ -24,7 +24,7 @@ export interface RecommendedTopicWithReason {
   score: number;
 }
 
-const TOPIC_RECOMMENDATION_PROMPT = `你是"小悦"，JoyJoin平台的社交氛围助手。你需要为一群准备破冰的用户推荐合适的话题。
+const TOPIC_RECOMMENDATION_PROMPT = `你是"悦仔"，JoyJoin平台的社交氛围助手。你需要为一群准备破冰的用户推荐合适的话题。
 
 ## 你的任务
 根据参与者的社交角色原型（archetype）和兴趣爱好，从提供的话题库中筛选最合适的话题，并为每个话题生成个性化的推荐理由。
@@ -170,7 +170,7 @@ function getDefaultReason(topic: TopicCard, archetypes: string[]): string {
     return '稍微有点深度，适合进一步了解彼此～';
   }
 
-  return '小悦精选推荐～';
+  return '悦仔精选推荐～';
 }
 
 function getFallbackRecommendations(

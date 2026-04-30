@@ -73,7 +73,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
     return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
   }
 
-  const { socialSessionId, playerCount, style, genres } = parsed.data;
+  const { socialSessionId, playerCount, style, genres, lite } = parsed.data;
   const { state, expired } = await getSessionWithExpiry(socialSessionId);
 
   if (!state) {
@@ -127,6 +127,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
       playerCount: session.playerCount,
       style,
       genres,
+      lite: lite ?? false,
     });
 
     // Slice 4: extract and persist secrets BEFORE storing framework on session state

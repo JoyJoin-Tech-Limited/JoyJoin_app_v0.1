@@ -8,7 +8,7 @@
 
 import { db } from './db';
 import { users, userInterests, eventPoolGroups, eventPools } from '@shared/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import type { 
   EventTheme, 
   MemberProfile, 
@@ -32,7 +32,7 @@ async function fetchEnrichedMemberProfiles(
   const usersData = await db
     .select({
       id: users.id,
-      archetype: users.archetype,
+      archetype: sql<string>`coalesce(${users.primaryArchetype}, ${users.archetype}, 'koala')`,
       secondaryArchetype: users.secondaryArchetype,
       gender: users.gender,
       birthdate: users.birthdate,
