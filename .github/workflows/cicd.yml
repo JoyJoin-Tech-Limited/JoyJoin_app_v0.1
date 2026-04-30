@@ -363,7 +363,10 @@ jobs:
             upsert_env_var() {
               local key="$1"
               local value="$2"
+              local compose_value
               local tmp
+              # Docker Compose interpolates $VAR-like text from env files; $$ preserves literal $.
+              compose_value="${value//\$/\$\$}"
               tmp=$(mktemp)
               if [ -s "$ENV_FILE" ]; then
                 grep -v "^${key}=" "$ENV_FILE" > "$tmp" || true
@@ -371,7 +374,7 @@ jobs:
                 : > "$tmp"
               fi
               mv "$tmp" "$ENV_FILE"
-              printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+              printf '%s=%s\n' "$key" "$compose_value" >> "$ENV_FILE"
             }
 
             upsert_if_nonempty() {
@@ -414,7 +417,30 @@ jobs:
 
             chmod 600 "$ENV_FILE" || true
 
-            # --- 2) Restart containers ---
+            # --- 2) DB Sync (same DATABASE_URL as API) ---
+            echo "🗄️ Syncing database schema..."
+            cd ~/JoyJoin
+
+            # Verify journal integrity before running migrations
+            echo "   Verifying migration journal..."
+            node scripts/verify-journal-sync.mjs
+
+            # Run pending migrations before restarting containers so new app code never boots on an old schema.
+            echo "   Running database migrations..."
+            MIGRATION_LOG=$(mktemp)
+            if ! CI=1 npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1; then
+              echo "❌ Database migration failed. Drizzle output:"
+              sed -n '1,240p' "$MIGRATION_LOG" || true
+              exit 1
+            fi
+            sed -n '1,240p' "$MIGRATION_LOG" || true
+            rm -f "$MIGRATION_LOG"
+
+            # Verify schema alignment after migration
+            echo "   Verifying schema alignment..."
+            node scripts/verify-db-alignment.mjs
+
+            # --- 3) Restart containers ---
             echo "🐳 Removing stale joyjoin-api container if present..."
             docker rm -f joyjoin-api || true
             echo "🐳 Restarting containers..."
@@ -446,22 +472,6 @@ jobs:
             sudo systemctl reload nginx
             echo "🔎 Active Nginx joyjoin.conf markers..."
             sudo awk 'NR<=120{print}' /etc/nginx/conf.d/joyjoin.conf | sed -n '/X-JoyJoin-Edge/p;/X-JoyJoin-Proxy/p;/upstream joyjoin_api/,/}/p'
-
-            # --- 3) DB Sync (same DATABASE_URL as API) ---
-            echo "🗄️ Syncing database schema..."
-            cd ~/JoyJoin
-
-            # Verify journal integrity before running migrations
-            echo "   Verifying migration journal..."
-            node scripts/verify-journal-sync.mjs
-
-            # Run pending migrations via drizzle-kit migrate
-            echo "   Running database migrations..."
-            npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs
-
-            # Verify schema alignment after migration
-            echo "   Verifying schema alignment..."
-            node --env-file=.env scripts/verify-db-alignment.mjs
 
             # --- 4) Health checks ---
             echo "🏥 Verifying service status..."
