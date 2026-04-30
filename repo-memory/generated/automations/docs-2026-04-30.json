@@ -1,0 +1,101 @@
+{
+  "id": "auto-docs-2026-04-30",
+  "title": "Auto-Docs Coverage Report 2026-04-30",
+  "status": "candidate",
+  "owner": "auto-docs",
+  "lastValidatedAt": "2026-04-30T22:35:04.826Z",
+  "tags": [
+    "auto-docs",
+    "documentation"
+  ],
+  "triggerTerms": [
+    "docs",
+    "documentation",
+    "readme"
+  ],
+  "relatedPaths": [
+    "apps/server/src/routes/README.md",
+    "apps/server/src/repositories/README.md",
+    "apps/server/src/middleware/README.md",
+    "packages/shared/src/personality/README.md",
+    "packages/shared/src/types/README.md",
+    "docs/architecture/matching.md",
+    "docs/architecture/matching.md",
+    "docs/architecture/social-icebreaker.md",
+    "docs/architecture/social-icebreaker.md",
+    "docs/architecture/payment.md",
+    "docs/architecture/websocket.md",
+    "apps/server/src/routes",
+    "apps/server/src/repositories",
+    "apps/server/src/middleware",
+    "packages/shared/src/personality",
+    "packages/shared/src/types",
+    "packages/shared/src/matching",
+    "apps/server/src/services/matching",
+    "apps/server/src/services/socialIcebreaker",
+    "packages/shared/src/socialIcebreaker",
+    "apps/server/src/services/payment",
+    "apps/server/src/websocket"
+  ],
+  "sources": [
+    "scripts/auto-docs.mjs"
+  ],
+  "confidence": "medium",
+  "summary": {
+    "totalGaps": 11,
+    "canonicalIssues": 0,
+    "scanRange": "last 5 commits",
+    "gaps": [
+      {
+        "doc": "apps/server/src/routes/README.md",
+        "source": "apps/server/src/routes",
+        "status": "missing"
+      },
+      {
+        "doc": "apps/server/src/repositories/README.md",
+        "source": "apps/server/src/repositories",
+        "status": "missing"
+      },
+      {
+        "doc": "apps/server/src/middleware/README.md",
+        "source": "apps/server/src/middleware",
+        "status": "missing"
+      },
+      {
+        "doc": "packages/shared/src/personality/README.md",
+        "source": "packages/shared/src/personality",
+        "status": "missing"
+      },
+      {
+        "doc": "packages/shared/src/types/README.md",
+        "source": "packages/shared/src/types",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/matching.md",
+        "source": "packages/shared/src/matching",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/matching.md",
+        "source": "apps/server/src/services/matching",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/social-icebreaker.md",
+        "source": "apps/server/src/services/socialIcebreaker",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/social-icebreaker.md",
+        "source": "packages/shared/src/socialIcebreaker",
+        "status": "missing"
+      },
+      {
+        "doc": "docs/architecture/payment.md",
+        "source": "apps/server/src/services/payment",
+        "status": "missing"
+      }
+    ]
+  }
+}
