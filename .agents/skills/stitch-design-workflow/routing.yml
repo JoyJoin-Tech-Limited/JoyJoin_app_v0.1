@@ -1,0 +1,58 @@
+skill: stitch-design-workflow
+category: ai-runtime
+
+primary_ownership: >
+  Brand-governed rapid UI design exploration using Google Stitch. Every prompt is
+  pre-processed through JoyJoin brand constraints before generation. Output is
+  exploratory only — production implementation follows existing design-system and
+  frontend skills.
+
+use_when:
+  - rapidly exploring 3–5 UI screen directions before committing to Figma
+  - generating reference mockups for new user flows
+  - creating visual pitch materials for stakeholders
+  - validating layout ideas before engineering scoping
+  - producing empty-state or loading-state screen concepts
+
+do_not_use_when:
+  - generating production-ready React/Taro code (Stitch outputs HTML/CSS only)
+  - creating brand illustrations or mascot artwork (use lovart-design-workflow)
+  - pixel-perfect production design handoff (use Figma after Stitch exploration)
+  - animations, micro-interactions, or motion design (use wow-elements)
+
+strong_triggers:
+  - Stitch design
+  - generate UI mockup
+  - Stitch screen
+  - design exploration
+  - rapid prototype with Stitch
+  - Stitch onboarding screen
+  - Stitch pool card
+  - Stitch layout
+  - Google Stitch
+
+owned_files: []
+
+owned_paths: []
+
+owned_symbols: []
+
+tooling_dependencies:
+  - tool: stitch
+    purpose: Generate UI screen explorations from brand-injected text prompts
+
+related_skills:
+  - skill: lovart-design-workflow
+    when: need brand illustrations, mascot artwork, or marketing graphics
+  - skill: design-system-governance
+    when: generated screen needs to map to CSS tokens, CVA variants, or new components
+  - skill: frontend-component-architecture
+    when: task requires deciding workspace placement for new components
+  - skill: mini-program-frontend-excellence
+    when: screen targets WeChat Mini Program and needs Taro-native implementation
+  - skill: wow-elements
+    when: screen needs motion, micro-interactions, or emotional polish
+  - skill: joyjoin-brand-guidelines
+    when: brand strategy, color expansion, or mascot roster changes
+  - skill: platform-coordination-protocol
+    when: feature needs both web and mini-program implementation

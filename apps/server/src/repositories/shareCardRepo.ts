@@ -1,6 +1,6 @@
 import { users } from "@shared/schema";
-import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface ShareCardRepository {
   calculateUserRank(userCreatedAt: Date): Promise<number>;
@@ -17,24 +17,21 @@ export const shareCardRepo: ShareCardRepository = {
   },
 
   async calculateArchetypeRank(userId: string, archetype: string): Promise<number> {
-    const [currentUser] = await db
-      .select({ createdAt: users.createdAt })
+    const [user] = await db
+      .select()
       .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    if (!currentUser?.createdAt) {
+      .where(eq(users.id, userId));
+    if (!user?.createdAt) {
       return 1;
     }
-
+    
     const [result] = await db
       .select({ count: sql<number>`count(*)` })
       .from(users)
-      .where(
-        and(
-          eq(users.archetype, archetype),
-          sql`${users.createdAt} < ${currentUser.createdAt}`,
-        ),
-      );
+      .where(and(
+        eq(users.archetype, archetype),
+        sql`${users.createdAt} < ${user.createdAt}`
+      ));
     return (result?.count || 0) + 1;
-  },
+  }
 };

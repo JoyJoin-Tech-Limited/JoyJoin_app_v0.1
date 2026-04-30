@@ -248,7 +248,7 @@ export default function ProfilePage() {
           );
         })()}
 
-        {/* Career & Insights Card - 职业信息和小悦洞察 */}
+        {/* Career & Insights Card - 职业信息和悦仔洞察 */}
         {!userLoading && user && (user.industry || user.occupation || (user.insightLedger && Array.isArray(user.insightLedger) && user.insightLedger.length > 0)) && (
           <Card className="border shadow-sm">
             <CardHeader className="pb-3">
@@ -276,12 +276,12 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* 小悦洞察 - 来自insightLedger */}
+              {/* 悦仔洞察 - 来自insightLedger */}
               {user.insightLedger && Array.isArray(user.insightLedger) && user.insightLedger.length > 0 && (
                 <div className="pt-2 border-t space-y-2">
                   <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-amber-500" />
-                    小悦的洞察
+                    悦仔的洞察
                   </p>
                   <div className="space-y-1.5">
                     {user.insightLedger
@@ -302,7 +302,7 @@ export default function ProfilePage() {
                       })}
                     {user.insightLedger.filter((insight: any) => insight.confidence >= INSIGHT_CONFIDENCE_THRESHOLD).length === 0 && (
                       <p className="text-xs text-muted-foreground italic">
-                        暂无高置信度洞察，继续和小悦聊天可解锁更多发现
+                        暂无高置信度洞察，继续和悦仔聊天可解锁更多发现
                       </p>
                     )}
                   </div>

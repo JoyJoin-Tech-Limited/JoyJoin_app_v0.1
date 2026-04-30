@@ -1,4 +1,5 @@
 skill: frontend-performance-and-loading
+category: internal
 
 primary_ownership: >
   Frontend loading and runtime performance strategy for route splitting,

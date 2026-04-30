@@ -54,7 +54,7 @@ export default function FirstTimeRegistrationGuide({
     {
       icon: Clock,
       title: "等待揭晓",
-      description: "活动前1天，小悦会通知你同桌名单",
+      description: "活动前1天，悦仔会通知你同桌名单",
     },
     {
       icon: Users,

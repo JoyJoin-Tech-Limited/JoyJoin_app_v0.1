@@ -12,6 +12,7 @@ import { onboardingRepo, type OnboardingRepository } from "./repositories/onboar
 import { paymentsRepo, type PaymentsRepository } from "./repositories/paymentsRepo";
 import { pricingRepo, type PricingRepository } from "./repositories/pricingRepo";
 import { registrationTelemetryRepo, type RegistrationTelemetryRepository } from "./repositories/registrationTelemetryRepo";
+import { shareCardRepo, type ShareCardRepository } from "./repositories/shareCardRepo";
 import { usersRepo, type UsersRepository } from "./repositories/usersRepo";
 import { venuesRepo, type VenuesRepository } from "./repositories/venuesRepo";
 
@@ -30,7 +31,8 @@ export type IStorage = typeof legacyStorageRepo
   & PricingRepository
   & ModerationRepository
   & MatchingConfigRepository
-  & RegistrationTelemetryRepository;
+  & RegistrationTelemetryRepository
+  & ShareCardRepository;
 
 export const storage: IStorage = Object.assign(
   legacyStorageRepo,
@@ -49,4 +51,5 @@ export const storage: IStorage = Object.assign(
   moderationRepo,
   matchingConfigRepo,
   registrationTelemetryRepo,
+  shareCardRepo,
 );

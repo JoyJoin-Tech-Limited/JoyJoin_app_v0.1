@@ -7,6 +7,7 @@ interface CreateSubscriptionData {
   planType: string;
   startDate: Date | string;
   endDate: Date | string;
+  status?: string;
   isActive?: boolean;
   autoRenew?: boolean;
   paymentId?: string | null;
@@ -16,9 +17,14 @@ interface CreateCouponData {
   code: string;
   discountType: string;
   discountValue: number;
-  validFrom: Date | string;
+  description?: string;
+  validFrom?: Date | string;
   validUntil?: Date | string | null;
+  expiresAt?: Date | string;
   maxUses?: number | null;
+  currentUses?: number;
+  status?: string;
+  isActive?: boolean;
 }
 
 export interface PaymentsRepository {

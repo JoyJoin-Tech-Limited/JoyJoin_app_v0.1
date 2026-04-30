@@ -212,7 +212,7 @@ function analyzeConversation(messages: Array<{ role: string; content: string }>)
     // 统计否定表达
     negationUsage += (content.match(negationPatterns) || []).length;
     
-    // 统计主动提问（用户主动问小悦问题）
+    // 统计主动提问（用户主动问悦仔问题）
     if (content.includes('你') && (content.includes('?') || content.includes('？'))) {
       proactiveQuestions++;
     }

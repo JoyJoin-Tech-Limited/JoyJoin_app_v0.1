@@ -1,4 +1,5 @@
 skill: platform-coordination-protocol
+category: internal
 
 primary_ownership: >
   Cross-platform coordination for duplicated mini-program/web auth, API, and

@@ -1,37 +1,17 @@
-import { sql } from "drizzle-orm";
+import { eventAttendance, users, events } from "@shared/schema";
 import { db } from "../db";
+import { eq, and, sql } from "drizzle-orm";
 import { logAdminAudit } from "../lib/adminAuditLogger";
 
 export interface AttendanceRepository {
-  getAttendanceStatus(
-    eventId: string,
-    userId: string,
-  ): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null>;
-  updateAttendanceStatus(
-    eventId: string,
-    userId: string,
-    status: string,
-    estimatedLateMinutes?: number | null,
-    absentReason?: string | null,
-  ): Promise<void>;
-  getEventAttendanceSummary(eventId: string): Promise<
-    Array<{
-      userId: string;
-      displayName: string;
-      archetype: string | null;
-      status: string;
-      estimatedLateMinutes: number | null;
-      absentReason: string | null;
-    }>
-  >;
+  getAttendanceStatus(eventId: string, userId: string): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null>;
+  updateAttendanceStatus(eventId: string, userId: string, status: string, estimatedLateMinutes?: number | null, absentReason?: string | null): Promise<void>;
+  getEventAttendanceSummary(eventId: string): Promise<Array<{ userId: string; displayName: string; archetype: string | null; status: string; estimatedLateMinutes: number | null; absentReason: string | null; }>>;
   adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void>;
 }
 
 export const attendanceRepo: AttendanceRepository = {
-  async getAttendanceStatus(
-    eventId: string,
-    userId: string,
-  ): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null> {
+  async getAttendanceStatus(eventId: string, userId: string): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null> {
     const result = await db.execute(sql`
       SELECT attendance_status as status, estimated_late_minutes, absent_reason
       FROM event_attendance
@@ -41,19 +21,13 @@ export const attendanceRepo: AttendanceRepository = {
     if (!result.rows[0]) return null;
     const row = result.rows[0] as any;
     return {
-      status: row.status ?? "pending",
+      status: row.status ?? 'pending',
       estimatedLateMinutes: row.estimated_late_minutes ?? null,
       absentReason: row.absent_reason ?? null,
     };
   },
 
-  async updateAttendanceStatus(
-    eventId: string,
-    userId: string,
-    status: string,
-    estimatedLateMinutes?: number | null,
-    absentReason?: string | null,
-  ): Promise<void> {
+  async updateAttendanceStatus(eventId: string, userId: string, status: string, estimatedLateMinutes?: number | null, absentReason?: string | null): Promise<void> {
     const result = await db.execute(sql`
       INSERT INTO event_attendance (blind_box_event_id, user_id, attendance_status, estimated_late_minutes, absent_reason, attendance_status_updated_at)
       VALUES (${eventId}, ${userId}, ${status}, ${estimatedLateMinutes ?? null}, ${absentReason ?? null}, NOW())
@@ -69,16 +43,8 @@ export const attendanceRepo: AttendanceRepository = {
     }
   },
 
-  async getEventAttendanceSummary(eventId: string): Promise<
-    Array<{
-      userId: string;
-      displayName: string;
-      archetype: string | null;
-      status: string;
-      estimatedLateMinutes: number | null;
-      absentReason: string | null;
-    }>
-  > {
+  async getEventAttendanceSummary(eventId: string): Promise<Array<{ userId: string; displayName: string; archetype: string | null; status: string; estimatedLateMinutes: number | null; absentReason: string | null; }>> {
+    // Join matched_attendees JSONB (from blind_box_events) with any existing event_attendance rows
     const result = await db.execute(sql`
       SELECT
         attendee->>'userId' AS "userId",
@@ -98,12 +64,7 @@ export const attendanceRepo: AttendanceRepository = {
     return result.rows as any[];
   },
 
-  async adminOverrideAttendanceStatus(
-    eventId: string,
-    userId: string,
-    status: string,
-    adminId: string,
-  ): Promise<void> {
+  async adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void> {
     await db.execute(sql`
       INSERT INTO event_attendance (blind_box_event_id, user_id, attendance_status, estimated_late_minutes, absent_reason, attendance_status_updated_at)
       VALUES (${eventId}, ${userId}, ${status}, NULL, NULL, NOW())
@@ -114,16 +75,14 @@ export const attendanceRepo: AttendanceRepository = {
         absent_reason = NULL,
         attendance_status_updated_at = EXCLUDED.attendance_status_updated_at
     `);
-    console.log(
-      `[AdminOverride] Admin ${adminId} overrode attendance status for user ${userId} in event ${eventId} to ${status}`,
-    );
+    console.log(`[AdminOverride] Admin ${adminId} overrode attendance status for user ${userId} in event ${eventId} to ${status}`);
 
     logAdminAudit({
-      action: "ATTENDANCE_OVERRIDE",
+      action: 'ATTENDANCE_OVERRIDE',
       adminId,
-      targetEntityType: "event_attendance",
+      targetEntityType: 'event_attendance',
       targetEntityId: `${eventId}:${userId}`,
       context: { eventId, userId, newStatus: status },
     });
-  },
+  }
 };

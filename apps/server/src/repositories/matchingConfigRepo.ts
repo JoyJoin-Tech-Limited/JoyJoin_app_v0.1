@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
 import { db } from "../db";
+import { sql } from "drizzle-orm";
 
 export interface MatchingConfigRepository {
   getActiveMatchingConfig(): Promise<any | undefined>;
@@ -19,10 +19,12 @@ export const matchingConfigRepo: MatchingConfigRepository = {
   },
 
   async updateMatchingConfig(config: any): Promise<any> {
+    // First, deactivate all existing configs
     await db.execute(sql`
       UPDATE matching_config SET is_active = false
     `);
 
+    // Insert new config as active
     const result = await db.execute(sql`
       INSERT INTO matching_config (
         config_name, 
@@ -40,7 +42,7 @@ export const matchingConfigRepo: MatchingConfigRepository = {
         notes,
         created_by
       ) VALUES (
-        ${config.configName || "default"},
+        ${config.configName || 'default'},
         ${config.personalityWeight || 30},
         ${config.interestsWeight || 25},
         ${config.intentWeight || 20},
@@ -61,12 +63,12 @@ export const matchingConfigRepo: MatchingConfigRepository = {
   },
 
   async saveMatchingResult(result: any): Promise<any> {
+    // Format userIds as properly escaped PostgreSQL array using Drizzle's sql.join
     const userIdsArray = result.userIds || [];
-    const userIdsParam =
-      userIdsArray.length === 0
-        ? sql`ARRAY[]::text[]`
-        : sql`ARRAY[${sql.join(userIdsArray.map((id: string) => sql`${id}`), sql.raw(", "))}]::text[]`;
-
+    const userIdsParam = userIdsArray.length === 0
+      ? sql`ARRAY[]::text[]`
+      : sql`ARRAY[${sql.join(userIdsArray.map((id: string) => sql`${id}`), sql.raw(', '))}]::text[]`;
+    
     const insertResult = await db.execute(sql`
       INSERT INTO matching_results (
         event_id,
@@ -98,5 +100,5 @@ export const matchingConfigRepo: MatchingConfigRepository = {
       RETURNING *
     `);
     return insertResult.rows[0];
-  },
+  }
 };

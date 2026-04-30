@@ -1,4 +1,5 @@
 skill: testing-and-regression-guardrails
+category: internal
 
 primary_ownership: >
   Regression tests, invariant tests, structural tests, CI guardrail scripts,

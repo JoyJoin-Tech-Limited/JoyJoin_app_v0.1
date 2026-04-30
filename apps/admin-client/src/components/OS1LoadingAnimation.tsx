@@ -9,7 +9,7 @@ interface OS1LoadingAnimationProps {
 }
 
 const defaultMessages = [
-  "小悦正在思考...",
+  "悦仔正在思考...",
   "正在理解你的意思...",
   "让我想想...",
   "正在为你寻找答案...",
@@ -19,7 +19,7 @@ const matchingMessages = [
   "正在寻找有趣的灵魂...",
   "分析匹配度中...",
   "筛选最佳组合...",
-  "小悦正在施展魔法...",
+  "悦仔正在施展魔法...",
 ];
 
 export const OS1_MESSAGE_PRESETS = {

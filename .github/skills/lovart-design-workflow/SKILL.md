@@ -14,9 +14,13 @@ description: >
 
 **Core rule:** Every Lovart design request starts from the JoyJoin brand system and ends with a standardized brief that can be copied directly into Lovart's ChatCanvas. This skill does not generate code — it produces design prompts and asset handoff artifacts.
 
-## When to use
+## When to use this skill
 
-Generating prompts for illustrations, mockups, marketing graphics, icons, or any brand-aligned visual asset. Converting product requirements into visual design briefs.
+- Generating Lovart-ready prompts for mascot illustrations, UI mockups, or marketing graphics
+- Converting product requirements into a standardized visual design brief
+- Requesting brand-aligned icons, posters, or social media assets
+- Handing off design artifacts from Lovart to frontend engineers
+- Choosing between Lovart (illustration) vs Stitch (UI exploration) vs Figma (production specs)
 
 ## When NOT to use
 
@@ -64,13 +68,10 @@ See [`references/output-handoff.md`](./references/output-handoff.md) for:
 - Code reference guidance for frontend handoff
 - Collaboration boundaries with related skills
 
-## Quick Examples
+## Quick examples
 
-**Onboarding welcome illustration:** Corgi mascot, playful pose, warm-beige background, PNG transparent 800x800px 2x.
-
-**Event pool card background:** Abstract soft gradient, Vibrant Purple to Warm Coral, JPG 16:9 1200x675px.
-
-**Mini-program tab bar icons:** Set of 4 line icons, rounded corners, monochrome Vibrant Purple, SVG web / PNG mini-program.
+- **Mascot illustration brief:** Corgi archetype mascot, playful surprised pose, warm-beige background, soft line art, PNG transparent 800x800px 2x.
+- **Marketing poster brief:** Event pool launch graphic, Vibrant Purple to Warm Coral gradient, minimal text overlay, brand font for headline, JPG 1200x1600px.
 
 ## Troubleshooting
 

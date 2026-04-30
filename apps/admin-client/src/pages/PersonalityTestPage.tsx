@@ -271,7 +271,7 @@ export default function PersonalityTestPage() {
                 <Users className="w-5 h-5 text-muted-foreground" />
               </div>
               <div className="text-left flex-1">
-                <p className="font-medium text-muted-foreground">和小悦聊聊</p>
+                <p className="font-medium text-muted-foreground">和悦仔聊聊</p>
                 <p className="text-xs text-muted-foreground">对话式测试 · 约3分钟</p>
               </div>
               <Badge variant="outline" className="text-xs">即将推出</Badge>

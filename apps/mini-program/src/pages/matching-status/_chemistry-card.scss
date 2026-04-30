@@ -94,4 +94,99 @@
   &__chemistry-prompt {
     margin-top: $spacing-md;
   }
+
+  &__chemistry-subtitle {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-tertiary;
+    font-style: italic;
+  }
+
+  // ── Unified Reveal Card (inside chemistry card) ───────────────
+  .unified-reveal {
+    &__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $spacing-md;
+      margin-bottom: $spacing-md;
+    }
+
+    &__badge-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 10rpx;
+      padding: 12rpx 22rpx;
+      border-radius: 999rpx;
+      background: rgba($color-surface, 0.92);
+    }
+
+    &__badge {
+      width: 32rpx;
+      height: 32rpx;
+      display: block;
+    }
+
+    &__label {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $color-text-primary;
+    }
+
+    &__score {
+      font-size: $font-size-sm;
+      font-weight: $font-weight-semibold;
+      color: $color-primary;
+    }
+
+    &__headline {
+      @include type-display-section-title;
+      display: block;
+      font-size: $font-size-lg;
+      color: $color-text-primary;
+    }
+
+    &__body {
+      display: block;
+      margin-top: $spacing-sm;
+      font-size: $font-size-sm;
+      line-height: 1.7;
+      color: $color-text-secondary;
+    }
+
+    &__subtitle {
+      display: block;
+      margin-top: $spacing-sm;
+      font-size: $font-size-xs;
+      line-height: 1.6;
+      color: $color-text-tertiary;
+      font-style: italic;
+    }
+
+    &__intro-angle {
+      display: block;
+      margin-top: 10rpx;
+      font-size: $font-size-xs;
+      line-height: 1.6;
+      color: $color-primary-dark;
+      font-weight: $font-weight-semibold;
+    }
+
+    &__pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12rpx;
+      margin-top: $spacing-md;
+    }
+
+    &__prompt {
+      display: block;
+      margin-top: $spacing-md;
+      font-size: $font-size-sm;
+      line-height: 1.7;
+      color: $color-text-secondary;
+    }
+  }
 }

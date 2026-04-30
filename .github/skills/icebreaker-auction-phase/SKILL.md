@@ -16,6 +16,14 @@ description: >-
 - **Advance guard**: host cannot `POST .../advance` out of `auction` until `auctionAllLotsClosed` is true (every lot closed via `close-lot`).
 - **Bidding rule**: each new high bid refunds the previous high bidder’s escrowed coins before deducting the new bidder.
 
+## When to use this skill
+
+- Implementing the `auction` social icebreaker phase in the mini-program or web
+- Adding or modifying virtual-coin auction lots, bidding logic, or host advance guards
+- Reviewing a PR that touches `auctionBalances`, `auctionLotsMeta`, or `close-lot` routes
+- Tuning auction economy parameters like `AUCTION_STARTING_COINS`
+- Debugging why host cannot advance out of the `auction` phase
+
 ## References
 
 | File | Purpose |

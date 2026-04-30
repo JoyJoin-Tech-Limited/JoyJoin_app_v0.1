@@ -62,6 +62,7 @@ describe('social icebreaker phase configuration', () => {
       DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
       2,
     );
+    // lie_detective requires 3 players, so with 2 players it skips to personality_dice
     expect(result).toBe('personality_dice');
   });
 
@@ -180,6 +181,7 @@ describe('social icebreaker phase configuration', () => {
     expect(state.personalityDiceChallenges).toBeUndefined();
     expect(state.currentDicePlayerIndex).toBeUndefined();
     expect(state.diceCompletedBy).toBeUndefined();
+    expect(state.dicePassedBy).toBeUndefined();
     expect(state.warmupTopics).toEqual([{ id: 't1', question: 'Q1', mood: 'funny', emoji: '😂' }]);
     expect(state.challengeCompletedBy).toEqual(['host-1']);
 

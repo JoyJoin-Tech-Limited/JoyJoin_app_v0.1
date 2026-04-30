@@ -249,7 +249,7 @@ export function IcebreakerEndingScreen({
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
-                  <span className="text-white/90 font-medium">小悦说</span>
+                  <span className="text-white/90 font-medium">悦仔说</span>
                 </div>
                 <p 
                   className="text-white text-lg leading-relaxed"

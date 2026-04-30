@@ -14,6 +14,14 @@ description: >-
 - **Wrong-phase guards**: statement generation, votes, and `next-player` only in `lie_detective`; host-only for `next-player`.
 - **Advance**: cannot leave phase until every roster player has generated statements, every turn revealed, and `lieDetectiveCompletedUserIds` covers the roster (see advance handler).
 
+## When to use this skill
+
+- Implementing the `lie_detective` social icebreaker phase (Two Truths and a Lie)
+- Ensuring `isLie` secrecy is maintained server-side and never leaked to clients
+- Adding vote/reveal state machine logic or host-only `next-player` controls
+- Reviewing a PR that touches `LieDetectivePlayer` types or `socialIcebreakerStore` truth tables
+- Debugging 400 errors, ignored votes, or missing recap lie highlights
+
 ## References
 
 | File | Purpose |

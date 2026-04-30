@@ -544,7 +544,7 @@ export default function BlindBoxEventDetailPage() {
           )
         ) : null}
 
-        {/* 小悦话题入口 (仅已匹配或已完成显示) */}
+        {/* 悦仔话题入口 (仅已匹配或已完成显示) */}
         {(event.status === "matched" || event.status === "completed") && eventId && (() => {
           const phase = getEventPhase(event.dateTime);
           if (phase === "started") {
@@ -580,7 +580,7 @@ export default function BlindBoxEventDetailPage() {
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border-2 border-white/30">
                       <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
-                        小悦
+                        悦仔
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 text-left">
@@ -606,12 +606,12 @@ export default function BlindBoxEventDetailPage() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10 border-2 border-white/30">
                   <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
-                    小悦
+                    悦仔
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
                   <p className="text-white font-semibold text-sm">AI破冰环节已就绪</p>
-                  <p className="text-white/70 text-xs">到场签到后，小悦将为你们定制专属破冰体验</p>
+                  <p className="text-white/70 text-xs">到场签到后，悦仔将为你们定制专属破冰体验</p>
                 </div>
                 <div className="flex items-center gap-1 text-white/80">
                   <Sparkles className="h-4 w-4" />

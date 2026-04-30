@@ -188,7 +188,7 @@ function MatchRevealAnimationComponent({
       <AnimationLoadingScreen 
         progress={loadProgress}
         eventTheme={theme}
-        message={loadProgress < 100 ? '小悦正在组局...' : '就要揭晓了...'}
+        message={loadProgress < 100 ? '悦仔正在组局...' : '就要揭晓了...'}
       />
     );
   }

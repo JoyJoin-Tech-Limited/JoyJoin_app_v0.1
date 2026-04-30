@@ -40,6 +40,8 @@ interface QuipBattlePhaseViewProps {
   userId?: string;
   playerCount?: number;
   onRefresh?: () => void;
+  onAdvance?: () => void;
+  isAdvancing?: boolean;
 }
 
 export default function QuipBattlePhaseView({
@@ -54,6 +56,8 @@ export default function QuipBattlePhaseView({
   userId,
   playerCount = 1,
   onRefresh,
+  onAdvance,
+  isAdvancing = false,
 }: QuipBattlePhaseViewProps) {
   const [answerMap, setAnswerMap] = useState<Record<string, string>>({});
   const [voteMap, setVoteMap] = useState<Record<string, string>>({});
@@ -185,7 +189,7 @@ export default function QuipBattlePhaseView({
         )}
 
         {prompts.map((prompt, i) => (
-          <Card key={prompt.id} className='icebreaker__challenge-card'>
+          <Card key={prompt.id} className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle icebreaker__challenge-card--has-bg'>
             <Text className='icebreaker__challenge-label'>题目 {i + 1}</Text>
             <Text className='icebreaker__challenge-text'>{prompt.promptText}</Text>
             <Input
@@ -222,7 +226,7 @@ export default function QuipBattlePhaseView({
         {prompts.map((prompt) => {
           const promptAnswers = answers.filter((a) => a.promptId === prompt.id);
           return (
-            <Card key={prompt.id} className='icebreaker__challenge-card'>
+            <Card key={prompt.id} className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle icebreaker__challenge-card--has-bg'>
               <Text className='icebreaker__challenge-text'>{prompt.promptText}</Text>
               {promptAnswers.map((answer) => (
                 <View
@@ -301,7 +305,7 @@ export default function QuipBattlePhaseView({
         <Text className='icebreaker__phase-subtitle'>看看谁的脑洞最大</Text>
 
         {results.map((result, i) => (
-          <Card key={result.promptId} className='icebreaker__challenge-card'>
+          <Card key={result.promptId} className='icebreaker__challenge-card icebreaker__challenge-card--quip-battle icebreaker__challenge-card--has-bg'>
             <Text className='icebreaker__challenge-label'>题目 {i + 1}</Text>
             <Text className='icebreaker__challenge-text'>{result.promptText}</Text>
 
@@ -327,6 +331,18 @@ export default function QuipBattlePhaseView({
             )}
           </Card>
         ))}
+
+        {isHost && onAdvance && (
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={onAdvance}
+            disabled={isAdvancing}
+            loading={isAdvancing}
+          >
+            {isAdvancing ? '切换中…' : '进入下一阶段'}
+          </Button>
+        )}
       </View>
     );
   }

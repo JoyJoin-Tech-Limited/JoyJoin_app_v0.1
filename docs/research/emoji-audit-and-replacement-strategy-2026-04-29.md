@@ -193,7 +193,21 @@
 3. Replace `👆` tap hint with Xiaoyue illustration or CSS arrow animation
 4. Remove decorative `✨` sparkles from footer and sections
 
-### Phase 2: Chemistry + Matching (Next sprint)
+### Phase 2: Chemistry + Matching ✅ COMPLETE (2026-04-29)
+**Shipped:**
+1. `chemistryPayoff.ts` ported to mini-program — generates group-level chemistry copy
+2. `composeUnifiedReveal()` fuses chemistryPayoff + connectionPoints into unified reveal
+3. Chemistry card now uses `UnifiedRevealCard` component
+4. All emojis stripped from `matching-status/` and `squad-unboxing/`
+5. `JoyJoinIcon` component maps emoji → proprietary icons via `emojiToIconMap.ts`
+6. Info labels (`📅📍🎯👥`) wired back as `JoyJoinIcon` assets
+7. Status emojis replaced with CSS dots
+8. `hasRevealed` flag for reveal theater
+9. 12 regression tests added
+10. Bundle size gate added (`scripts/check-bundle-size.mjs`)
+11. Emoji commit blocker in guardrails
+
+**Original plan (retained for reference):**
 1. Replace `🔥✨🌱💬` in `ChemistryBadge.tsx` with actual chemistry badge PNGs
 2. Replace `😕😔` in matching status with rating face PNGs
 3. Replace `📅📍🎯👥` in matching/pool screens with info label PNGs
@@ -244,7 +258,17 @@ fi
 
 ---
 
-## 9. Bottom Line
+## 9. Implementation Status
+
+| Phase | Status | Date | Notes |
+|-------|--------|------|-------|
+| Phase 1: Personality Results | Pending | — | Original highest-impact surface; not yet started |
+| Phase 2: Chemistry + Matching | **COMPLETE** | 2026-04-29 | Unified reveal shipped; all emojis removed from matching-status/ and squad-unboxing/; JoyJoinIcon + emojiToIconMap.ts in place; regression tests + bundle gate + guardrails added |
+| Phase 3: Events + Icebreaker | Pending | — | Original plan retained below |
+| Phase 4: Profile + Misc | Pending | — | Original plan retained below |
+| Phase 5: Food/Drink Preferences | Pending | — | Requires new asset pipeline |
+
+## 10. Bottom Line
 
 **~40% of emojis can be eliminated immediately using existing assets** (chemistry badges, info labels, rating faces, status icons).  
 **~30% can be replaced with simple text** (energy labels, rank badges, decorative sparkles).  

@@ -1,4 +1,5 @@
 skill: e2e-test-runner
+category: internal
 
 primary_ownership: >
   Flow-level validation for end-to-end journeys, smoke tests, and synthetic probes

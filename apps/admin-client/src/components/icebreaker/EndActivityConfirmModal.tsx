@@ -60,7 +60,7 @@ export function EndActivityConfirmModal({
                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow">
                   <Sparkles className="w-3 h-3 text-white" />
                 </div>
-                <span className="text-sm font-medium text-primary">小悦说</span>
+                <span className="text-sm font-medium text-primary">悦仔说</span>
               </div>
               <p className="text-sm text-foreground/90 leading-relaxed">
                 结束活动后，大家可以继续自由交流哦！记得给这次活动留个反馈，帮助我们做得更好~

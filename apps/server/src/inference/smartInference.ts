@@ -4,7 +4,7 @@
  * 改进目标：
  * 1. 减少追问次数 - 通过智能推断跳过冗余问题
  * 2. 边界输入处理 - 优雅处理emoji、特殊字符、无效输入
- * 3. 对话个性化 - 小悦根据用户风格动态调整语气
+ * 3. 对话个性化 - 悦仔根据用户风格动态调整语气
  * 4. 性格测试价值说明 - 测试前解释匹配质量重要性
  * 5. 心理教育内容 - 原型是启发性工具，鼓励自我探索
  */
@@ -411,7 +411,7 @@ export interface StyleProfile {
 }
 
 /**
- * 根据用户风格生成小悦的语气调整建议
+ * 根据用户风格生成悦仔的语气调整建议
  */
 export function detectUserStyle(
   messages: Array<{ role: string; content: string }>
@@ -456,7 +456,7 @@ export function detectUserStyle(
 }
 
 /**
- * 生成小悦的语气调整提示
+ * 生成悦仔的语气调整提示
  */
 export function generateStylePrompt(profile: StyleProfile): string {
   const prompts: string[] = [];

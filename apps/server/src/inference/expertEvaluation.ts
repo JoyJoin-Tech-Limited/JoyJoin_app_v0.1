@@ -1,6 +1,6 @@
 /**
- * 小悦智能评估系统 - 专家评分模块
- * 模拟10位AI专家对小悦进行多维度评分
+ * 悦仔智能评估系统 - 专家评分模块
+ * 模拟10位AI专家对悦仔进行多维度评分
  */
 
 import { TEST_SCENARIOS, getRandomScenarios as getScenarios } from './scenarios';

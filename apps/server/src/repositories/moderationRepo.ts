@@ -1,6 +1,6 @@
-import { type ChatMessage, chatMessages, chatReports, type ChatReport, type InsertChatReport, type User, users } from "@shared/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { type ChatReport, type InsertChatReport, type ChatMessage, type User, chatReports, chatMessages, users } from "@shared/schema";
 import { db } from "../db";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface ModerationRepository {
   getModerationStats(): Promise<any>;
@@ -12,10 +12,7 @@ export interface ModerationRepository {
   createChatReport(data: InsertChatReport): Promise<ChatReport>;
   getChatReports(status?: string): Promise<Array<ChatReport & { reporter: User; reportedUser: User; message: ChatMessage }>>;
   getChatReport(id: string): Promise<(ChatReport & { reporter: User; reportedUser: User; message: ChatMessage }) | undefined>;
-  updateChatReport(
-    id: string,
-    updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string },
-  ): Promise<ChatReport>;
+  updateChatReport(id: string, updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string }): Promise<ChatReport>;
 }
 
 export const moderationRepo: ModerationRepository = {
@@ -23,15 +20,15 @@ export const moderationRepo: ModerationRepository = {
     const totalReports = await db.execute(sql`
       SELECT COUNT(*)::int as count FROM reports
     `);
-
+    
     const pendingReports = await db.execute(sql`
       SELECT COUNT(*)::int as count FROM reports WHERE status = 'pending'
     `);
-
+    
     const resolvedReports = await db.execute(sql`
       SELECT COUNT(*)::int as count FROM reports WHERE status = 'resolved'
     `);
-
+    
     const bannedUsers = await db.execute(sql`
       SELECT COUNT(*)::int as count FROM users WHERE is_banned = true
     `);
@@ -84,7 +81,7 @@ export const moderationRepo: ModerationRepository = {
   async updateReportStatus(id: string, status: string, adminNotes?: string): Promise<any> {
     const result = await db.execute(sql`
       UPDATE reports 
-      SET status = ${status}, admin_notes = ${adminNotes || null}, resolved_at = ${status === "resolved" ? new Date() : null}
+      SET status = ${status}, admin_notes = ${adminNotes || null}, resolved_at = ${status === 'resolved' ? new Date() : null}
       WHERE id = ${id}
       RETURNING *
     `);
@@ -174,15 +171,12 @@ export const moderationRepo: ModerationRepository = {
     };
   },
 
-  async updateChatReport(
-    id: string,
-    updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string },
-  ): Promise<ChatReport> {
+  async updateChatReport(id: string, updates: { status?: string; reviewedBy?: string; reviewNotes?: string; actionTaken?: string }): Promise<ChatReport> {
     const [report] = await db
       .update(chatReports)
       .set({ ...updates, reviewedAt: new Date() })
       .where(eq(chatReports.id, id))
       .returning();
     return report;
-  },
+  }
 };

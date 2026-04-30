@@ -13,123 +13,87 @@ description: >-
 
 # Agent Coordination Patterns
 
-Multi-agent work is not just "spawn many agents and hope." This skill provides explicit patterns for designing agent workflows that converge on a balanced, coherent result.
+Multi-agent work is not just "spawn many agents and hope." This skill provides
+explicit patterns for designing workflows that converge on a balanced result.
 
 ## When to use this skill
 
-- Planning how **2+ agents** should collaborate on a single task or feature
-- Deciding whether to go **parallel** (simultaneous) or **sequential** (pipelined)
-- Merging **conflicting or divergent outputs** from multiple agents
-- Partitioning a large task so agents **don't collide** or duplicate work
-- Designing **interdependent workflows** where Agent B needs Agent A's output
+- Planning how **2+ agents** should collaborate on a single task
+- Deciding whether to go **parallel** or **sequential**
+- Merging **conflicting outputs** from multiple agents
+- Partitioning work so agents **don't collide** or duplicate
+- Designing **interdependent workflows**
 
 ## When NOT to use this skill
 
-- Single-agent tasks (use direct delivery)
-- Tasks requiring consensus through disagreement (use [`multi-agent-deliberation`](../../.github/skills/multi-agent-deliberation/SKILL.md))
-- Quality-gate deliberation (use [`harness-engineering-deliberation`](../../.github/skills/harness-engineering-deliberation/SKILL.md))
-- Simple subagent delegation with no interdependencies (use [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md))
+- Single-agent tasks (direct delivery)
+- Consensus through disagreement → `multi-agent-deliberation`
+- Quality-gate deliberation → `harness-engineering-deliberation`
+- Simple subagent delegation → `subagent-context-delegation`
 
-## Pattern catalog
+## Pattern overview
 
-See [`references/pattern-catalog.md`](./references/pattern-catalog.md) for detailed descriptions of all 7 patterns:
+See [`references/pattern-catalog.md`](./references/pattern-catalog.md) for detailed
+descriptions of all 7 patterns.
 
 | Pattern | Structure | Best for |
 |---------|-----------|----------|
-| **Sequential Pipeline** | A → B → C | Steps with natural ordering and genuine dependencies |
-| **Parallel Swarm** | A + B + C → Merge | Independent sub-tasks with combinable outputs |
-| **Dependency Graph** | A → B+C → D | Mixed sequential/parallel with explicit blocking |
-| **Fan-Out / Fan-In** | Explore → Converge | Broad exploration before synthesis |
-| **Convergence** | Build → Review → Refine | Quality-critical tasks needing iterative polish |
-| **Conflict Resolution** | Re-scope → Re-sequence → Authority → Deliberation → Human | Incompatible outputs from parallel agents |
-| **Workload Partitioning** | By domain / file / layer / phase / concern | Dividing work without collision |
+| Sequential Pipeline | A → B → C | Natural ordering and dependencies |
+| Parallel Swarm | A + B + C → Merge | Independent sub-tasks |
+| Dependency Graph | A → B+C → D | Mixed sequential/parallel |
+| Fan-Out / Fan-In | Explore → Converge | Broad exploration before synthesis |
+| Convergence | Build → Review → Refine | Iterative polish |
+| Conflict Resolution | Re-scope → … → Human | Incompatible outputs |
+| Workload Partitioning | By domain/file/layer/phase | Dividing work without collision |
 
-**Key rules across all patterns:**
-- Each agent gets a **non-overlapping scope** or explicit dependency ordering.
-- Merge strategy is **declared before spawning** parallel agents.
-- Context capsules stay **under 400 words** per agent.
-- Parent session stays lean — outputs summarized before merging.
-- Never leave parallel outputs unmerged.
+**Key rules:** non-overlapping scope, merge strategy declared before spawning,
+capsules under 400 words, parent stays lean, never leave outputs unmerged.
 
-## Coordination vs Deliberation: Decision Matrix
+## Coordination vs Deliberation
 
-| Situation | Use Coordination | Use Deliberation |
+| Situation | Coordination | Deliberation |
 |---|---|---|
-| Agents agree on goal, disagree on method | ❌ | ✅ |
-| Agents have independent, complementary scopes | ✅ | ❌ |
-| Need to resolve a fundamental architectural conflict | ❌ | ✅ |
-| Need to parallelize implementation across domains | ✅ | ❌ |
-| Need consensus before irreversible decision | ❌ | ✅ |
-| Need fast parallel exploration of options | ✅ | ❌ |
-| One agent's output violates another's constraints | ⚠️ Try coordination first | ✅ If coordination fails |
+| Independent, complementary scopes | ✅ | ❌ |
+| Fundamental architectural conflict | ❌ | ✅ |
+| Parallelize across domains | ✅ | ❌ |
+| Consensus before irreversible decision | ❌ | ✅ |
+| Fast parallel exploration | ✅ | ❌ |
 
-## Quick Examples
+For detailed examples, templates, and conflict-resolution rules, see
+[`references/patterns.md`](./references/patterns.md).
 
-### Build a feature across server + mini-program
+## Quick examples
 
-```
-# Step 1: Sequential — Planner defines contract
-Planner → "Design API contract and mini-program screen contract"
-
-# Step 2: Parallel — independent implementation
-[Backend Engineer: implement API] + [Taro Mini-Program Frontend Engineer: implement screen]
-
-# Step 3: Sequential — integration
-QA Agent → "Verify API + screen integration against contract"
-```
-
-### Audit codebase for auth gaps
-
-```
-# Fan-out
-Supervisor → 3 Explore agents:
-  - "Find all /api/admin/* routes missing requireAdmin"
-  - "Find all /api/* routes missing any auth"
-  - "Find all middleware that should enforce RBAC but doesn't"
-
-# Fan-in — Synthesis merge
-Synthesizer → "Merge findings into prioritized fix list, deduplicate, flag high-risk gaps"
-```
-
-### Conflicting architecture proposals
-
-```
-# Parallel exploration
-Backend Engineer → "Propose caching strategy A (Redis)"
-Backend Engineer → "Propose caching strategy B (in-memory with TTL)"
-
-# Conflict detected: incompatible approaches
-# Resolution: Re-sequence → Backend Engineer proposes, Verifier critiques
-# Or: Escalate → Deliberation Moderator with Alpha=scalability, Gamma=edge-cases
-```
+- **Feature across server + mini-program** → sequential contract, parallel
+  implementation, sequential integration.
+- **Auth gap audit** → fan-out to explore agents, fan-in to synthesizer.
+- **Conflicting proposals** → re-sequence into critique, escalate to deliberation.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Agents produce conflicting file edits | Overlapping scopes | Re-partition by file or domain; make sequential |
-| Merge step is overwhelmed | Too many parallel agents | Cap at 5; use hierarchical fan-in (merge in rounds) |
+| Conflicting file edits | Overlapping scopes | Re-partition by file or domain; make sequential |
+| Merge step overwhelmed | Too many parallel agents | Cap at 5; use hierarchical fan-in |
 | Pipeline stalls | Agent failed silently | Add explicit failure handling: retry, skip, or abort |
 | Convergence feels forced | Fundamental disagreement | Escalate to deliberation; don't force-merge |
-| Parent context explodes | Raw outputs accumulated | Summarize each agent output to ≤3 lines before merge |
-| Agents duplicate work | Ambiguous partition boundaries | Redraw partition map; add explicit "you own X, not Y" |
+| Parent context explodes | Raw outputs accumulated | Summarize each output to ≤3 lines before merge |
+| Agents duplicate work | Ambiguous partition boundaries | Redraw partition map; add explicit ownership |
 
 ## Review checklist
 
-- [ ] The coordination pattern is explicitly chosen (pipeline / swarm / graph / fan-out)
+- [ ] Coordination pattern is explicitly chosen
 - [ ] Each agent has a non-overlapping scope or explicit dependency ordering
 - [ ] Merge strategy is declared before spawning parallel agents
 - [ ] Capsules are under 400 words per agent
 - [ ] Parent session stays lean — outputs summarized before merging
 - [ ] Conflict resolution ladder is known before conflicts arise
-- [ ] Coordination vs deliberation distinction is clear for the task at hand
-- [ ] If 5+ agents needed, hierarchical fan-in is used instead of single merge
+- [ ] Coordination vs deliberation distinction is clear
+- [ ] If 5+ agents needed, hierarchical fan-in is used
 
 ## Related skills
 
-| Skill | Handoff point |
-|-------|--------------|
-| [`subagent-context-delegation`](../../.github/skills/subagent-context-delegation/SKILL.md) | How to package context for each individual agent call |
-| [`multi-agent-deliberation`](../../.github/skills/multi-agent-deliberation/SKILL.md) | When coordination fails and structured consensus is needed |
-| [`first-principles-velocity`](../../.github/skills/first-principles-velocity/SKILL.md) | Critical-path analysis, model-tier fit, and execution themes |
-| [`orchestration-turn-reporting`](../../.github/skills/orchestration-turn-reporting/SKILL.md) | Turn-end summaries and supervisor consolidation |
+- `subagent-context-delegation` — packaging context for each agent call
+- `multi-agent-deliberation` — structured consensus when coordination fails
+- `first-principles-velocity` — critical-path analysis and model-tier fit
+- `orchestration-turn-reporting` — turn-end summaries and supervisor consolidation
