@@ -282,7 +282,7 @@ export default function InterestsTopicsPage() {
               <div className="flex items-start gap-2 bg-primary/5 p-3 rounded-md border border-primary/20">
                 <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-muted-foreground">
-                  选择你感兴趣的3-7个，然后点击 <Star className="h-3 w-3 inline text-amber-500" /> 标记1-3个主要兴趣，小悦会优先匹配同频的人。
+                  选择你感兴趣的3-7个，然后点击 <Star className="h-3 w-3 inline text-amber-500" /> 标记1-3个主要兴趣，悦仔会优先匹配同频的人。
                   <span className="text-muted-foreground/70">（热度基于平台大数据）</span>
                 </p>
               </div>
@@ -492,7 +492,7 @@ export default function InterestsTopicsPage() {
               <div>
                 <h2 className="text-xl font-bold mb-2">话题雷区</h2>
                 <p className="text-sm text-muted-foreground">
-                  有些话题不适合在饭桌上聊？告诉小悦，帮你避开尴尬
+                  有些话题不适合在饭桌上聊？告诉悦仔，帮你避开尴尬
                 </p>
               </div>
 

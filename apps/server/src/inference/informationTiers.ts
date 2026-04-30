@@ -2,7 +2,7 @@
  * 三层信息漏斗系统 (3-Tier Information Funnel)
  * 
  * 基于10位社交达人建议设计：
- * - L1: 显式必要信息 (Explicit Fundamentals) - 小悦直接问
+ * - L1: 显式必要信息 (Explicit Fundamentals) - 悦仔直接问
  * - L2: 自然丰富信息 (Natural Enrichment) - 对话中巧妙引出
  * - L3: 隐藏推断洞察 (Hidden Insights) - AI静默推断
  * 

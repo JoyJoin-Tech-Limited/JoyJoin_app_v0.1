@@ -19,7 +19,7 @@ description: >
 - Adding a new workspace or moving code between workspaces
 - Updating `tsconfig` files
 
-## Workspace layout
+## Workspace boundaries
 
 ```
 /                          ← Root (orchestration only)
@@ -31,83 +31,18 @@ description: >
     └── shared/            ← @joyjoin/shared
 ```
 
-## Root package.json — orchestration only
+The root delegates to workspaces. It must not import or own runtime code. Required root scripts (enforced by `scripts/check-guardrails.mjs`) include `check`, `check:clients`, `check:server`, `check:full`, `set-admin`, and `guardrails`. Do not change these script names without updating the guardrail check.
 
-The root delegates to workspaces. It must not import or own runtime code.
+Workspace `package.json` files should expose `dev`, `build`, `typecheck`, `lint`, and `test` scripts. Root scripts delegate via `npm run <script> -w @joyjoin/<workspace>`.
 
-Required root scripts (enforced by `scripts/check-guardrails.mjs`):
-
-| Script | Purpose |
-|--------|---------|
-| `check` | Aliases `typecheck` across workspaces |
-| `check:clients` | TypeScript check for both client workspaces |
-| `check:server` | TypeScript check for server workspace |
-| `check:full` | Runs `guardrails`, `lint`, `test`, then `build` across all workspaces |
-| `set-admin` | Delegates to the root `admin:create` script |
-| `guardrails` | Runs `scripts/check-guardrails.mjs` |
-
-Do not change these script names or their delegated commands without updating the guardrail check.
-
-## Workspace dependency ownership
+## Root ownership rules
 
 - Each workspace declares its own `dependencies` and `devDependencies`
 - Cross-workspace shared code lives in `packages/shared` — not duplicated across apps
-- `packages/shared/package.json` declares `react` as a `peerDependency` and `@radix-ui/react-slot` + `lucide-react` as `dependencies` for shared UI exports
-- Admin-only code and dependencies belong in `apps/admin-client` — not imported into `apps/user-client`
+- Admin-only code and dependencies belong in `apps/admin-client` — never imported into `apps/user-client`
+- Never use the deprecated `shared/` root folder; use `packages/shared/src/` instead
 
-## tsconfig normalization
-
-- `tsconfig.base.json` at the repo root defines shared `compilerOptions`
-- Root `tsconfig.json` is a solution-style file with `references` to each workspace
-- Each workspace extends `tsconfig.base.json` and adds workspace-specific settings
-- User-client and admin-client currently run `typecheck` against their workspace `tsconfig.json`; `tsconfig.node.json` exists for node-specific tooling and is not invoked by the current `typecheck` script
-
-## Script normalization
-
-Workspace `package.json` files should expose:
-- `dev` — local development server
-- `build` — production build
-- `typecheck` — TypeScript check
-- `lint` — ESLint check
-- `test` — workspace-owned test entry point (some workspaces still use placeholder scripts today)
-
-Root scripts delegate via `npm run <script> -w @joyjoin/<workspace>`.
-
-## Env, secrets, and legacy guardrails
-
-Run `npm run guardrails` before pushing. CI runs the same check.
-
-Rules enforced by `scripts/check-guardrails.mjs`:
-
-- Only tracked env templates: `.env.example`, `deployment/.env.production.example`, `deployment/.env.staging.example`
-- Real `.env` files must never be committed
-- Legacy onboarding identifiers (`hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, `interestsTop`) must not appear in new active code
-- If secrets from a tracked `.env` were ever committed, rotate `DATABASE_URL`, `JWT_SECRET`, `SESSION_SECRET`, `WECHAT_SECRET`, `ADMIN_CREATE_SECRET_KEY`
-
-## Adding a new dependency
-
-1. Add to the specific workspace that uses it, not the root
-2. Run `npm install` from the repo root (npm workspaces resolves correctly)
-3. For shared UI primitives accessible to all apps, add to `packages/shared`
-4. Check for security advisories before adding new packages
-
-## Common mistakes to avoid
-
-- Adding a runtime dependency to the root `package.json`
-- Copying a package into multiple workspaces instead of sharing via `packages/shared`
-- Importing admin-client code into user-client (inflates the user bundle)
-- Removing or renaming required root scripts without updating `check-guardrails.mjs`
-- Using the deprecated `shared/` root folder — use `packages/shared/src/` instead
-
-## Related files
-
-- `package.json` — root orchestration
-- `tsconfig.json` — solution-style root config
-- `tsconfig.base.json` — shared compiler options
-- `scripts/check-guardrails.mjs` — guardrail enforcement
-- `apps/*/package.json` — workspace configs
-- `packages/shared/package.json` — shared package config
-- `DEVELOPER_QUICK_REFERENCE.md` — guardrail runbook
+See [`references/governance-details.md`](references/governance-details.md) for tsconfig normalization, script naming conventions, secret/env/legacy guardrails, and dependency ownership rules.
 
 ## Quick examples
 
@@ -127,6 +62,8 @@ Rules enforced by `scripts/check-guardrails.mjs`:
 - **Dependency installed to the wrong workspace** — a package was added to root `package.json` instead of the workspace that uses it. Move it: remove from root, add to the correct workspace with `-w @joyjoin/<workspace>`.
 - **TypeScript errors after changing `tsconfig`** — workspace `tsconfig.json` may have lost its `extends` reference to `tsconfig.base.json`, or a new workspace path is missing from the root `tsconfig.json` `references` array.
 - **Admin-client code is being bundled into user-client** — a direct import from `apps/admin-client` was added to `apps/user-client`. Remove it and move the shared logic to `packages/shared` if needed.
+- **Legacy identifiers in new code** — `scripts/check-guardrails.mjs` flags `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, and `interestsTop`. Remove or quarantine these identifiers in active code.
+- **Shared package missing a peer dependency** — `packages/shared/package.json` declares `react` as a `peerDependency` and `@radix-ui/react-slot` + `lucide-react` as `dependencies` for shared UI exports. Add shared UI primitives there, not in individual apps.
 
 ## Review checklist
 

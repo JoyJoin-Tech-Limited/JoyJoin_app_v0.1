@@ -17,7 +17,7 @@ interface AnimationLoadingScreenProps {
 }
 
 const MATCHING_MESSAGES = [
-  '小悦正在组局...',
+  '悦仔正在组局...',
   '正在寻找有趣的灵魂...',
   '分析匹配度中...',
   '筛选最佳组合...',

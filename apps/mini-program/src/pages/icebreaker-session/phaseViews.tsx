@@ -166,9 +166,11 @@ export function WarmupPhaseView({
   onGenerateTopics,
   onToggleReady,
   onNextTopic,
+  onAdvance,
   isGeneratingTopics,
   isUpdatingReady,
   isAdvancingTopic,
+  isAdvancing,
 }: {
   topics: Array<{ question: string; emoji?: string; mood?: string }>
   currentIndex: number
@@ -180,9 +182,11 @@ export function WarmupPhaseView({
   onGenerateTopics: (mood: AtmosphereMood) => void
   onToggleReady: () => void
   onNextTopic: () => void
+  onAdvance: () => void
   isGeneratingTopics: boolean
   isUpdatingReady: boolean
   isAdvancingTopic: boolean
+  isAdvancing: boolean
 }) {
   const currentTopic = topics[currentIndex]
   const isReady = readyUserIds.includes(currentUserId)
@@ -321,7 +325,15 @@ export function WarmupPhaseView({
             ) : null}
 
             {isHost && everyoneReady && currentIndex >= topics.length - 1 ? (
-              <Text className='icebreaker__helper-text'>所有热身已完成，可以使用下方按钮进入下一阶段。</Text>
+              <Button
+                variant='primary'
+                className='icebreaker__action-btn'
+                onClick={onAdvance}
+                disabled={isAdvancing}
+                loading={isAdvancing}
+              >
+                {isAdvancing ? '切换中…' : '进入下一阶段'}
+              </Button>
             ) : null}
 
             {!isHost && !everyoneReady ? (
@@ -354,7 +366,7 @@ export function MicroChallengePhaseView({
   return (
     <View className='icebreaker__challenge'>
       {challenge ? (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--micro-challenge'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="micro_challenge" size={80} /></View>
           <Text className='icebreaker__challenge-title'>{challenge.title}</Text>
           <Text className='icebreaker__challenge-desc'>{challenge.description}</Text>
@@ -378,7 +390,7 @@ export function MicroChallengePhaseView({
           )}
         </Card>
       ) : (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--micro-challenge'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="micro_challenge" size={80} /></View>
           <Text className='icebreaker__challenge-title'>挑战准备中…</Text>
         </Card>
@@ -422,6 +434,8 @@ export function LieDetectivePhaseView({
   canMoveToNextPlayer,
   onNextPlayer,
   isMovingNextPlayer,
+  onAdvance,
+  isAdvancing,
 }: {
   players: LieDetectivePlayer[]
   playerCount: number
@@ -439,6 +453,8 @@ export function LieDetectivePhaseView({
   canMoveToNextPlayer: boolean
   onNextPlayer: () => void
   isMovingNextPlayer: boolean
+  onAdvance: () => void
+  isAdvancing: boolean
 }) {
   const everyoneGenerated = playerCount > 0 && players.length >= playerCount
   const currentPlayer = players[currentPlayerIndex]
@@ -598,7 +614,15 @@ export function LieDetectivePhaseView({
         ) : null}
 
         {isHost && isRevealed && !canMoveToNextPlayer ? (
-          <Text className='icebreaker__helper-text'>所有侦探回合已完成，可以进入下一阶段。</Text>
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={onAdvance}
+            disabled={isAdvancing}
+            loading={isAdvancing}
+          >
+            {isAdvancing ? '切换中…' : '进入下一阶段'}
+          </Button>
         ) : null}
       </View>
 
@@ -614,6 +638,7 @@ export function PersonalityDicePhaseView({
   challenges,
   currentPlayerIndex,
   completedBy,
+  passedBy,
   currentUserId,
   isHost,
   onGenerate,
@@ -625,18 +650,22 @@ export function PersonalityDicePhaseView({
   challenges: PersonalityDiceChallenge[]
   currentPlayerIndex: number
   completedBy: string[]
+  passedBy: string[]
   currentUserId: string
   isHost: boolean
   onGenerate: () => void
-  onComplete: () => void
+  onComplete: (pass?: boolean) => void
   isGenerating: boolean
   isCompleting: boolean
 }) {
   const currentChallenge = challenges[currentPlayerIndex] ?? null
-  const allCompleted = challenges.length > 0 && completedBy.length >= challenges.length
   const isMyChallenge = currentChallenge?.userId === currentUserId
   const hasCompleted = completedBy.includes(currentUserId)
+  const hasPassed = passedBy.includes(currentUserId)
+  const hasResponded = hasCompleted || hasPassed
+  const allCompleted = challenges.length > 0 && (completedBy.length + passedBy.length) >= challenges.length
   const [showReveal, setShowReveal] = useState(false)
+  const [showPassModal, setShowPassModal] = useState(false)
   const prevChallengesLenRef = useRef(0)
 
   useEffect(() => {
@@ -657,7 +686,7 @@ export function PersonalityDicePhaseView({
           autoDismissMs={2500}
           onDismiss={() => setShowReveal(false)}
         />
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--personality-dice icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="personality_dice" size={80} /></View>
           <Text className='icebreaker__challenge-title'>人格骰子</Text>
           <Text className='icebreaker__challenge-desc'>
@@ -687,7 +716,7 @@ export function PersonalityDicePhaseView({
   if (allCompleted) {
     return (
       <View className='icebreaker__challenge'>
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--personality-dice icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="personality_dice" size={80} /></View>
           <Text className='icebreaker__challenge-title'>人格骰子完成</Text>
           <Text className='icebreaker__challenge-desc'>
@@ -709,7 +738,7 @@ export function PersonalityDicePhaseView({
         autoDismissMs={2500}
         onDismiss={() => setShowReveal(false)}
       />
-      <Card className='icebreaker__challenge-card'>
+      <Card className='icebreaker__challenge-card icebreaker__challenge-card--personality-dice icebreaker__challenge-card--has-bg'>
         <View className='icebreaker__challenge-emoji'>
           <PhaseHeaderIcon phase="personality_dice" size={48} />
         </View>
@@ -722,6 +751,11 @@ export function PersonalityDicePhaseView({
         {currentChallenge?.challengeBody ? (
           <Text className='icebreaker__challenge-hint'>{currentChallenge.challengeBody}</Text>
         ) : null}
+        {currentChallenge?.passLine ? (
+          <Text className='icebreaker__challenge-hint' style={{ opacity: 0.8 }}>
+            或者你可以{currentChallenge.passLine}
+          </Text>
+        ) : null}
         <View className='icebreaker__challenge-meta'>
           <Text className='icebreaker__challenge-duration'>
             {currentPlayerIndex + 1} / {challenges.length}
@@ -732,29 +766,103 @@ export function PersonalityDicePhaseView({
         </View>
       </Card>
 
+      {/* Pass confirm modal */}
+      {showPassModal && currentChallenge?.passConsequence ? (
+        <View className='icebreaker__modal-backdrop' catchMove>
+          <View className='icebreaker__modal-card'>
+            <Text className='icebreaker__modal-title'>确定要认怂？</Text>
+            <Text className='icebreaker__modal-body'>
+              认怂后果：{currentChallenge.passConsequence}
+            </Text>
+            <View className='icebreaker__modal-actions'>
+              <Button
+                variant='secondary'
+                className='icebreaker__modal-btn'
+                onClick={() => setShowPassModal(false)}
+              >
+                我再想想
+              </Button>
+              <Button
+                variant='primary'
+                className='icebreaker__modal-btn'
+                onClick={() => {
+                  setShowPassModal(false)
+                  onComplete(true)
+                }}
+                disabled={isCompleting}
+                loading={isCompleting}
+              >
+                {isCompleting ? '提交中…' : '确认认怂'}
+              </Button>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       <View className='icebreaker__action-stack'>
-        {isMyChallenge && !hasCompleted ? (
-          <Button
-            variant='primary'
-            className='icebreaker__action-btn'
-            onClick={onComplete}
-            disabled={isCompleting}
-            loading={isCompleting}
-          >
-            {isCompleting ? '提交中…' : '我完成了挑战'}
-          </Button>
+        {isMyChallenge && !hasResponded ? (
+          <View style={{ display: 'flex', flexDirection: 'column', gap: '16rpx', width: '100%' }}>
+            <Button
+              variant='primary'
+              className='icebreaker__action-btn'
+              onClick={() => onComplete(false)}
+              disabled={isCompleting}
+              loading={isCompleting}
+            >
+              <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8rpx' }}>
+                <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-accept.png')} mode='aspectFit' style={{ width: '36rpx', height: '36rpx' }} />
+                <Text>{isCompleting ? '提交中…' : '接受挑战'}</Text>
+              </View>
+            </Button>
+            <Button
+              variant='secondary'
+              className='icebreaker__action-btn'
+              onClick={() => setShowPassModal(true)}
+              disabled={isCompleting}
+            >
+              <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8rpx' }}>
+                <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-pass.png')} mode='aspectFit' style={{ width: '36rpx', height: '36rpx' }} />
+                <Text>认怂</Text>
+              </View>
+            </Button>
+          </View>
         ) : null}
 
         {isMyChallenge && hasCompleted ? (
-          <Text className='icebreaker__helper-text'>已记录你的挑战完成状态，等待其他玩家完成。</Text>
+          <View className='icebreaker__dice-badge icebreaker__dice-badge--accept'>
+            <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-accept.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx' }} />
+            <Text className='icebreaker__dice-badge-text'>已完成挑战</Text>
+          </View>
         ) : null}
 
-        {!isMyChallenge ? (
+        {isMyChallenge && hasPassed ? (
+          <View className='icebreaker__dice-badge icebreaker__dice-badge--pass'>
+            <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-pass.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx' }} />
+            <Text className='icebreaker__dice-badge-text'>已认怂</Text>
+          </View>
+        ) : null}
+
+        {!isMyChallenge && hasResponded ? (
+          <Text className='icebreaker__helper-text'>
+            {hasPassed
+              ? `${currentChallenge?.displayName ?? 'TA'} 认怂了：${currentChallenge?.passConsequence ?? ''}`
+              : `${currentChallenge?.displayName ?? 'TA'} 接受了挑战，正在执行中…`}
+          </Text>
+        ) : null}
+
+        {!isMyChallenge && !hasResponded ? (
           <Text className='icebreaker__helper-text'>等待 {currentChallenge?.displayName ?? '当前玩家'} 完成挑战…</Text>
         ) : null}
       </View>
     </View>
   )
+}
+
+export interface AuctionBidRecord {
+  userId: string
+  displayName: string
+  amount: number
+  at: number
 }
 
 export function AuctionPhaseView({
@@ -785,6 +893,9 @@ export function AuctionPhaseView({
   const [bidText, setBidText] = useState('10')
   const [bidError, setBidError] = useState('')
   const [showSold, setShowSold] = useState(false)
+  const [showLotSold, setShowLotSold] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(30)
+  const [bidHistory, setBidHistory] = useState<AuctionBidRecord[]>([])
   const lots = session.auctionLots ?? []
   const idx = session.auctionCurrentLotIndex ?? 0
   const currentLot = lots[idx]
@@ -792,10 +903,41 @@ export function AuctionPhaseView({
   const balance = session.auctionBalances?.[currentUserId] ?? 0
   const allClosed = session.auctionAllLotsClosed ?? false
   const prevAllClosedRef = useRef(false)
+  const prevIdxRef = useRef(idx)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const nameOf = (uid: string) =>
+    session.joinedParticipants?.find((p) => p.userId === uid)?.displayName ?? '匿名'
+
+  // Countdown timer: 30s per lot
+  useEffect(() => {
+    setTimeLeft(30)
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [idx])
 
   useEffect(() => {
     setBidText('10')
     setBidError('')
+    // Detect lot change (host closed previous lot)
+    if (idx > prevIdxRef.current && prevIdxRef.current >= 0) {
+      setShowLotSold(true)
+      setBidHistory([])
+    }
+    prevIdxRef.current = idx
   }, [idx])
 
   useEffect(() => {
@@ -805,10 +947,27 @@ export function AuctionPhaseView({
     prevAllClosedRef.current = allClosed
   }, [allClosed])
 
+  // Sync bid history from server high bid
+  useEffect(() => {
+    if (!high) return
+    setBidHistory((prev) => {
+      if (prev.length > 0) {
+        const last = prev[prev.length - 1]
+        if (last.amount === high.amount && last.userId === high.userId) {
+          return prev
+        }
+      }
+      return [
+        ...prev,
+        { userId: high.userId, displayName: nameOf(high.userId), amount: high.amount, at: Date.now() },
+      ]
+    })
+  }, [high?.amount, high?.userId])
+
   if (lots.length === 0) {
     return (
       <View className='icebreaker__challenge'>
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--auction icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={80} /></View>
           <Text className='icebreaker__challenge-title'>脑洞拍卖会</Text>
           <Text className='icebreaker__challenge-desc'>
@@ -843,7 +1002,7 @@ export function AuctionPhaseView({
           autoDismissMs={3000}
           onDismiss={() => setShowSold(false)}
         />
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--auction icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={80} /></View>
           <Text className='icebreaker__challenge-title'>拍卖结束</Text>
           <Text className='icebreaker__challenge-desc'>全部竞拍已完成。</Text>
@@ -865,58 +1024,151 @@ export function AuctionPhaseView({
     )
   }
 
+  const timerUrgent = timeLeft <= 10 && timeLeft > 0
+  const timerExpired = timeLeft <= 0
+  const minBid = (high?.amount ?? 0) + 1
+  const canBid = !isHost && !timerExpired && balance >= minBid
+
+  const handleQuickBid = (amount: number) => {
+    if (amount <= (high?.amount ?? 0)) {
+      setBidError('出价须高于当前最高')
+      return
+    }
+    if (amount > balance) {
+      setBidError('余额不足')
+      return
+    }
+    setBidError('')
+    onPlaceBid(amount)
+  }
+
   return (
     <View className='icebreaker__challenge'>
-      <Card className='icebreaker__challenge-card'>
+      <CelebrationOverlay
+        visible={showLotSold}
+        frameKey='auction_sold'
+        title='成交！'
+        subtitle={high ? `${nameOf(high.userId)} 以 ${high.amount} 币拍下` : '本标无人出价'}
+        autoDismissMs={2000}
+        onDismiss={() => setShowLotSold(false)}
+      />
+
+      <Card className='icebreaker__challenge-card icebreaker__challenge-card--auction icebreaker__challenge-card--has-bg'>
         <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="auction" size={80} /></View>
         <Text className='icebreaker__challenge-title'>第 {idx + 1} / {lots.length} 标</Text>
         <Text className='icebreaker__challenge-desc'>{currentLot?.title ?? ''}</Text>
         {currentLot?.teaser ? (
           <Text className='icebreaker__challenge-hint'>{currentLot.teaser}</Text>
         ) : null}
+
+        {/* Timer */}
+        <View className={`icebreaker__auction-timer${timerUrgent ? ' icebreaker__auction-timer--urgent' : ''}${timerExpired ? ' icebreaker__auction-timer--expired' : ''}`}>
+          <Text className='icebreaker__auction-timer-value'>
+            {timerExpired ? '时间到' : `00:${timeLeft.toString().padStart(2, '0')}`}
+          </Text>
+        </View>
+
         <View className='icebreaker__challenge-meta'>
           <Text className='icebreaker__challenge-duration'>
-            当前最高：{high ? `${high.amount} 币` : '暂无'}
+            <Image src={require('../../assets/lovart/icebreaker/icons/icon-coin-single.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx', marginRight: '6rpx', verticalAlign: 'middle' }} />
+            当前最高：{high ? `${high.amount}` : '暂无'}
           </Text>
-          <Text className='icebreaker__challenge-completed'>我的余额：{balance} 币</Text>
+          <Text className='icebreaker__challenge-completed'>
+            <Image src={require('../../assets/lovart/icebreaker/icons/icon-coin-stack.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx', marginRight: '6rpx', verticalAlign: 'middle' }} />
+            余额：{balance}
+          </Text>
         </View>
       </Card>
 
+      {/* Bid history */}
+      {bidHistory.length > 0 && (
+        <View className='icebreaker__auction-history'>
+          <Text className='icebreaker__auction-history-title'>出价记录</Text>
+          {bidHistory.slice(-5).map((bid, i) => (
+            <View key={`${bid.userId}-${bid.amount}-${i}`} className='icebreaker__auction-history-row'>
+              <Text className='icebreaker__auction-history-name'>{bid.displayName}</Text>
+              <Text className='icebreaker__auction-history-amount'>{bid.amount} 币</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {!isHost ? (
         <View className='icebreaker__action-stack'>
-          <Text className='icebreaker__helper-text'>输入出价（整数，须高于当前最高且不超过余额）</Text>
-          <Input
-            type='number'
-            className='icebreaker__input'
-            value={bidText}
-            onInput={(e) => setBidText(e.detail.value)}
-          />
-          {bidError ? <Text className='icebreaker__error'>{bidError}</Text> : null}
-          <Button
-            variant='primary'
-            className='icebreaker__action-btn'
-            onClick={() => {
-              const n = Number.parseInt(bidText, 10)
-              if (!Number.isFinite(n) || n <= 0) {
-                setBidError('出价须为正整数')
-                return
-              }
-              if (high && n <= high.amount) {
-                setBidError(`出价须高于当前最高 ${high.amount} 币`)
-                return
-              }
-              if (n > balance) {
-                setBidError(`余额不足，当前余额 ${balance} 币`)
-                return
-              }
-              setBidError('')
-              onPlaceBid(n)
-            }}
-            disabled={isPlacingBid}
-            loading={isPlacingBid}
-          >
-            {isPlacingBid ? '提交中…' : '出价'}
-          </Button>
+          {timerExpired ? (
+            <Text className='icebreaker__helper-text'>时间到，等待主持人落槌…</Text>
+          ) : (
+            <>
+              <Text className='icebreaker__helper-text'>选择快捷出价或自定义金额</Text>
+
+              {/* Quick-bid buttons */}
+              <View className='icebreaker__auction-quick-bids'>
+                <Button
+                  variant='secondary'
+                  className='icebreaker__auction-quick-btn'
+                  onClick={() => handleQuickBid((high?.amount ?? 0) + 5)}
+                  disabled={!canBid || isPlacingBid || balance < ((high?.amount ?? 0) + 5)}
+                >
+                  +5
+                </Button>
+                <Button
+                  variant='secondary'
+                  className='icebreaker__auction-quick-btn'
+                  onClick={() => handleQuickBid((high?.amount ?? 0) + 10)}
+                  disabled={!canBid || isPlacingBid || balance < ((high?.amount ?? 0) + 10)}
+                >
+                  +10
+                </Button>
+                <Button
+                  variant='secondary'
+                  className='icebreaker__auction-quick-btn'
+                  onClick={() => handleQuickBid(balance)}
+                  disabled={!canBid || isPlacingBid || balance <= (high?.amount ?? 0)}
+                >
+                  ALL IN
+                </Button>
+              </View>
+
+              <Input
+                type='number'
+                className='icebreaker__input'
+                value={bidText}
+                onInput={(e) => setBidText(e.detail.value)}
+                placeholder={`最低出价 ${minBid}`}
+              />
+              {bidError ? (
+                <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8rpx', marginBottom: '8rpx' }}>
+                  <Image src={require('../../assets/lovart/icebreaker/icons/icon-coin-empty.png')} mode='aspectFit' style={{ width: '32rpx', height: '32rpx' }} />
+                  <Text className='icebreaker__error'>{bidError}</Text>
+                </View>
+              ) : null}
+              <Button
+                variant='primary'
+                className='icebreaker__action-btn'
+                onClick={() => {
+                  const n = Number.parseInt(bidText, 10)
+                  if (!Number.isFinite(n) || n <= 0) {
+                    setBidError('出价须为正整数')
+                    return
+                  }
+                  if (high && n <= high.amount) {
+                    setBidError(`出价须高于当前最高 ${high.amount} 币`)
+                    return
+                  }
+                  if (n > balance) {
+                    setBidError(`余额不足，当前余额 ${balance} 币`)
+                    return
+                  }
+                  setBidError('')
+                  onPlaceBid(n)
+                }}
+                disabled={isPlacingBid || timerExpired}
+                loading={isPlacingBid}
+              >
+                {isPlacingBid ? '提交中…' : '出价'}
+              </Button>
+            </>
+          )}
         </View>
       ) : null}
 
@@ -928,7 +1180,7 @@ export function AuctionPhaseView({
           disabled={isClosingLot}
           loading={isClosingLot}
         >
-          {isClosingLot ? '处理中…' : '关闭本标（落槌）'}
+          {isClosingLot ? '处理中…' : timerExpired ? '时间到，落槌' : '关闭本标（落槌）'}
         </Button>
       ) : null}
     </View>
@@ -946,7 +1198,7 @@ export function FallbackPhaseView({
 }) {
   return (
     <View className='icebreaker__challenge'>
-      <Card className='icebreaker__challenge-card'>
+      <Card className={`icebreaker__challenge-card icebreaker__challenge-card--${phase}`}>
         <PhaseHeaderIcon phase={phase} size={48} />
         <Text className='icebreaker__challenge-title' style={{ marginTop: '12rpx' }}>{getPhaseLabel(phase)}</Text>
         <Text className='icebreaker__challenge-desc'>这个阶段暂时使用精简版展示。</Text>

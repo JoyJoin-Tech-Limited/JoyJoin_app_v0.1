@@ -10,7 +10,10 @@
 
 The JoyJoin skill routing system ensures that the right repo skill is loaded at the right time for every ask or task. It follows a **simple, observable, maintainable** design — a lightweight rule-based router rather than a learned model.
 
-**v2.0 coverage:** Every skill directory under `.github/skills/` that contains a `SKILL.md` participates in routing (validator-reported count: **31** skills as of this document’s last review). The validator enforces complete coverage — each directory must include a `routing.yml` (or an explicit `routing-exempt.yml`) before the branch is considered valid.
+**v2.0 coverage:** Every skill directory under `.github/skills/` that contains a `SKILL.md` participates in routing (validator-reported count: **76** skills as of this document’s last review). The validator enforces complete coverage — each directory must include a `routing.yml` (or an explicit `routing-exempt.yml`) before the branch is considered valid.
+
+
+> **Note:** `.agents/skills/` is an OpenCode-specific mirror containing a subset (62 skills) of the canonical `.github/skills/` tree. See `skill-taxonomy.md` for the canonical classification.
 
 **Large coordinated refreshes** (product docs + skills + agents together): follow [`docs/ai-workflow-documentation-refresh.md`](../ai-workflow-documentation-refresh.md) for scope tiers, lanes, and `npm run orchestration:validate` when orchestration or routing metadata changes.
 

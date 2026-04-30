@@ -1,14 +1,13 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import type { PoolGroupDetailsResponse } from '@shared/api'
 import type { GroupAnalysisResponse, PairExplanation } from '@shared/types/groupAnalysis'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import ArchetypeHead from '../../components/ArchetypeHead'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
-import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import JoyJoinIcon from '../../components/JoyJoinIcon'
 import ChemistryBadge from '../../components/ChemistryBadge'
-import ConnectionPointPill from '../../components/ConnectionPointPill'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import UnifiedRevealCard from './UnifiedRevealCard'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import {
   getVibeLabel,
@@ -20,6 +19,7 @@ import {
   type ViewerPairSpotlight,
   type WaitingSeatViewModel,
   type WaitingStateCopy,
+  type UnifiedRevealTokens,
 } from './matchingStatusViewModels'
 
 export function MatchingHero({ heroSrc, className = '' }: { heroSrc: string; className?: string }) {
@@ -181,6 +181,7 @@ interface MatchingStatusDetailSectionsProps {
   viewerPairSummaryByMemberId: Map<string, PairExplanation>
   viewerSpotlight: ViewerPairSpotlight | null
   chemistryTokens: ChemistryTokens
+  unifiedReveal: UnifiedRevealTokens | null
   leadIceBreaker: string | null
   persistedThemeSummary: ThemeSummary | null
   /** WP4: optional; when set, dev/beta may show cache vs fresh for group analysis */
@@ -194,6 +195,7 @@ export function MatchingStatusDetailSections({
   viewerPairSummaryByMemberId,
   viewerSpotlight,
   chemistryTokens,
+  unifiedReveal,
   leadIceBreaker,
   persistedThemeSummary,
   groupAnalysisDebugMeta,
@@ -238,48 +240,15 @@ export function MatchingStatusDetailSections({
         </Card>
       ) : null}
 
-      {showChemistryCard ? (
+      {showChemistryCard && unifiedReveal ? (
         <Card className='matching-status__chemistry-card'>
-          <View className='matching-status__chemistry-top'>
-            <View className='matching-status__chemistry-badge'>
-              <ChemistryBadge
-                chemistry={chemistryTokens.iconRef}
-                size={32}
-                className='matching-status__chemistry-emoji'
-              />
-              <Text className='matching-status__chemistry-badge-text'>{chemistryTokens.label}</Text>
-            </View>
-            {viewerSpotlight ? (
-              <Text className='matching-status__chemistry-score'>默契 {viewerSpotlight.pair.chemistryScore}</Text>
-            ) : null}
-          </View>
-
-          <Text className='matching-status__chemistry-title'>
-            {viewerSpotlight
-              ? `你和 ${viewerSpotlight.otherMemberName} 最容易先聊开`
-              : '这桌的聊天化学反应已经有了'}
-          </Text>
-          <Text className='matching-status__chemistry-copy'>
-            {viewerSpotlight?.pair.explanation ?? chemistryTokens.body}
-          </Text>
-          {viewerSpotlight?.pair.introAngle ? (
-            <Text className='matching-status__chemistry-intro-angle'>
-              开场：{viewerSpotlight.pair.introAngle}
-            </Text>
-          ) : null}
-
-          {(viewerSpotlight?.pair.connectionPointsWithRarity?.length ?? viewerSpotlight?.pair.connectionPoints?.length) ? (
-            <View className='matching-status__chemistry-pill-row'>
-              {(viewerSpotlight.pair.connectionPointsWithRarity ?? viewerSpotlight.pair.connectionPoints.slice(0, 3).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 3).map((point) => (
-                <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
-              ))}
-            </View>
-          ) : null}
-
-          {leadIceBreaker ? (
-            <Text className='matching-status__chemistry-prompt'>破冰建议：{leadIceBreaker}</Text>
-          ) : null}
-          <GroupAnalysisSourceHint analysis={groupAnalysisDebugMeta ?? undefined} />
+          <UnifiedRevealCard
+            chemistryTokens={chemistryTokens}
+            unifiedReveal={unifiedReveal}
+            leadIceBreaker={leadIceBreaker}
+            introAngle={viewerSpotlight?.pair.introAngle ?? null}
+            groupAnalysisDebugMeta={groupAnalysisDebugMeta ?? undefined}
+          />
         </Card>
       ) : null}
 
@@ -328,8 +297,10 @@ interface MatchingStatusLiveOverlayProps {
   effectiveGroupDetails: PoolGroupDetailsResponse | null
   viewerPairSummaryByMemberId: Map<string, PairExplanation>
   viewerSpotlight: ViewerPairSpotlight | null
+  unifiedReveal: UnifiedRevealTokens | null
   matchedGroupNumber?: number | null
   shouldReduceMotion: boolean
+  hasRevealed: boolean
   persistedThemeSummary: ThemeSummary | null
   resolvedGroupId: string
   onContinueFromMembers: () => void
@@ -343,8 +314,10 @@ export function MatchingStatusLiveOverlay({
   effectiveGroupDetails,
   viewerPairSummaryByMemberId,
   viewerSpotlight,
+  unifiedReveal,
   matchedGroupNumber,
   shouldReduceMotion,
+  hasRevealed,
   persistedThemeSummary,
   resolvedGroupId,
   onContinueFromMembers,
@@ -379,9 +352,11 @@ export function MatchingStatusLiveOverlay({
           <Text className='matching-status__overlay-eyebrow'>先看桌友</Text>
           <Text className='matching-status__overlay-title'>这一桌已经为你留好位置</Text>
           <Text className='matching-status__overlay-copy'>
-            {viewerSpotlight
-              ? `第 ${resolvedGroupNumber} 组已锁定。你和 ${viewerSpotlight.otherMemberName} 会先从「${viewerSpotlight.pair.connectionPointsWithRarity?.[0]?.text ?? viewerSpotlight.pair.connectionPoints?.[0] ?? '一个共同话题'}」聊开。`
-              : `第 ${resolvedGroupNumber} 组已锁定，先认识一下今晚会同桌的人。`}
+            {unifiedReveal?.spotlight
+              ? `第 ${resolvedGroupNumber} 组已锁定。${unifiedReveal.body}`
+              : unifiedReveal?.headline
+                ? `第 ${resolvedGroupNumber} 组已锁定。${unifiedReveal.headline}`
+                : `第 ${resolvedGroupNumber} 组已锁定，先认识一下今晚会同桌的人。`}
           </Text>
 
           <View className='matching-status__overlay-member-grid'>
@@ -392,7 +367,7 @@ export function MatchingStatusLiveOverlay({
                 <View
                   key={member.userId}
                   className='matching-status__overlay-member-card'
-                  style={{ animationDelay: shouldReduceMotion ? '0ms' : `${index * 120}ms` }}
+                  style={{ animationDelay: (shouldReduceMotion || hasRevealed) ? '0ms' : `${index * 120}ms` }}
                 >
                   <View className='matching-status__overlay-member-avatar'>
                     <ArchetypeHead

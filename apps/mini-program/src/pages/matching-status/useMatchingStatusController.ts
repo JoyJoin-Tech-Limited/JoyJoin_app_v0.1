@@ -1,4 +1,4 @@
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidHide } from '@tarojs/taro'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -9,6 +9,7 @@ import {
   getPoolGroupDetails,
   type PoolGroupDetailsResponse,
   type PoolRegistrationSummary,
+  type SimilarPoolSummary,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import type {
@@ -16,11 +17,12 @@ import type {
   PoolMatchedData,
   PoolRegistrationAddedData,
 } from '@shared/wsEvents'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useWebSocket } from '../../hooks/useWebSocket'
-import { logError, logInfo } from '../../lib/logger'
+import { logError, logInfo, logWarn } from '../../lib/logger'
 import {
   navigateBackOrEventsTab,
   openPoolGroupDetail,
@@ -50,12 +52,13 @@ import {
   isVenueUnlocked,
   resolveMatchingStatusAuthBootstrap,
   resolvePersistedThemeSummary,
+  composeUnifiedReveal,
   type LiveRevealStage,
   type PoolFillStats,
   type ThemeSummary,
   type ViewerPairSpotlight,
+  type UnifiedRevealTokens,
 } from './matchingStatusViewModels'
-import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { generateChemistryPayoff } from '../../lib/chemistryPayoff'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
@@ -67,8 +70,6 @@ const LIVE_STAGE_DELAY_MS = 950
 const LIVE_STAGE_DELAY_REDUCED_MS = 140
 const MAX_SIMILAR_POOLS = 3
 const DANGER_COLOR = COLOR_DANGER
-
-import type { SimilarPoolSummary } from '@shared/api'
 
 function triggerLightHaptic() {
   if (typeof Taro.vibrateShort === 'function') {
@@ -108,6 +109,7 @@ export function useMatchingStatusController({
 
   const [isCancelling, setIsCancelling] = useState(false)
   const [liveStage, setLiveStage] = useState<LiveRevealStage>('idle')
+  const [hasRevealed, setHasRevealed] = useState(false)
   const [matchedData, setMatchedData] = useState<PoolMatchedData | null>(null)
   const [themeRevealData, setThemeRevealData] = useState<EventThemeTitleRevealedData | null>(null)
   const [liveGroupDetails, setLiveGroupDetails] = useState<PoolGroupDetailsResponse | null>(null)
@@ -120,12 +122,12 @@ export function useMatchingStatusController({
   const liveStageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const newMemberTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cancelNavigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedRef = useRef(true)
 
   const {
     data: registration,
     status: registrationQueryStatus,
     error: fetchError,
-    refetch: refetchRegistration,
   } = useQuery<PoolRegistrationSummary | undefined>({
     queryKey: ['mini-program', 'pool-registration', registrationId],
     queryFn: async () => {
@@ -322,21 +324,36 @@ export function useMatchingStatusController({
     )
   }, [effectiveGroupDetails?.members, user])
 
-  const baseChemistryTokens = getChemistryTokens(
-    groupAnalysis?.overallChemistry,
-    viewerSpotlight?.pair.chemistryScore ??
-      effectiveGroupDetails?.group.matchScore ??
-      registration?.matchScore ??
-      matchedData?.matchScore ??
-      null,
+  const baseChemistryTokens = useMemo(
+    () =>
+      getChemistryTokens(
+        groupAnalysis?.overallChemistry,
+        viewerSpotlight?.pair.chemistryScore ??
+          effectiveGroupDetails?.group.matchScore ??
+          registration?.matchScore ??
+          matchedData?.matchScore ??
+          null,
+      ),
+    [
+      groupAnalysis?.overallChemistry,
+      viewerSpotlight?.pair.chemistryScore,
+      effectiveGroupDetails?.group.matchScore,
+      registration?.matchScore,
+      matchedData?.matchScore,
+    ],
+  )
+
+  const unifiedReveal = useMemo<UnifiedRevealTokens>(
+    () => composeUnifiedReveal({ chemistryPayoff, viewerSpotlight }),
+    [chemistryPayoff, viewerSpotlight],
   )
 
   const chemistryTokens = useMemo(
     () => ({
       ...baseChemistryTokens,
-      body: chemistryPayoff?.chemistryLine ?? baseChemistryTokens.body,
+      body: unifiedReveal.body,
     }),
-    [baseChemistryTokens, chemistryPayoff],
+    [baseChemistryTokens, unifiedReveal],
   )
 
   const leadIceBreaker = groupAnalysis?.iceBreakers?.[0] ?? null
@@ -463,7 +480,9 @@ export function useMatchingStatusController({
   }, [queryClient, registrationId])
 
   useEffect(() => {
+    mountedRef.current = true
     return () => {
+      mountedRef.current = false
       if (liveStageTimerRef.current) {
         clearTimeout(liveStageTimerRef.current)
       }
@@ -501,6 +520,48 @@ export function useMatchingStatusController({
     }
   }, [matchStatus, poolFillUpdatedAt])
 
+  useDidHide(() => {
+    setLiveStage('idle')
+    if (liveStageTimerRef.current) {
+      clearTimeout(liveStageTimerRef.current)
+      liveStageTimerRef.current = null
+    }
+  })
+
+  // Check hasRevealed flag when resolvedGroupId changes
+  useEffect(() => {
+    if (!resolvedGroupId) {
+      setHasRevealed(false)
+      return
+    }
+
+    try {
+      const flag = Taro.getStorageSync<boolean>(`jj_revealed_${resolvedGroupId}`)
+      setHasRevealed(Boolean(flag))
+    } catch (error) {
+      logWarn('[MatchingStatus] Failed to read hasRevealed flag', {
+        groupId: resolvedGroupId,
+        message: error instanceof Error ? error.message : String(error),
+      })
+      setHasRevealed(false)
+    }
+  }, [resolvedGroupId])
+
+  // Save hasRevealed when user proceeds past members stage
+  useEffect(() => {
+    if (liveStage === 'theme' && resolvedGroupId && !hasRevealed) {
+      try {
+        Taro.setStorageSync(`jj_revealed_${resolvedGroupId}`, true)
+        setHasRevealed(true)
+      } catch (error) {
+        logWarn('[MatchingStatus] Failed to save hasRevealed flag', {
+          groupId: resolvedGroupId,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+  }, [liveStage, resolvedGroupId, hasRevealed])
+
   useEffect(() => {
     if (liveStage !== 'match' || isLoadingLiveGroupDetails) {
       return undefined
@@ -511,6 +572,8 @@ export function useMatchingStatusController({
     }
 
     liveStageTimerRef.current = setTimeout(() => {
+      if (!mountedRef.current) return
+
       if (effectiveGroupDetails?.members && effectiveGroupDetails.members.length > 0) {
         triggerLightHaptic()
         setLiveStage('members')
@@ -591,6 +654,7 @@ export function useMatchingStatusController({
         }
 
         newMemberTimerRef.current = setTimeout(() => {
+          if (!mountedRef.current) return
           setNewMemberJoined(false)
           setNewMemberArchetype(null)
         }, NEW_MEMBER_BADGE_DURATION_MS)
@@ -674,8 +738,10 @@ export function useMatchingStatusController({
     viewerPairSummaryByMemberId,
     viewerSpotlight,
     chemistryTokens,
+    unifiedReveal,
     leadIceBreaker,
     groupAnalysis,
+    hasRevealed,
     liveRevealError,
     liveStage,
     isLoadingLiveGroupDetails,

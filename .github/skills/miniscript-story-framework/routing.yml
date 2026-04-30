@@ -1,4 +1,5 @@
 skill: miniscript-story-framework
+category: ai-runtime
 
 primary_ownership: >
   MiniScript (迷你剧本杀) story framework JSON schema, POST /api/miniscript/generate,

@@ -494,14 +494,89 @@
     flex-direction: column;
     gap: $spacing-md;
     padding: $spacing-xl $spacing-lg;
-    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 50%, #a5f3fc 100%);
+    background: linear-gradient(135deg, #FAFAFA 0%, #F3F4F6 100%);
     text-align: center;
+    position: relative;
+    overflow: hidden;
+
+    // Text readability overlay for image backgrounds
+    &--has-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.15) 40%,
+        rgba(0, 0, 0, 0.35) 100%
+      );
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    &--has-bg > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    // Per-phase proprietary backgrounds (Lovart)
+    &--auction {
+      background: url('../../assets/lovart/icebreaker/backgrounds/bg-auction.jpg') center/cover no-repeat;
+    }
+
+    &--personality-dice {
+      background: url('../../assets/lovart/icebreaker/backgrounds/bg-personality-dice.jpg') center/cover no-repeat;
+    }
+
+    &--undercover-word {
+      background: url('../../assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') center/cover no-repeat;
+    }
+
+    &--group-mirror {
+      background: url('../../assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') center/cover no-repeat;
+    }
+
+    &--quip-battle {
+      background: url('../../assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') center/cover no-repeat;
+    }
+
+    // Fallback gradients for phases without proprietary backgrounds yet
+    &--micro-challenge {
+      background: linear-gradient(135deg, #ecfeff 0%, #cffafe 50%, #a5f3fc 100%);
+    }
+
+    &--lie-detective {
+      background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #2e1065 100%);
+    }
+
+    &--warmup {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+    }
+
+    &--mini-script {
+      background: linear-gradient(135deg, #1E1B4B 0%, #2E1065 50%, #2D3142 100%);
+    }
+
+    &--recap {
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #ddd6fe 100%);
+    }
   }
 
   &__challenge-emoji {
     width: 80rpx;
     height: 80rpx;
     display: block;
+  }
+
+  // Light text overrides for cards with dark image backgrounds
+  &__challenge-card--has-bg &__challenge-title,
+  &__challenge-card--has-bg &__challenge-desc,
+  &__challenge-card--has-bg &__challenge-hint,
+  &__challenge-card--has-bg &__challenge-duration,
+  &__challenge-card--has-bg &__challenge-completed {
+    color: #ffffff;
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
   }
 
   &__challenge-title {
@@ -564,6 +639,173 @@
     font-size: $font-size-sm;
     color: $color-success;
     font-weight: $font-weight-semibold;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Auction Phase
+  // ═══════════════════════════════════════════════════════════════
+  &__auction-timer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xs $spacing-lg;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 100rpx;
+    margin-top: $spacing-sm;
+    border: 1rpx solid rgba(255, 255, 255, 0.2);
+
+    &--urgent {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.5);
+      animation: pulse-urgent 1s ease infinite;
+    }
+
+    &--expired {
+      background: rgba(107, 114, 128, 0.35);
+      border-color: rgba(107, 114, 128, 0.5);
+    }
+  }
+
+  &__auction-timer-value {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
+  }
+
+  &__auction-quick-bids {
+    display: flex;
+    gap: $spacing-sm;
+    width: 100%;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__auction-quick-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__auction-history {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16rpx;
+    margin-top: $spacing-sm;
+  }
+
+  &__auction-history-title {
+    font-size: $font-size-sm;
+    color: $color-text-muted;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__auction-history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-xs 0;
+    border-bottom: 1rpx solid rgba($color-text-primary, 0.06);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__auction-history-name {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__auction-history-amount {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  @keyframes pulse-urgent {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: 0.85; }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Personality Dice Phase — Modal & Badges
+  // ═══════════════════════════════════════════════════════════════
+  &__modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6rpx);
+    @include flex-center;
+    animation: fade-in 0.2s ease both;
+  }
+
+  &__modal-card {
+    width: 520rpx;
+    padding: $spacing-xl;
+    background: #ffffff;
+    border-radius: 24rpx;
+    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    animation: scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  &__modal-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__modal-body {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  &__modal-actions {
+    display: flex;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__modal-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__dice-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 100rpx;
+    margin-top: $spacing-sm;
+
+    &--accept {
+      background: rgba($color-success, 0.12);
+    }
+
+    &--pass {
+      background: rgba($color-warning, 0.12);
+    }
+  }
+
+  &__dice-badge-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+
+    .icebreaker__dice-badge--accept & {
+      color: $color-success;
+    }
+
+    .icebreaker__dice-badge--pass & {
+      color: $color-warning;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════

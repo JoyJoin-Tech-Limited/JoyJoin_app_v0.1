@@ -95,7 +95,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | `pages/event-feedback/index` | Primary destination | Collects post-event feedback and optional free-text follow-up. | Post-event feedback path. |
 | `pages/pool-registration/index` | Primary destination | Collects pool-specific soft preferences and submits the user into a blind-box event pool. | Main bridge from discover to matching. |
 | `pages/event-coordination/index` | Primary destination | Hosts the post-match event coordination chat and report flow. | Runtime communication surface after matching. |
-| `pages/matching-status/index` | Primary destination | Shows waiting, matched, no-match, and cancelled states for a pool registration. | Main waiting and reveal-state hub. |
+| `pages/matching-status/index` | Primary destination | Shows waiting, matched, no-match, and cancelled states for a pool registration. | Main waiting and reveal-state hub. Now includes **Unified Connection Reveal** — fuses `chemistryPayoff` group narrative with `connectionPoints` pair evidence into a single card. |
 | `pages/squad-unboxing/index` | Primary destination | Runs the matched reveal and post-reveal transition into group detail and event follow-up. | Reveal-heavy matched-state surface. |
 | `pages/pool-group-detail/index` | Primary destination | Shows the matched group detail, members, event details, and AI group analysis. | Read-only matched group surface. |
 | `pages/icebreaker-session/index` | Primary destination | Runs the live Social Icebreaker session for matched groups at event time. | Hosts warmup, challenge, lie-detective, personality-dice, and recap phases. |
@@ -115,7 +115,7 @@ This inventory is derived from the registered paths in [`../apps/mini-program/sr
 | Returning login | `pages/index/index` or `pages/login/index` -> WeChat login -> `/api/auth/user` -> server-owned `nextStep` | Mini-program-native login only; no browser OAuth redirect. |
 | Discovery and pool registration | `pages/discover/index` -> optional `pages/event-detail/index` -> `pages/pool-registration/index` | Pool registration owns soft-preference capture before matching. |
 | Payment and verification | `pages/pool-registration/index` -> `pages/blind-box-payment/index` -> `pages/payment-verification/index` -> back to pool registration or onward to profile/events | Cross-platform coordination rules live in [`./PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md). |
-| Matching and reveal | `pages/matching-status/index` -> `pages/squad-unboxing/index` -> `pages/pool-group-detail/index` -> `pages/event-coordination/index` or `pages/events/index` | Query keys and invalidation rules live in [`./mini-program-data-fetching.md`](./mini-program-data-fetching.md). |
+| Matching and reveal | `pages/matching-status/index` -> `pages/squad-unboxing/index` -> `pages/pool-group-detail/index` -> `pages/event-coordination/index` or `pages/events/index` | Query keys and invalidation rules live in [`./mini-program-data-fetching.md`](./mini-program-data-fetching.md). Matching-status now runs the **Unified Connection Reveal** — `composeUnifiedReveal()` fuses group chemistry with pair connection points into a single `UnifiedRevealCard`. |
 | In-event icebreaker | `pages/icebreaker-session/index` | Active in-event social flow; server-owned session state is described in [`./AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md) and [`./architecture/current-state.md`](./architecture/current-state.md). |
 | Ongoing account, rewards, invite, and relationship use | `pages/profile/index`, `pages/events/index`, `pages/connections/index`, `pages/rewards/index`, `pages/invite/index`, `pages/edit-profile/index` | These are the steady-state anchors after onboarding and matching. |
 
@@ -126,7 +126,7 @@ Mini-program-reachable AI features are inventoried canonically in [`./AI_FEATURE
 | Feature family | Mini-program entry surfaces | What matters here |
 | --- | --- | --- |
 | Onboarding profile tagline | `pages/onboarding/profile-review/index` | Presentation-only AI line fetched during profile review; it does not change onboarding state ownership. |
-| Match group analysis | `pages/matching-status/index`, `pages/squad-unboxing/index`, `pages/pool-group-detail/index` | Shared `GroupAnalysisResponse` rendered on matched-state surfaces with cache and fallback behavior. |
+| Match group analysis | `pages/matching-status/index`, `pages/squad-unboxing/index`, `pages/pool-group-detail/index` | Shared `GroupAnalysisResponse` rendered on matched-state surfaces with cache and fallback behavior. Matching-status now additionally runs `composeUnifiedReveal()` to fuse `chemistryPayoff` with `connectionPointsWithRarity` into a single presentational card. |
 | Event theme reveal | Matching-status and group-detail surfaces after matching | Async theme/title generation can enrich the reveal and later group detail state. |
 | Social Icebreaker generation | `pages/icebreaker-session/index` | AI-backed warmup topics, micro-challenges, lie-detective content, personality-dice content, and recap summary. |
 | Semantic profile embeddings | Onboarding, profile, and interest-update writes | Backend-only enrichment triggered by user changes; not shown as a direct UI widget. |

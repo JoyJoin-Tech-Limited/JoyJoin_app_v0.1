@@ -720,6 +720,45 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `SurpriseMatchReveal` | Legacy rarity-first reveal overlay preserved in the repo but superseded in the active flow |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |
 
+##### Unified Connection Reveal *(Mini-Program, 2026-04-29)*
+
+**Mini-Program Component:** `apps/mini-program/src/pages/matching-status/index.tsx` with `UnifiedRevealCard`
+
+**Web Reference:** Not yet implemented — mini-program is launch-primary
+
+Fuses **group-level chemistry narrative** (`chemistryPayoff`) with **pair-level connection point evidence** (`connectionPointsWithRarity`) into a single emotionally resonant reveal card.
+
+**Data flow:**
+```
+PoolGroupDetailsResponse (members, interests, archetypes)
+  ↓
+generateChemistryPayoff() → { headline, chemistryLine, tags }
+  ↓
+GroupAnalysisResponse (pairExplanations, connectionPointsWithRarity)
+  ↓
+composeUnifiedReveal() → UnifiedRevealTokens
+  ↓
+UnifiedRevealCard renders fused narrative
+```
+
+**Key behaviors:**
+- **Priority rule:** Spotlight pair's `explanation` overrides the generic group `chemistryLine` for the card body. The group line falls back to `subtitle` so the group narrative is not lost.
+- **Rarity visualization:** Connection points render as tiered pills (common = grey, rare = purple, epic = gold) using server-provided `connectionPointsWithRarity`.
+- **Legacy normalization:** If only `connectionPoints: string[]` is present (cached older data), each entry is normalized to `{ text, rarity: 'common' }`.
+- **hasRevealed flag:** Per-group Taro storage (`jj_revealed_${groupId}`) skips overlay stagger animation on revisit.
+- **Reduced motion:** `shouldReduceMotion` (from device benchmark + query param + storage) disables all reveal animations; content is shown instantly.
+
+**Source files:**
+- `apps/mini-program/src/pages/matching-status/matchingStatusViewModels.ts` — `composeUnifiedReveal()`
+- `apps/mini-program/src/pages/matching-status/UnifiedRevealCard.tsx` — presentational component
+- `apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts` — `hasRevealed` + timer lifecycle
+- `apps/mini-program/src/pages/matching-status/matchingStatusViewModels.test.ts` — 12 regression tests
+
+**Non-goals:**
+- No server/API changes — purely client-side view-model fusion
+- No new dependencies or animation libraries
+- No Canvas-based rendering
+
 **Shared asset:** Canonical background SVG at `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories.
 
 #### Center-Tab Empty-State Page *(PRs #359, #362, #363)*

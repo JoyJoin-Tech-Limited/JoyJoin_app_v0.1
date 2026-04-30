@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text, Input, Image } from '@tarojs/components';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import { apiRequest } from '../../lib/api';
@@ -27,6 +27,8 @@ interface UndercoverWordPhaseViewProps {
   } | null;
   playerCount?: number;
   participants?: Array<{ userId: string; displayName?: string }>;
+  onAdvance?: () => void;
+  isAdvancing?: boolean;
 }
 
 export default function UndercoverWordPhaseView({
@@ -43,6 +45,8 @@ export default function UndercoverWordPhaseView({
   results,
   playerCount = 1,
   participants = [],
+  onAdvance,
+  isAdvancing = false,
 }: UndercoverWordPhaseViewProps) {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -130,21 +134,26 @@ export default function UndercoverWordPhaseView({
   if (!pair) {
     return (
       <View className='icebreaker__phase'>
-        <Text className='icebreaker__phase-title'>谁是卧底</Text>
-        <Text className='icebreaker__phase-subtitle'>描述你的词，找出卧底</Text>
-        {isHost ? (
-          <Button onClick={handleGenerate} disabled={isGenerating} loading={isGenerating}>
-            生成词对
-          </Button>
-        ) : (
-          <Text className='icebreaker__helper-text'>等待主持人生成词对...</Text>
-        )}
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+          <Text className='icebreaker__phase-title'>谁是卧底</Text>
+          <Text className='icebreaker__phase-subtitle'>描述你的词，找出卧底</Text>
+          {isHost ? (
+            <Button onClick={handleGenerate} disabled={isGenerating} loading={isGenerating}>
+              生成词对
+            </Button>
+          ) : (
+            <Text className='icebreaker__helper-text'>等待主持人生成词对...</Text>
+          )}
+        </Card>
       </View>
     );
   }
 
   // State: reveal done
   if (revealed && results) {
+    const roleIcon = results.undercoverUserId === userId
+      ? require('../../assets/lovart/icebreaker/icons/icon-role-undercover.png')
+      : require('../../assets/lovart/icebreaker/icons/icon-role-civilian.png');
     return (
       <View className='icebreaker__phase'>
         <CelebrationOverlay
@@ -155,20 +164,35 @@ export default function UndercoverWordPhaseView({
           autoDismissMs={3500}
           onDismiss={() => setShowSecret(false)}
         />
-        <Text className='icebreaker__phase-title'>揭晓时刻</Text>
-        <Card>
-          <Text className='icebreaker__challenge-title'>卧底是：{results.undercoverDisplayName}</Text>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+          <Text className='icebreaker__phase-title'>揭晓时刻</Text>
+          <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12rpx', marginBottom: '12rpx' }}>
+            <Image src={roleIcon} mode='aspectFit' style={{ width: '48rpx', height: '48rpx' }} />
+            <Text className='icebreaker__challenge-title'>卧底是：{results.undercoverDisplayName}</Text>
+          </View>
           <Text className='icebreaker__challenge-desc'>平民词：{results.civilianWord}</Text>
           <Text className='icebreaker__challenge-desc'>卧底词：{results.undercoverWord}</Text>
           <Text className='icebreaker__challenge-desc'>
             {results.caught ? '卧底被抓住了！' : '卧底成功隐藏！'}
           </Text>
+          {participants.map((p) => (
+            <Text key={p.userId} className='icebreaker__helper-text'>
+              {p.displayName}: {results.voteCounts[p.userId] || 0} 票
+            </Text>
+          ))}
         </Card>
-        {participants.map((p) => (
-          <Text key={p.userId} className='icebreaker__helper-text'>
-            {p.displayName}: {results.voteCounts[p.userId] || 0} 票
-          </Text>
-        ))}
+
+        {isHost && onAdvance && (
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={onAdvance}
+            disabled={isAdvancing}
+            loading={isAdvancing}
+          >
+            {isAdvancing ? '切换中…' : '进入下一阶段'}
+          </Button>
+        )}
       </View>
     );
   }
@@ -177,31 +201,33 @@ export default function UndercoverWordPhaseView({
   if (allDescribed && currentRound >= 1) {
     return (
       <View className='icebreaker__phase'>
-        <Text className='icebreaker__phase-title'>投票环节</Text>
-        <Text className='icebreaker__phase-subtitle'>谁最有可能是卧底？</Text>
-        {hasVoted ? (
-          <Text className='icebreaker__helper-text'>已投票，等待其他人...</Text>
-        ) : (
-          <>
-            {participants.map((p) => (
-              <Button
-                key={p.userId}
-                onClick={() => setSelectedTarget(p.userId)}
-                variant={selectedTarget === p.userId ? 'primary' : 'secondary'}
-              >
-                {p.displayName}
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+          <Text className='icebreaker__phase-title'>投票环节</Text>
+          <Text className='icebreaker__phase-subtitle'>谁最有可能是卧底？</Text>
+          {hasVoted ? (
+            <Text className='icebreaker__helper-text'>已投票，等待其他人...</Text>
+          ) : (
+            <>
+              {participants.map((p) => (
+                <Button
+                  key={p.userId}
+                  onClick={() => setSelectedTarget(p.userId)}
+                  variant={selectedTarget === p.userId ? 'primary' : 'secondary'}
+                >
+                  {p.displayName}
+                </Button>
+              ))}
+              <Button onClick={handleVote} disabled={!selectedTarget || voting}>
+                {voting ? '提交中...' : '确认投票'}
               </Button>
-            ))}
-            <Button onClick={handleVote} disabled={!selectedTarget || voting}>
-              {voting ? '提交中...' : '确认投票'}
+            </>
+          )}
+          {isHost && allVoted && (
+            <Button onClick={handleReveal} disabled={revealing}>
+              {revealing ? '揭晓中...' : '揭晓结果'}
             </Button>
-          </>
-        )}
-        {isHost && allVoted && (
-          <Button onClick={handleReveal} disabled={revealing}>
-            {revealing ? '揭晓中...' : '揭晓结果'}
-          </Button>
-        )}
+          )}
+        </Card>
         {error ? <Text className='icebreaker__error'>{error}</Text> : null}
       </View>
     );
@@ -210,44 +236,42 @@ export default function UndercoverWordPhaseView({
   // State: describing
   return (
     <View className='icebreaker__phase'>
-      <Text className='icebreaker__phase-title'>谁是卧底 · 第{currentRound + 1}轮</Text>
-      <Card>
+      <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
+        <Text className='icebreaker__phase-title'>谁是卧底 · 第{currentRound + 1}轮</Text>
         <Text className='icebreaker__challenge-title'>你的词</Text>
-        <Text className='icebreaker__challenge-desc' style={{ fontSize: '48rpx', fontWeight: 'bold' }}>
-          {myWord || '?'}
-        </Text>
+        <Text className='icebreaker__challenge-title'>{myWord || '?'}</Text>
         <Text className='icebreaker__helper-text'>
           {isUndercover ? '你是卧底！不要暴露自己' : '你是平民'}
         </Text>
-      </Card>
 
-      {currentRoundData?.descriptions.map((d, i) => (
-        <Text key={i} className='icebreaker__helper-text'>
-          {d.displayName}: {d.text}
-        </Text>
-      ))}
+        {currentRoundData?.descriptions.map((d, i) => (
+          <Text key={i} className='icebreaker__helper-text'>
+            {d.displayName}: {d.text}
+          </Text>
+        ))}
 
-      {!hasSubmittedDesc ? (
-        <>
-          <Input
-            placeholder='用一句话描述你的词（不要直接说词）'
-            value={description}
-            onInput={(e) => setDescription(e.detail.value.slice(0, 100))}
-            maxlength={100}
-          />
-          <Button onClick={handleDescribe} disabled={!description.trim() || submitting}>
-            {submitting ? '提交中...' : '提交描述'}
+        {!hasSubmittedDesc ? (
+          <>
+            <Input
+              placeholder='用一句话描述你的词（不要直接说词）'
+              value={description}
+              onInput={(e) => setDescription(e.detail.value.slice(0, 100))}
+              maxlength={100}
+            />
+            <Button onClick={handleDescribe} disabled={!description.trim() || submitting}>
+              {submitting ? '提交中...' : '提交描述'}
+            </Button>
+          </>
+        ) : (
+          <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
+        )}
+
+        {isHost && allDescribed && (
+          <Button onClick={handleReveal} disabled={revealing}>
+            {revealing ? '处理中...' : currentRound >= 1 ? '进入投票' : '下一轮'}
           </Button>
-        </>
-      ) : (
-        <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
-      )}
-
-      {isHost && allDescribed && (
-        <Button onClick={handleReveal} disabled={revealing}>
-          {revealing ? '处理中...' : currentRound >= 1 ? '进入投票' : '下一轮'}
-        </Button>
-      )}
+        )}
+      </Card>
       {error ? <Text className='icebreaker__error'>{error}</Text> : null}
     </View>
   );

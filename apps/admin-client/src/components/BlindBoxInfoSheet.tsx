@@ -65,11 +65,11 @@ export default function BlindBoxInfoSheet({
           
           {/* 可滚动内容 */}
           <div className="overflow-y-auto flex-1 px-4 pb-6">
-            {/* 小悦介绍区 */}
+            {/* 悦仔介绍区 */}
             <div className="mb-6 flex items-start gap-3">
               <Avatar className="h-12 w-12 flex-shrink-0 border-2 border-primary/20">
                 {XIAOYUE_AVATAR_PLACEHOLDER ? (
-                  <AvatarImage src={XIAOYUE_AVATAR_PLACEHOLDER} alt="小悦" />
+                  <AvatarImage src={XIAOYUE_AVATAR_PLACEHOLDER} alt="悦仔" />
                 ) : null}
                 <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20">
                   <Bot className="h-6 w-6 text-primary" />
@@ -78,7 +78,7 @@ export default function BlindBoxInfoSheet({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Drawer.Title className="text-base font-semibold" data-testid="text-sheet-title">
-                    小悦
+                    悦仔
                   </Drawer.Title>
                   <Badge variant="secondary" className="text-xs">
                     悦聚助手
@@ -86,7 +86,7 @@ export default function BlindBoxInfoSheet({
                 </div>
                 <div className="bg-muted/50 rounded-lg rounded-tl-none p-3">
                   <p className="text-sm">
-                    嗨～我是小悦！让我来告诉你<span className="font-medium text-primary">盲盒模式</span>是怎么玩的吧～
+                    嗨～我是悦仔！让我来告诉你<span className="font-medium text-primary">盲盒模式</span>是怎么玩的吧～
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     详情在成局后解锁哦

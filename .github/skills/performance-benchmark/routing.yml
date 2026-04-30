@@ -1,4 +1,5 @@
 skill: performance-benchmark
+category: internal
 
 primary_ownership: >
   Measuring and comparing performance baselines before and after changes,

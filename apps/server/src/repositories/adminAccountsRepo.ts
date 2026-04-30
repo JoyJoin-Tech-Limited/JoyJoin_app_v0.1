@@ -1,21 +1,13 @@
 import { type AdminAccount, adminAccounts } from "@shared/schema";
-import { eq } from "drizzle-orm";
 import { db } from "../db";
+import { eq, sql } from "drizzle-orm";
 
 export interface AdminAccountsRepository {
   getAdminAccountByUsername(username: string): Promise<AdminAccount | undefined>;
   getAdminAccountById(id: string): Promise<AdminAccount | undefined>;
   listAdminAccounts(): Promise<AdminAccount[]>;
-  createAdminAccount(data: {
-    username: string;
-    passwordHash: string;
-    role: string;
-    displayName?: string;
-  }): Promise<AdminAccount>;
-  updateAdminAccount(
-    id: string,
-    updates: Partial<Pick<AdminAccount, "role" | "status" | "displayName" | "passwordHash">>,
-  ): Promise<AdminAccount>;
+  createAdminAccount(data: { username: string; passwordHash: string; role: string; displayName?: string }): Promise<AdminAccount>;
+  updateAdminAccount(id: string, updates: Partial<Pick<AdminAccount, 'role' | 'status' | 'displayName' | 'passwordHash'>>): Promise<AdminAccount>;
   updateAdminLastLogin(id: string): Promise<void>;
 }
 
@@ -56,7 +48,7 @@ export const adminAccountsRepo: AdminAccountsRepository = {
         passwordHash: data.passwordHash,
         role: data.role,
         displayName: data.displayName,
-        status: "active",
+        status: 'active',
       })
       .returning();
     return account;
@@ -64,7 +56,7 @@ export const adminAccountsRepo: AdminAccountsRepository = {
 
   async updateAdminAccount(
     id: string,
-    updates: Partial<Pick<AdminAccount, "role" | "status" | "displayName" | "passwordHash">>,
+    updates: Partial<Pick<AdminAccount, 'role' | 'status' | 'displayName' | 'passwordHash'>>,
   ): Promise<AdminAccount> {
     const [account] = await db
       .update(adminAccounts)
@@ -79,5 +71,5 @@ export const adminAccountsRepo: AdminAccountsRepository = {
       .update(adminAccounts)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(adminAccounts.id, id));
-  },
+  }
 };

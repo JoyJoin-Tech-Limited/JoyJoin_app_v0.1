@@ -10,108 +10,51 @@ description: >-
   "chat report", "ai frozen".
 ---
 
-# content-safety-abuse-detection
+# Content Safety and Abuse Detection
 
-## Purpose
-
-This skill owns the server's trust-and-safety layer: deterministic content
-filtering, behavioral abuse detection, rate limiting, user-level penalties,
-and admin moderation surfaces. It does **not** own auth gating or RBAC
-policy — those live in `auth-session-and-safety-boundaries` and
-`admin-audit-and-rbac-governance`.
+**Core rule:** Keep filtering deterministic and server-side. Respect the violation escalation ladder. Always pair moderation mutations with audit logs. Keep reports dual-track.
 
 ## When to use this skill
 
 Use this skill when you are:
 
-- adding or changing content-filter logic (sensitive-word lists, severity tiers,
-  gibberish/repetition detection)
-- modifying abuse-detection thresholds (token quotas, conversation turn limits,
-  message-rate floors, duplicate-message guards)
-- implementing or reviewing user ban/unban flows, violation counting, or
-  freeze-until logic
+- adding or changing content-filter logic (sensitive-word lists, severity tiers, gibberish/repetition detection)
+- modifying abuse-detection thresholds (token quotas, conversation turn limits, message-rate floors, duplicate-message guards)
+- implementing or reviewing user ban/unban flows, violation counting, or freeze-until logic
 - adding admin moderation endpoints (reports, moderation logs, stats)
 - working with chat-report or user-report tables and schemas
 - tuning rate-limit windows for AI, auth, payment, or webhook endpoints
-- adding content-moderation guards to AI-generated output (e.g. social-tag
-  blacklists)
+- adding content-moderation guards to AI-generated output
 
 ## When NOT to use this skill
 
-- task is about auth session policy or route gating (use
-  `auth-session-and-safety-boundaries`)
-- task is about admin RBAC matrices or audit-log obligations (use
-  `admin-audit-and-rbac-governance`)
-- task is purely about observability, metrics, or logging infrastructure (use
-  `platform-observability-and-ops`)
-- task is about generic code review with no safety focus (use `code-review`)
+- task is about auth session policy or route gating → use `auth-session-and-safety-boundaries`
+- task is about admin RBAC matrices or audit-log obligations → use `admin-audit-and-rbac-governance`
+- task is purely about observability, metrics, or logging infrastructure → use `platform-observability-and-ops`
+- task is about generic code review with no safety focus → use `code-review`
 
-## Core rules
+## Moderation workflow overview
 
-1. **Keep filtering deterministic and server-side.**
-   `contentFilter.ts` is the canonical authority for sensitive-word detection.
-   Do not move filter logic to the client or replace it with an LLM call.
+1. **Filtering** — `contentFilter.ts` is the canonical authority for sensitive-word detection (exact substring matching). Do not move logic to the client or replace it with an LLM call.
+2. **Escalation** — Warning → 1-hour AI freeze → 24-hour AI freeze → permanent ban. Severe violations count as +2; warnings as +1. Change thresholds deliberately in `abuseDetection.ts`.
+3. **Audit** — Ban/unban and report resolution must emit `logAdminAudit(...)` with `USER_BANNED` or `USER_UNBANNED`. Do not silently change `isBanned`.
+4. **Reports** — Dual-track: `reports` table for general content, `chatReports` table for group-chat messages. Do not mix flows.
 
-2. **Respect the violation escalation ladder.**
-   Warning → 1-hour AI freeze → 24-hour AI freeze → permanent ban.
-   Severe violations count as +2; warnings count as +1. Thresholds are
-   defined in `abuseDetection.ts` and must be changed deliberately, not
-   ad-hoc in route handlers.
+See [`references/moderation-ops.md`](references/moderation-ops.md) for detailed filter specifics, rate-limiting rules, AI token quota details, chat reporting flow, and freeze/unfreeze procedures.
 
-3. **Rate limits are in-memory today.**
-   `rateLimiter.ts` uses a local `Map`. This will not share state across
-   server instances. Document any new limiter with a TODO for Redis migration
-   if the endpoint is attacker-facing.
+## Violation tracking overview
 
-4. **Always pair moderation mutations with audit logs.**
-   Ban/unban and report resolution must emit `logAdminAudit(...)` with
-   `action: 'USER_BANNED'` or `'USER_UNBANNED'`. Do not silently change
-   `isBanned`.
-
-5. **Reports are dual-track.**
-   - `reports` table: general user/content reports (harassment, fake profile,
-     inappropriate content).
-   - `chatReports` table: event-group-chat message reports.
-   Keep schemas aligned with `packages/shared/src/schema.ts` and do not mix
-   the two flows in a single UI or API surface.
-
-6. **Content moderation on AI output is a post-generation filter.**
-   The social-tag generator in `tagGenerationService.ts` validates generated
-   tags against `BLACKLIST_KEYWORDS` before returning them. Follow this
-   pattern for new AI-backed features that emit user-visible strings.
-
-## Current repo anchors
-
-- `apps/server/src/contentFilter.ts` — sensitive-word lists, severity mapping,
-  gibberish/repetition detection.
-- `apps/server/src/abuseDetection.ts` — `checkUserAbuse`, token quotas,
-  conversation guards, violation escalation, `recordViolation`.
-- `apps/server/src/rateLimiter.ts` — `createRateLimiter`, AI/auth/payment/
-  webhook limiters, in-memory store cleanup.
-- `apps/server/src/routes.ts` — `/api/admin/users/:id/ban|unban`,
-  `/api/admin/moderation/*`, `/api/registration/chat/message` abuse gate.
-- `packages/shared/src/schema.ts` — `users.isBanned`, `users.violationCount`,
-  `users.aiFrozenUntil`, `reports`, `moderationLogs`, `chatReports`, `chatLogs`.
-- `apps/server/src/tagGenerationService.ts` — `BLACKLIST_KEYWORDS`,
-  `validateTag` for AI-generated content moderation.
-- `apps/server/src/lib/adminAuditLogger.ts` — `USER_BANNED`, `USER_UNBANNED`
-  action vocabulary.
+- `users.violationCount` accumulates across incidents
+- `users.aiFrozenUntil` sets a time-bounded AI suspension
+- `users.isBanned` is a permanent flag
+- AI-generated content must pass a post-generation blacklist check (e.g., `tagGenerationService.ts` pattern)
 
 ## Quick examples
 
-- **Add a new sensitive-word category**: extend `sensitiveWordLists` in
-  `contentFilter.ts` with a `ViolationType` entry, choose `warning` or `severe`,
-  and add a corresponding message in the `messages` record. Do not hard-code
-  severity in route handlers.
-- **Add a rate limiter to a new AI endpoint**: import `createRateLimiter` from
-  `rateLimiter.ts`, instantiate it with a descriptive `keyPrefix`, and apply it
-  as Express middleware. Add a TODO comment noting the in-memory limitation.
-- **Debug why a user sees "AI功能暂时冻结"**: check `users.aiFrozenUntil` in
-  the DB, then trace `abuseDetection.ts` → `recordViolation` to see which
-  threshold was crossed (`warningFreezeHours`, `tempBanHours`, or `permBan`).
-- **Add a user-report API**: create the route in `routes.ts` behind
-  `requireAuth`, validate with `insertReportSchema` from `@shared/schema`,
-  and insert into the `reports` table. Do not mix this with `chatReports`.
+- **Add a new sensitive-word category**: extend `sensitiveWordLists` in `contentFilter.ts`, choose `warning` or `severe`, and add the corresponding message. Do not hard-code severity in route handlers.
+- **Add a rate limiter to a new AI endpoint**: import `createRateLimiter` from `rateLimiter.ts`, instantiate with a descriptive `keyPrefix`, and apply as Express middleware. Add a TODO comment noting the in-memory limitation.
+- **Debug why a user sees "AI功能暂时冻结"**: check `users.aiFrozenUntil`, then trace `abuseDetection.ts` → `recordViolation` to see which threshold was crossed.
+- **Add a user-report API**: create the route behind `requireAuth`, validate with `insertReportSchema`, and insert into the `reports` table. Do not mix with `chatReports`.
 
 ## Troubleshooting
 
@@ -133,24 +76,3 @@ Use this skill when you are:
 - [ ] AI-generated content is validated against a blacklist or filter before reaching the user
 - [ ] Violation thresholds are changed in `abuseDetection.ts` constants, not inline in routes
 - [ ] In-memory rate-limit state is acknowledged as a horizontal-scaling limitation
-
-## Related skills
-
-| Skill | When to hand off |
-|-------|-----------------|
-| `admin-audit-and-rbac-governance` | admin moderation routes need RBAC mapping or audit-log obligations |
-| `auth-session-and-safety-boundaries` | auth gating, session middleware, or fail-closed route policy changes |
-| `platform-observability-and-ops` | adding metrics, alerts, or structured logging around abuse/moderation events |
-| `llm-runtime-safety-and-integration` | AI-generated output needs prompt-level safety or fallback behavior beyond post-generation filtering |
-| `server-domain-architecture` | new moderation routes need placement in `routes/domains/*` or repository extraction |
-| `reliability-and-state-integrity` | moderation workflows need idempotency, transaction guards, or retry safety |
-
-## Canonical references
-
-- `apps/server/src/contentFilter.ts`
-- `apps/server/src/abuseDetection.ts`
-- `apps/server/src/rateLimiter.ts`
-- `apps/server/src/routes.ts`
-- `apps/server/src/tagGenerationService.ts`
-- `apps/server/src/lib/adminAuditLogger.ts`
-- `packages/shared/src/schema.ts`

@@ -1,6 +1,6 @@
-import { type InsertVenueTimeSlot, type VenueTimeSlot, venueDeals, venueTimeSlotBookings, venueTimeSlots, venues } from "@shared/schema";
-import { and, eq, or, sql } from "drizzle-orm";
+import { type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking, venues, venueDeals, venueTimeSlots, venueTimeSlotBookings, events } from "@shared/schema";
 import { db } from "../db";
+import { eq, and, desc, sql, or, gte, inArray } from "drizzle-orm";
 
 export interface VenuesRepository {
   getAllVenues(): Promise<any[]>;
@@ -34,16 +34,10 @@ export interface VenuesRepository {
   getAllVenueTimeSlotsWithVenue(): Promise<Array<VenueTimeSlot & { venueName: string; venueCity: string; venueDistrict: string }>>;
   getVenueTimeSlots(venueId: string): Promise<VenueTimeSlot[]>;
   createVenueTimeSlot(data: InsertVenueTimeSlot): Promise<VenueTimeSlot>;
-  batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, "venueId">>): Promise<VenueTimeSlot[]>;
+  batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, 'venueId'>>): Promise<VenueTimeSlot[]>;
   updateVenueTimeSlot(id: string, updates: Partial<VenueTimeSlot>): Promise<VenueTimeSlot>;
   deleteVenueTimeSlot(id: string): Promise<void>;
-  getAvailableVenuesForDateTime(
-    city: string,
-    district: string | undefined,
-    date: string,
-    startTime?: string,
-    endTime?: string,
-  ): Promise<Array<{ venue: any; availableSlots: VenueTimeSlot[] }>>;
+  getAvailableVenuesForDateTime(city: string, district: string | undefined, date: string, startTime?: string, endTime?: string): Promise<Array<{ venue: any; availableSlots: VenueTimeSlot[] }>>;
 }
 
 export const venuesRepo: VenuesRepository = {
@@ -75,7 +69,10 @@ export const venuesRepo: VenuesRepository = {
   },
 
   async getActiveVenueDistricts(venueType?: string): Promise<{ clusterId: string; districtId: string; count: number }[]> {
-    const typeFilter = venueType === "饭局" ? "restaurant" : venueType === "酒局" ? "bar" : null;
+    // 获取有激活场地的商圈列表，按活动类型过滤（饭局->restaurant, 酒局->bar）
+    const typeFilter = venueType === '饭局' ? 'restaurant' : venueType === '酒局' ? 'bar' : null;
+    
+    // 根据 area 推断 clusterId: 南山区->nanshan, 福田区->futian
     const result = await db.execute(sql`
       SELECT 
         CASE 
@@ -92,11 +89,11 @@ export const venuesRepo: VenuesRepository = {
       GROUP BY area, district_id
       ORDER BY count DESC
     `);
-
+    
     return result.rows.map((row: any) => ({
       clusterId: row.cluster_id as string,
       districtId: row.district_id as string,
-      count: Number(row.count),
+      count: Number(row.count)
     }));
   },
 
@@ -125,7 +122,7 @@ export const venuesRepo: VenuesRepository = {
   async updateVenue(id: string, updates: any): Promise<any> {
     const setClauses = [];
     const values: any[] = [];
-
+    
     if (updates.name !== undefined) {
       setClauses.push(`name = $${values.length + 1}`);
       values.push(updates.name);
@@ -210,6 +207,7 @@ export const venuesRepo: VenuesRepository = {
       setClauses.push(`vibe_descriptor = $${values.length + 1}`);
       values.push(updates.vibeDescriptor);
     }
+    // 新增字段：合作场地优惠系统
     if (updates.avgPrice !== undefined) {
       setClauses.push(`avg_price = $${values.length + 1}`);
       values.push(updates.avgPrice);
@@ -240,9 +238,8 @@ export const venuesRepo: VenuesRepository = {
     }
 
     values.push(id);
-    const query = sql.raw(
-      `UPDATE venues SET ${setClauses.join(", ")}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`,
-    );
+    // SECURITY: setClauses contains only hardcoded column names. Never make them dynamic.
+    const query = sql.raw(`UPDATE venues SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`);
     const result = await db.execute(query);
     return result.rows[0];
   },
@@ -261,7 +258,7 @@ export const venuesRepo: VenuesRepository = {
   },
 
   async getActiveVenueDeals(venueId: string): Promise<any[]> {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0];
     const result = await db.execute(sql`
       SELECT * FROM venue_deals 
       WHERE venue_id = ${venueId}
@@ -281,7 +278,7 @@ export const venuesRepo: VenuesRepository = {
         per_person_limit, valid_from, valid_until, terms, excluded_dates, is_active
       ) VALUES (
         ${data.venueId}, ${data.title}, ${data.discountType}, ${data.discountValue || null},
-        ${data.description || null}, ${data.redemptionMethod || "show_page"},
+        ${data.description || null}, ${data.redemptionMethod || 'show_page'},
         ${data.redemptionCode || null}, ${data.minSpend || null}, ${data.maxDiscount || null},
         ${data.perPersonLimit || false}, ${data.validFrom || null}, ${data.validUntil || null},
         ${data.terms || null}, ${data.excludedDates || null}, ${data.isActive !== false}
@@ -314,8 +311,7 @@ export const venuesRepo: VenuesRepository = {
 
     setData.updatedAt = new Date();
 
-    const [result] = await db
-      .update(venueDeals)
+    const [result] = await db.update(venueDeals)
       .set(setData)
       .where(eq(venueDeals.id, id))
       .returning();
@@ -334,8 +330,8 @@ export const venuesRepo: VenuesRepository = {
   },
 
   async checkVenueAvailability(venueId: string, bookingDate: Date, bookingTime: string): Promise<boolean> {
-    const dateStr = bookingDate.toISOString().split("T")[0];
-
+    const dateStr = bookingDate.toISOString().split('T')[0];
+    
     const result = await db.execute(sql`
       SELECT v.max_concurrent_events,
         COALESCE(COUNT(vb.id), 0)::integer as current_bookings
@@ -364,8 +360,8 @@ export const venuesRepo: VenuesRepository = {
     participantCount: number;
     estimatedRevenue?: number;
   }): Promise<any> {
-    const dateStr = data.bookingDate.toISOString().split("T")[0];
-
+    const dateStr = data.bookingDate.toISOString().split('T')[0];
+    
     const result = await db.execute(sql`
       WITH venue_check AS (
         SELECT v.id, v.max_concurrent_events,
@@ -392,7 +388,7 @@ export const venuesRepo: VenuesRepository = {
     `);
 
     if (result.rows.length === 0) {
-      throw new Error("Venue is not available at the requested time");
+      throw new Error('Venue is not available at the requested time');
     }
 
     return result.rows[0];
@@ -453,33 +449,34 @@ export const venuesRepo: VenuesRepository = {
     const existingBooking = await db.execute(sql`
       SELECT * FROM venue_bookings WHERE id = ${bookingId}
     `);
-
+    
     if (existingBooking.rows.length === 0) {
-      throw new Error("Booking not found");
+      throw new Error('Booking not found');
     }
-
+    
     const booking = existingBooking.rows[0];
+    
     const newVenue = await this.getVenue(newVenueId);
     if (!newVenue) {
-      throw new Error("New venue not found");
+      throw new Error('New venue not found');
     }
-
+    
     const isAvailable = await this.checkVenueAvailability(
-      newVenueId,
-      new Date(booking.booking_date as string),
-      booking.booking_time as string,
+      newVenueId, 
+      new Date(booking.booking_date as string), 
+      booking.booking_time as string
     );
-
+    
     if (!isAvailable) {
-      throw new Error("New venue is not available at the requested time");
+      throw new Error('New venue is not available at the requested time');
     }
-
+    
     await db.execute(sql`
       UPDATE venue_bookings
       SET status = 'migrated', updated_at = NOW()
       WHERE id = ${bookingId}
     `);
-
+    
     const newBooking = await db.execute(sql`
       INSERT INTO venue_bookings (
         venue_id, event_id, booking_date, booking_time,
@@ -491,13 +488,13 @@ export const venuesRepo: VenuesRepository = {
       )
       RETURNING *
     `);
-
-    console.log(`[VenueMigration] Booking ${bookingId} migrated from venue to ${newVenueId}. Reason: ${reason || "N/A"}`);
-
+    
+    console.log(`[VenueMigration] Booking ${bookingId} migrated from venue to ${newVenueId}. Reason: ${reason || 'N/A'}`);
+    
     return {
-      oldBooking: { ...booking, status: "migrated" },
+      oldBooking: { ...booking, status: 'migrated' },
       newBooking: newBooking.rows[0],
-      newVenue,
+      newVenue
     };
   },
 
@@ -526,7 +523,7 @@ export const venuesRepo: VenuesRepository = {
       WHERE vts.is_active = true AND v.is_active = true
       ORDER BY vts.day_of_week NULLS LAST, vts.start_time
     `);
-
+    
     return (result.rows as any[]).map((row: any) => ({
       id: row.id,
       venueId: row.venue_id,
@@ -561,12 +558,9 @@ export const venuesRepo: VenuesRepository = {
     return slot;
   },
 
-  async batchCreateVenueTimeSlots(
-    venueId: string,
-    slots: Array<Omit<InsertVenueTimeSlot, "venueId">>,
-  ): Promise<VenueTimeSlot[]> {
+  async batchCreateVenueTimeSlots(venueId: string, slots: Array<Omit<InsertVenueTimeSlot, 'venueId'>>): Promise<VenueTimeSlot[]> {
     if (slots.length === 0) return [];
-
+    
     const slotsWithVenueId = slots.map((slot: any) => ({
       ...slot,
       venueId,
@@ -576,7 +570,7 @@ export const venuesRepo: VenuesRepository = {
       .insert(venueTimeSlots)
       .values(slotsWithVenueId)
       .returning();
-
+    
     return createdSlots;
   },
 
@@ -598,55 +592,64 @@ export const venuesRepo: VenuesRepository = {
     district: string | undefined,
     date: string,
     startTime?: string,
-    endTime?: string,
+    endTime?: string
   ): Promise<Array<{ venue: any; availableSlots: VenueTimeSlot[] }>> {
     const dayOfWeek = new Date(date).getDay();
 
-    const venueQuery = db
-      .select()
-      .from(venues)
-      .where(
-        and(
-          eq(venues.city, city),
-          eq(venues.isActive, true),
-          district ? eq(venues.area, district) : undefined,
-        ),
-      );
+    let venueQuery = db.select().from(venues).where(
+      and(
+        eq(venues.city, city),
+        eq(venues.isActive, true),
+        district ? eq(venues.area, district) : undefined
+      )
+    );
 
     const allVenues = await venueQuery;
+    if (allVenues.length === 0) return [];
+
+    const venueIds = allVenues.map(v => v.id);
+
+    // Batch load all time slots for all venues in one query
+    const allSlots = await db
+      .select()
+      .from(venueTimeSlots)
+      .where(
+        and(
+          inArray(venueTimeSlots.venueId, venueIds),
+          eq(venueTimeSlots.isActive, true),
+          or(
+            eq(venueTimeSlots.dayOfWeek, dayOfWeek),
+            eq(venueTimeSlots.specificDate, date)
+          )
+        )
+      );
+
+    // Batch load all bookings for the date in one query
+    const allBookings = await db
+      .select()
+      .from(venueTimeSlotBookings)
+      .where(
+        and(
+          eq(venueTimeSlotBookings.bookingDate, date),
+          eq(venueTimeSlotBookings.status, "confirmed"),
+          inArray(venueTimeSlotBookings.venueId, venueIds)
+        )
+      );
+
     const result: Array<{ venue: any; availableSlots: VenueTimeSlot[] }> = [];
 
     for (const venue of allVenues) {
-      const slots = await db
-        .select()
-        .from(venueTimeSlots)
-        .where(
-          and(
-            eq(venueTimeSlots.venueId, venue.id),
-            eq(venueTimeSlots.isActive, true),
-            or(
-              eq(venueTimeSlots.dayOfWeek, dayOfWeek),
-              eq(venueTimeSlots.specificDate, date),
-            ),
-          ),
-        );
+      let slots = allSlots.filter((s: any) => s.venueId === venue.id);
 
-      let filteredSlots = slots;
       if (startTime && endTime) {
-        filteredSlots = slots.filter((slot: any) => slot.startTime <= startTime && slot.endTime >= endTime);
+        slots = slots.filter((slot: any) => 
+          slot.startTime <= startTime && slot.endTime >= endTime
+        );
       }
 
-      const bookings = await db
-        .select()
-        .from(venueTimeSlotBookings)
-        .where(
-          and(
-            eq(venueTimeSlotBookings.bookingDate, date),
-            eq(venueTimeSlotBookings.status, "confirmed"),
-          ),
-        );
+      const bookings = allBookings.filter((b: any) => b.venueId === venue.id);
 
-      const availableSlots = filteredSlots.filter((slot: any) => {
+      const availableSlots = slots.filter((slot: any) => {
         const slotBookings = bookings.filter((b: any) => b.timeSlotId === slot.id);
         return slotBookings.length < (slot.maxConcurrentEvents || 1);
       });
@@ -657,5 +660,5 @@ export const venuesRepo: VenuesRepository = {
     }
 
     return result;
-  },
+  }
 };

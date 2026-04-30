@@ -1,4 +1,5 @@
 skill: subagent-context-delegation
+category: internal
 primary_ownership: >
   Patterns for packaging context into subagent prompts, launching parallel explore
   swarms, resuming existing agents, and keeping parent session context lean.

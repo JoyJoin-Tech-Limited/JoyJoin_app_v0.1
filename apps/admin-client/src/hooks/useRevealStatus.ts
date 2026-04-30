@@ -13,7 +13,7 @@ const REVEAL_THRESHOLD_HOURS = 24;
 const XIAOYUE_MESSAGES = [
   "嘿嘿，还有 {countdown} 就能见到新朋友啦～",
   "TA们也在期待和你相遇哦！",
-  "小悦已经帮你安排好一切，敬请期待 ✨",
+  "悦仔已经帮你安排好一切，敬请期待 ✨",
   "神秘感是最好的期待，再等等哦～",
   "好事不怕晚，{countdown} 后揭晓！",
 ];
@@ -146,7 +146,7 @@ export function useEventRevealCountdown(eventDateTime: Date | string | null | un
       ? null 
       : status.countdown,
     xiaoyueMessage: status.isRevealed 
-      ? "终于可以见面啦！小悦好开心～" 
+      ? "终于可以见面啦！悦仔好开心～" 
       : status.countdownMessage,
   };
 }

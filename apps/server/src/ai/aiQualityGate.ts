@@ -248,8 +248,10 @@ export async function evaluateContent(
 export async function generateWithQualityGate(
   generateFn: (refinementHint?: string) => Promise<string>,
   ctx: JudgeContext,
+  opts?: { forceBlocking?: boolean },
 ): Promise<{ content: string; gateResult: QualityGateResult } | null> {
-  if (!GATE_ENABLED || !BLOCKING_ENABLED) {
+  const blocking = opts?.forceBlocking ?? BLOCKING_ENABLED;
+  if (!GATE_ENABLED || !blocking) {
     const content = await generateFn();
     return { content, gateResult: { judgment: placeholderPass(), action: 'pass', refinementAttempts: 0 } };
   }

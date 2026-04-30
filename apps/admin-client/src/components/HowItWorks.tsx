@@ -9,7 +9,7 @@ const steps = [
   },
   {
     icon: Sparkles,
-    title: "让小悦帮你找到同频的人 🎯",
+    title: "让悦仔帮你找到同频的人 🎯",
     description: "AI智能匹配，为你推荐气场相合的活动和朋友，告别无效社交~"
   },
   {

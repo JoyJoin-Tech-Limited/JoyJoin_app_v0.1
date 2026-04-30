@@ -97,6 +97,21 @@ export interface ViewerPairSpotlight {
   otherMemberName: string
 }
 
+export interface UnifiedRevealSpotlight {
+  memberName: string
+  chemistryScore: number | null
+  connectionPointsWithRarity: { text: string; rarity: 'common' | 'rare' | 'epic' }[]
+  rarityTier: 'common' | 'rare' | 'epic'
+}
+
+export interface UnifiedRevealTokens {
+  headline: string
+  body: string
+  subtitle: string | null
+  groupTags: string[]
+  spotlight: UnifiedRevealSpotlight | null
+}
+
 export interface WaitingSeatViewModel {
   seatNumber: number
   isFilled: boolean
@@ -312,6 +327,48 @@ export function getWaitingStateCopy(stats?: PoolFillStats | null): WaitingStateC
     subtext: '有缘人正在路上，先把这桌的人味慢慢攒起来。',
     nextStepHint: '入座 → 聚齐 → 揭晓',
   }
+}
+
+export function composeUnifiedReveal(params: {
+  chemistryPayoff: { headline: string; chemistryLine: string; tags: string[] } | null
+  viewerSpotlight: ViewerPairSpotlight | null
+}): UnifiedRevealTokens {
+  const { chemistryPayoff, viewerSpotlight } = params
+
+  const headline = chemistryPayoff?.headline ?? '这桌的缘分已经悄悄酝酿'
+  const groupTags = chemistryPayoff?.tags ?? []
+
+  // Normalize connectionPoints to connectionPointsWithRarity format
+  const rawPoints = viewerSpotlight?.pair.connectionPointsWithRarity
+    ?? viewerSpotlight?.pair.connectionPoints?.slice(0, 3).map((text) => ({ text, rarity: 'common' as const }))
+    ?? []
+
+  // Compute rarity tier from connection points
+  const hasEpic = rawPoints.some((cp) => cp.rarity === 'epic')
+  const hasRare = rawPoints.some((cp) => cp.rarity === 'rare')
+  const rarityTier = hasEpic ? 'epic' : hasRare ? 'rare' : 'common'
+
+  // Priority rule: spotlight pair explanation wins over group chemistry line
+  const spotlightExplanation = viewerSpotlight?.pair.explanation?.trim()
+  const spotlightBody = spotlightExplanation && spotlightExplanation.length > 0
+    ? spotlightExplanation
+    : null
+
+  const groupBody = chemistryPayoff?.chemistryLine ?? '这桌的化学反应很值得期待'
+
+  const body = spotlightBody ?? groupBody
+  const subtitle = spotlightBody ? groupBody : null
+
+  const spotlight: UnifiedRevealSpotlight | null = viewerSpotlight
+    ? {
+        memberName: viewerSpotlight.otherMemberName,
+        chemistryScore: viewerSpotlight.pair.chemistryScore ?? null,
+        connectionPointsWithRarity: rawPoints,
+        rarityTier,
+      }
+    : null
+
+  return { headline, body, subtitle, groupTags, spotlight }
 }
 
 export function getChemistryTokens(

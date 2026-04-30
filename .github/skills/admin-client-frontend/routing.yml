@@ -1,4 +1,5 @@
 skill: admin-client-frontend
+category: internal
 
 primary_ownership: >
   Admin portal frontend in apps/admin-client — pages, components, Recharts dashboards,

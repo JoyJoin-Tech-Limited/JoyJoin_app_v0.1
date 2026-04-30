@@ -1,6 +1,6 @@
-import { eventPools, events, type PricingSetting, pricingSettings, type PromotionBanner, promotionBanners, users } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { type PricingSetting, type PromotionBanner, pricingSettings, promotionBanners, users, events, eventPools } from "@shared/schema";
 import { db } from "../db";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface PricingRepository {
   getAllPricingSettings(): Promise<PricingSetting[]>;
@@ -68,17 +68,17 @@ export const pricingRepo: PricingRepository = {
 
   async getActiveBanners(city?: string, placement?: string): Promise<PromotionBanner[]> {
     const now = new Date();
-    const query = db
+    let query = db
       .select()
       .from(promotionBanners)
       .where(eq(promotionBanners.isActive, true))
       .orderBy(promotionBanners.sortOrder);
 
     const results = await query;
-
+    
     return results.filter((banner: any) => {
       if (city && banner.city && banner.city !== city) return false;
-      if (placement && banner.placement !== placement && banner.placement !== "both") return false;
+      if (placement && banner.placement !== placement && banner.placement !== 'both') return false;
       if (banner.effectiveFrom && new Date(banner.effectiveFrom) > now) return false;
       if (banner.effectiveUntil && new Date(banner.effectiveUntil) < now) return false;
       return true;
@@ -107,9 +107,9 @@ export const pricingRepo: PricingRepository = {
 
     return {
       totalUsers: userCount?.count || 0,
-      totalEvents,
+      totalEvents: totalEvents,
       satisfactionRate: 95,
       avgRating: 4.8,
     };
-  },
+  }
 };

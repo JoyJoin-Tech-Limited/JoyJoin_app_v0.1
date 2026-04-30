@@ -376,7 +376,7 @@ export function generateEndingMessage(
   // Good compatibility (60-79%)
   if (compatibilityScore && compatibilityScore >= 60) {
     return {
-      main: '小悦为你精心安排了这一局',
+      main: '悦仔为你精心安排了这一局',
       sub: `专为${archetypeNames}打造的夜晚，即将开启`,
       compatibilityHighlight: `社交契合度 ${compatibilityScore}%`,
     };

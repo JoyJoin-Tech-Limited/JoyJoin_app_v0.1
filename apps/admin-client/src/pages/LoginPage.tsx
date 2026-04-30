@@ -89,18 +89,18 @@ const FAQ_ITEMS = [
   },
   {
     question: "一个人去会不会尴尬？",
-    answer: "完全不会！90%的参与者都是独自报名。我们的AI匹配会根据你的性格和兴趣为你安排合适的同桌。小悦还会提供专属破冰话题，帮你轻松打开话匣子。",
+    answer: "完全不会！90%的参与者都是独自报名。我们的AI匹配会根据你的性格和兴趣为你安排合适的同桌。悦仔还会提供专属破冰话题，帮你轻松打开话匣子。",
   },
 ];
 
-// 小悦对话消息序列
+// 悦仔对话消息序列
 const XIAOYUE_MESSAGES = [
-  "嗨～我是小悦，你的社交配局师！",
+  "嗨～我是悦仔，你的社交配局师！",
   "我帮500+朋友找到了chemistry对的饭搭子",
   "每桌4-6人，都是我精挑细选的组合哦~",
 ];
 
-// 小悦风格的功能标签 - 精简版4大卖点
+// 悦仔风格的功能标签 - 精简版4大卖点
 const XIAOYUE_FEATURES = [
   { text: "4-6人精品小局", icon: Users },
   { text: "AI智能配对", icon: Sparkles },
@@ -406,13 +406,13 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Section 3: 小悦介绍区 - 卡片式全身展示 */}
+      {/* Section 3: 悦仔介绍区 - 卡片式全身展示 */}
       <section className="py-4 px-4" data-testid="section-features">
         <div className="max-w-lg mx-auto">
           <Card className="overflow-hidden border-0 shadow-sm bg-white dark:bg-card">
             <CardContent className="p-0">
               <div className="flex">
-                {/* 小悦全身图 - 左侧 */}
+                {/* 悦仔全身图 - 左侧 */}
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
                   whileInView={{ x: 0, opacity: 1 }}
@@ -422,7 +422,7 @@ export default function LoginPage() {
                 >
                   <img 
                     src={xiaoyueFoxAvatar} 
-                    alt="小悦" 
+                    alt="悦仔" 
                     className="w-full h-48 object-contain object-center"
                     data-testid="img-xiaoyue-avatar"
                   />
@@ -438,7 +438,7 @@ export default function LoginPage() {
                     className="mb-2"
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-foreground">小悦</h3>
+                      <h3 className="text-lg font-bold text-foreground">悦仔</h3>
                       <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">AI社交建筑师</span>
                     </div>
                     <p className="text-sm text-foreground mt-1" data-testid="text-xiaoyue-message-0">

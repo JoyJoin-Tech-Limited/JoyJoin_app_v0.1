@@ -1,48 +1,37 @@
-import { blindBoxEvents, eventAttendance, events, type BlindBoxEvent } from "@shared/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { type BlindBoxEvent, blindBoxEvents, events, eventAttendance } from "@shared/schema";
 import { db } from "../db";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface BlindBoxEventsRepository {
   getAllBlindBoxEvents(): Promise<Array<BlindBoxEvent>>;
   getUserBlindBoxEvents(userId: string): Promise<Array<BlindBoxEvent>>;
   getBlindBoxEventById(eventId: string, userId: string): Promise<BlindBoxEvent | undefined>;
-  createBlindBoxEvent(
-    userId: string,
-    eventData: {
-      date: string;
-      time: string;
-      eventType: string;
-      city: string;
-      area: string;
-      budget: string[];
-      acceptNearby?: boolean;
-      selectedLanguages?: string[];
-      selectedTasteIntensity?: string[];
-      selectedCuisines?: string[];
-      inviteFriends?: boolean;
-      friendsCount?: number;
-    },
-  ): Promise<BlindBoxEvent>;
-  updateBlindBoxEventPreferences(
-    eventId: string,
-    userId: string,
-    preferences: {
-      budget?: string[];
-      acceptNearby?: boolean;
-      selectedLanguages?: string[];
-      selectedTasteIntensity?: string[];
-      selectedCuisines?: string[];
-    },
-  ): Promise<BlindBoxEvent>;
+  createBlindBoxEvent(userId: string, eventData: { 
+    date: string; 
+    time: string; 
+    eventType: string; 
+    city: string;
+    area: string; 
+    budget: string[]; 
+    acceptNearby?: boolean;
+    selectedLanguages?: string[];
+    selectedTasteIntensity?: string[];
+    selectedCuisines?: string[];
+    inviteFriends?: boolean;
+    friendsCount?: number;
+  }): Promise<BlindBoxEvent>;
+  updateBlindBoxEventPreferences(eventId: string, userId: string, preferences: {
+    budget?: string[];
+    acceptNearby?: boolean;
+    selectedLanguages?: string[];
+    selectedTasteIntensity?: string[];
+    selectedCuisines?: string[];
+  }): Promise<BlindBoxEvent>;
   cancelBlindBoxEvent(eventId: string, userId: string): Promise<BlindBoxEvent>;
-  setBlindBoxEventMatchData(
-    eventId: string,
-    userId: string,
-    matchData: {
-      matchedAttendees: any[];
-      matchExplanation?: string;
-    },
-  ): Promise<BlindBoxEvent>;
+  setBlindBoxEventMatchData(eventId: string, userId: string, matchData: {
+    matchedAttendees: any[];
+    matchExplanation?: string;
+  }): Promise<BlindBoxEvent>;
   getAllBlindBoxEventsAdmin(): Promise<any[]>;
   getBlindBoxEventAdmin(id: string): Promise<any>;
   updateBlindBoxEventAdmin(id: string, updates: any): Promise<any>;
@@ -54,12 +43,12 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
   },
 
   async getUserBlindBoxEvents(userId: string): Promise<Array<BlindBoxEvent>> {
-    const eventsResult = await db
+    const events = await db
       .select()
       .from(blindBoxEvents)
       .where(eq(blindBoxEvents.userId, userId))
       .orderBy(desc(blindBoxEvents.dateTime));
-    return eventsResult;
+    return events;
   },
 
   async getBlindBoxEventById(eventId: string, userId: string): Promise<BlindBoxEvent | undefined> {
@@ -67,71 +56,76 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
       .select()
       .from(blindBoxEvents)
       .where(eq(blindBoxEvents.id, eventId));
-
-    if (event && event.status !== "matched" && event.userId !== userId) {
+    
+    // Allow viewing matched events (for demo/preview), but only allow owner to view pending events
+    if (event && event.status !== 'matched' && event.userId !== userId) {
       return undefined;
     }
-
+    
     return event;
   },
 
-  async createBlindBoxEvent(
-    userId: string,
-    eventData: {
-      date: string;
-      time: string;
-      eventType: string;
-      city: string;
-      area: string;
-      budget: string[];
-      acceptNearby?: boolean;
-      selectedLanguages?: string[];
-      selectedTasteIntensity?: string[];
-      selectedCuisines?: string[];
-      inviteFriends?: boolean;
-      friendsCount?: number;
-    },
-  ): Promise<BlindBoxEvent> {
-    const district = eventData.area.includes("•")
-      ? eventData.area.split("•")[1]
+  async createBlindBoxEvent(userId: string, eventData: { 
+    date: string; 
+    time: string; 
+    eventType: string; 
+    city: string;
+    area: string; 
+    budget: string[]; 
+    acceptNearby?: boolean;
+    selectedLanguages?: string[];
+    selectedTasteIntensity?: string[];
+    selectedCuisines?: string[];
+    inviteFriends?: boolean;
+    friendsCount?: number;
+  }): Promise<BlindBoxEvent> {
+    // Parse area to get district (e.g., "深圳•南山区" -> "南山区")
+    const district = eventData.area.includes('•') 
+      ? eventData.area.split('•')[1] 
       : eventData.area;
-
+    
+    // Parse date (e.g., "周三") to get next occurrence of that weekday
     const parseWeekday = (weekdayStr: string): number => {
-      const weekdayMap: Record<string, number> = {
-        周日: 0,
-        周一: 1,
-        周二: 2,
-        周三: 3,
-        周四: 4,
-        周五: 5,
-        周六: 6,
+      const weekdayMap: { [key: string]: number } = {
+        '周日': 0, '周一': 1, '周二': 2, '周三': 3, 
+        '周四': 4, '周五': 5, '周六': 6
       };
       return weekdayMap[weekdayStr] ?? 0;
     };
-
+    
     const getNextWeekdayDate = (weekdayStr: string, timeStr: string): Date => {
       const targetWeekday = parseWeekday(weekdayStr);
       const now = new Date();
       const currentWeekday = now.getDay();
-
+      
+      // Calculate days until target weekday
       let daysUntil = targetWeekday - currentWeekday;
       if (daysUntil <= 0) {
-        daysUntil += 7;
+        daysUntil += 7; // Next week if target day has passed
       }
-
-      const [hours, minutes] = timeStr.split(":").map(Number);
+      
+      // Parse time (e.g., "19:00")
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      
+      // Create target date
       const targetDate = new Date(now);
       targetDate.setDate(now.getDate() + daysUntil);
       targetDate.setHours(hours, minutes, 0, 0);
-
+      
       return targetDate;
     };
-
+    
     const dateTime = getNextWeekdayDate(eventData.date, eventData.time);
+    
+    // Create title
     const title = `${eventData.date} ${eventData.time} · ${eventData.eventType}`;
-    const budgetTier = eventData.budget.join("/");
+    
+    // Join all budget tiers with "/"
+    const budgetTier = eventData.budget.join('/');
+    
+    // Calculate invited count
     const invitedCount = eventData.inviteFriends ? (eventData.friendsCount || 1) : 0;
-
+    
     const [newEvent] = await db
       .insert(blindBoxEvents)
       .values({
@@ -148,12 +142,13 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
         acceptNearby: eventData.acceptNearby || false,
         invitedCount,
         invitedJoined: 0,
-        status: "pending_match",
+        status: 'pending_match',
         progress: 0,
-        etaMinutes: 120,
+        etaMinutes: 120, // Default 2 hours ETA
       })
       .returning();
-
+    
+    // Create corresponding event record for chat/attendance tracking
     const [correspondingEvent] = await db
       .insert(events)
       .values({
@@ -166,53 +161,53 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
         maxAttendees: 6,
         currentAttendees: 1,
         hostId: userId,
-        status: "upcoming",
+        status: 'upcoming',
       })
       .returning();
-
+    
+    // Create event attendance record for the creator
     await db
       .insert(eventAttendance)
       .values({
         eventId: correspondingEvent.id,
         userId,
-        status: "confirmed",
+        status: 'confirmed',
       });
-
+    
     return newEvent;
   },
 
   async updateBlindBoxEventPreferences(
-    eventId: string,
-    userId: string,
+    eventId: string, 
+    userId: string, 
     preferences: {
       budget?: string[];
       acceptNearby?: boolean;
       selectedLanguages?: string[];
       selectedTasteIntensity?: string[];
       selectedCuisines?: string[];
-    },
+    }
   ): Promise<BlindBoxEvent> {
     const updateData: any = {
       updatedAt: new Date(),
     };
 
     if (preferences.budget && preferences.budget.length > 0) {
-      updateData.budgetTier = preferences.budget.join("/");
+      updateData.budgetTier = preferences.budget.join('/');
     }
-
+    
     if (preferences.acceptNearby !== undefined) {
       updateData.acceptNearby = preferences.acceptNearby;
     }
-
+    
     if (preferences.selectedLanguages !== undefined) {
       updateData.selectedLanguages = preferences.selectedLanguages.length > 0 ? preferences.selectedLanguages : null;
     }
-
+    
     if (preferences.selectedTasteIntensity !== undefined) {
-      updateData.selectedTasteIntensity =
-        preferences.selectedTasteIntensity.length > 0 ? preferences.selectedTasteIntensity : null;
+      updateData.selectedTasteIntensity = preferences.selectedTasteIntensity.length > 0 ? preferences.selectedTasteIntensity : null;
     }
-
+    
     if (preferences.selectedCuisines !== undefined) {
       updateData.selectedCuisines = preferences.selectedCuisines.length > 0 ? preferences.selectedCuisines : null;
     }
@@ -224,15 +219,15 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
         and(
           eq(blindBoxEvents.id, eventId),
           eq(blindBoxEvents.userId, userId),
-          eq(blindBoxEvents.status, "pending_match"),
-        ),
+          eq(blindBoxEvents.status, 'pending_match') // Only can update pending events
+        )
       )
       .returning();
-
+    
     if (!event) {
-      throw new Error("Event not found or cannot be updated");
+      throw new Error('Event not found or cannot be updated');
     }
-
+    
     return event;
   },
 
@@ -240,22 +235,22 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
     const [event] = await db
       .update(blindBoxEvents)
       .set({
-        status: "canceled",
+        status: 'canceled',
         updatedAt: new Date(),
       })
       .where(
         and(
           eq(blindBoxEvents.id, eventId),
           eq(blindBoxEvents.userId, userId),
-          eq(blindBoxEvents.status, "pending_match"),
-        ),
+          eq(blindBoxEvents.status, 'pending_match') // Only can cancel pending events
+        )
       )
       .returning();
-
+    
     if (!event) {
-      throw new Error("Event not found or cannot be canceled");
+      throw new Error('Event not found or cannot be canceled');
     }
-
+    
     return event;
   },
 
@@ -265,12 +260,12 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
     matchData: {
       matchedAttendees: any[];
       matchExplanation?: string;
-    },
+    }
   ): Promise<BlindBoxEvent> {
     const [event] = await db
       .update(blindBoxEvents)
       .set({
-        status: "matched",
+        status: 'matched',
         matchedAttendees: matchData.matchedAttendees as any,
         matchExplanation: matchData.matchExplanation,
         updatedAt: new Date(),
@@ -278,15 +273,15 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
       .where(
         and(
           eq(blindBoxEvents.id, eventId),
-          eq(blindBoxEvents.userId, userId),
-        ),
+          eq(blindBoxEvents.userId, userId)
+        )
       )
       .returning();
-
+    
     if (!event) {
-      throw new Error("Event not found");
+      throw new Error('Event not found');
     }
-
+    
     return event;
   },
 
@@ -324,14 +319,13 @@ export const blindBoxEventsRepo: BlindBoxEventsRepository = {
     if (updates.status !== undefined) setData.status = updates.status;
 
     if (Object.keys(setData).length === 0) {
-      return blindBoxEventsRepo.getBlindBoxEventAdmin(id);
+      return this.getBlindBoxEventAdmin(id);
     }
 
-    const [result] = await db
-      .update(blindBoxEvents)
+    const [result] = await db.update(blindBoxEvents)
       .set(setData)
       .where(eq(blindBoxEvents.id, id))
       .returning();
     return result;
-  },
+  }
 };

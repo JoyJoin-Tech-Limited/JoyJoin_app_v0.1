@@ -1,4 +1,5 @@
 skill: reliability-and-state-integrity
+category: internal
 
 primary_ownership: >
   Transactions, idempotency guards, execution guards, recovery/re-entry semantics,

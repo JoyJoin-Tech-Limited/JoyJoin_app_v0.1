@@ -1,4 +1,5 @@
 skill: multi-agent-deliberation
+category: internal
 
 primary_ownership: >
   Structured 5-phase multi-agent deliberation protocol: delegate roles, anonymous peer review,

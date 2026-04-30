@@ -1,4 +1,5 @@
 skill: matching-domain
+category: internal
 
 primary_ownership: >
   Deterministic pair scoring across 6 weighted dimensions, signal boundary invariant

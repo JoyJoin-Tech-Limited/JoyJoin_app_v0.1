@@ -26,6 +26,7 @@ export default function MatchingStatusPage() {
 
   const {
     chemistryTokens,
+    unifiedReveal,
     countdown,
     currentFill,
     effectiveEventDateTime,
@@ -33,6 +34,7 @@ export default function MatchingStatusPage() {
     fillStatusText,
     finishLiveJourney,
     groupAnalysis,
+    hasRevealed,
     handleBrowsePools,
     handleCancel,
     handleContinueFromMembers,
@@ -53,7 +55,6 @@ export default function MatchingStatusPage() {
     newMemberJoined,
     persistedThemeSummary,
     refreshCountdown,
-    registration,
     resolvedGroupId,
     rootClassName,
     seatsNeeded,
@@ -325,12 +326,13 @@ export default function MatchingStatusPage() {
       <MatchingStatusDetailSections
         showMatchedDetails={matchStatus === 'matched'}
         showChemistryCard={Boolean(
-          matchStatus === 'matched' && (viewerSpotlight || groupAnalysis?.overallChemistry || leadIceBreaker),
+          matchStatus === 'matched' && (viewerSpotlight || groupAnalysis?.overallChemistry || leadIceBreaker || unifiedReveal),
         )}
         effectiveGroupDetails={effectiveGroupDetails}
         viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
         viewerSpotlight={viewerSpotlight}
         chemistryTokens={chemistryTokens}
+        unifiedReveal={unifiedReveal}
         leadIceBreaker={leadIceBreaker}
         persistedThemeSummary={persistedThemeSummary}
         groupAnalysisDebugMeta={groupAnalysisDebugMeta}
@@ -404,8 +406,10 @@ export default function MatchingStatusPage() {
         effectiveGroupDetails={effectiveGroupDetails}
         viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
         viewerSpotlight={viewerSpotlight}
+        unifiedReveal={unifiedReveal}
         matchedGroupNumber={matchedData?.groupNumber}
         shouldReduceMotion={shouldReduceMotion}
+        hasRevealed={hasRevealed}
         persistedThemeSummary={persistedThemeSummary}
         resolvedGroupId={resolvedGroupId}
         onContinueFromMembers={handleContinueFromMembers}

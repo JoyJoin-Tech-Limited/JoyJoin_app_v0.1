@@ -354,7 +354,7 @@ export class InferenceEngine {
   }
   
   /**
-   * 生成注入到小悦提示词的上下文摘要
+   * 生成注入到悦仔提示词的上下文摘要
    */
   generatePromptContext(state: UserAttributeMap): {
     contextDigest: string;
@@ -450,7 +450,7 @@ export async function fullInfer(
 }
 
 /**
- * 生成小悦提示词上下文
+ * 生成悦仔提示词上下文
  */
 export function generateXiaoyueContext(state: UserAttributeMap): string {
   const { contextDigest, skipList, confirmList } = inferenceEngine.generatePromptContext(state);
