@@ -26,7 +26,7 @@ relatedPaths:
   - apps/mini-program/src/styles/_variables.scss
   - package.json
 sources:
-  - repo-memory/candidates/frontend-design-audit-integration.md
+  - repo-memory/promoted/frontend-design-audit-integration.md
   - .agents/skills/frontend-design-audit/SKILL.md
   - .agents/skills/stitch-design-workflow/SKILL.md
 confidence: high

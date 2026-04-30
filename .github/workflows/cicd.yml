@@ -182,6 +182,60 @@ jobs:
     needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare remote rsync target
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          script: |
+            set -euo pipefail
+            mkdir -p ~/JoyJoin
+            if ! command -v rsync >/dev/null 2>&1; then
+              echo "rsync not found on server; installing..."
+              if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y rsync
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y rsync
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y rsync
+              else
+                echo "❌ Cannot install rsync automatically. Install rsync on the server and rerun deployment."
+                exit 1
+              fi
+            fi
+
+      - name: Upload deployment workspace via rsync
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: >-
+            -az --delete
+            --exclude=.git/
+            --exclude=.github/
+            --exclude=.cursor/
+            --exclude=.agents/
+            --exclude=.env
+            --exclude=.env.*
+            --exclude=node_modules/
+            --exclude=dist/
+            --exclude=build/
+            --exclude=coverage/
+            --exclude=.joyjoin/
+            --exclude=tmp/
+            --exclude=reports/
+            --exclude=attached_assets/
+            --exclude=archived/
+          path: ./
+          remote_path: ~/JoyJoin/
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
       # Pre-encode multiline secrets (PEM keys/certs) as base64 so they survive
       # appleboy/ssh-action `envs` which generates export lines for each value.
       # Raw PEM newlines would corrupt the shell script, breaking heredocs.
@@ -298,20 +352,27 @@ jobs:
             }
             trap on_fail ERR
 
+            debug_log() {
+              local hypothesis_id="$1"
+              local message="$2"
+              local data="${3:-{}}"
+              printf 'AGENT_DEBUG %s\n' "$(printf '{"runId":"deploy-migrate-debug","hypothesisId":"%s","location":"cicd.yml:deploy-script","message":"%s","data":%s,"timestamp":%s}' \
+                "$hypothesis_id" "$message" "$data" "$(date +%s000)")"
+            }
+
             echo "🧭 Disk before:"
             df -h /
 
             disk_guard
 
-            # --- 1) Code Sync ---
-            echo "📥 Syncing code..."
+            # --- 1) Code is already synced from CI via rsync ---
+            echo "📥 Using code synced from CI rsync upload..."
             cd ~/JoyJoin
-            git fetch --all
-            git reset --hard origin/main
 
-            # Ensure host dependencies are fresh for CLI tools
-            echo "📦 Installing host dependencies..."
-            npm ci
+            # Ensure host dependencies are fresh for CLI tools.
+            # Skip Playwright browser downloads on prod host to avoid lock/contention failures.
+            echo "📦 Installing host dependencies (skip Playwright browser download)..."
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci
 
             # --- 1.5) Sync GitHub Actions secrets + variables → deployment/.env.production ---
             echo "🔐 Syncing GitHub secrets/variables into deployment/.env.production..."
@@ -322,7 +383,10 @@ jobs:
             upsert_env_var() {
               local key="$1"
               local value="$2"
+              local compose_value
               local tmp
+              # Docker Compose interpolates $VAR-like text from env files; $$ preserves literal $.
+              compose_value="${value//\$/\$\$}"
               tmp=$(mktemp)
               if [ -s "$ENV_FILE" ]; then
                 grep -v "^${key}=" "$ENV_FILE" > "$tmp" || true
@@ -330,7 +394,7 @@ jobs:
                 : > "$tmp"
               fi
               mv "$tmp" "$ENV_FILE"
-              printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+              printf '%s=%s\n' "$key" "$compose_value" >> "$ENV_FILE"
             }
 
             upsert_if_nonempty() {
@@ -377,7 +441,173 @@ jobs:
 
             chmod 600 "$ENV_FILE" || true
 
-            # --- 2) Restart containers ---
+            # --- 2) DB Sync (same DATABASE_URL as API) ---
+            echo "🗄️ Syncing database schema..."
+            cd ~/JoyJoin
+
+            # #region agent log
+            DB_META_JSON=$(node -e 'const u=process.env.DATABASE_URL||"";try{const p=new URL(u);const out={protocol:p.protocol.replace(":",""),host:p.hostname,port:p.port||"default",database:p.pathname.replace(/^\/+/,""),hasPassword:Boolean(p.password),hasUser:Boolean(p.username)};process.stdout.write(JSON.stringify(out));}catch{process.stdout.write(JSON.stringify({parseError:true,length:u.length}));}')
+            debug_log "H1" "database_url_metadata" "$DB_META_JSON"
+            # #endregion
+
+            # Verify journal integrity before running migrations
+            echo "   Verifying migration journal..."
+            node scripts/verify-journal-sync.mjs
+
+            # #region agent log
+            MIGRATION_FILES_JSON=$(node - <<'NODE'
+            const fs = require('fs');
+            const path = require('path');
+            const migrationsDir = path.join(process.cwd(), 'apps/server/migrations');
+            const metaJournal = path.join(migrationsDir, 'meta/_journal.json');
+            const files = fs.readdirSync(migrationsDir).filter((n) => n.endsWith('.sql'));
+            const journal = JSON.parse(fs.readFileSync(metaJournal, 'utf8'));
+            process.stdout.write(JSON.stringify({
+              sqlFileCount: files.length,
+              latestSqlFile: files.sort().at(-1) ?? null,
+              journalEntryCount: Array.isArray(journal?.entries) ? journal.entries.length : null,
+            }));
+            NODE
+            )
+            debug_log "H5" "migration_files_and_journal_snapshot" "$MIGRATION_FILES_JSON"
+            # #endregion
+
+            # #region agent log
+            PG_PROBE_JSON=$(node - <<'NODE'
+            const { Client } = require('pg');
+            (async () => {
+              const started = Date.now();
+              const client = new Client({
+                connectionString: process.env.DATABASE_URL,
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 8000,
+              });
+              try {
+                await client.connect();
+                const r = await client.query('select now() as now');
+                process.stdout.write(JSON.stringify({ ok: true, latencyMs: Date.now() - started, now: r.rows?.[0]?.now ?? null }));
+              } catch (error) {
+                process.stdout.write(JSON.stringify({
+                  ok: false,
+                  latencyMs: Date.now() - started,
+                  name: error?.name ?? null,
+                  code: error?.code ?? null,
+                  message: error?.message ?? null,
+                }));
+              } finally {
+                try { await client.end(); } catch {}
+              }
+            })();
+            NODE
+            )
+            debug_log "H2" "postgres_connectivity_probe" "$PG_PROBE_JSON"
+            # #endregion
+
+            # #region agent log
+            DB_IDENTITY_JSON=$(node - <<'NODE'
+            const { Client } = require('pg');
+            (async () => {
+              const client = new Client({
+                connectionString: process.env.DATABASE_URL,
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 8000,
+              });
+              try {
+                await client.connect();
+                const identity = await client.query(`
+                  select current_database() as database,
+                         current_user as db_user,
+                         current_schema() as schema
+                `);
+                const mig = await client.query(`
+                  select to_regclass('__drizzle_migrations') as migration_table
+                `);
+                process.stdout.write(JSON.stringify({
+                  ok: true,
+                  database: identity.rows?.[0]?.database ?? null,
+                  dbUser: identity.rows?.[0]?.db_user ?? null,
+                  schema: identity.rows?.[0]?.schema ?? null,
+                  migrationTable: mig.rows?.[0]?.migration_table ?? null,
+                }));
+              } catch (error) {
+                process.stdout.write(JSON.stringify({
+                  ok: false,
+                  code: error?.code ?? null,
+                  message: error?.message ?? null,
+                }));
+              } finally {
+                try { await client.end(); } catch {}
+              }
+            })();
+            NODE
+            )
+            debug_log "H4" "database_identity_and_migration_table_probe" "$DB_IDENTITY_JSON"
+            # #endregion
+
+            # Run pending migrations before restarting containers so new app code never boots on an old schema.
+            echo "   Running database migrations..."
+            MIGRATION_LOG=$(mktemp)
+            # #region agent log
+            if ! CI=1 npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1; then
+              MIGRATION_EXIT_CODE=$?
+              echo "❌ Database migration failed. Drizzle output:"
+              debug_log "H3" "drizzle_migrate_failed" "{\"exitCode\":${MIGRATION_EXIT_CODE:-1},\"logPath\":\"$MIGRATION_LOG\"}"
+              sed -n '1,240p' "$MIGRATION_LOG" || true
+              echo "----- drizzle migrate tail -----"
+              sed -n '241,480p' "$MIGRATION_LOG" || true
+              echo "----- drizzle migrate escaped (debug) -----"
+              node - <<'NODE' "$MIGRATION_LOG"
+              const fs = require('fs');
+              const p = process.argv[2];
+              try {
+                const content = fs.readFileSync(p, 'utf8');
+                const compact = content.slice(0, 8000);
+                console.log(JSON.stringify({ chars: content.length, preview: compact }));
+              } catch (error) {
+                console.log(JSON.stringify({ readError: error?.message ?? String(error) }));
+              }
+              NODE
+              echo "----- postgres lock probe (debug) -----"
+              node - <<'NODE'
+              const { Client } = require('pg');
+              (async () => {
+                const client = new Client({
+                  connectionString: process.env.DATABASE_URL,
+                  ssl: { rejectUnauthorized: false },
+                  connectionTimeoutMillis: 8000,
+                });
+                try {
+                  await client.connect();
+                  const r = await client.query(`
+                    select pid, usename, state, wait_event_type, wait_event, left(query, 140) as query
+                    from pg_stat_activity
+                    where datname = current_database()
+                      and state <> 'idle'
+                    order by query_start asc
+                    limit 12
+                  `);
+                  console.log(JSON.stringify({ activeSessions: r.rows }, null, 2));
+                } catch (error) {
+                  console.log(JSON.stringify({ lockProbeError: error?.message ?? String(error) }));
+                } finally {
+                  try { await client.end(); } catch {}
+                }
+              })();
+              NODE
+              exit 1
+            fi
+            debug_log "H3" "drizzle_migrate_succeeded" '{"exitCode":0}'
+            sed -n '1,240p' "$MIGRATION_LOG" || true
+            echo "----- drizzle migrate tail -----"
+            sed -n '241,480p' "$MIGRATION_LOG" || true
+            rm -f "$MIGRATION_LOG"
+            # #endregion
+
+            # Verify schema alignment after migration
+            echo "   Verifying schema alignment..."
+            node scripts/verify-db-alignment.mjs
+
+            # --- 3) Restart containers ---
             echo "🐳 Removing stale joyjoin-api container if present..."
             docker rm -f joyjoin-api || true
             echo "🐳 Restarting containers..."
@@ -410,22 +640,6 @@ jobs:
             echo "🔎 Active Nginx joyjoin.conf markers..."
             sudo awk 'NR<=120{print}' /etc/nginx/conf.d/joyjoin.conf | sed -n '/X-JoyJoin-Edge/p;/X-JoyJoin-Proxy/p;/upstream joyjoin_api/,/}/p'
 
-            # --- 3) DB Sync (same DATABASE_URL as API) ---
-            echo "🗄️ Syncing database schema..."
-            cd ~/JoyJoin
-
-            # Verify journal integrity before running migrations
-            echo "   Verifying migration journal..."
-            node scripts/verify-journal-sync.mjs
-
-            # Run pending migrations via drizzle-kit migrate
-            echo "   Running database migrations..."
-            npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs
-
-            # Verify schema alignment after migration
-            echo "   Verifying schema alignment..."
-            node --env-file=.env scripts/verify-db-alignment.mjs
-
             # --- 4) Health checks ---
             echo "🏥 Verifying service status..."
             sleep 10
@@ -435,7 +649,7 @@ jobs:
               || (echo "❌ API failed on 5000" && docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && docker logs joyjoin-api --tail 120 && exit 1)
 
             echo "   Checking Nginx-routed health endpoint..."
-            if ! curl -s --retry 5 --retry-delay 3 -H "Host: yuejuapp.com" http://127.0.0.1/api/health > /dev/null; then
+            if ! curl -s --retry 5 --retry-delay 3 -H "Host: joyjoinapp.com" http://127.0.0.1/api/health > /dev/null; then
               echo "❌ Nginx route check failed: http://127.0.0.1/api/health"
               echo "📋 Socket listeners (80/443/5000):"
               ss -ltnp | rg ':80|:443|:5000' || true
@@ -450,7 +664,7 @@ jobs:
               exit 1
             fi
             echo "   Nginx route response headers:"
-            curl -sSI -H "Host: yuejuapp.com" http://127.0.0.1/api/health || true
+            curl -sSI -H "Host: joyjoinapp.com" http://127.0.0.1/api/health || true
 
             # --- 5) Post-deploy cleanup ---
             soft_cleanup
