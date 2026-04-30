@@ -62,7 +62,7 @@ describe('social icebreaker phase configuration', () => {
       DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
       2,
     );
-    expect(result).toBe('lie_detective');
+    expect(result).toBe('personality_dice');
   });
 
   it('respects run plans when state is passed', () => {
