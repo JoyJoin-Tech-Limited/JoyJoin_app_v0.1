@@ -186,16 +186,7 @@ jobs:
 
       - name: Package deployment source
         run: |
-          tar \
-            --exclude='.git' \
-            --exclude='.env' \
-            --exclude='.env.local' \
-            --exclude='joyjoin-source.tar.gz' \
-            --exclude='node_modules' \
-            --exclude='*/node_modules' \
-            --exclude='apps/*/dist' \
-            --exclude='dist' \
-            -czf joyjoin-source.tar.gz .
+          git archive --format=tar.gz --output=joyjoin-source.tar.gz HEAD
 
       - name: Upload deployment source
         uses: appleboy/scp-action@v0.1.7
