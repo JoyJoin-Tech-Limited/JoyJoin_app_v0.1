@@ -182,22 +182,6 @@ jobs:
     needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
     steps:
-      - name: Prepare and validate SSH private key
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          : "${SSH_PRIVATE_KEY:?SSH_PRIVATE_KEY GitHub secret is required}"
-          mkdir -p ~/.ssh
-          # Support both raw multiline keys and "\n"-escaped secrets.
-          printf '%b\n' "$SSH_PRIVATE_KEY" > ~/.ssh/github_action_deploy_key
-          chmod 600 ~/.ssh/github_action_deploy_key
-          if ! ssh-keygen -y -f ~/.ssh/github_action_deploy_key >/dev/null 2>&1; then
-            echo "❌ SSH_PRIVATE_KEY is invalid or passphrase-protected without SSH_KEY_PASSPHRASE."
-            echo "   Expected a full private key block: -----BEGIN ... PRIVATE KEY-----"
-            exit 1
-          fi
-
       # GitHub → server: map Repository secrets to `secrets.*` and Repository variables to `vars.*`.
       # Add new keys here + in `envs` + in the sync loop below.
       - name: SSH Remote Deployment
@@ -237,7 +221,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
-          key_path: ~/.ssh/github_action_deploy_key
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           command_timeout: 30m
           envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS
