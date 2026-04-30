@@ -1,0 +1,143 @@
+# WeCom Bot Automation Trigger
+#
+# Receives webhook calls from WeCom (企业微信) group bot and triggers the
+# corresponding automation workflow (auto-debug, auto-docs, etc.).
+#
+# How it works:
+#   1. Set up a WeCom group bot with a custom webhook URL pointing to:
+#      https://github.com/<owner>/<repo>/actions/workflows/wecom-trigger.yml
+#      (GitHub doesn't support direct WeCom webhook → Actions, so this
+#       workflow serves as a dispatch target instead.)
+#
+#   2. WeCom bot messages → a lightweight relay (e.g. Cloudflare Worker,
+#      GitHub repo webhook, or the JoyJoin server) calls:
+#      POST /repos/<owner>/<repo>/actions/workflows/wecom-trigger.yml/dispatches
+#      with the payload.
+#
+#   3. This workflow parses the message and dispatches the appropriate
+#      child workflow.
+#
+# Trigger methods:
+#   A. workflow_dispatch (direct) — simplest: call from GitHub UI or API
+#   B. repository_dispatch — for webhook relay integration
+#
+# Usage:
+#   Trigger auto-debug:
+#     gh workflow run wecom-trigger.yml -f action=auto-debug -f commits=20
+#
+#   Trigger auto-docs:
+#     gh workflow run wecom-trigger.yml -f action=auto-docs -f scan_all=true
+#
+#   Via API (for WeCom relay):
+#     curl -X POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/wecom-trigger.yml/dispatches \
+#       -H "Authorization: Bearer <token>" \
+#       -H "Content-Type: application/json" \
+#       -d '{"ref":"main","inputs":{"action":"auto-debug"}}'
+#
+# Reference: docs/automations/README.md
+
+name: WeCom Automation Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Automation to trigger (auto-debug, auto-docs)'
+        required: true
+        default: 'auto-debug'
+        type: choice
+        options:
+          - auto-debug
+          - auto-docs
+      commits:
+        description: 'Commits to analyze (for auto-debug/auto-docs)'
+        required: false
+        default: '20'
+        type: string
+      range:
+        description: 'Git range override (for auto-debug/auto-docs)'
+        required: false
+        default: ''
+        type: string
+      create_pr:
+        description: 'Create PR with findings'
+        required: false
+        default: 'true'
+        type: boolean
+      notify_wecom:
+        description: 'Notify WeCom on completion'
+        required: false
+        default: 'true'
+        type: boolean
+      scan_all:
+        description: 'Scan full codebase (auto-docs only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+  repository_dispatch:
+    types: [wecom-automation]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dispatch:
+    name: Dispatch ${{ inputs.action || github.event.client_payload.action }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      workflow_id: ${{ steps.dispatch-target.outputs.workflow_id }}
+      status: ${{ steps.dispatch-target.outputs.status }}
+
+    steps:
+      - name: Determine target action
+        id: determine-action
+        env:
+          DISPATCH_ACTION: ${{ inputs.action || github.event.client_payload.action }}
+        run: |
+          echo "action=${DISPATCH_ACTION:-auto-debug}" >> $GITHUB_OUTPUT
+
+      - name: Dispatch to auto-debug
+        id: dispatch-debug
+        if: steps.determine-action.outputs.action == 'auto-debug'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-debug workflow..."
+          gh workflow run auto-debug.yml \
+            --ref ${{ github.ref_name }} \
+            ${{ inputs.commits && format('--field commits={0}', inputs.commits) || '' }} \
+            ${{ inputs.range && format('--field range={0}', inputs.range) || '' }} \
+            ${{ inputs.create_pr != 'false' && '--field create_pr=true' || '--field create_pr=false' }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Dispatch to auto-docs
+        id: dispatch-docs
+        if: steps.determine-action.outputs.action == 'auto-docs'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-docs workflow..."
+          gh workflow run auto-docs.yml \
+            --ref ${{ github.ref_name }} \
+            ${{ inputs.commits && format('--field commits={0}', inputs.commits) || '' }} \
+            ${{ inputs.range && format('--field range={0}', inputs.range) || '' }} \
+            ${{ inputs.scan_all == 'true' && '--field scan_all=true' || '' }} \
+            ${{ inputs.create_pr != 'false' && '--field create_pr=true' || '--field create_pr=false' }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Log dispatch result
+        run: |
+          echo "✅ Dispatched ${{ steps.determine-action.outputs.action }}"
+          echo "Action: ${{ steps.determine-action.outputs.action }}"
+          echo "Commits: ${{ inputs.commits || '20' }}"
+          echo "Create PR: ${{ inputs.create_pr != 'false' && 'true' || 'false' }}"
+          echo "Notify WeCom: ${{ inputs.notify_wecom != 'false' && 'true' || 'false' }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Failed to dispatch ${{ steps.determine-action.outputs.action }}"

@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-04-28
+> Compact instructions for AI coding agents. Last updated: 2026-04-30
 
 ---
 
@@ -16,6 +16,9 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `/guide` as core onboarding → active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
 - **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states)
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
+- **`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`** (approved Apr 29 deliberation; `socialIcebreakerTierManifest.ts` exists but not yet wired to client/server)
+- **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)
+- **Lie Detective V1 (AI-fabricated 2 truths 1 lie) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Design spec: `docs/proposals/spot-the-bot-game-design.md`
 - Root `shared/` directory imports → use `packages/shared/src/` via `@joyjoin/shared` or `@shared/*`
 
 **Canonical references:** `DEVELOPER_QUICK_REFERENCE.md` and `PRODUCT_REQUIREMENTS.md`
@@ -112,6 +115,12 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default.
 
+**Icebreaker tiers:** Host selects from `breeze` (破冰局, 40min casual) / `glow` (畅聊局, 60min standard) / `blaze` (狂欢局, 90min full). Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. Machine IDs decoupled from display names. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`.
+
+**Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 (AI-fabricated 3 statements) remains default. Design: `docs/proposals/spot-the-bot-game-design.md`.
+
+**Boost plan:** Planned 10-week roadmap to raise all 10 phases to composite 8.0+ using shared Reveal Engine, Gesture Kit, Context Injector, and Optimistic Sync. (Design doc pending — see `docs/unified-icebreaker-system.md` §11 for implementation sequence.)
+
 **Mini-program is launch-primary:** `apps/mini-program` is the primary client; web (`apps/user-client`) is sandbox. Cross-surface rules: `docs/PLATFORM_COORDINATION.md`.
 
 ---
@@ -137,13 +146,30 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 ---
 
-## 9. Documentation Map
+## 9. Automations (CI Background Agents)
+
+Two scheduled GitHub Actions workflows run daily to analyze code autonomously:
+
+- **`auto-debug.yml`** (daily 04:00 UTC) — scans recent commits for high-severity bugs (null derefs, missing auth, SQL injection, race conditions). Opens PRs with findings. Notifies via WeCom.
+- **`auto-docs.yml`** (daily 05:00 UTC) — identifies documentation gaps from recent changes. Generates/updates README files. Opens PRs.
+
+Trigger on demand: `gh workflow run auto-debug.yml` or via the **WeCom Automation Trigger** workflow.
+
+Full reference: `docs/automations/README.md`
+
+---
+
+## 10. Documentation Map
 
 - `README.md` — quick start, env setup
 - `DEVELOPER_QUICK_REFERENCE.md` — canonical engineering guardrails, active vs legacy
 - `PRODUCT_REQUIREMENTS.md` — product canon, terminology
 - `docs/README.md` — architecture docs index
+- `docs/automations/README.md` — CI automation system (auto-debug, auto-docs, WeCom)
 - `apps/server/src/README.md` — server domain ownership
 - `packages/shared/src/README.md` — shared package boundaries
-- `.github/skills/README.md` — skill index for specific tasks
+- `.agents/skills/` — **OpenCode auto-discovered** skill tree (mirrors `.github/skills/`; kept in sync manually)
+- `.github/skills/README.md` — canonical skill index for specific tasks
 - `.github/skills/skill-taxonomy.md` — canonical skill classification (`ai-runtime` vs `internal`)
+- `.opencode/agents/README.md` — OpenCode agent stubs (derived from `.github/agents/`)
+- `.github/agents/README.md` — canonical full agent portfolio (30+ agents)

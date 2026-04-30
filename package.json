@@ -56,8 +56,16 @@
     "db:status": "npm run db:journal-check && npm run db:verify",
     "set-admin": "npm run admin:create",
     "admin:create": "npm run admin:create -w @joyjoin/server",
+    "auto:debug": "node scripts/auto-debug.mjs",
+    "auto:debug:pr": "node scripts/auto-debug.mjs --pr --wecom --verbose",
+    "auto:debug:full": "node scripts/auto-debug.mjs --commits 50 --pr --wecom --verbose",
+    "auto:docs": "node scripts/auto-docs.mjs",
+    "auto:docs:pr": "node scripts/auto-docs.mjs --pr --wecom --checklist --verbose",
+    "auto:docs:full": "node scripts/auto-docs.mjs --scan-all --pr --wecom --checklist --verbose",
+    "auto:list": "node -e \"const s=require('fs').readFileSync('package.json','utf8');const p=JSON.parse(s);Object.keys(p.scripts||{}).filter(k=>k.startsWith('auto:')||k==='wecom:notify').forEach(k=>console.log('  '+k+' → '+p.scripts[k]))\"",
     "user:create": "npm run user:create -w @joyjoin/server",
     "user:bypass": "npm run user:bypass -w @joyjoin/server",
-    "seed:test-data": "npm run seed:test-data -w @joyjoin/server"
+    "seed:test-data": "npm run seed:test-data -w @joyjoin/server",
+    "wecom:notify": "node scripts/wecom-notify.mjs"
   }
 }

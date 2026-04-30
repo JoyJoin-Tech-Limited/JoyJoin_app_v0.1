@@ -1,0 +1,128 @@
+# Auto-Debug — Deep Bug-Finding Automation
+#
+# Scheduled daily analysis of recent commits for high-severity bugs that
+# escaped review.  Opens PRs when critical bugs are found and notifies
+# via WeCom (企业微信).
+#
+# Triggered by:
+#   - Schedule: daily at 04:00 UTC (12:00 CST)
+#   - workflow_dispatch: manual trigger via GitHub UI or WeCom webhook
+#
+# Secrets required:
+#   WECOM_BOT_KEY          – WeCom group bot webhook key (for notifications)
+#   AUTO_DEBUG_TOKEN       – GitHub PAT with contents:write + pull-requests:write
+#                            (falls back to GITHUB_TOKEN, which can't trigger
+#                             further workflows — use a PAT for full chain)
+#
+# Reference: docs/automations/README.md
+
+name: Auto-Debug Bug Finding
+
+on:
+  schedule:
+    # Daily at 04:00 UTC (12:00 CST) — after most commits are merged
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      commits:
+        description: 'Number of recent commits to analyze'
+        required: false
+        default: '20'
+        type: string
+      range:
+        description: 'Git range (e.g., HEAD~10..HEAD). Overrides commits.'
+        required: false
+        default: ''
+        type: string
+      create_pr:
+        description: 'Create PR if bugs found'
+        required: false
+        default: 'true'
+        type: boolean
+      notify_wecom:
+        description: 'Send WeCom notification'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: auto-debug-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  debug-analysis:
+    name: Bug Pattern Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for range analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Auto-Debug analysis
+        id: debug
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS=""
+
+          if [ -n "${{ inputs.range }}" ]; then
+            ARGS="$ARGS --range ${{ inputs.range }}"
+          else
+            ARGS="$ARGS --commits ${{ inputs.commits || '20' }}"
+          fi
+
+          if [ "${{ inputs.create_pr || 'true' }}" = "true" ]; then
+            ARGS="$ARGS --pr"
+          fi
+
+          if [ "${{ inputs.notify_wecom || 'true' }}" = "true" ] && [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+            ARGS="$ARGS --wecom"
+          fi
+
+          ARGS="$ARGS --verbose"
+
+          echo "Running: node scripts/auto-debug.mjs $ARGS"
+          node scripts/auto-debug.mjs $ARGS
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "Exit code: $EXIT_CODE"
+
+      - name: Upload analysis report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-debug-report
+          path: reports/auto-debug-*.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.debug.outputs.exit_code }}" = "0" ]; then
+            echo "✅ Auto-Debug: No critical bugs found."
+          elif [ "${{ steps.debug.outputs.exit_code }}" = "1" ]; then
+            echo "⚠️ Auto-Debug: Critical bugs found and reported."
+          else
+            echo "❌ Auto-Debug: Analysis error (exit code ${{ steps.debug.outputs.exit_code }})."
+          fi
