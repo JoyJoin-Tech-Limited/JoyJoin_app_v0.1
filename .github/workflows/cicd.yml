@@ -184,16 +184,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Upload deployment workspace via SCP
-        uses: appleboy/scp-action@v0.1.7
+      - name: Prepare remote rsync target
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          source: "apps,packages,deployment,scripts,package.json,package-lock.json,tsconfig.base.json,tsconfig.json,Dockerfile"
-          target: "~/JoyJoin"
-          rm: true
+          script: |
+            set -euo pipefail
+            mkdir -p ~/JoyJoin
+            if ! command -v rsync >/dev/null 2>&1; then
+              echo "rsync not found on server; installing..."
+              if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y rsync
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y rsync
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y rsync
+              else
+                echo "❌ Cannot install rsync automatically. Install rsync on the server and rerun deployment."
+                exit 1
+              fi
+            fi
+
+      - name: Upload deployment workspace via rsync
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: >-
+            -az --delete
+            --exclude=.git/
+            --exclude=.github/
+            --exclude=.cursor/
+            --exclude=.agents/
+            --exclude=.env
+            --exclude=.env.*
+            --exclude=node_modules/
+            --exclude=dist/
+            --exclude=build/
+            --exclude=coverage/
+            --exclude=.joyjoin/
+            --exclude=tmp/
+            --exclude=reports/
+            --exclude=attached_assets/
+            --exclude=archived/
+          path: ./
+          remote_path: ~/JoyJoin/
+          remote_host: ${{ secrets.SERVER_IP }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          remote_key_pass: ${{ secrets.SSH_KEY_PASSPHRASE }}
 
       # GitHub → server: map Repository secrets to `secrets.*` and Repository variables to `vars.*`.
       # Add new keys here + in `envs` + in the sync loop below.
