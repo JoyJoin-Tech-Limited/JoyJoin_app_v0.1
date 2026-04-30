@@ -10,6 +10,7 @@ AI-powered background automations that analyze code, find bugs, update documenta
 |------------|----------|--------|----------|
 | **Auto-Debug** | Daily 04:00 UTC | `scripts/auto-debug.mjs` | `.github/workflows/auto-debug.yml` |
 | **Auto-Docs** | Daily 05:00 UTC | `scripts/auto-docs.mjs` | `.github/workflows/auto-docs.yml` |
+| **Auto-Digest** | Daily 06:00 UTC | `scripts/auto-digest.mjs` | `.github/workflows/auto-digest.yml` |
 | **WeCom Trigger** | On demand | — | `.github/workflows/wecom-trigger.yml` |
 
 Each automation:
@@ -113,7 +114,61 @@ When auto-docs creates a README for a domain directory, it:
 
 ---
 
-## 3. WeCom Integration
+## 3. Auto-Digest (Daily Engineering Report)
+
+**Goal:** Produce a concise, high-signal summary of what changed in the last 24 hours.
+
+### How it works
+
+1. Collects commits (last 24h) + merged PRs
+2. Computes stats (top dirs, authors, file types)
+3. Sends data to **DeepSeek Flash** for LLM clustering and summarization
+4. Outputs a structured digest with:
+   - **3-7 key bullets** covering the most important changes
+   - **Watchlist** of 1-3 risks or pending follow-ups
+   - Commit hash / PR number references
+5. Falls back to template-based digest when LLM unavailable
+
+### Run locally
+
+```bash
+# Last 24 hours
+node scripts/auto-digest.mjs
+
+# Custom window
+node scripts/auto-digest.mjs --hours 48
+
+# Since a specific date
+node scripts/auto-digest.mjs --since "2026-04-28"
+
+# With WeCom notification
+GITHUB_TOKEN=ghp_xxx DEEPSEEK_API_KEY=sk-xxx \
+  node scripts/auto-digest.mjs --wecom
+
+npm run auto:digest
+npm run auto:digest:wecom     # + WeCom notification
+```
+
+### Output example
+
+```
+## 📋 JoyJoin 工程日报 2026-04-30
+
+**覆盖时段:** last 24h | **提交:** 23 | **PR:** 2 | **作者:** 4 | **变更文件:** ~900
+
+### 关键变更
+- [连接揭示功能上线] 为小程序匹配状态实现统一连接揭示 (bd0d6b99)
+- [Icebreaker 系统大修] 新增 LLM 增强分析、自动化系统及 WeCom 集成 (b78c9541)
+- [CI/CD 优化] Qulucas 完成 14 次 cicd.yml 迭代，稳定性增强
+
+### Watchlist
+- ⚠️ CI/CD 14 次快速迭代可能暗示部署不稳定
+- ⚠️ 三个大提交（831 文件改动）合并时可能引入冲突
+```
+
+---
+
+## 4. WeCom Integration
 
 ### Setup
 
