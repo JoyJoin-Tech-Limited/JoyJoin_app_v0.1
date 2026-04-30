@@ -182,6 +182,19 @@ jobs:
     needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload deployment workspace via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          source: "apps,packages,deployment,scripts,package.json,package-lock.json,tsconfig.base.json,tsconfig.json,Dockerfile"
+          target: "~/JoyJoin"
+          rm: true
+
       # GitHub → server: map Repository secrets to `secrets.*` and Repository variables to `vars.*`.
       # Add new keys here + in `envs` + in the sync loop below.
       - name: SSH Remote Deployment
@@ -291,11 +304,9 @@ jobs:
 
             disk_guard
 
-            # --- 1) Code Sync ---
-            echo "📥 Syncing code..."
+            # --- 1) Code is already synced from CI via SCP ---
+            echo "📥 Using code synced from CI artifact upload..."
             cd ~/JoyJoin
-            git fetch --all
-            git reset --hard origin/main
 
             # Ensure host dependencies are fresh for CLI tools
             echo "📦 Installing host dependencies..."
