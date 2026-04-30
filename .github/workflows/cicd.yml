@@ -340,6 +340,14 @@ jobs:
             }
             trap on_fail ERR
 
+            debug_log() {
+              local hypothesis_id="$1"
+              local message="$2"
+              local data="${3:-{}}"
+              printf 'AGENT_DEBUG %s\n' "$(printf '{"runId":"deploy-migrate-debug","hypothesisId":"%s","location":"cicd.yml:deploy-script","message":"%s","data":%s,"timestamp":%s}' \
+                "$hypothesis_id" "$message" "$data" "$(date +%s000)")"
+            }
+
             echo "🧭 Disk before:"
             df -h /
 
@@ -421,20 +429,163 @@ jobs:
             echo "🗄️ Syncing database schema..."
             cd ~/JoyJoin
 
+            # #region agent log
+            DB_META_JSON=$(node -e 'const u=process.env.DATABASE_URL||"";try{const p=new URL(u);const out={protocol:p.protocol.replace(":",""),host:p.hostname,port:p.port||"default",database:p.pathname.replace(/^\/+/,""),hasPassword:Boolean(p.password),hasUser:Boolean(p.username)};process.stdout.write(JSON.stringify(out));}catch{process.stdout.write(JSON.stringify({parseError:true,length:u.length}));}')
+            debug_log "H1" "database_url_metadata" "$DB_META_JSON"
+            # #endregion
+
             # Verify journal integrity before running migrations
             echo "   Verifying migration journal..."
             node scripts/verify-journal-sync.mjs
 
+            # #region agent log
+            MIGRATION_FILES_JSON=$(node - <<'NODE'
+            const fs = require('fs');
+            const path = require('path');
+            const migrationsDir = path.join(process.cwd(), 'apps/server/migrations');
+            const metaJournal = path.join(migrationsDir, 'meta/_journal.json');
+            const files = fs.readdirSync(migrationsDir).filter((n) => n.endsWith('.sql'));
+            const journal = JSON.parse(fs.readFileSync(metaJournal, 'utf8'));
+            process.stdout.write(JSON.stringify({
+              sqlFileCount: files.length,
+              latestSqlFile: files.sort().at(-1) ?? null,
+              journalEntryCount: Array.isArray(journal?.entries) ? journal.entries.length : null,
+            }));
+            NODE
+            )
+            debug_log "H5" "migration_files_and_journal_snapshot" "$MIGRATION_FILES_JSON"
+            # #endregion
+
+            # #region agent log
+            PG_PROBE_JSON=$(node - <<'NODE'
+            const { Client } = require('pg');
+            (async () => {
+              const started = Date.now();
+              const client = new Client({
+                connectionString: process.env.DATABASE_URL,
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 8000,
+              });
+              try {
+                await client.connect();
+                const r = await client.query('select now() as now');
+                process.stdout.write(JSON.stringify({ ok: true, latencyMs: Date.now() - started, now: r.rows?.[0]?.now ?? null }));
+              } catch (error) {
+                process.stdout.write(JSON.stringify({
+                  ok: false,
+                  latencyMs: Date.now() - started,
+                  name: error?.name ?? null,
+                  code: error?.code ?? null,
+                  message: error?.message ?? null,
+                }));
+              } finally {
+                try { await client.end(); } catch {}
+              }
+            })();
+            NODE
+            )
+            debug_log "H2" "postgres_connectivity_probe" "$PG_PROBE_JSON"
+            # #endregion
+
+            # #region agent log
+            DB_IDENTITY_JSON=$(node - <<'NODE'
+            const { Client } = require('pg');
+            (async () => {
+              const client = new Client({
+                connectionString: process.env.DATABASE_URL,
+                ssl: { rejectUnauthorized: false },
+                connectionTimeoutMillis: 8000,
+              });
+              try {
+                await client.connect();
+                const identity = await client.query(`
+                  select current_database() as database,
+                         current_user as db_user,
+                         current_schema() as schema
+                `);
+                const mig = await client.query(`
+                  select to_regclass('__drizzle_migrations') as migration_table
+                `);
+                process.stdout.write(JSON.stringify({
+                  ok: true,
+                  database: identity.rows?.[0]?.database ?? null,
+                  dbUser: identity.rows?.[0]?.db_user ?? null,
+                  schema: identity.rows?.[0]?.schema ?? null,
+                  migrationTable: mig.rows?.[0]?.migration_table ?? null,
+                }));
+              } catch (error) {
+                process.stdout.write(JSON.stringify({
+                  ok: false,
+                  code: error?.code ?? null,
+                  message: error?.message ?? null,
+                }));
+              } finally {
+                try { await client.end(); } catch {}
+              }
+            })();
+            NODE
+            )
+            debug_log "H4" "database_identity_and_migration_table_probe" "$DB_IDENTITY_JSON"
+            # #endregion
+
             # Run pending migrations before restarting containers so new app code never boots on an old schema.
             echo "   Running database migrations..."
             MIGRATION_LOG=$(mktemp)
+            # #region agent log
             if ! CI=1 npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1; then
+              MIGRATION_EXIT_CODE=$?
               echo "❌ Database migration failed. Drizzle output:"
+              debug_log "H3" "drizzle_migrate_failed" "{\"exitCode\":${MIGRATION_EXIT_CODE:-1},\"logPath\":\"$MIGRATION_LOG\"}"
               sed -n '1,240p' "$MIGRATION_LOG" || true
+              echo "----- drizzle migrate tail -----"
+              sed -n '241,480p' "$MIGRATION_LOG" || true
+              echo "----- drizzle migrate escaped (debug) -----"
+              node - <<'NODE' "$MIGRATION_LOG"
+              const fs = require('fs');
+              const p = process.argv[2];
+              try {
+                const content = fs.readFileSync(p, 'utf8');
+                const compact = content.slice(0, 8000);
+                console.log(JSON.stringify({ chars: content.length, preview: compact }));
+              } catch (error) {
+                console.log(JSON.stringify({ readError: error?.message ?? String(error) }));
+              }
+              NODE
+              echo "----- postgres lock probe (debug) -----"
+              node - <<'NODE'
+              const { Client } = require('pg');
+              (async () => {
+                const client = new Client({
+                  connectionString: process.env.DATABASE_URL,
+                  ssl: { rejectUnauthorized: false },
+                  connectionTimeoutMillis: 8000,
+                });
+                try {
+                  await client.connect();
+                  const r = await client.query(`
+                    select pid, usename, state, wait_event_type, wait_event, left(query, 140) as query
+                    from pg_stat_activity
+                    where datname = current_database()
+                      and state <> 'idle'
+                    order by query_start asc
+                    limit 12
+                  `);
+                  console.log(JSON.stringify({ activeSessions: r.rows }, null, 2));
+                } catch (error) {
+                  console.log(JSON.stringify({ lockProbeError: error?.message ?? String(error) }));
+                } finally {
+                  try { await client.end(); } catch {}
+                }
+              })();
+              NODE
               exit 1
             fi
+            debug_log "H3" "drizzle_migrate_succeeded" '{"exitCode":0}'
             sed -n '1,240p' "$MIGRATION_LOG" || true
+            echo "----- drizzle migrate tail -----"
+            sed -n '241,480p' "$MIGRATION_LOG" || true
             rm -f "$MIGRATION_LOG"
+            # #endregion
 
             # Verify schema alignment after migration
             echo "   Verifying schema alignment..."
