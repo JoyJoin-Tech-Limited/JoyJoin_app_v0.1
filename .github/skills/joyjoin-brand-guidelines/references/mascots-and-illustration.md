@@ -1,25 +1,42 @@
 # Mascots & Illustration
 
-JoyJoin's visual identity is built around **12 archetype animals** that map to the personality system's canonical archetypes (`packages/shared/src/personality/prototypes.ts`).
+JoyJoin's visual identity is built around **12 archetype animals** that map to the personality system's canonical archetypes.
+
+> **Source of truth:** `packages/shared/src/personality/archetypeNames.ts` and `archetypeRegistry.ts` own the canonical IDs, display names, and ordering. This document is kept in sync with those files.
 
 ## Archetype mascot roster
 
-| Archetype | Animal | Personality | Primary use |
-|-----------|--------|-------------|-------------|
-| 开心柯基 | **Corgi** | Warm, social, energetic | Celebration, onboarding welcome, action moments |
-| 太阳鸡 | **Rooster** | Bright, confident, energetic | Morning events, leadership themes |
-| 夸夸豚 | **Praise Dolphin** | Supportive, complimentary, warm | Social bonding, affirmation moments |
-| 机智狐 | **Fox** | Clever, adaptable, strategic | Problem-solving, game nights |
-| 淡定海豚 | **Calm Dolphin** | Steady, peaceful, balanced | Relaxation, mindfulness events |
-| 织网蛛 | **Spider** | Intricate, connected, detailed | Networking, craft workshops |
-| 暖心熊 | **Bear** | Warm, strong, protective | Trust moments, group hugs, winter themes |
-| 灵感章鱼 | **Octopus** | Creative, multi-faceted, curious | Arts, brainstorming, multi-activity |
-| 沉思猫头鹰 | **Owl** | Wise, contemplative, observant | Knowledge sharing, book clubs |
-| 定心大象 | **Elephant** | Steady, reliable, grounding | Team building, reassurance |
-| 稳如龟 | **Turtle** | Patient, persistent, thoughtful | Step-by-step progress, loading states |
-| 隐身猫 | **Cat** | Independent, curious, adaptable | Solo activities, creative exploration |
+| ID | Current name | Animal | Primary use |
+|-----------|-------------|--------|-------------|
+| corgi | **气氛组柯基** | Corgi | Celebration, onboarding welcome, action moments |
+| rooster | **情绪稳定鸡** | Rooster | Steady positive energy, mood stabilizer |
+| hamster_praise | **捧场王仓鼠** | Hamster | Social bonding, affirmation, warmth |
+| fox | **探宝雷达狐** | Fox | Problem-solving, fresh ideas, game nights |
+| dolphin_calm | **读空气海豚** | Dolphin | Relaxation, mindfulness, reading the room |
+| spider | **社交裁缝蛛** | Spider | Networking, connecting people, craft workshops |
+| koala | **情绪树洞考拉** | Koala | Trust moments, deep listening, emotional safety |
+| octopus | **脑洞喷泉章鱼** | Octopus | Arts, brainstorming, creative multi-activity |
+| owl | **追问猫头鹰** | Owl | Knowledge sharing, deep questions, book clubs |
+| elephant | **定海神针大象** | Elephant | Team building, reassurance, grounding |
+| turtle | **慢半拍龟** | Turtle | Step-by-step progress, loading states, observation |
+| cat | **静音模式猫** | Cat | Solo activities, quiet companionship, creative exploration |
 
-**Not approved:** Koala and Hamster are **not** part of the canonical archetype system. Do not use them in product UI or canonical brand assets without explicit Product approval.
+### Legacy names (for migration reference only)
+
+These older names may still appear in historical docs, mockups, and asset filenames. Use `ARCHETYPE_LEGACY_NAME_MAP` in `archetypeNames.ts` to resolve them:
+
+- 开心柯基 → corgi
+- 太阳鸡 → rooster
+- 夸夸豚 → hamster_praise
+- 机智狐 → fox
+- 淡定海豚 → dolphin_calm
+- 织网蛛 → spider
+- 暖心熊 → koala
+- 灵感章鱼 → octopus
+- 沉思猫头鹰 → owl
+- 定心大象 → elephant
+- 稳如龟 → turtle
+- 隐身猫 → cat
 
 ## Illustration style (插画风)
 

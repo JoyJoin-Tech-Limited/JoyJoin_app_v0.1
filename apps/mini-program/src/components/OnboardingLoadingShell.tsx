@@ -1,5 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect } from 'react'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { XiaoyueExpressionId } from '../lib/xiaoyueExpressions'
 import { getXiaoyueExpressionAsset } from '../lib/xiaoyueExpressions'
 import Card from './Card'
@@ -18,7 +19,7 @@ export default function OnboardingLoadingShell({
   stepLabel,
   title,
   subtitle,
-  hint = '小悦正在把这一页铺好，马上就能继续。',
+  hint = `${DEFAULT_MASCOT_DISPLAY_NAME}正在把这一页铺好，马上就能继续。`,
   xiaoyueExpression = 'loadingSystem',
 }: OnboardingLoadingShellProps) {
   const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))

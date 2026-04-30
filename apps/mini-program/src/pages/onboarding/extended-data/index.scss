@@ -33,7 +33,7 @@
   &__eyebrow {
     display: inline-flex;
     align-items: center;
-    padding: 10rpx 20rpx;
+    padding: 8rpx 16rpx;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.92);
     color: $color-primary;
@@ -85,7 +85,7 @@
 
   &__coach-text {
     display: block;
-    margin-top: 10rpx;
+    margin-top: 8rpx;
     font-size: $font-size-base;
     color: $color-text-primary;
     line-height: 1.5;
@@ -127,15 +127,15 @@
   &__selection-tray {
     display: flex;
     flex-wrap: wrap;
-    gap: 14rpx;
+    gap: 16rpx;
     margin-top: $spacing-md;
   }
 
   &__selection-chip {
     display: inline-flex;
     align-items: center;
-    gap: 10rpx;
-    padding: 12rpx 18rpx;
+    gap: 8rpx;
+    padding: 16rpx 16rpx;
     border-radius: 999rpx;
     background: rgba($color-primary-light, 0.6);
 
@@ -171,15 +171,15 @@
   &__dominant-categories {
     display: flex;
     flex-wrap: wrap;
-    gap: 12rpx;
+    gap: 16rpx;
     margin-top: $spacing-md;
   }
 
   &__dominant-chip {
     display: inline-flex;
     align-items: center;
-    gap: 10rpx;
-    padding: 10rpx 18rpx;
+    gap: 8rpx;
+    padding: 8rpx 16rpx;
     border-radius: 999rpx;
     background: rgba($color-surface, 0.98);
     border: 2rpx solid rgba($color-border, 0.92);
@@ -254,7 +254,7 @@
   &__category-title-wrap {
     display: flex;
     align-items: center;
-    gap: 12rpx;
+    gap: 16rpx;
   }
 
   &__category-dot {
@@ -297,7 +297,7 @@
     width: calc((100% - #{$spacing-sm}) / 2);
     min-height: 128rpx;
     padding: $spacing-md;
-    border-radius: 26rpx;
+    border-radius: 24rpx;
     border: 2rpx solid rgba($color-border, 0.94);
     background: $color-surface;
     transition:
@@ -320,7 +320,7 @@
       border-color: rgba($color-secondary, 0.22);
       background: rgba($color-secondary, 0.08);
       box-shadow: 0 8rpx 18rpx rgba($color-secondary, 0.08);
-      transform: translateY(-2rpx);
+      transform: translateY(-4rpx);
     }
 
     &--level-3 {
@@ -340,7 +340,7 @@
 
   &__interest-meta {
     display: block;
-    margin-top: 10rpx;
+    margin-top: 8rpx;
     font-size: $font-size-xs;
     color: $color-text-secondary;
   }
@@ -349,11 +349,11 @@
     position: fixed;
     left: $container-padding;
     right: $container-padding;
-    bottom: 238rpx;
-    bottom: calc(238rpx + constant(safe-area-inset-bottom));
-    bottom: calc(238rpx + env(safe-area-inset-bottom));
+    bottom: 240rpx;
+    bottom: calc(240rpx + constant(safe-area-inset-bottom));
+    bottom: calc(240rpx + env(safe-area-inset-bottom));
     z-index: $z-toast;
-    padding: 18rpx $spacing-md;
+    padding: 16rpx $spacing-md;
     border-radius: 28rpx;
     background: rgba($color-text-primary, 0.92);
     box-shadow: 0 14rpx 34rpx rgba(45, 49, 66, 0.18);
@@ -386,8 +386,8 @@
   &__footer-meter {
     display: flex;
     align-items: center;
-    gap: 12rpx;
-    margin-bottom: 12rpx;
+    gap: 16rpx;
+    margin-bottom: 16rpx;
   }
 
   &__footer-meter-track {
@@ -421,7 +421,7 @@
 
   &__footer-subtitle {
     display: block;
-    margin-top: 6rpx;
+    margin-top: 8rpx;
     font-size: $font-size-xs;
     color: $color-text-secondary;
     line-height: 1.45;
@@ -429,7 +429,7 @@
 
   &__error {
     display: block;
-    margin-top: 10rpx;
+    margin-top: 8rpx;
     font-size: $font-size-sm;
     color: $color-error;
   }

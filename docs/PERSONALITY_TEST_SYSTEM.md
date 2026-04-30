@@ -68,12 +68,12 @@ The current production system uses 12 archetypes. All archetype names are define
 | # | Archetype | Icon | Energy | Trait Profile | Description |
 |---|-----------|------|--------|--------------|-------------|
 | 1 | 气氛组柯基 (Happy Corgi) | 🐕 | 95 | X=95, P=85, O=65, A=60, E=60, C=50 | High-energy socializer, natural icebreaker |
-| 2 | 情绪稳定鸡 (Sun Chicken) | 🐓 | 90 | P=92, E=88, C=78, X=78, A=70, O=55 | Optimistic motivator, spreads positivity |
-| 3 | 捧场王仓鼠 (Praise Dolphin) | 🐬 | 85 | A=95, P=88, X=82, E=65, O=62, C=50 | Warmhearted encourager, builds people up |
+| 2 | 情绪稳定鸡 (Rooster) | 🐓 | 90 | P=92, E=88, C=78, X=78, A=70, O=55 | Optimistic motivator, spreads positivity |
+| 3 | 捧场王仓鼠 (Hamster) | 🐬 | 85 | A=95, P=88, X=82, E=65, O=62, C=50 | Warmhearted encourager, builds people up |
 | 4 | 探宝雷达狐 (Clever Fox) | 🦊 | 82 | O=92, X=78, P=58, E=60, C=50, A=40 | Creative problem-solver, quick thinker |
-| 5 | 读空气海豚 (Calm Dolphin) | 🐬 | 75 | E=85, C=70, A=70, O=65, X=65, P=68 | Balanced mediator, stays composed |
+| 5 | 读空气海豚 (Dolphin) | 🐬 | 75 | E=85, C=70, A=70, O=65, X=65, P=68 | Balanced mediator, stays composed |
 | 6 | 社交裁缝蛛 (Weaver Spider) | 🕷️ | 72 | C=85, O=70, A=70, E=65, X=60, P=60 | Detail-oriented planner, builds systems |
-| 7 | 情绪树洞考拉 (Warm Bear) | 🐻 | 70 | A=90, E=80, P=70, C=65, O=60, X=48 | Empathetic supporter, nurtures others |
+| 7 | 情绪树洞考拉 (Koala) | 🐻 | 70 | A=90, E=80, P=70, C=65, O=60, X=48 | Empathetic supporter, nurtures others |
 | 8 | 脑洞喷泉章鱼 (Inspiration Octopus) | 🐙 | 68 | O=95, P=70, E=55, X=52, A=50, C=28 | Innovative ideator, connects dots |
 | 9 | 追问猫头鹰 (Contemplative Owl) | 🦉 | 55 | O=88, C=80, E=75, A=45, P=50, X=40 | Analytical thinker, seeks understanding |
 | 10 | 定海神针大象 (Grounded Elephant) | 🐘 | 52 | C=90, E=86, A=70, P=60, O=50, X=40 | Stable anchor, provides structure |
@@ -479,7 +479,7 @@ Each archetype has 3 categories of traits:
 | **Secondary** | 1.2-1.3 | Supporting traits (medium importance) |
 | **Avoid** | 0.4-0.8 | Traits to minimize (low weight = divergence OK in this direction) |
 
-**Example: 情绪树洞考拉 (Warm Bear)**
+**Example: 情绪树洞考拉 (Koala)**
 ```typescript
 {
   primary: { A: 1.8 },           // Must have high Affinity

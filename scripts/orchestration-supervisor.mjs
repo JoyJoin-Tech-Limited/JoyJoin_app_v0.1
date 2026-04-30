@@ -856,12 +856,14 @@ function deriveSessionId(existingSessionId) {
   return cleanString(existingSessionId) || randomUUID();
 }
 
+const MODE_COMMUNICATION_VALUES = ['normal', 'caveman', 'grill-me'];
+
 export function normalizeModeState(value) {
   if (
     value &&
     typeof value === 'object' &&
     !Array.isArray(value) &&
-    ['normal', 'caveman', 'grill-me'].includes(value.communication)
+    MODE_COMMUNICATION_VALUES.includes(value.communication)
   ) {
     return {
       communication: value.communication,
@@ -1057,8 +1059,14 @@ export function recordTurnSummary(repoRoot, payload) {
     };
   }
 
+  const nextSessionTurnCounter = (existingContext.sessionTurnCounter || 0) + 1;
+
   const nextMode = payload.mode && typeof payload.mode === 'object' && !Array.isArray(payload.mode)
-    ? normalizeModeState({ ...existingContext.mode, ...payload.mode })
+    ? normalizeModeState({
+        ...existingContext.mode,
+        ...payload.mode,
+        activeSinceTurn: payload.mode.activeSinceTurn ?? nextSessionTurnCounter,
+      })
     : normalizeModeState(existingContext.mode);
 
   const nextContext = {
@@ -1070,6 +1078,7 @@ export function recordTurnSummary(repoRoot, payload) {
     upstreamAgent: summary.agentName,
     turnSummaryState: nextTurnSummaryState,
     mode: nextMode,
+    sessionTurnCounter: nextSessionTurnCounter,
     lastUpdatedAt: summary.recordedAt,
   };
 
@@ -1102,6 +1111,49 @@ export function recordTurnSummary(repoRoot, payload) {
 
 function runRecordSummary(repoRoot, args = []) {
   outputJson(recordTurnSummary(repoRoot, parseRecordSummaryPayload(args)));
+}
+
+export function setMode(repoRoot, mode) {
+  if (!MODE_COMMUNICATION_VALUES.includes(mode)) {
+    throw new Error(`Mode must be one of: ${MODE_COMMUNICATION_VALUES.join(', ')}. Received: ${mode}`);
+  }
+
+  const existingContext = loadRuntimeContext(repoRoot);
+  const manifest = loadOrchestrationManifest(repoRoot);
+  const previousMode = normalizeModeState(existingContext.mode);
+  const nextSessionTurnCounter = (existingContext.sessionTurnCounter || 0) + 1;
+
+  const nextMode = normalizeModeState({
+    communication: mode,
+    activeSinceTurn: nextSessionTurnCounter,
+    triggeredBy: 'user',
+  });
+
+  const nextContext = {
+    ...existingContext,
+    mode: nextMode,
+    sessionTurnCounter: nextSessionTurnCounter,
+    lastUpdatedAt: new Date().toISOString(),
+  };
+
+  persistRuntimeContext(repoRoot, nextContext, manifest);
+  appendOrchestrationLog(repoRoot, {
+    recordedAt: nextContext.lastUpdatedAt,
+    triggerSource: 'explicit_mode_change',
+    event: 'set-mode',
+    mode: nextMode,
+    previousMode,
+  });
+
+  return {
+    ok: true,
+    mode: nextMode,
+    previousMode,
+  };
+}
+
+function runSetMode(repoRoot, args = []) {
+  outputJson(setMode(repoRoot, args[0]));
 }
 
 function buildHookContext(repoRoot, eventName, payload, manifest) {
@@ -1382,6 +1434,7 @@ function runCopilotHook(repoRoot, eventName) {
       recommendedNextAgents: kickoffConfig.entry_agents ?? ['Researcher', 'Planner'],
       turnSummaryState: createDefaultTurnSummaryState(),
       mode: normalizeModeState(context.mode),
+      sessionTurnCounter: 1,
       memoryContext: buildMemoryContext({
         changedFiles: context.changedFiles ?? [],
         memoryConfig,
@@ -1617,6 +1670,11 @@ if (isMainModule()) {
 
     if (command === 'record-summary') {
       runRecordSummary(repoRoot, process.argv.slice(3));
+    }
+
+    if (command === 'set-mode') {
+      runSetMode(repoRoot, process.argv.slice(3));
+      process.exit(0);
     }
 
     if (command === 'git-hook') {

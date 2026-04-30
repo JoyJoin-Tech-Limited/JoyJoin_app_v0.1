@@ -23,6 +23,8 @@ export interface MatchExplanationContract {
   chemistryScore: number;
   sharedInterests: string[];
   connectionPoints: string[];
+  /** Connection points with rarity tiers (additive field for enriched rendering). */
+  connectionPointsWithRarity?: import('./types/groupAnalysis').ConnectionPointWithRarity[];
   /** Optional one-line conversation opener suggestion (match intelligence layer). */
   introAngle?: string;
 }

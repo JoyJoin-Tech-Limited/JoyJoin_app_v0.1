@@ -1,9 +1,10 @@
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { useMiniPageGate } from '../../hooks/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
@@ -98,7 +99,11 @@ export default function ConnectionsPage() {
           ))
         ) : (
           <Card className='connections-page__empty-state'>
-            <Text className='connections-page__empty-icon'>🤝</Text>
+            <Image
+              className='connections-page__empty-mascot'
+              src={getXiaoyueExpressionAsset('connectionsEmpty')}
+              mode='aspectFit'
+            />
             <Text className='connections-page__empty-text'>还没有建立连接</Text>
             <Text className='connections-page__empty-hint'>参加活动后即可与活动伙伴建立连接</Text>
           </Card>

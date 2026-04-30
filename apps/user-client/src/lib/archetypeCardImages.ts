@@ -9,7 +9,7 @@ const archetypeNameMap: Record<string, string> = {
   "corgi": "開心柯基",
   "koala": "koala",
   "spider": "織網蛛",
-  "hamster_praise": "誇誇豚",
+  "hamster_praise": "捧场王仓鼠",
   "rooster": "太陽雞",
   "dolphin_calm": "dolphin_calm",
   "owl": "沉思貓頭鷹",

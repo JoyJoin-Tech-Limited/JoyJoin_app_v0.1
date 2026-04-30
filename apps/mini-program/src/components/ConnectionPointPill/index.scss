@@ -1,0 +1,45 @@
+.connection-point-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.pill--common {
+  background-color: #F3F4F6;
+  color: #6B7280;
+  border: 1rpx solid #E2E5ED;
+}
+
+.pill--rare {
+  background-color: #F5F3FF;
+  color: #7C3AED;
+  border: 1rpx solid #DDD6FE;
+  border-left: 4rpx solid #8B5CF6;
+  animation: pillPulse 2.5s ease-in-out infinite;
+}
+
+.pill--epic {
+  background-color: #FFFBEB;
+  color: #92400E;
+  border: 1rpx solid #FDE68A;
+  border-left: 4rpx solid #F59E0B;
+  animation: pillPulse 2s ease-in-out infinite;
+}
+
+@keyframes pillPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+.pill-text {
+  font-size: 24rpx;
+}

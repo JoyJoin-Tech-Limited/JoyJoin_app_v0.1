@@ -1,4 +1,5 @@
 import { Button, View, Text, Image, ScrollView } from '@tarojs/components'
+import JoyButton from '../../components/Button'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/api'
@@ -486,12 +487,13 @@ export default function BlindBoxPaymentPage() {
           <View className='payment-page__orb payment-page__orb--right' />
         </View>
         <View className='payment-page__header'>
-          <Button
+          <JoyButton
+            variant='secondary'
             className='payment-page__back-button'
             onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile }) })}
           >
             返回
-          </Button>
+          </JoyButton>
           <Text className='payment-page__eyebrow'>
             {registrationReturnContext ? '继续报名' : '福利柜'}
           </Text>
@@ -536,9 +538,13 @@ export default function BlindBoxPaymentPage() {
               : '若你刚完成支付，可继续查看已有订单结果。'}
           </Text>
           {pendingOrderToResume ? (
-            <Button className='payment-page__resume-button' onClick={handleResumePendingOrder}>
+            <JoyButton
+              variant='primary'
+              className='payment-page__resume-button'
+              onClick={handleResumePendingOrder}
+            >
               {registrationReturnContext ? '继续确认并返回报名' : '继续查看已有订单'}
-            </Button>
+            </JoyButton>
           ) : null}
         </View>
       </ScrollView>
@@ -553,12 +559,13 @@ export default function BlindBoxPaymentPage() {
       </View>
 
       <View className='payment-page__header'>
-        <Button
+        <JoyButton
+          variant='secondary'
           className='payment-page__back-button'
           onClick={() => Taro.navigateBack({ fail: () => Taro.switchTab({ url: MINI_PROGRAM_ROUTES.profile }) })}
         >
           返回
-        </Button>
+        </JoyButton>
         <Text className='payment-page__eyebrow'>
           {registrationReturnContext ? '继续报名' : '福利柜'}
         </Text>
@@ -609,9 +616,13 @@ export default function BlindBoxPaymentPage() {
               ? '你有一笔订单仍在等待确认，先完成确认后系统会把你带回报名页。'
               : '你有一笔订单仍在等待确认，先完成结果确认再发起新的支付。'}
           </Text>
-          <Button className='payment-page__resume-button' onClick={handleResumePendingOrder}>
+          <JoyButton
+            variant='primary'
+            className='payment-page__resume-button'
+            onClick={handleResumePendingOrder}
+          >
             {registrationReturnContext ? '继续确认并返回报名' : '继续查询订单'}
-          </Button>
+          </JoyButton>
         </View>
       ) : null}
 
@@ -721,14 +732,15 @@ export default function BlindBoxPaymentPage() {
             </Text>
           </View>
         ))}
-        <Button
+        <JoyButton
+          variant='primary'
           className='payment-page__pay-button'
           onClick={handlePay}
           disabled={isBootstrapping || isCreatingIntent || !user?.id || !!pendingOrderToResume}
           loading={isCreatingIntent}
         >
           {payButtonLabel}
-        </Button>
+        </JoyButton>
         <Text className='payment-page__hint'>{payHint}</Text>
       </View>
     </ScrollView>

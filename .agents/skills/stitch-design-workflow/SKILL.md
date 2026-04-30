@@ -72,20 +72,20 @@ When mascots appear in Stitch-generated screens, use only these 12 archetypes:
 
 | Archetype | Animal | Personality |
 |-----------|--------|-------------|
-| 开心柯基 | Corgi | Playful, energetic, optimistic |
-| 太阳鸡 | Rooster | Bright, confident, energetic |
-| 夸夸豚 | Praise Dolphin | Supportive, complimentary, warm |
-| 机智狐 | Fox | Clever, adaptable, strategic |
-| 淡定海豚 | Calm Dolphin | Steady, peaceful, balanced |
-| 织网蛛 | Spider | Intricate, connected, detailed |
-| 暖心熊 | Bear | Warm, strong, protective |
-| 灵感章鱼 | Octopus | Creative, multi-faceted, curious |
-| 沉思猫头鹰 | Owl | Wise, contemplative, observant |
-| 定心大象 | Elephant | Steady, reliable, grounding |
-| 稳如龟 | Turtle | Patient, persistent, thoughtful |
-| 隐身猫 | Cat | Independent, curious, adaptable |
+| 气氛组柯基 | Corgi | Playful, energetic, optimistic |
+| 情绪稳定鸡 | Rooster | Bright, confident, energetic |
+| 捧场王仓鼠 | Hamster | Supportive, complimentary, warm |
+| 探宝雷达狐 | Fox | Clever, adaptable, strategic |
+| 读空气海豚 | Perceptive Dolphin | Steady, peaceful, balanced |
+| 社交裁缝蛛 | Spider | Intricate, connected, detailed |
+| 情绪树洞考拉 | Bear | Warm, strong, protective |
+| 脑洞喷泉章鱼 | Octopus | Creative, multi-faceted, curious |
+| 追问猫头鹰 | Owl | Wise, contemplative, observant |
+| 定海神针大象 | Elephant | Steady, reliable, grounding |
+| 慢半拍龟 | Turtle | Patient, persistent, thoughtful |
+| 静音模式猫 | Cat | Independent, curious, adaptable |
 
-**Not approved:** Koala and Hamster are not canonical. Do not include them.
+All 12 archetypes above are canonical. See `packages/shared/src/personality/archetypeNames.ts` for the legacy name migration map.
 
 ### Illustration style (插画风)
 

@@ -24,6 +24,7 @@ import { apiRequest, getUserState } from '../../../lib/api'
 import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
 import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
+import { getMascotDisplayName } from '../../../lib/mascotDisplay'
 import { logError, logInfo } from '../../../lib/logger'
 import Button from '../../../components/Button'
 import Card from '../../../components/Card'
@@ -332,7 +333,7 @@ export default function EssentialDataPage() {
     return (
       <OnboardingLoadingShell
         stepLabel='Onboarding 2 / 4'
-        title='小悦在整理你的入场名片'
+        title={`${getMascotDisplayName(user)}在整理你的入场名片`}
         subtitle='把这一步铺好后，后面的兴趣热度和资料预览都会顺滑接上。'
       />
     )

@@ -396,7 +396,7 @@ function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
   const topTraits = rankedTraits.slice(0, 2).map((trait) => trait.name);
   const lowTraits = [...rankedTraits].reverse().slice(0, 2).map((trait) => trait.name);
 
-  return `你在为悦聚 personality result 生成“小悦分析”文案。已有 Pokémon 风格海报承载“原型视觉感”，这次输出必须走“文字版社交表达”，不能重复海报上的原型卡、编号、限定、收藏感文案。
+  return `你在为悦聚 personality result 生成“悦仔分析”文案。已有 Pokémon 风格海报承载“原型视觉感”，这次输出必须走“文字版社交表达”，不能重复海报上的原型卡、编号、限定、收藏感文案。
 
 用户原型：${archetype}
 用户六维特质：
@@ -437,7 +437,7 @@ ${traitSummary}
 
 硬性要求：
 1. 全部使用第二人称“你”或第一人称分享句，不要写“该用户”
-2. 保持小悦的机智、利落、不油腻，不要鸡汤，不要感叹号，不要过度热情
+2. 保持悦仔的机智、利落、不油腻，不要鸡汤，不要感叹号，不要过度热情
 3. 用“场景 + 感受 + 动作”来写，少用抽象人格词
 4. headline 和 shareLine 必须与海报视觉形成互补：更像一句活人会发出去的话，不要写成海报标题
  5. analysis 结尾必须落到一个低成本的下一步，不要开放式问句

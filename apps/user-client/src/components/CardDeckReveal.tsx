@@ -5,7 +5,6 @@ import { getArchetypeImage } from "@/lib/archetypeImages";
 import { archetypeConfig } from "@/lib/archetypes";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import {
-  generateSparkPredictions,
   generatePersonalizedDescription,
   type UserContext,
   type SparkPrediction,
@@ -196,21 +195,7 @@ function MemberCard({
   // ── Memoised analytics – prevents 60fps drops during 3D spring animations ──
   const sparks = useMemo<SparkPrediction[]>(() => {
     if (!currentUser || !isFlipped) return [];
-    return generateSparkPredictions(currentUser, {
-      userId: member.userId,
-      displayName: member.displayName,
-      archetype: member.archetype,
-      age: member.age,
-      topInterests: member.topInterests,
-      primaryInterests: member.primaryInterests,
-      educationLevel: member.educationLevel,
-      industry: member.industry,
-      gender: member.gender,
-      relationshipStatus: member.relationshipStatus,
-      children: member.children,
-      hometownRegionCity: member.hometownRegionCity,
-      hometownAffinityOptin: member.hometownAffinityOptin,
-    });
+    return [];
   }, [currentUser, member, isFlipped]);
 
   const sortedSparks = useMemo(() => {

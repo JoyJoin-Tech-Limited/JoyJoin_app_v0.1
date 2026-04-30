@@ -306,7 +306,7 @@ export class LLMReasoner {
     // 格式化对话历史（最近5轮）
     const recentHistory = conversationHistory.slice(-10);
     const historyStr = recentHistory
-      .map(msg => `${msg.role === 'user' ? '用户' : '小悦'}: ${msg.content.slice(0, 100)}`)
+      .map(msg => `${msg.role === 'user' ? '用户' : '悦仔'}: ${msg.content.slice(0, 100)}`)
       .join('\n') || '暂无';
     
     // 获取模块化推理prompt

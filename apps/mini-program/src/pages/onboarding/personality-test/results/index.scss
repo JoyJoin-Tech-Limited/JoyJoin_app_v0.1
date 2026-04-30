@@ -111,7 +111,7 @@
   }
 
   &__immersive-title {
-    font-size: 52rpx;
+    font-size: $font-size-2xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     line-height: 1.28;
@@ -425,7 +425,7 @@
   }
 
   &__reveal-label {
-    font-size: 58rpx;
+    font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     margin-bottom: $spacing-sm;
@@ -570,7 +570,7 @@
 
   &__hero-name {
     display: block;
-    font-size: 60rpx;
+    font-size: $font-size-3xl;
     font-weight: $font-weight-black;
     color: $color-text-primary;
     line-height: 1.15;
@@ -809,6 +809,86 @@
       border-color: rgba(180, 140, 40, 0.15);
       color: #7a5a09;
     }
+  }
+
+  // ── Compact trait bars on visible card (Pokémon stats feel) ──
+  &__pokemon-compact-traits {
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pokemon-compact-trait {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+
+  &__pokemon-compact-trait-label {
+    width: 80rpx;
+    font-size: 22rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-secondary;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  &__pokemon-compact-trait-track {
+    flex: 1;
+    height: 12rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    overflow: hidden;
+  }
+
+  &__pokemon-compact-trait-fill {
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.6s ease-out;
+  }
+
+  &__pokemon-compact-trait-value {
+    width: 48rpx;
+    font-size: 22rpx;
+    font-weight: $font-weight-black;
+    color: $color-primary-dark;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  // ── Compact skill badges on visible card ──
+  &__pokemon-skill-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__pokemon-skill-badge {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+    border: 2rpx solid transparent;
+
+    &--warm {
+      background: rgba(255, 241, 233, 0.96);
+      border-color: rgba(255, 153, 105, 0.2);
+      color: #d97706;
+    }
+
+    &--cool {
+      background: rgba(244, 240, 255, 0.96);
+      border-color: rgba(139, 92, 246, 0.2);
+      color: #7c3aed;
+    }
+  }
+
+  &__pokemon-skill-badge-text {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
   }
 
   &__pokemon-energy {

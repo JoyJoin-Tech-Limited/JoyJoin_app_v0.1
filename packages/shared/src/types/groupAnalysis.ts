@@ -19,6 +19,14 @@
 import type { AIProvider, AIResponseMeta } from './aiMeta';
 
 /**
+ * Connection point with assigned rarity tier.
+ */
+export interface ConnectionPointWithRarity {
+  text: string;
+  rarity: 'common' | 'rare' | 'epic';
+}
+
+/**
  * AI-generated explanation for a single user pair within a group.
  * Produced by matchExplanationService.generatePairExplanation().
  *
@@ -53,6 +61,12 @@ export interface PairExplanation {
    * Examples: "同乡（广州）", "性格互补（柯基×狐狸）", "深度同好（4个共同深度兴趣）"
    */
   connectionPoints: string[];
+
+  /**
+   * Connection points with rarity tiers (additive field for enriched client rendering).
+   * Optional for backward compatibility with legacy cached data.
+   */
+  connectionPointsWithRarity?: ConnectionPointWithRarity[];
 
   /**
    * One short icebreaker line — how to open the conversation naturally (≤24 chars typical).

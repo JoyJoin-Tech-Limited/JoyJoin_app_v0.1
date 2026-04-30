@@ -33,7 +33,7 @@ export interface ConversationTopicsResponse {
   generatedAt: string;
 }
 
-const CONVERSATION_TOPICS_PROMPT = `你是"小悦"，JoyJoin平台的社交氛围助手。你需要为一群即将见面的用户生成可以聊的话题建议。
+const CONVERSATION_TOPICS_PROMPT = `你是"悦仔"，JoyJoin平台的社交氛围助手。你需要为一群即将见面的用户生成可以聊的话题建议。
 
 ## 你的任务
 根据参与者的信息，推荐3-5个适合大家一起聊的话题，并为每个话题提供破冰开场白。

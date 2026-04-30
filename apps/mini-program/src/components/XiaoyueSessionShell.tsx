@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import XiaoyueChatBubble from './XiaoyueChatBubble'
 import { ICEBREAKER_XIAOYUE_EXPRESSION } from '../lib/xiaoyueExpressions'
 import type { XiaoyueExpressionId } from '../lib/xiaoyueExpressions'
@@ -24,7 +25,7 @@ function getPhaseCoachingLine(
 ): { main: string; hint?: string } {
   if (!sessionPack) {
     const defaults: Record<string, string> = {
-      waiting: '欢迎来到今晚的破冰时间，我是小悦。',
+      waiting: `欢迎来到今晚的破冰时间，我是${DEFAULT_MASCOT_DISPLAY_NAME}。`,
       warmup: '先从轻松的话题暖暖场吧。',
       micro_challenge: '热身完毕，来个轻松的小挑战。',
       lie_detective: '侦探时间，仔细听每一句话。',
@@ -138,7 +139,7 @@ export default function XiaoyueSessionShell({
             className='xiaoyue-session-shell__ask-text'
             onClick={onRequestSuggestion}
           >
-            💡 小悦，给点建议？
+            {`💡 ${DEFAULT_MASCOT_DISPLAY_NAME}，给点建议？`}
           </Text>
         </View>
       )}

@@ -54,11 +54,11 @@ Canonical order is **load-bearing**: used for TYPE numbering (`#01/12`–`#12/12
 |---|------|-----|--------|-----------|
 | 01 | 开心柯基 | corgi | very high | X↑ P↑ |
 | 02 | 太阳鸡 | rooster | very high | P↑ C↑ |
-| 03 | 夸夸豚 | dolphin_praise | high | A↑ P↑ |
+| 03 | 捧场王仓鼠 | hamster_praise | high | A↑ P↑ |
 | 04 | 机智狐 | fox | high | O↑ X↑ |
 | 05 | 淡定海豚 | dolphin_calm | medium | E↑ C↑ |
 | 06 | 织网蛛 | spider | medium | C↑ A↑ |
-| 07 | 暖心熊 | bear | medium | A↑ E↑ |
+| 07 | 情绪树洞考拉 | koala | medium | A↑ E↑ |
 | 08 | 灵感章鱼 | octopus | medium | O↑ C↓ |
 | 09 | 沉思猫头鹰 | owl | low | O↑ C↑ |
 | 10 | 定心大象 | elephant | low | E↑ C↑ |

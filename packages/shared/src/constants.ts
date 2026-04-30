@@ -252,3 +252,55 @@ export const DISCUSSION_STYLE_LABELS: Record<string, string> = {
   meme_humor: "梗和搞笑",
   deeper_analysis: "深度讨论",
 };
+
+// ============ Connection Point Rarity Rules ============
+
+export const CONNECTION_POINT_RARITY_RULES: Record<string, 'common' | 'rare' | 'epic'> = {
+  // Common
+  '同城': 'common',
+  '同行': 'common',
+  '同状态': 'common',
+  '话题深度相近': 'common',
+  // Rare
+  '同乡': 'rare',
+  '同频': 'rare',
+  '性格互补': 'rare',
+  '同款聊法': 'rare',
+  '同领域同模式': 'rare',
+  // Epic
+  '同款人格': 'epic',
+  '老乡+同行': 'epic',
+  '深度同好': 'epic',
+};
+
+/** Deterministic rarity assignment for any connection-point text.
+ *  Matches exact labels first, then handles dynamic text patterns
+ *  (e.g. "火锅同款聊法（随便聊聊）", "深度同好（5个共同深度兴趣）").
+ */
+export function getConnectionPointRarity(text: string): 'common' | 'rare' | 'epic' {
+  // Exact match first
+  if (CONNECTION_POINT_RARITY_RULES[text]) {
+    return CONNECTION_POINT_RARITY_RULES[text];
+  }
+  // Prefix / substring matching for dynamic text patterns
+  // Epic tier
+  if (text.includes('老乡+同行')) return 'epic';
+  if (text.includes('同款人格')) return 'epic';
+  if (text.includes('深度同好')) return 'epic';
+  if (text.includes('同学历') && (text.includes('硕士') || text.includes('博士'))) return 'epic';
+  // Rare tier
+  if (text.includes('同在') && text.includes('·')) return 'rare';           // 同在科技·互联网
+  if (text.includes('同款聊法')) return 'rare';                             // 火锅同款聊法（...）
+  if (text.includes('同领域同模式')) return 'rare';
+  if (text.includes('同学历')) return 'rare';
+  if (text.includes('同乡')) return 'rare';
+  if (text.includes('同频')) return 'rare';
+  if (text.includes('性格互补')) return 'rare';
+  // Common tier
+  if (text.includes('话题深度相近')) return 'common';
+  if (text.includes('同行')) return 'common';
+  if (text.includes('同城')) return 'common';
+  if (text.includes('同状态')) return 'common';
+  // Default fallback
+  return 'common';
+}

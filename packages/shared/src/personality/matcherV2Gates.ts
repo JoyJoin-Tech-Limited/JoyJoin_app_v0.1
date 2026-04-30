@@ -112,7 +112,7 @@ export const CONFUSION_PAIR_GATES: Array<{
     }
   },
   {
-    // hamster_praise vs rooster: hamster_praiseX更高(83 vs 74)
+    // hamster_praise vs corgi: hamster_praiseX更高(83 vs 74)
     trueArchetype: "hamster_praise",
     rivalArchetype: "corgi",
     gate: (t) => {

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { isPhoneAuthenticated } from "../../phoneAuth";
 import { storage } from "../../storage";
 import { determineSubtype, generateInsights } from "./assessment";
+import type { ArchetypeName } from "../../archetypeConfig";
 
 function shuffleOptions(options: any[]): any[] {
   const shuffled = [...options];
@@ -355,9 +356,9 @@ export function registerAssessmentV4Routes(app: Express): void {
           
           await storage.saveRoleResult(session.userId, {
             userId: session.userId,
-            primaryArchetype,
+            primaryArchetype: primaryArchetype as any,
             primaryArchetypeScore: Math.round(primaryMatchScore),
-            secondaryArchetype,
+            secondaryArchetype: secondaryArchetype as any,
             secondaryArchetypeScore: secondaryArchetype ? Math.round(secondaryMatchScore) : 0,
             roleSubtype,
             roleScores: {},

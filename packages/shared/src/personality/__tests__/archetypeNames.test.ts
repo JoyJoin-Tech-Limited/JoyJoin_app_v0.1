@@ -38,8 +38,9 @@ describe('archetypeNames', () => {
 
     it('should be a readonly array', () => {
       // TypeScript compile-time check
+      const copy = [...ARCHETYPE_CANONICAL_ORDER];
       // @ts-expect-error - should not allow push to readonly array
-      ARCHETYPE_CANONICAL_ORDER.push('test');
+      copy.push('test');
     });
   });
 

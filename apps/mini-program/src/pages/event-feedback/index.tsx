@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
+import { getMascotDisplayName } from '../../lib/mascotDisplay'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { logInfo, logError } from '../../lib/logger'
 import { TOAST_DEFAULT_MS } from '../../lib/uiConstants'
@@ -102,7 +103,7 @@ export default function EventFeedbackPage() {
     return (
       <JoyJoinLoadingScreen
         title='准备反馈页面…'
-        subtitle='小悦在确认你的活动参与记录'
+        subtitle={`${getMascotDisplayName(currentUser)}在确认你的活动参与记录`}
         showSkeleton={false}
       />
     )
@@ -251,7 +252,7 @@ export default function EventFeedbackPage() {
     return (
       <JoyJoinLoadingScreen
         title='页面加载中…'
-        subtitle='小悦正在准备'
+        subtitle={`${getMascotDisplayName(currentUser)}正在准备`}
         showSkeleton={false}
       />
     )

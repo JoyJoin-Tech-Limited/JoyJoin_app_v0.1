@@ -15,6 +15,11 @@ const MINI_PROGRAM_WECHAT_SUBSCRIBE_TMPL_IDS =
 /** WP4: optional build-time flag to show "实时 vs 缓存" for group analysis (beta/preview only; off in normal prod). */
 const MINI_PROGRAM_SHOW_GROUP_ANALYSIS_DEBUG =
   process.env.TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG ?? ''
+/** Xiaoyue connection reactions feature flag (default OFF). */
+const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
+  process.env.TARO_APP_XIAOYUE_CONNECTION_REACTIONS_ENABLED ??
+  process.env.XIAOYUE_CONNECTION_REACTIONS_ENABLED ??
+  ''
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
@@ -40,6 +45,9 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       ),
       'process.env.TARO_APP_SHOW_GROUP_ANALYSIS_DEBUG': JSON.stringify(
         MINI_PROGRAM_SHOW_GROUP_ANALYSIS_DEBUG,
+      ),
+      'process.env.TARO_APP_XIAOYUE_CONNECTION_REACTIONS_ENABLED': JSON.stringify(
+        MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED,
       ),
     },
     copy: {
@@ -69,6 +77,9 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     compiler: {
       type: 'vite',
       vitePlugins: []
+    },
+    build: {
+      target: 'es2020'
     },
     alias: {
       '@': path.resolve(__dirname, '..', 'src'),

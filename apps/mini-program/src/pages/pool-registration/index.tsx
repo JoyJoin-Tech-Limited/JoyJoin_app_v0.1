@@ -21,6 +21,7 @@ import {
   readStoredPaymentReturnContext,
 } from '../../lib/paymentPendingOrderStorage'
 import LoadingScreen from '../../components/LoadingScreen'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechatSubscribeMessage'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -81,7 +82,7 @@ function ChoiceCard({ option, selected, onClick, compact = false }: ChoiceCardPr
       onClick={onClick}
     >
       <View className='pool-reg__choice-label-row'>
-        <Text className='pool-reg__choice-emoji'>{option.emoji}</Text>
+        {option.emoji ? <Text className='pool-reg__choice-emoji'>{option.emoji}</Text> : null}
         <Text className='pool-reg__choice-title'>{option.label}</Text>
       </View>
       {option.description ? <Text className='pool-reg__choice-desc'>{option.description}</Text> : null}
@@ -103,7 +104,7 @@ function ChoiceChip({ option, selected, onClick }: ChoiceChipProps) {
         .join(' ')}
       onClick={onClick}
     >
-      <Text className='pool-reg__chip-emoji'>{option.emoji}</Text>
+      {option.emoji ? <Text className='pool-reg__chip-emoji'>{option.emoji}</Text> : null}
       <Text className='pool-reg__chip-label'>{option.label}</Text>
     </View>
   )
@@ -593,13 +594,13 @@ export default function PoolRegistrationPage() {
     return (
       <View className='pool-reg'>
         <Card className='pool-reg__success'>
-          <Text className='pool-reg__success-emoji'>🎉</Text>
+          <View className='pool-reg__success-celebration' />
           <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
           <Text className='pool-reg__success-text'>
             我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
           </Text>
           <Text className='pool-reg__success-notify-hint'>
-            想在小悦帮你匹配成功时收到微信提醒？点一下授权（可在系统弹窗中选择）。
+            {`想在${DEFAULT_MASCOT_DISPLAY_NAME}帮你匹配成功时收到微信提醒？点一下授权（可在系统弹窗中选择）。`}
           </Text>
           <Button
             variant='secondary'

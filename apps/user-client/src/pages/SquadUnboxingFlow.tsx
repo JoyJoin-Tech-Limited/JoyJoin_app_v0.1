@@ -24,7 +24,7 @@ import {
   getUserPrimaryInterests,
   getUserTopicAvoidances,
 } from "@/lib/userFieldMappings";
-import { generateSparkPredictions, type UserContext } from "@/lib/attendeeAnalytics";
+import { type UserContext } from "@/lib/attendeeAnalytics";
 import { useGroupAnalysis } from "@/hooks/useGroupAnalysis";
 import { getVibeTokens } from "@/lib/vibeTokens";
 import type { PairExplanation } from "@shared/types/groupAnalysis";
@@ -215,24 +215,8 @@ export default function SquadUnboxingFlow() {
 
   // Aggregate total sparks across the whole squad (for dynamic FOMO modal)
   const totalSquadSparks = useMemo(() => {
-    if (!currentUser) return 0;
-    return squadMembers.reduce((total, member) => {
-      const sparks = generateSparkPredictions(currentUser, {
-        userId: member.userId,
-        displayName: member.displayName,
-        archetype: member.archetype,
-        age: member.age,
-        topInterests: member.topInterests,
-        educationLevel: member.educationLevel,
-        industry: member.industry,
-        gender: member.gender,
-        relationshipStatus: member.relationshipStatus,
-        hometownRegionCity: member.hometownRegionCity,
-        hometownAffinityOptin: member.hometownAffinityOptin,
-      });
-      return total + sparks.length;
-    }, 0);
-  }, [currentUser, squadMembers]);
+    return 0;
+  }, []);
 
   // Sort pair explanations so current user's pairs appear first
   const sortedPairExplanations = useMemo<PairExplanation[]>(() => {

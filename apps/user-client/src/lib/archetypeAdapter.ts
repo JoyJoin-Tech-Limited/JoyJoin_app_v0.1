@@ -24,11 +24,11 @@ import { archetypeRegistry, type ArchetypeRecord } from "@shared/personality/arc
 const assetKeyToPng: Record<string, string> = {
   'corgi': corgiImg,
   'rooster': roosterImg,
-  'dolphin_praise': pigletImg,
+  'hamster_praise': pigletImg,
   'fox': foxImg,
   'dolphin_calm': dolphinImg,
   'spider': spiderImg,
-  'bear': bearImg,
+  'koala': bearImg,
   'octopus': octopusImg,
   'owl': owlImg,
   'elephant': elephantImg,

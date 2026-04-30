@@ -18,7 +18,7 @@ export type MiniScriptConfigModalProps = {
   initialStyle?: MiniScriptStyle
   initialGenres?: MiniScriptGenre[]
   isSubmitting: boolean
-  onSubmit: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[] }) => void
+  onSubmit: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => void
 }
 
 type PickerStage = 'style' | 'genre'
@@ -38,6 +38,7 @@ export function MiniScriptConfigModal({
   const [stage, setStage] = useState<PickerStage>('style')
   const [selectedStyle, setSelectedStyle] = useState<MiniScriptStyle | null>(null)
   const [selectedGenres, setSelectedGenres] = useState<MiniScriptGenre[]>(() => [...initialGenres])
+  const [liteMode, setLiteMode] = useState(false)
   const [pressingKey, setPressingKey] = useState<string | null>(null)
   const [isEntering, setIsEntering] = useState(false)
   const [shuffleIndex, setShuffleIndex] = useState<number | null>(null)
@@ -60,6 +61,7 @@ export function MiniScriptConfigModal({
       setStage('style')
       setSelectedStyle(null)
       setSelectedGenres([...initialGenres])
+      setLiteMode(false)
       setPressingKey(null)
       setShuffleIndex(null)
       // Trigger staggered entrance after mount
@@ -144,7 +146,7 @@ export function MiniScriptConfigModal({
     if (!selectedStyle || selectedGenres.length === 0) {
       return
     }
-    onSubmit({ style: selectedStyle, genres: selectedGenres })
+    onSubmit({ style: selectedStyle, genres: selectedGenres, lite: liteMode })
   }
 
   const selectedStyleCard = selectedStyle
@@ -202,7 +204,7 @@ export function MiniScriptConfigModal({
                     className='ms-modal__hero-thumb'
                     style={{ background: getStyleGradient(selectedStyleCard) }}
                   >
-                    <Text className='ms-modal__hero-emoji'>{selectedStyleCard.emoji}</Text>
+                    <View className='ms-modal__hero-icon' />
                   </View>
                   <View className='ms-modal__hero-text'>
                     <Text className='ms-modal__hero-label'>{selectedStyleCard.label}</Text>
@@ -229,7 +231,7 @@ export function MiniScriptConfigModal({
                 const gradient = isSurprise
                   ? `linear-gradient(135deg, ${SURPRISE_ME_CARD.gradientFrom}, ${SURPRISE_ME_CARD.gradientTo})`
                   : getStyleGradient(card as MiniscriptStyleCard)
-                const emoji = isSurprise ? SURPRISE_ME_CARD.emoji : (card as MiniscriptStyleCard).emoji
+                const _emoji = isSurprise ? SURPRISE_ME_CARD.emoji : (card as MiniscriptStyleCard).emoji
                 const label = isSurprise ? SURPRISE_ME_CARD.label : card.label
                 const mod = getCardModifier(card.key, index)
 
@@ -266,8 +268,7 @@ export function MiniScriptConfigModal({
                     )}
                     {/* Dark gradient overlay for text readability */}
                     <View className='ms-card__overlay' />
-                    {/* Emoji */}
-                    <Text className='ms-card__emoji'>{emoji}</Text>
+                    {/* Style icon removed — gradient + label sufficient */}
                     {/* Label */}
                     <Text className='ms-card__label'>{label}</Text>
                     {/* Surprise Me subtitle */}
@@ -312,7 +313,7 @@ export function MiniScriptConfigModal({
                       style={{ background: gradient }}
                     />
                     <View className='ms-genre-card__overlay' />
-                    <Text className='ms-genre-card__emoji'>{card.emoji}</Text>
+                    {/* Genre icon removed — gradient + label sufficient */}
                     <Text className='ms-genre-card__label'>{card.label}</Text>
                     {/* Checkmark for selected state */}
                     {isSelected && (
@@ -335,17 +336,26 @@ export function MiniScriptConfigModal({
         {/* Footer CTA */}
         <View className='ms-modal__footer'>
           {stage === 'genre' ? (
-            <Button
-              variant='primary'
-              className='ms-modal__cta'
-              loading={isSubmitting}
-              disabled={isSubmitting || selectedGenres.length === 0}
-              onClick={handleSubmit}
-            >
-              {selectedGenres.length > 0
-                ? `生成剧本（${selectedGenres.length}种题材）`
-                : '请至少选择一种题材'}
-            </Button>
+            <>
+              <Button
+                variant={liteMode ? 'primary' : 'secondary'}
+                className='ms-modal__lite-toggle'
+                onClick={() => setLiteMode((v) => !v)}
+              >
+                {liteMode ? '精简模式：2幕 · 25分钟' : '标准模式：点击切换精简版'}
+              </Button>
+              <Button
+                variant='primary'
+                className='ms-modal__cta'
+                loading={isSubmitting}
+                disabled={isSubmitting || selectedGenres.length === 0}
+                onClick={handleSubmit}
+              >
+                {selectedGenres.length > 0
+                  ? `生成剧本（${selectedGenres.length}种题材）`
+                  : '请至少选择一种题材'}
+              </Button>
+            </>
           ) : (
             <Text className='ms-modal__footer-hint'>先选择一种风格，再挑选题材</Text>
           )}

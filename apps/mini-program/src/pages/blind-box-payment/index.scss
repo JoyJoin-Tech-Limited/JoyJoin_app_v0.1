@@ -51,7 +51,8 @@
     gap: 12rpx;
   }
 
-  &__back-button {
+  .joy-button &__back-button,
+  &__back-button.joy-button {
     width: 176rpx;
     min-height: 88rpx;
     padding: 0 24rpx;
@@ -61,10 +62,6 @@
     color: $color-text-secondary;
     font-size: 28rpx;
     border: 2rpx solid rgba($color-primary, 0.12);
-
-    &::after {
-      border: none;
-    }
   }
 
   &__eyebrow {
@@ -178,7 +175,8 @@
     line-height: 1.55;
   }
 
-  &__resume-button {
+  .joy-button &__resume-button,
+  &__resume-button.joy-button {
     @include type-brand-cta-label;
     margin-top: 12rpx;
     min-height: max(88rpx, $cta-min-tap);
@@ -190,10 +188,6 @@
     &:active {
       opacity: 0.96;
       transform: scale(0.98);
-    }
-
-    &::after {
-      border: none;
     }
   }
 
@@ -363,7 +357,8 @@
     color: $color-text-primary;
   }
 
-  &__pay-button {
+  .joy-button &__pay-button,
+  &__pay-button.joy-button {
     @include type-brand-cta-label;
     min-height: max(96rpx, $cta-min-tap);
     border-radius: $button-radius;
@@ -375,10 +370,6 @@
     &:active {
       opacity: 0.92;
       transform: scale(0.98);
-    }
-
-    &::after {
-      border: none;
     }
   }
 
@@ -400,6 +391,12 @@
   50% {
     opacity: 0.56;
     transform: translate3d(0, -18rpx, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .payment-page__orb {
+    animation: none !important;
   }
 }
 

@@ -1,12 +1,15 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import { cdnAsset } from '../../lib/cdnAssets'
 import { useRouter } from '@tarojs/taro'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/useJoyJoinNavigation'
 import ArchetypeHead from '../../components/ArchetypeHead'
 import ChemistryBadge from '../../components/ChemistryBadge'
+import JoyJoinIcon from '../../components/JoyJoinIcon'
 import LoadingScreen from '../../components/LoadingScreen'
 import Card from '../../components/Card'
+import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/Button'
 import { BlindBoxVisual } from './BlindBoxVisual'
@@ -85,12 +88,12 @@ export default function SquadUnboxingPage() {
     <View className={pageClassName}>
       <ScrollView className='squad-unboxing__scroll' scrollY enhanced showScrollbar={false}>
         <View className='squad-unboxing__header'>
-          <Text className='squad-unboxing__header-emoji'>🎉</Text>
+          <View className='squad-unboxing__header-celebration' />
           <Text className='squad-unboxing__header-title'>
             你的{pool.eventType === 'bar' ? '酒局' : '饭局'}桌友来了
           </Text>
           <Text className='squad-unboxing__header-tagline'>
-            {group.matchExplanation || pool.description || '小悦已经把这一桌锁定，准备让你看看今晚会和谁同桌。'}
+            {group.matchExplanation || pool.description || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把这一桌锁定，准备让你看看今晚会和谁同桌。`}
           </Text>
           <View className='squad-unboxing__header-meta'>
             {group.groupNumber ? (
@@ -133,7 +136,7 @@ export default function SquadUnboxingPage() {
             <BlindBoxVisual state='opening' shouldReduceMotion={shouldReduceMotion} />
             <Text className='squad-unboxing__blind-box-title'>盒子正在打开…</Text>
             <Text className='squad-unboxing__blind-box-copy'>
-              小悦正在把盒盖掀开，把今晚最值得期待的那一页翻给你看。
+              {`${DEFAULT_MASCOT_DISPLAY_NAME}正在把盒盖掀开，把今晚最值得期待的那一页翻给你看。`}
             </Text>
           </Card>
         ) : null}
@@ -162,24 +165,22 @@ export default function SquadUnboxingPage() {
                     {viewerSpotlight
                       ? `你会先和 ${getMemberName(viewerSpotlight.otherMember)} 聊开`
                       : isLoadingAnalysis
-                        ? '小悦正在替你挑出最先聊开的桌友'
+                        ? `${DEFAULT_MASCOT_DISPLAY_NAME}正在替你挑出最先聊开的桌友`
                         : '先看看这一桌为什么会把你放在这里'}
                   </Text>
                   <Text className='squad-unboxing__viewer-spotlight-copy'>
-                    {viewerSpotlight?.pair.connectionPoints?.[0]
-                      ? `第一句很可能会从「${viewerSpotlight.pair.connectionPoints[0]}」开始。`
+                    {viewerSpotlight?.pair.connectionPointsWithRarity?.[0]?.text ?? viewerSpotlight?.pair.connectionPoints?.[0]
+                      ? `第一句很可能会从「${viewerSpotlight.pair.connectionPointsWithRarity?.[0]?.text ?? viewerSpotlight.pair.connectionPoints?.[0]}」开始。`
                       : viewerSpotlight
                         ? viewerSpotlight.pair.explanation
                         : isLoadingAnalysis
                           ? '分析正在补齐，下面会先把桌友和整体氛围揭晓给你。'
-                          : group.matchExplanation || '往下看，小悦会把这桌的连接点慢慢揭晓给你。'}
+                          : group.matchExplanation || `往下看，${DEFAULT_MASCOT_DISPLAY_NAME}会把这桌的连接点慢慢揭晓给你。`}
                   </Text>
-                  {viewerSpotlight?.pair.connectionPoints?.length ? (
+                  {(viewerSpotlight?.pair.connectionPointsWithRarity?.length ?? viewerSpotlight?.pair.connectionPoints?.length) ? (
                     <View className='squad-unboxing__viewer-spotlight-pills'>
-                      {viewerSpotlight.pair.connectionPoints.slice(0, 2).map((point) => (
-                        <View key={point} className='squad-unboxing__viewer-spotlight-pill'>
-                          <Text className='squad-unboxing__viewer-spotlight-pill-text'>{point}</Text>
-                        </View>
+                      {(viewerSpotlight.pair.connectionPointsWithRarity ?? viewerSpotlight.pair.connectionPoints.slice(0, 2).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 2).map((point) => (
+                        <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
                       ))}
                     </View>
                   ) : null}
@@ -225,9 +226,9 @@ export default function SquadUnboxingPage() {
                               {[member.ageLabel, industryLabel].filter(Boolean).join(' · ')}
                             </Text>
                           ) : null}
-                          {viewerPair?.connectionPoints?.[0] ? (
+                          {viewerPair?.connectionPointsWithRarity?.[0]?.text ?? viewerPair?.connectionPoints?.[0] ? (
                             <Text className='squad-unboxing__member-signal'>
-                              {viewerPair.connectionPoints[0]}
+                              {viewerPair.connectionPointsWithRarity?.[0]?.text ?? viewerPair.connectionPoints?.[0]}
                             </Text>
                           ) : viewerPair ? (
                             <Text className='squad-unboxing__member-signal'>
@@ -262,14 +263,20 @@ export default function SquadUnboxingPage() {
 
               {pool.eventType ? (
                 <View className='squad-unboxing__info-row'>
-                  <Text className='squad-unboxing__info-label'>🎯 活动类型</Text>
+                  <View className='squad-unboxing__info-label'>
+                    <JoyJoinIcon emoji='🎯' size={24} />
+                    <Text>活动类型</Text>
+                  </View>
                   <Text className='squad-unboxing__info-value'>{pool.eventType}</Text>
                 </View>
               ) : null}
 
               {group.finalDateTime || pool.dateTime ? (
                 <View className='squad-unboxing__info-row'>
-                  <Text className='squad-unboxing__info-label'>📅 时间</Text>
+                  <View className='squad-unboxing__info-label'>
+                    <JoyJoinIcon emoji='📅' size={24} />
+                    <Text>时间</Text>
+                  </View>
                   <Text className='squad-unboxing__info-value'>
                     {formatDateTime(group.finalDateTime ?? pool.dateTime)}
                   </Text>
@@ -277,7 +284,10 @@ export default function SquadUnboxingPage() {
               ) : null}
 
               <View className='squad-unboxing__info-row'>
-                <Text className='squad-unboxing__info-label'>📍 地点</Text>
+                <View className='squad-unboxing__info-label'>
+                  <JoyJoinIcon emoji='📍' size={24} />
+                  <Text>地点</Text>
+                </View>
                 <Text className='squad-unboxing__info-value'>
                   {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '待公布'}
                 </Text>
@@ -324,7 +334,7 @@ export default function SquadUnboxingPage() {
                       <>
                         <View className={`squad-unboxing__chemistry-chip ${chemistryTokens.chipClassName}`}>
                           <ChemistryBadge
-                            chemistry={({ '🔥': 'fire', '✨': 'warm', '🌱': 'cold', '💬': 'mild', '💫': 'mild' } as Record<string, 'fire' | 'warm' | 'cold' | 'mild'>)[chemistryTokens.emoji] ?? 'mild'}
+                            chemistry={chemistryTokens.iconRef}
                             size={28}
                             className='squad-unboxing__chemistry-emoji'
                           />
@@ -399,12 +409,10 @@ export default function SquadUnboxingPage() {
                                 <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
                                 <Text className='squad-unboxing__pair-score'>{pair.chemistryScore}</Text>
                               </View>
-                              {pair.connectionPoints.length > 0 ? (
+                              {(pair.connectionPointsWithRarity?.length ?? pair.connectionPoints.length) > 0 ? (
                                 <View className='squad-unboxing__pair-pill-row'>
-                                  {pair.connectionPoints.slice(0, 3).map((point) => (
-                                    <View key={point} className='squad-unboxing__pair-pill'>
-                                      <Text className='squad-unboxing__pair-pill-text'>{point}</Text>
-                                    </View>
+                                  {(pair.connectionPointsWithRarity ?? pair.connectionPoints.slice(0, 3).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 3).map((point) => (
+                                    <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
                                   ))}
                                 </View>
                               ) : null}

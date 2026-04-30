@@ -1,3 +1,4 @@
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
 import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
@@ -31,7 +32,7 @@ export default function OnboardingEntryPage() {
     <OnboardingLoadingShell
       stepLabel='入门引导'
       title='正在接上你的进度'
-      subtitle='小悦正在读取服务器上的下一步，马上跳转。'
+      subtitle={`${DEFAULT_MASCOT_DISPLAY_NAME}正在读取服务器上的下一步，马上跳转。`}
       hint='若首次进入，可能会加载一小会儿新手任务包。'
       xiaoyueExpression='loadingSystem'
     />

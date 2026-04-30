@@ -625,9 +625,10 @@
     @include type-label;
   }
 
-  // ── Bottom spacer ─────────────────────────────────────────────
+  // ── Bottom safe-area reserve ──────────────────────────────────
   &__spacer {
-    height: 160rpx;
+    @include safe-area-bottom-padding(padding-bottom, $tab-bar-height + $spacing-lg);
+    height: 0;
   }
 }
 

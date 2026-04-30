@@ -48,6 +48,7 @@ const MANIFEST = [
   'xiaoyue-test-surprised',
   'xiaoyue-opt-out-reassure',
   'xiaoyue-payment-trust',
+  'xiaoyue-connections-empty',
 ]
 
 async function main() {

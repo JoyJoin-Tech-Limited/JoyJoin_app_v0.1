@@ -9,6 +9,8 @@ import type { ProfileTaglineResponse } from './ai/onboarding'
 import type { OnboardingNextStep } from './onboarding'
 import type { User } from './schema'
 import type { GroupAnalysisResponse } from './types/groupAnalysis'
+import type { MascotBackstory } from './mascotConfig'
+import type { TierDisplayFlags } from './socialIcebreakerTierManifest'
 
 export type ApiMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
@@ -370,6 +372,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   topInterests?: string[] | null
   primaryInterests?: string[] | null
   interests?: unknown[] | null
+  /** Server-resolved mascot display name (China market). */
+  mascotDisplayName?: string
+  /** Server-resolved mascot backstory / lore. */
+  mascotBackstory?: MascotBackstory
+  /** Server-resolved tier display flags. */
+  tierDisplayFlags?: TierDisplayFlags
 }
 
 export interface CreateMiniProgramPaymentIntentRequest {

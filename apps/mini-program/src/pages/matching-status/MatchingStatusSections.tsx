@@ -7,6 +7,8 @@ import Card from '../../components/Card'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import JoyJoinIcon from '../../components/JoyJoinIcon'
 import ChemistryBadge from '../../components/ChemistryBadge'
+import ConnectionPointPill from '../../components/ConnectionPointPill'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import {
   getVibeLabel,
@@ -223,9 +225,9 @@ export function MatchingStatusDetailSections({
                     <Text className='matching-status__member-name'>
                       {member.displayName ?? '神秘嘉宾'}
                     </Text>
-                    {pairSummary?.connectionPoints?.[0] ? (
+                    {pairSummary?.connectionPointsWithRarity?.[0]?.text ?? pairSummary?.connectionPoints?.[0] ? (
                       <Text className='matching-status__member-signal'>
-                        {pairSummary.connectionPoints[0]}
+                        {pairSummary.connectionPointsWithRarity?.[0]?.text ?? pairSummary.connectionPoints?.[0]}
                       </Text>
                     ) : null}
                   </View>
@@ -241,7 +243,7 @@ export function MatchingStatusDetailSections({
           <View className='matching-status__chemistry-top'>
             <View className='matching-status__chemistry-badge'>
               <ChemistryBadge
-                chemistry={({ '🔥': 'fire', '✨': 'warm', '🌱': 'cold', '💬': 'mild' } as Record<string, 'fire' | 'warm' | 'cold' | 'mild'>)[chemistryTokens.emoji] ?? 'mild'}
+                chemistry={chemistryTokens.iconRef}
                 size={32}
                 className='matching-status__chemistry-emoji'
               />
@@ -266,12 +268,10 @@ export function MatchingStatusDetailSections({
             </Text>
           ) : null}
 
-          {viewerSpotlight?.pair.connectionPoints?.length ? (
+          {(viewerSpotlight?.pair.connectionPointsWithRarity?.length ?? viewerSpotlight?.pair.connectionPoints?.length) ? (
             <View className='matching-status__chemistry-pill-row'>
-              {viewerSpotlight.pair.connectionPoints.slice(0, 3).map((point) => (
-                <View key={point} className='matching-status__chemistry-pill'>
-                  <Text className='matching-status__chemistry-pill-text'>{point}</Text>
-                </View>
+              {(viewerSpotlight.pair.connectionPointsWithRarity ?? viewerSpotlight.pair.connectionPoints.slice(0, 3).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 3).map((point) => (
+                <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
               ))}
             </View>
           ) : null}
@@ -362,8 +362,10 @@ export function MatchingStatusLiveOverlay({
 
       {liveStage === 'match' ? (
         <View className='matching-status__overlay-card' key='match'>
-          <Text className='matching-status__overlay-eyebrow'>小悦来报喜</Text>
-          <Text className='matching-status__overlay-emoji'>{stageTemperature.emoji}</Text>
+          <Text className='matching-status__overlay-eyebrow'>{`${DEFAULT_MASCOT_DISPLAY_NAME}来报喜`}</Text>
+          <Text className='matching-status__overlay-emoji'>
+            <ChemistryBadge chemistry={stageTemperature.iconRef} size={48} />
+          </Text>
           <Text className='matching-status__overlay-title'>{stageTemperature.label}</Text>
           <Text className='matching-status__overlay-copy'>{stageTemperature.body}</Text>
           <Text className='matching-status__overlay-loading'>
@@ -378,7 +380,7 @@ export function MatchingStatusLiveOverlay({
           <Text className='matching-status__overlay-title'>这一桌已经为你留好位置</Text>
           <Text className='matching-status__overlay-copy'>
             {viewerSpotlight
-              ? `第 ${resolvedGroupNumber} 组已锁定。你和 ${viewerSpotlight.otherMemberName} 会先从「${viewerSpotlight.pair.connectionPoints?.[0] ?? '一个共同话题'}」聊开。`
+              ? `第 ${resolvedGroupNumber} 组已锁定。你和 ${viewerSpotlight.otherMemberName} 会先从「${viewerSpotlight.pair.connectionPointsWithRarity?.[0]?.text ?? viewerSpotlight.pair.connectionPoints?.[0] ?? '一个共同话题'}」聊开。`
               : `第 ${resolvedGroupNumber} 组已锁定，先认识一下今晚会同桌的人。`}
           </Text>
 
@@ -402,9 +404,9 @@ export function MatchingStatusLiveOverlay({
                   <Text className='matching-status__overlay-member-name'>
                     {member.displayName ?? '神秘嘉宾'}
                   </Text>
-                  {pairSummary?.connectionPoints?.[0] ? (
+                  {pairSummary?.connectionPointsWithRarity?.[0]?.text ?? pairSummary?.connectionPoints?.[0] ? (
                     <Text className='matching-status__overlay-member-note'>
-                      {pairSummary.connectionPoints[0]}
+                      {pairSummary.connectionPointsWithRarity?.[0]?.text ?? pairSummary.connectionPoints?.[0]}
                     </Text>
                   ) : pairSummary ? (
                     <Text className='matching-status__overlay-member-note'>

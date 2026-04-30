@@ -159,6 +159,7 @@ export interface MiniScriptGenerationPromptParams {
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
   config: MiniScriptGameModeConfig;
+  lite?: boolean;
 }
 
 export function buildMiniScriptGenerationPrompt(
@@ -178,10 +179,15 @@ export function buildMiniScriptGenerationPrompt(
     republican_era: '民国',
   };
 
+  const liteModifier = params.lite
+    ? '\n【精简模式】\n- 总共只生成2幕（act_flow长度为2）\n- 每幕只揭示1条关键线索\n- 角色秘密要简单直接，不要多层嵌套\n- 总游戏时长控制在25分钟以内\n- 投票只进行一轮，简单多数胜出\n'
+    : '';
+
   const userMessage =
     `为一场${styleLabels[params.style]}风格的迷你剧本杀生成故事框架。\n\n` +
     `玩家数量：${params.playerCount}人\n` +
-    `题材：${params.genres.join('、')}\n\n` +
+    `题材：${params.genres.join('、')}\n` +
+    `${liteModifier}\n` +
     `${genreInstructions}\n\n` +
     `${buildJsonShapeInstructions(params.playerCount, params.config)}`;
 

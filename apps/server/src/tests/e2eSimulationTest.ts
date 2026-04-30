@@ -369,7 +369,7 @@ async function runSingleUserE2E(
       let conversationHistory: Array<{ role: string; content: string }> = [];
       let isComplete = false;
       
-      const systemPrompt = `你是小悦，JoyJoin的AI助手，正在进行标准模式注册对话。`;
+      const systemPrompt = `你是悦仔，JoyJoin的AI助手，正在进行标准模式注册对话。`;
       conversationHistory.push({ role: 'system', content: systemPrompt });
       
       while (!isComplete && registrationTurns < 15) {

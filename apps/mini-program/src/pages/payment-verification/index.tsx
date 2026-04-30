@@ -16,6 +16,7 @@ import type {
 import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
 import { type MiniProgramPaymentVerificationState } from '../../lib/paymentVerificationStatus'
 import type { XiaoyueExpressionId } from '../../lib/xiaoyueExpressions'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import './index.scss'
 
@@ -121,7 +122,7 @@ export default function PaymentVerificationPage() {
     return (
       <JoyJoinLoadingScreen
         title='正在确认你的登录…'
-        subtitle='请稍等，小悦在核对订单权限'
+        subtitle={`请稍等，${DEFAULT_MASCOT_DISPLAY_NAME}在核对订单权限`}
         showSkeleton={false}
       />
     )

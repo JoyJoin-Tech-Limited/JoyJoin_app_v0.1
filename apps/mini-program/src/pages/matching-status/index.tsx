@@ -3,6 +3,7 @@ import { useRouter } from '@tarojs/taro'
 import LoadingScreen from '../../components/LoadingScreen'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
+import JoyJoinIcon from '../../components/JoyJoinIcon'
 import StatusCard from '../../components/StatusCard'
 import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
 import {
@@ -113,7 +114,7 @@ export default function MatchingStatusPage() {
       return (
         <View className={rootClassName}>
           <Card className='matching-status__special-card'>
-            <Text className='matching-status__special-icon'>😔</Text>
+            <JoyJoinIcon emoji='😕' size={88} className='matching-status__special-icon' />
             <Text className='matching-status__special-title'>这场活动已取消</Text>
             <Text className='matching-status__special-text'>
               很抱歉，这场活动未能按计划进行。你可以回到发现页，重新挑一场更适合你的局。
@@ -220,9 +221,9 @@ export default function MatchingStatusPage() {
       <View
         className={`matching-status__header${matchStatus === 'pending' ? ' matching-status__header--with-hero' : ''}`}
       >
-        <Text className='matching-status__status-emoji'>
-          {matchStatus === 'matched' ? '🎉' : matchStatus === 'completed' ? '✅' : '⏳'}
-        </Text>
+        <View
+          className={`matching-status__status-dot matching-status__status-dot--${matchStatus}`}
+        />
         <Text className='matching-status__status-title'>
           {matchingStatusViewModels.getStatusLabel(matchStatus)}
         </Text>
@@ -263,14 +264,20 @@ export default function MatchingStatusPage() {
 
         {currentRegistration.poolEventType ? (
           <View className='matching-status__info-row'>
-            <Text className='matching-status__info-label'>🎯 类型</Text>
+            <View className='matching-status__info-label'>
+              <JoyJoinIcon emoji='🎯' size={24} />
+              <Text>类型</Text>
+            </View>
             <Text className='matching-status__info-value'>{currentRegistration.poolEventType}</Text>
           </View>
         ) : null}
 
         {(effectiveEventDateTime ?? currentRegistration.poolDateTime) ? (
           <View className='matching-status__info-row'>
-            <Text className='matching-status__info-label'>📅 时间</Text>
+            <View className='matching-status__info-label'>
+              <JoyJoinIcon emoji='📅' size={24} />
+              <Text>时间</Text>
+            </View>
             <Text className='matching-status__info-value'>
               {matchingStatusViewModels.formatDateTime(
                 effectiveEventDateTime ?? currentRegistration.poolDateTime,
@@ -281,7 +288,10 @@ export default function MatchingStatusPage() {
 
         {(effectiveGroupDetails?.group.venueName || currentRegistration.poolCity) ? (
           <View className='matching-status__info-row'>
-            <Text className='matching-status__info-label'>📍 地点</Text>
+            <View className='matching-status__info-label'>
+              <JoyJoinIcon emoji='📍' size={24} />
+              <Text>地点</Text>
+            </View>
             <Text className='matching-status__info-value'>
               {effectiveGroupDetails?.group.venueName ?? currentRegistration.venueName ?? currentRegistration.poolCity}
               {(effectiveGroupDetails?.group.venueAddress ?? currentRegistration.venueAddress)
@@ -295,7 +305,10 @@ export default function MatchingStatusPage() {
 
         {currentRegistration.matchScore != null ? (
           <View className='matching-status__info-row'>
-            <Text className='matching-status__info-label'>💯 匹配分</Text>
+            <View className='matching-status__info-label'>
+              <JoyJoinIcon emoji='👥' size={24} />
+              <Text>匹配分</Text>
+            </View>
             <Text className='matching-status__info-value matching-status__info-value--score'>
               {currentRegistration.matchScore}
             </Text>

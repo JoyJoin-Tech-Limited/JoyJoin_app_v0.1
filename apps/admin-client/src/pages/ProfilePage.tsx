@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { archetypeConfig } from "@/lib/archetypes";
 import { archetypeGradients, archetypeAvatars, archetypeEmojis } from "@/lib/archetypeAvatars";
 import { getArchetypeImage } from "@/lib/archetypeImages";
-import { getTopCompatibleArchetypes, getCompatibilityCategory } from "@/lib/archetypeCompatibility";
+import { getTopCompatibleArchetypes, getCompatibilityCategory } from "@shared/personality/archetypeCompatibility";
 import {
   getGenderDisplay,
   calculateAge,

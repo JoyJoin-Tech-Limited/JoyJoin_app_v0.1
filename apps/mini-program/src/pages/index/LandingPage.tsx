@@ -2,6 +2,7 @@ import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState } from "react"
 import Button from "../../components/Button"
+import { DEFAULT_MASCOT_DISPLAY_NAME } from "@shared/mascotConfig"
 import { getXiaoyueExpressionAsset } from "../../lib/xiaoyueExpressions"
 import { runMiniProgramRouteTransition } from "../../lib/onboardingNavigation"
 import "./index.scss"
@@ -131,7 +132,7 @@ export default function MiniProgramLandingPage() {
               src={getXiaoyueExpressionAsset("homeWelcome")}
               mode="aspectFit"
             />
-            <Text className="landing-page__xiaoyue-caption">小悦在这等你</Text>
+            <Text className="landing-page__xiaoyue-caption">{`${DEFAULT_MASCOT_DISPLAY_NAME}在这等你`}</Text>
           </View>
         </View>
       </View>

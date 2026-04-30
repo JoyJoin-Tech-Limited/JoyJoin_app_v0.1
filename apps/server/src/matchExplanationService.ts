@@ -18,12 +18,13 @@
 import { getClientForFunction, getDeepseekSelection } from './ai/socialModelRouter';
 import { recordProUsage } from './ai/deepseekBudgetTracker';
 import { DEEPSEEK_V4_PRO } from '@joyjoin/shared';
-import { chemistryMatrix } from './archetypeChemistry';
+import { getCalibratedChemistryScore } from './archetypeChemistryCalibration';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS } from '@shared/constants';
+import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS, getConnectionPointRarity } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
+import type { ConnectionPointWithRarity } from '@shared/types/groupAnalysis';
 import type { AIProvider } from '@shared/types/aiMeta';
 import { getInterestById } from '@shared/interests';
 import { logAITrace } from './lib/aiTraceLogger';
@@ -130,6 +131,7 @@ export interface MatchExplanation extends MatchExplanationContract {
   chemistryScore: number; // 化学反应分数
   sharedInterests: string[]; // 共同兴趣
   connectionPoints: string[]; // 连接点（同乡、同行业等）
+  connectionPointsWithRarity?: ConnectionPointWithRarity[]; // 带稀有度的连接点
   introAngle?: string;
 }
 
@@ -172,6 +174,7 @@ interface CachedAIMetadata {
 }
 
 interface PairExplanationsCache extends CachedAIMetadata {
+  schemaVersion: number;
   memberHash: string; // Hash of sorted member IDs for validation
   pairCount: number;
   generatedAt: string;
@@ -305,26 +308,32 @@ async function loadCachedPairExplanations(
       const cached = rawCache as PairExplanationsCache;
       const currentHash = generateMemberHash(members);
       const expectedPairCount = calculatePairCount(members.length);
-      
+
+      // Schema-version gate: reject old caches (lazy invalidation)
+      if (typeof cached.schemaVersion !== 'number' || cached.schemaVersion < 2) {
+        logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: schemaVersion=${cached.schemaVersion ?? 'missing'} < 2`);
+        return null;
+      }
+
       // Validate roster hasn't changed
       if (cached.memberHash !== currentHash) {
         logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: roster changed`);
         return null;
       }
-      
+
       // Validate pair count matches
       if (cached.pairCount !== expectedPairCount) {
         logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: pair count mismatch`);
         return null;
       }
-      
+
       // Check if cache is still valid
       const generatedTime = new Date(cached.generatedAt).getTime();
       if (Date.now() - generatedTime > CACHE_EXPIRY_MS) {
         logger.info(`[MatchExplanation] Cache expired for group ${groupId}`);
         return null;
       }
-      
+
       const metadata = coerceCachedAIMetadata(cached);
       return {
         explanations: cached.explanations,
@@ -359,6 +368,7 @@ async function savePairExplanationsCache(
 ): Promise<void> {
   try {
     const cache: PairExplanationsCache = {
+      schemaVersion: 2,
       memberHash: generateMemberHash(members),
       pairCount: explanations.length,
       generatedAt: new Date().toISOString(),
@@ -499,15 +509,6 @@ const archetypeNames: Record<string, string> = {
 // ============ 辅助函数 ============
 
 /**
- * 获取两个原型之间的化学反应分数
- */
-function getChemistryScore(archetype1: string | null, archetype2: string | null): number {
-  const a1 = archetype1 || "koala";
-  const a2 = archetype2 || "koala";
-  return (chemistryMatrix as any)[a1]?.[a2] || 50;
-}
-
-/**
  * 找出两个用户的共同兴趣
  */
 function findSharedInterests(
@@ -549,23 +550,27 @@ function findDeepInterestOverlap(
 }
 
 /**
- * 找出连接点（同乡、同行业等）
+ * 找出连接点（同乡、同行业等），返回带稀有度的结构化结果。
  */
-function findConnectionPoints(member1: MatchMember, member2: MatchMember): string[] {
-  const points: string[] = [];
+function findConnectionPoints(member1: MatchMember, member2: MatchMember): ConnectionPointWithRarity[] {
+  const points: ConnectionPointWithRarity[] = [];
+
+  const pushPoint = (text: string) => {
+    points.push({ text, rarity: getConnectionPointRarity(text) });
+  };
 
   if (member1.hometown && member2.hometown && member1.hometown === member2.hometown) {
-    points.push(`同乡（${member1.hometown}）`);
+    pushPoint(`同乡（${member1.hometown}）`);
   }
 
   if (member1.industry && member2.industry && member1.industry === member2.industry) {
-    points.push(`同行业（${member1.industry}）`);
+    pushPoint(`同行业（${member1.industry}）`);
   }
 
   // Same education level
   if (member1.educationLevel && member2.educationLevel &&
       member1.educationLevel === member2.educationLevel) {
-    points.push(`同学历（${member1.educationLevel}）`);
+    pushPoint(`同学历（${member1.educationLevel}）`);
   }
 
   // Same relationship status — use shared RELATIONSHIP_MATCH_LABELS for display text
@@ -574,7 +579,7 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
       member1.relationshipStatus !== "不透露") {
     const label = RELATIONSHIP_MATCH_LABELS[member1.relationshipStatus];
     if (label) {
-      points.push(label.text);
+      pushPoint(label.text);
     }
   }
 
@@ -585,19 +590,19 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
       member1.industryCategory && member2.industryCategory &&
       member1.industryCategory === member2.industryCategory) {
     const displayLabel = member1.industryCategoryLabel || member1.industryCategory;
-    points.push(`同在${displayLabel}·${getWorkModeLabel(member1.workMode)}`);
+    pushPoint(`同在${displayLabel}·${getWorkModeLabel(member1.workMode)}`);
   }
 
   // Archetype checks
   if (member1.archetype && member2.archetype) {
     if (member1.archetype === member2.archetype) {
       // Exact same archetype (epic)
-      points.push(`同款人格（${member1.archetype}）`);
+      pushPoint(`同款人格（${member1.archetype}）`);
     } else {
       // Complementary archetype (chemistry score > 85)
-      const chemScore = getChemistryScore(member1.archetype, member2.archetype);
+      const chemScore = getCalibratedChemistryScore(member1.archetype || "koala", member2.archetype || "koala");
       if (chemScore > 85) {
-        points.push(`性格互补（${member1.archetype}×${member2.archetype}）`);
+        pushPoint(`性格互补（${member1.archetype}×${member2.archetype}）`);
       }
     }
   }
@@ -609,7 +614,7 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
       member1.industryCategory && member2.industryCategory &&
       member1.industryCategory === member2.industryCategory) {
     const displayLabel = member1.industryCategoryLabel || member1.industryCategory;
-    points.push(`老乡+同行（${member1.hometown}·${displayLabel}）`);
+    pushPoint(`老乡+同行（${member1.hometown}·${displayLabel}）`);
   }
 
   // Deep interest overlap (≥3 interests at heat level ≥ 2)
@@ -619,7 +624,7 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
     2
   );
   if (deepOverlap.count >= 3) {
-    points.push(`深度同好（${deepOverlap.count}个共同深度兴趣）`);
+    pushPoint(`深度同好（${deepOverlap.count}个共同深度兴趣）`);
   }
 
   // Interest signal alignment — prompt enrichment only.
@@ -635,9 +640,9 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): strin
       if (!sig2) continue;
       // Both have signaled this interest
       if (sig1.discussionStyle === sig2.discussionStyle) {
-        points.push(`${sig1.interestLabel}同款聊法（${formatDiscussionStyle(sig1.discussionStyle)}）`);
+        pushPoint(`${sig1.interestLabel}同款聊法（${formatDiscussionStyle(sig1.discussionStyle)}）`);
       } else if (Math.abs(sig1.conversationDepth - sig2.conversationDepth) <= 1) {
-        points.push(`${sig1.interestLabel}话题深度相近`);
+        pushPoint(`${sig1.interestLabel}话题深度相近`);
       }
     }
   }
@@ -692,10 +697,11 @@ async function generatePairExplanationWithMetadata(
   member1: MatchMember,
   member2: MatchMember
 ): Promise<PairExplanationGenerationResult> {
-  const chemistryScore = getChemistryScore(member1.archetype, member2.archetype);
+  const chemistryScore = getCalibratedChemistryScore(member1.archetype || "koala", member2.archetype || "koala");
   const sharedInterests = findSharedInterests(member1.interestsTop, member2.interestsTop);
-  const connectionPoints = findConnectionPoints(member1, member2);
-  
+  const connectionPointsWithRarity = findConnectionPoints(member1, member2);
+  const connectionPoints = connectionPointsWithRarity.map(cp => cp.text);
+
   // 构建提示词（结构化 JSON：主解释 + 开场角度）
   const prompt = `你是一个社交活动的匹配分析师。请用2-3句温暖、正面的话语解释为什么这两位参与者可能会聊得来。
 
@@ -763,6 +769,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         chemistryScore,
         sharedInterests,
         connectionPoints,
+        connectionPointsWithRarity,
         ...(parsed.introAngle ? { introAngle: parsed.introAngle } : {}),
       },
       providerUsed: provider,
@@ -810,6 +817,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
             chemistryScore,
             sharedInterests,
             connectionPoints,
+            connectionPointsWithRarity,
             ...(fbParsed.introAngle ? { introAngle: fbParsed.introAngle } : {}),
           },
           providerUsed: 'deepseek',
@@ -855,6 +863,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         chemistryScore,
         sharedInterests,
         connectionPoints,
+        connectionPointsWithRarity,
         ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
       },
       providerUsed: null,
@@ -1479,7 +1488,6 @@ export const matchExplanationService = {
   generatePairExplanation,
   generateGroupAnalysis,
   generateIceBreakers,
-  getChemistryScore,
   findSharedInterests,
   findConnectionPoints,
   getPairExplanationForUser,

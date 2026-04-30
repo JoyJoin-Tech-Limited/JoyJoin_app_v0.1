@@ -202,9 +202,9 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     },
   },
   "hamster_praise": {
-    id: "dolphin_praise",
+    id: "hamster_praise",
     name: "捧场王仓鼠",
-    assetKey: "dolphin_praise",
+    assetKey: "hamster_praise",
     profile: {
       traitProfile: { A: 95, C: 50, E: 65, O: 62, X: 82, P: 88 },
       energyLevel: 85,
@@ -430,9 +430,9 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     },
   },
   "koala": {
-    id: "bear",
+    id: "koala",
     name: "情绪树洞考拉",
-    assetKey: "bear",
+    assetKey: "koala",
     profile: {
       traitProfile: { A: 90, C: 65, E: 80, O: 60, X: 48, P: 70 },
       energyLevel: 70,

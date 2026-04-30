@@ -62,3 +62,6 @@ export * from './miniscriptStoryFramework';
 export * from './miniscriptGameModes';
 export * from './schemaAnalytics';
 export * from './aiModels';
+export * from './socialIcebreakerTierManifest';
+export * from './mascotConfig';
+export * from './ui/connectionPointCompat';

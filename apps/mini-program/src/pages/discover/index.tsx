@@ -233,10 +233,10 @@ const PoolCard = React.memo(function PoolCard({
 
       <View className='discover-auth__pool-meta'>
         <Text className='discover-auth__pool-location'>
-          📍 {[pool.city, pool.district].filter(Boolean).join(' · ') || '深圳'}
+          {[pool.city, pool.district].filter(Boolean).join(' · ') || '深圳'}
         </Text>
         <Text className='discover-auth__pool-date'>
-          🗓 {pool.dateTime ?? '时间待定'}
+          {pool.dateTime ?? '时间待定'}
         </Text>
       </View>
 
@@ -416,13 +416,13 @@ function AuthenticatedDiscover() {
       {/* Sticky header: hero + actions + promo + filters */}
       <View className='discover-auth__sticky-header'>
         <View className='discover-auth__hero'>
-          <Text className='discover-auth__greeting'>你好，{displayName} 👋</Text>
+          <Text className='discover-auth__greeting'>你好，{displayName}</Text>
           <Text className='discover-auth__subtitle'>探索你的下一场悦聚</Text>
         </View>
 
         <View className='discover-auth__actions'>
           <Card className='discover-auth__action-card' onClick={handleOpenPayment}>
-            <JoyJoinIcon emoji='🎁' size={40} className='discover-auth__action-emoji' />
+            <JoyJoinIcon emoji='✨' size={40} className='discover-auth__action-emoji' />
             <Text className='discover-auth__action-label'>开通权益</Text>
           </Card>
           <Card className='discover-auth__action-card' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>

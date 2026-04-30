@@ -92,24 +92,28 @@ vi.mock('../archetypeChemistryCalibration', () => ({
   getCalibratedChemistryScore: vi.fn().mockReturnValue(50),
 }));
 vi.mock('@shared/utils', () => ({ calculateAge: vi.fn().mockReturnValue(28) }));
-vi.mock('@shared/constants', () => ({
-  EDU_ORDINAL: {},
-  WORK_MODE_LABELS: {
-    employed: '在职',
-    student: '学生',
-  },
-  RELATIONSHIP_MATCH_LABELS: {
-    single: '同为单身',
-    in_relationship: '感情状态相近',
-  },
-  DISCUSSION_STYLE_LABELS: {
-    casual_vibes: '随便聊聊',
-    character_people: '角色/人物党',
-    plot_worldbuilding: '剧情/世界观',
-    meme_humor: '梗和搞笑',
-    deeper_analysis: '深度讨论',
-  },
-}));
+vi.mock('@shared/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared/constants')>();
+  return {
+    ...actual,
+    EDU_ORDINAL: {},
+    WORK_MODE_LABELS: {
+      employed: '在职',
+      student: '学生',
+    },
+    RELATIONSHIP_MATCH_LABELS: {
+      single: '同为单身',
+      in_relationship: '感情状态相近',
+    },
+    DISCUSSION_STYLE_LABELS: {
+      casual_vibes: '随便聊聊',
+      character_people: '角色/人物党',
+      plot_worldbuilding: '剧情/世界观',
+      meme_humor: '梗和搞笑',
+      deeper_analysis: '深度讨论',
+    },
+  };
+});
 
 import { calculateInterestScoreAsync } from '../poolMatchingService';
 
@@ -305,7 +309,7 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const points = matchExplanationService.findConnectionPoints(memberA, memberB);
 
     // Signals should produce a connection point for the AI explanation surface.
-    expect(points).toContain('美食同款聊法（随便聊聊）');
+    expect(points.some(p => p.text === '美食同款聊法（随便聊聊）')).toBe(true);
   });
 
   it('findConnectionPoints produces no signal connection point when styles differ and depths are far apart', () => {
@@ -341,7 +345,7 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
     const points = matchExplanationService.findConnectionPoints(memberA, memberB);
 
     // Different style + depth gap of 2 — no signal connection point expected.
-    const signalPoints = points.filter(p => p.includes('游戏'));
+    const signalPoints = points.filter(p => p.text.includes('游戏'));
     expect(signalPoints).toHaveLength(0);
   });
 
@@ -361,6 +365,6 @@ describe('Interest Signal Boundary — prompt enrichment in matchExplanationServ
 
     // Should not throw; hometown connection should still be found.
     const points = matchExplanationService.findConnectionPoints(memberA, memberB);
-    expect(points).toContain('同乡（上海）');
+    expect(points.some(p => p.text === '同乡（上海）')).toBe(true);
   });
 });

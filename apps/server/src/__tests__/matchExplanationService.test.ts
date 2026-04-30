@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { getCalibratedChemistryScore } from '../archetypeChemistryCalibration';
 
 // Mock the database to avoid needing DATABASE_URL in tests
 vi.mock('../db', () => ({
@@ -144,20 +145,20 @@ describe('matchExplanationService', () => {
     hometown: '北京',
   };
 
-  describe('getChemistryScore', () => {
+  describe('getCalibratedChemistryScore', () => {
     it('should return chemistry score for valid archetypes', () => {
-      const score = matchExplanationService.getChemistryScore('corgi', 'koala');
+      const score = getCalibratedChemistryScore('corgi', 'koala');
       expect(score).toBeGreaterThan(0);
       expect(score).toBeLessThanOrEqual(100);
     });
 
     it('should return default score for null archetypes', () => {
-      const score = matchExplanationService.getChemistryScore(null, null);
+      const score = getCalibratedChemistryScore(null as any, null as any);
       expect(score).toBeGreaterThan(0);
     });
 
     it('should return default score for unknown archetypes', () => {
-      const score = matchExplanationService.getChemistryScore('未知原型', 'koala');
+      const score = getCalibratedChemistryScore('未知原型', 'koala');
       expect(typeof score).toBe('number');
     });
   });
@@ -194,32 +195,36 @@ describe('matchExplanationService', () => {
   describe('findConnectionPoints', () => {
     it('should find hometown connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points).toContain('同乡（深圳）');
+      expect(points.some(p => p.text === '同乡（深圳）')).toBe(true);
+      expect(points.find(p => p.text === '同乡（深圳）')?.rarity).toBe('rare');
     });
 
     it('should find industry connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points).toContain('同行业（互联网）');
+      expect(points.some(p => p.text === '同行业（互联网）')).toBe(true);
+      expect(points.find(p => p.text === '同行业（互联网）')?.rarity).toBe('common');
     });
 
     it('should find same education level connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points).toContain('同学历（硕士）');
+      expect(points.some(p => p.text === '同学历（硕士）')).toBe(true);
+      expect(points.find(p => p.text === '同学历（硕士）')?.rarity).toBe('epic');
     });
 
     it('should find same relationship status connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points.some(p => p.includes('单身'))).toBe(true);
+      expect(points.some(p => p.text.includes('单身'))).toBe(true);
     });
 
     it('should find same work mode + industry category compound connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points).toContain('同在科技互联网·在职');
+      expect(points.some(p => p.text === '同在科技互联网·在职')).toBe(true);
     });
 
     it('should find compound hometown + industry epic connection', () => {
       const points = matchExplanationService.findConnectionPoints(mockMember1, mockMember2);
-      expect(points).toContain('老乡+同行（深圳·科技互联网）');
+      expect(points.some(p => p.text === '老乡+同行（深圳·科技互联网）')).toBe(true);
+      expect(points.find(p => p.text === '老乡+同行（深圳·科技互联网）')?.rarity).toBe('epic');
     });
 
     it('should find exact archetype match (epic)', () => {
@@ -229,7 +234,8 @@ describe('matchExplanationService', () => {
         archetype: 'corgi',
       };
       const points = matchExplanationService.findConnectionPoints(mockMember1, sameArchetypeMember);
-      expect(points.some(p => p.includes('同款人格') && p.includes('corgi'))).toBe(true);
+      expect(points.some(p => p.text.includes('同款人格') && p.text.includes('corgi'))).toBe(true);
+      expect(points.find(p => p.text.includes('同款人格'))?.rarity).toBe('epic');
     });
 
     it('should find deep interest overlap when ≥3 high-heat interests match', () => {
@@ -256,7 +262,7 @@ describe('matchExplanationService', () => {
         ],
       };
       const points = matchExplanationService.findConnectionPoints(memberA, memberB);
-      expect(points.some(p => p.includes('深度同好'))).toBe(true);
+      expect(points.some(p => p.text.includes('深度同好'))).toBe(true);
     });
 
     it('should NOT show deep interest overlap when fewer than 3 high-heat interests match', () => {
@@ -279,7 +285,7 @@ describe('matchExplanationService', () => {
         ],
       };
       const points = matchExplanationService.findConnectionPoints(memberA, memberB);
-      expect(points.some(p => p.includes('深度同好'))).toBe(false);
+      expect(points.some(p => p.text.includes('深度同好'))).toBe(false);
     });
 
     it('should show matching discussion style for the same signaled interest', () => {
@@ -313,7 +319,7 @@ describe('matchExplanationService', () => {
       };
 
       const points = matchExplanationService.findConnectionPoints(memberA, memberB);
-      expect(points).toContain('火锅同款聊法（随便聊聊）');
+      expect(points.some(p => p.text === '火锅同款聊法（随便聊聊）')).toBe(true);
     });
 
     it('should show similar conversation depth for the same signaled interest', () => {
@@ -347,7 +353,7 @@ describe('matchExplanationService', () => {
       };
 
       const points = matchExplanationService.findConnectionPoints(memberA, memberB);
-      expect(points).toContain('动漫话题深度相近');
+      expect(points.some(p => p.text === '动漫话题深度相近')).toBe(true);
     });
 
     it('should NOT show relationship connection when status is 不透露', () => {
@@ -364,7 +370,7 @@ describe('matchExplanationService', () => {
         relationshipStatus: '不透露',
       };
       const points = matchExplanationService.findConnectionPoints(memberPrivate, memberPrivate2);
-      expect(points.some(p => p.includes('不透露'))).toBe(false);
+      expect(points.some(p => p.text.includes('不透露'))).toBe(false);
     });
 
     it('should return empty array when no connections', () => {
@@ -506,6 +512,7 @@ describe('matchExplanationService', () => {
     it('should restore provider and fallbackUsed from cache metadata on cache hit', async () => {
       vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
         pairExplanationsCache: {
+          schemaVersion: 2,
           memberHash: 'user-1,user-2',
           pairCount: 1,
           generatedAt: freshCacheTimestamp(),
@@ -543,7 +550,7 @@ describe('matchExplanationService', () => {
       expect(analysis.iceBreakers).toEqual(['缓存破冰 1', '缓存破冰 2']);
     });
 
-    it('should default legacy cache metadata to provider=null and fallbackUsed=false', async () => {
+    it('should reject legacy cache missing schemaVersion and regenerate', async () => {
       vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
         pairExplanationsCache: {
           memberHash: 'user-1,user-2',
@@ -571,10 +578,10 @@ describe('matchExplanationService', () => {
         '饭局'
       );
 
-      expect(analysis.fromCache).toBe(true);
-      expect(analysis.provider).toBe(null);
-      expect(analysis.fallbackUsed).toBe(false);
-      expect(analysis.promptVersion).toBe('group-analysis-v1');
+      // Legacy cache without schemaVersion is rejected (lazy invalidation) → fresh generation
+      expect(analysis.fromCache).toBe(false);
+      expect(['minimax', 'deepseek', null]).toContain(analysis.provider);
+      expect(typeof analysis.fallbackUsed).toBe('boolean');
     });
 
     it('should set fallbackUsed=false when LLM returns valid ice-breakers', async () => {
@@ -691,6 +698,7 @@ describe('matchExplanationService', () => {
     it('logs generateGroupAnalysis success=true for cached responses with unknown provider but no fallback', async () => {
       vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
         pairExplanationsCache: {
+          schemaVersion: 2,
           memberHash: 'user-1,user-2',
           pairCount: 1,
           generatedAt: freshCacheTimestamp(),

@@ -29,6 +29,7 @@
     "build:server": "npm run build -w @joyjoin/server",
     "start": "npm run db:migrate && npm run start -w @joyjoin/server",
     "guardrails": "node scripts/check-guardrails.mjs && node --test scripts/check-guardrails.test.mjs && node scripts/check-brand-colors.mjs && node scripts/design-audit.mjs",
+    "bundle-size:check": "node scripts/check-bundle-size.mjs",
     "design:audit": "node scripts/design-audit.mjs",
     "dep-check": "node scripts/check-workspace-dependency-ownership.mjs",
     "memory:validate": "node scripts/memory-validate.mjs",

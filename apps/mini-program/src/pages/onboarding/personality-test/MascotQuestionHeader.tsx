@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import XiaoyueChatBubble from '../../../components/XiaoyueChatBubble'
 import type { XiaoyueExpressionId } from '../../../lib/xiaoyueExpressions'
 import './MascotQuestionHeader.scss'
@@ -29,7 +30,7 @@ export default function MascotQuestionHeader({
     return (
       <View className='mascot-question-header mascot-question-header--empty'>
         <XiaoyueChatBubble
-          content='小悦正在准备下一题…'
+          content={`${DEFAULT_MASCOT_DISPLAY_NAME}正在准备下一题…`}
           expressionId='loadingSystem'
           wide
           showGlow

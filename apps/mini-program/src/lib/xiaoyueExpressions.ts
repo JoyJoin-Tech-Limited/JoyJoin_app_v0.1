@@ -24,6 +24,7 @@ export type XiaoyueExpressionId =
   | 'paymentTrust'
   | 'optOutReassure'
   | 'neutralInformation'
+  | 'connectionsEmpty'
   // Personality test phase expressions (unique assets shipped)
   | 'testCurious'
   | 'testListening'
@@ -54,6 +55,7 @@ const ART = {
   testSurprised: `${BASE}/xiaoyue-test-surprised.webp`,
   optOutReassure: `${BASE}/xiaoyue-opt-out-reassure.webp`,
   paymentTrust: `${BASE}/xiaoyue-payment-trust.webp`,
+  connectionsEmpty: `${BASE}/xiaoyue-connections-empty.webp`,
 } as const
 
 export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = {
@@ -73,6 +75,7 @@ export const XIAOYUE_ASSET_BY_EXPRESSION: Record<XiaoyueExpressionId, string> = 
   testSurprised: ART.testSurprised,
   optOutReassure: ART.optOutReassure,
   paymentTrust: ART.paymentTrust,
+  connectionsEmpty: ART.connectionsEmpty,
 }
 
 export const LEGACY_MOOD_TO_EXPRESSION: Record<LegacyXiaoyueMood, XiaoyueExpressionId> = {

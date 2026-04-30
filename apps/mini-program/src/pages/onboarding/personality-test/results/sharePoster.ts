@@ -1,7 +1,26 @@
 import Taro from '@tarojs/taro'
+import { CANVAS_PALETTE as PALETTE } from '@shared/personality/canvasPalette'
 
 const POSTER_WIDTH = 1080
 const POSTER_HEIGHT = 1920
+
+export const ARCHETYPE_ENGLISH_NAMES: Record<string, string> = {
+  fox: 'Clever Fox',
+  corgi: 'Happy Corgi',
+  koala: 'Warm Koala',
+  spider: 'Weaver Spider',
+  hamster_praise: 'Cheerful Hamster',
+  rooster: 'Sunny Rooster',
+  dolphin_calm: 'Perceptive Dolphin',
+  owl: 'Thoughtful Owl',
+  turtle: 'Steady Turtle',
+  cat: 'Mysterious Cat',
+  elephant: 'Grounded Elephant',
+  octopus: 'Creative Octopus',
+}
+
+const charWeightCache = new Map<string, number>()
+
 const OUTER_MARGIN = 28
 const CARD_RADIUS = 40
 const CARD_X = OUTER_MARGIN
@@ -15,52 +34,6 @@ const HERO_IMAGE_SIZE = 224
 const HERO_IMAGE_RADIUS = 112
 const SKILL_CARD_HEIGHT = 158
 const SKILL_CARD_RADIUS = 28
-
-const PALETTE = {
-  pageBgStart: '#fff8fb',
-  pageBgMid: '#fff3ea',
-  pageBgEnd: '#f6ecff',
-  cardFill: '#fffdfa',
-  cardBorder: '#f5c86b',
-  cardInnerBorder: 'rgba(255, 255, 255, 0.95)',
-  shadowPurple: 'rgba(91, 53, 178, 0.14)',
-  shadowOrange: 'rgba(255, 177, 87, 0.25)',
-  white: '#ffffff', // design-audit:intentional — canvas rendering requires exact hex values
-  heroGlowEnd: '#ffcf7d',
-  heroImageShell: '#fff7ee',
-  heroImageBorder: 'rgba(255, 255, 255, 0.85)',
-  textDark: '#201533',
-  textMuted: '#6f5a8e',
-  textSecondary: '#46355f',
-  textTertiary: '#6b5a7f',
-  textBody: '#2b1b41',
-  traitLabel: '#5d4c78',
-  traitTrack: '#f4ebff',
-  badgeDarkFill: '#23123d',
-  badgeDarkText: '#fff7d6',
-  badgeConfidenceFill: '#fff1cc',
-  badgeConfidenceText: '#7a4a00',
-  badgeRarityFill: '#f0e7ff',
-  badgeRarityText: '#5d35b2',
-  badgeMatchFill: '#fff7db',
-  badgeMatchText: '#815900',
-  quoteBoxFill: '#fff5ef',
-  quoteBoxBorder: 'rgba(255, 193, 140, 0.55)',
-  activeSkillFill: '#fff5f1',
-  activeSkillAccent: '#ff9969',
-  passiveSkillFill: '#f4f0ff',
-  passiveSkillAccent: '#8b5cf6',
-  skillCardBorder: 'rgba(91, 53, 178, 0.12)',
-  skillTitle: '#25173a',
-  skillEffect: '#64557c',
-  footerText: '#6d5f80',
-  skillAttributeText: '#4b2f77',
-  holographicGold: '#ffd700',
-  holographicSilver: '#e8e8e8',
-  foilPink: '#ffb6c1',
-  foilCyan: '#40e0d0',
-  foilLavender: '#e6e6fa',
-} as const
 
 export const PERSONALITY_SHARE_POSTER_CANVAS_ID = 'personality-share-poster-canvas'
 
@@ -92,6 +65,9 @@ export interface PersonalitySharePosterInput {
   passiveSkillTitle: string
   passiveSkillEffect: string
   topMatches: PersonalitySharePosterTopMatch[]
+  traitEntries: PersonalitySharePosterTraitEntry[]
+  englishName: string
+  globalRank?: number
   energyLevel?: number
   archetypeRank?: number
   serialNumber?: string
@@ -203,6 +179,71 @@ function splitText(text: string, maxCharsPerLine: number, maxLines = 2): string[
   return limited
 }
 
+function measureTextSplit(
+  ctx: Taro.CanvasContext,
+  text: string,
+  maxCharsPerLine: number,
+  maxLines = 2,
+): string[] {
+  const normalized = text.trim()
+  if (!normalized) {
+    return []
+  }
+
+  // Measure reference CJK character to normalize widths
+  let refWidth = 0
+  try {
+    refWidth = ctx.measureText('中').width
+  } catch {
+    refWidth = 0
+  }
+  if (refWidth === 0) {
+    return splitText(text, maxCharsPerLine, maxLines)
+  }
+
+  const chars = Array.from(normalized)
+  const lines: string[] = []
+  let currentLine = ''
+  let currentWeight = 0
+
+  chars.forEach((char) => {
+    let weight = charWeightCache.get(char)
+    if (weight === undefined) {
+      let width = 0
+      try {
+        width = ctx.measureText(char).width
+      } catch {
+        width = 0
+      }
+      weight = width > 0 ? width / refWidth : (/[A-Za-z0-9]/.test(char) ? 0.72 : 1)
+      charWeightCache.set(char, weight)
+    }
+
+    if (currentWeight + weight > maxCharsPerLine && currentLine) {
+      lines.push(currentLine)
+      currentLine = char
+      currentWeight = weight
+      return
+    }
+
+    currentLine += char
+    currentWeight += weight
+  })
+
+  if (currentLine) {
+    lines.push(currentLine)
+  }
+
+  if (lines.length <= maxLines) {
+    return lines
+  }
+
+  const limited = lines.slice(0, maxLines)
+  const lastLine = limited[maxLines - 1] ?? ''
+  limited[maxLines - 1] = `${lastLine.slice(0, Math.max(lastLine.length - 1, 1))}…`
+  return limited
+}
+
 function drawTextBlock(ctx: Taro.CanvasContext, options: {
   text: string
   x: number
@@ -213,10 +254,10 @@ function drawTextBlock(ctx: Taro.CanvasContext, options: {
   fontSize: number
   color: string
 }): number {
-  const lines = splitText(options.text, options.maxCharsPerLine, options.maxLines)
   ctx.save()
-  ctx.setFillStyle(options.color)
   ctx.setFontSize(options.fontSize)
+  const lines = measureTextSplit(ctx, options.text, options.maxCharsPerLine, options.maxLines)
+  ctx.setFillStyle(options.color)
   ctx.setTextAlign('left')
   ctx.setTextBaseline('top')
 
@@ -410,7 +451,7 @@ function drawHolographicStamp(
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText('★ HOLOGRAPHIC EDITION ★', centerX, centerY)
+  ctx.fillText('HOLOGRAPHIC EDITION', centerX, centerY)
 
   ctx.restore()
 }
@@ -499,7 +540,7 @@ function drawEnergyBar(
 ): void {
   const sectionX = CARD_X + 46
   const trackWidth = CARD_WIDTH - 152
-  const label = '⚡ 社交能量'
+  const label = '社交能量'
 
   ctx.save()
   ctx.setFillStyle(PALETTE.traitLabel)
@@ -530,6 +571,7 @@ function drawRankBadges(
   y: number,
   archetypeRank: number,
   serialNumber: string,
+  globalRank?: number,
 ): void {
   const badgeY = y
   const badgeHeight = 36
@@ -546,11 +588,11 @@ function drawRankBadges(
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText(`🎴 命格编号 No.${archetypeRank}`, leftBadgeX + leftBadgeWidth / 2, badgeY + badgeHeight / 2)
+  ctx.fillText(`命格编号 No.${archetypeRank}`, leftBadgeX + leftBadgeWidth / 2, badgeY + badgeHeight / 2)
   ctx.restore()
 
-  // Serial number badge (right)
-  const rightBadgeWidth = 180
+  // Serial number badge (right) — combined with global rank when available
+  const rightBadgeWidth = globalRank ? 260 : 180
   const rightBadgeX = CARD_X + CARD_WIDTH - 44 - rightBadgeWidth
   fillRoundedRect(ctx, rightBadgeX, badgeY, rightBadgeWidth, badgeHeight, badgeRadius, 'rgba(255, 248, 214, 0.94)')
   strokeRoundedRect(ctx, rightBadgeX, badgeY, rightBadgeWidth, badgeHeight, badgeRadius, 'rgba(180, 140, 40, 0.15)', 1)
@@ -560,8 +602,64 @@ function drawRankBadges(
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText(`🏅 ${serialNumber}`, rightBadgeX + rightBadgeWidth / 2, badgeY + badgeHeight / 2)
+  const serialText = globalRank
+    ? `${serialNumber} · 全球 #${globalRank}`
+    : `${serialNumber}`
+  ctx.fillText(serialText, rightBadgeX + rightBadgeWidth / 2, badgeY + badgeHeight / 2)
   ctx.restore()
+}
+
+function drawTraitBars(
+  ctx: Taro.CanvasContext,
+  y: number,
+  traitEntries: PersonalitySharePosterTraitEntry[],
+  accentColor: string,
+): number {
+  const sectionX = CARD_X + 44
+  const sectionWidth = CARD_WIDTH - 88
+  const barHeight = 14
+  const barRadius = 7
+  const rowHeight = 22
+  const labelWidth = 70
+  const valueWidth = 36
+  const barX = sectionX + labelWidth + 8
+  const barMaxWidth = sectionWidth - labelWidth - valueWidth - 16
+
+  const entries = traitEntries.slice(0, 6)
+
+  entries.forEach((entry, index) => {
+    const rowY = y + index * rowHeight
+
+    // Label (left)
+    ctx.save()
+    ctx.setFillStyle(PALETTE.traitLabel)
+    ctx.setFontSize(16)
+    ctx.setTextAlign('left')
+    ctx.setTextBaseline('middle')
+    ctx.fillText(entry.label, sectionX, rowY + barHeight / 2)
+    ctx.restore()
+
+    // Value (right)
+    ctx.save()
+    ctx.setFillStyle(PALETTE.textMuted)
+    ctx.setFontSize(16)
+    ctx.setTextAlign('right')
+    ctx.setTextBaseline('middle')
+    ctx.fillText(String(entry.value), sectionX + sectionWidth, rowY + barHeight / 2)
+    ctx.restore()
+
+    // Track background
+    fillRoundedRect(ctx, barX, rowY, barMaxWidth, barHeight, barRadius, PALETTE.traitTrack)
+
+    // Fill with accent gradient
+    const fillWidth = Math.max(4, barMaxWidth * (clampPercent(entry.value) / 100))
+    const fillGradient = ctx.createLinearGradient(barX, rowY, barX + fillWidth, rowY)
+    fillGradient.addColorStop(0, accentColor)
+    fillGradient.addColorStop(1, `${accentColor}99`)
+    fillRoundedRect(ctx, barX, rowY, fillWidth, barHeight, barRadius, fillGradient)
+  })
+
+  return entries.length * rowHeight - 8
 }
 
 function drawSkillCard(
@@ -615,6 +713,49 @@ function drawSkillCard(
   })
 }
 
+async function exportCanvasWithRetry(
+  exportMultiplier: number,
+): Promise<string> {
+  const dprValues = [exportMultiplier, 2, 1]
+
+  for (let attempt = 0; attempt < dprValues.length; attempt++) {
+    const dpr = dprValues[attempt]
+    try {
+      const output = await Taro.canvasToTempFilePath({
+        canvasId: PERSONALITY_SHARE_POSTER_CANVAS_ID,
+        x: 0,
+        y: 0,
+        width: POSTER_WIDTH,
+        height: POSTER_HEIGHT,
+        destWidth: Math.round(POSTER_WIDTH * dpr),
+        destHeight: Math.round(POSTER_HEIGHT * dpr),
+        fileType: 'png',
+        quality: 1,
+      })
+
+      // Clean up temp file after a delay (allow share/save to complete first)
+      setTimeout(() => {
+        try {
+          const fs = Taro.getFileSystemManager()
+          fs.unlinkSync(output.tempFilePath)
+        } catch {
+          // Ignore cleanup errors
+        }
+      }, 60000)
+
+      return output.tempFilePath
+    } catch (error) {
+      if (attempt === dprValues.length - 1) {
+        throw error
+      }
+      // Brief pause before retry
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+  }
+
+  throw new Error('canvasToTempFilePath failed after all DPR fallback attempts')
+}
+
 export async function generatePersonalitySharePoster(
   input: PersonalitySharePosterInput,
 ): Promise<string> {
@@ -659,6 +800,18 @@ export async function generatePersonalitySharePoster(
     clipRoundedRect(ctx, imageShellX, imageShellY, HERO_IMAGE_SIZE, HERO_IMAGE_SIZE, HERO_IMAGE_RADIUS)
     ctx.drawImage(archetypeImagePath, imageShellX + 20, imageShellY + 18, 184, 184)
     ctx.restore()
+  } else {
+    // Fallback: accent circle with archetype initial
+    fillRoundedRect(ctx, imageShellX, imageShellY, HERO_IMAGE_SIZE, HERO_IMAGE_SIZE, HERO_IMAGE_RADIUS, input.accentColor)
+
+    ctx.save()
+    ctx.setFillStyle(PALETTE.white)
+    ctx.setFontSize(80)
+    ctx.setTextAlign('center')
+    ctx.setTextBaseline('middle')
+    const firstChar = Array.from(input.archetype)[0] ?? '?'
+    ctx.fillText(firstChar, imageShellX + HERO_IMAGE_SIZE / 2, imageShellY + HERO_IMAGE_SIZE / 2)
+    ctx.restore()
   }
 
   ctx.save()
@@ -669,10 +822,19 @@ export async function generatePersonalitySharePoster(
   ctx.fillText(input.archetype, heroPanelX + 280, heroPanelY + 24)
   ctx.restore()
 
+  // English archetype name
+  ctx.save()
+  ctx.setFillStyle(PALETTE.textMuted)
+  ctx.setFontSize(28)
+  ctx.setTextAlign('left')
+  ctx.setTextBaseline('top')
+  ctx.fillText(input.englishName, heroPanelX + 280, heroPanelY + 76)
+  ctx.restore()
+
   drawTextBlock(ctx, {
     text: input.nickname || input.tagline,
     x: heroPanelX + 280,
-    y: heroPanelY + 82,
+    y: heroPanelY + 110,
     maxCharsPerLine: 12,
     maxLines: 1,
     lineHeight: 30,
@@ -683,7 +845,7 @@ export async function generatePersonalitySharePoster(
   drawTextBlock(ctx, {
     text: input.tagline,
     x: heroPanelX + 280,
-    y: heroPanelY + 118,
+    y: heroPanelY + 146,
     maxCharsPerLine: 14,
     maxLines: 2,
     lineHeight: 30,
@@ -694,10 +856,10 @@ export async function generatePersonalitySharePoster(
   drawTextBlock(ctx, {
     text: input.summary,
     x: heroPanelX + 280,
-    y: heroPanelY + 178,
+    y: heroPanelY + 204,
     maxCharsPerLine: 17,
     maxLines: 2,
-    lineHeight: 28,
+    lineHeight: 24,
     fontSize: 20,
     color: PALETTE.textTertiary,
   })
@@ -705,28 +867,28 @@ export async function generatePersonalitySharePoster(
   // Rank badges — placed just below the hero panel
   const rankBadgesY = heroPanelY + 272 + 14
   if (typeof input.archetypeRank === 'number' && input.serialNumber) {
-    drawRankBadges(ctx, rankBadgesY, input.archetypeRank, input.serialNumber)
+    drawRankBadges(ctx, rankBadgesY, input.archetypeRank, input.serialNumber, input.globalRank)
   }
 
-  // Quote box with share line
+  // Quote box with share line (compressed to make room for trait bars)
   const quoteBoxY = rankBadgesY + 36 + 14
-  const quoteBoxHeight = 120
+  const quoteBoxHeight = 90
   fillRoundedRect(ctx, CARD_X + 44, quoteBoxY, CARD_WIDTH - 88, quoteBoxHeight, 30, PALETTE.quoteBoxFill)
   strokeRoundedRect(ctx, CARD_X + 44, quoteBoxY, CARD_WIDTH - 88, quoteBoxHeight, 30, PALETTE.quoteBoxBorder, 2)
 
   drawTextBlock(ctx, {
     text: input.shareLine,
     x: CARD_X + 74,
-    y: quoteBoxY + 30,
-    maxCharsPerLine: 20,
+    y: quoteBoxY + 22,
+    maxCharsPerLine: 22,
     maxLines: 2,
-    lineHeight: 34,
+    lineHeight: 28,
     fontSize: 28,
     color: PALETTE.textBody,
   })
 
   // Rarity and skill attribute badges
-  const secondaryBadgesY = quoteBoxY + quoteBoxHeight + 14
+  const secondaryBadgesY = quoteBoxY + quoteBoxHeight + 12
   if (input.rarityLabel) {
     drawBadge(ctx, {
       text: input.rarityLabel,
@@ -748,7 +910,7 @@ export async function generatePersonalitySharePoster(
   })
 
   // Top match chips
-  const matchChipsY = secondaryBadgesY + 42 + 10
+  const matchChipsY = secondaryBadgesY + 42 + 8
   if (input.topMatches.length > 0) {
     input.topMatches.slice(0, 3).forEach((match, index) => {
       drawBadge(ctx, {
@@ -763,13 +925,20 @@ export async function generatePersonalitySharePoster(
   }
 
   // Social energy bar
-  const energyBarY = matchChipsY + 42 + 16
+  const energyBarY = matchChipsY + 42 + 12
   if (typeof input.energyLevel === 'number') {
     drawEnergyBar(ctx, energyBarY, input.energyLevel, input.accentColor)
   }
 
+  // ── Trait bars (6 ACOEXP dimensions) ────────────────────────────
+  const traitBarsY = energyBarY + 54 + 12
+  let traitBarsHeight = 0
+  if (input.traitEntries.length > 0) {
+    traitBarsHeight = drawTraitBars(ctx, traitBarsY, input.traitEntries, input.accentColor)
+  }
+
   // Skill cards
-  const skillCardsY = energyBarY + 54 + 18
+  const skillCardsY = traitBarsY + traitBarsHeight + 16
   const skillCardHeight = 148
   const skillCardWidth = (CARD_WIDTH - 120) / 2
   drawSkillCard(ctx, {
@@ -794,13 +963,23 @@ export async function generatePersonalitySharePoster(
   })
 
   // Holographic edition stamp
-  const holoStampY = skillCardsY + skillCardHeight + 18
+  const holoStampY = skillCardsY + skillCardHeight + 14
   drawHolographicStamp(ctx, POSTER_WIDTH / 2, holoStampY + 18)
 
-  // Footer text and attribution
+  // Footer text, logo lockup, and attribution
   const footerY = holoStampY + 36 + 16
+
+  // JoyJoin logo text lockup
+  ctx.save()
+  ctx.setFillStyle(PALETTE.footerText)
+  ctx.setFontSize(16)
+  ctx.setTextAlign('center')
+  ctx.setTextBaseline('top')
+  ctx.fillText('JOYJOIN · 悦聚', POSTER_WIDTH / 2, footerY - 28)
+  ctx.restore()
+
   drawTextBlock(ctx, {
-    text: '来悦聚测测你的社交命格，看看缘分会带你去哪里 ✨',
+    text: '来悦聚测测你的社交命格，看看缘分会带你去哪里',
     x: CARD_X + 52,
     y: footerY,
     maxCharsPerLine: 24,
@@ -823,27 +1002,8 @@ export async function generatePersonalitySharePoster(
   return await new Promise<string>((resolve, reject) => {
     ctx.draw(false, async () => {
       try {
-        const output = await Taro.canvasToTempFilePath({
-          canvasId: PERSONALITY_SHARE_POSTER_CANVAS_ID,
-          x: 0,
-          y: 0,
-          width: POSTER_WIDTH,
-          height: POSTER_HEIGHT,
-          destWidth: Math.round(POSTER_WIDTH * exportMultiplier),
-          destHeight: Math.round(POSTER_HEIGHT * exportMultiplier),
-          fileType: 'png',
-          quality: 1,
-        })
-        // Clean up temp file after a delay (allow share/save to complete first)
-        setTimeout(() => {
-          try {
-            const fs = Taro.getFileSystemManager()
-            fs.unlinkSync(output.tempFilePath)
-          } catch {
-            // Ignore cleanup errors
-          }
-        }, 60000)
-        resolve(output.tempFilePath)
+        const tempFilePath = await exportCanvasWithRetry(exportMultiplier)
+        resolve(tempFilePath)
       } catch (error) {
         reject(error)
       }

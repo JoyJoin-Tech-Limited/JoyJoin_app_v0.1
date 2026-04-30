@@ -74,7 +74,7 @@ const CANONICAL_ARCHETYPES: Record<string, ArchetypeInfo> = {
     emoji: "🕷️",
   },
   "koala": {
-    id: "bear",
+    id: "koala",
     name: "koala",
     image: bearImg,
     color: [24, 80, 50], // warm brown

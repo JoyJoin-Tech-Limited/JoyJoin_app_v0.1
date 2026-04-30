@@ -12,6 +12,7 @@ import {
 } from '../../visuals'
 import type { AnonymousAssessmentTopMatch } from '../../../../../lib/anonymousOnboarding'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { haptics } from '../../../../../lib/haptics'
 import type { ArchetypeCardVariant } from '../../archetypeVariants'
 
@@ -222,6 +223,34 @@ export default function FinalStage({
     onGeneratePoster()
   }, [onGeneratePoster])
 
+  const handleMoreShareOptions = useCallback(async () => {
+    haptics('light')
+    const taroWithShareImageMenu = Taro as typeof Taro & {
+      showShareImageMenu?: (options: { path: string }) => Promise<unknown>
+    }
+    const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
+
+    let tapIndex: number
+    try {
+      const res = await Taro.showActionSheet({
+        itemList: hasNativeShareMenu && sharePosterPath
+          ? ['分享到朋友圈', '邀请朋友来测', '预览卡片']
+          : ['分享到朋友圈', '邀请朋友来测'],
+      })
+      tapIndex = res.tapIndex
+    } catch {
+      return
+    }
+
+    if (tapIndex === 0) {
+      onGenerateSquarePoster?.()
+    } else if (tapIndex === 1) {
+      onInviteFriend()
+    } else if (tapIndex === 2 && sharePosterPath && hasNativeShareMenu) {
+      await taroWithShareImageMenu.showShareImageMenu!({ path: sharePosterPath })
+    }
+  }, [onGenerateSquarePoster, onInviteFriend, sharePosterPath])
+
   const handleNicknameInput = useCallback((value: string) => {
     setLocalNickname(value)
     onNicknameChange?.(value)
@@ -315,7 +344,7 @@ export default function FinalStage({
 
             {/* Tap hint */}
             <View className='personality-results__pokemon-tap-hint'>
-              <Text className='personality-results__pokemon-tap-hint-text'>👆 点击查看详情</Text>
+              <Text className='personality-results__pokemon-tap-hint-text'>点击查看详情</Text>
             </View>
 
             <View className='personality-results__pokemon-card-top'>
@@ -337,8 +366,8 @@ export default function FinalStage({
             {/* Rank badges */}
             {(typeof archetypeRank === 'number' && serialNumber) ? (
               <View className='personality-results__pokemon-rank-row'>
-                <Text className='personality-results__pokemon-rank-chip'>🎴 命格编号 No.{archetypeRank}</Text>
-                <Text className='personality-results__pokemon-rank-chip personality-results__pokemon-rank-chip--gold'>🏅 {serialNumber}</Text>
+                <Text className='personality-results__pokemon-rank-chip'>命格编号 No.{archetypeRank}</Text>
+                <Text className='personality-results__pokemon-rank-chip personality-results__pokemon-rank-chip--gold'>{serialNumber}</Text>
               </View>
             ) : null}
 
@@ -352,11 +381,36 @@ export default function FinalStage({
               </View>
             ) : null}
 
+            {/* Compact trait bars (top 3) — Pokémon card stats feel */}
+            {traitEntries.length > 0 && (
+              <View className='personality-results__pokemon-compact-traits'>
+                {traitEntries
+                  .slice()
+                  .sort((a, b) => b.value - a.value)
+                  .slice(0, 3)
+                  .map((trait) => (
+                    <View key={trait.key} className='personality-results__pokemon-compact-trait'>
+                      <Text className='personality-results__pokemon-compact-trait-label'>{trait.label}</Text>
+                      <View className='personality-results__pokemon-compact-trait-track'>
+                        <View
+                          className='personality-results__pokemon-compact-trait-fill'
+                          style={{
+                            width: `${trait.value}%`,
+                            background: visual.accent || COLOR_PRIMARY,
+                          }}
+                        />
+                      </View>
+                      <Text className='personality-results__pokemon-compact-trait-value'>{trait.value}</Text>
+                    </View>
+                  ))}
+              </View>
+            )}
+
             {/* Energy bar */}
             {typeof energyLevel === 'number' ? (
               <View className='personality-results__pokemon-energy'>
                 <View className='personality-results__pokemon-energy-header'>
-                  <Text className='personality-results__pokemon-energy-label'>⚡ 社交能量</Text>
+                  <Text className='personality-results__pokemon-energy-label'>社交能量</Text>
                   <Text className='personality-results__pokemon-energy-value'>{Math.round(energyLevel)}%</Text>
                 </View>
                 <View className='personality-results__pokemon-energy-track'>
@@ -364,6 +418,18 @@ export default function FinalStage({
                     className='personality-results__pokemon-energy-fill'
                     style={{ width: `${Math.min(energyLevel, 100)}%` }}
                   />
+                </View>
+              </View>
+            ) : null}
+
+            {/* Compact skill badges — quick preview before full cards */}
+            {skillSet ? (
+              <View className='personality-results__pokemon-skill-badges'>
+                <View className='personality-results__pokemon-skill-badge personality-results__pokemon-skill-badge--warm'>
+                  <Text className='personality-results__pokemon-skill-badge-text'>{skillSet.activeSkill.name}</Text>
+                </View>
+                <View className='personality-results__pokemon-skill-badge personality-results__pokemon-skill-badge--cool'>
+                  <Text className='personality-results__pokemon-skill-badge-text'>{skillSet.passiveSkill.name}</Text>
                 </View>
               </View>
             ) : null}
@@ -391,7 +457,7 @@ export default function FinalStage({
 
             {/* Holographic edition stamp */}
             <View className='personality-results__pokemon-holo-stamp'>
-              <Text className='personality-results__pokemon-holo-stamp-text'>★ HOLOGRAPHIC EDITION ★</Text>
+              <Text className='personality-results__pokemon-holo-stamp-text'>HOLOGRAPHIC EDITION</Text>
             </View>
 
             {/* Nickname input */}
@@ -429,18 +495,13 @@ export default function FinalStage({
             <View className='personality-results__pokemon-actions'>
               <Button onClick={handleSharePress} disabled={isGeneratingPoster} loading={isGeneratingPoster}>
                 {isGeneratingPoster
-                  ? (generationPhase || '正在生成海报…')
+                  ? (generationPhase || '正在渲染卡面…')
                   : sharePosterPath
-                    ? '再次分享卡片'
-                    : '生成并分享卡片'}
+                    ? '分享卡片'
+                    : '生成卡片'}
               </Button>
-              {onGenerateSquarePoster ? (
-                <Button variant='secondary' onClick={() => { haptics('light'); onGenerateSquarePoster(); }}>
-                  分享到朋友圈
-                </Button>
-              ) : null}
-              <Button variant='secondary' onClick={() => { haptics('light'); onInviteFriend(); }}>
-                {sharePosterPath ? '把海报发给朋友' : '邀请朋友也测一下'}
+              <Button variant='secondary' onClick={handleMoreShareOptions}>
+                更多分享方式
               </Button>
             </View>
           </View>
@@ -454,7 +515,7 @@ export default function FinalStage({
               src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCoach)}
             />
             <View className='personality-results__coach-copy'>
-              <Text className='personality-results__section-label'>小悦的解读</Text>
+              <Text className='personality-results__section-label'>{`${DEFAULT_MASCOT_DISPLAY_NAME}的解读`}</Text>
               <Text className='personality-results__coach-title'>这个命格为什么像你</Text>
               <Text className='personality-results__coach-text'>{summary}</Text>
               <Text className='personality-results__coach-text'>
@@ -515,7 +576,7 @@ export default function FinalStage({
             })}
           </View>
           <Text className='personality-results__collect-hint'>
-            邀请朋友来测，一起解锁全部 12 种命格 ✨
+            邀请朋友来测，一起解锁全部 12 种命格
           </Text>
         </Card>
 

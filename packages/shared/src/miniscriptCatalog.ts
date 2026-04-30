@@ -65,7 +65,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#8B5CF6',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/western-court-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/western-court-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/western-court-hero.webp',
     },
     {
       key: 'medieval',
@@ -75,7 +75,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#4B5563',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/medieval-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/medieval-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/medieval-hero.webp',
     },
     {
       key: 'ancient_chinese',
@@ -85,7 +85,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#DC2626',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/ancient-chinese-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/ancient-chinese-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/ancient-chinese-hero.webp',
     },
     {
       key: 'xianxia',
@@ -95,7 +95,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#38BDF8',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/xianxia-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/xianxia-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/xianxia-hero.webp',
     },
     {
       key: 'future_tech',
@@ -105,7 +105,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#06B6D4',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/future-tech-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/future-tech-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/future-tech-hero.webp',
     },
     {
       key: 'modern_urban',
@@ -115,7 +115,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#6366F1',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/modern-urban-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/modern-urban-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/modern-urban-hero.webp',
     },
     {
       key: 'republican_era',
@@ -125,7 +125,7 @@ export const MINISCRIPT_CATALOG: MiniscriptCatalog = {
       gradientTo: '#B45309',
       gradientAngle: 135,
       thumbnailPath: '/assets/miniscript/republican-era-thumb.webp',
-      heroCdnUrl: 'https://cdn.yuejuapp.com/miniscript/republican-era-hero.webp',
+      heroCdnUrl: 'https://joyjoinapp.com/static/assets/miniscript/republican-era-hero.webp',
     },
   ],
   genres: [

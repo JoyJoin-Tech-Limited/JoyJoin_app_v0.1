@@ -15,11 +15,11 @@ interface ParticipantAvatarsProps {
 const ARCHETYPE_EMOJIS: Record<string, string> = {
   'corgi': '🐕',
   'rooster': '🐓',
-  'hamster_praise': '🐬',
+  'hamster_praise': '🐹',
   'fox': '🦊',
   'dolphin_calm': '🐬',
   'spider': '🕷️',
-  'koala': '🐻',
+  'koala': '🐨',
   'octopus': '🐙',
   'owl': '🦉',
   'elephant': '🐘',

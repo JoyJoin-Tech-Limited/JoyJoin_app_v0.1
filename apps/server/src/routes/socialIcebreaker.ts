@@ -22,6 +22,8 @@ import {
   generateAuctionLots,
   generateXiaoyueSessionPack,
   generateQuipBattlePrompts,
+  generateUndercoverWordPair,
+  generateGroupMirrorQuestions,
 } from '../socialIcebreakerAIService';
 import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
@@ -55,6 +57,7 @@ import {
 } from '../lib/socialIcebreakerStore';
 import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
+import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
@@ -498,6 +501,24 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
+  if (currentPhase === 'undercover_word') {
+    if (!state.undercoverWordPair) {
+      return res.status(400).json({ error: 'Word pair not generated' });
+    }
+    if (!state.undercoverWordRevealed) {
+      return res.status(400).json({ error: 'Undercover word must be revealed before advancing' });
+    }
+  }
+
+  if (currentPhase === 'group_mirror') {
+    if (!state.groupMirrorQuestions || state.groupMirrorQuestions.length === 0) {
+      return res.status(400).json({ error: 'Group mirror questions not generated' });
+    }
+    if (!state.groupMirrorRevealed) {
+      return res.status(400).json({ error: 'Group mirror results must be revealed before advancing' });
+    }
+  }
+
   const effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
 
   if (!state.completedPhases.includes(currentPhase)) {
@@ -512,6 +533,46 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     state.warmupReadyUserIds = [];
   }
   await updateSession(socialSessionId, state);
+
+  if (effectiveNextPhase === 'recap') {
+    if (!state.recapSnapshot) {
+      try {
+        const roster = await listParticipants(socialSessionId);
+        const medals = curateMedals(state, roster);
+
+        const durationMinutes = Math.round(
+          (Date.now() - (state.sessionStartedAt || state.phaseStartedAt || Date.now())) / 60000
+        );
+        const sessionLieMap = await loadSessionLieTruths(socialSessionId);
+        const lieHighlights = buildLieDetectiveRecapHighlights(state, roster, sessionLieMap);
+        const personalityDiceRecapLines = buildPersonalityDiceRecapLines(state);
+        const miniScriptRecapLine = buildMiniScriptRecapLine(state);
+        const auctionRecapLines = buildAuctionRecapLines(state);
+
+        const summaryResult = await generateRecapSummary({
+          participants: buildRecapParticipants(roster, state),
+          topicsDiscussed: (state.warmupTopics || []).slice(0, (state.currentTopicIndex ?? 0) + 1).map(t => t.question),
+          challengesCompleted: state.challengeCompletedBy?.length || 0,
+          commonGroundCount: state.commonGroundCount || 0,
+          lieDetectiveHighlights: lieHighlights.length ? lieHighlights : undefined,
+          personalityDiceRecapLines: personalityDiceRecapLines.length ? personalityDiceRecapLines : undefined,
+          miniScriptRecapLine,
+          auctionRecapLines: auctionRecapLines.length ? auctionRecapLines : undefined,
+          durationMinutes,
+        });
+
+        state.recapSnapshot = {
+          recapSummary: summaryResult.data,
+          medals,
+          meta: summaryResult.meta,
+        };
+        await updateSession(socialSessionId, state);
+      } catch (error) {
+        logger.error('[SocialIcebreaker] Failed to generate recap snapshot:', { error: String(error) });
+        // Continue without snapshot — GET /recap and GET /moment-card will fall back
+      }
+    }
+  }
 
   let content: any = null;
   let meta: AIResponseMeta | undefined;
@@ -1479,6 +1540,16 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  if (state.recapSnapshot) {
+    const roster = await listParticipants(socialSessionId);
+    return res.json({
+      summary: state.recapSnapshot.recapSummary,
+      meta: state.recapSnapshot.meta,
+      medals: state.recapSnapshot.medals,
+      state: await buildClientState(state),
+    });
+  }
+
   const durationMinutes = Math.round((Date.now() - (state.sessionStartedAt || state.phaseStartedAt)) / 60000);
 
   interface Medal {
@@ -1587,11 +1658,10 @@ router.get('/:socialSessionId/moment-card', async (req: any, res) => {
 
   const roster = await listParticipants(socialSessionId);
 
-  // Reuse recap medals if available, or build minimal set
-  const medals: Array<{ emoji: string; title: string; recipientDisplayName: string; description: string }> = [];
+  const recapSummary = state.recapSnapshot?.recapSummary;
+  const medals = state.recapSnapshot?.medals ?? [];
 
-  // Build payload
-  const payload = buildMomentCardPayload(state, roster, undefined, medals);
+  const payload = buildMomentCardPayload(state, roster, recapSummary, medals);
 
   return res.json({ payload });
 });
@@ -1631,6 +1701,270 @@ router.post('/:socialSessionId/ai-feedback', async (req: any, res) => {
     logger.error('[SocialIcebreaker] ai-feedback error:', { error });
     return res.status(500).json({ error: 'Failed to save feedback' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Undercover Word routes
+// ---------------------------------------------------------------------------
+
+router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  try {
+    const result = await generateUndercoverWordPair({
+      eventType: state.eventType || '活动',
+      participantCount: state.playerCount || 4,
+    });
+
+    // Randomly assign undercover
+    const roster = await listParticipants(socialSessionId);
+    const undercoverIdx = Math.floor(Math.random() * roster.length);
+    const undercoverUserId = roster[undercoverIdx]?.userId;
+
+    state.undercoverWordPair = result.data;
+    state.undercoverWordPairMeta = result.meta;
+    state.undercoverUserId = undercoverUserId;
+    state.undercoverWordRounds = [];
+    state.undercoverWordCurrentRound = 0;
+    state.undercoverWordVotes = [];
+    state.undercoverWordVotedUserIds = [];
+    state.undercoverWordRevealed = false;
+    state.undercoverWordResults = undefined;
+    await updateSession(socialSessionId, state);
+
+    return res.json({ pair: result.data, undercoverAssigned: !!undercoverUserId });
+  } catch (error) {
+    logger.error('[SocialIcebreaker] generateUndercoverWordPair error:', { error: String(error) });
+    return res.status(500).json({ error: 'Failed to generate undercover word pair' });
+  }
+});
+
+router.post('/:socialSessionId/undercover-word/describe', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { text } = req.body as { text: string };
+
+  if (!userId) return res.status(401).json({ error: 'Authentication required' });
+  if (!text || text.trim().length === 0) return res.status(400).json({ error: 'Description required' });
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const currentRound = state.undercoverWordCurrentRound ?? 0;
+  const rounds = state.undercoverWordRounds || [];
+  const round = rounds[currentRound] || { roundNumber: currentRound + 1, descriptions: [] };
+
+  // Prevent duplicate descriptions from same user in same round
+  const existing = round.descriptions.find((d: any) => d.userId === userId);
+  if (existing) {
+    existing.text = text.trim().slice(0, 100);
+  } else {
+    round.descriptions.push({ userId, displayName: (await getParticipant(socialSessionId, userId))?.displayName || '匿名', text: text.trim().slice(0, 100) });
+  }
+
+  rounds[currentRound] = round;
+  state.undercoverWordRounds = rounds;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ submitted: true, round: currentRound + 1 });
+});
+
+router.post('/:socialSessionId/undercover-word/vote', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { targetUserId } = req.body as { targetUserId: string };
+
+  if (!userId) return res.status(401).json({ error: 'Authentication required' });
+  if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' });
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const votes = state.undercoverWordVotes || [];
+  const existingIdx = votes.findIndex((v: any) => v.voterId === userId);
+  if (existingIdx >= 0) {
+    votes[existingIdx] = { voterId: userId, targetUserId };
+  } else {
+    votes.push({ voterId: userId, targetUserId });
+  }
+
+  state.undercoverWordVotes = votes;
+  const votedUserIds = state.undercoverWordVotedUserIds || [];
+  if (!votedUserIds.includes(userId)) votedUserIds.push(userId);
+  state.undercoverWordVotedUserIds = votedUserIds;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ voted: true, totalVotes: votes.length });
+});
+
+router.post('/:socialSessionId/undercover-word/reveal', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only host can reveal' });
+  }
+
+  const votes = state.undercoverWordVotes || [];
+  const voteCounts: Record<string, number> = {};
+  for (const v of votes) {
+    voteCounts[v.targetUserId] = (voteCounts[v.targetUserId] || 0) + 1;
+  }
+
+  let maxVotes = 0;
+  let topTarget = '';
+  for (const [uid, count] of Object.entries(voteCounts)) {
+    if (count > maxVotes) {
+      maxVotes = count;
+      topTarget = uid;
+    }
+  }
+
+  const pair = state.undercoverWordPair;
+  const undercoverUserId = state.undercoverUserId || '';
+
+  const result: typeof state.undercoverWordResults = {
+    undercoverUserId,
+    undercoverDisplayName: (await getParticipant(socialSessionId, undercoverUserId))?.displayName || '匿名',
+    civilianWord: pair?.civilianWord || '',
+    undercoverWord: pair?.undercoverWord || '',
+    voteCounts,
+    caught: topTarget === undercoverUserId,
+  };
+
+  state.undercoverWordResults = result;
+  state.undercoverWordRevealed = true;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ revealed: true, result });
+});
+
+// ---------------------------------------------------------------------------
+// Group Mirror routes
+// ---------------------------------------------------------------------------
+
+router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  try {
+    const roster = await listParticipants(socialSessionId);
+    const result = await generateGroupMirrorQuestions({
+      eventType: state.eventType || '活动',
+      participantCount: roster.length,
+      participantNames: roster.map((p) => p.displayName).filter(Boolean) as string[],
+    });
+
+    state.groupMirrorQuestions = result.data;
+    state.groupMirrorQuestionsMeta = result.meta;
+    state.groupMirrorAnswers = [];
+    state.groupMirrorVotes = [];
+    state.groupMirrorSubmittedUserIds = [];
+    state.groupMirrorRevealed = false;
+    state.groupMirrorResults = undefined;
+    await updateSession(socialSessionId, state);
+
+    return res.json({ questions: result.data, meta: result.meta });
+  } catch (error) {
+    logger.error('[SocialIcebreaker] generateGroupMirrorQuestions error:', { error: String(error) });
+    return res.status(500).json({ error: 'Failed to generate group mirror questions' });
+  }
+});
+
+router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { answers } = req.body as { answers: Array<{ questionId: string; targetUserId: string; reasonText?: string }> };
+
+  if (!userId) return res.status(401).json({ error: 'Authentication required' });
+  if (!answers || !Array.isArray(answers)) return res.status(400).json({ error: 'answers array required' });
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const participant = await getParticipant(socialSessionId, userId);
+  const displayName = participant?.displayName || '匿名';
+
+  const existingAnswers = state.groupMirrorAnswers || [];
+  const newAnswers = answers.map((a) => ({
+    userId,
+    displayName,
+    questionId: a.questionId,
+    targetUserId: a.targetUserId,
+    reasonText: a.reasonText?.slice(0, 100),
+  }));
+
+  // Deduplicate by user + question
+  const answerMap = new Map<string, typeof newAnswers[0]>();
+  for (const a of existingAnswers) {
+    answerMap.set(`${a.userId}::${a.questionId}`, a as any);
+  }
+  for (const a of newAnswers) {
+    answerMap.set(`${a.userId}::${a.questionId}`, a as any);
+  }
+  state.groupMirrorAnswers = Array.from(answerMap.values());
+
+  const submittedUserIds = state.groupMirrorSubmittedUserIds || [];
+  if (!submittedUserIds.includes(userId)) submittedUserIds.push(userId);
+  state.groupMirrorSubmittedUserIds = submittedUserIds;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ submitted: true, totalAnswers: state.groupMirrorAnswers.length });
+});
+
+router.post('/:socialSessionId/group-mirror/reveal', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only host can reveal' });
+  }
+
+  const questions = state.groupMirrorQuestions || [];
+  const answers = state.groupMirrorAnswers || [];
+
+  const results: typeof state.groupMirrorResults = [];
+  for (const q of questions) {
+    const qAnswers = answers.filter((a: any) => a.questionId === q.id);
+    const targetCounts: Record<string, number> = {};
+    for (const a of qAnswers) {
+      targetCounts[a.targetUserId] = (targetCounts[a.targetUserId] || 0) + 1;
+    }
+
+    let maxCount = 0;
+    let topTarget = '';
+    for (const [uid, count] of Object.entries(targetCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        topTarget = uid;
+      }
+    }
+
+    const topParticipant = await getParticipant(socialSessionId, topTarget);
+    results.push({
+      questionId: q.id,
+      questionText: q.questionText,
+      topTargetUserId: topTarget,
+      topTargetDisplayName: topParticipant?.displayName || '匿名',
+      voteCount: maxCount,
+      totalVotes: qAnswers.length,
+    });
+  }
+
+  state.groupMirrorResults = results;
+  state.groupMirrorRevealed = true;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ revealed: true, results });
 });
 
 export default router;

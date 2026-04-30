@@ -186,9 +186,9 @@ export function generateMysteriousDescription(insights: SmartInsight[]): string 
   const count = insights?.length || 0;
   
   if (count === 0) return '';
-  if (count <= 2) return '小悦已捕捉到一些有趣线索';
-  if (count <= 5) return '小悦已解读到你的一些独特印记';
-  return '小悦已深入理解你的社交密码';
+  if (count <= 2) return '悦仔已捕捉到一些有趣线索';
+  if (count <= 5) return '悦仔已解读到你的一些独特印记';
+  return '悦仔已深入理解你的社交密码';
 }
 
 // ============ 类别统计 ============

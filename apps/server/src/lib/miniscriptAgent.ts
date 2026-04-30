@@ -200,6 +200,7 @@ async function pass1Generate(params: {
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
   config: ReturnType<typeof getGameModeConfig>;
+  lite?: boolean;
   signal?: AbortSignal;
 }): Promise<{
   ok: boolean;
@@ -216,6 +217,7 @@ async function pass1Generate(params: {
     style: params.style,
     genres: params.genres,
     config: params.config,
+    lite: params.lite,
   });
 
   let selection;
@@ -390,6 +392,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   playerCount: number;
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
+  lite?: boolean;
 }): Promise<{
   framework: MiniScriptStoryFramework;
   meta: GenerateMiniScriptFrameworkMeta;

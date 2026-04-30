@@ -208,7 +208,7 @@ export const SOCIAL_ICEBREAKER_PHASE_REGISTRY: Record<
     render: (p) => (
       <motion.div key="quip_battle" className="h-full flex items-center justify-center" {...fadeMotionProps()}>
         <div className="text-center p-8">
-          <div className="text-4xl mb-4">😂</div>
+          <div className="text-4xl mb-4"></div>
           <h3 className="text-lg font-semibold mb-2">机智对决</h3>
           <p className="text-muted-foreground text-sm mb-4">填空造句，秀出你的脑洞</p>
           <p className="text-xs text-muted-foreground">请在微信小程序中体验此环节</p>
@@ -229,7 +229,7 @@ export const SOCIAL_ICEBREAKER_PHASE_REGISTRY: Record<
     render: (p) => (
       <motion.div key="undercover_word" className="h-full flex items-center justify-center" {...fadeMotionProps()}>
         <div className="text-center p-8">
-          <div className="text-4xl mb-4">🕵️</div>
+          <div className="text-4xl mb-4"></div>
           <h3 className="text-lg font-semibold mb-2">谁是卧底</h3>
           <p className="text-muted-foreground text-sm mb-4">找出那个拿到不同词的人</p>
           <p className="text-xs text-muted-foreground">请在微信小程序中体验此环节</p>
@@ -250,7 +250,7 @@ export const SOCIAL_ICEBREAKER_PHASE_REGISTRY: Record<
     render: (p) => (
       <motion.div key="group_mirror" className="h-full flex items-center justify-center" {...fadeMotionProps()}>
         <div className="text-center p-8">
-          <div className="text-4xl mb-4">🪞</div>
+          <div className="text-4xl mb-4"></div>
           <h3 className="text-lg font-semibold mb-2">群像镜像</h3>
           <p className="text-muted-foreground text-sm mb-4">匿名投票，看看大家眼中的你</p>
           <p className="text-xs text-muted-foreground">请在微信小程序中体验此环节</p>

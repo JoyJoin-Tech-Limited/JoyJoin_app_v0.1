@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { haptics } from '../../lib/haptics'
 
 const PHASE_EMOJI_MAP: Record<string, string> = {
-  mini_script: '🎭',
+  mini_script: '',
 }
 
 const STEP_LABELS = ['角色', '幕1', '幕2', '投票', '真相']
@@ -207,7 +207,7 @@ export function MiniScriptPhaseView({
     return (
       <View className='icebreaker__challenge'>
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
           <Text className='icebreaker__challenge-title'>剧本尚未生成</Text>
           <Text className='icebreaker__challenge-desc'>
             {isHost ? '点击上方「迷你剧本杀」配置风格与题材，生成你们的剧本。' : '请等待主持人生成剧本…'}
@@ -222,7 +222,7 @@ export function MiniScriptPhaseView({
     return (
       <View className='icebreaker__challenge'>
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
           <Text className='icebreaker__challenge-title'>迷你剧本杀</Text>
           <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
         </Card>
@@ -249,7 +249,7 @@ export function MiniScriptPhaseView({
       <View className='icebreaker__challenge'>
         {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
         <Card className='icebreaker__challenge-card'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={48} /></View>
+          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
           <Text className='icebreaker__challenge-title'>你的角色</Text>
           {myRole ? (
             <View className='icebreaker__ms-role icebreaker__ms-role--animate' style={{ marginTop: '16rpx', animationDelay: '0ms' }}>
@@ -281,7 +281,7 @@ export function MiniScriptPhaseView({
               disabled={isSettingReady}
               loading={isSettingReady}
             >
-              {isReady ? '已准备 ✓' : '准备好了'}
+              {isReady ? '已准备' : '准备好了'}
             </Button>
           </View>
         )}
@@ -319,7 +319,7 @@ export function MiniScriptPhaseView({
       {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
 
       <Card className='icebreaker__challenge-card'>
-        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={48} /></View>
+        <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
         <Text className='icebreaker__challenge-title'>迷你剧本杀 · 第 {currentAct} 幕</Text>
         <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
       </Card>
@@ -336,7 +336,7 @@ export function MiniScriptPhaseView({
                 </Text>
                 {isNew && (
                   <Text className='icebreaker__ms-new-clue-badge'>
-                    🔍 新线索
+                    新线索
                   </Text>
                 )}
               </View>
@@ -390,7 +390,7 @@ export function MiniScriptPhaseView({
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             onClick={() => setShowDeductionHints(!showDeductionHints)}
           >
-            <Text className='icebreaker__challenge-title'>💡 推理提示 ({deductionHints.length})</Text>
+            <Text className='icebreaker__challenge-title'>推理提示 ({deductionHints.length})</Text>
             <Text style={{ fontSize: '24rpx', color: '#888' }}>{showDeductionHints ? '▼' : '▶'}</Text>
           </View>
           {showDeductionHints && (
@@ -453,7 +453,7 @@ export function MiniScriptPhaseView({
               {isVoting ? '提交中…' : '提交投票'}
             </Button>
             {myVote && (
-              <Text style={{ fontSize: '24rpx', color: '#27ae60', marginTop: '12rpx' }}>✓ 已投票</Text>
+              <Text style={{ fontSize: '24rpx', color: '#27ae60', marginTop: '12rpx' }}>已投票</Text>
             )}
           </View>
         </Card>
@@ -475,7 +475,7 @@ export function MiniScriptPhaseView({
               {voteSummary.map(([who, count], idx) => (
                 <View key={who} style={{ marginTop: '8rpx', display: 'flex', justifyContent: 'space-between' }}>
                   <Text className='icebreaker__ms-role-line'>
-                    {idx === 0 ? '🏆' : '•'} {who}
+                    {idx === 0 ? '' : '•'} {who}
                   </Text>
                   <Text style={{ fontSize: '24rpx', color: '#888' }}>{count} 票</Text>
                 </View>

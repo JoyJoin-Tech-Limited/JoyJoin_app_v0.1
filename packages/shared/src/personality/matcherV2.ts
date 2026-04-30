@@ -969,7 +969,7 @@ export class PrototypeMatcher {
       E: '情绪稳定性',
       O: '开放性',
       X: '外向性',
-      P: '耐心',
+      P: '正能量',
     };
 
     return `你的${traitNames[trait]}(${userScore}分)高于典型${prototypeName}(${protoScore}分)，这让你在某些方面表现更突出`;

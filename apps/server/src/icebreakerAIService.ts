@@ -10,7 +10,7 @@ export interface ParticipantInfo {
   interests?: string[];
 }
 
-const WELCOME_PROMPT = `你是"小悦"，JoyJoin平台的破冰助手。你需要为一群即将开始破冰的用户生成一段温暖、有趣的欢迎语。
+const WELCOME_PROMPT = `你是"悦仔"，JoyJoin平台的破冰助手。你需要为一群即将开始破冰的用户生成一段温暖、有趣的欢迎语。
 
 ## 你的任务
 根据参与者信息，生成一段简短（30-50字）的个性化欢迎语，让大家感到轻松和期待。
@@ -33,7 +33,7 @@ const WELCOME_PROMPT = `你是"小悦"，JoyJoin平台的破冰助手。你需�
 ## 输出要求
 直接输出欢迎语文本，不要有任何格式标记或额外解释。`;
 
-const CLOSING_PROMPT = `你是"小悦"，JoyJoin平台的破冰助手。破冰环节结束了，你需要生成一段温馨的结束语。
+const CLOSING_PROMPT = `你是"悦仔"，JoyJoin平台的破冰助手。破冰环节结束了，你需要生成一段温馨的结束语。
 
 ## 你的任务
 根据破冰活动信息，生成一段简短（30-60字）的结束语，让大家带着美好的心情离开。
@@ -297,7 +297,7 @@ export async function generateQuickWelcome(
   return `${participantCount}位小伙伴都到齐啦！准备好开始有趣的破冰了吗？Let's go！`;
 }
 
-const GAME_RECOMMENDATION_PROMPT = `你是"小悦"，JoyJoin平台的智能破冰助手。你需要根据参与者的画像，从游戏列表中推荐最适合当前群体氛围的破冰游戏。
+const GAME_RECOMMENDATION_PROMPT = `你是"悦仔"，JoyJoin平台的智能破冰助手。你需要根据参与者的画像，从游戏列表中推荐最适合当前群体氛围的破冰游戏。
 
 ## 可选游戏列表
 以下是所有可选的破冰游戏（格式：id | 名称 | 场景 | 类型 | 难度 | 人数 | 描述）：

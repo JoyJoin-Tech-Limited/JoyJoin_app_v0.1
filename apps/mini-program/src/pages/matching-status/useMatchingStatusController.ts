@@ -55,6 +55,8 @@ import {
   type ThemeSummary,
   type ViewerPairSpotlight,
 } from './matchingStatusViewModels'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { generateChemistryPayoff } from '../../lib/chemistryPayoff'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
 const GROUP_DETAILS_STALE_TIME_MS = 60_000
@@ -204,7 +206,7 @@ export function useMatchingStatusController({
     currentFill >= maxGroupSize
       ? '这桌已经满员，准备进入最后的揭晓。'
       : currentFill >= minGroupSize
-        ? '已经达到成桌门槛，小悦正在优先为这桌完成配对。'
+        ? `已经达到成桌门槛，${DEFAULT_MASCOT_DISPLAY_NAME}正在优先为这桌完成配对。`
         : `还差 ${seatsNeeded} 位达到成桌门槛。`
   const waitingSeats = useMemo(
     () =>
@@ -307,13 +309,34 @@ export function useMatchingStatusController({
     return null
   }, [currentUserId, pairKeyMemberMap, viewerPairs])
 
-  const chemistryTokens = getChemistryTokens(
+  const chemistryPayoff = useMemo(() => {
+    if (!effectiveGroupDetails?.members?.length) return null
+    return generateChemistryPayoff(
+      effectiveGroupDetails.members,
+      user
+        ? {
+            topInterests: user.topInterests,
+            archetype: (user as unknown as Record<string, unknown>).archetype as string | undefined,
+          }
+        : undefined,
+    )
+  }, [effectiveGroupDetails?.members, user])
+
+  const baseChemistryTokens = getChemistryTokens(
     groupAnalysis?.overallChemistry,
     viewerSpotlight?.pair.chemistryScore ??
       effectiveGroupDetails?.group.matchScore ??
       registration?.matchScore ??
       matchedData?.matchScore ??
       null,
+  )
+
+  const chemistryTokens = useMemo(
+    () => ({
+      ...baseChemistryTokens,
+      body: chemistryPayoff?.chemistryLine ?? baseChemistryTokens.body,
+    }),
+    [baseChemistryTokens, chemistryPayoff],
   )
 
   const leadIceBreaker = groupAnalysis?.iceBreakers?.[0] ?? null
