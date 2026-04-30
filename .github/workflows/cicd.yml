@@ -349,9 +349,10 @@ jobs:
             echo "📥 Using code synced from CI artifact upload..."
             cd ~/JoyJoin
 
-            # Ensure host dependencies are fresh for CLI tools
-            echo "📦 Installing host dependencies..."
-            npm ci
+            # Ensure host dependencies are fresh for CLI tools.
+            # Skip Playwright browser downloads on prod host to avoid lock/contention failures.
+            echo "📦 Installing host dependencies (skip Playwright browser download)..."
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci
 
             # --- 1.5) Sync GitHub Actions secrets + variables → deployment/.env.production ---
             echo "🔐 Syncing GitHub secrets/variables into deployment/.env.production..."
