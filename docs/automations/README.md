@@ -1,0 +1,283 @@
+# JoyJoin Automations System
+
+AI-powered background automations that analyze code, find bugs, update documentation, and notify the team — similar to [Cursor Automations](https://cursor.com/automations), but triggered via GitHub Actions and WeCom (企业微信).
+
+---
+
+## Overview
+
+| Automation | Schedule | Script | Workflow |
+|------------|----------|--------|----------|
+| **Auto-Debug** | Daily 04:00 UTC | `scripts/auto-debug.mjs` | `.github/workflows/auto-debug.yml` |
+| **Auto-Docs** | Daily 05:00 UTC | `scripts/auto-docs.mjs` | `.github/workflows/auto-docs.yml` |
+| **WeCom Trigger** | On demand | — | `.github/workflows/wecom-trigger.yml` |
+
+Each automation:
+1. Analyzes recent code changes
+2. Applies heuristics / pattern matching
+3. Opens a PR with findings (if anything actionable found)
+4. Sends a WeCom group notification
+
+---
+
+## 1. Auto-Debug (Bug Finding)
+
+**Goal:** Inspect recent commits for high-severity bugs that escaped review.
+
+### What it checks
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Null dereference | HIGH | Property access on nullable values without guard |
+| Missing await | HIGH | Promise-like call without `await` in async function |
+| Unhandled promise | HIGH | `.then()` chain without `.catch()` |
+| Empty catch block | HIGH | `catch(e) {}` silently swallows errors |
+| Missing auth check | CRITICAL | Admin/payment route without auth middleware |
+| SQL injection risk | CRITICAL | String interpolation in raw SQL queries |
+| Side-effect in getter | HIGH | Getter performs mutation (should be idempotent) |
+| Shared mutable state | HIGH | Module-level mutable variable in async context |
+| Unclosed connection | HIGH | DB/client connection opened without guaranteed cleanup |
+
+### Run locally
+
+```bash
+# Analyze last 10 commits
+node scripts/auto-debug.mjs
+
+# Analyze more commits
+node scripts/auto-debug.mjs --commits 30
+
+# Analyze a specific range
+node scripts/auto-debug.mjs --range HEAD~5..HEAD
+
+# Create PR + WeCom notification
+WECOM_BOT_KEY=your-key GITHUB_TOKEN=your-token \
+  node scripts/auto-debug.mjs --commits 20 --pr --wecom
+
+# Verbose output
+node scripts/auto-debug.mjs --verbose
+```
+
+### Output
+
+- **No bugs found:** Logs `✅ No critical bugs found` — expected outcome most days
+- **Bugs found (PR mode):** Creates PR with analysis report at `reports/auto-debug-*.md`
+- **WeCom:** Sends formatted markdown message with severity breakdown
+
+### Confidence bar
+
+- Must describe a concrete trigger scenario — not theoretical
+- If unsure, report in WeCom without opening PR
+- No PR = no action needed (expected state most days)
+
+---
+
+## 2. Auto-Docs (Documentation)
+
+**Goal:** Keep technical documentation current as the codebase evolves.
+
+### What it checks
+
+1. **Doc coverage by subsystem** — maps source directories to expected doc paths:
+   - `apps/server/src/routes/` → `apps/server/src/routes/README.md`
+   - `packages/shared/src/personality/` → `packages/shared/src/personality/README.md`
+   - `apps/server/src/middleware/` → `apps/server/src/middleware/README.md`
+   - _(full mapping in the script)_
+
+2. **Canonical docs check** — verifies required root docs exist and are non-trivial
+3. **JSDoc coverage** — flags barrel `index.ts` files where most exports lack JSDoc
+
+### Run locally
+
+```bash
+# Analyze last 20 commits
+node scripts/auto-docs.mjs
+
+# Full codebase scan
+node scripts/auto-docs.mjs --scan-all
+
+# Create PR + WeCom
+WECOM_BOT_KEY=your-key GITHUB_TOKEN=your-token \
+  node scripts/auto-docs.mjs --commits 30 --pr --wecom
+
+# Print checklist only
+node scripts/auto-docs.mjs --checklist
+```
+
+### Generated docs
+
+When auto-docs creates a README for a domain directory, it:
+- Lists all `.ts` source files
+- Extracts first-line descriptions from JSDoc comments
+- Adds usage examples and cross-references
+
+---
+
+## 3. WeCom Integration
+
+### Setup
+
+1. **Create a WeCom group bot:**
+   - Open your WeCom group chat → `...` → Group Bot → Add
+   - Copy the webhook URL (looks like `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx`)
+   - The `key` query parameter is your `WECOM_BOT_KEY`
+
+2. **Add to GitHub Secrets:**
+   - `WECOM_BOT_KEY` — the key from the bot webhook URL
+   - `AUTO_DEBUG_TOKEN` — GitHub PAT with `contents:write` and `pull-requests:write`
+
+3. **Test the connection:**
+   ```bash
+   WECOM_BOT_KEY=your-key node scripts/wecom-notify.mjs --markdown "## 🚀 Test\nAutomation system online."
+   ```
+
+### Notification format
+
+Auto-Debug sends:
+```
+## 🔴 Auto-Debug 发现 Bug
+
+**扫描范围:** 最近 20 个提交
+**发现:** 3 个 (严重: 2)
+
+**关键发现:**
+- [CRITICAL] `apps/server/src/routes/admin.ts:45` — Route handler does not check authentication
+- [HIGH] `apps/server/src/services/payment.ts:120` — Missing await in async function
+```
+
+Auto-Docs sends:
+```
+## 📚 Auto-Docs 文档更新报告
+
+**扫描范围:** 最近 30 个提交
+**发现文档缺口:** 2 个
+
+**需要补充的文档:**
+- [❌] `apps/server/src/repositories/README.md` — Database Repositories
+- [⚠️] `packages/shared/src/personality/README.md` — Personality Engine
+```
+
+### Triggering automations from WeCom
+
+Using the **WeCom Automation Trigger** workflow (`.github/workflows/wecom-trigger.yml`):
+
+**Option A: GitHub CLI**
+```bash
+# Trigger auto-debug
+gh workflow run wecom-trigger.yml -f action=auto-debug -f commits=20
+
+# Trigger auto-docs with full scan
+gh workflow run wecom-trigger.yml -f action=auto-docs -f scan_all=true
+```
+
+**Option B: GitHub API (for automated relay)**
+```bash
+curl -X POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/wecom-trigger.yml/dispatches \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"ref":"main","inputs":{"action":"auto-debug"}}'
+```
+
+**Option C: Direct workflow dispatch**
+Each workflow (`auto-debug.yml`, `auto-docs.yml`) supports `workflow_dispatch` directly from the GitHub Actions UI.
+
+### Full webhook relay (WeCom → GitHub)
+
+For a fully automated flow where a WeCom bot message triggers the right automation:
+
+1. Deploy a lightweight relay (e.g. Cloudflare Worker, Vercel function)
+2. The relay receives WeCom webhook → parses the message → calls GitHub API
+3. See `scripts/auto-debug.mjs` for the API call pattern
+
+Example Cloudflare Worker skeleton:
+
+```js
+// WeCom → GitHub Actions relay
+export default {
+  async fetch(request) {
+    const body = await request.json();
+    const action = parseWeComMessage(body);  // "auto-debug" or "auto-docs"
+
+    await fetch(
+      `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/wecom-trigger.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { action, commits: '20' },
+        }),
+      }
+    );
+
+    return new Response('OK');
+  }
+};
+```
+
+---
+
+## 4. Utility Scripts
+
+### `scripts/wecom-notify.mjs`
+
+Send WeCom messages from command line or scripts.
+
+```bash
+# Text message
+node scripts/wecom-notify.mjs --text "Build failed: check logs"
+
+# Markdown message
+node scripts/wecom-notify.mjs --markdown "# Report\n- Item 1\n- Item 2"
+
+# From stdin
+echo "# Automated report" | node scripts/wecom-notify.mjs
+```
+
+Environment: `WECOM_BOT_KEY` (required), `WECOM_BOT_TIMEOUT_MS` (optional, default 10000)
+
+Exit codes: 0 = sent, 1 = config error, 2 = API error
+
+---
+
+## 5. Adding New Automations
+
+To add a new automation:
+
+1. **Create the analysis script** at `scripts/auto-<name>.mjs`
+   - Accept `--pr`, `--wecom`, `--range`, `--commits`, `--verbose` flags
+   - Exit 0 = no issues, 1 = issues found, 2 = error
+   - Use `process.env.GITHUB_TOKEN`, `GITHUB_REPOSITORY` for PR creation
+
+2. **Create the workflow** at `.github/workflows/auto-<name>.yml`
+   - Schedule + `workflow_dispatch` triggers
+   - `contents: write` + `pull-requests: write` permissions
+   - Pass `GITHUB_TOKEN` and `WECOM_BOT_KEY` to the script
+
+3. **Add to WeCom trigger** — update `.github/workflows/wecom-trigger.yml`
+   - Add the new action option to the `action` input dropdown
+   - Add a dispatch step for the new action
+
+4. **Register in this docs** — update this README
+
+---
+
+## Security Notes
+
+- `WECOM_BOT_KEY` is a non-secret identifier (not a password), but keep it in GitHub Secrets
+- `AUTO_DEBUG_TOKEN` should be a fine-grained PAT with minimal scope: `contents:write`, `pull-requests:write`
+- Never commit tokens or keys to the repository
+- PRs created by automations should be reviewed by a human before merging
+- The auto-debug confidence bar is intentionally high — it should not create noise
+
+---
+
+## Related
+
+- [Developer Quick Reference](../DEVELOPER_QUICK_REFERENCE.md) — canonical engineering guardrails
+- [CI/CD Pipeline](../../.github/workflows/cicd.yml) — main production pipeline
+- [Synthetic Monitoring](../../.github/workflows/synthetic-probe.yml) — uptime probes
+- [Agent Orchestration](../../.github/workflows/orchestrate.yml) — AI agent coordination

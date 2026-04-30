@@ -1,0 +1,133 @@
+# Auto-Docs — Documentation Automation
+#
+# Scheduled analysis of recent code changes to identify documentation gaps
+# and generate targeted updates.  Opens PRs when doc gaps are found and
+# notifies via WeCom (企业微信).
+#
+# Triggered by:
+#   - Schedule: daily at 05:00 UTC (13:00 CST) — after auto-debug
+#   - workflow_dispatch: manual trigger via GitHub UI or WeCom webhook
+#
+# Secrets required:
+#   WECOM_BOT_KEY          – WeCom group bot webhook key (for notifications)
+#   AUTO_DEBUG_TOKEN       – GitHub PAT with contents:write + pull-requests:write
+#
+# Reference: docs/automations/README.md
+
+name: Auto-Docs Documentation Update
+
+on:
+  schedule:
+    # Daily at 05:00 UTC (13:00 CST) — after auto-debug run
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      commits:
+        description: 'Number of recent commits to analyze'
+        required: false
+        default: '30'
+        type: string
+      range:
+        description: 'Git range (e.g., HEAD~20..HEAD). Overrides commits.'
+        required: false
+        default: ''
+        type: string
+      scan_all:
+        description: 'Scan full codebase (not just recent changes)'
+        required: false
+        default: 'false'
+        type: boolean
+      create_pr:
+        description: 'Create PR if doc gaps found'
+        required: false
+        default: 'true'
+        type: boolean
+      notify_wecom:
+        description: 'Send WeCom notification'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: auto-docs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  docs-analysis:
+    name: Documentation Gap Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Auto-Docs analysis
+        id: docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS=""
+
+          if [ "${{ inputs.scan_all || 'false' }}" = "true" ]; then
+            ARGS="$ARGS --scan-all"
+          elif [ -n "${{ inputs.range }}" ]; then
+            ARGS="$ARGS --range ${{ inputs.range }}"
+          else
+            ARGS="$ARGS --commits ${{ inputs.commits || '30' }}"
+          fi
+
+          if [ "${{ inputs.create_pr || 'true' }}" = "true" ]; then
+            ARGS="$ARGS --pr"
+          fi
+
+          if [ "${{ inputs.notify_wecom || 'true' }}" = "true" ] && [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+            ARGS="$ARGS --wecom"
+          fi
+
+          ARGS="$ARGS --checklist --verbose"
+
+          echo "Running: node scripts/auto-docs.mjs $ARGS"
+          node scripts/auto-docs.mjs $ARGS
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "Exit code: $EXIT_CODE"
+
+      - name: Upload docs analysis report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-docs-report
+          path: reports/auto-docs-*.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.docs.outputs.exit_code }}" = "0" ]; then
+            echo "✅ Auto-Docs: No documentation gaps found."
+          elif [ "${{ steps.docs.outputs.exit_code }}" = "1" ]; then
+            echo "📚 Auto-Docs: Documentation gaps found and PR created."
+          else
+            echo "❌ Auto-Docs: Analysis error."
+          fi
