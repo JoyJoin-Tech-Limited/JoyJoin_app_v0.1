@@ -1,4 +1,5 @@
 skill: admin-audit-and-rbac-governance
+category: internal
 
 primary_ownership: >
   Admin RBAC role hierarchy, endpoint-to-permission mapping, and mandatory audit

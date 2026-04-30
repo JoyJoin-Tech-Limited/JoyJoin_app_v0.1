@@ -253,6 +253,7 @@ export async function generateWarmupTopics(params: {
   eventType: string;
   participantCount: number;
   avoidTopics?: string[];
+  _refinementHint?: string;
 }): Promise<AIServiceResult<SocialTopic[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateWarmupTopics');
@@ -342,6 +343,7 @@ export async function generateMicroChallenges(params: {
   completedChallengeIds?: string[];
   /** Deterministic seed for template selector (e.g. session ID). */
   seed?: string;
+  _refinementHint?: string;
 }): Promise<AIServiceResult<MicroChallenge[]>> {
   const aiCorrelationId = createAiCorrelationId();
 
@@ -429,6 +431,7 @@ export async function generateLieDetectiveStatements(params: {
   displayName: string;
   archetype?: string;
   interests?: string[];
+  _refinementHint?: string;
 }): Promise<AIServiceResult<LieDetectiveStatement[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateLieDetectiveStatements');
@@ -906,13 +909,17 @@ function buildArchetypeFallback(
   };
 }
 
-export async function generatePersonalityDiceChallenges(participants: Array<{
-  userId: string;
-  displayName: string;
-  archetype?: string;
-  traitScores?: Record<string, number>;
-}>): Promise<AIServiceResult<PersonalityDiceChallenge[]>> {
+export async function generatePersonalityDiceChallenges(params: {
+  participants: Array<{
+    userId: string;
+    displayName: string;
+    archetype?: string;
+    traitScores?: Record<string, number>;
+  }>;
+  _refinementHint?: string;
+}): Promise<AIServiceResult<PersonalityDiceChallenge[]>> {
   const aiCorrelationId = createAiCorrelationId();
+  const { participants } = params;
   // Build archetype-aware v2 fallbacks first
   const fallbacks: PersonalityDiceChallenge[] = participants.map(p => buildArchetypeFallback(p));
 
@@ -925,7 +932,7 @@ export async function generatePersonalityDiceChallenges(participants: Array<{
       dominantTrait: getDominantTrait(p.traitScores),
     }));
 
-    const prompt = buildPersonalityDicePrompt({ participants: participantList });
+    const prompt = buildPersonalityDicePrompt({ participants: participantList, _refinementHint: params._refinementHint });
 
     const response = await client.chat.completions.create({
       model,
@@ -966,6 +973,8 @@ export async function generatePersonalityDiceChallenges(participants: Array<{
         challengeBody: parsed[i].challengeBody || fallbacks[i].challengeBody,
         challengeEmoji: parsed[i].challengeEmoji || fallbacks[i].challengeEmoji,
         difficulty: parsed[i].difficulty || fallbacks[i].difficulty,
+        passLine: parsed[i].passLine || fallbacks[i].passLine,
+        passConsequence: parsed[i].passConsequence || fallbacks[i].passConsequence,
       })), meta };
     }
     const latencyMs = Date.now() - t0;
@@ -1005,6 +1014,7 @@ function normalizeAuctionLots(raw: AuctionLot[]): AuctionLot[] {
 export async function generateAuctionLots(params: {
   participantCount: number;
   eventType?: string;
+  _refinementHint?: string;
 }): Promise<AIServiceResult<AuctionLot[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const t0 = Date.now();
@@ -1265,6 +1275,7 @@ export async function generateQuipBattlePrompts(params: {
   eventType: string;
   participantCount: number;
   participants: Array<{ displayName: string; archetype?: string }>;
+  _refinementHint?: string;
 }): Promise<AIServiceResult<QuipBattlePrompt[]>> {
   const aiCorrelationId = createAiCorrelationId();
   const { client, model, provider } = getClientForFunction('generateQuipBattlePrompts');

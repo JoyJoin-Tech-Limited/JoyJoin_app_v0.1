@@ -10,13 +10,9 @@ description: >-
   system. Also applies when reviewing a PR that adds or changes skill docs.
 ---
 
-## Purpose
+# Skill Authoring Governance
 
-This is the governing skill for the `.github/skills/` system. It defines how skills are written, structured, reviewed, and maintained so the system stays consistent, concise, and trustworthy for both human contributors and AI assistants.
-
-Core principles: **consistency, clarity, triggerability, progressive disclosure, technical correctness**.
-
----
+**Core rule:** This is the governing skill for the `.github/skills/` system. It defines how skills are written, structured, reviewed, and maintained so the system stays consistent, concise, and trustworthy for both human contributors and AI assistants. Core principles: **consistency, clarity, triggerability, progressive disclosure, technical correctness**.
 
 ## When to use this skill
 
@@ -27,8 +23,6 @@ Core principles: **consistency, clarity, triggerability, progressive disclosure,
 - Normalizing inconsistent frontmatter, structure, examples, or checklists
 - Reviewing a PR that adds or changes skill docs
 - Improving weak, outdated, or low-quality skills
-
----
 
 ## What good skills must include
 
@@ -44,106 +38,7 @@ Core principles: **consistency, clarity, triggerability, progressive disclosure,
 | References | Relative paths only |
 | Progressive disclosure | `SKILL.md` stays concise; depth moves to `references/`. Hard limit: 100 lines. |
 
-### Description discipline
-
-The `description` field is **the only thing your agent sees** when deciding which skill to load.
-It is surfaced in the system prompt alongside all other installed skills.
-
-**Goal:** Give the agent just enough info to know:
-1. What capability this skill provides
-2. When/why to trigger it (specific keywords, contexts, file types)
-
-**Format:** max 1024 chars; first sentence = what it does; second sentence = "Use when [triggers]".
-
-**Good example:**
-```
-Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when user mentions PDFs, forms, or document extraction.
-```
-
-**Bad example:**
-```
-Helps with documents.
-```
-
-### When to add scripts
-
-Add utility scripts when:
-- The operation is deterministic (validation, formatting, code generation)
-- The same code would be generated repeatedly
-- Errors need explicit handling
-
-Scripts save tokens and improve reliability versus generated code.
-
----
-
-## Sequential workflow
-
-Follow this order for any skill task:
-
-1. **Gather requirements** — ask the user (or yourself) about:
-   - What task or domain does the skill cover?
-   - What specific use cases should it handle?
-   - Does it need executable scripts or just instructions?
-   - Any reference materials to include?
-2. **Draft the skill** — create:
-   - `SKILL.md` with correct frontmatter and concise instructions
-   - `references/` directory if content exceeds 100 lines or has distinct domains
-   - `scripts/` directory if deterministic operations are needed
-3. **Review with user** — present the draft and ask:
-   - Does this cover your use cases?
-   - Anything missing or unclear?
-   - Should any section be more or less detailed?
-4. **Identify request type** — new skill, update to existing, audit, normalization, or PR review
-5. **Verify structure and frontmatter** — folder name, `SKILL.md` exists, no `README.md`, frontmatter fields correct
-6. **Verify content quality** — use cases present, guidance is actionable, no padding
-7. **Verify patterns and methodology** — sequential workflow or other appropriate pattern is used and explained
-8. **Verify validation material** — examples exist, troubleshooting section present, review checklist present
-9. **Produce output** — new files, patch recommendations, or audit findings (see Output modes below)
-
----
-
-## Audit framework
-
-When auditing a skill or the full skills system, evaluate against these areas:
-
-1. YAML frontmatter
-2. File structure and naming
-3. Progressive disclosure
-4. Instructions quality
-5. Patterns and methodology
-6. Testing and validation
-7. Technical correctness
-8. Distribution readiness
-
-For the full golden checklist, see [`references/checklist.md`](./references/checklist.md).
-
-When auditing code-review or operational-quality skills, also check against **Harness Engineering Framework pillars**: reliability, scalability, security, observability, and maintainability. A skill that teaches code review should require explicit evaluation against each pillar and produce a per-pillar compliance verdict (Pass / Fail / Needs attention).
-
----
-
-## Output modes
-
-### New skill creation
-Produce: `SKILL.md` with correct frontmatter, all required sections, and a `references/` directory if examples or checklists are too detailed for the core file.
-
-### Existing skill improvement
-Produce: targeted patches to weak or missing sections. Do not rewrite sections that are already compliant. Document what changed and why.
-
-### Repo-wide audit
-Produce: an audit report per skill listing compliant and non-compliant items per checklist area. See [`references/examples.md`](./references/examples.md) for the audit report format.
-
-### PR review for skill changes
-Produce: inline comments or a review summary noting which checklist items pass or fail. Flag missing trigger phrases, missing review checklists, or bloated `SKILL.md` files.
-
----
-
-## Quick examples
-
-- **Create a new skill**: start with frontmatter, add a concrete "When to use this skill" section, then add quick examples, troubleshooting, and a review checklist before moving any long material to `references/`.
-- **Audit an existing skill**: check folder/file naming first, then frontmatter, then whether the skill is actionable and includes examples, troubleshooting, and validation.
-- **Review a PR that changes a skill**: verify the changed skill still matches the checklist in [`references/checklist.md`](./references/checklist.md) and that new requirements did not bloat `SKILL.md`.
-
----
+See [`references/governance-details.md`](./references/governance-details.md) for the full description discipline guide, script guidelines, sequential workflow, output mode templates, and full audit framework.
 
 ## Common failure modes
 
@@ -161,6 +56,12 @@ Produce: inline comments or a review summary noting which checklist items pass o
 | No deterministic utility scripts for repeatable operations | Add `scripts/` helper when the same code would be generated repeatedly or errors need explicit handling |
 | Code-review skill lacks Harness framework evaluation | Add per-pillar checklist and compliance verdict section |
 
+## Quick examples
+
+- **Create a new skill**: start with frontmatter, add a concrete "When to use this skill" section, then add quick examples, troubleshooting, and a review checklist before moving any long material to `references/`.
+- **Audit an existing skill**: check folder/file naming first, then frontmatter, then whether the skill is actionable and includes examples, troubleshooting, and validation.
+- **Review a PR that changes a skill**: verify the changed skill still matches the checklist in [`references/checklist.md`](./references/checklist.md) and that new requirements did not bloat `SKILL.md`.
+
 ## Troubleshooting
 
 **A skill reads well but is hard to trigger**
@@ -171,8 +72,6 @@ Keep the core rule and workflow in `SKILL.md`, then move examples, checklists, o
 
 **An audit result feels subjective**
 Tie findings back to the checklist in [`references/checklist.md`](./references/checklist.md) so each pass/fail item is objective and repeatable.
-
----
 
 ## Review checklist
 
@@ -188,8 +87,6 @@ Before merging a skill PR, verify:
 - [ ] Review checklist is present
 - [ ] All `references/` links use relative paths
 
----
-
 ## Related files
 
 - [`docs/ai-workflow-documentation-refresh.md`](../../../docs/ai-workflow-documentation-refresh.md) — coordinated refresh of docs + skills + agents (lanes, `docs-sync`, orchestration validation)
@@ -197,3 +94,4 @@ Before merging a skill PR, verify:
 - [`.github/copilot-instructions.md`](../../copilot-instructions.md) — repo-wide Copilot instructions
 - [`references/checklist.md`](./references/checklist.md) — full golden standard checklist
 - [`references/examples.md`](./references/examples.md) — practical examples for skill writing and auditing
+- [`references/governance-details.md`](./references/governance-details.md) — full audit framework, description discipline, script guidelines, output mode templates

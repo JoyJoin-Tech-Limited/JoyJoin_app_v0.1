@@ -12,12 +12,7 @@ description: >-
 
 # Payment Entitlement Authority
 
-## Purpose
-
-This skill defines the current ownership boundaries for JoyJoin payment creation,
-verification, fulfillment, entitlement reads, refunds, and platform coordination.
-It keeps payment writes server-owned, shared contracts pure, and platform launch
-flows local.
+**Core rule:** Payment writes are server-owned, shared contracts stay pure, and platform launch flows stay local. Keep endpoint auth, feature flags, and request validation in the route layer; WeChat-facing logic in the service layer; fulfillment side effects transaction-wrapped in repositories.
 
 ## When to use this skill
 
@@ -29,46 +24,39 @@ Use this skill when you are:
 - deciding whether a payment change belongs on the server, in `packages/shared`, or in platform-local adapters
 - auditing mini-program versus web payment coordination
 
-## Authority map
+## Authority map overview
 
-1. Endpoint auth, feature flags, and request validation live in `apps/server/src/routes/domains/payments.ts`.
-   Keep `PAYMENTS_ENABLED`, coupon validation, plan normalization, and route-level auth at the route layer. Add payment endpoints there, not in `apps/server/src/routes.ts`.
+| Layer | Owner | Responsibility |
+|-------|-------|----------------|
+| Route layer | `apps/server/src/routes/domains/payments.ts` | Endpoint auth, feature flags, request validation, coupon validation |
+| WeChat service | `apps/server/src/paymentService.ts` | Creation, status queries, webhook verification, refund initiation |
+| Fulfillment | `apps/server/src/repositories/paymentFulfillmentRepo.ts` | Transaction-wrapped confirmation, refund application, subscription activation |
+| Event credits | `apps/server/src/repositories/eventCreditsRepo.ts` | Grant, consume, summarize, reverse credits |
+| Entitlement reads | `apps/server/src/routes.ts` | Server-owned gating; checks subscription first, then event-pack credits |
+| Shared contracts | `packages/shared/src/api.ts` | Pure DTOs, plan normalization, verification decision helpers |
+| Schema | `packages/shared/src/schema.ts` | Persistence contract for payments and credit tables |
 
-2. WeChat-facing payment creation, status queries, webhook verification, and refund initiation live in `apps/server/src/paymentService.ts`.
-   Keep H5 and JSAPI request construction, webhook signature checks, and `REFUND.SUCCESS` handling there instead of duplicating them in routes or clients.
+Platform launch flows stay local: Mini Program owns `Taro.requestPayment`; web owns H5 redirect. Coordinate shared contract changes through `docs/PLATFORM_COORDINATION.md`.
 
-3. Stateful payment fulfillment side effects live in `apps/server/src/repositories/paymentFulfillmentRepo.ts`.
-   Payment confirmation and refund application must stay transaction-wrapped there: payment status updates, coupon usage, subscription activation, event registration, notifications, and event-pack credit grant or reversal.
+See [`references/payment-ops.md`](references/payment-ops.md) for webhook handling specifics, verification polling, refund procedures, event-pack credit details, and cross-platform coordination.
 
-4. Event-pack credit lifecycle lives in `apps/server/src/repositories/eventCreditsRepo.ts`.
-   Grant, consume, summarize, and reverse credits only through this repository. Do not mutate `event_credit_grants` or `event_credit_redemptions` ad hoc.
+## Payment lifecycle overview
 
-5. Read-side entitlement gating stays server-owned in `apps/server/src/routes.ts`.
-   The active pool-registration gate checks subscription first, then available event-pack credits, and returns `NO_ACTIVE_ENTITLEMENT` when neither exists. Clients may reflect that state, but they do not decide entitlement.
-
-6. Shared client contracts and pure verification helpers live in `packages/shared/src/api.ts`.
-   Safe extractions include payment DTOs, plan normalization, and `getPaymentVerificationStatusDecision()` / `getPaymentVerificationErrorDecision()`. Do not move WeChat SDK calls, storage, redirect launch, or toast logic there.
-
-7. Payment schema authority lives in `packages/shared/src/schema.ts`.
-   The `payments`, `event_credit_grants`, and `event_credit_redemptions` tables define the persistence contract. Behavior changes should stay aligned with that schema and its tests.
-
-8. Platform launch and pending-order persistence stay local.
-   Mini Program owns `Taro.requestPayment` and pending-order storage (launch-primary); browser clients own H5 redirect launch (reference-only, not shipping). Coordinate shared contract changes through `docs/PLATFORM_COORDINATION.md`.
-
-9. Admin refunds require both auth and audit truth.
-   `/api/admin/payments/:paymentId/refund` is protected by `requireAdmin` and records `PAYMENT_REFUND_INITIATED`. If refund permissions, logging, or failure handling changes, review the admin governance skill too.
+1. Client requests creation → route validates and delegates to `paymentService.ts`
+2. WeChat SDK returns prepay info → client launches payment locally
+3. Webhook or status query confirms → `paymentFulfillmentRepo.ts` updates state transactionally
+4. Entitlement read in `routes.ts` grants access based on subscription or available credits
 
 ## Quick examples
 
 - **Add a new payment status rule**: update the pure decision helper in `packages/shared/src/api.ts` when the change is only about client-visible verification state. Leave storage, retries, and platform navigation local.
-- **Refund an event pack safely**: keep refund initiation in `paymentService.createRefund()`, preserve the refund blocker check in `eventCreditsRepo.getRefundBlockerCountForPayment()`, and let `paymentFulfillmentRepo.finalizeRefundedPayment()` reverse credits after webhook confirmation.
-- **Debug "paid but still locked"**: inspect the payment row, then check whether `paymentFulfillmentRepo.finalizeConfirmedPayment()` ran and whether entitlement reads in `apps/server/src/routes.ts` see an active subscription or available event-pack credits.
-- **Change web and mini-program payment flow together**: update shared DTOs and pure helpers in `packages/shared/src/api.ts`, then review both platform adapters and `docs/PLATFORM_COORDINATION.md` before merging.
+- **Refund an event pack safely**: keep refund initiation in `paymentService.createRefund()`, preserve the refund blocker check in `eventCreditsRepo`, and let `paymentFulfillmentRepo.finalizeRefundedPayment()` reverse credits after webhook confirmation.
+- **Debug "paid but still locked"**: inspect the payment row, then check whether `paymentFulfillmentRepo.finalizeConfirmedPayment()` ran and whether entitlement reads see an active subscription or available event-pack credits.
 
 ## Troubleshooting
 
 **The client created a payment but the user still has no entitlement**
-Check whether the payment is still `pending`, whether the webhook or status query reached `paymentFulfillmentRepo.finalizeConfirmedPayment()`, and whether the entitlement read in `apps/server/src/routes.ts` is looking for a subscription versus event-pack credits.
+Check whether the payment is still `pending`, whether the webhook or status query reached `paymentFulfillmentRepo.finalizeConfirmedPayment()`, and whether the entitlement read is looking for a subscription versus event-pack credits.
 
 **A refund succeeded in WeChat but credits or entitlement did not roll back**
 Verify that `REFUND.SUCCESS` reaches `paymentService.handleWebhook()` and that `paymentFulfillmentRepo.finalizeRefundedPayment()` ran. Do not patch the route to set refunded state directly.
@@ -90,19 +78,3 @@ Check `PAYMENTS_ENABLED`, the launch-config guidance in `docs/LAUNCH_CONFIG.md`,
 - [ ] Shared contract or platform-boundary changes update `docs/PLATFORM_COORDINATION.md` and the affected platform builds
 - [ ] Payment feature-flag or environment assumptions still match `docs/LAUNCH_CONFIG.md`
 - [ ] Relevant payment tests were updated when the authority boundary or behavior changed
-
-## Related files
-
-- `apps/server/src/routes/domains/payments.ts`
-- `apps/server/src/paymentService.ts`
-- `apps/server/src/repositories/paymentFulfillmentRepo.ts`
-- `apps/server/src/repositories/eventCreditsRepo.ts`
-- `apps/server/src/routes.ts`
-- `packages/shared/src/api.ts`
-- `packages/shared/src/schema.ts`
-- `docs/PLATFORM_COORDINATION.md`
-- `docs/LAUNCH_CONFIG.md`
-- `apps/server/src/__tests__/paymentWebhook.test.ts`
-- `apps/server/src/__tests__/paymentFulfillmentRepo.test.ts`
-- `apps/server/src/__tests__/miniProgramPaymentRoutes.test.ts`
-- `apps/server/src/__tests__/sharedApiContracts.test.ts`

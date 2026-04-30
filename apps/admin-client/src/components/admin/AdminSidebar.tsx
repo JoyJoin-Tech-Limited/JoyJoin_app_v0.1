@@ -79,7 +79,7 @@ const contentRevenueItems: NavItem[] = [
   { title: "优惠券", url: "/admin/coupons", icon: Tag, roles: SUPER_ONLY },
   { title: "财务管理", url: "/admin/finance", icon: DollarSign, roles: SUPER_OPERATOR },
   { title: "举报管理", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },
-  { title: "小悦进化", url: "/admin/evolution", icon: Brain, roles: SUPER_ONLY },
+  { title: "悦仔进化", url: "/admin/evolution", icon: Brain, roles: SUPER_ONLY },
 ];
 
 const systemItems: NavItem[] = [

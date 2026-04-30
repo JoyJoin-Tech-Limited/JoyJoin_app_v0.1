@@ -147,7 +147,7 @@ export default function JourneyProgressCard({
 
         {nextStep && (
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            完成{nextStep.title}后，小悦就能为你精准匹配同桌啦
+            完成{nextStep.title}后，悦仔就能为你精准匹配同桌啦
           </p>
         )}
       </CardContent>

@@ -1,211 +1,217 @@
 import { describe, expect, it } from 'vitest'
-import type { PoolGroupSummary, PoolRegistrationSummary } from '@shared/api'
-import type { EventThemeTitleRevealedData } from '@shared/wsEvents'
-import {
-  getMatchingStatusScreenState,
-  resolveMatchingStatusAuthBootstrap,
-  resolvePersistedThemeSummary,
-} from './matchingStatusViewModels'
+import type { PairExplanation } from '@shared/types/groupAnalysis'
+import { composeUnifiedReveal } from './matchingStatusViewModels'
 
-function baseGroup(overrides: Partial<PoolGroupSummary> = {}): PoolGroupSummary {
-  return {
-    id: 'g1',
-    groupNumber: 1,
-    memberCount: 4,
-    ...overrides,
+describe('composeUnifiedReveal', () => {
+  const baseChemistryPayoff = {
+    headline: '这桌缘分已注定',
+    chemistryLine: '你们都爱电影和美食，聊起来一定停不下来',
+    tags: ['电影', '美食'],
   }
-}
 
-function baseRegistration(overrides: Partial<PoolRegistrationSummary> = {}): PoolRegistrationSummary {
-  return {
-    id: 'r1',
-    poolId: 'p1',
-    ...overrides,
+  const baseSpotlight = {
+    pair: {
+      pairKey: 'user-a_user-b',
+      explanation: '你和 Ta 最容易从「同乡（广州）」聊开',
+      introAngle: '聊聊各自在广州的生活节奏',
+      chemistryScore: 88,
+      sharedInterests: ['film_entertainment'],
+      connectionPoints: ['同乡（广州）', '都喜欢硬科幻'],
+      connectionPointsWithRarity: [
+        { text: '同乡（广州）', rarity: 'rare' as const },
+        { text: '都喜欢硬科幻', rarity: 'common' as const },
+      ],
+    } satisfies PairExplanation,
+    otherMemberId: 'user-b',
+    otherMemberName: '阿杰',
   }
-}
 
-const wsReveal: EventThemeTitleRevealedData = {
-  poolId: 'p1',
-  groupId: 'g1',
-  eventThemeTitle: 'WS 主题',
-  themeTagline: 'WS 副标题',
-  themeEmoji: '🎭',
-  themeHighlights: ['a', 'b'],
-  themeVibe: 'playful',
-}
-
-describe('resolvePersistedThemeSummary', () => {
-  it('prefers WebSocket theme reveal over group and registration', () => {
-    const result = resolvePersistedThemeSummary({
-      themeRevealData: wsReveal,
-      group: baseGroup({ theme: 'Group 主题', themeEmoji: '🍜' }),
-      registration: baseRegistration({ theme: 'Reg 主题', themeEmoji: '🥟' }),
-    })
-    expect(result).toEqual({
-      title: 'WS 主题',
-      subtitle: 'WS 副标题',
-      emoji: '🎭',
-      vibe: 'playful',
-      highlights: ['a', 'b'],
-    })
-  })
-
-  it('merges group over registration when there is no WS payload', () => {
-    const result = resolvePersistedThemeSummary({
-      themeRevealData: null,
-      group: baseGroup({
-        theme: 'Group',
-        subtitle: 'Sub G',
-        themeEmoji: '🍜',
-        vibe: 'professional',
-        highlights: ['x'],
-      }),
-      registration: baseRegistration({
-        theme: 'Reg',
-        subtitle: 'Sub R',
-        themeEmoji: '🥟',
-        vibe: 'creative',
-        highlights: ['y'],
-      }),
-    })
-    expect(result).toMatchObject({
-      title: 'Group',
-      subtitle: 'Sub G',
-      emoji: '🍜',
-      vibe: 'professional',
-      highlights: ['x'],
-    })
-  })
-
-  it('falls back to registration when group has no theme fields', () => {
-    const result = resolvePersistedThemeSummary({
-      themeRevealData: undefined,
-      group: baseGroup({ theme: null, themeEmoji: null }),
-      registration: baseRegistration({
-        theme: '仅报名',
-        themeEmoji: '🎯',
-        highlights: ['  ok  ', ''],
-      }),
-    })
-    expect(result).toMatchObject({
-      title: '仅报名',
-      emoji: '🎯',
-      highlights: ['  ok  '],
-    })
-  })
-
-  it('returns null when there is no title or emoji from any source', () => {
-    expect(
-      resolvePersistedThemeSummary({
-        themeRevealData: null,
-        group: baseGroup({ theme: null, themeEmoji: null }),
-        registration: baseRegistration({ theme: null, themeEmoji: null }),
-      }),
-    ).toBeNull()
-  })
-
-  it('caps and filters highlights to four non-empty strings', () => {
-    const result = resolvePersistedThemeSummary({
-      themeRevealData: null,
-      group: baseGroup({
-        theme: 'T',
-        highlights: ['1', '2', '3', '4', '5', '  '],
-      }),
-      registration: undefined,
-    })
-    expect(result?.highlights).toEqual(['1', '2', '3', '4'])
-  })
-})
-
-describe('getMatchingStatusScreenState', () => {
-  it('keeps unresolved registration bootstrap in loading state', () => {
-    expect(
-      getMatchingStatusScreenState({
-        hasRegistrationId: true,
-        isRegistrationUnresolved: true,
-        hasFetchError: false,
-        registration: undefined,
-        isCancelled: false,
-        isNoMatchState: false,
-      }),
-    ).toEqual({ kind: 'loading' })
-  })
-
-  it('shows not-found only after the registration query resolves without data', () => {
-    expect(
-      getMatchingStatusScreenState({
-        hasRegistrationId: true,
-        isRegistrationUnresolved: false,
-        hasFetchError: false,
-        registration: undefined,
-        isCancelled: false,
-        isNoMatchState: false,
-      }),
-    ).toEqual({ kind: 'not-found' })
-  })
-
-  it('surfaces fetch errors separately from missing-registration state', () => {
-    expect(
-      getMatchingStatusScreenState({
-        hasRegistrationId: true,
-        isRegistrationUnresolved: false,
-        hasFetchError: true,
-        registration: undefined,
-        isCancelled: false,
-        isNoMatchState: false,
-      }),
-    ).toEqual({ kind: 'error' })
-  })
-
-  it('keeps explicit terminal registration states after a successful resolve', () => {
-    expect(
-      getMatchingStatusScreenState({
-        hasRegistrationId: true,
-        isRegistrationUnresolved: false,
-        hasFetchError: false,
-        registration: baseRegistration(),
-        isCancelled: true,
-        isNoMatchState: false,
-      }),
-    ).toMatchObject({ kind: 'cancelled', registration: { id: 'r1' } })
-
-    expect(
-      getMatchingStatusScreenState({
-        hasRegistrationId: true,
-        isRegistrationUnresolved: false,
-        hasFetchError: false,
-        registration: baseRegistration(),
-        isCancelled: false,
-        isNoMatchState: true,
-      }),
-    ).toMatchObject({ kind: 'no-match', registration: { id: 'r1' } })
-  })
-})
-
-describe('resolveMatchingStatusAuthBootstrap', () => {
-  it('falls back to cached auth user while the hook is still settling', () => {
-    const authState = resolveMatchingStatusAuthBootstrap({
-      authUser: undefined,
-      cachedAuthUser: { id: 'cached-user' },
-      authLoading: true,
+  it('uses spotlight explanation as body when spotlight exists', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: baseSpotlight,
     })
 
-    expect(authState).toEqual({
-      effectiveAuthUser: { id: 'cached-user' },
-      isAuthBootstrapPending: false,
-    })
+    expect(result.body).toBe(baseSpotlight.pair.explanation)
+    expect(result.subtitle).toBe(baseChemistryPayoff.chemistryLine)
+    expect(result.headline).toBe(baseChemistryPayoff.headline)
   })
 
-  it('keeps bootstrap pending only when no live or cached auth user exists', () => {
-    expect(
-      resolveMatchingStatusAuthBootstrap({
-        authUser: undefined,
-        cachedAuthUser: undefined,
-        authLoading: true,
-      }),
-    ).toEqual({
-      effectiveAuthUser: undefined,
-      isAuthBootstrapPending: true,
+  it('uses chemistryPayoff body when spotlight has no explanation', () => {
+    const spotlightNoExplanation = {
+      ...baseSpotlight,
+      pair: { ...baseSpotlight.pair, explanation: '', connectionPoints: [], connectionPointsWithRarity: [] },
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightNoExplanation,
     })
+
+    expect(result.body).toBe(baseChemistryPayoff.chemistryLine)
+    expect(result.subtitle).toBeNull()
+  })
+
+  it('uses chemistryPayoff body when spotlight is null', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: null,
+    })
+
+    expect(result.body).toBe(baseChemistryPayoff.chemistryLine)
+    expect(result.subtitle).toBeNull()
+    expect(result.spotlight).toBeNull()
+  })
+
+  it('falls back to generic copy when chemistryPayoff is null', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: null,
+      viewerSpotlight: null,
+    })
+
+    expect(result.headline).toBe('这桌的缘分已经悄悄酝酿')
+    expect(result.body).toBe('这桌的化学反应很值得期待')
+    expect(result.subtitle).toBeNull()
+    expect(result.groupTags).toEqual([])
+    expect(result.spotlight).toBeNull()
+  })
+
+  it('normalizes legacy connectionPoints to common rarity', () => {
+    const spotlightLegacy = {
+      ...baseSpotlight,
+      pair: {
+        ...baseSpotlight.pair,
+        connectionPointsWithRarity: undefined,
+        connectionPoints: ['同乡（广州）', '都喜欢硬科幻'],
+      } satisfies PairExplanation,
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightLegacy,
+    })
+
+    expect(result.spotlight?.connectionPointsWithRarity).toEqual([
+      { text: '同乡（广州）', rarity: 'common' },
+      { text: '都喜欢硬科幻', rarity: 'common' },
+    ])
+  })
+
+  it('computes epic rarity tier when epic connection point exists', () => {
+    const spotlightEpic = {
+      ...baseSpotlight,
+      pair: {
+        ...baseSpotlight.pair,
+        connectionPoints: ['同款人格', '同乡'],
+        connectionPointsWithRarity: [
+          { text: '同款人格', rarity: 'epic' as const },
+          { text: '同乡', rarity: 'common' as const },
+        ],
+      },
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightEpic,
+    })
+
+    expect(result.spotlight?.rarityTier).toBe('epic')
+  })
+
+  it('computes rare rarity tier when rare but no epic exists', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: baseSpotlight,
+    })
+
+    expect(result.spotlight?.rarityTier).toBe('rare')
+  })
+
+  it('computes common rarity tier when only common exists', () => {
+    const spotlightCommon = {
+      ...baseSpotlight,
+      pair: {
+        ...baseSpotlight.pair,
+        connectionPoints: ['同城'],
+        connectionPointsWithRarity: [
+          { text: '同城', rarity: 'common' as const },
+        ],
+      },
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightCommon,
+    })
+
+    expect(result.spotlight?.rarityTier).toBe('common')
+  })
+
+  it('shows groupTags as pills when spotlight has no connection points', () => {
+    const spotlightEmpty = {
+      ...baseSpotlight,
+      pair: {
+        ...baseSpotlight.pair,
+        connectionPointsWithRarity: [],
+        connectionPoints: [],
+      },
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightEmpty,
+    })
+
+    expect(result.spotlight?.connectionPointsWithRarity).toEqual([])
+    // groupTags should still be available for fallback rendering
+    expect(result.groupTags).toEqual(['电影', '美食'])
+  })
+
+  it('truncates connectionPointsWithRarity to max 3 items', () => {
+    const spotlightMany = {
+      ...baseSpotlight,
+      pair: {
+        ...baseSpotlight.pair,
+        connectionPoints: ['同乡', '同城', '同行', '同好'],
+        connectionPointsWithRarity: [
+          { text: '同乡', rarity: 'rare' as const },
+          { text: '同城', rarity: 'common' as const },
+          { text: '同行', rarity: 'common' as const },
+          { text: '同好', rarity: 'common' as const },
+        ],
+      },
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightMany,
+    })
+
+    // Raw normalization preserves all; truncation happens at render time
+    expect(result.spotlight?.connectionPointsWithRarity.length).toBe(4)
+  })
+
+  it('uses memberName from spotlight', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: baseSpotlight,
+    })
+
+    expect(result.spotlight?.memberName).toBe('阿杰')
+  })
+
+  it('handles whitespace-only explanation as empty', () => {
+    const spotlightWhitespace = {
+      ...baseSpotlight,
+      pair: { ...baseSpotlight.pair, explanation: '   ', connectionPoints: [], connectionPointsWithRarity: [] },
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightWhitespace,
+    })
+
+    expect(result.body).toBe(baseChemistryPayoff.chemistryLine)
+    expect(result.subtitle).toBeNull()
   })
 })

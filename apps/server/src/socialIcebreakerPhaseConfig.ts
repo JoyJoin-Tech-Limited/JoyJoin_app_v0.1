@@ -136,6 +136,7 @@ export function cleanupPhaseStateForNextPhase(
       state.personalityDiceChallenges = undefined;
       state.currentDicePlayerIndex = undefined;
       state.diceCompletedBy = undefined;
+      state.dicePassedBy = undefined;
       return;
     case 'mini_script':
       state.miniScriptFramework = undefined;

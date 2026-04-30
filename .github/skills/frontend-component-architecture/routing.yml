@@ -1,4 +1,5 @@
 skill: frontend-component-architecture
+category: internal
 
 primary_ownership: >
   UI component placement across packages/shared/src/ui/ (shared primitives) and

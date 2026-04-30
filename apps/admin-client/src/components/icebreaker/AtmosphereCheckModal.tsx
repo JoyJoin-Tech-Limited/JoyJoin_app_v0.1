@@ -102,7 +102,7 @@ export function AtmosphereCheckModal({
               </div>
               <h3 className="text-lg font-semibold mb-1">活动进行得如何？</h3>
               <p className="text-sm text-muted-foreground">
-                已经交流 60 分钟啦！小悦想了解一下氛围~
+                已经交流 60 分钟啦！悦仔想了解一下氛围~
               </p>
             </div>
 

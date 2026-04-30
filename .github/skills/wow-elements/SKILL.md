@@ -27,38 +27,7 @@ Do **not** use this skill to:
 - justify one-off animations that cannot be maintained
 - work around missing product design intent
 
-## High-impact use cases in JoyJoin
-
-**1. Onboarding first load**
-The first authenticated screen a new user sees sets the perceived quality bar permanently. A subtle staggered entrance — content appearing with soft fade + translate rather than a hard render — signals premium craftsmanship before any feature is used.
-
-**2. Completion moments**
-Personality test completion, successful join, payment confirmation, and profile milestone completions are emotionally significant. A restrained celebration — a gentle scale pulse, a soft checkmark reveal, a warm confirmation copy moment — reinforces trust and satisfaction.
-
-**3. Empty and loading states**
-Empty states should feel like possibility, not absence. Loading states should feel like momentum, not waiting. A skeleton with a soft shimmer, a contextual illustration, or a warm short copy line transforms a neutral state into a brand-aligned moment.
-
-## Design direction before coding
-
-Before writing any polish or motion code, commit to a clear aesthetic direction for the moment you are building. Generic, interchangeable UI is the failure mode — every polished JoyJoin moment should feel like it could only exist in this product.
-
-**Anti-generic checklist — ask before you start:**
-
-- What is the single most emotionally significant moment in this flow? Polish that, nothing else.
-- Is this treatment warm, rounded, and distinctively JoyJoin — or is it a pattern that would feel equally at home in any other social app?
-- Have you avoided: purple-gradient-on-white backgrounds, generic floating cards with no brand character, default spring physics, system font labels on hero copy, and symmetrical layouts that feel undesigned?
-- Does the spatial composition do any work — breathing room, a soft asymmetry, a deliberate hierarchy — or is it a default flex column?
-
-**On Taro mini-program surfaces** — the same direction principle applies, but execution is constrained. Browser-only effects (backdrop-filter, CSS Grid masonry, custom cursor, hover-only reveals) have no direct equivalent. Translate the *intent* of the aesthetic into what Taro primitives (`View`, `Text`, `Image`, `ScrollView`) and WXSS-safe properties can actually deliver. A restrained, opinionated treatment with native press states and brand-aligned spacing beats a generic-looking attempt to clone browser effects.
-
-**What makes JoyJoin visually distinctive:**
-- warm Vibrant Purple as the single anchor, never scattered as a tint on every element
-- Warm Beige and soft white as breathing backgrounds, not harsh white
-- `font-cn-display` only on short emotional bursts — never on dense lists or body copy
-- rounded, tactile forms that feel social and approachable, not enterprise-flat
-- a single carefully placed mascot or illustration, never decorative wallpaper
-
-## Guiding principles
+## Golden rules
 
 | Principle | What it means |
 |-----------|--------------|
@@ -69,57 +38,11 @@ Before writing any polish or motion code, commit to a clear aesthetic direction 
 
 ## Working pattern — iterative refinement
 
-Do not attempt to polish everything in one pass.
+**Pass 1 — Functional baseline:** Build the feature. Get the data, layout, and interactions correct. No polish yet.
 
-**Pass 1 — Functional baseline**
-Build the feature. Get the data, layout, and interactions correct. No polish yet.
+**Pass 2 — Polish the key emotional moment:** Identify the single most emotionally significant moment in the flow. Add a targeted, minimal wow element to that moment only.
 
-**Pass 2 — Polish the key emotional moment**
-Identify the single most emotionally significant moment in the flow. Add a targeted, minimal wow element to that moment only. Review against the checklist below.
-
-**Pass 3 — Systemize if repeated**
-If the same pattern appears in three or more unrelated places, extract it into a shared component, utility, or hook. Do not create an abstraction for a one-off.
-
-## Implementation patterns
-
-### CSS / Tailwind for small motion
-Use `transition`, `duration-*`, and `ease-*` utilities for hover states, focus rings, button feedback, and simple reveal transitions. Apply them in the shared primitive or variant layer when the pattern is part of the system. This is the lightest and safest option.
-
-```tsx
-// Preferred: add motion to the shared Button primitive or variant classes
-import { Button } from "@/components/ui/button";
-
-<Button
-  variant="default"
-  size="lg"
-  className="transition-transform duration-150 ease-out active:scale-[0.98]"
->
-  Join
-</Button>
-```
-
-### Framer Motion for choreographed entrances/exits
-Use `motion.*` primitives for staggered entrance sequences, page transitions, and reveal choreography where CSS alone is insufficient.
-
-```tsx
-import { motion } from 'framer-motion';
-
-<motion.div
-  initial={{ opacity: 0, y: 8 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.3, ease: 'easeOut' }}
->
-  {children}
-</motion.div>
-```
-
-Always wrap Framer Motion usage with a `useReducedMotion` check or set `transition={{ duration: 0 }}` when `prefers-reduced-motion` is active. See `references/examples.md` for a reusable wrapper pattern.
-
-### Reuse shared UI patterns
-Before building a new animated component, check `packages/shared/src/ui/` for existing primitives. Prefer extending a shared component over creating a parallel one.
-
-### When to extract a hook or utility
-Only when the exact same animation pattern appears in 3+ unrelated places. A `useCompletionPulse()` hook is justified. A one-time animation inline is not worth abstracting.
+**Pass 3 — Systemize if repeated:** If the same pattern appears in 3+ unrelated places, extract it into a shared component, utility, or hook. Do not create an abstraction for a one-off.
 
 ## Quick examples
 
@@ -127,90 +50,26 @@ Only when the exact same animation pattern appears in 3+ unrelated places. A `us
 - **Match reveal entrance** — stagger only the title, summary, and primary CTA after data is ready; do not animate the entire screen tree.
 - **Empty state polish** — pair a short hopeful line of copy with a subtle shimmer or fade-in illustration, keeping the state fully readable without motion.
 
-## Common mistakes to avoid
+## Troubleshooting
 
-| Mistake | Impact | Fix |
-|---------|--------|-----|
-| **Staggering every element on every screen** | Visual noise; slow perceived load | Reserve stagger for the single key moment per flow |
-| **Animating during data fetching** | Competes with loading state; confusing | Animate after data is ready, not during skeleton phase |
-| **No `prefers-reduced-motion` fallback** | Accessibility failure | Always wrap motion in a reduced-motion guard |
-| **Using `duration > 400ms` for routine transitions** | Feels slow; slows task completion | Keep routine transitions ≤ 200ms; emotional moments ≤ 500ms |
-| **Off-brand motion** | Feels corporate or childish | Reference `.github/skills/joyjoin-brand-guidelines/SKILL.md` — soft easing, restrained scale, no harsh bounce |
-| **Layout-triggering animation** | Performance regression / CLS | Animate only `transform` and `opacity`; never `height`, `width`, or `margin` |
-| **Polishing low-priority screens** | Wasted effort | Focus polish budget on onboarding, completion, and high-frequency surfaces |
+- **Animation feels janky on mobile** — Check if you're animating `transform`/`opacity` only. Layout-triggering properties like `height`, `width`, or `margin` cause frame drops.
+- **Reduced-motion preference is ignored** — Wrap Framer Motion transitions with `useReducedMotion()` or set `duration: 0` when `prefers-reduced-motion` matches.
+- **Effect looks generic or off-brand** — Re-run the Anti-Generic Checklist. Verify you're using JoyJoin tokens (Vibrant Purple sparingly, Warm Beige backgrounds, rounded forms).
+- **Taro mini-program doesn't support the browser effect** — Translate intent to Taro primitives. Use `hover-class`, `animation` attributes, or WXSS `transition`.
+- **Same polish pattern duplicated across 3+ screens** — Extract to a shared hook or component. One-off inline animations should stay inline; repeated patterns belong in `packages/shared/src/ui/`.
 
-## Frontend Excellence Notes
+## Review checklist
 
-### Platform Applicability
+- [ ] The polished moment is the single most emotionally significant one in the flow
+- [ ] Motion uses `transform` and `opacity` only — no layout-triggering properties
+- [ ] `prefers-reduced-motion` is respected with a readable static fallback
+- [ ] Transition duration is ≤ 200 ms for routine feedback, ≤ 500 ms for emotional reveals
+- [ ] Effect is warm, restrained, and brand-aligned (not bouncy or corporate)
+- [ ] Copy and visual state remain fully understandable without animation
+- [ ] Pattern is either reused from shared primitives or justifies a new abstraction
+- [ ] Verified on a mid-range device, not just a fast dev machine
 
-- Applies to both Web and Taro mini-program frontend surfaces whenever polish, delight, or emotional resonance is being implemented in product UI.
-- The same emotional intent should survive across platforms even when the available primitives and motion systems differ.
+## References
 
-### UI/UX & Aesthetic Guidance
-
-- Motion and polish must stay anchored to JoyJoin tokens, typography roles, and component variants; wow moments should emerge from the product system, not sit on top of it as decoration.
-- Legendary polish requires complete state design: loading, error, empty, disabled, success, and reveal states should all feel intentional and visibly communicative.
-- Use semantic web elements or native Taro components as the foundation, then layer motion or micro-interactions only after the baseline interaction is already clear.
-
-### Web-Specific Considerations
-
-- Hover, active, and `:focus-visible` states should work together; motion should complement cursor and keyboard feedback rather than duplicate or obscure it.
-- Verify polished surfaces at narrow mobile widths first and ensure scroll containers remain smooth during staggered reveals or CTA feedback.
-- Use the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) when deciding when a polished collection still needs virtualization instead of per-item motion.
-
-### Taro-Specific Considerations
-
-- Follow the [shared frontend thresholds reference](../design-system-governance/references/frontend-excellence-thresholds.md) for minimum touch targets and long-list handling, prefer native components like `View`, `Text`, `Button`, and `ScrollView`, and replace CSS hover behavior with `hover-class` or pressed-state styling.
-- Premium polish must not trade scroll or tap latency for **unbounded** bitmap weight—when hero art or motion depends on heavy assets, use [`mini-program-frontend-excellence/references/taro-ui-framework.md`](../mini-program-frontend-excellence/references/taro-ui-framework.md) §8 for budgets and remediation.
-- Keep animation-heavy routes and large media assets aware of mini-program subpackage budgets, and use `VirtualList` for long lists before adding per-item polish.
-- Favor lightweight transform and opacity effects over DOM-like choreography that depends on browser-only APIs or expensive layout work.
-
-### Accessibility & Performance Notes
-
-- Respect WCAG 2.1 AA touchpoints, especially visible focus, readable contrast, and reduced-motion behavior; polish must never be the only carrier of meaning.
-- Protect Core Web Vitals by keeping wow moments off the critical LCP path, avoiding layout shift, and keeping interaction feedback responsive for INP.
-- On mini-program surfaces, treat scroll smoothness and tap latency as hard constraints; if an effect harms them, the effect is not production-ready.
-
-## Wow Element Review Checklist
-
-Before marking a polished interaction complete, verify:
-
-- [ ] Does this moment genuinely benefit from animation or polish?
-- [ ] Is the motion soft, restrained, and brand-aligned (not bouncy, corporate, or harsh)?
-- [ ] Does it respect `prefers-reduced-motion`?
-- [ ] Does it animate only `transform` / `opacity` (no layout-triggering properties)?
-- [ ] Does it complete within ≤ 500ms (≤ 200ms for routine transitions)?
-- [ ] Does it work correctly when data is loading, when the screen is slow, or when the user moves fast?
-- [ ] Has it been tested on a mid-range device (not just a fast dev machine)?
-- [ ] Is the pattern reused from shared primitives, or does it justify a new one?
-- [ ] Is the copy/visual state still readable and correct without the animation?
-- [ ] Would a new contributor understand why this animation exists?
-
-## Related skills
-
-| Skill | When to hand off |
-|-------|-----------------|
-| `frontend-component-architecture` | wow element is a new shared primitive or requires workspace placement decision |
-| `design-system-governance` | motion uses or introduces transition tokens or CSS custom properties |
-| `joyjoin-brand-guidelines` | animation direction must align with JoyJoin's brand motion personality |
-| `mini-program-frontend-excellence` | the polish is for the launch-primary mini-program surface |
-| `frontend-performance-and-loading` | the animation is list-heavy, media-heavy, or performance-sensitive |
-| `multi-agent-deliberation` | cross-perspective review of premium interaction decisions with performance vs UX tension |
-
-## Related files and docs
-
-| Resource | What it covers |
-|----------|---------------|
-| `.github/skills/joyjoin-brand-guidelines/SKILL.md` | Brand motion guidance, colour system, emotional tone |
-| `.github/skills/design-system-governance/SKILL.md` | Token ownership, CVA variants, accessibility expectations |
-| `.github/skills/frontend-component-architecture/SKILL.md` | Where polished components belong in the package structure |
-| `docs/button-design.md` | Button variant rationale and interaction states |
-| `docs/perf.md` | Performance budgets and CLS/TTI guidance |
-| `docs/ui-matching-reveal-improvements.md` | Existing premium reveal pattern — reference for choreography decisions |
-| `docs/matching-reveal-implementation-summary.md` | Implementation detail behind the matching reveal |
-| `references/examples.md` | 3–4 concrete wow element examples with TypeScript/React snippets |
-| `apps/mini-program/src/components/AchievementPopup.tsx` | Gamification achievement reveal animation |
-| `apps/mini-program/src/components/AnalyzingAnimation.tsx` | Personality test "analyzing" state animation |
-| `apps/mini-program/src/components/FancyLineLoadingScreen.tsx` | Premium loading state with motion |
-| `apps/mini-program/src/components/XiaoyueChatBubble.tsx` | Conversational AI character bubble animation |
-| `apps/mini-program/src/components/OnboardingLoadingShell.tsx` | Onboarding first-load emotional state |
+- [`references/element-catalog.md`](references/element-catalog.md) — Detailed element list (pulse, shimmer, stagger, etc.), Taro-specific implementation notes, easing tables, spring physics params, reduced-motion details, scroll-trigger details
+- [`references/examples.md`](references/examples.md) — 3–4 concrete wow element examples with TypeScript/React snippets

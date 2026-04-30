@@ -146,3 +146,4 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - `apps/server/src/README.md` — server domain ownership
 - `packages/shared/src/README.md` — shared package boundaries
 - `.github/skills/README.md` — skill index for specific tasks
+- `.github/skills/skill-taxonomy.md` — canonical skill classification (`ai-runtime` vs `internal`)

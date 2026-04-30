@@ -11,63 +11,30 @@ description: >
 
 # Harness Completion Gate
 
-## Purpose
-
-This is a **mandatory quality gate** that runs at the end of every implementation task. No task is considered complete until the Harness gate produces a PASS verdict for all 5 pillars.
+**Core rule:** This is a **mandatory quality gate** that runs at the end of every implementation task. No task is considered complete until the Harness gate produces a PASS verdict for all 5 pillars.
 
 The gate can be run:
 - **Automatically** via `npm run harness:gate` (reads git diff, evaluates changed files)
 - **Manually** by loading this skill and walking through the checklist
 - **Via auto-eval** as the `harness-engineering` module
 
-## When to run
+## When to use this skill
 
-Run the gate **before** declaring any task complete:
-- After the last file edit, before the turn summary
-- After tests pass but before claiming "done"
-- Before routing to `Verifier` or `QA Agent` for sign-off
+- Before declaring any implementation task complete
+- When the user asks for a "harness gate", "5-pillar review", or "pre-ship checklist"
+- After tests pass but before merging or deploying changes
+- When evaluating whether a change meets Reliability, Scalability, Security, Observability, and Maintainability standards
+- As a final quality gate in the `Harness` orchestration lane
 
-## The 5 Pillars
+## The 5 Pillars (overview)
 
-### 1. Reliability
-- [ ] No partial-failure risk (side effects before persistence?)
-- [ ] Error paths handled (try/catch, fallback values, graceful degradation)
-- [ ] Retries and timeouts configured for external calls
-- [ ] Multi-step operations are atomic or have recovery logic
-- [ ] Idempotency respected where needed (payments, webhooks, mutations)
-- [ ] No race conditions on shared mutable state
-
-### 2. Scalability
-- [ ] No queries inside loops (N+1)
-- [ ] No unbounded list renders without pagination or virtualisation
-- [ ] No unbounded memory growth (caches have TTL, arrays have limits)
-- [ ] Concurrency-safe (no global mutable state without locks)
-- [ ] Database queries use appropriate indexes (no full table scans)
-
-### 3. Security
-- [ ] Auth/permission checks present on new routes or mutations
-- [ ] Fail-closed defaults (deny by default, not allow by default)
-- [ ] No secrets, credentials, or tokens in code or logs
-- [ ] No sensitive data exposed in error messages or responses
-- [ ] Trust boundaries respected (user vs admin, internal vs external)
-- [ ] Input validation (Zod, type guards, or manual validation)
-
-### 4. Observability
-- [ ] Error paths are logged with structured fields
-- [ ] Key decisions/actions are traceable (request IDs, correlation)
-- [ ] New failure modes have metrics or alert coverage
-- [ ] Audit-worthy actions recorded (auth, payments, data mutation)
-- [ ] Logs use the project's logger (not raw `console.*` in server handlers)
-
-### 5. Maintainability / Architecture Fit
-- [ ] Code placed in correct layer (route, service, repository, shared)
-- [ ] No cross-app imports (web cannot import from admin, etc.)
-- [ ] Shared code imported via `@joyjoin/shared` (not legacy `shared/`)
-- [ ] No drift from established patterns without documented justification
-- [ ] Abstraction level is appropriate (not too thin, not too deep)
-- [ ] File size is reasonable (< 1500 lines for logic, < 1200 for frontend)
-
-## Gate Script
+| Pillar | Concerns |
+|--------|----------|
+| Reliability | Error handling, idempotency, atomicity, no race conditions |
+| Scalability | No N+1, no unbounded lists, caches have TTL, indexes used |
+| Security | Auth checks, fail-closed defaults, no secrets in code/logs, input validation |
+| Observability | Structured logging, request IDs, metrics for new failures, audit logs |
+| Maintainability | Correct layer, no cross-app imports, shared via `@joyjoin/shared`, file size reasonable |
 
 Run the automated gate:
 
@@ -80,65 +47,29 @@ This produces a JSON report and exits:
 - `1` = one or more pillars failed (blocking issues found)
 - `2` = concerns found (non-blocking, but must be documented)
 
-## Sprint Contract Awareness
+For full per-pillar checklists, Sprint Contract JSON format, auto-eval integration, and agent workflow steps — see [references/pillar-details.md](references/pillar-details.md).
 
-If an active Sprint Contract exists at `.git/.orchestration/sprints/sprint-contract.{taskId}.md`, the gate script reads it and cross-checks the diff against the contract's pillar criteria. Findings are tagged with contract criterion IDs:
+## Quick examples
 
-```json
-{
-  "harnessVerdict": {
-    "reliability": "pass",
-    "scalability": "pass"
-  },
-  "contractFindings": [
-    { "criterionId": "REL-01", "status": "pass", "message": "..." },
-    { "criterionId": "SEC-02", "status": "fail", "message": "..." }
-  ]
-}
-```
+- **Run the automated gate:** `npm run harness:gate` → review JSON output → fix all blocking findings before the turn summary.
+- **Manual gate after a bugfix:** Walk the 5-pillar checklists for a single-file auth fix; verify fail-closed defaults and error logging even when the automated script is unavailable.
+- **Contract-aware gate:** `node scripts/evaluate-sprint-contract.mjs --contract=.git/.orchestration/sprints/sprint-contract.<taskId>.md` → cross-checks diff against contract criteria.
 
-Run contract-aware evaluation:
-```bash
-node scripts/evaluate-sprint-contract.mjs --contract=.git/.orchestration/sprints/sprint-contract.<taskId>.md
-```
+## Troubleshooting
 
-## Integration with auto-eval
+- **Gate exits with code 1 (blocking issues)** → Review the JSON report, fix every `[blocking]` item, and re-run before claiming completion.
+- **Gate script is unavailable** → Run the manual 5-pillar checklist in this skill; do not skip the gate.
+- **Contract findings show unexpected failures** → Verify the sprint contract path is correct and that criterion IDs match the changed files.
+- **Supervisor or Verifier rejects sign-off despite gate passing** → Document the specific pillar concern in the turn summary and re-evaluate.
+- **Large diff causes timeout** → Run the gate locally with `--files` to limit scope, or switch to manual review for the affected files.
+- **Gate exits with code 2 (concerns)** → Document each concern in the turn summary with a mitigation plan; concerns do not block completion but must not be silently ignored.
 
-The Harness gate is also available as an auto-eval module:
+## Review checklist
 
-```bash
-node scripts/auto-eval.mjs --mode=manual-report
-```
-
-When the `harness-engineering` module is enabled, it runs the same checks as `npm run harness:gate`.
-
-## Agent Workflow
-
-At the end of every implementation turn:
-
-1. **Run `npm run harness:gate`** (or manual checklist if script unavailable)
-2. **Review findings** — classify each as [blocking], [concern], or [nit]
-3. **Fix all [blocking] items** before claiming completion
-4. **Document [concern] items** in the turn summary with mitigation plan
-5. **Include Harness verdict** in `agent_turn_summary`:
-
-```json
-{
-  "harnessVerdict": {
-    "reliability": "pass",
-    "scalability": "pass",
-    "security": "pass",
-    "observability": "concern",
-    "maintainability": "pass"
-  },
-  "harnessFindings": [
-    { "pillar": "observability", "severity": "concern", "message": "..." }
-  ]
-}
-```
-
-## Related
-
-- [`code-review`](../code-review/SKILL.md) — Deep PR review using the same 5 pillars
-- [`first-principles-velocity`](../first-principles-velocity/SKILL.md) — Mission-focused execution discipline
-- [`testing-and-regression-guardrails`](../testing-and-regression-guardrails/SKILL.md) — Test coverage requirements
+- [ ] Gate was run after the last file edit and before the turn summary
+- [ ] All 5 pillars evaluated (Reliability, Scalability, Security, Observability, Maintainability)
+- [ ] Every `[blocking]` finding is fixed or explicitly escalated with evidence
+- [ ] `[concern]` items are documented in the turn summary with a mitigation plan
+- [ ] `harnessVerdict` JSON is included in the agent turn summary
+- [ ] Sprint contract cross-check performed when a contract is active
+- [ ] Supervisor/Verifier sign-off obtained or documented if gate produces concerns

@@ -151,13 +151,86 @@ User B profile ──┘                                    │
 │  │ • Server-driven rarity  │  │ • calculateMatchQuality             │  │
 │  │   (connectionPointsWithRarity)│ • MysteryBadge reveal game          │  │
 │  └─────────────────────────┘  └─────────────────────────────────────┘  │
-│  ┌─────────────────────────┐                                            │
-│  │ Mini-Program: squad-unboxing                                          │
-│  │ • Shows plain pills (no EnergyRing)                                   │
-│  │ • Server-driven rarity (connectionPointsWithRarity)                    │
-│  └─────────────────────────┘                                            │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ Mini-Program: matching-status (Unified Reveal)                     │ │
+│  │ • composeUnifiedReveal: merges chemistryPayoff + connectionPoints  │ │
+│  │ • UnifiedRevealCard: single card with spotlight pair + group body  │ │
+│  │ • hasRevealed flag via Taro storage                                │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 4.5 Unified Reveal Pattern
+
+**File:** `apps/mini-program/src/pages/matching-status/matchingStatusViewModels.ts`
+
+The Unified Reveal fuses the **group-level chemistry narrative** (`chemistryPayoff`) with **pair-level connection point evidence** (`connectionPointsWithRarity`) into a single presentational object. This is a pure client-side transform — **no server or API changes**.
+
+### 4.5.1 `composeUnifiedReveal()`
+
+```typescript
+function composeUnifiedReveal(
+  chemistryPayoff: ChemistryPayoff,
+  connectionPointsWithRarity: ConnectionPointRarity[],
+  spotlightPair: PairExplanation,
+  memberName: string
+): UnifiedRevealTokens {
+  return {
+    headline: string;        // e.g. "命运的红线"
+    body: string;            // spotlight pair.explanation (priority) or chemistryPayoff.chemistryLine
+    subtitle: string;        // group-level chemistry payoff body (when spotlight overrides)
+    groupTags: string[];     // chemistryPayoff.tags
+    spotlight: {
+      memberName: string;
+      chemistryScore: number;
+      connectionPointsWithRarity: { text: string; rarity: 'common'|'rare'|'epic' }[];
+      rarityTier: 'common'|'rare'|'epic';
+    }
+  };
+}
+```
+
+**Priority rule:** `spotlightPair.explanation` overrides `chemistryPayoff.chemistryLine` for the `body`. When this happens, `chemistryPayoff.body` falls back to `subtitle` so the group-level narrative is not lost.
+
+**Legacy normalization:** If the input only provides `connectionPoints: string[]` (no rarity), the function normalizes each entry to `{ text, rarity: 'common' }`.
+
+### 4.5.2 `UnifiedRevealCard.tsx`
+
+**File:** `apps/mini-program/src/pages/matching-status/UnifiedRevealCard.tsx`
+
+Renders the fused output:
+- **Headline** — chemistry payoff title (large, brand accent)
+- **Body** — spotlight pair explanation (overrides group chemistry line when present)
+- **Subtitle** — group chemistry body (shown only when body was overridden)
+- **Group tags** — chemistry payoff tags as small pills
+- **Spotlight** — member name, chemistry score, and tiered connection point pills with rarity colors
+
+### 4.5.3 Reveal State (`hasRevealed`)
+
+**File:** `apps/mini-program/src/pages/matching-status/useMatchingStatusController.ts`
+
+The reveal is a one-time, per-group interaction. `hasRevealed` is persisted via Taro storage:
+
+```typescript
+Taro.setStorageSync('jj_revealed_' + groupId, true);
+const hasRevealed = Taro.getStorageSync('jj_revealed_' + groupId) === true;
+```
+
+### 4.5.4 Lifecycle Safety
+
+Timer leak fixes in the matching-status screen:
+- `mountedRef` guards setState callbacks against unmounted components
+- `useDidHide` pauses active timers when the mini-program page is hidden
+
+### 4.5.5 Test Coverage
+
+12 regression tests in `apps/mini-program/src/pages/matching-status/matchingStatusViewModels.test.ts` covering:
+- Spotlight override priority
+- Legacy `string[]` normalization
+- Empty / missing chemistry payoff fallbacks
+- Rarity tier computation from connection points
 
 ---
 
@@ -174,6 +247,7 @@ User B profile ──┘                                    │
 | `EnergyRing` component | ✅ | ❌ | ❌ |
 | `UserConnectionCard` | ✅ | ❌ | ❌ |
 | `MysteryBadge` reveal game | ✅ | ❌ | ❌ |
+| Unified Reveal (`composeUnifiedReveal`) | ❌ | ✅ | ❌ |
 
 ### Gap Assessment
 
@@ -198,6 +272,8 @@ User B profile ──┘                                    │
 
 **Phase 3: Web client** — EnergyRing unchanged; compat shim in `packages/shared` pipes server-driven rarity into existing ring props. Legacy `generateSparkPredictions` deleted from both user-client and admin-client in this sprint.
 
+**Phase 4: Unified Reveal (2026-04-29)** — Mini-program matching-status screen now fuses `chemistryPayoff` with `connectionPointsWithRarity` into a single `UnifiedRevealCard`. Adds `composeUnifiedReveal` pure function, `hasRevealed` Taro storage flag, and timer leak fixes (`mountedRef`, `useDidHide`). No server/API changes.
+
 **Remaining cleanup:** See `docs/tech-debt/connection-points-cleanup.md` (TECH-DEBT-001).
 
 ---
@@ -217,6 +293,10 @@ User B profile ──┘                                    │
 | Shared constants | `packages/shared/src/constants.ts` (lines 198–254) |
 | Mini-program squad unboxing | `apps/mini-program/src/pages/squad-unboxing/index.tsx` |
 | Mini-program matching status | `apps/mini-program/src/pages/matching-status/MatchingStatusSections.tsx` |
+| Mini-program unified reveal VM | `apps/mini-program/src/pages/matching-status/viewModels/matchingStatusViewModels.ts` |
+| Mini-program unified reveal card | `apps/mini-program/src/pages/matching-status/components/UnifiedRevealCard.tsx` |
+| Mini-program reveal state hook | `apps/mini-program/src/pages/matching-status/hooks/useMatchingStatus.ts` |
+| Mini-program reveal VM tests | `apps/mini-program/src/pages/matching-status/viewModels/matchingStatusViewModels.test.ts` |
 | Interest signal system | `docs/interest-signal-boost.md` |
 
 ---

@@ -24,6 +24,8 @@ interface GroupMirrorPhaseViewProps {
   }>;
   playerCount?: number;
   participants?: Array<{ userId: string; displayName?: string }>;
+  onAdvance?: () => void;
+  isAdvancing?: boolean;
 }
 
 export default function GroupMirrorPhaseView({
@@ -37,6 +39,8 @@ export default function GroupMirrorPhaseView({
   results,
   playerCount = 1,
   participants = [],
+  onAdvance,
+  isAdvancing = false,
 }: GroupMirrorPhaseViewProps) {
   const [submitting, setSubmitting] = useState(false);
   const [revealing, setRevealing] = useState(false);
@@ -108,15 +112,17 @@ export default function GroupMirrorPhaseView({
   if (questions.length === 0) {
     return (
       <View className='icebreaker__phase'>
-        <Text className='icebreaker__phase-title'>群像镜像</Text>
-        <Text className='icebreaker__phase-subtitle'>匿名投票，看看大家眼中的彼此</Text>
-        {isHost ? (
-          <Button onClick={handleGenerate} disabled={isGenerating} loading={isGenerating}>
-            生成问题
-          </Button>
-        ) : (
-          <Text className='icebreaker__helper-text'>等待主持人生成问题...</Text>
-        )}
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--group-mirror icebreaker__challenge-card--has-bg'>
+          <Text className='icebreaker__phase-title'>群像镜像</Text>
+          <Text className='icebreaker__phase-subtitle'>匿名投票，看看大家眼中的彼此</Text>
+          {isHost ? (
+            <Button onClick={handleGenerate} disabled={isGenerating} loading={isGenerating}>
+              生成问题
+            </Button>
+          ) : (
+            <Text className='icebreaker__helper-text'>等待主持人生成问题...</Text>
+          )}
+        </Card>
       </View>
     );
   }
@@ -134,15 +140,29 @@ export default function GroupMirrorPhaseView({
           autoDismissMs={3000}
           onDismiss={() => setShowResult(false)}
         />
-        <Text className='icebreaker__phase-title'>群像镜像 · 揭晓</Text>
-        {results.map((r) => (
-          <Card key={r.questionId}>
-            <Text className='icebreaker__challenge-title'>{r.questionText}</Text>
-            <Text className='icebreaker__challenge-desc'>
-              最多票：{r.topTargetDisplayName}（{r.voteCount}/{r.totalVotes} 票）
-            </Text>
-          </Card>
-        ))}
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--group-mirror icebreaker__challenge-card--has-bg'>
+          <Text className='icebreaker__phase-title'>群像镜像 · 揭晓</Text>
+          {results.map((r) => (
+            <View key={r.questionId}>
+              <Text className='icebreaker__challenge-title'>{r.questionText}</Text>
+              <Text className='icebreaker__challenge-desc'>
+                最多票：{r.topTargetDisplayName}（{r.voteCount}/{r.totalVotes} 票）
+              </Text>
+            </View>
+          ))}
+        </Card>
+
+        {isHost && onAdvance && (
+          <Button
+            variant='primary'
+            className='icebreaker__action-btn'
+            onClick={onAdvance}
+            disabled={isAdvancing}
+            loading={isAdvancing}
+          >
+            {isAdvancing ? '切换中…' : '进入下一阶段'}
+          </Button>
+        )}
       </View>
     );
   }
@@ -150,40 +170,42 @@ export default function GroupMirrorPhaseView({
   // State: voting / submitting
   return (
     <View className='icebreaker__phase'>
-      <Text className='icebreaker__phase-title'>群像镜像</Text>
-      <Text className='icebreaker__phase-subtitle'>为每个问题选择最符合的人</Text>
+      <Card className='icebreaker__challenge-card icebreaker__challenge-card--group-mirror icebreaker__challenge-card--has-bg'>
+        <Text className='icebreaker__phase-title'>群像镜像</Text>
+        <Text className='icebreaker__phase-subtitle'>为每个问题选择最符合的人</Text>
 
-      {hasSubmitted ? (
-        <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
-      ) : (
-        <>
-          {questions.map((q) => (
-            <Card key={q.id}>
-              <Text className='icebreaker__challenge-title'>{q.questionText}</Text>
-              <View style={{ display: 'flex', flexWrap: 'wrap', gap: '8rpx', marginTop: '12rpx' }}>
-                {participants.map((p) => (
-                  <Button
-                    key={p.userId}
-                    onClick={() => setVoteMap((prev) => ({ ...prev, [q.id]: p.userId }))}
-                    variant={voteMap[q.id] === p.userId ? 'primary' : 'secondary'}
-                  >
-                    {p.displayName}
-                  </Button>
-                ))}
+        {hasSubmitted ? (
+          <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
+        ) : (
+          <>
+            {questions.map((q) => (
+              <View key={q.id}>
+                <Text className='icebreaker__challenge-title'>{q.questionText}</Text>
+                <View style={{ display: 'flex', flexWrap: 'wrap', gap: '8rpx', marginTop: '12rpx' }}>
+                  {participants.map((p) => (
+                    <Button
+                      key={p.userId}
+                      onClick={() => setVoteMap((prev) => ({ ...prev, [q.id]: p.userId }))}
+                      variant={voteMap[q.id] === p.userId ? 'primary' : 'secondary'}
+                    >
+                      {p.displayName}
+                    </Button>
+                  ))}
+                </View>
               </View>
-            </Card>
-          ))}
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? '提交中...' : '提交投票'}
-          </Button>
-        </>
-      )}
+            ))}
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? '提交中...' : '提交投票'}
+            </Button>
+          </>
+        )}
 
-      {isHost && allSubmitted && (
-        <Button onClick={handleReveal} disabled={revealing}>
-          {revealing ? '揭晓中...' : '揭晓结果'}
-        </Button>
-      )}
+        {isHost && allSubmitted && (
+          <Button onClick={handleReveal} disabled={revealing}>
+            {revealing ? '揭晓中...' : '揭晓结果'}
+          </Button>
+        )}
+      </Card>
       {error ? <Text className='icebreaker__error'>{error}</Text> : null}
     </View>
   );

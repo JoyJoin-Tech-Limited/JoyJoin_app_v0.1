@@ -60,7 +60,7 @@ const toolkitFeatures = [
   {
     icon: MessageCircle,
     title: '话题推荐',
-    description: '小悦根据大家的性格精选话题',
+    description: '悦仔根据大家的性格精选话题',
   },
   {
     icon: Gamepad2,
@@ -299,7 +299,7 @@ function ToolkitGuide({ onConfirm }: { onConfirm: () => void }) {
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-medium text-primary">小悦说</span>
+          <span className="text-sm font-medium text-primary">悦仔说</span>
         </div>
         <p className="text-sm text-foreground/90 leading-relaxed mb-4" data-testid="text-xiaoyue-message">
           自我介绍结束啦！接下来我为你准备了一些有趣的工具，可以帮助大家打破僵局、活跃气氛~
@@ -504,7 +504,7 @@ export function PhaseTransition({ type, isVisible, onComplete }: PhaseTransition
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
                       <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <span className="text-sm font-medium text-primary">小悦说</span>
+                    <span className="text-sm font-medium text-primary">悦仔说</span>
                   </div>
                   <p className="text-sm text-foreground/90 leading-relaxed" data-testid="text-xiaoyue-message">
                     {config.xiaoYueMessage}

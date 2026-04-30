@@ -13,45 +13,35 @@ A PR added a new onboarding step that allows users to upload a profile photo bef
 - Updated `flow.ts` mapping: `'photo-upload'` → `/onboarding/photo-upload`
 - Updated `nextStep` computation in `apps/server/src/routes/domains/auth.ts`
 
-### Step 1 — Classify the change
+### Step 1 — Inventory
+
+- Agent memory: searched for "onboarding", "photo", "nextStep" → found a memory caching the active onboarding step list (stale — missing `photo-upload`)
+- Docs: `README.md`, `AGENTS.md`, `docs/onboarding-flow.md`, `DEVELOPER_QUICK_REFERENCE.md`, `onboarding-state-architecture` SKILL.md
+- All files read and tagged `[assessed / needs-edit / skip]`
+
+### Step 2 — Impact analysis
 
 - New onboarding step (flow change) ✓
 - New API route ✓
 - New database column ✓
 - New page component ✓
 
-All four categories have documentation implications.
+All four categories have documentation and memory implications.
 
-### Step 2 — Map to documentation targets
+### Step 3 — Map to targets (using `mapping.md`)
 
-Using `references/mapping.md`:
+| Change | Agent memory | Canonical doc / skill | Section |
+|--------|-------------|----------------------|---------|
+| New `nextStep` value | Update cached step list | `docs/onboarding-flow.md` | Step sequence |
+| New `nextStep` value | — | `onboarding-state-architecture` SKILL.md | Active onboarding steps table |
+| New `users` column | — | `DEVELOPER_QUICK_REFERENCE.md` | Server-owned completion semantics |
+| New POST endpoint | — | `DEVELOPER_QUICK_REFERENCE.md` / `docs/api/` | Route table |
+| New page component | — | `apps/user-client/src/features/onboarding/README.md` | Module structure |
 
-| Change | Canonical doc | Section |
-|--------|--------------|---------|
-| New `nextStep` value | `docs/onboarding-flow.md` | Step sequence |
-| New `nextStep` value | `onboarding-state-architecture` SKILL.md | Active onboarding steps table |
-| New `users` column | `DEVELOPER_QUICK_REFERENCE.md` | (add to server-owned completion semantics if needed) |
-| New POST endpoint | `DEVELOPER_QUICK_REFERENCE.md` / `docs/api/` | Route table |
-| New page component | `apps/user-client/src/features/onboarding/README.md` | Module structure |
+### Step 4 — Edits
 
-### Step 3 — Documentation impact summary
-
-```
-## Documentation impact summary
-
-### Changed area: Added `photo-upload` onboarding step
-
-**Priority:** Required
-
-**Impacted docs:**
-| File | Section | Change needed |
-|------|---------|---------------|
-| `docs/onboarding-flow.md` | Step sequence table | Insert `photo-upload` between `extended-data` and `profile-review` |
-| `.github/skills/onboarding-state-architecture/SKILL.md` | Active onboarding steps | Add row: nextStep=`photo-upload`, route=`/onboarding/photo-upload`, component=`PhotoUploadPage.tsx`, completion=`hasCompletedPhotoUpload` |
-| `apps/user-client/src/features/onboarding/README.md` | Active pages list | Add `PhotoUploadPage.tsx` entry |
-```
-
-### Step 4 — Proposed edits
+**Agent memory (via MCP `agentMemory`)**
+- `update` the cached onboarding-step memory to include `photo-upload` with absolute date `2026-04-30`
 
 **`docs/onboarding-flow.md` — step sequence (before)**
 ```
@@ -79,21 +69,41 @@ Using `references/mapping.md`:
 | `profile-review` | `/onboarding/review` | `FinalProfileReviewPage.tsx` | `hasSeenProfileReview` (`users` table flag) |
 ```
 
-### Step 5 — What this example avoids
+### Step 5 — Self-checklist and summary
+
+Checklist (see [`checklist.md`](./checklist.md) for full 10-step gate):
+- [x] All files from inventory assessed or edited
+- [x] Agent memory updated; no stale step list remains
+- [x] `AGENTS.md` paths match code
+- [x] New route in `DEVELOPER_QUICK_REFERENCE.md` and `docs/api/`
+- [x] New env var (none in this change)
+- [x] No relative time strings
+- [x] Only active flow documented
+
+Summary output:
+```markdown
+## Sync complete
+
+### Memory changes
+- Update: cached onboarding step list — added `photo-upload` (2026-04-30)
+
+### Documentation changes
+- `docs/onboarding-flow.md` — inserted `photo-upload` step sequence
+- `onboarding-state-architecture` SKILL.md — added active step row
+- `DEVELOPER_QUICK_REFERENCE.md` — added `nextStep` value and completion flag
+
+### Unhandled
+- None
+```
+
+### What this example avoids
 
 - ❌ Not touching `QUICK_REFERENCE.md` (legacy, superseded by `DEVELOPER_QUICK_REFERENCE.md`)
 - ❌ Not adding the step to `apps/user-client/src/legacy/onboarding/` — that directory is quarantined
 - ❌ Not reintroducing `hasCompletedRegistration` or any other deprecated identifier
 - ❌ Not documenting the internal Drizzle migration file — implementation detail, not a public surface
 - ❌ Not reformatting the entire onboarding step table — only the new row is added
-
-### Step 6 — Confirmation and apply
-
-After presenting the impact summary, the user confirms which files to update. Changes are applied file by file, then committed:
-
-```
-docs: sync onboarding-flow and skill after photo-upload step addition
-```
+- ❌ Not leaving agent memory with a stale onboarding step list
 
 ---
 
@@ -112,14 +122,16 @@ A PR removed the `/api/legacy/registration` route that had been kept for backwar
 ### Impact assessment
 
 1. Search all `docs/` and `.github/skills/` for the string `/api/legacy/registration`
-2. If found in any active doc section, mark the reference for removal
-3. If found only in a legacy/deprecated section, confirm the section should remain or be deleted
+2. Search agent memory for the same string (MCP `agentMemory` `search`)
+3. If found in any active doc section, mark for removal
+4. If found in agent memory, `delete` or `update` it
+5. If found only in a legacy/deprecated section, confirm the section should remain or be deleted
 
 ### Proposed edit
 
 **Priority:** Required (stale route references cause confusion about the current API surface)
 
-Find every occurrence of `/api/legacy/registration` in documentation. Either remove the reference or move it to an explicitly-labeled "removed routes" section.
+Find every occurrence of `/api/legacy/registration` in documentation and memory. Remove or update each.
 
 **Commit message:**
 ```

@@ -1,4 +1,5 @@
 skill: icebreaker-auction-phase
+category: ai-runtime
 
 primary_ownership: >
   Auction phase virtual economy, AI lot generation (optional), bidding/close-lot routes,

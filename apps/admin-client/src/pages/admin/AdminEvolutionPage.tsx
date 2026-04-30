@@ -378,7 +378,7 @@ export default function AdminEvolutionPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Brain className="h-6 w-6 text-primary" />
-            小悦进化系统
+            悦仔进化系统
           </h1>
           <p className="text-muted-foreground">
             AI驱动的对话优化与匹配权重自动调整
@@ -1035,7 +1035,7 @@ export default function AdminEvolutionPage() {
             <CardHeader>
               <CardTitle>添加黄金话术</CardTitle>
               <CardDescription>
-                手动标记优秀的对话模式，帮助小悦学习
+                手动标记优秀的对话模式，帮助悦仔学习
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

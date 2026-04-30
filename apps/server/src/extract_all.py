@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Extract domain route groups from routes.ts into separate files.
-Uses in-place replacement to preserve registration order.
+Robust domain extraction script for routes.ts.
 """
 
 import os
+from collections import defaultdict
 
 with open('routes.ts', 'r') as f:
     lines = f.readlines()
@@ -12,7 +12,23 @@ with open('routes.ts', 'r') as f:
 def get_text(start_1idx, end_1idx_exclusive):
     return ''.join(lines[start_1idx - 1:end_1idx_exclusive - 1])
 
-# Standard imports for new files
+HELPERS = """
+async function requireAuth(req: Request, res: any, next: any) {
+  if (!getAuthenticatedUserId(req)) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  next();
+}
+
+function getActingAdminId(req: any): string {
+  return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+}
+
+function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
+  return values.find((v) => v && v.trim().length > 0);
+}
+"""
+
 STANDARD_IMPORTS = """import type { Express, Request } from "express";
 import { db } from "../../db";
 import { storage } from "../../storage";
@@ -66,26 +82,11 @@ import {
 import { normalizeProfileInterests, validateTelemetry } from "@shared/interests";
 import { getArchetypeFamily } from "@shared/archetypeColors";
 
-async function requireAuth(req: Request, res: any, next: any) {
-  if (!getAuthenticatedUserId(req)) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  next();
-}
+""" + HELPERS + "\n"
 
-function getActingAdminId(req: any): string {
-  return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
-}
-
-function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
-  return values.find((v) => v && v.trim().length > 0);
-}
-
-"""
-
-# Domain definitions with exact line ranges in CURRENT file
+# Domain chunk definitions
 # Format: (registrar_name, file_name, start_1idx, end_1idx_exclusive, is_new_file)
-domains = [
+chunks = [
     ("registerPreEventAttendanceRoutes", "blindBoxEvents", 8295, 8399, False),
     ("registerDevToolsRoutes", "devTools", 7980, 8295, True),
     ("registerXiaoyueRoutes", "xiaoyue", 7896, 7980, True),
@@ -99,55 +100,74 @@ domains = [
     ("registerUserEventPoolRoutes", "eventPools", 4317, 5578, False),
     ("registerAdminEventPoolRoutes", "eventPools", 3952, 4317, False),
     ("registerVenueRoutes", "venues", 3184, 3952, True),
-    ("registerPublicStatsRoutes", "publicStats", 3077, 3184, True),
+    ("registerPublicStatsRoutes", "publicStats", 3077, 3107, True),
     ("registerAdminLeftoverRoutes", "admin", 2250, 3077, False),
     ("registerReferralRoutes", "referrals", 1941, 2240, True),
-    ("registerUserCoreRoutes", "userCore", 502, 1941, True),
+    ("registerUserCoreChunk2bRoutes", "userCore", 1041, 1941, True),
+    ("registerUserCoreRoutes", "userCore", 502, 651, True),
     ("registerUserCoreChunk1Routes", "userCore", 247, 490, True),
 ]
 
-# Extract domains to files
-for registrar, fname, start, end, is_new in domains:
-    text = get_text(start, end)
+# Group chunks by file name
+file_chunks = defaultdict(list)
+for registrar, fname, start, end, is_new in chunks:
+    file_chunks[fname].append((registrar, start, end, is_new))
+
+# Process each file
+for fname, chunk_list in file_chunks.items():
     filepath = f'routes/domains/{fname}.ts'
+    chunk_list.sort(key=lambda x: x[1])
+    is_new = chunk_list[0][3]
     
     if is_new:
-        full_content = STANDARD_IMPORTS + f'export function {registrar}(app: Express) {{\n{text}\n}}\n'
+        parts = [STANDARD_IMPORTS]
+        for registrar, start, end, _ in chunk_list:
+            text = get_text(start, end)
+            parts.append(f'export function {registrar}(app: Express) {{\n{text}\n}}\n')
+        full_content = '\n'.join(parts)
         with open(filepath, 'w') as f:
             f.write(full_content)
-        print(f"Created {filepath} ({end-start} lines)")
+        total = sum(end - start for _, start, end, _ in chunk_list)
+        print(f"Created {filepath} ({total} lines)")
     else:
         with open(filepath, 'r') as f:
             existing = f.read()
         existing_stripped = existing.rstrip()
         if existing_stripped.endswith('}'):
             existing_stripped = existing_stripped[:-1].rstrip()
-        new_content = existing_stripped + '\n' + text + '\n}\n'
+        
+        parts = [existing_stripped]
+        needs_helpers = False
+        for registrar, start, end, _ in chunk_list:
+            text = get_text(start, end)
+            if 'requireAuth' in text or 'getActingAdminId' in text or 'firstNonEmptyString' in text:
+                needs_helpers = True
+            parts.append(text)
+        
+        if needs_helpers and HELPERS.strip() not in existing:
+            parts.insert(1, HELPERS)
+        
+        parts.append('}\n')
+        new_content = '\n'.join(parts)
         with open(filepath, 'w') as f:
             f.write(new_content)
-        print(f"Extended {filepath} ({end-start} lines)")
+        total = sum(end - start for _, start, end, _ in chunk_list)
+        print(f"Extended {filepath} ({total} lines)")
 
-# Now rebuild routes.ts with in-place replacements
-# We replace each extracted chunk with its registrar call
+# Rebuild routes.ts with in-place replacements
 replacement_map = {}
-for registrar, fname, start, end, is_new in domains:
+for registrar, fname, start, end, is_new in chunks:
     replacement_map[(start, end)] = f"  {registrar}(app);\n"
 
-# Sort by start line (ascending) and apply replacements
 sorted_ranges = sorted(replacement_map.keys())
 new_lines = []
-last_end = 1  # 1-indexed
+last_end = 1
 for start, end in sorted_ranges:
-    # Add lines before this range
     new_lines.extend(lines[last_end - 1:start - 1])
-    # Add replacement call
     new_lines.append(replacement_map[(start, end)])
     last_end = end
 
-# Add remaining lines after last range
 new_lines.extend(lines[last_end - 1:])
-
-routes_content = ''.join(new_lines)
 
 # Add new imports
 new_imports = """import { registerUserCoreRoutes } from "./routes/domains/userCore";
@@ -162,7 +182,6 @@ import { registerXiaoyueRoutes } from "./routes/domains/xiaoyue";
 import { registerDevToolsRoutes } from "./routes/domains/devTools";
 """
 
-# Insert after last existing register import
 import_lines = [i for i, line in enumerate(new_lines) if line.strip().startswith('import ') and 'register' in line and 'routes/domains' in line]
 if import_lines:
     new_lines.insert(import_lines[-1] + 1, new_imports)

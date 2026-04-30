@@ -1,0 +1,45 @@
+skill: harness-completion-gate
+category: internal
+
+primary_ownership: >
+  Mandatory Harness Engineering Framework verification gate. Evaluates the 5 pillars
+  (Reliability, Scalability, Security, Observability, Maintainability) against changed
+  code before sign-off.
+
+use_when:
+  - after the last file edit, before the turn summary
+  - after tests pass but before claiming "done"
+  - before routing to Verifier or QA Agent for sign-off
+  - user asks to verify against Harness, run harness gate, or pre-ship check
+
+do_not_use_when:
+  - task has not yet started implementation
+  - user is asking for code review on a PR (use code-review)
+  - user is asking for architectural deliberation (use multi-agent-deliberation)
+
+strong_triggers:
+  - harness gate
+  - completion check
+  - ready to call done
+  - verify against harness
+  - 5-pillar review
+  - pre-ship checklist
+  - process-verification-gate
+  - done yet
+  - can we ship this
+
+owned_files: []
+
+owned_paths: []
+
+owned_symbols: []
+
+related_skills:
+  - skill: code-review
+    when: deep PR review using the same 5 pillars
+  - skill: first-principles-velocity
+    when: mission-focused execution discipline and bottleneck removal
+  - skill: testing-and-regression-guardrails
+    when: test coverage requirements and invariant checks
+  - skill: docs-sync
+    when: documentation needs to be updated after Harness findings

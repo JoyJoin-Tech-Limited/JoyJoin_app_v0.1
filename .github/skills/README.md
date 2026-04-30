@@ -4,6 +4,8 @@
 
 Each skill is a focused, actionable reference — not a comprehensive handbook. Skills document the project's active architecture, conventions, and boundaries so that contributors and AI coding assistants can make correct decisions without having to reverse-engineer intent from the codebase.
 
+**Taxonomy:** All skills are classified as `ai-runtime` (orchestrate AI services invoked at runtime) or `internal` (developer tooling, design guidance, infrastructure, process). See [`skill-taxonomy.md`](./skill-taxonomy.md) for the full classification, edge-case rationale, and usage in routing.
+
 **Roadmap:** Prioritized skill-system follow-ups (briefing rollout, model catalog dedupe, tests) live in [`ITERATION_ROADMAP.md`](./ITERATION_ROADMAP.md).
 
 ## How to use these skills
@@ -111,6 +113,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 | Skill | What it covers |
 |-------|---------------|
 | [`mini-program-frontend-excellence`](./mini-program-frontend-excellence/SKILL.md) | Premium, brand-governed Taro UI workflow for `apps/mini-program` — native-quality execution, full state design, WeChat-safe polish; **pixel precision** (spec-exact or 8rpx rhythm, DevTools gate) in [`references/pixel-precision.md`](./mini-program-frontend-excellence/references/pixel-precision.md); structural Taro rules in [`references/taro-ui-framework.md`](./mini-program-frontend-excellence/references/taro-ui-framework.md) |
+| [`frontend-design-audit`](./frontend-design-audit/SKILL.md) | Systematic design-quality audits on mini-program and web surfaces — scores 5 dimensions, detects AI slop / generic patterns, produces actionable fix lists |
 | [`frontend-hook-engine`](./frontend-hook-engine/SKILL.md) | Screen-level Seven Deadly Sins UI diagnosis for CTA hierarchy, state design, interaction clarity, and build-ready component/state plans |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 | [`lovart-design-workflow`](./lovart-design-workflow/SKILL.md) | Lovart AI Design Agent prompt generation, brand-aligned visual asset briefs, and design-to-code handoff for illustrations, mockups, marketing graphics, and icons |
