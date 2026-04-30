@@ -1,0 +1,114 @@
+# Auto-Digest — Daily Engineering Digest
+#
+# Produces a concise, high-signal summary of what changed in the last 24 hours.
+# Clusters commits and PRs into themes, highlights risks, and sends to WeCom.
+#
+# Triggered by:
+#   - Schedule: daily at 06:00 UTC (14:00 CST) — after auto-debug + auto-docs
+#   - workflow_dispatch: manual trigger
+#
+# Secrets required:
+#   WECOM_BOT_KEY          – WeCom group bot webhook key
+#   GITHUB_TOKEN           – auto-available for PR queries
+#   DEEPSEEK_API_KEY       – for LLM-enhanced digest (optional)
+
+name: Auto-Digest Engineering Report
+
+on:
+  schedule:
+    # Daily at 06:00 UTC (14:00 CST) — after auto-debug and auto-docs finish
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: 'Lookback window in hours'
+        required: false
+        default: '24'
+        type: string
+      since:
+        description: 'Custom since date (YYYY-MM-DD). Overrides hours.'
+        required: false
+        default: ''
+        type: string
+      notify_wecom:
+        description: 'Send WeCom notification'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: auto-digest-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    name: Generate Engineering Digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate digest
+        id: digest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS=""
+
+          if [ -n "${{ inputs.since }}" ]; then
+            ARGS="$ARGS --since ${{ inputs.since }}"
+          else
+            ARGS="$ARGS --hours ${{ inputs.hours || '24' }}"
+          fi
+
+          if [ "${{ inputs.notify_wecom || 'true' }}" = "true" ] && [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+            ARGS="$ARGS --wecom"
+          fi
+
+          ARGS="$ARGS --verbose"
+
+          echo "Running: node scripts/auto-digest.mjs $ARGS"
+          node scripts/auto-digest.mjs $ARGS
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+      - name: Upload digest artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-digest
+          path: reports/digest-*.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.digest.outputs.exit_code }}" = "1" ]; then
+            echo "✅ Digest published."
+          elif [ "${{ steps.digest.outputs.exit_code }}" = "0" ]; then
+            echo "📭 No changes in period."
+          else
+            echo "❌ Digest generation error."
+          fi
