@@ -182,6 +182,31 @@ jobs:
     needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Package deployment source
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --exclude='joyjoin-source.tar.gz' \
+            --exclude='node_modules' \
+            --exclude='*/node_modules' \
+            --exclude='apps/*/dist' \
+            --exclude='dist' \
+            -czf joyjoin-source.tar.gz .
+
+      - name: Upload deployment source
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          source: joyjoin-source.tar.gz
+          target: /tmp
+
       # GitHub → server: map Repository secrets to `secrets.*` and Repository variables to `vars.*`.
       # Add new keys here + in `envs` + in the sync loop below.
       - name: SSH Remote Deployment
@@ -218,8 +243,6 @@ jobs:
           CREATIVE_AI_TITLE_PROVIDER: ${{ vars.CREATIVE_AI_TITLE_PROVIDER }}
           AI_TIMEOUT_MS: ${{ vars.AI_TIMEOUT_MS }}
           PROJECT_DIR: ${{ vars.PROJECT_DIR }}
-          REPO_URL: ${{ vars.REPO_URL }}
-          GIT_AUTH_TOKEN: ${{ github.token }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -227,7 +250,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           command_timeout: 30m
-          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,PROJECT_DIR,REPO_URL,GIT_AUTH_TOKEN
+          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,PROJECT_DIR
           script: |
             set -euo pipefail
 
@@ -236,8 +259,7 @@ jobs:
             : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
             : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
             PROJECT_DIR="${PROJECT_DIR:-$HOME/JoyJoin}"
-            REPO_URL="${REPO_URL:-https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1.git}"
-            : "${GIT_AUTH_TOKEN:?GIT_AUTH_TOKEN is required for bootstrap clone}"
+            PROJECT_ARCHIVE="/tmp/joyjoin-source.tar.gz"
 
             soft_cleanup() {
               echo "🧹 Soft cleanup (keep 7 days)..."
@@ -298,25 +320,22 @@ jobs:
             disk_guard
 
             # --- 1) Code Sync ---
-            echo "📥 Syncing code..."
-            if [ ! -d "$PROJECT_DIR/.git" ]; then
-              echo "📦 Repository not found at $PROJECT_DIR, cloning from $REPO_URL ..."
-              mkdir -p "$(dirname "$PROJECT_DIR")"
-              if [ -d "$PROJECT_DIR" ] && [ -n "$(ls -A "$PROJECT_DIR" 2>/dev/null || true)" ]; then
-                echo "❌ $PROJECT_DIR exists but is not a git repo. Please set vars.PROJECT_DIR correctly."
-                exit 1
-              fi
-              rm -rf "$PROJECT_DIR"
-              AUTH_REPO_URL="$REPO_URL"
-              if [[ "$REPO_URL" =~ ^https://github\.com/ ]]; then
-                AUTH_REPO_URL="${REPO_URL/https:\/\/github.com\//https:\/\/x-access-token:${GIT_AUTH_TOKEN}@github.com\/}"
-              fi
-              git clone "$AUTH_REPO_URL" "$PROJECT_DIR"
-              unset AUTH_REPO_URL
+            echo "📥 Syncing uploaded source archive..."
+            if [ ! -f "$PROJECT_ARCHIVE" ]; then
+              echo "❌ Missing uploaded source archive: $PROJECT_ARCHIVE"
+              exit 1
             fi
+            case "$PROJECT_DIR" in
+              ""|"/"|"$HOME"|"/root"|"/home")
+                echo "❌ Refusing to deploy into unsafe PROJECT_DIR: $PROJECT_DIR"
+                exit 1
+                ;;
+            esac
+            rm -rf "$PROJECT_DIR"
+            mkdir -p "$PROJECT_DIR"
+            tar -xzf "$PROJECT_ARCHIVE" -C "$PROJECT_DIR"
+            rm -f "$PROJECT_ARCHIVE"
             cd "$PROJECT_DIR"
-            git fetch --all
-            git reset --hard origin/main
 
             # Ensure host dependencies are fresh for CLI tools
             echo "📦 Installing host dependencies..."
@@ -429,7 +448,7 @@ jobs:
 
             # Verify schema alignment after migration
             echo "   Verifying schema alignment..."
-            node --env-file=.env scripts/verify-db-alignment.mjs
+            node --env-file="$ENV_FILE" scripts/verify-db-alignment.mjs
 
             # --- 4) Health checks ---
             echo "🏥 Verifying service status..."
