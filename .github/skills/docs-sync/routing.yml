@@ -1,64 +1,69 @@
 skill: docs-sync
+category: internal
 
 primary_ownership: >
-  Post-change documentation hygiene — scanning code changes, mapping them to the
-  correct documentation targets, and applying minimal active-flow-only updates to
-  keep reference docs aligned with the current codebase.
+  Post-change documentation hygiene: reconciling agent memory, AGENTS.md, and docs/
+  against the active codebase. Enforces active-flow-only guardrails, canonical-first
+  editing order, and audience separation (memory → AGENTS.md → docs/).
 
 use_when:
-  - user asks to update, sync, or refresh documentation after a code change
-  - user asks to iterate or refresh skills, agents, and product docs together (coordinated multi-tier refresh)
-  - a PR has merged and its changes are not yet reflected in reference docs
-  - an API, route, or data model has changed and docs are stale
-  - an architecture decision was made that is not yet documented
-  - a skill, quick-reference table, or onboarding guide is visibly out of date
-  - preparing docs before a release or onboarding sprint
+  - a PR merged and its changes are not yet documented
+  - an API, route, data model, or flow changed and reference docs are stale
+  - user asks to sync, tidy, or clean up docs or memory
+  - after significant architecture, component, or config changes
+  - discovering a past sync was missed and docs are now stale
 
 do_not_use_when:
-  - task is writing new product requirements (use PRODUCT_REQUIREMENTS.md directly)
-  - change is purely internal with no API, architecture, or user-facing flow impact
-  - documentation is already accurate and up-to-date for the changed area
-  - task is authoring or auditing a skill file (use skill-authoring-governance)
+  - writing new product requirements from scratch (use draft-prd)
+  - purely internal refactor with no API/flow impact
+  - docs are already accurate
+  - the task is a coordinated multi-tier refresh across docs, skills, and agents (use docs/ai-workflow-documentation-refresh.md for scope tiers and lane choice)
 
 strong_triggers:
   - update docs
-  - sync documentation
-  - document recent changes
-  - refresh reference docs
-  - iterate skills and agents
-  - full documentation refresh
-  - ai-workflow-documentation-refresh.md
-  - docs are out of date
-  - DEVELOPER_QUICK_REFERENCE.md
-  - docs/onboarding-flow.md
-  - docs/architecture
-  - docs/api
-  - apps/server/src/README.md
-  - packages/shared/src/README.md
-  - documentation sync
-  - keep docs in sync
-  - post-PR documentation
+  - sync up
+  - tidy up
+  - /sync
+  - /neat
+  - 同步一下
+  - 整理文档
+  - 整理一下
+  - 更新记忆
+  - 收尾
+  - docs are stale
+  - documentation is out of date
+  - after significant code changes
+  - missing documentation
 
 owned_files:
-  - DEVELOPER_QUICK_REFERENCE.md
+  - AGENTS.md
+  - README.md
+  - docs/README.md
+  - docs/architecture/skill-routing.md
   - docs/ai-workflow-documentation-refresh.md
-  - docs/**
-  - docs/architecture/current-state.md
-  - docs/onboarding-flow.md
-  - apps/server/src/README.md
-  - apps/user-client/src/features/onboarding/README.md
-  - packages/shared/src/README.md
+  - PRODUCT_REQUIREMENTS.md
+  - DEVELOPER_QUICK_REFERENCE.md
+  - .github/skills/README.md
+  - .github/skills/skill-taxonomy.md
 
-owned_paths: []
+owned_paths:
+  - /api/**
 
-owned_symbols: []
+owned_symbols:
+  - docs-sync
+  - mapping.md
+  - workflow.md
+  - checklist.md
 
 related_skills:
   - skill: skill-authoring-governance
-    when: sync involves updating or auditing skill files under .github/skills/
-  - skill: server-domain-architecture
-    when: sync targets route or API documentation after a server-side change
-  - skill: onboarding-state-architecture
-    when: sync targets onboarding flow docs after a nextStep or completion flag change
-  - skill: matching-domain
-    when: sync targets matching or scoring documentation after an algorithm change
+    when: the docs-sync skill itself is being audited, updated, or brought up to standard
+  - skill: draft-prd
+    when: the user is writing new product requirements rather than syncing existing docs
+  - skill: harness-completion-gate
+    when: documentation changes are part of a larger implementation that needs 5-pillar review
+
+tooling_dependencies:
+  - mcp: agentMemory
+    purpose: query and reconcile agent memory layer (recall, search, list_recent, store, update, delete)
+    required: true

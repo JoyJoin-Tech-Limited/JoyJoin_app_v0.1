@@ -1,4 +1,5 @@
 skill: database-migration-safety
+category: internal
 
 primary_ownership: >
   Safe schema evolution, idempotent migration scripts, pre and post verification,

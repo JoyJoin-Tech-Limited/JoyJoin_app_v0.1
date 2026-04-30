@@ -14,6 +14,14 @@ description: >-
 - **Non-clinical copy**: challenges are social dares, not psychological assessment products.
 - **Host-only generate**; players complete their own challenge row.
 
+## When to use this skill
+
+- Implementing the `personality_dice` social icebreaker phase
+- Adding or modifying `generatePersonalityDiceChallenges` output or REST routes
+- Ensuring challenge copy stays playful and non-clinical
+- Reviewing a PR that touches `DICE_CURATED` fallbacks or Taro `PersonalityDicePhaseView`
+- Debugging array length mismatches or host-only generate permissions
+
 ## References
 
 | File | Purpose |

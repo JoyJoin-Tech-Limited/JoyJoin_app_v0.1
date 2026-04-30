@@ -11,12 +11,7 @@ description: >-
 
 # Event Pool and Matching Operations
 
-## Purpose
-
-This skill owns the operational layer around event pools: pool lifecycle,
-registration and stats semantics, match-run orchestration surfaces, and
-post-match outcome submission. It does **not** own the scoring math itself.
-Scoring logic and weight decisions remain under `matching-domain`.
+**Core rule:** Split pool operations from scoring logic. This skill owns pool state, stats semantics, admin operations, and group-outcome handling. Scoring logic and weight decisions remain under `matching-domain`.
 
 ## When to use this skill
 
@@ -30,40 +25,23 @@ Use this skill when you are:
 
 ## Boundary rule
 
-Split pool operations from scoring logic.
-
 - `event-pool-and-matching-operations` owns pool state, stats semantics, admin operations, and group-outcome handling.
 - `matching-domain` owns pair scoring, group scoring, chemistry logic, thresholds, and explanation boundaries.
 
 If the task changes `calculatePairScore`, weight distribution, or chemistry rules, load `matching-domain` first.
 
-## Core workflow
+## Pool lifecycle overview
 
-1. Decide whether the task is pool operations or scoring math.
-   Do not hide scoring changes inside a pool-lifecycle change.
+1. Keep pool-layer signals separate from formed-group outcomes. Registrations, archetype mix, and projected capacity describe the pool. Match scores and theme titles describe groups that already formed.
+2. Keep capacity estimates conservative. `estimatedGroups` should stay floor-based and capped by the pool's configured group limit. Partial groups are not counted as formable.
+3. Treat match-run operations as operational orchestration. Auth, reliability, and observability still matter even when the scoring engine is unchanged.
+4. Pool matching must not run concurrently for the same pool — use an execution guard. The matching result is persisted before notifications fire.
 
-2. Keep pool-layer signals separate from formed-group outcomes.
-   Registrations, archetype mix, and projected capacity describe the pool.
-   Match scores and theme titles describe groups that already formed from the pool.
+See [`references/pool-ops.md`](references/pool-ops.md) for full pool stats semantics, match-run operation details, estimated groups logic, and registration constraints.
 
-3. Keep capacity estimates conservative.
-   `estimatedGroups` should stay floor-based and capped by the pool's configured group limit. Partial groups are not counted as formable.
+## Group outcome overview
 
-4. Treat match-run operations as operational orchestration.
-   Auth, reliability, and observability still matter here even when the scoring engine is unchanged.
-
-5. Validate post-match submissions against real group membership.
-   Group outcome submission must come from an authenticated member of the group, and `connectionRadar` may only reference other members of that same group.
-
-6. Be explicit about duplicate-submission behavior.
-   If a group outcome route replaces a prior submission, document and preserve that behavior instead of letting duplicates silently pile up.
-
-## Current operational rules
-
-- Pool stats intentionally mix two layers only when they are clearly labeled: pool signals and historical formed-group outcomes.
-- `estimatedGroups` is conservative by design. Do not switch it to optimistic rounding.
-- Theme titles returned from pool stats are historical examples from already-formed groups, not evidence that the current pool has formed a new group.
-- Group outcome submissions reject invalid `connectionRadar` targets that point to the submitter or to non-members.
+Group outcome submission must come from an authenticated member of the group. `connectionRadar` may only reference other members of that same group. Be explicit about duplicate-submission behavior rather than letting duplicates silently pile up.
 
 ## Quick examples
 
@@ -85,6 +63,9 @@ Verify that the submitting user is actually a member of the target group for the
 **A group outcome submission is rejected with `400`**
 Inspect `connectionRadar` targets first. The route only accepts other members of the same group.
 
+**Theme titles in pool stats are confusing**
+Theme titles are historical examples from already-formed groups, not evidence that the current pool has formed a new group.
+
 ## Review checklist
 
 - [ ] The change stays on the pool-operations side and does not quietly alter scoring math
@@ -93,12 +74,3 @@ Inspect `connectionRadar` targets first. The route only accepts other members of
 - [ ] Group outcome validation checks real group membership and connection-radar targets
 - [ ] Auth, reliability, and telemetry concerns are handled where the operation is privileged or stateful
 - [ ] Duplicate submission behavior is explicit rather than accidental
-
-## Related files
-
-- [`apps/server/src/routes/domains/eventPools.ts`](../../../apps/server/src/routes/domains/eventPools.ts) — pool routes, `GET /api/event-pools/:poolId/stats`, `buildEventPoolStatsResponse` (`estimatedGroups` is `Math.floor` registrations ÷ `minGroupSize`, capped by `targetGroups`)
-- [`apps/server/src/routes/domains/eventGroupOutcomes.ts`](../../../apps/server/src/routes/domains/eventGroupOutcomes.ts)
-- [`apps/server/src/poolRealtimeMatchingService.ts`](../../../apps/server/src/poolRealtimeMatchingService.ts) — registration-triggered and scheduled match runs
-- [`apps/server/src/poolMatchingService.ts`](../../../apps/server/src/poolMatchingService.ts) — read-only for understanding how pool config feeds group formation (scoring changes belong to `matching-domain`)
-- [`docs/MATCHING_ALGORITHM_REFERENCE.md`](../../../docs/MATCHING_ALGORITHM_REFERENCE.md) — pair/group algorithm reference (cross-check with pool operations)
-- [`docs/admin-rbac-matrix.md`](../../../docs/admin-rbac-matrix.md)

@@ -1303,11 +1303,12 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
   }
 
   try {
-    const challengeResult = await generatePersonalityDiceChallenges(participants || []);
+    const challengeResult = await generatePersonalityDiceChallenges({ participants: participants || [] });
     state.personalityDiceChallenges = challengeResult.data;
     state.personalityDiceChallengesMeta = challengeResult.meta;
     state.currentDicePlayerIndex = 0;
     state.diceCompletedBy = [];
+    state.dicePassedBy = [];
     await updateSession(socialSessionId, state);
 
     return res.json({ challenges: challengeResult.data, meta: challengeResult.meta });
@@ -1323,6 +1324,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
 router.post('/:socialSessionId/personality-dice/complete', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
+  const { pass } = req.body as { pass?: boolean };
 
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -1331,10 +1333,23 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+
   const diceCompletedBy = state.diceCompletedBy || [];
-  if (!diceCompletedBy.includes(userId)) {
-    diceCompletedBy.push(userId);
-    state.diceCompletedBy = diceCompletedBy;
+  const dicePassedBy = state.dicePassedBy || [];
+
+  if (pass === true) {
+    if (!dicePassedBy.includes(userId)) {
+      dicePassedBy.push(userId);
+      state.dicePassedBy = dicePassedBy;
+    }
+  } else {
+    if (!diceCompletedBy.includes(userId)) {
+      diceCompletedBy.push(userId);
+      state.diceCompletedBy = diceCompletedBy;
+    }
   }
 
   const challenges = state.personalityDiceChallenges || [];
@@ -1345,12 +1360,13 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
   await updateSession(socialSessionId, state);
 
-  const allCompleted = challenges.length > 0 && diceCompletedBy.length >= challenges.length;
+  const allResponded = challenges.length > 0 && (diceCompletedBy.length + dicePassedBy.length) >= challenges.length;
 
   return res.json({
     diceCompletedBy,
+    dicePassedBy,
     currentDicePlayerIndex: state.currentDicePlayerIndex,
-    allCompleted,
+    allCompleted: allResponded,
   });
 });
 

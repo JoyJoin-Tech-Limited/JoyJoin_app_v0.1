@@ -63,5 +63,7 @@ export * from './miniscriptGameModes';
 export * from './schemaAnalytics';
 export * from './aiModels';
 export * from './socialIcebreakerTierManifest';
+export * from './socialIcebreakerRunPlans';
+export * from './socialIcebreakerYuezaiCopy';
 export * from './mascotConfig';
 export * from './ui/connectionPointCompat';

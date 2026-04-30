@@ -1,4 +1,5 @@
 skill: agent-coordination-patterns
+category: internal
 primary_ownership: >
   Design patterns for multi-agent workflows: sequential pipelines, parallel swarms,
   dependency graphs, fan-out/fan-in, convergence strategies, conflict resolution,

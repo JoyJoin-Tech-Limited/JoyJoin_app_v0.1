@@ -11,9 +11,9 @@ interface MatchCelebrationOverlayProps {
 }
 
 const XIAOYUE_CELEBRATION_MESSAGES = [
-  "恭喜你！小悦已经为你找到了最佳的小伙伴～",
+  "恭喜你！悦仔已经为你找到了最佳的小伙伴～",
   "太棒啦！你们的缘分就从今天开始！",
-  "终于等到你们相遇了！小悦好开心～",
+  "终于等到你们相遇了！悦仔好开心～",
   "匹配成功！期待你们创造美好回忆！",
 ];
 

@@ -1,4 +1,5 @@
 skill: viewport-zero-scroll
+category: internal
 
 primary_ownership: >
   Zero-scroll viewport policy for web and WeChat mini-program: 100dvh shell, no document/page scroll,

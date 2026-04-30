@@ -41,7 +41,7 @@ export default function BlindBoxGuide({ className }: BlindBoxGuideProps) {
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  报名后，活动开始前1天揭晓你的同桌名单。AI小悦会根据大家的性格、兴趣精心搭配，
+                  报名后，活动开始前1天揭晓你的同桌名单。AI悦仔会根据大家的性格、兴趣精心搭配，
                   保证每一桌都是"聊得来"的氛围！
                 </p>
                 <div className="flex flex-wrap gap-3 pt-1">

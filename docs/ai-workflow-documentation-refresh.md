@@ -64,6 +64,7 @@ When running a deliberate **full refresh**, re-verify these entry points for con
 | [`.github/ORCHESTRATION.md`](../.github/ORCHESTRATION.md) | Human-readable orchestration graph |
 | [`.github/orchestration.yaml`](../.github/orchestration.yaml) | Machine-readable orchestration contract |
 | [`.github/skills/README.md`](../.github/skills/README.md) | Skill index |
+| [`.github/skills/skill-taxonomy.md`](../.github/skills/skill-taxonomy.md) | Canonical skill classification (`ai-runtime` vs `internal`) |
 | [`.github/agents/README.md`](../.github/agents/README.md) | Agent portfolio index |
 | [`docs/architecture/skill-routing.md`](./architecture/skill-routing.md) | Skill routing architecture (if present) |
 

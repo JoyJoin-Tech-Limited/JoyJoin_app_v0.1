@@ -20,7 +20,7 @@ export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v2';
 export const MICRO_CHALLENGES_PROMPT_VERSION = 'social-micro-challenges-v2';
 export const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
 export const RECAP_SUMMARY_PROMPT_VERSION = 'social-recap-summary-v3';
-export const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v2';
+export const PERSONALITY_DICE_PROMPT_VERSION = 'social-personality-dice-v3';
 export const AUCTION_LOTS_PROMPT_VERSION = 'social-auction-lots-v2';
 export const MINI_SCRIPT_FRAMEWORK_PROMPT_VERSION = 'social-miniscript-framework-v1';
 export const SESSION_PACK_PROMPT_VERSION = 'social-session-pack-v2';
@@ -32,6 +32,7 @@ export function buildWarmupTopicsPrompt(params: {
   participantCount: number;
   mood: AtmosphereMood;
   avoidTopics?: string[];
+  _refinementHint?: string;
 }): string {
   const moodMap: Record<AtmosphereMood, string> = {
     relaxed: '轻松',
@@ -59,7 +60,9 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 请以JSON格式返回：
 [{"id":"ai1","question":"话题文本","mood":"${params.mood}","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}]
 
-直接返回JSON数组，不要其他内容。`;
+直接返回JSON数组，不要其他内容。${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
 }
 
 // ─── Micro Challenges ────────────────────────────────────────────────────────
@@ -67,6 +70,7 @@ ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join
 export function buildMicroChallengesPrompt(params: {
   eventType: string;
   participantCount: number;
+  _refinementHint?: string;
 }): string {
   return `你是JoyJoin的社交破冰专家。请为一个${params.eventType}活动（${params.participantCount}人）生成3个有趣的微挑战。
 
@@ -86,7 +90,9 @@ export function buildMicroChallengesPrompt(params: {
 请以JSON格式返回：
 [{"id":"ai_c1","title":"挑战名称","description":"详细描述","durationSeconds":120,"completionCTA":"完成按钮文字","visualHint":"2-3个相关emoji"}]
 
-直接返回JSON数组，不要其他内容。`;
+直接返回JSON数组，不要其他内容。${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
 }
 
 // ─── Lie Detective ───────────────────────────────────────────────────────────
@@ -95,6 +101,7 @@ export function buildLieDetectivePrompt(params: {
   displayName: string;
   archetype?: string;
   interests?: string[];
+  _refinementHint?: string;
 }): string {
   const context = [
     params.archetype ? `性格类型：${params.archetype}` : '',
@@ -201,6 +208,7 @@ export function buildPersonalityDicePrompt(params: {
     archetype?: string;
     dominantTrait: string;
   }>;
+  _refinementHint?: string;
 }): string {
   const participantList = params.participants.map((p) => ({
     displayName: p.displayName,
@@ -240,11 +248,16 @@ ${JSON.stringify(participantList, null, 2)}
 - 适合当场执行（1-2分钟内）
 - 有趣但不尴尬，不搞惩罚
 - 每个人都要有不同的挑战，不能重复
+- 每个挑战必须包含一个「认怂选项」(passLine)和一个「认怂后果」(passConsequence)：
+  * passLine：一句轻松的opt-out台词，比如"我选择认怂"、"这题我不会"（≤15字）
+  * passConsequence：一个搞笑但无害的小后果，比如"请用三种语气说'我真棒'"、"模仿一种动物叫三声"（≤20字）
 
 请以JSON数组返回（顺序与输入一致）：
-[{"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard"}]
+[{"challengeTitle":"挑战名称","challengeBody":"挑战说明（30字内）","challengeEmoji":"1个emoji","difficulty":"easy|medium|hard","passLine":"认怂台词","passConsequence":"认怂后果"}]
 
-直接返回JSON数组，不要其他内容。`;
+直接返回JSON数组，不要其他内容。${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
 }
 
 // ─── Auction Lots ────────────────────────────────────────────────────────────
@@ -252,23 +265,27 @@ ${JSON.stringify(participantList, null, 2)}
 export function buildAuctionLotsPrompt(params: {
   participantCount: number;
   eventType?: string;
+  _refinementHint?: string;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '';
-  return (
-    `你是JoyJoin的社交破冰主持人。为一场线下小局（约${params.participantCount}人）设计${eventLabel}虚拟脑洞拍卖的竞拍条目。\n\n` +
-    '语气要求（活人感）：\n' +
-    '- title像朋友间随口抛出的脑洞，不是正式拍卖品\n' +
-    '- teaser带点挑逗或悬念（"敢不敢...""今晚限定..."）\n' +
-    '- 善用语气词和口语化\n' +
-    '- 当代网络用语每3条最多用1个（如：整活、绝了、拿捏、栓Q）\n' +
-    '- 禁止："恭喜获得...""起拍价..."等正式拍卖口吻\n\n' +
-    '内容规则：\n' +
-    '- 全部是轻松、低压力的分享或小表演类条目，不要涉及金钱、酒精、恋爱隐私、政治、宗教、身体伤害\n' +
-    '- 每个条目要能在几分钟内完成\n' +
-    '- 生成 3 到 5 条竞拍品\n\n' +
-    '请以 JSON 对象返回（仅此对象，不要 markdown）：\n' +
-    '{"lots":[{"id":"lot_1","title":"竞拍标题（≤20字）","teaser":"一句话说明（≤40字，可选）"}]}'
-  );
+  return `你是JoyJoin的社交破冰主持人。为一场线下小局（约${params.participantCount}人）设计${eventLabel}虚拟脑洞拍卖的竞拍条目。
+
+语气要求（活人感）：
+- title像朋友间随口抛出的脑洞，不是正式拍卖品
+- teaser带点挑逗或悬念（"敢不敢...""今晚限定..."）
+- 善用语气词和口语化
+- 当代网络用语每3条最多用1个（如：整活、绝了、拿捏、栓Q）
+- 禁止："恭喜获得...""起拍价..."等正式拍卖口吻
+
+内容规则：
+- 全部是轻松、低压力的分享或小表演类条目，不要涉及金钱、酒精、恋爱隐私、政治、宗教、身体伤害
+- 每个条目要能在几分钟内完成
+- 生成 3 到 5 条竞拍品
+
+请以 JSON 对象返回（仅此对象，不要 markdown）：
+{"lots":[{"id":"lot_1","title":"竞拍标题（≤20字）","teaser":"一句话说明（≤40字，可选）"}]}${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
 }
 
 // ─── MiniScript Framework ────────────────────────────────────────────────────
@@ -347,6 +364,7 @@ export function buildQuipBattlePrompt(params: {
   participantCount: number;
   eventType?: string;
   participants: Array<{ displayName: string; archetype?: string }>;
+  _refinementHint?: string;
 }): string {
   const eventLabel = params.eventType ? `「${params.eventType}」` : '线下小局';
   const participantList = params.participants
@@ -369,7 +387,9 @@ export function buildQuipBattlePrompt(params: {
 请以JSON数组返回：
 [{"id":"qb_1","promptText":"如果_____有段位，你已经是王者了","category":"自嘲"},{"id":"qb_2","promptText":"...","category":"..."},{"id":"qb_3","promptText":"...","category":"..."}]
 
-直接返回JSON，不要其他内容。`;
+直接返回JSON，不要其他内容。${params._refinementHint ? `
+
+【改进建议】${params._refinementHint}` : ''}`;
 }
 
 // ─── Undercover Word Prompts ─────────────────────────────────────────────────

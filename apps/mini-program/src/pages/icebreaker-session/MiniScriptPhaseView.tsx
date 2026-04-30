@@ -206,7 +206,7 @@ export function MiniScriptPhaseView({
   if (!framework) {
     return (
       <View className='icebreaker__challenge'>
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
           <Text className='icebreaker__challenge-title'>剧本尚未生成</Text>
           <Text className='icebreaker__challenge-desc'>
@@ -221,7 +221,7 @@ export function MiniScriptPhaseView({
   if (!session.miniScriptRoleAssignments || Object.keys(session.miniScriptRoleAssignments).length === 0) {
     return (
       <View className='icebreaker__challenge'>
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
           <Text className='icebreaker__challenge-title'>迷你剧本杀</Text>
           <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
@@ -248,7 +248,7 @@ export function MiniScriptPhaseView({
     return (
       <View className='icebreaker__challenge'>
         {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
           <Text className='icebreaker__challenge-title'>你的角色</Text>
           {myRole ? (
@@ -267,7 +267,7 @@ export function MiniScriptPhaseView({
             <Text className='icebreaker__challenge-desc'>你尚未被分配角色。</Text>
           )}
         </Card>
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__challenge-title'>故事 premise</Text>
           <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
         </Card>
@@ -318,14 +318,14 @@ export function MiniScriptPhaseView({
     <View className='icebreaker__challenge'>
       {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
 
-      <Card className='icebreaker__challenge-card'>
+      <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
         <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
         <Text className='icebreaker__challenge-title'>迷你剧本杀 · 第 {currentAct} 幕</Text>
         <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
       </Card>
 
       {(session.miniScriptRevealedClues ?? []).length > 0 && (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__challenge-title'>已揭示线索</Text>
           {session.miniScriptRevealedClues!.map((clue, idx) => {
             const isNew = lastRevealedClueIds.includes(clue.clueId)
@@ -346,7 +346,7 @@ export function MiniScriptPhaseView({
       )}
 
       {framework.act_flow[currentAct - 1] && (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__challenge-title'>当前幕节拍</Text>
           <Text className='icebreaker__ms-act-title'>
             第{framework.act_flow[currentAct - 1].actNumber}幕 · {framework.act_flow[currentAct - 1].title}
@@ -358,7 +358,7 @@ export function MiniScriptPhaseView({
       )}
 
       {myRole && (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <View
             style={{
               display: 'flex',
@@ -385,7 +385,7 @@ export function MiniScriptPhaseView({
       )}
 
       {deductionHints.length > 0 && (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <View
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             onClick={() => setShowDeductionHints(!showDeductionHints)}
@@ -408,7 +408,7 @@ export function MiniScriptPhaseView({
       )}
 
       {allActsRevealed && !solutionRevealed && (
-        <Card className='icebreaker__challenge-card'>
+        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__challenge-title'>共识投票</Text>
           <Text style={{ fontSize: '24rpx', color: '#888', marginBottom: '12rpx' }}>
             {allVotes.length}/{playerCount} 人已投票
@@ -461,7 +461,7 @@ export function MiniScriptPhaseView({
 
       {solutionRevealed && (
         <>
-          <Card className='icebreaker__challenge-card'>
+          <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
             <Text className='icebreaker__challenge-title'>真相揭晓</Text>
             <Text className='icebreaker__challenge-desc'>{framework.ending.resolutionSummary}</Text>
             <Text className='icebreaker__challenge-desc' style={{ marginTop: '12rpx', color: '#e67e22' }}>
@@ -470,7 +470,7 @@ export function MiniScriptPhaseView({
           </Card>
 
           {voteSummary.length > 0 && (
-            <Card className='icebreaker__challenge-card'>
+            <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
               <Text className='icebreaker__challenge-title'>投票结果</Text>
               {voteSummary.map(([who, count], idx) => (
                 <View key={who} style={{ marginTop: '8rpx', display: 'flex', justifyContent: 'space-between' }}>

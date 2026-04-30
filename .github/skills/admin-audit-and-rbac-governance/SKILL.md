@@ -11,11 +11,7 @@ description: >-
 
 # Admin Audit and RBAC Governance
 
-## Purpose
-
-This skill keeps admin work fail-closed and traceable. It owns the current
-admin role hierarchy, endpoint-to-permission mapping, and the audit-log
-requirements for sensitive admin actions.
+**Core rule:** Keep admin work fail-closed and traceable. Classify the action, map it to the current RBAC matrix, and emit `logAdminAudit(...)` for every sensitive write.
 
 ## When to use this skill
 
@@ -27,58 +23,28 @@ Use this skill when you are:
 - adding audit coverage for refunds, bans, password resets, attendance overrides, or admin account changes
 - debugging missing `[AdminAudit]` lines or unexpected `403` responses in admin flows
 
-## Core workflow
+## Role hierarchy overview
 
-1. Classify the action before writing code.
-   Read-only admin data, operational writes, and account-management writes do not share the same risk.
+Three runtime middleware levels exist today:
 
-2. Map the action to the current RBAC matrix.
-   Treat [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md) as the current permission table.
-   Do not infer permissions from page names or menu placement.
+1. **`requireAdmin`** — baseline for all admin routes; validates an active admin session
+2. **`requireOperatorOrAbove`** — operational write boundary for some actions; the matrix documents where route-level enforcement is still catching up
+3. **`requireSuperAdmin`** — account management only; creation, role/status updates, and password resets
 
-3. Keep account management at `super_admin` level.
-   Admin account creation, role/status updates, and password resets stay behind `requireSuperAdmin`.
+`viewer` exists in the role model but is not yet fully enforced as a read-only runtime role across all routes. See [`references/rbac-matrix.md`](references/rbac-matrix.md) for the full endpoint mapping and action vocabulary.
 
-4. Treat sensitive writes as audit-worthy by default.
-   If an admin action changes money, user access, attendance, content state, or admin credentials, it should emit `logAdminAudit(...)`.
+## Audit logging overview
 
-5. Keep audit payloads safe and minimal.
-   Include `action`, `adminId`, `adminRole`, `targetEntityType`, `targetEntityId`, and only the smallest useful `before`, `after`, or `context` snapshot.
-   Never pass passwords, secrets, tokens, cookies, or session material.
+Sensitive writes — money, user access, attendance, content state, admin credentials — should emit `logAdminAudit(...)` by default. Keep payloads safe and minimal: include `action`, `adminId`, `adminRole`, `targetEntityType`, `targetEntityId`, and only the smallest useful `before`/`after` snapshot. Never pass passwords, secrets, tokens, cookies, or session material.
 
-6. Verify the full operational path.
-   After implementing or changing an admin action, verify the route guard, the audit event, and the runbook-facing behavior together.
-
-## Current operational rules
-
-- `requireAdmin` validates an active admin session.
-- `requireSuperAdmin` is required for admin account management.
-- `requireOperatorOrAbove` is the intended write boundary for some operational actions, but the matrix documents where route-level enforcement is still catching up.
-- `viewer` exists in the role model, but it is not yet fully enforced as a read-only runtime role across all routes.
-- `logAdminAudit` auto-generates `auditId` and `timestamp`, normalizes unknown actions to `OTHER`, and redacts sensitive keys in nested payloads.
-
-## Sensitive actions that should stay explicit
-
-Keep action names aligned with `ADMIN_AUDIT_ACTIONS` whenever possible. Current examples include:
-
-- `ADMIN_LOGIN`
-- `ADMIN_ACCOUNT_CREATED`
-- `ADMIN_ACCOUNT_UPDATED`
-- `ADMIN_PASSWORD_RESET`
-- `USER_BANNED`
-- `USER_UNBANNED`
-- `ADMIN_POINTS_ADJUSTED`
-- `ATTENDANCE_OVERRIDE`
-- `PAYMENT_REFUND_INITIATED`
-- `EVENT_POOL_STATUS_CHANGED`
-
-If a new sensitive admin action does not fit the current vocabulary, extend the action list rather than hiding the action under a vague context bag.
+After implementing or changing an admin action, verify the route guard, the audit event, and the runbook-facing behavior together. Read-only data, operational writes, and account-management writes do not share the same risk — classify before writing code.
 
 ## Quick examples
 
 - **Add an admin refund route**: apply the correct admin middleware, emit `PAYMENT_REFUND_INITIATED`, and log only safe refund context such as `paymentId` and `reason`.
 - **Add an attendance override button**: keep the route behind the documented admin middleware and emit `ATTENDANCE_OVERRIDE` with the new status, not a full user record dump.
 - **Debug a `403` in admin accounts**: check whether the route requires `requireSuperAdmin` and whether the acting admin is using the expected RBAC session path.
+- **Extend the audit action list**: when a new sensitive action does not fit the current vocabulary, add it to `ADMIN_AUDIT_ACTIONS` rather than hiding it under a vague context bag.
 
 ## Troubleshooting
 
@@ -86,13 +52,19 @@ If a new sensitive admin action does not fit the current vocabulary, extend the 
 Verify that `logAdminAudit(...)` is actually called in the mutation path and search logs by the `[AdminAudit]` prefix rather than generic request logs.
 
 **An action is using the wrong middleware**
-Check the live route against [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md). Do not trust an old assumption that every `/api/admin/*` write is equivalent.
+Check the live route against [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md) and [`references/rbac-matrix.md`](references/rbac-matrix.md). Do not trust an old assumption that every `/api/admin/*` write is equivalent.
 
 **The audit record contains too much data**
 Reduce `before`, `after`, and `context` to safe business fields only. Redaction is a safety net, not a license to pass large or sensitive objects.
 
 **A viewer can still perform a write**
 That may reflect the current beta enforcement gap rather than a router bug. Document the route's intended guard and tighten it deliberately instead of assuming the role label is enough.
+
+**Audit log returns 500 on resolution**
+Verify that `insertModerationLogSchema` matches the request body and that `adminId` is populated from the session, not the request body.
+
+**Missing audit coverage on a new admin flow**
+If the flow changes money, user access, attendance, content state, or admin credentials, it should emit `logAdminAudit(...)` by default.
 
 ## Review checklist
 
@@ -102,10 +74,3 @@ That may reflect the current beta enforcement gap rather than a router bug. Docu
 - [ ] `action`, `targetEntityType`, and `targetEntityId` are explicit and useful
 - [ ] The implementation matches the current RBAC matrix rather than an inferred permission model
 - [ ] The operational path is covered by logs or runbook verification steps
-
-## Related files
-
-- [`docs/admin-rbac-matrix.md`](../../docs/admin-rbac-matrix.md)
-- [`docs/runbooks/admin-incident-handling.md`](../../docs/runbooks/admin-incident-handling.md)
-- [`apps/server/src/lib/adminAuditLogger.ts`](../../apps/server/src/lib/adminAuditLogger.ts)
-- [`apps/server/src/routes/domains/admin.ts`](../../apps/server/src/routes/domains/admin.ts)

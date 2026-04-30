@@ -366,6 +366,7 @@ export interface SocialSessionState {
   personalityDiceChallengesMeta?: AIResponseMeta;
   currentDicePlayerIndex?: number;
   diceCompletedBy?: string[];
+  dicePassedBy?: string[];
   // Auction phase (virtual coins; see payment-entitlement-authority if real value ever touches this)
   auctionLots?: AuctionLot[];
   auctionLotsMeta?: AIResponseMeta;

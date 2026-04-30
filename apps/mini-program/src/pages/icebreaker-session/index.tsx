@@ -379,8 +379,8 @@ export default function IcebreakerSessionPage() {
     })
   }, [performSocialAction, participants])
 
-  const handleCompleteDiceChallenge = useCallback(() => {
-    void performSocialAction('dice-complete', '/personality-dice/complete', {})
+  const handleCompleteDiceChallenge = useCallback((pass?: boolean) => {
+    void performSocialAction('dice-complete', '/personality-dice/complete', { pass: pass === true })
   }, [performSocialAction])
 
   const handleGenerateAuctionLots = useCallback(() => {
@@ -520,7 +520,12 @@ export default function IcebreakerSessionPage() {
     phase !== 'ended' &&
     phase !== 'waiting' &&
     phase !== 'auction' &&
-    phase !== 'mini_script' && (
+    phase !== 'mini_script' &&
+    phase !== 'warmup' &&
+    phase !== 'lie_detective' &&
+    phase !== 'quip_battle' &&
+    phase !== 'undercover_word' &&
+    phase !== 'group_mirror' && (
     <View className='icebreaker__host-controls'>
       <View className='icebreaker__host-badge'>
         <View className='icebreaker__host-badge-text'>
@@ -606,9 +611,11 @@ export default function IcebreakerSessionPage() {
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
             onNextTopic={handleNextWarmupTopic}
+            onAdvance={handleAdvancePhase}
             isGeneratingTopics={pendingAction === 'topics'}
             isUpdatingReady={pendingAction === 'warmup-ready'}
             isAdvancingTopic={pendingAction === 'warmup-next-topic'}
+            isAdvancing={pendingAction === 'advance'}
           />
         )}
 
@@ -641,6 +648,8 @@ export default function IcebreakerSessionPage() {
             canMoveToNextPlayer={canMoveToNextPlayer}
             onNextPlayer={handleNextLieDetectivePlayer}
             isMovingNextPlayer={pendingAction === 'lie-next-player'}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
           />
         )}
 
@@ -698,6 +707,7 @@ export default function IcebreakerSessionPage() {
             challenges={session.personalityDiceChallenges ?? []}
             currentPlayerIndex={session.currentDicePlayerIndex ?? 0}
             completedBy={session.diceCompletedBy ?? []}
+            passedBy={session.dicePassedBy ?? []}
             currentUserId={currentUserId}
             isHost={isHost}
             onGenerate={handleGenerateDiceChallenges}
@@ -720,6 +730,8 @@ export default function IcebreakerSessionPage() {
             userId={currentUserId}
             playerCount={playerCount}
             onRefresh={() => socialSessionQuery.refetch()}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
           />
         )}
 
@@ -738,6 +750,8 @@ export default function IcebreakerSessionPage() {
             results={session.undercoverWordResults ?? null}
             playerCount={playerCount}
             participants={participants}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
           />
         )}
 
@@ -753,6 +767,8 @@ export default function IcebreakerSessionPage() {
             results={session.groupMirrorResults ?? []}
             playerCount={playerCount}
             participants={participants}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
           />
         )}
 

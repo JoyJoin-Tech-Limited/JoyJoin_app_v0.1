@@ -1,4 +1,5 @@
 skill: backend-models-standards
+category: internal
 
 primary_ownership: >
   Drizzle ORM schema definitions, table naming conventions, column data types,

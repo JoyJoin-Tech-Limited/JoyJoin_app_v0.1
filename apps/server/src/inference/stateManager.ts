@@ -173,7 +173,7 @@ export class StateManager {
   }
   
   /**
-   * 生成上下文摘要（注入到小悦提示词）
+   * 生成上下文摘要（注入到悦仔提示词）
    */
   generateContextDigest(state: UserAttributeMap): string {
     const lines: string[] = ['## 已收集的用户信息'];

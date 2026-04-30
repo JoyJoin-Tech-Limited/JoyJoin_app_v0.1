@@ -1,4 +1,5 @@
 skill: feature-flags-launch-config
+category: internal
 
 primary_ownership: >
   JoyJoin feature flags, launch configuration, and safe rollout patterns —

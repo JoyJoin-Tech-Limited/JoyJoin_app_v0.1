@@ -1,4 +1,5 @@
 skill: server-domain-architecture
+category: internal
 
 primary_ownership: >
   routes.ts as composition root, routes/domains/* for domain-scoped handlers,
