@@ -263,6 +263,7 @@ Active domain modules in `routes/domains/`:
 | Readiness probe | `GET /api/readyz` → verifies DB + config before returning 200 |
 | Admin audit log | `apps/server/src/lib/adminAuditLogger.ts` — emit an audit entry for every sensitive admin action |
 | Synthetic monitoring | `scripts/synthetic/happy-path-probe.mjs` — GitHub Actions schedule (every 5 min) |
+| CI automations | `scripts/auto-*.mjs` + `.github/workflows/auto-*.yml` — daily bug scanning, docs, digest, test coverage; see `docs/automations/README.md` |
 | Infra stack | `infra/` — Prometheus, Alertmanager, Grafana, Loki, Promtail configs |
 
 **Structured logging pattern:**
@@ -477,7 +478,8 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 - API: `/api/social-icebreaker/*` (mounted in `routes/domains/icebreaker.ts`)
 - Component: `IcebreakerSessionPage` (web); `apps/mini-program/src/pages/icebreaker-session/` (mini-program)
 - Hook: `useSocialIcebreaker`
-- Phases: shared `PHASE_ORDER` ends in `recap`; default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless feature flags trim the list — see `packages/shared/src/socialIcebreaker.ts`
+- Phases: governed by tier-based run plans — `breeze` (破冰局, 40min casual), `glow` (畅聊局, 60min standard), `blaze` (狂欢局, 90min full). Default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless tier selection adds fan-out phases. Tier machine ID (`breeze`/`glow`/`blaze`) is decoupled from display name via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`.
+- **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` switches to user-tag-based gameplay (2 tags + AI fake). V1 (AI-fabricated statements) remains default. Design spec: `docs/proposals/spot-the-bot-game-design.md`.
 - Full reference: `docs/icebreaker-system.md`
 
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.
