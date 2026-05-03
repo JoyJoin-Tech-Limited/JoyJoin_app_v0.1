@@ -13,6 +13,8 @@ AI-powered background automations that analyze code, find bugs, update documenta
 | **Auto-Digest** | Daily 06:00 UTC | `scripts/auto-digest.mjs` | `.github/workflows/auto-digest.yml` |
 | **Auto-Test** | Daily 07:00 UTC | `scripts/auto-test.mjs` | `.github/workflows/auto-test.yml` |
 | **Auto-CI-Fix** | On CI failure | `scripts/auto-ci-fix.mjs` | `.github/workflows/auto-ci-fix.yml` |
+| **Auto-Prune** | Weekly Wed 01:00 UTC | `scripts/auto-prune.mjs` | `.github/workflows/auto-prune.yml` |
+| **Auto-Triage** | PR/issue open + every 4h | `scripts/auto-triage.mjs` | `.github/workflows/auto-triage.yml` |
 | **WeCom Trigger** | On demand | — | `.github/workflows/wecom-trigger.yml` |
 
 Each automation:
@@ -170,7 +172,115 @@ npm run auto:digest:wecom     # + WeCom notification
 
 ---
 
-## 4. WeCom Integration
+## 4. Auto-Prune (Weekly Cleanup)
+
+**Goal:** Keep the repository clean — delete stale branches, old CI artifacts, expired repo-memory candidates, and old reports.
+
+### What it cleans
+
+| Target | Threshold | Description |
+|--------|-----------|-------------|
+| Local branches | >14 days | Merged-to-main branches with no recent activity |
+| Remote branches | >14 days | Stale branches via GitHub API (merged PRs) |
+| Workflow artifacts | >30 days | CI build artifacts from old workflow runs |
+| Memory candidates | >14 days | Candidate files in `repo-memory/candidates/` already promoted |
+| Old reports | >60 days | Expired report files in `reports/` (preserves digests, audits) |
+
+### Run locally
+
+```bash
+# Dry run — preview only (safe, always start here)
+node scripts/auto-prune.mjs
+npm run auto:prune
+
+# Live execution — actually deletes
+node scripts/auto-prune.mjs --live
+npm run auto:prune:live
+
+# Live + WeCom notification
+node scripts/auto-prune.mjs --live --wecom
+npm run auto:prune:wecom
+
+# Scope to specific targets
+node scripts/auto-prune.mjs --branches --live
+node scripts/auto-prune.mjs --artifacts --live
+```
+
+### Safety
+
+- Never deletes `main` or `feat/mini-program-foundation` branches
+- Requires explicit `--live` flag for any deletions
+- Dry run is the default — reports what would be deleted without acting
+- WeCom report shows deleted items by category
+
+---
+
+## 5. Auto-Triage (Automatic Labeler)
+
+**Goal:** Automatically label PRs and issues so nothing falls through the cracks.
+
+### What it labels
+
+**Area labels** (from changed file paths):
+- `area:server` — `apps/server/` changes
+- `area:mini-program` — `apps/mini-program/` changes
+- `area:web` — `apps/user-client/` or web changes
+- `area:admin` — `apps/admin-client/` changes
+- `area:shared` — `packages/shared/` changes
+- `area:docs` — `docs/` or `.md` changes
+- `area:ci` — `.github/`, `scripts/`, Docker/CI files
+- `area:automations` — `repo-memory/` changes
+
+**Type labels** (from title/body keywords):
+- `bug` — fix, regression, broke
+- `enhancement` — feat, add, new, implement
+- `documentation` — docs, readme
+- `refactor` — refactor, clean, reorganize
+- `test` — test, spec
+- `dependencies` — deps, bump, upgrade
+- `performance` — perf, speed, optimize
+- `security` — security, vulnerability
+
+**Annotation labels** (from specific file patterns):
+- `migration`, `payments`, `admin-audit`, `personality`, `icebreaker`, `onboarding`, `matching`
+
+### Run locally
+
+```bash
+# Scan all open PRs and issues
+node scripts/auto-triage.mjs
+npm run auto:triage
+
+# Dry run — preview without applying
+node scripts/auto-triage.mjs --dry-run
+npm run auto:triage:dry
+
+# Only PRs or only issues
+node scripts/auto-triage.mjs --prs
+node scripts/auto-triage.mjs --issues
+
+# Scan one specific PR/issue
+node scripts/auto-triage.mjs --number 42 --type pr
+
+# With WeCom notification
+node scripts/auto-triage.mjs --wecom
+npm run auto:triage:wecom
+```
+
+### Triggers
+
+- **On PR open:** Auto-labels immediately when a new PR is created
+- **On issue open:** Auto-labels immediately when a new issue is created
+- **Every 4 hours:** Batch scan to catch any missed items
+- **On demand:** Via `workflow_dispatch` or WeCom trigger
+
+### Labels created automatically
+
+Auto-triage creates missing labels on first run. Label colors follow JoyJoin conventions and GitHub defaults.
+
+---
+
+## 6. WeCom Integration
 
 ### Setup
 
@@ -277,7 +387,7 @@ export default {
 
 ---
 
-## 4. Utility Scripts
+## 7. Utility Scripts
 
 ### `scripts/wecom-notify.mjs`
 
@@ -300,7 +410,7 @@ Exit codes: 0 = sent, 1 = config error, 2 = API error
 
 ---
 
-## 5. Adding New Automations
+## 8. Adding New Automations
 
 To add a new automation:
 
