@@ -52,6 +52,8 @@ on:
           - auto-digest
           - auto-test
           - auto-ci-fix
+          - auto-prune
+          - auto-triage
       commits:
         description: 'Commits to analyze (for auto-debug/auto-docs)'
         required: false
@@ -166,6 +168,29 @@ jobs:
         run: |
           echo "🚀 Triggering auto-ci-fix workflow..."
           gh workflow run auto-ci-fix.yml \
+            --ref ${{ github.ref_name }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Dispatch to auto-prune
+        id: dispatch-prune
+        if: steps.determine-action.outputs.action == 'auto-prune'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-prune workflow..."
+          gh workflow run auto-prune.yml \
+            --ref ${{ github.ref_name }} \
+            ${{ inputs.create_pr == 'true' && '--field live=true' || '--field live=false' }} \
+            ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
+
+      - name: Dispatch to auto-triage
+        id: dispatch-triage
+        if: steps.determine-action.outputs.action == 'auto-triage'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering auto-triage workflow..."
+          gh workflow run auto-triage.yml \
             --ref ${{ github.ref_name }} \
             ${{ inputs.notify_wecom != 'false' && '--field notify_wecom=true' || '--field notify_wecom=false' }}
 
