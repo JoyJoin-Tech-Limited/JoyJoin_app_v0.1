@@ -1201,7 +1201,11 @@ async function main() {
   let prCreated = false;
   if (flags.pr && criticalFindings.length > 0) {
     console.log('\n📝 Creating bug-finding PR...');
-    prCreated = await createBugPR(criticalFindings);
+    try {
+      prCreated = await createBugPR(criticalFindings);
+    } catch (err) {
+      console.error(`⚠️ PR creation failed (continuing): ${err.message}`);
+    }
     if (prCreated) {
       console.log('✅ Bug report PR created');
     } else {
@@ -1230,7 +1234,14 @@ async function main() {
 
 main()
   .then(code => process.exit(code))
-  .catch(err => {
-    console.error('❌ Auto-Debug fatal error:', err);
+  .catch(async err => {
+    console.error('❌ Auto-Debug fatal error:', err.message);
+    try {
+      if (flags.wecom) {
+        const proc = spawnSync('node', ['scripts/wecom-notify.mjs', '--markdown',
+          `## ❌ Auto-Debug 执行失败\n\n**错误:** ${err.message}\n\n请查看运行日志排查。`
+        ], { encoding: 'utf8', timeout: 15000, env: { ...process.env } });
+      }
+    } catch {}
     process.exit(2);
   });

@@ -564,7 +564,7 @@ async function createDocPR(analysis) {
     if (!gap.docExists) {
       console.log(`   [${i + 1}/${analysis.gaps.filter(g => !g.docExists).length}] ${gap.mapping.doc}`);
       const content = await generateDomainDoc(gap.mapping);
-      newDocs.push({ path: gap.mapping.doc, content });
+      newDocs.push({ path: gap.mapping.doc, content, description: gap.mapping.description });
     }
   }
 
@@ -606,7 +606,7 @@ async function createDocPR(analysis) {
   ];
 
   for (const doc of newDocs) {
-    bodyLines.push(`- \`${doc.path}\` — ${doc.mapping.description}`);
+    bodyLines.push(`- \`${doc.path}\` — ${doc.description || 'N/A'}`);
   }
 
   if (analysis.canonicalIssues.length > 0) {
@@ -830,7 +830,11 @@ async function main() {
   const hasGaps = gaps.length > 0 || canonicalIssues.length > 0;
   if (flags.pr && hasGaps) {
     console.log('\n📝 Creating documentation update PR...');
-    prCreated = await createDocPR({ gaps, canonicalIssues, undocumentedExports });
+    try {
+      prCreated = await createDocPR({ gaps, canonicalIssues, undocumentedExports });
+    } catch (err) {
+      console.error(`⚠️ PR creation failed (continuing): ${err.message}`);
+    }
   } else if (flags.pr && !hasGaps) {
     console.log('\n✅ No documentation gaps found — skipping PR.');
   }
@@ -856,7 +860,11 @@ async function main() {
 
 main()
   .then(code => process.exit(code))
-  .catch(err => {
-    console.error('❌ Auto-Docs fatal error:', err);
+  .catch(async err => {
+    console.error('❌ Auto-Docs fatal error:', err.message);
+    // Attempt WeCom notification even on crash
+    try {
+      if (flags.wecom) await sendWeComNotification([], []);
+    } catch {}
     process.exit(2);
   });
