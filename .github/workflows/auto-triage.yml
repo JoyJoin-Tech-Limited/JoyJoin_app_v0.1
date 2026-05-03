@@ -1,0 +1,178 @@
+# Auto-Triage — Automatic PR & Issue Labeler
+#
+# Automatically labels PRs and issues based on changed file paths, title/body
+# keywords, and file patterns. Runs on every new PR/issue and periodically
+# (every 4 hours) to catch any missed items.
+#
+# Triggered by:
+#   - pull_request: opened (auto-label on first open)
+#   - issues: opened (auto-label on first open)
+#   - Schedule: every 4 hours (catches items that slipped)
+#   - workflow_dispatch: manual trigger
+#
+# Secrets required:
+#   GITHUB_TOKEN           – auto-available (needs issues:write, pull-requests:read)
+#   WECOM_BOT_KEY          – for triage summary notifications
+
+name: Auto-Triage Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issues:
+    types: [opened]
+  schedule:
+    # Every 4 hours — catches any items that were missed (e.g., labels were added by other means)
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview labels without applying'
+        required: false
+        default: false
+        type: boolean
+      notify_wecom:
+        description: 'Send WeCom triage summary'
+        required: false
+        default: 'false'
+        type: boolean
+      scope:
+        description: 'Scope to triage'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - prs
+          - issues
+
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
+
+concurrency:
+  group: auto-triage-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  triage-pr:
+    name: Triage Pull Request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Triage PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "🏷️ Triage PR #${{ github.event.pull_request.number }}"
+          node scripts/auto-triage.mjs --prs --number ${{ github.event.pull_request.number }}
+
+  triage-issue:
+    name: Triage Issue
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Triage Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "🏷️ Triage Issue #${{ github.event.issue.number }}"
+          node scripts/auto-triage.mjs --issues --number ${{ github.event.issue.number }}
+
+  triage-batch:
+    name: Batch Triage (scheduled or manual)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run batch triage
+        id: triage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS=""
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+
+          if [ "${{ inputs.notify_wecom || 'false' }}" = "true" ] && [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+            ARGS="$ARGS --wecom"
+          fi
+
+          SCOPE="${{ inputs.scope || 'all' }}"
+          if [ "$SCOPE" = "prs" ]; then
+            ARGS="$ARGS --prs"
+          elif [ "$SCOPE" = "issues" ]; then
+            ARGS="$ARGS --issues"
+          fi
+
+          echo "Running: node scripts/auto-triage.mjs $ARGS"
+          node scripts/auto-triage.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.triage.outputs.exit_code }}" = "0" ]; then
+            echo "✅ Triage complete — items labeled."
+          elif [ "${{ steps.triage.outputs.exit_code }}" = "1" ]; then
+            echo "✅ Triage complete — nothing to label."
+          else
+            echo "❌ Triage error — check logs."
+          fi
