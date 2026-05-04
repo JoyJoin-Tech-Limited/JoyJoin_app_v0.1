@@ -25,6 +25,13 @@ describe('server route modularization', () => {
     expect(source).toContain('registerIcebreakerRoutes(app);');
   });
 
+  it('does not log admin bootstrap secret metadata on every server boot', () => {
+    const source = readRepoFile('apps/server/src/routes.ts');
+    expect(source).not.toMatch(/ADMIN_CREATE_SECRET_KEY/);
+    expect(source).not.toMatch(/Secret key length/);
+    expect(source).not.toMatch(/Secret key configured/);
+  });
+
   it('moves representative route ownership out of routes.ts into domain modules', () => {
     const topLevel = readFileSync(ROUTES_FILE, 'utf8');
     expect(topLevel).not.toContain("app.get('/api/auth/user'");
