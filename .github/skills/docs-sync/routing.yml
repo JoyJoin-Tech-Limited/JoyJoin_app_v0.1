@@ -31,9 +31,13 @@ strong_triggers:
   - 更新记忆
   - 收尾
   - docs are stale
+  - docs are out of date
   - documentation is out of date
+  - sync documentation
   - after significant code changes
   - missing documentation
+  - document recent changes
+  - refresh reference docs
 
 owned_files:
   - AGENTS.md

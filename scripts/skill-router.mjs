@@ -154,6 +154,23 @@ function askMatchesTrigger(text, trigger) {
 }
 
 /**
+ * For 2-word triggers only, match if both words appear in order with at least one
+ * alphabetic character in the gap between them. This handles "update docs" matching
+ * "update the docs" while preventing false matches on "ENABLE_SEMANTIC_SIMILARITY".
+ */
+function triggerMatchesTextFuzzy(text, trigger) {
+  const words = trigger.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length !== 2) return false;
+  const idx1 = text.indexOf(words[0]);
+  if (idx1 === -1) return false;
+  const after = idx1 + words[0].length;
+  const idx2 = text.indexOf(words[1], after);
+  if (idx2 === -1) return false;
+  const gap = text.substring(after, idx2);
+  return /[a-zA-Z]/.test(gap);
+}
+
+/**
  * Match a symbol against a trigger without letting very short strings create
  * substring false positives.
  *
@@ -185,7 +202,7 @@ function scoreSkill(skill, normAsk, normFiles, normSymbols) {
   // Strong triggers (highest weight)
   for (const trigger of skill.strong_triggers) {
     const normTrigger = normalise(trigger);
-    if (askMatchesTrigger(normAsk, normTrigger)) {
+    if (askMatchesTrigger(normAsk, normTrigger) || triggerMatchesTextFuzzy(normAsk, normTrigger)) {
       score += STRONG_TRIGGER_SCORE;
       signals.push(`strong_trigger:ask:"${trigger}"`);
     }
