@@ -169,11 +169,6 @@ function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // 🔧 DEV TOOLS: Debug logging for secret key configuration
-  const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
-  console.log('[DEV TOOLS] Secret key configured:', DEV_SECRET_KEY ? '✅ Yes' : '❌ No');
-  console.log('[DEV TOOLS] Secret key length:', DEV_SECRET_KEY?.length || 0);
-  
   // 🔧 确保 trust proxy 在 session 之前设置（防止 index.ts 漏掉）
   app.set('trust proxy', 1);
 
