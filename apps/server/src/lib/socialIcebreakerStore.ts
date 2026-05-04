@@ -528,32 +528,38 @@ export async function dequeuePendingJob(): Promise<{
   phase: string;
   payload: Record<string, unknown>;
 } | null> {
-  const rows = await db
-    .select({
-      id: preGenerationJobs.id,
-      socialSessionId: preGenerationJobs.socialSessionId,
-      phase: preGenerationJobs.phase,
-      payload: preGenerationJobs.payload,
-    })
-    .from(preGenerationJobs)
-    .where(eq(preGenerationJobs.status, 'pending'))
-    .orderBy(sql`${preGenerationJobs.priority} desc`, preGenerationJobs.createdAt)
-    .limit(1);
+  // Single-statement SELECT + UPDATE is not atomic: two workers can read the same
+  // pending row before either UPDATE, causing duplicate AI work and last-writer
+  // wins on pre_generation_results for (socialSessionId, phase). Use one
+  // transaction with row-level lock so only one worker claims a job.
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        id: preGenerationJobs.id,
+        socialSessionId: preGenerationJobs.socialSessionId,
+        phase: preGenerationJobs.phase,
+        payload: preGenerationJobs.payload,
+      })
+      .from(preGenerationJobs)
+      .where(eq(preGenerationJobs.status, 'pending'))
+      .orderBy(sql`${preGenerationJobs.priority} desc`, preGenerationJobs.createdAt)
+      .limit(1)
+      .for('update', { skipLocked: true });
 
-  if (!rows[0]) return null;
+    if (!rows[0]) return null;
 
-  // Mark as running
-  await db
-    .update(preGenerationJobs)
-    .set({ status: 'running', updatedAt: new Date() })
-    .where(eq(preGenerationJobs.id, rows[0].id));
+    await tx
+      .update(preGenerationJobs)
+      .set({ status: 'running', updatedAt: new Date() })
+      .where(eq(preGenerationJobs.id, rows[0].id));
 
-  return {
-    id: rows[0].id,
-    socialSessionId: rows[0].socialSessionId,
-    phase: rows[0].phase,
-    payload: (rows[0].payload as Record<string, unknown>) || {},
-  };
+    return {
+      id: rows[0].id,
+      socialSessionId: rows[0].socialSessionId,
+      phase: rows[0].phase,
+      payload: (rows[0].payload as Record<string, unknown>) || {},
+    };
+  });
 }
 
 export async function completePreGenerationJob(
