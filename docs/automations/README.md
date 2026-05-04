@@ -15,6 +15,8 @@ AI-powered background automations that analyze code, find bugs, update documenta
 | **Auto-CI-Fix** | On CI failure | `scripts/auto-ci-fix.mjs` | `.github/workflows/auto-ci-fix.yml` |
 | **Auto-Prune** | Weekly Wed 01:00 UTC | `scripts/auto-prune.mjs` | `.github/workflows/auto-prune.yml` |
 | **Auto-Triage** | PR/issue open + every 4h | `scripts/auto-triage.mjs` | `.github/workflows/auto-triage.yml` |
+| **Auto-Merge** | Every 30min + on auto workflow complete | `scripts/auto-merge.mjs` | `.github/workflows/auto-merge.yml` |
+| **Auto-Fix** | Daily 03:30 UTC | `scripts/auto-fix.mjs` | `.github/workflows/auto-fix.yml` |
 | **WeCom Trigger** | On demand | — | `.github/workflows/wecom-trigger.yml` |
 
 Each automation:
@@ -280,7 +282,105 @@ Auto-triage creates missing labels on first run. Label colors follow JoyJoin con
 
 ---
 
-## 6. WeCom Integration
+## 6. Auto-Merge (Autonomous PR Merger)
+
+**Goal:** Automatically merge auto-generated PRs when CI passes, applying blast-radius gating.
+
+### Safety rules
+
+| PR type | Cooldown | Description |
+|---------|----------|-------------|
+| Docs (auto-docs) | 0 min (immediate) | Documentation changes are safe to merge immediately |
+| Test (auto-test) | 30 min | Tests deserve a short review window |
+| Fix (auto-debug) | 1 hour | Bug fixes get 1-hour cooldown for human review |
+
+### Hard limits
+
+- **Max 3 auto-merges per 24h** (circuit breaker)
+- **Never merges** PRs touching `.github/workflows/*` (infra needs human review)
+- **Never merges** PRs with failing CI or merge conflicts
+- **Never merges** draft PRs or PRs with pending review requests
+
+### Run locally
+
+```bash
+# Dry run — show what would merge
+node scripts/auto-merge.mjs
+npm run auto:merge
+
+# Execute actual merges
+node scripts/auto-merge.mjs --live
+npm run auto:merge:live
+
+# Merge + WeCom notification
+node scripts/auto-merge.mjs --live --wecom
+npm run auto:merge:wecom
+```
+
+### Triggers
+
+- **Every 30 minutes** during active hours (00:00-14:00 UTC / 08:00-22:00 CST)
+- **On auto workflow complete:** Triggers when auto-debug, auto-docs, or auto-test workflows complete successfully
+- **On demand:** Via `workflow_dispatch` or WeCom trigger
+
+### Implementation notes
+
+- Uses GitHub API (`ghApi`) to check PR status, CI, and mergeability
+- Daily merge count tracked in `.repo-memory/_auto_merge_history.json`
+- Merged via squash for clean history; base = `main`
+
+---
+
+## 7. Auto-Fix (Automatic Bug Fixing — PR Mode)
+
+**Goal:** Automatically create fix PRs for deterministic bug patterns found by auto-debug's regex engine.
+
+### What it fixes (deterministic patterns)
+
+| Pattern | Fix |
+|---------|-----|
+| `empty-catch-block` | Adds `console.error('Operation failed:', err)` inside empty catch |
+| `missing-await` | Adds `await` keyword before the promise call |
+| `promise-not-awaited` | Appends `.catch(err => console.error('Promise error:', err))` |
+
+### What it flags but does NOT auto-fix
+
+- `missing-auth-check`, `sql-injection-risk` — complex, needs human judgment
+- `possible-null-deref` — often requires structural changes
+- `shared-mutable-state`, `unclosed-connection` — architectural fixes
+- `side-effect-in-getter` — may be intentional
+
+### Safety
+
+- **PR mode only** — all fixes go through pull request for human review
+- Never commits directly to `main`
+- Branch name: `auto-fix` (force-pushed each run, replaces previous PR if unmerged)
+- PR title: `Auto-Fix: N bug pattern(s) fixed`
+- Schedules at **03:30 UTC** (before auto-debug at 04:00, so fixes are ready for human review by morning)
+
+### Run locally
+
+```bash
+# Dry run — show what would be fixed
+node scripts/auto-fix.mjs
+npm run auto:fix
+
+# Create fix PR + WeCom notification
+GITHUB_TOKEN=your-token node scripts/auto-fix.mjs --pr --wecom
+npm run auto:fix:pr
+
+# Deep scan (30 commits)
+node scripts/auto-fix.mjs --commits 30 --pr --wecom
+npm run auto:fix:full
+```
+
+### WeCom notification
+
+Reports fixed issues with file locations, plus flags any non-auto-fixable issues for human review.
+
+---
+
+## 8. WeCom Integration
 
 ### Setup
 
@@ -387,7 +487,7 @@ export default {
 
 ---
 
-## 7. Utility Scripts
+## 9. Utility Scripts
 
 ### `scripts/wecom-notify.mjs`
 
@@ -410,7 +510,7 @@ Exit codes: 0 = sent, 1 = config error, 2 = API error
 
 ---
 
-## 8. Adding New Automations
+## 10. Adding New Automations
 
 To add a new automation:
 

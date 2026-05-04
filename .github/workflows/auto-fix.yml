@@ -1,0 +1,124 @@
+# Auto-Fix — Automatic Bug Fixing (PR Mode)
+#
+# Runs the auto-debug regex engine to find deterministic bugs, then
+# automatically creates fix PRs for patterns that are safe to auto-fix.
+#
+# What it fixes:
+#   empty-catch-block        → adds console.error(err) inside empty catch
+#   missing-await             → adds await keyword before the call
+#   promise-not-awaited       → adds .catch(err => console.error(...))
+#
+# What it flags but does NOT fix (human review needed):
+#   missing-auth-check, sql-injection-risk, possible-null-deref,
+#   shared-mutable-state, unclosed-connection, side-effect-in-getter
+#
+# Triggered by:
+#   - Schedule: daily at 03:30 UTC (before auto-debug at 04:00)
+#   - workflow_dispatch: manual trigger
+#
+# Safety:
+#   - PR mode only — all changes go through pull request
+#   - Never commits directly to main
+#   - Only fixes 3 deterministic patterns; everything else is flagged for review
+#
+# Secrets required:
+#   AUTO_DEBUG_TOKEN       – GitHub PAT with contents:write + pull-requests:write
+#   WECOM_BOT_KEY          – WeCom bot key (optional)
+#
+# Reference: docs/automations/README.md
+
+name: Auto-Fix Bugs
+
+on:
+  schedule:
+    # Daily at 03:30 UTC (11:30 CST) — before auto-debug at 04:00
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      commits:
+        description: 'Number of recent commits to analyze'
+        required: false
+        default: '15'
+        type: string
+      create_pr:
+        description: 'Create fix PR'
+        required: false
+        default: 'true'
+        type: boolean
+      notify_wecom:
+        description: 'Send WeCom notification'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: auto-fix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auto-fix:
+    name: Auto-Fix Bugs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config user.name "JoyJoin Bot"
+          git config user.email "bot@joyjoin.com"
+
+      - name: Run Auto-Fix analysis
+        id: fix
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS="--commits ${{ inputs.commits || '15' }}"
+
+          if [ "${{ inputs.create_pr || 'true' }}" = "true" ]; then
+            ARGS="$ARGS --pr"
+          fi
+
+          if [ "${{ inputs.notify_wecom || 'true' }}" = "true" ] && [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+            ARGS="$ARGS --wecom"
+          fi
+
+          ARGS="$ARGS --verbose"
+
+          echo "Running: node scripts/auto-fix.mjs $ARGS"
+          node scripts/auto-fix.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "Exit code: $EXIT_CODE"
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.fix.outputs.exit_code }}" = "0" ]; then
+            echo "✅ Auto-Fix: No auto-fixable bugs found."
+          elif [ "${{ steps.fix.outputs.exit_code }}" = "1" ]; then
+            echo "🔧 Auto-Fix: Bugs found and fix PR created."
+          else
+            echo "❌ Auto-Fix: Error (exit code ${{ steps.fix.outputs.exit_code }})."
+          fi

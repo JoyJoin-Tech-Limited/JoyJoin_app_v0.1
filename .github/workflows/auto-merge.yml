@@ -1,0 +1,119 @@
+# Auto-Merge — Autonomous PR Merger
+#
+# Watches for auto-generated PRs (auto-debug, auto-docs, auto-test) and
+# auto-merges them when CI passes, applying blast-radius cooldown windows.
+#
+# Triggered by:
+#   - Schedule: every 30 minutes during active hours (00:00-14:00 UTC)
+#   - workflow_run: when auto-* workflows complete successfully
+#   - workflow_dispatch: manual trigger
+#
+# Safety:
+#   - Docs PRs merge immediately (CI passing required)
+#   - Test PRs merge after 30-minute cooldown
+#   - Fix PRs merge after 1-hour cooldown
+#   - Max 3 auto-merges per 24h (circuit breaker)
+#   - Never merges PRs touching .github/workflows/
+#
+# Secrets required:
+#   AUTO_MERGE_TOKEN       – GitHub PAT with contents:write + pull-requests:write
+#   WECOM_BOT_KEY          – WeCom bot key (optional, for notifications)
+#
+# Reference: docs/automations/README.md
+
+name: Auto-Merge PRs
+
+on:
+  schedule:
+    # Every 30 min during active hours (approx 08:00-22:00 CST)
+    - cron: '0,30 0-14 * * *'
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Execute actual merges (not dry run)'
+        required: false
+        default: true
+        type: boolean
+      notify_wecom:
+        description: 'Send WeCom notification'
+        required: false
+        default: true
+        type: boolean
+  # Triggered when auto-* workflows complete
+  workflow_run:
+    workflows:
+      - 'Auto-Debug Bug Finding'
+      - 'Auto-Docs Documentation'
+      - 'Auto-Test Automation'
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: auto-merge-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    name: Auto-Merge PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Auto-Merge
+        id: merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.AUTO_DEBUG_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          ARGS=""
+
+          LIVE="${{ inputs.live }}"
+          if [ "$LIVE" = "true" ] || [ "$LIVE" = "True" ]; then
+            ARGS="$ARGS --live"
+          fi
+
+          NOTIFY="${{ inputs.notify_wecom }}"
+          if [ "$NOTIFY" = "true" ] || [ "$NOTIFY" = "True" ]; then
+            if [ -n "${{ secrets.WECOM_BOT_KEY }}" ]; then
+              ARGS="$ARGS --wecom"
+            fi
+          fi
+
+          ARGS="$ARGS --verbose"
+
+          echo "Running: node scripts/auto-merge.mjs $ARGS"
+          node scripts/auto-merge.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "Exit code: $EXIT_CODE"
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.merge.outputs.exit_code }}" = "0" ]; then
+            echo "✅ Auto-Merge: No PRs to merge."
+          elif [ "${{ steps.merge.outputs.exit_code }}" = "1" ]; then
+            echo "🔀 Auto-Merge: PRs merged (see log for details)."
+          else
+            echo "❌ Auto-Merge: Error (exit code ${{ steps.merge.outputs.exit_code }})."
+          fi

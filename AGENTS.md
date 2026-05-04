@@ -56,7 +56,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `圈子` nav label → `连接`
 - `会员/VIP会员` copy → `权益`
 - `/guide` as core onboarding → active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
-- **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states)
+- **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states). Chat registration inline handlers removed from routes.ts in 2026-05-01 refactoring; only `routes/domains/xiaoyue.ts` remains (AI analysis, unwired).
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
 - **`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`** (approved Apr 29 deliberation; `socialIcebreakerTierManifest.ts` exists but not yet wired to client/server)
 - **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)
@@ -157,11 +157,15 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default.
 
-**Icebreaker tiers:** Host selects from `breeze` (破冰局, 40min casual) / `glow` (畅聊局, 60min standard) / `blaze` (狂欢局, 90min full). Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. Machine IDs decoupled from display names. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`.
+**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, ~50min) / `glow` (畅聊局, ~80min) / `blaze` (狂欢局, ~120min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/unified-icebreaker-system.md`.
 
-**Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 (AI-fabricated 3 statements) remains default. Design: `docs/proposals/spot-the-bot-game-design.md`.
+**Game Design Agent:** Compiles dynamic run plan per session using 70% rule engine + 30% LLM. Reads archetype mix + behavioral signals (mood, commonGround, completion rate, pulse). Rule engine runs on every compilation (deterministic); LLM enhances selection + ordering with 3s timeout fallback. See `docs/unified-icebreaker-system.md` §5.
 
-**Boost plan:** `docs/unified-icebreaker-system.md` §11 defines the 10-week roadmap to raise all 10 phases to composite 8.0+ using shared Reveal Engine, Gesture Kit, Context Injector, and Optimistic Sync. Full plan: `.git/.orchestration/plans/boost-all-games-to-8.md`.
+**Phase pool (8 non-core + 1 bonus):** lie_detective, personality_dice, group_mirror, undercover_word, quip_battle, auction, speed_friending (NEW). Mini_script is bonus-only (悦仔 offers after last phase before recap, all tiers eligible).
+
+**Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 remains default. Host-choosable toggle, all tiers. Design: `docs/proposals/spot-the-bot-game-design.md`.
+
+**Boost plan:** All 10 phases must reach composite ≥8.0 (agent may select any phase — none deferred). 11-week roadmap in `.git/.orchestration/plans/boost-all-games-to-8.md`. Shared infra: Reveal Engine, Gesture Kit, Context Injector, Optimistic Sync.
 
 **Mini-program is launch-primary:** `apps/mini-program` is the primary client; web (`apps/user-client`) is sandbox. Cross-surface rules: `docs/PLATFORM_COORDINATION.md`.
 
@@ -199,6 +203,10 @@ Five scheduled/event-driven GitHub Actions workflows run autonomously:
 | **`auto-digest.yml`** | Daily 06:00 UTC | Engineering digest — clusters last 24h commits/PRs into themes via LLM. WeCom only. |
 | **`auto-test.yml`** | Daily 07:00 UTC | Test coverage — finds untested production code, generates tests via LLM, validates with vitest. Opens test PRs. |
 | **`auto-ci-fix.yml`** | On CI failure | CI autofix — deduplicates via lock files, investigates root cause with LLM, skips flaky tests or reports. |
+| **`auto-fix.yml`** | Daily 03:30 UTC | Auto-creates fix PRs for deterministic bugs (empty-catch, missing-await, promise-not-awaited). PR mode only. |
+| **`auto-merge.yml`** | Every 30min + on auto workflow complete | Auto-merges auto-generated PRs when CI passes with blast-radius cooldowns (docs→immediate, test→30min, fix→1hr). |
+| **`auto-prune.yml`** | Weekly Wed 01:00 UTC | Cleans stale branches, old artifacts, expired reports. `--live` flag required for deletions. |
+| **`auto-triage.yml`** | PR/issue open + every 4h | Auto-labels PRs and issues by changed paths, title, and body keywords. Creates missing labels automatically. |
 
 All notify via WeCom when actionable findings are discovered.
 
