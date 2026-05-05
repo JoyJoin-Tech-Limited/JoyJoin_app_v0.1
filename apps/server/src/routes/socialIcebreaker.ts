@@ -237,6 +237,14 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
     return res.status(403).json({ error: 'Only the host can set the tier' });
   }
 
+  // Changing runPlan after warmup would desync currentPhase from the new segment order
+  // (getNextEligiblePhase uses runPlan.segments); only allow while still in warmup.
+  if (state.currentPhase !== 'warmup') {
+    return res.status(400).json({
+      error: 'Tier can only be changed during warmup (before advancing past the first phase)',
+    });
+  }
+
   const VALID_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze'];
   if (!tier || !VALID_TIERS.includes(tier as TierMachineId)) {
     return res.status(400).json({ error: 'Invalid tier. Must be one of: breeze, glow, blaze' });
