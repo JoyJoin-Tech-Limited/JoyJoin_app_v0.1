@@ -4,6 +4,22 @@
   "provider": {
     "deepseek": {
       "models": {
+        "deepseek-v4-flash": {
+          "options": {
+            "maxTokens": 16384
+          },
+          "variants": {
+            "medium": {
+              "reasoningEffort": "medium"
+            },
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
+          }
+        },
         "deepseek-v4-pro": {
           "options": {
             "maxTokens": 16384
@@ -15,6 +31,34 @@
             "max": {
               "reasoningEffort": "max"
             }
+          }
+        }
+      }
+    },
+    "kimi": {
+      "models": {
+        "kimi-k2.6": {
+          "options": {
+            "maxTokens": 16384
+          },
+          "variants": {
+            "thinking": {
+              "thinking": true
+            }
+          }
+        }
+      }
+    },
+    "glm": {
+      "models": {
+        "glm-5.1-fp8": {
+          "options": {
+            "maxTokens": 16384
+          }
+        },
+        "glm-5-fp8": {
+          "options": {
+            "maxTokens": 16384
           }
         }
       }
@@ -30,24 +74,44 @@
     },
     "github": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
       "environment": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     },
     "postgres": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-postgres"],
-      "args": ["{env:MCP_DATABASE_URL}"]
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-postgres"
+      ],
+      "args": [
+        "{env:MCP_DATABASE_URL}"
+      ]
     },
     "sequential-thinking": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
     },
     "filesystem": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem"],
-      "args": ["{env:PWD}"]
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem"
+      ],
+      "args": [
+        "{env:PWD}"
+      ]
     }
   },
   "permission": {
@@ -58,6 +122,22 @@
       "*": "allow"
     }
   },
+  "plugin": [
+    "@tarquinen/opencode-dcp@latest",
+    "opencode-mem",
+    "oh-my-openagent"
+  ],
+  "command": {
+    "mentor": {
+      "template": "Load the cto-mentor skill. Provide a structured mentor breakdown of the most recent implementation work: (1) What we did & why — high-level friendly summary, (2) Key ideas at play — 2-3 concepts with plain-language metaphors first, (3) Trade-offs we made — honest about what we gave up, (4) Where to go next — concrete study/practice/build suggestions. Tone: warm, encouraging, jargon-free. Max 3 concepts.",
+      "description": "CTO Mentor — structured breakdown of completed work"
+    }
+  },
+  "instructions": [
+    ".opencode/rules/joyjoin-workflow.md",
+    ".opencode/rules/joyjoin-orchestration.md",
+    ".opencode/rules/joyjoin-harness.md"
+  ],
   "agent": {
     "build": {
       "permission": {
@@ -68,14 +148,6 @@
           "*": "allow"
         },
         "bash": {
-          "node scripts/orchestration-supervisor.mjs *": "allow",
-          "node scripts/auto-eval.mjs *": "allow",
-          "node scripts/harness-auto-trigger.mjs *": "allow",
-          "npm run guardrails": "allow",
-          "npm run typecheck": "allow",
-          "npm run test *": "allow",
-          "npm run db:*": "allow",
-          "git *": "allow",
           "*": "ask"
         },
         "edit": "allow",
@@ -92,10 +164,6 @@
         },
         "edit": "deny",
         "bash": {
-          "node scripts/orchestration-supervisor.mjs *": "allow",
-          "node scripts/auto-eval.mjs *": "allow",
-          "git diff *": "allow",
-          "git status *": "allow",
           "*": "deny"
         }
       }

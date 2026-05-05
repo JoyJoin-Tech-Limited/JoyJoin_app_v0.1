@@ -11,16 +11,18 @@
 
 ---
 
-## Baseline table
+## Active model pool
+
+The repo's coding agents are powered by **DeepSeek V4**, **Kimi K2.6**, and **GLM 5.1**. Opus, GPT, Sonnet, and Claude models are no longer in active use and should not be referenced in routing recommendations.
+
+### Baseline table
 
 | Model Name | Cost (Premium Request Units) | Best Suited For |
 | --- | --- | --- |
-| GPT-5 mini | 0.00x | Trivial tasks, simple syntax fixes, single-line changes. |
-| GPT-5.4 mini | 0.33x | Minor refactors, small component updates, light debugging. |
-| GPT-5.4 xhigh | 1.00x | Standard feature implementation, moderate complexity. |
-| Sonnet 4.6 | 1.00x | Balanced performance for typical engineering tasks. |
-| Opus 4.6 | 3.00x | Complex logic, architectural changes, multi-file coordination. |
-| Opus 4.7 | 7.50x | Extremely complex refactors, large-scale planning, high-stakes decisions. |
+| DeepSeek V4 Flash | 0.33x | Trivial tasks, single-file edits, syntax fixes, low-blast-radius changes. Fastest and cheapest. |
+| DeepSeek V4 Pro | 1.00x | Standard feature implementation, complex logic, multi-file coordination, high-stakes changes. Default coding model. |
+| Kimi K2.6 | 2.50x | Multi-file coordination, Agent Swarm decomposition, strong instruction following, interleaved thinking between tool calls. |
+| GLM 5.1 | 3.00x | Complex systems engineering, architecture design, long-horizon agentic tasks, large-scale refactors. |
 
 Optimize for outcome quality first, then token efficiency. Do not default to the cheapest model for non-trivial work, and do not spend premium capacity on trivial work.
 
@@ -35,54 +37,104 @@ Route work by **shape**, not vibes:
 | **Ambiguity** | Spec is explicit, acceptance obvious | Requirements fuzzy, many valid designs |
 | **Blast radius** | One file / one function | Cross-cutting contracts, auth, money, data integrity |
 | **Coordination** | Single owner, linear steps | Many files, parallel workstreams, orchestration |
-| **Tooling depth** | Read-only or a few commands | Long tool chains, computer/browser use, multi-step agents |
+| **Tooling depth** | Read-only or a few commands | Long tool chains, multi-step agents |
 | **Reasoning depth** | Mechanical edit, known pattern | Architecture, novel invariants, adversarial edge cases |
 | **Latency budget** | User wants instant iteration | Correctness matters more than seconds-to-first-token |
 | **Context mass** | Small prompt, narrow files | Very large repos or huge diffs in one pass |
 
-When two dimensions disagree (e.g. “small edit” but **high blast radius**), **escalate** tier.
+When two dimensions disagree (e.g. "small edit" but **high blast radius**), **escalate** tier.
 
 ---
 
-## OpenAI GPT family (this catalog)
+## DeepSeek V4 (backbone coding model)
 
-**GPT-5 mini** — Near-zero cost tier. Best for **mechanical** work: renames, obvious fixes, formatting, single-shot answers where a mistake is cheap to undo. Avoid for ambiguous specs, security-sensitive edits, or multi-step refactors.
+### DeepSeek V4 Flash — $0.14/1M input, $0.28/1M output
 
-**GPT-5.4 mini** — Cost-efficient **frontier-small** tier. Strong for bounded tasks with clear success criteria: localized UI tweaks, narrow bug hunts with a repro, smaller refactors across a **small** surface. Per OpenAI’s GPT‑5.4 line, smaller variants trade some depth on the hardest agentic / computer-use style tasks vs the full **GPT‑5.4** class models—if the task looks like **long-horizon** agent work, **terminal-heavy** automation, or **large-context** synthesis, move up to **GPT‑5.4 xhigh** (or Claude Sonnet per row below) rather than mini.
+Cost-efficient tier for **mechanical** work: renames, obvious fixes, formatting, single-shot answers where a mistake is cheap to undo. **1M context window** — largest in class. No thinking mode (fast path). Avoid for ambiguous specs, security-sensitive edits, or multi-step refactors.
 
-**GPT-5.4 xhigh** — Default **professional / implementation** tier in this table (1.00x). OpenAI positions **GPT‑5.4** class models as strong on **coding, agentic workflows, tool use**, and long-context professional work. Use for standard feature work, multi-file edits with moderate complexity, and most “ship this PR” engineering. Prefer this over mini when **implicit requirements**, **cross-file consistency**, or **tool orchestration** matter.
+**Known tool-calling quirks** (shared across DeepSeek, GLM, and Qwen — handled by `toolInputRepair.ts`):
+1. Sends `null` for optional fields instead of omitting them
+2. Emits arrays as JSON strings: `"[\"a\",\"b\"]"` instead of `["a","b"]`
+3. Wraps single args in `{}` where schema expects an array
+4. Passes bare strings where arrays are expected
+5. Emits markdown auto-links in file paths: `[file.md](http://file.md)`
 
-*Vendor context:* [Introducing GPT‑5.4](https://openai.com/index/introducing-gpt-5-4/) (reasoning, coding, agentic workflows, computer-use class capabilities in the family).
+The tool-input repair layer (validate-then-repair) handles these transparently. See `apps/server/src/ai/toolInputRepair.ts`.
+
+### DeepSeek V4 Pro — $1.74/1M input, $3.48/1M output
+
+Default **professional / implementation** tier (1.00x). **1M context window** (4× Kimi, 8× GLM) — ideal for large-repo analysis and multi-file refactors. Supports thinking mode via `reasoning_effort: 'high' | 'max'`. Use for standard feature work, multi-file edits with moderate complexity, and most "ship this PR" engineering. Prefer over Flash when **implicit requirements**, **cross-file consistency**, or **tool orchestration** matter.
+
+*Provider context:* DeepSeek V4 supports 1M context, JSON output, tool calls, and thinking mode via `extra_body.thinking`.
 
 ---
 
-## Anthropic Claude (this catalog)
+## Kimi K2.6 (Moonshot AI — multi-file coordination)
 
-**Sonnet 4.6** — **Default balanced** tier for coding and agents at **Sonnet-equivalent** cost in this table. Anthropic describes Sonnet 4.6 as a strong generalist for **coding, agents, and long-running tasks**, with a large context window—use when you want **instruction-following, multi-file reasoning, and tool reliability** without paying Opus rates. Pair with **extended thinking** (when your product surface exposes it) for harder reasoning at the cost of latency.
+### Kimi K2.6 — $0.16/1M input (cache hit) / $0.95/1M (cache miss), $4.00/1M output
 
-*Vendor context:* [Claude Sonnet 4.6](https://www.anthropic.com/claude/sonnet) (capabilities, context, use cases).
+Strong alternative for **multi-file coordination** and tasks that benefit from agent decomposition. **262K context window**. Unique **Agent Swarm** capability: decomposes complex tasks into parallel sub-tasks executed by dynamically instantiated domain-specific agents. Toggleable thinking mode supports interleaved reasoning between tool call steps.
 
-**Opus 4.6** — Step up when **Sonnet** is insufficient: heavier **architecture**, trickier **multi-agent** coordination, or when prior passes still miss edge cases. Prefer when mistakes are expensive (payments, migrations, security).
+**Strengths:**
+- "Significantly improved instruction compliance and self-correction" (per Moonshot)
+- "Stronger and more stable long-term code writing"
+- Agent Swarm excels at coordinating multi-file changes
 
-**Opus 4.7** — Reserve for **largest** refactors, org-wide planning, or **highest-stakes** decisions where you would otherwise schedule senior staff time. Requires explicit justification in Planner / Supervisor outputs.
+**Best for:** Multi-file feature implementations, parallel audits, tasks where agentic decomposition benefits the outcome.
+
+**Limitations:** 256K context (vs DeepSeek's 1M). Higher output cost ($4.00/1M). Cache-hit input ($0.16) is competitive with DeepSeek Flash.
+
+*Provider context:* Moonshot AI. Model ID: `kimi-k2.6`. API compatible with OpenAI SDK.
 
 ---
 
-## Cross-lineup heuristics (GPT vs Claude in this repo)
+## GLM 5.1 (Zhipu AI / Z.AI — systems engineering)
 
-- **Research & synthesis** (read-heavy, web-assisted): **Sonnet 4.6** or **GPT‑5.4 xhigh**—both handle long context and tool use well; pick whichever matches your session’s **default** and pricing.
-- **Tight implementation loop** on a **small** surface: **GPT‑5.4 mini** or **GPT‑5 mini** if truly trivial.
-- **Orchestration / routing / executive briefing**: **Sonnet 4.6** or **GPT‑5.4 xhigh**; escalate to **Opus** when tradeoffs are strategic or cross-team.
-- **Verification / “prove it” passes** (e.g. Verifier lane): prefer **faster/cheaper** tiers when checks are **narrow and scripted**; do not use mini for interpreting flaky failures across the stack.
+### GLM 5.1 — Subscription-based (Z.AI Coding Plan)
+
+Purpose-built for **complex systems engineering** and **long-horizon agentic tasks**. **744B total / 40B active parameters** (MoE architecture). **~128K context window** with DeepSeek Sparse Attention (DSA). Trained on 28.5T tokens. Supports reasoning parser (`--reasoning-parser glm45`) and tool-call parser (`--tool-call-parser glm47`).
+
+**Strengths:**
+- Designed for "complex systems" — architecture, multi-file orchestration, debugging complex issues
+- Subscription pricing via Z.AI Coding Plan makes bulk coding work extremely economical (~1% of standard API pricing)
+- Anthropic-protocol compatible — can be used as Opus/Sonnet replacement in Claude Code configurations
+
+**Best for:** Architecture design, large refactors, systems-level debugging, bulk coding work (subscription economics).
+
+**Limitations:** Smallest context window (~128K). Per-call reasoning effort is not parameterized (server-side parser config). Subscription model doesn't map cleanly to per-request cost multipliers.
+
+*Provider context:* Zhipu AI / Z.AI. Model IDs: `glm-5.1-fp8`, `glm-5-fp8`. Pricing: Z.AI Coding Plan (Lite/Pro/Max tiers).
+
+---
+
+## Task Shape → Model routing
+
+| Task Shape | Model | Why |
+|--- |--- |--- |
+| Bounded single-file edit, low blast radius | **DeepSeek V4 Flash** | Cheapest, fastest, sufficient |
+| Standard feature work, moderate complexity | **DeepSeek V4 Pro** | Default coding tier, 1M context |
+| Multi-file feature implementation | **Kimi K2.6** | Agent Swarm excels at coordination |
+| Architecture design / systems refactor | **GLM 5.1** | Purpose-built for systems engineering |
+| Large-repo analysis / audit (>128K context) | **DeepSeek V4 Pro** | Only model with 1M context |
+| High-stakes (auth, payment, migration) | **DeepSeek V4 Pro** (thinking + max) | Proven reasoning depth + largest context |
+| Bulk cheap coding work | **GLM 5.1** (Coding Plan) | Subscription economics win at scale |
+| Research / exploration (read-heavy) | **Kimi K2.6** or **DeepSeek V4 Pro** | Both handle long context well |
+
+---
+
+## Tool-input repair coverage
+
+All models in this catalog may exhibit the tool-calling quirks documented for DeepSeek V4 (the 4 failure modes + markdown auto-links). The `toolInputRepair.ts` repair layer is **provider-agnostic** and applies to all models. Repair-rate telemetry is tracked per (model, tool) so regressions are detected before users report them.
+
+When evaluating a model's coding quality, account for the repair layer: a model that "fails" on a tool call may actually have the correct intent and only needs input repair. The repair layer handles this transparently.
 
 ---
 
 ## Escalation ladder (suggested)
 
-1. **GPT‑5 mini** — only after confirming the task is truly low-risk and atomic.  
-2. **GPT‑5.4 mini** — bounded, well-specified work.  
-3. **GPT‑5.4 xhigh** or **Sonnet 4.6** — default shipping tier for real engineering.  
-4. **Opus 4.6** — complex / high-blast-radius.  
-5. **Opus 4.7** — rare; largest scope or executive-level planning.
+1. **DeepSeek V4 Flash** — only after confirming the task is truly low-risk and atomic.
+2. **DeepSeek V4 Pro** — default shipping tier for real engineering.
+3. **Kimi K2.6** — multi-file coordination, agent swarm decomposition needed.
+4. **GLM 5.1** — complex systems / architecture / bulk coding.
 
 Always cite **which dimensions** triggered escalation when recommending in Planner or Supervisor.

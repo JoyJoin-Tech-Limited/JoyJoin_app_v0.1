@@ -33,6 +33,7 @@ import { IcebreakerToolSelector } from './IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './MiniScriptConfigModal'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
 import { PHASE_CONFIG } from '@shared/socialIcebreaker'
+import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
 import {
   buildSocialPath,
@@ -71,6 +72,7 @@ export default function IcebreakerSessionPage() {
   const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
+  const [showTierSelector, setShowTierSelector] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
 
@@ -338,6 +340,42 @@ export default function IcebreakerSessionPage() {
     })
   }, [performSocialAction, session, socialSessionId])
 
+  const handleSetTier = useCallback(
+    (tier: TierMachineId) => {
+      if (!socialSessionId || pendingAction !== null) {
+        return
+      }
+
+      logInfo('[IcebreakerSession] Setting tier', {
+        socialSessionId,
+        tier,
+      })
+
+      setPendingAction('set-tier')
+
+      void apiRequest({
+        path: `/api/social-icebreaker/${socialSessionId}/set-tier`,
+        method: 'POST',
+        data: { tier },
+      })
+        .then(() => {
+          void socialSessionQuery.refetch()
+        })
+        .catch((err: unknown) => {
+          logError('[IcebreakerSession] Set tier failed', { error: err })
+          void Taro.showToast({
+            title: '切换失败，请重试',
+            icon: 'none',
+            duration: 2000,
+          })
+        })
+        .finally(() => {
+          setPendingAction(null)
+        })
+    },
+    [socialSessionId, socialSessionQuery, pendingAction],
+  )
+
   const handleCompleteChallenge = useCallback(() => {
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
   }, [performSocialAction])
@@ -585,6 +623,46 @@ export default function IcebreakerSessionPage() {
               isHost={isHost}
               onAdvance={handleAdvancePhase}
             />
+            {isHost && session && (
+              <View className='icebreaker__tier-selector'>
+                <Text className='icebreaker__tier-selector-label'>
+                  选择破冰模式
+                  {pendingAction === 'set-tier' && (
+                    <Text className='icebreaker__tier-selector-label--loading'> 切换中…</Text>
+                  )}
+                </Text>
+                <View className='icebreaker__tier-options'>
+                  {([
+                    { tier: 'breeze' as const, title: '破冰局', desc: '40分钟 · 轻松暖场', tag: null },
+                    { tier: 'glow' as const, title: '畅聊局', desc: '60分钟 · 深度互动', tag: '推荐' },
+                    { tier: 'blaze' as const, title: '狂欢局', desc: '105分钟 · 全阶段体验', tag: null },
+                  ]).map((option) => {
+                    const isActive = session.eventTier === option.tier
+                    const isBusy = pendingAction === 'set-tier'
+                    return (
+                      <View
+                        key={option.tier}
+                        onClick={isBusy ? undefined : () => handleSetTier(option.tier)}
+                        hoverClass='icebreaker__tier-option--pressed'
+                        hoverStartTime={0}
+                        hoverStayTime={100}
+                        className={`icebreaker__tier-option ${isActive ? 'icebreaker__tier-option--active' : ''} ${isBusy ? 'icebreaker__tier-option--busy' : ''}`}
+                      >
+                        {option.tag && (
+                          <Text className='icebreaker__tier-option-tag'>{option.tag}</Text>
+                        )}
+                        <Text className='icebreaker__tier-option-title'>
+                          {option.title}
+                        </Text>
+                        <Text className='icebreaker__tier-option-desc'>
+                          {option.desc}
+                        </Text>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+            )}
             {isHost && !session?.xiaoyueSessionPack && (
               <Button
                 variant='secondary'

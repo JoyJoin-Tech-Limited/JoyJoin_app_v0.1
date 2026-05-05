@@ -57,3 +57,21 @@ Before any file edits:
 - Transactional or idempotent behavior is handled when stateful.
 - New failure paths are observable.
 - Regression coverage exists or missing coverage is called out.
+
+## Tool Call Protocol (DeepSeek-safe)
+
+When calling tools (bash, edit, write, read, grep, glob), follow these rules to prevent known model failure modes. The `toolInputRepair` layer in `apps/server/src/ai/toolInputRepair.ts` handles these transparently, but producing correct input avoids repair overhead.
+
+**DO NOT:**
+- Pass `null` for optional fields — omit them instead
+- Emit arrays as JSON-encoded strings (`"[\"a\",\"b\"]"` → `["a", "b"]`)
+- Wrap single values in `{}` when schema expects an array
+- Pass bare strings where arrays are expected — wrap in `[]`
+- Emit file paths as markdown auto-links (`[file.ts](http://file.ts)` → `file.ts`)
+
+**CORRECT tool call examples:**
+- `bash`: `{ "command": "npm run test -w @joyjoin/server -- --run <pattern>", "description": "Run specific test suite" }`
+- `edit`: `{ "filePath": "/absolute/path/to/routes/domains/<name>.ts", "oldString": "exact text", "newString": "replacement" }`
+- `write`: `{ "filePath": "/absolute/path/to/repositories/<name>.ts", "content": "full file content" }`
+- `read`: `{ "filePath": "/absolute/path/to/file.ts", "offset": 1, "limit": 200 }` — always pair offset+limit; never pass null for either
+- `grep`: `{ "pattern": "export\\s+function\\s+\\w+", "include": "*.ts", "path": "apps/server/src" }`

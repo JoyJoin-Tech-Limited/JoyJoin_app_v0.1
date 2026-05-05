@@ -37,3 +37,12 @@ Deliver premium, JoyJoin-native UI using Taro-native primitives, brand-aligned h
 - Taro-native primitives used correctly; no DOM API leakage.
 - WeChat DevTools inspection completed for visual changes.
 - Cross-platform parity audited when sibling web feature exists.
+
+## Tool Call Examples
+
+Mini-program bash commands are easy to get wrong — use these exact forms:
+- `bash`: `{ "command": "npm run dev:weapp --workspace=mini-program", "description": "Start Taro watch build" }`
+- `read`: `{ "filePath": "/absolute/path/to/page.tsx" }` — omit optional fields rather than passing null
+- `grep`: `{ "pattern": "Taro\\.", "include": "*.{ts,tsx}", "path": "apps/mini-program/src" }`
+
+Omit optional fields rather than passing `null`. Pass arrays as actual arrays, never as JSON-encoded strings.

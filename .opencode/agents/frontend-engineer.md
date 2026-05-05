@@ -30,3 +30,21 @@ Build and polish React 18 + Vite UI with Wouter routing, TanStack Query pages, R
 - Component is placed in the correct layer (shared vs user-client).
 - Integration with TanStack Query and wouter routing is correct.
 - Accessibility basics are respected.
+
+## Tool Call Protocol (DeepSeek-safe)
+
+When calling tools (bash, edit, write, read, grep, glob), follow these rules to prevent known model failure modes.
+
+**DO NOT:**
+- Pass `null` for optional fields — omit them instead
+- Emit arrays as JSON-encoded strings (`"[\"a\",\"b\"]"` → `["a", "b"]`)
+- Wrap single values in `{}` when schema expects an array
+- Pass bare strings where arrays are expected — wrap in `[]`
+- Emit file paths as markdown auto-links (`[file.ts](http://file.ts)` → `file.ts`)
+
+**CORRECT tool call examples:**
+- `bash`: `{ "command": "npm run dev -w @joyjoin/user-client", "description": "Start web dev server" }`
+- `edit`: `{ "filePath": "/absolute/path/to/Component.tsx", "oldString": "exact code block", "newString": "replacement code" }`
+- `write`: `{ "filePath": "/absolute/path/to/new.tsx", "content": "full file content" }`
+- `read`: `{ "filePath": "/absolute/path/to/file.tsx" }` — omit optional fields, don't pass null
+- `grep`: `{ "pattern": "useState", "include": "*.tsx", "path": "apps/user-client/src" }`

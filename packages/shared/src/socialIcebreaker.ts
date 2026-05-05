@@ -5,6 +5,7 @@ import type { AIResponseMeta } from './types/aiMeta';
 import type { MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput } from './miniscriptStoryFramework';
 export type { MiniScriptStoryFrameworkPublic } from './miniscriptStoryFramework';
 import type { IcebreakerRunPlan } from './phaseModule';
+import type { TierMachineId } from './socialIcebreakerTierManifest.js';
 
 export type SocialIcebreakerPhase =
   | 'warmup'
@@ -338,6 +339,7 @@ export interface SocialSessionState {
   expiresAt?: string;
   completedPhases: SocialIcebreakerPhase[];
   eventType?: string;
+  eventTier?: TierMachineId;
   enabledPhases?: SocialIcebreakerPhase[];
   /** Compiled run plan from Game Design Agent; if present, session follows this instead of hardcoded PHASE_ORDER. */
   runPlan?: IcebreakerRunPlan;

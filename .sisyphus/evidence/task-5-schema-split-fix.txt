@@ -1,0 +1,6 @@
+Schema split task 5 verification:
+Typecheck: PASS (0 errors)
+Tests: PASS (6 files, 65 tests)
+Schema/ directory: 12 domain files + _definitions.ts + index.ts
+All domain file type exports use correct names (without Row suffix mismatch)
+

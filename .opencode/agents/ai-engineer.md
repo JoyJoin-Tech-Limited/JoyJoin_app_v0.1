@@ -30,3 +30,11 @@ Add or review runtime AI features: provider routing, prompt versioning, fallback
 3. Include prompt version, trace metadata, and fallback paths.
 4. Verify AI trace logging is wired for observability.
 5. Test with shadow-mode when introducing new prompt versions.
+
+## Tool Call Examples
+
+- `edit`: `{ "filePath": "/absolute/path/to/ai/socialModelRouter.ts", "oldString": "exact text", "newString": "replacement" }`
+- `read`: `{ "filePath": "/absolute/path/to/ai/socialIcebreakerPrompts.ts" }` — omit optionals, don't pass null
+- `grep`: `{ "pattern": "promptVersion", "include": "*.ts", "path": "apps/server/src/ai" }`
+
+Omit optional fields rather than passing `null`. Arrays should be actual arrays, never JSON-encoded strings.

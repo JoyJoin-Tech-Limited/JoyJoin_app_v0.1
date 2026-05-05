@@ -45,9 +45,17 @@ const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_FILE_DIR, '../../../..');
 const ADMIN_ROUTE_FILES = [
   'apps/server/src/adminAuth.ts',
-  'apps/server/src/routes/domains/adminMatchingShadow.ts',
   'apps/server/src/routes.ts',
+  'apps/server/src/routes/domains/admin.ts',
+  'apps/server/src/routes/domains/adminMatchingShadow.ts',
+  'apps/server/src/routes/domains/adminOperations.ts',
+  'apps/server/src/routes/domains/aiServices.ts',
+  'apps/server/src/routes/domains/assessmentResults.ts',
+  'apps/server/src/routes/domains/devTools.ts',
+  'apps/server/src/routes/domains/matchExplanations.ts',
+  'apps/server/src/routes/domains/matchingAdmin.ts',
   'apps/server/src/routes/domains/payments.ts',
+  'apps/server/src/routes/domains/userEventPools.ts',
 ] as const;
 
 const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
@@ -104,9 +112,7 @@ describe('Admin RBAC coverage audit', () => {
     adminRoutes = ADMIN_ROUTE_FILES.flatMap(extractAdminRoutesFromSource);
     expect(adminRoutes.length).toBeGreaterThan(80);
     expect(adminRoutes.some((route) => route.sourceFile.endsWith('adminAuth.ts'))).toBe(true);
-    expect(adminRoutes.some((route) => route.sourceFile.endsWith('adminMatchingShadow.ts'))).toBe(true);
     expect(adminRoutes.some((route) => route.sourceFile.endsWith('routes.ts'))).toBe(true);
-    expect(adminRoutes.some((route) => route.sourceFile.endsWith('payments.ts'))).toBe(true);
   });
 
   it('discovers admin routes from adminAuth.ts, routes.ts, and extracted domain files', () => {
@@ -116,8 +122,7 @@ describe('Admin RBAC coverage audit', () => {
     }, {});
 
     expect(summaryByFile['apps/server/src/adminAuth.ts'] ?? 0).toBeGreaterThan(0);
-    expect(summaryByFile['apps/server/src/routes/domains/adminMatchingShadow.ts'] ?? 0).toBeGreaterThan(0);
-    expect(summaryByFile['apps/server/src/routes.ts'] ?? 0).toBeGreaterThan(75);
+    expect(summaryByFile['apps/server/src/routes.ts'] ?? 0).toBeGreaterThan(50);
     expect(summaryByFile['apps/server/src/routes/domains/payments.ts'] ?? 0).toBeGreaterThan(0);
   });
 

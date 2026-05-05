@@ -153,6 +153,87 @@
     font-weight: $font-weight-semibold;
   }
 
+  // ── Tier Selector ─────────────────────────────────────────────
+  &__tier-selector {
+    margin-top: $spacing-md;
+    padding: 0 $container-padding;
+  }
+
+  &__tier-selector-label {
+    font-size: $font-size-base;
+    color: $color-text-white;
+    margin-bottom: $spacing-sm;
+    display: block;
+
+    &--loading {
+      font-size: $font-size-xs;
+      color: rgba($color-text-white, 0.6);
+      font-weight: $font-weight-normal;
+    }
+  }
+
+  &__tier-options {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__tier-option {
+    position: relative;
+    flex: 1;
+    padding: $spacing-sm $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-white, 0.1);
+    border: 2rpx solid transparent;
+    text-align: center;
+    transition: transform 0.15s ease-out, opacity 0.2s ease;
+
+    &--active {
+      background: $color-primary;
+      border-color: rgba($color-text-white, 0.3);
+    }
+
+    &--pressed {
+      transform: scale(0.97);
+    }
+
+    &--busy {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    &:nth-child(2) {
+      padding-top: $spacing-sm + 4rpx;
+      padding-bottom: $spacing-sm + 4rpx;
+    }
+  }
+
+  &__tier-option-tag {
+    position: absolute;
+    top: -10rpx;
+    right: -6rpx;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    background: $color-secondary;
+    padding: 2rpx 10rpx;
+    border-radius: 100rpx;
+    line-height: 1;
+  }
+
+  &__tier-option-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+    display: block;
+  }
+
+  &__tier-option-desc {
+    font-size: $font-size-xs;
+    color: rgba($color-text-white, 0.7);
+    margin-top: $spacing-xs;
+    display: block;
+  }
+
   &__advance-btn {
     @include button-primary;
     width: 100%;

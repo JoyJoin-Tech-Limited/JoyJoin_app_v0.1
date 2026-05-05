@@ -87,3 +87,14 @@ export function resolveTierDisplay(
 export function resolveTierDisplayEn(machineId: TierMachineId): string {
   return TIER_DISPLAY_MANIFEST[machineId].defaultEn
 }
+
+export const LEGACY_TIER_MAP: Record<string, TierMachineId> = {
+  standard: 'glow',
+  premium: 'blaze',
+  bar: 'breeze',
+}
+
+export function resolveLegacyTier(legacyTier: string | undefined): TierMachineId {
+  if (!legacyTier) return 'breeze'
+  return LEGACY_TIER_MAP[legacyTier] ?? (LEGACY_TIER_MAP as Record<string, TierMachineId>)[legacyTier] ?? 'breeze'
+}

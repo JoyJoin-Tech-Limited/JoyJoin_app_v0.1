@@ -173,6 +173,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 |-------|---------------|
 | [`backend-models-standards`](./backend-models-standards/SKILL.md) | Drizzle/ORM model naming, data types, constraints, relationships, validation layers, index strategy |
 | [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) | Brand essence, colour system, typography, mascots, UI tone, motion guidance |
+| [`cto-mentor`](./cto-mentor/SKILL.md) | After-task mentor mode — 4-section breakdown (what we built, key ideas with metaphors, trade-offs, learning paths). Use `/mentor` or "teach me". |
 
 ---
 
@@ -236,6 +237,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | How does semantic similarity matching work? | `semantic-matching-embeddings` |
 | How do I plan a cross-cutting refresh of product docs, skills, and agents? | [`docs/ai-workflow-documentation-refresh.md`](../../docs/ai-workflow-documentation-refresh.md) + `docs-sync` where applicable |
 | How do I run a structured multi-agent review or architecture consensus? | `multi-agent-deliberation` |
+| How do I get a mentor-style breakdown of what we just built? | `cto-mentor` |
 
 ---
 

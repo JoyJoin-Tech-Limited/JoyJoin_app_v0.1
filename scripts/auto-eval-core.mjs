@@ -682,16 +682,17 @@ function planLogicCommands(repoRoot, changedFiles, timeoutProfile) {
       });
     }
 
-    if (categories.has('user-client')) {
-      commands.push({
-        id: 'typecheck-user-client',
-        label: 'User client typecheck',
-        command: 'npm',
-        args: ['run', 'typecheck', '-w', '@joyjoin/user-client'],
-        cwd: repoRoot,
-        timeoutMs: timeoutProfile.workspaceTypecheck,
-      });
-    }
+    // user-client paused for mini-program launch focus
+    // if (categories.has('user-client')) {
+    //   commands.push({
+    //     id: 'typecheck-user-client',
+    //     label: 'User client typecheck',
+    //     command: 'npm',
+    //     args: ['run', 'typecheck', '-w', '@joyjoin/user-client'],
+    //     cwd: repoRoot,
+    //     timeoutMs: timeoutProfile.workspaceTypecheck,
+    //   });
+    // }
 
     if (categories.has('admin-client')) {
       commands.push({

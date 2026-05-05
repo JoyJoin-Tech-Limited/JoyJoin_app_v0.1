@@ -27,7 +27,7 @@ Load skills explicitly before building the plan:
 
 ## First-principles velocity (always co-load)
 
-On **every** plan, apply [`.github/skills/first-principles-velocity/SKILL.md`](../skills/first-principles-velocity/SKILL.md) with [`.github/agents/MODEL_CATALOG.md`](../agents/MODEL_CATALOG.md): name the **bottleneck**, sequence **one critical path**, and in `## Model Recommendation for Execution` cite **which catalog dimensions** (ambiguity, blast radius, coordination, etc.) justify the tier—use the **escalation ladder** in the catalog when moving between mini / Sonnet–GPT‑5.4 xhigh / Opus.
+On **every** plan, apply [`.github/skills/first-principles-velocity/SKILL.md`](../skills/first-principles-velocity/SKILL.md) with [`.github/agents/MODEL_CATALOG.md`](../agents/MODEL_CATALOG.md): name the **bottleneck**, sequence **one critical path**, and in `## Model Recommendation for Execution` cite **which catalog dimensions** (ambiguity, blast radius, coordination, etc.) justify the tier—use the **escalation ladder** in the catalog when moving between DeepSeek V4 Flash / DeepSeek V4 Pro / Kimi K2.6 / GLM 5.1.
 
 The same skill’s **Five execution themes** apply here: add a **Non-negotiable constraints** subsection (data, auth, platform, payment, latency) **before** solution-heavy steps; group steps by **vertical slice** and **single owner** per major step where possible; make the next validation step the **smallest proof** (tests + repo guardrails, then smoke/E2E when warranted—not skipping safety); call out **retirements/quarantines** when the plan removes paths; if the plan cannot proceed without a missing decision or env, state **blocked** with what evidence the next agent must produce.
 

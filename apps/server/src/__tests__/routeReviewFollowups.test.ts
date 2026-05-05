@@ -28,19 +28,19 @@ describe('route review follow-ups', () => {
   });
 
   it('aggregates profile stats with count queries', () => {
-    const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const eventPoolsSource = readRepoFile('apps/server/src/routes/domains/eventPools.ts');
     const profileRoutesSource = readRepoFile('apps/server/src/routes/domains/profile.ts');
 
-    expect(routesSource).toContain('sql<number>`count(*)::int`');
+    expect(eventPoolsSource).toContain('sql<number>`count(*)::int`');
     expect(profileRoutesSource).toContain('const [completedEventsResult] = await db');
     expect(profileRoutesSource).toContain('const [connectionsResult] = await db');
   });
 
   it('emits normalized AI metadata on legacy pair-explanation responses', () => {
-    const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const matchExplanationsSource = readRepoFile('apps/server/src/routes/domains/matchExplanations.ts');
     const blindBoxEventsSource = readRepoFile('apps/server/src/routes/domains/blindBoxEvents.ts');
 
-    expect(routesSource).toContain("app.get('/api/event-pool-groups/:groupId/match-explanations'");
+    expect(matchExplanationsSource).toContain("app.get('/api/event-pool-groups/:groupId/match-explanations'");
     expect(blindBoxEventsSource).toContain("app.get('/api/blind-box-events/:eventId/match-explanations'");
     expect(blindBoxEventsSource).toContain('promptVersion: groupAnalysis.promptVersion');
     expect(blindBoxEventsSource).toContain('fromCache: groupAnalysis.fromCache');
@@ -48,11 +48,11 @@ describe('route review follow-ups', () => {
   });
 
   it('persists blind-box attendance confirmations and keeps pool-group age payloads privacy-safe', () => {
-    const routesSource = readRepoFile('apps/server/src/routes.ts');
+    const userEventPoolsSource = readRepoFile('apps/server/src/routes/domains/userEventPools.ts');
 
-    expect(routesSource).toContain("await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed')");
-    expect(routesSource).toContain("ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all')");
-    expect(routesSource).not.toContain('members: groupMembers');
+    expect(userEventPoolsSource).toContain("await storage.updateAttendanceStatus(blindBoxEventId, userId, 'confirmed')");
+    expect(userEventPoolsSource).toContain("ageLabel: formatAge(member.birthdate, member.ageVisible ?? 'hide_all')");
+    expect(userEventPoolsSource).not.toContain('members: groupMembers');
   });
 
   it('returns a stable coupon response object and preserves total-versus-available semantics', () => {

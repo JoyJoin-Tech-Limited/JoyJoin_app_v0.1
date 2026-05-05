@@ -100,7 +100,7 @@ Full schema: `.github/skills/orchestration-turn-reporting/SKILL.md`
 ## Model Recommendation
 
 When ready for execution, include a model recommendation:
-- Recommended Model (from `.github/agents/MODEL_CATALOG.md`)
+- Recommended Model (from `.github/agents/MODEL_CATALOG.md` — DeepSeek V4 Flash/Pro, Kimi K2.6, GLM 5.1)
 - Justification (complexity, scope, token load)
 - Estimated Premium Request Cost
 

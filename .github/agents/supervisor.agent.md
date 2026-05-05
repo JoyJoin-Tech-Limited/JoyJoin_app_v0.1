@@ -161,23 +161,24 @@ When a full block is required, use this shape (keep the **same model catalog and
 Assign models intelligently based on task complexity and coordination pattern. Use the **same catalog** as [`.github/agents/MODEL_CATALOG.md`](./MODEL_CATALOG.md):
 
 **Single-agent moves:**
-- Simple follow-up / single-file tweak → **GPT-5.4 mini**
-- Standard feature work, multi-file but bounded → **GPT-5.4 xhigh** or **Sonnet 4.6**
-- Core engine, payment logic, security-critical → **Opus 4.6** / **Opus 4.7**
+- Simple follow-up / single-file tweak → **DeepSeek V4 Flash**
+- Standard feature work, multi-file but bounded → **DeepSeek V4 Pro**
+- Multi-file coordination, agentic decomposition → **Kimi K2.6**
+- Core engine, payment logic, security-critical, architecture → **GLM 5.1** or **DeepSeek V4 Pro** (thinking + max)
 
 **Multi-agent moves:**
-- **Parallel tracks** (independent work) → cheaper models per track; e.g., two audits can both run **Sonnet 4.6**
+- **Parallel tracks** (independent work) → cheaper models per track; e.g., two audits can both run **DeepSeek V4 Flash**
 - **Pipeline / sequential** → match model to complexity of each step; early steps may be cheaper
-- **Deliberation / convergence** → use strongest model for the convergence agent who integrates conflicting perspectives; e.g., exploration by **Sonnet 4.6**, synthesis by **Opus 4.7**
+- **Deliberation / convergence** → use strongest model for the convergence agent who integrates conflicting perspectives; e.g., exploration by **Kimi K2.6**, synthesis by **GLM 5.1**
 - **Review loop** → reviewer should be equal or stronger than builder to catch subtle gaps
 
-**Steps that are verification-only, clarification, or pure routing** may omit a model or use **GPT-5 mini** / **GPT-5.4 mini**.
+**Steps that are verification-only, clarification, or pure routing** may omit a model or use **DeepSeek V4 Flash**.
 
 **Format:**
-- Single-agent: `1. Backend Engineer — server-domain-architecture — Add pool deadline (suggested model: GPT-5.4 xhigh — touches domain guards and tests)`
+- Single-agent: `1. Backend Engineer — server-domain-architecture — Add pool deadline (suggested model: DeepSeek V4 Pro — touches domain guards and tests)`
 - Multi-agent: append per-sub-bullet, or give one model line per pattern type when all sub-bullets share a tier.
 
-If **every** next step is low-risk doc or single-file trivia, give **one** line after the list: **Default execution model for trivial follow-ups:** GPT-5.4 mini — [why].
+If **every** next step is low-risk doc or single-file trivia, give **one** line after the list: **Default execution model for trivial follow-ups:** DeepSeek V4 Flash — [why].
 
 ## Default workflow
 
@@ -273,7 +274,7 @@ Recommended Orchestration Strategy
 ```
 
 **Adaptive formatting rules:**
-- **Single-agent move** → flat line: `Backend Engineer — server-domain-architecture — Add deadline column (suggested model: GPT-5.4 xhigh)`
+- **Single-agent move** → flat line: `Backend Engineer — server-domain-architecture — Add deadline column (suggested model: DeepSeek V4 Pro)`
 - **Multi-agent move** → grouped with pattern prefix and sub-bullets per agent:
   - `Parallel — Audit both surfaces`
   - `Pipeline — End-to-end payment flow`

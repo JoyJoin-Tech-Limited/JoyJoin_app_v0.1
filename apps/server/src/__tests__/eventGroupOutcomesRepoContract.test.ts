@@ -12,7 +12,7 @@ function readRepoFile(relativePath: string): string {
 
 describe("event group outcomes persistence contract", () => {
   it("guards duplicate submissions with a schema unique index and repository upsert", () => {
-    const schemaSource = readRepoFile("packages/shared/src/schema.ts");
+    const schemaSource = readRepoFile("packages/shared/src/schema/_definitions.ts");
     const repoSource = readRepoFile("apps/server/src/repositories/eventGroupOutcomesRepo.ts");
 
     // guards against regression: duplicate group feedback must collapse to one row per submitter

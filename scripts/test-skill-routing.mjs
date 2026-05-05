@@ -897,6 +897,30 @@ test('admin broadcast notification → notification-system', () => {
 });
 
 // ---------------------------------------------------------------------------
+// cto-mentor — after-task mentor mode
+// ---------------------------------------------------------------------------
+
+test('/mentor command → cto-mentor', () => {
+  const r = routeSkill({ ask: '/mentor' });
+  assertEqual(r.primary_skill, 'cto-mentor');
+});
+
+test('teach me trigger → cto-mentor', () => {
+  const r = routeSkill({ ask: 'Teach me what we just built with the auth middleware.' });
+  assertEqual(r.primary_skill, 'cto-mentor');
+});
+
+test('explain what we just did → cto-mentor', () => {
+  const r = routeSkill({ ask: 'Can you explain what we just did with the database migration?' });
+  assertEqual(r.primary_skill, 'cto-mentor');
+});
+
+test('CTO mentor phrase → cto-mentor', () => {
+  const r = routeSkill({ ask: 'Give me a CTO mentor breakdown of the JWT implementation.' });
+  assertEqual(r.primary_skill, 'cto-mentor');
+});
+
+// ---------------------------------------------------------------------------
 // Validation edge cases
 // ---------------------------------------------------------------------------
 
