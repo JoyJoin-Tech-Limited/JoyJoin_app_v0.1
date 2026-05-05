@@ -50,32 +50,6 @@ export function isDeepSeekThinkingTier(tier: DeepSeekModelTier): boolean {
 /** @deprecated Use isDeepSeekThinkingTier */
 export const isThinkingTier = isDeepSeekThinkingTier;
 
-/**
- * Recommended reasoning_effort level for a DeepSeek tier.
- */
-export function getReasoningEffort(
-  tier: DeepSeekModelTier,
-  override?: 'high' | 'max',
-): 'high' | 'max' | undefined {
-  if (!isDeepSeekThinkingTier(tier)) return undefined;
-  if (override) return override;
-  return tier === 'pro-thinking' ? 'high' : 'high';
-}
-
-/**
- * Build the DeepSeek-specific extra_body payload for thinking mode.
- */
-export function buildThinkingExtraBody(
-  tier: DeepSeekModelTier,
-  override?: 'high' | 'max',
-): { thinking?: { type: 'enabled' }; reasoning_effort?: 'high' | 'max' } | undefined {
-  if (!isDeepSeekThinkingTier(tier)) return undefined;
-  return {
-    thinking: { type: 'enabled' },
-    reasoning_effort: getReasoningEffort(tier, override),
-  };
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Kimi K2.6 (Moonshot AI)
 // ═══════════════════════════════════════════════════════════════════════════════

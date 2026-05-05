@@ -13,7 +13,7 @@
     "build": "npm run dep-check && npm run build:admin && npm run build:server",
     "typecheck": "npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w mini-program && npm run typecheck -w @joyjoin/server",
     "check": "npm run typecheck",
-    "check:clients": "npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w mini-program",
+    "check:clients": "npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w mini-program",
     "check:server": "npm run typecheck -w @joyjoin/server",
     "check:full": "npm run guardrails && npm run lint && npm run test && npm run build",
     "lint": "npm run lint -w @joyjoin/shared && npm run lint -w @joyjoin/admin-client && npm run lint -w @joyjoin/server",
