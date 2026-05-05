@@ -532,7 +532,7 @@ export async function dequeuePendingJob(): Promise<{
   // pending row before either UPDATE, causing duplicate AI work and last-writer
   // wins on pre_generation_results for (socialSessionId, phase). Use one
   // transaction with row-level lock so only one worker claims a job.
-  return db.transaction(async (tx) => {
+  return db.transaction(async (tx: any) => {
     const rows = await tx
       .select({
         id: preGenerationJobs.id,

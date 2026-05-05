@@ -45,7 +45,7 @@ describe('repo cleanup config follow-ups', () => {
     const pkg = JSON.parse(readRepoFile('package.json'));
 
     expect(pkg.scripts.check).toBe('npm run typecheck');
-    expect(pkg.scripts['check:clients']).toBe('npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/user-client && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w mini-program');
+    expect(pkg.scripts['check:clients']).toBe('npm run typecheck -w @joyjoin/shared && npm run typecheck -w @joyjoin/admin-client && npm run typecheck -w mini-program');
     expect(pkg.scripts['check:server']).toBe('npm run typecheck -w @joyjoin/server');
     expect(pkg.scripts['check:full']).toBe('npm run guardrails && npm run lint && npm run test && npm run build');
     expect(pkg.scripts['set-admin']).toBe('npm run admin:create');

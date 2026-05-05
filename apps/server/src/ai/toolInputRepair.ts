@@ -431,13 +431,13 @@ function formatModelReadableError(error: ZodError, toolName: string): string {
   const issues = error.issues.slice(0, 5); // Cap at 5 — avoid overwhelming the model
   const issueLines = issues.map((issue) => {
     const path = issue.path.join('.') || '(root)';
+    // Missing required field (check before general type mismatch)
+    if (issue.code === 'invalid_type' && (issue as any).received === 'undefined') {
+      return `  ${path}: required field is missing`;
+    }
     // Type mismatch
     if (issue.code === 'invalid_type') {
-      return `  ${path}: expected ${issue.expected}, received ${issue.received}`;
-    }
-    // Missing required field
-    if (issue.code === 'invalid_type' && issue.received === 'undefined') {
-      return `  ${path}: required field is missing`;
+      return `  ${path}: expected ${(issue as any).expected}, received ${(issue as any).received}`;
     }
     // Union errors
     if (issue.code === 'invalid_union') {

@@ -160,7 +160,7 @@ export interface ClientSelection {
   model: string;
   provider: 'minimax' | 'deepseek';
   /** DeepSeek thinking configuration to pass via extra_body */
-  thinkingExtraBody?: { thinking?: { type: 'enabled' }; reasoning_effort?: 'high' | 'max' };
+  thinkingExtraBody?: { thinking?: { type: 'enabled' }; reasoning_effort?: 'high' | 'max' | 'medium' };
   /** The reasoning effort level that was resolved for this selection */
   reasoningEffort?: 'high' | 'max';
 }

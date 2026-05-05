@@ -169,6 +169,8 @@ function buildVenueAuditAfter(body: Record<string, unknown> | undefined): Record
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const httpServer = createServer(app);
+
   // 🔧 确保 trust proxy 在 session 之前设置（防止 index.ts 漏掉）
   app.set('trust proxy', 1);
 

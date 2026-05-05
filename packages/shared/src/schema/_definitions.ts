@@ -2213,6 +2213,7 @@ export const venueTimeSlotBookings = pgTable("venue_time_slot_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
   // 关联
+  venueId: varchar("venue_id").notNull().references(() => venues.id),
   timeSlotId: varchar("time_slot_id").notNull().references(() => venueTimeSlots.id),
   eventPoolId: varchar("event_pool_id").references(() => eventPools.id), // 关联的活动池
   eventGroupId: varchar("event_group_id").references(() => eventPoolGroups.id), // 关联的具体小组

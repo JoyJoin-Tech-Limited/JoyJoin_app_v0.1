@@ -1,4 +1,4 @@
-import { type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking, venues, venueDeals, venueTimeSlots, venueTimeSlotBookings, events } from "@shared/schema";
+import { type Venue, type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking, venues, venueDeals, venueTimeSlots, venueTimeSlotBookings, events } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, desc, sql, or, gte, inArray } from "drizzle-orm";
 
@@ -604,10 +604,10 @@ export const venuesRepo: VenuesRepository = {
       )
     );
 
-    const allVenues = await venueQuery;
+    const allVenues: Venue[] = await venueQuery;
     if (allVenues.length === 0) return [];
 
-    const venueIds = allVenues.map(v => v.id);
+    const venueIds = allVenues.map((v: Venue) => v.id);
 
     // Batch load all time slots for all venues in one query
     const allSlots = await db

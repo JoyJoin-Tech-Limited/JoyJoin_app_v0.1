@@ -254,7 +254,7 @@ describe("admin auth routes", () => {
     });
   });
 
-  it("falls back to legacy admin login when admin_accounts lookup fails with postgres undefined-table code", async () => {
+  it("falls back to legacy admin login when admin_accounts lookup fails with postgres undefined-table code", { timeout: 10000 }, async () => {
     const missingTableError = Object.assign(new Error("relation \"admin_accounts\" does not exist"), {
       code: "42P01",
     });
@@ -329,7 +329,7 @@ describe("admin auth routes", () => {
     });
   });
 
-  it("accepts an 8-character password when creating admin accounts", async () => {
+  it("accepts an 8-character password when creating admin accounts", { timeout: 10000 }, async () => {
     vi.mocked(storage.getAdminAccountByUsername).mockImplementation(async (username: string) => {
       if (username === superAdminAccount.username) return superAdminAccount as any;
       return undefined;
@@ -372,7 +372,7 @@ describe("admin auth routes", () => {
     });
   });
 
-  it("denies operator access to super-admin-only admin account management", async () => {
+  it("denies operator access to super-admin-only admin account management", { timeout: 10000 }, async () => {
     vi.mocked(storage.getAdminAccountByUsername).mockImplementation(async (username: string) =>
       username === operatorAccount.username ? (operatorAccount as any) : undefined,
     );

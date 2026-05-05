@@ -640,7 +640,7 @@ describe('edge cases', () => {
 
     expectRepaired(result);
     expectRepairType(result, 'stringified_array');
-    expect(result.repaired?.config?.files).toEqual(['a.ts', 'b.ts']);
+    expect((result.repaired as any)?.config?.files).toEqual(['a.ts', 'b.ts']);
   });
 });
 
