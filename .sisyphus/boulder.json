@@ -1,6 +1,7 @@
 {
-  "active_plan": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/.sisyphus/plans/cleanup-discovery-findings.md",
+  "active_plan": null,
   "started_at": "2026-05-04T11:48:32.789Z",
+  "completed_at": "2026-05-05T17:00:00.000Z",
   "session_ids": [
     "ses_20d470a9dffezoYArwgdPn5ZJW",
     "ses_20ddc415dffedF21pfM5Cy5cYh",
@@ -19,7 +20,8 @@
       "session_id": "ses_20d1efea4ffeYaDP3drXIYSsbC",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-05-04T12:35:26.302Z"
+      "status": "completed",
+      "updated_at": "2026-05-05T17:00:00.000Z"
     },
     "todo:2": {
       "task_key": "todo:2",
@@ -28,7 +30,8 @@
       "session_id": "ses_20cfccf76ffeRrOjSeZTHBRoWr",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-05-04T13:05:04.027Z"
+      "status": "completed",
+      "updated_at": "2026-05-05T17:00:00.000Z"
     },
     "todo:4": {
       "task_key": "todo:4",
@@ -37,8 +40,21 @@
       "session_id": "ses_20c227a5fffeF0385mYbW69wnp",
       "agent": "Sisyphus-Junior",
       "category": "unspecified-high",
-      "updated_at": "2026-05-04T17:14:04.925Z"
+      "status": "completed",
+      "updated_at": "2026-05-05T17:00:00.000Z"
     }
   },
+  "completed_plans": [
+    {
+      "plan": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/.sisyphus/plans/cleanup-discovery-findings.md",
+      "completed_at": "2026-05-05T17:00:00.000Z",
+      "commits": ["17821a46"]
+    },
+    {
+      "plan": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/.sisyphus/plans/wire-3-tier-run-plans.md",
+      "completed_at": "2026-05-05T17:00:00.000Z",
+      "commits": ["17821a46"]
+    }
+  ],
   "agent": "atlas"
 }

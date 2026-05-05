@@ -311,6 +311,120 @@ describe('social icebreaker routes', () => {
     });
   });
 
+  it('creates a session with the requested tier and run plan', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-host');
+      const sessionId = `session-tier-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'blaze' }),
+      });
+      const startBody = await startResponse.json() as any;
+
+      expect(startResponse.status).toBe(200);
+      expect(startBody.state.eventTier).toBe('blaze');
+      expect(startBody.state.runPlan).toMatchObject({
+        compilerId: 'blaze-v1',
+        totalMinutes: 90,
+      });
+    });
+  });
+
+  it('resolves legacy tier strings to canonical tiers on start', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-legacy-host');
+      const sessionId = `session-tier-legacy-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'standard' }),
+      });
+      const startBody = await startResponse.json() as any;
+
+      expect(startResponse.status).toBe(200);
+      expect(startBody.state.eventTier).toBe('glow');
+      expect(startBody.state.runPlan).toMatchObject({
+        compilerId: 'glow-v1',
+        totalMinutes: 60,
+      });
+    });
+  });
+
+  it('allows the host to change tier via set-tier', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-set-host');
+      const sessionId = `session-tier-set-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'breeze' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const setTierResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ tier: 'blaze' }),
+      });
+      const setTierBody = await setTierResponse.json() as any;
+
+      expect(setTierResponse.status).toBe(200);
+      expect(setTierBody.eventTier).toBe('blaze');
+      expect(setTierBody.runPlan).toMatchObject({
+        compilerId: 'blaze-v1',
+        totalMinutes: 90,
+      });
+    });
+  });
+
+  it('rejects set-tier for legacy tier strings', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-reject-host');
+      const sessionId = `session-tier-reject-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const setTierResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ tier: 'premium' }),
+      });
+
+      expect(setTierResponse.status).toBe(400);
+    });
+  });
+
+  it('rejects set-tier with empty or missing tier', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-empty-host');
+      const sessionId = `session-tier-empty-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const setTierResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({}),
+      });
+
+      expect(setTierResponse.status).toBe(400);
+    });
+  });
+
   it('returns normalized AI metadata for warmup topics', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'topics-host');
