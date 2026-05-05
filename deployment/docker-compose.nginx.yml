@@ -13,15 +13,6 @@ services:
     ports:
       - "127.0.0.1:5000:5000"
 
-  joyjoin-user:
-    build:
-      context: ..
-      dockerfile: apps/user-client/Dockerfile
-    container_name: joyjoin-user
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:80"
-
   joyjoin-admin:
     build:
       context: ..

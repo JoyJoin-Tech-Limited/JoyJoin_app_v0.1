@@ -1,0 +1,44 @@
+{
+  "active_plan": "/Users/vincentlai/GitHub/JoyJoin_app_v0.1/.sisyphus/plans/cleanup-discovery-findings.md",
+  "started_at": "2026-05-04T11:48:32.789Z",
+  "session_ids": [
+    "ses_20d470a9dffezoYArwgdPn5ZJW",
+    "ses_20ddc415dffedF21pfM5Cy5cYh",
+    "ses_20d2fe960ffeHJqFee5513dDcR"
+  ],
+  "plan_name": "cleanup-discovery-findings",
+  "session_origins": {
+    "ses_20d470a9dffezoYArwgdPn5ZJW": "direct",
+    "ses_20d2fe960ffeHJqFee5513dDcR": "direct"
+  },
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Remove root `shared/` legacy duplicate",
+      "session_id": "ses_20d1efea4ffeYaDP3drXIYSsbC",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-04T12:35:26.302Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "Wire admin-client test infrastructure",
+      "session_id": "ses_20cfccf76ffeRrOjSeZTHBRoWr",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-04T13:05:04.027Z"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "Expand CI test coverage to all workspaces",
+      "session_id": "ses_20c227a5fffeF0385mYbW69wnp",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-04T17:14:04.925Z"
+    }
+  },
+  "agent": "atlas"
+}

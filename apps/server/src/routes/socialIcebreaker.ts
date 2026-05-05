@@ -33,6 +33,8 @@ import {
   getServerEnabledPhases,
 } from '../socialIcebreakerPhaseConfig';
 import { DEFAULT_STANDARD_RUN_PLAN } from '@shared/phaseRegistry';
+import { getRunPlanForTier } from '@shared/socialIcebreakerRunPlans';
+import { resolveLegacyTier, type TierMachineId } from '@shared/socialIcebreakerTierManifest';
 import { socialIcebreakerAiFeedbackRepo } from '../repositories/socialIcebreakerAiFeedbackRepo';
 import { submitSocialIcebreakerAiFeedbackSchema } from '@shared/schema';
 import {
@@ -92,7 +94,7 @@ startSocialIcebreakerSweep();
 // POST /api/social-icebreaker/start
 // ---------------------------------------------------------------------------
 router.post('/start', async (req: any, res) => {
-  const { sessionId, displayName, eventType } = req.body;
+  const { sessionId, displayName, eventType, eventTier } = req.body;
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
@@ -146,6 +148,8 @@ router.post('/start', async (req: any, res) => {
   // Create new social session — first caller becomes host.
   const socialSessionId = getSocialSessionId(sessionId);
   const now = Date.now();
+  const resolvedTier = resolveLegacyTier(eventTier);
+  const runPlan = getRunPlanForTier(resolvedTier) ?? DEFAULT_STANDARD_RUN_PLAN;
   const newState: SocialSessionState = {
     socialSessionId,
     icebreakerSessionId: sessionId,
@@ -158,12 +162,13 @@ router.post('/start', async (req: any, res) => {
     sessionStartedAt: now,
     completedPhases: [],
     eventType,
+    eventTier: resolvedTier,
     enabledPhases: getServerEnabledPhases(),
     commonGroundCount: 0,
     warmupReadyUserIds: [],
     lieDetectiveCompletedUserIds: [],
     autoAdvanceEnabled: true,
-    runPlan: DEFAULT_STANDARD_RUN_PLAN,
+    runPlan,
   };
 
   try {
@@ -210,6 +215,54 @@ router.post('/start', async (req: any, res) => {
     hostDisplayName: newState.hostDisplayName,
     currentPhase: newState.currentPhase,
     state: await buildClientState(newState),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/set-tier
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/set-tier', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { tier } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only the host can set the tier' });
+  }
+
+  const VALID_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze'];
+  if (!tier || !VALID_TIERS.includes(tier as TierMachineId)) {
+    return res.status(400).json({ error: 'Invalid tier. Must be one of: breeze, glow, blaze' });
+  }
+
+  const newTier = tier as TierMachineId;
+  const runPlan = getRunPlanForTier(newTier);
+  if (!runPlan) {
+    return res.status(500).json({ error: 'Run plan not found for tier' });
+  }
+
+  state.eventTier = newTier;
+  state.runPlan = runPlan;
+  await updateSession(socialSessionId, state);
+
+  logger.info('Social icebreaker tier updated', {
+    socialSessionId,
+    userId,
+    tier: newTier,
+  });
+
+  return res.json({
+    socialSessionId,
+    eventTier: newTier,
+    runPlan,
+    state: await buildClientState(state, userId),
   });
 });
 

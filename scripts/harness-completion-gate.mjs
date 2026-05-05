@@ -451,7 +451,7 @@ function checkMaintainability(changedFiles, fileContents) {
 
     // File size
     const lines = content.split('\n').length;
-    const isFrontend = file.includes('user-client') || file.includes('admin-client') || file.includes('mini-program');
+    const isFrontend = file.includes('admin-client') || file.includes('mini-program');
     const warnLimit = isFrontend ? 1200 : 1500;
     const failLimit = isFrontend ? 1800 : 2500;
     if (lines > failLimit) {

@@ -90,13 +90,7 @@ if [[ ${#MISSING_TLS_FILES[@]} -gt 0 ]]; then
     exit 1
 fi
 
-echo "🐳 Step 1: Rebuild and restart containers..."
-cd "$DEPLOY_DIR"
-echo "🧹 Removing stale joyjoin-api container if present..."
-docker rm -f joyjoin-api || true
-retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
-
-echo "🌐 Step 1.5: Sync and reload host Nginx config..."
+echo "🌐 Step 1: Sync and reload host Nginx config first (prevents 502s during container swap)..."
 if [[ ! -f "$DEPLOY_DIR/nginx/joyjoin.conf" ]]; then
     echo "❌ Missing Nginx config template: $DEPLOY_DIR/nginx/joyjoin.conf"
     exit 1
@@ -107,7 +101,13 @@ sudo systemctl reload nginx
 echo "🔎 Active Nginx joyjoin.conf markers:"
 sudo awk 'NR<=120{print}' /etc/nginx/conf.d/joyjoin.conf | sed -n '/X-JoyJoin-Edge/p;/X-JoyJoin-Proxy/p;/upstream joyjoin_api/,/}/p'
 
-echo "🗄️  Step 2: Run idempotent migrations and schema push..."
+echo "🐳 Step 2: Rebuild and restart containers..."
+cd "$DEPLOY_DIR"
+echo "🧹 Removing stale joyjoin-api container if present..."
+docker rm -f joyjoin-api || true
+retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+
+echo "🗄️  Step 3: Run idempotent migrations and schema push..."
 cd "$REPO_ROOT"
 
 echo "  Running column rename migration..."
@@ -135,7 +135,7 @@ fi
 echo "  Running schema push..."
 npx drizzle-kit push --config=apps/server/drizzle.config.cjs
 
-echo "🏥 Step 3: Verify runtime health..."
+echo "🏥 Step 4: Verify runtime health..."
 API_HOST="127.0.0.1"
 API_PORTS=("5000")
 MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
@@ -163,7 +163,7 @@ for ((health_check_attempt=1; health_check_attempt<=MAX_HEALTH_CHECK_ATTEMPTS; h
     sleep "$HEALTH_CHECK_RETRY_DELAY_SECONDS"
 done
 
-echo "🌐 Step 4: Verify Nginx route /api/health..."
+echo "🌐 Step 5: Verify Nginx route /api/health..."
 if ! curl -fsS -H "Host: yuejuapp.com" "http://127.0.0.1/api/health" > /dev/null; then
     echo "❌ Nginx route check failed at http://127.0.0.1/api/health"
     echo "📋 Debug info:"
@@ -184,7 +184,7 @@ curl -sSI -H "Host: yuejuapp.com" "http://127.0.0.1/api/health" || true
 
 echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
-    echo "  User Portal:  https://yuejuapp.com | https://joyjoinapp.com"
+    echo "  User Portal:  https://yuejuapp.com | https://joyjoinapp.com (maintenance mode — mini-program launch focus)"
     echo "  Admin Portal: https://admin.yuejuapp.com | https://admin.joyjoinapp.com"
     echo "  API Server:   https://api.yuejuapp.com | https://api.joyjoinapp.com"
 else

@@ -4,9 +4,14 @@ import path from 'path'
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
     include: ['src/**/*.{test,spec}.ts', 'src/**/*.{test,spec}.tsx'],
-    exclude: ['node_modules', 'dist'],
+    exclude: [
+      'node_modules',
+      'dist',
+      'src/pages/icebreaker-session/UndercoverWordPhaseView.tsx',
+    ],
+    setupFiles: ['./vitest.setup.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
@@ -15,6 +20,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '@tarojs/taro': path.resolve(__dirname, './__mocks__/taro.ts'),
     },
+  },
+  deps: {
+    inline: [/@tarojs\/components/],
   },
 })

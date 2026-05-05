@@ -1,0 +1,31 @@
+export {
+  matchingThresholds,
+  poolMatchingLogs,
+  matchHistory,
+  archetypePairFeedbackStats,
+  matchingConfig,
+  insertMatchingConfigSchema,
+  matchingResults,
+  insertMatchingResultSchema,
+  matchingShadowExperiments,
+  insertMatchingShadowExperimentSchema,
+  matchingWeightsConfig,
+  matchingWeightsHistory,
+  insertMatchingWeightsConfigSchema,
+  insertMatchingWeightsHistorySchema,
+} from './_definitions.js';
+
+export type {
+  MatchingConfig,
+  InsertMatchingConfig,
+  MatchingResult,
+  InsertMatchingResult,
+  MatchingShadowExperiment,
+  InsertMatchingShadowExperiment,
+  MatchingShadowComparison,
+  MatchingShadowSummary,
+  MatchingWeightsConfig,
+  InsertMatchingWeightsConfig,
+  MatchingWeightsHistory,
+  InsertMatchingWeightsHistory,
+} from './_definitions.js';
