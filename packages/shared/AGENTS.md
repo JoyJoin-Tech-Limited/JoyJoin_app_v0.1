@@ -100,18 +100,21 @@ Shared code must be exported through TWO surfaces:
 
 ---
 
-## 4. Schema File (`schema.ts` — 3,664 lines)
+## 4. Schema Files
 
-The largest single file in the package. Contains all 50+ Drizzle PostgreSQL table definitions.
+Schema is split by domain under `packages/shared/src/schema/`:
+- `_definitions.ts` — canonical Drizzle table definitions (50+ tables)
+- `index.ts` — barrel export re-exporting all domain files
+- Domain barrels: `users.ts`, `events.ts`, `payments.ts`, `personality.ts`, `socialIcebreaker.ts`, `venues.ts`, `matching.ts`, `admin.ts`, `analytics.ts`, `chat.ts`, `misc.ts`
+
+`schema.ts` at package root is a 1-line barrel: `export * from './schema/index.js'`
 
 **Rules:**
-- All DB tables go here (currently a single file — no domain splitting yet)
+- New tables go in `_definitions.ts`, then re-export from the appropriate domain barrel
 - Use Drizzle's `pgTable` with explicit column types
 - Include relations via `relations()` helper
 - **Before any schema change**: load `backend-models-standards` + `database-migration-safety`
 - **Migration workflow**: `db:push` for local dev → `db:generate` for migration SQL → `db:rebuild-journal` to register
-
-**Known issue**: schema.ts should eventually be split by domain (e.g., `schema/users.ts`, `schema/payments.ts`) but this is not yet done.
 
 ---
 
@@ -208,7 +211,7 @@ Run: `npm run test -w @joyjoin/shared`
 
 ## 10. Known Issues (Do Not Make Worse)
 
-1. **`schema.ts` is 3,664 lines** — do not add more to it without discussion. Future: split by domain.
+1. ~~`schema.ts` is 3,664 lines~~ — **RESOLVED 2026-05-05**: Split into 13 domain files under `schema/`.
 2. **`archetypeRegistry.ts.bak`** — stale backup. Do not reference. Remove when safe.
 3. **`socialIcebreaker.ts` not in barrel** — intentional (too large), but document this in any PR touching it.
 4. **Large flat files** — `occupations.ts` (1,064 lines), `interests.ts` (509 lines), `topicCards.ts` (917 lines). Prefer adding new data to new files, not expanding these.

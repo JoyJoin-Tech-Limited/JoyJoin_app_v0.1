@@ -58,7 +58,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `/guide` as core onboarding → active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
 - **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states). Chat registration inline handlers removed from routes.ts in 2026-05-01 refactoring; only `routes/domains/xiaoyue.ts` remains (AI analysis, unwired).
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
-- **`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`** (approved Apr 29 deliberation; `socialIcebreakerTierManifest.ts` exists but not yet wired to client/server)
+- ~~`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`~~ — **WIRED 2026-05-05**: Server `/start` + `/set-tier`, mini-program tier selector, run plans active
 - **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)
 - **Lie Detective V1 (AI-fabricated 2 truths 1 lie) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Design spec: `docs/proposals/spot-the-bot-game-design.md`
 - Root `shared/` directory imports → use `packages/shared/src/` via `@joyjoin/shared` or `@shared/*`
@@ -157,7 +157,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default.
 
-**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, ~50min) / `glow` (畅聊局, ~80min) / `blaze` (狂欢局, ~120min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/unified-icebreaker-system.md`.
+**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, 40min) / `glow` (畅聊局, 60min) / `blaze` (狂欢局, 105min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/unified-icebreaker-system.md`.
 
 **Game Design Agent:** Compiles dynamic run plan per session using 70% rule engine + 30% LLM. Reads archetype mix + behavioral signals (mood, commonGround, completion rate, pulse). Rule engine runs on every compilation (deterministic); LLM enhances selection + ordering with 3s timeout fallback. See `docs/unified-icebreaker-system.md` §5.
 
