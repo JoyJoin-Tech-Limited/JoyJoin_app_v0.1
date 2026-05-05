@@ -59,4 +59,4 @@ Thumbs.db
 # Misc legacy
 server/public
 vite.config.ts.*
-*.tar.gz
+*.tar.gz.gitnexus/
