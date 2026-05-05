@@ -1,0 +1,24 @@
+skill: caveman
+primary_ownership: >
+  Ultra-compressed user-facing communication mode that reduces token usage
+  by dropping filler while preserving technical accuracy.
+use_when:
+  - user asks for terse replies, token reduction, or compressed communication
+  - user says "caveman mode", "talk like caveman", "use caveman", "less tokens", "be brief"
+  - user invokes /caveman
+do_not_use_when:
+  - user asks for detailed explanation or long-form reasoning
+  - security warning or irreversible action confirmation is needed
+  - multi-step sequence where fragment order risks misread
+strong_triggers:
+  - caveman mode
+  - talk like caveman
+  - use caveman
+  - less tokens
+  - be brief
+  - /caveman
+  - stop caveman
+  - normal mode
+related_skills:
+  - skill: skill-authoring-governance
+    when: when creating or reviewing skills that need concise descriptions

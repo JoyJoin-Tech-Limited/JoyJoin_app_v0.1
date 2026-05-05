@@ -1,0 +1,36 @@
+skill: sprint-contract
+primary_ownership: >
+  Sprint Contract lifecycle: drafting, negotiation, and evaluation for Tier 2+
+  tasks in the Harness Engineering Framework. Defines testable acceptance criteria
+  and Harness pillar criteria before implementation begins.
+use_when:
+  - Task is Tier 2 or Tier 3 and needs a contract
+  - Reviewing a draft contract for vagueness or missing edge cases
+  - Evaluating completed work against contract criteria with hard thresholds
+  - Negotiating what "done" looks like
+  - Verifier reviews a Sprint Contract draft
+do_not_use_when:
+  - Tier 1 task (no contract needed)
+  - Task already has an accepted contract in place
+  - Documentation-only or test-only changes
+  - Post-implementation review without a prior contract
+strong_triggers:
+  - write a sprint contract
+  - negotiate done-ness
+  - contract required
+  - tier 2 task
+  - tier 3 task
+  - harness contract
+  - acceptance criteria
+  - what does done look like
+  - sprint-contract
+  - contract evaluation
+  - sprint evaluation
+  - maxEvaluatorIterations
+owned_paths:
+  - /.github/skills/sprint-contract/
+  - /.git/.orchestration/sprints/
+related_skills:
+  - harness-session-guard
+  - harness-completion-gate
+  - testing-and-regression-guardrails

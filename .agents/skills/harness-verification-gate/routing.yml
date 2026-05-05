@@ -1,0 +1,55 @@
+skill: harness-verification-gate
+
+primary_ownership: >
+  Lightweight 5-pillar Harness Engineering Framework validation gate between
+  deliberation consensus and implementation start. Standalone re-check or PR
+  sanity check for reliability, scalability, security, observability, maintainability.
+
+use_when:
+  - user asks to "run the harness gate" or "harness sanity check"
+  - post-deliberation independent verification is needed
+  - PR touches core engines and needs rapid pillar check without full deliberation
+  - implementation agent wants structured engineering sign-off
+  - supervisor needs to verify a plan satisfies pillars before routing
+
+do_not_use_when:
+  - task needs full multi-agent deliberation (use harness-engineering-deliberation)
+  - change is trivial with no pillar risk
+  - full code-review PR review is already underway (co-load instead)
+
+strong_triggers:
+  - harness gate
+  - verification gate
+  - harness sanity check
+  - pillar check
+  - run the harness checklist
+  - engineering sign-off
+  - harness verification
+  - gate this plan
+  - gate this pr
+  - gate this change
+
+owned_files:
+  - .github/skills/harness-verification-gate/SKILL.md
+  - .github/agents/harness-runtime-controller.agent.md
+
+owned_paths:
+  - /.github/skills/harness-verification-gate/SKILL.md
+
+owned_symbols:
+  - Harness Verification Gate
+  - harness-verification-gate
+  - GATE: PASS
+  - GATE: BLOCK
+
+related_skills:
+  - skill: harness-engineering-deliberation
+    when: full deliberation is needed instead of a lightweight gate
+  - skill: code-review
+    when: running the gate inside a PR review workflow
+  - skill: testing-and-regression-guardrails
+    when: verifying tests cover blocking concerns
+  - skill: platform-observability-and-ops
+    when: observability pillar needs deep review
+  - skill: reliability-and-state-integrity
+    when: reliability pillar needs deep review

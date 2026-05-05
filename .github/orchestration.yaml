@@ -1282,6 +1282,103 @@
         "summary": "Infrastructure operations require full repo inspection, configuration editing, and command execution for deployment, observability, and troubleshooting.",
         "recommended_extensions": []
       }
+    },
+    "Atlas": {
+      "file": ".github/agents/atlas.agent.md",
+      "portfolio_role": "orchestrator-operation",
+      "orchestration_status": "workflow-core",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Work manager for boulder workflows: reads plans, manages boulder state, delegates tasks to Sisyphus. Full tool access needed for plan execution and state management.",
+        "recommended_extensions": []
+      }
+    },
+    "Sisyphus": {
+      "file": ".github/agents/sisyphus.agent.md",
+      "portfolio_role": "implementation-worker",
+      "orchestration_status": "workflow-core",
+      "current_tools": [
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "agent"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Task executor for boulder plans. Executes individual implementation tasks with category and skill recommendations. Full tool access needed for code changes.",
+        "recommended_extensions": []
+      }
+    },
+    "Momus": {
+      "file": ".github/agents/momus---plan-critic.agent.md",
+      "portfolio_role": "plan-review",
+      "orchestration_status": "workflow-core",
+      "current_tools": [
+        "read",
+        "search",
+        "glob",
+        "grep"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Plan critic that reviews Prometheus plans before execution. Read-only tools sufficient for verification of references and dependencies.",
+        "recommended_extensions": []
+      }
+    },
+    "Metis": {
+      "file": ".github/agents/metis---plan-consultant.agent.md",
+      "portfolio_role": "plan-advisor",
+      "orchestration_status": "workflow-core",
+      "current_tools": [
+        "read",
+        "search"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Plan structure advisor. Read-only tools sufficient for suggesting wave sequencing and parallelization improvements.",
+        "recommended_extensions": []
+      }
+    },
+    "Oracle": {
+      "file": ".github/agents/oracle.agent.md",
+      "portfolio_role": "compliance-auditor",
+      "orchestration_status": "workflow-core",
+      "current_tools": [
+        "read",
+        "search",
+        "glob",
+        "grep",
+        "execute"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Compliance auditor that verifies deliverables against plan acceptance criteria. Execute access needed for running tests and guardrails.",
+        "recommended_extensions": []
+      }
+    },
+    "Prometheus": {
+      "file": ".github/agents/prometheus.agent.md",
+      "portfolio_role": "plan-generator",
+      "orchestration_status": "workflow-core",
+      "current_tools": [
+        "read",
+        "search",
+        "write",
+        "glob"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Plan generator that converts user requests into structured .sisyphus/plans/ files. Write access needed for plan file creation.",
+        "recommended_extensions": []
+      }
     }
   },
   "skill_bindings": {
