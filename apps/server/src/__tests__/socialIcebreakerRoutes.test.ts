@@ -425,6 +425,49 @@ describe('social icebreaker routes', () => {
     });
   });
 
+  it('rejects set-tier after leaving warmup', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-lock-host');
+      const sessionId = `session-tier-lock-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'breeze' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ mood: 'relaxed' }),
+      });
+
+      await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/warmup/ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ ready: true }),
+      });
+
+      const advanceResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ currentPhase: 'warmup' }),
+      });
+      expect(advanceResponse.status).toBe(200);
+
+      const setTierResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ tier: 'blaze' }),
+      });
+
+      expect(setTierResponse.status).toBe(400);
+      const body = await setTierResponse.json() as { error?: string };
+      expect(body.error).toContain('warmup');
+    });
+  });
+
   it('returns normalized AI metadata for warmup topics', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'topics-host');
