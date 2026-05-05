@@ -940,6 +940,84 @@
         "frontend-component-architecture"
       ],
       "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Atlas",
+      "file": "atlas.agent.md",
+      "description": "Work manager for Oh-My-OpenCode boulder workflows. Reads Prometheus plans, manages boulder state, delegates tasks to Sisyphus, marks progress. Trigger phrases: /start-work, resume boulder, continue plan, atlas.",
+      "tools": ["read", "search", "edit", "execute", "agent"],
+      "argumentHint": "Provide plan name, worktree path (optional), or say 'resume' to continue the last active boulder.",
+      "subagents": ["Sisyphus", "Metis", "Momus", "Oracle", "Prometheus"],
+      "portfolioRole": "orchestrator-operation",
+      "orchestrationPhase": "workflow-core",
+      "handoffs": ["Sisyphus", "Momus", "Oracle", "Prometheus", "Metis"],
+      "skills": ["sprint-contract", "harness-session-guard", "lane-selection-governance", "orchestration-turn-reporting", "first-principles-velocity"],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Sisyphus",
+      "file": "sisyphus.agent.md",
+      "description": "Task worker for Oh-My-OpenCode. Executes individual implementation tasks from plans, applies recommended category and skills, records learnings to notepad, returns verification evidence.",
+      "tools": ["read", "search", "edit", "execute", "agent"],
+      "argumentHint": "Provide plan path, task number, full task spec including Must Do, Must NOT Do, Acceptance Criteria.",
+      "subagents": [],
+      "portfolioRole": "implementation-worker",
+      "orchestrationPhase": "workflow-core",
+      "handoffs": [],
+      "skills": ["backend-models-standards", "server-domain-architecture", "mini-program-frontend-excellence", "process-test-first", "process-refactoring", "harness-completion-gate", "orchestration-turn-reporting"],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Momus",
+      "file": "momus---plan-critic.agent.md",
+      "description": "Plan critic for Oh-My-OpenCode. Reviews Prometheus plans before execution: verifies file references, validates dependencies, checks task executability, reviews QA scenarios. Trigger phrases: momus, plan review, plan critic.",
+      "tools": ["read", "search", "glob", "grep"],
+      "argumentHint": "Provide the absolute path to the plan file to review.",
+      "subagents": [],
+      "portfolioRole": "plan-review",
+      "orchestrationPhase": "workflow-core",
+      "handoffs": ["Prometheus"],
+      "skills": ["orchestration-turn-reporting"],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Metis",
+      "file": "metis---plan-consultant.agent.md",
+      "description": "Plan consultant for Oh-My-OpenCode. Advises on plan structure: wave sequencing, parallelization strategy, dependency ordering, task granularity. Trigger phrases: metis, plan consultant, plan advisor.",
+      "tools": ["read", "search"],
+      "argumentHint": "Provide the plan draft or key constraints (task list, dependencies, target execution time).",
+      "subagents": [],
+      "portfolioRole": "plan-advisor",
+      "orchestrationPhase": "workflow-core",
+      "handoffs": [],
+      "skills": ["agent-coordination-patterns", "first-principles-velocity", "orchestration-turn-reporting"],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Oracle",
+      "file": "oracle.agent.md",
+      "description": "Compliance auditor for Oh-My-OpenCode. Verifies completed work against plan specs, checks Must Do / Must NOT Do compliance, reports per-task APPROVE/REJECT. Trigger phrases: oracle, compliance audit, verify plan, F1, scope fidelity.",
+      "tools": ["read", "search", "glob", "grep", "execute"],
+      "argumentHint": "Provide the plan path and a list of completed task numbers to verify.",
+      "subagents": [],
+      "portfolioRole": "compliance-auditor",
+      "orchestrationPhase": "workflow-core",
+      "handoffs": [],
+      "skills": ["harness-verification-gate", "harness-completion-gate", "code-review", "orchestration-turn-reporting"],
+      "toolingStatus": "sufficient"
+    },
+    {
+      "name": "Prometheus",
+      "file": "prometheus.agent.md",
+      "description": "Plan generator for Oh-My-OpenCode. Converts user requests into structured work plans with waves, dependencies, task specs, and acceptance criteria. Saves to .sisyphus/plans/. Trigger phrases: generate plan, create plan, prometheus, plan this, make a plan.",
+      "tools": ["read", "search", "write", "glob"],
+      "argumentHint": "Describe the work to be done, any constraints or priorities, and who will implement.",
+      "subagents": ["Metis"],
+      "portfolioRole": "plan-generator",
+      "orchestrationPhase": "workflow-core",
+      "handoffs": ["Metis", "Momus"],
+      "skills": ["draft-prd", "first-principles-velocity", "agent-coordination-patterns", "orchestration-turn-reporting", "task-creator"],
+      "toolingStatus": "sufficient"
     }
   ]
 }

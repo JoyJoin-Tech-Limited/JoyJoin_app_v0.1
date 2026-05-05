@@ -2,8 +2,8 @@
 # Docs: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 #
 # Adjust `targets` to the hostname/port where the JoyJoin server runs.
-# For Docker-on-Linux use 172.17.0.1:5001.
-# For Docker Desktop (macOS / Windows) use host.docker.internal:5001.
+# For Docker-on-Linux use 172.17.0.1:5000.
+# For Docker Desktop (macOS / Windows) use host.docker.internal:5000.
 
 global:
   scrape_interval: 15s
@@ -25,7 +25,7 @@ scrape_configs:
   - job_name: joyjoin_server
     static_configs:
       - targets:
-          - host.docker.internal:5001   # change for Linux: 172.17.0.1:5001
+          - host.docker.internal:5000   # change for Linux: 172.17.0.1:5000
     metrics_path: /api/metrics
 
   # Prometheus self-monitoring

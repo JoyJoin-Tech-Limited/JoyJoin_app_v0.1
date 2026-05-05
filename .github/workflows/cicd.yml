@@ -6,7 +6,7 @@ on:
 
 concurrency:
   group: joyjoin-prod-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -15,6 +15,7 @@ jobs:
   guardrails:
     name: Guardrails
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +47,7 @@ jobs:
     needs: [guardrails]
     name: Type Check Shared Package
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -65,6 +67,7 @@ jobs:
     needs: [guardrails]
     name: Type Check Admin Client
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -84,6 +87,7 @@ jobs:
     needs: [guardrails]
     name: Type Check Server
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -103,6 +107,7 @@ jobs:
     needs: [guardrails]
     name: Server Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -122,6 +127,7 @@ jobs:
     needs: [guardrails]
     name: Shared Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -138,6 +144,7 @@ jobs:
     needs: [guardrails]
     name: Admin Client Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -154,6 +161,7 @@ jobs:
     needs: [guardrails]
     name: Mini Program Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -170,6 +178,7 @@ jobs:
     needs: [guardrails]
     name: Harness Completion Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -189,6 +198,7 @@ jobs:
     name: AI Simulation Test
     needs: [lint-shared, lint-admin, lint-server, test-server, test-shared, test-admin-client, test-mini-program, harness-gate]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -210,6 +220,7 @@ jobs:
     name: Production Deployment
     needs: [ai-test, harness-gate]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -573,11 +584,16 @@ jobs:
             debug_log "H4" "database_identity_and_migration_table_probe" "$DB_IDENTITY_JSON"
             # #endregion
 
-            # Run pending migrations before restarting containers so new app code never boots on an old schema.
-            echo "   Running database migrations..."
+            # --- Snapshot DB before migration for safety ---
+            echo "   Creating pre-migration database snapshot..."
+            SNAPSHOT_FILE=~/JoyJoin/deployment/pre-migrate-$(date +%Y%m%d-%H%M%S).sql
+            pg_dump "$DATABASE_URL" --no-owner --no-acl -f "$SNAPSHOT_FILE" 2>&1 || echo "⚠️ pg_dump failed (non-fatal — continuing with migration)"
+
+            # Run pending migrations with statement timeout guard to prevent hangs
+            echo "   Running database migrations (statement_timeout=5min)..."
             MIGRATION_LOG=$(mktemp)
             # #region agent log
-            if ! CI=1 npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1; then
+            if ! CI=1 PGOPTIONS="-c statement_timeout=300000" npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1; then
               MIGRATION_EXIT_CODE=$?
               echo "❌ Database migration failed. Drizzle output:"
               debug_log "H3" "drizzle_migrate_failed" "{\"exitCode\":${MIGRATION_EXIT_CODE:-1},\"logPath\":\"$MIGRATION_LOG\"}"
@@ -704,3 +720,29 @@ jobs:
             echo "🧭 Disk after:"
             df -h /
             echo "✅ Deployment successful!"
+
+      - name: Notify deployment failure
+        if: failure()
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B "$GITHUB_SHA" | head -1)
+          echo "::error::Deploy failed for commit ${GITHUB_SHA:0:7}: $COMMIT_MSG"
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --key "$WECOM_BOT_KEY" \
+              --title "❌ Deploy Failed" \
+              --content "Commit: ${GITHUB_SHA:0:7} — $COMMIT_MSG\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Notify deployment success
+        if: success() && github.event_name == 'push'
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
+        run: |
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --key "$WECOM_BOT_KEY" \
+              --title "✅ Deploy Success" \
+              --content "Commit ${GITHUB_SHA:0:7} deployed to production"
+          fi

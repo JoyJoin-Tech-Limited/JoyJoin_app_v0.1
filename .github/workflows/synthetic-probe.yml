@@ -51,14 +51,14 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        # Replace with your preferred notification action (Slack, PagerDuty, etc.)
-        # Example using slackapi/slack-github-action:
-        #   uses: slackapi/slack-github-action@v1
-        #   with:
-        #     channel-id: C_INCIDENTS
-        #     payload: '{"text":"🚨 JoyJoin synthetic probe FAILED. Check GitHub Actions for details."}'
-        #   env:
-        #     SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        env:
+          WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |
           echo "::error::Synthetic probe failed — server may be down or unhealthy."
           echo "Runbook: https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinsyntheticprobefailed"
+          if [ -n "$WECOM_BOT_KEY" ]; then
+            node scripts/wecom-notify.mjs \
+              --key "$WECOM_BOT_KEY" \
+              --title "🚨 Synthetic Probe FAILED" \
+              --content "Production server may be down or unhealthy.\nCheck: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi

@@ -19,6 +19,17 @@ These agents are migrated from the Kimi Code agent portfolio (`.github/agents/`)
 | `product-manager.md` | product-manager | PRDs, user stories, scope |
 | `debug.md` | debug | Bug investigation and resolution |
 
+### Oh-My-OpenCode workflow agents (boulder / plans)
+
+| Agent file | Alias | Role |
+|---|---|---|
+| `atlas.md` | atlas | Work manager — reads plans, delegates tasks |
+| `sisyphus.md` | sisyphus | Task worker — executes plan tasks |
+| `prometheus.md` | prometheus | Plan generator — creates .sisyphus/plans/*.md |
+| `momus.md` | momus | Plan critic — reviews plans before execution |
+| `metis.md` | metis | Plan consultant — advises on structure |
+| `oracle.md` | oracle | Compliance auditor — verifies deliverables |
+
 ## Invocation
 
 - **@mention** in chat: `@supervisor`, `@researcher`, etc.
