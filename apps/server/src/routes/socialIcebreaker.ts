@@ -1563,7 +1563,37 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only the host can reveal quip battle results' });
+  }
+
+  if (state.currentPhase !== 'quip_battle') {
+    return res.status(400).json({ error: 'Not in quip_battle phase' });
+  }
+
+  if (state.quipBattleRevealed && Array.isArray(state.quipBattleResults) && state.quipBattleResults.length > 0) {
+    return res.json({
+      results: state.quipBattleResults,
+      allVoted: hasAllRosterParticipantsResponded(state.quipBattleVotedUserIds, state.playerCount),
+    });
+  }
+
   const prompts = state.quipBattlePrompts || [];
+  if (prompts.length === 0) {
+    return res.status(400).json({ error: 'Quip battle prompts not generated' });
+  }
+
+  if (!hasAllRosterParticipantsResponded(state.quipBattleSubmittedUserIds, state.playerCount)) {
+    return res.status(400).json({ error: 'All participants must submit answers before revealing results' });
+  }
+
+  if (!hasAllRosterParticipantsResponded(state.quipBattleVotedUserIds, state.playerCount)) {
+    return res.status(400).json({ error: 'All participants must vote before revealing results' });
+  }
+
   const answers = state.quipBattleAnswers || [];
   const votes = state.quipBattleVotes || [];
 
@@ -1605,7 +1635,10 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   state.quipBattleRevealed = true;
   await updateSession(socialSessionId, state);
 
-  return res.json({ results, allVoted: (state.quipBattleVotedUserIds || []).length >= (state.playerCount || 1) });
+  return res.json({
+    results,
+    allVoted: hasAllRosterParticipantsResponded(state.quipBattleVotedUserIds, state.playerCount),
+  });
 });
 
 // ---------------------------------------------------------------------------
