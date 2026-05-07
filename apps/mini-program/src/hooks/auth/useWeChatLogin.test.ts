@@ -9,7 +9,7 @@ describe('useWeChatLogin navigation handoff', () => {
   // reLaunch directly, which breaks when nextStep resolves to a tabBar page.
   it('awaits the route-aware onboarding helper instead of raw reLaunch', () => {
     expect(hookSource).toContain(
-      "import { navigateToMiniProgramNextStep } from '../lib/onboarding/onboardingNavigation'",
+      "import { navigateToMiniProgramNextStep } from '../../lib/onboarding/onboardingNavigation'",
     )
     expect(hookSource).toContain(
       "await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })",

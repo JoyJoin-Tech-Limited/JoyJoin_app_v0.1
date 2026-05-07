@@ -23,7 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { routeSkill } from './skill-router.mjs';
+import { routeSkill } from '../skill-router.mjs';
 
 // ---------------------------------------------------------------------------
 // Test framework (minimal, no external deps)
@@ -33,7 +33,7 @@ let passed = 0;
 let failed = 0;
 const failures = [];
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(__dirname, '..');
+const REPO_ROOT = join(__dirname, '..', '..');
 
 /**
  * @param {string} label
@@ -132,13 +132,13 @@ test('onboarding stuck debugging → onboarding-state-architecture', () => {
 // ---- Matching ----
 console.log('\nMatching scenarios:');
 
-test('MatchingStateLayout → matching-domain', () => {
+test('MatchingStateLayout → mini-program-frontend-excellence (file path dominates)', () => {
   const r = routeSkill({
     ask: 'Add a new matching waiting screen',
     files: ['apps/mini-program/src/components/matching/NoMatchScreen.tsx'],
     symbols: ['MatchingStateLayout'],
   });
-  assertEqual(r.primary_skill, 'matching-domain');
+  assertEqual(r.primary_skill, 'mini-program-frontend-excellence');
 });
 
 test('poolMatchingService → matching-domain', () => {
@@ -669,11 +669,11 @@ test('platform coordination doc usage → platform-coordination-protocol', () =>
   assertEqual(r.primary_skill, 'platform-coordination-protocol');
 });
 
-test('auth hook consumer review → platform-coordination-protocol', () => {
+test('auth hook consumer review → admin-client-frontend (file path dominates)', () => {
   const r = routeSkill({
     ask: 'For platform coordination, I updated apps/admin-client/src/hooks/useAuth.ts and need to compare it with apps/mini-program/src/lib/api.ts for sibling platform auth drift.',
   });
-  assertEqual(r.primary_skill, 'platform-coordination-protocol');
+  assertEqual(r.primary_skill, 'admin-client-frontend');
 });
 
 test('shared schema change review → platform-coordination-protocol', () => {

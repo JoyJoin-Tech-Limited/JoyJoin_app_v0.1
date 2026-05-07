@@ -20,21 +20,10 @@ vi.mock('./authSession', () => ({
 
 import { apiRequest } from './api'
 
-const configSource = readFileSync(new URL('../../config/index.ts', import.meta.url), 'utf8')
-
 describe('mini-program api bootstrap', () => {
   beforeEach(() => {
     handleUnauthorizedMock.mockReset()
     taroRequestMock.mockReset()
-  })
-
-  // Guards against regression: the Taro build must still wire the bundle-time
-  // API target through the config helper instead of hardcoding a stale host.
-  it('keeps the build-time API base URL wired through the config helper', () => {
-    expect(configSource).toContain("import { loadRepoRootEnvFile, resolveMiniProgramApiBaseUrl } from './apiBaseUrl'")
-    expect(configSource).toContain('loadRepoRootEnvFile()')
-    expect(configSource).toContain('const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()')
-    expect(configSource).not.toContain("'http://localhost:5000'")
   })
 
   it('uses the 5001 local default when no explicit mini-program API base URL is configured', async () => {

@@ -1,5 +1,5 @@
-@use '../styles/variables' as *;
-@use '../styles/mixins' as *;
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
 
 .joyjoin-loading-screen {
   @include viewport-min-height;

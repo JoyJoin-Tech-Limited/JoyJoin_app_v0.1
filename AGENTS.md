@@ -107,7 +107,18 @@ npm run check:full                    # guardrails + lint + tests + build
 npm run harness:gate                  # 5-pillar quality gate
 ```
 
-**Migration discipline:** local dev → `db:push`; before commit → `db:generate` then `db:rebuild-journal`; production → `db:migrate` only.
+**Migration discipline (Neon PostgreSQL):**
+- Local dev → `npm run db:push`
+- Before commit → `npm run db:generate` then `npm run db:rebuild-journal`
+- Production → `drizzle-kit push --force` via CI/CD deploy script
+  > ⚠️ `drizzle-kit migrate` is broken on Neon (exits code 1 silently with drizzle-kit v0.31.10);
+    `push --force` is the working production path.
+  > ⚠️ `push --force` is destructive — it drops columns/tables not in schema.
+    The deploy script creates a `pg_dump` snapshot before push as a safety net.
+  > ⚠️ `DATABASE_URL` in CI must use the **direct** Neon endpoint
+    (not the `-pooler` endpoint) for DDL operations:
+    `ep-<project>.us-east-1.aws.neon.tech` (without `-pooler`).
+    The pooler rejects `CREATE TABLE` / `ALTER TABLE`.
 
 ---
 

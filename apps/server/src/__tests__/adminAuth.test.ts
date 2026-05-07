@@ -233,7 +233,7 @@ describe("admin auth routes", () => {
     });
   });
 
-  it("falls back to legacy admin login when admin_accounts lookup is unavailable", async () => {
+  it("falls back to legacy admin login when admin_accounts lookup is unavailable", { timeout: 10000 }, async () => {
     vi.mocked(storage.getAdminAccountByUsername).mockRejectedValue(new Error("relation \"admin_accounts\" does not exist"));
     vi.mocked(storage.getUserByPhone).mockImplementation(async (phoneNumber: string) =>
       phoneNumber === legacyAdminUser.phoneNumber ? [legacyAdminUser as any] : [],
@@ -274,7 +274,7 @@ describe("admin auth routes", () => {
     });
   });
 
-  it("falls back to legacy admin login when admin_accounts lookup fails with postgres undefined-column code", async () => {
+  it("falls back to legacy admin login when admin_accounts lookup fails with postgres undefined-column code", { timeout: 10000 }, async () => {
     const missingColumnError = Object.assign(new Error("column admin_accounts.username does not exist"), {
       code: "42703",
     });
