@@ -58,3 +58,38 @@ jobs:
           path: apps/mini-program/dist
           retention-days: 30
           if-no-files-found: error
+
+      - name: Upload to WeChat Mini Program (production)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          
+          if [ -z "${WECHAT_PRIVATE_KEY:-}" ]; then
+            echo "⚠️ WECHAT_PRIVATE_KEY secret not set — skipping upload"
+            echo "   Set it in GitHub repo Settings → Secrets → Actions"
+            exit 0
+          fi
+          
+          echo "📱 Uploading mini-program to WeChat..."
+          
+          PRIVATE_KEY_FILE=$(mktemp)
+          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$PRIVATE_KEY_FILE"
+          chmod 600 "$PRIVATE_KEY_FILE"
+          
+          VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
+          DESCRIPTION="Auto-deploy: ${GITHUB_SHA:0:7}"
+          
+          echo "   Version: $VERSION"
+          echo "   Robot: 1"
+          
+          npx miniprogram-ci upload \
+            --pp apps/mini-program \
+            --pkp "$PRIVATE_KEY_FILE" \
+            --uv "$VERSION" \
+            --ud "$DESCRIPTION" \
+            --rp 1
+          
+          rm -f "$PRIVATE_KEY_FILE"
+          echo "✅ WeChat upload complete!"
