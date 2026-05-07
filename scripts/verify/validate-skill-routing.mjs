@@ -35,7 +35,7 @@ import {
   REPO_ROOT,
   ROUTING_REQUIRED_FIELDS,
   SKILLS_DIR,
-} from './skill-routing-metadata.mjs';
+} from '../skill-routing-metadata.mjs';
 
 /**
  * @typedef {{ skill: string, errors: string[], warnings: string[] }} ValidationResult
