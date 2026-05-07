@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const INPUT_DIR = path.join(ROOT, 'raw-assets/personality/archetypes')
+const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
 const OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
 
 const THUMB_SIZE = 60

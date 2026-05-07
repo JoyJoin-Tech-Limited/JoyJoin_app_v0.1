@@ -1,7 +1,7 @@
 // my path:/Users/felixg/projects/JoyJoin3/client/src/pages/admin/AdminEventPoolsPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import FieldInfoTooltip from "@/components/FieldInfoTooltip";
+import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import {
   Card,
   CardContent,

@@ -17,16 +17,16 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Sparkles, PartyPopper, Gift, Star, RotateCcw, Clock, Users, Brain, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import MiniRadarChart from "@/components/MiniRadarChart";
-import { personalityQuestionsV2, type QuestionV2, type TraitScores } from "@/data/personalityQuestionsV2";
+import MiniRadarChart from "@/components/profile/MiniRadarChart";
+import { personalityQuestionsV2, type QuestionV2, type TraitScores } from "@/static-data/personalityQuestionsV2";
 import { 
   getCalibrationQuestion, 
   shouldTriggerLowEnergyCalibration,
   getLowEnergyCalibrationQuestions,
   type LowEnergyCalibrationQuestion 
-} from "@/data/adaptiveCalibrationQuestions";
+} from "@/static-data/adaptiveCalibrationQuestions";
 import { evaluatePersonality } from "@/lib/cumulativeScoringSystem";
-import CelebrationConfetti from "@/components/CelebrationConfetti";
+import CelebrationConfetti from "@/components/profile/CelebrationConfetti";
 
 const PERSONALITY_TEST_CACHE_KEY = "joyjoin_personality_test_progress";
 const CACHE_EXPIRY_DAYS = 7;

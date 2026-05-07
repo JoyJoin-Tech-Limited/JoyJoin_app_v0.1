@@ -39,7 +39,7 @@ import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterByI
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import AmapPicker from "@/components/AmapPicker";
+import AmapPicker from "@/components/discover/AmapPicker";
 
 interface VenueTimeSlot {
   id: string;

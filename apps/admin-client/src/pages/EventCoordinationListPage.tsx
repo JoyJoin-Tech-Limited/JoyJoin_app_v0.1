@@ -1,5 +1,5 @@
-import MobileHeader from "@/components/MobileHeader";
-import BottomNav from "@/components/BottomNav";
+import MobileHeader from "@/components/navigation/MobileHeader";
+import BottomNav from "@/components/navigation/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, MessageSquare, Users, Lock } from "lucide-react";
@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
-import ParticipantAvatars from "@/components/ParticipantAvatars";
+import ParticipantAvatars from "@/components/discover/ParticipantAvatars";
 import type { Event } from "@shared/schema";
 
 type EventWithParticipants = Event & {

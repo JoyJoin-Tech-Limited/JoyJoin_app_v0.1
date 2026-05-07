@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const INPUT_DIR = path.join(ROOT, 'raw-assets/personality/xiaoyue')
+const INPUT_DIR = path.join(ROOT, 'assets-source/personality/xiaoyue')
 const OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/xiaoyue')
 
 const MAX_WIDTH = 480

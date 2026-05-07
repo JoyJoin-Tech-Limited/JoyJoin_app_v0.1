@@ -1,10 +1,10 @@
-import MobileHeader from "@/components/MobileHeader";
-import BottomNav from "@/components/BottomNav";
-import SocialRoleCard from "@/components/SocialRoleCard";
-import PersonalityRadarChart from "@/components/PersonalityRadarChart";
-import QuizIntro from "@/components/QuizIntro";
-import EditFullProfileDialog from "@/components/EditFullProfileDialog";
-import GamificationCard from "@/components/GamificationCard";
+import MobileHeader from "@/components/navigation/MobileHeader";
+import BottomNav from "@/components/navigation/BottomNav";
+import SocialRoleCard from "@/components/profile/SocialRoleCard";
+import PersonalityRadarChart from "@/components/profile/PersonalityRadarChart";
+import QuizIntro from "@/components/profile/QuizIntro";
+import EditFullProfileDialog from "@/components/profile/EditFullProfileDialog";
+import GamificationCard from "@/components/profile/GamificationCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

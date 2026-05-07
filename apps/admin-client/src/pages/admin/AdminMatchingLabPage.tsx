@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
-import FieldInfoTooltip from "@/components/FieldInfoTooltip";
+import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";

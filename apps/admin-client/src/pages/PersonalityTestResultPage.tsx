@@ -4,7 +4,7 @@ import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import PersonalityRadarChart from '@/components/PersonalityRadarChart';
+import PersonalityRadarChart from '@/components/profile/PersonalityRadarChart';
 import { Sparkles, Users, TrendingUp, AlertTriangle, Heart, Share2, Quote, Target } from 'lucide-react';
 import type { RoleResult } from '@shared/schema';
 import { queryClient } from '@/lib/queryClient';

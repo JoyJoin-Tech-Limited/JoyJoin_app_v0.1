@@ -3,7 +3,7 @@
  * Optimize Lovart-generated PNG assets for the mini-program.
  *
  * Workflow:
- *   1. Download PNG masters from Lovart → raw-assets/lovart/
+ *   1. Download PNG masters from Lovart → assets-source/lovart/
  *   2. Run: npm run optimize:lovart
  *   3. Optimized WebP + compressed PNG are written to src/assets/lovart/
  *
@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const INPUT_DIR = path.join(ROOT, 'raw-assets/lovart')
+const INPUT_DIR = path.join(ROOT, 'assets-source/lovart')
 const OUTPUT_DIR = path.join(ROOT, 'src/assets/lovart')
 
 const MAX_WIDTH = 800

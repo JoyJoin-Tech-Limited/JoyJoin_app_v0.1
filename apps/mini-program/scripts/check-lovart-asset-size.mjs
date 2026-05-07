@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 
-const RAW_DIR = path.join(ROOT, 'raw-assets/lovart')
+const RAW_DIR = path.join(ROOT, 'assets-source/lovart')
 const OUT_DIRS = [
   path.join(ROOT, 'src/assets/lovart'),
   path.join(ROOT, 'src/assets/empty-state'),

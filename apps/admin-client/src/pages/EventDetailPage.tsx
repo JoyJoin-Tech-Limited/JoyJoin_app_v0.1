@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, MapPin, DollarSign, Users, ChevronDown, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
-import GroupSparkMeter from "@/components/GroupSparkMeter";
+import GroupSparkMeter from "@/components/event/GroupSparkMeter";
 import { useState } from "react";
 
 export default function EventDetailPage() {

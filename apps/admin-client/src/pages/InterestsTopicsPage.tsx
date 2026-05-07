@@ -12,9 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, Star, Info, Flame, Sparkles, Ban } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
-import RegistrationProgress from "@/components/RegistrationProgress";
-import CelebrationConfetti from "@/components/CelebrationConfetti";
-import InterestMapping from "@/components/InterestMapping";
+import RegistrationProgress from "@/components/_archive/RegistrationProgress";
+import CelebrationConfetti from "@/components/profile/CelebrationConfetti";
+import InterestMapping from "@/components/profile/InterestMapping";
 
 // Interest categories with emojis - displayed in two tiers (hot first, then more)
 // Heat values based on platform big data (基于平台大数据)

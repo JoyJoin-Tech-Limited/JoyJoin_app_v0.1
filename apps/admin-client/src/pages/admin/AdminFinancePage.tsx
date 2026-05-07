@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { DollarSign, CreditCard, TrendingUp, Receipt, Store, RotateCcw, HelpCircle } from "lucide-react";
-import FieldInfoTooltip from "@/components/FieldInfoTooltip";
+import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { queryClient } from "@/lib/queryClient";

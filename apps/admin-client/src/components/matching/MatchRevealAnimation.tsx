@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Share2, Sparkles, RotateCcw, RotateCw, Theater, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingProgressTracker } from '@/lib/loadingProgressTracker';
-import { AnimationLoadingScreen } from '@/components/AnimationLoadingScreen';
+import { AnimationLoadingScreen } from '@/components/animation/AnimationLoadingScreen';
 import { archetypeAvatars, archetypeGradients } from '@/lib/archetypeAvatars';
 import { 
   archetypeAnimations, 
