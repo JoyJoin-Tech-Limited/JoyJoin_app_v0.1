@@ -226,7 +226,7 @@ If **every** next step is low-risk doc or single-file trivia, give **one** line 
    - `maxEvaluatorIterations: 3`
    - Expected verification method summary
 5. Require each delegated agent to return a compact `turnSummary` JSON object that follows the shared orchestration turn-reporting schema.
-6. Persist any child summaries that were not already recorded by calling `node scripts/orchestration-supervisor.mjs record-summary` with the validated JSON payload.
+6. Persist any child summaries that were not already recorded by calling `node scripts/orchestration/orchestration-supervisor.mjs record-summary` with the validated JSON payload.
 7. Build one canonical `supervisor_turn_report` JSON object from the child summaries for persistence and runtime state.
 8. Persist the supervisor turn report through the same recorder command.
 9. Keep deterministic checks explicit: Auto-Eval for dirty-worktree gating, git hooks for commit-time enforcement, and GitHub workflows for PR or scheduled orchestration summaries.

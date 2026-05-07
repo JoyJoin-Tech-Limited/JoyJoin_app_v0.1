@@ -46,7 +46,7 @@ import {
   venues, venueTimeSlots, matchHistory, connections, reports, payments,
   type ChatMessage, type User
 } from "@shared/schema";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { logger } from "../../lib/logger";

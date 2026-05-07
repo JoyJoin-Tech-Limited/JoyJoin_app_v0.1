@@ -1,8 +1,8 @@
 import { Image, Text, View } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useMemo } from 'react'
-import Card from '../../../../../components/Card'
-import { COLOR_PRIMARY } from '../../../../../lib/uiConstants'
+import Card from '../../../../../components/ui/Card'
+import { COLOR_PRIMARY } from '../../../../../lib/utils/uiConstants'
 import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,

@@ -1,11 +1,11 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useRouter } from '@tarojs/taro'
-import LoadingScreen from '../../components/LoadingScreen'
-import Button from '../../components/Button'
-import Card from '../../components/Card'
-import JoyJoinIcon from '../../components/JoyJoinIcon'
-import StatusCard from '../../components/StatusCard'
-import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
+import LoadingScreen from '../../components/loading/LoadingScreen'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import StatusCard from '../../components/ui/StatusCard'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import {
   MatchingHero,
   MatchingStatusDetailSections,

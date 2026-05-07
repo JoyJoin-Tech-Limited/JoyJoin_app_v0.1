@@ -51,8 +51,10 @@ describe('repo cleanup config follow-ups', () => {
     expect(pkg.scripts['set-admin']).toBe('npm run admin:create');
   });
 
-  it('documents the active onboarding module instead of the pre-consolidation layout', () => {
-    const onboardingReadme = readRepoFile('apps/user-client/src/features/onboarding/README.md');
+  // Archived: apps/user-client was moved to archived/workspaces/user-client/
+  // Onboarding is now server-driven; mini-program is the only active client.
+  it.skip('documents the active onboarding module instead of the pre-consolidation layout', () => {
+    const onboardingReadme = readRepoFile('archived/workspaces/user-client/src/features/onboarding/README.md');
 
     expect(onboardingReadme).toContain('apps/user-client/src/features/onboarding/active/');
     expect(onboardingReadme).toContain('pages/WeChatAuthGatePage.tsx');

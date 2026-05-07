@@ -5,22 +5,22 @@ import { useRef } from 'react'
 import { getCurrentUser, getUserCoupons } from '@shared/api'
 import { getOnboardingStepLabel, nextStepToOnboardingStep } from '@shared/onboarding'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import {
   clearMiniProgramAuthSession,
   getApiErrorStatusCode,
   isUnauthorizedApiError,
-} from '../../lib/authSession'
-import { useMiniPageGate } from '../../hooks/useMiniPageGate'
-import { useCustomTabBarSync } from '../../hooks/useCustomTabBarSync'
+} from '../../lib/api/authSession'
+import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
+import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import type { AuthUser } from '../../hooks/useAuth'
-import { logError, logInfo } from '../../lib/logger'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
-import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
-import ArchetypeHead from '../../components/ArchetypeHead'
-import Card from '../../components/Card'
-import Button from '../../components/Button'
-import { MINI_PROGRAM_TAB_INDEX } from '../../lib/tabBarConfig'
+import { logError, logInfo } from '../../lib/utils/logger'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import { MINI_PROGRAM_TAB_INDEX } from '../../lib/navigation/tabBarConfig'
 import './index.scss'
 
 export default function ProfilePage() {

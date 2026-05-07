@@ -99,5 +99,5 @@ jobs:
           fi
 
           ARGS="$ARGS --verbose"
-          node scripts/auto-test.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          node scripts/auto/auto-test.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT

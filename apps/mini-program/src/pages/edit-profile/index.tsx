@@ -8,12 +8,12 @@ import {
   type InterestSelectionLevel,
 } from '@shared/api'
 import { getActiveInterests, MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import { useAuth, useInvalidateAuth } from '../../hooks/useAuth'
-import { useMiniPageGate } from '../../hooks/useMiniPageGate'
-import { logInfo, logError } from '../../lib/logger'
-import Card from '../../components/Card'
-import Button from '../../components/Button'
+import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
+import { logInfo, logError } from '../../lib/utils/logger'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────

@@ -26,8 +26,8 @@ relatedPaths:
   - .github/skills/mini-program-frontend-excellence/SKILL.md
   - .github/skills/wow-elements/SKILL.md
   - .github/skills/frontend-component-architecture/SKILL.md
-  - apps/user-client/src/assets/fonts/fonts.css
-  - apps/user-client/tailwind.config.ts
+  - archived/workspaces/user-client/src/assets/fonts/fonts.css
+  - archived/workspaces/user-client/tailwind.config.ts
 sources:
   - .github/skills/joyjoin-brand-guidelines/SKILL.md
   - .github/skills/lovart-design-workflow/SKILL.md
@@ -71,7 +71,7 @@ A Lovart-generated brand prompt was submitted for analysis. It conflicts with th
 | Mini-program | AlimamaFangYuanTiVF-Thin via `Taro.loadFontFace()` | "System fonts only" | ✗ **FALSE** |
 
 **Files:**
-- Web: `apps/user-client/src/assets/fonts/fonts.css` (lines 48–56, 117)
+- Web: `archived/workspaces/user-client/src/assets/fonts/fonts.css` (lines 48–56, 117)
 - Mini-program: `apps/mini-program/src/lib/brandFont.ts` (lines 8–48), `apps/mini-program/src/styles/_variables.scss` (lines 33–35)
 
 **Recommendation:** Unify to **AlimamaFangYuanTiVF-Thin everywhere**. Rationale:

@@ -1,10 +1,10 @@
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import Taro from '@tarojs/taro'
 import { useEffect } from 'react'
-import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
+import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { useAuth } from '../../../hooks/useAuth'
-import { navigateToMiniProgramNextStep } from '../../../lib/onboardingNavigation'
-import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
+import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 
 /**
  * OnboardingEntryPage — server-driven redirect hub.

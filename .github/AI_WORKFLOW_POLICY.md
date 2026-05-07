@@ -220,7 +220,7 @@ When you **do** extend the portfolio, follow a consistent sequence so capabiliti
 
 ### Custom orchestration outside the IDE
 
-The in-repo graph (hooks, `Supervisor`, turn summaries) is **guidance and handoff**, not a peer-to-peer multi-agent runtime. You **can** add **custom orchestration** around it: e.g. CI jobs, `scripts/orchestration-supervisor.mjs`, scheduled workflows, or external runners that aggregate multiple human or API sessions—provided you keep **deterministic authority** and **repo-memory** rules in [`.github/ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) and [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md). New automation must not imply hidden autonomous execution without an explicit approval boundary.
+The in-repo graph (hooks, `Supervisor`, turn summaries) is **guidance and handoff**, not a peer-to-peer multi-agent runtime. You **can** add **custom orchestration** around it: e.g. CI jobs, `scripts/orchestration/orchestration-supervisor.mjs`, scheduled workflows, or external runners that aggregate multiple human or API sessions—provided you keep **deterministic authority** and **repo-memory** rules in [`.github/ORCHESTRATION_GOVERNANCE.md`](./ORCHESTRATION_GOVERNANCE.md) and [`../docs/ai-agent-harness-separation-strategy.md`](../docs/ai-agent-harness-separation-strategy.md). New automation must not imply hidden autonomous execution without an explicit approval boundary.
 
 ## Working checklist
 

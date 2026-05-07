@@ -1,7 +1,8 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { venueMatchingService } from "../../venueMatchingService";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { storage } from "../../storage";
 import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "../../userMatchingService";
 import type { User } from "@shared/schema";
@@ -10,7 +11,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
   // ============ VENUE MATCHING ============
   
   // Find matching venues for event criteria
-  app.post("/api/venues/match", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/venues/match", requireAuth, async (req, res) => {
     try {
       const { eventType, theme, participantCount, preferredDistrict, preferredCity, cuisinePreferences, priceRange } = req.body;
       
@@ -30,13 +31,13 @@ export function registerMatchingConfigRoutes(app: Express): void {
       
       res.json({ venues: matches });
     } catch (error) {
-      console.error("Error matching venues:", error);
+      logger.error("Error matching venues", { error: String(error) });
       res.status(500).json({ message: "Failed to match venues" });
     }
   });
   
   // Get best venue for event
-  app.post("/api/venues/select-best", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/venues/select-best", requireAuth, async (req, res) => {
     try {
       const { eventType, theme, participantCount, preferredDistrict, preferredCity, cuisinePreferences, priceRange } = req.body;
       
@@ -60,7 +61,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
       
       res.json(bestMatch);
     } catch (error) {
-      console.error("Error selecting venue:", error);
+      logger.error("Error selecting venue", { error: String(error) });
       res.status(500).json({ message: "Failed to select venue" });
     }
   });
@@ -91,7 +92,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
       
       res.json(score);
     } catch (error) {
-      console.error("Error calculating match score:", error);
+      logger.error("Error calculating match score", { error: String(error) });
       res.status(500).json({ message: "Failed to calculate match score" });
     }
   });
@@ -129,7 +130,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
         executionTimeMs: executionTime,
       });
     } catch (error: any) {
-      console.error("Error creating groups:", error);
+      logger.error("Error creating groups", { error: String(error) });
       res.status(500).json({ message: error.message || "Failed to create groups" });
     }
   });
@@ -159,7 +160,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
         });
       }
     } catch (error) {
-      console.error("Error getting matching config:", error);
+      logger.error("Error getting matching config", { error: String(error) });
       res.status(500).json({ message: "Failed to get matching config" });
     }
   });
@@ -217,7 +218,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
       const updatedConfig = await storage.updateMatchingConfig(configForStorage);
       res.json(updatedConfig);
     } catch (error) {
-      console.error("Error updating matching config:", error);
+      logger.error("Error updating matching config", { error: String(error) });
       res.status(500).json({ message: "Failed to update matching config" });
     }
   });
@@ -285,7 +286,7 @@ export function registerMatchingConfigRoutes(app: Express): void {
         },
       });
     } catch (error: any) {
-      console.error("Error testing matching scenario:", error);
+      logger.error("Error testing matching scenario", { error: String(error) });
       res.status(500).json({ message: error.message || "Failed to test matching scenario" });
     }
   });

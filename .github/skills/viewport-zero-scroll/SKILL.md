@@ -41,7 +41,7 @@ include a short comment citing this exception.
 Apply the same intent with renderer-native primitives:
 - Root `page` + `@include no-scroll-page-shell` from `_mixins.scss`
 - One explicit `ScrollView` per screen that needs it
-- `ResponsiveSpacer` in `apps/mini-program/src/components/ResponsiveSpacer.tsx`
+- `ResponsiveSpacer` in `apps/mini-program/src/components/ui/ResponsiveSpacer.tsx`
 - Same ≤4 text/numeric inputs per step rule as web
 
 For detailed `ResponsiveSpacer` usage, `ScrollSentinel` setup, `FormStepper` rules,

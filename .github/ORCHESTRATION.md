@@ -90,7 +90,7 @@ npm run memory:validate
 npm run memory:build-index
 npm run orchestration:validate
 npm run orchestration:tooling-report
-node scripts/orchestration-supervisor.mjs workflow pull-request
+node scripts/orchestration/orchestration-supervisor.mjs workflow pull-request
 ```
 
 ## Session kickoff flow
@@ -98,7 +98,7 @@ node scripts/orchestration-supervisor.mjs workflow pull-request
 - `SessionStart` initializes the orchestration runtime, writes default kickoff state under `.git/.orchestration/context.json`, and builds advisory repo-memory context only from changed files under `.github/`, `scripts/`, and `repo-memory/`.
 - `UserPromptSubmit` inspects the first broad prompt and recommends `Researcher` -> `Planner` when the request is multi-step, ambiguous, or cross-cutting.
 - `UserPromptSubmit` also queries the promoted repo-memory index for meaningful prompts only, then surfaces a concise relevant-memory summary when useful hits exist.
-- Custom agents emit explicit end-of-turn JSON summaries. Those summaries are persisted through `node scripts/orchestration-supervisor.mjs record-summary` via stdin, `--json`, or `--file`, not inferred from hook telemetry.
+- Custom agents emit explicit end-of-turn JSON summaries. Those summaries are persisted through `node scripts/orchestration/orchestration-supervisor.mjs record-summary` via stdin, `--json`, or `--file`, not inferred from hook telemetry.
 - `Supervisor` consolidates child summaries into one canonical `supervisor_turn_report` JSON object with cross-agent insights, per-agent feedback, and categorized task recommendations.
 - `Supervisor` returns a separate visible note using the **executive briefing** shape in [`.github/skills/orchestration-turn-reporting/SKILL.md`](./skills/orchestration-turn-reporting/SKILL.md): **Observation**, **Implication / Context**, **Next Step**, optional **Bottom Line**, plus **Turn status** and **Routing (pick one)** (typically 3–5 **Role — action** lines when Ready), per [`.github/agents/supervisor.agent.md`](./agents/supervisor.agent.md)—plain language for non-technical readers.
 - `Researcher` returns a structured research brief.
@@ -222,11 +222,11 @@ Branding and crafted interaction polish remain skill boundaries on the frontend 
 - `npm run memory:validate` and `npm run memory:build-index` should pass when repo-memory retrieval or publication behavior changes.
 - `npm run orchestration:validate` should pass after orchestration changes.
 - `node scripts/validate-skill-routing.mjs` and `node scripts/test-skill-routing.mjs` should pass when skill bindings, skill routing metadata, or advisory workflow skill references change.
-- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
-- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Please explain separate durable memory from operational state for the orchestration runtime context."}'` should surface relevant repo memory without forcing a kickoff recommendation.
-- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
-- `node scripts/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
-- `node scripts/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'` should recommend `Researcher` -> `Planner` for a broad request.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Please explain separate durable memory from operational state for the orchestration runtime context."}'` should surface relevant repo memory without forcing a kickoff recommendation.
+- `env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["Example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["Example"],"nextTurnImprovements":["Example improvement"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'` should validate the summary payload without mutating runtime files.
+- `node scripts/orchestration/orchestration-supervisor.mjs workflow pull-request` should generate a workflow summary without failing.
+- `node scripts/orchestration/orchestration-supervisor.mjs tooling-report` should expose the current tooling sufficiency audit.
 - `node scripts/auto-eval.mjs --mode manual-report` should continue to work, and `.github/orchestration.yaml` is now part of its syntax preflight.
 - `npm run orchestration:validate` should fail if `.github/agents/manifest.json` drifts from agent frontmatter subagent allowlists, if `.vscode/settings.json` stops enabling authored nested delegation, or if orchestration skill references drift from active `.github/skills/` directories.
 

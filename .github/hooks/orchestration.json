@@ -3,21 +3,21 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "node scripts/orchestration-supervisor.mjs copilot-hook session-start",
+        "command": "node scripts/orchestration/orchestration-supervisor.mjs copilot-hook session-start",
         "timeout": 90
       }
     ],
     "UserPromptSubmit": [
       {
         "type": "command",
-        "command": "node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit",
+        "command": "node scripts/orchestration/orchestration-supervisor.mjs copilot-hook user-prompt-submit",
         "timeout": 90
       }
     ],
     "PostToolUse": [
       {
         "type": "command",
-        "command": "node scripts/orchestration-supervisor.mjs copilot-hook post-tool-use",
+        "command": "node scripts/orchestration/orchestration-supervisor.mjs copilot-hook post-tool-use",
         "timeout": 90
       }
     ]

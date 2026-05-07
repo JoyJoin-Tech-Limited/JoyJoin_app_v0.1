@@ -14,8 +14,8 @@ import React, {
 } from 'react'
 import {
   MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD,
-} from '../../lib/longListThreshold'
-import { logInfo, logWarn } from '../../lib/logger'
+} from '../../lib/utils/longListThreshold'
+import { logInfo, logWarn } from '../../lib/utils/logger'
 
 // ─── Constants ────────────────────────────────────────────────────
 

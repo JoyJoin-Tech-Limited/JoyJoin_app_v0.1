@@ -74,7 +74,6 @@ interface User {
   hasCompletedPersonalityTest?: boolean;
   hasCompletedInterestsCarousel?: boolean;
   hasSeenProfileReview?: boolean;
-  hasSeenGuide?: boolean;
   onboardingCheckpoint?: string | null;
   onboardingCheckpointTimestamp?: string | null;
   createdAt: string;
@@ -88,7 +87,6 @@ interface OnboardingState {
   hasCompletedPersonalityTest: boolean;
   hasCompletedInterestsCarousel: boolean;
   hasSeenProfileReview: boolean;
-  hasSeenGuide: boolean;
 }
 
 interface AssessmentSession {
@@ -390,7 +388,6 @@ export default function AdminUsersPage() {
                 { label: "性格测试", count: users.filter((u) => u.hasCompletedPersonalityTest).length, key: "hasCompletedPersonalityTest" },
                 { label: "兴趣选择", count: users.filter((u) => u.hasCompletedInterestsCarousel).length, key: "hasCompletedInterestsCarousel" },
                 { label: "资料回顾", count: users.filter((u) => u.hasSeenProfileReview).length, key: "hasSeenProfileReview" },
-                { label: "引导完成", count: users.filter((u) => u.hasSeenGuide).length, key: "hasSeenGuide" },
               ];
               const maxCount = Math.max(...steps.map((s) => s.count), 1);
               return (
@@ -625,7 +622,6 @@ export default function AdminUsersPage() {
                       <OnboardingStep done={userDetail.onboarding.profileEssentialComplete} label="基本资料完成" />
                       <OnboardingStep done={userDetail.onboarding.hasCompletedInterestsCarousel} label="兴趣偏好完成" />
                       <OnboardingStep done={userDetail.onboarding.hasSeenProfileReview} label="资料预览完成" />
-                      <OnboardingStep done={userDetail.onboarding.hasSeenGuide} label="发现社区就绪" />
                     </CardContent>
                   </Card>
 

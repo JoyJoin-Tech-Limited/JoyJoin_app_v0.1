@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { db } from "../../db";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { storage } from "../../storage";
-import { processTestV2, type AnswerV2 } from "../../personalityMatchingV2";
+import { processTestV2, type AnswerV2 } from "../../personalityMatching";
 import { isNotNull } from "drizzle-orm";
 import { registerUserSchema, users } from "@shared/schema";
 import type { ArchetypeName } from "../../archetypeConfig";
@@ -221,10 +221,10 @@ export function generateInsights(primaryArchetype: string, secondaryArchetype: s
 
 export function registerAssessmentRoutes(app: Express): void {
   // Registration routes
-  app.post('/api/user/register', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/user/register', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      logger.info("[Backend] Received registration data:", req.body);
+      logger.info("[Backend] Received registration data", { data: req.body });
       const result = registerUserSchema.safeParse(req.body);
 
       if (!result.success) {
@@ -232,9 +232,9 @@ export function registerAssessmentRoutes(app: Express): void {
         return res.status(400).json({ error: result.error });
       }
 
-      logger.info("[Backend] Validated data:", result.data);
+      logger.info("[Backend] Validated data", { data: result.data });
       const user = await storage.registerUser(userId, result.data);
-      logger.info("[Backend] User updated successfully:", { id: user.id, displayName: user.displayName, gender: user.gender, birthdate: user.birthdate });
+      logger.info("[Backend] User updated successfully", { data: { id: user.id, displayName: user.displayName, gender: user.gender, birthdate: user.birthdate } });
 
       try {
         const { awardXPAndCoins } = await import('../../gamificationService');
@@ -281,7 +281,7 @@ export function registerAssessmentRoutes(app: Express): void {
   });
 
   // Personality test routes
-  app.post('/api/personality-test/preliminary-score', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/personality-test/preliminary-score', requireAuth, async (req: any, res) => {
     try {
       const { responses } = req.body;
       const roleScores = calculateRoleScores(responses);
@@ -333,7 +333,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/personality-test/submit', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/personality-test/submit', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { responses } = req.body;
@@ -378,7 +378,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/personality-test/v2/submit', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/personality-test/v2/submit', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { responses } = req.body as { responses: Record<number, AnswerV2> };
@@ -444,7 +444,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/user/coupons', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/coupons', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const coupons = await storage.getUserCoupons(userId);
@@ -455,7 +455,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/user/coupons/expiring', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/coupons/expiring', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const withinDays = parseInt(req.query.days as string) || 7;
@@ -497,7 +497,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/user/gamification', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/gamification', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { getUserGamificationInfo } = await import('../../gamificationService');
@@ -514,7 +514,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/user/gamification/history', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/gamification/history', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -527,7 +527,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/user/gamification/redeem', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/user/gamification/redeem', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { itemId } = req.body;
@@ -619,7 +619,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/user/gamification/redeemable-items', isPhoneAuthenticated, async (_req: any, res) => {
+  app.get('/api/user/gamification/redeemable-items', requireAuth, async (_req: any, res) => {
     try {
       const { REDEEMABLE_ITEMS } = await import('@shared/gamification');
       res.json(REDEEMABLE_ITEMS);
@@ -639,7 +639,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/user/gamification/level-discount', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/gamification/level-discount', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const user = await storage.getUser(userId);
@@ -665,7 +665,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/personality-test/results', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/personality-test/results', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const result = await storage.getRoleResult(userId);
@@ -681,7 +681,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/personality-test/stats', isPhoneAuthenticated, async (_req: any, res) => {
+  app.get('/api/personality-test/stats', requireAuth, async (_req: any, res) => {
     try {
       const stats = await storage.getPersonalityDistribution();
       res.json(stats);
@@ -691,7 +691,7 @@ export function registerAssessmentRoutes(app: Express): void {
     }
   });
 
-  app.get('/api/personality/role-distribution', isPhoneAuthenticated, async (_req: any, res) => {
+  app.get('/api/personality/role-distribution', requireAuth, async (_req: any, res) => {
     try {
       const allUsers = await db.select({ primaryArchetype: users.primaryArchetype }).from(users).where(isNotNull(users.primaryArchetype)).limit(1000);
 

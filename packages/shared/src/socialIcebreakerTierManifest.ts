@@ -88,17 +88,4 @@ export function resolveTierDisplayEn(machineId: TierMachineId): string {
   return TIER_DISPLAY_MANIFEST[machineId].defaultEn
 }
 
-export const LEGACY_TIER_MAP: Record<string, TierMachineId> = {
-  standard: 'glow',
-  premium: 'blaze',
-  bar: 'breeze',
-}
 
-export function resolveLegacyTier(legacyTier: string | undefined): TierMachineId {
-  if (!legacyTier) return 'breeze'
-  // If it's already a canonical tier ID, pass it through
-  if ((['breeze', 'glow', 'blaze'] as const).includes(legacyTier as TierMachineId)) {
-    return legacyTier as TierMachineId
-  }
-  return LEGACY_TIER_MAP[legacyTier] ?? 'breeze'
-}

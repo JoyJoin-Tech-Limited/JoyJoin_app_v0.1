@@ -5,7 +5,7 @@ export type {
   LegacyXiaoyueMood,
   XiaoyueExpressionId,
   XiaoyueMood,
-} from '../../../lib/xiaoyueExpressions'
+} from '../../../lib/mascot/xiaoyueExpressions'
 export {
   getXiaoyueAsset,
   getXiaoyueExpressionAsset,
@@ -13,7 +13,7 @@ export {
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
   XIAOYUE_ASSET_BY_EXPRESSION,
-} from '../../../lib/xiaoyueExpressions'
+} from '../../../lib/mascot/xiaoyueExpressions'
 
 export interface ArchetypeAssetPaths {
   webp: string

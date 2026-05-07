@@ -1,15 +1,15 @@
-import "./lib/abortControllerPolyfill"
+import "./lib/wechat/abortControllerPolyfill"
 import { PropsWithChildren, createElement, useCallback, useEffect, useRef } from 'react'
 import Taro, { useDidShow, useLaunch } from '@tarojs/taro'
 import { useAuth } from './hooks/useAuth'
-import { logInfo, logWarn } from './lib/logger'
-import { buildPaymentVerificationUrl, decidePendingOrderAutoResume } from './lib/paymentPendingOrder'
-import { clearPendingOrderStorage, getPendingOrderStorageSnapshot } from './lib/paymentPendingOrderStorage'
+import { logInfo, logWarn } from './lib/utils/logger'
+import { buildPaymentVerificationUrl, decidePendingOrderAutoResume } from './lib/payment/paymentPendingOrder'
+import { clearPendingOrderStorage, getPendingOrderStorageSnapshot } from './lib/payment/paymentPendingOrderStorage'
 import AuthProvider from './providers/AuthProvider'
 import { DynamicAccentProvider } from './providers/DynamicAccentProvider'
 import { AchievementProvider } from './providers/AchievementProvider'
 import AchievementPopup from './components/AchievementPopup'
-import { loadBrandFonts } from './lib/brandFont'
+import { loadBrandFonts } from './lib/utils/brandFont'
 import './app.scss'
 
 function PendingOrderResumeBridge() {

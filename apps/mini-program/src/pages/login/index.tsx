@@ -1,6 +1,6 @@
 import { View, Text, Button, Image } from '@tarojs/components'
-import { useWeChatLogin } from '../../hooks/useWeChatLogin'
-import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
+import { useWeChatLogin } from '../../hooks/auth/useWeChatLogin'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { getArchetypeVisual } from '../onboarding/personality-test/visuals'
 import './index.scss'
 

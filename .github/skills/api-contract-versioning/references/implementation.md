@@ -4,7 +4,7 @@
 
 Clients import DTOs via `@shared/api`:
 - **Web**: `apps/user-client/src/hooks/useAuth.ts` imports `AuthUserResponse`
-- **Mini-program**: `apps/mini-program/src/lib/api.ts` imports `AuthUserResponse`
+- **Mini-program**: `apps/mini-program/src/lib/api/api.ts` imports `AuthUserResponse`
 - **Server**: `apps/server/src/routes.ts` imports DTOs and schemas from `@shared/schema` and `@shared/api`
 
 ### API DTO patterns
@@ -78,7 +78,7 @@ if (!parsed.success) {
 - `packages/shared/src/api.ts` — API DTOs, transport contract, normalization helpers
 - `packages/shared/src/types/` — Domain-specific cross-cutting types
 - `apps/server/src/routes.ts` — Route composition root + `/api/v1/*` rewrite
-- `apps/mini-program/src/lib/api.ts` — Mini-program API transport + auth bootstrap
+- `apps/mini-program/src/lib/api/api.ts` — Mini-program API transport + auth bootstrap
 - `apps/user-client/src/hooks/useAuth.ts` — Web auth/session type consumer
 - `apps/server/src/routes/domains/eventGroupOutcomes.ts` — Example of Zod `safeParse` in domain route
 - `packages/shared/src/index.ts` — Shared package export barrel

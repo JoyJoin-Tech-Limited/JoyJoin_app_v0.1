@@ -14,7 +14,7 @@
 | Squad unboxing | `useSquadUnboxingController`, view models | Same analysis + group detail queries as before |
 | Pool / icebreaker | Form module + `icebreakerSessionModel` | No LLM paths |
 
-**Canonical navigation / URLs:** [`apps/mini-program/src/lib/matchingNavigation.ts`](../../apps/mini-program/src/lib/matchingNavigation.ts).
+**Canonical navigation / URLs:** [`apps/mini-program/src/lib/navigation/matchingNavigation.ts`](../../apps/mini-program/src/lib/navigation/matchingNavigation.ts).
 
 ---
 

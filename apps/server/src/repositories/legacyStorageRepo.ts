@@ -8,8 +8,6 @@ import {
   type ChatReport, type InsertChatReport, type ChatLog, type InsertChatLog,
   type PricingSetting, type PromotionBanner,
   type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking,
-  type IcebreakerSession, type IcebreakerCheckin, type IcebreakerReadyVote, type IcebreakerActivityLog,
-  type InsertIcebreakerSession, type InsertIcebreakerCheckin, type InsertIcebreakerReadyVote, type InsertIcebreakerActivityLog,
   type RegistrationSession,
   type PreSignupData,
   type UserSocialTagGeneration,
@@ -18,7 +16,7 @@ import {
   users, events, eventAttendance, chatMessages, eventFeedback, blindBoxEvents, testResponses, roleResults, notifications,
   payments, coupons, couponUsage, subscriptions, contents, chatReports, chatLogs,
   pricingSettings, promotionBanners, eventPools, eventPoolGroups, venueTimeSlots, venueTimeSlotBookings, venues, venueDeals, eventTemplates,
-  icebreakerSessions, icebreakerCheckins, icebreakerReadyVotes, icebreakerActivityLogs, registrationSessions, preSignupData,
+  registrationSessions, preSignupData,
   assessmentSessions, assessmentAnswers, userSocialTagGenerations, connections,
   adminAccounts,
   userInterestSignals,
@@ -40,7 +38,7 @@ import { logAdminAudit } from "../lib/adminAuditLogger";
  * - `paymentsRepo.ts`       — payment records
  * - `assessmentRepo.ts`     — assessment sessions
  * - `eventPoolsRepo.ts`     — event pools
- * - `icebreakerRepo.ts`     — icebreaker sessions
+ * - `icebreakerRepo.ts`     — icebreaker sessions (archived; use social-icebreaker domain)
  * - `notificationsRepo.ts`  — notifications
  * - `eventGroupOutcomesRepo.ts` — group outcomes
  * - `onboardingRepo.ts`     — onboarding state

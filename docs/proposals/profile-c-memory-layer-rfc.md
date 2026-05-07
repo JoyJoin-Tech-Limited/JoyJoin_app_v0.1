@@ -137,7 +137,7 @@ tags:
   - governance
 relatedPaths:
   - .github/ORCHESTRATION_GOVERNANCE.md
-  - scripts/orchestration-supervisor.mjs
+  - scripts/orchestration/orchestration-supervisor.mjs
 ---
 
 - Runtime state under `.git/.orchestration/` is advisory and must not overstate certainty.

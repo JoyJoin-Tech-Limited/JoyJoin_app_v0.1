@@ -10,12 +10,12 @@
 
 | Concern | Canonical files |
 |---------|-------------------|
-| Personality test (V4 UI) | `apps/mini-program/src/pages/onboarding/personality-test/` — `index` (test), `results`, `auth-gate`; onboarding subpackage registration in `lib/onboardingRoutes.ts` |
-| Anonymous assessment keys | `apps/mini-program/src/lib/anonymousOnboarding.ts` (aligns with web `joyjoin_v4_presignup_answers` semantics) |
-| WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
-| WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api.ts` → `POST /api/auth/wechat/login-with-test` (used from personality-test auth-gate) |
+| Personality test (V4 UI) | `apps/mini-program/src/pages/onboarding/personality-test/` — `index` (test), `results`, `auth-gate`; onboarding subpackage registration in `lib/onboarding/onboardingRoutes.ts` |
+| Anonymous assessment keys | `apps/mini-program/src/lib/auth/anonymousOnboarding.ts` (aligns with web `joyjoin_v4_presignup_answers` semantics) |
+| WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
+| WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api/api.ts` → `POST /api/auth/wechat/login-with-test` (used from personality-test auth-gate) |
 | Blind-box payment (JSAPI) | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `createMiniProgramPaymentIntent()` in `packages/shared/src/api.ts` → `POST /api/payments/miniprogram/create` → `Taro.requestPayment` |
-| Post-pay verification + pending order | `apps/mini-program/src/pages/payment-verification/index.tsx`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`, `lib/paymentVerificationStatus.ts`; app resume: `apps/mini-program/src/app.ts` |
+| Post-pay verification + pending order | `apps/mini-program/src/pages/payment-verification/index.tsx`, `lib/payment/paymentPendingOrder.ts`, `lib/payment/paymentPendingOrderStorage.ts`, `lib/payment/paymentVerificationStatus.ts`; app resume: `apps/mini-program/src/app.ts` |
 
 Current platform symmetry is **yellow**, and the previous payment-contract blockers are no longer endpoint-availability issues.
 
@@ -30,7 +30,7 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
 - Platform-specific adapters and renderers stay in app workspaces, using the center-tab routing split as the reference pattern:
   - `packages/shared/src/centerTabRouting.ts` owns shared decision logic.
   - `apps/user-client/src/lib/centerTabRouting.ts` owns web route mapping.
-  - `apps/mini-program/src/lib/centerTabRouting.ts` owns mini-program route mapping.
+  - `apps/mini-program/src/lib/navigation/centerTabRouting.ts` owns mini-program route mapping.
 - Do not introduce a new shared business-logic workspace during the current execution track. Reassess only after the existing `packages/shared` extraction path is stable.
 - The root `package.json` remains orchestration-only throughout this migration.
 
@@ -38,10 +38,10 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
 
 | Area | Status | Findings | Evidence |
 | --- | --- | --- | --- |
-| API layer | 🟡 Yellow | Separate transports remain, but shared API helpers now live in `packages/shared/src/api.ts` and are consumed by both web and mini-program. Active browser payment routes are present on the server (`/api/coupons/validate`, `/api/payments/create`, `/api/subscription/renew`); browser event-pack purchase is disabled instead of calling a dead route. | `packages/shared/src/api.ts`; `apps/user-client/src/lib/queryClient.ts`; `apps/mini-program/src/lib/api.ts`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/admin-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts` |
-| Auth logic | 🟡 Yellow | `user-client` uses server-driven auth state via `useAuth()` and `GET /api/auth/user`, while the Mini Program performs login inline with `authenticateMiniProgramUser()` and stores only `openid` locally. Both depend on WeChat login but use different entry endpoints and different state models. | `apps/user-client/src/hooks/useAuth.ts`; `apps/user-client/src/hooks/useWeChatLogin.ts`; `apps/mini-program/src/lib/api.ts`; `apps/server/src/wechatAuth.ts` |
+| API layer | 🟡 Yellow | Separate transports remain, but shared API helpers now live in `packages/shared/src/api.ts` and are consumed by both web and mini-program. Active browser payment routes are present on the server (`/api/coupons/validate`, `/api/payments/create`, `/api/subscription/renew`); browser event-pack purchase is disabled instead of calling a dead route. | `packages/shared/src/api.ts`; `apps/user-client/src/lib/queryClient.ts`; `apps/mini-program/src/lib/api/api.ts`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/admin-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts` |
+| Auth logic | 🟡 Yellow | `user-client` uses server-driven auth state via `useAuth()` and `GET /api/auth/user`, while the Mini Program performs login inline with `authenticateMiniProgramUser()` and stores only `openid` locally. Both depend on WeChat login but use different entry endpoints and different state models. | `apps/user-client/src/hooks/useAuth.ts`; `apps/user-client/src/hooks/useWeChatLogin.ts`; `apps/mini-program/src/lib/api/api.ts`; `apps/server/src/wechatAuth.ts` |
 | Payment trigger logic | 🟡 Yellow | Mini Program runs the full payment intent → `Taro.requestPayment` → verification polling flow. The user/admin browser surfaces now use normalized plan IDs plus `paymentRedirectUrl` / `paymentStatus` returned by `/api/subscription/renew` and `/api/payments/create`. The remaining gap is runtime-specific launch and verification orchestration, not mismatched endpoints. | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/admin-client/src/pages/BlindBoxPaymentPage.tsx`; `apps/server/src/routes/domains/payments.ts`; `packages/shared/src/api.ts` |
-| Core utilities | 🟡 Yellow | Mini Program now imports shared API, center-tab routing, and Hong Kong time helpers. Remaining duplication is mostly transport glue and some page-local display formatting. | `packages/shared/src/api.ts`; `packages/shared/src/centerTabRouting.ts`; `packages/shared/src/hongKongTime.ts`; `apps/mini-program/src/hooks/useCustomTabBarSync.ts`; `apps/mini-program/src/lib/centerTabRouting.ts`; `apps/user-client/src/lib/centerTabRouting.ts` |
+| Core utilities | 🟡 Yellow | Mini Program now imports shared API, center-tab routing, and Hong Kong time helpers. Remaining duplication is mostly transport glue and some page-local display formatting. | `packages/shared/src/api.ts`; `packages/shared/src/centerTabRouting.ts`; `packages/shared/src/hongKongTime.ts`; `apps/mini-program/src/hooks/navigation/useCustomTabBarSync.ts`; `apps/mini-program/src/lib/navigation/centerTabRouting.ts`; `apps/user-client/src/lib/centerTabRouting.ts` |
 
 ## Phase 1 — Architecture Discovery and Divergence Audit
 
@@ -57,12 +57,12 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
 
 | Logic | Web / shared location | Mini Program location | Notes |
 | --- | --- | --- | --- |
-| Auth session bootstrap | `apps/user-client/src/hooks/useAuth.ts` | `apps/mini-program/src/lib/api.ts` | Separate auth state models |
-| WeChat login entry | `apps/user-client/src/hooks/useWeChatLogin.ts` | `apps/mini-program/src/lib/api.ts` | Separate endpoint usage and runtime assumptions |
-| API request wrapper | `apps/user-client/src/lib/queryClient.ts` | `apps/mini-program/src/lib/api.ts` | Different signatures, error handling, and caching |
+| Auth session bootstrap | `apps/user-client/src/hooks/useAuth.ts` | `apps/mini-program/src/lib/api/api.ts` | Separate auth state models |
+| WeChat login entry | `apps/user-client/src/hooks/useWeChatLogin.ts` | `apps/mini-program/src/lib/api/api.ts` | Separate endpoint usage and runtime assumptions |
+| API request wrapper | `apps/user-client/src/lib/queryClient.ts` | `apps/mini-program/src/lib/api/api.ts` | Different signatures, error handling, and caching |
 | Price/currency formatting | `apps/user-client/src/lib/currency.ts`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `packages/shared/src/api.ts` | Plan lookup and browser launch-url normalization are shared; some display formatting is still runtime-local |
 | Payment page orchestration | `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/blind-box-payment/index.tsx`; `packages/shared/src/api.ts` | Shared endpoint contract and plan normalization; runtime launch flow is still duplicated |
-| Payment verification / post-pay routing | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/mini-program/src/lib/paymentVerificationStatus.ts`; `packages/shared/src/api.ts` | Browser confirmation now exists, and pure verification decision helpers are shared; payment launch, pending-order persistence, and polling orchestration remain platform-local |
+| Payment verification / post-pay routing | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/mini-program/src/lib/payment/paymentVerificationStatus.ts`; `packages/shared/src/api.ts` | Browser confirmation now exists, and pure verification decision helpers are shared; payment launch, pending-order persistence, and polling orchestration remain platform-local |
 
 ### API client analysis
 
@@ -70,7 +70,7 @@ The biggest remaining risk is payment orchestration, not broken contracts. The M
   - Web: `apiRequest(method, url, data)` wraps browser `fetch` in `apps/user-client/src/lib/queryClient.ts`.
     - Returns raw `Response`
     - Handles `401` by clearing the React Query cache and redirecting
-  - Mini Program: `apiRequest({ path, method, data })` wraps `Taro.request` in `apps/mini-program/src/lib/api.ts`.
+  - Mini Program: `apiRequest({ path, method, data })` wraps `Taro.request` in `apps/mini-program/src/lib/api/api.ts`.
     - Returns parsed JSON
     - Uses cookies plus a base URL env var
 - **Shared API types**
@@ -110,7 +110,7 @@ Handlers: `apps/mini-program/.../useMatchingStatusController.ts`; `apps/user-cli
 | --- | --- | --- | --- |
 | Payment plan selection | `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` | `apps/mini-program/src/pages/blind-box-payment/index.tsx` | `usePaymentPlanSelection` |
 | Payment bootstrap (pricing + coupons + auth/session) | same file | same file | `usePaymentBootstrap` |
-| Post-payment verification state machine | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/mini-program/src/lib/paymentVerificationStatus.ts`; `packages/shared/src/api.ts` | Shared verification decision helpers already live in `packages/shared/src/api.ts`; full launch and polling orchestration still belong to each platform adapter |
+| Post-payment verification state machine | `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx`; `packages/shared/src/api.ts` | `apps/mini-program/src/pages/payment-verification/index.tsx`; `apps/mini-program/src/lib/payment/paymentVerificationStatus.ts`; `packages/shared/src/api.ts` | Shared verification decision helpers already live in `packages/shared/src/api.ts`; full launch and polling orchestration still belong to each platform adapter |
 | Payment summary math (base price, savings, coupon totals) | `BlindBoxPaymentPage.tsx` | `blind-box-payment/index.tsx` | `paymentPricing.ts` utility |
 | Payment CTA state | disabled/loading/error logic in payment page | disabled/loading/error logic in payment page | headless action model |
 

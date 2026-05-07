@@ -1,8 +1,8 @@
 import { PropsWithChildren, createElement } from 'react'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useDidShow } from '@tarojs/taro'
-import { bootstrapMiniProgramAuthSession } from '../lib/authSession'
-import { queryClient } from '../lib/queryClient'
+import { bootstrapMiniProgramAuthSession } from '../lib/api/authSession'
+import { queryClient } from '../lib/api/queryClient'
 
 function AuthRefreshBridge({ children }: PropsWithChildren) {
   const client = useQueryClient()

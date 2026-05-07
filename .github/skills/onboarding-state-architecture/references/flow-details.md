@@ -20,7 +20,7 @@ Shared helpers live in `packages/shared/src/onboarding.ts` — same `nextStep` �
 
 **Input cap:** A single onboarding step must not contain **more than four (4)** text/numeric inputs (`input`, `textarea`, or bulky `select`). If the story needs five or more such fields, **split into additional steps**.
 
-**Layout:** Full-height steps should compose with the [viewport-zero-scroll](../viewport-zero-scroll/SKILL.md) shell: **web** — `.no-scroll-container`, `@shared/ui/ResponsiveSpacer`; **mini-program (launch)** — `@include no-scroll-page-shell` / bounded `ScrollView`, `apps/mini-program/src/components/ResponsiveSpacer.tsx`, and `100dvh`-aware mixins.
+**Layout:** Full-height steps should compose with the [viewport-zero-scroll](../viewport-zero-scroll/SKILL.md) shell: **web** — `.no-scroll-container`, `@shared/ui/ResponsiveSpacer`; **mini-program (launch)** — `@include no-scroll-page-shell` / bounded `ScrollView`, `apps/mini-program/src/components/ui/ResponsiveSpacer.tsx`, and `100dvh`-aware mixins.
 
 **Reference implementation:** Web — `EssentialDataPage.tsx` + `STEP_CONFIG`. Mini-program — `apps/mini-program/src/pages/onboarding/*` (split stages / single focus per route where possible); align field count and step boundaries with web when both ship the same journey.
 

@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -49,7 +50,7 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
         } : null,
       });
     } catch (error: any) {
-      console.error("Error fetching predictive rerank status:", error);
+      logger.error("Error fetching predictive rerank status", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch predictive rerank status" });
     }
   });
@@ -63,7 +64,7 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
       const experiments = await listMatchingShadowExperiments({ poolId, limit });
       res.json(experiments);
     } catch (error: any) {
-      console.error("Error fetching matching shadow experiments:", error);
+      logger.error("Error fetching matching shadow experiments", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch matching shadow experiments" });
     }
   });
@@ -77,7 +78,7 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
 
       res.json(experiment);
     } catch (error: any) {
-      console.error("Error fetching matching shadow experiment detail:", error);
+      logger.error("Error fetching matching shadow experiment detail", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch matching shadow experiment" });
     }
   });
@@ -107,7 +108,7 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
 
       res.status(201).json(created);
     } catch (error: any) {
-      console.error("Error running matching shadow experiment:", error);
+      logger.error("Error running matching shadow experiment", { error: String(error) });
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid shadow experiment request", issues: error.issues });
       }

@@ -1,15 +1,15 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
-@use 'base';
-@use 'error-state';
-@use 'hero';
-@use 'animations';
-@use 'card-info';
-@use 'waiting-card';
-@use 'chemistry-card';
-@use 'theme-and-special';
-@use 'overlay';
-@use 'actions';
+@use 'styles/base';
+@use 'styles/error-state';
+@use 'styles/hero';
+@use 'styles/animations';
+@use 'styles/card-info';
+@use 'styles/waiting-card';
+@use 'styles/chemistry-card';
+@use 'styles/theme-and-special';
+@use 'styles/overlay';
+@use 'styles/actions';
 
 .matching-status {
   @include base.matching-status-base;

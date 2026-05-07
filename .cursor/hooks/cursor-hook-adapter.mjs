@@ -94,10 +94,10 @@ if (event === 'sessionStart') {
   const includeSessionAutoEval = process.env.CURSOR_SESSION_AUTO_EVAL === '1';
   let aeJson = {};
   if (includeSessionAutoEval) {
-    const ae = runNode(['scripts/auto-eval-hook.mjs', 'session-start'], {});
+    const ae = runNode(['scripts/auto/auto-eval-hook.mjs', 'session-start'], {});
     aeJson = parseJsonSafe(ae.stdout);
   }
-  const orch = runNode(['scripts/orchestration-supervisor.mjs', 'copilot-hook', 'session-start'], cursorPayload);
+  const orch = runNode(['scripts/orchestration/orchestration-supervisor.mjs', 'copilot-hook', 'session-start'], cursorPayload);
   const orchJson = parseJsonSafe(orch.stdout);
   const parts = [];
   if (includeSessionAutoEval && aeJson.systemMessage) {
@@ -116,7 +116,7 @@ if (event === 'sessionStart') {
 
 if (event === 'beforeSubmitPrompt') {
   const orch = runNode(
-    ['scripts/orchestration-supervisor.mjs', 'copilot-hook', 'user-prompt-submit'],
+    ['scripts/orchestration/orchestration-supervisor.mjs', 'copilot-hook', 'user-prompt-submit'],
     cursorPayload,
   );
   const orchJson = parseJsonSafe(orch.stdout);
@@ -135,7 +135,7 @@ if (event === 'beforeSubmitPrompt') {
 
 if (event === 'postToolUse') {
   const merged = mergePostToolPayload(cursorPayload);
-  const orch = runNode(['scripts/orchestration-supervisor.mjs', 'copilot-hook', 'post-tool-use'], merged);
+  const orch = runNode(['scripts/orchestration/orchestration-supervisor.mjs', 'copilot-hook', 'post-tool-use'], merged);
   const orchJson = parseJsonSafe(orch.stdout);
   const out = {};
   if (orchJson.systemMessage) {
@@ -147,7 +147,7 @@ if (event === 'postToolUse') {
 
 if (event === 'preToolUse') {
   const copilotPayload = cursorToCopilotPreToolPayload(cursorPayload);
-  const ae = runNode(['scripts/auto-eval-hook.mjs', 'pre-tool-use'], copilotPayload);
+  const ae = runNode(['scripts/auto/auto-eval-hook.mjs', 'pre-tool-use'], copilotPayload);
   if (ae.error) {
     process.stdout.write(`${JSON.stringify({ permission: 'allow' })}\n`);
     process.exit(0);

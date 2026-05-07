@@ -13,7 +13,7 @@
   "focusWindowTurns": 5,
   "turnStatus": "ready",
   "done": ["Implemented record-summary command"],
-  "filesChanged": ["scripts/orchestration-supervisor.mjs"],
+  "filesChanged": ["scripts/orchestration/orchestration-supervisor.mjs"],
   "decisions": ["Stored full events in events.jsonl and compact projections in context.json"],
   "blockers": [],
   "learned": ["PostToolUse does not expose truthful turn-end state"],

@@ -30,5 +30,5 @@ Add a `preToolUse` entry to [`hooks.json`](../hooks.json) pointing at `node .cur
 
 ## Single source of truth
 
-- Hook behavior and policies remain in [`scripts/auto-eval-hook.mjs`](../../scripts/auto-eval-hook.mjs), [`scripts/orchestration-supervisor.mjs`](../../scripts/orchestration-supervisor.mjs), and [`.github/orchestration.yaml`](../../.github/orchestration.yaml).
+- Hook behavior and policies remain in [`scripts/auto-eval-hook.mjs`](../../scripts/auto-eval-hook.mjs), [`scripts/orchestration/orchestration-supervisor.mjs`](../../scripts/orchestration/orchestration-supervisor.mjs), and [`.github/orchestration.yaml`](../../.github/orchestration.yaml).
 - [`.github/hooks/*.json`](../../.github/hooks/) configures **Copilot** event names (`SessionStart`, `PreToolUse`, …). Do not copy those JSON files here; use [`hooks.json`](../hooks.json) for Cursor.

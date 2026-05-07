@@ -124,7 +124,7 @@ function detectTemplate(goal, files) {
 
   // Default: try to infer from file patterns
   if (fileStr.includes("apps/server/")) return "new-api-route";
-  if (fileStr.includes("apps/mini-program/") || fileStr.includes("apps/user-client/") || fileStr.includes("apps/admin-client/")) return "ui-component";
+  if (fileStr.includes("apps/mini-program/") || fileStr.includes("apps/admin-client/")) return "ui-component";
 
   return "new-api-route"; // safest default
 }

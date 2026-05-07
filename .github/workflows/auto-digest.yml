@@ -88,8 +88,8 @@ jobs:
 
           ARGS="$ARGS --verbose"
 
-          echo "Running: node scripts/auto-digest.mjs $ARGS"
-          node scripts/auto-digest.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          echo "Running: node scripts/auto/auto-digest.mjs $ARGS"
+          node scripts/auto/auto-digest.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
 
       - name: Upload digest artifact

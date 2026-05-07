@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 export function classifyShadowExperimentError(error: unknown): {
   status: number;
   message: string;

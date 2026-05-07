@@ -1,6 +1,6 @@
 import { Text, View } from '@tarojs/components'
 import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'
-import ChemistryBadge from '../../components/ChemistryBadge'
+import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import type { ChemistryTokens, UnifiedRevealTokens } from './matchingStatusViewModels'

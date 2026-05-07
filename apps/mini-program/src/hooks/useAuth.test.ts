@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveMiniProgramAuthState } from './authState'
+import { deriveMiniProgramAuthState } from './auth/authState'
 import type { AuthUser } from './useAuth'
 
 function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
@@ -29,7 +29,7 @@ describe('deriveMiniProgramAuthState', () => {
   })
 
   it('returns the authenticated user once the fetch has settled', () => {
-    const user = createAuthUser({ nextStep: 'guide' })
+    const user = createAuthUser({ nextStep: 'discover' })
 
     expect(
       deriveMiniProgramAuthState({
@@ -41,7 +41,7 @@ describe('deriveMiniProgramAuthState', () => {
       user,
       isLoading: false,
       isAuthenticated: true,
-      nextStep: 'guide',
+      nextStep: 'discover',
     })
   })
 

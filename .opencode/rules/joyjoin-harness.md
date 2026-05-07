@@ -105,7 +105,7 @@ npm run guardrails          # Env, secrets, legacy, import checks
 npm run typecheck           # Full workspace type check
 npm run test -w @joyjoin/server  # Server tests
 node scripts/auto-eval.mjs --mode manual-report  # Auto-Eval gate
-node scripts/orchestration-supervisor.mjs validate  # Orchestration contract
+node scripts/orchestration/orchestration-supervisor.mjs validate  # Orchestration contract
 ```
 
 ## Escalation Path

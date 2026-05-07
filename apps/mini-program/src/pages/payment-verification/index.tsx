@@ -2,22 +2,22 @@ import { Button, View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow, useLoad } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import JoyJoinLoadingScreen from '../../components/JoyJoinLoadingScreen'
-import { AUTH_QUERY_KEY } from '../../lib/authSession'
+import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
+import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
 import {
   isPoolRegistrationReturnContext,
   useMiniProgramPaymentFlowController,
-} from '../../lib/paymentFlowController'
+} from '../../lib/payment/paymentFlowController'
 import type {
   MiniProgramPoolRegistrationReturnContext,
-} from '../../lib/paymentPendingOrder'
-import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
-import { type MiniProgramPaymentVerificationState } from '../../lib/paymentVerificationStatus'
-import type { XiaoyueExpressionId } from '../../lib/xiaoyueExpressions'
+} from '../../lib/payment/paymentPendingOrder'
+import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { type MiniProgramPaymentVerificationState } from '../../lib/payment/paymentVerificationStatus'
+import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import './index.scss'
 
 function getVerificationMascotExpression(status: MiniProgramPaymentVerificationState): XiaoyueExpressionId {

@@ -1,7 +1,7 @@
 import { View, Text, Slider } from '@tarojs/components'
-import Button from '../../../components/Button'
-import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/uiConstants'
-import { haptics } from '../../../lib/haptics'
+import Button from '../../../components/ui/Button'
+import { COLOR_PRIMARY, COLOR_PRIMARY_LIGHT } from '../../../lib/utils/uiConstants'
+import { haptics } from '../../../lib/utils/haptics'
 import './PersonalityTestAnswerArea.scss'
 
 export type QuestionType = 'choice' | 'slider' | 'emoji_tap'

@@ -1,8 +1,8 @@
 /**
  * Shared onboarding flow logic — platform-agnostic pure functions.
  *
- * Used by both web (apps/user-client) and mini-program (apps/mini-program)
- * to ensure consistent onboarding state derivation from the server's nextStep.
+ * Used by the mini-program (apps/mini-program) to ensure consistent
+ * onboarding state derivation from the server's nextStep.
  */
 
 export type ActiveOnboardingStep =
@@ -18,7 +18,6 @@ export type OnboardingNextStep =
   | 'essential-data'
   | 'extended-data'
   | 'profile-review'
-  | 'guide'
   | 'discover'
 
 export interface OnboardingProgress {
@@ -56,7 +55,6 @@ export function nextStepToOnboardingStep(nextStep: OnboardingNextStep | string |
       return 'extended-data'
     case 'profile-review':
       return 'profile-review'
-    case 'guide':
     case 'discover':
     default:
       return 'complete'

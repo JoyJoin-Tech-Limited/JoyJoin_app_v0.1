@@ -2,7 +2,7 @@
 
 > **Status:** Supplemental guide — **not** the architecture or routing source of truth for the shipped client.
 >
-> **Shipped client (launch-primary):** [`apps/mini-program`](../apps/mini-program/) — **Taro 4 + React 18**. Page registration, main package vs **subpackage** (`pages/onboarding`), **`preloadRule`** (from `MINI_PROGRAM_PRELOAD_RULES`), and **`lazyCodeLoading: 'requiredComponents'`** are defined or wired in [`apps/mini-program/src/lib/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) and [`app.config.ts`](../apps/mini-program/src/app.config.ts). Auth/API: [`apps/mini-program/src/lib/api.ts`](../apps/mini-program/src/lib/api.ts). Native custom tab bar: [`apps/mini-program/README.md`](../apps/mini-program/README.md).
+> **Shipped client (launch-primary):** [`apps/mini-program`](../apps/mini-program/) — **Taro 4 + React 18**. Page registration, main package vs **subpackage** (`pages/onboarding`), **`preloadRule`** (from `MINI_PROGRAM_PRELOAD_RULES`), and **`lazyCodeLoading: 'requiredComponents'`** are defined or wired in [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) and [`app.config.ts`](../apps/mini-program/src/app.config.ts). Auth/API: [`apps/mini-program/src/lib/api/api.ts`](../apps/mini-program/src/lib/api/api.ts). Native custom tab bar: [`apps/mini-program/README.md`](../apps/mini-program/README.md).
 >
 > **Read first for active work:** [`apps/mini-program/README.md`](../apps/mini-program/README.md) · [`docs/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md) · [`.github/skills/mini-program-frontend-excellence/SKILL.md`](../.github/skills/mini-program-frontend-excellence/SKILL.md) · [`docs/perf.md`](./perf.md) (mini-program package loading).
 
@@ -835,7 +835,7 @@ Low-level patterns above (rpx, `hover-class`, `wx.request`) still apply inside T
 
 | Mechanism | Location |
 |-----------|----------|
-| Main package pages, subpackages, preload rule source | [`onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) → [`app.config.ts`](../apps/mini-program/src/app.config.ts) (`preloadRule` is built from `MINI_PROGRAM_PRELOAD_RULES`) |
+| Main package pages, subpackages, preload rule source | [`onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) → [`app.config.ts`](../apps/mini-program/src/app.config.ts) (`preloadRule` is built from `MINI_PROGRAM_PRELOAD_RULES`) |
 | Onboarding subpackage | `root: pages/onboarding`, seven pages (`MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`) |
 | Preload | `MINI_PROGRAM_PRELOAD_RULES` preloads `pages/onboarding` from **index** and **login** |
 | On-demand injection | `lazyCodeLoading: 'requiredComponents'` in `app.config.ts` |

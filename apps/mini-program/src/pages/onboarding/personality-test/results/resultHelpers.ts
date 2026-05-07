@@ -3,7 +3,7 @@ import {
   type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
-} from '../../../../lib/anonymousOnboarding'
+} from '../../../../lib/auth/anonymousOnboarding'
 
 export type FlowStage = 'loading' | 'slot' | 'reveal' | 'bridge' | 'result' | 'error' | 'empty'
 export type SlotPhase = 'anticipation' | 'spinning' | 'holding' | 'slowing' | 'nearMiss' | 'landed'

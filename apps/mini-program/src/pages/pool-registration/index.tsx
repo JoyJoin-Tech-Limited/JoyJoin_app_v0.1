@@ -1,30 +1,30 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { cdnAsset } from '../../lib/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, registerForPool, type EventPoolSummary } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { apiRequest, type ApiError } from '../../lib/api'
+import { apiRequest, type ApiError } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { COLOR_PRIMARY, TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/uiConstants'
-import { logInfo, logError } from '../../lib/logger'
-import { openMiniProgramPaymentPage } from '../../lib/paymentEntry'
+import { COLOR_PRIMARY, TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
+import { logInfo, logError } from '../../lib/utils/logger'
+import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import {
   buildPoolRegistrationPaymentReturnContext,
   type MiniProgramPaymentEntitlementCode,
   type MiniProgramPoolRegistrationReturnContext,
-} from '../../lib/paymentPendingOrder'
+} from '../../lib/payment/paymentPendingOrder'
 import {
   clearPaymentReturnContextStorage,
   persistPaymentReturnContext,
   readStoredPaymentReturnContext,
-} from '../../lib/paymentPendingOrderStorage'
-import LoadingScreen from '../../components/LoadingScreen'
+} from '../../lib/payment/paymentPendingOrderStorage'
+import LoadingScreen from '../../components/loading/LoadingScreen'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { requestPoolMatchSubscribeMessage } from '../../lib/wechatSubscribeMessage'
-import Card from '../../components/Card'
-import Button from '../../components/Button'
+import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
 import {
   ALCOHOL_COMFORT_OPTIONS,
   BAR_THEME_OPTIONS,

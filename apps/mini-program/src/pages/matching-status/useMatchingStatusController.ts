@@ -18,27 +18,27 @@ import type {
   PoolRegistrationAddedData,
 } from '@shared/wsEvents'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useWebSocket } from '../../hooks/useWebSocket'
-import { logError, logInfo, logWarn } from '../../lib/logger'
+import { logError, logInfo, logWarn } from '../../lib/utils/logger'
 import {
   navigateBackOrEventsTab,
   openPoolGroupDetail,
   replaceWithPoolGroupDetail,
   switchToDiscoverTab,
   switchToEventsTab,
-} from '../../lib/matchingNavigation'
+} from '../../lib/navigation/matchingNavigation'
 import {
   AUTH_QUERY_KEY,
-} from '../../lib/authSession'
+} from '../../lib/api/authSession'
 import {
   STALE_TIME_BRIEF_MS,
   TOAST_DEFAULT_MS,
   TOAST_FATAL_MS,
   COLOR_DANGER,
-} from '../../lib/uiConstants'
+} from '../../lib/utils/uiConstants'
 import {
   buildWaitingSeats,
   DEFAULT_MAX_GROUP_SIZE,
@@ -59,7 +59,7 @@ import {
   type ViewerPairSpotlight,
   type UnifiedRevealTokens,
 } from './matchingStatusViewModels'
-import { generateChemistryPayoff } from '../../lib/chemistryPayoff'
+import { generateChemistryPayoff } from '../../lib/matching/chemistryPayoff'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
 const GROUP_DETAILS_STALE_TIME_MS = 60_000

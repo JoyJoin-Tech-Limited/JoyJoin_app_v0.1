@@ -1,6 +1,5 @@
 import type { Express, Request } from "express";
 import { z } from "zod";
-import { isPhoneAuthenticated } from "../../phoneAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { storage } from "../../storage";
 import { db } from "../../db";
@@ -73,7 +72,7 @@ async function requireAuth(req: Request, res: any, next: any) {
 }
 
 export function registerProfileRoutes(app: Express): void {
-  app.get('/api/profile/stats', isPhoneAuthenticated, async (req: Request, res) => {
+  app.get('/api/profile/stats', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -117,7 +116,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch profile stats" });
     }
   });
-  app.post('/api/profile/setup', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/profile/setup', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const result = updateProfileSchema.safeParse(req.body);
@@ -136,7 +135,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
-  app.post('/api/user/interests-topics', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/user/interests-topics', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const result = interestsTopicsSchema.safeParse(req.body);
@@ -172,7 +171,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to update interests and topics" });
     }
   });
-  app.post('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/user/interests', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { interests } = req.body;
@@ -269,7 +268,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: errorMessage });
     }
   });
-  app.get('/api/user/interests', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/interests', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
 
@@ -289,7 +288,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch interests" });
     }
   });
-  app.get('/api/user/interests/summary', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/user/interests/summary', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
 
@@ -314,7 +313,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch interest summary" });
     }
   });
-  app.patch('/api/user/interests/nudge', isPhoneAuthenticated, async (req: any, res) => {
+  app.patch('/api/user/interests/nudge', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { boostTopicIds } = req.body;
@@ -418,7 +417,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch interest signals" });
     }
   });
-  app.post('/api/profile/personality', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/profile/personality', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const result = updatePersonalitySchema.safeParse(req.body);
@@ -435,7 +434,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to update personality" });
     }
   });
-  app.patch('/api/profile', isPhoneAuthenticated, async (req: any, res) => {
+  app.patch('/api/profile', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const result = updateFullProfileSchema.safeParse(req.body);
@@ -549,7 +548,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
-  app.post("/api/profile/update-industry", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/profile/update-industry", requireAuth, async (req, res) => {
     try {
       if (!req.session?.userId) {
         return res.status(401).json({ error: "未登录" });
@@ -600,7 +599,7 @@ export function registerProfileRoutes(app: Express): void {
       res.status(500).json({ error: "Update failed", message: error.message });
     }
   });
-  app.get('/api/personality-test/share-card-data', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/personality-test/share-card-data', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user?.id || req.session?.userId;
       

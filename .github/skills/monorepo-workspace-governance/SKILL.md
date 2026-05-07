@@ -24,14 +24,18 @@ description: >
 ```
 /                          ← Root (orchestration only)
 ├── apps/
-│   ├── user-client/       ← @joyjoin/user-client
+│   ├── mini-program/      ← mini-program (launch-primary client)
 │   ├── admin-client/      ← @joyjoin/admin-client
 │   └── server/            ← @joyjoin/server
-└── packages/
-    └── shared/            ← @joyjoin/shared
+├── packages/
+│   ├── shared/            ← @joyjoin/shared
+│   └── e2e/               ← @joyjoin/e2e
+└── [tooling dirs]         ← scripts/, docs/, deployment/, infra/
 ```
 
-The root delegates to workspaces. It must not import or own runtime code. Required root scripts (enforced by `scripts/check-guardrails.mjs`) include `check`, `check:clients`, `check:server`, `check:full`, `set-admin`, and `guardrails`. Do not change these script names without updating the guardrail check.
+> **📘 Comprehensive blueprint:** See `docs/FOLDER_STRUCTURE.md` for the full directory map with domain ownership, active vs legacy status, and placement rules.
+
+The root delegates to workspaces. It must not import or own runtime code. Required root scripts (enforced by `scripts/check/check-guardrails.mjs`) include `check`, `check:clients`, `check:server`, `check:full`, `set-admin`, and `guardrails`. Do not change these script names without updating the guardrail check.
 
 Workspace `package.json` files should expose `dev`, `build`, `typecheck`, `lint`, and `test` scripts. Root scripts delegate via `npm run <script> -w @joyjoin/<workspace>`.
 
@@ -39,7 +43,7 @@ Workspace `package.json` files should expose `dev`, `build`, `typecheck`, `lint`
 
 - Each workspace declares its own `dependencies` and `devDependencies`
 - Cross-workspace shared code lives in `packages/shared` — not duplicated across apps
-- Admin-only code and dependencies belong in `apps/admin-client` — never imported into `apps/user-client`
+- Admin-only code and dependencies belong in `apps/admin-client` — never imported into other apps
 - Never use the deprecated `shared/` root folder; use `packages/shared/src/` instead
 
 See [`references/governance-details.md`](references/governance-details.md) for tsconfig normalization, script naming conventions, secret/env/legacy guardrails, and dependency ownership rules.
@@ -58,11 +62,11 @@ See [`references/governance-details.md`](references/governance-details.md) for t
 
 ## Troubleshooting
 
-- **`npm run guardrails` fails with "missing required script"** — a required root script was renamed or removed. Check `scripts/check-guardrails.mjs` for the expected script names and commands and restore the exact match.
+- **`npm run guardrails` fails with "missing required script"** — a required root script was renamed or removed. Check `scripts/check/check-guardrails.mjs` for the expected script names and commands and restore the exact match.
 - **Dependency installed to the wrong workspace** — a package was added to root `package.json` instead of the workspace that uses it. Move it: remove from root, add to the correct workspace with `-w @joyjoin/<workspace>`.
 - **TypeScript errors after changing `tsconfig`** — workspace `tsconfig.json` may have lost its `extends` reference to `tsconfig.base.json`, or a new workspace path is missing from the root `tsconfig.json` `references` array.
-- **Admin-client code is being bundled into user-client** — a direct import from `apps/admin-client` was added to `apps/user-client`. Remove it and move the shared logic to `packages/shared` if needed.
-- **Legacy identifiers in new code** — `scripts/check-guardrails.mjs` flags `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, and `interestsTop`. Remove or quarantine these identifiers in active code.
+- **Admin-client code is being bundled into mini-program** — a direct import from `apps/admin-client` was added to `apps/mini-program`. Remove it and move the shared logic to `packages/shared` if needed.
+- **Legacy identifiers in new code** — `scripts/check/check-guardrails.mjs` flags `hasCompletedRegistration`, `needsRegistration`, `registration_sessions`, and `interestsTop`. Remove or quarantine these identifiers in active code.
 - **Shared package missing a peer dependency** — `packages/shared/package.json` declares `react` as a `peerDependency` and `@radix-ui/react-slot` + `lucide-react` as `dependencies` for shared UI exports. Add shared UI primitives there, not in individual apps.
 
 ## Review checklist

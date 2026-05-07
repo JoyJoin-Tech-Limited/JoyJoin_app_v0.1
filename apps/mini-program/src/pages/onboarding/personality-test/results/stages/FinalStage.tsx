@@ -2,18 +2,18 @@ import { Image, Input, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ARCHETYPE_CANONICAL_ORDER, getArchetypeIndex } from '@shared/personality/archetypeNames'
-import Button from '../../../../../components/Button'
-import Card from '../../../../../components/Card'
-import { COLOR_PRIMARY } from '../../../../../lib/uiConstants'
+import Button from '../../../../../components/ui/Button'
+import Card from '../../../../../components/ui/Card'
+import { COLOR_PRIMARY } from '../../../../../lib/utils/uiConstants'
 import type { ArchetypeVisual } from '../../visuals'
 import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from '../../visuals'
-import type { AnonymousAssessmentTopMatch } from '../../../../../lib/anonymousOnboarding'
+import type { AnonymousAssessmentTopMatch } from '../../../../../lib/auth/anonymousOnboarding'
 import type { ArchetypeSkillSet } from '@shared/personality/archetypeSkills'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { haptics } from '../../../../../lib/haptics'
+import { haptics } from '../../../../../lib/utils/haptics'
 import type { ArchetypeCardVariant } from '../../archetypeVariants'
 
 interface FinalStageProps {

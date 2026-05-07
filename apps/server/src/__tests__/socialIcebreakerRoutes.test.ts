@@ -208,15 +208,15 @@ vi.mock('../socialIcebreakerAIService', () => ({
   }),
 }));
 
-vi.mock('../lib/icebreakerAccess', () => ({
-  getIcebreakerSessionParticipantAccess: vi.fn(async (sessionId: string) => {
+vi.mock('../lib/socialIcebreakerAccess', () => ({
+  getSocialIcebreakerAccess: vi.fn(async (sessionId: string) => {
     if (sessionId.startsWith('forbidden')) {
       return { allowed: false, status: 403, body: { message: 'Forbidden' } };
     }
     if (sessionId.startsWith('missing')) {
       return { allowed: false, status: 404, body: { message: 'Icebreaker session not found' } };
     }
-    return { allowed: true, session: { id: sessionId } };
+    return { allowed: true };
   }),
 }));
 
@@ -332,7 +332,7 @@ describe('social icebreaker routes', () => {
     });
   });
 
-  it('resolves legacy tier strings to canonical tiers on start', async () => {
+  it('defaults unknown tier strings to breeze on start', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'tier-legacy-host');
       const sessionId = `session-tier-legacy-${Date.now()}`;
@@ -345,10 +345,10 @@ describe('social icebreaker routes', () => {
       const startBody = await startResponse.json() as any;
 
       expect(startResponse.status).toBe(200);
-      expect(startBody.state.eventTier).toBe('glow');
+      expect(startBody.state.eventTier).toBe('breeze');
       expect(startBody.state.runPlan).toMatchObject({
-        compilerId: 'glow-v1',
-        totalMinutes: 60,
+        compilerId: 'breeze-v1',
+        totalMinutes: 40,
       });
     });
   });

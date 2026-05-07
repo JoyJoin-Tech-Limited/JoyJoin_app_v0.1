@@ -191,15 +191,15 @@ vi.mock('../socialIcebreakerAIService', async (importOriginal) => {
   };
 });
 
-vi.mock('../lib/icebreakerAccess', () => ({
-  getIcebreakerSessionParticipantAccess: vi.fn(async (sessionId: string) => {
+vi.mock('../lib/socialIcebreakerAccess', () => ({
+  getSocialIcebreakerAccess: vi.fn(async (sessionId: string) => {
     if (sessionId.startsWith('forbidden')) {
       return { allowed: false, status: 403, body: { message: 'Forbidden' } };
     }
     if (sessionId.startsWith('missing')) {
       return { allowed: false, status: 404, body: { message: 'Icebreaker session not found' } };
     }
-    return { allowed: true, session: { id: sessionId } };
+    return { allowed: true };
   }),
 }));
 

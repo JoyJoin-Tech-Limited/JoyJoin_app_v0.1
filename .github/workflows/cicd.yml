@@ -29,19 +29,19 @@ jobs:
         run: npm ci
 
       - name: Verify env, secret, legacy, and import-boundary guardrails
-        run: node scripts/check-guardrails.mjs
+        run: node scripts/check/check-guardrails.mjs
 
       - name: Verify workspace dependency ownership
-        run: node scripts/check-workspace-dependency-ownership.mjs
+        run: node scripts/check/check-workspace-dependency-ownership.mjs
 
       - name: Validate skill routing coverage
-        run: node scripts/validate-skill-routing.mjs
+        run: node scripts/verify/validate-skill-routing.mjs
 
       - name: Run skill routing regression suite
-        run: node scripts/test-skill-routing.mjs
+        run: node scripts/test/test-skill-routing.mjs
 
       - name: Verify migration journal sync
-        run: node scripts/verify-journal-sync.mjs
+        run: node scripts/verify/verify-journal-sync.mjs
 
   lint-shared:
     needs: [guardrails]
@@ -263,6 +263,19 @@ jobs:
               else
                 echo "❌ Cannot install rsync automatically. Install rsync on the server and rerun deployment."
                 exit 1
+              fi
+            fi
+            if ! command -v pg_dump >/dev/null 2>&1; then
+              echo "postgresql client not found on server; installing..."
+              if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y postgresql
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y postgresql
+              elif command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y postgresql-client
+              else
+                echo "⚠️ Cannot install postgresql client automatically. pg_dump snapshots will be skipped."
               fi
             fi
 
@@ -509,7 +522,7 @@ jobs:
 
             # Verify journal integrity before running migrations
             echo "   Verifying migration journal..."
-            node scripts/verify-journal-sync.mjs
+            node scripts/verify/verify-journal-sync.mjs
 
             # #region agent log
             MIGRATION_FILES_JSON=$(node - <<'NODE'
@@ -604,35 +617,38 @@ jobs:
             # --- Snapshot DB before migration for safety ---
             echo "   Creating pre-migration database snapshot..."
             SNAPSHOT_FILE=~/JoyJoin/deployment/pre-migrate-$(date +%Y%m%d-%H%M%S).sql
-            pg_dump "$DATABASE_URL" --no-owner --no-acl -f "$SNAPSHOT_FILE" 2>&1 || echo "⚠️ pg_dump failed (non-fatal — continuing with migration)"
+            pg_dump "$DATABASE_URL" --no-owner --no-acl -f "$SNAPSHOT_FILE" 2>&1 || echo "⚠️ pg_dump failed or not installed (non-fatal — continuing with migration)"
 
-            # Run pending migrations with statement timeout guard to prevent hangs
-            echo "   Running database migrations (statement_timeout=5min)..."
+            # Run schema push with statement timeout guard to prevent hangs
+            echo "   Running database schema push (statement_timeout=5min)..."
             MIGRATION_LOG=$(mktemp)
             # #region agent log
-            if ! CI=1 PGOPTIONS="-c statement_timeout=300000" npx drizzle-kit migrate --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1; then
-              MIGRATION_EXIT_CODE=$?
-              echo "❌ Database migration failed. Drizzle output:"
-              debug_log "H3" "drizzle_migrate_failed" "{\"exitCode\":${MIGRATION_EXIT_CODE:-1},\"logPath\":\"$MIGRATION_LOG\"}"
+            set +e
+            CI=1 PGOPTIONS="-c statement_timeout=300000" npx drizzle-kit push --force --config=apps/server/drizzle.config.cjs >"$MIGRATION_LOG" 2>&1
+            MIGRATION_EXIT_CODE=$?
+            set -e
+            if [ "$MIGRATION_EXIT_CODE" -ne 0 ]; then
+              echo "❌ Database schema push failed. Drizzle output:"
+              debug_log "H3" "drizzle_push_failed" "{\"exitCode\":${MIGRATION_EXIT_CODE},\"logPath\":\"$MIGRATION_LOG\"}"
               sed -n '1,240p' "$MIGRATION_LOG" || true
-              echo "----- drizzle migrate tail -----"
+              echo "----- drizzle push tail -----"
               sed -n '241,480p' "$MIGRATION_LOG" || true
-              echo "----- drizzle migrate escaped (debug) -----"
-              node scripts/debug-migration-log.mjs "$MIGRATION_LOG"
+              echo "----- drizzle push escaped (debug) -----"
+              node scripts/devtools/debug-migration-log.mjs "$MIGRATION_LOG"
               echo "----- postgres lock probe (debug) -----"
-              node scripts/debug-lock-probe.mjs
+              node scripts/devtools/debug-lock-probe.mjs
               exit 1
             fi
-            debug_log "H3" "drizzle_migrate_succeeded" '{"exitCode":0}'
+            debug_log "H3" "drizzle_push_succeeded" '{"exitCode":0}'
             sed -n '1,240p' "$MIGRATION_LOG" || true
-            echo "----- drizzle migrate tail -----"
+            echo "----- drizzle push tail -----"
             sed -n '241,480p' "$MIGRATION_LOG" || true
             rm -f "$MIGRATION_LOG"
             # #endregion
 
             # Verify schema alignment after migration
             echo "   Verifying schema alignment..."
-            node scripts/verify-db-alignment.mjs
+            node scripts/verify/verify-db-alignment.mjs
 
             # --- 3) Sync and reload Nginx BEFORE restarting containers ---
             # This prevents 502s: Nginx stops routing to joyjoin-user BEFORE

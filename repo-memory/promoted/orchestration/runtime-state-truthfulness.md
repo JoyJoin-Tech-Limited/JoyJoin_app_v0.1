@@ -15,7 +15,7 @@ triggerTerms:
 relatedPaths:
   - .github/ORCHESTRATION.md
   - .github/ORCHESTRATION_GOVERNANCE.md
-  - scripts/orchestration-lib.mjs
+  - scripts/orchestration/orchestration-lib.mjs
 sources:
   - .github/ORCHESTRATION.md
   - .github/ORCHESTRATION_GOVERNANCE.md

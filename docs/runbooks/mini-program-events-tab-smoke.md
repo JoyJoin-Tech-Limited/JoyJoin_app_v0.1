@@ -15,7 +15,7 @@ This smoke is specifically for the MP-3 shell cleanup. It verifies that:
 1. The canonical second tab is `pages/events/index`.
 2. The visible tab label is `足迹`.
 3. The final page header is `我的足迹`.
-4. The legacy `pages/journey/index` and `pages/my-events/index` entries both recover into the canonical Events tab instead of behaving like separate destinations.
+4. The legacy `pages/my-events/index` entry recovers into the canonical Events tab instead of behaving like a separate destination. (`pages/journey/index` was removed entirely.)
 
 ---
 
@@ -24,7 +24,7 @@ This smoke is specifically for the MP-3 shell cleanup. It verifies that:
 From the repo root:
 
 ```bash
-npx vitest run apps/mini-program/src/lib/eventsTabRedirect.test.ts apps/mini-program/src/lib/tabBarConfig.test.ts apps/mini-program/src/lib/onboardingRoutes.test.ts apps/mini-program/src/pages/journey/redirect.test.ts
+npx vitest run apps/mini-program/src/lib/navigation/tabBarConfig.test.ts apps/mini-program/src/lib/onboarding/onboardingRoutes.test.ts apps/mini-program/src/pages/my-events/index.test.ts
 npm run typecheck -w mini-program
 npm run build:weapp -w mini-program
 ```
@@ -35,7 +35,7 @@ Expected result:
 - Mini-program typecheck passes.
 - WeChat build succeeds and refreshes `apps/mini-program/dist`.
 
-These checks validate the route inventory, redirect helper, and tab-shell config. The manual DevTools smoke below is still required to confirm runtime navigation.
+These checks validate the route inventory and tab-shell config. The manual DevTools smoke below is still required to confirm runtime navigation.
 
 ---
 
@@ -94,28 +94,7 @@ Expected result:
 - The page title reads `我的足迹`.
 - The content area shows the normal Events page, not a redirect placeholder.
 
-### Case 2 - Legacy `journey` alias
-
-Goal: confirm the legacy route now behaves only as a redirect shell.
-
-Entry options:
-
-1. Add a temporary compile mode that starts at `/pages/journey/index`.
-2. Or, in the AppService console, run:
-
-```javascript
-wx.reLaunch({ url: "/pages/journey/index" })
-```
-
-Expected result:
-
-- You may briefly see the loading message `正在前往「我的足迹」...`.
-- The app lands on the canonical Events destination, not a standalone Journey screen.
-- Final route is `pages/events/index`.
-- The second tab is selected.
-- The header reads `我的足迹`.
-
-### Case 3 - Legacy `my-events` alias
+### Case 2 - Legacy `my-events` alias
 
 Goal: confirm the older my-events entry now funnels into the same Events tab.
 
@@ -140,12 +119,11 @@ Expected result:
 
 ## Pass criteria
 
-Treat the smoke as passed only when all three entry points behave as follows:
+Treat the smoke as passed only when both entry points behave as follows:
 
 | Entry path | Final route | Final header | Tab expectation |
 | --- | --- | --- | --- |
 | `pages/events/index` | `pages/events/index` | `我的足迹` | second tab selected |
-| `pages/journey/index` | `pages/events/index` | `我的足迹` | second tab selected |
 | `pages/my-events/index` | `pages/events/index` | `我的足迹` | second tab selected |
 
 ---
@@ -154,9 +132,8 @@ Treat the smoke as passed only when all three entry points behave as follows:
 
 Treat any of the following as a regression:
 
-- `journey` still renders its old standalone timeline UI.
 - `my-events` remains a separate destination instead of funneling into Events.
-- The final route after either alias is still the alias path instead of `pages/events/index`.
+- The final route after the alias is still the alias path instead of `pages/events/index`.
 - The selected tab does not move to the second `足迹` slot.
 - The final page title is not `我的足迹`.
 
@@ -170,8 +147,7 @@ Operational issues that are not product regressions:
 
 ## Related code surfaces
 
-- Canonical tab config: `apps/mini-program/src/lib/tabBarConfig.ts`
+- Canonical tab config: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`
 - Events page: `apps/mini-program/src/pages/events/index.tsx`
-- Shared legacy redirect helper: `apps/mini-program/src/lib/eventsTabRedirect.ts`
-- Journey alias shell: `apps/mini-program/src/pages/journey/index.tsx`
 - My-events alias shell: `apps/mini-program/src/pages/my-events/index.tsx`
+- `pages/journey/index` — **removed** (no longer registered in onboardingRoutes)

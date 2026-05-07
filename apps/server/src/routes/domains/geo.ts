@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 
 export function registerGeoRoutes(app: Express): void {
@@ -95,7 +96,7 @@ export function registerGeoRoutes(app: Express): void {
         });
       }
     } catch (error) {
-      console.error("Reverse geocode error:", error);
+      logger.error("Reverse geocode error", { error: String(error) });
       res.status(500).json({
         success: false,
         error: "定位服务暂时不可用"

@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { storage } from "../../storage";
@@ -21,7 +22,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const feedbacks = await storage.getAllFeedbacks(filters);
       res.json(feedbacks);
     } catch (error) {
-      console.error("Error fetching feedbacks:", error);
+      logger.error("Error fetching feedbacks", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch feedbacks" });
     }
   });
@@ -32,7 +33,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const stats = await storage.getFeedbackStats();
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching feedback stats:", error);
+      logger.error("Error fetching feedback stats", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch feedback stats" });
     }
   });
@@ -49,7 +50,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       
       res.json(feedback);
     } catch (error) {
-      console.error("Error fetching feedback:", error);
+      logger.error("Error fetching feedback", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch feedback" });
     }
   });
@@ -63,7 +64,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const contents = await storage.getAllContents(type as string | undefined);
       res.json(contents);
     } catch (error) {
-      console.error("Error fetching contents:", error);
+      logger.error("Error fetching contents", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch contents" });
     }
   });
@@ -77,7 +78,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       }
       res.json(content);
     } catch (error) {
-      console.error("Error fetching content:", error);
+      logger.error("Error fetching content", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch content" });
     }
   });
@@ -92,7 +93,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       });
       res.json(content);
     } catch (error) {
-      console.error("Error creating content:", error);
+      logger.error("Error creating content", { error: String(error) });
       res.status(500).json({ message: "Failed to create content" });
     }
   });
@@ -103,7 +104,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const content = await storage.updateContent(req.params.id, req.body);
       res.json(content);
     } catch (error) {
-      console.error("Error updating content:", error);
+      logger.error("Error updating content", { error: String(error) });
       res.status(500).json({ message: "Failed to update content" });
     }
   });
@@ -114,7 +115,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       await storage.deleteContent(req.params.id);
       res.json({ success: true });
     } catch (error) {
-      console.error("Error deleting content:", error);
+      logger.error("Error deleting content", { error: String(error) });
       res.status(500).json({ message: "Failed to delete content" });
     }
   });
@@ -150,7 +151,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
 
       res.json(content);
     } catch (error) {
-      console.error("Error publishing content:", error);
+      logger.error("Error publishing content", { error: String(error) });
       res.status(500).json({ message: "Failed to publish content" });
     }
   });
@@ -161,7 +162,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const contents = await storage.getPublishedContents(req.params.type);
       res.json(contents);
     } catch (error) {
-      console.error("Error fetching published contents:", error);
+      logger.error("Error fetching published contents", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch contents" });
     }
   });
@@ -177,7 +178,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const notifications = await storage.getAdminNotifications(adminId);
       res.json({ notifications });
     } catch (error) {
-      console.error("Error fetching admin notifications:", error);
+      logger.error("Error fetching admin notifications", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch notifications" });
     }
   });
@@ -205,7 +206,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       
       res.json({ success: true, sent: result.sent });
     } catch (error) {
-      console.error("Error broadcasting notification:", error);
+      logger.error("Error broadcasting notification", { error: String(error) });
       res.status(500).json({ message: "Failed to broadcast notification" });
     }
   });
@@ -233,7 +234,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       
       res.json({ success: true, sent: result.sent });
     } catch (error) {
-      console.error("Error sending notification:", error);
+      logger.error("Error sending notification", { error: String(error) });
       res.status(500).json({ message: "Failed to send notification" });
     }
   });
@@ -244,7 +245,7 @@ export function registerAdminOperationsRoutes(app: Express): void {
       const stats = await storage.getNotificationStats(req.params.id);
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching notification stats:", error);
+      logger.error("Error fetching notification stats", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });

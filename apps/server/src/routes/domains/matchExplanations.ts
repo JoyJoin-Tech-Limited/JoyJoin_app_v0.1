@@ -1,5 +1,6 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { db } from "../../db";
@@ -18,7 +19,7 @@ export function registerMatchExplanationRoutes(app: Express): void {
   // ============ Match Explanation & Ice-Breaker API ============
 
   // Get match explanations for an event pool group
-  app.get('/api/event-pool-groups/:groupId/match-explanations', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
+  app.get('/api/event-pool-groups/:groupId/match-explanations', requireAuth, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { groupId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -125,13 +126,13 @@ export function registerMatchExplanationRoutes(app: Express): void {
         },
       });
     } catch (error: any) {
-      console.error('[Match Explanations] Error:', error);
+      logger.error('[Match Explanations] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to generate match explanations', error: error.message });
     }
   });
 
   // Get ice-breakers for an event pool group (part of 活动工具包)
-  app.get('/api/event-pool-groups/:groupId/ice-breakers', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
+  app.get('/api/event-pool-groups/:groupId/ice-breakers', requireAuth, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { groupId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -234,7 +235,7 @@ export function registerMatchExplanationRoutes(app: Express): void {
         },
       });
     } catch (error: any) {
-      console.error('[Ice-Breakers] Error:', error);
+      logger.error('[Ice-Breakers] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to generate ice-breakers', error: error.message });
     }
   });
@@ -242,7 +243,7 @@ export function registerMatchExplanationRoutes(app: Express): void {
   // Match explanations for blind box events (using matchedAttendees field)
 
   // Conversation topics for event participants (DeepSeek AI)
-  app.post('/api/events/:eventId/conversation-topics', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
+  app.post('/api/events/:eventId/conversation-topics', requireAuth, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { eventId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -309,13 +310,13 @@ export function registerMatchExplanationRoutes(app: Express): void {
       const result = await generateConversationTopics(profiles, blindBoxEvent.eventType || '饭局');
       res.json(result);
     } catch (error: any) {
-      console.error('[Conversation Topics] Error:', error);
+      logger.error('[Conversation Topics] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to generate conversation topics', error: error.message });
     }
   });
 
   // Profile spotlight for tablemates (auth-gated, limited to event participants)
-  app.get('/api/events/:eventId/spotlight/:targetUserId', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/events/:eventId/spotlight/:targetUserId', requireAuth, async (req: any, res) => {
     try {
       const { eventId, targetUserId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -406,7 +407,7 @@ export function registerMatchExplanationRoutes(app: Express): void {
         },
       });
     } catch (error: any) {
-      console.error('[Profile Spotlight] Error:', error);
+      logger.error('[Profile Spotlight] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to fetch profile', error: error.message });
     }
   });
@@ -478,7 +479,7 @@ export function registerMatchExplanationRoutes(app: Express): void {
         analyses: allAnalyses,
       });
     } catch (error: any) {
-      console.error('[Admin Match Explanations] Error:', error);
+      logger.error('[Admin Match Explanations] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to regenerate explanations', error: error.message });
     }
   });

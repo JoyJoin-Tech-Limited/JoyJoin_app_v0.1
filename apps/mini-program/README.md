@@ -23,11 +23,11 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 ## Source-of-Truth Entry Points
 
 - `src/app.ts` — app lifecycle entry (launch, providers, pending-order resume bridge)
-- `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboardingRoutes.ts` + tab config from `lib/tabBarConfig.ts`
-- `src/lib/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
-- `src/lib/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
+- `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboarding/onboardingRoutes.ts` + tab config from `lib/navigation/tabBarConfig.ts`
+- `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, onboarding subpackage under `pages/onboarding`, preload rules)
+- `src/lib/api/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
 - `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate
-- `src/pages/login/index.tsx` + `src/hooks/useWeChatLogin.ts` — returning-user WeChat login
+- `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 
 ---
@@ -132,13 +132,13 @@ The shipped mini-program tab bar is the **native WeChat component** copied from 
 | What | Where |
 |------|-------|
 | New page | `apps/mini-program/src/pages/<page-name>/index.tsx` (+ `.scss`, `.config.ts` if needed) |
-| New component | `apps/mini-program/src/components/<ComponentName>.tsx` (+ `.scss`) |
-| New hook | `apps/mini-program/src/hooks/use<HookName>.ts` |
-| New lib helper | `apps/mini-program/src/lib/<helper>.ts` |
-| UI constants (timing, colors, intervals) | `apps/mini-program/src/lib/uiConstants.ts` — **centralized source of truth** |
+| New component | `apps/mini-program/src/components/<ComponentName>.tsx` (+ `.scss`) — place in `ui/`, `loading/`, or `mascot/` subdir by domain |
+| New hook | `apps/mini-program/src/hooks/use<HookName>.ts` — place in `auth/`, `payment/`, `navigation/`, or `onboarding/` subdir by domain |
+| New lib helper | `apps/mini-program/src/lib/<helper>.ts` — place in domain subdir (`api/`, `auth/`, `payment/`, `onboarding/`, `navigation/`, `wechat/`, `matching/`, `mascot/`, `analytics/`, `utils/`) |
+| UI constants (timing, colors, intervals) | `apps/mini-program/src/lib/utils/uiConstants.ts` — **centralized source of truth** |
 | App-level config / registration | `apps/mini-program/src/app.ts`, `src/app.config.ts` |
 | Shared types, schemas, constants | `packages/shared/src/` (import via `@shared/*` or `@joyjoin/shared`) |
-| New tab bar item | `src/lib/tabBarConfig.ts` + `src/native-custom-tab-bar/index.js` + `src/app.config.ts` |
+| New tab bar item | `src/lib/navigation/tabBarConfig.ts` + `src/native-custom-tab-bar/index.js` + `src/app.config.ts` |
 
 ---
 

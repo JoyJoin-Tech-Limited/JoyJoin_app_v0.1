@@ -45,7 +45,7 @@ Use only for:
 ## Taro / WeChat Mini Program notes
 
 - **Web client:** `apps/user-client/src/assets/fonts/fonts.css` self-hosts **AlimamaFangYuanTiVF-Thin** via `@font-face`.
-- **WeChat Mini Program:** `apps/mini-program/src/lib/brandFont.ts` loads **AlimamaFangYuanTiVF-Thin** via `Taro.loadFontFace()` at app launch. The SCSS variable `$font-cn-display` references the same family name.
+- **WeChat Mini Program:** `apps/mini-program/src/lib/utils/brandFont.ts` loads **AlimamaFangYuanTiVF-Thin** via `Taro.loadFontFace()` at app launch. The SCSS variable `$font-cn-display` references the same family name.
 - **Admin client:** No custom font is loaded; admin surfaces use the system Chinese stack for `font-cn-display`.
 - Outfit, loaded via Google Fonts on the web client, acts as the effective `font-en-brand` fallback.
 - WeChat Mini Program / WebView: avoid `backdrop-filter` and `hover:` states.

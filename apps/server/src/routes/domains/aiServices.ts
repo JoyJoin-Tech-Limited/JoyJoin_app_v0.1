@@ -6,7 +6,6 @@ import { matchIndustryFromText } from "../../inference/industryOntology";
 import { INDUSTRY_OPTIONS } from "@shared/constants";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { isPhoneAuthenticated } from "../../phoneAuth";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 
@@ -248,7 +247,7 @@ export function registerAIServiceRoutes(app: Express): void {
 
 
   // POST /api/inference/parse-industry - semantic industry parsing
-  app.post("/api/inference/parse-industry", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/inference/parse-industry", requireAuth, async (req, res) => {
     try {
       const text = (req.body?.text || '').toString();
       if (!text.trim()) {
@@ -327,7 +326,7 @@ export function registerAIServiceRoutes(app: Express): void {
   });
   
   // POST /api/inference/classify-industry - 三层行业智能分类
-  app.post("/api/inference/classify-industry", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/inference/classify-industry", requireAuth, async (req, res) => {
     try {
       const { description, context } = req.body;
       

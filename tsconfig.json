@@ -8,9 +8,6 @@
       "path": "./apps/mini-program"
     },
     {
-      "path": "./apps/user-client"
-    },
-    {
       "path": "./apps/admin-client"
     },
     {

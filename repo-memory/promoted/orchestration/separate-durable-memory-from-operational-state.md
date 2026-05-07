@@ -15,7 +15,7 @@ triggerTerms:
 relatedPaths:
   - docs/proposals/profile-c-memory-layer-rfc.md
   - .github/ORCHESTRATION_GOVERNANCE.md
-  - scripts/orchestration-lib.mjs
+  - scripts/orchestration/orchestration-lib.mjs
 sources:
   - docs/proposals/profile-c-memory-layer-rfc.md
   - .github/ORCHESTRATION_GOVERNANCE.md

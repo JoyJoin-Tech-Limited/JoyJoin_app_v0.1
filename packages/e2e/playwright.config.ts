@@ -48,11 +48,5 @@ export default defineConfig({
           timeout: 60_000,
           reuseExistingServer: !process.env.CI,
         },
-        {
-          command: 'cd ../../apps/user-client && npm run dev',
-          url: BASE_WEB_URL,
-          timeout: 60_000,
-          reuseExistingServer: !process.env.CI,
-        },
       ],
 });

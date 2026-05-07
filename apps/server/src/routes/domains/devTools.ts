@@ -1,17 +1,29 @@
+import { logger } from "../../lib/logger";
 import type { Express, Request } from "express";
 import { isDevAuthToolsEnabled } from "../../auth/policy";
 import { storage } from "../../storage";
 import { ARCHETYPE_NAMES, type ArchetypeName } from "../../archetypeConfig";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
 import * as schema from "@shared/schema";
 import { blindBoxEvents } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
+import { getActingAdminId } from "../../lib/getActingAdminId";
 
-function getActingAdminId(req: any): string {
-  return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
+function getCookieDiagnostics(cookieHeader: string | string[] | undefined) {
+  const normalizedHeader = Array.isArray(cookieHeader) ? cookieHeader.join(";") : cookieHeader ?? "";
+  const cookieEntries = normalizedHeader
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return {
+    hasCookieHeader: cookieEntries.length > 0,
+    cookieCount: cookieEntries.length,
+    hasConnectSidCookie: cookieEntries.some((entry) => entry.startsWith("connect.sid=")),
+  };
 }
 
 export function registerDevToolRoutes(app: Express): void {
@@ -19,12 +31,92 @@ export function registerDevToolRoutes(app: Express): void {
   // Opt-in only outside production; omitted entirely from production registrations.
   if (isDevAuthToolsEnabled()) {
 
+  // ---------- Debug cookie / session diagnostics ----------
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  app.get("/api/debug/cookie-direct", (req, res) => {
+    console.log("🔧 [DEBUG] /api/debug/cookie-direct called");
+    res.cookie("debug_direct", "1", {
+      path: "/",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax"
+    });
+    res.json({ ok: true, message: "Check for Set-Cookie: debug_direct=1" });
+  });
+
+  app.get("/api/debug/session-set", (req, res) => {
+    console.log("🔧 [DEBUG] /api/debug/session-set called");
+    req.session.userId = "debug-user";
+    req.session.isAdmin = true;
+    req.session.save((err) => {
+      if (err) {
+        console.error("🔧 [DEBUG] Session save error:", err);
+        return res.status(500).json({ ok: false, err: String(err) });
+      }
+
+      const hasSetCookie = Boolean(res.getHeader("set-cookie"));
+      console.log("🔧 [DEBUG] Session saved", { hasSetCookie });
+      res.json({
+        ok: true,
+        sessionSaved: true,
+        hasSessionUserId: Boolean(req.session.userId),
+        sessionIsAdmin: Boolean(req.session.isAdmin),
+        hasSetCookie,
+      });
+    });
+  });
+
+  app.get("/api/debug/echo-cookie", (req, res) => {
+    console.log("🔧 [DEBUG] /api/debug/echo-cookie called");
+    const cookieDiagnostics = getCookieDiagnostics(req.headers.cookie);
+
+    res.json({
+      ...cookieDiagnostics,
+      hasSessionUserId: Boolean(req.session?.userId),
+      sessionIsAdmin: req.session?.isAdmin ?? null,
+      hasDebugSessionFlag: typeof req.session?.debugTest === "number",
+      reqSecure: req.secure,
+      xForwardedProto: req.headers['x-forwarded-proto'] || null,
+      protocol: req.protocol,
+      xForwardedHost: req.headers['x-forwarded-host'] || null,
+      xForwardedFor: req.headers['x-forwarded-for'] || null,
+      host: req.headers.host || null,
+    });
+  });
+
+  app.get("/api/debug/set-cookie", (req, res) => {
+    console.log("🔧 [DEBUG] /api/debug/set-cookie called");
+    res.cookie("debug_direct", "1", {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: "/",
+    });
+    req.session.debugTest = Date.now();
+    req.session.save((err) => {
+      if (err) {
+        console.error("🔧 [DEBUG] Session save error:", err);
+        return res.status(500).json({ ok: false, error: String(err) });
+      }
+
+      const hasSetCookie = Boolean(res.getHeader("set-cookie"));
+      console.log("🔧 [DEBUG] Session saved successfully", { hasSetCookie });
+      res.json({
+        ok: true,
+        hasSetCookie,
+        debugCookieQueued: true,
+        hasDebugSessionFlag: typeof req.session.debugTest === "number",
+        message: "Check response headers for Set-Cookie",
+      });
+    });
+  });
+
   // Helper function to verify secret key
   function verifySecretKey(secretKey: string): { valid: boolean; error?: string; hint?: string } {
     const expectedKey = process.env.ADMIN_CREATE_SECRET_KEY;
     
     if (!expectedKey) {
-      console.error('[DEV TOOLS] ADMIN_CREATE_SECRET_KEY not set in environment');
+      logger.error('[DEV TOOLS] ADMIN_CREATE_SECRET_KEY not set in environment');
       return { 
         valid: false, 
         error: 'ADMIN_CREATE_SECRET_KEY not configured on server',
@@ -33,7 +125,7 @@ export function registerDevToolRoutes(app: Express): void {
     }
     
     if (secretKey !== expectedKey) {
-      console.error('[DEV TOOLS] Secret key mismatch');
+      logger.error('[DEV TOOLS] Secret key mismatch');
       return { 
         valid: false, 
         error: 'Invalid secret key',
@@ -49,8 +141,8 @@ export function registerDevToolRoutes(app: Express): void {
     try {
       const { phoneNumber, password, secretKey } = req.body;
 
-      console.log('[DEV] Admin create attempt');
-      console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      logger.info('[DEV] Admin create attempt');
+      logger.info('[DEV] Secret key provided', { data: secretKey ? 'Yes' : 'No' });
       
       // Verify secret key
       const verification = verifySecretKey(secretKey);
@@ -83,7 +175,7 @@ export function registerDevToolRoutes(app: Express): void {
           hasCompletedPersonalityTest: true,
           hasCompletedRegistration: true,
         });
-        console.log(`[Dev Tools] Updated user ${user.id} to admin account`);
+        logger.info(`[Dev Tools] Updated user ${user.id} to admin account`);
       } else {
         // Create new admin user
         user = await storage.createUserWithPhone({
@@ -100,7 +192,7 @@ export function registerDevToolRoutes(app: Express): void {
           displayName: 'Admin',
           primaryArchetype: '开心柯基', // Default archetype
         });
-        console.log(`[Dev Tools] Created new admin account ${user.id}`);
+        logger.info(`[Dev Tools] Created new admin account ${user.id}`);
       }
 
       res.json({
@@ -110,7 +202,7 @@ export function registerDevToolRoutes(app: Express): void {
         phoneNumber: user.phoneNumber,
       });
     } catch (error: any) {
-      console.error('[Dev Tools] Error creating admin:', error);
+      logger.error('[Dev Tools] Error creating admin', { error: String(error) });
       // Sanitize error message to avoid leaking sensitive information
       const safeMessage = error?.message?.includes('getaddrinfo') 
         ? 'Database connection failed'
@@ -138,8 +230,8 @@ export function registerDevToolRoutes(app: Express): void {
         topInterests
       } = req.body;
 
-      console.log('[DEV] User create attempt');
-      console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      logger.info('[DEV] User create attempt');
+      logger.info('[DEV] Secret key provided', { data: secretKey ? 'Yes' : 'No' });
 
       // Verify secret key
       const verification = verifySecretKey(secretKey);
@@ -202,7 +294,7 @@ export function registerDevToolRoutes(app: Express): void {
         // Update existing user
         user = existingUsers[0];
         user = await storage.updateUser(user.id, userData);
-        console.log(`[Dev Tools] Updated user ${user.id}`);
+        logger.info(`[Dev Tools] Updated user ${user.id}`);
       } else {
         // Create new user
         user = await storage.createUserWithPhone({
@@ -212,7 +304,7 @@ export function registerDevToolRoutes(app: Express): void {
           lastName: displayName.split(' ')[1] || '',
         });
         user = await storage.updateUser(user.id, userData);
-        console.log(`[Dev Tools] Created new user ${user.id}`);
+        logger.info(`[Dev Tools] Created new user ${user.id}`);
       }
 
       res.json({
@@ -224,7 +316,7 @@ export function registerDevToolRoutes(app: Express): void {
         archetype: user.primaryArchetype,
       });
     } catch (error: any) {
-      console.error('[Dev Tools] Error creating user:', error);
+      logger.error('[Dev Tools] Error creating user', { error: String(error) });
       // Sanitize error message to avoid leaking sensitive information
       const safeMessage = error?.message?.includes('getaddrinfo') 
         ? 'Database connection failed'
@@ -237,13 +329,13 @@ export function registerDevToolRoutes(app: Express): void {
   });
 
   // Bypass personality test for current user
-  app.post('/api/dev/personality-test/bypass', isPhoneAuthenticated, async (req: Request, res) => {
+  app.post('/api/dev/personality-test/bypass', requireAuth, async (req: Request, res) => {
     try {
       const { secretKey } = req.body;
       const userId = req.session.userId;
 
-      console.log('[DEV] Personality test bypass attempt');
-      console.log('[DEV] Secret key provided:', secretKey ? 'Yes' : 'No');
+      logger.info('[DEV] Personality test bypass attempt');
+      logger.info('[DEV] Secret key provided', { data: secretKey ? 'Yes' : 'No' });
 
       // Verify secret key
       const verification = verifySecretKey(secretKey);
@@ -275,7 +367,7 @@ export function registerDevToolRoutes(app: Express): void {
 
       await storage.updateUser(userId, updates);
 
-      console.log(`[Dev Tools] Bypassed personality test for user ${userId}`);
+      logger.info(`[Dev Tools] Bypassed personality test for user ${userId}`);
 
       res.json({
         success: true,
@@ -283,7 +375,7 @@ export function registerDevToolRoutes(app: Express): void {
         archetype: user.primaryArchetype || '开心柯基',
       });
     } catch (error: any) {
-      console.error('[Dev Tools] Error bypassing test:', error);
+      logger.error('[Dev Tools] Error bypassing test', { error: String(error) });
       // Sanitize error message to avoid leaking sensitive information
       const safeMessage = error?.message?.includes('getaddrinfo') 
         ? 'Database connection failed'
@@ -301,11 +393,11 @@ export function registerDevToolRoutes(app: Express): void {
     
     const DEV_SECRET_KEY = process.env.ADMIN_CREATE_SECRET_KEY;
     
-    console.log('[DEV] Secret key check');
-    console.log('[DEV] Server has key:', DEV_SECRET_KEY ? 'Yes' : 'No');
-    console.log('[DEV] Key length:', DEV_SECRET_KEY?.length || 0);
-    console.log('[DEV] Provided key length:', secretKey?.length || 0);
-    console.log('[DEV] Match:', secretKey === DEV_SECRET_KEY);
+    logger.info('[DEV] Secret key check');
+    logger.info('[DEV] Server has key', { data: DEV_SECRET_KEY ? 'Yes' : 'No' });
+    logger.info('[DEV] Key length', { data: DEV_SECRET_KEY?.length || 0 });
+    logger.info('[DEV] Provided key length', { data: secretKey?.length || 0 });
+    logger.info('[DEV] Match', { data: secretKey === DEV_SECRET_KEY });
     
     if (!DEV_SECRET_KEY) {
       return res.status(500).json({
@@ -382,7 +474,7 @@ export function registerDevToolRoutes(app: Express): void {
 
       res.json({ summary, attendees });
     } catch (error) {
-      console.error("Error fetching attendance summary:", error);
+      logger.error("Error fetching attendance summary", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch attendance summary" });
     }
   });
@@ -394,7 +486,7 @@ export function registerDevToolRoutes(app: Express): void {
       // For now we acknowledge the action and return success.
       res.json({ success: true, message: "Reminders sent to pending attendees" });
     } catch (error) {
-      console.error("Error chasing attendees:", error);
+      logger.error("Error chasing attendees", { error: String(error) });
       res.status(500).json({ message: "Failed to send reminders" });
     }
   });
@@ -429,7 +521,7 @@ export function registerDevToolRoutes(app: Express): void {
 
       res.json({ success: true, status });
     } catch (error) {
-      console.error("Error overriding attendance:", error);
+      logger.error("Error overriding attendance", { error: String(error) });
       res.status(500).json({ message: "Failed to override attendance status" });
     }
   });

@@ -50,14 +50,14 @@ Owns the active in-event Social Icebreaker flow, session/check-in surfaces, and 
 Primary files:
 - `apps/server/src/routes/socialIcebreaker.ts`
 - `apps/server/src/lib/socialIcebreakerStore.ts`
-- `apps/server/src/routes/domains/icebreakerSessions.ts`
-- `apps/server/src/repositories/icebreakerRepo.ts`
+- `apps/server/src/routes/socialIcebreaker.ts` — active social icebreaker session flow
 - `apps/server/src/socialIcebreakerAIService.ts`
 - `apps/server/src/socialIcebreakerPhaseConfig.ts`
 
 Boundary:
 - `apps/server/src/routes/socialIcebreaker.ts` persists live social-session state through `apps/server/src/lib/socialIcebreakerStore.ts`.
-- `apps/server/src/routes/domains/icebreakerSessions.ts` and `apps/server/src/repositories/icebreakerRepo.ts` own event-session, check-in, and attendance-adjacent flows.
+- `apps/server/src/routes/socialIcebreaker.ts` and `apps/server/src/lib/socialIcebreakerStore.ts` own the active social icebreaker session flow.
+- Legacy `icebreakerSessions.ts` and `icebreakerRepo.ts` were archived/removed (2026-05).
 - New in-event icebreaker work should integrate here, not into legacy toolkit-style flows.
 
 ### Payments, subscriptions, and commerce

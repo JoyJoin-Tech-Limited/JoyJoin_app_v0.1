@@ -29,9 +29,9 @@ export function getInitial(name: string): string {
   return name.charAt(0).toUpperCase()
 }
 
-export { formatDateTime } from '../../lib/groupDisplay'
+export { formatDateTime } from '../../lib/matching/groupDisplay'
 
-import { getVibeLabel as getVibeLabelShared } from '../../lib/groupDisplay'
+import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
 
 export function getVibeLabel(vibe?: string | null): string {
   return getVibeLabelShared(vibe, '今晚成桌')

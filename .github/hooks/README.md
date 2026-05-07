@@ -6,9 +6,9 @@ This workspace uses hooks for deterministic auto-eval enforcement and for lightw
 
 - `SessionStart` runs `node scripts/auto-eval-hook.mjs session-start`
 - `PreToolUse` runs `node scripts/auto-eval-hook.mjs pre-tool-use`
-- `SessionStart` also runs `node scripts/orchestration-supervisor.mjs copilot-hook session-start`
-- `UserPromptSubmit` runs `node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit`
-- `PostToolUse` runs `node scripts/orchestration-supervisor.mjs copilot-hook post-tool-use`
+- `SessionStart` also runs `node scripts/orchestration/orchestration-supervisor.mjs copilot-hook session-start`
+- `UserPromptSubmit` runs `node scripts/orchestration/orchestration-supervisor.mjs copilot-hook user-prompt-submit`
+- `PostToolUse` runs `node scripts/orchestration/orchestration-supervisor.mjs copilot-hook post-tool-use`
 
 ## What they do
 
@@ -28,9 +28,9 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 
 - `scripts/auto-eval.mjs --mode manual-report` prints the human-readable report.
 - `scripts/auto-eval-hook.mjs` translates evaluator results into the hook input and output contract.
-- `scripts/orchestration-supervisor.mjs` is the runtime entrypoint for Copilot hooks, local git hooks, and the GitHub orchestration workflow.
-- `scripts/orchestration-supervisor.mjs record-summary` is the explicit recorder path for agent and supervisor turn summaries, and it accepts stdin, `--json`, or `--file` payload input.
-- `scripts/memory-lib.mjs` provides the shared repo-memory substrate for note validation, indexing, and lexical retrieval.
+- `scripts/orchestration/orchestration-supervisor.mjs` is the runtime entrypoint for Copilot hooks, local git hooks, and the GitHub orchestration workflow.
+- `scripts/orchestration/orchestration-supervisor.mjs record-summary` is the explicit recorder path for agent and supervisor turn summaries, and it accepts stdin, `--json`, or `--file` payload input.
+- `scripts/memory/memory-lib.mjs` provides the shared repo-memory substrate for note validation, indexing, and lexical retrieval.
 - `.github/agents/manifest.json` is the machine-readable inventory for canonical agent names and subagent allowlists.
 - `.github/orchestration.yaml` is the machine-readable contract for orchestrated agents, support agents, skill bindings, and tooling sufficiency notes.
 - Optional local `.vscode/settings.json` (often gitignored) may enable nested subagent invocation for second-level support lanes; tracked `.vscode/mcp.json` is for VS Code / Copilot MCP—see `.github/AI_TOOLING_UNIFIED_BRAIN.md`.
@@ -39,7 +39,7 @@ The shared evaluator lives in `scripts/auto-eval-core.mjs`.
 
 ## Cursor IDE
 
-Cursor loads project hooks from [`../../.cursor/hooks.json`](../../.cursor/hooks.json) (camelCase events such as `sessionStart`, `beforeSubmitPrompt`, `postToolUse`; `preToolUse` is optional and not enabled by default). Those entries run [`../../.cursor/hooks/cursor-hook-adapter.mjs`](../../.cursor/hooks/cursor-hook-adapter.mjs), which calls the same `scripts/auto-eval-hook.mjs` and `scripts/orchestration-supervisor.mjs` commands as above and translates stdin/stdout to Cursor’s hook schemas. Do not duplicate Copilot’s JSON configs here; see [`../../.cursor/hooks/README.md`](../../.cursor/hooks/README.md) for the mapping.
+Cursor loads project hooks from [`../../.cursor/hooks.json`](../../.cursor/hooks.json) (camelCase events such as `sessionStart`, `beforeSubmitPrompt`, `postToolUse`; `preToolUse` is optional and not enabled by default). Those entries run [`../../.cursor/hooks/cursor-hook-adapter.mjs`](../../.cursor/hooks/cursor-hook-adapter.mjs), which calls the same `scripts/auto-eval-hook.mjs` and `scripts/orchestration/orchestration-supervisor.mjs` commands as above and translates stdin/stdout to Cursor’s hook schemas. Do not duplicate Copilot’s JSON configs here; see [`../../.cursor/hooks/README.md`](../../.cursor/hooks/README.md) for the mapping.
 
 ## Pass cache
 

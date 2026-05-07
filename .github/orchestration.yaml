@@ -168,7 +168,7 @@
           "type": "shell",
           "command": "node",
           "args": [
-            "scripts/orchestration-supervisor.mjs",
+            "scripts/orchestration/orchestration-supervisor.mjs",
             "validate"
           ]
         },

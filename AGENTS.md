@@ -55,12 +55,12 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `/chats` surface, DM UI → replaced by `/connections`
 - `圈子` nav label → `连接`
 - `会员/VIP会员` copy → `权益`
-- `/guide` as core onboarding → active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
+- `/guide` as core onboarding → removed; active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
 - **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states). Chat registration inline handlers removed from routes.ts in 2026-05-01 refactoring; only `routes/domains/xiaoyue.ts` remains (AI analysis, unwired).
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
 - ~~`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`~~ — **WIRED 2026-05-05**: Server `/start` + `/set-tier`, mini-program tier selector, run plans active
 - **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)
-- **Lie Detective V1 (AI-fabricated 2 truths 1 lie) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Design spec: `docs/proposals/spot-the-bot-game-design.md`
+- **Lie Detective V1 (AI-fabricated 2 truths 1 lie) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Design spec: `docs/icebreaker/icebreaker-system.md`
 - Root `shared/` directory imports → use `packages/shared/src/` via `@joyjoin/shared` or `@shared/*`
 
 **Canonical references:** `DEVELOPER_QUICK_REFERENCE.md` and `PRODUCT_REQUIREMENTS.md`
@@ -76,7 +76,8 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - ESM only (`"type": "module"` in all workspace `package.json` files)
 - Strict TypeScript, solution-style project references
 
-**Workspaces:** `@joyjoin/user-client` (port 5001), `@joyjoin/admin-client` (port 5002), `@joyjoin/server` (port 5000), `@joyjoin/shared`, `mini-program`
+**Workspaces:** `@joyjoin/admin-client` (port 5002), `@joyjoin/server` (port 5000), `@joyjoin/shared`, `mini-program`
+- `@joyjoin/user-client` was archived to `archived/workspaces/user-client/` (2026-05)
 
 ---
 
@@ -128,17 +129,20 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 ## 5. Where to Put New Code
 
+> **📘 See `docs/FOLDER_STRUCTURE.md` for the comprehensive directory blueprint** with domain ownership, placement rules, and the "Where does X go?" decision tree.
+
 **Server:**
 - New domain endpoints → `apps/server/src/routes/domains/<domain>.ts`
 - New isolated router → `apps/server/src/routes/<router>.ts`
-- Business logic → `apps/server/src/` or domain subfolder
+- Business logic → `apps/server/src/services/` (lightweight) or `src/lib/` (shared)
 - DB queries → `apps/server/src/repositories/` (**not** `storage.ts`)
 - Middleware → `apps/server/src/middleware/`
 - Helpers → `apps/server/src/lib/`
 
 **Shared package:**
-- DB schema → `packages/shared/src/schema.ts`
+- DB schema → `packages/shared/src/schema/` (then `db:generate` + `db:rebuild-journal`)
 - Cross-app types → `packages/shared/src/types/`
+- API DTOs (Zod) → `packages/shared/src/api.ts`
 - Personality engine → `packages/shared/src/personality/`
 - UI primitives → `packages/shared/src/ui/`
 - Export from `packages/shared/src/index.ts` or add subpath export in `packages/shared/package.json`
@@ -157,9 +161,9 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. `/icebreaker-game` (AI Card Game) is optional deep-dive, not default.
 
-**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, 40min) / `glow` (畅聊局, 60min) / `blaze` (狂欢局, 105min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/unified-icebreaker-system.md`.
+**Icebreaker tiers & vibe:** Host selects time budget + vibe. Budgets: `breeze` (破冰局, 40min) / `glow` (畅聊局, 60min) / `blaze` (狂欢局, 105min). Vibe: 聊天为主 / 混合 / 竞技为主. Resolved via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/icebreaker/icebreaker-system.md`.
 
-**Game Design Agent:** Compiles dynamic run plan per session using 70% rule engine + 30% LLM. Reads archetype mix + behavioral signals (mood, commonGround, completion rate, pulse). Rule engine runs on every compilation (deterministic); LLM enhances selection + ordering with 3s timeout fallback. See `docs/unified-icebreaker-system.md` §5.
+**Game Design Agent:** Compiles dynamic run plan per session using 70% rule engine + 30% LLM. Reads archetype mix + behavioral signals (mood, commonGround, completion rate, pulse). Rule engine runs on every compilation (deterministic); LLM enhances selection + ordering with 3s timeout fallback. See `docs/icebreaker/icebreaker-system.md` §5.
 
 **Phase pool (8 non-core + 1 bonus):** lie_detective, personality_dice, group_mirror, undercover_word, quip_battle, auction, speed_friending (NEW). Mini_script is bonus-only (悦仔 offers after last phase before recap, all tiers eligible).
 
@@ -167,7 +171,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Boost plan:** All 10 phases must reach composite ≥8.0 (agent may select any phase — none deferred). 11-week roadmap in `.git/.orchestration/plans/boost-all-games-to-8.md`. Shared infra: Reveal Engine, Gesture Kit, Context Injector, Optimistic Sync.
 
-**Mini-program is launch-primary:** `apps/mini-program` is the primary client; web (`apps/user-client`) is sandbox. Cross-surface rules: `docs/PLATFORM_COORDINATION.md`.
+**Mini-program is launch-primary:** `apps/mini-program` is the primary and only shipping user-facing client. The web sandbox (`archived/workspaces/user-client/`) exists for historical reference. Cross-surface rules: `docs/PLATFORM_COORDINATION.md`.
 
 ---
 

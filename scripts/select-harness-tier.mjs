@@ -75,10 +75,6 @@ const TIER_2_PATTERNS = [
   // Admin UI
   /apps\/admin-client\/src\/pages\//,
   /apps\/admin-client\/src\/components\//,
-  // Web client pages
-  /apps\/user-client\/src\/pages\//,
-  /apps\/user-client\/src\/components\//,
-  /apps\/user-client\/src\/features\//,
 ];
 
 const TIER_2_KEYWORDS = [

@@ -1,7 +1,6 @@
 import type { Express, Request } from "express";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { db } from "../../db";
-import { isPhoneAuthenticated } from "../../phoneAuth";
 import { eq } from "drizzle-orm";
 import { onboardingAnalytics, userInterests, users } from "@shared/schema";
 import { normalizeOptionalDuration } from "./helpers";
@@ -17,7 +16,7 @@ async function requireAuth(req: Request, res: any, next: any) {
 
 export function registerOnboardingRoutes(app: Express): void {
   // Mark guide as seen (B2: Guide persistence server-side)
-  app.post('/api/guide/mark-seen', isPhoneAuthenticated, async (req: Request, res) => {
+  app.post('/api/guide/mark-seen', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -32,7 +31,7 @@ export function registerOnboardingRoutes(app: Express): void {
   });
 
   // Alias endpoint for guide completion (matches problem statement requirement)
-  app.post('/api/guide/complete', isPhoneAuthenticated, async (req: Request, res) => {
+  app.post('/api/guide/complete', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -50,7 +49,7 @@ export function registerOnboardingRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/profile-review/complete', isPhoneAuthenticated, async (req: Request, res) => {
+  app.post('/api/profile-review/complete', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -69,7 +68,7 @@ export function registerOnboardingRoutes(app: Express): void {
   });
 
   // Save onboarding checkpoint
-  app.post('/api/onboarding/checkpoint', isPhoneAuthenticated, async (req: Request, res) => {
+  app.post('/api/onboarding/checkpoint', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });

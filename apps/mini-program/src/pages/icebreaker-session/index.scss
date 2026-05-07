@@ -656,7 +656,7 @@
   &__challenge-card--has-bg &__challenge-hint,
   &__challenge-card--has-bg &__challenge-duration,
   &__challenge-card--has-bg &__challenge-completed {
-    color: #ffffff;
+    color: $color-text-white;
     text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
   }
 
@@ -750,7 +750,7 @@
   &__auction-timer-value {
     font-size: $font-size-xl;
     font-weight: $font-weight-bold;
-    color: #ffffff;
+    color: $color-text-white;
     font-variant-numeric: tabular-nums;
     text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.4);
   }
@@ -825,7 +825,7 @@
   &__modal-card {
     width: 520rpx;
     padding: $spacing-xl;
-    background: #ffffff;
+    background: $color-surface;
     border-radius: 24rpx;
     box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
     display: flex;

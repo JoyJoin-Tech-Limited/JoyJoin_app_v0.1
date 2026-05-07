@@ -46,7 +46,7 @@ This is a governance document, not a runtime-product AI architecture document. F
 | Durable repo memory | `repo-memory/README.md`, `repo-memory/candidates/README.md`, `repo-memory/promoted/`, `repo-memory/generated/` | Reviewable memory plane outside `.git`; publication remains explicit and fail-closed. |
 | Shared contributor instructions | `.github/copilot-instructions.md` | Entry-point guidance for contributors and Copilot. |
 | Coordinated documentation refresh | [`../docs/ai-workflow-documentation-refresh.md`](../docs/ai-workflow-documentation-refresh.md) | Scope tiers and validation when changing `docs/`, skills, agents, and orchestration together—not a substitute for incremental `ORCHESTRATION_GOVERNANCE` checks per change. |
-| Runtime implementation | `scripts/orchestration-supervisor.mjs`, `scripts/orchestration-lib.mjs`, `scripts/memory-*.mjs`, `scripts/auto-eval*.mjs` | Deterministic behavior must match the documented contract. |
+| Runtime implementation | `scripts/orchestration/orchestration-supervisor.mjs`, `scripts/orchestration/orchestration-lib.mjs`, `scripts/memory/memory-*.mjs`, `scripts/auto-eval*.mjs` | Deterministic behavior must match the documented contract. |
 | Regression coverage | orchestration-related tests in `apps/server/src/__tests__/` and `scripts/` validators | Lock in behavior that contributors depend on. |
 
 ## Change types and required sync
@@ -126,9 +126,9 @@ Minimum commands for orchestration-governance work:
 npm run memory:validate
 npm run memory:build-index
 npm run orchestration:validate
-env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["example"],"nextTurnImprovements":["tighten scope"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'
-env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'
-node scripts/orchestration-supervisor.mjs workflow pull-request
+env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs record-summary --json '{"type":"agent_turn_summary","agentName":"Supervisor","done":["example"],"filesChanged":[],"decisions":[],"blockers":[],"learned":["example"],"nextTurnImprovements":["tighten scope"],"nextSteps":{"bugFix":[],"enhancement":[],"validation":[]},"confidence":{"score":0.5,"reason":"example"},"unresolvedAssumptions":[]}'
+env ORCHESTRATION_DISABLE_RUNTIME_WRITES=1 node scripts/orchestration/orchestration-supervisor.mjs copilot-hook user-prompt-submit <<< '{"prompt":"Add a new API endpoint with caching"}'
+node scripts/orchestration/orchestration-supervisor.mjs workflow pull-request
 node scripts/auto-eval.mjs --mode manual-report
 ```
 

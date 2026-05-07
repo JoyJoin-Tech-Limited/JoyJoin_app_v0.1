@@ -126,7 +126,7 @@ apps/user-client/src/assets/matching/
 
 | 机制 | 位置 |
 |------|------|
-| 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboardingRoutes.ts) → 由 [`app.config.ts`](../apps/mini-program/src/app.config.ts) 引用 |
+| 主包页面列表 + 分包声明 + `preloadRule` | [`apps/mini-program/src/lib/onboarding/onboardingRoutes.ts`](../apps/mini-program/src/lib/onboarding/onboardingRoutes.ts) → 由 [`app.config.ts`](../apps/mini-program/src/app.config.ts) 引用 |
 | Onboarding subpackage | `root: pages/onboarding`，7 个页面（见 `MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES`） |
 | 预下载 | `MINI_PROGRAM_PRELOAD_RULES`：从 `index` 与 `login` 预拉 `pages/onboarding` 分包 |
 | 按需注入 | `app.config.ts` 中 `lazyCodeLoading: 'requiredComponents'` |

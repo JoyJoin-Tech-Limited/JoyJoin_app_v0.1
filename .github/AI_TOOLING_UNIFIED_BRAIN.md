@@ -36,7 +36,7 @@ Treat these paths as the **only** policy sources for *what* to build and *how* r
 | --- | --- |
 | `.github/copilot-instructions.md` | Primary Copilot instructions (skills, agents, orchestration, review) |
 | `.vscode/mcp.json` | **VS Code / Copilot MCP** servers — `servers` + optional `inputs` ([reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration)) |
-| `.github/hooks/*.json` | Copilot hook event names (`SessionStart`, `UserPromptSubmit`, …) calling `scripts/orchestration-supervisor.mjs` |
+| `.github/hooks/*.json` | Copilot hook event names (`SessionStart`, `UserPromptSubmit`, …) calling `scripts/orchestration/orchestration-supervisor.mjs` |
 
 Copilot does **not** read root `.mcp.json` (Cursor shape). It uses **`.vscode/mcp.json`** when using VS Code’s MCP integration.
 

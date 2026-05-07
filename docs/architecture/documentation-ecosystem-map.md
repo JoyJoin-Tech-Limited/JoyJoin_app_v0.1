@@ -131,7 +131,7 @@ These docs matter but are not linked from anywhere else, making them hard to dis
 | `docs/xiaoyue-visual-comparison.txt` | Same deprecation | Quarantine or archive |
 | `docs/README-xiaoyue-formatting.md` | Xiaoyue formatting guide; likely tied to deprecated chat UX | Review for archival |
 | `docs/wechat-mini-program-reference.md` | README explicitly says **"not the Taro source of truth"** | Mark supplemental; do not expand |
-| `docs/MOBILE_UI_IMPLEMENTATION_SUMMARY.md` | Covers web-mobile; mini-program is now launch-primary | Add stale warning header |
+| `docs/architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md` | Covers web-mobile; mini-program is now launch-primary | Add stale warning header |
 | `docs/icebreaker-ux-report.md` | UX analysis; may predate current Social Icebreaker dominance | Verify currency |
 | `docs/personality-accuracy-report.md` | May be outdated relative to V4 engine | Verify or archive |
 | `docs/ICEBREAKER_PHASE_ROLLOUT.md` | Rollout plan says MVP phases are live; may be complete | Mark as completed |

@@ -233,5 +233,5 @@ The **Harness Runtime Controller** auto-activates when any of these are true:
 - `.github/skills/code-review/SKILL.md`
 - `.github/orchestration.yaml`
 - `.github/agents/manifest.json`
-- `scripts/orchestration-supervisor.mjs`
-- `scripts/orchestration-next-actions.mjs`
+- `scripts/orchestration/orchestration-supervisor.mjs`
+- `scripts/orchestration/orchestration-next-actions.mjs`

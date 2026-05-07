@@ -1,7 +1,7 @@
 import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components'
 import { useCallback, useState } from 'react'
-import { cdnAsset } from '../lib/cdnAssets'
-import { SWIPER_INTERVAL_MS, SWIPER_TRANSITION_MS } from '../lib/uiConstants'
+import { cdnAsset } from '../lib/utils/cdnAssets'
+import { SWIPER_INTERVAL_MS, SWIPER_TRANSITION_MS } from '../lib/utils/uiConstants'
 import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
 import './AiMatchPromoCarousel.scss'
 

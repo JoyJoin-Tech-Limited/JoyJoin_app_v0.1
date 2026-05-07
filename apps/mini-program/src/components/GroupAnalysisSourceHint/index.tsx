@@ -1,6 +1,6 @@
 import { Text, View } from '@tarojs/components'
 import type { GroupAnalysisResponse } from '@shared/types/groupAnalysis'
-import { shouldShowGroupAnalysisDebugMeta } from '../../lib/groupAnalysisDebug'
+import { shouldShowGroupAnalysisDebugMeta } from '../../lib/matching/groupAnalysisDebug'
 import './index.scss'
 
 export type GroupAnalysisSourceHintProps = {

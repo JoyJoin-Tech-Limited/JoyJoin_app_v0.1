@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AuthUserResponse } from '@shared/api'
-import { apiRequest, type OnboardingStep } from '../lib/api'
+import { apiRequest, type OnboardingStep } from '../lib/api/api'
 import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
   isUnauthorizedApiError,
-} from '../lib/authSession'
-import { deriveMiniProgramAuthState } from './authState'
+} from '../lib/api/authSession'
+import { deriveMiniProgramAuthState } from './auth/authState'
 
 export type NextStepType = OnboardingStep
 

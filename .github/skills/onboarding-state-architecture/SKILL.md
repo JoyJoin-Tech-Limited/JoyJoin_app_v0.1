@@ -44,7 +44,7 @@ GET /api/auth/user
 | `essential-data` | `/onboarding/setup` | `profileEssentialComplete` |
 | `extended-data` | `/onboarding/extended` | `hasCompletedInterestsCarousel` |
 | `profile-review` | `/onboarding/review` | `hasSeenProfileReview` |
-| `guide` / `discover` | `/discover` | `hasSeenGuide` |
+| `discover` | `/discover` | `onboardingCheckpoint === 'discover'` |
 
 **Extended data gate:** `extended-data` is driven by **`hasCompletedInterestsCarousel`** — do not use `profileExtendedComplete` as a substitute for routing logic.
 

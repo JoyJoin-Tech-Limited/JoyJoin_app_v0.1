@@ -236,15 +236,22 @@
     {
       "idx": 33,
       "version": "7",
-      "when": 1776958939444,
-      "tag": "add_attendance_status",
+      "when": 1776958962129,
+      "tag": "20260423000000_reconcile_legacy_cleanup",
       "breakpoints": true
     },
     {
       "idx": 34,
       "version": "7",
-      "when": 1776958962129,
-      "tag": "20260423000000_reconcile_legacy_cleanup",
+      "when": 1777939200000,
+      "tag": "20260505000000_drop_has_seen_guide",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1776958939444,
+      "tag": "add_attendance_status",
       "breakpoints": true
     }
   ]

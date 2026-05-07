@@ -3,7 +3,7 @@ name: platform-coordination-protocol
 description: >
   Mini-program and web coordination guidance for duplicated auth, API, and
   payment flows. Use when a task touches docs/PLATFORM_COORDINATION.md,
-  apps/mini-program/src/lib/api.ts, apps/user-client/src/hooks/useAuth.ts, or
+  apps/mini-program/src/lib/api/api.ts, apps/user-client/src/hooks/useAuth.ts, or
   the payment pages and asks whether sibling platform review is needed.
   Trigger phrases: "sibling platform", "platform coordination",
   "BlindBoxPaymentPage", "useAuth.ts", "mini-program api.ts".
@@ -17,7 +17,7 @@ description: >
 
 - Editing one of the duplicated cross-platform hotspots called out in `docs/PLATFORM_COORDINATION.md`
 - Changing payment or auth/session logic that spans mini-program and web
-- Updating `apps/mini-program/src/lib/api.ts`, `apps/user-client/src/hooks/useAuth.ts`, `apps/user-client/src/lib/queryClient.ts`, or either payment page
+- Updating `apps/mini-program/src/lib/api/api.ts`, `apps/user-client/src/hooks/useAuth.ts`, `apps/user-client/src/lib/queryClient.ts`, or either payment page
 - Asking whether a sibling platform or shared package consumer also needs review
 - Checking whether a change should stay local or be escalated to both clients
 
@@ -51,7 +51,7 @@ Use scope labels **`MINI_PROGRAM_ONLY`**, **`WEB_ONLY`**, or **`BOTH_REQUIRED`**
 ---
 
 **User says:** "I updated `apps/user-client/src/hooks/useAuth.ts`."
-**Apply this skill by:** Comparing the auth/session assumptions against `apps/mini-program/src/lib/api.ts`, then checking whether the change also affects shared types or only web-side state wiring.
+**Apply this skill by:** Comparing the auth/session assumptions against `apps/mini-program/src/lib/api/api.ts`, then checking whether the change also affects shared types or only web-side state wiring.
 **Result:** Auth/session drift is caught before one client silently diverges.
 
 ---

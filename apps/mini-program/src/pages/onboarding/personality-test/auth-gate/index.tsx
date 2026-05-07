@@ -2,29 +2,29 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Button from '../../../../components/Button'
-import Card from '../../../../components/Card'
-import OnboardingLoadingShell from '../../../../components/OnboardingLoadingShell'
+import Button from '../../../../components/ui/Button'
+import Card from '../../../../components/ui/Card'
+import OnboardingLoadingShell from '../../../../components/loading/OnboardingLoadingShell'
 import { useAuth } from '../../../../hooks/useAuth'
-import { useWeChatLogin } from '../../../../hooks/useWeChatLogin'
-import { useOnboardingAnalytics } from '../../../../hooks/useOnboardingAnalytics'
-import { TOAST_FATAL_MS } from '../../../../lib/uiConstants'
+import { useWeChatLogin } from '../../../../hooks/auth/useWeChatLogin'
+import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
+import { TOAST_FATAL_MS } from '../../../../lib/utils/uiConstants'
 import {
   authenticateMiniProgramUserWithTest,
   getUserState,
   type ApiError,
-} from '../../../../lib/api'
+} from '../../../../lib/api/api'
 import {
   clearAnonymousAssessmentStorage,
   getAnonymousAssessmentImportGateState,
   readAnonymousAssessmentAnswers,
   readAnonymousAssessmentSession,
-} from '../../../../lib/anonymousOnboarding'
-import { seedMiniProgramAuthSession } from '../../../../lib/authSession'
-import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
-import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
+} from '../../../../lib/auth/anonymousOnboarding'
+import { seedMiniProgramAuthSession } from '../../../../lib/api/authSession'
+import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
+import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { logError, logInfo } from '../../../../lib/logger'
+import { logError, logInfo } from '../../../../lib/utils/logger'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import './index.scss'
 

@@ -1,19 +1,19 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { cdnAsset } from '../../lib/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
-import { apiRequest } from '../../lib/api'
-import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/uiConstants'
+import { apiRequest } from '../../lib/api/api'
+import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
-import { logInfo, logError } from '../../lib/logger'
-import { getMascotDisplayName } from '../../lib/mascotDisplay'
-import OnboardingLoadingShell from '../../components/OnboardingLoadingShell'
-import XiaoyueSessionShell from '../../components/XiaoyueSessionShell'
-import Card from '../../components/Card'
-import Button from '../../components/Button'
-import JoyJoinIcon from '../../components/JoyJoinIcon'
+import { logInfo, logError } from '../../lib/utils/logger'
+import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
+import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
+import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import {
   AuctionPhaseView,
   FallbackPhaseView,
@@ -27,10 +27,10 @@ import {
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
-import { PhaseIntroOverlay } from './PhaseIntroOverlay'
-import { MiniScriptPhaseView } from './MiniScriptPhaseView'
-import { IcebreakerToolSelector } from './IcebreakerToolSelector'
-import { MiniScriptConfigModal } from './MiniScriptConfigModal'
+import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
+import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
+import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
+import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import type { AtmosphereMood, SocialSessionState } from '@shared/socialIcebreaker'
 import { PHASE_CONFIG } from '@shared/socialIcebreaker'
 import { resolveTierDisplay, type TierMachineId } from '@shared/socialIcebreakerTierManifest'
@@ -45,7 +45,6 @@ import {
   normaliseSession,
   type EventSessionDiscovery,
   type IcebreakerSession,
-  type LegacyIcebreakerSessionDetails,
   type SocialRecapResponse,
   type SocialStartResponse,
 } from './icebreakerSessionModel'
@@ -109,22 +108,13 @@ export default function IcebreakerSessionPage() {
     startAttemptRef.current = null
   }, [resolvedSessionId])
 
-  const {
-    data: sessionDetails,
-    isLoading: sessionLoading,
-    error: sessionError,
-  } = useQuery<LegacyIcebreakerSessionDetails>({
-    queryKey: ['mini-program', 'icebreaker-session-details', resolvedSessionId],
-    queryFn: () =>
-      apiRequest<LegacyIcebreakerSessionDetails>({
-        path: `/api/icebreaker/session/${encodeURIComponent(resolvedSessionId)}`,
-      }),
-    enabled: !!resolvedSessionId && !authLoading,
-    staleTime: 0,
-  })
+  // Legacy icebreaker session details API removed; use defaults
+  const sessionDetails = null
+  const sessionLoading = false
+  const sessionError = null
 
   useEffect(() => {
-    if (!resolvedSessionId || authLoading || !currentUserId || sessionLoading || sessionError) {
+    if (!resolvedSessionId || authLoading || !currentUserId) {
       return
     }
 
@@ -143,7 +133,7 @@ export default function IcebreakerSessionPage() {
       data: {
         sessionId: resolvedSessionId,
         displayName: currentUserDisplayName,
-        eventType: sessionDetails?.eventType ?? '活动',
+        eventType: '活动',
       },
     })
       .then((response) => {
@@ -190,7 +180,6 @@ export default function IcebreakerSessionPage() {
     sessionError,
     socialSessionId,
     currentUserDisplayName,
-    sessionDetails?.eventType,
   ])
 
   const socialSessionQuery = useQuery<SocialSessionState>({
@@ -222,7 +211,7 @@ export default function IcebreakerSessionPage() {
   const hostUserId = session?.hostUserId ?? ''
   const isHost = !!currentUserId && currentUserId === hostUserId
   const participants = session
-    ? deriveParticipants(session, sessionDetails?.participants ?? [], hostUserId)
+    ? deriveParticipants(session, [], hostUserId)
     : []
   const playerCount = session?.playerCount ?? participants.length
 
@@ -290,11 +279,11 @@ export default function IcebreakerSessionPage() {
   const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
     void performSocialAction('topics', '/topics', {
       mood,
-      eventType: sessionDetails?.eventType ?? '活动',
+      eventType: '活动',
       participantCount: Math.max(playerCount, 2),
       avoidTopics: [],
     })
-  }, [performSocialAction, sessionDetails?.eventType, playerCount])
+  }, [performSocialAction, playerCount])
 
   const handleToggleWarmupReady = useCallback(() => {
     const isReady = session?.warmupReadyUserIds?.includes(currentUserId) ?? false
@@ -546,7 +535,7 @@ export default function IcebreakerSessionPage() {
       playerCount={playerCount}
       isHost={isHost}
       isSyncing={socialSessionQuery.isRefetching}
-      eventTitle={sessionDetails?.eventTitle}
+      eventTitle={undefined}
       onRequestSuggestion={handleRequestAdaptiveSuggestion}
       onDismissSuggestion={handleDismissAdaptiveSuggestion}
     />

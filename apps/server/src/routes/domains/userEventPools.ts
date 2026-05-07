@@ -27,7 +27,6 @@ import { enrichProfileFromRegistration } from "../../lib/profileEnrichment";
 import { logger } from "../../lib/logger";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
 import { aiEndpointLimiter } from "../../rateLimiter";
-import { isPhoneAuthenticated } from "../../phoneAuth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import * as schema from "@shared/schema";
@@ -51,7 +50,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
   // ============ USER EVENT POOLS (用户端活动池) ============
   
   // Get all active event pools (for DiscoverPage)
-  app.get('/api/event-pools', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/event-pools', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -780,7 +779,7 @@ app.get("/api/my-pool-registrations", requireAuth, async (req, res) => {
 
 
   // 取消盲盒报名（从活动池中移除当前用户的报名记录）
-  app.delete('/api/pool-registrations/:id', isPhoneAuthenticated, async (req: any, res) => {
+  app.delete('/api/pool-registrations/:id', requireAuth, async (req: any, res) => {
     try {
       console.log('[MyPoolRegistrationsCancel] route hit for /api/pool-registrations/:id', {
         method: req.method,

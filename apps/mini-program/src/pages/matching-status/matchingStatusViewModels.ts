@@ -2,8 +2,8 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { EventThemeVibe, PoolGroupSummary, PoolRegistrationSummary } from '@shared/api'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 import type { EventThemeTitleRevealedData } from '@shared/wsEvents'
-import { cdnAsset } from '../../lib/cdnAssets'
-import { MS_PER_HOUR, MS_PER_MINUTE } from '../../lib/uiConstants'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../../lib/utils/uiConstants'
 
 export type LiveRevealStage = 'idle' | 'match' | 'members' | 'theme'
 
@@ -207,7 +207,7 @@ export function getMatchingStatusScreenState<TRegistration extends { id: string 
   return { kind: 'ready', registration }
 }
 
-export { formatDateTime } from '../../lib/groupDisplay'
+export { formatDateTime } from '../../lib/matching/groupDisplay'
 
 export function getStatusLabel(status?: string): string {
   switch (status) {
@@ -221,7 +221,7 @@ export function getStatusLabel(status?: string): string {
   }
 }
 
-export { getVibeLabel } from '../../lib/groupDisplay'
+export { getVibeLabel } from '../../lib/matching/groupDisplay'
 
 export function getCountdownState(dateTime?: string | null): { isExpired: boolean; label: string } {
   if (!dateTime) {

@@ -88,5 +88,5 @@ jobs:
           fi
 
           ARGS="$ARGS --verbose"
-          node scripts/auto-ci-fix.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          node scripts/auto/auto-ci-fix.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT

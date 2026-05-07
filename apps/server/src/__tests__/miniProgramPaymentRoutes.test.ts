@@ -55,7 +55,7 @@ vi.mock("../storage", () => ({
 }));
 
 vi.mock("../phoneAuth", () => ({
-  isPhoneAuthenticated: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireAuth: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
 vi.mock("../lib/adminAuditLogger", () => ({

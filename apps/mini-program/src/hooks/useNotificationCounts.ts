@@ -4,8 +4,8 @@ import {
   markNotificationsAsRead,
   type NotificationCountsResponse,
 } from '@shared/api'
-import { POLL_NOTIFICATIONS_MS, STALE_TIME_DEFAULT_MS } from '../lib/uiConstants'
-import { apiRequest } from '../lib/api'
+import { POLL_NOTIFICATIONS_MS, STALE_TIME_DEFAULT_MS } from '../lib/utils/uiConstants'
+import { apiRequest } from '../lib/api/api'
 
 const NOTIFICATION_COUNTS_KEY = ['mini-program', 'notification-counts'] as const
 

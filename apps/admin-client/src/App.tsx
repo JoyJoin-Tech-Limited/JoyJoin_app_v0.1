@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import LoginPage from "@/pages/LoginPage";
+
 import { useEffect } from "react";
 // Legacy registration pages removed:
 //   - ChatRegistrationPage removed (2026-01-20)
@@ -34,7 +34,6 @@ import InviteLandingRouter from "@/pages/InviteLandingRouter";
 import InvitePage from "@/pages/InvitePage";
 import EventFeedbackFlow from "@/pages/EventFeedbackFlow";
 import DeepFeedbackFlow from "@/pages/DeepFeedbackFlow";
-import IcebreakerSessionPage from "@/pages/IcebreakerSessionPage";
 import RewardsPage from "@/pages/RewardsPage";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
@@ -76,7 +75,6 @@ function AuthenticatedRouter() {
       <Route path="/blind-box-events/:eventId" component={BlindBoxEventDetailPage} />
       <Route path="/events/:eventId/feedback" component={EventFeedbackFlow} />
       <Route path="/events/:eventId/deep-feedback" component={DeepFeedbackFlow} />
-      <Route path="/icebreaker/:sessionId" component={IcebreakerSessionPage} />
       <Route path="/events" component={EventsPage} />
       <Route path="/chats" component={EventCoordinationListPage} />
       <Route path="/chats/:eventId" component={EventCoordinationDetailPage} />
@@ -113,9 +111,9 @@ function Router() {
     );
   }
 
-  // Preview login page (for demo purposes - shows complete login flow)
+  // Preview login redirect (legacy phone login removed; use admin login)
   if (location === "/preview-login") {
-    return <Route path="/preview-login" component={LoginPage} />;
+    return <Route path="/preview-login" component={AdminLoginPage} />;
   }
 
   // Invite landing page is publicly accessible (handles both referrals and event invitations)
@@ -138,7 +136,7 @@ function Router() {
 
   // Regular user routes
   if (!isAuthenticated) {
-    return <Route path="*" component={LoginPage} />;
+    return <Route path="*" component={AdminLoginPage} />;
   }
 
   return <AuthenticatedRouter />;

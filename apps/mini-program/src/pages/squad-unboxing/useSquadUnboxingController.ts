@@ -9,12 +9,12 @@ import {
   type PoolGroupMemberSummary,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
-import { logError, logInfo } from '../../lib/logger'
-import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/uiConstants'
-import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/matchingNavigation'
+import { logError, logInfo } from '../../lib/utils/logger'
+import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
+import { navigateBackOrEventsTab, openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
 import {
   computeActionDockState,
   getSquadChemistryTokens,

@@ -5,7 +5,7 @@
 ## Near term (highest leverage)
 
 1. **Roll out executive briefing** — Treat [orchestration-turn-reporting](./orchestration-turn-reporting/SKILL.md) as canonical. **Contributor harness pointer:** [CONTRIBUTOR_AGENT_HARNESS.md](../CONTRIBUTOR_AGENT_HARNESS.md); shared turn narrative: [AGENT_TURN_VISIBLE_FORMAT.md](../agents/AGENT_TURN_VISIBLE_FORMAT.md). Agents under `.github/agents/` include a **Turn visible note (orchestration)** subsection aligned to that contract.
-2. **Regression guard for recorder** — **Done:** [`scripts/orchestration-turn-summary.test.mjs`](../../scripts/orchestration-turn-summary.test.mjs) (`npm run orchestration:test`); runs in [`.github/workflows/orchestrate.yml`](../../.github/workflows/orchestrate.yml) after `orchestration:validate`.
+2. **Regression guard for recorder** — **Done:** [`scripts/orchestration/orchestration-turn-summary.test.mjs`](../../scripts/orchestration/orchestration-turn-summary.test.mjs) (`npm run orchestration:test`); runs in [`.github/workflows/orchestrate.yml`](../../.github/workflows/orchestrate.yml) after `orchestration:validate`.
 3. **Single source for model catalog** — **Done:** [`.github/agents/MODEL_CATALOG.md`](../agents/MODEL_CATALOG.md); policy and Planner/Supervisor link to it.
 4. **code-review skill** — **Done:** [Author-facing summary (optional)](./code-review/SKILL.md#author-facing-summary-optional) cross-links [orchestration-turn-reporting](./orchestration-turn-reporting/SKILL.md) executive briefing.
 

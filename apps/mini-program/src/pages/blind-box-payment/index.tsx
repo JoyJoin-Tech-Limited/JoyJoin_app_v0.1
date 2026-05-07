@@ -1,8 +1,8 @@
 import { Button, View, Text, Image, ScrollView } from '@tarojs/components'
-import JoyButton from '../../components/Button'
+import JoyButton from '../../components/ui/Button'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import {
   createMiniProgramPaymentIntent,
   getPricing,
@@ -13,22 +13,22 @@ import {
   type UserCouponSummary,
 } from '@shared/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { logError, logWarn } from '../../lib/logger'
-import { getXiaoyueExpressionAsset } from '../../lib/xiaoyueExpressions'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboardingRoutes'
+import { logError, logWarn } from '../../lib/utils/logger'
+import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import {
   buildPaymentVerificationUrl,
   type MiniProgramPaymentReturnContext,
   type MiniProgramPoolRegistrationReturnContext,
   type ReadyMiniProgramPendingOrder,
-} from '../../lib/paymentPendingOrder'
+} from '../../lib/payment/paymentPendingOrder'
 import {
   clearPendingOrderStorage,
   clearPaymentReturnContextStorage,
   persistPendingOrder,
   readStoredPaymentReturnContext,
   readStoredPendingOrder,
-} from '../../lib/paymentPendingOrderStorage'
+} from '../../lib/payment/paymentPendingOrderStorage'
 import {
   buildMiniProgramPaymentAmountSummary,
   buildMiniProgramPaymentCouponDisplayModel,
@@ -37,7 +37,7 @@ import {
   getMiniProgramPaymentPlanMeta,
   resolveMiniProgramPaymentPlans,
   type MiniProgramPaymentPlanKey,
-} from '../../lib/paymentPageModel'
+} from '../../lib/payment/paymentPageModel'
 import './index.scss'
 
 type CouponValidationResponse = {

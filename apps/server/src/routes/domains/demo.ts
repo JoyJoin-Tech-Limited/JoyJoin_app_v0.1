@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { randomUUID } from "crypto";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
 import { storage } from "../../storage";
@@ -19,7 +19,7 @@ const seedPoolRegistrationsSchema = z.object({
 // Demo seed endpoints perform a series of independent INSERTs per route.
 // These are idempotent / best-effort seed operations, not transactional business flows.
 export function registerDemoRoutes(app: Express): void {
-  app.post('/api/demo/seed-events', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/demo/seed-events', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { db } = await import("../../db");
@@ -32,7 +32,7 @@ export function registerDemoRoutes(app: Express): void {
       const hasCompletedDemo = existingEvents.some((e: any) => e.status === 'completed' && e.restaurantName?.includes('Tap House'));
       
       if (hasMatchedDemo && hasCompletedDemo) {
-        logger.info("✅ Demo events already exist for user:", { value: userId });
+        logger.info("✅ Demo events already exist for user", { data: { value: userId } });
         return res.json({ message: "Demo events already exist" });
       }
       
@@ -276,7 +276,7 @@ export function registerDemoRoutes(app: Express): void {
         matchExplanation: "这是一场创意人的深夜聚会！精酿啤酒配上有趣的灵魂，大家都喜欢分享故事和创意想法。"
       }).returning();
       
-      logger.info("✅ Demo events created:", { matched: matchedEvent[0].id, completed: completedEvent[0].id });
+      logger.info("✅ Demo events created", { data: { matched: matchedEvent[0].id, completed: completedEvent[0].id } });
       
       res.json({ 
         message: "Demo events created successfully",
@@ -290,7 +290,7 @@ export function registerDemoRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to seed demo events" });
     }
   });
-  app.post('/api/demo/seed-pool-registrations', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/demo/seed-pool-registrations', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -385,7 +385,7 @@ export function registerDemoRoutes(app: Express): void {
       });
     }
   });
-  app.post('/api/demo/create-christmas-pool', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/demo/create-christmas-pool', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -408,7 +408,7 @@ export function registerDemoRoutes(app: Express): void {
       );
       
       if (hasChristmasPool) {
-        logger.info("✅ Christmas pool already exists for user:", { value: userId });
+        logger.info("✅ Christmas pool already exists for user", { data: { value: userId } });
         return res.json({ 
           message: "Christmas pool already exists",
           poolExists: true 
@@ -434,7 +434,7 @@ export function registerDemoRoutes(app: Express): void {
         currentParticipants: 1, // Just the creator
       }).returning();
 
-      logger.info("✅ Demo Christmas pool created:", created[0].id);
+      logger.info("✅ Demo Christmas pool created", { data: created[0].id });
       
       res.json({
         message: "Christmas pool created successfully",
@@ -533,7 +533,7 @@ export function registerDemoRoutes(app: Express): void {
       });
     }
   });
-  app.post('/api/chats/seed-demo', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/chats/seed-demo', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {

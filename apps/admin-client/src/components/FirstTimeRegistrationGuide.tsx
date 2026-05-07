@@ -27,17 +27,17 @@ interface FirstTimeRegistrationGuideProps {
 const GUIDE_STORAGE_KEY = "first_registration_guide_shown";
 
 export function useFirstTimeRegistrationGuide() {
-  const [hasSeenGuide, setHasSeenGuide] = useState(() => {
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(GUIDE_STORAGE_KEY) === "true";
   });
 
   const markAsSeen = () => {
     localStorage.setItem(GUIDE_STORAGE_KEY, "true");
-    setHasSeenGuide(true);
+    setHasSeenWelcome(true);
   };
 
-  return { hasSeenGuide, markAsSeen };
+  return { hasSeenWelcome, markAsSeen };
 }
 
 export default function FirstTimeRegistrationGuide({

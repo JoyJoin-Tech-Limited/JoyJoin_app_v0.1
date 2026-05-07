@@ -39,7 +39,7 @@
 
 ## Taro WebSocket examples
 
-Mini-program uses singleton pattern in `apps/mini-program/src/lib/websocket.ts` with hook in `apps/mini-program/src/hooks/useWebSocket.ts`.
+Mini-program uses singleton pattern in `apps/mini-program/src/lib/api/websocket.ts` with hook in `apps/mini-program/src/hooks/useWebSocket.ts`.
 
 Web client hooks:
 - `apps/user-client/src/hooks/useWebSocket.ts`
@@ -58,5 +58,5 @@ Web client hooks:
 - `apps/user-client/src/hooks/useWebSocket.ts`
 - `apps/user-client/src/hooks/useIcebreakerWebSocket.ts`
 - `apps/user-client/src/hooks/useKingGameWebSocket.ts`
-- `apps/mini-program/src/lib/websocket.ts`
+- `apps/mini-program/src/lib/api/websocket.ts`
 - `apps/mini-program/src/hooks/useWebSocket.ts`

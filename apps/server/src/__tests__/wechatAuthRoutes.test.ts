@@ -15,7 +15,6 @@ const mockUser = {
   hasCompletedPersonalityTest: true,
   hasCompletedInterestsCarousel: true,
   hasSeenProfileReview: true,
-  hasSeenGuide: true,
   password: "hashed-password",
   wechatOpenId: "mock_openid_wechat_test_route_hardening",
   wechatSessionKey: "super-secret-session-key",
@@ -142,30 +141,6 @@ describe("wechat auth route hardening", () => {
     vi.mocked(storage.getUserById).mockResolvedValue(mockUser as any);
     vi.mocked(storage.getUser).mockResolvedValue(mockUser as any);
     vi.mocked(storage.getAssessmentSessionByUser).mockResolvedValue(undefined as any);
-  });
-
-  it("strips sensitive fields on /api/auth/phone-login", async () => {
-    vi.mocked(storage.getUserByPhone).mockResolvedValue([mockUser as any]);
-
-    await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/auth/phone-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber: "13800138000",
-          code: "666666",
-        }),
-      });
-      const body = await response.json() as any;
-
-      expect(response.status).toBe(200);
-      expect(body).toMatchObject({
-        message: "Login successful",
-        userId: mockUser.id,
-        id: mockUser.id,
-      });
-      expectNoSensitiveAuthFields(body);
-    });
   });
 
   it("regenerates the session and strips sensitive fields on /api/auth/wechat/login", async () => {

@@ -1,10 +1,10 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro from "@tarojs/taro"
 import { useState } from "react"
-import Button from "../../components/Button"
+import Button from "../../components/ui/Button"
 import { DEFAULT_MASCOT_DISPLAY_NAME } from "@shared/mascotConfig"
-import { getXiaoyueExpressionAsset } from "../../lib/xiaoyueExpressions"
-import { runMiniProgramRouteTransition } from "../../lib/onboardingNavigation"
+import { getXiaoyueExpressionAsset } from "../../lib/mascot/xiaoyueExpressions"
+import { runMiniProgramRouteTransition } from "../../lib/onboarding/onboardingNavigation"
 import "./index.scss"
 
 type LandingHeroKey = "match" | "dinner" | "continue"

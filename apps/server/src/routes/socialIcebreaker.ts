@@ -34,7 +34,7 @@ import {
 } from '../socialIcebreakerPhaseConfig';
 import { DEFAULT_STANDARD_RUN_PLAN } from '@shared/phaseRegistry';
 import { getRunPlanForTier } from '@shared/socialIcebreakerRunPlans';
-import { resolveLegacyTier, type TierMachineId } from '@shared/socialIcebreakerTierManifest';
+import { type TierMachineId } from '@shared/socialIcebreakerTierManifest';
 import { socialIcebreakerAiFeedbackRepo } from '../repositories/socialIcebreakerAiFeedbackRepo';
 import { submitSocialIcebreakerAiFeedbackSchema } from '@shared/schema';
 import {
@@ -57,7 +57,7 @@ import {
   logMomentCardInteraction,
   getMomentCardStats,
 } from '../lib/socialIcebreakerStore';
-import { getIcebreakerSessionParticipantAccess } from '../lib/icebreakerAccess';
+import { getSocialIcebreakerAccess } from '../lib/socialIcebreakerAccess';
 import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
@@ -102,7 +102,7 @@ router.post('/start', async (req: any, res) => {
     return res.status(400).json({ error: 'sessionId is required' });
   }
 
-  const access = await getIcebreakerSessionParticipantAccess(sessionId, userId);
+  const access = await getSocialIcebreakerAccess(sessionId, userId);
   if (!access.allowed) {
     return res.status(access.status).json(access.body);
   }
@@ -148,7 +148,7 @@ router.post('/start', async (req: any, res) => {
   // Create new social session — first caller becomes host.
   const socialSessionId = getSocialSessionId(sessionId);
   const now = Date.now();
-  const resolvedTier = resolveLegacyTier(eventTier);
+  const resolvedTier: TierMachineId = (['breeze', 'glow', 'blaze'] as string[]).includes(eventTier) ? eventTier as TierMachineId : 'breeze';
   const runPlan = getRunPlanForTier(resolvedTier) ?? DEFAULT_STANDARD_RUN_PLAN;
   const newState: SocialSessionState = {
     socialSessionId,

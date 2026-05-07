@@ -4,7 +4,7 @@ import type { WSMessage, WSEventType } from '@shared/wsEvents'
 import {
   getWebSocket,
   type ConnectionState,
-} from '../lib/websocket'
+} from '../lib/api/websocket'
 
 // ---------------------------------------------------------------------------
 // Public types

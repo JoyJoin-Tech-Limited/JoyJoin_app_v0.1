@@ -177,14 +177,14 @@ Boundary:
 
 ### Mini Program (Taro — launch-primary)
 
-- **Page registration:** `apps/mini-program/src/lib/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the onboarding **subpackage** (`root: pages/onboarding`, seven page entries), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
+- **Page registration:** `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` defines `MINI_PROGRAM_MAIN_PACKAGE_PAGES`, the onboarding **subpackage** (`root: pages/onboarding`, seven page entries), and `preloadRule` entries; `app.config.ts` imports these — edit onboardingRoutes when adding routes or changing package splits.
 - Taro page implementations: `apps/mini-program/src/pages/`
-- Mini Program runtime helper: `apps/mini-program/src/lib/` (`api.ts`, `centerTabRouting.ts`, `tabBarConfig.ts`, `xiaoyueExpressions.ts`, etc.)
+- Mini Program runtime helpers: `apps/mini-program/src/lib/` — domain subdirectories: `api/`, `auth/`, `payment/`, `onboarding/`, `navigation/`, `wechat/`, `matching/`, `mascot/`, `analytics/`, `utils/`
 - Mini Program hook: `apps/mini-program/src/hooks/`
 - Mini Program provider: `apps/mini-program/src/providers/` (`AuthProvider.tsx`, achievement/accent providers)
 - Native WeChat custom tab bar implementation: `apps/mini-program/src/native-custom-tab-bar/`
 - The build copies `apps/mini-program/src/native-custom-tab-bar/` into the runtime `custom-tab-bar/` directory; `apps/mini-program/src/custom-tab-bar/` is not the active runtime path.
-- Tab selection / center CTA sync: `apps/mini-program/src/lib/tabBarConfig.ts`, `apps/mini-program/src/lib/centerTabRouting.ts`, `apps/mini-program/src/hooks/useCustomTabBarSync.ts`
+- Tab selection / center CTA sync: `apps/mini-program/src/lib/navigation/tabBarConfig.ts`, `apps/mini-program/src/lib/navigation/centerTabRouting.ts`, `apps/mini-program/src/hooks/navigation/useCustomTabBarSync.ts`
 - Active custom-tab-bar constraints live in `apps/mini-program/README.md`; keep the native tree within `cover-view` nesting rules and treat shadow, gradient, and overflow-driven protrusions as compatibility-sensitive.
 - App-level config / lifecycle: `apps/mini-program/src/app.ts` (provider setup), `apps/mini-program/src/app.config.ts` (`lazyCodeLoading: 'requiredComponents'`, `tabBar.custom`, window defaults)
 - Cross-platform contract or pure business rule: `packages/shared/src/` (`api.ts`, `centerTabRouting.ts`, `hongKongTime.ts`, `onboarding.ts`)

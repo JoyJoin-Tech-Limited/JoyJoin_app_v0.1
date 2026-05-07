@@ -57,7 +57,7 @@ For implementation details — Zod/Drizzle examples, DTO patterns, drift detecti
 ---
 
 **User says:** "The server is returning a new `themeEmoji` field but the mini-program isn't seeing it."
-**Apply this skill by:** Checking `packages/shared/src/api.ts` for `PoolGroupSummary` — if `themeEmoji` is missing from the interface, add it there. Also verify `apps/mini-program/src/lib/api.ts` imports the updated type via `@shared/api`.
+**Apply this skill by:** Checking `packages/shared/src/api.ts` for `PoolGroupSummary` — if `themeEmoji` is missing from the interface, add it there. Also verify `apps/mini-program/src/lib/api/api.ts` imports the updated type via `@shared/api`.
 **Result:** Type drift is caught at the shared boundary, not at runtime in the client.
 
 ## Troubleshooting

@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
-import { logError } from '../../lib/logger'
+import { logError } from '../../lib/utils/logger'
 
 export default function MyEventsLegacyPage() {
   const [statusText, setStatusText] = useState('正在前往我的足迹...')

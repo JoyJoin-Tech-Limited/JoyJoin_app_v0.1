@@ -1,5 +1,5 @@
 import { Image, Text, View } from '@tarojs/components'
-import Button from '../../../../../components/Button'
+import Button from '../../../../../components/ui/Button'
 import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,

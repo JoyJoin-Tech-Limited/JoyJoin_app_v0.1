@@ -80,7 +80,7 @@ npm run dev
 ### Key Commands
 ```bash
 npm run build            # Build user-client, admin-client, and server workspaces
-npm run build:user       # Build only the user-client workspace
+# npm run build:user was removed — user-client archived to archived/workspaces/user-client/
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
 npm run check:clients    # Typecheck shared + user/admin + mini-program workspaces
 npm run check:server     # Typecheck only the server workspace
@@ -110,15 +110,16 @@ joyjoin-monorepo/
 ├── .github/                  # CI workflows, orchestration contract, agents, and skills
 ├── .githooks/                # Optional repo-managed local pre/post-commit hooks
 ├── apps/
-│   ├── user-client/          # User-facing React app (mobile-first)
+│   ├── mini-program/         # WeChat Mini Program — launch-primary client (Taro + React)
 │   │   ├── src/
-│   │   │   ├── pages/        # Page components (40+ pages)
-│   │   │   ├── components/   # Reusable UI components (90+ components)
-│   │   │   ├── hooks/        # Custom React hooks
-│   │   │   ├── lib/          # Utilities (queryClient, etc.)
-│   │   │   ├── data/         # Static data files
-│   │   │   └── App.tsx       # Main app with routing
-│   │   └── index.html
+│   │   │   ├── pages/        # Taro page components
+│   │   │   ├── components/   # Reusable Taro components
+│   │   │   ├── hooks/        # Custom hooks
+│   │   │   ├── lib/          # Utilities and API wrappers
+│   │   │   └── app.ts        # Mini-program app entry
+│   │   └── dist/             # Build output
+│   │
+│   ├── user-client/          # [ARCHIVED] User-facing React app (moved to archived/workspaces/user-client/)
 │   │
 │   ├── admin-client/         # Admin portal React app (desktop-first)
 │   │   ├── src/
@@ -196,13 +197,13 @@ joyjoin-monorepo/
 
 | Concern | Location |
 |---------|----------|
-| Register pages / main vs onboarding subpackage / `preloadRule` | `apps/mini-program/src/lib/onboardingRoutes.ts` → consumed by `app.config.ts` |
+| Register pages / main vs onboarding subpackage / `preloadRule` | `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` → consumed by `app.config.ts` |
 | Personality test (V4) | `apps/mini-program/src/pages/onboarding/personality-test/` (test, results, auth-gate); anonymous keys in `lib/anonymousOnboarding.ts` |
 | WeChat login | Returning: `pages/login/index.tsx` + `hooks/useWeChatLogin.ts` → `POST /api/auth/wechat/login`. With assessment import: `authenticateMiniProgramUserWithTest` in `lib/api.ts` → `POST /api/auth/wechat/login-with-test` |
 | Blind-box payment + verification | `pages/blind-box-payment/`, `pages/payment-verification/`; `lib/paymentEntry.ts`, `lib/paymentPendingOrder.ts`, `lib/paymentPendingOrderStorage.ts`; shared intent helper `createMiniProgramPaymentIntent` in `packages/shared/src/api.ts` |
-| Auth + API bootstrap | `apps/mini-program/src/lib/api.ts` |
+| Auth + API bootstrap | `apps/mini-program/src/lib/api/api.ts` |
 | Custom tab bar (native) | `apps/mini-program/src/native-custom-tab-bar/` (see `apps/mini-program/README.md`) |
-| Tab list + `tabBar.custom` | `apps/mini-program/src/lib/tabBarConfig.ts` + `app.config.ts` |
+| Tab list + `tabBar.custom` | `apps/mini-program/src/lib/navigation/tabBarConfig.ts` + `app.config.ts` |
 | Shared contracts with web | `packages/shared/src/api.ts`, `centerTabRouting.ts`, `onboarding.ts`, `hongKongTime.ts` |
 | Quality bar (pixel precision, DevTools) | `.github/skills/mini-program-frontend-excellence/SKILL.md` |
 
@@ -363,13 +364,12 @@ The client **never** computes its own onboarding position. `nextStep` is always 
 | `essential-data` | `/onboarding/setup` | `profileEssentialComplete` (server-computed) |
 | `extended-data` | `/onboarding/extended` | `hasCompletedInterestsCarousel` (users table) |
 | `profile-review` | `/onboarding/review` | `hasSeenProfileReview` (users table) |
-| `guide` / `discover` | `/discover` | `hasSeenGuide` (users table) |
+| `discover` | `/discover` | `onboardingCheckpoint === 'discover'` |
 
 Pre-auth value-first entry remains `/personality-test` → `/personality-test/results` → `/personality-test/auth-gate`; once the user is authenticated, routing authority switches to server-returned `nextStep`.
 
-Active onboarding pages: `apps/user-client/src/features/onboarding/active/pages/`  
-Mini-program mirror: `apps/mini-program/src/pages/onboarding/`  
-Legacy surfaces: `apps/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
+Active onboarding pages: `apps/mini-program/src/pages/onboarding/`  
+Legacy surfaces: `archived/workspaces/user-client/src/legacy/onboarding/` — do not add new routes or CTAs there
 
 > Full reference: `docs/onboarding-flow.md` · skill: `onboarding-state-architecture`
 
@@ -479,7 +479,7 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 - Component: `IcebreakerSessionPage` (web); `apps/mini-program/src/pages/icebreaker-session/` (mini-program)
 - Hook: `useSocialIcebreaker`
 - Phases: governed by tier-based run plans — `breeze` (破冰局, 40min casual), `glow` (畅聊局, 60min standard), `blaze` (狂欢局, 90min full). Default enabled set is MVP (`warmup`, `micro_challenge`, `lie_detective`) **plus** `personality_dice` unless tier selection adds fan-out phases. Tier machine ID (`breeze`/`glow`/`blaze`) is decoupled from display name via `packages/shared/src/socialIcebreakerTierManifest.ts`. See `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`.
-- **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` switches to user-tag-based gameplay (2 tags + AI fake). V1 (AI-fabricated statements) remains default. Design spec: `docs/proposals/spot-the-bot-game-design.md`.
+- **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` switches to user-tag-based gameplay (2 tags + AI fake). V1 (AI-fabricated statements) remains default. Design spec: `docs/icebreaker/icebreaker-system.md`.
 - Full reference: `docs/icebreaker-system.md`
 
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.

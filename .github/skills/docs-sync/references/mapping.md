@@ -70,12 +70,12 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 **Source paths:**
 - `apps/mini-program/src/pages/onboarding/personality-test/`
 - `apps/mini-program/src/pages/login/`
-- `apps/mini-program/src/hooks/useWeChatLogin.ts`
-- `apps/mini-program/src/lib/anonymousOnboarding.ts`
+- `apps/mini-program/src/hooks/auth/useWeChatLogin.ts`
+- `apps/mini-program/src/lib/auth/anonymousOnboarding.ts`
 - `apps/mini-program/src/pages/blind-box-payment/`
 - `apps/mini-program/src/pages/payment-verification/`
-- `apps/mini-program/src/lib/api.ts`, `paymentEntry.ts`, `paymentPendingOrder.ts`, `paymentPendingOrderStorage.ts`
-- `apps/mini-program/src/lib/onboardingRoutes.ts` (page registration / subpackages)
+- `apps/mini-program/src/lib/api/api.ts`, `payment/paymentEntry.ts`, `payment/paymentPendingOrder.ts`, `payment/paymentPendingOrderStorage.ts`
+- `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` (page registration / subpackages)
 - `apps/mini-program/src/app.ts` (pending-order resume on cold start)
 - `apps/mini-program/src/pages/matching-status/` (matching result, chemistry reveal, connection points, share poster)
 - `apps/mini-program/src/pages/connections/` (connection list, reveal flow)

@@ -34,7 +34,7 @@ owned_files:
   - .github/agents/supervisor.agent.md
   - .github/orchestration.yaml
   - .github/orchestration-context.example.json
-  - scripts/orchestration-supervisor.mjs
+  - scripts/orchestration/orchestration-supervisor.mjs
   - .github/copilot-instructions.md
 
 related_skills:

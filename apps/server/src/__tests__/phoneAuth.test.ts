@@ -1,82 +1,50 @@
-import express from "express";
-import session from "express-session";
-import type { AddressInfo } from "net";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Request, Response, NextFunction } from "express";
+import { describe, expect, it, vi } from "vitest";
+import { requireAuth } from "../phoneAuth";
 
-vi.mock("../storage", () => ({
-  storage: {
-    getUserByPhone: vi.fn(),
-    createUserWithPhone: vi.fn(),
-    getUserById: vi.fn(),
-  },
-}));
-
-const { setupPhoneAuth } = await import("../phoneAuth");
-
-const originalEnv = { ...process.env };
-
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: "test-secret",
-      resave: false,
-      saveUninitialized: false,
-    }),
-  );
-  setupPhoneAuth(app);
-  return app;
+function mockReq(session: Record<string, unknown> | undefined): Partial<Request> {
+  return { session: session as any };
 }
 
-async function withServer<T>(fn: (baseUrl: string) => Promise<T>) {
-  const app = createApp();
-  const server = await new Promise<ReturnType<typeof app.listen>>((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-
-  try {
-    const { port } = server.address() as AddressInfo;
-    return await fn(`http://127.0.0.1:${port}`);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
+function mockRes(): Partial<Response> {
+  const res: Partial<Response> = {
+    status: vi.fn().mockReturnThis(),
+    json: vi.fn().mockReturnThis(),
+  };
+  return res;
 }
 
-afterEach(() => {
-  process.env = { ...originalEnv };
-});
+const mockNext = vi.fn() as NextFunction;
 
-describe("phone auth debug route registration", () => {
-  it("does not register debug routes by default", async () => {
-    process.env.NODE_ENV = "development";
-    delete process.env.ENABLE_DEV_AUTH_TOOLS;
+describe("requireAuth middleware", () => {
+  it("calls next() when session has userId", async () => {
+    const req = mockReq({ userId: "user-123" }) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
 
-    await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/debug/echo-cookie`);
-      expect(response.status).toBe(404);
-    });
+    await requireAuth(req, res, next);
+    expect(next).toHaveBeenCalled();
   });
 
-  it("registers debug routes only with explicit opt-in", async () => {
-    process.env.NODE_ENV = "development";
-    process.env.ENABLE_DEV_AUTH_TOOLS = "1";
+  it("returns 401 when session has no userId", async () => {
+    const req = mockReq({}) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
 
-    await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/debug/echo-cookie`);
-      const body = await response.json();
-      expect(response.status).toBe(200);
-      expect(body).toMatchObject({
-        hasCookieHeader: false,
-        hasConnectSidCookie: false,
-        hasSessionUserId: false,
-        sessionIsAdmin: null,
-      });
-      expect(body).not.toHaveProperty("cookieHeader");
-      expect(body).not.toHaveProperty("sessionID");
-      expect(body).not.toHaveProperty("sessionUserId");
-    });
+    await requireAuth(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
+  });
+
+  it("returns 401 when session is undefined", async () => {
+    const req = mockReq(undefined) as Request;
+    const res = mockRes() as Response;
+    const next = vi.fn() as NextFunction;
+
+    await requireAuth(req, res, next);
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
   });
 });

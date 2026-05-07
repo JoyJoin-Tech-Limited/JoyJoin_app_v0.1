@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import XiaoyueChatBubble from '../../../components/XiaoyueChatBubble'
-import type { XiaoyueExpressionId } from '../../../lib/xiaoyueExpressions'
+import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
 import './MascotQuestionHeader.scss'
 
 interface MatchChip {

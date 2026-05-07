@@ -226,7 +226,7 @@ node scripts/auto-prune.mjs --artifacts --live
 **Area labels** (from changed file paths):
 - `area:server` — `apps/server/` changes
 - `area:mini-program` — `apps/mini-program/` changes
-- `area:web` — `apps/user-client/` or web changes
+- `area:web` — `archived/workspaces/user-client/` (historical web reference) or mini-program web-view changes
 - `area:admin` — `apps/admin-client/` changes
 - `area:shared` — `packages/shared/` changes
 - `area:docs` — `docs/` or `.md` changes

@@ -1,5 +1,6 @@
 import type { Express } from "express";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { logger } from "../../lib/logger";
+import { requireAuth } from "../../phoneAuth";
 import { storage } from "../../storage";
 import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";
@@ -19,7 +20,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       const { preSignupAnswers, sessionId: existingSessionId, forceNew } = req.body;
       const userId = req.session?.userId || null;
       
-      console.log('[Assessment V4 Start] Called with:', {
+      logger.info("[Assessment V4 Start] Called with", {
         existingSessionId,
         userId,
         forceNew,
@@ -54,7 +55,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       // Resume existing session UNLESS user explicitly wants to restart
       if (userId && !isExplicitRestart) {
         const existingUserSession = await storage.getAssessmentSessionByUser(userId);
-        console.log('[V4 Start] Checked for existing user session:', {
+        logger.info("[V4 Start] Checked for existing user session", {
           userId,
           foundSession: !!existingUserSession,
           sessionId: existingUserSession?.id,
@@ -79,27 +80,27 @@ export function registerAssessmentV4Routes(app: Express): void {
             }
           }
           
-          console.log('[V4 Start] Resuming existing session for user:', userId, 'with', answers.length, 'answers');
+          logger.info("[V4 Start] Resuming existing session for user", { userId, answerCount: answers.length });
         } else if (existingUserSession && existingUserSession.completedAt) {
           // User has a completed session - start fresh
-          console.log('[V4 Start] User has completed session, creating new one');
+          logger.info('[V4 Start] User has completed session, creating new one');
         } else {
-          console.log('[V4 Start] No existing session found for user:', userId);
+          logger.info("[V4 Start] No existing session found for user", { data: userId });
         }
       } else if (userId && isExplicitRestart) {
-        console.log('[V4 Start] Explicit restart requested for user:', userId);
+        logger.info("[V4 Start] Explicit restart requested for user", { data: userId });
       }
       
       // If resuming by session ID (anonymous pre-signup flow)
       if (!session && existingSessionId && !forceNew) {
-        console.log('[V4 Start] Attempting to resume by sessionId:', existingSessionId);
+        logger.info("[V4 Start] Attempting to resume by sessionId", { data: existingSessionId });
         session = await storage.getAssessmentSession(existingSessionId);
         if (!session) {
-          console.error('[V4 Start] Session not found by sessionId:', existingSessionId);
+          logger.error("[V4 Start] Session not found by sessionId", { error: String(existingSessionId) });
           return res.status(404).json({ message: 'Session not found' });
         }
         
-        console.log('[V4 Start] Found session by sessionId:', {
+        logger.info("[V4 Start] Found session by sessionId", {
           sessionId: session.id,
           userId: session.userId,
           phase: session.phase,
@@ -119,7 +120,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           }
         }
         
-        console.log('[V4 Start] Replayed', answers.length, 'answers for session:', existingSessionId);
+        logger.info('[V4 Start] Replayed answers for session', { count: answers.length, sessionId: existingSessionId });
       }
       
       // Create new session if none exists
@@ -164,20 +165,20 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       // Ensure engineState is initialized (should always be by this point)
       if (!engineState) {
-        console.log('[V4 Start] Engine state was not initialized, initializing now');
+        logger.info('[V4 Start] Engine state was not initialized, initializing now');
         engineState = initializeEngineState(assessmentConfig);
       }
       
       // Ensure session exists by this point
       if (!session) {
-        console.error('[V4 Start] No session available after all checks - this should not happen');
+        logger.error('[V4 Start] No session available after all checks - this should not happen');
         return res.status(500).json({ message: 'Failed to create or find session' });
       }
       
       // Get next question
       const nextQuestion = selectNextQuestion(engineState);
       
-      console.log('[Assessment V4 Start] Engine state:', {
+      logger.info("[Assessment V4 Start] Engine state", {
         answeredCount: engineState.answeredQuestionIds.size,
         skipCount: engineState.skipCount,
         phase: session.phase,
@@ -212,7 +213,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         isComplete: nextQuestion === null,
       };
       
-      console.log('[Assessment V4 Start] Response:', {
+      logger.info("[Assessment V4 Start] Response", {
         sessionId: response.sessionId,
         phase: response.phase,
         answered: response.progress.answered,
@@ -222,7 +223,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       res.json(response);
     } catch (error: any) {
-      console.error('[Assessment V4 Start] Error:', error);
+      logger.error("[Assessment V4 Start] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to start assessment', error: error.message });
     }
   });
@@ -231,7 +232,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       const { sessionId } = req.params;
       const { questionId, selectedOption } = req.body;
       
-      console.log('[Assessment V4 Answer] Called with:', {
+      logger.info("[Assessment V4 Answer] Called with", {
         sessionId,
         questionId,
         selectedOption,
@@ -243,7 +244,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
-        console.error('[Assessment V4 Answer] Session not found:', sessionId);
+        logger.error("[Assessment V4 Answer] Session not found", { error: String(sessionId) });
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -378,7 +379,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           // Log algorithm version and match details for A/B testing
           const algorithmVersion = finalResult.algorithmVersion || 'v1.0';
           const isDecisive = finalResult.isDecisive ?? true;
-          console.log(`[Assessment V4] Algorithm: ${algorithmVersion} | Result: ${primaryArchetype} (score: ${primaryMatchScore}) | Decisive: ${isDecisive} | User: ${session.userId}`);
+          logger.info('[Assessment V4] Algorithm result', { algorithmVersion, primaryArchetype, primaryMatchScore, isDecisive, userId: session.userId });
         }
         
         res.json({
@@ -438,7 +439,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           encouragement,
         });
         
-        console.log('[Assessment V4 Answer] Response:', {
+        logger.info("[Assessment V4 Answer] Response", {
           isComplete: false,
           hasNextQuestion: !!nextQuestion,
           nextQuestionId: nextQuestion?.id,
@@ -446,7 +447,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         });
       }
     } catch (error: any) {
-      console.error('[Assessment V4 Answer] Error:', error);
+      logger.error("[Assessment V4 Answer] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to submit answer', error: error.message });
     }
   });
@@ -455,7 +456,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       const { sessionId } = req.params;
       const { questionId } = req.body;
       
-      console.log('[Assessment V4 Skip] Called with:', {
+      logger.info("[Assessment V4 Skip] Called with", {
         sessionId,
         questionId,
       });
@@ -466,7 +467,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
-        console.error('[Assessment V4 Skip] Session not found:', sessionId);
+        logger.error("[Assessment V4 Skip] Session not found", { error: String(sessionId) });
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -555,7 +556,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         remainingSkips: MAX_SKIP_COUNT - skipResult.newState.skipCount,
       });
     } catch (error: any) {
-      console.error('[Assessment V4 Skip] Error:', error);
+      logger.error("[Assessment V4 Skip] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to skip question', error: error.message });
     }
   });
@@ -580,23 +581,23 @@ export function registerAssessmentV4Routes(app: Express): void {
         topArchetypes: session.topArchetypes,
       });
     } catch (error: any) {
-      console.error('[Assessment V4 Result] Error:', error);
+      logger.error("[Assessment V4 Result] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to get result', error: error.message });
     }
   });
-  app.post('/api/assessment/v4/:sessionId/link-user', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/assessment/v4/:sessionId/link-user', requireAuth, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
       const userId = req.user!.id;
       
-      console.log('[Assessment V4 Link] Called with:', {
+      logger.info("[Assessment V4 Link] Called with", {
         sessionId,
         userId,
       });
       
       const session = await storage.getAssessmentSession(sessionId);
       if (!session) {
-        console.error('[Assessment V4 Link] Session not found:', sessionId);
+        logger.error("[Assessment V4 Link] Session not found", { error: String(sessionId) });
         return res.status(404).json({ message: 'Session not found' });
       }
       
@@ -664,7 +665,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         currentMatches: engineState.currentMatches.slice(0, 3),
       };
       
-      console.log('[Assessment V4 Link] Response:', {
+      logger.info("[Assessment V4 Link] Response", {
         success: true,
         hasNextQuestion: !!nextQuestion,
         nextQuestionId: nextQuestion?.id,
@@ -673,7 +674,7 @@ export function registerAssessmentV4Routes(app: Express): void {
       
       res.json(responseData);
     } catch (error: any) {
-      console.error('[Assessment V4 Link] Error:', error);
+      logger.error("[Assessment V4 Link] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to link user', error: error.message });
     }
   });
@@ -694,7 +695,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         count: anchors.length,
       });
     } catch (error: any) {
-      console.error('[Assessment V4 Anchors] Error:', error);
+      logger.error("[Assessment V4 Anchors] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to get anchor questions', error: error.message });
     }
   });
@@ -702,7 +703,7 @@ export function registerAssessmentV4Routes(app: Express): void {
     try {
       const userId = req.session?.userId;
       if (!userId) {
-        console.warn('[Presignup Sync] No userId in session - session may not be ready yet');
+        logger.warn('[Presignup Sync] No userId in session - session may not be ready yet');
         return res.status(401).json({ message: 'Unauthorized - must be logged in' });
       }
 
@@ -711,7 +712,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         return res.status(400).json({ message: 'No pre-signup answers provided' });
       }
 
-      console.log('[Presignup Sync] Syncing', preSignupAnswers.length, 'answers for user:', userId);
+      logger.info('[Presignup Sync] Syncing answers for user', { count: preSignupAnswers.length, userId });
 
       // Import adaptive engine
       const { 
@@ -743,7 +744,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         const newAnswers = Array.from(dedupedIncoming.values()).filter(ans => !existingQuestionIds.has(ans.questionId));
         
         if (newAnswers.length === 0) {
-          console.log('[Presignup Sync] No new answers to sync for session:', session.id);
+          logger.info("[Presignup Sync] No new answers to sync for session", { data: session.id });
           return res.json({ 
             sessionId: session.id, 
             message: 'All answers already synced',
@@ -752,7 +753,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           });
         }
 
-        console.log('[Presignup Sync] Syncing', newAnswers.length, 'new answers to existing session:', session.id);
+        logger.info('[Presignup Sync] Syncing new answers to existing session', { count: newAnswers.length, sessionId: session.id });
         
         // Reconstruct engine state for full session (existing + new) to update current matches
         const allUniqueAnswers = [...existingAnswers.map(a => ({ questionId: a.questionId, selectedOption: a.selectedOption })), ...newAnswers];
@@ -811,7 +812,7 @@ export function registerAssessmentV4Routes(app: Express): void {
           phase: 'post_signup',
           preSignupAnswers: preSignupAnswers,
         });
-        console.log('[Presignup Sync] Created new session:', session.id);
+        logger.info("[Presignup Sync] Created new session", { data: session.id });
       }
 
       // Initialize engine state and process pre-signup answers
@@ -858,7 +859,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         answeredQuestionIds: Array.from(engineState.answeredQuestionIds),
       });
 
-      console.log('[Presignup Sync] Synced', uniqueAnswers.length, 'answers to session:', session.id);
+      logger.info('[Presignup Sync] Synced answers to session', { count: uniqueAnswers.length, sessionId: session.id });
 
       res.json({ 
         sessionId: session.id, 
@@ -867,7 +868,7 @@ export function registerAssessmentV4Routes(app: Express): void {
         message: 'Pre-signup answers synced successfully'
       });
     } catch (error: any) {
-      console.error('[Presignup Sync] Error:', error);
+      logger.error("[Presignup Sync] Error", { error: String(error) });
       res.status(500).json({ message: 'Failed to sync pre-signup answers', error: error.message });
     }
   });

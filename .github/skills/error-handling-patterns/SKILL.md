@@ -54,7 +54,7 @@ The server uses three closely related shapes. Prefer `{ error, code? }` for new 
 **Result:** Clients receive a clean, predictable error shape without internal field leakage.
 
 **User says:** "The mini-program shows a generic 'request failed' when the API is unreachable."
-**Apply this skill by:** Using `apiRequest` from `apps/mini-program/src/lib/api.ts`. Transport errors are already normalized: timeout → "请求超时…", domain whitelist → "不在小程序合法域名白名单中…", SSL → "无法建立安全连接…". Surface `error.message` in the UI; it is already localized.
+**Apply this skill by:** Using `apiRequest` from `apps/mini-program/src/lib/api/api.ts`. Transport errors are already normalized: timeout → "请求超时…", domain whitelist → "不在小程序合法域名白名单中…", SSL → "无法建立安全连接…". Surface `error.message` in the UI; it is already localized.
 **Result:** Users see actionable, network-cause-specific copy instead of a generic failure.
 
 ## Troubleshooting

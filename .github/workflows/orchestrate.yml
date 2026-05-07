@@ -55,4 +55,4 @@ jobs:
             fi
           fi
 
-          node scripts/orchestration-supervisor.mjs workflow "$target"
+          node scripts/orchestration/orchestration-supervisor.mjs workflow "$target"

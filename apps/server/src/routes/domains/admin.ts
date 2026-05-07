@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { registerAdminAuthRoutes, requireAdmin } from "../../adminAuth";
 import {
@@ -43,7 +44,7 @@ export function registerAdminRoutes(app: Express): void {
         rows,
       });
     } catch (error) {
-      console.error("Error fetching chemistry calibration details:", error);
+      logger.error("Error fetching chemistry calibration details", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch chemistry calibration details" });
     }
   });
@@ -60,7 +61,7 @@ export function registerAdminRoutes(app: Express): void {
       const dashboard = await adminOutcomeAnalyticsRepo.getDashboard();
       res.json(dashboard);
     } catch (error) {
-      console.error("[AdminOutcomeAnalytics] Failed to build dashboard:", error);
+      logger.error("[AdminOutcomeAnalytics] Failed to build dashboard", { error: String(error) });
       res.status(500).json({ message: "Failed to load outcome analytics dashboard" });
     }
   });
@@ -81,7 +82,7 @@ export function registerAdminRoutes(app: Express): void {
         ...summary,
       });
     } catch (error) {
-      console.error("[AdminIcebreakerAiFeedback] summary failed:", error);
+      logger.error("[AdminIcebreakerAiFeedback] summary failed", { error: String(error) });
       res.status(500).json({ message: "Failed to load icebreaker AI feedback summary" });
     }
   });
@@ -103,7 +104,7 @@ export function registerAdminRoutes(app: Express): void {
         generatedAt: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("[AdminIcebreakerAnalytics] summary failed:", error);
+      logger.error("[AdminIcebreakerAnalytics] summary failed", { error: String(error) });
       res.status(500).json({ message: "Failed to load icebreaker analytics" });
     }
   });
@@ -126,7 +127,7 @@ export function registerAdminRoutes(app: Express): void {
 
       res.json(result);
     } catch (error) {
-      console.error("[AdminAuditLogs] query failed:", error);
+      logger.error("[AdminAuditLogs] query failed", { error: String(error) });
       res.status(500).json({ message: "Failed to load audit logs" });
     }
   });

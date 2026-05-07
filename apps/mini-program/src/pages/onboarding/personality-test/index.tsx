@@ -1,13 +1,13 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { cdnAsset } from '../../../lib/cdnAssets'
-import Button from '../../../components/Button'
-import OnboardingLoadingShell from '../../../components/OnboardingLoadingShell'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import Button from '../../../components/ui/Button'
+import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
-import { apiRequest, getUserState } from '../../../lib/api'
-import { useOnboardingAnalytics } from '../../../hooks/useOnboardingAnalytics'
-import { useOnboardingCheckpoint } from '../../../hooks/useOnboardingCheckpoint'
+import { apiRequest, getUserState } from '../../../lib/api/api'
+import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
+import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import {
   clearAnonymousAssessmentStorage,
   hasAnonymousAssessmentResult,
@@ -17,24 +17,24 @@ import {
   upsertAnonymousAssessmentAnswer,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
-} from '../../../lib/anonymousOnboarding'
-import { MINI_PROGRAM_ROUTES } from '../../../lib/onboardingRoutes'
+} from '../../../lib/auth/anonymousOnboarding'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import {
   navigateToMiniProgramNextStep,
   runMiniProgramRouteTransition,
-} from '../../../lib/onboardingNavigation'
+} from '../../../lib/onboarding/onboardingNavigation'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { logInfo, logError } from '../../../lib/logger'
+import { logInfo, logError } from '../../../lib/utils/logger'
 import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
   PERSONALITY_TEST_QUESTION_EXPRESSION,
 } from './visuals'
-import type { XiaoyueExpressionId } from '../../../lib/xiaoyueExpressions'
-import SegmentedProgress from '../../../components/SegmentedProgress'
-import XiaoyueChatBubble from '../../../components/XiaoyueChatBubble'
-import { haptics } from '../../../lib/haptics'
+import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
+import SegmentedProgress from '../../../components/ui/SegmentedProgress'
+import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import { haptics } from '../../../lib/utils/haptics'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import QuestionTransition from './QuestionTransition'

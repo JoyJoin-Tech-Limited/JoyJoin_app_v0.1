@@ -12,13 +12,10 @@ import { refundAttemptsRepo } from "../../repositories/refundAttemptsRepo";
 import { usersRepo } from "../../repositories/usersRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { db } from "../../db";
-
-function getActingAdminId(req: any): string {
-  return req.adminAccount?.id ?? req.session?.userId ?? "unknown";
-}
+import { getActingAdminId } from "../../lib/getActingAdminId";
 
 const getRequestClientIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
@@ -430,7 +427,7 @@ export function registerPaymentRoutes(app: Express): void {
   };
 
   // Get current user's subscription status
-  app.get("/api/subscription/status", isPhoneAuthenticated, async (req, res) => {
+  app.get("/api/subscription/status", requireAuth, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
@@ -449,7 +446,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // Create subscription renewal (returns payment details)
-  app.post("/api/subscription/renew", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+  app.post("/api/subscription/renew", paymentEndpointLimiter, requireAuth, checkPaymentsEnabled, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
@@ -508,7 +505,7 @@ export function registerPaymentRoutes(app: Express): void {
   });
 
   // Cancel subscription
-  app.post("/api/subscription/cancel", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/subscription/cancel", requireAuth, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
@@ -533,7 +530,7 @@ export function registerPaymentRoutes(app: Express): void {
 
   // ============ PAYMENT & WEBHOOKS ============
 
-  app.post("/api/coupons/validate", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+  app.post("/api/coupons/validate", paymentEndpointLimiter, requireAuth, checkPaymentsEnabled, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
@@ -591,7 +588,7 @@ export function registerPaymentRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/payments/create", paymentEndpointLimiter, isPhoneAuthenticated, checkPaymentsEnabled, async (req, res) => {
+  app.post("/api/payments/create", paymentEndpointLimiter, requireAuth, checkPaymentsEnabled, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
       const userId = req.session.userId;
@@ -683,7 +680,7 @@ export function registerPaymentRoutes(app: Express): void {
   app.post(
     "/api/payments/miniprogram/create",
     paymentEndpointLimiter,
-    isPhoneAuthenticated,
+    requireAuth,
     checkPaymentsEnabled,
     async (req, res) => {
       const reqLogger = logger.child({ request_id: req.requestId });
@@ -871,8 +868,8 @@ export function registerPaymentRoutes(app: Express): void {
     }
   );
 
-  app.get("/api/payments/:wechatOrderId/status", isPhoneAuthenticated, respondWithPaymentStatus);
-  app.get("/api/payments/status/:wechatOrderId", isPhoneAuthenticated, respondWithPaymentStatus);
+  app.get("/api/payments/:wechatOrderId/status", requireAuth, respondWithPaymentStatus);
+  app.get("/api/payments/status/:wechatOrderId", requireAuth, respondWithPaymentStatus);
 
   app.get("/api/admin/payments", requireAdmin, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });

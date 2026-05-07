@@ -6,7 +6,7 @@
   "prNumber": null,
   "changedFiles": [
     ".github/orchestration.yaml",
-    "scripts/orchestration-supervisor.mjs",
+    "scripts/orchestration/orchestration-supervisor.mjs",
     ".github/agents/researcher.agent.md",
     ".github/agents/planner.agent.md"
   ],
@@ -53,7 +53,7 @@
     "changedFiles": {
       "consideredPaths": [
         ".github/orchestration.yaml",
-        "scripts/orchestration-supervisor.mjs"
+        "scripts/orchestration/orchestration-supervisor.mjs"
       ],
       "hits": [
         {
@@ -65,7 +65,7 @@
           "relatedPaths": [
             ".github/ORCHESTRATION.md",
             ".github/ORCHESTRATION_GOVERNANCE.md",
-            "scripts/orchestration-lib.mjs"
+            "scripts/orchestration/orchestration-lib.mjs"
           ],
           "sources": [
             ".github/ORCHESTRATION.md",
@@ -89,7 +89,7 @@
             "authoritativePaths": [
               ".github/ORCHESTRATION.md",
               ".github/ORCHESTRATION_GOVERNANCE.md",
-              "scripts/orchestration-lib.mjs",
+              "scripts/orchestration/orchestration-lib.mjs",
               "repo-memory/promoted/orchestration/runtime-state-truthfulness.md"
             ],
             "sourcePathConflictsEnabled": true,

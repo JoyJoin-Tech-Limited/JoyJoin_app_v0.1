@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import { useAuth, type NextStepType } from './useAuth'
-import { navigateToMiniProgramNextStep } from '../lib/onboardingNavigation'
-import { MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from '../lib/onboardingRoutes'
+import { navigateToMiniProgramNextStep } from '../lib/onboarding/onboardingNavigation'
+import { MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from '../lib/onboarding/onboardingRoutes'
 
 /**
  * Map a server-driven nextStep to the corresponding mini-program page route.
@@ -72,7 +72,7 @@ export function useAuthGuard(options?: {
       const expectedRouteBare = expectedRoute.replace(/^\//, '')
 
       // If user is done with onboarding but on an onboarding page, send to discover
-      if (auth.nextStep === 'discover' || auth.nextStep === 'guide') {
+      if (auth.nextStep === 'discover') {
         Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
         return
       }

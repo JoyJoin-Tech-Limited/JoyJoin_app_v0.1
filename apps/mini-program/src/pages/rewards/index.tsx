@@ -1,5 +1,5 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset } from '../../lib/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro from '@tarojs/taro'
 import { useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,14 +14,14 @@ import {
   type UserCouponStatus,
   type UserGamificationSummary,
 } from '@shared/api'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { COLOR_ACCENT_PINK, TOAST_MEDIUM_MS, TOAST_ERROR_MS } from '../../lib/uiConstants'
-import LoadingScreen from '../../components/LoadingScreen'
-import Card from '../../components/Card'
-import Button from '../../components/Button'
-import StatusCard from '../../components/StatusCard'
-import XiaoyueChatBubble from '../../components/XiaoyueChatBubble'
+import { COLOR_ACCENT_PINK, TOAST_MEDIUM_MS, TOAST_ERROR_MS } from '../../lib/utils/uiConstants'
+import LoadingScreen from '../../components/loading/LoadingScreen'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import StatusCard from '../../components/ui/StatusCard'
+import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import './index.scss'
 
 const HISTORY_LIMIT = 6

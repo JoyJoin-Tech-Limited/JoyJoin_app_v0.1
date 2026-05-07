@@ -6,7 +6,7 @@
       "active"
     ]
   },
-  "noteCount": 4,
+  "noteCount": 5,
   "notes": [
     {
       "id": "repo.frontend.design-audit-integration",
@@ -39,7 +39,7 @@
         "package.json"
       ],
       "sources": [
-        "repo-memory/candidates/frontend-design-audit-integration.md",
+        "repo-memory/promoted/frontend-design-audit-integration.md",
         ".agents/skills/frontend-design-audit/SKILL.md",
         ".agents/skills/stitch-design-workflow/SKILL.md"
       ],
@@ -167,7 +167,7 @@
       "relatedPaths": [
         ".github/ORCHESTRATION.md",
         ".github/ORCHESTRATION_GOVERNANCE.md",
-        "scripts/orchestration-lib.mjs"
+        "scripts/orchestration/orchestration-lib.mjs"
       ],
       "sources": [
         ".github/ORCHESTRATION.md",
@@ -199,7 +199,7 @@
       "relatedPaths": [
         "docs/proposals/profile-c-memory-layer-rfc.md",
         ".github/ORCHESTRATION_GOVERNANCE.md",
-        "scripts/orchestration-lib.mjs"
+        "scripts/orchestration/orchestration-lib.mjs"
       ],
       "sources": [
         "docs/proposals/profile-c-memory-layer-rfc.md",
@@ -210,6 +210,34 @@
       "statements": [
         "Durable repo memory belongs in reviewable files outside `.git`, so notes stay diffable, attributable, and easy to retire when they go stale.",
         "`.git/.orchestration/*` and `.git/.auto-eval/pass-state.json` remain operational surfaces only; they are not publication targets for reusable repo knowledge."
+      ]
+    },
+    {
+      "id": "test.orchestration.memory-stage-promote-flow",
+      "title": "Memory Stage Promote Flow Test",
+      "status": "active",
+      "owner": "workflow-platform",
+      "lastValidatedAt": "2026-04-14",
+      "tags": [
+        "orchestration",
+        "tests"
+      ],
+      "triggerTerms": [
+        "candidate promote flow test",
+        "stage candidate promote memory"
+      ],
+      "relatedPaths": [
+        ".github/ORCHESTRATION.md",
+        "scripts/orchestration/orchestration-supervisor.mjs"
+      ],
+      "sources": [
+        ".github/ORCHESTRATION.md",
+        "scripts/orchestration/orchestration-supervisor.mjs"
+      ],
+      "confidence": "medium",
+      "path": "repo-memory/promoted/__tests__/memory-stage-promote-flow.md",
+      "statements": [
+        "Test-only candidate note used to verify deterministic candidate staging and promotion."
       ]
     }
   ]

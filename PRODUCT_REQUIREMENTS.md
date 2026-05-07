@@ -171,7 +171,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - Server field `hasSeenProfileReview`; marked complete via `POST /api/profile-review/complete`
 
 **11. Guide Page Deprecated** 🗑️ *(2026-02-16)*
-- `/guide` step removed from onboarding; `hasSeenGuide` retained on server for backward compatibility
+- `/guide` step removed from onboarding; `hasSeenGuide` column dropped from users table (2026-05)
 - Guide content replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on Discover page
 
 **12. Life Stage Affinity Matrix** 🤝 *(PR #312)*

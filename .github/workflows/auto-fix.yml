@@ -107,8 +107,8 @@ jobs:
 
           ARGS="$ARGS --verbose"
 
-          echo "Running: node scripts/auto-fix.mjs $ARGS"
-          node scripts/auto-fix.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
+          echo "Running: node scripts/auto/auto-fix.mjs $ARGS"
+          node scripts/auto/auto-fix.mjs $ARGS && EXIT_CODE=$? || EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
           echo "Exit code: $EXIT_CODE"
 

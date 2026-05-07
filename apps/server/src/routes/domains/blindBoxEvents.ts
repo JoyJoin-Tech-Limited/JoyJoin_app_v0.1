@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { storage } from "../../storage";
 import { db } from "../../db";
@@ -59,7 +59,7 @@ function isParticipantOfBlindBoxEvent(event: any, userId: string): boolean {
 }
 
 export function registerBlindBoxEventRoutes(app: Express): void {
-  app.get('/api/blind-box-events/:eventId', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/blind-box-events/:eventId', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -75,7 +75,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch blind box event" });
     }
   });
-  app.patch('/api/blind-box-events/:eventId', isPhoneAuthenticated, async (req: any, res) => {
+  app.patch('/api/blind-box-events/:eventId', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -99,7 +99,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to update blind box event" });
     }
   });
-  app.post('/api/blind-box-events/:eventId/cancel', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/blind-box-events/:eventId/cancel', requireAuth, async (req: any, res) => {
     try {
       logger.info("[BlindBoxCancel] route hit, raw request:", {
         method: req.method,
@@ -227,7 +227,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to cancel blind box event" });
     }
   });
-  app.get('/api/blind-box-events/:eventId/my-attendance-status', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/blind-box-events/:eventId/my-attendance-status', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -241,7 +241,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch attendance status" });
     }
   });
-  app.post('/api/blind-box-events/:eventId/attendance-status', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/blind-box-events/:eventId/attendance-status', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -311,7 +311,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to update attendance status" });
     }
   });
-  app.get('/api/blind-box-events/:eventId/attendance-summary', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/blind-box-events/:eventId/attendance-summary', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -332,7 +332,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch attendance summary" });
     }
   });
-  app.post('/api/blind-box-events/:eventId/set-demo-match', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/blind-box-events/:eventId/set-demo-match', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -434,7 +434,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to set demo match data" });
     }
   });
-  app.get('/api/blind-box-events/:eventId/match-explanations', isPhoneAuthenticated, aiEndpointLimiter, async (req: any, res) => {
+  app.get('/api/blind-box-events/:eventId/match-explanations', requireAuth, aiEndpointLimiter, async (req: any, res) => {
     try {
       const { eventId } = req.params;
       const userId = req.user?.id || req.session?.userId;
@@ -533,11 +533,11 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         },
       });
     } catch (error: any) {
-      logger.error('[Match Explanations] Error:', error);
+      logger.error('[Match Explanations] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to generate match explanations', error: error.message });
     }
   });
-  app.post('/api/blind-box-events/:eventId/pre-attendance', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/blind-box-events/:eventId/pre-attendance', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       const { eventId } = req.params;
@@ -563,7 +563,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
     }
   });
 
-  app.post('/api/blind-box-events', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/blind-box-events', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
@@ -577,7 +577,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
           .select()
           .from(users)
           .where(eq(users.id, userId));
-        logger.info("[BlindBoxPayment] current user from DB:", { value: usersResult });
+        logger.info("[BlindBoxPayment] current user from DB", { data: { value: usersResult } });
       } catch (userErr) {
         logger.warn("[BlindBoxPayment] failed to load user for debug:", { error: userErr instanceof Error ? userErr.message : String(userErr) });
       }
@@ -712,14 +712,14 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
       };
 
-      logger.info("[BlindBoxPayment] creating eventPoolRegistration with data:", { value: registrationData });
+      logger.info("[BlindBoxPayment] creating eventPoolRegistration with data", { data: { value: registrationData } });
 
       const [registration] = await db
         .insert(eventPoolRegistrations)
         .values(registrationData)
         .returning();
 
-      logger.info("[BlindBoxPayment] created eventPoolRegistration:", { value: registration });
+      logger.info("[BlindBoxPayment] created eventPoolRegistration", { data: { value: registration } });
 
       // ✅ 更新活动池的 totalRegistrations 计数
       const [updatedPool] = await db
@@ -731,7 +731,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         .where(eq(eventPools.id, pool.id))
         .returning();
 
-      logger.info("[BlindBoxPayment] updated eventPool after registration:", { value: updatedPool });
+      logger.info("[BlindBoxPayment] updated eventPool after registration", { data: { value: updatedPool } });
 
       broadcastPoolRegistrationAdded(
         pool.id,

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_FILE_DIR, '../../../..');
-const ROUTES_FILE = path.join(REPO_ROOT, 'apps/server/src/routes.ts');
+const ROUTES_FILE = path.join(REPO_ROOT, 'apps/server/src/routes/domains/social.ts');
 
 function readRoutesSource(): string {
   return readFileSync(ROUTES_FILE, 'utf8');
@@ -26,8 +26,8 @@ describe('social compliance chat boundary', () => {
     const source = readRoutesSource();
     const handler = extractRouteBlock(
       source,
-      "app.post('/api/events/:eventId/messages', isPhoneAuthenticated, async (req: any, res) => {",
-      '  // Feedback routes',
+      "app.post('/api/events/:eventId/messages', requireAuth, async (req: any, res) => {",
+      "app.post('/api/events/:eventId/feedback',",
     );
 
     // Guards against regression: the legacy event chat write path must stay frozen.
@@ -41,8 +41,8 @@ describe('social compliance chat boundary', () => {
     const source = readRoutesSource();
     const handler = extractRouteBlock(
       source,
-      "app.post('/api/events/:eventId/feedback', isPhoneAuthenticated, async (req: any, res) => {",
-      '  // Deep feedback route',
+      "app.post('/api/events/:eventId/feedback', requireAuth, async (req: any, res) => {",
+      "app.post('/api/insight-feedback',",
     );
 
     // Guards against regression: the compliance scope blocks chat only, not off-platform contact exchange.

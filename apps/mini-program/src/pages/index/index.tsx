@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import LoadingScreen from '../../components/LoadingScreen'
+import LoadingScreen from '../../components/loading/LoadingScreen'
 import { useAuth } from '../../hooks/useAuth'
-import { navigateToMiniProgramNextStep } from '../../lib/onboardingNavigation'
+import { navigateToMiniProgramNextStep } from '../../lib/onboarding/onboardingNavigation'
 import MiniProgramLandingPage from './LandingPage'
 
 export default function Index() {

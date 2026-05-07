@@ -46,7 +46,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 - [`../apps/mini-program/README.md`](../apps/mini-program/README.md) — Taro mini-program (launch-primary): layout, tab bar, subpackages
 - [`mobile-design-system.md`](./mobile-design-system.md)
-- [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
+- [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
 - [`button-design.md`](./button-design.md)
 - [`ui-matching-reveal-improvements.md`](./ui-matching-reveal-improvements.md)
 

@@ -37,7 +37,7 @@ In `development` (`NODE_ENV === 'development'`), both `getWechatOpenId` and `get
 
 ### API transport
 
-`apps/mini-program/src/lib/api.ts` wraps `Taro.request` with:
+`apps/mini-program/src/lib/api/api.ts` wraps `Taro.request` with:
 - Cookie-enabled requests (`enableCookie: true`)
 - 304 cache-bust retry for GET
 - Domain-list / SSL / timeout error translation
@@ -78,8 +78,8 @@ In `development` (`NODE_ENV === 'development'`), both `getWechatOpenId` and `get
 - `apps/server/src/routes/domains/payments.ts` — payment routes + webhook
 - `apps/server/src/routes/domains/auth.ts` — WeChat login routes
 - `apps/server/src/lib/configValidation.ts` — `WECHAT_APPID` validation
-- `apps/mini-program/src/lib/api.ts` — `Taro.request` wrapper
-- `apps/mini-program/src/hooks/useWeChatLogin.ts` — Mini Program login hook
+- `apps/mini-program/src/lib/api/api.ts` — `Taro.request` wrapper
+- `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` — Mini Program login hook
 - `apps/mini-program/src/pages/blind-box-payment/index.tsx` — `Taro.requestPayment` launch
 - `apps/user-client/src/hooks/useWeChatLogin.ts` — Web OAuth / `wx.login()` hybrid hook
 - `docs/PLATFORM_COORDINATION.md` — Cross-platform auth/payment coordination playbook

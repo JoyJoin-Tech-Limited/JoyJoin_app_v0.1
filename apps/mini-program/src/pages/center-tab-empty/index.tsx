@@ -1,7 +1,7 @@
 import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useMiniPageGate } from '../../hooks/useMiniPageGate'
-import Button from '../../components/Button'
+import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
+import Button from '../../components/ui/Button'
 import BottomNav from '../../components/BottomNav'
 import './index.scss'
 

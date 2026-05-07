@@ -2,15 +2,15 @@ import {
   MINI_PROGRAM_MAIN_PACKAGE_PAGES,
   MINI_PROGRAM_PRELOAD_RULES,
   MINI_PROGRAM_SUBPACKAGES,
-} from './lib/onboardingRoutes'
-import { MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS } from './lib/tabBarConfig'
+} from './lib/onboarding/onboardingRoutes'
+import { MINI_PROGRAM_TAB_BAR_CONFIG_ITEMS } from './lib/navigation/tabBarConfig'
 import {
   COLOR_TAB_INACTIVE,
   COLOR_PRIMARY,
   COLOR_SURFACE,
   COLOR_BACKGROUND,
   COLOR_NAVBAR_BG,
-} from './lib/uiConstants'
+} from './lib/utils/uiConstants'
 
 const MINI_PROGRAM_SUBPACKAGES_CONFIG = MINI_PROGRAM_SUBPACKAGES.map((subpackage) => ({
   ...subpackage,

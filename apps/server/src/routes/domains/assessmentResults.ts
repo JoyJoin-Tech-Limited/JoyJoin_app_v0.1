@@ -1,7 +1,8 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { kpiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { storage } from "../../storage";
 
 export function registerAssessmentResultRoutes(app: Express): void {
@@ -15,7 +16,7 @@ export function registerAssessmentResultRoutes(app: Express): void {
       const data = await kpiService.getKpiDashboardData(days);
       res.json(data);
     } catch (error: any) {
-      console.error('[KPI Dashboard] Error:', error);
+      logger.error('[KPI Dashboard] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to get KPI dashboard data', error: error.message });
     }
   });
@@ -27,7 +28,7 @@ export function registerAssessmentResultRoutes(app: Express): void {
       const analysis = await kpiService.getChurnAnalysis();
       res.json(analysis);
     } catch (error: any) {
-      console.error('[KPI Churn] Error:', error);
+      logger.error('[KPI Churn] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to get churn analysis', error: error.message });
     }
   });
@@ -39,7 +40,7 @@ export function registerAssessmentResultRoutes(app: Express): void {
       await kpiService.generateDailyKpiSnapshot();
       res.json({ success: true, message: 'KPI snapshot generated' });
     } catch (error: any) {
-      console.error('[KPI Snapshot] Error:', error);
+      logger.error('[KPI Snapshot] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to generate KPI snapshot', error: error.message });
     }
   });
@@ -52,7 +53,7 @@ export function registerAssessmentResultRoutes(app: Express): void {
       await kpiService.updateUserEngagement(userId);
       res.json({ success: true, message: 'User engagement updated' });
     } catch (error: any) {
-      console.error('[KPI User Engagement] Error:', error);
+      logger.error('[KPI User Engagement] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to update user engagement', error: error.message });
     }
   });
@@ -77,7 +78,7 @@ export function registerAssessmentResultRoutes(app: Express): void {
         period: `Last ${days} days`,
       });
     } catch (error: any) {
-      console.error('[KPI Satisfaction] Error:', error);
+      logger.error('[KPI Satisfaction] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to get satisfaction scores', error: error.message });
     }
   });
@@ -110,7 +111,7 @@ export function registerAssessmentResultRoutes(app: Express): void {
 
   // ============ Unified Assessment Result Endpoint (V2 Integration) ============
   // This endpoint normalizes both V1 and V2 results into a consistent shape
-  app.get('/api/assessment/result', isPhoneAuthenticated, async (req: any, res) => {
+  app.get('/api/assessment/result', requireAuth, async (req: any, res) => {
     try {
       // Use session userId fallback when req.user is undefined (phone auth uses session)
       const userId = req.user?.id || req.session?.userId;
@@ -218,13 +219,13 @@ export function registerAssessmentResultRoutes(app: Express): void {
         hasCompletedTest: false 
       });
     } catch (error: any) {
-      console.error('[Unified Assessment Result] Error:', error);
+      logger.error('[Unified Assessment Result] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to get result', error: error.message });
     }
   });
 
   // ============ Assessment Feedback Endpoint ============
-  app.post('/api/assessment/feedback', isPhoneAuthenticated, async (req: any, res) => {
+  app.post('/api/assessment/feedback', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session?.userId;
       const { archetype, accuracy } = req.body;
@@ -237,13 +238,13 @@ export function registerAssessmentResultRoutes(app: Express): void {
         return res.status(400).json({ message: 'Invalid accuracy value' });
       }
 
-      console.log(`[Assessment Feedback] User ${userId} rated ${archetype} as ${accuracy}`);
+      logger.info(`[Assessment Feedback] User ${userId} rated ${archetype} as ${accuracy}`);
       
       // Store feedback for analysis (could be extended to save to DB)
       // For now, just log it for collection
       res.json({ success: true, message: 'Feedback recorded' });
     } catch (error: any) {
-      console.error('[Assessment Feedback] Error:', error);
+      logger.error('[Assessment Feedback] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to record feedback', error: error.message });
     }
   });

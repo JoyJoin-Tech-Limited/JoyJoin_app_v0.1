@@ -1,9 +1,10 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 import { db } from "../../db";
 import { eq, and, desc } from "drizzle-orm";
 import { matchingThresholds, poolMatchingLogs, eventPools, insertChatReportSchema, insertChatLogSchema } from "@shared/schema";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
-import { isPhoneAuthenticated } from "../../phoneAuth";
+import { requireAuth } from "../../phoneAuth";
 import { storage } from "../../storage";
 import type { User } from "@shared/schema";
 
@@ -11,7 +12,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
   // ============ CHAT REPORTS & MODERATION ROUTES ============
   
   // POST /api/chat-reports - User creates a report
-  app.post("/api/chat-reports", isPhoneAuthenticated, async (req, res) => {
+  app.post("/api/chat-reports", requireAuth, async (req, res) => {
     try {
       const session = req.session as any;
       const userId = session.userId;
@@ -22,7 +23,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(report);
     } catch (error: any) {
-      console.error("Error creating chat report:", error);
+      logger.error("Error creating chat report", { error: String(error) });
       res.status(400).json({ message: error.message || "Failed to create report" });
     }
   });
@@ -36,7 +37,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(reports);
     } catch (error: any) {
-      console.error("Error fetching chat reports:", error);
+      logger.error("Error fetching chat reports", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch reports" });
     }
   });
@@ -65,7 +66,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(report);
     } catch (error: any) {
-      console.error("Error fetching chat report:", error);
+      logger.error("Error fetching chat report", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch report" });
     }
   });
@@ -106,7 +107,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(report);
     } catch (error: any) {
-      console.error("Error updating chat report:", error);
+      logger.error("Error updating chat report", { error: String(error) });
       res.status(400).json({ message: error.message || "Failed to update report" });
     }
   });
@@ -122,7 +123,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(log);
     } catch (error: any) {
-      console.error("Error creating interaction log:", error);
+      logger.error("Error creating interaction log", { error: String(error) });
       res.status(400).json({ message: error.message || "Failed to create log" });
     }
   });
@@ -143,7 +144,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(logs);
     } catch (error: any) {
-      console.error("Error fetching interaction logs:", error);
+      logger.error("Error fetching interaction logs", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch logs" });
     }
   });
@@ -155,7 +156,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(stats);
     } catch (error: any) {
-      console.error("Error fetching interaction log stats:", error);
+      logger.error("Error fetching interaction log stats", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
@@ -211,7 +212,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(activeConfig);
     } catch (error: any) {
-      console.error("Error fetching matching thresholds:", error);
+      logger.error("Error fetching matching thresholds", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch thresholds" });
     }
   });
@@ -256,7 +257,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(newConfig);
     } catch (error: any) {
-      console.error("Error updating matching thresholds:", error);
+      logger.error("Error updating matching thresholds", { error: String(error) });
       res.status(500).json({ message: "Failed to update thresholds" });
     }
   });
@@ -299,7 +300,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(enrichedLogs);
     } catch (error: any) {
-      console.error("Error fetching matching logs:", error);
+      logger.error("Error fetching matching logs", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch logs" });
     }
   });
@@ -314,7 +315,7 @@ export function registerMatchingAdminRoutes(app: Express): void {
       
       res.json(result);
     } catch (error: any) {
-      console.error("Error triggering pool scan:", error);
+      logger.error("Error triggering pool scan", { error: String(error) });
       res.status(500).json({ message: "Failed to trigger scan", error: error.message });
     }
   });

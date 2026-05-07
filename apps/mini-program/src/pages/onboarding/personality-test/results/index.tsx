@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
 import { useAuth } from '../../../../hooks/useAuth'
-import { useOnboardingAnalytics } from '../../../../hooks/useOnboardingAnalytics'
-import { apiRequest } from '../../../../lib/api'
+import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
+import { apiRequest } from '../../../../lib/api/api'
 import {
   clearAnonymousAssessmentStorage,
   hasAnonymousAssessmentResult,
@@ -13,13 +13,13 @@ import {
   readAnonymousAssessmentSession,
   saveAnonymousAssessmentSession,
   type AnonymousAssessmentSessionSnapshot,
-} from '../../../../lib/anonymousOnboarding'
-import { getDegradationTier, type DegradationTier } from '../../../../lib/frameBudget'
-import { haptics } from '../../../../lib/haptics'
-import { getMascotDisplayName } from '../../../../lib/mascotDisplay'
-import { logError, logInfo, logWarn } from '../../../../lib/logger'
-import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboardingRoutes'
-import { navigateToMiniProgramNextStep } from '../../../../lib/onboardingNavigation'
+} from '../../../../lib/auth/anonymousOnboarding'
+import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/frameBudget'
+import { haptics } from '../../../../lib/utils/haptics'
+import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
+import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
+import { MINI_PROGRAM_ROUTES } from '../../../../lib/onboarding/onboardingRoutes'
+import { navigateToMiniProgramNextStep } from '../../../../lib/onboarding/onboardingNavigation'
 import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
@@ -36,7 +36,7 @@ import {
   generatePersonalitySquarePoster,
   PERSONALITY_SQUARE_CANVAS_ID,
   type PersonalitySquarePosterInput,
-} from '../../../../lib/momentsPosterFactory'
+} from '../../../../lib/utils/momentsPosterFactory'
 import {
   buildResolvedResultState,
   buildShareLine,

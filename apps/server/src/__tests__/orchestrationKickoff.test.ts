@@ -34,16 +34,16 @@ type BuildMemoryContext = (args: {
   evaluatedAt?: string;
 }) => RuntimeMemoryContext;
 
-const orchestrationLibPath = new URL("../../../../scripts/orchestration-lib.mjs", import.meta.url).href;
+const orchestrationLibPath = new URL("../../../../scripts/orchestration/orchestration-lib.mjs", import.meta.url).href;
 const { collectChangedFiles, validateOrchestrationManifest } = await import(orchestrationLibPath) as {
   collectChangedFiles: CollectChangedFiles;
   validateOrchestrationManifest: ValidateOrchestrationManifest;
 };
-const orchestrationSupervisorPath = new URL("../../../../scripts/orchestration-supervisor.mjs", import.meta.url).href;
+const orchestrationSupervisorPath = new URL("../../../../scripts/orchestration/orchestration-supervisor.mjs", import.meta.url).href;
 const { buildMemoryContext } = await import(orchestrationSupervisorPath) as {
   buildMemoryContext: BuildMemoryContext;
 };
-const memoryLibPath = new URL("../../../../scripts/memory-lib.mjs", import.meta.url).href;
+const memoryLibPath = new URL("../../../../scripts/memory/memory-lib.mjs", import.meta.url).href;
 const { DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES } = await import(memoryLibPath) as {
   DEFAULT_MEANINGFUL_MEMORY_QUERY_RULES: MeaningfulMemoryQueryRules;
 };
@@ -304,7 +304,7 @@ function writeRepoFile(repoRoot: string, relativePath: string, contents: string)
 }
 
 function runCopilotHook(eventName: string, payload: Record<string, unknown> = {}, runtimeWritesEnabled = false): HookResult {
-  const result = spawnSync('node', ['scripts/orchestration-supervisor.mjs', 'copilot-hook', eventName], {
+  const result = spawnSync('node', ['scripts/orchestration/orchestration-supervisor.mjs', 'copilot-hook', eventName], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     input: JSON.stringify(payload),
@@ -326,7 +326,7 @@ function runRecordSummaryCommand(
     runtimeWritesEnabled?: boolean;
   } = {},
 ): RecordSummaryResult {
-  const result = spawnSync('node', ['scripts/orchestration-supervisor.mjs', 'record-summary', ...commandArgs], {
+  const result = spawnSync('node', ['scripts/orchestration/orchestration-supervisor.mjs', 'record-summary', ...commandArgs], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     input: options.input,
@@ -947,8 +947,8 @@ describe.sequential('repo memory lifecycle advisories', () => {
             lastValidatedAt: '2025-12-01',
             tags: ['orchestration', 'memory'],
             triggerTerms: ['stale conflict memory note'],
-            relatedPaths: ['scripts/orchestration-supervisor.mjs'],
-            sources: ['scripts/orchestration-supervisor.mjs'],
+            relatedPaths: ['scripts/orchestration/orchestration-supervisor.mjs'],
+            sources: ['scripts/orchestration/orchestration-supervisor.mjs'],
             confidence: 'high',
             path: 'repo-memory/promoted/__tests__/stale-conflict-memory-note.md',
             statements: ['Lifecycle warnings should stay advisory and explicit.'],
@@ -958,7 +958,7 @@ describe.sequential('repo memory lifecycle advisories', () => {
     );
 
     const memoryContext = buildMemoryContext({
-      changedFiles: ['scripts/orchestration-supervisor.mjs', 'README.md'],
+      changedFiles: ['scripts/orchestration/orchestration-supervisor.mjs', 'README.md'],
       memoryConfig: {
         artifactPath: TEST_MEMORY_LIFECYCLE_INDEX_RELATIVE_PATH,
         workflowRelevantPathPrefixes: ['.github/', 'scripts/', 'repo-memory/'],
@@ -974,7 +974,7 @@ describe.sequential('repo memory lifecycle advisories', () => {
       evaluatedAt: '2026-04-14',
     });
 
-    expect(memoryContext.changedFiles?.consideredPaths).toEqual(['scripts/orchestration-supervisor.mjs']);
+    expect(memoryContext.changedFiles?.consideredPaths).toEqual(['scripts/orchestration/orchestration-supervisor.mjs']);
     expect(memoryContext.lifecycle).toMatchObject({
       evaluatedAt: '2026-04-14',
       maxValidationAgeDays: 90,
@@ -989,8 +989,8 @@ describe.sequential('repo memory lifecycle advisories', () => {
     expect(memoryContext.changedFiles?.hits?.[0]).toMatchObject({
       id: TEST_MEMORY_LIFECYCLE_NOTE_ID,
       lastValidatedAt: '2025-12-01',
-      relatedPaths: ['scripts/orchestration-supervisor.mjs'],
-      sources: ['scripts/orchestration-supervisor.mjs'],
+      relatedPaths: ['scripts/orchestration/orchestration-supervisor.mjs'],
+      sources: ['scripts/orchestration/orchestration-supervisor.mjs'],
       lifecycle: {
         status: 'stale-conflicted',
         caution: true,
@@ -998,8 +998,8 @@ describe.sequential('repo memory lifecycle advisories', () => {
         validationAgeDays: 134,
         maxValidationAgeDays: 90,
         conflict: true,
-        conflictingPaths: ['scripts/orchestration-supervisor.mjs'],
-        matchedAuthorityPaths: ['scripts/orchestration-supervisor.mjs'],
+        conflictingPaths: ['scripts/orchestration/orchestration-supervisor.mjs'],
+        matchedAuthorityPaths: ['scripts/orchestration/orchestration-supervisor.mjs'],
       },
     });
     expect(memoryContext.prompt?.hits?.[0]?.lifecycle?.status).toBe('stale-conflicted');
@@ -1105,7 +1105,7 @@ describe.sequential('orchestration runtime context persistence', () => {
         agentName: 'Researcher',
         parentAgent: 'Supervisor',
         done: ['Recorded an agent summary through --json'],
-        filesChanged: ['scripts/orchestration-supervisor.mjs'],
+        filesChanged: ['scripts/orchestration/orchestration-supervisor.mjs'],
         decisions: ['Prefer direct recorder flags over shell heredoc input for summary payloads'],
         blockers: [],
         learned: ['The record-summary command now supports a direct JSON argument'],
@@ -1139,7 +1139,7 @@ describe.sequential('orchestration runtime context persistence', () => {
             type: 'supervisor_turn_report',
             agentName: 'Supervisor',
             done: ['Recorded a supervisor report from a JSON file'],
-            filesChanged: ['scripts/orchestration-supervisor.mjs'],
+            filesChanged: ['scripts/orchestration/orchestration-supervisor.mjs'],
             decisions: ['Prefer direct recorder flags over shell heredocs'],
             blockers: [],
             keyBullets: ['Recorder accepted a --file payload'],
@@ -1192,7 +1192,7 @@ describe.sequential('orchestration runtime context persistence', () => {
         agentName: 'Researcher',
         parentAgent: 'Supervisor',
         done: ['Gathered repo orchestration context'],
-        filesChanged: ['scripts/orchestration-supervisor.mjs'],
+        filesChanged: ['scripts/orchestration/orchestration-supervisor.mjs'],
         decisions: ['Use an explicit summary recorder instead of hook inference'],
         blockers: [],
         learned: ['PostToolUse is not a truthful turn boundary source'],
@@ -1241,7 +1241,7 @@ describe.sequential('orchestration runtime context persistence', () => {
             'Consolidated turn ' + String(turnNumber),
           ],
           filesChanged: [
-            'scripts/orchestration-supervisor.mjs',
+            'scripts/orchestration/orchestration-supervisor.mjs',
             'apps/server/src/__tests__/orchestrationKickoff.test.ts',
           ],
           decisions: ['Keep recent turn history bounded to five turns'],
@@ -1439,10 +1439,10 @@ describe.sequential('repo memory candidate publication flow', () => {
         '  - stage candidate promote memory',
         'relatedPaths:',
         '  - .github/ORCHESTRATION.md',
-        '  - scripts/orchestration-supervisor.mjs',
+        '  - scripts/orchestration/orchestration-supervisor.mjs',
         'sources:',
         '  - .github/ORCHESTRATION.md',
-        '  - scripts/orchestration-supervisor.mjs',
+        '  - scripts/orchestration/orchestration-supervisor.mjs',
         'confidence: medium',
         '---',
         '',
@@ -1452,13 +1452,13 @@ describe.sequential('repo memory candidate publication flow', () => {
     );
 
     const directPromoteResult = runNodeScript(
-      ['scripts/memory-promote.mjs', TEST_MEMORY_DRAFT_RELATIVE_PATH],
+      ['scripts/memory/memory-promote.mjs', TEST_MEMORY_DRAFT_RELATIVE_PATH],
       { expectStatus: 1 },
     );
     expect(directPromoteResult.stderr).toContain('candidate note under repo-memory/candidates');
 
     runNodeScript([
-      'scripts/memory-stage-candidate.mjs',
+      'scripts/memory/memory-stage-candidate.mjs',
       TEST_MEMORY_DRAFT_RELATIVE_PATH,
       TEST_MEMORY_CANDIDATE_RELATIVE_PATH,
     ]);
@@ -1466,7 +1466,7 @@ describe.sequential('repo memory candidate publication flow', () => {
     expect(existsSync(TEST_MEMORY_CANDIDATE_PATH)).toBe(true);
     expect(readFileSync(TEST_MEMORY_CANDIDATE_PATH, 'utf8')).toContain('status: candidate');
 
-    runNodeScript(['scripts/memory-promote.mjs', TEST_MEMORY_CANDIDATE_RELATIVE_PATH]);
+    runNodeScript(['scripts/memory/memory-promote.mjs', TEST_MEMORY_CANDIDATE_RELATIVE_PATH]);
 
     expect(existsSync(TEST_MEMORY_CANDIDATE_PATH)).toBe(false);
     expect(existsSync(TEST_MEMORY_PROMOTED_PATH)).toBe(true);

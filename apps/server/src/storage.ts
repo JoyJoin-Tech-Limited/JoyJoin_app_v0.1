@@ -3,7 +3,6 @@ import { assessmentRepo, type AssessmentRepository } from "./repositories/assess
 import { attendanceRepo, type AttendanceRepository } from "./repositories/attendanceRepo";
 import { blindBoxEventsRepo, type BlindBoxEventsRepository } from "./repositories/blindBoxEventsRepo";
 import { eventPoolsRepo, type EventPoolsRepository } from "./repositories/eventPoolsRepo";
-import { icebreakerRepo, type IcebreakerRepository } from "./repositories/icebreakerRepo";
 import { legacyStorageRepo } from "./repositories/legacyStorageRepo";
 import { matchingConfigRepo, type MatchingConfigRepository } from "./repositories/matchingConfigRepo";
 import { moderationRepo, type ModerationRepository } from "./repositories/moderationRepo";
@@ -23,7 +22,6 @@ export type IStorage = typeof legacyStorageRepo
   & NotificationsRepository
   & PaymentsRepository
   & EventPoolsRepository
-  & IcebreakerRepository
   & BlindBoxEventsRepository
   & VenuesRepository
   & AttendanceRepository
@@ -42,7 +40,6 @@ export const storage: IStorage = Object.assign(
   notificationsRepo,
   paymentsRepo,
   eventPoolsRepo,
-  icebreakerRepo,
   blindBoxEventsRepo,
   venuesRepo,
   attendanceRepo,

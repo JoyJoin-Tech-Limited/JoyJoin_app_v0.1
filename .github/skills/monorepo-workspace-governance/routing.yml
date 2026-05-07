@@ -37,13 +37,13 @@ strong_triggers:
   - npm install
   - peerDependencies
   - devDependencies
-  - scripts/check-guardrails.mjs
-  - scripts/check-workspace-dependency-ownership.mjs
+  - scripts/check/check-guardrails.mjs
+  - scripts/check/check-workspace-dependency-ownership.mjs
 
 owned_files:
   - package.json
-  - scripts/check-guardrails.mjs
-  - scripts/check-workspace-dependency-ownership.mjs
+  - scripts/check/check-guardrails.mjs
+  - scripts/check/check-workspace-dependency-ownership.mjs
 
 owned_paths: []
 

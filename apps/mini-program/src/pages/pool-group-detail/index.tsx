@@ -1,5 +1,5 @@
 import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
-import { cdnAsset } from '../../lib/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useCallback } from 'react'
@@ -9,19 +9,19 @@ import {
   type PoolGroupDetailsResponse,
   type PoolGroupMemberSummary,
 } from '@shared/api'
-import { apiRequest } from '../../lib/api'
+import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import LoadingScreen from '../../components/LoadingScreen'
-import Card from '../../components/Card'
-import ArchetypeHead from '../../components/ArchetypeHead'
-import Button from '../../components/Button'
+import LoadingScreen from '../../components/loading/LoadingScreen'
+import Card from '../../components/ui/Card'
+import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import Button from '../../components/ui/Button'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
-import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/uiConstants'
-import { formatDateTime } from '../../lib/groupDisplay'
+import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
+import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
   generateGroupRevealPoster,
   GROUP_REVEAL_CANVAS_ID,
-} from '../../lib/momentsPosterFactory'
+} from '../../lib/utils/momentsPosterFactory'
 import './index.scss'
 
 function getMemberName(member: PoolGroupMemberSummary) {

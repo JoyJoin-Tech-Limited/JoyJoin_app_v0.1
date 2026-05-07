@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger";
 import type { Express } from "express";
 
 export function registerXiaoyueRoutes(app: Express): void {
@@ -39,7 +40,7 @@ export function registerXiaoyueRoutes(app: Express): void {
       
       res.json(result);
     } catch (error: any) {
-      console.error('[Xiaoyue Analysis] Error:', error);
+      logger.error('[Xiaoyue Analysis] Error', { error: String(error) });
       res.status(500).json({ message: 'Failed to generate analysis', error: error.message });
     }
   });
@@ -82,7 +83,7 @@ export function registerXiaoyueRoutes(app: Express): void {
       
       res.json({ prefetched: true });
     } catch (error: any) {
-      console.error('[Xiaoyue Prefetch] Error:', error);
+      logger.error('[Xiaoyue Prefetch] Error', { error: String(error) });
       res.json({ prefetched: false, error: error.message });
     }
   });

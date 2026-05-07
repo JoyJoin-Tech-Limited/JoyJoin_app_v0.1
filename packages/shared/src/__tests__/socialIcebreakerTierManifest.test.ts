@@ -1,33 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { resolveLegacyTier } from '../socialIcebreakerTierManifest';
+import { resolveTierDisplay, resolveTierDisplayEn, type TierMachineId } from '../socialIcebreakerTierManifest';
+
+const defaultFlags = { glowVariant: 'standard' as const };
 
 describe('socialIcebreakerTierManifest', () => {
-  describe('resolveLegacyTier', () => {
-    it('resolves legacy standard to glow', () => {
-      expect(resolveLegacyTier('standard')).toBe('glow');
+  describe('resolveTierDisplay', () => {
+    it('returns Chinese display for breeze', () => {
+      expect(resolveTierDisplay('breeze', defaultFlags)).toBe('破冰局');
     });
 
-    it('resolves legacy premium to blaze', () => {
-      expect(resolveLegacyTier('premium')).toBe('blaze');
+    it('returns Chinese display for glow', () => {
+      expect(resolveTierDisplay('glow', defaultFlags)).toBe('畅聊局');
     });
 
-    it('resolves legacy bar to breeze', () => {
-      expect(resolveLegacyTier('bar')).toBe('breeze');
+    it('returns Chinese display for blaze', () => {
+      expect(resolveTierDisplay('blaze', defaultFlags)).toBe('狂欢局');
+    });
+  });
+
+  describe('resolveTierDisplayEn', () => {
+    it('returns English display for breeze', () => {
+      expect(resolveTierDisplayEn('breeze')).toBe('Breeze');
     });
 
-    it('returns breeze for undefined input', () => {
-      expect(resolveLegacyTier(undefined)).toBe('breeze');
+    it('returns English display for glow', () => {
+      expect(resolveTierDisplayEn('glow')).toBe('Glow');
     });
 
-    it('returns breeze for unknown strings', () => {
-      expect(resolveLegacyTier('unknown')).toBe('breeze');
-      expect(resolveLegacyTier('')).toBe('breeze');
-    });
-
-    it('passes through canonical tier IDs unchanged', () => {
-      expect(resolveLegacyTier('breeze')).toBe('breeze');
-      expect(resolveLegacyTier('glow')).toBe('glow');
-      expect(resolveLegacyTier('blaze')).toBe('blaze');
+    it('returns English display for blaze', () => {
+      expect(resolveTierDisplayEn('blaze')).toBe('Blaze');
     });
   });
 });
