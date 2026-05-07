@@ -1,6 +1,6 @@
 # JoyJoin — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents. Last updated: 2026-05-01
+> Compact instructions for AI coding agents. Last updated: 2026-05-07
 
 ---
 
@@ -62,6 +62,13 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)
 - **Lie Detective V1 (AI-fabricated 2 truths 1 lie) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Design spec: `docs/icebreaker/icebreaker-system.md`
 - Root `shared/` directory imports → use `packages/shared/src/` via `@joyjoin/shared` or `@shared/*`
+- `personalityMatchingV2.ts` → renamed to `personalityMatching.ts` (2026-05-07)
+- `archetypeRegistry.ts.bak` → deleted (stale backup, 2026-05-07)
+- `hasSeenGuide` column removed from `users` table (2026-05-07)
+- `guide` step removed from `OnboardingNextStep` type and onboarding routing (2026-05-07)
+- `LEGACY_TIER_MAP` + `resolveLegacyTier()` removed from `socialIcebreakerTierManifest.ts` (2026-05-07)
+- `/api/registration/chat/start`, `/api/registration/chat/message`, `/api/registration/chat/message/stream` handlers removed from `routes.ts` (2026-05-07)
+- `/api/guide/mark-seen`, `/api/guide/complete` routes removed (2026-05-07)
 
 **Canonical references:** `DEVELOPER_QUICK_REFERENCE.md` and `PRODUCT_REQUIREMENTS.md`
 
@@ -108,16 +115,18 @@ npm run harness:gate                  # 5-pillar quality gate
 ```
 
 **Migration discipline (Neon PostgreSQL):**
-- Local dev → `npm run db:push`
+- Local dev → `npm run db:push` (say No to destructive prompts)
 - Before commit → `npm run db:generate` then `npm run db:rebuild-journal`
-- Production → `drizzle-kit push --force` via CI/CD deploy script
-  > ⚠️ `drizzle-kit migrate` is broken on Neon (exits code 1 silently with drizzle-kit v0.31.10);
-    `push --force` is the working production path.
-  > ⚠️ `push --force` is destructive — it drops columns/tables not in schema.
-    The deploy script creates a `pg_dump` snapshot before push as a safety net.
-  > ⚠️ `DATABASE_URL` in CI must use the **direct** Neon endpoint
-    (not the `-pooler` endpoint) for DDL operations:
-    `ep-<project>.us-east-1.aws.neon.tech` (without `-pooler`).
+- Production DDL → **manual** via generated `.sql` files + `psql`
+  > ⚠️ `drizzle-kit migrate` (v0.31.10) exits code 1 silently on Neon.
+  > ⚠️ `drizzle-kit push --force` also fails — schema introspection regex
+    cannot parse this Postgres version ("Schema parser only found 0 tables").
+  > ✅ Generate SQL with `npx drizzle-kit generate`, then apply with
+    `psql "$DATABASE_URL" -f apps/server/migrations/<file>.sql`
+  > ✅ The CI/CD deploy script **skips drizzle-kit DDL** entirely.
+    Schema changes must be applied separately before deploy.
+  > ⚠️ `DATABASE_URL` for DDL must use the **direct** Neon endpoint
+    (not `-pooler`): `ep-<project>.us-east-1.aws.neon.tech`.
     The pooler rejects `CREATE TABLE` / `ALTER TABLE`.
 
 ---
