@@ -1,4 +1,4 @@
-import { useLevelUp } from "@/hooks/useLevelUp";
+import { useLevelUp } from "@/hooks/game/useLevelUp";
 import LevelUpCelebration from "./LevelUpCelebration";
 
 interface LevelUpProviderProps {

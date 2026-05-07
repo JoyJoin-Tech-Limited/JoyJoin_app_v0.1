@@ -33,7 +33,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 type AdminRole = "super_admin" | "operator" | "viewer";
 

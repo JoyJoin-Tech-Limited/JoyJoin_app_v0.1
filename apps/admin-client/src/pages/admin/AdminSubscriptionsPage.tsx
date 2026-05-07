@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Crown, Calendar, TrendingUp, DollarSign, Users, Plus } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { format, differenceInDays } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface Subscription {
   id: string;

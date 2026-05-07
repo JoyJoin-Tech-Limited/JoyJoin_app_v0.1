@@ -3,7 +3,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminGuard } from "@/components/admin/AdminGuard";
 import { Route, Switch } from "wouter";
 import { lazy, Suspense } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsersPage = lazy(() => import("@/pages/admin/AdminUsersPage"));

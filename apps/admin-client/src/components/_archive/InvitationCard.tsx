@@ -15,7 +15,7 @@ import {
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface InvitationCardProps {
   inviterName: string;

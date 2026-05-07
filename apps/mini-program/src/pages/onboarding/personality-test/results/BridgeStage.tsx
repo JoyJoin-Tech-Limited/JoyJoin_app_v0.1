@@ -1,10 +1,10 @@
 import { Image, Text, View } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import Card from '../../../../../components/ui/Card'
+import Card from '../../../../components/ui/Card'
 import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-} from '../../visuals'
+} from '../visuals'
 
 interface BridgeStageProps {
   displayArchetypeName: string

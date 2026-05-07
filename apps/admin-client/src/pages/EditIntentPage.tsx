@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { ChevronLeft } from "lucide-react";
 import { intentOptions } from "@/lib/userFieldMappings";
 import { useEffect } from "react";

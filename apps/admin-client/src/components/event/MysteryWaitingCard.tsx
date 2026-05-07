@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { HelpCircle, Sparkles, Clock } from "lucide-react";
-import { useRevealStatus } from "@/hooks/useRevealStatus";
+import { useRevealStatus } from "@/hooks/event/useRevealStatus";
 import { REVEAL_THRESHOLD_HOURS, formatEventDateTime } from "@shared/eventDetail";
 
 interface MysteryWaitingCardProps {

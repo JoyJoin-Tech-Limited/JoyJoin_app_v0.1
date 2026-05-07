@@ -1,5 +1,5 @@
 import { View } from '@tarojs/components'
-import spritesheetManifest from '../../../assets/archetypes/archetype-spritesheet.json'
+import spritesheetManifest from '../../assets/archetypes/archetype-spritesheet.json'
 
 const SHEET_PATH = '/pages/onboarding/assets/archetypes/archetype-spritesheet.webp'
 

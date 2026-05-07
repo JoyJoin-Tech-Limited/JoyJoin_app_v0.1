@@ -34,7 +34,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Calendar, Plus, Edit, Trash2, Clock, TrendingUp, Users } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface EventTemplate {
   id: string;

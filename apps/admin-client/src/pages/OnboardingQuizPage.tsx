@@ -7,7 +7,7 @@ import QuizIntro from "@/components/profile/QuizIntro";
 import PersonalityProfile from "@/components/profile/PersonalityProfile";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 export default function OnboardingQuizPage() {
   const [, setLocation] = useLocation();

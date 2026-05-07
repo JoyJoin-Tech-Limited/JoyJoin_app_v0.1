@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Clock, Sparkles, Check, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { zhCN } from "date-fns/locale";
 

@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import { Button } from "@/components/ui/button";

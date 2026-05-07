@@ -6,7 +6,7 @@ import { Calendar, MapPin, MessageSquare, Users, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
-import { useMarkNotificationsAsRead } from "@/hooks/useNotificationCounts";
+import { useMarkNotificationsAsRead } from "@/hooks/notifications/useNotificationCounts";
 import ParticipantAvatars from "@/components/discover/ParticipantAvatars";
 import type { Event } from "@shared/schema";
 

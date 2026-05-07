@@ -1,6 +1,6 @@
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import JoyJoinLogo from "./JoyJoinLogo";
+import JoyJoinLogo from "@/components/_archive/JoyJoinLogo";
 
 interface MobileHeaderProps {
   title?: string;

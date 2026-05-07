@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import MatchPointValidation from "@/components/feedback/MatchPointValidation";
 import ConversationDynamics from "@/components/feedback/ConversationDynamics";

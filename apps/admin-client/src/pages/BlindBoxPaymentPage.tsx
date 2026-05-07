@@ -22,7 +22,7 @@ import {
 } from "@shared/api";
 import { getCurrencySymbol } from "@/lib/currency";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { SiWechat } from "react-icons/si";
 
 type CouponValidationResponse = {

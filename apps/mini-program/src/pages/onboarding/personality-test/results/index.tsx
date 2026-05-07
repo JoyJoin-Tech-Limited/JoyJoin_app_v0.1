@@ -54,13 +54,13 @@ import {
   type RevealPhase,
   type SlotPhase,
 } from './resultHelpers'
-import LoadingStage from './stages/LoadingStage'
-import EmptyStage from './stages/EmptyStage'
-import ErrorStage from './stages/ErrorStage'
-import SlotStage from './stages/SlotStage'
-import RevealStage from './stages/RevealStage'
-import BridgeStage from './stages/BridgeStage'
-import FinalStage from './stages/FinalStage'
+import LoadingStage from './LoadingStage'
+import EmptyStage from './EmptyStage'
+import ErrorStage from './ErrorStage'
+import SlotStage from './SlotStage'
+import RevealStage from './RevealStage'
+import BridgeStage from './BridgeStage'
+import FinalStage from './FinalStage'
 import './index.scss'
 
 export default function PersonalityTestResultsPage() {

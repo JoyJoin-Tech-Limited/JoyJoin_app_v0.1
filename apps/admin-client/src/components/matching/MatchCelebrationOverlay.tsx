@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sparkles, PartyPopper, ChevronRight } from "lucide-react";
-import ConfettiCelebration from "./ConfettiCelebration";
+import ConfettiCelebration from "@/components/_archive/ConfettiCelebration";
 
 interface MatchCelebrationOverlayProps {
   isVisible: boolean;

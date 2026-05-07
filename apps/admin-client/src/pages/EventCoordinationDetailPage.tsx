@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, Send, Clock, ArrowDown, CheckCheck, MoreVertical, Flag } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import type { User, ChatMessage } from "@shared/schema";
 import { 
   getGenderDisplay, 

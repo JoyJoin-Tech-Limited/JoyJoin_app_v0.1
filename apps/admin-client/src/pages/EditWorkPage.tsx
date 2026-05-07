@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, Briefcase, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { WORK_MODE_TO_LABEL } from "@shared/occupations";
 
 const workSchema = z.object({

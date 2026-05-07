@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, Users, Eye, MapPin, Clock, Store, Copy, Check, Pencil, UserPlus, ChevronDown } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { useForm } from "react-hook-form";

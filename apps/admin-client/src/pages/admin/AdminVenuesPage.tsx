@@ -37,7 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Store, Plus, Edit, Trash2, Building, TrendingUp, Calendar, DollarSign, Clock, X, CalendarDays, LayoutGrid, AlertTriangle, ArrowRightLeft, Gift, Percent, Tag, CircleDollarSign, Eye, EyeOff, MapPin, Map } from "lucide-react";
 import { shenzhenClusters, getDistrictsByCluster, getDistrictById, getClusterById } from "@shared/districts";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import AmapPicker from "@/components/discover/AmapPicker";
 

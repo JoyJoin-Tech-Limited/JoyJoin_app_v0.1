@@ -26,7 +26,7 @@ import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface FinanceStats {
   totalRevenue: number;

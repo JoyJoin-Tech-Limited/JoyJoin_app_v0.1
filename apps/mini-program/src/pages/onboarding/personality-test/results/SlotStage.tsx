@@ -1,15 +1,15 @@
 import { Image, Text, View } from '@tarojs/components'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useMemo } from 'react'
-import Card from '../../../../../components/ui/Card'
-import { COLOR_PRIMARY } from '../../../../../lib/utils/uiConstants'
+import Card from '../../../../components/ui/Card'
+import { COLOR_PRIMARY } from '../../../../lib/utils/uiConstants'
 import {
   getArchetypeVisual,
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-} from '../../visuals'
-import { getVisibleReelItems, type SlotPhase } from '../resultHelpers'
-import ArchetypeSpritesheet from '../components/ArchetypeSpritesheet'
+} from '../visuals'
+import { getVisibleReelItems, type SlotPhase } from './resultHelpers'
+import ArchetypeSpritesheet from './ArchetypeSpritesheet'
 
 interface SlotStageProps {
   reelIndex: number

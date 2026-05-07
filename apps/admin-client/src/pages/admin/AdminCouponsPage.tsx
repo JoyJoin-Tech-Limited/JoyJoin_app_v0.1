@@ -24,7 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { Ticket, Plus, Edit, TrendingUp, Users, DollarSign } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { format, isPast, isFuture } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface Coupon {
   id: string;

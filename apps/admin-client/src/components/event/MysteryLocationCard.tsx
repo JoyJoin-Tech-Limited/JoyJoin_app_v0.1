@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Lock, Sparkles } from "lucide-react";
-import { useRevealStatus } from "@/hooks/useRevealStatus";
+import { useRevealStatus } from "@/hooks/event/useRevealStatus";
 import { REVEAL_THRESHOLD_HOURS, formatEventDateTime } from "@shared/eventDetail";
 
 interface MysteryLocationCardProps {

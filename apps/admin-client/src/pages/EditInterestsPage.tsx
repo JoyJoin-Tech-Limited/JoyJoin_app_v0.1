@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, Ban, Heart } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { INTERESTS_OPTIONS, TOPICS_GROUPS, getAllTopics, type InterestOption, type TopicGroup } from "@/static-data/interestsTopicsData";
 import { getUserPrimaryInterests, getUserTopicAvoidances } from "@/lib/userFieldMappings";
 

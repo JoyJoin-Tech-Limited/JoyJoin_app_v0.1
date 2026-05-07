@@ -1,7 +1,7 @@
 import { Compass, Calendar, MessageSquare, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { useNotificationCounts } from "@/hooks/useNotificationCounts";
+import { useNotificationCounts } from "@/hooks/notifications/useNotificationCounts";
 
 interface NavItem {
   icon: any;

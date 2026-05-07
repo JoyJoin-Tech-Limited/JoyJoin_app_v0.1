@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import SocialGoalCard from "../shared/SocialGoalCard";
 import { SHARED_OPTIONS } from "@/lib/event-pool-options";
 

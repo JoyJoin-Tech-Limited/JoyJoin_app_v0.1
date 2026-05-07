@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/ui/use-toast";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { 
   Copy, 
   Gift, 

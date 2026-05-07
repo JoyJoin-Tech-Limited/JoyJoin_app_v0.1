@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Sparkles, Users } from "lucide-react";
-import BlindBoxInfoSheet from "./BlindBoxInfoSheet";
-import JoinEventPoolSheet from "./event-pool-registration/JoinEventPoolSheet";
+import BlindBoxInfoSheet from "@/components/_archive/BlindBoxInfoSheet";
+import JoinEventPoolSheet from "@/components/event-pool-registration/JoinEventPoolSheet";
 import { getArchetypeImage } from "@/lib/archetypeImages";
 
 type PriceTier = "150以下" | "150-200" | "200-300" | "300-500";

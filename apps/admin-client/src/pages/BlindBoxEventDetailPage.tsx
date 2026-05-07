@@ -18,18 +18,18 @@ import MysteryWaitingCard from "@/components/event/MysteryWaitingCard";
 import MysteryLocationCard from "@/components/event/MysteryLocationCard";
 import MatchCelebrationOverlay from "@/components/matching/MatchCelebrationOverlay";
 import VenuePartnerCard from "@/components/event/VenuePartnerCard";
-import { useAuth } from "@/hooks/useAuth";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { useWebSocket } from "@/hooks/event/useWebSocket";
 import { invalidateCacheForEvent } from "@/lib/cacheInvalidation";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useSoundEffects } from "@/hooks/ui/useSoundEffects";
 import { trackAnimationEvent } from "@/lib/animationAnalytics";
-import { preloadArchetypeImages } from "@/hooks/usePreloadImages";
+import { preloadArchetypeImages } from "@/hooks/ui/usePreloadImages";
 import { archetypeAvatars } from "@/lib/archetypeAvatars";
 import { detectDevice } from "@/lib/deviceDetection";
 import { getOrAssignVariant } from "@/lib/abTestingFramework";
-import { useRevealStatus } from "@/hooks/useRevealStatus";
+import { useRevealStatus } from "@/hooks/event/useRevealStatus";
 import EventSessionBanner, { FloatingCheckinButton } from "@/components/event/EventSessionBanner";
 
 interface AnimationStatus {

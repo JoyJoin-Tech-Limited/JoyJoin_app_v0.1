@@ -17,7 +17,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { DollarSign, Edit, Star, Clock, Package } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface PricingSetting {
   id: string;

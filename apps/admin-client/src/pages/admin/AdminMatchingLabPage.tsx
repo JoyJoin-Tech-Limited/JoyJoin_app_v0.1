@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 

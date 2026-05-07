@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, MapPin, Users, Navigation, AlertCircle, Sparkles } from "lucide-react";
 import PostMatchEventCard from "@/components/event/PostMatchEventCard";
 import IcebreakerTool from "@/components/event/IcebreakerTool";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { calculateAge } from "@shared/utils";
 import type { AttendeeData } from "@/lib/attendeeAnalytics";
 

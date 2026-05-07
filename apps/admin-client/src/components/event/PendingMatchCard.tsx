@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import EditPreferencesDialog from "@/components/EditPreferencesDialog";
+import EditPreferencesDialog from "@/components/_archive/EditPreferencesDialog";
 
 interface PendingMatchCardProps {
   event: BlindBoxEvent;

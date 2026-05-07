@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Coins, Gift, ArrowLeft, History, Check, ChevronRight } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import {

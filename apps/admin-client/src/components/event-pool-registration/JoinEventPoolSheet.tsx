@@ -4,8 +4,8 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
-import { useAuth } from "@/hooks/useAuth";
-import { useEventPoolRegistration } from "@/hooks/useEventPoolRegistration";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { useEventPoolRegistration } from "@/hooks/event/useEventPoolRegistration";
 import SheetHeader from "./SheetHeader";
 import FloatingOrbs from "./FloatingOrbs";
 import TransitionMascot from "./TransitionMascot";

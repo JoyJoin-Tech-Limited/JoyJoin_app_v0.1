@@ -2,7 +2,7 @@ import { Image, Text, View } from '@tarojs/components'
 import {
   getXiaoyueExpressionAsset,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-} from '../../visuals'
+} from '../visuals'
 
 interface LoadingStageProps {
   phaseText?: string

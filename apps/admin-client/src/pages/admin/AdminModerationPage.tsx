@@ -42,7 +42,7 @@ import {
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 
 interface ModerationStats {
   totalReports: number;
