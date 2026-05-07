@@ -38,7 +38,7 @@ owned_files:
   - apps/server/src/routes/domains/miniscript.ts
   - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
   - apps/mini-program/src/pages/icebreaker-session/index.tsx
-  - apps/user-client/src/components/social-icebreaker/miniscript/
+  - archived/workspaces/user-client/src/components/social-icebreaker/miniscript/
 
 related_skills:
   - skill: llm-runtime-safety-and-integration

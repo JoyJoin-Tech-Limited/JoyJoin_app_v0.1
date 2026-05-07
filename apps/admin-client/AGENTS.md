@@ -39,22 +39,25 @@ Every task touching admin-client must load these skills:
 ## 1. Active vs. Legacy (Do Not Reintroduce)
 
 **Active — use these:**
-- `AdminApp.tsx` as app root (NOT `App.tsx` — `App.tsx` exists but is a legacy stub)
+- `AdminApp.tsx` as app root (only entry — legacy `App.tsx` removed 2026-05-07)
 - `wouter` for routing (NOT React Router)
-- `useAuth()` from `@/hooks/useAuth` — checks `user.isAdmin`
+- `useAuth()` from `@/hooks/auth/useAuth` — checks `user.isAdmin`
 - `@/components/ui/*` for shadcn primitives (Button, Dialog, Table, etc.)
 - `@/components/admin/*` for admin-specific components
+- `@/components/discover/`, `@/components/event/`, `@/components/profile/` for feature-grouped components
+- `@/components/navigation/` for BottomNav, MobileHeader
 - `@/pages/admin/*` for admin route pages
 - `Recharts` for charts/dashboards
 - `react-hook-form` + `zod` for form validation
 - `@tanstack/react-query` for server state
 - `framer-motion` for animations
+- `@/hooks/auth/useAuth`, `@/hooks/ui/use-toast`, `@/hooks/event/useWebSocket` for domain-organized hooks
 
 **Legacy — never use:**
-- `App.tsx` (stub file, exists but `AdminApp.tsx` is the real entry)
 - Direct router imports from non-wouter libraries
 - Hardcoded role strings — use the RBAC helper from shared
 - Admin pages placed outside `pages/admin/`
+- Flat `@/components/ComponentName` imports — use feature subdir instead
 
 ---
 
@@ -97,22 +100,39 @@ main.tsx                          # Vite bootstrap → renders AdminApp
 ```
 src/
   components/
-    ui/                  # shadcn/ui primitives (Button, Dialog, Table, Card, etc.)
+    ui/                  # shadcn/ui primitives (33 active, Button, Dialog, Table, Card, etc.)
     admin/               # Admin-specific reusable components (sidebars, data tables, filters)
-    *.tsx                # Admin-local non-shared components
+    discover/            # Event discovery components (EventCard, BlindBoxEventCard, etc.)
+    event/               # Event-related components (CompletedEventCard, PostMatchEventCard, etc.)
+    profile/             # Profile & personality components (PersonalityRadarChart, QuizIntro, etc.)
+    matching/            # Matching visualization (MatchRevealAnimation, MatchCelebrationOverlay)
+    navigation/          # BottomNav, MobileHeader
+    animation/           # AnimationLoadingScreen
+    icebreaker/          # Icebreaker tools
+    feedback/            # Post-event feedback
+    event-pool-registration/  # Pool registration flow
+    _archive/            # Unused legacy components (preserved for reference)
   pages/
     admin/               # Route-level page components
       AdminLayout.tsx    # Shell: sidebar + header + <Switch> routes
       AdminDashboardPage.tsx
       AdminPoolsPage.tsx
       ...
-  hooks/                 # Admin-specific hooks (useAuth, useAdminQuery, etc.)
+  hooks/
+    auth/                # useAuth
+    notifications/       # useNotificationCounts
+    event/               # useEventPoolRegistration, useGroupAnalysis, useRevealStatus, useWebSocket
+    ui/                  # use-toast, use-mobile, useSoundEffects, usePreloadImages
+    game/                # useLevelUp, useXPNotification
+    icebreaker/          # use-icebreaker-messages, use-icebreaker-topics
   lib/                   # Utilities (queryClient, api helpers, formatters)
-  data/                  # Static data / lookup tables
+  static-data/           # Static data / lookup tables
 ```
 
 **Rules:**
 - Pages go in `pages/admin/` — NOT top-level `pages/`
+- Components go in feature subdirs (discover/, event/, profile/, etc.) — NOT flat at `components/`
+- Hooks go in domain subdirs (auth/, event/, ui/, etc.) — NOT flat at `hooks/`
 - Admin-local UI goes in `components/` — shared primitives go to `packages/shared/src/ui/`
 - Every page must handle: loading, empty, error, unauthorized states
 - Data tables use shadcn/ui Table + TanStack Query (`useQuery`)

@@ -46,8 +46,8 @@ owned_files:
   - apps/server/src/lib/errorResponse.ts
   - apps/server/src/index.ts
   - apps/server/src/lib/stateTransitions.ts
-  - apps/user-client/src/lib/queryClient.ts
-  - apps/user-client/src/lib/icebreakerSessionRequest.ts
+  - archived/workspaces/user-client/src/lib/queryClient.ts
+  - archived/workspaces/user-client/src/lib/icebreakerSessionRequest.ts
   - apps/mini-program/src/lib/api.ts
   - apps/mini-program/src/lib/authSession.ts
 

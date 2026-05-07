@@ -45,11 +45,11 @@ strong_triggers:
   - modify completion flags
 
 owned_files:
-  - apps/user-client/src/features/onboarding/**
-  - apps/user-client/src/hooks/useAuth.ts
-  - apps/user-client/src/hooks/useOnboardingRoute.ts
-  - apps/user-client/src/hooks/useOnboardingProgress.ts
-  - apps/user-client/src/App.tsx
+  - archived/workspaces/user-client/src/features/onboarding/**
+  - archived/workspaces/user-client/src/hooks/useAuth.ts
+  - archived/workspaces/user-client/src/hooks/useOnboardingRoute.ts
+  - archived/workspaces/user-client/src/hooks/useOnboardingProgress.ts
+  - archived/workspaces/user-client/src/App.tsx
   - apps/server/src/routes/domains/auth.ts
   - apps/server/src/routes/domains/onboarding.ts
   - packages/shared/src/onboarding.ts

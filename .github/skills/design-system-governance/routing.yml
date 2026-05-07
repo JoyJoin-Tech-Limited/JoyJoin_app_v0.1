@@ -39,9 +39,9 @@ strong_triggers:
 
 owned_files:
   - packages/shared/src/ui/buttonVariants.ts
-  - apps/user-client/src/index.css
+  - archived/workspaces/user-client/src/index.css
   - apps/admin-client/src/index.css
-  - apps/user-client/tailwind.config.ts
+  - archived/workspaces/user-client/tailwind.config.ts
   - apps/admin-client/tailwind.config.ts
   - docs/button-design.md
 

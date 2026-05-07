@@ -1,19 +1,19 @@
 # JoyJoin User Onboarding Flow
 
-> **Status:** Active onboarding reference — last verified 2026-04-19 against `apps/server/src/routes/domains/auth.ts`, `packages/shared/src/onboarding.ts`, `apps/user-client/src/hooks/useAuth.ts`, `apps/user-client/src/features/onboarding/active/`, and mini-program onboarding routes under `apps/mini-program/src/pages/onboarding/` + `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` / `api/api.ts`.
+> **Status:** Historical reference — user-client (web) was archived to `archived/workspaces/user-client/` on 2026-05-07. Mini-program is the only active user-facing client. The server-driven `nextStep` flow (documented in `GET /api/auth/user` and `packages/shared/src/onboarding.ts`) is the canonical onboarding authority for both surfaces. This doc documents the former user-client onboarding architecture for legacy understanding only.
 > **Authority:** Post-auth progression is server-owned via `nextStep` from `GET /api/auth/user`. Historical routing-fix docs in this directory are reference-only.
 
 ## Overview (Updated 2026-04-07)
 
 JoyJoin uses a **value-first** onboarding approach:
 
-**Canonical client module boundary (active flow):**
-- `apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts` — single onboarding navigation/progress hook
-- `apps/user-client/src/features/onboarding/active/flow.ts` — `nextStep` → step/route mapping (source of truth on client)
-- `apps/user-client/src/features/onboarding/active/pages/*` — active onboarding pages
-- `apps/user-client/src/legacy/onboarding/pages/*` — quarantined legacy onboarding surfaces
+**Canonical client module boundary (archived — see `archived/workspaces/user-client/`):**
+- `archived/workspaces/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts`
+- `archived/workspaces/user-client/src/features/onboarding/active/flow.ts`
+- `archived/workspaces/user-client/src/features/onboarding/active/pages/*`
+- `archived/workspaces/user-client/src/legacy/onboarding/pages/*`
 
-> **Module consolidation (PRs #401, #403, #423):** The `features/onboarding/active/` module is the single owner of all new onboarding navigation and page logic. Do not add new onboarding routes to `apps/user-client/src/pages/` directly — route-to-step mapping lives in `flow.ts`, and orchestration lives in `useOnboardingOrchestrator.ts`. Legacy surfaces under `legacy/onboarding/` are quarantined and must not be referenced by active code.
+> The mini-program handles onboarding via server-driven `nextStep` — see `apps/mini-program/src/lib/onboardingRoutes.ts` for route mapping and `apps/mini-program/src/hooks/useAuthGuard.ts` for navigation orchestration.
 
 1. **Show value (personality test) BEFORE asking for signup**
 2. Silent WeChat authentication after user is invested
@@ -200,7 +200,6 @@ await fetch('/api/auth/wechat/login-with-test', {
   ```ts
   const NEXT_STEP_TO_PATH: Record<string, string> = {
     'discover':        '/discover',
-    'guide':           '/discover',        // deprecated step alias
     'profile-review':  '/onboarding/review',
     'extended-data':   '/onboarding/extended',
     'essential-data':  '/onboarding/setup',
@@ -218,7 +217,7 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **User State:** Onboarding complete
 
-> **Note:** The 3-step guide (`/guide`) that previously preceded the Discover page was deprecated on 2026-02-16. Its content has been replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page itself.
+> **Note:** The 3-step guide (`/guide`) was **removed** (2026-05-07). Its content was replaced by inline coach marks (`CoachMarkBanner`, `XiaoyueFAB`, `ProfileCompletionNudge`) on the Discover page.
 
 **Post-Onboarding Profile Enrichment (Progressive)**
 
@@ -239,10 +238,10 @@ The enrichment card is shown via the `ProfileEnrichmentCard` component on the Di
 
 | Field | Type | Description |
 |------|------|-------------|
-| `nextStep` | `string` | Server-calculated next route. Active values: `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. Legacy/fallback values: `onboarding` (routes to `/personality-test`), `guide` (legacy; in `AuthenticatedRouter` this falls through to the `discover` case; the `/guide` route and `GuidePage` are kept for backward compatibility). |
+| `nextStep` | `string` | Server-calculated next route. Active values: `onboarding`, `personality-test`, `essential-data`, `extended-data`, `profile-review`, `discover`. |
 | `profileEssentialComplete` | `boolean` | Essential data complete (displayName, gender, currentCity) |
 | `profileExtendedComplete` | `boolean` | Server-computed profile enrichment flag: `true` when education + industry labels + hometown are present. Note: this is **separate** from the interests carousel completion flag (`hasCompletedInterestsCarousel`). |
-| `hasSeenGuide` | `boolean` | Legacy field — guide step removed from onboarding flow (2026-02-16); retained on server for backward compatibility |
+| – (removed) | – | `hasSeenGuide` column removed from `users` table (2026-05-07). Guide step no longer exists. |
 | `hasSeenProfileReview` | `boolean` | Profile review viewed (server-persisted) |
 | `activeAssessmentSessionId` | `string \| null` | Active V4 session ID |
 | `hasCompletedInterestsCarousel` | `boolean` | Set to `true` when the user completes or skips the interests carousel step (`/onboarding/extended`). This is the canonical completion gate for the extended-data onboarding step. |
@@ -254,7 +253,7 @@ The enrichment card is shown via the `ProfileEnrichmentCard` component on the Di
 |----------|--------|-------------|
 | `/api/auth/user` | GET | Get current user and nextStep |
 | `/api/profile-review/complete` | POST | Mark profile review as seen |
-| `/api/guide/complete` | POST | Mark guide as seen |
+| (removed) | – | `/api/guide/mark-seen` and `/api/guide/complete` removed (2026-05-07) |
 
 ### useAuth Hook Extension
 

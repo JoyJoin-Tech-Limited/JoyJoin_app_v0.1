@@ -74,9 +74,9 @@ mv phaseViews.tsx PhaseViews.tsx
 ### Completed in Round 2
 
 ```bash
-# 5. Move PNG masters to raw-assets/
-mkdir -p apps/mini-program/raw-assets/personality/xiaoyue
-mv apps/mini-program/src/assets/personality/xiaoyue/*.png apps/mini-program/raw-assets/personality/xiaoyue/
+# 5. Move PNG masters to assets-source/
+mkdir -p apps/mini-program/assets-source/personality/xiaoyue
+mv apps/mini-program/src/assets/personality/xiaoyue/*.png apps/mini-program/assets-source/personality/xiaoyue/
 
 # 6. Generate promo WebP banners
 node apps/mini-program/scripts/optimize-promo-assets.mjs
@@ -237,10 +237,10 @@ The mini-program communicates with the backend via **52 endpoints** across 10 lo
 - `src/components/AnalyzingAnimation.tsx` — extracted animation timing constants
 - `src/components/AiMatchPromoCarousel.tsx` — extracted swiper timing constants
 - `src/app.config.ts` — imported colors from `uiConstants.ts`
-- `scripts/optimize-xiaoyue-assets.mjs` — reads PNG masters from `raw-assets/`
+- `scripts/optimize-xiaoyue-assets.mjs` — reads PNG masters from `assets-source/`
 
 ### Created
-- `raw-assets/personality/xiaoyue/` — PNG master storage (moved from `src/assets/`)
+- `assets-source/personality/xiaoyue/` — PNG master storage (moved from `src/assets/`)
 - `scripts/optimize-promo-assets.mjs` — WebP generation for promo banners
 - `src/lib/uiConstants.ts` — centralized UI constants (timing, colors, intervals)
 - `README.md` (updated)

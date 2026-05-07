@@ -43,8 +43,8 @@ owned_files:
   - apps/server/src/poolMatchingService.ts
   - apps/server/src/poolRealtimeMatchingService.ts
   - apps/server/src/matchingSemantic.ts
-  - apps/user-client/src/components/matching/**
-  - apps/user-client/src/pages/MatchingStatusPage.tsx
+  - archived/workspaces/user-client/src/components/matching/**
+  - archived/workspaces/user-client/src/pages/MatchingStatusPage.tsx
   - docs/MATCHING_ALGORITHM_REFERENCE.md
 
 owned_paths:

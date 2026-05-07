@@ -30,7 +30,7 @@ strong_triggers:
 owned_files:
   - apps/server/src/routes/socialIcebreaker.ts
   - apps/server/src/socialIcebreakerAIService.ts
-  - apps/user-client/src/components/social-icebreaker/PersonalityDicePhase.tsx
+  - archived/workspaces/user-client/src/components/social-icebreaker/PersonalityDicePhase.tsx
   - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
 
 owned_paths:

@@ -10,7 +10,7 @@ use_when:
   - changing one of the duplicated auth/api/payment files called out in docs/PLATFORM_COORDINATION.md
   - asking whether a sibling platform also needs review
   - using docs/PLATFORM_COORDINATION.md to decide whether a change stays local
-  - changing apps/mini-program/src/lib/api.ts, apps/user-client/src/hooks/useAuth.ts, queryClient.ts, or the payment pages
+  - changing apps/mini-program/src/lib/api.ts, archived/workspaces/user-client/src/hooks/useAuth.ts, queryClient.ts, or the payment pages
   - changing shared package files that coordinated client flows depend on
 
 do_not_use_when:
@@ -25,8 +25,8 @@ strong_triggers:
   - BlindBoxPaymentPage.tsx
   - blind-box-payment/index.tsx
   - apps/mini-program/src/lib/api.ts
-  - apps/user-client/src/hooks/useAuth.ts
-  - apps/user-client/src/lib/queryClient.ts
+  - archived/workspaces/user-client/src/hooks/useAuth.ts
+  - archived/workspaces/user-client/src/lib/queryClient.ts
   - packages/shared/src/schema.ts
   - duplicated payment flow
   - mirrored web journey
@@ -35,9 +35,9 @@ owned_files:
   - docs/PLATFORM_COORDINATION.md
   - apps/mini-program/src/lib/api.ts
   - apps/mini-program/src/pages/blind-box-payment/index.tsx
-  - apps/user-client/src/hooks/useAuth.ts
-  - apps/user-client/src/lib/queryClient.ts
-  - apps/user-client/src/pages/BlindBoxPaymentPage.tsx
+  - archived/workspaces/user-client/src/hooks/useAuth.ts
+  - archived/workspaces/user-client/src/lib/queryClient.ts
+  - archived/workspaces/user-client/src/pages/BlindBoxPaymentPage.tsx
   - packages/shared/src/schema.ts
 
 owned_paths: []

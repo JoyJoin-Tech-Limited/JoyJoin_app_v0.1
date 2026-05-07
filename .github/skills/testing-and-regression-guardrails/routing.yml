@@ -30,13 +30,13 @@ strong_triggers:
   - which workspace does this test belong in
   - vitest
   - apps/server/src/__tests__
-  - apps/user-client/src/features/onboarding/active/__tests__
-  - apps/user-client/src/hooks/__tests__
+  - archived/workspaces/user-client/src/features/onboarding/active/__tests__
+  - archived/workspaces/user-client/src/hooks/__tests__
 
 owned_files:
   - apps/server/src/__tests__/**
-  - apps/user-client/src/features/onboarding/active/__tests__/**
-  - apps/user-client/src/hooks/__tests__/**
+  - archived/workspaces/user-client/src/features/onboarding/active/__tests__/**
+  - archived/workspaces/user-client/src/hooks/__tests__/**
   - scripts/check-guardrails.mjs
 
 owned_paths: []

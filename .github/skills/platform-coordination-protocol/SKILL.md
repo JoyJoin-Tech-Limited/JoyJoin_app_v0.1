@@ -1,33 +1,24 @@
 ---
 name: platform-coordination-protocol
 description: >
-  Mini-program and web coordination guidance for duplicated auth, API, and
-  payment flows. Use when a task touches docs/PLATFORM_COORDINATION.md,
-  apps/mini-program/src/lib/api/api.ts, apps/user-client/src/hooks/useAuth.ts, or
-  the payment pages and asks whether sibling platform review is needed.
+  Mini-program coordination guidance for auth, API, and payment flows. The
+  web client (apps/user-client) was archived. Use when a task touches
+  apps/mini-program/src/lib/api/api.ts, docs/PLATFORM_COORDINATION.md, or
+  payment pages and asks whether cross-platform review is needed.
   Trigger phrases: "sibling platform", "platform coordination",
-  "BlindBoxPaymentPage", "useAuth.ts", "mini-program api.ts".
+  "mini-program api.ts".
 ---
 
 # Platform Coordination Protocol
 
-**Core rule:** For current duplicated auth/API/payment flows, use `docs/PLATFORM_COORDINATION.md` as the source of truth, treat the mini-program flow as the strongest reference for current payment mechanics, and review the matching web or shared surface before merging.
+**Core rule:** `apps/mini-program` is the only active user-facing client. The web client (`apps/user-client`) was archived to `archived/workspaces/user-client/`. This skill primarily concerns mini-program ↔ shared package coordination. Cross-surface rules (mini-program ↔ admin-client) follow `docs/PLATFORM_COORDINATION.md`.
 
 ## When to use this skill
 
-- Editing one of the duplicated cross-platform hotspots called out in `docs/PLATFORM_COORDINATION.md`
-- Changing payment or auth/session logic that spans mini-program and web
-- Updating `apps/mini-program/src/lib/api/api.ts`, `apps/user-client/src/hooks/useAuth.ts`, `apps/user-client/src/lib/queryClient.ts`, or either payment page
-- Asking whether a sibling platform or shared package consumer also needs review
-- Checking whether a change should stay local or be escalated to both clients
-
-## Cross-platform parity overview
-
-- **Mini Program reference surface** — strongest current reference for payment mechanics and WeChat-specific auth/api behavior
-- **Web sibling surface** — matching user-facing flow that should be reviewed for parity when duplicated business intent changes
-- **Shared package surface** — `packages/shared/src/` modules that both clients may consume today, especially `packages/shared/src/schema.ts` and shared utilities/constants
-
-Today there is **no** dedicated shared payment/auth DTO module. `docs/PLATFORM_COORDINATION.md` is the canonical coordination reference for these mappings.
+- Editing mini-program auth/API/payment flows that share logic with the server or shared package
+- Changing mini-program payment or auth/session logic that interacts with the server API
+- Updating `apps/mini-program/src/lib/api/api.ts` or mini-program payment pages
+- Asking whether a shared package consumer also needs review
 
 See [`references/coordination-details.md`](references/coordination-details.md) for the full coordinated areas table, mini-program file map, web client api.ts patterns, auth flow comparison, and payment page parity checklist.
 
@@ -65,7 +56,7 @@ Use scope labels **`MINI_PROGRAM_ONLY`**, **`WEB_ONLY`**, or **`BOTH_REQUIRED`**
 - **This looks platform-specific, but the playbook lists it as duplicated logic** — trust `docs/PLATFORM_COORDINATION.md` first and treat it as `BOTH_REQUIRED` until you confirm only renderer wiring changed.
 - **I changed `packages/shared/src/` and I am not sure who consumes it** — inspect both clients for imports and review the duplicated auth/payment hotspots listed in the playbook before merging.
 - **The web and mini-program files differ a lot already** — compare business intent, not syntax. If the same user-facing rule changed on one side, review the sibling side even if the implementations are structurally different.
-- **The mini-program build is unavailable in my environment** — run the web or shared checks that exist (`npm run typecheck -w @joyjoin/user-client` or `npm run check:clients`) and note the mini-program validation gap in the PR.
+- **The mini-program build is unavailable in my environment** — run the shared checks that exist (`npm run typecheck -w @joyjoin/shared` or `npm run typecheck -w @joyjoin/server`) and note the mini-program validation gap in the PR.
 - **I cannot tell whether this is business logic or renderer wiring** — default to `BOTH_REQUIRED` and explain in the PR why you kept or skipped the sibling change.
 - **Payment behavior changed on one client but not the other** — treat mini-program payment intent flow as the strongest current reference. Review the sibling payment page whenever pricing assumptions, payment status handling, or post-payment behavior changes.
 

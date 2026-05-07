@@ -52,7 +52,7 @@ strong_triggers:
 owned_files:
   - apps/server/src/repositories/notificationsRepo.ts
   - apps/server/src/eventBroadcast.ts
-  - apps/user-client/src/hooks/useNotificationCounts.ts
+  - archived/workspaces/user-client/src/hooks/useNotificationCounts.ts
   - apps/mini-program/src/hooks/useNotificationCounts.ts
   - packages/shared/src/schema.ts
   - packages/shared/src/api.ts

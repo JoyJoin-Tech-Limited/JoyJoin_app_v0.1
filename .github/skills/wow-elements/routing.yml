@@ -55,7 +55,7 @@ strong_triggers:
   - chat bubble animation
 
 owned_files:
-  - apps/user-client/src/**
+  - archived/workspaces/user-client/src/**
   - apps/mini-program/src/components/AchievementPopup.tsx
   - apps/mini-program/src/components/AchievementPopup.scss
   - apps/mini-program/src/components/AnalyzingAnimation.tsx

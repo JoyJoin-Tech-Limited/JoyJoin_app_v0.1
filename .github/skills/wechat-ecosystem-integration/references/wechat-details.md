@@ -66,10 +66,10 @@ In `development` (`NODE_ENV === 'development'`), both `getWechatOpenId` and `get
 
 ## Cross-platform coordination
 
-- Mini Program is the **launch-primary** client; treat it as the strongest reference for WeChat-specific flows.
-- Web (`user-client`) uses a hybrid path: `wx.login()` when `wx` global exists, otherwise WeChat OAuth2 web redirect.
+- Mini Program is the **launch-primary** and only active user-facing client.
+- The web client (`apps/user-client`) was archived to `archived/workspaces/user-client/` (2026-05-07).
+  Formerly it used a hybrid WeChat OAuth2 / `wx.login()` path — no longer active.
 - Any change to shared auth/payment contracts must be reviewed against `docs/PLATFORM_COORDINATION.md`.
-- Payment plan IDs, coupon payloads, and status strings must stay aligned across both clients.
 
 ## Canonical References
 

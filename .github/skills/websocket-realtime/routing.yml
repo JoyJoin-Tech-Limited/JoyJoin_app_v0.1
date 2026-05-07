@@ -47,9 +47,9 @@ owned_files:
   - apps/server/src/wsService.ts
   - apps/server/src/eventBroadcast.ts
   - packages/shared/src/wsEvents.ts
-  - apps/user-client/src/hooks/useWebSocket.ts
-  - apps/user-client/src/hooks/useIcebreakerWebSocket.ts
-  - apps/user-client/src/hooks/useKingGameWebSocket.ts
+  - archived/workspaces/user-client/src/hooks/useWebSocket.ts
+  - archived/workspaces/user-client/src/hooks/useIcebreakerWebSocket.ts
+  - archived/workspaces/user-client/src/hooks/useKingGameWebSocket.ts
   - apps/mini-program/src/lib/websocket.ts
   - apps/mini-program/src/hooks/useWebSocket.ts
 

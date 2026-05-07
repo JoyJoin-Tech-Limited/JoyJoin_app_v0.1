@@ -56,8 +56,8 @@ owned_files:
   - apps/server/src/socialIcebreakerPhaseConfig.ts
   - apps/server/src/socialIcebreakerAIService.ts
   - apps/server/src/ai/socialModelRouter.ts
-  - apps/user-client/src/pages/IcebreakerSessionPage.tsx
-  - apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx
+  - archived/workspaces/user-client/src/pages/IcebreakerSessionPage.tsx
+  - archived/workspaces/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx
   - docs/icebreaker-system.md
 
 owned_paths:

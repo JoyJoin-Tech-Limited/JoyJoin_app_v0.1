@@ -28,7 +28,7 @@ owned_files:
   - apps/server/src/routes/socialIcebreaker.ts
   - apps/server/src/socialIcebreakerAIService.ts
   - apps/server/src/lib/socialIcebreakerStore.ts
-  - apps/user-client/src/components/social-icebreaker/lie-detective
+  - archived/workspaces/user-client/src/components/social-icebreaker/lie-detective
   - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
 
 owned_paths:

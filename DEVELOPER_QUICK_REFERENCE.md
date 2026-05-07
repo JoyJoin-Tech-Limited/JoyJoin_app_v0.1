@@ -25,11 +25,11 @@
 - The **`圈子`** nav label — replaced by `连接`
 - **`会员 / VIP会员`** user-facing copy — replaced by `权益`
 - Any reference to the **`shared/` root folder** as the import source — use `packages/shared/src/` instead
-- The **`/guide` page** as a core onboarding step — it is deprecated; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
+- The **`/guide` page** as a core onboarding step — **removed**; the active onboarding steps after WeChat login are `/onboarding/setup`, `/onboarding/extended`, and `/onboarding/review`, then directly to `/discover`
 - **Demo code `666666`** and `createDemoDataForUser` in production — gated on `NODE_ENV !== 'production'`
 
 ### If you are unsure whether something is active or legacy:
-1. Check whether the file/route/component is imported and used in `App.tsx` or an active page.
+1. Check whether the file/route/component is imported and used in an active entry point (`AdminApp.tsx` for admin, `app.ts` for mini-program) or an active page.
 2. Check `PRODUCT_REQUIREMENTS.md` § *Product Canon & Terminology*.
 3. If still unsure, flag for human review rather than guessing.
 
@@ -79,10 +79,9 @@ npm run dev
 
 ### Key Commands
 ```bash
-npm run build            # Build user-client, admin-client, and server workspaces
-# npm run build:user was removed — user-client archived to archived/workspaces/user-client/
+npm run build            # Build admin-client and server workspaces (user-client archived)
 npm run typecheck        # Run TypeScript checks across shared + app workspaces
-npm run check:clients    # Typecheck shared + user/admin + mini-program workspaces
+npm run check:clients    # Typecheck shared + admin-client + mini-program workspaces
 npm run check:server     # Typecheck only the server workspace
 npm run check:full       # Run guardrails, lint, tests, and the full build
 npm run lint             # Alias of the repo TypeScript checks
@@ -118,8 +117,6 @@ joyjoin-monorepo/
 │   │   │   ├── lib/          # Utilities and API wrappers
 │   │   │   └── app.ts        # Mini-program app entry
 │   │   └── dist/             # Build output
-│   │
-│   ├── user-client/          # [ARCHIVED] User-facing React app (moved to archived/workspaces/user-client/)
 │   │
 │   ├── admin-client/         # Admin portal React app (desktop-first)
 │   │   ├── src/
@@ -193,7 +190,7 @@ joyjoin-monorepo/
 
 ### Taro mini-program (launch focus)
 
-`apps/mini-program` is the **launch-primary** WeChat client. Web (`apps/user-client`) is the sandbox; coordinate cross-surface work via [`docs/PLATFORM_COORDINATION.md`](docs/PLATFORM_COORDINATION.md).
+`apps/mini-program` is the **launch-primary** and only shipping user-facing client. The web sandbox (`apps/user-client`) was archived to `archived/workspaces/user-client/`. Cross-surface rules (mini-program ↔ admin-client): [`docs/PLATFORM_COORDINATION.md`](docs/PLATFORM_COORDINATION.md).
 
 | Concern | Location |
 |---------|----------|
@@ -485,7 +482,7 @@ The PRIMARY icebreaking experience for matched groups is the **Social Icebreaker
 Do NOT direct users to `/icebreaker-game` (AI Card Game) as the first/default experience.
 The Card Game is an optional deep-dive accessible from within the Social Icebreaker.
 
-The IcebreakerToolkit (pre-event game browser) is a LEGACY tool. Do not add new Toolkit CTAs.
+The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by Social Icebreaker (`/api/social-icebreaker/*`). Do not add new Toolkit CTAs.
 
 ---
 
@@ -495,10 +492,9 @@ The IcebreakerToolkit (pre-event game browser) is a LEGACY tool. Do not add new 
 
 ### Shared Layout — `MatchingStateLayout`
 
-**File:** `apps/user-client/src/components/matching/MatchingStateLayout.tsx`
+**File (archived):** `archived/workspaces/user-client/src/components/matching/MatchingStateLayout.tsx`
 
-Provides:
-- Canonical dark background from `apps/user-client/src/assets/matching/shared/matching-bg.svg`
+- Canonical dark background from `archived/workspaces/user-client/src/assets/matching/shared/matching-bg.svg`
 - Safe-area header (optional back button + title)
 - Composition slots: `hero`, `copy`, `cta`, `footer`
 
@@ -538,7 +534,7 @@ Provides:
 1. **State must be trigger-driven.** `MatchingStatusPage.tsx` maps real app state (registration status, fill count, WebSocket events) to the correct screen. No placeholder timers or mocked transitions.
 2. **Recovery must be correct.** A user returning to the matching-status page after a forced refresh should land in the right state.
 3. **For full-screen matching-status screens, never duplicate `matching-bg.svg`.** Import the shared background only via `MatchingStateLayout`. Join-sheet interstitials inherit their presentation context from `JoinEventPoolSheet` and should not wrap themselves in `MatchingStateLayout`.
-4. **Asset locations:** `apps/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
+4. **Asset locations (archived):** `archived/workspaces/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
 5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
 
 Full reference: `docs/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
@@ -562,8 +558,8 @@ After `FinalProfileReviewPage`, a secondary CTA "先浏览 →" lets users enter
 
 | Guardrail | Rule |
 |-----------|------|
-| Non-critical routes | **Must** use `React.lazy()` in `App.tsx` — no static imports for non-critical pages |
-| Admin code | Must **not** be imported into `apps/user-client` — keep admin-only code in `apps/admin-client` |
+| Non-critical routes | **Must** use code splitting / lazy loading — no static imports for non-critical pages |
+| Cross-app imports | Apps must **not** import from other apps — shared logic goes in `packages/shared` |
 | Matching background | Reuse `matching/shared/matching-bg.svg` via `MatchingStateLayout` — never duplicate |
 | Hero images | Prefer WebP + `decoding="async"` over PNG for hero/above-fold images |
 | Archetype assets | Defer/gate — do not preload all 12 archetype PNGs in the critical path |
@@ -621,9 +617,9 @@ type CohortType =
 |------|---------|
 | `packages/shared/src/personality/archetypeRegistry.ts` | Single source of truth for all archetype data |
 | `packages/shared/src/personality/archetypeCompatibility.ts` | Chemistry matrix between archetypes |
-| `apps/user-client/src/components/StyleSpectrum.tsx` | Archetype result visualization |
-| `apps/user-client/src/components/TraitSpectrum.tsx` | Bipolar trait slider display |
+| `archived/workspaces/user-client/src/components/StyleSpectrum.tsx` | Archetype result visualization (legacy — mini-program has its own) |
 
+| `archived/workspaces/user-client/src/components/TraitSpectrum.tsx` | Bipolar trait slider display (legacy) |
 ---
 
 ## MatcherV2 Algorithm
@@ -685,8 +681,8 @@ const DISAMBIGUATION_RULES = [
 
 ## V4 Adaptive Personality Assessment
 
-> **Note**: V4 is the current and only supported personality assessment flow for user-client.
-> V2 has been deprecated and removed from user-client. Admin-client retains V2 for legacy purposes only.
+> **Note**: V4 is the current and only supported personality assessment flow. V2 has been deprecated.
+> Admin-client retains V2 for legacy admin review purposes only.
 
 ### Overview
 
@@ -751,9 +747,9 @@ const DEFAULT_ASSESSMENT_CONFIG = {
 | `packages/shared/src/personality/matcherV2.ts` | V2 weighted Manhattan distance matcher with asymmetric penalties and VETO filters |
 | `packages/shared/src/personality/prototypes.ts` | 12 archetype trait profiles |
 | `packages/shared/src/personality/types.ts` | Type definitions (TraitKey, ArchetypeMatch, etc.) |
-| `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx` | Adaptive test UI |
-| `apps/user-client/src/pages/PersonalityTestResultPage.tsx` | Results display |
+| `apps/mini-program/src/pages/onboarding/personality-test/` | Adaptive test UI (mini-program) |
 
+| `apps/mini-program/src/pages/onboarding/personality-test/results/` | Results display (mini-program) |
 ### V2 Matcher Algorithm
 
 **Core Formula:**
@@ -818,7 +814,7 @@ interface StyleSpectrumProps {
 }
 ```
 
-**Location:** `apps/user-client/src/components/StyleSpectrum.tsx`
+**Location (archived):** `archived/workspaces/user-client/src/components/StyleSpectrum.tsx`
 
 ### TraitSpectrum
 
@@ -837,7 +833,7 @@ interface TraitSpectrumProps {
 }
 ```
 
-**Location:** `apps/user-client/src/components/TraitSpectrum.tsx`
+**Location (archived):** `archived/workspaces/user-client/src/components/TraitSpectrum.tsx`
 
 ### XiaoyueChatBubble
 
@@ -853,7 +849,7 @@ interface XiaoyueChatBubbleProps {
 }
 ```
 
-**Location:** `apps/user-client/src/components/XiaoyueChatBubble.tsx`
+**Location (archived):** `archived/workspaces/user-client/src/components/XiaoyueChatBubble.tsx`
 
 ### Other Important Components
 
@@ -1008,7 +1004,7 @@ interface PoolMatchedData {
 |------|---------|
 | `packages/shared/src/wsEvents.ts` | Event type definitions |
 | `apps/server/src/wsService.ts` | WebSocket server |
-| `apps/user-client/src/hooks/useWebSocket.ts` | Client hook |
+| `apps/mini-program/src/hooks/useWebSocket.ts` | Client hook (mini-program) |
 
 ---
 

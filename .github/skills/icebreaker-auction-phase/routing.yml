@@ -28,7 +28,7 @@ owned_files:
   - apps/server/src/socialIcebreakerAIService.ts
   - apps/server/src/socialIcebreakerPhaseConfig.ts
   - packages/shared/src/socialIcebreaker.ts
-  - apps/user-client/src/components/social-icebreaker/AuctionPhase.tsx
+  - archived/workspaces/user-client/src/components/social-icebreaker/AuctionPhase.tsx
   - apps/mini-program/src/pages/icebreaker-session/index.tsx
   - apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx
 

@@ -8,11 +8,11 @@ If `users.onboardingCheckpoint` is set **ahead** of the base-computed step (and 
 
 Shared helpers live in `packages/shared/src/onboarding.ts` — same `nextStep` → step helpers for web + mini-program.
 
-**Web routing:**
-- `apps/user-client/src/features/onboarding/active/flow.ts` — web `nextStep` → route mapping
-- `apps/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts` — progress hook
+**Web routing (archived — user-client archived to `archived/workspaces/user-client/`):**
+- `archived/workspaces/user-client/src/features/onboarding/active/flow.ts` — web `nextStep` → route mapping
+- `archived/workspaces/user-client/src/features/onboarding/active/useOnboardingOrchestrator.ts` — progress hook
 
-**Mini-program routing:**
+**Mini-program routing (active):**
 - Parallel pages under `apps/mini-program/src/pages/onboarding/` (personality test, auth-gate, essential/extended/review)
 - Must obey the same server `nextStep`; do not invent a separate progression model
 
@@ -26,7 +26,7 @@ Shared helpers live in `packages/shared/src/onboarding.ts` — same `nextStep` �
 
 ## Legacy quarantine list
 
-- Legacy onboarding surfaces stay under `apps/user-client/src/legacy/onboarding/`
+- Legacy onboarding surfaces (archived) stay under `archived/workspaces/user-client/src/legacy/onboarding/`
 - Do not add new routes, CTAs, or features to legacy onboarding pages
 - `GuidePage` is retained for backward compatibility only — `guide` routes directly to `DiscoverPage`
 - `ProfileSetupPage` in `legacy/` is unused — do not revive it

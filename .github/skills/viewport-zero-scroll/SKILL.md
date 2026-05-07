@@ -13,8 +13,8 @@ description: >
 and per-surface flex shells. Scrolling is allowed only inside an explicit scroll
 port documented in a code comment.
 
-**Launch priority:** Apply the same discipline to `apps/mini-program` (Taro / WeChat)
-as to `user-client`.
+**Launch priority:** Apply this discipline to `apps/mini-program` (Taro / WeChat).
+The web client (`apps/user-client`) was archived — only mini-program is active.
 
 ## 100dvh policy
 
@@ -90,9 +90,9 @@ Taro `ScrollView` patterns, and SCSS mixin reference, see
 - [ ] **Launch:** sibling flows reviewed under platform coordination when layout changes
 
 ## Related files
+- `archived/workspaces/user-client/src/styles/viewport-lockdown.css`
 
-- `apps/user-client/src/styles/viewport-lockdown.css`
-- `apps/user-client/src/App.tsx`
+- `archived/workspaces/user-client/src/App.tsx`
 - `packages/shared/src/ui/ResponsiveSpacer.tsx`
 - `apps/mini-program/src/styles/_mixins.scss`
 - [`references/layout-patterns.md`](./references/layout-patterns.md)

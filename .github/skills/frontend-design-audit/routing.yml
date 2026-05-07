@@ -31,7 +31,7 @@ strong_triggers:
 
 owned_files:
   - apps/mini-program/src/pages/**
-  - apps/user-client/src/pages/**
+  - archived/workspaces/user-client/src/pages/**
   - apps/admin-client/src/**
 
 owned_paths: []

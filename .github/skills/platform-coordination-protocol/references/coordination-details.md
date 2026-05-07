@@ -1,6 +1,11 @@
 # Coordination Details and Platform File Map
 
-## Current coordinated areas (full table)
+> **⚠️ The web client (`apps/user-client`) was archived to `archived/workspaces/user-client/` (2026-05-07).**
+> The table below documents the former web ↔ mini-program coordination for historical reference.
+> Only mini-program is an active user-facing client. New development should focus on mini-program alone
+> unless explicitly directed otherwise by the `platform-coordination-protocol` skill.
+
+## Former coordinated areas (historical reference — web archived)
 
 | Area | Mini Program reference | Web sibling | Shared reference today |
 |------|---------|-----------|--------|

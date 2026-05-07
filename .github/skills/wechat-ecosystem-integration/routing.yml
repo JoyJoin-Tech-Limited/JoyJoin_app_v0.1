@@ -62,7 +62,7 @@ owned_files:
   - apps/mini-program/src/hooks/useWeChatLogin.ts
   - apps/mini-program/src/pages/blind-box-payment/index.tsx
   - apps/mini-program/src/pages/payment-verification/index.tsx
-  - apps/user-client/src/hooks/useWeChatLogin.ts
+  - archived/workspaces/user-client/src/hooks/useWeChatLogin.ts
   - docs/PLATFORM_COORDINATION.md
   - docs/wechat-mini-program-reference.md
 

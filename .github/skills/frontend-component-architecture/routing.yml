@@ -19,7 +19,7 @@ do_not_use_when:
 
 strong_triggers:
   - packages/shared/src/ui
-  - apps/user-client/src/components
+  - archived/workspaces/user-client/src/components
   - apps/admin-client/src/components
   - where does this component go
   - should this be shared
@@ -32,7 +32,7 @@ strong_triggers:
 
 owned_files:
   - packages/shared/src/ui/**
-  - apps/user-client/src/components/**
+  - archived/workspaces/user-client/src/components/**
   - apps/admin-client/src/components/**
 
 owned_paths: []

@@ -37,10 +37,10 @@ strong_triggers:
   - jj-scroll-chassis
 
 owned_files:
-  - apps/user-client/src/styles/viewport-lockdown.css
-  - apps/user-client/src/index.css
-  - apps/user-client/src/App.tsx
-  - apps/user-client/src/components/dev/ScrollSentinel.tsx
+  - archived/workspaces/user-client/src/styles/viewport-lockdown.css
+  - archived/workspaces/user-client/src/index.css
+  - archived/workspaces/user-client/src/App.tsx
+  - archived/workspaces/user-client/src/components/dev/ScrollSentinel.tsx
   - packages/shared/src/ui/ResponsiveSpacer.tsx
   - apps/mini-program/src/app.config.ts
 

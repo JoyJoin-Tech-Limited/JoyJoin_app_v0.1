@@ -37,7 +37,7 @@ strong_triggers:
   - people are not tapping the main button
 
 owned_files:
-  - apps/user-client/src/**
+  - archived/workspaces/user-client/src/**
   - apps/mini-program/src/**
 
 owned_paths: []

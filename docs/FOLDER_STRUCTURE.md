@@ -203,16 +203,29 @@ apps/admin-client/
 │   │   ├── AdminInteractionLogsPage.tsx
 │   │   └── AdminLoginPage.tsx
 │   ├── components/
-│   │   ├── ui/                    # shadcn/ui primitives
+│   │   ├── ui/                    # shadcn/ui primitives (33 active, 15 unused archived)
+│   │   ├── _unused/               # Archived unused shadcn/ui components
 │   │   ├── admin/                 # Admin-specific shared components
+│   │   ├── discover/              # Event discovery components
+│   │   ├── event/                 # Event-related components (cards, registration, matching status)
+│   │   ├── profile/               # Profile & personality test components
+│   │   ├── matching/              # Matching visualization & reveal animation
+│   │   ├── navigation/            # BottomNav, MobileHeader
+│   │   ├── animation/             # Loading & transition animations
 │   │   ├── event-pool-registration/ # Pool registration flow
 │   │   ├── feedback/              # Feedback display components
-│   │   ├── matching/              # Matching visualization
-│   │   └── icebreaker/            # Icebreaker admin tools
-│   ├── hooks/                     # React hooks
+│   │   ├── icebreaker/            # Icebreaker admin tools
+│   │   └── _archive/              # Unused legacy components (preserved for reference)
+│   ├── hooks/                     # React hooks (domain-organized)
+│   │   ├── auth/                  # useAuth
+│   │   ├── notifications/         # useNotificationCounts
+│   │   ├── event/                 # useEventPoolRegistration, useGroupAnalysis, useRevealStatus, useWebSocket
+│   │   ├── ui/                    # use-toast, use-mobile, useSoundEffects, usePreloadImages
+│   │   ├── game/                  # useLevelUp, useXPNotification
+│   │   └── icebreaker/            # use-icebreaker-messages, use-icebreaker-topics
 │   ├── lib/                       # Utilities, API clients
 │   │   └── __tests__/
-│   └── data/                      # Static data / constants
+│   └── static-data/               # Static lookup data
 ├── public/
 └── package.json
 ```
@@ -237,7 +250,8 @@ apps/mini-program/
 │   │   │   ├── essential-data/    # Basic profile (name, gender, city)
 │   │   │   ├── extended-data/     # Extended profile (birth year, intent)
 │   │   │   ├── personality-test/  # V4 adaptive assessment
-│   │   │   └── profile-review/    # Final review step
+│   │   │   │   ├── auth-gate/     # Post-test auth gate
+│   │   │   │   └── results/       # Test results (stages + components flattened)
 │   │   ├── discover/              # Event discovery
 │   │   ├── events/                # Event listing
 │   │   ├── event-detail/          # Single event view
