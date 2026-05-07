@@ -24,6 +24,7 @@ import {
   generateQuipBattlePrompts,
   generateUndercoverWordPair,
   generateGroupMirrorQuestions,
+  QUIP_BATTLE_PROMPT_VERSION,
 } from '../socialIcebreakerAIService';
 import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
@@ -1437,9 +1438,37 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
 router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
   const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only the host can generate quip battle prompts' });
+  }
+
+  if (state.currentPhase !== 'quip_battle') {
+    return res.status(400).json({ error: 'Not in quip_battle phase' });
+  }
+
+  // Idempotent retry: return existing prompts instead of regenerating (avoids duplicate AI spend
+  // and prevents promptId drift vs submitted answers).
+  if (state.quipBattlePrompts?.length) {
+    return res.json({
+      prompts: state.quipBattlePrompts,
+      meta:
+        state.quipBattlePromptsMeta ??
+        buildCachedAIMeta(
+          new Date(state.phaseStartedAt ?? Date.now()).toISOString(),
+          null,
+          QUIP_BATTLE_PROMPT_VERSION,
+        ),
+    });
+  }
 
   const roster = await listParticipants(socialSessionId);
   const participantList = roster.map((p) => ({
