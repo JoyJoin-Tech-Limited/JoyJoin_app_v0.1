@@ -381,6 +381,29 @@ describe('social icebreaker routes', () => {
     });
   });
 
+  it('rejects set-tier from authenticated non-participants (auto-advance default)', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'tier-stranger-host');
+      const strangerCookie = await login(baseUrl, 'tier-stranger-outsider');
+      const sessionId = `session-tier-stranger-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'breeze' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      const setTierResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/set-tier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: strangerCookie },
+        body: JSON.stringify({ tier: 'glow' }),
+      });
+
+      expect(setTierResponse.status).toBe(403);
+    });
+  });
+
   it('rejects set-tier for legacy tier strings', async () => {
     await withServer(async (baseUrl) => {
       const hostCookie = await login(baseUrl, 'tier-reject-host');

@@ -233,7 +233,7 @@ router.post('/:socialSessionId/set-tier', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can set the tier' });
   }
 
@@ -346,7 +346,7 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can change topics' });
   }
 
@@ -429,7 +429,7 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can move to the next topic' });
   }
 
@@ -479,7 +479,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can advance phases' });
   }
 
@@ -798,7 +798,7 @@ router.post('/:socialSessionId/micro-challenge/generate', async (req: any, res) 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate challenges' });
   }
 
@@ -1001,7 +1001,7 @@ router.post('/:socialSessionId/lie-detective/next-player', async (req: any, res)
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can advance lie-detective turns' });
   }
 
@@ -1049,7 +1049,7 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate auction lots' });
   }
 
@@ -1120,7 +1120,7 @@ router.post('/:socialSessionId/xiaoyue/session-pack', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate a session pack' });
   }
 
@@ -1182,7 +1182,7 @@ router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: any, re
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can request adaptive suggestions' });
   }
 
@@ -1281,7 +1281,7 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can close an auction lot' });
   }
 
@@ -1348,7 +1348,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can generate dice challenges' });
   }
 
@@ -1566,7 +1566,7 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only the host can reveal quip battle results' });
   }
 
@@ -1916,7 +1916,7 @@ router.post('/:socialSessionId/undercover-word/reveal', async (req: any, res) =>
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only host can reveal' });
   }
 
@@ -2035,7 +2035,7 @@ router.post('/:socialSessionId/group-mirror/reveal', async (req: any, res) => {
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
-  if (!isHostAuthorized(state, userId)) {
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
     return res.status(403).json({ error: 'Only host can reveal' });
   }
 
