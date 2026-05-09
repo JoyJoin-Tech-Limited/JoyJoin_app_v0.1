@@ -1,7 +1,7 @@
 # Admin Portal — Incident Handling Runbook
 
 **Audience:** JoyJoin internal support staff and on-call engineers  
-**Environment:** Internal beta (`admin.yuejuapp.com`)  
+**Environment:** Internal beta (`admin.joyjoinapp.com`)  
 **Last updated:** 2026-04-01
 
 ---
@@ -20,7 +20,7 @@
 ### 1.1 Admin Login / Account Handling
 
 **Login:**
-1. Navigate to `https://admin.yuejuapp.com`
+1. Navigate to `https://admin.joyjoinapp.com`
 2. Enter admin username and password.
 3. On success the session cookie is set and you are redirected to the dashboard.
 
@@ -138,11 +138,11 @@ Refunds are audit-logged (`PAYMENT_REFUND_INITIATED`) with `paymentId` and `reas
 
 ### 2.1 Admin UI Fails to Load
 
-**Symptoms:** Browser shows blank page or network error at `admin.yuejuapp.com`.
+**Symptoms:** Browser shows blank page or network error at `admin.joyjoinapp.com`.
 
 **Checklist:**
 1. Check that the **admin-client** build is deployed (`apps/admin-client/dist/`).
-2. Verify the Nginx reverse proxy is routing `admin.yuejuapp.com` correctly (separate deployment from the user client).
+2. Verify the Nginx reverse proxy is routing `admin.joyjoinapp.com` correctly (separate deployment from the user client).
 3. Check server liveness: `GET /api/health` should return `200`. If the symptom looks DB/session-related, check `GET /api/readyz` too; a `503` there points to dependency/config failure while the process is still up.
 4. Check browser console for CORS or 5xx errors.
 5. Verify the session store (PostgreSQL connect-pg-simple) is reachable — a DB outage will break session reads.
@@ -199,7 +199,7 @@ Refunds are audit-logged (`PAYMENT_REFUND_INITIATED`) with `paymentId` and `reas
 1. Check `admin_accounts` table: username must exist, `status = 'active'`, and `passwordHash` must be a valid bcrypt hash.
 2. Password must be ≥ 8 characters.
 3. Session store: PostgreSQL session table must be accessible. A DB restart may clear sessions.
-4. Cookie domain: sessions are shared across `*.yuejuapp.com` (see `cookieDomain` in `apps/server/src/routes.ts`). Ensure browser is not blocking cross-subdomain cookies.
+4. Cookie domain: sessions are shared across `*.joyjoinapp.com` (see `cookieDomain` in `apps/server/src/routes.ts`). Ensure browser is not blocking cross-subdomain cookies.
 5. If logging in from a new device, check for any IP restrictions (none currently, but note for future).
 
 **First-time setup — create initial super_admin:**

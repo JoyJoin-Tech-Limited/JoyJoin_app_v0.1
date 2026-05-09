@@ -689,8 +689,8 @@ jobs:
               /etc/letsencrypt/live/joyjoinapp.com/privkey.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
               /etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
-              /etc/letsencrypt/live/api.joyjoinapp.com/fullchain.pem
-              /etc/letsencrypt/live/api.joyjoinapp.com/privkey.pem
+              /etc/letsencrypt/live/api.joyjoin.com/fullchain.pem
+              /etc/letsencrypt/live/api.joyjoin.com/privkey.pem
             )
             missing_tls=0
             for tls_file in "${REQUIRED_TLS_FILES[@]}"; do

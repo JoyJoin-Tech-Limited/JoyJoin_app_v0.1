@@ -45,7 +45,7 @@ function getArchetypeEmoji(archetype?: string): string {
 }
 
 function buildDeepLink(sessionId: string): string {
-  const base = process.env.APP_URL || 'https://yuejuapp.com';
+  const base = process.env.APP_URL || 'https://joyjoinapp.com';
   return `${base}/discover?utm_source=moment_card&utm_medium=share&utm_campaign=viral&ref_session=${encodeURIComponent(sessionId)}`;
 }
 

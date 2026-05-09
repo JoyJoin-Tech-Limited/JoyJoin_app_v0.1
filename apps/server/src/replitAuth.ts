@@ -33,7 +33,7 @@ export function getSession() {
   });
   
   const isProduction = process.env.NODE_ENV === 'production';
-  const cookieDomain = process.env.COOKIE_DOMAIN; // e.g., '.yuejuapp.com'
+  const cookieDomain = process.env.COOKIE_DOMAIN; // e.g., '.joyjoinapp.com'
   
   // Production: secure + sameSite:none for cross-subdomain HTTPS
   // Development: not secure + sameSite:lax for local HTTP
