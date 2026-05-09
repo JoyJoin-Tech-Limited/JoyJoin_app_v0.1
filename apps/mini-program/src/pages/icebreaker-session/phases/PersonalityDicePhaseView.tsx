@@ -183,7 +183,7 @@ export function PersonalityDicePhaseView({
               loading={isCompleting}
             >
               <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8rpx' }}>
-                <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-accept.png')} mode='aspectFit' style={{ width: '36rpx', height: '36rpx' }} />
+                <Image src='/assets/lovart/icebreaker/icons/icon-dice-accept.png' mode='aspectFit' style={{ width: '36rpx', height: '36rpx' }} />
                 <Text>{isCompleting ? '提交中…' : '接受挑战'}</Text>
               </View>
             </Button>
@@ -194,7 +194,7 @@ export function PersonalityDicePhaseView({
               disabled={isCompleting}
             >
               <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8rpx' }}>
-                <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-pass.png')} mode='aspectFit' style={{ width: '36rpx', height: '36rpx' }} />
+                <Image src='/assets/lovart/icebreaker/icons/icon-dice-pass.png' mode='aspectFit' style={{ width: '36rpx', height: '36rpx' }} />
                 <Text>认怂</Text>
               </View>
             </Button>
@@ -203,14 +203,14 @@ export function PersonalityDicePhaseView({
 
         {isMyChallenge && hasCompleted ? (
           <View className='icebreaker__dice-badge icebreaker__dice-badge--accept'>
-            <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-accept.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx' }} />
+            <Image src='/assets/lovart/icebreaker/icons/icon-dice-accept.png' mode='aspectFit' style={{ width: '28rpx', height: '28rpx' }} />
             <Text className='icebreaker__dice-badge-text'>已完成挑战</Text>
           </View>
         ) : null}
 
         {isMyChallenge && hasPassed ? (
           <View className='icebreaker__dice-badge icebreaker__dice-badge--pass'>
-            <Image src={require('../../assets/lovart/icebreaker/icons/icon-dice-pass.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx' }} />
+            <Image src='/assets/lovart/icebreaker/icons/icon-dice-pass.png' mode='aspectFit' style={{ width: '28rpx', height: '28rpx' }} />
             <Text className='icebreaker__dice-badge-text'>已认怂</Text>
           </View>
         ) : null}

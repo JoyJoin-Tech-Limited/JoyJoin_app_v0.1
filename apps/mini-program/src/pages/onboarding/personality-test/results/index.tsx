@@ -13,6 +13,7 @@ import {
   readAnonymousAssessmentSession,
   saveAnonymousAssessmentSession,
   type AnonymousAssessmentSessionSnapshot,
+  type AnonymousAssessmentTopMatch,
 } from '../../../../lib/auth/anonymousOnboarding'
 import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/frameBudget'
 import { haptics } from '../../../../lib/utils/haptics'
@@ -262,7 +263,7 @@ export default function PersonalityTestResultsPage() {
         sessionId: string
         completedAt?: string
         result: NonNullable<typeof latestSnapshot.result>
-        topArchetypes?: typeof topMatches
+        topArchetypes?: AnonymousAssessmentTopMatch[]
       }>({
         path: `/api/assessment/v4/${encodeURIComponent(latestSnapshot.sessionId)}/result`,
         // @ts-expect-error - apiRequest may not expose signal yet; handled gracefully
@@ -316,7 +317,10 @@ export default function PersonalityTestResultsPage() {
         setIsFetchingResult(false)
       }
     }
-  }, [analytics, topMatches])
+    // Do not depend on `topMatches` — it updates when this callback sets result state, which would
+    // recreate fetchResult → runResultFlow → re-fire the mount effect and bump runIdRef, aborting
+    // the in-flight reveal animation (stuck on SlotStage / 「社交卡面正在靠近」).
+  }, [analytics])
 
   const runResultFlow = useCallback(async (options?: { forceRefresh?: boolean }) => {
     const nextRunId = runIdRef.current + 1

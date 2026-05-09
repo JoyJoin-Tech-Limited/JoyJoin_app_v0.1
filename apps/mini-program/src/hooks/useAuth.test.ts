@@ -59,4 +59,19 @@ describe('deriveMiniProgramAuthState', () => {
       nextStep: undefined,
     })
   })
+
+  it('does not block UI on background refetch when unauthenticated (null user)', () => {
+    expect(
+      deriveMiniProgramAuthState({
+        user: null,
+        isLoading: false,
+        isFetching: true,
+      })
+    ).toEqual({
+      user: undefined,
+      isLoading: false,
+      isAuthenticated: false,
+      nextStep: undefined,
+    })
+  })
 })

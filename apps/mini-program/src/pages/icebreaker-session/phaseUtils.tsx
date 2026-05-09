@@ -12,11 +12,12 @@ export interface SessionParticipant {
   isActive?: boolean
 }
 
+/** Root-relative paths — work from any JS chunk (e.g. `dist/common.js`); avoid `require('../../assets/…')` which resolves wrong when hoisted. */
 export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: string }> = [
-  { mood: 'funny', label: '搞笑', asset: require('../../assets/icons/mood-icons/mood-funny.png') },
-  { mood: 'life', label: '生活', asset: require('../../assets/icons/mood-icons/mood-life.png') },
-  { mood: 'relaxed', label: '轻松', asset: require('../../assets/icons/mood-icons/mood-relaxed.png') },
-  { mood: 'emotional', label: '情感', asset: require('../../assets/icons/mood-icons/mood-emotional.png') },
+  { mood: 'funny', label: '搞笑', asset: '/assets/icons/mood-icons/mood-funny.png' },
+  { mood: 'life', label: '生活', asset: '/assets/icons/mood-icons/mood-life.png' },
+  { mood: 'relaxed', label: '轻松', asset: '/assets/icons/mood-icons/mood-relaxed.png' },
+  { mood: 'emotional', label: '情感', asset: '/assets/icons/mood-icons/mood-emotional.png' },
 ]
 
 export function getPhaseLabel(phase: SessionPhase): string {
@@ -87,16 +88,16 @@ export function PhaseHeaderIcon({
   // Canonical filename mapping — WebP primary (~90% smaller than PNG)
   // Fallback to PNG if WebP unsupported (WeChat base lib < 2.9.0, extremely rare)
   const srcMap: Record<string, string> = {
-    warmup: require('../../assets/icons/phase-icons/phase-warmup.webp'),
-    micro_challenge: require('../../assets/icons/phase-icons/phase-micro-challenge.webp'),
-    lie_detective: require('../../assets/icons/phase-icons/phase-lie-detective.webp'),
-    personality_dice: require('../../assets/icons/phase-icons/phase-personality-dice.webp'),
-    auction: require('../../assets/icons/phase-icons/phase-auction.webp'),
-    quip_battle: require('../../assets/icons/phase-icons/phase-quip-battle.webp'),
-    undercover_word: require('../../assets/icons/phase-icons/phase-undercover-word.webp'),
-    group_mirror: require('../../assets/icons/phase-icons/phase-group-mirror.webp'),
-    mini_script: require('../../assets/icons/phase-icons/phase-mini-script.webp'),
-    recap: require('../../assets/icons/phase-icons/phase-recap.webp'),
+    warmup: '/assets/icons/phase-icons/phase-warmup.webp',
+    micro_challenge: '/assets/icons/phase-icons/phase-micro-challenge.webp',
+    lie_detective: '/assets/icons/phase-icons/phase-lie-detective.webp',
+    personality_dice: '/assets/icons/phase-icons/phase-personality-dice.webp',
+    auction: '/assets/icons/phase-icons/phase-auction.webp',
+    quip_battle: '/assets/icons/phase-icons/phase-quip-battle.webp',
+    undercover_word: '/assets/icons/phase-icons/phase-undercover-word.webp',
+    group_mirror: '/assets/icons/phase-icons/phase-group-mirror.webp',
+    mini_script: '/assets/icons/phase-icons/phase-mini-script.webp',
+    recap: '/assets/icons/phase-icons/phase-recap.webp',
   }
   const src = srcMap[phase]
   if (src) {

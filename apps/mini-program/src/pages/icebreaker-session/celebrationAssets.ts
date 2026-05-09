@@ -10,12 +10,13 @@
  *   - Total: ~753KB for 5 frames
  */
 
+/** Root-relative — same paths exist under `dist/assets/` after copy; avoids broken `require` when hoisted to `common.js`. */
 export const CELEBRATION_FRAME_MAP = {
-  auction_sold: require('../../assets/lovart/icebreaker/celebrations/celebration-auction-sold.png'),
-  dice_reveal: require('../../assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png'),
-  undercover_secret: require('../../assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png'),
-  mirror_result: require('../../assets/lovart/icebreaker/celebrations/celebration-mirror-result.png'),
-  quip_champion: require('../../assets/lovart/icebreaker/celebrations/celebration-quip-champion.png'),
+  auction_sold: '/assets/lovart/icebreaker/celebrations/celebration-auction-sold.png',
+  dice_reveal: '/assets/lovart/icebreaker/celebrations/celebration-dice-reveal.png',
+  undercover_secret: '/assets/lovart/icebreaker/celebrations/celebration-undercover-secret.png',
+  mirror_result: '/assets/lovart/icebreaker/celebrations/celebration-mirror-result.png',
+  quip_champion: '/assets/lovart/icebreaker/celebrations/celebration-quip-champion.png',
 } as const
 
 export type CelebrationFrameKey = keyof typeof CELEBRATION_FRAME_MAP
