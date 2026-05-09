@@ -415,19 +415,24 @@ Start with these files in order when you are new to the repo or touching an unfa
 - [`apps/server/src/README.md`](./apps/server/src/README.md) — server domain ownership and file placement
 - [`packages/shared/src/README.md`](./packages/shared/src/README.md) — shared package boundary rules
 
-## 模型文件安装
+## Embedding Model
 
-由于模型文件较大，Git 不跟踪这些文件。请按以下步骤获取：
+JoyJoin uses [`granite-embedding-97m-multilingual-r2`](https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2) (384-dim, Apache 2.0) for semantic profile embeddings and professional similarity matching.
 
-1. **初始化子模块**（如果尚未注册）：
-   ```bash
-   git submodule update --init --recursive
-   ```
+### Installation
 
-2. **下载模型文件**：
-   从 [Hugging Face](https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2) 下载模型文件到 `granite-embedding-97m-multilingual-r2/` 目录。
+```bash
+pip install sentence-transformers
+```
 
-3. **需要的文件**：
-   - `model.safetensors`
-   - `tokenizer.json`
-   - 其他模型相关文件（`config.json`、`1_Pooling/config.json` 等已包含在仓库中）
+### Usage
+
+```python
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer("ibm-granite/granite-embedding-97m-multilingual-r2")
+
+sentences = ["The weather is lovely today.", "It's so sunny outside!", "He drove to the stadium."]
+embeddings = model.encode(sentences)          # shape: (n, 384)
+similarities = model.similarity(embeddings, embeddings)
+```
