@@ -438,6 +438,16 @@ export default function PersonalityTestPage() {
     sessionId,
   ])
 
+  const handleSliderSubmit = useCallback(() => {
+    if (!question) return
+    const sliderOption = getNearestSliderOption(question.options, sliderValue)
+    if (sliderOption) {
+      void handleAnswer(sliderOption)
+      return
+    }
+    analytics.validationFailed('slider', 'no-option-mapped')
+  }, [question, sliderValue, handleAnswer, analytics])
+
   const showLoadingShell = auth.isLoading && (auth.isAuthenticated || hasStoredIncompleteSession)
   if (showLoadingShell) {
     return (
@@ -595,16 +605,6 @@ export default function PersonalityTestPage() {
       />
     )
   }
-
-  const handleSliderSubmit = useCallback(() => {
-    if (!question) return
-    const sliderOption = getNearestSliderOption(question.options, sliderValue)
-    if (sliderOption) {
-      void handleAnswer(sliderOption)
-      return
-    }
-    analytics.validationFailed('slider', 'no-option-mapped')
-  }, [question, sliderValue, handleAnswer, analytics])
 
   const preloadExpressions: XiaoyueExpressionId[] = [
     PERSONALITY_TEST_QUESTION_EXPRESSION.choice,

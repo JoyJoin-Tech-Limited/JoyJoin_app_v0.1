@@ -103,7 +103,7 @@ export function WarmupPhaseView({
               )}
               {p.isHost && (
                 <Image
-                  src={require('../../assets/icons/status-icons/status-crown.png')}
+                  src='/assets/icons/status-icons/status-crown.png'
                   style={{ width: '20rpx', height: '20rpx', marginLeft: '4rpx' }}
                   lazyLoad
                   className='icebreaker__participant-host'

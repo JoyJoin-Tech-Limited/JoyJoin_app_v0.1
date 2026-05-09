@@ -219,11 +219,11 @@ export function AuctionPhaseView({
 
         <View className='icebreaker__challenge-meta'>
           <Text className='icebreaker__challenge-duration'>
-            <Image src={require('../../assets/lovart/icebreaker/icons/icon-coin-single.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx', marginRight: '6rpx', verticalAlign: 'middle' }} />
+            <Image src='/assets/lovart/icebreaker/icons/icon-coin-single.png' mode='aspectFit' style={{ width: '28rpx', height: '28rpx', marginRight: '6rpx', verticalAlign: 'middle' }} />
             当前最高：{high ? `${high.amount}` : '暂无'}
           </Text>
           <Text className='icebreaker__challenge-completed'>
-            <Image src={require('../../assets/lovart/icebreaker/icons/icon-coin-stack.png')} mode='aspectFit' style={{ width: '28rpx', height: '28rpx', marginRight: '6rpx', verticalAlign: 'middle' }} />
+            <Image src='/assets/lovart/icebreaker/icons/icon-coin-stack.png' mode='aspectFit' style={{ width: '28rpx', height: '28rpx', marginRight: '6rpx', verticalAlign: 'middle' }} />
             余额：{balance}
           </Text>
         </View>
@@ -287,7 +287,7 @@ export function AuctionPhaseView({
               />
               {bidError ? (
                 <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8rpx', marginBottom: '8rpx' }}>
-                  <Image src={require('../../assets/lovart/icebreaker/icons/icon-coin-empty.png')} mode='aspectFit' style={{ width: '32rpx', height: '32rpx' }} />
+                  <Image src='/assets/lovart/icebreaker/icons/icon-coin-empty.png' mode='aspectFit' style={{ width: '32rpx', height: '32rpx' }} />
                   <Text className='icebreaker__error'>{bidError}</Text>
                 </View>
               ) : null}

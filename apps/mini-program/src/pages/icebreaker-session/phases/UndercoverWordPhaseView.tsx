@@ -151,9 +151,10 @@ export default function UndercoverWordPhaseView({
 
   // State: reveal done
   if (revealed && results) {
-    const roleIcon = results.undercoverUserId === userId
-      ? require('../../assets/lovart/icebreaker/icons/icon-role-undercover.png')
-      : require('../../assets/lovart/icebreaker/icons/icon-role-civilian.png');
+    const roleIcon =
+      results.undercoverUserId === userId
+        ? '/assets/lovart/icebreaker/icons/icon-role-undercover.png'
+        : '/assets/lovart/icebreaker/icons/icon-role-civilian.png'
     return (
       <View className='icebreaker__phase'>
         <CelebrationOverlay
