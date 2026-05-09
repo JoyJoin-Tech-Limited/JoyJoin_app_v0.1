@@ -146,9 +146,9 @@ vi.mock('../socialIcebreakerAIService', () => ({
       promptVersion: 'social-recap-summary-v2',
     },
   }),
-  generatePersonalityDiceChallenges: vi.fn().mockImplementation(async (participants: Array<{ userId: string; displayName: string }>) => {
+  generatePersonalityDiceChallenges: vi.fn().mockImplementation(async (params: { participants: Array<{ userId: string; displayName: string }>; _refinementHint?: string }) => {
     return {
-      data: participants.map((participant: { userId: string; displayName: string }, i: number) => ({
+      data: params.participants.map((participant: { userId: string; displayName: string }, i: number) => ({
         userId: participant.userId,
         displayName: participant.displayName,
         dominantTrait: 'A' as const,
