@@ -1437,9 +1437,29 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
 router.post('/:socialSessionId/quip-battle/generate', async (req: any, res) => {
   const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only the host can generate quip battle prompts' });
+  }
+
+  if (state.currentPhase !== 'quip_battle') {
+    return res.status(400).json({ error: 'Not in quip_battle phase' });
+  }
+
+  if ((state.quipBattlePrompts || []).length > 0) {
+    const cachedMeta =
+      state.quipBattlePromptsMeta ??
+      buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-quip-battle-v1');
+    return res.json({ prompts: state.quipBattlePrompts, meta: cachedMeta });
+  }
 
   const roster = await listParticipants(socialSessionId);
   const participantList = roster.map((p) => ({
@@ -1819,8 +1839,29 @@ router.post('/:socialSessionId/ai-feedback', async (req: any, res) => {
 
 router.post('/:socialSessionId/undercover-word/generate', async (req: any, res) => {
   const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only the host can generate undercover word content' });
+  }
+
+  if (state.currentPhase !== 'undercover_word') {
+    return res.status(400).json({ error: 'Not in undercover_word phase' });
+  }
+
+  if (state.undercoverWordPair) {
+    return res.json({
+      pair: state.undercoverWordPair,
+      undercoverAssigned: !!state.undercoverUserId,
+    });
+  }
 
   try {
     const result = await generateUndercoverWordPair({
@@ -1960,8 +2001,29 @@ router.post('/:socialSessionId/undercover-word/reveal', async (req: any, res) =>
 
 router.post('/:socialSessionId/group-mirror/generate', async (req: any, res) => {
   const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
+
+  if (!isHostAuthorized(state, userId)) {
+    return res.status(403).json({ error: 'Only the host can generate group mirror questions' });
+  }
+
+  if (state.currentPhase !== 'group_mirror') {
+    return res.status(400).json({ error: 'Not in group_mirror phase' });
+  }
+
+  if ((state.groupMirrorQuestions || []).length > 0) {
+    const cachedMeta =
+      state.groupMirrorQuestionsMeta ??
+      buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-group-mirror-v1');
+    return res.json({ questions: state.groupMirrorQuestions, meta: cachedMeta });
+  }
 
   try {
     const roster = await listParticipants(socialSessionId);
