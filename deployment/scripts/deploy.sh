@@ -81,12 +81,11 @@ if [[ ${#MISSING_TLS_FILES[@]} -gt 0 ]]; then
     printf '   - %s\n' "${MISSING_TLS_FILES[@]}"
     echo "   Provision the Let's Encrypt certificates on the deployment host before re-running deploy."
     echo "   Expected domains: joyjoinapp.com, admin.joyjoinapp.com, api.joyjoin.com"
-    echo "                  + joyjoinapp.com, admin.joyjoinapp.com, api.joyjoin.com"
     echo "   Cert renewal example:"
     echo "     sudo certbot certonly --nginx"
-    echo "       -d joyjoinapp.com -d www.joyjoinapp.com -d joyjoinapp.com -d www.joyjoinapp.com"
-    echo "     sudo certbot certonly --nginx -d admin.joyjoinapp.com -d admin.joyjoinapp.com"
-    echo "     sudo certbot certonly --nginx -d api.joyjoin.com -d api.joyjoin.com"
+    echo "       -d joyjoinapp.com -d www.joyjoinapp.com"
+    echo "     sudo certbot certonly --nginx -d admin.joyjoinapp.com"
+    echo "     sudo certbot certonly --nginx -d api.joyjoin.com"
     exit 1
 fi
 
@@ -184,9 +183,9 @@ curl -sSI -H "Host: joyjoinapp.com" "http://127.0.0.1/api/health" || true
 
 echo "✅ Deployment completed"
 if [[ "$ENVIRONMENT" == "production" ]]; then
-    echo "  User Portal:  https://joyjoinapp.com | https://joyjoinapp.com (maintenance mode — mini-program launch focus)"
-    echo "  Admin Portal: https://admin.joyjoinapp.com | https://admin.joyjoinapp.com"
-    echo "  API Server:   https://api.joyjoin.com | https://api.joyjoin.com"
+    echo "  User Portal:  https://joyjoinapp.com (maintenance mode — mini-program launch focus)"
+    echo "  Admin Portal: https://admin.joyjoinapp.com"
+    echo "  API Server:   https://api.joyjoin.com"
 else
     echo "  Staging uses the same self-managed flow, but requires staging-specific env and routing to be prepared first."
 fi

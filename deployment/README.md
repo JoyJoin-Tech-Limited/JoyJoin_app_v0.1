@@ -26,9 +26,9 @@ GitHub Actions
             └─ joyjoin-api     (Node.js API, 127.0.0.1:5000)
 
 公网域名 (多域名 SAN 证书)
-  ├─ joyjoinapp.com / www.joyjoinapp.com / joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
-  ├─ admin.joyjoinapp.com / admin.joyjoinapp.com                             -> Nginx -> joyjoin-admin
-  └─ api.joyjoin.com / api.joyjoin.com                                 -> Nginx -> joyjoin-api
+  ├─ joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
+  ├─ admin.joyjoinapp.com                 -> Nginx -> joyjoin-admin
+  └─ api.joyjoin.com                      -> Nginx -> joyjoin-api
 
 数据库
   └─ DATABASE_URL -> 外部 PostgreSQL
@@ -117,17 +117,13 @@ joyjoinapp.com
 www.joyjoinapp.com
 admin.joyjoinapp.com
 api.joyjoin.com
-joyjoinapp.com
-www.joyjoinapp.com
-admin.joyjoinapp.com
-api.joyjoin.com
 ```
 
 `deployment/nginx/joyjoin.conf` 负责：
 
 - 自动 HTTPS
 - HTTP -> HTTPS 跳转
-- `joyjoinapp.com / joyjoinapp.com` 及 `www.*` 下的 `/api/*` 反代到 `joyjoin-api:5000`
+- `joyjoinapp.com` 及 `www.*` 下的 `/api/*` 反代到 `joyjoin-api:5000`
 - `admin.*` 前缀反代到 `joyjoin-admin:3001`
 - `api.*` 前缀全量反代到 `joyjoin-api:5000`
 
