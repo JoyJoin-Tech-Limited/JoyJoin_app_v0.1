@@ -26,9 +26,9 @@ GitHub Actions
             └─ joyjoin-api     (Node.js API, 127.0.0.1:5000)
 
 公网域名 (多域名 SAN 证书)
-  ├─ yuejuapp.com / www.yuejuapp.com / joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
-  ├─ admin.yuejuapp.com / admin.joyjoinapp.com                             -> Nginx -> joyjoin-admin
-  └─ api.yuejuapp.com / api.joyjoinapp.com                                 -> Nginx -> joyjoin-api
+  ├─ joyjoinapp.com / www.joyjoinapp.com / joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
+  ├─ admin.joyjoinapp.com / admin.joyjoinapp.com                             -> Nginx -> joyjoin-admin
+  └─ api.joyjoin.com / api.joyjoin.com                                 -> Nginx -> joyjoin-api
 
 数据库
   └─ DATABASE_URL -> 外部 PostgreSQL
@@ -113,21 +113,21 @@ DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=re
 为当前自管服务器部署（新服务器 IP: 1.12.243.104），确保以下 **A 记录** 都直接指向远程服务器公网 IP `1.12.243.104`：
 
 ```text
-yuejuapp.com
-www.yuejuapp.com
-admin.yuejuapp.com
-api.yuejuapp.com
 joyjoinapp.com
 www.joyjoinapp.com
 admin.joyjoinapp.com
-api.joyjoinapp.com
+api.joyjoin.com
+joyjoinapp.com
+www.joyjoinapp.com
+admin.joyjoinapp.com
+api.joyjoin.com
 ```
 
 `deployment/nginx/joyjoin.conf` 负责：
 
 - 自动 HTTPS
 - HTTP -> HTTPS 跳转
-- `yuejuapp.com / joyjoinapp.com` 及 `www.*` 下的 `/api/*` 反代到 `joyjoin-api:5000`
+- `joyjoinapp.com / joyjoinapp.com` 及 `www.*` 下的 `/api/*` 反代到 `joyjoin-api:5000`
 - `admin.*` 前缀反代到 `joyjoin-admin:3001`
 - `api.*` 前缀全量反代到 `joyjoin-api:5000`
 
@@ -135,12 +135,12 @@ api.joyjoinapp.com
 会失败：
 
 ```text
-/etc/letsencrypt/live/yuejuapp.com/fullchain.pem
-/etc/letsencrypt/live/yuejuapp.com/privkey.pem
-/etc/letsencrypt/live/admin.yuejuapp.com/fullchain.pem
-/etc/letsencrypt/live/admin.yuejuapp.com/privkey.pem
-/etc/letsencrypt/live/api.yuejuapp.com/fullchain.pem
-/etc/letsencrypt/live/api.yuejuapp.com/privkey.pem
+/etc/letsencrypt/live/joyjoinapp.com/fullchain.pem
+/etc/letsencrypt/live/joyjoinapp.com/privkey.pem
+/etc/letsencrypt/live/admin.joyjoinapp.com/fullchain.pem
+/etc/letsencrypt/live/admin.joyjoinapp.com/privkey.pem
+/etc/letsencrypt/live/api.joyjoin.com/fullchain.pem
+/etc/letsencrypt/live/api.joyjoin.com/privkey.pem
 ```
 
 如果证书尚未签发，先在服务器上通过 Certbot 或等效方式为这些域名签发证书，再执行部署。
@@ -157,9 +157,9 @@ api.joyjoinapp.com
 ```env
 NODE_ENV=production
 PORT=5000
-APP_URL=https://yuejuapp.com
+APP_URL=https://joyjoinapp.com
 DATABASE_URL=postgresql://<db-user>:<db-password>@<db-host>/<db-name>?sslmode=require
-COOKIE_DOMAIN=.yuejuapp.com
+COOKIE_DOMAIN=.joyjoinapp.com
 ```
 
 前端生产构建默认保持 `VITE_API_URL` 为空，让浏览器继续请求同源 `/api/*`，
@@ -198,10 +198,10 @@ docker ps
 外部访问验证：
 
 ```text
-https://yuejuapp.com
-https://admin.yuejuapp.com
-https://yuejuapp.com/api/health
-https://api.yuejuapp.com/api/health
+https://joyjoinapp.com
+https://admin.joyjoinapp.com
+https://joyjoinapp.com/api/health
+https://api.joyjoin.com/api/health
 ```
 
 ---

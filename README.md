@@ -8,7 +8,7 @@ This is the JoyJoin application monorepo, managed with **npm workspaces**.
 /
 ├── apps/
 │   ├── user-client/     # React 18 + Vite PWA (user-facing, port 5001)
-│   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.yuejuapp.com)
+│   ├── admin-client/    # React 18 + Vite admin portal (port 5002, deployed to admin.joyjoinapp.com)
 │   └── server/          # Node.js + Express API server (recommended local port 5000 via PORT env)
 ├── packages/
 │   └── shared/          # @joyjoin/shared — internal shared library
@@ -350,7 +350,7 @@ Verify the local setup for both roles:
   - Fix: this usually means DB schema drift (missing columns in `users` table). Run non-destructive migration steps first and avoid destructive `db:push` options on existing data.
 
 - **User app redirects admin links to production**
-  - Symptom: clicking an admin link from the user app sends you to `https://admin.yuejuapp.com`.
+  - Symptom: clicking an admin link from the user app sends you to `https://admin.joyjoinapp.com`.
   - Fix: set `VITE_ADMIN_PORTAL_URL=http://localhost:5002/admin` in `apps/user-client/.env.local` (or export it in the shell before `npm run dev:user`), then restart the user app.
 
 ## Validation commands
