@@ -414,3 +414,20 @@ Start with these files in order when you are new to the repo or touching an unfa
 - [`.github/agents/README.md`](./.github/agents/README.md) — focused custom agents for recurring workflows
 - [`apps/server/src/README.md`](./apps/server/src/README.md) — server domain ownership and file placement
 - [`packages/shared/src/README.md`](./packages/shared/src/README.md) — shared package boundary rules
+
+## 模型文件安装
+
+由于模型文件较大，Git 不跟踪这些文件。请按以下步骤获取：
+
+1. **初始化子模块**（如果尚未注册）：
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+2. **下载模型文件**：
+   从 [Hugging Face](https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2) 下载模型文件到 `granite-embedding-97m-multilingual-r2/` 目录。
+
+3. **需要的文件**：
+   - `model.safetensors`
+   - `tokenizer.json`
+   - 其他模型相关文件（`config.json`、`1_Pooling/config.json` 等已包含在仓库中）
