@@ -22,6 +22,7 @@ import {
   momentCardInteractions,
   preGenerationJobs,
   preGenerationResults,
+  users,
 } from '@shared/schema';
 import { socialIcebreakerMiniscriptSecrets } from '@shared/schemaAnalytics';
 import type {
@@ -274,8 +275,19 @@ export async function listParticipants(
       displayName: socialIcebreakerParticipants.displayName,
       joinedAt: socialIcebreakerParticipants.joinedAt,
       lastSeenAt: socialIcebreakerParticipants.lastSeenAt,
+      archetype: users.archetype,
+      industryNicheLabel: users.industryNicheLabel,
+      birthdate: users.birthdate,
+      currentCity: users.currentCity,
+      vibeVector: users.vibeVector,
+      gender: users.gender,
+      educationLevel: users.educationLevel,
+      lifeStage: users.lifeStage,
+      bio: users.bio,
+      tableVibePreference: users.tableVibePreference,
     })
     .from(socialIcebreakerParticipants)
+    .leftJoin(users, eq(socialIcebreakerParticipants.userId, users.id))
     .where(eq(socialIcebreakerParticipants.socialSessionId, socialSessionId));
 
   const cutoff = Date.now() - thresholdMs;
@@ -291,7 +303,54 @@ export async function listParticipants(
       joinedAt: participant.joinedAt.toISOString(),
       lastSeenAt: participant.lastSeenAt.toISOString(),
       isActive: participant.lastSeenAt.getTime() >= cutoff,
+      archetype: participant.archetype ?? undefined,
+      profile: participant.archetype ? buildParticipantProfile(participant) : null,
     }));
+}
+
+function buildParticipantProfile(row: Record<string, unknown>): NonNullable<SocialSessionParticipantSummary['profile']> {
+  const vibeVector = typeof row.vibeVector === 'object' && row.vibeVector !== null
+    ? row.vibeVector as Record<string, unknown>
+    : null;
+  const birthdate = row.birthdate instanceof Date ? row.birthdate : null;
+  const age = birthdate
+    ? new Date().getFullYear() - birthdate.getFullYear()
+    : null;
+
+  const stateLabel = vibeVector ? deriveStateLabel({
+    extraversion: Number(vibeVector.energy ?? 0) * 100,
+    positivity: Number(vibeVector.humor ?? 0) * 100,
+    openness: Number(vibeVector.novelty ?? 0) * 100,
+    affinity: Number(vibeVector.conversation_style ?? 0) * 100,
+    emotionalStability: 50,
+    conscientiousness: 50,
+  }) : null;
+
+  return {
+    archetype: (row.archetype as string) ?? null,
+    industryLabel: (row.industryNicheLabel as string) ?? null,
+    age,
+    city: (row.currentCity as string) ?? null,
+    stateLabel,
+    gender: (row.gender as string) ?? null,
+    educationLevel: (row.educationLevel as string) ?? null,
+    lifeStage: (row.lifeStage as string) ?? null,
+    bio: (row.bio as string) ?? null,
+    tableVibePreference: (row.tableVibePreference as string) ?? null,
+  };
+}
+
+/** Derive social state label from vibeVector-style scores. Simplified version — full logic in xiaoyueAnalysisService. */
+function deriveStateLabel(scores: {
+  extraversion: number; positivity: number; openness: number; affinity: number; emotionalStability: number; conscientiousness: number;
+}): string {
+  if (scores.extraversion >= 72 && scores.positivity >= 70) return '快热带动型';
+  if (scores.emotionalStability >= 72 && scores.conscientiousness >= 68) return '稳场推进型';
+  if (scores.affinity >= 72 && scores.positivity >= 66) return '熟了更有火花型';
+  if (scores.openness >= 74 && scores.extraversion >= 58) return '灵感破冰型';
+  if (scores.extraversion <= 46 && scores.openness >= 62) return '慢热深聊型';
+  if (scores.extraversion <= 46 && scores.emotionalStability >= 62) return '低耗观察型';
+  return '局内升温型';
 }
 
 // ---------------------------------------------------------------------------
@@ -302,18 +361,35 @@ export async function listParticipants(
 export async function setLieTruths(
   socialSessionId: string,
   userId: string,
-  statements: Array<{ index: number; text: string; isLie: boolean }>,
+  statements: Array<{ index: number; text: string; isLie: boolean; is_ai?: boolean; source_tag?: string | null }>,
 ): Promise<void> {
   const now = new Date();
+  const hasAiStatement = statements.some((s) => s.is_ai === true);
+  const userTags = statements
+    .filter((s) => s.source_tag)
+    .map((s) => s.source_tag!)
+    .join(',');
   await db
     .insert(socialIcebreakerLieTruths)
-    .values({ socialSessionId, userId, statementsJson: statements, updatedAt: now })
+    .values({
+      socialSessionId,
+      userId,
+      statementsJson: statements,
+      isAi: hasAiStatement,
+      sourceTag: userTags || null,
+      updatedAt: now,
+    })
     .onConflictDoUpdate({
       target: [
         socialIcebreakerLieTruths.socialSessionId,
         socialIcebreakerLieTruths.userId,
       ],
-      set: { statementsJson: statements, updatedAt: now },
+      set: {
+        statementsJson: statements,
+        isAi: hasAiStatement,
+        sourceTag: userTags || null,
+        updatedAt: now,
+      },
     });
 }
 
@@ -324,7 +400,7 @@ export async function setLieTruths(
 export async function getLieTruths(
   socialSessionId: string,
   userId: string,
-): Promise<Array<{ index: number; text: string; isLie: boolean }> | null> {
+): Promise<Array<{ index: number; text: string; isLie: boolean; is_ai?: boolean; source_tag?: string | null }> | null> {
   const rows = await db
     .select({ statementsJson: socialIcebreakerLieTruths.statementsJson })
     .from(socialIcebreakerLieTruths)
@@ -344,7 +420,7 @@ export async function getLieTruths(
  */
 export async function loadSessionLieTruths(
   socialSessionId: string,
-): Promise<Map<string, Array<{ index: number; text: string; isLie: boolean }>>> {
+): Promise<Map<string, Array<{ index: number; text: string; isLie: boolean; is_ai?: boolean; source_tag?: string | null }>>> {
   const rows = await db
     .select({
       userId: socialIcebreakerLieTruths.userId,
@@ -353,7 +429,7 @@ export async function loadSessionLieTruths(
     .from(socialIcebreakerLieTruths)
     .where(eq(socialIcebreakerLieTruths.socialSessionId, socialSessionId));
 
-  const result = new Map<string, Array<{ index: number; text: string; isLie: boolean }>>();
+  const result = new Map<string, Array<{ index: number; text: string; isLie: boolean; is_ai?: boolean; source_tag?: string | null }>>();
   for (const row of rows) {
     result.set(row.userId, row.statementsJson);
   }

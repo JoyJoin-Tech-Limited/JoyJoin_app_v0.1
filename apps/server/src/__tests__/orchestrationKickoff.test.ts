@@ -427,6 +427,8 @@ function clearTestMemoryLifecycleFiles() {
   rmSync(path.join(REPO_ROOT, 'repo-memory/generated/__tests__'), { recursive: true, force: true });
 }
 
+describe.sequential('orchestration integration', () => {
+
 describe('orchestration kickoff lane', () => {
   it('registers Researcher and Planner in both machine-readable registries', () => {
     const manifest = JSON.parse(readRepoFile('.github/agents/manifest.json')) as {
@@ -1478,3 +1480,5 @@ describe.sequential('repo memory candidate publication flow', () => {
     expect(rebuiltIndex.notes.some((note) => note.id === TEST_MEMORY_NOTE_ID)).toBe(true);
   });
 });
+
+}, 10000);

@@ -5,7 +5,7 @@ type RosterEntry = { displayName: string; userId: string };
 const CATEGORIES: Array<{ title: string; emoji: string; description: string }> = [
   { title: '最佳侦探', emoji: '🕵️', description: '在侦探环节中表现最为出色' },
   { title: '挑战先锋', emoji: '⚡', description: '率先完成挑战任务' },
-  { title: '话题王', emoji: '💬', description: '在热身话题中最活跃' },
+  { title: '话题王', emoji: '💬', description: '在话题卡环节中最活跃' },
 ];
 
 /** DJB2-like 32-bit hash for seeding the PRNG. */

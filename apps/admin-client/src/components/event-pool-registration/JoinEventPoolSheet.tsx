@@ -191,14 +191,8 @@ export default function JoinEventPoolSheet({
                       <div className="mt-6">
                         {poolData.eventType === "饭局" ? (
                           <DinnerPreferencesStep
-                            selectedCuisines={preferences.cuisines || []}
                             selectedDietary={preferences.dietary || []}
-                            tasteIntensity={preferences.tasteIntensity}
-                            onUpdateCuisines={(cuisines) => updatePreferences({ cuisines })}
                             onUpdateDietary={(dietary) => updatePreferences({ dietary })}
-                            onUpdateTasteIntensity={(intensity) => 
-                              updatePreferences({ tasteIntensity: intensity })
-                            }
                           />
                         ) : (
                           <BarPreferencesStep

@@ -80,6 +80,8 @@ interface SuggestionTemplate {
   type: XiaoyueAdaptiveSuggestionType;
   message: string;
   actionableHint: string;
+  minGroupSize?: number;
+  maxGroupSize?: number;
 }
 
 const SUGGESTION_TEMPLATES: Record<XiaoyueAdaptiveSuggestionType, SuggestionTemplate[]> = {
@@ -92,7 +94,7 @@ const SUGGESTION_TEMPLATES: Record<XiaoyueAdaptiveSuggestionType, SuggestionTemp
     { type: 'speed_up', message: '时间过半，试试给每人限定30秒', actionableHint: '设定倒计时，提升紧迫感' },
   ],
   slow_down: [
-    { type: 'slow_down', message: '大家还在热身中，不用着急，多给一点时间', actionableHint: '再等2-3分钟，观察一下' },
+    { type: 'slow_down', message: '大家还在话题卡环节，不用着急，多给一点时间', actionableHint: '再等2-3分钟，观察一下' },
     { type: 'slow_down', message: '节奏有点快，有人还没进入状态', actionableHint: '放慢一步，先确保每个人都开口' },
   ],
   go_deeper: [
@@ -104,8 +106,25 @@ const SUGGESTION_TEMPLATES: Record<XiaoyueAdaptiveSuggestionType, SuggestionTemp
     { type: 'keep_light', message: '氛围偏冷，不要急着深入，先暖暖场', actionableHint: '来个简单的小游戏或投票' },
   ],
   rescue_quiet: [
-    { type: 'rescue_quiet', message: '有几位朋友还没参与，温柔地邀请TA试试吧，不勉强', actionableHint: '点名邀请一位还没发言的人，但给足退路' },
-    { type: 'rescue_quiet', message: '注意到有人一直沉默，给TA一个不用想太多的问题', actionableHint: '问一个只需要回答"是/否"的问题' },
+    {
+      type: 'rescue_quiet',
+      message: '有几位朋友还没参与，温柔地邀请TA试试吧，不勉强',
+      actionableHint: '点名邀请一位还没发言的人，但给足退路',
+      minGroupSize: 5,
+    },
+    {
+      type: 'rescue_quiet',
+      message: '有人一直没开口——小组里一个人的沉默会被放很大，试试给TA一个最轻松的问题',
+      actionableHint: '问一个只需要回答一个词的问题，比如"你更喜欢山还是海"',
+      minGroupSize: 2,
+      maxGroupSize: 4,
+    },
+    {
+      type: 'rescue_quiet',
+      message: '注意到有人一直沉默，给TA一个不用想太多的问题',
+      actionableHint: '问一个只需要回答"是/否"的问题',
+      minGroupSize: 5,
+    },
   ],
   energy_boost: [
     { type: 'energy_boost', message: '活跃度有点低，来个轻松的小互动提提神', actionableHint: '发起一个快速投票或表情包大战' },
@@ -117,20 +136,29 @@ const SUGGESTION_TEMPLATES: Record<XiaoyueAdaptiveSuggestionType, SuggestionTemp
   ],
 };
 
-function pickTemplate(type: XiaoyueAdaptiveSuggestionType, seed: number): SuggestionTemplate {
-  const pool = SUGGESTION_TEMPLATES[type];
-  const index = seed % pool.length;
-  return pool[index];
+function pickTemplate(type: XiaoyueAdaptiveSuggestionType, seed: number, playerCount: number): SuggestionTemplate {
+  const pool = SUGGESTION_TEMPLATES[type].filter(t => {
+    if (t.minGroupSize != null && playerCount < t.minGroupSize) return false;
+    if (t.maxGroupSize != null && playerCount > t.maxGroupSize) return false;
+    return true;
+  });
+  // Fallback: if all templates are filtered out, use any template of this type
+  const candidates = pool.length > 0 ? pool : SUGGESTION_TEMPLATES[type];
+  const index = seed % candidates.length;
+  return candidates[index];
 }
 
 /**
  * Deterministic rule engine that maps pulse signals to a suggestion type.
  * Rules are ordered by priority (most specific first).
+ * Group-size aware: 4-person groups (one quiet = 25%+ of room) trigger earlier than 5-6 person groups.
  */
 function selectSuggestionType(
   signals: XiaoyuePulseSignals,
   phase: SocialIcebreakerPhase
 ): XiaoyueAdaptiveSuggestionType {
+  const isTightGroup = signals.playerCount <= 4; // 4人：每个人占比25%，沉默更明显
+
   // 1. Recap is always "advance" (session ending)
   if (phase === 'recap') {
     return 'keep_going';
@@ -142,7 +170,10 @@ function selectSuggestionType(
   }
 
   // 3. Low active rate + elapsed time → energy boost (room is dying)
-  if (signals.activeRate < 0.5 && signals.phaseElapsedMinutes >= 5) {
+  // Tight group (4): intervene at 60% active after 3min. Balanced (5-6): 50% after 5min.
+  const energyBoostMinutes = isTightGroup ? 3 : 5;
+  const energyBoostRate = isTightGroup ? 0.6 : 0.5;
+  if (signals.activeRate < energyBoostRate && signals.phaseElapsedMinutes >= energyBoostMinutes) {
     return 'energy_boost';
   }
 
@@ -156,8 +187,11 @@ function selectSuggestionType(
     return 'keep_light';
   }
 
-  // 6. Very low completion after reasonable time → rescue quiet players
-  if (signals.completionRate < 0.3 && signals.phaseElapsedMinutes >= 5) {
+  // 6. Low completion after reasonable time → rescue quiet players
+  // Tight group: 4人局一个人沉默就是25%——half completion at 3min triggers rescue. Balanced: 30% at 5min.
+  const rescueCompletionRate = isTightGroup ? 0.5 : 0.3;
+  const rescueMinutes = isTightGroup ? 3 : 5;
+  if (signals.completionRate < rescueCompletionRate && signals.phaseElapsedMinutes >= rescueMinutes) {
     return 'rescue_quiet';
   }
 
@@ -201,7 +235,7 @@ export function generateXiaoyueAdaptiveSuggestion(
     Math.floor(signals.activeRate * 100) +
     signals.playerCount;
 
-  const template = pickTemplate(type, seed);
+  const template = pickTemplate(type, seed, signals.playerCount);
 
   return {
     type: template.type,

@@ -14,8 +14,6 @@ const patchPreferencesSchema = z.object({
   budget: z.array(z.string()).optional(),
   acceptNearby: z.boolean().optional(),
   selectedLanguages: z.array(z.string()).optional(),
-  selectedTasteIntensity: z.array(z.string()).optional(),
-  selectedCuisines: z.array(z.string()).optional(),
 });
 
 const attendanceStatusSchema = z.object({
@@ -36,8 +34,6 @@ const createBlindBoxSchema = z.object({
   eventType: z.string().optional(),
   budgetTier: z.union([z.string(), z.array(z.string())]).optional(),
   selectedLanguages: z.array(z.string()).optional(),
-  selectedTasteIntensity: z.array(z.string()).optional(),
-  selectedCuisines: z.array(z.string()).optional(),
   eventIntent: z.array(z.string()).optional(),
   dietaryRestrictions: z.array(z.string()).optional(),
   poolId: z.string(),
@@ -83,14 +79,12 @@ export function registerBlindBoxEventRoutes(app: Express): void {
       if (!parseResult.success) {
         return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.format() });
       }
-      const { budget, acceptNearby, selectedLanguages, selectedTasteIntensity, selectedCuisines } = parseResult.data;
+      const { budget, acceptNearby, selectedLanguages } = parseResult.data;
 
       const event = await storage.updateBlindBoxEventPreferences(eventId, userId, {
         budget,
         acceptNearby,
         selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
       });
       
       res.json(event);
@@ -592,8 +586,6 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         eventType,
         budgetTier,
         selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
         eventIntent,
         dietaryRestrictions,
         poolId,
@@ -613,8 +605,6 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         budgetTier,
         budget,
         selectedLanguages,
-        selectedTasteIntensity,
-        selectedCuisines,
         eventIntent,
         dietaryRestrictions,
         poolId,
@@ -706,8 +696,6 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         userId,
         budgetRange,
         preferredLanguages: Array.isArray(selectedLanguages) ? selectedLanguages : [],
-        tasteIntensity: Array.isArray(selectedTasteIntensity) ? selectedTasteIntensity : [],
-        cuisinePreferences: Array.isArray(selectedCuisines) ? selectedCuisines : [],
         eventIntent: Array.isArray(eventIntent) ? eventIntent : [],
         dietaryRestrictions: Array.isArray(dietaryRestrictions) ? dietaryRestrictions : [],
       };

@@ -392,4 +392,31 @@ export function registerAdminEventPoolRoutes(app: Express): void {
       });
     }
   });
+
+  // Event Pools - Get pair-scores matrix for a pool
+  app.get("/api/admin/event-pools/:id/pair-scores", requireAdmin, async (req, res) => {
+    try {
+      const groups = await db.query.eventPoolGroups.findMany({
+        where: (groups: any, { eq }: any) => eq(groups.poolId, req.params.id),
+        orderBy: (groups: any, { asc }: any) => [asc(groups.groupNumber)],
+      });
+
+      const pairScores = groups.map((group: any) => ({
+        groupId: group.id,
+        groupNumber: group.groupNumber,
+        memberCount: group.memberCount,
+        avgChemistryScore: group.avgChemistryScore,
+        diversityScore: group.diversityScore,
+        communicationBalance: group.communicationBalance,
+        genderBalanceScore: group.genderBalanceScore,
+        overallScore: group.overallScore,
+        temperatureLevel: group.temperatureLevel,
+      }));
+
+      res.json(pairScores);
+    } catch (error) {
+      logger.error("Error fetching pair scores", { error: String(error) });
+      res.status(500).json({ message: "Failed to fetch pair scores" });
+    }
+  });
 }

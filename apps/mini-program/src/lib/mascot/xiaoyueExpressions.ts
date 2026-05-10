@@ -122,6 +122,30 @@ export const ICEBREAKER_XIAOYUE_EXPRESSION = {
   ended: 'thanksFeedback',
 } as const satisfies Record<string, XiaoyueExpressionId>
 
+/** Map canonical expression IDs to sprite animation states.
+ *  Used by XiaoyueSpriteAnimator to upgrade static expressions to animated sprites.
+ *  When a state gains multi-frame assets, update here — no component changes needed.
+ */
+export const XIAOYUE_EXPRESSION_TO_SPRITE_STATE: Record<XiaoyueExpressionId, import('../../components/mascot/XiaoyueSpriteAnimator').XiaoyueSpriteState> = {
+  homeWelcome: 'welcome',
+  coachGuide: 'coach',
+  loadingSystem: 'loading',
+  loadingReveal: 'reveal',
+  matchWaiting: 'waiting',
+  matchSuccess: 'celebrate',
+  actionSuccess: 'success',
+  actionFailure: 'error',
+  thanksFeedback: 'thanks',
+  neutralInformation: 'neutral',
+  testCurious: 'curious',
+  testListening: 'listening',
+  testNod: 'nod',
+  testSurprised: 'surprised',
+  optOutReassure: 'reassure',
+  paymentTrust: 'trust',
+  connectionsEmpty: 'empty',
+}
+
 export function getXiaoyueExpressionAsset(id: XiaoyueExpressionId): string {
   return XIAOYUE_ASSET_BY_EXPRESSION[id]
 }

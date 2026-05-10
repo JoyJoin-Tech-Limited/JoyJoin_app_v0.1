@@ -1,4 +1,4 @@
-import { PropsWithChildren, createElement } from 'react'
+import { PropsWithChildren, createElement, useRef } from 'react'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { useDidShow } from '@tarojs/taro'
 import { bootstrapMiniProgramAuthSession } from '../lib/api/authSession'
@@ -6,8 +6,13 @@ import { queryClient } from '../lib/api/queryClient'
 
 function AuthRefreshBridge({ children }: PropsWithChildren) {
   const client = useQueryClient()
+  const isFirstShowRef = useRef(true)
 
   useDidShow(() => {
+    if (isFirstShowRef.current) {
+      isFirstShowRef.current = false
+      return
+    }
     void bootstrapMiniProgramAuthSession(client)
   })
 

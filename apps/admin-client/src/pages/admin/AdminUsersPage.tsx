@@ -13,6 +13,16 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -20,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/ui/use-toast";
 import {
   Search,
   UserX,
@@ -36,129 +47,29 @@ import {
   Clock,
   MapPin,
   Zap,
+  Info,
+  Download,
 } from "lucide-react";
+import { downloadCsv } from "@/lib/csvExport";
+import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { calculateAge } from "@/lib/userFieldMappings";
-import { format } from "date-fns";
+import { fmtDate, fmtDateTimeShort } from "@/lib/dateUtils";
 import { useLocation, useSearch } from "wouter";
 import { CURRENT_CITY_OPTIONS } from "@shared/constants";
-
-interface ProfileCompleteness {
-  score: number;
-  starRating: number;
-  missingFields: string[];
-}
-
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  displayName?: string;
-  email: string;
-  phoneNumber: string;
-  gender?: string;
-  birthdate?: string;
-  primaryArchetype?: string;
-  archetype?: string;
-  currentCity?: string;
-  educationLevel?: string;
-  industryCategory?: string;
-  industryCategoryLabel?: string;
-  industryNicheLabel?: string;
-  hometownRegionCity?: string;
-  interestsTop?: string[];
-  intent?: string[];
-  isAdmin: boolean;
-  isBanned: boolean;
-  hasCompletedRegistration: boolean;
-  hasCompletedPersonalityTest?: boolean;
-  hasCompletedInterestsCarousel?: boolean;
-  hasSeenProfileReview?: boolean;
-  onboardingCheckpoint?: string | null;
-  onboardingCheckpointTimestamp?: string | null;
-  createdAt: string;
-  profileCompleteness?: ProfileCompleteness;
-}
-
-interface OnboardingState {
-  nextStep: string;
-  profileEssentialComplete: boolean;
-  hasCompletedRegistration: boolean;
-  hasCompletedPersonalityTest: boolean;
-  hasCompletedInterestsCarousel: boolean;
-  hasSeenProfileReview: boolean;
-}
-
-interface AssessmentSession {
-  id: string;
-  primaryArchetype?: string;
-  phase: string;
-  traitScores?: Record<string, number>;
-  topArchetypes?: Array<{ archetype: string; score: number }>;
-  completedAt?: string;
-  isDecisive?: boolean;
-  matchDetailsJson?: { primaryArchetype?: string; secondaryArchetype?: string; decisiveReason?: string; score?: number };
-}
-
-interface UserInterests {
-  totalHeat?: number;
-  totalSelections?: number;
-  categoryHeat?: Record<string, number>;
-  selections?: Array<{ topicId: string; emoji?: string; label: string; category: string; heat: number; level: number }>;
-  topPriorities?: Array<{ topicId: string; label: string; heat: number }>;
-}
-
-interface JoinedEvent {
-  id: string;
-  title?: string;
-  eventType?: string;
-  dateTime?: string;
-  attendanceStatus?: string;
-}
-
-interface PoolRegistration {
-  id: string;
-  poolId: string;
-  assignedGroupId?: string | null;
-  matchStatus?: string;
-  matchScore?: number | null;
-  registeredAt?: string;
-  eventIntent?: string[];
-  budgetRange?: string[];
-}
-
-interface Connection {
-  id: string;
-  eventId: string;
-  userAId: string;
-  userBId: string;
-  status: string;
-  revealedAt?: string | null;
-  createdAt?: string;
-}
-
-interface MatchHistoryEntry {
-  id: string;
-  user1Id: string;
-  user2Id: string;
-  eventId: string;
-  matchedAt?: string | null;
-  connectionQuality?: number | null;
-  wouldMeetAgain?: boolean | null;
-  connectionPointTypes?: string[] | null;
-}
-
-interface UserDetail {
-  user: User & { profileCompleteness: ProfileCompleteness };
-  onboarding: OnboardingState;
-  assessmentSession: AssessmentSession | null;
-  joinedEvents: JoinedEvent[];
-  poolRegistrations: PoolRegistration[];
-  connections: Connection[];
-  matchHistory: MatchHistoryEntry[];
-  interests: UserInterests | null;
-  matchingReadiness: { isReady: boolean; blockers: string[] };
-}
+import type {
+  AdminUser,
+  ProfileCompleteness,
+  OnboardingState,
+  AssessmentSession,
+  UserInterests,
+  JoinedEvent,
+  UserPoolRegistration,
+  Connection,
+  MatchHistoryEntry,
+  UserDetail,
+} from "./types";
+import { getArchetypeBadgeStyle, getStuckStatus } from "./adminUserBadges";
 
 export default function AdminUsersPage() {
   const searchParams = useSearch();
@@ -170,7 +81,10 @@ export default function AdminUsersPage() {
   const [cityFilter, setCityFilter] = useState<string>("");
   const [archetypeFilter, setArchetypeFilter] = useState<string>("");
   const [maxCompleteness, setMaxCompleteness] = useState<string>("");
+  const { toast } = useToast();
   const [showFilters, setShowFilters] = useState(false);
+  const [showBanDialog, setShowBanDialog] = useState(false);
+  const [banReason, setBanReason] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
@@ -180,7 +94,7 @@ export default function AdminUsersPage() {
     }
   }, [searchParams]);
 
-  const { data: users = [], isLoading, isError, error, refetch } = useQuery<User[]>({
+  const { data: users = [], isLoading, isError, error, refetch } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users", { search: searchQuery, filter: filterStatus === "all" ? undefined : filterStatus, city: cityFilter, archetype: archetypeFilter, maxCompleteness }],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -208,11 +122,35 @@ export default function AdminUsersPage() {
   });
 
   const banMutation = useMutation({
-    mutationFn: (userId: string) =>
-      fetch(`/api/admin/users/${userId}/ban`, { method: "PATCH", credentials: "include" }).then(r => r.json()),
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/ban`, { 
+          method: "PATCH", 
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+          throw new Error(err.message || `Failed to ban user: ${res.status}`);
+        }
+        return res.json();
+      } catch (err) {
+        throw err;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setShowBanDialog(false);
+      setBanReason("");
       setSelectedUser(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "封禁失败",
+        description: error.message || "无法封禁用户，请重试",
+        variant: "destructive",
+      });
     },
   });
 
@@ -290,9 +228,32 @@ export default function AdminUsersPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">用户管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">用户管理</h1>
           <p className="text-muted-foreground mt-1">查看和管理所有用户账户</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const headers = ["ID", "姓名", "邮箱", "手机号", "城市", "性别", "原型", "资料完整度", "注册时间", "状态"];
+            const rows = users.map((u) => [
+              u.id,
+              `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.displayName || '未命名',
+              u.email,
+              u.phoneNumber,
+              u.currentCity || '',
+              u.gender || '',
+              u.archetype || '',
+              u.profileCompleteness ? `${u.profileCompleteness.score}%` : '',
+              u.createdAt ? fmtDate(u.createdAt) : '',
+              u.isBanned ? '已封禁' : u.hasCompletedRegistration ? '正常' : '未完成注册',
+            ]);
+            downloadCsv({ filename: `users-${fmtDate(new Date())}.csv`, headers, rows });
+          }}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          导出 CSV
+        </Button>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -462,6 +423,10 @@ export default function AdminUsersPage() {
                 </div>
                 <div className="flex flex-col gap-1 items-end">
                   {user.profileCompleteness && renderStars(user.profileCompleteness.starRating)}
+                  {(() => {
+                    const stuck = getStuckStatus(user);
+                    return stuck.isStuck ? <Badge variant={stuck.variant} className="text-xs">{stuck.label}</Badge> : null;
+                  })()}
                   {user.isBanned && <Badge variant="destructive">已封禁</Badge>}
                 </div>
               </CardHeader>
@@ -481,7 +446,22 @@ export default function AdminUsersPage() {
                 {user.archetype && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">原型</span>
-                    <Badge variant="outline" className="text-xs">{user.archetype}</Badge>
+                    {(() => {
+                      const style = getArchetypeBadgeStyle(user.primaryArchetype || user.archetype);
+                      return (
+                        <Badge
+                          variant="outline"
+                          className="text-xs"
+                          style={style ? {
+                            backgroundColor: style.backgroundColor,
+                            color: style.color,
+                            borderColor: style.borderColor,
+                          } : undefined}
+                        >
+                          {user.archetype}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 )}
                 {user.profileCompleteness && (
@@ -497,7 +477,7 @@ export default function AdminUsersPage() {
                 )}
                 <div className="flex justify-between pt-2 border-t">
                   <span className="text-muted-foreground">注册时间</span>
-                  <span className="text-xs">{format(new Date(user.createdAt), "yyyy/MM/dd")}</span>
+                  <span className="text-xs">{fmtDate(user.createdAt)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -543,6 +523,13 @@ export default function AdminUsersPage() {
                   {/* Profile completeness */}
                   <Card className="p-4">
                     <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">资料完整度</span>
+                        <FieldInfoTooltip
+                          title="资料完整度"
+                          description="基于用户填写的必填字段计算得出。5星 = 100%完整，缺失字段越少评分越高。完整度影响匹配质量和用户体验。"
+                        />
+                      </div>
                       <div className="flex items-center gap-3">
                         {renderStars(userDetail.user.profileCompleteness.starRating)}
                         <span className="font-semibold">{userDetail.user.profileCompleteness.score}% 完整</span>
@@ -589,18 +576,33 @@ export default function AdminUsersPage() {
                           <p className="text-xs text-muted-foreground">注册时间</p>
                           <p className="font-medium flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(userDetail.user.createdAt), "yyyy年MM月dd日")}
+                            {fmtDate(userDetail.user.createdAt)}
                           </p>
                         </div>
                         {userDetail.user.archetype && (
                           <div>
                             <p className="text-xs text-muted-foreground">社交原型</p>
-                            <Badge variant="outline">{userDetail.user.archetype}</Badge>
+                            {(() => {
+                              const style = getArchetypeBadgeStyle(userDetail.user.primaryArchetype || userDetail.user.archetype);
+                              return (
+                                <Badge variant="outline" style={style ? {
+                                  backgroundColor: style.backgroundColor,
+                                  color: style.color,
+                                  borderColor: style.borderColor,
+                                } : undefined}>
+                                  {userDetail.user.archetype}
+                                </Badge>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
                       <div className="flex gap-2 pt-1">
                         {userDetail.user.isAdmin && <Badge variant="secondary"><Crown className="h-3 w-3 mr-1" />管理员</Badge>}
+                        {(() => {
+                          const stuck = getStuckStatus(userDetail.user);
+                          return stuck.isStuck ? <Badge variant={stuck.variant} className="text-xs">{stuck.label}</Badge> : null;
+                        })()}
                         {userDetail.user.isBanned && <Badge variant="destructive">已封禁</Badge>}
                       </div>
                     </CardContent>
@@ -610,7 +612,13 @@ export default function AdminUsersPage() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center justify-between">
-                        注册进度
+                        <span className="flex items-center gap-1.5">
+                          注册进度
+                          <FieldInfoTooltip
+                            title="注册进度"
+                            description="显示用户当前所处的 onboarding 阶段。nextStep 是服务端计算出的下一步引导目标。已完成的步骤越多，用户参与匹配的 readiness 越高。"
+                          />
+                        </span>
                         <Badge variant="outline" className="text-xs font-normal">
                           <Clock className="h-3 w-3 mr-1" />
                           {userDetail.onboarding.nextStep}
@@ -630,7 +638,7 @@ export default function AdminUsersPage() {
                     <Button
                       variant={userDetail.user.isBanned ? "default" : "destructive"}
                       className="w-full"
-                      onClick={() => userDetail.user.isBanned ? unbanMutation.mutate(userDetail.user.id) : banMutation.mutate(userDetail.user.id)}
+                      onClick={() => userDetail.user.isBanned ? unbanMutation.mutate(userDetail.user.id) : setShowBanDialog(true)}
                       disabled={banMutation.isPending || unbanMutation.isPending}
                       data-testid={userDetail.user.isBanned ? "button-unban-user" : "button-ban-user"}
                     >
@@ -644,12 +652,29 @@ export default function AdminUsersPage() {
                   {/* Archetype */}
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">性格原型</CardTitle>
+                      <CardTitle className="text-sm flex items-center gap-1.5">
+                        性格原型
+                        <FieldInfoTooltip
+                          title="性格原型"
+                          description="用户通过 JoyJoin 人格测试（ACOEXP 6维度模型）获得的12原型分类结果。原型影响匹配算法中的化学反应分数和社交破冰环节的话题推荐。"
+                        />
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {userDetail.user.archetype ? (
                         <div className="flex items-center gap-2">
-                          <Badge className="text-base px-3 py-1">{userDetail.user.archetype}</Badge>
+                          {(() => {
+                            const style = getArchetypeBadgeStyle(userDetail.user.primaryArchetype || userDetail.user.archetype);
+                            return (
+                              <Badge className="text-base px-3 py-1" style={style ? {
+                                backgroundColor: style.backgroundColor,
+                                color: style.color,
+                                borderColor: style.borderColor,
+                              } : undefined}>
+                                {userDetail.user.archetype}
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">未确定原型</p>
@@ -696,31 +721,31 @@ export default function AdminUsersPage() {
                         {userDetail.user.birthdate && (
                           <div>
                             <p className="text-xs text-muted-foreground">年龄</p>
-                            <p>{calculateAge(userDetail.user.birthdate)} 岁</p>
+                            <p className="font-medium">{calculateAge(userDetail.user.birthdate)} 岁</p>
                           </div>
                         )}
                         {userDetail.user.educationLevel && (
                           <div>
                             <p className="text-xs text-muted-foreground">学历</p>
-                            <p>{userDetail.user.educationLevel}</p>
+                            <p className="font-medium">{userDetail.user.educationLevel}</p>
                           </div>
                         )}
                         {(userDetail.user.industryCategoryLabel || userDetail.user.industryCategory) && (
                           <div>
                             <p className="text-xs text-muted-foreground">行业</p>
-                            <p>{userDetail.user.industryCategoryLabel || userDetail.user.industryCategory}</p>
+                            <p className="font-medium">{userDetail.user.industryCategoryLabel || userDetail.user.industryCategory}</p>
                           </div>
                         )}
                         {userDetail.user.industryNicheLabel && (
                           <div>
                             <p className="text-xs text-muted-foreground">细分</p>
-                            <p>{userDetail.user.industryNicheLabel}</p>
+                            <p className="font-medium">{userDetail.user.industryNicheLabel}</p>
                           </div>
                         )}
                         {userDetail.user.hometownRegionCity && (
                           <div>
                             <p className="text-xs text-muted-foreground">家乡</p>
-                            <p className="flex items-center gap-1"><MapPin className="h-3 w-3" />{userDetail.user.hometownRegionCity}</p>
+                            <p className="font-medium flex items-center gap-1"><MapPin className="h-3 w-3" />{userDetail.user.hometownRegionCity}</p>
                           </div>
                         )}
                       </div>
@@ -788,7 +813,7 @@ export default function AdminUsersPage() {
                                 <p className="text-xs text-muted-foreground">{event.eventType}</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-xs text-muted-foreground">{event.dateTime ? format(new Date(event.dateTime), "yyyy/MM/dd") : '—'}</p>
+                                <p className="text-xs text-muted-foreground">{fmtDate(event.dateTime)}</p>
                                 {event.attendanceStatus && <Badge variant="outline" className="text-xs mt-0.5">{event.attendanceStatus}</Badge>}
                               </div>
                             </div>
@@ -832,7 +857,7 @@ export default function AdminUsersPage() {
                                 </div>
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {reg.registeredAt ? format(new Date(reg.registeredAt), "yyyy/MM/dd HH:mm") : '—'}
+                                {fmtDateTimeShort(reg.registeredAt)}
                               </p>
                             </div>
                           ))}
@@ -868,7 +893,7 @@ export default function AdminUsersPage() {
                                   <div className="text-right">
                                     <Badge variant="default" className="text-xs">互相连接</Badge>
                                     {conn.revealedAt && (
-                                      <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(conn.revealedAt), "yyyy/MM/dd")}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(conn.revealedAt)}</p>
                                     )}
                                   </div>
                                 </div>
@@ -901,8 +926,13 @@ export default function AdminUsersPage() {
                               <div key={match.id} className="text-sm border rounded-md px-3 py-2">
                                 <div className="flex justify-between items-start">
                                   <div>
-                                    <p className="text-xs text-muted-foreground">对方: {otherId?.slice(0, 12)}…</p>
-                                    <p className="text-xs text-muted-foreground">活动: {match.eventId?.slice(0, 8)}…</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      对方: {match.partnerName || otherId?.slice(0, 12)}…
+                                      {match.partnerArchetype && (
+                                        <Badge variant="outline" className="ml-1 text-[10px] font-normal">{match.partnerArchetype}</Badge>
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">活动: {match.eventTitle || match.eventId?.slice(0, 8)}…</p>
                                     {match.connectionPointTypes && (
                                       <p className="text-xs text-muted-foreground">契合类型: {Array.isArray(match.connectionPointTypes) ? match.connectionPointTypes.join(', ') : match.connectionPointTypes}</p>
                                     )}
@@ -915,7 +945,7 @@ export default function AdminUsersPage() {
                                       <p className="text-xs text-muted-foreground">再见意愿: {match.wouldMeetAgain ? '是' : '否'}</p>
                                     )}
                                     {match.matchedAt && (
-                                      <p className="text-xs text-muted-foreground">{format(new Date(match.matchedAt), "yyyy/MM/dd")}</p>
+                                      <p className="text-xs text-muted-foreground">{fmtDate(match.matchedAt)}</p>
                                     )}
                                   </div>
                                 </div>
@@ -976,6 +1006,57 @@ export default function AdminUsersPage() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {/* Ban Confirmation Dialog */}
+      <AlertDialog open={showBanDialog} onOpenChange={setShowBanDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-destructive" />
+              确认封禁用户
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              {userDetail && (
+                <>
+                  <p>
+                    你即将封禁用户 <strong>{userDetail.user.displayName || userDetail.user.phoneNumber}</strong>。
+                    此操作将立即生效，该用户将无法登录、参加活动或接收匹配。
+                  </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      封禁原因 <span className="text-destructive">*</span>
+                    </label>
+                    <Input
+                      placeholder="请填写封禁原因（至少5个字符）"
+                      value={banReason}
+                      onChange={(e) => setBanReason(e.target.value)}
+                      data-testid="input-ban-reason"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      封禁原因将记录在审计日志中，供后续查阅。
+                    </p>
+                  </div>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBanReason("")}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (userDetail && banReason.trim().length >= 5) {
+                  banMutation.mutate({ userId: userDetail.user.id, reason: banReason.trim() });
+                }
+              }}
+              disabled={banMutation.isPending || banReason.trim().length < 5}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-ban"
+            >
+              {banMutation.isPending ? "封禁中..." : "确认封禁"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

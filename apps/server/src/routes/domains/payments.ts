@@ -55,8 +55,6 @@ type NormalizedEventRegistrationPayload = {
   eventType: string | null;
   budgetRange: string[];
   preferredLanguages: string[];
-  tasteIntensity: string[];
-  cuisinePreferences: string[];
   eventIntent: string[];
   dietaryRestrictions: string[];
 };
@@ -140,10 +138,6 @@ function normalizeEventRegistrationPayload(payload: unknown): NormalizedEventReg
 
   const preferredLanguages = toStringArray(source.preferredLanguages);
   const selectedLanguages = toStringArray(source.selectedLanguages);
-  const tasteIntensity = toStringArray(source.tasteIntensity);
-  const selectedTasteIntensity = toStringArray(source.selectedTasteIntensity);
-  const cuisinePreferences = toStringArray(source.cuisinePreferences);
-  const selectedCuisines = toStringArray(source.selectedCuisines);
 
   return {
     poolId,
@@ -152,8 +146,6 @@ function normalizeEventRegistrationPayload(payload: unknown): NormalizedEventReg
     eventType: getNonEmptyString(source.eventType),
     budgetRange: normalizedBudgetRange,
     preferredLanguages: preferredLanguages.length > 0 ? preferredLanguages : selectedLanguages,
-    tasteIntensity: tasteIntensity.length > 0 ? tasteIntensity : selectedTasteIntensity,
-    cuisinePreferences: cuisinePreferences.length > 0 ? cuisinePreferences : selectedCuisines,
     eventIntent: toStringArray(source.eventIntent),
     dietaryRestrictions: toStringArray(source.dietaryRestrictions),
   };

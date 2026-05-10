@@ -20,6 +20,9 @@ export {
   insertReferralConversionSchema,
   insertEventTemplateSchema,
   insertContentSchema,
+} from './_definitions.js';
+
+export {
   insertInvitationSchema,
   insertInvitationUseSchema,
   reunionRequests,
@@ -50,15 +53,14 @@ export {
   insertBlindBoxPreAttendanceSchema,
   userInterestSignals,
   insertUserInterestSignalSchema,
+} from './_definitions_extended.js';
+
+export {
   preGenerationJobs,
   preGenerationResults,
-} from './_definitions.js';
+} from './_definitions_social.js';
 
 export type {
-  InsertReferralCode,
-  ReferralCode,
-  InsertReferralConversion,
-  ReferralConversion,
   UpdateProfile,
   UpdateFullProfile,
   UpdatePersonality,
@@ -67,10 +69,17 @@ export type {
   BlindBoxEvent,
   InsertEventFeedback,
   InsertBlindBoxEvent,
+  InsertReferralCode,
+  ReferralCode,
+  InsertReferralConversion,
+  ReferralConversion,
   EventTemplate,
   Content,
   InsertEventTemplate,
   InsertContent,
+} from './_definitions.js';
+
+export type {
   Invitation,
   InvitationUse,
   InsertInvitation,
@@ -103,6 +112,9 @@ export type {
   InsertBlindBoxPreAttendance,
   UserInterestSignal,
   InsertUserInterestSignal,
+} from './_definitions_extended.js';
+
+export type {
   PreGenerationJobRow,
   PreGenerationResultRow,
-} from './_definitions.js';
+} from './_definitions_social.js';

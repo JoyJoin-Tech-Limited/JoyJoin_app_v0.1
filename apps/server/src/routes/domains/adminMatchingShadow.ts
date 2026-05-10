@@ -117,4 +117,29 @@ export function registerAdminMatchingShadowRoutes(app: Express): void {
       res.status(classified.status).json({ message: classified.message });
     }
   });
+
+  // Active pair-score model weights (6D + group score weights)
+  app.get("/api/admin/matching/active-pair-model", requireAdmin, async (_req, res) => {
+    try {
+      const { matchingWeightsService } = await import("../../matchingWeightsService");
+      const weights = await matchingWeightsService.getActiveWeights();
+
+      res.json({
+        chemistryWeight: weights.chemistryWeight,
+        interestWeight: weights.interestWeight,
+        socialAffinityWeight: weights.socialAffinityWeight,
+        backgroundDiversityWeight: weights.backgroundDiversityWeight,
+        preferenceWeight: weights.preferenceWeight,
+        languageWeight: weights.languageWeight,
+        groupScoreWeights: {
+          avgPairScore: 50,
+          groupDiversity: 30,
+          energyBalance: 20,
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error fetching active pair model", { error: String(error) });
+      res.status(500).json({ message: "Failed to fetch active pair model" });
+    }
+  });
 }

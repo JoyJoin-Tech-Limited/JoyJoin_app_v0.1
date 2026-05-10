@@ -15,19 +15,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import {
   Select,
   SelectContent,
@@ -42,16 +41,14 @@ import {
   CheckCircle,
   Clock,
   MapPin,
-  PlusCircle,
   Play,
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import EventCreateDialog from "./EventCreateDialog";
+import EmptyState from "@/components/admin/EmptyState";
 
 // =============== 类型定义 ===============
 
@@ -168,19 +165,6 @@ const budgetOptions = [
   { value: "300-500", label: "300-500" },
 ];
 
-// 创建盲盒活动表单
-const createEventSchema = z.object({
-  poolId: z.string().min(1, "请选择所属活动池"),
-  title: z.string().min(1, "活动标题不能为空"),
-  minGroupSize: z.coerce.number().min(2, "至少 2 人").max(12, "最多 12 人"),
-  maxGroupSize: z.coerce.number().min(2, "至少 2 人").max(12, "最多 12 人"),
-  budgetTier: z.string().min(1, "请选择预算"),
-  selectedLanguages: z.array(z.string()).optional().default([]),
-  selectedTasteIntensity: z.array(z.string()).optional().default([]),
-  selectedCuisines: z.array(z.string()).optional().default([]),
-  autoMatch: z.boolean().default(true),
-});
-
 // =============== 组件 ===============
 
 type StatusFilter = "all" | "pending_match" | "matched" | "in_progress" | "completed";
@@ -214,6 +198,8 @@ export default function AdminEventsPage() {
     null,
   );
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showMatchDialog, setShowMatchDialog] = useState(false);
+  const [matchEventId, setMatchEventId] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -226,55 +212,6 @@ export default function AdminEventsPage() {
   // 活动池列表（用于创建盲盒活动时选择池子）
   const { data: pools = [] } = useQuery<EventPoolSummary[]>({
     queryKey: ["/api/admin/event-pools"],
-  });
-
-  // 创建活动表单
-  const form = useForm({
-    resolver: zodResolver(createEventSchema),
-    defaultValues: {
-      poolId: "",
-      title: "",
-      minGroupSize: 4,
-      maxGroupSize: 6,
-      budgetTier: "",
-      selectedLanguages: [],
-      selectedTasteIntensity: [],
-      selectedCuisines: [],
-      autoMatch: false,
-    },
-  });
-
-  const selectedPoolId = form.watch("poolId");
-  const selectedPoolForForm = useMemo(
-    () => pools.find((p) => p.id === selectedPoolId) || null,
-    [pools, selectedPoolId],
-  );
-
-  // ====== Mutation：创建盲盒活动 ======
-  const createEventMutation = useMutation({
-    mutationFn: async (data: any) => {
-      console.log("[AdminEvents] creating blind-box event with payload:", data);
-      // 注意：这里是 (method, url, body)
-      return apiRequest("POST", "/api/admin/blind-box-events", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
-      setShowCreateDialog(false);
-      form.reset();
-      toast({
-        title: "创建成功",
-        description: "盲盒活动已创建，可在列表中查看并后续匹配。",
-      });
-    },
-    onError: (error: any) => {
-      console.error("[AdminEvents] Failed to create blind-box event:", error);
-      toast({
-        title: "创建失败",
-        description:
-          error?.message || "无法创建盲盒活动，请检查参数或稍后重试",
-        variant: "destructive",
-      });
-    },
   });
 
   // ====== Mutation：更新活动状态 ======
@@ -323,41 +260,8 @@ export default function AdminEventsPage() {
   });
 
   const handleStartMatching = (eventId: string) => {
-    if (
-      confirm(
-        "确定要为这个盲盒活动开始匹配吗？如果算法已接入，将从对应活动池中分配用户。"
-      )
-    ) {
-      startMatchMutation.mutate(eventId);
-    }
-  };
-
-  const onSubmitCreateEvent = (data: any) => {
-    const pool = pools.find((p) => p.id === data.poolId);
-
-    const payload: any = {
-      poolId: data.poolId,
-      title: data.title,
-      minGroupSize: Number(data.minGroupSize) || 4,
-      maxGroupSize: Number(data.maxGroupSize) || 6,
-      budgetTier: data.budgetTier,
-      autoMatch: !!data.autoMatch,
-      selectedLanguages: data.selectedLanguages ?? [],
-      selectedTasteIntensity: data.selectedTasteIntensity ?? [],
-      selectedCuisines: data.selectedCuisines ?? [],
-    };
-
-    console.log("[AdminEvents] create form data:", data);
-    console.log("[AdminEvents] create payload:", payload);
-
-    if (pool) {
-      payload.eventType = pool.eventType;
-      payload.city = pool.city;
-      payload.district = pool.district;
-      payload.dateTime = pool.dateTime;
-    }
-
-    createEventMutation.mutate(payload);
+    setMatchEventId(eventId);
+    setShowMatchDialog(true);
   };
 
   const handleViewDetails = (event: BlindBoxEvent) => {
@@ -485,327 +389,16 @@ export default function AdminEventsPage() {
           </p>
         </div>
 
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-event">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              创建盲盒活动（桌）
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>创建新的盲盒活动</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmitCreateEvent)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="poolId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>所属活动池 *</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            const pool = pools.find((p) => p.id === value);
-                            console.log("[AdminEvents] selected pool for event:", pool);
-                            if (pool) {
-                              if (!form.getValues("title")) {
-                                form.setValue("title", `${pool.title} 第1桌`);
-                              }
-                              if (typeof pool.minGroupSize === "number") {
-                                form.setValue("minGroupSize", pool.minGroupSize);
-                              }
-                              if (typeof pool.maxGroupSize === "number") {
-                                form.setValue("maxGroupSize", pool.maxGroupSize);
-                              }
-                            }
-                          }}
-                        >
-                          <SelectTrigger data-testid="select-pool">
-                            <SelectValue placeholder="选择所属活动池" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {pools.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.title} · {p.city}
-                                {p.district ? `·${p.district}` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {selectedPoolForForm && (
-                  <div className="rounded-md border p-3 text-xs text-muted-foreground space-y-1">
-                    <div>
-                      继承池子：
-                      <span className="font-medium text-foreground">
-                        {selectedPoolForForm.title}
-                      </span>
-                    </div>
-                    <div>
-                      城市 / 区域：{selectedPoolForForm.city}
-                      {selectedPoolForForm.district
-                        ? ` · ${selectedPoolForForm.district}`
-                        : ""}
-                    </div>
-                    <div>活动类型：{selectedPoolForForm.eventType}</div>
-                    <div>
-                      推荐时间：{formatDateTime(selectedPoolForForm.dateTime)}
-                    </div>
-                  </div>
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="budgetTier"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>预算区间 *</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger data-testid="select-budget">
-                            <SelectValue placeholder="选择本桌人均预算" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {budgetOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>活动标题 *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="例如：海底捞暖心局 第1桌"
-                          {...field}
-                          data-testid="input-title"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="minGroupSize"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>最小人数 *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={2}
-                            max={12}
-                            {...field}
-                            data-testid="input-min-size"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="maxGroupSize"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>最大人数 *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={2}
-                            max={12}
-                            {...field}
-                            data-testid="input-max-size"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="selectedLanguages"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>语言偏好（可选）</FormLabel>
-                      <div className="flex flex-wrap gap-2">
-                        {languageOptions.map((opt) => {
-                          const selected = (field.value as string[] | undefined) ?? [];
-                          const checked = selected.includes(opt.value);
-                          return (
-                            <div
-                              key={opt.value}
-                              className="flex items-center space-x-1 border rounded-full px-3 py-1 text-xs"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  const current = (field.value as string[] | undefined) ?? [];
-                                  const next = isChecked
-                                    ? [...current, opt.value]
-                                    : current.filter((v) => v !== opt.value);
-                                  field.onChange(next);
-                                }}
-                              />
-                              <span>{opt.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="selectedTasteIntensity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>口味强度偏好（可选）</FormLabel>
-                      <div className="flex flex-wrap gap-2">
-                        {tasteIntensityOptions.map((opt) => {
-                          const selected = (field.value as string[] | undefined) ?? [];
-                          const checked = selected.includes(opt.value);
-                          return (
-                            <div
-                              key={opt.value}
-                              className="flex items-center space-x-1 border rounded-full px-3 py-1 text-xs"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  const current = (field.value as string[] | undefined) ?? [];
-                                  const next = isChecked
-                                    ? [...current, opt.value]
-                                    : current.filter((v) => v !== opt.value);
-                                  field.onChange(next);
-                                }}
-                              />
-                              <span>{opt.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="selectedCuisines"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>菜系偏好（可选）</FormLabel>
-                      <div className="flex flex-wrap gap-2">
-                        {cuisineOptions.map((opt) => {
-                          const selected = (field.value as string[] | undefined) ?? [];
-                          const checked = selected.includes(opt.value);
-                          return (
-                            <div
-                              key={opt.value}
-                              className="flex items-center space-x-1 border rounded-full px-3 py-1 text-xs"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  const current = (field.value as string[] | undefined) ?? [];
-                                  const next = isChecked
-                                    ? [...current, opt.value]
-                                    : current.filter((v) => v !== opt.value);
-                                  field.onChange(next);
-                                }}
-                              />
-                              <span>{opt.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="autoMatch"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>自动匹配模式</FormLabel>
-                        <p className="text-xs text-muted-foreground">
-                          开启后，可以在匹配页面一键从池子中按偏好/人数匹配用户。
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          关闭时，管理员需手动触发匹配；建议先人工审核报名后再开启自动匹配
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
-                          data-testid="input-auto-match"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateDialog(false)}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createEventMutation.isPending}
-                    data-testid="button-submit-event"
-                  >
-                    {createEventMutation.isPending ? "创建中..." : "创建盲盒活动"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <EventCreateDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          pools={pools}
+          formatDateTime={formatDateTime}
+          budgetOptions={budgetOptions}
+          languageOptions={languageOptions}
+          tasteIntensityOptions={tasteIntensityOptions}
+          cuisineOptions={cuisineOptions}
+        />
       </div>
 
       {/* Metric Cards */}
@@ -1036,12 +629,10 @@ export default function AdminEventsPage() {
         </CardHeader>
         <CardContent>
           {filteredEvents.length === 0 ? (
-            <div
-              className="py-12 text-center text-muted-foreground text-sm"
+            <EmptyState
+              title="暂无符合筛选条件的盲盒活动"
               data-testid="text-no-events"
-            >
-              暂无符合筛选条件的盲盒活动
-            </div>
+            />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredEvents.map((event) => (
@@ -1165,7 +756,7 @@ export default function AdminEventsPage() {
                 <h3 className="font-semibold">基本信息</h3>
                 <div className="grid gap-3">
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">活动类型:</span>
+                    <span className="text-muted-foreground">活动类型</span>
                     <span
                       className="col-span-2"
                       data-testid="text-detail-event-type"
@@ -1174,7 +765,7 @@ export default function AdminEventsPage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">活动时间:</span>
+                    <span className="text-muted-foreground">活动时间</span>
                     <span
                       className="col-span-2"
                       data-testid="text-detail-datetime"
@@ -1183,7 +774,7 @@ export default function AdminEventsPage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">城市/商圈:</span>
+                    <span className="text-muted-foreground">城市/商圈</span>
                     <span
                       className="col-span-2"
                       data-testid="text-detail-location"
@@ -1192,7 +783,7 @@ export default function AdminEventsPage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">状态:</span>
+                    <span className="text-muted-foreground">状态</span>
                     <div className="col-span-2">
                       <Badge
                         variant={
@@ -1223,7 +814,7 @@ export default function AdminEventsPage() {
                 <h3 className="font-semibold">创建者信息</h3>
                 <div className="grid gap-3 text-sm">
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">姓名:</span>
+                    <span className="text-muted-foreground">姓名</span>
                     <span
                       className="col-span-2"
                       data-testid="text-detail-creator-name"
@@ -1233,7 +824,7 @@ export default function AdminEventsPage() {
                   </div>
                   {selectedEvent.creator?.email && (
                     <div className="grid grid-cols-3 gap-2">
-                      <span className="text-muted-foreground">邮箱:</span>
+                      <span className="text-muted-foreground">邮箱</span>
                       <span
                         className="col-span-2"
                         data-testid="text-detail-creator-email"
@@ -1244,7 +835,7 @@ export default function AdminEventsPage() {
                   )}
                   {selectedEvent.creator?.phoneNumber && (
                     <div className="grid grid-cols-3 gap-2">
-                      <span className="text-muted-foreground">电话:</span>
+                      <span className="text-muted-foreground">电话</span>
                       <span
                         className="col-span-2"
                         data-testid="text-detail-creator-phone"
@@ -1261,13 +852,13 @@ export default function AdminEventsPage() {
                 <h3 className="font-semibold">预算与偏好设置</h3>
                 <div className="grid gap-3 text-sm">
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">预算档位:</span>
+                    <span className="text-muted-foreground">预算档位</span>
                     <span className="col-span-2">
                       {selectedEvent.budgetTier || "未设置"}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">语言偏好:</span>
+                    <span className="text-muted-foreground">语言偏好</span>
                     <span className="col-span-2">
                       {selectedEvent.selectedLanguages &&
                       selectedEvent.selectedLanguages.length > 0
@@ -1276,7 +867,7 @@ export default function AdminEventsPage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">口味偏好:</span>
+                    <span className="text-muted-foreground">口味偏好</span>
                     <span className="col-span-2">
                       {selectedEvent.selectedTasteIntensity &&
                       selectedEvent.selectedTasteIntensity.length > 0
@@ -1285,7 +876,7 @@ export default function AdminEventsPage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <span className="text-muted-foreground">菜系偏好:</span>
+                    <span className="text-muted-foreground">菜系偏好</span>
                     <span className="col-span-2">
                       {selectedEvent.selectedCuisines &&
                       selectedEvent.selectedCuisines.length > 0
@@ -1300,7 +891,7 @@ export default function AdminEventsPage() {
               <div className="space-y-3">
                 <h3 className="font-semibold">管理操作</h3>
                 <div className="flex items-center gap-3">
-                  <Label>更新状态:</Label>
+                  <Label>更新状态</Label>
                   <Select
                     value={selectedEvent.status}
                     onValueChange={handleStatusUpdate}
@@ -1344,6 +935,34 @@ export default function AdminEventsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Matching Confirmation Dialog */}
+      <AlertDialog open={showMatchDialog} onOpenChange={setShowMatchDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认开始匹配</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要为这个盲盒活动开始匹配吗？如果算法已接入，将从对应活动池中分配用户。
+              此操作不可撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMatchEventId(null)}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (matchEventId) {
+                  startMatchMutation.mutate(matchEventId);
+                }
+                setMatchEventId(null);
+              }}
+              disabled={startMatchMutation.isPending}
+              data-testid="button-confirm-start-match"
+            >
+              {startMatchMutation.isPending ? "匹配中..." : "确认开始匹配"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

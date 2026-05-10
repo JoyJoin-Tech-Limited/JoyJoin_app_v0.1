@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
-import { View, Text, Input, Image } from '@tarojs/components';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { View, Text, Input } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import { apiRequest } from '../../../lib/api/api';
 import { buildSocialPath } from '../icebreakerSessionModel';
-import { CelebrationOverlay } from '../overlays/CelebrationOverlay';
+import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal';
+import { SwipeCard, TapReaction } from '../../../components/gesture';
 
 interface UndercoverWordPhaseViewProps {
   socialSessionId: string;
@@ -31,6 +33,13 @@ interface UndercoverWordPhaseViewProps {
   isAdvancing?: boolean;
 }
 
+const REACTION_ITEMS = [
+  { emoji: '😂', label: '好笑' },
+  { emoji: '🤔', label: '疑惑' },
+  { emoji: '🔥', label: '精彩' },
+  { emoji: '👏', label: '点赞' },
+];
+
 export default function UndercoverWordPhaseView({
   socialSessionId,
   isHost,
@@ -48,6 +57,7 @@ export default function UndercoverWordPhaseView({
   onAdvance,
   isAdvancing = false,
 }: UndercoverWordPhaseViewProps) {
+  // ── Existing state ──────────────────────────────────────────────
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [voting, setVoting] = useState(false);
@@ -57,12 +67,17 @@ export default function UndercoverWordPhaseView({
   const [selectedTarget, setSelectedTarget] = useState('');
   const [showSecret, setShowSecret] = useState(false);
 
-  useEffect(() => {
-    if (revealed && results) {
-      setShowSecret(true);
-    }
-  }, [revealed, results]);
+  // ── V2 state ────────────────────────────────────────────────────
+  const [cardFlipped, setCardFlipped] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [localReactions, setLocalReactions] = useState<Record<number, number>>({});
+  const [selectedReaction, setSelectedReaction] = useState<number | null>(null);
+  const [burstTriggered, setBurstTriggered] = useState(false);
+  const [descPulse, setDescPulse] = useState(false);
+  const prevDescCountRef = useRef(0);
+  const hasAutoFlippedRef = useRef(false);
 
+  // ── Derived ─────────────────────────────────────────────────────
   const isUndercover = userId === undercoverUserId;
   const myWord = isUndercover ? pair?.undercoverWord : pair?.civilianWord;
   const currentRoundData = rounds[currentRound];
@@ -71,6 +86,43 @@ export default function UndercoverWordPhaseView({
   const allDescribed = currentRoundData ? currentRoundData.descriptions.length >= playerCount : false;
   const allVoted = votedUserIds.length >= playerCount;
 
+  const describedCount = currentRoundData?.descriptions.length ?? 0;
+  const describeProgress = playerCount > 0 ? describedCount / playerCount : 0;
+
+  // ── Effects ─────────────────────────────────────────────────────
+  // Auto-flip card once when a new pair arrives
+  useEffect(() => {
+    if (pair && !hasAutoFlippedRef.current) {
+      hasAutoFlippedRef.current = true;
+      const timer = setTimeout(() => setCardFlipped(true), 500);
+      return () => clearTimeout(timer);
+    }
+    if (!pair) {
+      hasAutoFlippedRef.current = false;
+      setCardFlipped(false);
+    }
+  }, [pair?.civilianWord, pair?.undercoverWord]);
+
+  // Reveal burst
+  useEffect(() => {
+    if (revealed && results) {
+      setShowSecret(true);
+      setBurstTriggered(true);
+    }
+  }, [revealed, results]);
+
+  // Progress bar pulse when someone new describes
+  useEffect(() => {
+    const count = currentRoundData?.descriptions.length ?? 0;
+    if (count > prevDescCountRef.current && prevDescCountRef.current > 0) {
+      setDescPulse(true);
+      const t = setTimeout(() => setDescPulse(false), 500);
+      return () => clearTimeout(t);
+    }
+    prevDescCountRef.current = count;
+  }, [currentRoundData?.descriptions.length]);
+
+  // ── Handlers (preserved exactly) ────────────────────────────────
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError('');
@@ -130,7 +182,46 @@ export default function UndercoverWordPhaseView({
     }
   };
 
-  // State: not generated yet
+  // ── V2 interaction handlers ─────────────────────────────────────
+  const handleReact = useCallback((index: number) => {
+    setSelectedReaction(index);
+    setLocalReactions((prev) => ({
+      ...prev,
+      [index]: (prev[index] || 0) + 1,
+    }));
+  }, []);
+
+  const handleSwipeSelect = useCallback(
+    (targetId: string) => {
+      try {
+        Taro.vibrateShort({ type: 'light' });
+      } catch {
+        // ignore haptic failure
+      }
+      setSelectedTarget(targetId);
+    },
+    [],
+  );
+
+  // ── Helpers ─────────────────────────────────────────────────────
+  const getDescriptionsForUser = (targetUserId: string) => {
+    const out: string[] = [];
+    for (const r of rounds) {
+      const d = r.descriptions.find((x) => x.userId === targetUserId);
+      if (d) out.push(`第${r.roundNumber}轮：${d.text}`);
+    }
+    return out;
+  };
+
+  const avatarHue = (id: string) => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    return Math.abs(hash) % 360;
+  };
+
+  // ════════════════════════════════════════════════════════════════
+  //  State 0 — waiting for pair
+  // ════════════════════════════════════════════════════════════════
   if (!pair) {
     return (
       <View className='icebreaker__phase'>
@@ -149,38 +240,74 @@ export default function UndercoverWordPhaseView({
     );
   }
 
-  // State: reveal done
+  // ════════════════════════════════════════════════════════════════
+  //  State 4 — revealed
+  // ════════════════════════════════════════════════════════════════
   if (revealed && results) {
-    const roleIcon =
-      results.undercoverUserId === userId
-        ? '/assets/lovart/icebreaker/icons/icon-role-undercover.png'
-        : '/assets/lovart/icebreaker/icons/icon-role-civilian.png'
     return (
       <View className='icebreaker__phase'>
-        <CelebrationOverlay
-          visible={showSecret}
-          frameKey='undercover_secret'
-          title='卧底身份曝光'
-          subtitle={`卧底：${results.undercoverDisplayName}`}
-          autoDismissMs={3500}
-          onDismiss={() => setShowSecret(false)}
+        {/* Dramatic reveal spotlight */}
+        <IdentityReveal
+          identity={results.undercoverDisplayName}
+          label='卧底身份曝光'
+          revealed={showSecret}
+          spotlightColor='#EF4444'
         />
+
+        {/* Celebration burst */}
+        {showSecret && (
+          <ParticleBurst
+            trigger={burstTriggered}
+            type={results.caught ? 'confetti' : 'roses'}
+            spotlightColor={results.caught ? '#22C55E' : '#EF4444'}
+            count={48}
+          />
+        )}
+
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__phase-title'>揭晓时刻</Text>
-          <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12rpx', marginBottom: '12rpx' }}>
-            <Image src={roleIcon} mode='aspectFit' style={{ width: '48rpx', height: '48rpx' }} />
-            <Text className='icebreaker__challenge-title'>卧底是：{results.undercoverDisplayName}</Text>
+
+          <View
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12rpx',
+              marginBottom: '12rpx',
+            }}
+          >
+            <Text style={{ fontSize: '48rpx' }}>{results.caught ? '🎉' : '😈'}</Text>
+            <Text className='icebreaker__challenge-title'>
+              卧底是：{results.undercoverDisplayName}
+            </Text>
           </View>
+
           <Text className='icebreaker__challenge-desc'>平民词：{results.civilianWord}</Text>
           <Text className='icebreaker__challenge-desc'>卧底词：{results.undercoverWord}</Text>
           <Text className='icebreaker__challenge-desc'>
             {results.caught ? '卧底被抓住了！' : '卧底成功隐藏！'}
           </Text>
-          {participants.map((p) => (
-            <Text key={p.userId} className='icebreaker__helper-text'>
-              {p.displayName}: {results.voteCounts[p.userId] || 0} 票
-            </Text>
-          ))}
+
+          <View style={{ width: '100%', marginTop: '16rpx', display: 'flex', flexDirection: 'column', gap: '8rpx' }}>
+            {participants.map((p) => (
+              <View
+                key={p.userId}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12rpx 16rpx',
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  borderRadius: '12rpx',
+                }}
+              >
+                <Text style={{ fontSize: '28rpx', color: '#fff' }}>{p.displayName}</Text>
+                <Text style={{ fontSize: '28rpx', color: '#FBBF24', fontWeight: 'bold' }}>
+                  {results.voteCounts[p.userId] || 0} 票
+                </Text>
+              </View>
+            ))}
+          </View>
         </Card>
 
         {isHost && onAdvance && (
@@ -194,63 +321,393 @@ export default function UndercoverWordPhaseView({
             {isAdvancing ? '切换中…' : '进入下一阶段'}
           </Button>
         )}
+
+        {error ? <Text className='icebreaker__error'>{error}</Text> : null}
       </View>
     );
   }
 
-  // State: voting
+  // ════════════════════════════════════════════════════════════════
+  //  State 3 — voting
+  // ════════════════════════════════════════════════════════════════
   if (allDescribed && currentRound >= 1) {
     return (
       <View className='icebreaker__phase'>
+        {/* Word reminder (flipped open) */}
+        <View style={{ marginBottom: '24rpx', width: '100%' }}>
+          <CardFlip
+            front={
+              <View
+                style={{
+                  backgroundColor: 'rgba(30, 27, 75, 0.85)',
+                  padding: '32rpx',
+                  borderRadius: '16rpx',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8rpx',
+                }}
+              >
+                <Text style={{ fontSize: '48rpx' }}>🕵️</Text>
+                <Text style={{ fontSize: '28rpx', fontWeight: 'bold', color: '#fff' }}>你的身份是？</Text>
+              </View>
+            }
+            back={
+              <View
+                style={{
+                  backgroundColor: isUndercover
+                    ? 'rgba(239, 68, 68, 0.10)'
+                    : 'rgba(59, 130, 246, 0.10)',
+                  padding: '32rpx',
+                  borderRadius: '16rpx',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8rpx',
+                }}
+              >
+                <Text style={{ fontSize: '40rpx', fontWeight: 'bold', color: '#fff' }}>{myWord}</Text>
+                <View
+                  style={{
+                    padding: '4rpx 16rpx',
+                    borderRadius: '100rpx',
+                    backgroundColor: isUndercover
+                      ? 'rgba(239, 68, 68, 0.2)'
+                      : 'rgba(59, 130, 246, 0.2)',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: '22rpx',
+                      fontWeight: '600',
+                      color: isUndercover ? '#FCA5A5' : '#93C5FD',
+                    }}
+                  >
+                    {isUndercover ? '卧底' : '平民'}
+                  </Text>
+                </View>
+              </View>
+            }
+            flipped={cardFlipped}
+            onFlip={() => setCardFlipped((f) => !f)}
+            duration={400}
+          />
+        </View>
+
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__phase-title'>投票环节</Text>
           <Text className='icebreaker__phase-subtitle'>谁最有可能是卧底？</Text>
+
           {hasVoted ? (
             <Text className='icebreaker__helper-text'>已投票，等待其他人...</Text>
           ) : (
             <>
-              {participants.map((p) => (
-                <Button
-                  key={p.userId}
-                  onClick={() => setSelectedTarget(p.userId)}
-                  variant={selectedTarget === p.userId ? 'primary' : 'secondary'}
-                >
-                  {p.displayName}
-                </Button>
-              ))}
+              <View style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16rpx', marginBottom: '16rpx' }}>
+                {participants
+                  .map((p) => {
+                    const descs = getDescriptionsForUser(p.userId);
+                    const isSelected = selectedTarget === p.userId;
+                    return (
+                      <SwipeCard
+                        key={p.userId}
+                        onSwipeRight={() => handleSwipeSelect(p.userId)}
+                        onSwipeLeft={() => setSelectedTarget('')}
+                        threshold={0.35}
+                      >
+                        <View
+                          style={{
+                            padding: '20rpx',
+                            borderRadius: '16rpx',
+                            backgroundColor: 'rgba(0,0,0,0.25)',
+                            border: isSelected
+                              ? '2rpx solid #22C55E'
+                              : '2rpx solid rgba(255,255,255,0.1)',
+                            boxShadow: isSelected
+                              ? '0 0 20rpx rgba(34, 197, 94, 0.35)'
+                              : 'none',
+                            transition: 'border-color 200ms ease, box-shadow 200ms ease',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: '16rpx',
+                          }}
+                        >
+                          {/* Avatar */}
+                          <View
+                            style={{
+                              width: '72rpx',
+                              height: '72rpx',
+                              borderRadius: '50%',
+                              backgroundColor: `hsl(${avatarHue(p.userId)}, 65%, 60%)`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: '30rpx',
+                                fontWeight: 'bold',
+                                color: '#fff',
+                              }}
+                            >
+                              {(p.displayName || '?')[0]}
+                            </Text>
+                          </View>
+
+                          {/* Info */}
+                          <View style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4rpx' }}>
+                            <Text
+                              style={{
+                                fontSize: '30rpx',
+                                fontWeight: 'bold',
+                                color: '#fff',
+                              }}
+                            >
+                              {p.displayName}
+                            </Text>
+                            {descs.length > 0 && (
+                              <Text
+                                style={{
+                                  fontSize: '22rpx',
+                                  color: 'rgba(255,255,255,0.7)',
+                                  lineHeight: 1.4,
+                                }}
+                                numberOfLines={2}
+                              >
+                                {descs.join(' · ')}
+                              </Text>
+                            )}
+                          </View>
+
+                          {/* Selection indicator */}
+                          {isSelected && (
+                            <View
+                              style={{
+                                width: '40rpx',
+                                height: '40rpx',
+                                borderRadius: '50%',
+                                backgroundColor: '#22C55E',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Text style={{ fontSize: '24rpx', color: '#fff' }}>✓</Text>
+                            </View>
+                          )}
+                        </View>
+                      </SwipeCard>
+                    );
+                  })}
+              </View>
+
               <Button onClick={handleVote} disabled={!selectedTarget || voting}>
-                {voting ? '提交中...' : '确认投票'}
+                {voting ? '提交中...' : selectedTarget ? '确认投票' : '请选择目标'}
               </Button>
             </>
           )}
+
           {isHost && allVoted && (
             <Button onClick={handleReveal} disabled={revealing}>
               {revealing ? '揭晓中...' : '揭晓结果'}
             </Button>
           )}
         </Card>
+
         {error ? <Text className='icebreaker__error'>{error}</Text> : null}
       </View>
     );
   }
 
-  // State: describing
+  // ════════════════════════════════════════════════════════════════
+  //  State 2 — describing
+  // ════════════════════════════════════════════════════════════════
   return (
     <View className='icebreaker__phase'>
+      {/* CardFlip word reveal */}
+      <View style={{ marginBottom: '24rpx', width: '100%' }}>
+        <CardFlip
+          front={
+            <View
+              style={{
+                backgroundColor: 'rgba(30, 27, 75, 0.85)',
+                padding: '48rpx 32rpx',
+                borderRadius: '16rpx',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12rpx',
+              }}
+            >
+              <Text style={{ fontSize: '72rpx' }}>🕵️</Text>
+              <Text style={{ fontSize: '36rpx', fontWeight: 'bold', color: '#fff' }}>
+                你的身份是？
+              </Text>
+              <Text style={{ fontSize: '24rpx', color: 'rgba(255,255,255,0.6)' }}>
+                点击或等待揭晓
+              </Text>
+            </View>
+          }
+          back={
+            <View
+              style={{
+                backgroundColor: isUndercover
+                  ? 'rgba(239, 68, 68, 0.10)'
+                  : 'rgba(59, 130, 246, 0.10)',
+                padding: '48rpx 32rpx',
+                borderRadius: '16rpx',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16rpx',
+              }}
+            >
+              <Text style={{ fontSize: '64rpx' }}>{isUndercover ? '🕵️' : '🙂'}</Text>
+              <Text
+                style={{
+                  fontSize: '48rpx',
+                  fontWeight: 'bold',
+                  color: '#fff',
+                }}
+              >
+                {myWord || '?'}
+              </Text>
+              <View
+                style={{
+                  padding: '8rpx 24rpx',
+                  borderRadius: '100rpx',
+                  backgroundColor: isUndercover
+                    ? 'rgba(239, 68, 68, 0.2)'
+                    : 'rgba(59, 130, 246, 0.2)',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: '26rpx',
+                    fontWeight: '600',
+                    color: isUndercover ? '#FCA5A5' : '#93C5FD',
+                  }}
+                >
+                  {isUndercover ? '卧底' : '平民'}
+                </Text>
+              </View>
+              <Text
+                style={{
+                  fontSize: '22rpx',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginTop: '4rpx',
+                }}
+              >
+                {isUndercover ? '不要暴露自己' : '找出卧底'}
+              </Text>
+            </View>
+          }
+          flipped={cardFlipped}
+          onFlip={() => setCardFlipped((f) => !f)}
+          duration={400}
+        />
+      </View>
+
       <Card className='icebreaker__challenge-card icebreaker__challenge-card--undercover-word icebreaker__challenge-card--has-bg'>
         <Text className='icebreaker__phase-title'>谁是卧底 · 第{currentRound + 1}轮</Text>
-        <Text className='icebreaker__challenge-title'>你的词</Text>
-        <Text className='icebreaker__challenge-title'>{myWord || '?'}</Text>
-        <Text className='icebreaker__helper-text'>
-          {isUndercover ? '你是卧底！不要暴露自己' : '你是平民'}
-        </Text>
 
-        {currentRoundData?.descriptions.map((d, i) => (
-          <Text key={i} className='icebreaker__helper-text'>
-            {d.displayName}: {d.text}
-          </Text>
-        ))}
+        {/* Tension progress bar */}
+        <View style={{ width: '100%', marginBottom: '16rpx' }}>
+          <View
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8rpx',
+            }}
+          >
+            <Text style={{ fontSize: '24rpx', color: 'rgba(255,255,255,0.7)' }}>
+              描述进度
+            </Text>
+            <Text
+              style={{
+                fontSize: '24rpx',
+                color: '#fff',
+                fontWeight: '600',
+                transform: descPulse ? 'scale(1.15)' : 'scale(1)',
+                transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+              }}
+            >
+              {describedCount}/{playerCount} 人已描述
+            </Text>
+          </View>
+          <View
+            style={{
+              width: '100%',
+              height: '8rpx',
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              borderRadius: '4rpx',
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                width: `${describeProgress * 100}%`,
+                height: '100%',
+                backgroundColor: describeProgress >= 1 ? '#22C55E' : '#8B5CF6',
+                borderRadius: '4rpx',
+                transition: 'width 400ms cubic-bezier(0.22, 1, 0.36, 1)',
+                transform: descPulse ? 'scaleY(1.8)' : 'scaleY(1)',
+                transformOrigin: 'center',
+                transitionProperty: 'width, transform',
+              }}
+            />
+          </View>
+        </View>
 
+        {/* Previous descriptions */}
+        {currentRoundData && currentRoundData.descriptions.length > 0 && (
+          <View
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10rpx',
+              marginBottom: '16rpx',
+            }}
+          >
+            {currentRoundData.descriptions.map((d, i) => (
+              <View
+                key={i}
+                style={{
+                  padding: '14rpx 18rpx',
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  borderRadius: '12rpx',
+                  animation: `icebreaker-phase-in 0.3s ease ${i * 60}ms both`,
+                }}
+              >
+                <Text style={{ fontSize: '24rpx', color: 'rgba(255,255,255,0.6)', marginBottom: '2rpx' }}>
+                  {d.displayName}
+                </Text>
+                <Text style={{ fontSize: '28rpx', color: '#fff', lineHeight: 1.5 }}>
+                  “{d.text}”
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* TapReaction row */}
+        <View style={{ width: '100%', marginBottom: '8rpx' }}>
+          <TapReaction
+            reactions={REACTION_ITEMS.map((r, i) => ({
+              ...r,
+              count: (localReactions[i] || 0) > 0 ? localReactions[i] : undefined,
+            }))}
+            onReact={handleReact}
+            selectedIndex={selectedReaction ?? undefined}
+          />
+        </View>
+
+        {/* Input or submitted state */}
         {!hasSubmittedDesc ? (
           <>
             <Input
@@ -258,21 +715,52 @@ export default function UndercoverWordPhaseView({
               value={description}
               onInput={(e) => setDescription(e.detail.value.slice(0, 100))}
               maxlength={100}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              style={{
+                width: '100%',
+                marginTop: '8rpx',
+                marginBottom: '8rpx',
+                padding: '16rpx 20rpx',
+                borderRadius: '16rpx',
+                border: '1rpx solid rgba(255,255,255,0.2)',
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                fontSize: '28rpx',
+                color: '#fff',
+                boxShadow: inputFocused
+                  ? '0 0 20rpx rgba(139, 92, 246, 0.35)'
+                  : '0 0 0rpx transparent',
+                transition: 'box-shadow 200ms ease',
+              }}
+              placeholderStyle='color: rgba(255,255,255,0.4)'
             />
             <Button onClick={handleDescribe} disabled={!description.trim() || submitting}>
               {submitting ? '提交中...' : '提交描述'}
             </Button>
           </>
         ) : (
-          <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
+          <View
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8rpx',
+              padding: '16rpx',
+            }}
+          >
+            <Text style={{ fontSize: '28rpx', color: '#22C55E' }}>✓</Text>
+            <Text className='icebreaker__helper-text'>已提交，等待其他人...</Text>
+          </View>
         )}
 
+        {/* Host advance */}
         {isHost && allDescribed && (
           <Button onClick={handleReveal} disabled={revealing}>
             {revealing ? '处理中...' : currentRound >= 1 ? '进入投票' : '下一轮'}
           </Button>
         )}
       </Card>
+
       {error ? <Text className='icebreaker__error'>{error}</Text> : null}
     </View>
   );

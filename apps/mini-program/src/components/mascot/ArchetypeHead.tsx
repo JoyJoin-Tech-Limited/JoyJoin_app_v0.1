@@ -17,18 +17,18 @@ interface ArchetypeHeadProps {
 }
 
 const HEAD_PATHS: Record<string, string> = {
-  corgi: '/assets/icons/archetype/archetype-corgi-head@3x.png',
-  rooster: '/assets/icons/archetype/archetype-rooster-head@3x.png',
-  hamster_praise: '/assets/icons/archetype/archetype-hamster_praise-head@3x.png',
-  fox: '/assets/icons/archetype/archetype-fox-head@3x.png',
-  dolphin_calm: '/assets/icons/archetype/archetype-dolphin_calm-head@3x.png',
-  spider: '/assets/icons/archetype/archetype-spider-head@3x.png',
-  koala: '/assets/icons/archetype/archetype-koala-head@3x.png',
-  octopus: '/assets/icons/archetype/archetype-octopus-head@3x.png',
-  owl: '/assets/icons/archetype/archetype-owl-head@3x.png',
-  elephant: '/assets/icons/archetype/archetype-elephant-head@3x.png',
-  turtle: '/assets/icons/archetype/archetype-turtle-head@3x.png',
-  cat: '/assets/icons/archetype/archetype-cat-head@3x.png',
+  corgi: '/assets/icons/archetype/archetype-corgi-head@3x.webp',
+  rooster: '/assets/icons/archetype/archetype-rooster-head@3x.webp',
+  hamster_praise: '/assets/icons/archetype/archetype-hamster_praise-head@3x.webp',
+  fox: '/assets/icons/archetype/archetype-fox-head@3x.webp',
+  dolphin_calm: '/assets/icons/archetype/archetype-dolphin_calm-head@3x.webp',
+  spider: '/assets/icons/archetype/archetype-spider-head@3x.webp',
+  koala: '/assets/icons/archetype/archetype-koala-head@3x.webp',
+  octopus: '/assets/icons/archetype/archetype-octopus-head@3x.webp',
+  owl: '/assets/icons/archetype/archetype-owl-head@3x.webp',
+  elephant: '/assets/icons/archetype/archetype-elephant-head@3x.webp',
+  turtle: '/assets/icons/archetype/archetype-turtle-head@3x.webp',
+  cat: '/assets/icons/archetype/archetype-cat-head@3x.webp',
 }
 
 function getFallbackInitial(text?: string): string {

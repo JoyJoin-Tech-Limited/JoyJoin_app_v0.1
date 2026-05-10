@@ -129,3 +129,34 @@ Follow this pattern for other resource admin pages (venues, events, users).
 - Use `Badge` for status labels with variant mapping (`default`, `secondary`, `destructive`, `outline`)
 - Use `data-testid` attributes on primary interactive elements for testability
 - Forms use `react-hook-form` + zod + `@hookform/resolvers`
+
+## Utility Patterns
+
+### Safe date formatting
+
+Use `@/lib/dateUtils` instead of raw `format(new Date(...))` to avoid runtime crashes on invalid or null date strings.
+
+```tsx
+import { fmtDate, fmtDateTime, fmtDateTimeShort } from "@/lib/dateUtils";
+
+// Safe — returns "—" on invalid/null input
+<span>{fmtDate(user.createdAt)}</span>
+<span>{fmtDateTime(payment.created_at)}</span>
+<span>{fmtDateTimeShort(reg.registeredAt)}</span>
+```
+
+Available helpers: `safeFormat` (low-level), `fmtDate`, `fmtDateTime`, `fmtDateTimeShort`, `fmtDateTimeLocal`, `fmtCsvDate`.
+
+### CSV export
+
+Use `@/lib/csvExport` for downloading table data. It is formula-injection safe (prefixes `=+@-` with tab) and emits a UTF-8 BOM for Excel compatibility.
+
+```tsx
+import { downloadCsv } from "@/lib/csvExport";
+
+downloadCsv({
+  filename: `users-${fmtDate(new Date())}.csv`,
+  headers: ["ID", "Name", "Email", "Joined"],
+  rows: users.map(u => [u.id, u.name, u.email, fmtDate(u.createdAt)]),
+});
+```

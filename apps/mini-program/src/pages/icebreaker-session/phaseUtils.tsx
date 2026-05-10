@@ -25,7 +25,7 @@ export function getPhaseLabel(phase: SessionPhase): string {
     case 'waiting':
       return '等待中'
     case 'warmup':
-      return '热身'
+      return '话题卡'
     case 'micro_challenge':
       return '挑战'
     case 'lie_detective':
@@ -68,7 +68,7 @@ const PHASE_EMOJI_MAP: Record<SessionPhase, string> = {
 
 /** Render a phase icon (Lovart 240px source, Taro downscales)
  *
- * Source assets are 240×240px PNG with transparent background.
+ * Source assets are 240×240px WebP with transparent background.
  * Recommended display sizes:
  *   - 40–48rpx: inline / list / header (default)
  *   - 80rpx:  phase card header
@@ -85,8 +85,7 @@ export function PhaseHeaderIcon({
   className?: string
 }) {
   const sizeStr = `${size}rpx`
-  // Canonical filename mapping — WebP primary (~90% smaller than PNG)
-  // Fallback to PNG if WebP unsupported (WeChat base lib < 2.9.0, extremely rare)
+  // Canonical filename mapping — WebP primary (~80-90% smaller than PNG source)
   const srcMap: Record<string, string> = {
     warmup: '/assets/icons/phase-icons/phase-warmup.webp',
     micro_challenge: '/assets/icons/phase-icons/phase-micro-challenge.webp',

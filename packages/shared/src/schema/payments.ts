@@ -7,15 +7,14 @@ export {
   userCoupons,
   eventCreditGrants,
   eventCreditRedemptions,
+} from './_definitions.js';
+
+export {
   pricingSettings,
   pricingHistory,
-  insertSubscriptionSchema,
-  insertPaymentSchema,
-  insertCouponSchema,
-  insertUserCouponSchema,
   insertPricingSettingSchema,
   updatePricingSettingSchema,
-} from './_definitions.js';
+} from './_definitions_extended.js';
 
 export type {
   Subscription,
@@ -27,6 +26,9 @@ export type {
   CouponUsage,
   UserCoupon,
   InsertUserCoupon,
+} from './_definitions.js';
+
+export type {
   EventCreditGrant,
   InsertEventCreditGrant,
   EventCreditRedemption,
@@ -34,4 +36,4 @@ export type {
   PricingSetting,
   InsertPricingSetting,
   UpdatePricingSetting,
-} from './_definitions.js';
+} from './_definitions_extended.js';

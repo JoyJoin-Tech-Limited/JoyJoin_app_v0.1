@@ -15,3 +15,4 @@ export * from './archetypeSkills';
 export * from './traitDisplayConfig';
 export * from './secondaryQuestionMap';
 export * from './resultViewModel';
+export * from './discovery';

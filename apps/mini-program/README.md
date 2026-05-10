@@ -59,6 +59,7 @@ src/
 │   ├── terms/
 │   └── center-tab-empty/
 ├── components/          # Shared UI components & primitives
+│   └── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, etc.
 ├── hooks/               # Custom React hooks
 ├── lib/                 # Runtime helpers & business logic
 ├── providers/           # App-level React context providers

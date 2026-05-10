@@ -1,6 +1,13 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
+// ── Local colour tokens (guardrails-compliant) ─────────────────
+$__dark-indigo-1: rgba($color-primary-dark, 0.95);
+$__dark-indigo-2: rgba($color-primary, 0.85);
+$__dark-slate:   rgba($color-text-primary, 0.9);
+$__emerald-glow: $color-success;
+$__gold-accent:  $color-landed-gold;
+
 // ─── Root ─────────────────────────────────────────────────────────
 .icebreaker {
   @include page-gradient-bg;
@@ -628,7 +635,7 @@
     }
 
     &--lie-detective {
-      background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #2e1065 100%);
+      background: linear-gradient(135deg, $__dark-indigo-1 0%, $__dark-indigo-2 50%, $__dark-indigo-1 100%);
     }
 
     &--warmup {
@@ -636,7 +643,7 @@
     }
 
     &--mini-script {
-      background: linear-gradient(135deg, #1E1B4B 0%, #2E1065 50%, #2D3142 100%);
+      background: linear-gradient(135deg, $__dark-indigo-1 0%, $__dark-indigo-2 50%, $__dark-slate 100%);
     }
 
     &--recap {
@@ -720,6 +727,64 @@
     font-size: $font-size-sm;
     color: $color-success;
     font-weight: $font-weight-semibold;
+  }
+
+  // ── Micro-challenge V2 ─────────────────────────────────────────
+  &__challenge-progress {
+    width: 100%;
+    margin-top: $spacing-sm;
+  }
+
+  &__challenge-progress-track {
+    width: 100%;
+    height: 16rpx;
+    border-radius: 8rpx;
+    background: rgba($color-primary, 0.12);
+    overflow: hidden;
+  }
+
+  &__challenge-progress-fill {
+    height: 100%;
+    border-radius: 8rpx;
+    background: $brand-gradient;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: width;
+  }
+
+  &__challenge-progress-text {
+    display: block;
+    text-align: center;
+    margin-top: $spacing-xs;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__challenge-stagger {
+    opacity: 0;
+    transform: translateY(16rpx);
+    animation: ms-fade-slide-in 0.4s ease both;
+
+    &--delay-0 { animation-delay: 0ms; }
+    &--delay-1 { animation-delay: 80ms; }
+    &--delay-2 { animation-delay: 160ms; }
+    &--delay-3 { animation-delay: 240ms; }
+    &--delay-4 { animation-delay: 320ms; }
+  }
+
+  &__challenge-tap-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__challenge-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    pointer-events: none;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1044,6 +1109,133 @@
     text-align: center;
   }
 
+  // ── V2 Tag Input ──────────────────────────────────────────────
+  &__tag-form {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__tag-field {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__tag-input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 16rpx;
+    border: 2rpx solid $color-border;
+    font-size: $font-size-base;
+    background: $color-surface;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+
+    &--error {
+      border-color: $color-error;
+    }
+  }
+
+  &__tag-counter {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    text-align: right;
+  }
+
+  &__tag-error {
+    font-size: $font-size-xs;
+    color: $color-error;
+  }
+
+  // ── V2 Reveal Badges ──────────────────────────────────────────
+  &__statement-tag--ai {
+    background: rgba($__emerald-glow, 0.12);
+    color: $__emerald-glow;
+  }
+
+  &__statement-tag--user {
+    background: rgba($color-success, 0.12);
+    color: $color-success;
+  }
+
+  // ── V2 AI Statement Emerald Glow ──────────────────────────────
+  &__statement--ai-glow {
+    border-color: $__emerald-glow;
+    box-shadow: 0 0 16rpx rgba($__emerald-glow, 0.35);
+    animation: ai-glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes ai-glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 12rpx rgba($__emerald-glow, 0.25);
+    }
+    50% {
+      box-shadow: 0 0 24rpx rgba($__emerald-glow, 0.5);
+    }
+  }
+
+  // ── V2 Edge Messages ──────────────────────────────────────────
+  &__detective-edge-msg {
+    @include card;
+    padding: $spacing-md;
+    text-align: center;
+
+    &--zero {
+      background: rgba($color-secondary, 0.08);
+      border-color: rgba($color-secondary, 0.25);
+    }
+
+    &--hundred {
+      background: rgba($color-success, 0.08);
+      border-color: rgba($color-success, 0.25);
+    }
+
+    &--animate {
+      animation: edge-msg-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+  }
+
+  &__detective-edge-text {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+
+    .icebreaker__detective-edge-msg--zero & {
+      color: $color-secondary;
+    }
+
+    .icebreaker__detective-edge-msg--hundred & {
+      color: $color-success;
+    }
+  }
+
+  @keyframes edge-msg-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.92) translateY(8rpx);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  // ── Vote Count Animation ──────────────────────────────────────
+  &__statement-votes--animate {
+    animation: vote-count-spring 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes vote-count-spring {
+    from {
+      opacity: 0;
+      transform: translateY(6rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   //  Recap Phase
   // ═══════════════════════════════════════════════════════════════
@@ -1291,6 +1483,331 @@
     color: $color-success;
     margin-top: $spacing-sm;
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Group Mirror Phase V2
+  // ═══════════════════════════════════════════════════════════════
+  &__mirror-identity-wrapper {
+    margin: $spacing-md 0;
+    border-radius: $card-radius;
+    overflow: hidden;
+  }
+
+  &__mirror-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  &__mirror-results {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    margin-top: $spacing-md;
+  }
+
+  &__mirror-result-item {
+    width: 100%;
+  }
+
+  &__mirror-card-front {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-lg;
+    min-height: 160rpx;
+    background: linear-gradient(135deg, rgba($color-primary, 0.06), rgba($color-secondary, 0.06));
+    border-radius: $card-radius;
+  }
+
+  &__mirror-card-question {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  &__mirror-card-hint {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__mirror-card-back {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-lg;
+    min-height: 160rpx;
+    background: linear-gradient(135deg, rgba($color-success, 0.08), rgba($color-primary, 0.08));
+    border-radius: $card-radius;
+  }
+
+  &__mirror-card-winner {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+
+  &__mirror-card-votes {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__mirror-reactions {
+    margin: $spacing-sm 0;
+  }
+
+  &__mirror-question-block {
+    margin-bottom: $spacing-md;
+  }
+// ═══════════════════════════════════════════════════════════════
+//  Quip Battle V2
+// ═══════════════════════════════════════════════════════════════
+&__quip-stack {
+  position: relative;
+  width: 100%;
+  min-height: 360rpx;
+}
+
+&__quip-stack-card {
+  @include card;
+  padding: $spacing-lg;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+  border: 2rpx solid rgba($color-primary, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+&__quip-stack-prompt {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+&__quip-stack-author {
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+&__quip-stack-answer {
+  font-size: $font-size-lg;
+  color: $color-text-primary;
+  line-height: 1.6;
+  margin-top: $spacing-sm;
+}
+
+&__quip-stack-progress {
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-muted;
+  margin-top: $spacing-sm;
+}
+
+&__quip-reaction-row {
+  margin-top: $spacing-md;
+}
+
+&__best-of-reel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+&__best-of-card {
+  @include card;
+  padding: $spacing-lg;
+  background: linear-gradient(135deg, rgba($color-success, 0.08), rgba($color-primary, 0.08));
+  border: 2rpx solid rgba($color-success, 0.25);
+  opacity: 0;
+  transform: translateY(16rpx);
+  animation: ms-fade-slide-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+  &--delay-0 { animation-delay: 0ms; }
+  &--delay-1 { animation-delay: 80ms; }
+  &--delay-2 { animation-delay: 160ms; }
+}
+
+&__best-of-rank {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $color-success;
+  margin-bottom: $spacing-xs;
+}
+
+&__best-of-author {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+&__best-of-text {
+  font-size: $font-size-base;
+  color: $color-text-secondary;
+  margin-top: $spacing-xs;
+  line-height: 1.5;
+}
+
+&__best-of-votes {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  margin-top: $spacing-xs;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Mini Script V2
+// ═══════════════════════════════════════════════════════════════
+&__ms-role-flip {
+  margin: $spacing-md 0;
+}
+
+&__ms-role-front {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-xl $spacing-lg;
+  min-height: 280rpx;
+  background: linear-gradient(135deg, #1E1B4B 0%, #2E1065 50%, #2D3142 100%);
+  border-radius: $card-radius;
+  text-align: center;
+}
+
+&__ms-role-front-emoji {
+  font-size: 80rpx;
+  line-height: 1;
+}
+
+&__ms-role-front-label {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+&__ms-role-front-hint {
+  font-size: $font-size-sm;
+  color: rgba($color-text-white, 0.7);
+}
+
+&__ms-role-back {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-xl $spacing-lg;
+  min-height: 280rpx;
+  background: linear-gradient(135deg, $__dark-indigo-1 0%, $__dark-indigo-2 50%, $__dark-indigo-1 100%);
+  border-radius: $card-radius;
+  text-align: center;
+}
+
+&__ms-role-back-title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+&__ms-role-back-line {
+  font-size: $font-size-sm;
+  color: rgba($color-text-white, 0.85);
+  line-height: 1.6;
+}
+
+&__ms-act-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  pointer-events: none;
+}
+
+&__ms-reaction-row {
+  margin: $spacing-md 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Recap V2
+// ═══════════════════════════════════════════════════════════════
+&__recap-medal {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-text-primary, 0.03);
+  border-radius: $card-radius-sm;
+  opacity: 0;
+  transform: scale(0.92);
+  animation: recap-medal-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+
+  &--delay-0 { animation-delay: 0ms; }
+  &--delay-1 { animation-delay: 80ms; }
+  &--delay-2 { animation-delay: 160ms; }
+  &--delay-3 { animation-delay: 240ms; }
+  &--delay-4 { animation-delay: 320ms; }
+}
+
+&__recap-medal-emoji {
+  font-size: $font-size-lg;
+  line-height: 1;
+}
+
+&__recap-medal-text {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}
+
+&__recap-v2-stat {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+
+  &:not(:last-child) {
+    border-bottom: 1rpx solid rgba($color-text-primary, 0.06);
+  }
+}
+
+&__recap-v2-stat-label {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+&__recap-v2-stat-value {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+&__share-card {
+  @include card;
+  padding: $spacing-lg;
+  background: linear-gradient(135deg, $__dark-indigo-1 0%, $__dark-indigo-2 50%, $__dark-indigo-1 100%);
+  border: 2rpx solid rgba($__gold-accent, 0.3);
+  text-align: center;
+}
+
+&__share-card-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $__gold-accent;
+  margin-bottom: $spacing-sm;
+}
+
+&__share-card-line {
+  font-size: $font-size-sm;
+  color: rgba($color-text-white, 0.85);
+  line-height: 1.6;
+}
+
+&__share-card-cta {
+  margin-top: $spacing-md;
+}
+
 }
 
 // ─── 迷你剧本杀配置弹层（沉浸式两阶段卡片选择器）──────────────────────
@@ -1778,6 +2295,18 @@
     opacity: 1;
     transform: none;
   }
+
+  .icebreaker__statement--ai-glow {
+    animation: none;
+    box-shadow: 0 0 8rpx rgba($__emerald-glow, 0.3);
+  }
+
+  .icebreaker__detective-edge-msg--animate,
+  .icebreaker__statement-votes--animate {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 // ─── Xiaoyue Session Pack ────────────────────────────────────────────────────
@@ -1831,8 +2360,6 @@
   margin-left: 8rpx;
   display: inline-block;
 }
-
-
 // ─── Phase Intro Overlay ──────────────────────────────────────────
 
 .phase-intro-overlay {
@@ -1986,5 +2513,28 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+
+@keyframes recap-medal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ─── Reduced Motion Overrides for V2 Phases ─────────────────────
+
+@media (prefers-reduced-motion: reduce) {
+  .icebreaker__best-of-card,
+  .icebreaker__recap-medal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

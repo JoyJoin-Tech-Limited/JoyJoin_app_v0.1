@@ -1,0 +1,375 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WarmupPhaseView — Sprint C Boost Styles
+// ═══════════════════════════════════════════════════════════════════════════
+
+.icebreaker__warmup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  width: 100%;
+  padding: $spacing-sm 0 $spacing-lg;
+  position: relative;
+}
+
+// ── Celebration overlay ──────────────────────────────────────────
+.icebreaker__warmup-celebration {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+// ── Archetype mix badge ──────────────────────────────────────────
+.icebreaker__archetype-mix {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  background: rgba($color-primary, 0.08);
+  border: 2rpx solid rgba($color-primary, 0.18);
+  border-radius: $radius-pill;
+  max-width: 90%;
+}
+
+.icebreaker__archetype-mix-label {
+  @include type-caption;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.icebreaker__archetype-mix-text {
+  @include type-caption;
+  color: $color-text-secondary;
+  @include text-truncate;
+}
+
+// ── Topic card wrapper ───────────────────────────────────────────
+.icebreaker__warmup-card-wrap {
+  width: 100%;
+  max-width: 640rpx;
+
+  .reveal-card-flip {
+    min-height: 320rpx;
+  }
+
+  .reveal-card-flip__face {
+    @include card-premium;
+    padding: $spacing-lg;
+    min-height: 320rpx;
+  }
+}
+
+// ── Card front (pre-flip) ────────────────────────────────────────
+.warmup-card-front {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-sm;
+  min-height: 320rpx;
+  text-align: center;
+
+  &__icon {
+    opacity: 0.6;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__label {
+    @include type-heading;
+    color: $color-text-secondary;
+  }
+
+  &__sub {
+    @include type-caption;
+    color: $color-text-muted;
+  }
+}
+
+// ── Card back (topic revealed) ───────────────────────────────────
+.warmup-card-back {
+  @include flex-center;
+  flex-direction: column;
+  gap: $spacing-md;
+  min-height: 320rpx;
+  text-align: center;
+
+  &__emoji {
+    margin-bottom: $spacing-xs;
+  }
+
+  &__question {
+    @include type-subheading;
+    color: $color-text-primary;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-top: $spacing-xs;
+  }
+
+  &__index {
+    @include type-caption;
+    color: $color-text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__mood {
+    @include type-caption;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    padding: 4rpx $spacing-sm;
+    background: rgba($color-primary, 0.08);
+    border-radius: $radius-pill;
+  }
+
+  &--empty {
+    opacity: 0.7;
+
+    .warmup-card-back__question {
+      @include type-body;
+      color: $color-text-secondary;
+    }
+  }
+}
+
+// ── Ready status bar ─────────────────────────────────────────────
+.icebreaker__warmup-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0 $container-padding;
+}
+
+.icebreaker__warmup-ready-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  background: rgba($color-success, 0.08);
+  border-radius: $radius-pill;
+}
+
+.icebreaker__warmup-ready-count {
+  @include type-caption;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.icebreaker__warmup-ready-all {
+  @include type-caption;
+  color: $color-success;
+  font-weight: $font-weight-semibold;
+}
+
+.icebreaker__warmup-ready-badge {
+  @include type-caption;
+  color: $color-success;
+  font-weight: $font-weight-semibold;
+  padding: 4rpx $spacing-sm;
+  background: rgba($color-success, 0.1);
+  border-radius: $radius-pill;
+}
+
+// ── Participant roster ───────────────────────────────────────────
+.icebreaker__participants-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 $container-padding;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.icebreaker__participants {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs 0;
+}
+
+.icebreaker__participant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: $spacing-xs $spacing-sm;
+  min-width: 100rpx;
+  border-radius: $card-radius-sm;
+  background: $color-surface;
+  border: 2rpx solid $color-divider;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &--ready {
+    border-color: rgba($color-success, 0.4);
+    background: rgba($color-success, 0.04);
+    box-shadow: 0 2rpx 8rpx rgba($color-success, 0.1);
+
+    .icebreaker__participant-check {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+.icebreaker__participant-avatar {
+  position: relative;
+  @include flex-center;
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.icebreaker__participant-avatar-fallback {
+  font-size: $font-size-lg;
+  color: $color-text-muted;
+  line-height: 1;
+}
+
+.icebreaker__participant-host {
+  position: absolute;
+  top: -6rpx;
+  right: -10rpx;
+}
+
+.icebreaker__participant-name {
+  @include type-caption;
+  color: $color-text-secondary;
+  max-width: 96rpx;
+  @include text-truncate;
+}
+
+.icebreaker__participant-check {
+  @include type-caption;
+  color: $color-success;
+  font-weight: $font-weight-bold;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+// ── Mood grid ────────────────────────────────────────────────────
+.icebreaker__mood-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0 $container-padding;
+}
+
+.icebreaker__mood-option {
+  @include flex-center;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: $spacing-md $spacing-sm;
+  background: $color-surface;
+  border-radius: $card-radius-sm;
+  border: 2rpx solid transparent;
+  box-shadow: $shadow-sm;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease,
+    background-color 0.2s ease;
+  position: relative;
+  @include tap-feedback;
+
+  &--active {
+    transform: scale(1.05);
+    border-color: rgba($color-primary, 0.5);
+    background: rgba($color-primary, 0.06);
+    box-shadow: 0 4rpx 20rpx rgba($color-primary, 0.18);
+    z-index: 1;
+  }
+
+  &--dimmed {
+    opacity: 0.55;
+  }
+
+  &--disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+}
+
+.icebreaker__mood-option-emoji {
+  width: 56rpx;
+  height: 56rpx;
+}
+
+.icebreaker__mood-option-label {
+  @include type-label;
+  color: $color-text-primary;
+}
+
+.icebreaker__mood-option-check {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 32rpx;
+  height: 32rpx;
+  @include flex-center;
+  background: $color-primary;
+  border-radius: 50%;
+  animation: mood-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.icebreaker__mood-option-check-icon {
+  font-size: $font-size-xs;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+@keyframes mood-check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// ── Action stack ─────────────────────────────────────────────────
+.icebreaker__action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  padding: 0 $container-padding;
+  margin-top: $spacing-xs;
+}
+
+.icebreaker__action-btn {
+  width: 100%;
+  max-width: 560rpx;
+}
+
+.icebreaker__helper-text {
+  @include type-caption;
+  color: $color-text-muted;
+  text-align: center;
+  margin-top: $spacing-xs;
+  padding: 0 $spacing-md;
+}

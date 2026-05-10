@@ -27,10 +27,10 @@ describe('mini-program build-time API base URL resolution', () => {
     expect(configSource).toContain('const MINI_PROGRAM_API_BASE_URL = resolveMiniProgramApiBaseUrl()')
   })
 
-  it('uses APP_URL when higher-precedence overrides are absent', () => {
+  it('falls back to default when TARO_APP_API_BASE_URL is absent', () => {
     expect(resolveMiniProgramApiBaseUrl({
       APP_URL: 'http://192.168.100.105:5001/',
-    })).toBe('http://192.168.100.105:5001')
+    })).toBe('http://localhost:5001')
   })
 
   it('loads APP_URL from the repo env file without overriding explicit env vars', () => {

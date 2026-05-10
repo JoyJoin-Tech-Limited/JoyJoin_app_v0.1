@@ -49,13 +49,13 @@ describe('creativeModelRouter', () => {
     expect(getEventThemeTitleProvider()).toBe('deepseek');
   });
 
-  it('defaults to minimax when available and deepseek otherwise', () => {
-    isMiniMaxAvailableMock.mockReturnValue(true);
-    expect(getProviderForCreativeFunction('generateSocialTags')).toBe('minimax');
-    expect(getProviderForCreativeFunction('generateThemeLLM')).toBe('minimax');
-
-    isMiniMaxAvailableMock.mockReturnValue(false);
+  it('defaults to deepseek as the primary provider', () => {
     expect(getProviderForCreativeFunction('generateSocialTags')).toBe('deepseek');
+    expect(getProviderForCreativeFunction('generateThemeLLM')).toBe('deepseek');
     expect(getProviderForCreativeFunction('generateEventThemeTitle')).toBe('deepseek');
+
+    // MiniMax available does not change the default
+    isMiniMaxAvailableMock.mockReturnValue(true);
+    expect(getProviderForCreativeFunction('generateSocialTags')).toBe('deepseek');
   });
 });

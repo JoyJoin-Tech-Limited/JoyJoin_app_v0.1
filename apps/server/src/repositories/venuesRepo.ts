@@ -1,6 +1,9 @@
-import { type Venue, type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking, venues, venueDeals, venueTimeSlots, venueTimeSlotBookings, events } from "@shared/schema";
+import { type Venue, type VenueTimeSlot, type InsertVenueTimeSlot, type VenueTimeSlotBooking, type InsertVenueTimeSlotBooking, venues, venueDeals, venueTimeSlots, venueTimeSlotBookings, events, venueBookings } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, desc, sql, or, gte, inArray } from "drizzle-orm";
+import type { NeonDatabase } from "drizzle-orm/neon-serverless";
+import * as schema from "@shared/schema";
+import { logger } from "../lib/logger";
 
 export interface VenuesRepository {
   getAllVenues(): Promise<any[]>;
@@ -100,19 +103,22 @@ export const venuesRepo: VenuesRepository = {
   async createVenue(data: any): Promise<any> {
     const result = await db.execute(sql`
       INSERT INTO venues (
-        name, type, address, city, district, cluster_id, district_id,
-        contact_name, contact_phone, commission_rate, tags, cuisines, 
-        price_range, decor_style, taste_intensity, max_concurrent_events, 
-        is_active, notes, bar_themes, alcohol_options, vibe_descriptor
+        name, venue_type, address, city, area,
+        district_id, cluster_id,
+        contact_person, contact_phone, commission_rate, tags, cuisines, 
+        price_range, decor_style, taste_intensity, capacity, 
+        is_active, notes, bar_themes, alcohol_options, vibe_descriptor,
+        latitude, longitude, partner_status
       )
       VALUES (
         ${data.name}, ${data.type}, ${data.address}, ${data.city}, ${data.district},
-        ${data.clusterId || null}, ${data.districtId || null},
+        ${data.districtId || null}, ${data.clusterId || null},
         ${data.contactName || null}, ${data.contactPhone || null}, ${data.commissionRate || 20},
         ${data.tags || []}, ${data.cuisines || []}, ${data.priceRange || null},
         ${data.decorStyle || []}, ${data.tasteIntensity || []}, ${data.maxConcurrentEvents || 1},
         ${data.isActive !== false}, ${data.notes || null},
-        ${data.barThemes || []}, ${data.alcoholOptions || []}, ${data.vibeDescriptor || null}
+        ${data.barThemes || []}, ${data.alcoholOptions || []}, ${data.vibeDescriptor || null},
+        ${data.latitude || null}, ${data.longitude || null}, ${data.partnerStatus || 'active'}
       )
       RETURNING *
     `);
@@ -128,7 +134,7 @@ export const venuesRepo: VenuesRepository = {
       values.push(updates.name);
     }
     if (updates.type !== undefined) {
-      setClauses.push(`type = $${values.length + 1}`);
+      setClauses.push(`venue_type = $${values.length + 1}`);
       values.push(updates.type);
     }
     if (updates.address !== undefined) {
@@ -140,11 +146,11 @@ export const venuesRepo: VenuesRepository = {
       values.push(updates.city);
     }
     if (updates.district !== undefined) {
-      setClauses.push(`district = $${values.length + 1}`);
+      setClauses.push(`area = $${values.length + 1}`);
       values.push(updates.district);
     }
     if (updates.contactName !== undefined) {
-      setClauses.push(`contact_name = $${values.length + 1}`);
+      setClauses.push(`contact_person = $${values.length + 1}`);
       values.push(updates.contactName);
     }
     if (updates.contactPhone !== undefined) {
@@ -168,7 +174,7 @@ export const venuesRepo: VenuesRepository = {
       values.push(updates.priceRange);
     }
     if (updates.maxConcurrentEvents !== undefined) {
-      setClauses.push(`max_concurrent_events = $${values.length + 1}`);
+      setClauses.push(`capacity = $${values.length + 1}`);
       values.push(updates.maxConcurrentEvents);
     }
     if (updates.isActive !== undefined) {
@@ -231,6 +237,14 @@ export const venuesRepo: VenuesRepository = {
     if (updates.partnerSince !== undefined) {
       setClauses.push(`partner_since = $${values.length + 1}`);
       values.push(updates.partnerSince);
+    }
+    if (updates.latitude !== undefined) {
+      setClauses.push(`latitude = $${values.length + 1}`);
+      values.push(updates.latitude);
+    }
+    if (updates.longitude !== undefined) {
+      setClauses.push(`longitude = $${values.length + 1}`);
+      values.push(updates.longitude);
     }
 
     if (setClauses.length === 0) {
@@ -471,31 +485,33 @@ export const venuesRepo: VenuesRepository = {
       throw new Error('New venue is not available at the requested time');
     }
     
-    await db.execute(sql`
-      UPDATE venue_bookings
-      SET status = 'migrated', updated_at = NOW()
-      WHERE id = ${bookingId}
-    `);
-    
-    const newBooking = await db.execute(sql`
-      INSERT INTO venue_bookings (
-        venue_id, event_id, booking_date, booking_time,
-        participant_count, estimated_revenue, status
-      )
-      VALUES (
-        ${newVenueId}, ${booking.event_id}, ${booking.booking_date}::timestamp, ${booking.booking_time},
-        ${booking.participant_count}, ${booking.estimated_revenue}, 'confirmed'
-      )
-      RETURNING *
-    `);
-    
-    console.log(`[VenueMigration] Booking ${bookingId} migrated from venue to ${newVenueId}. Reason: ${reason || 'N/A'}`);
-    
-    return {
-      oldBooking: { ...booking, status: 'migrated' },
-      newBooking: newBooking.rows[0],
-      newVenue
-    };
+    const result = await db.transaction(async (tx: NeonDatabase<typeof schema>) => {
+      await tx.update(venueBookings)
+        .set({ status: 'migrated', updatedAt: new Date() })
+        .where(eq(venueBookings.id, bookingId));
+
+      const [newBookingRow] = await tx.insert(venueBookings)
+        .values({
+          venueId: newVenueId,
+          eventId: booking.event_id as string,
+          bookingDate: new Date(booking.booking_date as string),
+          bookingTime: booking.booking_time as string,
+          participantCount: Number(booking.participant_count),
+          estimatedRevenue: booking.estimated_revenue ? Number(booking.estimated_revenue) : null,
+          status: 'confirmed',
+        })
+        .returning();
+
+      return {
+        oldBooking: { ...booking, status: 'migrated' },
+        newBooking: newBookingRow,
+        newVenue
+      };
+    });
+
+    logger.info(`[VenueMigration] Booking ${bookingId} migrated from venue to ${newVenueId}. Reason: ${reason || 'N/A'}`);
+
+    return result;
   },
 
   async getActiveBookingsForVenue(venueId: string): Promise<any[]> {

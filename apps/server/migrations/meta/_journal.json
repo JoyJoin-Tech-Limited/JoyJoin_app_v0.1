@@ -250,8 +250,29 @@
     {
       "idx": 35,
       "version": "7",
-      "when": 1776958939444,
+      "when": 1778112000000,
+      "tag": "20260507000000_add_venue_location_and_admin_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1778141820000,
+      "tag": "20260507081700_add_lie_truths_ai_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1778141820001,
       "tag": "add_attendance_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1778336575701,
+      "tag": "0039_pink_leech",
       "breakpoints": true
     }
   ]

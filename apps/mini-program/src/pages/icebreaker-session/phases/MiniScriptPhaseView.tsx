@@ -3,14 +3,23 @@ import Taro from '@tarojs/taro'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import { type SocialSessionState } from '@shared/socialIcebreaker'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { haptics } from '../../../lib/utils/haptics'
+import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal'
+import { TapReaction } from '../../../components/gesture'
 
 const PHASE_EMOJI_MAP: Record<string, string> = {
   mini_script: '',
 }
 
 const STEP_LABELS = ['角色', '幕1', '幕2', '投票', '真相']
+
+const REACTIONS = [
+  { emoji: '😂', label: '好笑' },
+  { emoji: '🔥', label: '绝了' },
+  { emoji: '👏', label: '鼓掌' },
+  { emoji: '🌹', label: '玫瑰' },
+]
 
 function PhaseHeaderIcon({ phase, size = 40 }: { phase: string; size?: number }) {
   const emoji = PHASE_EMOJI_MAP[phase] ?? ''
@@ -110,10 +119,20 @@ export function MiniScriptPhaseView({
   const [roleCardCollapsed, setRoleCardCollapsed] = useState(false)
   const [showDeductionHints, setShowDeductionHints] = useState(false)
   const [lastRevealedClueIds, setLastRevealedClueIds] = useState<string[]>([])
+  const clueTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const actTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const prevCurrentActRef = useRef(currentAct)
   const wasVotingRef = useRef(isVoting)
 
-  // Detect act changes to flash new clue badge
+  // V2 state
+  const [roleFlipped, setRoleFlipped] = useState(false)
+  const [showActReveal, setShowActReveal] = useState(false)
+  const [actRevealTitle, setActRevealTitle] = useState('')
+  const [burstTrigger, setBurstTrigger] = useState(false)
+  const [reactionCounts, setReactionCounts] = useState<number[]>([0, 0, 0, 0])
+  const [selectedReaction, setSelectedReaction] = useState<number | undefined>()
+
+  // Detect act changes to flash new clue badge + IdentityReveal overlay
   useEffect(() => {
     if (currentAct > prevCurrentActRef.current && framework) {
       const actClues = session.miniScriptRevealedClues ?? []
@@ -121,12 +140,28 @@ export function MiniScriptPhaseView({
       const newlyRevealed = newIds.filter((id) => !lastRevealedClueIds.includes(id))
       if (newlyRevealed.length > 0) {
         setLastRevealedClueIds(newIds)
-        // Clear the "new" flash after 3 seconds
-        setTimeout(() => setLastRevealedClueIds([]), 3000)
+        if (clueTimeoutRef.current) clearTimeout(clueTimeoutRef.current)
+        clueTimeoutRef.current = setTimeout(() => setLastRevealedClueIds([]), 3000)
+      }
+
+      // IdentityReveal act transition
+      const act = framework.act_flow[currentAct - 1]
+      if (act && currentAct > 0) {
+        setActRevealTitle(`第 ${act.actNumber} 幕 · ${act.title}`)
+        setShowActReveal(true)
+        if (actTimeoutRef.current) clearTimeout(actTimeoutRef.current)
+        actTimeoutRef.current = setTimeout(() => setShowActReveal(false), 2500)
       }
     }
     prevCurrentActRef.current = currentAct
   }, [currentAct, framework, session.miniScriptRevealedClues, lastRevealedClueIds])
+
+  // Trigger ParticleBurst on solution reveal
+  useEffect(() => {
+    if (solutionRevealed) {
+      setBurstTrigger(true)
+    }
+  }, [solutionRevealed])
 
   // Reset dirty flag when vote submission completes successfully
   useEffect(() => {
@@ -135,6 +170,14 @@ export function MiniScriptPhaseView({
     }
     wasVotingRef.current = isVoting
   }, [isVoting, myVote])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (clueTimeoutRef.current) clearTimeout(clueTimeoutRef.current)
+      if (actTimeoutRef.current) clearTimeout(actTimeoutRef.current)
+    }
+  }, [])
 
   // Sync from server ONLY when not dirty
   useEffect(() => {
@@ -179,6 +222,15 @@ export function MiniScriptPhaseView({
     haptics('light')
     onReady?.(!isReady)
   }
+
+  const handleReaction = useCallback((index: number) => {
+    setSelectedReaction(index)
+    setReactionCounts((prev) => {
+      const next = [...prev]
+      next[index] = (next[index] || 0) + 1
+      return next
+    })
+  }, [])
 
   // Determine current step for stepper
   const currentStep = solutionRevealed
@@ -243,30 +295,45 @@ export function MiniScriptPhaseView({
     )
   }
 
-  // State 2: Role assigned — show my role card
+  // State 2: Role assigned — show my role card with CardFlip
   if (currentAct === 0) {
     return (
       <View className='icebreaker__challenge'>
         {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
-        <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
-          <View className='icebreaker__challenge-emoji'><PhaseHeaderIcon phase="mini_script" size={80} /></View>
-          <Text className='icebreaker__challenge-title'>你的角色</Text>
-          {myRole ? (
-            <View className='icebreaker__ms-role icebreaker__ms-role--animate' style={{ marginTop: '16rpx', animationDelay: '0ms' }}>
-              <Text className='icebreaker__ms-role-title' style={{ animationDelay: '80ms' }}>{myRole.roleLabel}</Text>
-              <Text className='icebreaker__ms-role-line icebreaker__ms-role--animate' style={{ animationDelay: '160ms' }}>钩子：{myRole.sinHook}</Text>
-              <Text className='icebreaker__ms-role-line icebreaker__ms-role--animate' style={{ animationDelay: '240ms' }}>表面：{myRole.alibi}</Text>
-              {myRole.secretAgenda ? (
-                <View className='icebreaker__ms-role--animate' style={{ marginTop: '12rpx', paddingTop: '12rpx', borderTop: '1px dashed rgba(0,0,0,0.1)', animationDelay: '320ms' }}>
-                  <Text className='icebreaker__ms-secret-label'>你的秘密</Text>
-                  <Text className='icebreaker__ms-role-line icebreaker__ms-secret-text'>{myRole.secretAgenda}</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : (
-            <Text className='icebreaker__challenge-desc'>你尚未被分配角色。</Text>
-          )}
-        </Card>
+
+        {/* CardFlip role reveal */}
+        <View className='icebreaker__ms-role-flip'>
+          <CardFlip
+            flipped={roleFlipped}
+            onFlip={() => setRoleFlipped((f) => !f)}
+            front={
+              <View className='icebreaker__ms-role-front'>
+                <Text className='icebreaker__ms-role-front-emoji'>🎭</Text>
+                <Text className='icebreaker__ms-role-front-label'>你的角色是？</Text>
+                <Text className='icebreaker__ms-role-front-hint'>轻触卡片揭晓</Text>
+              </View>
+            }
+            back={
+              <View className='icebreaker__ms-role-back'>
+                {myRole ? (
+                  <>
+                    <Text className='icebreaker__ms-role-back-title'>{myRole.roleLabel}</Text>
+                    <Text className='icebreaker__ms-role-back-line'>钩子：{myRole.sinHook}</Text>
+                    <Text className='icebreaker__ms-role-back-line'>表面：{myRole.alibi}</Text>
+                    {myRole.secretAgenda ? (
+                      <Text className='icebreaker__ms-role-back-line' style={{ color: '#f87171', marginTop: '8rpx' }}>
+                        秘密：{myRole.secretAgenda}
+                      </Text>
+                    ) : null}
+                  </>
+                ) : (
+                  <Text className='icebreaker__ms-role-back-line'>你尚未被分配角色。</Text>
+                )}
+              </View>
+            }
+          />
+        </View>
+
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
           <Text className='icebreaker__challenge-title'>故事 premise</Text>
           <Text className='icebreaker__challenge-desc'>{framework.premise}</Text>
@@ -316,6 +383,25 @@ export function MiniScriptPhaseView({
 
   return (
     <View className='icebreaker__challenge'>
+      {/* IdentityReveal act transition overlay */}
+      {showActReveal && (
+        <View className='icebreaker__ms-act-reveal'>
+          <IdentityReveal
+            identity={actRevealTitle}
+            label='即将进入'
+            revealed={showActReveal}
+            spotlightColor='#8B5CF6'
+          />
+        </View>
+      )}
+
+      {/* ParticleBurst on solution reveal */}
+      {solutionRevealed && (
+        <View style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, pointerEvents: 'none' }}>
+          <ParticleBurst trigger={burstTrigger} type='confetti' count={40} />
+        </View>
+      )}
+
       {currentStep >= 0 && <ProgressStepper currentStep={currentStep} />}
 
       <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>
@@ -406,6 +492,15 @@ export function MiniScriptPhaseView({
           )}
         </Card>
       )}
+
+      {/* TapReaction during acts */}
+      <View className='icebreaker__ms-reaction-row'>
+        <TapReaction
+          reactions={REACTIONS.map((r, i) => ({ ...r, count: reactionCounts[i] }))}
+          onReact={handleReaction}
+          selectedIndex={selectedReaction}
+        />
+      </View>
 
       {allActsRevealed && !solutionRevealed && (
         <Card className='icebreaker__challenge-card icebreaker__challenge-card--mini-script icebreaker__challenge-card--has-bg'>

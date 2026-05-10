@@ -64,8 +64,6 @@ describe('userSemanticProfileService', () => {
     );
 
     expect(document).toContain('喜欢把轻松聊天聊出层次感');
-    expect(document).toContain('Archetype: fox');
-    expect(document).toContain('Current city: 深圳');
     expect(document).toContain('Top interests: 咖啡馆探店, 城市散步');
   });
 

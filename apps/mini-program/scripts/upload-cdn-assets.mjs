@@ -118,6 +118,9 @@ async function uploadRsync(files) {
   const sshArgs = ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null']
   if (key) sshArgs.push('-i', key)
 
+  // Quote args with spaces for shell command strings used by rsync -e
+  const sshArgsQuoted = sshArgs.map((a) => (a.includes(' ') ? `'${a}'` : a))
+
   // Ensure remote directory exists
   const mkdirCmd = ['ssh', ...sshArgs, `${user}@${host}`, `mkdir -p ${remotePath}`]
   if (DRY_RUN) {
@@ -138,7 +141,7 @@ async function uploadRsync(files) {
     const mkdirDirCmd = ['ssh', ...sshArgs, `${user}@${host}`, `mkdir -p ${destDir}`]
     const rsyncCmd = [
       'rsync', '-avz', '--checksum',
-      '-e', `ssh ${sshArgs.join(' ')}`,
+      '-e', `ssh ${sshArgsQuoted.join(' ')}`,
       src, dest,
     ]
 
@@ -149,7 +152,7 @@ async function uploadRsync(files) {
     }
 
     await runCommand('ssh', [...sshArgs, `${user}@${host}`, `mkdir -p ${destDir}`])
-    await runCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgs.join(' ')}`, src, dest])
+    await runCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
   }
 }
 

@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-04-21
+**Last Updated:** 2026-05-07
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -40,7 +40,7 @@
 > ✅ **REMOVED — IcebreakerCardsSheet:**
 > Pre-event topic preview sheet (GET /api/icebreakers/curated/:eventId) has been deleted.
 > The pre-event 小悦 button in BlindBoxEventDetailPage now shows a static teaser card.
-> The live WarmupPhase (Social Icebreaker) is the sole topic browsing experience.
+> The live Topic Card phase (Social Icebreaker) is the sole topic browsing experience.
 ```
 
 ---
@@ -54,7 +54,7 @@
 **Context:** Three separate icebreaker surfaces existed:
 - **Surface A** (`IcebreakerCardsSheet`): Pre-event bottom sheet, passive carousel, `CuratedTopic[]` from `/api/icebreakers/curated/:eventId`, based on all `matchedAttendees`
 - **Surface B** (`IcebreakerToolkit`): Full-screen session tool, `TopicCard[]` + games, legacy
-- **Surface C** (`SocialIcebreakerOrchestrator` / `WarmupPhase`): Live session, mood-filtered `SocialTopic[]`, host-driven, checked-in users only — **the primary flow**
+- **Surface C** (`SocialIcebreakerOrchestrator` / `WarmupPhase`): Live session, mood-filtered topic cards (`SocialTopic[]`), host-driven, checked-in users only — **the primary flow**
 
 **Problem:** Surface A duplicated Surface C's purpose (show 小悦-curated topics to the group) but was worse in every dimension: static, single-player, disconnected from the live session, based on pre-checkin attendee list, and using a different data model (`CuratedTopic` vs `SocialTopic`).
 
@@ -86,8 +86,11 @@ type SocialIcebreakerPhase =
   | 'warmup'           // 🌅 Hot Topics — mood-filtered conversation starters
   | 'micro_challenge'  // ⚡ Group Challenges — timed activities
   | 'lie_detective'    // 🕵️ Two Truths One Lie — AI-generated statements
+  | 'undercover_word'  // 🕵️‍♂️ Undercover Word — hidden-role word deduction
   | 'auction'          // 🎪 Auction (feature-flagged)
   | 'personality_dice' // 🎲 Personality Dice
+  | 'group_mirror'     // 🪞 Group Mirror — peer reflection voting
+  | 'quip_battle'      // ⚔️ Quip Battle — witty prompt responses
   | 'mini_script'       // 🎭 迷你剧本杀 (feature-flagged)
   | 'recap';           // ✨ Session summary
 
@@ -102,13 +105,16 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 
 | Phase | Emoji | CN Name | Timeout | Min Players | Key Mechanic |
 |-------|-------|---------|---------|-------------|--------------|
-| `warmup` | 🌅 | 热身 | 20 min | 2 | Mood-filtered topics, host navigates, all see same topic |
+| `warmup` | 🌅 | 话题卡 | 20 min | 2 | Mood-filtered topics, host navigates, all see same topic. Archetype mix badge, mood selection animations, CardFlip topic entrance, ParticleBurst all-ready celebration. |
 | `micro_challenge` | ⚡ | 挑战 | 15 min | 2 | Timed group task, each player taps "done" |
 | `lie_detective` | 🕵️ | 侦探 | 25 min | 3 | Per-player AI statements, group votes on which is the lie |
-| `auction` | 🎪 | 拍卖 | 30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks) |
+| `undercover_word` | 🕵️‍♂️ | 谁是卧底 | 15 min | 3 | Hidden-role word deduction; AI generates word pairs, players describe and vote |
+| `auction` | 🎪 | 拍卖 | 30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks). Server-synced timer, bid history, outbid notifications, archetype-aware lot generation. |
 | `personality_dice` | 🎲 | 骰子 | 15 min | 2 | AI-generated archetype dares |
+| `group_mirror` | 🪞 | 群像镜像 | 15 min | 2 | Peer reflection voting; players nominate who best fits each question |
+| `quip_battle` | ⚔️ | 机智对决 | 15 min | 2 | Witty prompt responses; SwipeCard voting, best-of reel |
 | `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | **Full Social Icebreaker phase.** Host-picked style/genre, multi-act collaborative mystery with role assignments, clue reveals, and group voting. Feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`). Not a side game — executes within the phase-ordered session flow. |
-| `recap` | ✨ | 回顾 | 5 min | 1 | AI-generated session summary |
+| `recap` | ✨ | 回顾 | 5 min | 1 | AI-generated session summary with V2 stats (lieDetective aiWinRate, personalityDice highlights, undercoverWord result, etc.). IdentityReveal hero headline, CardFlip share card, staggered medal grid, ParticleBurst celebration. |
 
 ### Session Lifecycle
 
@@ -146,6 +152,11 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   Host → POST .../lie-detective/next-player to move to the next player after reveal
         │
         ▼ Host calls POST .../advance
+[UNDERCOVER_WORD] (when `SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD=true`)
+  Host → POST .../undercover-word/generate (AI word pair, role assignment)
+  Players → POST .../undercover-word/describe (word description) → POST .../undercover-word/vote
+        │
+        ▼ Host calls POST .../advance
 [AUCTION] (only when `SOCIAL_ICEBREAKER_ENABLE_AUCTION=true`, inserted before `personality_dice`)
   Host → POST .../auction/generate-lots (AI or curated `auctionLots[]`, initializes `auctionBalances`)
   Players → POST .../auction/bid { amount } (virtual coins; outbid refunds previous high)
@@ -157,12 +168,25 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   Players → POST .../personality-dice/complete
         │
         ▼ Host calls POST .../advance
+[GROUP_MIRROR] (when `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR=true`)
+  Host → POST .../group-mirror/generate
+  Players → POST .../group-mirror/submit (nominate + reason)
+  Host → POST .../group-mirror/reveal
+        │
+        ▼ Host calls POST .../advance
+[QUIP_BATTLE] (when `SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE=true`)
+  Host → POST .../quip-battle/generate (AI prompts)
+  Players → POST .../quip-battle/submit (answers) → POST .../quip-battle/vote (SwipeCard upvotes)
+  Host → POST .../quip-battle/results (reveals best-of reel per prompt)
+        │
+        ▼ Host calls POST .../advance
 [MINI_SCRIPT] (when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` or legacy `_BETA` true)
   Host → POST /api/miniscript/generate (see miniscript routes)
+  Players → CardFlip role reveal, TapReaction clue voting, IdentityReveal act transitions
         │
         ▼ Host calls POST .../advance
 [RECAP]
-  GET .../recap → AI-generated { headline, moments[], closingLine } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present)
+  GET .../recap → AI-generated { headline, moments[], closingLine, medals[], lieDetectiveV2Stats?, personalityDiceHighlights?, undercoverWordResult?, microChallengeHighlights?, groupMirrorHighlights? } (`social-recap-summary-v2`; includes lie highlights, dice, MiniScript premise excerpt, auction lines when present). V2 recap snapshot is built once during phase advance and persisted in `recapSnapshot`.
 ```
 
 ### Session State (`SocialSessionState`)
@@ -184,7 +208,7 @@ interface SocialSessionState {
   eventType?: string;
   enabledPhases?: SocialIcebreakerPhase[];
 
-  // Warmup phase
+  // Topic card phase
   warmupTopics?: SocialTopic[];
   currentTopicIndex?: number;
   warmupReadyUserIds?: string[];
@@ -206,13 +230,15 @@ interface SocialSessionState {
   pulseChecks?: PulseCheckResult[]; // reset on each phase advance
 
   // Auction (virtual currency; see `SOCIAL_ICEBREAKER_ENABLE_AUCTION`)
-  // AuctionLot = { id: string; title: string; teaser?: string } (see packages/shared/src/socialIcebreaker.ts)
-  auctionLots?: Array<{ id: string; title: string; teaser?: string }>;
+  // AuctionLot = { id: string; title: string; teaser?: string; emoji?: string } (see packages/shared/src/socialIcebreaker.ts)
+  auctionLots?: Array<{ id: string; title: string; teaser?: string; emoji?: string }>;
   auctionBalances?: Record<string, number>;
   auctionCurrentLotIndex?: number;
   auctionHighBid?: { userId: string; amount: number } | null;
   auctionAllLotsClosed?: boolean;
   auctionRecapLines?: string[];
+  auctionLotStartedAt?: number;      // ms timestamp — server-synced lot timer
+  auctionBidHistory?: Array<{ userId: string; displayName: string; amount: number; at: number }>;
 
   // Recap
   recapData?: {
@@ -478,6 +504,7 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 | `generateWarmupTopics` | `{ mood, eventType, participantCount, avoidTopics? }` | 5 `SocialTopic[]` | 25 curated topics (mood-filtered) |
 | `generateMicroChallenges` | `{ eventType, participantCount, completedChallengeIds? }` | 3 `MicroChallenge[]` | 8 curated challenges |
 | `generateLieDetectiveStatements` | `{ userId, displayName, archetype?, interests? }` | 3 statements (2T+1F) | 3 curated fallback sets |
+| `generateAuctionLots` | `{ eventType, participantCount, sessionContext? { mixText } }` | `AuctionLot[]` (with optional `emoji`) | Curated fallback lots; archetype mix injected when `sessionContext` provided |
 | `generateXiaoYueComment` | `{ phase, event, context? }` | commentary string | hardcoded phase/event map |
 | `generateRecapSummary` | `{ participants, topicsDiscussed, challengesCompleted, durationMinutes }` | `{ headline, moments[], closingLine }` | template-based default |
 
@@ -493,7 +520,8 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 |------|---------|
 | `shared/socialIcebreaker.ts` | Core types: phases, state, configs (`PHASE_CONFIG`, `PHASE_ORDER`, `MVP_PHASES`) |
 | `packages/shared/src/socialIcebreaker.ts` | Package alias of above |
-| `apps/server/src/routes/socialIcebreaker.ts` | All Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store |
+| `apps/server/src/routes/socialIcebreaker.ts` | Core Social Icebreaker API routes + client-state assembly over the PostgreSQL-backed session store |
+| `apps/server/src/routes/socialIcebreakerExtended.ts` | Extended phase routes: auction (generate-lots, bid, close-lot) with server-synced timer, bid history, and archetype context injection |
 | `apps/server/src/socialIcebreakerAIService.ts` | AI generation functions (DeepSeek) with curated fallbacks |
 | `apps/user-client/src/components/social-icebreaker/socialIcebreakerPhaseRegistry.tsx` | Phase id → shipped UI template registry (`renderSocialIcebreakerPhasePanel`) |
 | `apps/user-client/src/hooks/useSocialIcebreaker.ts` | React hook: session management, polling, all actions |

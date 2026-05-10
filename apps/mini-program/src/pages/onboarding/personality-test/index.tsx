@@ -3,7 +3,7 @@ import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Button from '../../../components/ui/Button'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
@@ -24,6 +24,7 @@ import {
   runMiniProgramRouteTransition,
 } from '../../../lib/onboarding/onboardingNavigation'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { logInfo, logError } from '../../../lib/utils/logger'
 import {
   getArchetypeVisual,
@@ -32,12 +33,11 @@ import {
   PERSONALITY_TEST_QUESTION_EXPRESSION,
 } from './visuals'
 import type { XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
-import SegmentedProgress from '../../../components/ui/SegmentedProgress'
-import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import { haptics } from '../../../lib/utils/haptics'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import QuestionTransition from './QuestionTransition'
+import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import './index.scss'
 
 type Phase = 'intro' | 'testing' | 'completing'
@@ -96,66 +96,64 @@ interface AssessmentAnswerResponse {
   currentMatches?: AssessmentMatch[]
 }
 
-const INTRO_ARCHETYPE_TEASERS = [
-  {
-    archetype: 'corgi',
-    vibeLine: '一进场，就把气氛带热。',
-  },
-  {
-    archetype: 'fox',
-    vibeLine: '普通话题，也能聊出火花。',
-  },
-  {
-    archetype: 'koala',
-    vibeLine: '会让人慢慢放松下来。',
-  },
-] as const
+const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
+  { archetype: 'corgi', vibeLine: '一进场，就把气氛带热。' },
+  { archetype: 'fox', vibeLine: '普通话题，也能聊出火花。' },
+  { archetype: 'koala', vibeLine: '会让人慢慢放松下来。' },
+]
 
 const INTRO_META_PILLS = ['约 3-5 分钟', '自适应题目', '可先完成再登录'] as const
 
 const INTRO_TRUST_POINTS = [
   {
+    icon: '⏱️',
     title: '约 3-5 分钟完成',
     description: '轻量做完，不会把你困在一串冗长题目里。',
   },
   {
+    icon: '🎯',
     title: '题目会跟着你变化',
     description: '系统会根据你的回答逐渐收敛出更像你的氛围原型。',
   },
   {
+    icon: '💾',
     title: '未登录也能先完成',
     description: '结果会先保存在这台设备里，准备好时再继续登录。',
   },
 ] as const
 
+const PRELOAD_EXPRESSIONS: XiaoyueExpressionId[] = [
+  PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.loading,
+]
+
 function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestionType {
   if (!question?.questionType) {
     return 'choice'
   }
-
   return question.questionType
 }
 
-function resolveQuestionExpression(
+/** Resolve the sprite animation state for the current question context. */
+function resolveSpriteState(
   questionType: AssessmentQuestionType,
   isSubmitting: boolean,
-): XiaoyueExpressionId {
+): XiaoyueSpriteState {
   if (isSubmitting) {
-    return PERSONALITY_TEST_QUESTION_EXPRESSION.loading
+    return 'thinking'
   }
   switch (questionType) {
     case 'slider':
-      return PERSONALITY_TEST_QUESTION_EXPRESSION.slider
+      return 'listening'
     case 'emoji_tap':
-      return PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap
+      return 'curious'
     case 'choice':
     default:
-      return PERSONALITY_TEST_QUESTION_EXPRESSION.choice
+      return 'curious'
   }
 }
-
-/** Feature flag: enable the Duolingo-style mascot questioner layout. */
-const ENABLE_MASCOT_QUESTIONER = true
 
 export default function PersonalityTestPage() {
   const auth = useAuth()
@@ -171,16 +169,25 @@ export default function PersonalityTestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+  const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
+  const [spriteLocked, setSpriteLocked] = useState(false)
+  const [introSpriteState, setIntroSpriteState] = useState<XiaoyueSpriteState>('intro')
+  const [milestoneFlash, setMilestoneFlash] = useState(false)
+
+  // Guard against stale async closures hijacking navigation after session change
+  const activeSessionRef = useRef<string>('')
+  // Defensive timeout for sprite unlock if WeChat drops animationend
+  const spriteUnlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isAuthenticated = auth.isAuthenticated
   const hasStoredIncompleteSession = useMemo(() => {
     if (isAuthenticated) {
       return false
     }
-
     const snapshot = readAnonymousAssessmentSession()
     return Boolean(snapshot?.sessionId && !isAnonymousAssessmentSessionCompleted(snapshot))
   }, [isAuthenticated, phase])
+
   const analytics = useOnboardingAnalytics('personality-test', {
     enabled:
       !auth.isLoading && (!auth.isAuthenticated || auth.nextStep === 'personality-test'),
@@ -191,12 +198,36 @@ export default function PersonalityTestPage() {
   })
 
   const questionType = getQuestionType(question)
+  const questionStub = useMemo(
+    () => ({ scenarioText: question?.scenarioText, questionText: question?.questionText ?? '' }),
+    [question?.scenarioText, question?.questionText],
+  )
+  const baseSpriteState = resolveSpriteState(questionType, isSubmitting)
+
+  // Sync base sprite state when question changes (unless locked for one-shot)
+  useEffect(() => {
+    if (!spriteLocked) {
+      setSpriteState(baseSpriteState)
+    }
+  }, [baseSpriteState, spriteLocked])
+
+  // Brief accent flash at Q4/Q8 milestones
+  useEffect(() => {
+    const shouldFlash = progress && (progress.answered === 4 || progress.answered === 8)
+    setMilestoneFlash(shouldFlash ?? false)
+    if (shouldFlash) {
+      const t = setTimeout(() => setMilestoneFlash(false), 700)
+      return () => clearTimeout(t)
+    }
+  }, [progress?.answered])
+
   const estimatedTotal = progress
     ? progress.answered + Math.max(progress.estimatedRemaining, 1)
     : 1
   const progressPercent = progress
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
+
   const introTeasers = useMemo(
     () =>
       INTRO_ARCHETYPE_TEASERS.map((item) => ({
@@ -205,6 +236,7 @@ export default function PersonalityTestPage() {
       })),
     [],
   )
+
   const introCoachLine = hasStoredIncompleteSession
     ? '上次的进度我还替你留着。继续往下答几分钟，这份氛围画像就能顺着刚才的位置接上。'
     : '这不是标准化测评，更像一次轻量的社交画像。按直觉选择就好，我会帮你把你的聚会气场整理清楚。'
@@ -219,6 +251,7 @@ export default function PersonalityTestPage() {
     : hasStoredIncompleteSession
       ? '继续测试'
       : '开始测试'
+
   const getPageClassName = (...extraClasses: string[]) =>
     ['personality-test', ...extraClasses, isPageExiting ? 'personality-test--exiting' : '']
       .filter(Boolean)
@@ -288,6 +321,7 @@ export default function PersonalityTestPage() {
         data: shouldResumeAnonymous ? { sessionId: snapshot?.sessionId } : {},
       })
 
+      activeSessionRef.current = result.sessionId
       setSessionId(result.sessionId)
       setQuestion(result.nextQuestion)
       setProgress(result.progress)
@@ -308,7 +342,7 @@ export default function PersonalityTestPage() {
 
       if (result.isComplete || !result.nextQuestion) {
         setPhase('completing')
-        const completedAnswerCount = result.progress?.answered ?? progress?.answered ?? 0
+        const completedAnswerCount = result.progress?.answered ?? 0
 
         if (isAuthenticated) {
           clearAnonymousAssessmentStorage()
@@ -351,24 +385,45 @@ export default function PersonalityTestPage() {
     completeAnonymousAssessment,
     invalidateAuth,
     isAuthenticated,
-    progress?.answered,
     saveCheckpoint,
   ])
 
   const handleAnswer = useCallback(async (option: AssessmentOption) => {
     if (!sessionId || !question || isSubmitting) return
 
+    // Stale-session guard: remember which session this answer belongs to
+    const thisSessionId = sessionId
+    activeSessionRef.current = thisSessionId
+
+    // Choose reaction based on milestone proximity
+    const isMilestone = progress && (progress.answered === 3 || progress.answered === 7)
+    const reactionState: XiaoyueSpriteState = isMilestone ? 'celebrate' : 'nod'
+
+    setSpriteLocked(true)
+    setSpriteState(reactionState)
+
+    // Defensive unlock: if WeChat never fires animationend, unlock after max duration
+    if (spriteUnlockTimeoutRef.current) {
+      clearTimeout(spriteUnlockTimeoutRef.current)
+    }
+    spriteUnlockTimeoutRef.current = setTimeout(() => {
+      setSpriteLocked(false)
+    }, 1500)
+
     setIsSubmitting(true)
     setError('')
     try {
       const result = await apiRequest<AssessmentAnswerResponse>({
-        path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/answer`,
+        path: `/api/assessment/v4/${encodeURIComponent(thisSessionId)}/answer`,
         method: 'POST',
         data: {
           questionId: question.id,
           selectedOption: option.value,
         },
       })
+
+      // Abandon stale async work if session has changed
+      if (activeSessionRef.current !== thisSessionId) return
 
       if (!isAuthenticated) {
         upsertAnonymousAssessmentAnswer({
@@ -384,7 +439,7 @@ export default function PersonalityTestPage() {
         const completedAnswerCount = result.progress?.answered ?? ((progress?.answered ?? 0) + 1)
         logInfo('[PersonalityTest] Assessment complete', {
           isAuthenticated,
-          sessionId,
+          sessionId: thisSessionId,
         })
 
         if (isAuthenticated) {
@@ -409,7 +464,7 @@ export default function PersonalityTestPage() {
           answerCount: completedAnswerCount,
           destination: MINI_PROGRAM_ROUTES.personalityTestResults,
         })
-        await completeAnonymousAssessment(sessionId, result.currentMatches ?? currentMatches)
+        await completeAnonymousAssessment(thisSessionId, result.currentMatches ?? currentMatches)
         return
       }
 
@@ -423,6 +478,7 @@ export default function PersonalityTestPage() {
       setError(message)
       analytics.errorOccurred('answer_failed', message)
       logError('[PersonalityTest] Failed to submit answer', { message })
+      setSpriteLocked(false)
     } finally {
       setIsSubmitting(false)
     }
@@ -448,6 +504,22 @@ export default function PersonalityTestPage() {
     analytics.validationFailed('slider', 'no-option-mapped')
   }, [question, sliderValue, handleAnswer, analytics])
 
+  /** Release sprite lock after one-shot animation completes */
+  const handleSpriteAnimationComplete = useCallback(() => {
+    if (spriteUnlockTimeoutRef.current) {
+      clearTimeout(spriteUnlockTimeoutRef.current)
+      spriteUnlockTimeoutRef.current = null
+    }
+    setSpriteLocked(false)
+  }, [])
+
+  const preloadExpressions: XiaoyueExpressionId[] = [
+    PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
+    PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
+    PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap,
+    PERSONALITY_TEST_QUESTION_EXPRESSION.loading,
+  ]
+
   const showLoadingShell = auth.isLoading && (auth.isAuthenticated || hasStoredIncompleteSession)
   if (showLoadingShell) {
     return (
@@ -465,7 +537,7 @@ export default function PersonalityTestPage() {
   if (phase === 'intro') {
     return (
       <View className={getPageClassName('personality-test--intro')}>
-        <ScrollView className='personality-test__intro-scroll' scrollY enhanced showScrollbar={false}>
+        <ScrollView className='personality-test__intro-scroll' scrollY showScrollbar={false}>
           <View className='personality-test__intro-shell'>
             <View className='personality-test__stage personality-test__stage--1'>
               <Text className='personality-test__eyebrow'>
@@ -482,10 +554,11 @@ export default function PersonalityTestPage() {
             <View className='personality-test__intro-hero personality-test__stage personality-test__stage--2'>
               <View className='personality-test__intro-hero-visual'>
                 <View className='personality-test__intro-hero-halo' />
-                <Image
+                <XiaoyueSpriteAnimator
+                  state={introSpriteState}
+                  size='320rpx'
                   className='personality-test__mascot personality-test__mascot--animated'
-                  src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp')}
-                  mode='aspectFit'
+                  onComplete={useCallback(() => setIntroSpriteState('idle'), [])}
                 />
               </View>
 
@@ -506,10 +579,10 @@ export default function PersonalityTestPage() {
             <View className='personality-test__intro-trust personality-test__stage personality-test__stage--3'>
               <Text className='personality-test__intro-trust-title'>做之前，你只需要知道这三件事</Text>
               <View className='personality-test__intro-trust-list'>
-                {INTRO_TRUST_POINTS.map((item, index) => (
+                {INTRO_TRUST_POINTS.map((item) => (
                   <View key={item.title} className='personality-test__intro-trust-item'>
-                    <View className='personality-test__intro-trust-index'>
-                      <Text className='personality-test__intro-trust-index-text'>{`0${index + 1}`}</Text>
+                    <View className='personality-test__intro-trust-icon'>
+                      <Text>{item.icon}</Text>
                     </View>
                     <View className='personality-test__intro-trust-copy'>
                       <Text className='personality-test__intro-trust-item-title'>{item.title}</Text>
@@ -562,7 +635,9 @@ export default function PersonalityTestPage() {
                           />
                         </View>
                       </View>
-                      <Text className='personality-test__intro-tease-name'>{item.archetype}</Text>
+                      <Text className='personality-test__intro-tease-name'>
+                        {ARCHETYPE_BY_ID[item.archetype]?.nameCn ?? item.archetype}
+                      </Text>
                       <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
                     </View>
                   ))}
@@ -606,178 +681,113 @@ export default function PersonalityTestPage() {
     )
   }
 
-  const preloadExpressions: XiaoyueExpressionId[] = [
-    PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
-    PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
-    PERSONALITY_TEST_QUESTION_EXPRESSION.emoji_tap,
-    PERSONALITY_TEST_QUESTION_EXPRESSION.loading,
-  ]
-
   return (
     <>
       {/* Asset preloading for mascot expressions */}
       <View className='personality-test__preload-layer'>
-        {preloadExpressions.map((expr) => (
+        {PRELOAD_EXPRESSIONS.map((expr) => (
           <Image
             key={expr}
             className='personality-test__preload-image'
             src={getXiaoyueExpressionAsset(expr)}
             mode='aspectFit'
+            lazyLoad={false}
           />
         ))}
       </View>
 
-      {ENABLE_MASCOT_QUESTIONER ? (
-        /* ─── New: Duolingo-style mascot questioner layout ─── */
-        <View className={getPageClassName('personality-test--mascot-layout')}>
-          {/* Zone A: Progress */}
-          <View className='personality-test__progress-wrap'>
-            <SegmentedProgress
-              progress={progressPercent}
-              totalSegments={Math.max(progress?.softMaxQuestions ?? 12, 8)}
-              variant='duolingo'
-              smooth
-              milestone={progress?.answered && progress.answered >= 8 ? 66 : null}
-            />
-            <View className='personality-test__progress-label'>
-              <Text className='personality-test__progress-text'>
-                已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
-              </Text>
-            </View>
-          </View>
-
-          {/* Zone B: Host (mascot + question) */}
-          <View className='personality-test__host-zone'>
-            {question ? (
-              <QuestionTransition questionId={question.id}>
-                <MascotQuestionHeader
-                  question={{
-                    scenarioText: question.scenarioText,
-                    questionText: question.questionText,
-                  }}
-                  currentMatches={currentMatches}
-                  expressionId={resolveQuestionExpression(questionType, isSubmitting)}
-                  isLoading={isSubmitting}
-                />
-              </QuestionTransition>
-            ) : null}
-          </View>
-
-          {/* Milestone coaching: Q4 and Q8 */}
-          {progress && progress.answered === 4 && (
-            <View className='personality-test__milestone-coach personality-test__stage'>
-              <XiaoyueChatBubble
-                content='已经答完一半了！你的画像轮廓开始清晰起来了，继续按直觉选就好。'
-                expressionId='coachGuide'
-                horizontal
-                showGlow
-              />
-            </View>
-          )}
-          {progress && progress.answered === 8 && (
-            <View className='personality-test__milestone-coach personality-test__stage'>
-              <XiaoyueChatBubble
-                content='太棒了！进入精准收敛阶段，接下来的题目会更聚焦，帮你锁定最像你的原型。'
-                expressionId='coachGuide'
-                horizontal
-                showGlow
-              />
-            </View>
-          )}
-
-          {/* Zone C: Answers */}
-          <View className='personality-test__answer-zone'>
-            {question ? (
-              <QuestionTransition questionId={question.id}>
-                <PersonalityTestAnswerArea
-                  questionType={questionType}
-                  options={question.options}
-                  sliderConfig={question.sliderConfig}
-                  sliderValue={sliderValue}
-                  isSubmitting={isSubmitting}
-                  onAnswer={handleAnswer}
-                  onSliderChange={setSliderValue}
-                  onSliderSubmit={handleSliderSubmit}
-                />
-              </QuestionTransition>
-            ) : null}
-          </View>
-
-          {error ? <Text className='personality-test__error'>{error}</Text> : null}
+      {/* ─── Expert Commentator Layout ─── */}
+      <View className={getPageClassName('personality-test--mascot-layout')}>
+        {/* Zone A: Thin progress bar */}
+        <View className='personality-test__progress-track'>
+          <View
+            className='personality-test__progress-fill'
+            style={{ transform: `scaleX(${Math.min(progressPercent / 100, 1)})` }}
+          />
         </View>
-      ) : (
-        /* ─── Legacy: ScrollView-based layout (fallback) ─── */
-        <ScrollView className={getPageClassName()} scrollY enhanced showScrollbar={false}>
-          <View className='personality-test__progress-wrap'>
-            <SegmentedProgress
-              progress={progressPercent}
-              totalSegments={Math.max(progress?.softMaxQuestions ?? 12, 8)}
-              variant='duolingo'
-              smooth
-              milestone={progress?.answered && progress.answered >= 8 ? 66 : null}
-            />
-            <View className='personality-test__progress-label'>
-              <Text className='personality-test__progress-text'>
-                已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
-              </Text>
-            </View>
-          </View>
+        <View className='personality-test__progress-label'>
+          <Text className='personality-test__progress-text'>
+            已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
+          </Text>
+        </View>
 
-          {/* Milestone coaching: Q4 and Q8 */}
-          {progress && progress.answered === 4 && (
-            <View className='personality-test__milestone-coach personality-test__stage'>
-              <XiaoyueChatBubble
-                content='已经答完一半了！你的画像轮廓开始清晰起来了，继续按直觉选就好。'
-                pose='casual'
-                horizontal
-                showGlow
-              />
-            </View>
-          )}
-          {progress && progress.answered === 8 && (
-            <View className='personality-test__milestone-coach personality-test__stage'>
-              <XiaoyueChatBubble
-                content='太棒了！进入精准收敛阶段，接下来的题目会更聚焦，帮你锁定最像你的原型。'
-                pose='pointing'
-                horizontal
-                showGlow
-              />
-            </View>
-          )}
-
+        {/* Zone B: Commentary row (mascot + question glass card) */}
+        <View className='personality-test__host-zone'>
           {question ? (
-            <View className='personality-test__question'>
-              <View className='personality-test__question-card'>
-                <Text className='personality-test__scenario'>{question.scenarioText}</Text>
-                <Text className='personality-test__question-text'>{question.questionText}</Text>
-
-                {currentMatches.length > 0 ? (
-                  <View className='personality-test__matches'>
-                    {currentMatches.slice(0, 2).map((match) => (
-                      <Text key={match.archetype} className='personality-test__match-chip'>
-                        {match.archetype}
-                      </Text>
-                    ))}
-                  </View>
-                ) : null}
-
-                <PersonalityTestAnswerArea
-                  questionType={questionType}
-                  options={question.options}
-                  sliderConfig={question.sliderConfig}
-                  sliderValue={sliderValue}
-                  isSubmitting={isSubmitting}
-                  onAnswer={handleAnswer}
-                  onSliderChange={setSliderValue}
-                  onSliderSubmit={handleSliderSubmit}
+            <View className='personality-test__commentary-row'>
+              <View className='personality-test__commentary-mascot'>
+                <XiaoyueSpriteAnimator
+                  state={spriteState}
+                  size='140rpx'
+                  onComplete={handleSpriteAnimationComplete}
                 />
+              </View>
+              <View className='personality-test__commentary-card-wrap'>
+                <QuestionTransition questionId={question.id}>
+                  <MascotQuestionHeader
+                    question={questionStub}
+                    isLoading={isSubmitting}
+                  />
+                </QuestionTransition>
               </View>
             </View>
           ) : null}
+        </View>
 
-          {error ? <Text className='personality-test__error'>{error}</Text> : null}
-        </ScrollView>
-      )}
+        {/* Milestone coaching: Q4 and Q8 — inline near commentary */}
+        {progress && progress.answered === 4 && (
+          <View className={`personality-test__milestone-coach${milestoneFlash ? ' personality-test__milestone-coach--flash' : ''}`}>
+            <View className='personality-test__milestone-coach-inner'>
+              <View className='personality-test__milestone-coach-bubble'>
+                <Text className='personality-test__milestone-coach-text'>
+                  已经答完一半了！你的画像轮廓开始清晰起来了，继续按直觉选就好。
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+        {progress && progress.answered === 8 && (
+          <View className={`personality-test__milestone-coach${milestoneFlash ? ' personality-test__milestone-coach--flash' : ''}`}>
+            <View className='personality-test__milestone-coach-inner'>
+              <View className='personality-test__milestone-coach-bubble'>
+                <Text className='personality-test__milestone-coach-text'>
+                  太棒了！进入精准收敛阶段，接下来的题目会更聚焦，帮你锁定最像你的原型。
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Zone C: Answers */}
+        <View className='personality-test__answer-zone'>
+          {isSubmitting ? (
+            <View className='personality-test__skeleton'>
+              <View className='personality-test__skeleton-scenario' />
+              <View className='personality-test__skeleton-question' />
+              <View className='personality-test__skeleton-options'>
+                <View className='personality-test__skeleton-option' />
+                <View className='personality-test__skeleton-option' />
+                <View className='personality-test__skeleton-option' />
+              </View>
+            </View>
+          ) : question ? (
+            <QuestionTransition questionId={question.id}>
+              <PersonalityTestAnswerArea
+                questionType={questionType}
+                options={question.options}
+                sliderConfig={question.sliderConfig}
+                sliderValue={sliderValue}
+                isSubmitting={isSubmitting}
+                onAnswer={handleAnswer}
+                onSliderChange={setSliderValue}
+                onSliderSubmit={handleSliderSubmit}
+              />
+            </QuestionTransition>
+          ) : null}
+        </View>
+
+        {error ? <Text className='personality-test__error'>{error}</Text> : null}
+      </View>
     </>
   )
 }

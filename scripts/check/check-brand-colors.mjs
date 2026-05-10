@@ -94,6 +94,9 @@ const ALLOWED_HEX_COLORS = new Set([
   '#F59E0B',   // amber/warm accent
   '#06B6D4',   // cyan/cool accent
 
+  // Lie Detective V2 — AI statement emerald glow & badge
+  '#10B981',   // emerald-500 (AI-generated statement glow)
+
   // Landing page feature card colors
   '#B83A5E',   // rose feature
   '#1E7A4D',   // emerald feature

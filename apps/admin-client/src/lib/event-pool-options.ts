@@ -59,39 +59,11 @@ export const DINNER_OPTIONS = {
       description: "高端享受"
     }
   ],
-  cuisines: [
-    { value: "粤菜", label: "粤菜", emoji: "🥘" },
-    { value: "川菜", label: "川菜", emoji: "🌶️" },
-    { value: "日料", label: "日料", emoji: "🍱" },
-    { value: "西餐", label: "西餐", emoji: "🍝" },
-    { value: "火锅", label: "火锅", emoji: "🍲" },
-    { value: "烧烤", label: "烧烤", emoji: "🍖" }
-  ],
   dietary: [
     { value: "none", label: "无限制", emoji: "✅" },
     { value: "vegetarian", label: "素食", emoji: "🥗" },
     { value: "halal", label: "清真", emoji: "☪️" },
     { value: "seafood_allergy", label: "海鲜过敏", emoji: "🚫🦐" }
-  ],
-  tasteIntensity: [
-    { 
-      value: "mild", 
-      label: "清淡", 
-      emoji: "🌿",
-      description: "喜欢清淡口味"
-    },
-    { 
-      value: "medium", 
-      label: "适中", 
-      emoji: "😋",
-      description: "不挑食，都可以"
-    },
-    { 
-      value: "heavy", 
-      label: "重口味", 
-      emoji: "🔥",
-      description: "喜欢浓烈口味"
-    }
   ]
 };
 

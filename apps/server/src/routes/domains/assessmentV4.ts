@@ -4,6 +4,7 @@ import { requireAuth } from "../../phoneAuth";
 import { storage } from "../../storage";
 import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";
+import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
 
 function shuffleOptions(options: any[]): any[] {
   const shuffled = [...options];
@@ -375,6 +376,27 @@ export function registerAssessmentV4Routes(app: Express): void {
           
           // Mark personality test as complete
           await storage.markPersonalityTestComplete(session.userId);
+
+          // Warm xiaoyue analysis cache for discover page
+          const confidenceValues = Object.values(finalResult.confidences ?? {}) as number[];
+          const avgConfidence = confidenceValues.length > 0
+            ? confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length
+            : 0.85;
+          prefetchAnalysisIfReady(
+            {
+              archetype: primaryArchetype as string,
+              secondaryArchetype: secondaryArchetype as string | null | undefined,
+              traitScores: {
+                affinity: finalResult.traitScores?.A || 50,
+                openness: finalResult.traitScores?.O || 50,
+                conscientiousness: finalResult.traitScores?.C || 50,
+                emotionalStability: finalResult.traitScores?.E || 50,
+                extraversion: finalResult.traitScores?.X || 50,
+                positivity: finalResult.traitScores?.P || 50,
+              },
+            },
+            avgConfidence
+          );
           
           // Log algorithm version and match details for A/B testing
           const algorithmVersion = finalResult.algorithmVersion || 'v1.0';

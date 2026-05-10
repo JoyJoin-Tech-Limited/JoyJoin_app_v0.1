@@ -36,26 +36,11 @@ export const DRINKS_BUDGET_OPTIONS: FlowOption[] = [
   { value: '80-150', label: '80-150', description: '更偏精品调酒或氛围' },
 ]
 
-export const CUISINE_OPTIONS: FlowOption[] = [
-  { value: '粤菜', label: '粤菜' },
-  { value: '川菜', label: '川菜' },
-  { value: '日料', label: '日料' },
-  { value: '西餐', label: '西餐' },
-  { value: '火锅', label: '火锅' },
-  { value: '烧烤', label: '烧烤' },
-]
-
 export const DIETARY_OPTIONS: FlowOption[] = [
   { value: 'none', label: '无限制' },
   { value: 'vegetarian', label: '素食' },
   { value: 'halal', label: '清真' },
   { value: 'seafood_allergy', label: '海鲜过敏' },
-]
-
-export const TASTE_INTENSITY_OPTIONS: FlowOption[] = [
-  { value: 'mild', label: '清淡', description: '想先吃得舒服一点' },
-  { value: 'medium', label: '适中', description: '不挑，跟着局走' },
-  { value: 'heavy', label: '重口味', description: '想要更浓一点的味道' },
 ]
 
 export const BAR_THEME_OPTIONS: FlowOption[] = [
@@ -85,7 +70,7 @@ export function getBudgetOptions(eventType: PoolEventType): FlowOption[] {
 }
 
 export function getFlowStepLabels(eventType: PoolEventType): string[] {
-  return ['预算', '期待', eventType === '酒局' ? '氛围' : '口味']
+  return ['预算', '期待', eventType === '酒局' ? '氛围' : '细节']
 }
 
 export function buildPreJoinVibeBriefPath(input: {
@@ -122,11 +107,11 @@ export function buildFallbackBrief(input: {
 
   return {
     insight: '你更适合在轻松的饭局里，先吃得舒服，再慢慢把话题聊开。',
-    matchingPromise: '我们会把你的预算、语言和口味偏好一起放进匹配里，为你找更同频的饭搭子。',
+    matchingPromise: '我们会把你的预算、语言和饮食偏好一起放进匹配里，为你找更同频的饭搭子。',
     reasons: [
       `${areaReasonPrefix}更容易遇到顺路也顺频的人`,
       '预算和社交期待会一起参与匹配',
-      '口味细节会帮我们避开不合拍的组合',
+      '饮食细节会帮我们避开不合拍的组合',
     ],
   }
 }

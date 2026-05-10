@@ -9,6 +9,8 @@ import type { AuthUserResponse } from "@shared/api";
 import type { User } from "@shared/schema";
 import { buildMascotConfigFromEnv } from "@shared/mascotConfig";
 import type { TierDisplayFlags } from "@shared/socialIcebreakerTierManifest";
+import { peekCachedAnalysis } from "../../xiaoyueAnalysisService";
+import type { ArchetypeAnalysisInput } from "../../xiaoyueAnalysisService";
 
 // Module-level cached mascot config (env vars are immutable after startup)
 const mascotConfig = buildMascotConfigFromEnv({
@@ -337,6 +339,34 @@ export function registerAuthRoutes(app: Express): void {
         glowVariant: resolvedGlowVariant,
       };
 
+      let xiaoyueAnalysis: NonNullable<AuthUserResponse['xiaoyueAnalysis']> | null = null;
+      if (user.primaryArchetype) {
+        try {
+          const roleResult = await storage.getRoleResult(userId);
+          if (roleResult) {
+            const analysisInput: ArchetypeAnalysisInput = {
+              archetype: user.primaryArchetype,
+              secondaryArchetype: user.secondaryArchetype ?? null,
+              traitScores: {
+                affinity: roleResult.affinityScore ?? 50,
+                openness: roleResult.opennessScore ?? 50,
+                conscientiousness: roleResult.conscientiousnessScore ?? 50,
+                emotionalStability: roleResult.emotionalStabilityScore ?? 50,
+                extraversion: roleResult.extraversionScore ?? 50,
+                positivity: roleResult.positivityScore ?? 50,
+              },
+            };
+            const cached = peekCachedAnalysis(analysisInput);
+            if (cached) {
+              const { ...publicResult } = cached;
+              xiaoyueAnalysis = publicResult;
+            }
+          }
+        } catch (e) {
+          // Non-critical: if cache lookup fails, return null silently
+        }
+      }
+
       const authUserResponse: AuthUserResponse = {
         ...sanitizeAuthUser(user),
         nextStep,
@@ -347,6 +377,7 @@ export function registerAuthRoutes(app: Express): void {
         mascotDisplayName: mascotConfig.displayName,
         mascotBackstory: mascotConfig.backstory,
         tierDisplayFlags,
+        xiaoyueAnalysis,
       };
 
       res.json(authUserResponse);

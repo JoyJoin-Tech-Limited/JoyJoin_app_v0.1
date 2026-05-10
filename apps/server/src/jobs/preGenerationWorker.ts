@@ -24,13 +24,17 @@ import {
   generatePersonalityDiceChallenges,
   generateAuctionLots,
   generateQuipBattlePrompts,
+  generateUndercoverWordPair,
+  generateGroupMirrorQuestions,
 } from '../socialIcebreakerAIService';
 import { generateWithQualityGate } from '../ai/aiQualityGate';
 import type { JudgeFeatureType } from '../ai/qualityJudgePrompts';
 import { getRandomQuipBattlePrompts } from '@shared/quipBattle';
 import { selectMicroChallenges } from '@shared/microChallengeTemplates';
 import { getDaresForArchetype } from '@shared/personalityDiceDares';
-import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge } from '@shared/socialIcebreaker';
+import { getFallbackUndercoverPair } from '@shared/undercoverWord';
+import { getFallbackGroupMirrorQuestions } from '@shared/groupMirror';
+import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion } from '@shared/socialIcebreaker';
 import { logger } from '../lib/logger';
 
 // ---------------------------------------------------------------------------
@@ -54,6 +58,7 @@ const PHASE_FEATURE_TYPES: Record<string, JudgeFeatureType> = {
   personality_dice: 'icebreaker_personality_dice',
   auction: 'icebreaker_auction',
   quip_battle: 'icebreaker_micro_challenge', // reuse micro_challenge rubric for quip battle
+  group_mirror: 'icebreaker_warmup', // reuse warmup rubric for group mirror
 };
 
 // ---------------------------------------------------------------------------
@@ -154,6 +159,22 @@ function getFallbackForPhase(
     case 'quip_battle': {
       return { data: getRandomQuipBattlePrompts(3), meta: { provider: null, fallbackUsed: true, promptVersion: 'fallback-v1', generatedAt: new Date().toISOString() } };
     }
+    case 'undercover_word': {
+      return { data: getFallbackUndercoverPair(), meta: { provider: null, fallbackUsed: true, promptVersion: 'fallback-v1', generatedAt: new Date().toISOString() } };
+    }
+    case 'group_mirror': {
+      const participants = (payload.participants as Array<{ userId: string; displayName: string }>) || [];
+      return {
+        data: getFallbackGroupMirrorQuestions(5).map((q) => ({
+          ...q,
+          // seed participant names into fallback for minimal personalization
+          questionText: participants.length > 0
+            ? q.questionText.replace('大家', participants.map((p) => p.displayName).join('、'))
+            : q.questionText,
+        })),
+        meta: { provider: null, fallbackUsed: true, promptVersion: 'fallback-v1', generatedAt: new Date().toISOString() },
+      };
+    }
     default:
       return { data: [], meta: { provider: null, fallbackUsed: true, promptVersion: 'fallback-v1', generatedAt: new Date().toISOString() } };
   }
@@ -174,6 +195,7 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
       mood: (payload.mood as any) || 'funny',
       eventType: (payload.eventType as string) || '活动',
       participantCount: (payload.participantCount as number) || 4,
+      roster: (payload.participants as any[]) || [],
       _refinementHint: payload._refinementHint as string | undefined,
     });
     return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
@@ -184,6 +206,7 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
       eventType: (payload.eventType as string) || '活动',
       participantCount: (payload.participantCount as number) || 4,
       seed: payload.seed as string,
+      roster: (payload.participants as any[]) || [],
       _refinementHint: payload._refinementHint as string | undefined,
     });
     return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
@@ -228,6 +251,29 @@ const PHASE_GENERATORS: Record<string, GeneratorFn> = {
       eventType: (payload.eventType as string) || '活动',
       participantCount: (payload.participantCount as number) || 4,
       participants: (payload.participants as Array<{ displayName: string; archetype?: string }>) || [],
+      roster: (payload.participants as Array<{ archetype?: string }>) || [],
+      _refinementHint: payload._refinementHint as string | undefined,
+    });
+    return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
+  },
+
+  undercover_word: async (_sessionId, payload) => {
+    const result = await generateUndercoverWordPair({
+      eventType: (payload.eventType as string) || '活动',
+      participantCount: (payload.participantCount as number) || 4,
+      roster: (payload.participants as Array<{ userId: string; displayName: string; archetype?: string }>) || [],
+      _refinementHint: payload._refinementHint as string | undefined,
+    });
+    return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };
+  },
+
+  group_mirror: async (_sessionId, payload) => {
+    const participants = (payload.participants as Array<{ userId: string; displayName: string; archetype?: string }>) || [];
+    const result = await generateGroupMirrorQuestions({
+      eventType: (payload.eventType as string) || '活动',
+      participantCount: participants.length,
+      participantNames: participants.map((p) => p.displayName).filter(Boolean) as string[],
+      roster: participants,
       _refinementHint: payload._refinementHint as string | undefined,
     });
     return { data: result.data, meta: result.meta as unknown as Record<string, unknown> };

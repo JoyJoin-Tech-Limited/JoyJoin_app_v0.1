@@ -1,3 +1,4 @@
+// Audit logging is performed by the calling route handlers via adminAuditLogger
 import { db } from "../db";
 import { sql, eq } from "drizzle-orm";
 import { subscriptions, coupons, payments } from "@shared/schema";
@@ -315,12 +316,19 @@ export const paymentsRepo: PaymentsRepository = {
   async getAllPayments(): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT 
-        p.*, 
+        p.id, p.user_id, p.payment_type, p.related_id, p.status, p.payment_method,
+        p.original_amount, p.discount_amount, p.final_amount as amount,
+        p.coupon_id, p.wechat_transaction_id, p.wechat_order_id, p.wechat_prepay_id,
+        p.paid_at, p.created_at,
         u.first_name as user_first_name,
         u.last_name as user_last_name,
-        u.email as user_email
+        u.email as user_email,
+        e.title as event_title,
+        s.plan_type as subscription_plan
       FROM payments p
       LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN events e ON p.payment_type = 'event' AND p.related_id = e.id
+      LEFT JOIN subscriptions s ON p.payment_type = 'subscription' AND p.related_id = s.id
       ORDER BY p.created_at DESC
     `);
     return result.rows;
@@ -347,12 +355,19 @@ export const paymentsRepo: PaymentsRepository = {
   async getPaymentsByType(paymentType: string): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT 
-        p.*, 
+        p.id, p.user_id, p.payment_type, p.related_id, p.status, p.payment_method,
+        p.original_amount, p.discount_amount, p.final_amount as amount,
+        p.coupon_id, p.wechat_transaction_id, p.wechat_order_id, p.wechat_prepay_id,
+        p.paid_at, p.created_at,
         u.first_name as user_first_name,
         u.last_name as user_last_name,
-        u.email as user_email
+        u.email as user_email,
+        e.title as event_title,
+        s.plan_type as subscription_plan
       FROM payments p
       LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN events e ON p.payment_type = 'event' AND p.related_id = e.id
+      LEFT JOIN subscriptions s ON p.payment_type = 'subscription' AND p.related_id = s.id
       WHERE p.payment_type = ${paymentType}
       ORDER BY p.created_at DESC
     `);

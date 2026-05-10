@@ -15,6 +15,12 @@ export type TierMachineId = 'breeze' | 'glow' | 'blaze'
 
 export const TIER_MACHINE_IDS: TierMachineId[] = ['breeze', 'glow', 'blaze']
 
+export const LEGACY_TIER_MAP: Record<string, TierMachineId> = {
+  standard: 'glow',
+  premium: 'blaze',
+  bar: 'breeze',
+}
+
 export interface TierDisplayEntry {
   /** Canonical display name for the China market. */
   default: string
@@ -63,11 +69,15 @@ export interface TierDisplayFlags {
  * @returns localized display string
  */
 export function resolveTierDisplay(
-  machineId: TierMachineId,
+  machineId: TierMachineId | string,
   flags: TierDisplayFlags,
 ): string {
-  const entry = TIER_DISPLAY_MANIFEST[machineId]
-  if (machineId === 'glow') {
+  const mappedId = LEGACY_TIER_MAP[machineId] ?? machineId
+  const entry = TIER_DISPLAY_MANIFEST[mappedId as TierMachineId]
+  if (!entry) {
+    return String(machineId)
+  }
+  if (mappedId === 'glow') {
     if (flags.glowVariant === 'tipsy') {
       return entry.variants.tipsy ?? entry.default
     }

@@ -151,9 +151,9 @@ back to `45` (slightly conservative). The 6% weight keeps the maximum possible s
 real-time average semantic score, pair-score deltas, and flag status. Prometheus metrics are
 available at the `/api/metrics` endpoint.
 
-> **Rollout guidance:** Leave `ENABLE_SEMANTIC_SIMILARITY=false` until semantic profile quality
-> has been validated against a live pool. When enabling, monitor the admin dashboard for
-> unexpected score shifts before removing the flag.
+> **Status:** Enabled in production since 2026-05-09. Semantic profile quality was validated
+> against live pool data before enabling. Monitor the admin dashboard 🧠 语义匹配观测 panel
+> for unexpected score shifts during the first week of active 7D scoring.
 
 ---
 

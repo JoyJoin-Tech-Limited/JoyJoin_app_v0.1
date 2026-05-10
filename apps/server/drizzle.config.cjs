@@ -8,7 +8,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 /** Schema path is anchored to this file so `drizzle-kit push` works from repo root or apps/server. */
-const schemaPath = path.join(__dirname, "../../packages/shared/src/schema.ts");
+const schemaPath = path.join(__dirname, "../../packages/shared/src/schema/index.ts");
 
 module.exports = defineConfig({
   out: "./migrations",

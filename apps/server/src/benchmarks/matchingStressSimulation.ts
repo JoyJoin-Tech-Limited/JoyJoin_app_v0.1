@@ -60,6 +60,9 @@ function buildSyntheticUsers(count: number): UserWithProfile[] {
       barThemes: [],
       alcoholComfort: [],
       eventType: '饭局',
+      ageMatchPreference: null,
+      tableVibePreference: null,
+      vibeVector: null,
     });
   }
   return users;

@@ -117,14 +117,10 @@ export function registerAttendanceRoutes(app: Express): void {
         poolId,
         // 预算档位（前端传的 budgetTier，直接存进去）
         budgetTier,
-        // 下面几个是偏好字段，前端可能用 languages / cuisines / tasteIntensity，
-        // 也可能用 selectedLanguages / selectedCuisines / selectedTasteIntensity，这里统一兼容
+        // 下面几个是偏好字段，前端可能用 languages，
+        // 也可能用 selectedLanguages，这里统一兼容
         languages,
-        cuisines,
-        tasteIntensity,
         selectedLanguages,
-        selectedCuisines,
-        selectedTasteIntensity,
         // 预留：后面如果要做「自动匹配」可以用这个开关
         autoMatch,
       } = req.body || {};
@@ -161,8 +157,6 @@ export function registerAttendanceRoutes(app: Express): void {
       };
 
       const normalizedLanguages = toStringArray(selectedLanguages ?? languages);
-      const normalizedCuisines = toStringArray(selectedCuisines ?? cuisines);
-      const normalizedTasteIntensity = toStringArray(selectedTasteIntensity ?? tasteIntensity);
 
       logger.info("[AdminBlindBox] incoming create payload:", {
         adminId,
@@ -171,8 +165,6 @@ export function registerAttendanceRoutes(app: Express): void {
         poolId,
         budgetTier,
         normalizedLanguages,
-        normalizedCuisines,
-        normalizedTasteIntensity,
         autoMatch,
       });
 
@@ -193,9 +185,6 @@ export function registerAttendanceRoutes(app: Express): void {
           budgetTier: budgetTier ?? "",
           // 偏好字段
           selectedLanguages: normalizedLanguages,
-          selectedTasteIntensity: normalizedTasteIntensity,
-          selectedCuisines: normalizedCuisines,
-          cuisineTags: normalizedCuisines,
           // 桌子初始状态：匹配中
           status: "matching",
           progress: 0,

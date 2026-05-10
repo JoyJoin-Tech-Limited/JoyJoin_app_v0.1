@@ -23,6 +23,13 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
   getMiniScriptSecrets: async (socialSessionId: string) => {
     return (testMiniScriptSecrets.get(socialSessionId) as any) ?? null;
   },
+  listParticipants: async (socialSessionId: string) => {
+    const state = testSessions.get(socialSessionId);
+    if (!state) return [];
+    return [
+      { userId: state.hostUserId, displayName: state.hostDisplayName, joinedAt: new Date().toISOString(), lastSeenAt: new Date().toISOString(), isActive: true },
+    ];
+  },
 }));
 
 const { default: miniscriptRouter } = await import('../routes/domains/miniscript');

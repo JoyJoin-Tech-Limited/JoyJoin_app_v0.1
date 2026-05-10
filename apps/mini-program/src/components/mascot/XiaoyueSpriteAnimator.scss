@@ -1,0 +1,60 @@
+@use '../../styles/variables' as *;
+
+.xiaoyue-sprite {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+
+  &--glow::before {
+    content: '';
+    position: absolute;
+    inset: -4rpx;
+    border-radius: 50%;
+    border: 4rpx solid rgba($color-primary, 0.3);
+    animation: xiaoyue-pulse-ring 2s ease-in-out infinite;
+  }
+
+  &__frame {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: transparent;
+    will-change: background-position;
+  }
+
+  &--fallback {
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
+  }
+}
+
+@keyframes xiaoyue-sprite-play {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes xiaoyue-pulse-ring {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xiaoyue-sprite__frame {
+    animation: none !important;
+  }
+
+  .xiaoyue-sprite--glow::before {
+    animation: none;
+    opacity: 0.3;
+  }
+}

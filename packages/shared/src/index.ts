@@ -64,6 +64,8 @@ export * from './schemaAnalytics';
 export * from './aiModels';
 export * from './socialIcebreakerTierManifest';
 export * from './socialIcebreakerRunPlans';
+export * from './runPlanCompiler';
 export * from './socialIcebreakerYuezaiCopy';
 export * from './mascotConfig';
+export * from './lieDetectiveFallback';
 export * from './ui/connectionPointCompat';

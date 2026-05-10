@@ -1,5 +1,5 @@
 import { View } from '@tarojs/components'
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import './QuestionTransition.scss'
 
 export interface QuestionTransitionProps {
@@ -8,10 +8,16 @@ export interface QuestionTransitionProps {
 }
 
 export default function QuestionTransition({ questionId, children }: QuestionTransitionProps) {
-  const key = useMemo(() => questionId, [questionId])
+  const [animating, setAnimating] = useState(false)
+
+  useEffect(() => {
+    setAnimating(false)
+    const timer = setTimeout(() => setAnimating(true), 17)
+    return () => clearTimeout(timer)
+  }, [questionId])
 
   return (
-    <View key={key} className='question-transition question-transition--enter'>
+    <View className={animating ? 'question-transition question-transition--enter' : 'question-transition'}>
       {children}
     </View>
   )

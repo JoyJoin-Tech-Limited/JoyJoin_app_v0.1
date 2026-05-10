@@ -16,8 +16,6 @@ vi.mock('openai', () => {
 });
 
 // ─── Mock minimaxClient so the router responds to env changes per-test ────────
-// The getter pattern makes minimaxClient re-evaluate MINIMAX_API_KEY on every
-// access, which lets us control it via process.env inside individual tests.
 vi.mock('../ai/minimaxClient', () => ({
   get minimaxClient(): OpenAI | null {
     return process.env.MINIMAX_API_KEY
@@ -98,7 +96,6 @@ describe('socialModelRouter', () => {
       for (const fn of fns) {
         const result = getClientForFunction(fn);
         expect(result.provider).toBe('deepseek');
-        expect(result.model).toBe('deepseek-v4-flash');
       }
     });
   });
@@ -138,10 +135,10 @@ describe('socialModelRouter', () => {
   });
 
   describe('SOCIAL_AI_PROVIDER=hybrid (default)', () => {
-    it('routes MiniMax-designated functions to minimax when MINIMAX_API_KEY is set', () => {
-      setEnv({ MINIMAX_API_KEY: 'sk-minimax-test' });
+    it('routes all functions to deepseek by default', () => {
+      setEnv({});
 
-      const minimaxFns = [
+      const fns = [
         'generateWarmupTopics',
         'generateXiaoYueComment',
         'generateRecapSummary',
@@ -152,9 +149,9 @@ describe('socialModelRouter', () => {
         'generateClosingMessage',
       ] as const;
 
-      for (const fn of minimaxFns) {
+      for (const fn of fns) {
         const result = getClientForFunction(fn);
-        expect(result.provider, `${fn} should be minimax`).toBe('minimax');
+        expect(result.provider, `${fn} should be deepseek`).toBe('deepseek');
       }
     });
 
@@ -165,42 +162,21 @@ describe('socialModelRouter', () => {
       expect(result.provider).toBe('deepseek');
     });
 
-    it('routes JSON-heavy icebreaker functions to minimax when MINIMAX_API_KEY is set', () => {
-      setEnv({ MINIMAX_API_KEY: 'sk-minimax-test' });
+    it('routes structured icebreaker functions to deepseek by default', () => {
+      setEnv({});
 
       for (const fn of ['generateMicroChallenges', 'generatePersonalityDiceChallenges', 'generateAuctionLots', 'generateMiniScriptFramework'] as const) {
         const result = getClientForFunction(fn);
-        expect(result.provider, `${fn} should be minimax`).toBe('minimax');
-      }
-    });
-
-    it('falls back to deepseek for MiniMax functions and warns when MINIMAX_API_KEY is not set', () => {
-      setEnv({});
-
-      const minimaxFns = [
-        'generateWarmupTopics',
-        'generateXiaoYueComment',
-        'generateRecapSummary',
-        'generateLieDetectiveStatements',
-      ] as const;
-
-      for (const fn of minimaxFns) {
-        vi.mocked(logger.warn).mockClear();
-        const result = getClientForFunction(fn);
-        expect(result.provider, `${fn} should fall back to deepseek`).toBe('deepseek');
-        expect(logger.warn).toHaveBeenCalledWith(
-          'MINIMAX_API_KEY is not set, falling back to deepseek',
-          expect.any(Object)
-        );
+        expect(result.provider, `${fn} should be deepseek`).toBe('deepseek');
       }
     });
   });
 
   describe('SOCIAL_AI_PROVIDER=<unrecognized>', () => {
     it('warns about the invalid value and defaults to hybrid behaviour', () => {
-      setEnv({ SOCIAL_AI_PROVIDER: 'hybridx', MINIMAX_API_KEY: 'sk-minimax-test' });
+      setEnv({ SOCIAL_AI_PROVIDER: 'hybridx' });
 
-      getClientForFunction('generateWarmupTopics'); // triggers resolveMode()
+      getClientForFunction('generateWarmupTopics');
 
       expect(logger.warn).toHaveBeenCalledWith(
         'Unrecognized SOCIAL_AI_PROVIDER, defaulting to hybrid',
@@ -208,31 +184,31 @@ describe('socialModelRouter', () => {
       );
     });
 
-    it('uses minimax for MiniMax functions (hybrid fallback) when key is set', () => {
-      setEnv({ SOCIAL_AI_PROVIDER: 'bad_value', MINIMAX_API_KEY: 'sk-minimax-test' });
+    it('uses deepseek for all functions (hybrid fallback) by default', () => {
+      setEnv({ SOCIAL_AI_PROVIDER: 'bad_value' });
 
       const result = getClientForFunction('generateWarmupTopics');
-      expect(result.provider).toBe('minimax');
+      expect(result.provider).toBe('deepseek');
     });
 
-    it('uses minimax for structural icebreaker functions when key is set (hybrid fallback)', () => {
-      setEnv({ SOCIAL_AI_PROVIDER: 'bad_value', MINIMAX_API_KEY: 'sk-minimax-test' });
+    it('uses deepseek for structural icebreaker functions by default', () => {
+      setEnv({ SOCIAL_AI_PROVIDER: 'bad_value' });
 
       const result = getClientForFunction('generateMicroChallenges');
-      expect(result.provider).toBe('minimax');
+      expect(result.provider).toBe('deepseek');
     });
   });
 
   describe('model name resolution', () => {
-    it('uses minimax-m2.7 model by default', () => {
-      setEnv({ MINIMAX_API_KEY: 'sk-minimax-test' });
+    it('uses deepseek-v4-flash model for flash-tier functions', () => {
+      setEnv({});
 
-      const result = getClientForFunction('generateWarmupTopics');
-      expect(result.provider).toBe('minimax');
-      expect(result.model).toBe('minimax-m2.7');
+      const result = getClientForFunction('generateProfileTagline');
+      expect(result.provider).toBe('deepseek');
+      expect(result.model).toBe('deepseek-v4-flash');
     });
 
-    it('uses deepseek-v4-flash model for DeepSeek functions', () => {
+    it('uses deepseek-v4-flash model for thinking-tier functions', () => {
       setEnv({});
 
       const result = getClientForFunction('generateMicroChallenges');
@@ -241,5 +217,3 @@ describe('socialModelRouter', () => {
     });
   });
 });
-
-

@@ -12,6 +12,16 @@ import { Bell, Send, Users, CheckCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type User = {
   id: string;
@@ -40,6 +50,7 @@ export default function AdminNotificationsPage() {
   const [message, setMessage] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [recipientFilter, setRecipientFilter] = useState<"all" | "selected">("all");
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
@@ -108,7 +119,18 @@ export default function AdminNotificationsPage() {
       return;
     }
 
+    setShowPreviewDialog(true);
+  };
+
+  const confirmSend = () => {
+    let userIds: string[] = [];
+    if (recipientFilter === "all") {
+      userIds = (usersData || []).map((u: User) => u.id);
+    } else {
+      userIds = selectedUserIds;
+    }
     sendNotificationMutation.mutate({ userIds, category, type, title, message });
+    setShowPreviewDialog(false);
   };
 
   const toggleUserSelection = (userId: string) => {
@@ -348,6 +370,49 @@ export default function AdminNotificationsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Send Preview Confirmation Dialog */}
+      <AlertDialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              确认发送通知
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <div className="rounded-md border p-3 space-y-2">
+                <div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">标题</span>
+                  <p className="font-semibold">{title}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">内容</span>
+                  <p className="text-sm whitespace-pre-wrap">{message}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">接收人数</span>
+                  <p className="font-semibold">
+                    {recipientFilter === "all" ? (usersData || []).length : selectedUserIds.length} 人
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                此操作将立即发送通知给上述用户，请确认内容无误。
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmSend}
+              disabled={sendNotificationMutation.isPending}
+              data-testid="button-confirm-send-notification"
+            >
+              {sendNotificationMutation.isPending ? "发送中..." : "确认发送"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

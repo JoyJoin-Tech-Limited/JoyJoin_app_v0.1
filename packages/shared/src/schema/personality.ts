@@ -2,13 +2,16 @@ export {
   personalityQuestions,
   testResponses,
   roleResults,
-  assessmentSessions,
-  assessmentAnswers,
   insertTestResponseSchema,
   insertRoleResultSchema,
+} from './_definitions.js';
+
+export {
+  assessmentSessions,
+  assessmentAnswers,
   insertAssessmentSessionSchema,
   insertAssessmentAnswerSchema,
-} from './_definitions.js';
+} from './_definitions_extended.js';
 
 export type {
   PersonalityQuestion,
@@ -16,8 +19,11 @@ export type {
   InsertTestResponse,
   RoleResult,
   InsertRoleResult,
+} from './_definitions.js';
+
+export type {
   AssessmentSession,
   InsertAssessmentSession,
   AssessmentAnswer,
   InsertAssessmentAnswer,
-} from './_definitions.js';
+} from './_definitions_extended.js';

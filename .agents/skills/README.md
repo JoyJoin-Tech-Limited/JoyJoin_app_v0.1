@@ -91,6 +91,7 @@ See [`skill-taxonomy.md`](./skill-taxonomy.md) for full definitions and edge-cas
 | [`agent-coordination-patterns`](./agent-coordination-patterns/SKILL.md) | Multi-agent pipelines, swarms, dependency graphs |
 | [`docs-sync`](./docs-sync/SKILL.md) | Knowledge-base editor: memory, AGENTS.md, docs |
 | [`draft-prd`](./draft-prd/SKILL.md) | Product requirements, acceptance criteria, scope |
+| [`omo-orchestration-bridge`](./omo-orchestration-bridge/SKILL.md) | Bridge OMO discipline-agent workflows into Kimi Code CLI — ultrawork, boulder management, Prometheus→Atlas→Sisyphus→Oracle |
 | [`first-principles-velocity`](./first-principles-velocity/SKILL.md) | Critical-path execution, bottleneck removal |
 | [`multi-agent-deliberation`](./multi-agent-deliberation/SKILL.md) | 5-phase architecture deliberation protocol |
 | [`orchestration-turn-reporting`](./orchestration-turn-reporting/SKILL.md) | Turn-end summaries, iterative improvement |

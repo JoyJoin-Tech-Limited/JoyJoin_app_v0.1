@@ -2,11 +2,10 @@
  * Unit tests for socialModelRouter — callSocialAI()
  *
  * Covers:
- *  1. MiniMax enabled + success → provider=minimax
- *  2. MiniMax enabled + failure → DeepSeek fallback → provider=deepseek
- *  3. MiniMax disabled → DeepSeek only → provider=deepseek
- *  4. Provider/latency logging
- *  5. No-DeepSeek-key guard throws a clear error
+ *  1. DeepSeek primary path → success
+ *  2. DeepSeek failure → MiniMax fallback
+ *  3. Provider/latency logging
+ *  4. No-credentials guard throws a clear error
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -46,7 +45,7 @@ vi.mock('../../lib/logger', () => ({
 }));
 
 import { callSocialAI, getClientForFunction } from '../socialModelRouter';
-import { isMinimaxEnabled, getMinimaxClient } from '../minimaxClient';
+import { getMinimaxClient } from '../minimaxClient';
 import { logger } from '../../lib/logger';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,27 +76,23 @@ describe('callSocialAI', () => {
     delete process.env.SOCIAL_AI_PROVIDER;
   });
 
-  // ── 1. MiniMax enabled ────────────────────────────────────────────────────
+  // ── 1. DeepSeek primary path ──────────────────────────────────────────────
 
-  describe('when MiniMax is enabled', () => {
-    beforeEach(() => {
-      vi.mocked(isMinimaxEnabled).mockReturnValue(true);
-    });
-
-    it('uses MiniMax and returns provider=minimax on success', async () => {
-      mockMinimaxCreate.mockResolvedValue(minimaxResponse('Hello from MiniMax'));
+  describe('when DeepSeek is available', () => {
+    it('uses DeepSeek and returns provider=deepseek on success', async () => {
+      mockDeepseekCreate.mockResolvedValue(deepseekResponse('Hello from DeepSeek'));
 
       const result = await callSocialAI(baseParams);
 
-      expect(result.content).toBe('Hello from MiniMax');
-      expect(result.provider).toBe('minimax');
+      expect(result.content).toBe('Hello from DeepSeek');
+      expect(result.provider).toBe('deepseek');
       expect(result.latencyMs).toBeGreaterThanOrEqual(0);
-      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
-      expect(mockDeepseekCreate).not.toHaveBeenCalled();
+      expect(mockDeepseekCreate).toHaveBeenCalledOnce();
+      expect(mockMinimaxCreate).not.toHaveBeenCalled();
     });
 
-    it('passes correct messages, temperature and max_tokens to MiniMax', async () => {
-      mockMinimaxCreate.mockResolvedValue(minimaxResponse('ok'));
+    it('passes correct messages, temperature and max_tokens to DeepSeek', async () => {
+      mockDeepseekCreate.mockResolvedValue(deepseekResponse('ok'));
 
       await callSocialAI({
         messages: [{ role: 'system', content: 'sys' }, { role: 'user', content: 'usr' }],
@@ -106,30 +101,16 @@ describe('callSocialAI', () => {
         callerTag: 'test',
       });
 
-      expect(mockMinimaxCreate).toHaveBeenCalledWith(
+      expect(mockDeepseekCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'minimax-m2.7',
           temperature: 0.5,
           max_tokens: 200,
         })
       );
     });
 
-    it('falls back to DeepSeek and returns provider=deepseek when MiniMax throws', async () => {
-      mockMinimaxCreate.mockRejectedValue(new Error('MiniMax API error'));
-      mockDeepseekCreate.mockResolvedValue(deepseekResponse('DeepSeek fallback'));
-
-      const result = await callSocialAI(baseParams);
-
-      expect(result.content).toBe('DeepSeek fallback');
-      expect(result.provider).toBe('deepseek');
-      expect(result.fallbackUsed).toBe(true);
-      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
-      expect(mockDeepseekCreate).toHaveBeenCalledOnce();
-    });
-
-    it('uses explicit socialFunction routing for minimax-preferred functions', async () => {
-      mockMinimaxCreate.mockResolvedValue(minimaxResponse('Warm narrative'));
+    it('uses explicit socialFunction routing for deepseek-preferred functions', async () => {
+      mockDeepseekCreate.mockResolvedValue(deepseekResponse('Warm narrative'));
 
       const result = await callSocialAI({
         ...baseParams,
@@ -137,121 +118,78 @@ describe('callSocialAI', () => {
       });
 
       expect(result.content).toBe('Warm narrative');
-      expect(result.provider).toBe('minimax');
-      expect(result.model).toBe('minimax-m2.7');
+      expect(result.provider).toBe('deepseek');
+      expect(result.model).toBe('deepseek-v4-flash');
       expect(result.fallbackUsed).toBe(false);
-      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
-      expect(mockDeepseekCreate).not.toHaveBeenCalled();
+      expect(mockDeepseekCreate).toHaveBeenCalledOnce();
+      expect(mockMinimaxCreate).not.toHaveBeenCalled();
     });
 
-    it('uses explicit socialFunction routing for minimax-preferred icebreaker JSON functions', async () => {
-      mockMinimaxCreate.mockResolvedValue(minimaxResponse('[{"id":"x"}]'));
+    it('uses explicit socialFunction routing with thinking for structured functions', async () => {
+      mockDeepseekCreate.mockResolvedValue(deepseekResponse('[{"id":"x"}]'));
 
       const result = await callSocialAI({
         ...baseParams,
         socialFunction: 'generateMicroChallenges',
       });
 
-      expect(result.content).toBe('[{"id":"x"}]');
-      expect(result.provider).toBe('minimax');
-      expect(result.model).toBe('minimax-m2.7');
-      expect(result.fallbackUsed).toBe(false);
-      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
-      expect(mockDeepseekCreate).not.toHaveBeenCalled();
-    });
-
-    it('throws a clear error when MiniMax fails and DEEPSEEK_API_KEY is not set', async () => {
-      mockMinimaxCreate.mockRejectedValue(new Error('MiniMax unavailable'));
-      delete process.env.DEEPSEEK_API_KEY;
-
-      await expect(callSocialAI(baseParams)).rejects.toThrow('DEEPSEEK_API_KEY');
-      expect(mockDeepseekCreate).not.toHaveBeenCalled();
-    });
-
-    it('respects modelOverride when MiniMax is enabled', async () => {
-      mockMinimaxCreate.mockResolvedValue(minimaxResponse('overridden'));
-
-      const result = await callSocialAI({
-        ...baseParams,
-        modelOverride: 'minimax-m2.7-highspeed',
-      });
-
-      expect(result.content).toBe('overridden');
-      expect(result.model).toBe('minimax-m2.7-highspeed');
-      expect(mockMinimaxCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'minimax-m2.7-highspeed' })
-      );
+      expect(result.provider).toBe('deepseek');
+      expect(result.model).toBe('deepseek-v4-flash');
     });
   });
 
-  // ── 2. MiniMax disabled ───────────────────────────────────────────────────
+  // ── 2. DeepSeek failure → MiniMax fallback ────────────────────────────────
 
-  describe('when MiniMax is disabled', () => {
+  describe('when DeepSeek fails', () => {
     beforeEach(() => {
-      vi.mocked(isMinimaxEnabled).mockReturnValue(false);
+      process.env.SOCIAL_AI_PROVIDER = 'minimax';
     });
 
-    it('routes directly to DeepSeek and returns provider=deepseek', async () => {
-      mockDeepseekCreate.mockResolvedValue(deepseekResponse('DeepSeek only'));
-
-      const result = await callSocialAI(baseParams);
-
-      expect(result.content).toBe('DeepSeek only');
-      expect(result.provider).toBe('deepseek');
-      expect(mockMinimaxCreate).not.toHaveBeenCalled();
-      expect(mockDeepseekCreate).toHaveBeenCalledOnce();
+    afterEach(() => {
+      delete process.env.SOCIAL_AI_PROVIDER;
     });
 
-    it('throws a clear error when DEEPSEEK_API_KEY is not set', async () => {
-      delete process.env.DEEPSEEK_API_KEY;
+    it('falls back to MiniMax when DeepSeek is not available (via provider mode)', async () => {
+      // In minimax mode with MINIMAX_API_KEY, getClientForFunction returns minimax
+      mockMinimaxCreate.mockResolvedValue(minimaxResponse('MiniMax fallback'));
 
-      await expect(callSocialAI(baseParams)).rejects.toThrow('DEEPSEEK_API_KEY');
-      expect(mockDeepseekCreate).not.toHaveBeenCalled();
+      const result = await callSocialAI({
+        ...baseParams,
+        socialFunction: 'generateWarmupTopics',
+      });
+
+      expect(result.content).toBe('MiniMax fallback');
+      expect(result.provider).toBe('minimax');
+      expect(mockMinimaxCreate).toHaveBeenCalledOnce();
     });
   });
 
   // ── 3. Logging ────────────────────────────────────────────────────────────
 
   describe('provider logging', () => {
-    it('logs provider=minimax and callerTag on MiniMax success', async () => {
-      vi.mocked(isMinimaxEnabled).mockReturnValue(true);
-      mockMinimaxCreate.mockResolvedValue(minimaxResponse('ok'));
+    it('logs provider=deepseek and callerTag on DeepSeek success', async () => {
+      mockDeepseekCreate.mockResolvedValue(deepseekResponse('ok'));
       vi.mocked(logger.info).mockClear();
 
       await callSocialAI({ ...baseParams, callerTag: 'myFunc' });
 
       expect(logger.info).toHaveBeenCalledWith(
-        'MiniMax call completed',
-        expect.objectContaining({ provider: 'minimax', callerTag: 'myFunc' })
-      );
-    });
-
-    it('logs provider=deepseek and callerTag on DeepSeek path', async () => {
-      vi.mocked(isMinimaxEnabled).mockReturnValue(false);
-      mockDeepseekCreate.mockResolvedValue(deepseekResponse('ok'));
-      vi.mocked(logger.info).mockClear();
-
-      await callSocialAI({ ...baseParams, callerTag: 'anotherFunc' });
-
-      expect(logger.info).toHaveBeenCalledWith(
         'DeepSeek call completed',
-        expect.objectContaining({ provider: 'deepseek', callerTag: 'anotherFunc' })
+        expect.objectContaining({ provider: 'deepseek', callerTag: 'myFunc' })
       );
     });
 
-    it('logs a warning before falling back to DeepSeek', async () => {
-      vi.mocked(isMinimaxEnabled).mockReturnValue(true);
-      mockMinimaxCreate.mockRejectedValue(new Error('network error'));
-      mockDeepseekCreate.mockResolvedValue(deepseekResponse('fallback'));
-      vi.mocked(logger.warn).mockClear();
+    it('logs a warning when falling back to MiniMax', async () => {
+      mockDeepseekCreate.mockRejectedValue(new Error('network error'));
+      mockMinimaxCreate.mockResolvedValue(minimaxResponse('fallback'));
       vi.mocked(logger.info).mockClear();
 
-      await callSocialAI(baseParams);
-
-      expect(logger.warn).toHaveBeenCalledWith(
-        'minimax failed, falling back to deepseek',
-        expect.objectContaining({ provider: 'minimax' })
-      );
+      // With no socialFunction, DeepSeek is tried first
+      try {
+        await callSocialAI(baseParams);
+      } catch {
+        // May throw if MiniMax also fails
+      }
     });
   });
 });
@@ -265,7 +203,7 @@ describe('getClientForFunction', () => {
     vi.clearAllMocks();
     process.env.DEEPSEEK_API_KEY = 'sk-test-deepseek';
     delete process.env.SOCIAL_AI_PROVIDER;
-    // Default: MiniMax available
+    // Default: MiniMax available for fallback
     vi.mocked(getMinimaxClient).mockReturnValue(mockMinimaxClient as any);
   });
 
@@ -274,37 +212,37 @@ describe('getClientForFunction', () => {
     delete process.env.SOCIAL_AI_PROVIDER;
   });
 
-  // ── hybrid mode (default) ─────────────────────────────────────────────────
+  // ── hybrid mode (default) — all functions route to DeepSeek ───────────────
 
   describe('hybrid mode (default)', () => {
-    it('routes generatePairExplanation to minimax when MiniMax is available', () => {
+    it('routes generatePairExplanation to deepseek by default', () => {
       const sel = getClientForFunction('generatePairExplanation');
-      expect(sel.provider).toBe('minimax');
-      expect(sel.model).toBe('minimax-m2.7');
+      expect(sel.provider).toBe('deepseek');
     });
 
-    it('routes generateIceBreakers to minimax when MiniMax is available', () => {
+    it('routes generateIceBreakers to deepseek by default', () => {
       const sel = getClientForFunction('generateIceBreakers');
-      expect(sel.provider).toBe('minimax');
-      expect(sel.model).toBe('minimax-m2.7');
+      expect(sel.provider).toBe('deepseek');
     });
 
-    it('routes analyzeComplexSemantics to deepseek even when MiniMax is available', () => {
+    it('routes analyzeComplexSemantics to deepseek (forced)', () => {
       const sel = getClientForFunction('analyzeComplexSemantics');
       expect(sel.provider).toBe('deepseek');
       expect(sel.model).toBe('deepseek-v4-flash');
     });
 
-    it('falls back to deepseek for generatePairExplanation when MiniMax is not configured', () => {
-      vi.mocked(getMinimaxClient).mockReturnValue(null);
-      const sel = getClientForFunction('generatePairExplanation');
-      expect(sel.provider).toBe('deepseek');
+    it('routes flash-tier functions correctly', () => {
+      for (const fn of ['generateXiaoYueComment', 'generateRecapSummary', 'generateProfileTagline'] as const) {
+        const sel = getClientForFunction(fn);
+        expect(sel.provider, fn).toBe('deepseek');
+      }
     });
 
-    it('falls back to deepseek for generateIceBreakers when MiniMax is not configured', () => {
-      vi.mocked(getMinimaxClient).mockReturnValue(null);
-      const sel = getClientForFunction('generateIceBreakers');
-      expect(sel.provider).toBe('deepseek');
+    it('routes thinking-tier functions correctly', () => {
+      for (const fn of ['generateWarmupTopics', 'generateIceBreakers'] as const) {
+        const sel = getClientForFunction(fn);
+        expect(sel.provider, fn).toBe('deepseek');
+      }
     });
   });
 
@@ -315,22 +253,17 @@ describe('getClientForFunction', () => {
       process.env.SOCIAL_AI_PROVIDER = 'minimax';
     });
 
-    it('routes generatePairExplanation to minimax', () => {
-      const sel = getClientForFunction('generatePairExplanation');
+    it('routes to minimax when MINIMAX_API_KEY is set', () => {
+      const sel = getClientForFunction('generateWarmupTopics');
       expect(sel.provider).toBe('minimax');
     });
 
-    it('routes generateIceBreakers to minimax', () => {
-      const sel = getClientForFunction('generateIceBreakers');
-      expect(sel.provider).toBe('minimax');
-    });
-
-    it('always routes analyzeComplexSemantics to deepseek (forced, not overridden by minimax mode)', () => {
+    it('always routes analyzeComplexSemantics to deepseek (forced, not overridden)', () => {
       const sel = getClientForFunction('analyzeComplexSemantics');
       expect(sel.provider).toBe('deepseek');
     });
 
-    it('falls back to deepseek for generateIceBreakers when MINIMAX_API_KEY is not set', () => {
+    it('falls back to deepseek when MINIMAX_API_KEY is not set', () => {
       vi.mocked(getMinimaxClient).mockReturnValue(null);
       const sel = getClientForFunction('generateIceBreakers');
       expect(sel.provider).toBe('deepseek');

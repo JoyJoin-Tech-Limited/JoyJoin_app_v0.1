@@ -43,6 +43,9 @@ $color-success:        #2ECC71;
 $color-warning:        #F0A030;
 $color-error:          #EF4444;
 
+$color-landed-gold:    #FBBF24;
+$color-burst-pink:     #FF6B9D;
+
 // ─── Typography ───────────────────────────────────────────────────
 // UI stack: dense copy, forms, lists, legal — always use `$font-ui` / `$font-body`.
 $font-ui:   -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', sans-serif;
@@ -118,6 +121,7 @@ $button-height-sm: 72rpx;
 $button-radius:    48rpx;
 $card-radius:      32rpx;
 $card-radius-sm:   24rpx;
+$radius-pill:      56rpx;
 $input-height:     88rpx;
 $tab-bar-height:   120rpx;
 $center-tab-button-size: 140rpx;
