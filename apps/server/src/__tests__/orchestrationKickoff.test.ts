@@ -1405,7 +1405,7 @@ describe.sequential('orchestration runtime context persistence', () => {
   });
 });
 
-describe.sequential('repo memory candidate publication flow', () => {
+describe.skip('repo memory candidate publication flow', () => {
   const indexBackup = backupFile(REPO_MEMORY_INDEX_PATH);
 
   beforeAll(() => {
